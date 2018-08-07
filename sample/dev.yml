@@ -1,0 +1,11 @@
+name: cnd-test
+swap:
+  deployment:
+    file: nginx-deployment.yml
+    container: nginx
+    image: pchico83/dev
+  service:
+    file: nginx-service.yml
+mount:
+  source: ..
+  target: /test
