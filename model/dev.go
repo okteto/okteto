@@ -40,23 +40,6 @@ type mount struct {
 	Target string `yaml:"target"`
 }
 
-//UnmarshalYAML parses the yaml element and sets default values
-func (dev *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(dev); err != nil {
-		return err
-	}
-	if len(dev.Swap.Deployment.Command) == 0 {
-		dev.Swap.Deployment.Command = []string{"tail", "-f", "/dev/null"}
-	}
-	if dev.Mount.Source == "" {
-		dev.Mount.Source = "."
-	}
-	if dev.Mount.Target == "" {
-		dev.Mount.Target = "/src"
-	}
-	return dev.validate()
-}
-
 func (dev *Dev) validate() error {
 	file, err := os.Stat(dev.Mount.Source)
 	if err != nil && os.IsNotExist(err) {
@@ -80,9 +63,22 @@ func ReadDev(devPath string) (*Dev, error) {
 	if err != nil {
 		return nil, err
 	}
-	var dev Dev
+	dev := Dev{
+		Mount: mount{
+			Source: ".",
+			Target: "/src",
+		},
+		Swap: swap{
+			Deployment: deployment{
+				Command: []string{"tail", "-f", "/dev/null"},
+			},
+		},
+	}
 	err = yaml.Unmarshal(readBytes, &dev)
 	if err != nil {
+		return nil, err
+	}
+	if err := dev.validate(); err != nil {
 		return nil, err
 	}
 	return &dev, nil
@@ -101,21 +97,42 @@ func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 
 	d.GetObjectMeta().SetName(dev.Name)
 	labels := d.GetObjectMeta().GetLabels()
-	labels["cnd"] = dev.Name
+	if labels == nil {
+		labels = map[string]string{"cnd": dev.Name}
+	} else {
+		labels["cnd"] = dev.Name
+	}
 	d.GetObjectMeta().SetLabels(labels)
 	d.Spec.Selector.MatchLabels["cnd"] = dev.Name
 	d.Spec.Template.GetObjectMeta().SetName(dev.Name)
 	labels = d.Spec.Template.GetObjectMeta().GetLabels()
-	labels["cnd"] = dev.Name
+	if labels == nil {
+		labels = map[string]string{"cnd": dev.Name}
+	} else {
+		labels["cnd"] = dev.Name
+	}
 	d.Spec.Template.GetObjectMeta().SetLabels(labels)
 
-	//TODO: set force update policy, to force recreation
+	a := apiv1.HostPathDirectory
+	cndV := apiv1.Volume{
+		Name: "git-volume",
+		VolumeSource: apiv1.VolumeSource{
+			HostPath: &apiv1.HostPathVolumeSource{
+				Path: dev.Mount.Source,
+				Type: &a,
+			},
+		},
+	}
+	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, cndV)
 	for i, c := range d.Spec.Template.Spec.Containers {
 		if c.Name == dev.Swap.Deployment.Container || dev.Swap.Deployment.Container == "" {
 			d.Spec.Template.Spec.Containers[i].Image = dev.Swap.Deployment.Image
 			d.Spec.Template.Spec.Containers[i].Command = dev.Swap.Deployment.Command
-
-			//mount volumes
+			vM := apiv1.VolumeMount{
+				Name:      "git-volume",
+				MountPath: dev.Mount.Target,
+			}
+			d.Spec.Template.Spec.Containers[i].VolumeMounts = append(d.Spec.Template.Spec.Containers[i].VolumeMounts, vM)
 			break
 		}
 	}
@@ -139,7 +156,11 @@ func (dev *Dev) Service(translate bool) (*apiv1.Service, error) {
 	}
 
 	labels := s.GetObjectMeta().GetLabels()
-	labels["cnd"] = dev.Name
+	if labels == nil {
+		labels = map[string]string{"cnd": dev.Name}
+	} else {
+		labels["cnd"] = dev.Name
+	}
 	s.GetObjectMeta().SetLabels(labels)
 	s.Spec.Selector["cnd"] = dev.Name
 	return &s, nil

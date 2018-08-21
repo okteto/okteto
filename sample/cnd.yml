@@ -1,0 +1,11 @@
+name: cnd-test
+swap:
+  deployment:
+    file: ./sample/k8/nginx-deployment.yml
+    container: nginx
+    image: pchico83/dev
+  service:
+    file: ./sample/k8/nginx-service.yml
+mount:
+  source: /Users/pablo/go/src/github.com/okteto/cnd
+  target: /test

@@ -44,11 +44,11 @@ func Deploy(d *appsv1.Deployment, namespace string, c *kubernetes.Clientset) err
 			return fmt.Errorf("Error getting kubernetes deployment: %s", err)
 		}
 		if d.Status.ReadyReplicas == 1 && d.Status.UpdatedReplicas == 1 {
-			log.Printf("kubernetes deployment '%s' is ready.", d.Name)
+			log.Printf("Kubernetes deployment '%s' is ready.", d.Name)
 			return nil
 		}
 	}
-	return fmt.Errorf("kubernetes deployment not ready after 300s")
+	return fmt.Errorf("Kubernetes deployment not ready after 300s")
 }
 
 //Destroy destroysa k8 deployment
@@ -78,5 +78,5 @@ func Destroy(d *appsv1.Deployment, namespace string, c *kubernetes.Clientset) er
 			return fmt.Errorf("Error getting kubernetes deployment: %s", err)
 		}
 	}
-	return fmt.Errorf("kubernetes deployment not deleted after 50s")
+	return fmt.Errorf("Kubernetes deployment not deleted after 50s")
 }

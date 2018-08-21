@@ -14,7 +14,6 @@ func main() {
 	}
 	commands.AddCommand(
 		cmd.Up(),
-		cmd.Exec(),
 		cmd.Down(),
 	)
 

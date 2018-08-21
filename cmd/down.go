@@ -56,7 +56,5 @@ func executeDown(devPath string) error {
 	if err != nil {
 		return err
 	}
-
-	log.Println("Done!")
 	return nil
 }

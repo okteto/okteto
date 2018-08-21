@@ -17,8 +17,18 @@ func Deploy(s *apiv1.Service, namespace string, c *kubernetes.Clientset) error {
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("Error getting k8 service: %s", err)
 	}
-	if sk8.Name != "" {
+
+	if sk8.Name == "" {
+		log.Printf("Creating service '%s'...", s.Name)
+		_, err = sClient.Create(s)
+		if err != nil {
+			return fmt.Errorf("Error creating kubernetes service: %s", err)
+		}
+		log.Printf("Created service '%s'.", s.Name)
+	} else {
 		log.Printf("Updating service '%s'...", s.Name)
+		s.Spec.ClusterIP = sk8.Spec.ClusterIP
+		s.GetObjectMeta().SetResourceVersion(sk8.GetObjectMeta().GetResourceVersion())
 		_, err = sClient.Update(s)
 		if err != nil {
 			return fmt.Errorf("Error updating kubernetes service: %s", err)
