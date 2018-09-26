@@ -136,6 +136,7 @@ func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 	for i, c := range d.Spec.Template.Spec.Containers {
 		if c.Name == dev.Swap.Deployment.Container || dev.Swap.Deployment.Container == "" {
 			d.Spec.Template.Spec.Containers[i].Image = dev.Swap.Deployment.Image
+			d.Spec.Template.Spec.Containers[i].ImagePullPolicy = apiv1.PullIfNotPresent
 			d.Spec.Template.Spec.Containers[i].Command = dev.Swap.Deployment.Command
 			vM := apiv1.VolumeMount{
 				Name:      "git-volume",
