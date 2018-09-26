@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -81,6 +82,14 @@ func ReadDev(devPath string) (*Dev, error) {
 	if err := dev.validate(); err != nil {
 		return nil, err
 	}
+	if !filepath.IsAbs(dev.Mount.Source) {
+		if filepath.IsAbs(devPath) {
+			dev.Mount.Source = path.Join(devPath, dev.Mount.Source)
+		} else {
+			wd, _ := os.Getwd()
+			dev.Mount.Source = path.Join(wd, devPath, dev.Mount.Source)
+		}
+	}
 	return &dev, nil
 }
 
@@ -127,6 +136,7 @@ func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 	for i, c := range d.Spec.Template.Spec.Containers {
 		if c.Name == dev.Swap.Deployment.Container || dev.Swap.Deployment.Container == "" {
 			d.Spec.Template.Spec.Containers[i].Image = dev.Swap.Deployment.Image
+			d.Spec.Template.Spec.Containers[i].ImagePullPolicy = apiv1.PullIfNotPresent
 			d.Spec.Template.Spec.Containers[i].Command = dev.Swap.Deployment.Command
 			vM := apiv1.VolumeMount{
 				Name:      "git-volume",
