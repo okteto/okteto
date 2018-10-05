@@ -122,27 +122,11 @@ func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 	}
 	d.Spec.Template.GetObjectMeta().SetLabels(labels)
 
-	a := apiv1.HostPathDirectory
-	cndV := apiv1.Volume{
-		Name: "git-volume",
-		VolumeSource: apiv1.VolumeSource{
-			HostPath: &apiv1.HostPathVolumeSource{
-				Path: dev.Mount.Source,
-				Type: &a,
-			},
-		},
-	}
-	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, cndV)
 	for i, c := range d.Spec.Template.Spec.Containers {
 		if c.Name == dev.Swap.Deployment.Container || dev.Swap.Deployment.Container == "" {
 			d.Spec.Template.Spec.Containers[i].Image = dev.Swap.Deployment.Image
 			d.Spec.Template.Spec.Containers[i].ImagePullPolicy = apiv1.PullIfNotPresent
 			d.Spec.Template.Spec.Containers[i].Command = dev.Swap.Deployment.Command
-			vM := apiv1.VolumeMount{
-				Name:      "git-volume",
-				MountPath: dev.Mount.Target,
-			}
-			d.Spec.Template.Spec.Containers[i].VolumeMounts = append(d.Spec.Template.Spec.Containers[i].VolumeMounts, vM)
 			break
 		}
 	}
