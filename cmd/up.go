@@ -63,5 +63,10 @@ func executeUp(devPath string) error {
 		return err
 	}
 
+	err = ksync.Watch()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
