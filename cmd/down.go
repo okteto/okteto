@@ -20,7 +20,7 @@ func Down() *cobra.Command {
 			return executeDown(devPath)
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", "dev.yml", "dev yml file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", "cnd.yml", "manifest file")
 	return cmd
 }
 
