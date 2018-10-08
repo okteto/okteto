@@ -60,10 +60,18 @@ func (dev *Dev) validate() error {
 
 //ReadDev returns a Dev object from a given file
 func ReadDev(devPath string) (*Dev, error) {
-	readBytes, err := ioutil.ReadFile(devPath)
+	b, err := ioutil.ReadFile(devPath)
 	if err != nil {
 		return nil, err
 	}
+
+	d, err := loadDev(b)
+	d.fixPath(devPath)
+
+	return d, nil
+}
+
+func loadDev(b []byte) (*Dev, error) {
 	dev := Dev{
 		Mount: mount{
 			Source: ".",
@@ -75,22 +83,28 @@ func ReadDev(devPath string) (*Dev, error) {
 			},
 		},
 	}
-	err = yaml.Unmarshal(readBytes, &dev)
+
+	err := yaml.Unmarshal(b, &dev)
 	if err != nil {
 		return nil, err
 	}
+
 	if err := dev.validate(); err != nil {
 		return nil, err
 	}
+
+	return &dev, nil
+}
+
+func (dev *Dev) fixPath(originalPath string) {
 	if !filepath.IsAbs(dev.Mount.Source) {
-		if filepath.IsAbs(devPath) {
-			dev.Mount.Source = path.Join(devPath, dev.Mount.Source)
+		if filepath.IsAbs(originalPath) {
+			dev.Mount.Source = path.Join(path.Dir(originalPath), dev.Mount.Source)
 		} else {
 			wd, _ := os.Getwd()
-			dev.Mount.Source = path.Join(wd, devPath, dev.Mount.Source)
+			dev.Mount.Source = path.Join(wd, originalPath, dev.Mount.Source)
 		}
 	}
-	return &dev, nil
 }
 
 //Deployment returns a k8 deployment for a cloud native environment
