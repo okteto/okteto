@@ -27,7 +27,7 @@ func Up() *cobra.Command {
 func executeUp(devPath string) error {
 	log.Println("Executing up...")
 
-	namespace, client, err := client.Get()
+	namespace, client, _, err := client.Get()
 	if err != nil {
 		return err
 	}
