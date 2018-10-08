@@ -66,8 +66,6 @@ func ReadDev(devPath string) (*Dev, error) {
 	}
 
 	d, err := loadDev(b)
-	d.fixPath(devPath)
-
 	return d, nil
 }
 
@@ -102,7 +100,7 @@ func (dev *Dev) fixPath(originalPath string) {
 			dev.Mount.Source = path.Join(path.Dir(originalPath), dev.Mount.Source)
 		} else {
 			wd, _ := os.Getwd()
-			dev.Mount.Source = path.Join(wd, originalPath, dev.Mount.Source)
+			dev.Mount.Source = path.Join(wd, path.Dir(originalPath), dev.Mount.Source)
 		}
 	}
 }
