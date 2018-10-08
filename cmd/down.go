@@ -27,7 +27,7 @@ func Down() *cobra.Command {
 func executeDown(devPath string) error {
 	log.Println("Executing down...")
 
-	namespace, client, err := client.Get()
+	namespace, client, _, err := client.Get()
 	if err != nil {
 		return err
 	}
