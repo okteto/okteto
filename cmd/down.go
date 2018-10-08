@@ -6,6 +6,7 @@ import (
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
 	"github.com/okteto/cnd/k8/services"
+	"github.com/okteto/cnd/ksync"
 	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
 )
@@ -56,5 +57,11 @@ func executeDown(devPath string) error {
 	if err != nil {
 		return err
 	}
+
+	err = ksync.Delete(dev)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
