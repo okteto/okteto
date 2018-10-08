@@ -14,15 +14,13 @@ func Create(d *model.Dev, namespace string) error {
 		return err
 	}
 	newSpec := &ksync.SpecDetails{
-		Name: d.Name,
-		// ContainerName: d.Swap.Deployment.Container,
-		Selector:  []string{fmt.Sprintf("cnd=%s", d.Name)},
-		Namespace: namespace,
-		// LocalReadOnly:  cmd.Viper.GetBool("local-read-only"),
-		// RemoteReadOnly: cmd.Viper.GetBool("remote-read-only"),
-		LocalPath:  d.Mount.Source,
-		RemotePath: d.Mount.Target,
-		Reload:     false,
+		Name:          d.Name,
+		ContainerName: d.Swap.Deployment.Container,
+		Selector:      []string{fmt.Sprintf("cnd=%s", d.Name)},
+		Namespace:     namespace,
+		LocalPath:     d.Mount.Source,
+		RemotePath:    d.Mount.Target,
+		Reload:        false,
 	}
 	if err := newSpec.IsValid(); err != nil {
 		return err
