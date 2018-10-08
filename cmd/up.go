@@ -58,7 +58,7 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	err = ksync.Create(dev)
+	err = ksync.Create(dev, namespace)
 	if err != nil {
 		return err
 	}
