@@ -5,6 +5,7 @@ import (
 
 	"github.com/okteto/cnd/cmd"
 	"github.com/spf13/cobra"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 func main() {
