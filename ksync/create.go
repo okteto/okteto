@@ -2,19 +2,33 @@ package ksync
 
 import (
 	"fmt"
-	"os/exec"
 
 	"github.com/okteto/cnd/model"
+	"github.com/vapor-ware/ksync/pkg/ksync"
 )
 
-//Create creates a sync folder
-func Create(d *model.Dev) error {
-	cmd := exec.Command(
-		"ksync",
-		"create",
-		"--reload=false",
-		fmt.Sprintf("--selector=cnd=%s", d.Name),
-		d.Mount.Source,
-		d.Mount.Target)
-	return cmd.Run()
+//Create creates a sync folder using ksync
+func Create(d *model.Dev, namespace string) error {
+	specs := &ksync.SpecList{}
+	if err := specs.Update(); err != nil {
+		return err
+	}
+	newSpec := &ksync.SpecDetails{
+		Name: d.Name,
+		// ContainerName: d.Swap.Deployment.Container,
+		Selector:  []string{fmt.Sprintf("cnd=%s", d.Name)},
+		Namespace: namespace,
+		// LocalReadOnly:  cmd.Viper.GetBool("local-read-only"),
+		// RemoteReadOnly: cmd.Viper.GetBool("remote-read-only"),
+		LocalPath:  d.Mount.Source,
+		RemotePath: d.Mount.Target,
+		Reload:     false,
+	}
+	if err := newSpec.IsValid(); err != nil {
+		return err
+	}
+	if err := specs.Create(newSpec, true); err != nil {
+		return err
+	}
+	return specs.Save()
 }
