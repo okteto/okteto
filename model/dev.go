@@ -139,6 +139,7 @@ func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 			d.Spec.Template.Spec.Containers[i].Image = dev.Swap.Deployment.Image
 			d.Spec.Template.Spec.Containers[i].ImagePullPolicy = apiv1.PullIfNotPresent
 			d.Spec.Template.Spec.Containers[i].Command = dev.Swap.Deployment.Command
+			d.Spec.Template.Spec.Containers[i].WorkingDir = dev.Mount.Target
 			break
 		}
 	}
