@@ -26,25 +26,25 @@ The name of the cloud native development. Must be unique across your set of clou
 
 ## swap.deployment.file (required)
 
-The deployment manifest of the component to be replaced by the cloud native environment.
+The path to the  manifest of the deployment to be replaced by the cloud native environment.
 
 ## swap.deployment.container (required)
 
-The container of the deployment manifest pointed by `swap.deployment.file` to be replaced by the cloud native environment.
+The name of the container of to be replaced.
 
 ## swap.deployment.image (required)
 
-The image to be used by the cloud native environment.
+The container image to be used by the cloud native environment.
 
 ## swap.deployment.command (optional)
 
 The command to be executed by the cloud native environment.
 
-It has to be a non-finishing command (default: `taild -f /dev/null`)
+It has to be a non-finishing command (default: `tail -f /dev/null`)
 
 ## swap.service.file (required)
 
-The service of the component to be replaced by the cloud native environment.
+The path to the manifest of the service to be replaced by the cloud native environment.
 
 ## mount.source (required)
 
