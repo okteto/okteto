@@ -66,6 +66,7 @@ func ReadDev(devPath string) (*Dev, error) {
 	}
 
 	d, err := loadDev(b)
+	d.fixPath(devPath)
 	return d, nil
 }
 
