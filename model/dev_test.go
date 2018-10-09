@@ -35,6 +35,13 @@ func TestReadDev(t *testing.T) {
 			devPath:  "cnd/cnd.yml",
 			expected: fmt.Sprintf("%s/cnd/k8/src", wd),
 		},
+		{
+			name:     "relative-source-path",
+			source:   "./frontend",
+			target:   "/usr/src/frontend",
+			devPath:  "cnd-frontend.yml",
+			expected: fmt.Sprintf("%s/frontend", wd),
+		},
 	}
 
 	for _, tt := range tests {
