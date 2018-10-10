@@ -43,6 +43,11 @@ func executeUp(devPath string) error {
 		return err
 	}
 
+	_, err = validateSwapConfiguration(client, namespace, dev)
+	if err != nil {
+		return err
+	}
+
 	err = deployments.Deploy(d, namespace, client)
 	if err != nil {
 		return err

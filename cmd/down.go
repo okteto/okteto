@@ -36,6 +36,11 @@ func executeDown(devPath string) error {
 		return err
 	}
 
+	_, err = validateSwapConfiguration(client, namespace, dev)
+	if err != nil {
+		return err
+	}
+
 	s, err := dev.Service(false)
 	if err != nil {
 		return err

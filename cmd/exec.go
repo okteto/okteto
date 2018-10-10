@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 //Exec executes a command on the CND container
@@ -46,29 +47,33 @@ func executeExec(devPath string, args []string) error {
 		return err
 	}
 
-	pods, err := client.CoreV1().Pods(namespace).List(v1.ListOptions{
-		LabelSelector: fmt.Sprintf("cnd=%s", dev.Name),
-	})
-
+	pod, err := validateSwapConfiguration(client, namespace, dev)
 	if err != nil {
 		return err
 	}
 
+	return exec.Exec(client, config, pod, dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
+}
+
+func getPod(c *kubernetes.Clientset, namespace, name string) (*apiv1.Pod, error) {
+
+	pods, err := c.CoreV1().Pods(namespace).List(v1.ListOptions{
+		LabelSelector: fmt.Sprintf("cnd=%s", name),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
 	if len(pods.Items) == 0 {
-		return fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
+		return nil, fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
 	}
 
 	if len(pods.Items) > 1 {
-		return fmt.Errorf("more than one cloud native environment have the same name. Please restart your environment")
+		return nil, fmt.Errorf("more than one cloud native environment have the same name. Please restart your environment")
 	}
 
-	if dev.Swap.Deployment.Container != "" {
-		if !containerExists(&pods.Items[0], dev.Swap.Deployment.Container) {
-			return fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
-		}
-	}
-
-	return exec.Exec(client, config, &pods.Items[0], dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
+	return &pods.Items[0], nil
 }
 
 func containerExists(pod *apiv1.Pod, container string) bool {
@@ -79,4 +84,17 @@ func containerExists(pod *apiv1.Pod, container string) bool {
 	}
 
 	return false
+}
+
+func validateSwapConfiguration(c *kubernetes.Clientset, namespace string, dev *model.Dev) (*apiv1.Pod, error) {
+	p, err := getPod(c, namespace, dev.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	if !containerExists(p, dev.Swap.Deployment.Container) {
+		return nil, fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
+	}
+
+	return p, nil
 }
