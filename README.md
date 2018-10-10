@@ -1,5 +1,7 @@
 # Cloud Native Development (CND)
 
+[![CircleCI](https://circleci.com/gh/okteto/cnd.svg?style=svg)](https://circleci.com/gh/okteto/cnd)
+
 **Cloud Native Development** (CND) is about running your development flow entirely in kubernetes, avoiding the time-consuming `docker build/push/pull/redeploy` cycle. 
 
 CND helps you achieve this with a mix of kubernetes automation, file synchying between your local file system and kubernetes and hot reloading of containers.
