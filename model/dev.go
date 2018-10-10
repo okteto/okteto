@@ -30,6 +30,7 @@ type deployment struct {
 	Container string   `yaml:"container"`
 	Image     string   `yaml:"image"`
 	Command   []string `yaml:"command"`
+	Args      []string `yaml:"args"`
 }
 
 type service struct {
@@ -78,7 +79,8 @@ func loadDev(b []byte) (*Dev, error) {
 		},
 		Swap: swap{
 			Deployment: deployment{
-				Command: []string{"tail", "-f", "/dev/null"},
+				Command: []string{"tail"},
+				Args:    []string{"-f", "/dev/null"},
 			},
 		},
 	}
@@ -140,6 +142,7 @@ func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 			d.Spec.Template.Spec.Containers[i].Image = dev.Swap.Deployment.Image
 			d.Spec.Template.Spec.Containers[i].ImagePullPolicy = apiv1.PullIfNotPresent
 			d.Spec.Template.Spec.Containers[i].Command = dev.Swap.Deployment.Command
+			d.Spec.Template.Spec.Containers[i].Args = dev.Swap.Deployment.Args
 			d.Spec.Template.Spec.Containers[i].WorkingDir = dev.Mount.Target
 			break
 		}

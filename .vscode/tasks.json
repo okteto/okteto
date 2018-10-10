@@ -1,0 +1,16 @@
+{
+	"version": "2.0.0",	
+	"type": "shell",	
+	"echoCommand": true,
+	"cwd": "${workspaceFolder}",
+	"tasks": [
+		{
+			"label": "build",
+			"command": "go build -o /usr/local/bin/cnd",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},		
+	]
+}

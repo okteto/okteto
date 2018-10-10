@@ -13,14 +13,14 @@ import (
 )
 
 // Exec executes the command in the cnd container
-func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
+func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
 	req := c.CoreV1().RESTClient().Post().
 		Namespace(pod.Namespace).
 		Resource("pods").
 		Name(pod.Name).
 		SubResource("exec").
 		VersionedParams(&apiv1.PodExecOptions{
-			Container: pod.Spec.Containers[0].Name,
+			Container: container,
 			Command:   command,
 			Stdin:     true,
 			Stdout:    true,
