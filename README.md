@@ -112,3 +112,5 @@ Finally, in order to permanently remove your cloud native development, execute:
 ```bash
 cnd rm
 ```
+
+For a full demo of Cloud Native Development, check the [Voting App demo](https://github.com/okteto/cnd-voting-demo).
