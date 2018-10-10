@@ -105,3 +105,10 @@ In order to revert back to your original configuration, execute:
 ```bash
 cnd down
 ```
+
+Switch back and forth your development mode as you wish by executing `cnd up` and `cnd down`. 
+Finally, in order to permanently remove your cloud native development, execute:
+
+```bash
+cnd down
+```
