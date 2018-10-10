@@ -10,6 +10,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -125,7 +126,13 @@ func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 		labels["cnd"] = dev.Name
 	}
 	d.GetObjectMeta().SetLabels(labels)
-	d.Spec.Selector.MatchLabels["cnd"] = dev.Name
+	if d.Spec.Selector == nil {
+		d.Spec.Selector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{"cnd": dev.Name},
+		}
+	} else {
+		d.Spec.Selector.MatchLabels["cnd"] = dev.Name
+	}
 	d.Spec.Template.GetObjectMeta().SetName(dev.Name)
 	labels = d.Spec.Template.GetObjectMeta().GetLabels()
 	if labels == nil {
