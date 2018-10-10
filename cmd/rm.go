@@ -4,17 +4,19 @@ import (
 	"log"
 
 	"github.com/okteto/cnd/k8/client"
+	"github.com/okteto/cnd/k8/deployments"
 	"github.com/okteto/cnd/k8/services"
+	"github.com/okteto/cnd/ksync"
 	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
 )
 
-//Down stops a cloud native environment
-func Down() *cobra.Command {
+//Rm removes a cloud native environment
+func Rm() *cobra.Command {
 	var devPath string
 	cmd := &cobra.Command{
-		Use:   "down",
-		Short: "Stops a cloud native environment",
+		Use:   "rm",
+		Short: "Remove a cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return executeDown(devPath)
 		},
@@ -23,8 +25,8 @@ func Down() *cobra.Command {
 	return cmd
 }
 
-func executeDown(devPath string) error {
-	log.Println("Executing down...")
+func executeRm(devPath string) error {
+	log.Println("Executing rm...")
 
 	namespace, client, _, err := client.Get()
 	if err != nil {
@@ -32,6 +34,16 @@ func executeDown(devPath string) error {
 	}
 
 	dev, err := model.ReadDev(devPath)
+	if err != nil {
+		return err
+	}
+
+	d, err := dev.Deployment()
+	if err != nil {
+		return err
+	}
+
+	err = deployments.Destroy(d, namespace, client)
 	if err != nil {
 		return err
 	}
@@ -45,5 +57,11 @@ func executeDown(devPath string) error {
 	if err != nil {
 		return err
 	}
+
+	err = ksync.Delete(dev)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
