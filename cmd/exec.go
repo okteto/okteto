@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/okteto/cnd/k8/exec"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/okteto/cnd/k8/client"
+	"github.com/okteto/cnd/k8/exec"
 	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
+	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //Exec executes a command on the CND container
@@ -59,8 +59,24 @@ func executeExec(devPath string, args []string) error {
 	}
 
 	if len(pods.Items) > 1 {
-		return fmt.Errorf("More than one cloud native environment have the same name. Please restart your environment")
+		return fmt.Errorf("more than one cloud native environment have the same name. Please restart your environment")
 	}
 
-	return exec.Exec(client, config, &pods.Items[0], os.Stdin, os.Stdout, os.Stderr, args)
+	if dev.Swap.Deployment.Container != "" {
+		if !containerExists(&pods.Items[0], dev.Swap.Deployment.Container) {
+			return fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
+		}
+	}
+
+	return exec.Exec(client, config, &pods.Items[0], dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
+}
+
+func containerExists(pod *apiv1.Pod, container string) bool {
+	for _, c := range pod.Spec.Containers {
+		if c.Name == container {
+			return true
+		}
+	}
+
+	return false
 }
