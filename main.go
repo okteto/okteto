@@ -22,6 +22,7 @@ func main() {
 		cmd.Up(),
 		cmd.Exec(),
 		cmd.Down(),
+		cmd.Rm(),
 	)
 
 	if err := commands.Execute(); err != nil {
