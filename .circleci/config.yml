@@ -6,7 +6,7 @@ jobs:
         environment:
           DEBUG: true
 
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    working_directory: /go/src/github.com/okteto/cnd
 
     environment:
         BINARY_NAME: "cnd"
