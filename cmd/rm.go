@@ -38,6 +38,11 @@ func executeRm(devPath string) error {
 		return err
 	}
 
+	_, err = validateSwapConfiguration(client, namespace, dev)
+	if err != nil {
+		return err
+	}
+
 	d, err := dev.Deployment()
 	if err != nil {
 		return err
