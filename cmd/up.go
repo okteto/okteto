@@ -38,12 +38,12 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	d, err := dev.Deployment()
+	_, err = validateSwapConfiguration(client, namespace, dev)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateSwapConfiguration(client, namespace, dev)
+	d, err := dev.Deployment()
 	if err != nil {
 		return err
 	}
