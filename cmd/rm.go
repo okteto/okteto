@@ -18,7 +18,7 @@ func Rm() *cobra.Command {
 		Use:   "rm",
 		Short: "Remove a cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeDown(devPath)
+			return executeRm(devPath)
 		},
 	}
 	cmd.Flags().StringVarP(&devPath, "file", "f", "cnd.yml", "manifest file")
