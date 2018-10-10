@@ -1,0 +1,28 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:latest
+        environment:
+          DEBUG: true
+
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+
+    environment:
+        BINARY_NAME: "cnd"
+
+    steps:
+      - checkout
+      - run: go test -v ./...
+      - run: go fmt ./...
+      - run: go vet ./...
+      - run: go build -o bin/cnd
+
+      - persist_to_workspace:
+          root: .
+          paths:
+            - bin
+
+      - store_artifacts:
+          path: bin
+          destination: binaries
