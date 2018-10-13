@@ -1,19 +1,33 @@
 package exec
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 
-	"golang.org/x/crypto/ssh/terminal"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/kubernetes/pkg/kubectl/util/term"
 )
 
 // Exec executes the command in the cnd container
 func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
+
+	if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
+		return fmt.Errorf("cannot exec in your cloud native environment; current state is %s", pod.Status.Phase)
+	}
+
+	t := term.TTY{
+		In:  stdin,
+		Out: stdout,
+		Raw: true,
+	}
+
+	sizeQueue := t.MonitorSize(t.GetSize())
+
 	req := c.CoreV1().RESTClient().Post().
 		Namespace(pod.Namespace).
 		Resource("pods").
@@ -28,23 +42,24 @@ func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, containe
 			TTY:       true,
 		}, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(config, http.MethodPost, req.URL())
-	if err != nil {
+	fn := func() error {
+		exec, err := remotecommand.NewSPDYExecutor(config, http.MethodPost, req.URL())
+		if err != nil {
+			return err
+		}
+
+		return exec.Stream(remotecommand.StreamOptions{
+			Stdin:             stdin,
+			Stdout:            stdout,
+			Stderr:            stderr,
+			Tty:               t.Raw,
+			TerminalSizeQueue: sizeQueue,
+		})
+	}
+
+	if err := t.Safe(fn); err != nil {
 		return err
 	}
 
-	// Put the terminal into raw mode to prevent it echoing characters twice.
-	oldState, err := terminal.MakeRaw(0)
-	if err != nil {
-		return err
-	}
-
-	defer terminal.Restore(0, oldState)
-
-	return exec.Stream(remotecommand.StreamOptions{
-		Stdin:  stdin,
-		Stdout: stdout,
-		Stderr: stderr,
-		Tty:    true,
-	})
+	return nil
 }
