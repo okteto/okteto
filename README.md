@@ -4,7 +4,7 @@
 
 **Cloud Native Development** (CND) is about running your development flow entirely in kubernetes, avoiding the time-consuming `docker build/push/pull/redeploy` cycle. 
 
-CND helps you achieve this with a mix of kubernetes automation, file synchying between your local file system and kubernetes and hot reloading of containers.
+CND helps you achieve this with a mix of kubernetes automation, file synching between your local file system and kubernetes and hot reloading of containers.
 
 ## How does it work
 
@@ -117,12 +117,12 @@ For a full demo of Cloud Native Development, check the [Voting App demo](https:/
 
 ## Troubleshooting
 
-### Files are not synchronizing
-cnd leverages [ksync](https://github.com/vapor-ware/ksync) and [syncthing](https://docs.syncthing.ne) to synchronize files betwee your environments. If you files are not being synchronized correctly, please review the following:
+### Files are not synching
+cnd uses [ksync](https://github.com/vapor-ware/ksync) and [syncthing](https://docs.syncthing.ne) to sync files between your environments. If your cloud native environment is not being updated correctly, review the following:
 
 1. Verify that ksync is functioning correctly by running `ksync doctor`
 1. Review ksync's logs (~/.ksync/daemon.log) for errors
-1. Browse to http://localhost:8384 to  see if there are any syncthing-specific issues.
+1. Browse to http://localhost:8384 to see if there are any syncthing-specific issues.
 
-### Files synchronization is slow
+### Files synching is slow
 Please follow [syncthing's docs](https://docs.syncthing.net/users/faq.html#why-is-the-sync-so-slow) to troubleshoot this.
