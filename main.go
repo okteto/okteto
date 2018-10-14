@@ -23,6 +23,7 @@ func main() {
 		cmd.Exec(),
 		cmd.Down(),
 		cmd.Rm(),
+		cmd.Version(),
 	)
 
 	if err := commands.Execute(); err != nil {
