@@ -3,7 +3,6 @@ package syncthing
 import (
 	"bytes"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -39,11 +38,11 @@ type Syncthing struct {
 }
 
 // NewSyncthing constructs a new Syncthing.
-func NewSyncthing(name string, localPath, remoteDeviceID, remoteAddress string) *Syncthing {
+func NewSyncthing(name, namespace, localPath, remoteDeviceID, remoteAddress string) *Syncthing {
 	return &Syncthing{
 		APIKey:         "cnd",
 		Name:           name,
-		Home:           path.Join(os.Getenv("HOME"), ".oksync", name),
+		Home:           path.Join(os.Getenv("HOME"), ".oksync", namespace, name),
 		LocalPath:      localPath,
 		RemoteAddress:  remoteAddress,
 		RemoteDeviceID: remoteDeviceID,
@@ -71,8 +70,6 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 	if err != nil {
 		return err
 	}
-
-	log.Println("cleaning background daemon")
 
 	pid, pidErr := strconv.Atoi(string(content))
 	if pidErr != nil {

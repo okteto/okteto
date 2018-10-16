@@ -64,7 +64,7 @@ func executeUp(devPath, remoteAddress string) error {
 	}
 
 	syncthing := syncthing.NewSyncthing(
-		dev.Name, dev.Mount.Source, syncthing.DefaultRemoteDeviceID, remoteAddress)
+		dev.Name, namespace, dev.Mount.Source, syncthing.DefaultRemoteDeviceID, remoteAddress)
 
 	return syncthing.Run()
 }
