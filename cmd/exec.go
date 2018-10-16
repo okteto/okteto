@@ -58,17 +58,28 @@ func executeExec(devPath string, args []string) error {
 		return fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
 	}
 
+	pod := pods.Items[0]
+	if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
+		return fmt.Errorf("cannot exec in your cloud native environment; current state is %s", pod.Status.Phase)
+	}
+
 	if len(pods.Items) > 1 {
-		return fmt.Errorf("more than one cloud native environment have the same name. Please restart your environment")
+		podNames := make([]string, len(pods.Items))
+		for i, p := range pods.Items {
+			podNames[i] = p.Name
+		}
+
+		return fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
+
 	}
 
 	if dev.Swap.Deployment.Container != "" {
-		if !containerExists(&pods.Items[0], dev.Swap.Deployment.Container) {
+		if !containerExists(&pod, dev.Swap.Deployment.Container) {
 			return fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
 		}
 	}
 
-	return exec.Exec(client, config, &pods.Items[0], dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
+	return exec.Exec(client, config, &pod, dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
 }
 
 func containerExists(pod *apiv1.Pod, container string) bool {
