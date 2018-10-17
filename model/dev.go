@@ -8,10 +8,6 @@ import (
 	"path/filepath"
 
 	yaml "gopkg.in/yaml.v2"
-	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // Dev represents a cloud native development environment
@@ -24,18 +20,6 @@ type Dev struct {
 type swap struct {
 	Deployment deployment `yaml:"deployment"`
 	Service    service    `yaml:"service"`
-}
-
-type deployment struct {
-	File      string   `yaml:"file"`
-	Container string   `yaml:"container"`
-	Image     string   `yaml:"image"`
-	Command   []string `yaml:"command"`
-	Args      []string `yaml:"args"`
-}
-
-type service struct {
-	File string `yaml:"file"`
 }
 
 type mount struct {
@@ -107,79 +91,4 @@ func (dev *Dev) fixPath(originalPath string) {
 			dev.Mount.Source = path.Join(wd, path.Dir(originalPath), dev.Mount.Source)
 		}
 	}
-}
-
-//Deployment returns a k8 deployment for a cloud native environment
-func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
-	cwd, _ := os.Getwd()
-	file, err := os.Open(path.Join(cwd, dev.Swap.Deployment.File))
-	if err != nil {
-		return nil, err
-	}
-	dec := k8Yaml.NewYAMLOrJSONDecoder(file, 1000)
-	var d appsv1.Deployment
-	dec.Decode(&d)
-
-	d.GetObjectMeta().SetName(dev.Name)
-	labels := d.GetObjectMeta().GetLabels()
-	if labels == nil {
-		labels = map[string]string{"cnd": dev.Name}
-	} else {
-		labels["cnd"] = dev.Name
-	}
-	d.GetObjectMeta().SetLabels(labels)
-	if d.Spec.Selector == nil {
-		d.Spec.Selector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{"cnd": dev.Name},
-		}
-	} else {
-		d.Spec.Selector.MatchLabels["cnd"] = dev.Name
-	}
-	d.Spec.Template.GetObjectMeta().SetName(dev.Name)
-	labels = d.Spec.Template.GetObjectMeta().GetLabels()
-	if labels == nil {
-		labels = map[string]string{"cnd": dev.Name}
-	} else {
-		labels["cnd"] = dev.Name
-	}
-	d.Spec.Template.GetObjectMeta().SetLabels(labels)
-
-	for i, c := range d.Spec.Template.Spec.Containers {
-		if c.Name == dev.Swap.Deployment.Container || dev.Swap.Deployment.Container == "" {
-			d.Spec.Template.Spec.Containers[i].Image = dev.Swap.Deployment.Image
-			d.Spec.Template.Spec.Containers[i].ImagePullPolicy = apiv1.PullIfNotPresent
-			d.Spec.Template.Spec.Containers[i].Command = dev.Swap.Deployment.Command
-			d.Spec.Template.Spec.Containers[i].Args = dev.Swap.Deployment.Args
-			d.Spec.Template.Spec.Containers[i].WorkingDir = dev.Mount.Target
-			break
-		}
-	}
-
-	return &d, nil
-}
-
-//Service returns a k8 service for a cloud native environment
-func (dev *Dev) Service(translate bool) (*apiv1.Service, error) {
-	cwd, _ := os.Getwd()
-	file, err := os.Open(path.Join(cwd, dev.Swap.Service.File))
-	if err != nil {
-		return nil, err
-	}
-	dec := k8Yaml.NewYAMLOrJSONDecoder(file, 1000)
-	var s apiv1.Service
-	dec.Decode(&s)
-
-	if !translate {
-		return &s, nil
-	}
-
-	labels := s.GetObjectMeta().GetLabels()
-	if labels == nil {
-		labels = map[string]string{"cnd": dev.Name}
-	} else {
-		labels["cnd"] = dev.Name
-	}
-	s.GetObjectMeta().SetLabels(labels)
-	s.Spec.Selector["cnd"] = dev.Name
-	return &s, nil
 }
