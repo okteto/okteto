@@ -419,7 +419,7 @@
 
 [[projects]]
   branch = "release-8.0"
-  digest = "1:e0234c7080bb87660277b27ddecf7c1f8d05a56b8af8a8fbce3baeb4cca57f54"
+  digest = "1:b351915cfc1249e8a3928a9d701ec55127ab5a095b5d6b9ca30df82af8a1a114"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -469,6 +469,7 @@
     "tools/clientcmd/api/latest",
     "tools/clientcmd/api/v1",
     "tools/metrics",
+    "tools/portforward",
     "tools/reference",
     "tools/remotecommand",
     "transport",
@@ -511,7 +512,9 @@
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api",
+    "k8s.io/client-go/tools/portforward",
     "k8s.io/client-go/tools/remotecommand",
+    "k8s.io/client-go/transport/spdy",
     "k8s.io/kubernetes/pkg/kubectl/util/term",
   ]
   solver-name = "gps-cdcl"
