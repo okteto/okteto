@@ -159,7 +159,11 @@ func (s *Syncthing) Run() error {
 
 // Stop halts the background process and cleans up.
 func (s *Syncthing) Stop() error {
-	defer s.cmd.Process.Wait() // nolint: errcheck
+	pidPath := filepath.Join(s.Home, "syncthing.pid")
 
-	return s.cmd.Process.Signal(os.Interrupt)
+	if err := s.cleanupDaemon(pidPath); err != nil {
+		return err
+	}
+
+	return nil
 }
