@@ -71,6 +71,7 @@ func executeUp(devPath string) error {
 	if err != nil {
 		return err
 	}
+
 	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
 	if err != nil {
 		return err

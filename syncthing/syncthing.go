@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -32,12 +33,14 @@ const (
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
 	cmd            *exec.Cmd
+	BinPath        string
 	Home           string
 	Name           string
 	LocalPath      string
 	RemoteAddress  string
 	RemoteDeviceID string
 	APIKey         string
+	GUIAddress     string
 }
 
 // NewSyncthing constructs a new Syncthing.
@@ -48,13 +51,20 @@ func NewSyncthing(name, namespace, localPath string) (*Syncthing, error) {
 		return nil, err
 	}
 
+	guiPort, err := getAvailablePort()
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Syncthing{
 		APIKey:         "cnd",
+		BinPath:        "syncthing",
 		Name:           name,
 		Home:           path.Join(os.Getenv("HOME"), ".cnd", namespace, name),
 		LocalPath:      localPath,
 		RemoteAddress:  fmt.Sprintf("tcp://localhost:%d", port),
 		RemoteDeviceID: DefaultRemoteDeviceID,
+		GUIAddress:     fmt.Sprintf("http://127.0.0.1:%d", guiPort),
 	}
 
 	if err := s.initConfig(); err != nil {
@@ -153,16 +163,14 @@ func (s *Syncthing) Run() error {
 		return err
 	}
 
-	// TODO calculate the path or include it in the release
-	path := "/usr/local/bin/syncthing"
-
 	cmdArgs := []string{
 		"-home", s.Home,
 		"-no-browser",
 		"-verbose",
+		"-gui-address", s.GUIAddress,
 	}
 
-	s.cmd = exec.Command(path, cmdArgs...) //nolint: gas, gosec
+	s.cmd = exec.Command(s.BinPath, cmdArgs...) //nolint: gas, gosec
 
 	if err := s.cmd.Start(); err != nil {
 		return err
@@ -181,6 +189,7 @@ func (s *Syncthing) Run() error {
 		return err
 	}
 
+	log.Printf("syncthing running on %s", s.GUIAddress)
 	return nil
 }
 
