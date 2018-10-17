@@ -117,12 +117,12 @@ For a full demo of Cloud Native Development, check the [Voting App demo](https:/
 
 ## Troubleshooting
 
-### Files are not synching
-cnd uses [ksync](https://github.com/vapor-ware/ksync) and [syncthing](https://docs.syncthing.ne) to sync files between your environments. If your cloud native environment is not being updated correctly, review the following:
+### Files are not syncing
+cnd uses [ksync](https://github.com/vapor-ware/ksync) and [syncthing](https://docs.syncthing.net) to sync files between your environments. If your cloud native environment is not being updated correctly, review the following:
 
 1. Verify that ksync is functioning correctly by running `ksync doctor`
 1. Review ksync's logs (~/.ksync/daemon.log) for errors
 1. Browse to http://localhost:8384 to see if there are any syncthing-specific issues.
 
-### Files synching is slow
+### Files syncing is slow
 Please follow [syncthing's docs](https://docs.syncthing.net/users/faq.html#why-is-the-sync-so-slow) to troubleshoot this.
