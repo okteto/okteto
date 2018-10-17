@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -17,20 +19,29 @@ import (
 type CNDPortForward struct {
 	StopChan   chan struct{}
 	ReadyChan  chan struct{}
+	IsReady    bool
 	LocalPort  int
 	RemotePort int
 	Out        *bytes.Buffer
 }
 
 //NewCNDPortForward initializes and returns a new port forward structure
-func NewCNDPortForward(remotePort int) *CNDPortForward {
+func NewCNDPortForward(remoteAddress string) (*CNDPortForward, error) {
+	parsed, err := url.Parse(remoteAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	port, _ := strconv.Atoi(parsed.Port())
+
 	return &CNDPortForward{
-		LocalPort:  22100,
-		RemotePort: remotePort,
+		LocalPort:  port,
+		RemotePort: 22000,
 		StopChan:   make(chan struct{}, 1),
 		ReadyChan:  make(chan struct{}, 1),
 		Out:        new(bytes.Buffer),
-	}
+		IsReady:    false,
+	}, nil
 }
 
 // Start starts a port foward for the specified port. The function will block until
@@ -61,12 +72,21 @@ func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod
 		return err
 	}
 
-	log.Printf("tunneling from %s to %s", p.LocalPort, p.RemotePort)
+	go func() {
+		select {
+		case <-pf.Ready:
+			log.Printf("Synchronization starting %d -> %d", p.LocalPort, p.RemotePort)
+			p.IsReady = true
+		}
+	}()
+
 	return pf.ForwardPorts()
 }
 
 // Stop stops the port forwarding
 func (p *CNDPortForward) Stop() {
-	close(p.StopChan)
-	<-p.StopChan
+	if p.StopChan != nil {
+		close(p.StopChan)
+		<-p.StopChan
+	}
 }

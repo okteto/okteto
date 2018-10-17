@@ -2,7 +2,9 @@ package syncthing
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -21,6 +23,7 @@ const (
 	certFile   = "cert.pem"
 	keyFile    = "key.pem"
 	configFile = "config.xml"
+	portFile   = ".port"
 
 	// DefaultRemoteDeviceID remote syncthing ID
 	DefaultRemoteDeviceID = "ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU"
@@ -38,15 +41,27 @@ type Syncthing struct {
 }
 
 // NewSyncthing constructs a new Syncthing.
-func NewSyncthing(name, namespace, localPath, remoteDeviceID, remoteAddress string) *Syncthing {
-	return &Syncthing{
+func NewSyncthing(name, namespace, localPath string) (*Syncthing, error) {
+
+	port, err := getAvailablePort()
+	if err != nil {
+		return nil, err
+	}
+
+	s := &Syncthing{
 		APIKey:         "cnd",
 		Name:           name,
-		Home:           path.Join(os.Getenv("HOME"), ".oksync", namespace, name),
+		Home:           path.Join(os.Getenv("HOME"), ".cnd", namespace, name),
 		LocalPath:      localPath,
-		RemoteAddress:  remoteAddress,
-		RemoteDeviceID: remoteDeviceID,
+		RemoteAddress:  fmt.Sprintf("tcp://localhost:%d", port),
+		RemoteDeviceID: DefaultRemoteDeviceID,
 	}
+
+	if err := s.initConfig(); err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }
 
 // Normally, syscall.Kill would be good enough. Unfortunately, that's not
@@ -114,12 +129,24 @@ func (s *Syncthing) initConfig() error {
 	return nil
 }
 
-// Run starts up a local syncthing process to serve files from.
-func (s *Syncthing) Run() error {
-	if err := s.initConfig(); err != nil {
-		return err
+func getAvailablePort() (int, error) {
+	address, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
 	}
 
+	listener, err := net.ListenTCP("tcp", address)
+	if err != nil {
+		return 0, err
+	}
+
+	defer listener.Close()
+	return listener.Addr().(*net.TCPAddr).Port, nil
+
+}
+
+// Run starts up a local syncthing process to serve files from.
+func (s *Syncthing) Run() error {
 	pidPath := filepath.Join(s.Home, "syncthing.pid")
 
 	if err := s.cleanupDaemon(pidPath); err != nil {

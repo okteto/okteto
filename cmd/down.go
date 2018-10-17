@@ -48,8 +48,10 @@ func executeDown(devPath string) error {
 		return err
 	}
 
-	syncthing := syncthing.NewSyncthing(
-		dev.Name, namespace, dev.Mount.Source, syncthing.DefaultRemoteDeviceID, "")
+	syncthing, err := syncthing.NewSyncthing(dev.Name, namespace, dev.Mount.Source)
+	if err != nil {
+		return err
+	}
 
 	return syncthing.Stop()
 }

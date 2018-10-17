@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 //Exec executes a command on the CND container
@@ -46,40 +47,12 @@ func executeExec(devPath string, args []string) error {
 		return err
 	}
 
-	pods, err := client.CoreV1().Pods(namespace).List(v1.ListOptions{
-		LabelSelector: fmt.Sprintf("cnd=%s", dev.Name),
-	})
-
+	pod, err := getCNDPod(client, namespace, dev)
 	if err != nil {
 		return err
 	}
 
-	if len(pods.Items) == 0 {
-		return fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
-	}
-
-	pod := pods.Items[0]
-	if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
-		return fmt.Errorf("cannot exec in your cloud native environment; current state is %s", pod.Status.Phase)
-	}
-
-	if len(pods.Items) > 1 {
-		podNames := make([]string, len(pods.Items))
-		for i, p := range pods.Items {
-			podNames[i] = p.Name
-		}
-
-		return fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
-
-	}
-
-	if dev.Swap.Deployment.Container != "" {
-		if !containerExists(&pod, dev.Swap.Deployment.Container) {
-			return fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
-		}
-	}
-
-	return exec.Exec(client, config, &pod, dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
+	return exec.Exec(client, config, pod, dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
 }
 
 func containerExists(pod *apiv1.Pod, container string) bool {
@@ -90,4 +63,41 @@ func containerExists(pod *apiv1.Pod, container string) bool {
 	}
 
 	return false
+}
+
+func getCNDPod(c *kubernetes.Clientset, namespace string, dev *model.Dev) (*apiv1.Pod, error) {
+	pods, err := c.CoreV1().Pods(namespace).List(v1.ListOptions{
+		LabelSelector: fmt.Sprintf("cnd=%s", dev.Name),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(pods.Items) == 0 {
+		return nil, fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
+	}
+
+	pod := pods.Items[0]
+	if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
+		return nil, fmt.Errorf("cannot exec in your cloud native environment; current state is %s", pod.Status.Phase)
+	}
+
+	if len(pods.Items) > 1 {
+		podNames := make([]string, len(pods.Items))
+		for i, p := range pods.Items {
+			podNames[i] = p.Name
+		}
+
+		return nil, fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
+
+	}
+
+	if dev.Swap.Deployment.Container != "" {
+		if !containerExists(&pod, dev.Swap.Deployment.Container) {
+			return nil, fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
+		}
+	}
+
+	return &pod, nil
 }

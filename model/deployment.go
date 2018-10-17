@@ -60,9 +60,8 @@ func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 		}
 	}
 
-	dev.createSyncthingContainer(d)
-
-	dev.createSyncthingVolume(d)
+	dev.createSyncthingContainer(&d)
+	dev.createSyncthingVolume(&d)
 
 	return &d, nil
 }
@@ -85,7 +84,7 @@ func (dev *Dev) updateCndContainer(c *apiv1.Container) {
 	)
 }
 
-func (dev *Dev) createSyncthingContainer(d appsv1.Deployment) {
+func (dev *Dev) createSyncthingContainer(d *appsv1.Deployment) {
 	d.Spec.Template.Spec.Containers = append(
 		d.Spec.Template.Spec.Containers,
 		apiv1.Container{
@@ -109,10 +108,11 @@ func (dev *Dev) createSyncthingContainer(d appsv1.Deployment) {
 	)
 }
 
-func (dev *Dev) createSyncthingVolume(d appsv1.Deployment) {
+func (dev *Dev) createSyncthingVolume(d *appsv1.Deployment) {
 	if d.Spec.Template.Spec.Volumes == nil {
 		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
 	}
+
 	d.Spec.Template.Spec.Volumes = append(
 		d.Spec.Template.Spec.Volumes,
 		apiv1.Volume{Name: "cnd-sync"},
