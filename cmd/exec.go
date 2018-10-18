@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"syscall"
 
 	"github.com/okteto/cnd/k8/client"
-	"github.com/okteto/cnd/k8/exec"
+	k8exec "github.com/okteto/cnd/k8/exec"
 	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
 	apiv1 "k8s.io/api/core/v1"
@@ -52,7 +54,9 @@ func executeExec(devPath string, args []string) error {
 		return err
 	}
 
-	return exec.Exec(client, config, pod, dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
+	err = k8exec.Exec(client, config, pod, dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
+	return checkForGracefulExit(err)
+
 }
 
 func containerExists(pod *apiv1.Pod, container string) bool {
@@ -100,4 +104,21 @@ func getCNDPod(c *kubernetes.Clientset, namespace string, dev *model.Dev) (*apiv
 	}
 
 	return &pod, nil
+}
+
+func checkForGracefulExit(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if ce, ok := err.(*exec.ExitError); ok {
+		if status, ok := ce.Sys().(syscall.WaitStatus); ok {
+			// 130 is ctrl+c
+			if status.ExitStatus() == 130 {
+				return nil
+			}
+		}
+	}
+
+	return err
 }

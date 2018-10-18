@@ -83,7 +83,9 @@ func executeUp(devPath string) error {
 	}
 
 	defer stop(sy, pf, dev, namespace, client)
-	return pf.Start(client, restConfig, pod)
+
+	err = pf.Start(client, restConfig, pod)
+	return checkForGracefulExit(err)
 }
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward, dev *model.Dev, namespace string, client *kubernetes.Clientset) {
