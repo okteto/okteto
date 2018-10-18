@@ -12,10 +12,10 @@ arch = $(word 2, $(temp))
 .DEFAULT_GOAL := build
 
 .PHONY: release
-release: $(PLATFORMS)
+build-all: $(PLATFORMS)
 
 $(PLATFORMS):
-	GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/okteto/cnd/cmd.VersionString=${VERSION_STRING}" -o "bin/$(os)-$(arch)/cnd" 
+	GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/okteto/cnd/cmd.VersionString=${VERSION_STRING}" -o "bin/cnd-$(os)-$(arch)" 
 
 .PHONY: build
 build:
