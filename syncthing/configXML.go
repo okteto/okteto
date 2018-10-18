@@ -37,21 +37,19 @@ const configXML = `<configuration version="28">
         <maxRecvKbps>0</maxRecvKbps>
     </device>
     <gui enabled="true" tls="false" debugging="false">
-        <address>127.0.0.1:8384</address>
+        <address>{{.GUIAddress}}</address>
         <apikey>{{.APIKey}}</apikey>
         <theme>default</theme>
     </gui>
     <ldap></ldap>
     <options>
-        <listenAddress>default</listenAddress>
+        <listenAddress>{{.ListenAddress}}</listenAddress>
         <globalAnnounceServer>default</globalAnnounceServer>
         <globalAnnounceEnabled>false</globalAnnounceEnabled>
         <localAnnounceEnabled>false</localAnnounceEnabled>
-        <localAnnouncePort>21027</localAnnouncePort>
-        <localAnnounceMCAddr>[ff12::8384]:21027</localAnnounceMCAddr>
         <maxSendKbps>0</maxSendKbps>
         <maxRecvKbps>0</maxRecvKbps>
-        <reconnectionIntervalS>60</reconnectionIntervalS>
+        <reconnectionIntervalS>30</reconnectionIntervalS>
         <relaysEnabled>false</relaysEnabled>
         <relayReconnectIntervalM>10</relayReconnectIntervalM>
         <startBrowser>false</startBrowser>
@@ -61,12 +59,11 @@ const configXML = `<configuration version="28">
         <natTimeoutSeconds>10</natTimeoutSeconds>
         <urAccepted>-1</urAccepted>
         <urSeen>3</urSeen>
-        <urUniqueID>localhost</urUniqueID>
         <urURL>http://localhost</urURL>
         <urPostInsecurely>false</urPostInsecurely>
         <urInitialDelayS>1800</urInitialDelayS>
         <restartOnWakeup>true</restartOnWakeup>
-        <autoUpgradeIntervalH>12</autoUpgradeIntervalH>
+        <autoUpgradeIntervalH>0</autoUpgradeIntervalH>
         <upgradeToPreReleases>false</upgradeToPreReleases>
         <keepTemporariesH>24</keepTemporariesH>
         <cacheIgnoredFiles>false</cacheIgnoredFiles>
@@ -77,7 +74,7 @@ const configXML = `<configuration version="28">
         <overwriteRemoteDeviceNamesOnConnect>false</overwriteRemoteDeviceNamesOnConnect>
         <tempIndexMinBlocks>10</tempIndexMinBlocks>
         <trafficClass>0</trafficClass>
-        <defaultFolderPath>~</defaultFolderPath>
+        <defaultFolderPath></defaultFolderPath>
         <setLowPriority>true</setLowPriority>
         <minHomeDiskFreePct>0</minHomeDiskFreePct>
     </options>

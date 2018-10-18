@@ -25,28 +25,34 @@ const (
 	keyFile    = "key.pem"
 	configFile = "config.xml"
 	portFile   = ".port"
+	logFile    = "syncthing.log"
 
 	// DefaultRemoteDeviceID remote syncthing ID
 	DefaultRemoteDeviceID = "ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU"
+
+	// DefaultFileWatcherDelay how much to wait before starting a sync after a file change
+	DefaultFileWatcherDelay = 5
 )
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
-	cmd            *exec.Cmd
-	BinPath        string
-	Home           string
-	Name           string
-	LocalPath      string
-	RemoteAddress  string
-	RemoteDeviceID string
-	APIKey         string
-	GUIAddress     string
+	cmd              *exec.Cmd
+	binPath          string
+	Home             string
+	Name             string
+	LocalPath        string
+	RemoteAddress    string
+	RemoteDeviceID   string
+	APIKey           string
+	FileWatcherDelay int
+	GUIAddress       string
+	ListenAddress    string
 }
 
 // NewSyncthing constructs a new Syncthing.
 func NewSyncthing(name, namespace, localPath string) (*Syncthing, error) {
 
-	port, err := getAvailablePort()
+	remotePort, err := getAvailablePort()
 	if err != nil {
 		return nil, err
 	}
@@ -56,15 +62,22 @@ func NewSyncthing(name, namespace, localPath string) (*Syncthing, error) {
 		return nil, err
 	}
 
+	listenPort, err := getAvailablePort()
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Syncthing{
-		APIKey:         "cnd",
-		BinPath:        "syncthing",
-		Name:           name,
-		Home:           path.Join(os.Getenv("HOME"), ".cnd", namespace, name),
-		LocalPath:      localPath,
-		RemoteAddress:  fmt.Sprintf("tcp://localhost:%d", port),
-		RemoteDeviceID: DefaultRemoteDeviceID,
-		GUIAddress:     fmt.Sprintf("http://127.0.0.1:%d", guiPort),
+		APIKey:           "cnd",
+		binPath:          "syncthing",
+		Name:             name,
+		Home:             path.Join(os.Getenv("HOME"), ".cnd", namespace, name),
+		LocalPath:        localPath,
+		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
+		RemoteDeviceID:   DefaultRemoteDeviceID,
+		FileWatcherDelay: DefaultFileWatcherDelay,
+		GUIAddress:       fmt.Sprintf("127.0.0.1:%d", guiPort),
+		ListenAddress:    fmt.Sprintf("0.0.0.0:%d", listenPort),
 	}
 
 	if err := s.initConfig(); err != nil {
@@ -167,17 +180,16 @@ func (s *Syncthing) Run() error {
 		"-home", s.Home,
 		"-no-browser",
 		"-verbose",
-		"-gui-address", s.GUIAddress,
+		"-logfile", path.Join(s.Home, logFile),
 	}
 
-	s.cmd = exec.Command(s.BinPath, cmdArgs...) //nolint: gas, gosec
+	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
+	s.cmd.Env = append(os.Environ(), "STNOUPGRADE=1")
 
 	if err := s.cmd.Start(); err != nil {
 		return err
 	}
 
-	//Because child process signal handling is completely broken, just save the
-	//pid and try to kill it every start.
 	if s.cmd.Process == nil {
 		return nil
 	}
@@ -189,7 +201,7 @@ func (s *Syncthing) Run() error {
 		return err
 	}
 
-	log.Printf("syncthing running on %s", s.GUIAddress)
+	log.Printf("Syncthing running on %s and %s", s.GUIAddress, s.ListenAddress)
 	return nil
 }
 

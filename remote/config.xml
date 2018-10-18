@@ -35,7 +35,7 @@
         <maxRecvKbps>0</maxRecvKbps>
     </device>
     <gui enabled="true" tls="false" debugging="false">
-        <address>{{.GUIAddress}}</address>
+        <address>127.0.0.1:8384</address>
         <apikey>cnd</apikey>
         <theme>default</theme>
     </gui>
