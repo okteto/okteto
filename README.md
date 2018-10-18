@@ -44,9 +44,6 @@ To install `syncthing`, download the corresponding binary from their [releases p
 which syncthing
 ```
 
-
-```
-
 Install **cnd** from by executing:
 
 ```bash
