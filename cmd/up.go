@@ -90,7 +90,7 @@ func executeUp(devPath string) error {
 
 	go handleExitSignal(sy, pf, dev, namespace, client)
 
-	err = checkForGracefulExit(pf.Start(client, restConfig, pod))
+	err = pf.Start(client, restConfig, pod)
 	if err != nil {
 		log.Println(err)
 	}

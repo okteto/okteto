@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
-	"syscall"
 
 	"github.com/okteto/cnd/k8/client"
 	k8exec "github.com/okteto/cnd/k8/exec"
@@ -102,21 +100,4 @@ func getCNDPod(c *kubernetes.Clientset, namespace string, dev *model.Dev) (*apiv
 	}
 
 	return &pod, nil
-}
-
-func checkForGracefulExit(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	if ce, ok := err.(*exec.ExitError); ok {
-		if status, ok := ce.Sys().(syscall.WaitStatus); ok {
-			// 130 is ctrl+c
-			if status.ExitStatus() == 130 {
-				return nil
-			}
-		}
-	}
-
-	return err
 }

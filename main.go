@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os/exec"
+	"syscall"
 
 	"github.com/okteto/cnd/cmd"
 	"github.com/spf13/cobra"
@@ -21,7 +23,24 @@ func main() {
 		cmd.Version(),
 	)
 
-	if err := commands.Execute(); err != nil {
+	if err := checkForGracefulExit(commands.Execute()); err != nil {
 		log.Printf("ERROR: %s", err)
 	}
+}
+
+func checkForGracefulExit(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if ce, ok := err.(*exec.ExitError); ok {
+		if status, ok := ce.Sys().(syscall.WaitStatus); ok {
+			// 130 is ctrl+c
+			if status.ExitStatus() == 130 {
+				return nil
+			}
+		}
+	}
+
+	return err
 }
