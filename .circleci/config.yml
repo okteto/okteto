@@ -16,7 +16,7 @@ jobs:
       - run: go test -v ./...
       - run: go fmt ./...
       - run: go vet ./...
-      - run: go build -o bin/cnd
+      - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
 
       - persist_to_workspace:
           root: .
@@ -26,3 +26,31 @@ jobs:
       - store_artifacts:
           path: bin
           destination: binaries
+  
+  publish-github-release:
+    docker:
+      - image: cibuilds/github:0.10
+    steps:
+      - attach_workspace:
+          at: ./artifacts
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            ghr -u okteto -r cnd -c ${CIRCLE_SHA1} -token ${GITHUB_TOKEN} -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
+workflows:
+  version: 2
+  build-release:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - publish-github-release:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^\d+\.\d+\.\d+$/
+            branches:
+              ignore: /.*/
+      
