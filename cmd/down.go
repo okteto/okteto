@@ -3,6 +3,8 @@ package cmd
 import (
 	"log"
 
+	"github.com/okteto/cnd/syncthing"
+
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/services"
 	"github.com/okteto/cnd/model"
@@ -45,5 +47,11 @@ func executeDown(devPath string) error {
 	if err != nil {
 		return err
 	}
-	return nil
+
+	syncthing, err := syncthing.NewSyncthing(dev.Name, namespace, dev.Mount.Source)
+	if err != nil {
+		return err
+	}
+
+	return syncthing.Stop()
 }

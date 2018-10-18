@@ -5,8 +5,10 @@ import (
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
+	"github.com/okteto/cnd/k8/forward"
 	"github.com/okteto/cnd/k8/services"
-	"github.com/okteto/cnd/ksync"
+	"github.com/okteto/cnd/syncthing"
+
 	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
 )
@@ -14,6 +16,7 @@ import (
 //Up starts or upgrades a cloud native environment
 func Up() *cobra.Command {
 	var devPath string
+
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Starts or upgrades a cloud native environment",
@@ -22,13 +25,14 @@ func Up() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&devPath, "file", "f", "cnd.yml", "manifest file")
+
 	return cmd
 }
 
 func executeUp(devPath string) error {
 	log.Println("Executing up...")
 
-	namespace, client, _, err := client.Get()
+	namespace, client, restConfig, err := client.Get()
 	if err != nil {
 		return err
 	}
@@ -58,15 +62,34 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	err = ksync.Create(dev, namespace)
+	pod, err := getCNDPod(client, namespace, dev)
 	if err != nil {
 		return err
 	}
 
-	err = ksync.Watch()
+	sy, err := syncthing.NewSyncthing(dev.Name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
+	if err != nil {
+		return err
+	}
+
+	if err := sy.Run(); err != nil {
+		return err
+	}
+
+	defer stop(sy, pf)
+	err = pf.Start(client, restConfig, pod)
+	return err
+}
+
+func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
+	if err := sy.Stop(); err != nil {
+		log.Printf(err.Error())
+	}
+
+	pf.Stop()
 }

@@ -1,7 +1,6 @@
 package exec
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 
@@ -15,10 +14,6 @@ import (
 
 // Exec executes the command in the cnd container
 func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
-
-	if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
-		return fmt.Errorf("cannot exec in your cloud native environment; current state is %s", pod.Status.Phase)
-	}
 
 	t := term.TTY{
 		In:  stdin,

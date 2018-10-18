@@ -12,6 +12,7 @@ import (
 
 //Deploy deploys a k8 service
 func Deploy(s *apiv1.Service, namespace string, c *kubernetes.Clientset) error {
+	serviceName := fmt.Sprintf("%s/%s", namespace, s.Name)
 	sClient := c.CoreV1().Services(namespace)
 	sk8, err := sClient.Get(s.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
@@ -19,21 +20,21 @@ func Deploy(s *apiv1.Service, namespace string, c *kubernetes.Clientset) error {
 	}
 
 	if sk8.Name == "" {
-		log.Printf("Creating service '%s'...", s.Name)
+		log.Printf("Creating service '%s'...", serviceName)
 		_, err = sClient.Create(s)
 		if err != nil {
 			return fmt.Errorf("Error creating kubernetes service: %s", err)
 		}
-		log.Printf("Created service '%s'.", s.Name)
+		log.Printf("Created service '%s'.", serviceName)
 	} else {
-		log.Printf("Updating service '%s'...", s.Name)
+		log.Printf("Updating service '%s'...", serviceName)
 		s.Spec.ClusterIP = sk8.Spec.ClusterIP
 		s.GetObjectMeta().SetResourceVersion(sk8.GetObjectMeta().GetResourceVersion())
 		_, err = sClient.Update(s)
 		if err != nil {
 			return fmt.Errorf("Error updating kubernetes service: %s", err)
 		}
-		log.Printf("Updated service '%s'.", s.Name)
+		log.Printf("Updated service '%s'.", serviceName)
 	}
 	return nil
 }

@@ -28,27 +28,16 @@ Once you're ready to integrate, you can revert back to your original configurati
 
 ## Installation
 
-The synching functionality of **cnd** is provided by [ksync](https://github.com/vapor-ware/ksync).
+The synching functionality of **cnd** is provided by [syncthing](https://docs.syncthing.net).
 
-To install `ksync`, execute:
+To install `syncthing`, download the corresponding binary from their [releases page](https://github.com/syncthing/syncthing/releases). 
 
-```bash
-curl https://vapor-ware.github.io/gimme-that/gimme.sh | bash
+**cnd** assumes that synchting is in the path, to verify, run the following:
+```
+which syncthing
 ```
 
-and:
-
-```
-ksync init --image=vaporio/ksync:0.3.2-hotfix
-```
-
-check the `ksync` installation by executing:
-
-```bash
-ksync doctor
-```
-
-If `ksync` is successfully installed, install **cnd** from by executing:
+Install **cnd** from by executing:
 
 ```bash
 go get github.com/okteto/cnd
@@ -118,11 +107,11 @@ For a full demo of Cloud Native Development, check the [Voting App demo](https:/
 ## Troubleshooting
 
 ### Files are not syncing
-cnd uses [ksync](https://github.com/vapor-ware/ksync) and [syncthing](https://docs.syncthing.net) to sync files between your environments. If your cloud native environment is not being updated correctly, review the following:
+cnd uses  [syncthing](https://docs.syncthing.ne) to sync files between your environments. If your cloud native environment is not being updated correctly, review the following:
 
-1. Verify that ksync is functioning correctly by running `ksync doctor`
-1. Review ksync's logs (~/.ksync/daemon.log) for errors
-1. Browse to http://localhost:8384 to see if there are any syncthing-specific issues.
+1. The `cnd up` process is running
+1. Verify that syncthing is running on your environment (there should be two processes per cnd environment running)
+1. Rerun `cnd up` (give it a few minutes to reestablish synchronization)
 
 ### Files syncing is slow
 Please follow [syncthing's docs](https://docs.syncthing.net/users/faq.html#why-is-the-sync-so-slow) to troubleshoot this.

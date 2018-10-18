@@ -6,8 +6,8 @@ import (
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
 	"github.com/okteto/cnd/k8/services"
-	"github.com/okteto/cnd/ksync"
 	"github.com/okteto/cnd/model"
+	"github.com/okteto/cnd/syncthing"
 	"github.com/spf13/cobra"
 )
 
@@ -58,10 +58,9 @@ func executeRm(devPath string) error {
 		return err
 	}
 
-	err = ksync.Delete(dev)
+	syncthing, err := syncthing.NewSyncthing(dev.Name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
 	}
-
-	return nil
+	return syncthing.Stop()
 }
