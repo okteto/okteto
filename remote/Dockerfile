@@ -1,4 +1,4 @@
-FROM syncthing/syncthing
+FROM syncthing/syncthing:v0.14.51
 
 ENV HOME /var/syncthing
 
