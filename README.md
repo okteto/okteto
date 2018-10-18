@@ -26,7 +26,14 @@ Local changes are synched to the **cnd** container via `syncthing`. As you save 
 Once you're ready to integrate, you can revert back to your original configuration for general end-to-end testing before sending a PR or pushing to production.
 
 
-## Installation
+## Homebrew install
+
+```bash
+brew tap okteto/cnd
+brew install cnd
+```
+
+## Manual install
 
 The synching functionality of **cnd** is provided by [syncthing](https://docs.syncthing.net).
 
@@ -35,6 +42,9 @@ To install `syncthing`, download the corresponding binary from their [releases p
 **cnd** assumes that synchting is in the path, to verify, run the following:
 ```
 which syncthing
+```
+
+
 ```
 
 Install **cnd** from by executing:
