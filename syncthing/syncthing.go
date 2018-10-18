@@ -201,7 +201,7 @@ func (s *Syncthing) Run() error {
 		return err
 	}
 
-	log.Printf("Syncthing running on %s and %s", s.GUIAddress, s.ListenAddress)
+	log.Printf("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 	return nil
 }
 

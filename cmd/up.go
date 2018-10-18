@@ -81,6 +81,15 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	defer pf.Stop()
-	return pf.Start(client, restConfig, pod)
+	defer stop(sy, pf)
+	err = pf.Start(client, restConfig, pod)
+	return err
+}
+
+func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
+	if err := sy.Stop(); err != nil {
+		log.Printf(err.Error())
+	}
+
+	pf.Stop()
 }
