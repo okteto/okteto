@@ -16,7 +16,7 @@ jobs:
       - run: go test -v ./...
       - run: go fmt ./...
       - run: go vet ./...
-      - run: make
+      - run: env VERSION_STRING=$CIRCLE_TAG make build
 
       - persist_to_workspace:
           root: .
@@ -32,13 +32,13 @@ jobs:
       - image: cibuilds/github:0.10
     steps:
       - attach_workspace:
-          at: ./binaries
+          at: ./artifacts
       - run:
           name: "Publish Release on GitHub"
           command: |
-            ls -la binaries
-            VERSION=$(binaries/cnd --version)
-            ghr -u okteto -r cnd -c ${CIRCLE_SHA1} -token ${GITHUB_TOKEN} -replace $VERSION  ./binaries/
+            ls -la artifacts/bin
+            VERSION=$(artifacts/bin/cnd --version)
+            ghr -u okteto -r cnd -c ${CIRCLE_SHA1} -token ${GITHUB_TOKEN} -replace $VERSION  ./artifacts/bin/
 workflows:
   version: 2
   build-release:
