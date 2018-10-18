@@ -88,5 +88,6 @@ func (p *CNDPortForward) Stop() {
 	if p.StopChan != nil {
 		close(p.StopChan)
 		<-p.StopChan
+		p.StopChan = nil
 	}
 }

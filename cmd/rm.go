@@ -5,7 +5,6 @@ import (
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
-	"github.com/okteto/cnd/k8/services"
 	"github.com/okteto/cnd/model"
 	"github.com/okteto/cnd/syncthing"
 	"github.com/spf13/cobra"
@@ -48,13 +47,7 @@ func executeRm(devPath string) error {
 		return err
 	}
 
-	s, err := dev.Service(false)
-	if err != nil {
-		return err
-	}
-
-	err = services.Deploy(s, namespace, client)
-	if err != nil {
+	if err := restoreService(dev, namespace, client); err != nil {
 		return err
 	}
 

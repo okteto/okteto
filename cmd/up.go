@@ -8,6 +8,7 @@ import (
 	"github.com/okteto/cnd/k8/forward"
 	"github.com/okteto/cnd/k8/services"
 	"github.com/okteto/cnd/syncthing"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
@@ -81,15 +82,17 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	defer stop(sy, pf)
-	err = pf.Start(client, restConfig, pod)
-	return err
+	defer stop(sy, pf, dev, namespace, client)
+	return pf.Start(client, restConfig, pod)
 }
 
-func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
+func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward, dev *model.Dev, namespace string, client *kubernetes.Clientset) {
 	if err := sy.Stop(); err != nil {
 		log.Printf(err.Error())
 	}
 
 	pf.Stop()
+	if err := restoreService(dev, namespace, client); err != nil {
+		log.Printf(err.Error())
+	}
 }

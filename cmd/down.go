@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/okteto/cnd/syncthing"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/services"
@@ -38,13 +39,7 @@ func executeDown(devPath string) error {
 		return err
 	}
 
-	s, err := dev.Service(false)
-	if err != nil {
-		return err
-	}
-
-	err = services.Deploy(s, namespace, client)
-	if err != nil {
+	if err := restoreService(dev, namespace, client); err != nil {
 		return err
 	}
 
@@ -54,4 +49,13 @@ func executeDown(devPath string) error {
 	}
 
 	return syncthing.Stop()
+}
+
+func restoreService(dev *model.Dev, namespace string, client *kubernetes.Clientset) error {
+	s, err := dev.Service(false)
+	if err != nil {
+		return err
+	}
+
+	return services.Deploy(s, namespace, client)
 }
