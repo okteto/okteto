@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"log"
+	"os"
+	"os/signal"
+	"sync"
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
@@ -13,6 +16,8 @@ import (
 	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
 )
+
+var wg sync.WaitGroup
 
 //Up starts or upgrades a cloud native environment
 func Up() *cobra.Command {
@@ -32,6 +37,7 @@ func Up() *cobra.Command {
 
 func executeUp(devPath string) error {
 	log.Println("Executing up...")
+	wg.Add(1)
 
 	namespace, client, restConfig, err := client.Get()
 	if err != nil {
@@ -82,19 +88,35 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	defer stop(sy, pf, dev, namespace, client)
+	go handleExitSignal(sy, pf, dev, namespace, client)
 
-	err = pf.Start(client, restConfig, pod)
-	return checkForGracefulExit(err)
+	err = checkForGracefulExit(pf.Start(client, restConfig, pod))
+	if err != nil {
+		log.Println(err)
+	}
+
+	wg.Wait()
+	return nil
 }
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward, dev *model.Dev, namespace string, client *kubernetes.Clientset) {
-	if err := sy.Stop(); err != nil {
+	if err := restoreService(dev, namespace, client); err != nil {
 		log.Printf(err.Error())
 	}
 
 	pf.Stop()
-	if err := restoreService(dev, namespace, client); err != nil {
+
+	if err := sy.Stop(); err != nil {
 		log.Printf(err.Error())
 	}
+}
+
+func handleExitSignal(sy *syncthing.Syncthing, pf *forward.CNDPortForward, dev *model.Dev, namespace string, client *kubernetes.Clientset) {
+	c := make(chan os.Signal)
+	defer wg.Done()
+
+	signal.Notify(c, os.Interrupt)
+	_ = <-c
+	stop(sy, pf, dev, namespace, client)
+	os.Exit(1)
 }

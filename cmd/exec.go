@@ -54,9 +54,7 @@ func executeExec(devPath string, args []string) error {
 		return err
 	}
 
-	err = k8exec.Exec(client, config, pod, dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
-	return checkForGracefulExit(err)
-
+	return k8exec.Exec(client, config, pod, dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
 }
 
 func containerExists(pod *apiv1.Pod, container string) bool {
