@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path"
 	"path/filepath"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -30,7 +32,7 @@ type mount struct {
 func (dev *Dev) validate() error {
 	file, err := os.Stat(dev.Mount.Source)
 	if err != nil && os.IsNotExist(err) {
-		return fmt.Errorf("Source mount folder does not exists")
+		return fmt.Errorf("Source mount folder %s does not exists", dev.Mount.Source)
 	}
 	if !file.Mode().IsDir() {
 		return fmt.Errorf("Source mount folder is not a directory")
@@ -52,6 +54,10 @@ func ReadDev(devPath string) (*Dev, error) {
 	}
 
 	d, err := loadDev(b)
+	if err != nil {
+		return nil, err
+	}
+
 	d.fixPath(devPath)
 	return d, nil
 }
@@ -73,6 +79,12 @@ func loadDev(b []byte) (*Dev, error) {
 	err := yaml.Unmarshal(b, &dev)
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.HasPrefix(dev.Mount.Source, "~/") {
+		usr, _ := user.Current()
+		dir := usr.HomeDir
+		dev.Mount.Source = filepath.Join(dir, dev.Mount.Source[2:])
 	}
 
 	if err := dev.validate(); err != nil {
