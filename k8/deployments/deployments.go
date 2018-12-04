@@ -85,6 +85,6 @@ func Destroy(d *appsv1.Deployment, namespace string, c *kubernetes.Clientset) er
 }
 
 // GetFullName returns the full name of the deployment. This is mostly used for logs and labels
-func GetFullName(deploymentName, namespace string) string {
+func GetFullName(namespace, deploymentName string) string {
 	return fmt.Sprintf("%s/%s", namespace, deploymentName)
 }
