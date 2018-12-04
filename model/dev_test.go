@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestReadDev(t *testing.T) {
+func Test_fixPath(t *testing.T) {
 	wd, _ := os.Getwd()
 
 	var tests = []struct {
@@ -51,5 +51,31 @@ func TestReadDev(t *testing.T) {
 				t.Errorf("%s != %s", dev.Mount.Source, tt.expected)
 			}
 		})
+	}
+}
+
+func Test_loadDev(t *testing.T) {
+	manifest := []byte(`
+swap:
+  deployment:
+    file: deployment.yml
+    container: core
+    image: codescope/core:0.1.8
+    command: ["uwsgi"]
+    args: ["--gevent", "100", "--http-socket", "0.0.0.0:8000", "--mount", "/=codescope:app", "--python-autoreload", "1"]
+mount:
+  source: /Users/fernandomayofernandez/PycharmProjects/codescope-core
+  target: /app`)
+	d, err := loadDev(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(d.Swap.Deployment.Command) != 1 || d.Swap.Deployment.Command[0] != "uwsgi" {
+		t.Errorf("command was not parsed: %+v", d)
+	}
+
+	if len(d.Swap.Deployment.Args) != 8 || d.Swap.Deployment.Args[4] != "--mount" {
+		t.Errorf("args was not parsed: %+v", d)
 	}
 }

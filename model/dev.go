@@ -54,6 +54,10 @@ func ReadDev(devPath string) (*Dev, error) {
 		return nil, err
 	}
 
+	if err := d.validate(); err != nil {
+		return nil, err
+	}
+
 	d.fixPath(devPath)
 	return d, nil
 }
@@ -81,10 +85,6 @@ func loadDev(b []byte) (*Dev, error) {
 		usr, _ := user.Current()
 		dir := usr.HomeDir
 		dev.Mount.Source = filepath.Join(dir, dev.Mount.Source[2:])
-	}
-
-	if err := dev.validate(); err != nil {
-		return nil, err
 	}
 
 	return &dev, nil
