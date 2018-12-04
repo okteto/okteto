@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/cnd/storage"
+	"github.com/okteto/cnd/pkg/storage"
 
-	"github.com/okteto/cnd/k8/client"
-	"github.com/okteto/cnd/k8/exec"
+	"github.com/okteto/cnd/pkg/k8/client"
+	"github.com/okteto/cnd/pkg/k8/exec"
 	"github.com/spf13/cobra"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
