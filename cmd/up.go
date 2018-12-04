@@ -41,27 +41,22 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	d, err := dev.DevDeployment()
+	name, err := deployments.DevDeploy(dev, namespace, client)
 	if err != nil {
 		return err
 	}
 
-	err = deployments.Deploy(d, namespace, client)
+	pod, err := deployments.GetCNDPod(client, namespace, name, dev.Swap.Deployment.Container)
 	if err != nil {
 		return err
 	}
 
-	pod, err := getCNDPod(client, namespace, d.Name, dev.Swap.Deployment.Container)
+	sy, err := syncthing.NewSyncthing(name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
 	}
 
-	sy, err := syncthing.NewSyncthing(d.Name, namespace, dev.Mount.Source)
-	if err != nil {
-		return err
-	}
-
-	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, d.Name))
+	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, name))
 	if err != nil {
 		return err
 	}
@@ -70,7 +65,7 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	err = storage.Insert(namespace, d.Name, dev.Swap.Deployment.Container, sy.LocalPath, sy.GUIAddress)
+	err = storage.Insert(namespace, name, dev.Swap.Deployment.Container, sy.LocalPath, sy.GUIAddress)
 	if err != nil {
 		return err
 	}

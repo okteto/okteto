@@ -1,12 +1,9 @@
 package model
 
 import (
-	"os"
-
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type deployment struct {
@@ -21,17 +18,8 @@ var (
 	devReplicas int32 = 1
 )
 
-//Deployment returns a k8 deployment
-func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
-	return dev.loadDeployment()
-}
-
-//DevDeployment returns a k8 deployment modified with  a cloud native environment
-func (dev *Dev) DevDeployment() (*appsv1.Deployment, error) {
-	d, err := dev.loadDeployment()
-	if err != nil {
-		return nil, err
-	}
+//TurnIntoDevDeployment modifies a  k8 deployment with the cloud native environment settings
+func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment) {
 
 	labels := d.GetObjectMeta().GetLabels()
 	if labels == nil {
@@ -39,6 +27,7 @@ func (dev *Dev) DevDeployment() (*appsv1.Deployment, error) {
 	} else {
 		labels["cnd"] = d.Name
 	}
+
 	d.GetObjectMeta().SetLabels(labels)
 
 	labels = d.Spec.Template.GetObjectMeta().GetLabels()
@@ -64,8 +53,6 @@ func (dev *Dev) DevDeployment() (*appsv1.Deployment, error) {
 		log.Info("cnd only supports running with 1 replica in dev mode")
 		d.Spec.Replicas = &devReplicas
 	}
-
-	return d, nil
 }
 
 func (dev *Dev) updateCndContainer(c *apiv1.Container) {
@@ -123,17 +110,4 @@ func (dev *Dev) createSyncthingVolume(d *appsv1.Deployment) {
 		d.Spec.Template.Spec.Volumes,
 		apiv1.Volume{Name: "cnd-sync"},
 	)
-}
-
-func (dev *Dev) loadDeployment() (*appsv1.Deployment, error) {
-	log.Debugf("loading deployment definition from %s", dev.Swap.Deployment.File)
-	file, err := os.Open(dev.Swap.Deployment.File)
-	if err != nil {
-		return nil, err
-	}
-
-	dec := k8Yaml.NewYAMLOrJSONDecoder(file, 1000)
-	var d appsv1.Deployment
-	err = dec.Decode(&d)
-	return &d, err
 }

@@ -38,22 +38,17 @@ func executeDown(devPath string) error {
 		return err
 	}
 
-	d, err := dev.Deployment()
+	name, err := deployments.Deploy(dev, namespace, client)
 	if err != nil {
 		return err
 	}
 
-	err = deployments.Deploy(d, namespace, client)
+	syncthing, err := syncthing.NewSyncthing(name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
 	}
 
-	syncthing, err := syncthing.NewSyncthing(d.Name, namespace, dev.Mount.Source)
-	if err != nil {
-		return err
-	}
-
-	storage.Delete(namespace, d.Name)
+	storage.Delete(namespace, name)
 
 	return syncthing.Stop()
 }
