@@ -16,7 +16,6 @@ import (
 
 //Exec executes a command on the CND container
 func Exec() *cobra.Command {
-	var devPath string
 	cmd := &cobra.Command{
 		Use:   "exec COMMAND",
 		Short: "Execute a command in the cloud native environment",

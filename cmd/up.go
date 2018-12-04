@@ -17,8 +17,6 @@ import (
 
 //Up starts or upgrades a cloud native environment
 func Up() *cobra.Command {
-	var devPath string
-
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Starts or upgrades a cloud native environment",
