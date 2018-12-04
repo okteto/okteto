@@ -5,24 +5,17 @@ A Cloud Native Development file (`cnd.yml`) defines the container to be swapped 
 Below is an example of a `cnd.yml`:
 
 ```yaml
-name: dev
 swap:
   deployment:
     file: nginx-deployment.yml
     container: nginx
     image: ubuntu
-  service:
-    file: nginx-service.yml
 mount:
   source: .
   target: /src
 ```
 
 Each key is documented below:
-
-## name (required)
-
-The name of the cloud native development. Must be unique across your set of cloud native environments.
 
 ## swap.deployment.file (required)
 
@@ -41,10 +34,6 @@ The container image to be used by the cloud native environment.
 The command to be executed by the cloud native environment.
 
 It has to be a non-finishing command (default: `tail -f /dev/null`)
-
-## swap.service.file (required)
-
-The path to the manifest of the service to be replaced by the cloud native environment.
 
 ## mount.source (required)
 
