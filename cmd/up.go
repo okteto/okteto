@@ -55,12 +55,12 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	sy, err := syncthing.NewSyncthing(s.Name, namespace, dev.Mount.Source)
+	sy, err := syncthing.NewSyncthing(d.Name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
 	}
 
-	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, dev.Name))
+	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, d.Name))
 	if err != nil {
 		return err
 	}

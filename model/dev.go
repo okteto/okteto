@@ -14,9 +14,8 @@ import (
 
 // Dev represents a cloud native development environment
 type Dev struct {
-	Name  string `yaml:"name"`
-	Swap  swap   `yaml:"swap"`
-	Mount mount  `yaml:"mount"`
+	Swap  swap  `yaml:"swap"`
+	Mount mount `yaml:"mount"`
 }
 
 type swap struct {

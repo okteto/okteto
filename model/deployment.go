@@ -31,17 +31,17 @@ func (dev *Dev) DevDeployment() (*appsv1.Deployment, error) {
 
 	labels := d.GetObjectMeta().GetLabels()
 	if labels == nil {
-		labels = map[string]string{"cnd": dev.Name}
+		labels = map[string]string{"cnd": d.Name}
 	} else {
-		labels["cnd"] = dev.Name
+		labels["cnd"] = d.Name
 	}
 	d.GetObjectMeta().SetLabels(labels)
 
 	labels = d.Spec.Template.GetObjectMeta().GetLabels()
 	if labels == nil {
-		labels = map[string]string{"cnd": dev.Name}
+		labels = map[string]string{"cnd": d.Name}
 	} else {
-		labels["cnd"] = dev.Name
+		labels["cnd"] = d.Name
 	}
 
 	d.Spec.Template.GetObjectMeta().SetLabels(labels)

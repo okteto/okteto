@@ -47,7 +47,7 @@ func executeExec(devPath string, args []string) error {
 		return err
 	}
 
-	pod, err := getCNDPod(client, namespace, dev)
+	pod, err := getCNDPod(client, namespace, d.Name, dev)
 	if err != nil {
 		return err
 	}
@@ -65,12 +65,12 @@ func containerExists(pod *apiv1.Pod, container string) bool {
 	return false
 }
 
-func getCNDPod(c *kubernetes.Clientset, namespace string, dev *model.Dev) (*apiv1.Pod, error) {
+func getCNDPod(c *kubernetes.Clientset, namespace, deploymentName string, dev *model.Dev) (*apiv1.Pod, error) {
 	tries := 0
 	for tries < 30 {
 
 		pods, err := c.CoreV1().Pods(namespace).List(v1.ListOptions{
-			LabelSelector: fmt.Sprintf("cnd=%s", dev.Name),
+			LabelSelector: fmt.Sprintf("cnd=%s", deploymentName),
 		})
 
 		if err != nil {
