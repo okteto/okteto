@@ -14,6 +14,10 @@ const (
 	version = "1.0"
 )
 
+var (
+	stPath string
+)
+
 //Storage represents the cli state
 type Storage struct {
 	path     string
@@ -27,17 +31,18 @@ type Service struct {
 	Syncthing string `yaml:"syncthing,omitempty"`
 }
 
+func init() {
+	stPath = path.Join(os.Getenv("HOME"), ".cnd", ".state")
+}
 func load() (*Storage, error) {
-	filePath := path.Join(os.Getenv("HOME"), ".cnd", ".state")
-
 	var s Storage
-	s.path = filePath
+	s.path = stPath
 	s.Version = version
 	s.Services = map[string]Service{}
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	if _, err := os.Stat(stPath); os.IsNotExist(err) {
 		return &s, nil
 	}
-	bytes, err := ioutil.ReadFile(filePath)
+	bytes, err := ioutil.ReadFile(stPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading the storage file: %s", err.Error())
 	}
