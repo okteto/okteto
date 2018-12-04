@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/exec"
@@ -66,38 +67,54 @@ func containerExists(pod *apiv1.Pod, container string) bool {
 }
 
 func getCNDPod(c *kubernetes.Clientset, namespace string, dev *model.Dev) (*apiv1.Pod, error) {
-	pods, err := c.CoreV1().Pods(namespace).List(v1.ListOptions{
-		LabelSelector: fmt.Sprintf("cnd=%s", dev.Name),
-	})
+	tries := 0
+	for tries < 30 {
 
-	if err != nil {
-		return nil, err
-	}
+		pods, err := c.CoreV1().Pods(namespace).List(v1.ListOptions{
+			LabelSelector: fmt.Sprintf("cnd=%s", dev.Name),
+		})
 
-	if len(pods.Items) == 0 {
-		return nil, fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
-	}
-
-	pod := pods.Items[0]
-	if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
-		return nil, fmt.Errorf("cannot exec in your cloud native environment; current state is %s", pod.Status.Phase)
-	}
-
-	if len(pods.Items) > 1 {
-		podNames := make([]string, len(pods.Items))
-		for i, p := range pods.Items {
-			podNames[i] = p.Name
+		if err != nil {
+			return nil, err
 		}
 
-		return nil, fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
-
-	}
-
-	if dev.Swap.Deployment.Container != "" {
-		if !containerExists(&pod, dev.Swap.Deployment.Container) {
-			return nil, fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
+		if len(pods.Items) == 0 {
+			return nil, fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
 		}
+
+		pod := pods.Items[0]
+		if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
+			return nil, fmt.Errorf("cannot exec in your cloud native environment; current state is %s", pod.Status.Phase)
+		}
+
+		var runningPods []apiv1.Pod
+		for _, pod := range pods.Items {
+			if pod.Status.Phase == apiv1.PodRunning && pod.GetObjectMeta().GetDeletionTimestamp() == nil {
+				runningPods = append(runningPods, pod)
+			}
+		}
+
+		if len(runningPods) == 1 {
+			if dev.Swap.Deployment.Container != "" {
+				if !containerExists(&pod, dev.Swap.Deployment.Container) {
+					return nil, fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
+				}
+			}
+
+			return &runningPods[0], nil
+		}
+
+		if len(runningPods) > 1 {
+			podNames := make([]string, len(runningPods))
+			for i, p := range runningPods {
+				podNames[i] = p.Name
+			}
+			return nil, fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
+		}
+
+		tries++
+		time.Sleep(1 * time.Second)
 	}
 
-	return &pod, nil
+	return nil, fmt.Errorf("kubernetes is taking long to create the dev mode container. Please, check for erros or retry in about 1 minute")
 }
