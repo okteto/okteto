@@ -21,7 +21,6 @@ type Dev struct {
 
 type swap struct {
 	Deployment deployment `yaml:"deployment"`
-	Service    service    `yaml:"service"`
 }
 
 type mount struct {
@@ -40,9 +39,7 @@ func (dev *Dev) validate() error {
 	if dev.Swap.Deployment.File == "" {
 		return fmt.Errorf("Swap deployment file cannot be empty")
 	}
-	if dev.Swap.Deployment.Image == "" {
-		return fmt.Errorf("Swap deployment image cannot be empty")
-	}
+
 	return nil
 }
 

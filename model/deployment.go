@@ -18,18 +18,18 @@ type deployment struct {
 	Args      []string `yaml:"args"`
 }
 
-//Deployment returns a k8 deployment for a cloud native environment
+//Deployment returns a k8 deployment
 func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
-	cwd, _ := os.Getwd()
-	file, err := os.Open(path.Join(cwd, dev.Swap.Deployment.File))
+	return dev.loadDeployment()
+}
+
+//DevDeployment returns a k8 deployment modified with  a cloud native environment
+func (dev *Dev) DevDeployment() (*appsv1.Deployment, error) {
+	d, err := dev.loadDeployment()
 	if err != nil {
 		return nil, err
 	}
-	dec := k8Yaml.NewYAMLOrJSONDecoder(file, 1000)
-	var d appsv1.Deployment
-	dec.Decode(&d)
 
-	d.GetObjectMeta().SetName(dev.Name)
 	labels := d.GetObjectMeta().GetLabels()
 	if labels == nil {
 		labels = map[string]string{"cnd": dev.Name}
@@ -60,10 +60,10 @@ func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 		}
 	}
 
-	dev.createSyncthingContainer(&d)
-	dev.createSyncthingVolume(&d)
+	dev.createSyncthingContainer(d)
+	dev.createSyncthingVolume(d)
 
-	return &d, nil
+	return d, nil
 }
 
 func (dev *Dev) updateCndContainer(c *apiv1.Container) {
@@ -117,4 +117,16 @@ func (dev *Dev) createSyncthingVolume(d *appsv1.Deployment) {
 		d.Spec.Template.Spec.Volumes,
 		apiv1.Volume{Name: "cnd-sync"},
 	)
+}
+
+func (dev *Dev) loadDeployment() (*appsv1.Deployment, error) {
+	cwd, _ := os.Getwd()
+	file, err := os.Open(path.Join(cwd, dev.Swap.Deployment.File))
+	if err != nil {
+		return nil, err
+	}
+	dec := k8Yaml.NewYAMLOrJSONDecoder(file, 1000)
+	var d *appsv1.Deployment
+	err = dec.Decode(d)
+	return d, err
 }

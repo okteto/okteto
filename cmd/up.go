@@ -8,7 +8,6 @@ import (
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
 	"github.com/okteto/cnd/k8/forward"
-	"github.com/okteto/cnd/k8/services"
 	"github.com/okteto/cnd/syncthing"
 
 	"github.com/okteto/cnd/model"
@@ -43,22 +42,12 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	d, err := dev.Deployment()
+	d, err := dev.DevDeployment()
 	if err != nil {
 		return err
 	}
 
 	err = deployments.Deploy(d, namespace, client)
-	if err != nil {
-		return err
-	}
-
-	s, err := dev.Service(true)
-	if err != nil {
-		return err
-	}
-
-	err = services.Deploy(s, namespace, client)
 	if err != nil {
 		return err
 	}
