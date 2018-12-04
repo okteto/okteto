@@ -14,6 +14,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/okteto/cnd/storage"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -41,6 +42,7 @@ type Syncthing struct {
 	binPath          string
 	Home             string
 	Name             string
+	Namespace        string
 	LocalPath        string
 	RemoteAddress    string
 	RemoteDeviceID   string
@@ -72,6 +74,7 @@ func NewSyncthing(name, namespace, localPath string) (*Syncthing, error) {
 		APIKey:           "cnd",
 		binPath:          "syncthing",
 		Name:             name,
+		Namespace:        namespace,
 		Home:             path.Join(os.Getenv("HOME"), ".cnd", namespace, name),
 		LocalPath:        localPath,
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
@@ -171,6 +174,11 @@ func getAvailablePort() (int, error) {
 
 // Run starts up a local syncthing process to serve files from.
 func (s *Syncthing) Run() error {
+	err := storage.Insert(s.Namespace, s.Name, s.LocalPath, s.GUIAddress)
+	if err != nil {
+		return err
+	}
+
 	pidPath := filepath.Join(s.Home, "syncthing.pid")
 
 	if err := s.cleanupDaemon(pidPath); err != nil {
@@ -208,6 +216,7 @@ func (s *Syncthing) Run() error {
 
 // Stop halts the background process and cleans up.
 func (s *Syncthing) Stop() error {
+	storage.Delete(s.Namespace, s.Name)
 	pidPath := filepath.Join(s.Home, "syncthing.pid")
 
 	if err := s.cleanupDaemon(pidPath); err != nil {

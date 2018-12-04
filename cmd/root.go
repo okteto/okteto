@@ -11,7 +11,7 @@ var (
 	logLevel string
 	devPath  string
 	root     = &cobra.Command{
-		Use:   "cnd [flags] COMMAND [ARG...]",
+		Use:   "cnd COMMAND [ARG...]",
 		Short: "Manage cloud native environments",
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			l, err := log.ParseLevel(logLevel)
@@ -32,6 +32,7 @@ func init() {
 		Exec(),
 		Down(),
 		Version(),
+		List(),
 	)
 }
 
