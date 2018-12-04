@@ -57,14 +57,11 @@ Note: these instructions assume that you already have a kubernetes-based applica
 Define your Cloud Native Development file (`cnd.yml`). A `cnd.yml` looks like this:
 
 ```yaml
-name: dev
 swap:
   deployment:
     file: nginx-deployment.yml
     container: nginx
     image: ubuntu
-  service:
-    file: nginx-service.yml
 mount:
   source: .
   target: /src
