@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/okteto/cnd/storage"
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/exec"
-	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +23,7 @@ func Exec() *cobra.Command {
 		Use:   "exec COMMAND",
 		Short: "Execute a command in the cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeExec(devPath, args)
+			return executeExec(args)
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
@@ -35,24 +37,45 @@ func Exec() *cobra.Command {
 	return cmd
 }
 
-func executeExec(devPath string, args []string) error {
+func executeExec(args []string) error {
+	services := storage.All()
+	candidates := []storage.Service{}
+	deploymentFullName := ""
+	devContainer := ""
+	folder, _ := os.Getwd()
+
+	for name, svc := range services {
+		if strings.HasPrefix(folder, svc.Folder) {
+			candidates = append(candidates, svc)
+			if deploymentFullName == "" {
+				deploymentFullName = name
+				devContainer = svc.Container
+			}
+		}
+	}
+
+	if len(candidates) == 0 {
+		return fmt.Errorf("There is not a dev mode service in your current folder")
+	}
+	if len(candidates) > 1 {
+		fmt.Printf("warning: there are %d dev mode services in your current folder, taking '%s'\n", len(candidates), deploymentFullName)
+	}
+
+	parts := strings.SplitN(deploymentFullName, "/", 2)
+	namespace := parts[0]
+	deploymentName := parts[1]
 
 	namespace, client, config, err := client.Get()
 	if err != nil {
 		return err
 	}
 
-	dev, err := model.ReadDev(devPath)
+	pod, err := getCNDPod(client, namespace, deploymentName, devContainer)
 	if err != nil {
 		return err
 	}
 
-	pod, err := getCNDPod(client, namespace, d.Name, dev)
-	if err != nil {
-		return err
-	}
-
-	return exec.Exec(client, config, pod, dev.Swap.Deployment.Container, os.Stdin, os.Stdout, os.Stderr, args)
+	return exec.Exec(client, config, pod, devContainer, os.Stdin, os.Stdout, os.Stderr, args)
 }
 
 func containerExists(pod *apiv1.Pod, container string) bool {
@@ -65,7 +88,7 @@ func containerExists(pod *apiv1.Pod, container string) bool {
 	return false
 }
 
-func getCNDPod(c *kubernetes.Clientset, namespace, deploymentName string, dev *model.Dev) (*apiv1.Pod, error) {
+func getCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer string) (*apiv1.Pod, error) {
 	tries := 0
 	for tries < 30 {
 
@@ -94,9 +117,9 @@ func getCNDPod(c *kubernetes.Clientset, namespace, deploymentName string, dev *m
 		}
 
 		if len(runningPods) == 1 {
-			if dev.Swap.Deployment.Container != "" {
-				if !containerExists(&pod, dev.Swap.Deployment.Container) {
-					return nil, fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
+			if devContainer != "" {
+				if !containerExists(&pod, devContainer) {
+					return nil, fmt.Errorf("container %s doesn't exist in the pod", devContainer)
 				}
 			}
 

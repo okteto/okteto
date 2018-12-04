@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/okteto/cnd/storage"
 	"github.com/okteto/cnd/syncthing"
 
 	"github.com/okteto/cnd/k8/client"
@@ -51,6 +52,8 @@ func executeDown(devPath string) error {
 	if err != nil {
 		return err
 	}
+
+	storage.Delete(namespace, d.Name)
 
 	return syncthing.Stop()
 }

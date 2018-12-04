@@ -29,6 +29,7 @@ type Storage struct {
 type Service struct {
 	Folder    string `yaml:"folder,omitempty"`
 	Syncthing string `yaml:"syncthing,omitempty"`
+	Container string `yaml:"container,omitempty`
 }
 
 func init() {
@@ -54,7 +55,7 @@ func load() (*Storage, error) {
 }
 
 //Insert inserts a new service entry
-func Insert(namespace, deployment, folder, host string) error {
+func Insert(namespace, deployment, container, folder, host string) error {
 	s, err := load()
 	if err != nil {
 		return err
@@ -65,7 +66,7 @@ func Insert(namespace, deployment, folder, host string) error {
 	if err != nil {
 		return err
 	}
-	svc := Service{Folder: absFolder, Syncthing: host}
+	svc := Service{Folder: absFolder, Syncthing: host, Container: container}
 	if svc2, ok := s.Services[fullName]; ok {
 		if svc2 == svc {
 			return nil
