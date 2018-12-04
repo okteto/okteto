@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
@@ -30,7 +30,7 @@ func Up() *cobra.Command {
 }
 
 func executeUp(devPath string) error {
-	log.Println("Executing up...")
+	log.Info("Activating dev mode...")
 
 	namespace, client, restConfig, err := client.Get()
 	if err != nil {
@@ -72,7 +72,7 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
+	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, dev.Name))
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func executeUp(devPath string) error {
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
 	if err := sy.Stop(); err != nil {
-		log.Printf(err.Error())
+		log.Error(err)
 	}
 
 	pf.Stop()

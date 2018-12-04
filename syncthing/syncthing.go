@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -201,7 +202,7 @@ func (s *Syncthing) Run() error {
 		return err
 	}
 
-	log.Printf("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
+	log.Debugf("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 	return nil
 }
 

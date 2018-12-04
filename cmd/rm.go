@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
@@ -26,7 +26,7 @@ func Rm() *cobra.Command {
 }
 
 func executeRm(devPath string) error {
-	log.Println("Executing rm...")
+	log.Debug("Executing rm...")
 
 	namespace, client, _, err := client.Get()
 	if err != nil {

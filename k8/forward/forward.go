@@ -3,10 +3,11 @@ package forward
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -17,16 +18,18 @@ import (
 
 //CNDPortForward holds the information of the port forward
 type CNDPortForward struct {
-	StopChan   chan struct{}
-	ReadyChan  chan struct{}
-	IsReady    bool
-	LocalPort  int
-	RemotePort int
-	Out        *bytes.Buffer
+	StopChan       chan struct{}
+	ReadyChan      chan struct{}
+	IsReady        bool
+	LocalPort      int
+	RemotePort     int
+	LocalPath      string
+	DeploymentName string
+	Out            *bytes.Buffer
 }
 
 //NewCNDPortForward initializes and returns a new port forward structure
-func NewCNDPortForward(remoteAddress string) (*CNDPortForward, error) {
+func NewCNDPortForward(localPath, remoteAddress, deploymentName string) (*CNDPortForward, error) {
 	parsed, err := url.Parse(remoteAddress)
 	if err != nil {
 		return nil, err
@@ -35,12 +38,14 @@ func NewCNDPortForward(remoteAddress string) (*CNDPortForward, error) {
 	port, _ := strconv.Atoi(parsed.Port())
 
 	return &CNDPortForward{
-		LocalPort:  port,
-		RemotePort: 22000,
-		StopChan:   make(chan struct{}, 1),
-		ReadyChan:  make(chan struct{}, 1),
-		Out:        new(bytes.Buffer),
-		IsReady:    false,
+		LocalPort:      port,
+		RemotePort:     22000,
+		StopChan:       make(chan struct{}, 1),
+		ReadyChan:      make(chan struct{}, 1),
+		Out:            new(bytes.Buffer),
+		LocalPath:      localPath,
+		DeploymentName: deploymentName,
+		IsReady:        false,
 	}, nil
 }
 
@@ -75,7 +80,8 @@ func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod
 	go func() {
 		select {
 		case <-pf.Ready:
-			log.Printf("Synchronization starting %d -> %d", p.LocalPort, p.RemotePort)
+			log.Infof("Linking '%s' to %s...", p.LocalPath, p.DeploymentName)
+			log.Infof("Ready! Go to your local IDE and continue coding!")
 			p.IsReady = true
 		}
 	}()
