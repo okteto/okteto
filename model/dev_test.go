@@ -38,17 +38,19 @@ func TestReadDev(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		dev := Dev{
-			Name: "test",
-			Mount: mount{
-				Source: tt.source,
-				Target: tt.target,
-			},
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			dev := Dev{
+				Name: "test",
+				Mount: mount{
+					Source: tt.source,
+					Target: tt.target,
+				},
+			}
 
-		dev.fixPath(tt.devPath)
-		if dev.Mount.Source != tt.expected {
-			t.Errorf("%s != %s", dev.Mount.Source, tt.expected)
-		}
+			dev.fixPath(tt.devPath)
+			if dev.Mount.Source != tt.expected {
+				t.Errorf("%s != %s", dev.Mount.Source, tt.expected)
+			}
+		})
 	}
 }
