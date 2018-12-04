@@ -67,7 +67,7 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	sy, err := syncthing.NewSyncthing(dev.Name, namespace, dev.Mount.Source)
+	sy, err := syncthing.NewSyncthing(s.Name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
 	}

@@ -37,6 +37,7 @@ func Exec() *cobra.Command {
 }
 
 func executeExec(devPath string, args []string) error {
+
 	namespace, client, config, err := client.Get()
 	if err != nil {
 		return err
