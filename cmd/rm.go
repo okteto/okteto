@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
@@ -13,20 +13,20 @@ import (
 
 //Rm removes a cloud native environment
 func Rm() *cobra.Command {
-	var devPath string
 	cmd := &cobra.Command{
 		Use:   "rm",
 		Short: "Remove a cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
 			return executeRm(devPath)
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", "cnd.yml", "manifest file")
+
 	return cmd
 }
 
 func executeRm(devPath string) error {
-	log.Println("Executing rm...")
+	log.Debug("Executing rm...")
 
 	namespace, client, _, err := client.Get()
 	if err != nil {

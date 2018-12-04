@@ -500,6 +500,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",

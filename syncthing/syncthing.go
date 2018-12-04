@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -16,6 +15,7 @@ import (
 	"text/template"
 
 	"github.com/okteto/cnd/storage"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -210,7 +210,7 @@ func (s *Syncthing) Run() error {
 		return err
 	}
 
-	log.Printf("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
+	log.Infof("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 	return nil
 }
 

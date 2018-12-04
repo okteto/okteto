@@ -2,7 +2,6 @@ package model
 
 import (
 	"os"
-	"path"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -20,11 +19,11 @@ type deployment struct {
 
 //Deployment returns a k8 deployment for a cloud native environment
 func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
-	cwd, _ := os.Getwd()
-	file, err := os.Open(path.Join(cwd, dev.Swap.Deployment.File))
+	file, err := os.Open(dev.Swap.Deployment.File)
 	if err != nil {
 		return nil, err
 	}
+
 	dec := k8Yaml.NewYAMLOrJSONDecoder(file, 1000)
 	var d appsv1.Deployment
 	dec.Decode(&d)

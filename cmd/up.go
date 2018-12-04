@@ -1,7 +1,9 @@
 package cmd
 
 import (
-	"log"
+	"fmt"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
@@ -15,8 +17,6 @@ import (
 
 //Up starts or upgrades a cloud native environment
 func Up() *cobra.Command {
-	var devPath string
-
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Starts or upgrades a cloud native environment",
@@ -24,13 +24,12 @@ func Up() *cobra.Command {
 			return executeUp(devPath)
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", "cnd.yml", "manifest file")
 
 	return cmd
 }
 
 func executeUp(devPath string) error {
-	log.Println("Executing up...")
+	fmt.Println("Activating dev mode...")
 
 	namespace, client, restConfig, err := client.Get()
 	if err != nil {
@@ -72,7 +71,7 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
+	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, dev.Name))
 	if err != nil {
 		return err
 	}
@@ -88,7 +87,7 @@ func executeUp(devPath string) error {
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
 	if err := sy.Stop(); err != nil {
-		log.Printf(err.Error())
+		log.Error(err)
 	}
 
 	pf.Stop()
