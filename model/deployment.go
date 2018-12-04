@@ -3,9 +3,9 @@ package model
 import (
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -36,20 +36,14 @@ func (dev *Dev) DevDeployment() (*appsv1.Deployment, error) {
 		labels["cnd"] = dev.Name
 	}
 	d.GetObjectMeta().SetLabels(labels)
-	if d.Spec.Selector == nil {
-		d.Spec.Selector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{"cnd": dev.Name},
-		}
-	} else {
-		d.Spec.Selector.MatchLabels["cnd"] = dev.Name
-	}
-	d.Spec.Template.GetObjectMeta().SetName(dev.Name)
+
 	labels = d.Spec.Template.GetObjectMeta().GetLabels()
 	if labels == nil {
 		labels = map[string]string{"cnd": dev.Name}
 	} else {
 		labels["cnd"] = dev.Name
 	}
+
 	d.Spec.Template.GetObjectMeta().SetLabels(labels)
 
 	for i, c := range d.Spec.Template.Spec.Containers {
@@ -81,6 +75,9 @@ func (dev *Dev) updateCndContainer(c *apiv1.Container) {
 			MountPath: dev.Mount.Target,
 		},
 	)
+
+	c.ReadinessProbe = nil
+	c.LivenessProbe = nil
 }
 
 func (dev *Dev) createSyncthingContainer(d *appsv1.Deployment) {
@@ -119,12 +116,14 @@ func (dev *Dev) createSyncthingVolume(d *appsv1.Deployment) {
 }
 
 func (dev *Dev) loadDeployment() (*appsv1.Deployment, error) {
+	log.Debugf("loading deployment definition from %s", dev.Swap.Deployment.File)
 	file, err := os.Open(dev.Swap.Deployment.File)
 	if err != nil {
 		return nil, err
 	}
+
 	dec := k8Yaml.NewYAMLOrJSONDecoder(file, 1000)
-	var d *appsv1.Deployment
-	err = dec.Decode(d)
-	return d, err
+	var d appsv1.Deployment
+	err = dec.Decode(&d)
+	return &d, err
 }
