@@ -11,8 +11,6 @@ swap:
     file: nginx-deployment.yml
     container: nginx
     image: ubuntu
-  service:
-    file: nginx-service.yml
 mount:
   source: .
   target: /src
@@ -41,10 +39,6 @@ The container image to be used by the cloud native environment.
 The command to be executed by the cloud native environment.
 
 It has to be a non-finishing command (default: `tail -f /dev/null`)
-
-## swap.service.file (required)
-
-The path to the manifest of the service to be replaced by the cloud native environment.
 
 ## mount.source (required)
 

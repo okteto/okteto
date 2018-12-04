@@ -63,8 +63,6 @@ swap:
     file: nginx-deployment.yml
     container: nginx
     image: ubuntu
-  service:
-    file: nginx-service.yml
 mount:
   source: .
   target: /src
@@ -100,13 +98,6 @@ In order to revert back to your original configuration, execute:
 
 ```bash
 cnd down
-```
-
-Switch back and forth your development mode as you wish by executing `cnd up` and `cnd down`. 
-Finally, in order to permanently remove your cloud native development, execute:
-
-```bash
-cnd rm
 ```
 
 For a full demo of Cloud Native Development, check the [Voting App demo](https://github.com/okteto/cnd-voting-demo).
