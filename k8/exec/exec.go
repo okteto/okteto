@@ -9,6 +9,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/client-go/util/exec"
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
 )
 
@@ -53,7 +54,12 @@ func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, containe
 	}
 
 	if err := t.Safe(fn); err != nil {
-		return err
+		if v, ok := err.(exec.CodeExitError); ok {
+			// 130 is the exit code for ctrl+c or exit commands
+			if v.Code == 130 {
+				return nil
+			}
+		}
 	}
 
 	return nil
