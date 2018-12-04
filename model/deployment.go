@@ -2,7 +2,6 @@ package model
 
 import (
 	"os"
-	"path"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -120,8 +119,7 @@ func (dev *Dev) createSyncthingVolume(d *appsv1.Deployment) {
 }
 
 func (dev *Dev) loadDeployment() (*appsv1.Deployment, error) {
-	cwd, _ := os.Getwd()
-	file, err := os.Open(path.Join(cwd, dev.Swap.Deployment.File))
+	file, err := os.Open(dev.Swap.Deployment.File)
 	if err != nil {
 		return nil, err
 	}

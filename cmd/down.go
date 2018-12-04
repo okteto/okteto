@@ -13,7 +13,6 @@ import (
 
 //Down stops a cloud native environment
 func Down() *cobra.Command {
-	var devPath string
 	cmd := &cobra.Command{
 		Use:   "down",
 		Short: "Stops a cloud native environment",

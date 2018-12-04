@@ -92,12 +92,23 @@ func loadDev(b []byte) (*Dev, error) {
 }
 
 func (dev *Dev) fixPath(originalPath string) {
+	wd, _ := os.Getwd()
+
 	if !filepath.IsAbs(dev.Mount.Source) {
 		if filepath.IsAbs(originalPath) {
 			dev.Mount.Source = path.Join(path.Dir(originalPath), dev.Mount.Source)
 		} else {
-			wd, _ := os.Getwd()
+
 			dev.Mount.Source = path.Join(wd, path.Dir(originalPath), dev.Mount.Source)
+		}
+	}
+
+	if !filepath.IsAbs(dev.Swap.Deployment.File) {
+		if filepath.IsAbs(originalPath) {
+			dev.Swap.Deployment.File = path.Join(path.Dir(originalPath), dev.Swap.Deployment.File)
+		} else {
+
+			dev.Swap.Deployment.File = path.Join(wd, path.Dir(originalPath), dev.Swap.Deployment.File)
 		}
 	}
 }
