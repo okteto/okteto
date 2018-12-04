@@ -29,7 +29,7 @@ type Storage struct {
 type Service struct {
 	Folder    string `yaml:"folder,omitempty"`
 	Syncthing string `yaml:"syncthing,omitempty"`
-	Container string `yaml:"container,omitempty`
+	Container string `yaml:"container,omitempty"`
 }
 
 func init() {
