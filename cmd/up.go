@@ -8,7 +8,7 @@ import (
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
 	"github.com/okteto/cnd/k8/forward"
-	"github.com/okteto/cnd/k8/services"
+	"github.com/okteto/cnd/storage"
 	"github.com/okteto/cnd/syncthing"
 
 	"github.com/okteto/cnd/model"
@@ -41,7 +41,7 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	d, err := dev.Deployment()
+	d, err := dev.DevDeployment()
 	if err != nil {
 		return err
 	}
@@ -51,32 +51,27 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	s, err := dev.Service(true)
+	pod, err := getCNDPod(client, namespace, d.Name, dev.Swap.Deployment.Container)
 	if err != nil {
 		return err
 	}
 
-	err = services.Deploy(s, namespace, client)
+	sy, err := syncthing.NewSyncthing(d.Name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
 	}
 
-	pod, err := getCNDPod(client, namespace, dev)
-	if err != nil {
-		return err
-	}
-
-	sy, err := syncthing.NewSyncthing(s.Name, namespace, dev.Mount.Source)
-	if err != nil {
-		return err
-	}
-
-	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, dev.Name))
+	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, d.Name))
 	if err != nil {
 		return err
 	}
 
 	if err := sy.Run(); err != nil {
+		return err
+	}
+
+	err = storage.Insert(namespace, d.Name, dev.Swap.Deployment.Container, sy.LocalPath, sy.GUIAddress)
+	if err != nil {
 		return err
 	}
 

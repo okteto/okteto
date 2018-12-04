@@ -31,7 +31,6 @@ func init() {
 		Up(),
 		Exec(),
 		Down(),
-		Rm(),
 		Version(),
 		List(),
 	)

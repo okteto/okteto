@@ -14,14 +14,12 @@ import (
 
 // Dev represents a cloud native development environment
 type Dev struct {
-	Name  string `yaml:"name"`
-	Swap  swap   `yaml:"swap"`
-	Mount mount  `yaml:"mount"`
+	Swap  swap  `yaml:"swap"`
+	Mount mount `yaml:"mount"`
 }
 
 type swap struct {
 	Deployment deployment `yaml:"deployment"`
-	Service    service    `yaml:"service"`
 }
 
 type mount struct {
@@ -40,9 +38,7 @@ func (dev *Dev) validate() error {
 	if dev.Swap.Deployment.File == "" {
 		return fmt.Errorf("Swap deployment file cannot be empty")
 	}
-	if dev.Swap.Deployment.Image == "" {
-		return fmt.Errorf("Swap deployment image cannot be empty")
-	}
+
 	return nil
 }
 

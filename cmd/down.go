@@ -3,10 +3,11 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/okteto/cnd/storage"
 	"github.com/okteto/cnd/syncthing"
 
 	"github.com/okteto/cnd/k8/client"
-	"github.com/okteto/cnd/k8/services"
+	"github.com/okteto/cnd/k8/deployments"
 	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
 )
@@ -37,20 +38,22 @@ func executeDown(devPath string) error {
 		return err
 	}
 
-	s, err := dev.Service(false)
+	d, err := dev.Deployment()
 	if err != nil {
 		return err
 	}
 
-	err = services.Deploy(s, namespace, client)
+	err = deployments.Deploy(d, namespace, client)
 	if err != nil {
 		return err
 	}
 
-	syncthing, err := syncthing.NewSyncthing(s.Name, namespace, dev.Mount.Source)
+	syncthing, err := syncthing.NewSyncthing(d.Name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
 	}
+
+	storage.Delete(namespace, d.Name)
 
 	return syncthing.Stop()
 }
