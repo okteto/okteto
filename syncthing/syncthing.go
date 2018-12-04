@@ -202,7 +202,7 @@ func (s *Syncthing) Run() error {
 		return err
 	}
 
-	log.Debugf("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
+	log.Infof("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 	return nil
 }
 

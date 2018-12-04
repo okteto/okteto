@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/okteto/cnd/k8/client"
@@ -24,13 +26,12 @@ func Up() *cobra.Command {
 			return executeUp(devPath)
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", "cnd.yml", "manifest file")
 
 	return cmd
 }
 
 func executeUp(devPath string) error {
-	log.Info("Activating dev mode...")
+	fmt.Println("Activating dev mode...")
 
 	namespace, client, restConfig, err := client.Get()
 	if err != nil {

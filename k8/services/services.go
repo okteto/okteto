@@ -21,21 +21,21 @@ func Deploy(s *apiv1.Service, namespace string, c *kubernetes.Clientset) error {
 	}
 
 	if sk8.Name == "" {
-		log.Debugf("Creating service '%s'...", serviceName)
+		log.Infof("Creating service '%s'...", serviceName)
 		_, err = sClient.Create(s)
 		if err != nil {
 			return fmt.Errorf("Error creating kubernetes service: %s", err)
 		}
-		log.Debugf("Created service '%s'.", serviceName)
+		log.Infof("Created service '%s'.", serviceName)
 	} else {
-		log.Debugf("Updating service '%s'...", serviceName)
+		log.Infof("Updating service '%s'...", serviceName)
 		s.Spec.ClusterIP = sk8.Spec.ClusterIP
 		s.GetObjectMeta().SetResourceVersion(sk8.GetObjectMeta().GetResourceVersion())
 		_, err = sClient.Update(s)
 		if err != nil {
 			return fmt.Errorf("Error updating kubernetes service: %s", err)
 		}
-		log.Debugf("Updated service '%s'.", serviceName)
+		log.Infof("Updated service '%s'.", serviceName)
 	}
 	return nil
 }

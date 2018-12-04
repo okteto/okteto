@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	log "github.com/sirupsen/logrus"
+	"fmt"
 
 	"github.com/okteto/cnd/syncthing"
 
@@ -21,12 +21,12 @@ func Down() *cobra.Command {
 			return executeDown(devPath)
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", "cnd.yml", "manifest file")
+
 	return cmd
 }
 
 func executeDown(devPath string) error {
-	log.Info("Deactivating dev mode...")
+	fmt.Println("Deactivating dev mode...")
 
 	namespace, client, _, err := client.Get()
 	if err != nil {

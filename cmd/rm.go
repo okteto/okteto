@@ -13,15 +13,15 @@ import (
 
 //Rm removes a cloud native environment
 func Rm() *cobra.Command {
-	var devPath string
 	cmd := &cobra.Command{
 		Use:   "rm",
 		Short: "Remove a cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
 			return executeRm(devPath)
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", "cnd.yml", "manifest file")
+
 	return cmd
 }
 

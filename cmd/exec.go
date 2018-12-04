@@ -32,7 +32,6 @@ func Exec() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", "cnd.yml", "manifest file")
 	return cmd
 }
 

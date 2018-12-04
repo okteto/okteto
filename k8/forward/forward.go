@@ -7,8 +7,6 @@ import (
 	"net/url"
 	"strconv"
 
-	log "github.com/sirupsen/logrus"
-
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -80,8 +78,10 @@ func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod
 	go func() {
 		select {
 		case <-pf.Ready:
-			log.Infof("Linking '%s' to %s...", p.LocalPath, p.DeploymentName)
-			log.Infof("Ready! Go to your local IDE and continue coding!")
+			fmt.Printf("Linking '%s' to %s...", p.LocalPath, p.DeploymentName)
+			fmt.Println()
+			fmt.Printf("Ready! Go to your local IDE and continue coding!")
+			fmt.Println()
 			p.IsReady = true
 		}
 	}()
