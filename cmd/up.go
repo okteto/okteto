@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 
 	log "github.com/sirupsen/logrus"
 
@@ -15,11 +17,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Up starts or upgrades a cloud native environment
+//Up starts a cloud native environment
 func Up() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Starts or upgrades a cloud native environment",
+		Short: "Starts a cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return executeUp(devPath)
 		},
@@ -41,27 +43,24 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	d, err := dev.DevDeployment()
+	name, err := deployments.DevDeploy(dev, namespace, client)
 	if err != nil {
 		return err
 	}
 
-	err = deployments.Deploy(d, namespace, client)
+	pod, err := deployments.GetCNDPod(client, namespace, name, dev.Swap.Deployment.Container)
 	if err != nil {
 		return err
 	}
 
-	pod, err := getCNDPod(client, namespace, d.Name, dev.Swap.Deployment.Container)
+	sy, err := syncthing.NewSyncthing(name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
 	}
 
-	sy, err := syncthing.NewSyncthing(d.Name, namespace, dev.Mount.Source)
-	if err != nil {
-		return err
-	}
+	fullname := deployments.GetFullName(namespace, name)
 
-	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, d.Name))
+	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, fullname)
 	if err != nil {
 		return err
 	}
@@ -70,20 +69,34 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	err = storage.Insert(namespace, d.Name, dev.Swap.Deployment.Container, sy.LocalPath, sy.GUIAddress)
+	err = storage.Insert(namespace, name, dev.Swap.Deployment.Container, sy.LocalPath, sy.GUIAddress)
 	if err != nil {
+		if err == storage.ErrAlreadyRunning {
+			return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", fullname)
+		}
+
 		return err
 	}
 
-	defer stop(sy, pf)
-	err = pf.Start(client, restConfig, pod)
-	return err
+	channel := make(chan os.Signal, 1)
+	signal.Notify(channel, os.Interrupt)
+	go func() {
+		<-channel
+		stop(sy, pf)
+		return
+	}()
+
+	return pf.Start(client, restConfig, pod)
 }
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
+	fmt.Println()
+	log.Debugf("stopping syncthing and port forwarding")
 	if err := sy.Stop(); err != nil {
 		log.Error(err)
 	}
 
+	storage.Delete(sy.Namespace, sy.Name)
 	pf.Stop()
+	log.Debugf("stopped syncthing and port forwarding")
 }

@@ -27,33 +27,33 @@ func Down() *cobra.Command {
 
 func executeDown(devPath string) error {
 	fmt.Println("Deactivating dev mode...")
+	dev, err := model.ReadDev(devPath)
+	if err != nil {
+		return err
+	}
 
 	namespace, client, _, err := client.Get()
 	if err != nil {
 		return err
 	}
 
-	dev, err := model.ReadDev(devPath)
+	name, err := deployments.Deploy(dev, namespace, client)
 	if err != nil {
 		return err
 	}
 
-	d, err := dev.Deployment()
+	syncthing, err := syncthing.NewSyncthing(name, namespace, "")
 	if err != nil {
 		return err
 	}
 
-	err = deployments.Deploy(d, namespace, client)
+	storage.Delete(namespace, name)
+
+	err = syncthing.Stop()
 	if err != nil {
 		return err
 	}
 
-	syncthing, err := syncthing.NewSyncthing(d.Name, namespace, dev.Mount.Source)
-	if err != nil {
-		return err
-	}
-
-	storage.Delete(namespace, d.Name)
-
-	return syncthing.Stop()
+	fmt.Println("Dev mode deactivated...")
+	return nil
 }

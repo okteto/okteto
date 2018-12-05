@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -35,8 +34,13 @@ func (dev *Dev) validate() error {
 	if !file.Mode().IsDir() {
 		return fmt.Errorf("Source mount folder is not a directory")
 	}
-	if dev.Swap.Deployment.File == "" {
-		return fmt.Errorf("Swap deployment file cannot be empty")
+
+	if dev.Swap.Deployment.Name == "" {
+		if dev.Swap.Deployment.File != "" {
+			// for legacy deployments
+			return fmt.Errorf("Swap deployment name cannot be empty")
+		}
+
 	}
 
 	return nil
@@ -51,6 +55,10 @@ func ReadDev(devPath string) (*Dev, error) {
 
 	d, err := loadDev(b)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := d.validate(); err != nil {
 		return nil, err
 	}
 
@@ -78,13 +86,8 @@ func loadDev(b []byte) (*Dev, error) {
 	}
 
 	if strings.HasPrefix(dev.Mount.Source, "~/") {
-		usr, _ := user.Current()
-		dir := usr.HomeDir
-		dev.Mount.Source = filepath.Join(dir, dev.Mount.Source[2:])
-	}
-
-	if err := dev.validate(); err != nil {
-		return nil, err
+		home := os.Getenv("HOME")
+		dev.Mount.Source = filepath.Join(home, dev.Mount.Source[2:])
 	}
 
 	return &dev, nil
@@ -99,15 +102,6 @@ func (dev *Dev) fixPath(originalPath string) {
 		} else {
 
 			dev.Mount.Source = path.Join(wd, path.Dir(originalPath), dev.Mount.Source)
-		}
-	}
-
-	if !filepath.IsAbs(dev.Swap.Deployment.File) {
-		if filepath.IsAbs(originalPath) {
-			dev.Swap.Deployment.File = path.Join(path.Dir(originalPath), dev.Swap.Deployment.File)
-		} else {
-
-			dev.Swap.Deployment.File = path.Join(wd, path.Dir(originalPath), dev.Swap.Deployment.File)
 		}
 	}
 }

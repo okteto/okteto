@@ -1,15 +1,13 @@
 package model
 
 import (
-	"os"
-
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type deployment struct {
+	Name      string   `yaml:"name"`
 	File      string   `yaml:"file"`
 	Container string   `yaml:"container"`
 	Image     string   `yaml:"image"`
@@ -17,36 +15,51 @@ type deployment struct {
 	Args      []string `yaml:"args"`
 }
 
+const (
+	// CNDRevisionAnnotation is the annotation added to a service to track the original deployment in k8
+	CNDRevisionAnnotation = "deployment.okteto.com/parent"
+
+	// CNDLabel is the label added to a dev deployment in k8
+	CNDLabel = "deployment.okteto.com/cnd"
+
+	// OldCNDLabel is the legacy label
+	OldCNDLabel = "cnd"
+
+	// RevisionAnnotation is the deployed revision
+	RevisionAnnotation = "deployment.kubernetes.io/revision"
+)
+
 var (
 	devReplicas int32 = 1
 )
 
-//Deployment returns a k8 deployment
-func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
-	return dev.loadDeployment()
-}
-
-//DevDeployment returns a k8 deployment modified with  a cloud native environment
-func (dev *Dev) DevDeployment() (*appsv1.Deployment, error) {
-	d, err := dev.loadDeployment()
-	if err != nil {
-		return nil, err
-	}
+//TurnIntoDevDeployment modifies a  k8 deployment with the cloud native environment settings
+func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment, parentRevision string) {
 
 	labels := d.GetObjectMeta().GetLabels()
 	if labels == nil {
-		labels = map[string]string{"cnd": d.Name}
-	} else {
-		labels["cnd"] = d.Name
+		labels = map[string]string{}
 	}
+
+	labels[CNDLabel] = d.Name
+
+	annotations := d.GetObjectMeta().GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	annotations[CNDRevisionAnnotation] = parentRevision
+	log.Debugf("dev deployment is based of revision %s", annotations[CNDRevisionAnnotation])
+
 	d.GetObjectMeta().SetLabels(labels)
+	d.GetObjectMeta().SetAnnotations(annotations)
 
 	labels = d.Spec.Template.GetObjectMeta().GetLabels()
 	if labels == nil {
-		labels = map[string]string{"cnd": d.Name}
-	} else {
-		labels["cnd"] = d.Name
+		labels = map[string]string{}
 	}
+
+	labels[CNDLabel] = d.Name
 
 	d.Spec.Template.GetObjectMeta().SetLabels(labels)
 
@@ -64,54 +77,70 @@ func (dev *Dev) DevDeployment() (*appsv1.Deployment, error) {
 		log.Info("cnd only supports running with 1 replica in dev mode")
 		d.Spec.Replicas = &devReplicas
 	}
-
-	return d, nil
 }
 
 func (dev *Dev) updateCndContainer(c *apiv1.Container) {
-	c.Image = dev.Swap.Deployment.Image
+	if dev.Swap.Deployment.Image != "" {
+		c.Image = dev.Swap.Deployment.Image
+	}
+
 	c.ImagePullPolicy = apiv1.PullIfNotPresent
 	c.Command = dev.Swap.Deployment.Command
 	c.Args = dev.Swap.Deployment.Args
 	c.WorkingDir = dev.Mount.Target
-	if c.VolumeMounts == nil {
-		c.VolumeMounts = []apiv1.VolumeMount{}
-	}
-	c.VolumeMounts = append(
-		c.VolumeMounts,
-		apiv1.VolumeMount{
-			Name:      "cnd-sync",
-			MountPath: dev.Mount.Target,
-		},
-	)
-
 	c.ReadinessProbe = nil
 	c.LivenessProbe = nil
 
+	if c.VolumeMounts == nil {
+		c.VolumeMounts = []apiv1.VolumeMount{}
+	}
+
+	volumeMount := apiv1.VolumeMount{
+		Name:      "cnd-sync",
+		MountPath: dev.Mount.Target,
+	}
+
+	for i, v := range c.VolumeMounts {
+		if v.Name == volumeMount.Name {
+			c.VolumeMounts[i] = volumeMount
+			return
+		}
+	}
+
+	c.VolumeMounts = append(
+		c.VolumeMounts,
+		volumeMount,
+	)
 }
 
 func (dev *Dev) createSyncthingContainer(d *appsv1.Deployment) {
-	d.Spec.Template.Spec.Containers = append(
-		d.Spec.Template.Spec.Containers,
-		apiv1.Container{
-			Name:  "cnd-syncthing",
-			Image: "okteto/syncthing:latest",
-			VolumeMounts: []apiv1.VolumeMount{
-				apiv1.VolumeMount{
-					Name:      "cnd-sync",
-					MountPath: "/var/cnd-sync",
-				},
-			},
-			Ports: []apiv1.ContainerPort{
-				apiv1.ContainerPort{
-					ContainerPort: 8384,
-				},
-				apiv1.ContainerPort{
-					ContainerPort: 22000,
-				},
+	syncthingContainer := apiv1.Container{
+		Name:  "cnd-syncthing",
+		Image: "okteto/syncthing:latest",
+		VolumeMounts: []apiv1.VolumeMount{
+			apiv1.VolumeMount{
+				Name:      "cnd-sync",
+				MountPath: "/var/cnd-sync",
 			},
 		},
-	)
+		Ports: []apiv1.ContainerPort{
+			apiv1.ContainerPort{
+				ContainerPort: 8384,
+			},
+			apiv1.ContainerPort{
+				ContainerPort: 22000,
+			},
+		},
+	}
+
+	for i, c := range d.Spec.Template.Spec.Containers {
+		if c.Name == syncthingContainer.Name {
+			d.Spec.Template.Spec.Containers[i] = syncthingContainer
+			return
+		}
+	}
+
+	d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, syncthingContainer)
 }
 
 func (dev *Dev) createSyncthingVolume(d *appsv1.Deployment) {
@@ -119,21 +148,17 @@ func (dev *Dev) createSyncthingVolume(d *appsv1.Deployment) {
 		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
 	}
 
-	d.Spec.Template.Spec.Volumes = append(
-		d.Spec.Template.Spec.Volumes,
-		apiv1.Volume{Name: "cnd-sync"},
-	)
-}
+	syncVolume := apiv1.Volume{Name: "cnd-sync"}
 
-func (dev *Dev) loadDeployment() (*appsv1.Deployment, error) {
-	log.Debugf("loading deployment definition from %s", dev.Swap.Deployment.File)
-	file, err := os.Open(dev.Swap.Deployment.File)
-	if err != nil {
-		return nil, err
+	for i, v := range d.Spec.Template.Spec.Volumes {
+		if v.Name == syncVolume.Name {
+			d.Spec.Template.Spec.Volumes[i] = syncVolume
+			return
+		}
 	}
 
-	dec := k8Yaml.NewYAMLOrJSONDecoder(file, 1000)
-	var d appsv1.Deployment
-	err = dec.Decode(&d)
-	return &d, err
+	d.Spec.Template.Spec.Volumes = append(
+		d.Spec.Template.Spec.Volumes,
+		syncVolume,
+	)
 }

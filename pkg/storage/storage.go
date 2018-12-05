@@ -15,7 +15,8 @@ const (
 )
 
 var (
-	stPath string
+	stPath            string
+	ErrAlreadyRunning = fmt.Errorf("up-already-running")
 )
 
 //Storage represents the cli state
@@ -62,17 +63,19 @@ func Insert(namespace, deployment, container, folder, host string) error {
 	}
 
 	fullName := fmt.Sprintf("%s/%s", namespace, deployment)
-	absFolder, err := fixPath(folder)
+	svc, err := newService(folder, container, host)
 	if err != nil {
 		return err
 	}
-	svc := Service{Folder: absFolder, Syncthing: host, Container: container}
+
 	if svc2, ok := s.Services[fullName]; ok {
 		if svc2 == svc {
 			return nil
 		}
-		return fmt.Errorf("there is already an entry for '%s'.\nAre you running 'cnd up %s' somewhere else?", fullName, fullName)
+
+		return ErrAlreadyRunning
 	}
+
 	s.Services[fullName] = svc
 	return s.save()
 }
@@ -136,4 +139,13 @@ func fixPath(originalPath string) (string, error) {
 		return "", err
 	}
 	return path.Join(folder, originalPath), nil
+}
+
+func newService(folder, container, host string) (Service, error) {
+	absFolder, err := fixPath(folder)
+	if err != nil {
+		return Service{}, err
+	}
+	return Service{Folder: absFolder, Syncthing: host, Container: container}, nil
+
 }
