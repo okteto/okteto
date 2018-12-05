@@ -82,10 +82,12 @@ func executeUp(devPath string) error {
 }
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
+	log.Print("stopped syncthing and port forwarding")
 	if err := sy.Stop(); err != nil {
 		log.Error(err)
 	}
 
 	storage.Delete(sy.Namespace, sy.Name)
 	pf.Stop()
+	log.Print("stopped syncthing and port forwarding")
 }

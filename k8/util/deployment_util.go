@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-original source: https://github.com/kubernetes/kubernetes/blob/954996e231074dc7429f7be1256a579bedd8344c/pkg/controller/deployment/util/deployment_util.go
+adapted from: https://github.com/kubernetes/kubernetes/blob/954996e231074dc7429f7be1256a579bedd8344c/pkg/controller/deployment/util/deployment_util.go
 */
 
 package util
 
 import (
+	"github.com/okteto/cnd/model"
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 )
@@ -45,6 +46,7 @@ var annotationsToSkip = map[string]bool{
 	DesiredReplicasAnnotation:      true,
 	MaxReplicasAnnotation:          true,
 	apps.DeprecatedRollbackTo:      true,
+	model.CNDRevisionAnnotation:    true,
 }
 
 // skipCopyAnnotation returns true if we should skip copying the annotation with the given annotation key
@@ -83,6 +85,7 @@ func SetFromReplicaSetTemplate(deployment *apps.Deployment, template v1.PodTempl
 	deployment.Spec.Template.ObjectMeta.Labels = CloneAndRemoveLabel(
 		deployment.Spec.Template.ObjectMeta.Labels,
 		apps.DefaultDeploymentUniqueLabelKey)
+
 	return deployment
 }
 

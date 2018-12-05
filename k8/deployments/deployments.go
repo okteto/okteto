@@ -27,11 +27,13 @@ func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (strin
 		return "", err
 	}
 
-	if d.GetAnnotations()[model.CNDLabel] != "" {
-		log.Debugf("The current deployment %s is already in dev mode", GetFullName(d.Namespace, d.Name))
+	parentRevision := d.GetObjectMeta().GetAnnotations()[model.RevisionAnnotation]
+	if d.GetObjectMeta().GetLabels()[model.CNDLabel] != "" {
+		log.Debugf("The current deployment %s is already in dev mode. Leaving the original parent revision.", GetFullName(d.Namespace, d.Name))
+		parentRevision = d.GetObjectMeta().GetAnnotations()[model.CNDRevisionAnnotation]
 	}
 
-	dev.TurnIntoDevDeployment(d)
+	dev.TurnIntoDevDeployment(d, parentRevision)
 
 	name, err := deploy(d, c)
 	if err != nil {
@@ -62,9 +64,9 @@ func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, 
 
 	fullname := GetFullName(d.Namespace, d.Name)
 
-	revision := d.GetObjectMeta().GetAnnotations()[model.CNDRevision]
+	revision := d.GetObjectMeta().GetAnnotations()[model.CNDRevisionAnnotation]
 	if revision == "" {
-		log.Debugf("%s doesn't have the %s annotation", fullname, model.CNDRevision)
+		log.Debugf("%s doesn't have the %s annotation", fullname, model.CNDRevisionAnnotation)
 		return "", fmt.Errorf("%s is not in dev mode", fullname)
 	}
 
@@ -76,6 +78,10 @@ func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, 
 	util.SetFromReplicaSetTemplate(d, rs.Spec.Template)
 	util.SetDeploymentAnnotationsTo(d, rs)
 
+	delete(d.GetObjectMeta().GetAnnotations(), model.CNDRevisionAnnotation)
+	delete(d.GetObjectMeta().GetLabels(), model.CNDLabel)
+
+	log.Infof("restoring the production configuration")
 	return deploy(d, c)
 }
 
@@ -136,7 +142,7 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 	for tries < 30 {
 
 		pods, err := c.CoreV1().Pods(namespace).List(metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("cnd=%s", deploymentName),
+			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, deploymentName),
 		})
 
 		if err != nil {

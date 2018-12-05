@@ -16,11 +16,11 @@ type deployment struct {
 }
 
 const (
-	// CNDRevision is the annotation added to a service to track the original deployment in k8
-	CNDRevision = "cnd-revision"
+	// CNDRevisionAnnotation is the annotation added to a service to track the original deployment in k8
+	CNDRevisionAnnotation = "deployment.okteto.com/parent"
 
 	// CNDLabel is the label added to a dev deployment in k8
-	CNDLabel = "cnd"
+	CNDLabel = "deployment.okteto.com/cnd"
 
 	// RevisionAnnotation is the deployed revision
 	RevisionAnnotation = "deployment.kubernetes.io/revision"
@@ -31,7 +31,7 @@ var (
 )
 
 //TurnIntoDevDeployment modifies a  k8 deployment with the cloud native environment settings
-func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment) {
+func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment, parentRevision string) {
 
 	labels := d.GetObjectMeta().GetLabels()
 	if labels == nil {
@@ -45,8 +45,8 @@ func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment) {
 		annotations = map[string]string{}
 	}
 
-	annotations[CNDRevision] = annotations[RevisionAnnotation]
-	log.Debugf("dev deployment is based of revision %s", annotations[CNDRevision])
+	annotations[CNDRevisionAnnotation] = parentRevision
+	log.Debugf("dev deployment is based of revision %s", annotations[CNDRevisionAnnotation])
 
 	d.GetObjectMeta().SetLabels(labels)
 	d.GetObjectMeta().SetAnnotations(annotations)
