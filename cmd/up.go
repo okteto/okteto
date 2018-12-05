@@ -17,11 +17,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Up starts or upgrades a cloud native environment
+//Up starts a cloud native environment
 func Up() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Starts or upgrades a cloud native environment",
+		Short: "Starts a cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return executeUp(devPath)
 		},

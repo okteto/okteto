@@ -49,5 +49,11 @@ func executeDown(devPath string) error {
 
 	storage.Delete(namespace, name)
 
-	return syncthing.Stop()
+	err = syncthing.Stop()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Dev mode deactivated...")
+	return nil
 }

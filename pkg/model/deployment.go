@@ -20,7 +20,10 @@ const (
 	CNDRevisionAnnotation = "deployment.okteto.com/parent"
 
 	// CNDLabel is the label added to a dev deployment in k8
-	CNDLabel = "cnd"
+	CNDLabel = "deployment.okteto.com/cnd"
+
+	// OldCNDLabel is the legacy label
+	OldCNDLabel = "cnd"
 
 	// RevisionAnnotation is the deployed revision
 	RevisionAnnotation = "deployment.kubernetes.io/revision"

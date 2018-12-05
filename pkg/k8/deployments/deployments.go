@@ -152,7 +152,8 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 		}
 
 		if len(pods.Items) == 0 {
-			return nil, fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
+			return nil, checkForLegacyCND(namespace, deploymentName, c)
+
 		}
 
 		pod := pods.Items[0]
@@ -189,7 +190,7 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 		time.Sleep(1 * time.Second)
 	}
 
-	return nil, fmt.Errorf("kubernetes is taking long to create the dev mode container. Please, check for erros or retry in about 1 minute")
+	return nil, fmt.Errorf("kubernetes is taking long to create the dev mode container. Please, check for errors or try again")
 }
 
 func loadDeployment(namespace, deploymentName string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
@@ -253,4 +254,21 @@ func getMatchingReplicaSet(namespace, deploymentName, revision string, c *kubern
 	}
 
 	return matchingReplicaSet, nil
+}
+
+func checkForLegacyCND(namespace, deploymentName string, c *kubernetes.Clientset) error {
+	pods, err := c.CoreV1().Pods(namespace).List(metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", model.OldCNDLabel, deploymentName),
+	})
+
+	if err != nil {
+		if len(pods.Items) > 0 {
+			log.Debugf("labels: %+v", pods.Items[0].GetObjectMeta().GetLabels())
+			fmt.Println("This deployment was launched with a legacy version of cnd.")
+			fmt.Println("Please redeploy manually and then run `cnd up` again.")
+			os.Exit(1)
+		}
+	}
+
+	return fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
 }
