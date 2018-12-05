@@ -3,7 +3,7 @@ package deployments
 import (
 	"fmt"
 	"os"
-	"strings"
+	"path"
 	"time"
 
 	"github.com/okteto/cnd/model"
@@ -16,6 +16,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const (
+	deploymentFile = "deployment.yml"
+)
+
 //DevDeploy deploys a k8 deployment in dev mode
 func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
 	d, err := loadDeployment(dev, namespace, c)
@@ -23,39 +27,47 @@ func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (strin
 		return "", err
 	}
 
+	if d.GetAnnotations()[model.CNDLabel] != "" {
+		log.Debugf("The current deployment %s is already in dev mode", GetFullName(d.Namespace, d.Name))
+	}
+
 	dev.TurnIntoDevDeployment(d)
 
-	return deploy(d, c)
-}
-
-//Deploy deploys a k8 deployment in prod mode
-func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
-	d, err := loadDeployment(dev, namespace, c)
+	name, err := deploy(d, c)
 	if err != nil {
 		return "", err
 	}
 
-	return deploy(d, c)
+	return name, nil
+}
+
+//Deploy deploys a k8 deployment in prod mode
+func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
+	prodDeploy, err := loadDeploymentFromFile(dev.Swap.Deployment.File)
+	prodDeploy.Namespace = namespace
+
+	if err != nil {
+		log.Debugf("error while retrieving deployment from %s: %s", dev.Swap.Deployment.File, err)
+		return "", err
+	}
+
+	return deploy(prodDeploy, c)
 }
 
 func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) (string, error) {
 	deploymentName := GetFullName(d.Namespace, d.Name)
 	dClient := c.AppsV1().Deployments(d.Namespace)
-	dk8, err := getDeploymentFromAPI(d.Namespace, d.Name, c)
-	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return "", fmt.Errorf("Error getting kubernetes deployment: %s", err)
-	}
 
-	if dk8.Name == "" {
+	if d.Name == "" {
 		log.Infof("Creating deployment '%s'...", deploymentName)
-		_, err = dClient.Create(d)
+		_, err := dClient.Create(d)
 		if err != nil {
 			return "", fmt.Errorf("Error creating kubernetes deployment: %s", err)
 		}
 		log.Infof("Created deployment %s.", deploymentName)
 	} else {
 		log.Infof("Updating deployment '%s'...", deploymentName)
-		_, err = dClient.Update(d)
+		_, err := dClient.Update(d)
 		if err != nil {
 			return "", fmt.Errorf("Error updating kubernetes deployment: %s", err)
 		}
@@ -66,7 +78,7 @@ func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) (string, error) {
 	for tries < 60 {
 		tries++
 		time.Sleep(5 * time.Second)
-		d, err = dClient.Get(d.Name, metav1.GetOptions{})
+		d, err := dClient.Get(d.Name, metav1.GetOptions{})
 		if err != nil {
 			return "", fmt.Errorf("Error getting kubernetes deployment: %s", err)
 		}
@@ -149,6 +161,10 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 
 func loadDeployment(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
 
+	if namespace == "" {
+		return nil, fmt.Errorf("empty namespace")
+	}
+
 	if dev.Swap.Deployment.File != "" {
 		log.Infof("loading deployment definition from %s", dev.Swap.Deployment.File)
 		return loadDeploymentFromFile(dev.Swap.Deployment.File)
@@ -171,5 +187,16 @@ func loadDeploymentFromFile(deploymentPath string) (*appsv1.Deployment, error) {
 }
 
 func getDeploymentFromAPI(namespace, name string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
-	return c.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+
+	d, err := c.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		log.Debugf("error while retrieving the deployment: %s", err)
+	}
+
+	return d, err
+}
+
+func getProdDeploymentPath(namespace, name string) string {
+	return path.Join(os.Getenv("HOME"), ".cnd", namespace, name, deploymentFile)
+
 }
