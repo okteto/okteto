@@ -86,5 +86,6 @@ func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
 		log.Error(err)
 	}
 
+	storage.Delete(sy.Namespace, sy.Name)
 	pf.Stop()
 }
