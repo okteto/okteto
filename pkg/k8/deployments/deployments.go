@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -33,10 +32,12 @@ func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (strin
 		return "", err
 	}
 
-	parentRevision := d.GetObjectMeta().GetAnnotations()[model.RevisionAnnotation]
-	if d.GetObjectMeta().GetLabels()[model.CNDLabel] != "" {
+	parentRevision := util.GetAnnotation(d.GetObjectMeta(), model.RevisionAnnotation)
+	cndLabelValue := util.GetLabel(d.GetObjectMeta(), model.CNDLabel)
+
+	if cndLabelValue != "" {
 		log.Debugf("The current deployment %s is already in dev mode. Leaving the original parent revision.", GetFullName(d.Namespace, d.Name))
-		parentRevision = d.GetObjectMeta().GetAnnotations()[model.CNDRevisionAnnotation]
+		parentRevision = util.GetAnnotation(d.GetObjectMeta(), model.CNDRevisionAnnotation)
 	}
 
 	dev.TurnIntoDevDeployment(d, parentRevision)
@@ -65,9 +66,9 @@ func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, 
 
 	fullname := GetFullName(d.Namespace, d.Name)
 
-	revision := d.GetObjectMeta().GetAnnotations()[model.CNDRevisionAnnotation]
+	revision := util.GetAnnotation(d.GetObjectMeta(), model.CNDRevisionAnnotation)
 	if revision == "" {
-		log.Debugf("%s doesn't have the %s annotation", fullname, model.CNDRevisionAnnotation)
+		log.Debugf("%s doesn't have the %s annotation.", fullname, model.CNDRevisionAnnotation)
 		return "", fmt.Errorf("%s is not in dev mode", fullname)
 	}
 
@@ -205,18 +206,6 @@ func loadDeployment(namespace, deploymentName string, c *kubernetes.Clientset) (
 	return d, err
 }
 
-func loadDeploymentFromFile(deploymentPath string) (*appsv1.Deployment, error) {
-	file, err := os.Open(deploymentPath)
-	if err != nil {
-		return nil, err
-	}
-
-	dec := k8Yaml.NewYAMLOrJSONDecoder(file, 1000)
-	var d appsv1.Deployment
-	err = dec.Decode(&d)
-	return &d, err
-}
-
 func getMatchingReplicaSet(namespace, deploymentName, revision string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
 	log.Debugf("Looking for a replica set of %s/%s with revision %s", namespace, deploymentName, revision)
 
@@ -244,7 +233,7 @@ func getMatchingReplicaSet(namespace, deploymentName, revision string, c *kubern
 			continue
 		}
 
-		replicaSetRevision := r.GetObjectMeta().GetAnnotations()[model.RevisionAnnotation]
+		replicaSetRevision := util.GetAnnotation(r.GetObjectMeta(), model.RevisionAnnotation)
 		if replicaSetRevision == "" {
 			log.Errorf("replicaset %s doesn't have a revision", r.Name)
 			continue

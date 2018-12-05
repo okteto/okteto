@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/cnd/pkg/model"
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -103,4 +104,24 @@ func CloneAndRemoveLabel(labels map[string]string, labelKey string) map[string]s
 	}
 	delete(newLabels, labelKey)
 	return newLabels
+}
+
+// GetAnnotation returns a label or an empty strig if it doesn't exist
+func GetAnnotation(o meta.Object, key string) string {
+	annotations := o.GetAnnotations()
+	if annotations != nil {
+		return annotations[key]
+	}
+
+	return ""
+}
+
+// GetLabel returns a label or an empty strig if it doesn't exist
+func GetLabel(o meta.Object, key string) string {
+	labels := o.GetLabels()
+	if labels != nil {
+		return labels[key]
+	}
+
+	return ""
 }
