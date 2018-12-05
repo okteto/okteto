@@ -35,8 +35,11 @@ func (dev *Dev) validate() error {
 	if !file.Mode().IsDir() {
 		return fmt.Errorf("Source mount folder is not a directory")
 	}
-	if dev.Swap.Deployment.File == "" {
-		return fmt.Errorf("Swap deployment file cannot be empty")
+
+	if dev.Swap.Deployment.Name == "" {
+		if dev.Swap.Deployment.File == "" {
+			return fmt.Errorf("Swap deployment name cannot be empty")
+		}
 	}
 
 	return nil

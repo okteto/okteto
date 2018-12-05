@@ -3,12 +3,12 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/okteto/cnd/model"
 	"github.com/okteto/cnd/storage"
 	"github.com/okteto/cnd/syncthing"
 
 	"github.com/okteto/cnd/k8/client"
 	"github.com/okteto/cnd/k8/deployments"
-	"github.com/okteto/cnd/model"
 	"github.com/spf13/cobra"
 )
 
@@ -27,13 +27,12 @@ func Down() *cobra.Command {
 
 func executeDown(devPath string) error {
 	fmt.Println("Deactivating dev mode...")
-
-	namespace, client, _, err := client.Get()
+	dev, err := model.ReadDev(devPath)
 	if err != nil {
 		return err
 	}
 
-	dev, err := model.ReadDev(devPath)
+	namespace, client, _, err := client.Get()
 	if err != nil {
 		return err
 	}
@@ -43,7 +42,7 @@ func executeDown(devPath string) error {
 		return err
 	}
 
-	syncthing, err := syncthing.NewSyncthing(name, namespace, dev.Mount.Source)
+	syncthing, err := syncthing.NewSyncthing(name, namespace, "")
 	if err != nil {
 		return err
 	}

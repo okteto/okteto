@@ -18,29 +18,30 @@ import (
 
 //DevDeploy deploys a k8 deployment in dev mode
 func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
-	d, err := loadDeployment(dev)
+	d, err := loadDeployment(dev, namespace, c)
 	if err != nil {
 		return "", err
 	}
 
 	dev.TurnIntoDevDeployment(d)
-	return deploy(d, namespace, c)
+
+	return deploy(d, c)
 }
 
 //Deploy deploys a k8 deployment in prod mode
 func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
-	d, err := loadDeployment(dev)
+	d, err := loadDeployment(dev, namespace, c)
 	if err != nil {
 		return "", err
 	}
 
-	return deploy(d, namespace, c)
+	return deploy(d, c)
 }
 
-func deploy(d *appsv1.Deployment, namespace string, c *kubernetes.Clientset) (string, error) {
-	deploymentName := GetFullName(namespace, d.Name)
-	dClient := c.AppsV1().Deployments(namespace)
-	dk8, err := dClient.Get(d.Name, metav1.GetOptions{})
+func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) (string, error) {
+	deploymentName := GetFullName(d.Namespace, d.Name)
+	dClient := c.AppsV1().Deployments(d.Namespace)
+	dk8, err := getDeploymentFromAPI(d.Namespace, d.Name, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return "", fmt.Errorf("Error getting kubernetes deployment: %s", err)
 	}
@@ -146,9 +147,19 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 	return nil, fmt.Errorf("kubernetes is taking long to create the dev mode container. Please, check for erros or retry in about 1 minute")
 }
 
-func loadDeployment(dev *model.Dev) (*appsv1.Deployment, error) {
-	log.Debugf("loading deployment definition from %s", dev.Swap.Deployment.File)
-	file, err := os.Open(dev.Swap.Deployment.File)
+func loadDeployment(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+
+	if dev.Swap.Deployment.File != "" {
+		log.Infof("loading deployment definition from %s", dev.Swap.Deployment.File)
+		return loadDeploymentFromFile(dev.Swap.Deployment.File)
+	}
+
+	log.Debugf("loading deployment definition from the cluster")
+	return getDeploymentFromAPI(namespace, dev.Swap.Deployment.Name, c)
+}
+
+func loadDeploymentFromFile(deploymentPath string) (*appsv1.Deployment, error) {
+	file, err := os.Open(deploymentPath)
 	if err != nil {
 		return nil, err
 	}
@@ -157,4 +168,8 @@ func loadDeployment(dev *model.Dev) (*appsv1.Deployment, error) {
 	var d appsv1.Deployment
 	err = dec.Decode(&d)
 	return &d, err
+}
+
+func getDeploymentFromAPI(namespace, name string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+	return c.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 }
