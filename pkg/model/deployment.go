@@ -80,7 +80,10 @@ func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment, parentRevision strin
 }
 
 func (dev *Dev) updateCndContainer(c *apiv1.Container) {
-	c.Image = dev.Swap.Deployment.Image
+	if dev.Swap.Deployment.Image != "" {
+		c.Image = dev.Swap.Deployment.Image
+	}
+
 	c.ImagePullPolicy = apiv1.PullIfNotPresent
 	c.Command = dev.Swap.Deployment.Command
 	c.Args = dev.Swap.Deployment.Args
