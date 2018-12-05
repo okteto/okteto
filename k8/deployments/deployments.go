@@ -3,9 +3,9 @@ package deployments
 import (
 	"fmt"
 	"os"
-	"path"
 	"time"
 
+	"github.com/okteto/cnd/k8/util"
 	"github.com/okteto/cnd/model"
 	log "github.com/sirupsen/logrus"
 
@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
-	deploymentUtil "k8s.io/kubernetes/pkg/controller/deployment/util"
 )
 
 const (
@@ -69,16 +68,15 @@ func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, 
 		return "", fmt.Errorf("%s is not in dev mode", fullname)
 	}
 
-	rs, err = getMatchingReplicaSet(namespace, d.Name, revision, c)
+	rs, err := getMatchingReplicaSet(namespace, d.Name, revision, c)
 	if err != nil {
 		return "", err
 	}
 
-	deploymentUtil.SetFromReplicaSetTemplate(d, rs)
-	deploymentutil.SetDeploymentAnnotationsTo(d, rs)
+	util.SetFromReplicaSetTemplate(d, rs.Spec.Template)
+	util.SetDeploymentAnnotationsTo(d, rs)
 
-	deploy(d, c)
-	return "", fmt.Errorf("error")
+	return deploy(d, c)
 }
 
 func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) (string, error) {
@@ -223,10 +221,6 @@ func getDeploymentFromAPI(namespace, name string, c *kubernetes.Clientset) (*app
 	return d, err
 }
 
-func getProdDeploymentPath(namespace, name string) string {
-	return path.Join(os.Getenv("HOME"), ".cnd", namespace, name, deploymentFile)
-}
-
 func getMatchingReplicaSet(namespace, deploymentName, revision string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
 	log.Debugf("Looking for a replica set of %s/%s with revision %s", namespace, deploymentName, revision)
 
@@ -262,6 +256,7 @@ func getMatchingReplicaSet(namespace, deploymentName, revision string, c *kubern
 		if name == deploymentName {
 			if replicaSetRevision == revision {
 				matchingReplicaSet = &r
+				log.Debugf("replicaset %s has the required revision", r.Name)
 				break
 			}
 		}
