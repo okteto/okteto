@@ -230,6 +230,7 @@ func getDeploymentFromAPI(namespace, name string, c *kubernetes.Clientset) (*app
 func getMatchingReplicaSet(namespace, deploymentName, revision string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
 	log.Debugf("Looking for a replica set of %s/%s with revision %s", namespace, deploymentName, revision)
 
+	// TODO: how can we add a filter so we only get the specific one we need?
 	replicaSets, err := c.AppsV1().ReplicaSets(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		log.Debugf("error while retrieving replicasets: %s", err)
@@ -243,19 +244,19 @@ func getMatchingReplicaSet(namespace, deploymentName, revision string, c *kubern
 	for _, r := range replicaSets.Items {
 		ownerReferences := r.GetObjectMeta().GetOwnerReferences()
 		if len(ownerReferences) == 0 {
-			log.Debugf("replicaset %s doesn't have an owner reference", r.Name)
+			log.Errorf("replicaset %s doesn't have an owner reference", r.Name)
 			continue
 		}
 
 		name := r.GetObjectMeta().GetOwnerReferences()[0].Name
 		if name == "" {
-			log.Debugf("replicaset %s doesn't have an owner name", r.Name)
+			log.Errorf("replicaset %s doesn't have an owner name", r.Name)
 			continue
 		}
 
 		replicaSetRevision := r.GetObjectMeta().GetAnnotations()[model.RevisionAnnotation]
 		if replicaSetRevision == "" {
-			log.Debugf("replicaset %s doesn't have a revision", r.Name)
+			log.Errorf("replicaset %s doesn't have a revision", r.Name)
 			continue
 		}
 
