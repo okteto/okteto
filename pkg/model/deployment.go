@@ -17,6 +17,10 @@ type deployment struct {
 	Args      []string `yaml:"args"`
 }
 
+var (
+	devReplicas int32 = 1
+)
+
 //Deployment returns a k8 deployment
 func (dev *Dev) Deployment() (*appsv1.Deployment, error) {
 	return dev.loadDeployment()
@@ -56,6 +60,11 @@ func (dev *Dev) DevDeployment() (*appsv1.Deployment, error) {
 	dev.createSyncthingContainer(d)
 	dev.createSyncthingVolume(d)
 
+	if *(d.Spec.Replicas) != devReplicas {
+		log.Info("cnd only supports running with 1 replica in dev mode")
+		d.Spec.Replicas = &devReplicas
+	}
+
 	return d, nil
 }
 
@@ -78,6 +87,7 @@ func (dev *Dev) updateCndContainer(c *apiv1.Container) {
 
 	c.ReadinessProbe = nil
 	c.LivenessProbe = nil
+
 }
 
 func (dev *Dev) createSyncthingContainer(d *appsv1.Deployment) {
