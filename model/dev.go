@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -85,9 +84,8 @@ func loadDev(b []byte) (*Dev, error) {
 	}
 
 	if strings.HasPrefix(dev.Mount.Source, "~/") {
-		usr, _ := user.Current()
-		dir := usr.HomeDir
-		dev.Mount.Source = filepath.Join(dir, dev.Mount.Source[2:])
+		home := os.Getenv("HOME")
+		dev.Mount.Source = filepath.Join(home, dev.Mount.Source[2:])
 	}
 
 	return &dev, nil
@@ -105,7 +103,7 @@ func (dev *Dev) fixPath(originalPath string) {
 		}
 	}
 
-	if !filepath.IsAbs(dev.Swap.Deployment.File) {
+	if dev.Swap.Deployment.File != "" && !filepath.IsAbs(dev.Swap.Deployment.File) {
 		if filepath.IsAbs(originalPath) {
 			dev.Swap.Deployment.File = path.Join(path.Dir(originalPath), dev.Swap.Deployment.File)
 		} else {

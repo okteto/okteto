@@ -56,7 +56,9 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, deployments.GetFullName(namespace, name))
+	fullname := deployments.GetFullName(namespace, name)
+
+	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, fullname)
 	if err != nil {
 		return err
 	}
@@ -67,6 +69,10 @@ func executeUp(devPath string) error {
 
 	err = storage.Insert(namespace, name, dev.Swap.Deployment.Container, sy.LocalPath, sy.GUIAddress)
 	if err != nil {
+		if err == storage.ErrAlreadyRunning {
+			return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", fullname)
+		}
+
 		return err
 	}
 
