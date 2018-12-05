@@ -36,9 +36,11 @@ func (dev *Dev) validate() error {
 	}
 
 	if dev.Swap.Deployment.Name == "" {
-		if dev.Swap.Deployment.File == "" {
+		if dev.Swap.Deployment.File != "" {
+			// for legacy deployments
 			return fmt.Errorf("Swap deployment name cannot be empty")
 		}
+
 	}
 
 	return nil
@@ -100,15 +102,6 @@ func (dev *Dev) fixPath(originalPath string) {
 		} else {
 
 			dev.Mount.Source = path.Join(wd, path.Dir(originalPath), dev.Mount.Source)
-		}
-	}
-
-	if dev.Swap.Deployment.File != "" && !filepath.IsAbs(dev.Swap.Deployment.File) {
-		if filepath.IsAbs(originalPath) {
-			dev.Swap.Deployment.File = path.Join(path.Dir(originalPath), dev.Swap.Deployment.File)
-		} else {
-
-			dev.Swap.Deployment.File = path.Join(wd, path.Dir(originalPath), dev.Swap.Deployment.File)
 		}
 	}
 }

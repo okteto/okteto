@@ -21,8 +21,10 @@ func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (strin
 	var d *appsv1.Deployment
 	var err error
 	if dev.Swap.Deployment.File != "" {
-		log.Infof("loading deployment definition from %s", dev.Swap.Deployment.File)
-		d, err = loadDeploymentFromFile(dev.Swap.Deployment.File)
+		// TODO: remove by January along with the file attribute
+		fmt.Println("This version of cnd no longer supports specifying your own deployment file")
+		fmt.Println("Instead, you need to provide the name of your deployment and cnd will get it from kubernetes.")
+		os.Exit(1)
 	} else {
 		d, err = loadDeployment(namespace, dev.Swap.Deployment.Name, c)
 	}
@@ -50,15 +52,10 @@ func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (strin
 //Deploy deploys a k8 deployment in prod mode
 func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
 	if dev.Swap.Deployment.File != "" {
-		prodDeploy, err := loadDeploymentFromFile(dev.Swap.Deployment.File)
-		prodDeploy.Namespace = namespace
-
-		if err != nil {
-			log.Debugf("error while retrieving deployment from %s: %s", dev.Swap.Deployment.File, err)
-			return "", err
-		}
-
-		return deploy(prodDeploy, c)
+		// TODO: remove by January along with the file attribute
+		fmt.Println("This version of cnd no longer supports specifying your own deployment file.")
+		fmt.Println("Please redeploy manually to restore your production configuration or use and older version of cnd.")
+		os.Exit(1)
 	}
 
 	d, err := loadDeployment(namespace, dev.Swap.Deployment.Name, c)
