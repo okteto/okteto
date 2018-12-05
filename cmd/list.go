@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"path"
 
-	"github.com/okteto/cnd/storage"
+	"github.com/okteto/cnd/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
