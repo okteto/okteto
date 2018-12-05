@@ -18,7 +18,15 @@ import (
 
 //DevDeploy deploys a k8 deployment in dev mode
 func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
-	d, err := loadDeployment(dev, namespace, c)
+	var d *appsv1.Deployment
+	var err error
+	if dev.Swap.Deployment.File != "" {
+		log.Infof("loading deployment definition from %s", dev.Swap.Deployment.File)
+		d, err = loadDeploymentFromFile(dev.Swap.Deployment.File)
+	} else {
+		d, err = loadDeployment(namespace, dev.Swap.Deployment.Name, c)
+	}
+
 	if err != nil {
 		return "", err
 	}
@@ -53,7 +61,7 @@ func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, 
 		return deploy(prodDeploy, c)
 	}
 
-	d, err := loadDeployment(dev, namespace, c)
+	d, err := loadDeployment(namespace, dev.Swap.Deployment.Name, c)
 	if err != nil {
 		return "", err
 	}
@@ -186,19 +194,18 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 	return nil, fmt.Errorf("kubernetes is taking long to create the dev mode container. Please, check for erros or retry in about 1 minute")
 }
 
-func loadDeployment(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+func loadDeployment(namespace, deploymentName string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
 
 	if namespace == "" {
 		return nil, fmt.Errorf("empty namespace")
 	}
 
-	if dev.Swap.Deployment.File != "" {
-		log.Infof("loading deployment definition from %s", dev.Swap.Deployment.File)
-		return loadDeploymentFromFile(dev.Swap.Deployment.File)
+	d, err := c.AppsV1().Deployments(namespace).Get(deploymentName, metav1.GetOptions{})
+	if err != nil {
+		log.Debugf("error while retrieving the deployment: %s", err)
 	}
 
-	log.Debugf("loading deployment definition for %s/%s from the cluster", namespace, dev.Swap.Deployment.Name)
-	return getDeploymentFromAPI(namespace, dev.Swap.Deployment.Name, c)
+	return d, err
 }
 
 func loadDeploymentFromFile(deploymentPath string) (*appsv1.Deployment, error) {
@@ -211,16 +218,6 @@ func loadDeploymentFromFile(deploymentPath string) (*appsv1.Deployment, error) {
 	var d appsv1.Deployment
 	err = dec.Decode(&d)
 	return &d, err
-}
-
-func getDeploymentFromAPI(namespace, name string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
-
-	d, err := c.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		log.Debugf("error while retrieving the deployment: %s", err)
-	}
-
-	return d, err
 }
 
 func getMatchingReplicaSet(namespace, deploymentName, revision string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
