@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 
 	log "github.com/sirupsen/logrus"
 
@@ -76,18 +78,25 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	defer stop(sy, pf)
-	err = pf.Start(client, restConfig, pod)
-	return err
+	channel := make(chan os.Signal, 1)
+	signal.Notify(channel, os.Interrupt)
+	go func() {
+		<-channel
+		stop(sy, pf)
+		return
+	}()
+
+	return pf.Start(client, restConfig, pod)
 }
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
-	log.Print("stopped syncthing and port forwarding")
+	fmt.Println()
+	log.Debugf("stopping syncthing and port forwarding")
 	if err := sy.Stop(); err != nil {
 		log.Error(err)
 	}
 
 	storage.Delete(sy.Namespace, sy.Name)
 	pf.Stop()
-	log.Print("stopped syncthing and port forwarding")
+	log.Debugf("stopped syncthing and port forwarding")
 }
