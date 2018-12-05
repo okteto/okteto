@@ -22,7 +22,8 @@ const (
 	// CNDLabel is the label added to a dev deployment in k8
 	CNDLabel = "cnd"
 
-	revisionAnnotation = "deployment.kubernetes.io/revision"
+	// RevisionAnnotation is the deployed revision
+	RevisionAnnotation = "deployment.kubernetes.io/revision"
 )
 
 var (
@@ -44,7 +45,7 @@ func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment) {
 		annotations = map[string]string{}
 	}
 
-	annotations[CNDRevision] = annotations[revisionAnnotation]
+	annotations[CNDRevision] = annotations[RevisionAnnotation]
 	log.Debugf("dev deployment is based of revision %s", annotations[CNDRevision])
 
 	d.GetObjectMeta().SetLabels(labels)
