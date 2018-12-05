@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/okteto/cnd/storage"
+	"github.com/okteto/cnd/pkg/storage"
 
-	"github.com/okteto/cnd/k8/client"
-	"github.com/okteto/cnd/k8/deployments"
-	"github.com/okteto/cnd/k8/exec"
+	"github.com/okteto/cnd/pkg/k8/client"
+	"github.com/okteto/cnd/pkg/k8/deployments"
+	"github.com/okteto/cnd/pkg/k8/exec"
 	"github.com/spf13/cobra"
 )
 

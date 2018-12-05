@@ -3,12 +3,12 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/okteto/cnd/model"
-	"github.com/okteto/cnd/storage"
-	"github.com/okteto/cnd/syncthing"
+	"github.com/okteto/cnd/pkg/storage"
+	"github.com/okteto/cnd/pkg/syncthing"
 
-	"github.com/okteto/cnd/k8/client"
-	"github.com/okteto/cnd/k8/deployments"
+	"github.com/okteto/cnd/pkg/k8/client"
+	"github.com/okteto/cnd/pkg/k8/deployments"
+	"github.com/okteto/cnd/pkg/model"
 	"github.com/spf13/cobra"
 )
 

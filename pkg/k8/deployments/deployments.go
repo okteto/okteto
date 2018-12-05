@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/okteto/cnd/k8/util"
-	"github.com/okteto/cnd/model"
+	"github.com/okteto/cnd/pkg/k8/util"
+	"github.com/okteto/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
 
 	appsv1 "k8s.io/api/apps/v1"

@@ -19,7 +19,7 @@ adapted from: https://github.com/kubernetes/kubernetes/blob/954996e231074dc7429f
 package util
 
 import (
-	"github.com/okteto/cnd/model"
+	"github.com/okteto/cnd/pkg/model"
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 )
