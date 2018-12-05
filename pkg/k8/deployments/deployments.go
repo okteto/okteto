@@ -16,10 +16,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const (
-	deploymentFile = "deployment.yml"
-)
-
 //DevDeploy deploys a k8 deployment in dev mode
 func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
 	d, err := loadDeployment(dev, namespace, c)
