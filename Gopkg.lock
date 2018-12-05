@@ -491,6 +491,7 @@
   packages = [
     "pkg/kubectl/util/term",
     "pkg/util/interrupt",
+    "pkg/controller/deployment/util",
   ]
   pruneopts = "UT"
   revision = "4ed3216f3ec431b140b1d899130a69fc671678f4"
@@ -516,6 +517,7 @@
     "k8s.io/client-go/tools/portforward",
     "k8s.io/client-go/tools/remotecommand",
     "k8s.io/client-go/transport/spdy",
+    "k8s.io/client-go/util/exec",
     "k8s.io/kubernetes/pkg/kubectl/util/term",
   ]
   solver-name = "gps-cdcl"

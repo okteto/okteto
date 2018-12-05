@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+	deploymentUtil "k8s.io/kubernetes/pkg/controller/deployment/util"
 )
 
 const (
@@ -43,15 +44,41 @@ func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (strin
 
 //Deploy deploys a k8 deployment in prod mode
 func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
-	prodDeploy, err := loadDeploymentFromFile(dev.Swap.Deployment.File)
-	prodDeploy.Namespace = namespace
+	if dev.Swap.Deployment.File != "" {
+		prodDeploy, err := loadDeploymentFromFile(dev.Swap.Deployment.File)
+		prodDeploy.Namespace = namespace
 
+		if err != nil {
+			log.Debugf("error while retrieving deployment from %s: %s", dev.Swap.Deployment.File, err)
+			return "", err
+		}
+
+		return deploy(prodDeploy, c)
+	}
+
+	d, err := loadDeployment(dev, namespace, c)
 	if err != nil {
-		log.Debugf("error while retrieving deployment from %s: %s", dev.Swap.Deployment.File, err)
 		return "", err
 	}
 
-	return deploy(prodDeploy, c)
+	fullname := GetFullName(d.Namespace, d.Name)
+
+	revision := d.GetObjectMeta().GetAnnotations()[model.CNDRevision]
+	if revision == "" {
+		log.Debugf("%s doesn't have the %s annotation", fullname, model.CNDRevision)
+		return "", fmt.Errorf("%s is not in dev mode", fullname)
+	}
+
+	rs, err = getMatchingReplicaSet(namespace, d.Name, revision, c)
+	if err != nil {
+		return "", err
+	}
+
+	deploymentUtil.SetFromReplicaSetTemplate(d, rs)
+	deploymentutil.SetDeploymentAnnotationsTo(d, rs)
+
+	deploy(d, c)
+	return "", fmt.Errorf("error")
 }
 
 func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) (string, error) {
@@ -170,7 +197,7 @@ func loadDeployment(dev *model.Dev, namespace string, c *kubernetes.Clientset) (
 		return loadDeploymentFromFile(dev.Swap.Deployment.File)
 	}
 
-	log.Debugf("loading deployment definition from the cluster")
+	log.Debugf("loading deployment definition for %s/%s from the cluster", namespace, dev.Swap.Deployment.Name)
 	return getDeploymentFromAPI(namespace, dev.Swap.Deployment.Name, c)
 }
 
@@ -198,5 +225,51 @@ func getDeploymentFromAPI(namespace, name string, c *kubernetes.Clientset) (*app
 
 func getProdDeploymentPath(namespace, name string) string {
 	return path.Join(os.Getenv("HOME"), ".cnd", namespace, name, deploymentFile)
+}
 
+func getMatchingReplicaSet(namespace, deploymentName, revision string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
+	log.Debugf("Looking for a replica set of %s/%s with revision %s", namespace, deploymentName, revision)
+
+	replicaSets, err := c.AppsV1().ReplicaSets(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		log.Debugf("error while retrieving replicasets: %s", err)
+		return nil, err
+	}
+
+	log.Debugf("found %d replica sets on namespace %s", len(replicaSets.Items), namespace)
+
+	var matchingReplicaSet *appsv1.ReplicaSet
+
+	for _, r := range replicaSets.Items {
+		ownerReferences := r.GetObjectMeta().GetOwnerReferences()
+		if len(ownerReferences) == 0 {
+			log.Debugf("replicaset %s doesn't have an owner reference", r.Name)
+			continue
+		}
+
+		name := r.GetObjectMeta().GetOwnerReferences()[0].Name
+		if name == "" {
+			log.Debugf("replicaset %s doesn't have an owner name", r.Name)
+			continue
+		}
+
+		replicaSetRevision := r.GetObjectMeta().GetAnnotations()[model.RevisionAnnotation]
+		if replicaSetRevision == "" {
+			log.Debugf("replicaset %s doesn't have a revision", r.Name)
+			continue
+		}
+
+		if name == deploymentName {
+			if replicaSetRevision == revision {
+				matchingReplicaSet = &r
+				break
+			}
+		}
+	}
+
+	if matchingReplicaSet == nil {
+		return nil, fmt.Errorf("couldn't find a replicaset of %s with the required revision", deploymentName)
+	}
+
+	return matchingReplicaSet, nil
 }
