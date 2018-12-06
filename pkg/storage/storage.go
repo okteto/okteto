@@ -26,7 +26,7 @@ type Storage struct {
 	Services map[string]Service `yaml:"services,omitempty"`
 }
 
-//Service represents the information about a dev mode service
+//Service represents the information about a cnd service
 type Service struct {
 	Folder    string `yaml:"folder,omitempty"`
 	Syncthing string `yaml:"syncthing,omitempty"`
@@ -90,7 +90,7 @@ func Get(namespace, deployment string) (*Service, error) {
 	fullName := fmt.Sprintf("%s/%s", namespace, deployment)
 	svc, ok := s.Services[fullName]
 	if !ok {
-		return nil, fmt.Errorf("there is no active dev mode for '%s'", fullName)
+		return nil, fmt.Errorf("there aren't any active cloud native development environments available for '%s'", fullName)
 	}
 	return &svc, nil
 }
@@ -107,7 +107,7 @@ func Delete(namespace, deployment string) error {
 	return s.save()
 }
 
-//All returns the active dev mode services
+//All returns the active cnd services
 func All() map[string]Service {
 	s, err := load()
 	if err != nil {

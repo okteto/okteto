@@ -16,7 +16,7 @@ import (
 func Down() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "down",
-		Short: "Stops a cloud native environment",
+		Short: "Deactivates your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return executeDown(devPath)
 		},
@@ -26,7 +26,7 @@ func Down() *cobra.Command {
 }
 
 func executeDown(devPath string) error {
-	fmt.Println("Deactivating dev mode...")
+	fmt.Println("Deactivating your cloud native development environment...")
 	dev, err := model.ReadDev(devPath)
 	if err != nil {
 		return err
@@ -54,6 +54,6 @@ func executeDown(devPath string) error {
 		return err
 	}
 
-	fmt.Println("Dev mode deactivated...")
+	fmt.Println("Cloud native development environment deactivated...")
 	return nil
 }

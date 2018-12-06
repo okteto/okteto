@@ -31,7 +31,7 @@ func Up() *cobra.Command {
 }
 
 func executeUp(devPath string) error {
-	fmt.Println("Activating dev mode...")
+	fmt.Println("Activating your cloud native development environment...")
 
 	namespace, client, restConfig, err := client.Get()
 	if err != nil {

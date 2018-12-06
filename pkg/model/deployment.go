@@ -74,7 +74,7 @@ func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment, parentRevision strin
 	dev.createSyncthingVolume(d)
 
 	if *(d.Spec.Replicas) != devReplicas {
-		log.Info("cnd only supports running with 1 replica in dev mode")
+		log.Info("cnd only supports running with 1 replica")
 		d.Spec.Replicas = &devReplicas
 	}
 }

@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//DevDeploy deploys a k8 deployment in dev mode
+//DevDeploy deploys a k8 deployment in cnd
 func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
 	var d *appsv1.Deployment
 	var err error
@@ -36,7 +36,7 @@ func DevDeploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (strin
 	cndLabelValue := util.GetLabel(d.GetObjectMeta(), model.CNDLabel)
 
 	if cndLabelValue != "" {
-		log.Debugf("The current deployment %s is already in dev mode. Leaving the original parent revision.", GetFullName(d.Namespace, d.Name))
+		log.Debugf("The current deployment %s is already in cnd. Leaving the original parent revision.", GetFullName(d.Namespace, d.Name))
 		parentRevision = util.GetAnnotation(d.GetObjectMeta(), model.CNDRevisionAnnotation)
 	}
 
@@ -69,7 +69,7 @@ func Deploy(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, 
 	revision := util.GetAnnotation(d.GetObjectMeta(), model.CNDRevisionAnnotation)
 	if revision == "" {
 		log.Debugf("%s doesn't have the %s annotation.", fullname, model.CNDRevisionAnnotation)
-		return "", fmt.Errorf("%s is not in dev mode", fullname)
+		return "", fmt.Errorf("%s is not a cloud native development deployment", fullname)
 	}
 
 	rs, err := getMatchingReplicaSet(namespace, d.Name, revision, c)
@@ -190,7 +190,7 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 		time.Sleep(1 * time.Second)
 	}
 
-	return nil, fmt.Errorf("kubernetes is taking long to create the dev mode container. Please, check for errors or try again")
+	return nil, fmt.Errorf("kubernetes is taking too long to create the cnd container. Please check for errors or try again")
 }
 
 func loadDeployment(namespace, deploymentName string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {

@@ -26,7 +26,7 @@ type Data struct {
 func List() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "lists the active dev mode services",
+		Short: "lists your active cloud native development environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return list()
 		},
@@ -39,10 +39,10 @@ func list() error {
 	services := storage.All()
 
 	if len(services) == 0 {
-		fmt.Println("There are no active dev mode services")
+		fmt.Println("There are no active cloud native development environments")
 		return nil
 	}
-	fmt.Println("Active dev mode services:")
+	fmt.Println("Active cloud native development environments:")
 	for name, svc := range services {
 		completion := status(svc)
 		fmt.Printf("%s\t\t%s\t\t%.2f%%\n", name, svc.Folder, completion)

@@ -52,10 +52,10 @@ func executeExec(args []string) error {
 	}
 
 	if len(candidates) == 0 {
-		return fmt.Errorf("There is not a dev mode service in your current folder")
+		return fmt.Errorf("There aren't any cloud native development environments active in your current folder")
 	}
 	if len(candidates) > 1 {
-		fmt.Printf("warning: there are %d dev mode services in your current folder, taking '%s'\n", len(candidates), deploymentFullName)
+		fmt.Printf("warning: there are %d cloud native development environments active in your current folder, using '%s'\n", len(candidates), deploymentFullName)
 	}
 
 	parts := strings.SplitN(deploymentFullName, "/", 2)
