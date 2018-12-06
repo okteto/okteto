@@ -83,10 +83,13 @@ func (dev *Dev) updateCndContainer(c *apiv1.Container) {
 	if dev.Swap.Deployment.Image != "" {
 		c.Image = dev.Swap.Deployment.Image
 	}
+	if len(dev.Swap.Deployment.Command) > 0 {
+		c.Command = dev.Swap.Deployment.Command
+	}
+	if len(dev.Swap.Deployment.Args) > 0 {
+		c.Args = dev.Swap.Deployment.Args
+	}
 
-	c.ImagePullPolicy = apiv1.PullIfNotPresent
-	c.Command = dev.Swap.Deployment.Command
-	c.Args = dev.Swap.Deployment.Args
 	c.WorkingDir = dev.Mount.Target
 	c.ReadinessProbe = nil
 	c.LivenessProbe = nil
