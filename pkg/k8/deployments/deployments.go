@@ -190,7 +190,7 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 		time.Sleep(1 * time.Second)
 	}
 
-	return nil, fmt.Errorf("kubernetes is taking long to create the cnd container. Please, check for errors or try again")
+	return nil, fmt.Errorf("kubernetes is taking too long to create the cnd container. Please check for errors or try again")
 }
 
 func loadDeployment(namespace, deploymentName string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
