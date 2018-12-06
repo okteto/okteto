@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/okteto/cnd.svg?style=svg)](https://circleci.com/gh/okteto/cnd)
 
-**Cloud Native Development** (CND) is about running your development flow entirely in kubernetes, avoiding the time-consuming `docker build/push/pull/redeploy` cycle. 
+**Cloud Native Development** (CND) is about running your development flow entirely in kubernetes, avoiding the time-consuming `docker build/push/pull/redeploy` cycle.
 
 CND helps you achieve this with a mix of kubernetes automation, file synching between your local file system and kubernetes and hot reloading of containers.
 
@@ -37,7 +37,7 @@ brew install cnd
 
 The synching functionality of **cnd** is provided by [syncthing](https://docs.syncthing.net).
 
-To install `syncthing`, download the corresponding binary from their [releases page](https://github.com/syncthing/syncthing/releases). 
+To install `syncthing`, download the corresponding binary from their [releases page](https://github.com/syncthing/syncthing/releases).
 
 **cnd** assumes that synchting is in the path, to verify, run the following:
 ```
@@ -52,14 +52,14 @@ go get github.com/okteto/cnd
 
 ## Usage
 
-Note: these instructions assume that you already have a kubernetes-based application running. 
+Note: these instructions assume that you already have a kubernetes-based application running.
 
 Define your Cloud Native Development file (`cnd.yml`). A `cnd.yml` looks like this:
 
 ```yaml
 swap:
   deployment:
-    file: nginx-deployment.yml
+    name: webserver
     container: nginx
     image: ubuntu
 mount:
