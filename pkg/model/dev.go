@@ -72,12 +72,6 @@ func loadDev(b []byte) (*Dev, error) {
 			Source: ".",
 			Target: "/src",
 		},
-		Swap: swap{
-			Deployment: deployment{
-				Command: []string{"tail"},
-				Args:    []string{"-f", "/dev/null"},
-			},
-		},
 	}
 
 	err := yaml.Unmarshal(b, &dev)
