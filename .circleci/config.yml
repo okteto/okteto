@@ -27,6 +27,18 @@ jobs:
           path: bin
           destination: binaries
   
+  mock-publish-github-release:
+    docker:
+      - image: cibuilds/github:0.10
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./artifacts
+      - deploy:
+          name: "Update brew formula"
+          command: |
+            ls -la
+            bash ./update_homebrew_formula.sh 0.0.1 $(awk {'print $1'} ./artifacts/bin/cnd-darwin-amd64.sha256) ${GITHUB_TOKEN} 1
   publish-github-release:
     docker:
       - image: cibuilds/github:0.10
@@ -39,15 +51,22 @@ jobs:
           command: |
             ghr -u okteto -r cnd -c ${CIRCLE_SHA1} -token ${GITHUB_TOKEN} -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
       - deploy:
-          name: "Update brew formula to ${CIRCLE_TAG}"
+          name: "Update brew formula"
           command: |
-            ./update_homebrew_formula.sh ${CIRCLE_TAG} $(awk {'print $1'} ./artifacts/bin/okteto-darwin-amd64.sha256) $GITHUB_TOKEN
+            ls -la
+            bash ./update_homebrew_formula.sh ${CIRCLE_TAG} $(awk {'print $1'} ./artifacts/bin/cnd-darwin-amd64.sha256) ${GITHUB_TOKEN} 0
 
 workflows:
   version: 2
   build-release:
     jobs:
       - build:
+          filters:
+            tags:
+              only: /.*/
+      - mock-publish-github-release:
+          requires:
+            - build
           filters:
             tags:
               only: /.*/

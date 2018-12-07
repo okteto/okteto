@@ -6,6 +6,41 @@
 
 CND helps you achieve this with a mix of kubernetes automation, file synching between your local file system and kubernetes and hot reloading of containers.
 
+## Quickstart
+
+- Install `cnd` locally 
+- Deploy a kubernetes service
+- Run `cnd up`
+- 
+
+For a more advanced scenario [check out our voting app cnd demo](https://github.com/okteto/cnd-voting-demo).
+
+## Installation
+
+### Homebrew install
+
+```bash
+brew tap okteto/cnd
+brew install cnd
+```
+
+### Manual install
+
+The synching functionality of **cnd** is provided by [syncthing](https://docs.syncthing.net).
+
+To install `syncthing`, download the corresponding binary from their [releases page](https://github.com/syncthing/syncthing/releases).
+
+**cnd** assumes that synchting is in the path, to verify, run the following:
+```
+which syncthing
+```
+
+Install **cnd** from by executing:
+
+```bash
+go get github.com/okteto/cnd
+```
+
 ## How does it work
 
 This is how a standard dev environment looks like:
@@ -26,29 +61,7 @@ Local changes are synched to the **cnd** container via `syncthing`. As you save 
 Once you're ready to integrate, you can revert back to your original configuration for general end-to-end testing before sending a PR or pushing to production.
 
 
-## Homebrew install
 
-```bash
-brew tap okteto/cnd
-brew install cnd
-```
-
-## Manual install
-
-The synching functionality of **cnd** is provided by [syncthing](https://docs.syncthing.net).
-
-To install `syncthing`, download the corresponding binary from their [releases page](https://github.com/syncthing/syncthing/releases).
-
-**cnd** assumes that synchting is in the path, to verify, run the following:
-```
-which syncthing
-```
-
-Install **cnd** from by executing:
-
-```bash
-go get github.com/okteto/cnd
-```
 
 ## Usage
 
@@ -61,7 +74,7 @@ swap:
   deployment:
     name: webserver
     container: nginx
-    image: ubuntu
+    image: nginx:alpine
 mount:
   source: .
   target: /src
