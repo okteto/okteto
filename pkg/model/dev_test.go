@@ -58,7 +58,7 @@ func Test_loadDev(t *testing.T) {
 	manifest := []byte(`
 swap:
   deployment:
-    file: deployment.yml
+    name: deployment
     container: core
     image: codescope/core:0.1.8
     command: ["uwsgi"]
@@ -71,11 +71,38 @@ mount:
 		t.Fatal(err)
 	}
 
+	if d.Swap.Deployment.Name != "deployment" {
+		t.Errorf("name was not parsed: %+v", d)
+	}
+
 	if len(d.Swap.Deployment.Command) != 1 || d.Swap.Deployment.Command[0] != "uwsgi" {
 		t.Errorf("command was not parsed: %+v", d)
 	}
 
 	if len(d.Swap.Deployment.Args) != 8 || d.Swap.Deployment.Args[4] != "--mount" {
+		t.Errorf("args was not parsed: %+v", d)
+	}
+}
+
+func Test_loadDevDefaults(t *testing.T) {
+	manifest := []byte(`
+swap:
+  deployment:
+    name: service
+    container: core
+mount:
+  source: /Users/fernandomayofernandez/PycharmProjects/codescope-core
+  target: /app`)
+	d, err := loadDev(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if d.Swap.Deployment.Command != nil || len(d.Swap.Deployment.Command) != 0 {
+		t.Errorf("command was not parsed: %+v", d)
+	}
+
+	if d.Swap.Deployment.Args != nil || len(d.Swap.Deployment.Args) != 0 {
 		t.Errorf("args was not parsed: %+v", d)
 	}
 }
