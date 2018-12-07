@@ -37,7 +37,6 @@ jobs:
       - deploy:
           name: "Update brew formula"
           command: |
-            ls -la
             bash ./update_homebrew_formula.sh 0.0.1 $(awk {'print $1'} ./artifacts/bin/cnd-darwin-amd64.sha256) ${GITHUB_TOKEN} 1
   publish-github-release:
     docker:
@@ -53,7 +52,6 @@ jobs:
       - deploy:
           name: "Update brew formula"
           command: |
-            ls -la
             bash ./update_homebrew_formula.sh ${CIRCLE_TAG} $(awk {'print $1'} ./artifacts/bin/cnd-darwin-amd64.sha256) ${GITHUB_TOKEN} 0
 
 workflows:
