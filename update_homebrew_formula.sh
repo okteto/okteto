@@ -4,6 +4,7 @@ set -e
 VERSION=$1
 SHA=$2
 GITHUB_TOKEN=$3
+DRYRUN=$4
 
 if [ -z "$VERSION" ]; then
   echo "missing version"
@@ -51,4 +52,10 @@ git config --global user.name "okteto"
 git config --global user.email "ci@okteto.com"
 git commit -m "$VERSION release"
 git --no-pager log -1
-git push origin master
+
+if [ "$DRYRUN" -eq "1" ]; then
+  echo "dry run: git push origin master"
+else
+  git push https://${GITHUB_TOKEN}@github.com/okteto/homebrew-cnd.git master
+fi
+
