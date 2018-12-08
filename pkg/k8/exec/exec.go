@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/util/exec"
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
 
+	"github.com/okteto/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,6 +26,14 @@ func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, containe
 	}
 
 	sizeQueue := t.MonitorSize(t.GetSize())
+
+	if container == "" {
+		for _, c := range pod.Spec.Containers {
+			if c.Name != model.CNDSyncContainerName {
+				container = c.Name
+			}
+		}
+	}
 
 	req := c.CoreV1().RESTClient().Post().
 		Namespace(pod.Namespace).

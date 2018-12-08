@@ -53,10 +53,6 @@ func executeExec(args []string) error {
 		}
 	}
 
-	if devContainer == "" {
-		return fmt.Errorf("failed to find your container, please check your configuration")
-	}
-
 	if len(candidates) == 0 {
 		return fmt.Errorf("There aren't any cloud native development environments active in your current folder")
 	}
@@ -78,6 +74,6 @@ func executeExec(args []string) error {
 		return err
 	}
 
-	log.Debugf("running command `%s` on %s/%s", strings.Join(args, " "), pod.Name, devContainer)
+	log.Debugf("running command `%s` on %s", strings.Join(args, " "), pod.Name)
 	return exec.Exec(client, config, pod, devContainer, os.Stdin, os.Stdout, os.Stderr, args)
 }

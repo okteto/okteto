@@ -27,6 +27,11 @@ const (
 
 	// RevisionAnnotation is the deployed revision
 	RevisionAnnotation = "deployment.kubernetes.io/revision"
+
+	// CNDSyncContainerName is the name of the container running syncthing
+	CNDSyncContainerName = "cnd-syncthing"
+
+	cndSyncVolumeName = "cnd-sync"
 )
 
 var (
@@ -80,10 +85,7 @@ func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment, parentRevision strin
 }
 
 func (dev *Dev) updateCndContainer(c *apiv1.Container) {
-	if dev.Swap.Deployment.Image == "" {
-		// we need this for the exec/run commands
-		dev.Swap.Deployment.Image = c.Image
-	} else {
+	if dev.Swap.Deployment.Image != "" {
 		c.Image = dev.Swap.Deployment.Image
 	}
 
@@ -103,7 +105,7 @@ func (dev *Dev) updateCndContainer(c *apiv1.Container) {
 	}
 
 	volumeMount := apiv1.VolumeMount{
-		Name:      "cnd-sync",
+		Name:      cndSyncVolumeName,
 		MountPath: dev.Mount.Target,
 	}
 
@@ -122,11 +124,11 @@ func (dev *Dev) updateCndContainer(c *apiv1.Container) {
 
 func (dev *Dev) createSyncthingContainer(d *appsv1.Deployment) {
 	syncthingContainer := apiv1.Container{
-		Name:  "cnd-syncthing",
+		Name:  CNDSyncContainerName,
 		Image: "okteto/syncthing:latest",
 		VolumeMounts: []apiv1.VolumeMount{
 			apiv1.VolumeMount{
-				Name:      "cnd-sync",
+				Name:      cndSyncVolumeName,
 				MountPath: "/var/cnd-sync",
 			},
 		},
@@ -155,7 +157,7 @@ func (dev *Dev) createSyncthingVolume(d *appsv1.Deployment) {
 		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
 	}
 
-	syncVolume := apiv1.Volume{Name: "cnd-sync"}
+	syncVolume := apiv1.Volume{Name: cndSyncVolumeName}
 
 	for i, v := range d.Spec.Template.Spec.Volumes {
 		if v.Name == syncVolume.Name {
