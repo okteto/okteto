@@ -80,9 +80,13 @@ func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment, parentRevision strin
 }
 
 func (dev *Dev) updateCndContainer(c *apiv1.Container) {
-	if dev.Swap.Deployment.Image != "" {
+	if dev.Swap.Deployment.Image == "" {
+		// we need this for the exec/run commands
+		dev.Swap.Deployment.Image = c.Image
+	} else {
 		c.Image = dev.Swap.Deployment.Image
 	}
+
 	if len(dev.Swap.Deployment.Command) > 0 {
 		c.Command = dev.Swap.Deployment.Command
 	}
