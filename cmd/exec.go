@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/okteto/cnd/pkg/storage"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/okteto/cnd/pkg/k8/client"
 	"github.com/okteto/cnd/pkg/k8/deployments"
@@ -42,6 +43,7 @@ func executeExec(args []string) error {
 	folder, _ := os.Getwd()
 
 	for name, svc := range services {
+
 		if strings.HasPrefix(folder, svc.Folder) {
 			candidates = append(candidates, svc)
 			if deploymentFullName == "" {
@@ -72,5 +74,6 @@ func executeExec(args []string) error {
 		return err
 	}
 
+	log.Debugf("running command `%s` on %s", strings.Join(args, " "), pod.Name)
 	return exec.Exec(client, config, pod, devContainer, os.Stdin, os.Stdout, os.Stderr, args)
 }

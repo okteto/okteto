@@ -11,6 +11,9 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/util/exec"
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
+
+	"github.com/okteto/cnd/pkg/model"
+	log "github.com/sirupsen/logrus"
 )
 
 // Exec executes the command in the cnd container
@@ -23,6 +26,14 @@ func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, containe
 	}
 
 	sizeQueue := t.MonitorSize(t.GetSize())
+
+	if container == "" {
+		for _, c := range pod.Spec.Containers {
+			if c.Name != model.CNDSyncContainerName {
+				container = c.Name
+			}
+		}
+	}
 
 	req := c.CoreV1().RESTClient().Post().
 		Namespace(pod.Namespace).
@@ -41,6 +52,7 @@ func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, containe
 	fn := func() error {
 		exec, err := remotecommand.NewSPDYExecutor(config, http.MethodPost, req.URL())
 		if err != nil {
+			log.Errorf("failed to establish the remote executor: %s", err.Error())
 			return err
 		}
 
@@ -57,9 +69,13 @@ func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, containe
 		if v, ok := err.(exec.CodeExitError); ok {
 			// 130 is the exit code for ctrl+c or exit commands
 			if v.Code == 130 {
+				log.Infof("ignoring error 130")
 				return nil
 			}
 		}
+
+		log.Infof("failed to start the command stream: %s", err.Error())
+		return err
 	}
 
 	return nil
