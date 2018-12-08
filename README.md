@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/okteto/cnd.svg?style=svg)](https://circleci.com/gh/okteto/cnd)
 
-**Cloud Native Development** (CND) is about running your development flow entirely in kubernetes, avoiding the time-consuming `docker build/push/pull/redeploy` cycle.
+**Cloud Native Development** (CND) is about moving your entire development workflow to kubernetes, avoiding the time-consuming `docker build/push/pull/redeploy` cycle.
 
 CND helps you achieve this with a mix of kubernetes automation, file synching between your local file system and kubernetes and hot reloading of containers.
 
@@ -157,3 +157,6 @@ cnd uses  [syncthing](https://docs.syncthing.ne) to sync files between your envi
 
 ### Files syncing is slow
 Please follow [syncthing's docs](https://docs.syncthing.net/users/faq.html#why-is-the-sync-so-slow) to troubleshoot this.
+
+# About cnd
+cnd was originally created by [Okteto](https://okteto.com) and is licensed under the Apache 2.0 License.
