@@ -21,7 +21,7 @@ import (
 func Up() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Activates your cloud native development environment",
+		Short: "Activate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return executeUp(devPath)
 		},
