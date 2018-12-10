@@ -26,7 +26,7 @@ type Data struct {
 func List() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "lists your active cloud native development environments",
+		Short: "List your active cloud native development environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return list()
 		},

@@ -16,7 +16,7 @@ import (
 func Down() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "down",
-		Short: "Deactivates your cloud native development environment",
+		Short: "Deactivate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return executeDown(devPath)
 		},
