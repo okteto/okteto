@@ -168,4 +168,4 @@ Get in touch with the maintainers!
 
 
 # About cnd
-cnd was originally created by [Okteto](https://okteto.com) and is licensed under the Apache 2.0 License.
+cnd was originally created by [Okteto](https://okteto.com/cnd) and is licensed under the Apache 2.0 License.
