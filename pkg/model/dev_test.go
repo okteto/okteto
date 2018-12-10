@@ -65,7 +65,7 @@ swap:
     command: ["uwsgi"]
     args: ["--gevent", "100", "--http-socket", "0.0.0.0:8000", "--mount", "/=codescope:app", "--python-autoreload", "1"]
 mount:
-  source: /Users/fernandomayofernandez/PycharmProjects/codescope-core
+  source: /Users/example/app
   target: /app`)
 	d, err := loadDev(manifest)
 	if err != nil {
@@ -99,11 +99,11 @@ func Test_loadDevDefaults(t *testing.T) {
                 name: service
                 container: core
             mount:
-              source: /Users/fernandomayofernandez/PycharmProjects/codescope-core
+              source: /Users/example/app
               target: /app
             scripts:
-              run: "uwsgi --gevent 100 --http-socket 0.0.0.0:8000 --mount /=codescope:app --python-autoreload 1"`),
-			[]string{"--gevent", "100", "--http-socket", "0.0.0.0:8000", "--mount", "/=codescope:app", "--python-autoreload", "1"},
+              run: "uwsgi --gevent 100 --http-socket 0.0.0.0:8000 --mount /=app:app --python-autoreload 1"`),
+			[]string{"--gevent", "100", "--http-socket", "0.0.0.0:8000", "--mount", "/=app:app", "--python-autoreload", "1"},
 		},
 		{
 			"basic script",
