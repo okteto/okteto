@@ -93,8 +93,6 @@ Local changes are synched to the **cnd** container via `syncthing`. As you save 
 Once you're ready to integrate, you can revert back to your original configuration for general end-to-end testing before sending a PR or pushing to production.
 
 
-
-
 ## Usage
 
 Note: these instructions assume that you already have a kubernetes-based application running.
@@ -157,6 +155,17 @@ cnd uses  [syncthing](https://docs.syncthing.ne) to sync files between your envi
 
 ### Files syncing is slow
 Please follow [syncthing's docs](https://docs.syncthing.net/users/faq.html#why-is-the-sync-so-slow) to troubleshoot this.
+
+# Stay in Touch
+Got questions? Have feedback? Come talk to us in 
+our [Slack workspace](https://okteto-community.slack.com/join/shared_invite/enQtNDg3MTMyMzA1OTg3LTY1NzE0MGM5YjMwOTAzN2YxZTU3ZjkzNTNkM2Y1YmJjMjlkODU5Mzc1YzY0OThkNWRhYzhkMTM2NWFlY2RkMDk)
+
+Get in touch with the maintainers!
+
+- [Pablo Chico de Guzman](https://twitter.com/pchico83)
+- [Ramiro Berrelleza](https://twitter.com/rberrelleza)
+- [Ramon Lamana](https://twitter.com/monchocromo)
+
 
 # About cnd
 cnd was originally created by [Okteto](https://okteto.com) and is licensed under the Apache 2.0 License.
