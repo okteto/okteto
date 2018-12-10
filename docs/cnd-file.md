@@ -43,7 +43,7 @@ The local folder synched to the remote container. (default: the current folder)
 
 The remote folder path synched with the local file system.
 
-## swap.scripts (optional)
+## scripts (optional)
 
 You may define scripts in your cnd file to run directly in your cloud native environment via the `cnd run SCRIPT` command. Each script must have a unique name.
 ```yaml

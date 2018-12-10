@@ -86,30 +86,60 @@ mount:
 }
 
 func Test_loadDevDefaults(t *testing.T) {
-	manifest := []byte(`
-swap:
-  deployment:
-    name: service
-    container: core
-mount:
-  source: /Users/fernandomayofernandez/PycharmProjects/codescope-core
-  target: /app
-scripts:
-  run: "uwsgi --gevent 100 --http-socket 0.0.0.0:8000 --mount /=codescope:app --python-autoreload 1"`)
-	d, err := loadDev(manifest)
-	if err != nil {
-		t.Fatal(err)
+	var tests = []struct {
+		name     string
+		manifest []byte
+		expected []string
+	}{
+		{
+			"long script",
+			[]byte(`
+            swap:
+              deployment:
+                name: service
+                container: core
+            mount:
+              source: /Users/fernandomayofernandez/PycharmProjects/codescope-core
+              target: /app
+            scripts:
+              run: "uwsgi --gevent 100 --http-socket 0.0.0.0:8000 --mount /=codescope:app --python-autoreload 1"`),
+			[]string{"--gevent", "100", "--http-socket", "0.0.0.0:8000", "--mount", "/=codescope:app", "--python-autoreload", "1"},
+		},
+		{
+			"basic script",
+			[]byte(`
+            swap:
+              deployment:
+                name: service
+                container: core
+            mount:
+              source: /src
+              target: /app
+            scripts:
+              run: "start.sh"`),
+			[]string{"start.sh"},
+		},
 	}
 
-	if d.Swap.Deployment.Command != nil || len(d.Swap.Deployment.Command) != 0 {
-		t.Errorf("command was not parsed: %+v", d)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d, err := loadDev(tt.manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if d.Swap.Deployment.Command != nil || len(d.Swap.Deployment.Command) != 0 {
+				t.Errorf("command was not parsed: %+v", d)
+			}
+
+			if d.Swap.Deployment.Args != nil || len(d.Swap.Deployment.Args) != 0 {
+				t.Errorf("args was not parsed: %+v", d)
+			}
+			if reflect.DeepEqual(d.Scripts["run"], tt.expected) {
+				t.Errorf("script was not parsed correctly")
+			}
+
+		})
 	}
 
-	if d.Swap.Deployment.Args != nil || len(d.Swap.Deployment.Args) != 0 {
-		t.Errorf("args was not parsed: %+v", d)
-	}
-
-	if reflect.DeepEqual(d.Scripts["run"], []string{"--gevent", "100", "--http-socket", "0.0.0.0:8000", "--mount", "/=codescope:app", "--python-autoreload", "1"}) {
-		t.Errorf("script was not parsed correctly")
-	}
 }
