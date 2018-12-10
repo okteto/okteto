@@ -10,7 +10,7 @@ CND helps you achieve this with a mix of kubernetes automation, file synching be
 
 Let's start with something simple to show you the power of cloud native development. First, install [cnd locally](#installation).  
 
-Clone the `voting-app` service.
+Clone the `welcome` service.
 
 ```console
 git clone https://github.com/okteto/welcome
