@@ -175,5 +175,9 @@ We follow the standard [github pull request process](https://help.github.com/art
 ## File an Issue
 Not ready to contribute code, but see something that needs work? While we encourage everyone to contribute code, it is also appreciated when someone reports an issue. We use [github issues](https://github.com/okteto/cnd/issues) for this.
 
+## Code of Conduct
+Please make sure to read and observe our [code of conduct](code-of-conduct.md).
+
+
 # About cnd
 cnd was originally created by [Okteto](https://okteto.com/cnd) and is licensed under the Apache 2.0 License.
