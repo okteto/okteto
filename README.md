@@ -73,25 +73,10 @@ Install **cnd** from by executing:
 go get github.com/okteto/cnd
 ```
 
+
 ## How does it work
 
-This is how a standard dev environment looks like:
-
-<img align="left" src="docs/env.png">
-
-&nbsp;
-
-And this how it looks after converting it into a cloud native environment:
-
-<img align="left" src="docs/cnd.png">
-&nbsp;
-
-The **cnd** container duplicates the manifest of the **api** pod, so it is fully integrated with every Kubernetes feature.
-
-Local changes are synched to the **cnd** container via `syncthing`. As you save locally, it will be automatically synched in your **cnd** container in seconds.
-
-Once you're ready to integrate, you can revert back to your original configuration for general end-to-end testing before sending a PR or pushing to production.
-
+Interested in the internal workings of cnd? An in-depth explanation [is available here](docs/how-does-it-work.md). 
 
 ## Usage
 
@@ -110,7 +95,7 @@ mount:
   target: /src
 ```
 
-For more information about the Cloud Native Development file, see its [reference](/docs/cnd-file.md).
+For more information about the Cloud Native Development file, see its [reference](docs/cnd-file.md#cnd-yaml-reference).
 
 To convert your dev environment to a cloud native environment, execute:
 
