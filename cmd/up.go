@@ -7,7 +7,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/okteto/cnd/pkg/k8/client"
 	"github.com/okteto/cnd/pkg/k8/deployments"
 	"github.com/okteto/cnd/pkg/k8/forward"
 	"github.com/okteto/cnd/pkg/storage"
@@ -23,7 +22,7 @@ func Up() *cobra.Command {
 		Use:   "up",
 		Short: "Activate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeUp(devPath)
+			return executeUp(c.devPath)
 		},
 	}
 
@@ -33,7 +32,7 @@ func Up() *cobra.Command {
 func executeUp(devPath string) error {
 	fmt.Println("Activating your cloud native development environment...")
 
-	namespace, client, restConfig, err := client.Get()
+	namespace, client, restConfig, err := getKubernetesClient()
 	if err != nil {
 		return err
 	}

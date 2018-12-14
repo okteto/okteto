@@ -30,7 +30,7 @@ func Run() *cobra.Command {
 }
 
 func executeRun(args []string) error {
-	dev, err := model.ReadDev(devPath)
+	dev, err := model.ReadDev(c.devPath)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func executeRun(args []string) error {
 		return executeExec(parseArguments(val, args))
 	}
 
-	return fmt.Errorf("%s is not defined in %s", args[0], devPath)
+	return fmt.Errorf("%s is not defined in %s", args[0], c.devPath)
 
 }
 

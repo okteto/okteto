@@ -10,16 +10,19 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-//Get returns a kubernetes client
-func Get() (string, *kubernetes.Clientset, *rest.Config, error) {
+//Get returns a kubernetes client. If namespace is empty, it will use the default namespace configured.
+func Get(namespace string) (string, *kubernetes.Clientset, *rest.Config, error) {
 	home := os.Getenv("HOME")
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: path.Join(home, ".kube/config")},
 		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}})
 
-	namespace, _, err := clientConfig.Namespace()
-	if err != nil {
-		return "", nil, nil, err
+	if namespace == "" {
+		var err error
+		namespace, _, err = clientConfig.Namespace()
+		if err != nil {
+			return "", nil, nil, err
+		}
 	}
 
 	config, err := clientConfig.ClientConfig()

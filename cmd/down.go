@@ -6,7 +6,6 @@ import (
 	"github.com/okteto/cnd/pkg/storage"
 	"github.com/okteto/cnd/pkg/syncthing"
 
-	"github.com/okteto/cnd/pkg/k8/client"
 	"github.com/okteto/cnd/pkg/k8/deployments"
 	"github.com/okteto/cnd/pkg/model"
 	"github.com/spf13/cobra"
@@ -18,7 +17,7 @@ func Down() *cobra.Command {
 		Use:   "down",
 		Short: "Deactivate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeDown(devPath)
+			return executeDown(c.devPath)
 		},
 	}
 
@@ -32,7 +31,7 @@ func executeDown(devPath string) error {
 		return err
 	}
 
-	namespace, client, _, err := client.Get()
+	namespace, client, _, err := getKubernetesClient()
 	if err != nil {
 		return err
 	}
