@@ -33,6 +33,7 @@ func init() {
 		Down(),
 		Version(),
 		List(),
+		Run(),
 	)
 }
 
