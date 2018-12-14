@@ -9,7 +9,6 @@ import (
 	"github.com/okteto/cnd/pkg/storage"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/okteto/cnd/pkg/k8/client"
 	"github.com/okteto/cnd/pkg/k8/deployments"
 	"github.com/okteto/cnd/pkg/k8/exec"
 	"github.com/spf13/cobra"
@@ -64,7 +63,7 @@ func executeExec(args []string) error {
 	namespace := parts[0]
 	deploymentName := parts[1]
 
-	namespace, client, config, err := client.Get()
+	namespace, client, config, err := getKubernetesClient()
 	if err != nil {
 		return err
 	}
