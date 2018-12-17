@@ -129,18 +129,6 @@ cnd down
 
 For a full demo of Cloud Native Development, check the [Voting App demo](https://github.com/okteto/cnd-voting-demo).
 
-## Troubleshooting
-
-### Files are not syncing
-cnd uses  [syncthing](https://docs.syncthing.ne) to sync files between your environments. If your cloud native environment is not being updated correctly, review the following:
-
-1. The `cnd up` process is running
-1. Verify that syncthing is running on your environment (there should be two processes per cnd environment running)
-1. Rerun `cnd up` (give it a few minutes to reestablish synchronization)
-
-### Files syncing is slow
-Please follow [syncthing's docs](https://docs.syncthing.net/users/faq.html#why-is-the-sync-so-slow) to troubleshoot this.
-
 # Stay in Touch
 Got questions? Have feedback? Come talk to us in 
 our [Slack workspace](https://okteto-community.slack.com/join/shared_invite/enQtNDg3MTMyMzA1OTg3LTY1NzE0MGM5YjMwOTAzN2YxZTU3ZjkzNTNkM2Y1YmJjMjlkODU5Mzc1YzY0OThkNWRhYzhkMTM2NWFlY2RkMDk)
@@ -159,10 +147,10 @@ We follow the standard [github pull request process](https://help.github.com/art
 
 ## File an Issue
 Not ready to contribute code, but see something that needs work? While we encourage everyone to contribute code, it is also appreciated when someone reports an issue. We use [github issues](https://github.com/okteto/cnd/issues) for this.
+Also, check our [troubleshooting section](docs/troubleshooting.md) for known issues.
 
 ## Code of Conduct
 Please make sure to read and observe our [code of conduct](code-of-conduct.md).
-
 
 # About cnd
 cnd was originally created by [Okteto](https://okteto.com/cnd) and is licensed under the Apache 2.0 License.
