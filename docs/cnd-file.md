@@ -33,7 +33,7 @@ The docker image to use by the cloud native environment. (default: the existing 
 
 The command to be executed by the cloud native environment.
 
-It has to be a non-finishing command (default: `tail -f /dev/null`)
+It has to be a non-finishing command, e.g. `tail -f /dev/null` (default: the existing image command)
 
 ## mount.source (optional)
 
