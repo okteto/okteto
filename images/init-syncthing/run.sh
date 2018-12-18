@@ -9,7 +9,7 @@ fi
 
 echo "Waiting for tarball to be uploaded..."
 i=0
-while [ ! "$(ls -A /src)" ] && [ "$i" -lt 60 ]; do
+while [ ! -f /initialized ] && [ "$i" -lt 60 ]; do
 	sleep 1
 done
 

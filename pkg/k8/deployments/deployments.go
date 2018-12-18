@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/okteto/cnd/pkg/k8/cp"
 	"github.com/okteto/cnd/pkg/k8/util"
 	"github.com/okteto/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
@@ -13,6 +14,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 //DevDeploy deploys a k8 deployment in cnd
@@ -106,21 +108,7 @@ func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) (string, error) {
 		}
 	}
 
-	log.Infof("Waiting for the deployment '%s' to be ready...", deploymentName)
-	tries := 0
-	for tries < 60 {
-		tries++
-		time.Sleep(5 * time.Second)
-		d, err := dClient.Get(d.Name, metav1.GetOptions{})
-		if err != nil {
-			return "", fmt.Errorf("Error getting kubernetes deployment: %s", err)
-		}
-		if d.Status.ReadyReplicas == 1 && d.Status.UpdatedReplicas == 1 {
-			log.Infof("Kubernetes deployment '%s' is ready.", deploymentName)
-			return d.Name, nil
-		}
-	}
-	return "", fmt.Errorf("Kubernetes deployment  %s not ready after 300s", deploymentName)
+	return d.Name, nil
 }
 
 // GetFullName returns the full name of the deployment. This is mostly used for logs and labels
@@ -156,31 +144,28 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 
 		}
 
-		pod := pods.Items[0]
-		if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
-			return nil, fmt.Errorf("cannot exec in your cloud native environment; current state is %s", pod.Status.Phase)
-		}
-
-		var runningPods []apiv1.Pod
+		var pendingOrRunningPods []apiv1.Pod
 		for _, pod := range pods.Items {
-			if pod.Status.Phase == apiv1.PodRunning && pod.GetObjectMeta().GetDeletionTimestamp() == nil {
-				runningPods = append(runningPods, pod)
+			if pod.Status.Phase == apiv1.PodRunning || pod.Status.Phase == apiv1.PodPending {
+				if pod.GetObjectMeta().GetDeletionTimestamp() == nil {
+					pendingOrRunningPods = append(pendingOrRunningPods, pod)
+				}
 			}
 		}
 
-		if len(runningPods) == 1 {
+		if len(pendingOrRunningPods) == 1 {
 			if devContainer != "" {
-				if !containerExists(&pod, devContainer) {
+				if !containerExists(&pendingOrRunningPods[0], devContainer) {
 					return nil, fmt.Errorf("container %s doesn't exist in the pod", devContainer)
 				}
 			}
 
-			return &runningPods[0], nil
+			return &pendingOrRunningPods[0], nil
 		}
 
-		if len(runningPods) > 1 {
-			podNames := make([]string, len(runningPods))
-			for i, p := range runningPods {
+		if len(pendingOrRunningPods) > 1 {
+			podNames := make([]string, len(pendingOrRunningPods))
+			for i, p := range pendingOrRunningPods {
 				podNames[i] = p.Name
 			}
 			return nil, fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
@@ -190,7 +175,60 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 		time.Sleep(1 * time.Second)
 	}
 
-	return nil, fmt.Errorf("kubernetes is taking too long to create the cnd container. Please check for errors or try again")
+	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors or try again")
+}
+
+// InitVolumeWithTarball initializes the remote volume with a local tarball
+func InitVolumeWithTarball(c *kubernetes.Clientset, config *rest.Config, namespace, podName, folder string) error {
+	copied := false
+	tries := 0
+	for tries < 30 && !copied {
+		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		for _, status := range pod.Status.InitContainerStatuses {
+			if status.Name == model.CNDInitSyncContainerName {
+				if status.State.Waiting != nil {
+					time.Sleep(1 * time.Second)
+				}
+				if status.State.Running != nil {
+					if copied {
+						time.Sleep(1 * time.Second)
+					} else {
+						if err := cp.Copy(c, config, namespace, pod, folder); err != nil {
+							return err
+						}
+						copied = true
+					}
+				}
+				if status.State.Terminated != nil {
+					if status.State.Terminated.ExitCode != 0 {
+						return fmt.Errorf("Volume initialization failed with exit code %d", status.State.Terminated.ExitCode)
+					}
+					copied = true
+				}
+				break
+			}
+		}
+		tries++
+	}
+	if tries == 30 {
+		return fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors or try again")
+	}
+	tries = 0
+	for tries < 30 {
+		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if pod.Status.Phase == apiv1.PodRunning {
+			return nil
+		}
+		tries++
+		time.Sleep(1 * time.Second)
+	}
+	return fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors or try again")
 }
 
 func loadDeployment(namespace, deploymentName string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {

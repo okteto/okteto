@@ -74,5 +74,5 @@ func executeExec(args []string) error {
 	}
 
 	log.Debugf("running command `%s` on %s", strings.Join(args, " "), pod.Name)
-	return exec.Exec(client, config, pod, devContainer, os.Stdin, os.Stdout, os.Stderr, args)
+	return exec.Exec(client, config, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
 }
