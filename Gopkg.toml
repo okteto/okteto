@@ -52,3 +52,15 @@
 [[constraint]]
   name = "k8s.io/kubernetes"
   version = "1.12.1"
+
+[[constraint]]
+  name = "github.com/mholt/archiver"
+  version = "3.1.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mash/go-tempfile-suffix"
+
+[[constraint]]
+  name = "github.com/satori/go.uuid"
+  version = "1.2.0"
