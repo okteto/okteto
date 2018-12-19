@@ -89,7 +89,7 @@ func executeUp(devPath string) error {
 		return
 	}()
 
-	return pf.Start(client, restConfig, pod)
+	return pf.Start(client, restConfig, pod, dev.Swap.Deployment.Container)
 }
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
