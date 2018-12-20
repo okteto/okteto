@@ -28,6 +28,9 @@ const (
 	// RevisionAnnotation is the deployed revision
 	RevisionAnnotation = "deployment.kubernetes.io/revision"
 
+	// CNDInitSyncContainerName is the name of the container initializing the shared volume
+	CNDInitSyncContainerName = "cnd-init-syncthing"
+
 	// CNDSyncContainerName is the name of the container running syncthing
 	CNDSyncContainerName = "cnd-syncthing"
 
@@ -75,6 +78,7 @@ func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment, parentRevision strin
 		}
 	}
 
+	dev.createInitSyncthingContainer(d)
 	dev.createSyncthingContainer(d)
 	dev.createSyncthingVolume(d)
 
@@ -120,6 +124,32 @@ func (dev *Dev) updateCndContainer(c *apiv1.Container) {
 		c.VolumeMounts,
 		volumeMount,
 	)
+}
+
+func (dev *Dev) createInitSyncthingContainer(d *appsv1.Deployment) {
+	initSyncthingContainer := apiv1.Container{
+		Name:  CNDInitSyncContainerName,
+		Image: "okteto/init-syncthing:0.3.4",
+		VolumeMounts: []apiv1.VolumeMount{
+			apiv1.VolumeMount{
+				Name:      cndSyncVolumeName,
+				MountPath: "/src",
+			},
+		},
+	}
+
+	if d.Spec.Template.Spec.InitContainers == nil {
+		d.Spec.Template.Spec.InitContainers = []apiv1.Container{}
+	}
+
+	for i, c := range d.Spec.Template.Spec.InitContainers {
+		if c.Name == initSyncthingContainer.Name {
+			d.Spec.Template.Spec.InitContainers[i] = initSyncthingContainer
+			return
+		}
+	}
+
+	d.Spec.Template.Spec.InitContainers = append(d.Spec.Template.Spec.InitContainers, initSyncthingContainer)
 }
 
 func (dev *Dev) createSyncthingContainer(d *appsv1.Deployment) {

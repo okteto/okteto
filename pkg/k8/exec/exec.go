@@ -17,7 +17,7 @@ import (
 )
 
 // Exec executes the command in the cnd container
-func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
+func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string, tty bool, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
 
 	t := term.TTY{
 		In:  stdin,
@@ -46,7 +46,7 @@ func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, containe
 			Stdin:     true,
 			Stdout:    true,
 			Stderr:    true,
-			TTY:       true,
+			TTY:       tty,
 		}, scheme.ParameterCodec)
 
 	fn := func() error {

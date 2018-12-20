@@ -52,6 +52,10 @@ func executeUp(devPath string) error {
 		return err
 	}
 
+	if err := deployments.InitVolumeWithTarball(client, restConfig, namespace, pod.Name, dev.Mount.Source); err != nil {
+		return err
+	}
+
 	sy, err := syncthing.NewSyncthing(name, namespace, dev.Mount.Source)
 	if err != nil {
 		return err
@@ -85,7 +89,7 @@ func executeUp(devPath string) error {
 		return
 	}()
 
-	return pf.Start(client, restConfig, pod)
+	return pf.Start(client, restConfig, pod, dev.Swap.Deployment.Container)
 }
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {

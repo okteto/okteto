@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/okteto/cnd/pkg/k8/logs"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -49,7 +50,7 @@ func NewCNDPortForward(localPath, remoteAddress, deploymentName string) (*CNDPor
 
 // Start starts a port foward for the specified port. The function will block until
 // p.Stop is called
-func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod) error {
+func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string) error {
 	req := c.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace(pod.Namespace).
@@ -83,6 +84,7 @@ func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod
 			fmt.Printf("Ready! Go to your local IDE and continue coding!")
 			fmt.Println()
 			p.IsReady = true
+			logs.Logs(c, config, pod, container)
 		}
 	}()
 
