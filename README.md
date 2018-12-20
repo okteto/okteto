@@ -6,14 +6,93 @@
 
 CND helps you achieve this with a mix of kubernetes automation, file synching between your local file system and kubernetes and hot reloading of containers.
 
+## Installation
+
+### Homebrew install
+
+```console
+brew tap okteto/cnd
+brew install cnd
+```
+
+### Manual install
+
+The synching functionality of **cnd** is provided by [syncthing](https://docs.syncthing.net).
+
+To install `syncthing`, download the corresponding binary from their [releases page](https://github.com/syncthing/syncthing/releases).
+
+**cnd** assumes that synchting is in the path, to verify, run the following:
+```console
+which syncthing
+```
+
+Install **cnd** from by executing:
+
+```console
+go get github.com/okteto/cnd
+```
+
+## How does it work
+
+Interested in the internal workings of cnd? An in-depth explanation [is available here](docs/how-does-it-work.md). 
+
+## Usage
+
+Define your cloud native development environment using a `cnd.yml` file. A `cnd.yml` file looks like this:
+
+```yaml
+swap:
+  deployment:
+    name: welcome
+    container: welcome
+mount:
+  source: .
+  target: /src
+```
+
+For more information about the Cloud Native Development file, see its [reference](docs/cnd-file.md#cnd-yaml-reference).
+
+To convert your dev environment to a cloud native environment, execute:
+
+```console
+cnd up
+```
+
+by default, it uses a `cnd.yml` in your current folder. For using a different file, execute:
+
+```console
+cnd up -f path-to-cnd-file
+```
+
+To create a long-running session to your cloud native environment, execute:
+
+```console
+cnd exec sh
+```
+
+You can also execute standalone commands like:
+
+```console
+cnd exec go test
+```
+
+In order to revert back to your original configuration, execute:
+
+```console
+cnd down
+```
+
 ## Quickstart
 
-Let's start with something simple to show you the power of cloud native development. First, install [cnd locally](#installation).  
+(Prerequisites: you need to have a kubernetes cluster running and `kubectl` pointing to it.)
+
+Let's start with something simple to show you the power of cloud native development.
 
 Clone the `welcome` service.
 
 ```console
 git clone https://github.com/okteto/welcome
+cd welcome
 ```
 
 Deploy the welcome service by running the following command.
@@ -26,7 +105,7 @@ $ kubectl get service welcome
 NAME      TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)        AGE
 welcome   LoadBalancer   10.15.255.73   35.204.101.246   80:30879/TCP   20s
 ```
-It might take a minute or two for the service to be up and running depending on your cluster.
+It might take a minute or two for the service to expose the external ip depending on your cluster.
 
 *If you're using minikube, you'll need to either change the service to use a NodePort, or enable load balancers in your instance.*
 
@@ -46,88 +125,6 @@ Open your favorite IDE, go to `app.py` and change the value of  `option_a` (line
 Congratulations, you're now a **cloud native developer** 😎.
 
 For a more advanced scenario involving a microservices-based application, [check out our voting app cnd demo](https://github.com/okteto/cnd-voting-demo).
-
-## Installation
-
-### Homebrew install
-
-```bash
-brew tap okteto/cnd
-brew install cnd
-```
-
-### Manual install
-
-The synching functionality of **cnd** is provided by [syncthing](https://docs.syncthing.net).
-
-To install `syncthing`, download the corresponding binary from their [releases page](https://github.com/syncthing/syncthing/releases).
-
-**cnd** assumes that synchting is in the path, to verify, run the following:
-```
-which syncthing
-```
-
-Install **cnd** from by executing:
-
-```bash
-go get github.com/okteto/cnd
-```
-
-
-## How does it work
-
-Interested in the internal workings of cnd? An in-depth explanation [is available here](docs/how-does-it-work.md). 
-
-## Usage
-
-Note: these instructions assume that you already have a kubernetes-based application running.
-
-Define your Cloud Native Development file (`cnd.yml`). A `cnd.yml` looks like this:
-
-```yaml
-swap:
-  deployment:
-    name: webserver
-    container: nginx
-    image: nginx:alpine
-mount:
-  source: .
-  target: /src
-```
-
-For more information about the Cloud Native Development file, see its [reference](docs/cnd-file.md#cnd-yaml-reference).
-
-To convert your dev environment to a cloud native environment, execute:
-
-```bash
-cnd up
-```
-
-by default, it uses a `cnd.yml` in your current folder. For using a different file, execute:
-
-```bash
-cnd up -f path-to-cnd-file
-```
-
-To create a long-running session to your cloud native environment, execute:
-
-```bash
-cnd exec sh
-```
-
-You can also execute standalone commands like:
-
-```bash
-cnd exec go test
-```
-
-In order to revert back to your original configuration, execute:
-
-```bash
-cnd down
-```
-
-For a full demo of Cloud Native Development, check the [Voting App demo](https://github.com/okteto/cnd-voting-demo).
 
 # Stay in Touch
 Got questions? Have feedback? Come talk to us in 
