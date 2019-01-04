@@ -6,6 +6,11 @@
 
 CND helps you achieve this with a mix of kubernetes automation, file synching between your local file system and kubernetes and hot reloading of containers.
 
+Follow [@OktetoHQ](https://twitter.com/oktetohq) on Twitter for important announcements.
+
+This project adheres to the Contributor Covenant [code of conduct](code-of-conduct.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to hello@okteto.com.
+
+
 ## Installation
 
 ### Homebrew install
@@ -135,19 +140,6 @@ Get in touch with the maintainers!
 - [Pablo Chico de Guzman](https://twitter.com/pchico83)
 - [Ramiro Berrelleza](https://twitter.com/rberrelleza)
 - [Ramon Lamana](https://twitter.com/monchocromo)
-
-# Contributions
-
-Interested in contributing? As an open source project, we'd appreciate any help and contributions! 
-
-We follow the standard [github pull request process](https://help.github.com/articles/about-pull-requests/). We'll try to review your contributions as soon as possible. 
-
-## File an Issue
-Not ready to contribute code, but see something that needs work? While we encourage everyone to contribute code, it is also appreciated when someone reports an issue. We use [github issues](https://github.com/okteto/cnd/issues) for this.
-Also, check our [troubleshooting section](docs/troubleshooting.md) for known issues.
-
-## Code of Conduct
-Please make sure to read and observe our [code of conduct](code-of-conduct.md).
 
 # About cnd
 cnd was originally created by [Okteto](https://okteto.com/cnd) and is licensed under the Apache 2.0 License.
