@@ -209,6 +209,14 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:b8a91524c7e262bcf2fde6e6bdcebfcaa6450ad073af6df6301fd5f6c32a838b"
+  name = "github.com/moovweb/rubex"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "cb849acea6148000db8a55743f71476b0897ea41"
+  version = "6.3.107"
+
+[[projects]]
   digest = "1:b93a939355dc613ca1c23bf39f6d4c207da431a31dd8af001cc334ad24cab9d3"
   name = "github.com/nwaples/rardecode"
   packages = ["."]
@@ -274,6 +282,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
+
+[[projects]]
+  branch = "master"
+  digest = "1:2699f40ea73866f38eccb385738750a71a05cec654f029e78f620caccefd85e4"
+  name = "github.com/toqueteos/trie"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "56fed4a05683322f125e2d78ee269bb102280392"
 
 [[projects]]
   digest = "1:db345c377984d0907323c09a9b17f11d995a59649fd38f909727df358b5f9020"
@@ -401,6 +417,27 @@
   pruneopts = "UT"
   revision = "d2d2541c53f18d2a059457998ce2876cc8e67cbf"
   version = "v0.9.1"
+
+[[projects]]
+  digest = "1:bdce03a1ad3dbb484e748b871f7069cefe3a8e111296e494a58bc7145cfa112e"
+  name = "gopkg.in/src-d/enry.v1"
+  packages = [
+    ".",
+    "data",
+    "internal/tokenizer",
+    "regex",
+  ]
+  pruneopts = "UT"
+  revision = "8953e0e19a9a08c69113f672fbd89f6082b379d5"
+  version = "v1.6.7"
+
+[[projects]]
+  digest = "1:98e121dbd49eb03c58bd8ef3b76322b2fdc3676cf11fa0084bb17ff01b2aa704"
+  name = "gopkg.in/toqueteos/substring.v1"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c5f61671513240ddf5563635cc4a90e9f3ae4710"
+  version = "v1.0.2"
 
 [[projects]]
   digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
@@ -583,6 +620,7 @@
     "github.com/satori/go.uuid",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
+    "gopkg.in/src-d/enry.v1",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
