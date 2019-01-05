@@ -308,5 +308,5 @@ func checkForLegacyCND(namespace, deploymentName string, c *kubernetes.Clientset
 		}
 	}
 
-	return fmt.Errorf("cloud native environment is not initialized. Please run 'cnd up' first")
+	return fmt.Errorf("cloud native environment %s/%s is not initialized. Please run 'cnd up' first", namespace, deploymentName)
 }
