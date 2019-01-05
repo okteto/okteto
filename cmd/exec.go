@@ -35,6 +35,26 @@ func Exec() *cobra.Command {
 }
 
 func executeExec(args []string) error {
+	namespace, deployment, devContainer, err := findDevEnvironment()
+	if err != nil {
+		return err
+	}
+
+	_, client, config, err := getKubernetesClient()
+	if err != nil {
+		return err
+	}
+
+	pod, err := deployments.GetCNDPod(client, namespace, deployment, devContainer)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("running command `%s` on %s", strings.Join(args, " "), pod.Name)
+	return exec.Exec(client, config, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
+}
+
+func findDevEnvironment() (string, string, string, error) {
 	services := storage.All()
 	candidates := []storage.Service{}
 	deploymentFullName := ""
@@ -42,7 +62,6 @@ func executeExec(args []string) error {
 	folder, _ := os.Getwd()
 
 	for name, svc := range services {
-
 		if strings.HasPrefix(folder, svc.Folder) {
 			candidates = append(candidates, svc)
 			if deploymentFullName == "" {
@@ -53,7 +72,7 @@ func executeExec(args []string) error {
 	}
 
 	if len(candidates) == 0 {
-		return fmt.Errorf("There aren't any cloud native development environments active in your current folder")
+		return "", "", "", fmt.Errorf("There aren't any cloud native development environments active in your current folder")
 	}
 	if len(candidates) > 1 {
 		fmt.Printf("warning: there are %d cloud native development environments active in your current folder, using '%s'\n", len(candidates), deploymentFullName)
@@ -63,16 +82,5 @@ func executeExec(args []string) error {
 	namespace := parts[0]
 	deploymentName := parts[1]
 
-	namespace, client, config, err := getKubernetesClient()
-	if err != nil {
-		return err
-	}
-
-	pod, err := deployments.GetCNDPod(client, namespace, deploymentName, devContainer)
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("running command `%s` on %s", strings.Join(args, " "), pod.Name)
-	return exec.Exec(client, config, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
+	return namespace, deploymentName, devContainer, nil
 }
