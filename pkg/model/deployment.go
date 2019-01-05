@@ -86,6 +86,7 @@ func (dev *Dev) TurnIntoDevDeployment(d *appsv1.Deployment, parentRevision strin
 		log.Info("cnd only supports running with 1 replica")
 		d.Spec.Replicas = &devReplicas
 	}
+
 }
 
 func (dev *Dev) updateCndContainer(c *apiv1.Container) {
@@ -124,6 +125,8 @@ func (dev *Dev) updateCndContainer(c *apiv1.Container) {
 		c.VolumeMounts,
 		volumeMount,
 	)
+
+	c.Resources = apiv1.ResourceRequirements{}
 }
 
 func (dev *Dev) createInitSyncthingContainer(d *appsv1.Deployment) {
