@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type lenguageDefault struct {
+type languageDefault struct {
 	image   string
 	command []string
 	path    string
@@ -22,31 +22,31 @@ const (
 )
 
 var (
-	lenguageDefaults map[string]lenguageDefault
+	languageDefaults map[string]languageDefault
 	tailCommand      = []string{"tail", "-f", "/dev/null"}
 )
 
 func init() {
-	lenguageDefaults = make(map[string]lenguageDefault)
-	lenguageDefaults[javascript] = lenguageDefault{
+	languageDefaults = make(map[string]languageDefault)
+	languageDefaults[javascript] = languageDefault{
 		image:   "node",
 		command: tailCommand,
 		path:    "/usr/src/app",
 	}
 
-	lenguageDefaults[golang] = lenguageDefault{
+	languageDefaults[golang] = languageDefault{
 		image:   "golang",
 		command: tailCommand,
 		path:    "/go/src/app",
 	}
 
-	lenguageDefaults[python] = lenguageDefault{
+	languageDefaults[python] = languageDefault{
 		image:   "python",
 		command: []string{"python", "app.py"},
 		path:    "/usr/src/app",
 	}
 
-	lenguageDefaults[unrecognized] = lenguageDefault{
+	languageDefaults[unrecognized] = languageDefault{
 		image:   "ubuntu",
 		command: tailCommand,
 		path:    "/app",
@@ -55,7 +55,7 @@ func init() {
 
 // GetDevConfig returns the default dev for the specified language
 func GetDevConfig(language string) *model.Dev {
-	vals := lenguageDefaults[normalizeLenguage(language)]
+	vals := languageDefaults[normalizeLanguage(language)]
 
 	dev := model.NewDev()
 	dev.Swap.Deployment.Image = vals.image
@@ -66,7 +66,7 @@ func GetDevConfig(language string) *model.Dev {
 	return dev
 }
 
-func normalizeLenguage(language string) string {
+func normalizeLanguage(language string) string {
 	lower := strings.ToLower(language)
 	switch lower {
 	case "typescript":
