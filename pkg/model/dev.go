@@ -27,6 +27,20 @@ type mount struct {
 	Target string `yaml:"target"`
 }
 
+//NewDev returns a new instance of dev with default values
+func NewDev() *Dev {
+	return &Dev{
+		Swap: swap{
+			Deployment: deployment{},
+		},
+		Mount: mount{
+			Source: ".",
+			Target: "/app",
+		},
+		Scripts: make(map[string]string),
+	}
+}
+
 func (dev *Dev) validate() error {
 	file, err := os.Stat(dev.Mount.Source)
 	if err != nil && os.IsNotExist(err) {
