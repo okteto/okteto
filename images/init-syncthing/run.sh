@@ -3,7 +3,7 @@
 set -e
 
 if [ "$(ls -A /src)" ]; then
-	echo "Volume was already initialized."
+	echo "Volume was already initialized"
 	exit 0 
 fi
 
@@ -14,8 +14,8 @@ while [ ! -f /initialized ] && [ "$i" -lt 60 ]; do
 done
 
 if [ "$i" -eq 60 ]; then
-	echo "Tarball not uploaded after 1 minute."
+	echo "Tarball not uploaded after 1 minute"
 	exit 0
 fi
 
-echo "Volume is now initialized."
+echo "Volume is now initialized"

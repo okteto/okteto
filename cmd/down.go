@@ -36,7 +36,7 @@ func executeDown(devPath string) error {
 		return err
 	}
 
-	name, err := deployments.Deploy(dev, namespace, client)
+	name, err := deployments.DevModeOff(dev, namespace, client)
 	if err != nil {
 		return err
 	}
@@ -53,6 +53,6 @@ func executeDown(devPath string) error {
 		return err
 	}
 
-	fmt.Println("Cloud native development environment deactivated...")
+	fmt.Println("Cloud native development environment deactivated")
 	return nil
 }

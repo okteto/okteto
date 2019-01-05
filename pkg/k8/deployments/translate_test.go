@@ -1,31 +1,31 @@
-package model
+package deployments
 
 import (
 	"testing"
 
+	"github.com/okteto/cnd/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 )
 
 func Test_updateCNDContainer(t *testing.T) {
-	manifest := []byte(`
-swap:
-  deployment:
-    name: deployment
-    container: core
-    image: okteto/test
-mount:
-  source: /Users/fernandomayofernandez/PycharmProjects/codescope-core
-  target: /app`)
-	d, err := loadDev(manifest)
-	if err != nil {
-		t.Fatal(err)
+	dev := &model.Dev{
+		Swap: model.Swap{
+			Deployment: model.Deployment{
+				Name:      "deployment",
+				Container: "api",
+				Image:     "okteto/test",
+			},
+		},
+		Mount: model.Mount{
+			Source: ".",
+			Target: "/app",
+		},
 	}
-
 	c := &apiv1.Container{
 		Command: []string{"/run"},
 		Args:    []string{"all"},
 	}
-	d.updateCndContainer(c)
+	updateCndContainer(c, dev)
 
 	if c.Image != "okteto/test" {
 		t.Errorf("Image wasn't updated: %+v", c)
