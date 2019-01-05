@@ -4,27 +4,15 @@ import (
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	apiResource "k8s.io/apimachinery/pkg/api/resource"
 )
 
 type deployment struct {
-	Name      string    `yaml:"name"`
-	File      string    `yaml:"file"`
-	Container string    `yaml:"container"`
-	Image     string    `yaml:"image"`
-	Command   []string  `yaml:"command"`
-	Args      []string  `yaml:"args"`
-	Resources resources `yaml:"resources"`
-}
-
-type resources struct {
-	Limits   resource `yaml:"limits"`
-	Requests resource `yaml:"requests"`
-}
-
-type resource struct {
-	CPU    string `yaml:"cpu"`
-	Memory string `yaml:"memory"`
+	Name      string   `yaml:"name"`
+	File      string   `yaml:"file"`
+	Container string   `yaml:"container"`
+	Image     string   `yaml:"image"`
+	Command   []string `yaml:"command"`
+	Args      []string `yaml:"args"`
 }
 
 const (
@@ -139,30 +127,6 @@ func (dev *Dev) updateCndContainer(c *apiv1.Container) {
 	)
 
 	c.Resources = apiv1.ResourceRequirements{}
-
-	limitsOverrides := c.Resources.Limits.DeepCopy()
-	overrideLimitIfNeeded(dev.Swap.Deployment.Resources.Limits.CPU, apiv1.ResourceLimitsCPU, &limitsOverrides)
-	overrideLimitIfNeeded(dev.Swap.Deployment.Resources.Limits.Memory, apiv1.ResourceLimitsMemory, &limitsOverrides)
-	c.Resources.Limits = limitsOverrides
-
-	requestsOverrides := c.Resources.Requests.DeepCopy()
-	overrideLimitIfNeeded(dev.Swap.Deployment.Resources.Requests.CPU, apiv1.ResourceRequestsCPU, &requestsOverrides)
-	overrideLimitIfNeeded(dev.Swap.Deployment.Resources.Requests.Memory, apiv1.ResourceRequestsMemory, &requestsOverrides)
-	c.Resources.Requests = requestsOverrides
-}
-
-func overrideLimitIfNeeded(quantity string, resource apiv1.ResourceName, resourceList *apiv1.ResourceList) {
-	if quantity == "" {
-		return
-	}
-
-	q, err := apiResource.ParseQuantity(quantity)
-	if err != nil {
-		log.Errorf("Failed to parse quantity for %s: %s", resource, err.Error())
-		return
-	}
-
-	(*resourceList)[resource] = q
 }
 
 func (dev *Dev) createInitSyncthingContainer(d *appsv1.Deployment) {

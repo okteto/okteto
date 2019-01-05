@@ -8,9 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
-	apiResource "k8s.io/apimachinery/pkg/api/resource"
 )
 
 // Dev represents a cloud native development environment
@@ -44,36 +42,6 @@ func (dev *Dev) validate() error {
 			return fmt.Errorf("Swap deployment name cannot be empty")
 		}
 
-	}
-
-	if err := validateQuantity(dev.Swap.Deployment.Resources.Limits.CPU, "dev.swap.deployment.resources.limits.cpu"); err != nil {
-		return err
-	}
-
-	if err := validateQuantity(dev.Swap.Deployment.Resources.Limits.Memory, "dev.swap.deployment.resources.limits.memory"); err != nil {
-		return err
-	}
-
-	if err := validateQuantity(dev.Swap.Deployment.Resources.Requests.CPU, "dev.swap.deployment.resources.requests.cpu"); err != nil {
-		return err
-	}
-
-	if err := validateQuantity(dev.Swap.Deployment.Resources.Requests.Memory, "dev.swap.deployment.resources.requests.memory"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func validateQuantity(quantity, tagName string) error {
-	if quantity == "" {
-		return nil
-	}
-
-	_, err := apiResource.ParseQuantity(quantity)
-	if err != nil {
-		log.Errorf("invalid quantity value for %s: %s", tagName, err)
-		return fmt.Errorf("%s is not a valid value for %s", quantity, tagName)
 	}
 
 	return nil
