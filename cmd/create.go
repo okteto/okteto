@@ -17,7 +17,7 @@ import (
 func Create() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Automatically create the cnd manifest",
+		Short: "Automatically create the cnd manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return executeCreate()
 		},
