@@ -52,8 +52,6 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(dev.Swap.Deployment.Container, pod.Spec.Containers)
-
 	if err := deployments.InitVolumeWithTarball(client, restConfig, namespace, pod.Name, dev.Mount.Source); err != nil {
 		return err
 	}
