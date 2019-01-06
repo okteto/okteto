@@ -67,7 +67,7 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	sy, err := syncthing.NewSyncthing(name, namespace, dev.Mount.Source)
+	sy, err := syncthing.NewSyncthing(name, namespace, dev.Swap.Deployment.Container, dev.Mount.Source)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
 		log.Error(err)
 	}
 
-	storage.Stop(sy.Namespace, sy.Name)
+	storage.Stop(sy.Namespace, sy.Name, sy.Container)
 	pf.Stop()
 	log.Debugf("stopped syncthing and port forwarding")
 }

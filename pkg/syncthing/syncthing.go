@@ -43,6 +43,7 @@ type Syncthing struct {
 	home             string
 	Name             string
 	Namespace        string
+	Container        string
 	LocalPath        string
 	RemoteAddress    string
 	RemoteDeviceID   string
@@ -57,7 +58,7 @@ func getCNDHome() string {
 }
 
 // NewSyncthing constructs a new Syncthing.
-func NewSyncthing(name, namespace, localPath string) (*Syncthing, error) {
+func NewSyncthing(name, namespace, container, localPath string) (*Syncthing, error) {
 
 	remotePort, err := getAvailablePort()
 	if err != nil {
@@ -79,6 +80,7 @@ func NewSyncthing(name, namespace, localPath string) (*Syncthing, error) {
 		binPath:          "syncthing",
 		Name:             name,
 		Namespace:        namespace,
+		Container:        container,
 		home:             path.Join(getCNDHome(), namespace, name),
 		LocalPath:        localPath,
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),

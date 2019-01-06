@@ -27,7 +27,7 @@ func Down() *cobra.Command {
 func executeDown() error {
 	fmt.Println("Deactivating your cloud native development environment...")
 
-	namespace, deployment, _, err := findDevEnvironment(false)
+	namespace, deployment, devContainer, err := findDevEnvironment(false)
 
 	if err != nil {
 		if err == errNoCNDEnvironment {
@@ -44,17 +44,17 @@ func executeDown() error {
 		return err
 	}
 
-	name, err := deployments.DevModeOff(namespace, deployment, client)
+	_, err = deployments.DevModeOff(namespace, deployment, client)
 	if err != nil {
 		return err
 	}
 
-	syncthing, err := syncthing.NewSyncthing(name, namespace, "")
+	syncthing, err := syncthing.NewSyncthing(deployment, namespace, devContainer, "")
 	if err != nil {
 		return err
 	}
 
-	storage.Delete(namespace, name)
+	storage.Delete(namespace, deployment, devContainer)
 
 	err = syncthing.Stop()
 	if err != nil {

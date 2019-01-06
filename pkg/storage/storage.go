@@ -15,7 +15,8 @@ const (
 )
 
 var (
-	stPath            string
+	stPath string
+	// ErrAlreadyRunning indicates a "cnd up" command is already running
 	ErrAlreadyRunning = fmt.Errorf("up-already-running")
 )
 
@@ -30,7 +31,6 @@ type Storage struct {
 type Service struct {
 	Folder    string `yaml:"folder,omitempty"`
 	Syncthing string `yaml:"syncthing,omitempty"`
-	Container string `yaml:"container,omitempty"`
 }
 
 func init() {
@@ -62,8 +62,8 @@ func Insert(namespace, deployment, container, folder, host string) error {
 		return err
 	}
 
-	fullName := fmt.Sprintf("%s/%s", namespace, deployment)
-	svc, err := newService(folder, container, host)
+	fullName := fmt.Sprintf("%s/%s/%s", namespace, deployment, container)
+	svc, err := newService(folder, host)
 	if err != nil {
 		return err
 	}
@@ -73,11 +73,9 @@ func Insert(namespace, deployment, container, folder, host string) error {
 			return nil
 		}
 
-		if svc2.Syncthing == "" {
-			return nil
+		if svc2.Syncthing != "" {
+			return ErrAlreadyRunning
 		}
-
-		return ErrAlreadyRunning
 	}
 
 	s.Services[fullName] = svc
@@ -85,13 +83,13 @@ func Insert(namespace, deployment, container, folder, host string) error {
 }
 
 //Get gets a service entry
-func Get(namespace, deployment string) (*Service, error) {
+func Get(namespace, deployment, container string) (*Service, error) {
 	s, err := load()
 	if err != nil {
 		return nil, err
 	}
 
-	fullName := fmt.Sprintf("%s/%s", namespace, deployment)
+	fullName := fmt.Sprintf("%s/%s/%s", namespace, deployment, container)
 	svc, ok := s.Services[fullName]
 	if !ok {
 		return nil, fmt.Errorf("there aren't any active cloud native development environments available for '%s'", fullName)
@@ -100,27 +98,30 @@ func Get(namespace, deployment string) (*Service, error) {
 }
 
 //Stop marks a service entry as stopped
-func Stop(namespace, deployment string) error {
+func Stop(namespace, deployment, container string) error {
 	s, err := load()
 	if err != nil {
 		return err
 	}
 
-	fullName := fmt.Sprintf("%s/%s", namespace, deployment)
-	svc := s.Services[fullName]
-	svc.Syncthing = ""
-	s.Services[fullName] = svc
-	return s.save()
+	fullName := fmt.Sprintf("%s/%s/%s", namespace, deployment, container)
+	svc, ok := s.Services[fullName]
+	if ok {
+		svc.Syncthing = ""
+		s.Services[fullName] = svc
+		return s.save()
+	}
+	return nil
 }
 
 //Delete deletes a service entry
-func Delete(namespace, deployment string) error {
+func Delete(namespace, deployment, container string) error {
 	s, err := load()
 	if err != nil {
 		return err
 	}
 
-	fullName := fmt.Sprintf("%s/%s", namespace, deployment)
+	fullName := fmt.Sprintf("%s/%s/%s", namespace, deployment, container)
 	delete(s.Services, fullName)
 	return s.save()
 }
@@ -159,11 +160,10 @@ func fixPath(originalPath string) (string, error) {
 	return path.Join(folder, originalPath), nil
 }
 
-func newService(folder, container, host string) (Service, error) {
+func newService(folder, host string) (Service, error) {
 	absFolder, err := fixPath(folder)
 	if err != nil {
 		return Service{}, err
 	}
-	return Service{Folder: absFolder, Syncthing: host, Container: container}, nil
-
+	return Service{Folder: absFolder, Syncthing: host}, nil
 }
