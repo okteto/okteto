@@ -14,7 +14,7 @@ type languageDefault struct {
 }
 
 const (
-	node             = "node"
+	javascript       = "javascript"
 	golang           = "go"
 	python           = "python"
 	unrecognized     = "unrecognized"
@@ -22,31 +22,31 @@ const (
 )
 
 var (
-	platformDefaults map[string]languageDefault
+	languageDefaults map[string]languageDefault
 	tailCommand      = []string{"tail", "-f", "/dev/null"}
 )
 
 func init() {
-	platformDefaults = make(map[string]languageDefault)
-	platformDefaults[node] = languageDefault{
+	languageDefaults = make(map[string]languageDefault)
+	languageDefaults[javascript] = languageDefault{
 		image:   "okteto/node:11",
 		command: []string{"sh", "-c", "yarn install && yarn start"},
 		path:    "/usr/src/app",
 	}
 
-	platformDefaults[golang] = languageDefault{
+	languageDefaults[golang] = languageDefault{
 		image:   "golang",
 		command: tailCommand,
 		path:    "/go/src/app",
 	}
 
-	platformDefaults[python] = languageDefault{
+	languageDefaults[python] = languageDefault{
 		image:   "python",
 		command: []string{"python", "app.py"},
 		path:    "/usr/src/app",
 	}
 
-	platformDefaults[unrecognized] = languageDefault{
+	languageDefaults[unrecognized] = languageDefault{
 		image:   "ubuntu",
 		command: tailCommand,
 		path:    "/usr/src/app",
@@ -55,7 +55,7 @@ func init() {
 
 // GetDevConfig returns the default dev for the specified language
 func GetDevConfig(language string) *model.Dev {
-	vals := platformDefaults[getPlatform(language)]
+	vals := languageDefaults[normalizeLanguage(language)]
 
 	dev := model.NewDev()
 	dev.Swap.Deployment.Image = vals.image
@@ -66,15 +66,15 @@ func GetDevConfig(language string) *model.Dev {
 	return dev
 }
 
-func getPlatform(language string) string {
+func normalizeLanguage(language string) string {
 	lower := strings.ToLower(language)
 	switch lower {
 	case "typescript":
-		return node
+		return javascript
 	case "javascript":
-		return node
+		return javascript
 	case "jsx":
-		return node
+		return javascript
 	case "python":
 		return python
 	case "go":
