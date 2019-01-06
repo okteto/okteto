@@ -32,8 +32,10 @@ func Up() *cobra.Command {
 func executeUp(devPath string) error {
 	fmt.Println("Activating your cloud native development environment...")
 
-	namespace, deploymentName, _, err := findDevEnvironment()
+	namespace, deploymentName, _, err := findDevEnvironment(true)
+
 	if err != errNoCNDEnvironment {
+		log.Info(err)
 		return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", deployments.GetFullName(namespace, deploymentName))
 	}
 
@@ -104,7 +106,7 @@ func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
 		log.Error(err)
 	}
 
-	storage.Delete(sy.Namespace, sy.Name)
+	storage.Stop(sy.Namespace, sy.Name)
 	pf.Stop()
 	log.Debugf("stopped syncthing and port forwarding")
 }

@@ -49,8 +49,8 @@ func DevModeOn(dev *model.Dev, namespace string, c *kubernetes.Clientset) (strin
 }
 
 //DevModeOff deactivates a cloud native development
-func DevModeOff(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
-	d, err := loadDeployment(namespace, dev.Swap.Deployment.Name, c)
+func DevModeOff(namespace, deploymentName string, c *kubernetes.Clientset) (string, error) {
+	d, err := loadDeployment(namespace, deploymentName, c)
 	if err != nil {
 		return "", err
 	}

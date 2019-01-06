@@ -39,10 +39,7 @@ func Exec() *cobra.Command {
 }
 
 func executeExec(args []string) error {
-	namespace, deployment, devContainer, err := findDevEnvironment()
-	if err != nil {
-		return err
-	}
+	namespace, deployment, devContainer, err := findDevEnvironment(true)
 
 	_, client, config, err := getKubernetesClient()
 	if err != nil {
@@ -58,7 +55,7 @@ func executeExec(args []string) error {
 	return exec.Exec(client, config, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
 }
 
-func findDevEnvironment() (string, string, string, error) {
+func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 	services := storage.All()
 	candidates := []storage.Service{}
 	deploymentFullName := ""
@@ -67,6 +64,10 @@ func findDevEnvironment() (string, string, string, error) {
 
 	for name, svc := range services {
 		if strings.HasPrefix(folder, svc.Folder) {
+			if mustBeRunning && svc.Syncthing == "" {
+				continue
+			}
+
 			candidates = append(candidates, svc)
 			if deploymentFullName == "" {
 				deploymentFullName = name

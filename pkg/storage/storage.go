@@ -73,6 +73,10 @@ func Insert(namespace, deployment, container, folder, host string) error {
 			return nil
 		}
 
+		if svc2.Syncthing == "" {
+			return nil
+		}
+
 		return ErrAlreadyRunning
 	}
 
@@ -93,6 +97,20 @@ func Get(namespace, deployment string) (*Service, error) {
 		return nil, fmt.Errorf("there aren't any active cloud native development environments available for '%s'", fullName)
 	}
 	return &svc, nil
+}
+
+//Stop marks a service entry as stopped
+func Stop(namespace, deployment string) error {
+	s, err := load()
+	if err != nil {
+		return err
+	}
+
+	fullName := fmt.Sprintf("%s/%s", namespace, deployment)
+	svc := s.Services[fullName]
+	svc.Syncthing = ""
+	s.Services[fullName] = svc
+	return s.save()
 }
 
 //Delete deletes a service entry
