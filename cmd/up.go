@@ -18,28 +18,32 @@ import (
 
 //Up starts a cloud native environment
 func Up() *cobra.Command {
+	var namespace string
+	var devPath string
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeUp(c.devPath)
+			return executeUp(devPath, namespace)
 		},
 	}
 
+	addDevPathFlag(cmd, &devPath)
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "kubernetes namespace to use (defaults to the current kube config namespace)")
 	return cmd
 }
 
-func executeUp(devPath string) error {
+func executeUp(devPath, namespace string) error {
 	fmt.Println("Activating your cloud native development environment...")
 
-	namespace, deploymentName, _, err := findDevEnvironment(true)
+	_, deploymentName, _, err := findDevEnvironment(true)
 
 	if err != errNoCNDEnvironment {
 		log.Info(err)
 		return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", deployments.GetFullName(namespace, deploymentName))
 	}
 
-	namespace, client, restConfig, err := getKubernetesClient()
+	_, client, restConfig, err := getKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}

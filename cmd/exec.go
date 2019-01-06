@@ -40,8 +40,11 @@ func Exec() *cobra.Command {
 
 func executeExec(args []string) error {
 	namespace, deployment, devContainer, err := findDevEnvironment(true)
+	if err != nil {
+		return err
+	}
 
-	_, client, config, err := getKubernetesClient()
+	_, client, config, err := getKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}

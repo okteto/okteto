@@ -17,14 +17,14 @@ func Down() *cobra.Command {
 		Use:   "down",
 		Short: "Deactivate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeDown(c.devPath)
+			return executeDown()
 		},
 	}
 
 	return cmd
 }
 
-func executeDown(devPath string) error {
+func executeDown() error {
 	fmt.Println("Deactivating your cloud native development environment...")
 
 	namespace, deployment, _, err := findDevEnvironment(false)
@@ -39,7 +39,7 @@ func executeDown(devPath string) error {
 		return fmt.Errorf("failed to deactivate your cloud native environment")
 	}
 
-	_, client, _, err := getKubernetesClient()
+	_, client, _, err := getKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}

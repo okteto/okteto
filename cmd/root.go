@@ -11,9 +11,7 @@ import (
 )
 
 type config struct {
-	logLevel  string
-	devPath   string
-	namespace string
+	logLevel string
 }
 
 var (
@@ -34,8 +32,6 @@ var (
 
 func init() {
 	root.PersistentFlags().StringVarP(&c.logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
-	root.PersistentFlags().StringVarP(&c.devPath, "file", "f", "cnd.yml", "path to the cnd manifest file")
-	root.PersistentFlags().StringVarP(&c.namespace, "namespace", "n", "", "kubernetes namespace to use (defaults to the current kube config namespace)")
 	root.AddCommand(
 		Up(),
 		Exec(),
@@ -54,6 +50,10 @@ func Execute() {
 	}
 }
 
-func getKubernetesClient() (string, *kubernetes.Clientset, *rest.Config, error) {
-	return client.Get(c.namespace)
+func getKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, error) {
+	return client.Get(namespace)
+}
+
+func addDevPathFlag(cmd *cobra.Command, devPath *string) {
+	cmd.Flags().StringVarP(devPath, "file", "f", "cnd.yml", "path to the cnd manifest file")
 }

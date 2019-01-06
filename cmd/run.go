@@ -11,11 +11,12 @@ import (
 
 //Run executes a custom command on the CND container
 func Run() *cobra.Command {
+	var devPath string
 	cmd := &cobra.Command{
 		Use:   "run SCRIPT ARGS",
 		Short: "Run a script defined in your cnd.yml file directly in your cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeRun(args)
+			return executeRun(devPath, args)
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 || args[0] == "" {
@@ -26,11 +27,12 @@ func Run() *cobra.Command {
 		},
 	}
 
+	addDevPathFlag(cmd, &devPath)
 	return cmd
 }
 
-func executeRun(args []string) error {
-	dev, err := model.ReadDev(c.devPath)
+func executeRun(devPath string, args []string) error {
+	dev, err := model.ReadDev(devPath)
 	if err != nil {
 		return err
 	}
@@ -39,7 +41,7 @@ func executeRun(args []string) error {
 		return executeExec(parseArguments(val, args))
 	}
 
-	return fmt.Errorf("%s is not defined in %s", args[0], c.devPath)
+	return fmt.Errorf("%s is not defined in %s", args[0], devPath)
 
 }
 

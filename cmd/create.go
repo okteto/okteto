@@ -15,20 +15,22 @@ import (
 
 //Create automatically generates the manifest
 func Create() *cobra.Command {
+	var devPath string
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Automatically create the cnd manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeCreate()
+			return executeCreate(devPath)
 		},
 	}
 
+	addDevPathFlag(cmd, &devPath)
 	return cmd
 }
 
-func executeCreate() error {
-	if fileExists(c.devPath) {
-		return fmt.Errorf("%s already exists. Please delete it before running the command again", c.devPath)
+func executeCreate(devPath string) error {
+	if fileExists(devPath) {
+		return fmt.Errorf("%s already exists. Please delete it before running the command again", devPath)
 	}
 
 	root, err := os.Getwd()
@@ -50,7 +52,7 @@ func executeCreate() error {
 		return fmt.Errorf("Failed to generate your cnd manifest")
 	}
 
-	if err := ioutil.WriteFile(c.devPath, marshalled, 0600); err != nil {
+	if err := ioutil.WriteFile(devPath, marshalled, 0600); err != nil {
 		log.Error(err)
 		return fmt.Errorf("Failed to generate your cnd manifest")
 	}
@@ -66,7 +68,7 @@ func fileExists(name string) bool {
 	}
 
 	if err != nil {
-		log.Infof("Failed to check if %s exists: %s", c.devPath, err)
+		log.Infof("Failed to check if %s exists: %s", name, err)
 	}
 
 	return true
