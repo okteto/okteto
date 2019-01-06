@@ -43,7 +43,7 @@ func executeUp(devPath, namespace string) error {
 		return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", deployments.GetFullName(namespace, deploymentName))
 	}
 
-	_, client, restConfig, err := getKubernetesClient(namespace)
+	namespace, client, restConfig, err := getKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}

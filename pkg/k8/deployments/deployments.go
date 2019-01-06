@@ -20,6 +20,10 @@ import (
 //DevModeOn activates a cloud native development for a given k8 deployment
 func DevModeOn(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
 	d, err := loadDeployment(namespace, dev.Swap.Deployment.Name, c)
+	if err != nil {
+		return "", err
+	}
+
 	dev.Swap.Deployment.Container = getDevContainerOrFirst(dev.Swap.Deployment.Container, d.Spec.Template.Spec.Containers)
 
 	if err != nil {
