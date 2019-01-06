@@ -8,11 +8,11 @@ import (
 
 type deployment struct {
 	Name      string   `yaml:"name"`
-	File      string   `yaml:"file"`
-	Container string   `yaml:"container"`
+	File      string   `yaml:"file,omitempty"`
+	Container string   `yaml:"container,omitempty"`
 	Image     string   `yaml:"image"`
-	Command   []string `yaml:"command"`
-	Args      []string `yaml:"args"`
+	Command   []string `yaml:"command,omitempty"`
+	Args      []string `yaml:"args,omitempty"`
 }
 
 const (

@@ -6,7 +6,7 @@
 	"tasks": [
 		{
 			"label": "build",
-			"command": "go build -o /usr/local/bin/cnd",
+			"command": "make build",
 			"group": {
 				"kind": "build",
 				"isDefault": true

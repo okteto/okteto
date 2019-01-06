@@ -43,6 +43,7 @@ func init() {
 		Version(),
 		List(),
 		Run(),
+		Create(),
 	)
 }
 
