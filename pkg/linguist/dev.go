@@ -73,6 +73,8 @@ func normalizeLanguage(language string) string {
 		return javascript
 	case "javascript":
 		return javascript
+	case "jsx":
+		return javascript
 	case "python":
 		return python
 	case "go":
