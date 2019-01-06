@@ -86,7 +86,7 @@ func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod
 			fmt.Println()
 			p.IsReady = true
 			if err := logs.Logs(c, config, pod, container); err != nil {
-				log.Errorf("couldn't retrieve logs for container: %s: %s", container, err)
+				log.Errorf("couldn't retrieve logs for %s/%s: %s", pod.Namespace, container, err)
 			}
 		}
 	}()
