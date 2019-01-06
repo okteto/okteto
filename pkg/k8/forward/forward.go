@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/okteto/cnd/pkg/k8/logs"
+	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -84,7 +85,9 @@ func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod
 			fmt.Printf("Ready! Go to your local IDE and continue coding!")
 			fmt.Println()
 			p.IsReady = true
-			logs.Logs(c, config, pod, container)
+			if err := logs.Logs(c, config, pod, container); err != nil {
+				log.Errorf("couldn't retrieve logs for container: %s: %s", container, err)
+			}
 		}
 	}()
 

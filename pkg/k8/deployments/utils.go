@@ -3,6 +3,7 @@ package deployments
 import (
 	"fmt"
 
+	"github.com/okteto/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -73,4 +74,17 @@ func setAnnotation(o metav1.Object, key, value string) {
 	}
 	annotations[key] = value
 	o.SetAnnotations(annotations)
+}
+
+// GetDevContainerOrFirst returns the named container or the first user-defined one
+func GetDevContainerOrFirst(container string, containers []apiv1.Container) string {
+	if container == "" {
+		for _, c := range containers {
+			if c.Name != model.CNDSyncContainerName {
+				container = c.Name
+			}
+		}
+	}
+
+	return container
 }
