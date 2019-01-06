@@ -7,6 +7,12 @@ brew tap okteto/cnd
 brew install cnd
 ```
 
+You can install to the latest unstable version by executing:
+```console
+brew tap okteto/cnd
+brew install --HEAD cnd
+```
+
 ## Manual install
 
 The synching functionality of **cnd** is provided by [syncthing](https://docs.syncthing.net).
