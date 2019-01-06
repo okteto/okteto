@@ -14,7 +14,7 @@ type languageDefault struct {
 }
 
 const (
-	javascript       = "javascript"
+	node             = "node"
 	golang           = "go"
 	python           = "python"
 	unrecognized     = "unrecognized"
@@ -22,31 +22,31 @@ const (
 )
 
 var (
-	languageDefaults map[string]languageDefault
+	platformDefaults map[string]languageDefault
 	tailCommand      = []string{"tail", "-f", "/dev/null"}
 )
 
 func init() {
-	languageDefaults = make(map[string]languageDefault)
-	languageDefaults[javascript] = languageDefault{
+	platformDefaults = make(map[string]languageDefault)
+	platformDefaults[node] = languageDefault{
 		image:   "okteto/node:11",
 		command: []string{"sh", "-c", "yarn install && yarn start"},
 		path:    "/usr/src/app",
 	}
 
-	languageDefaults[golang] = languageDefault{
+	platformDefaults[golang] = languageDefault{
 		image:   "golang",
 		command: tailCommand,
 		path:    "/go/src/app",
 	}
 
-	languageDefaults[python] = languageDefault{
+	platformDefaults[python] = languageDefault{
 		image:   "python",
 		command: []string{"python", "app.py"},
 		path:    "/usr/src/app",
 	}
 
-	languageDefaults[unrecognized] = languageDefault{
+	platformDefaults[unrecognized] = languageDefault{
 		image:   "ubuntu",
 		command: tailCommand,
 		path:    "/usr/src/app",
@@ -55,7 +55,7 @@ func init() {
 
 // GetDevConfig returns the default dev for the specified language
 func GetDevConfig(language string) *model.Dev {
-	vals := languageDefaults[normalizeLanguage(language)]
+	vals := platformDefaults[getPlatform(language)]
 
 	dev := model.NewDev()
 	dev.Swap.Deployment.Image = vals.image
@@ -66,13 +66,15 @@ func GetDevConfig(language string) *model.Dev {
 	return dev
 }
 
-func normalizeLanguage(language string) string {
+func getPlatform(language string) string {
 	lower := strings.ToLower(language)
 	switch lower {
 	case "typescript":
-		return javascript
+		return node
 	case "javascript":
-		return javascript
+		return node
+	case "jsx":
+		return node
 	case "python":
 		return python
 	case "go":
