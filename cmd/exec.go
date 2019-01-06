@@ -62,7 +62,6 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 	services := storage.All()
 	candidates := []storage.Service{}
 	deploymentFullName := ""
-	devContainer := ""
 	folder, _ := os.Getwd()
 
 	for name, svc := range services {
@@ -74,7 +73,6 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 			candidates = append(candidates, svc)
 			if deploymentFullName == "" {
 				deploymentFullName = name
-				devContainer = svc.Container
 			}
 		}
 	}
@@ -87,9 +85,10 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 		fmt.Printf("warning: there are %d cloud native development environments active in your current folder, using '%s'\n", len(candidates), deploymentFullName)
 	}
 
-	parts := strings.SplitN(deploymentFullName, "/", 2)
+	parts := strings.SplitN(deploymentFullName, "/", 3)
 	namespace := parts[0]
 	deploymentName := parts[1]
+	devContainer := parts[2]
 
 	return namespace, deploymentName, devContainer, nil
 }

@@ -19,7 +19,7 @@ func TestInsertGetListDelete(t *testing.T) {
 	if len(services) != 0 {
 		t.Fatalf("1 listing should be empty: %d", len(services))
 	}
-	err = Insert("project1", "service1", "dev", "/folder1", "localhost1")
+	err = Insert("project1", "service1", "dev1", "/folder1", "localhost1")
 	if err != nil {
 		t.Fatalf("error 1 inserting: %s", err)
 	}
@@ -27,7 +27,7 @@ func TestInsertGetListDelete(t *testing.T) {
 	if len(services) != 1 {
 		t.Fatalf("2 listing should be 1: %d", len(services))
 	}
-	err = Insert("project2", "service2", "dev", "/folder2", "localhost2")
+	err = Insert("project2", "service2", "dev2", "/folder2", "localhost2")
 	if err != nil {
 		t.Fatalf("error 1 inserting: %s", err)
 	}
@@ -35,7 +35,7 @@ func TestInsertGetListDelete(t *testing.T) {
 	if len(services) != 2 {
 		t.Fatalf("3 listing should be 2: %d", len(services))
 	}
-	svc := services["project1/service1"]
+	svc := services["project1/service1/dev1"]
 	if err != nil {
 		t.Fatalf("error getting service: %s", err)
 	}
@@ -47,11 +47,7 @@ func TestInsertGetListDelete(t *testing.T) {
 		t.Fatalf("wrong host: %s", svc.Syncthing)
 	}
 
-	if svc.Container != "dev" {
-		t.Fatalf("wrong container: %s", svc.Container)
-	}
-
-	err = Delete("project1", "service1")
+	err = Delete("project1", "service1", "dev1")
 	if err != nil {
 		t.Fatalf("error deleting service: %s", err)
 	}
