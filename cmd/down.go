@@ -61,6 +61,11 @@ func executeDown() error {
 		return err
 	}
 
+	err = syncthing.RemoveFolder()
+	if err != nil {
+		return err
+	}
+
 	fmt.Println("Cloud native development environment deactivated")
 	return nil
 }

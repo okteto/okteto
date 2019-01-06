@@ -3,6 +3,7 @@ package syncthing
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -39,7 +40,7 @@ const (
 type Syncthing struct {
 	cmd              *exec.Cmd
 	binPath          string
-	Home             string
+	home             string
 	Name             string
 	Namespace        string
 	LocalPath        string
@@ -49,6 +50,10 @@ type Syncthing struct {
 	FileWatcherDelay int
 	GUIAddress       string
 	ListenAddress    string
+}
+
+func getCNDHome() string {
+	return path.Join(os.Getenv("HOME"), ".cnd")
 }
 
 // NewSyncthing constructs a new Syncthing.
@@ -74,17 +79,13 @@ func NewSyncthing(name, namespace, localPath string) (*Syncthing, error) {
 		binPath:          "syncthing",
 		Name:             name,
 		Namespace:        namespace,
-		Home:             path.Join(os.Getenv("HOME"), ".cnd", namespace, name),
+		home:             path.Join(getCNDHome(), namespace, name),
 		LocalPath:        localPath,
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("127.0.0.1:%d", guiPort),
 		ListenAddress:    fmt.Sprintf("0.0.0.0:%d", listenPort),
-	}
-
-	if err := s.initConfig(); err != nil {
-		return nil, err
 	}
 
 	return s, nil
@@ -133,22 +134,22 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 }
 
 func (s *Syncthing) initConfig() error {
-	os.MkdirAll(s.Home, 0700)
+	os.MkdirAll(s.home, 0700)
 
 	buf := new(bytes.Buffer)
 	if err := configTemplate.Execute(buf, s); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(path.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
+	if err := ioutil.WriteFile(path.Join(s.home, configFile), buf.Bytes(), 0700); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(path.Join(s.Home, certFile), cert, 0700); err != nil {
+	if err := ioutil.WriteFile(path.Join(s.home, certFile), cert, 0700); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(path.Join(s.Home, keyFile), key, 0700); err != nil {
+	if err := ioutil.WriteFile(path.Join(s.home, keyFile), key, 0700); err != nil {
 		return err
 	}
 
@@ -173,17 +174,21 @@ func getAvailablePort() (int, error) {
 
 // Run starts up a local syncthing process to serve files from.
 func (s *Syncthing) Run() error {
-	pidPath := filepath.Join(s.Home, "syncthing.pid")
+	if err := s.initConfig(); err != nil {
+		return err
+	}
+
+	pidPath := filepath.Join(s.home, "syncthing.pid")
 
 	if err := s.cleanupDaemon(pidPath); err != nil {
 		return err
 	}
 
 	cmdArgs := []string{
-		"-home", s.Home,
+		"-home", s.home,
 		"-no-browser",
 		"-verbose",
-		"-logfile", path.Join(s.Home, logFile),
+		"-logfile", path.Join(s.home, logFile),
 	}
 
 	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
@@ -210,11 +215,57 @@ func (s *Syncthing) Run() error {
 
 // Stop halts the background process and cleans up.
 func (s *Syncthing) Stop() error {
-	pidPath := filepath.Join(s.Home, "syncthing.pid")
+	pidPath := filepath.Join(s.home, "syncthing.pid")
 
 	if err := s.cleanupDaemon(pidPath); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// RemoveFolder deletes all the files created by the syncthing instance
+func (s *Syncthing) RemoveFolder() error {
+	if s.home == "" {
+		log.Info("the home directory is not set when deleting")
+		return nil
+	}
+
+	if err := os.RemoveAll(s.home); err != nil {
+		log.Info(err)
+		return nil
+	}
+
+	parentDir := path.Dir(s.home)
+	if parentDir != "." {
+		empty, err := isEmpty(parentDir)
+		if err != nil {
+			log.Info(err)
+			return nil
+		}
+
+		if empty {
+			log.Debugf("deleting %s since it's empty", parentDir)
+			if err := os.RemoveAll(parentDir); err != nil {
+				log.Info(err)
+				return nil
+			}
+		}
+	}
+
+	return nil
+}
+
+func isEmpty(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	_, err = f.Readdirnames(1) // Or f.Readdir(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err // Either not empty or error, suits both cases
 }
