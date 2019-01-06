@@ -29,8 +29,8 @@ var (
 func init() {
 	languageDefaults = make(map[string]languageDefault)
 	languageDefaults[javascript] = languageDefault{
-		image:   "node",
-		command: tailCommand,
+		image:   "okteto/node:11",
+		command: []string{"sh", "-c", "yarn install && yarn start"},
 		path:    "/usr/src/app",
 	}
 
@@ -49,7 +49,7 @@ func init() {
 	languageDefaults[unrecognized] = languageDefault{
 		image:   "ubuntu",
 		command: tailCommand,
-		path:    "/app",
+		path:    "/usr/src/app",
 	}
 }
 
