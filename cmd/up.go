@@ -42,7 +42,7 @@ func executeUp(devPath string) error {
 		return err
 	}
 
-	name, err := deployments.DevDeploy(dev, namespace, client)
+	name, err := deployments.DevModeOn(dev, namespace, client)
 	if err != nil {
 		return err
 	}

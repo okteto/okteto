@@ -11,18 +11,46 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// Dev represents a cloud native development environment
+const (
+	// CNDLabel is the label added to a dev deployment in k8
+	CNDLabel = "cnd.okteto.com/deployment"
+
+	// CNDDeploymentAnnotation is the original deployment manifest
+	CNDDeploymentAnnotation = "cnd.okteto.com/manifest"
+
+	// CNDInitSyncContainerName is the name of the container initializing the shared volume
+	CNDInitSyncContainerName = "cnd-init-syncthing"
+
+	// CNDSyncContainerName is the name of the container running syncthing
+	CNDSyncContainerName = "cnd-syncthing"
+
+	// CNDSyncVolumeName is the name of synched volume
+	CNDSyncVolumeName = "cnd-sync"
+)
+
+//Dev represents a cloud native development environment
 type Dev struct {
-	Swap    swap              `yaml:"swap"`
-	Mount   mount             `yaml:"mount"`
+	Swap    Swap              `yaml:"swap"`
+	Mount   Mount             `yaml:"mount"`
 	Scripts map[string]string `yaml:"scripts"`
 }
 
-type swap struct {
-	Deployment deployment `yaml:"deployment"`
+//Swap represents the metadata for the container to be swapped
+type Swap struct {
+	Deployment Deployment `yaml:"deployment"`
 }
 
-type mount struct {
+//Deployment represents the container to be swapped
+type Deployment struct {
+	Name      string   `yaml:"name"`
+	Container string   `yaml:"container,omitempty"`
+	Image     string   `yaml:"image"`
+	Command   []string `yaml:"command,omitempty"`
+	Args      []string `yaml:"args,omitempty"`
+}
+
+//Mount represents how the local filesystem is mounted
+type Mount struct {
 	Source string `yaml:"source"`
 	Target string `yaml:"target"`
 }
@@ -30,10 +58,10 @@ type mount struct {
 //NewDev returns a new instance of dev with default values
 func NewDev() *Dev {
 	return &Dev{
-		Swap: swap{
-			Deployment: deployment{},
+		Swap: Swap{
+			Deployment: Deployment{},
 		},
-		Mount: mount{
+		Mount: Mount{
 			Source: ".",
 			Target: "/app",
 		},
@@ -51,11 +79,7 @@ func (dev *Dev) validate() error {
 	}
 
 	if dev.Swap.Deployment.Name == "" {
-		if dev.Swap.Deployment.File != "" {
-			// for legacy deployments
-			return fmt.Errorf("Swap deployment name cannot be empty")
-		}
-
+		return fmt.Errorf("Swap deployment name cannot be empty")
 	}
 
 	return nil
@@ -83,7 +107,7 @@ func ReadDev(devPath string) (*Dev, error) {
 
 func loadDev(b []byte) (*Dev, error) {
 	dev := Dev{
-		Mount: mount{
+		Mount: Mount{
 			Source: ".",
 			Target: "/src",
 		},

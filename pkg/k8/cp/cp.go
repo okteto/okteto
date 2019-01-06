@@ -39,7 +39,7 @@ func Copy(c *kubernetes.Clientset, config *rest.Config, namespace string, pod *a
 		log.Errorf("failed to sent tarball: %s", err.Error())
 		return fmt.Errorf("Failed to send tarball")
 	}
-	log.Info("Tarball sent.")
+	log.Info("Tarball sent")
 	if err := exec.Exec(c, config, pod, model.CNDInitSyncContainerName, false, os.Stdin, os.Stdout, os.Stderr, touchCommand); err != nil {
 		log.Errorf("failed to sent initialized flag: %s", err.Error())
 		return fmt.Errorf("Failed to send initialized flag")
