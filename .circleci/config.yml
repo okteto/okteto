@@ -37,7 +37,7 @@ jobs:
       - deploy:
           name: "Update brew formula"
           command: |
-            bash ./update_homebrew_formula.sh 0.0.1 $(awk {'print $1'} ./artifacts/bin/cnd-darwin-amd64.sha256) ${GITHUB_TOKEN} 1
+            bash ./update_homebrew_formula.sh 0.0.1 $CIRCLE_SHA1 $GITHUB_TOKEN 1
   publish-github-release:
     docker:
       - image: cibuilds/github:0.10
@@ -48,11 +48,11 @@ jobs:
       - run:
           name: "Publish Release on GitHub"
           command: |
-            ghr -u okteto -r cnd -c ${CIRCLE_SHA1} -token ${GITHUB_TOKEN} -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
+            ghr -u okteto -r cnd -c $CIRCLE_SHA1 -token $GITHUB_TOKEN -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
       - deploy:
           name: "Update brew formula"
           command: |
-            bash ./update_homebrew_formula.sh ${CIRCLE_TAG} $(awk {'print $1'} ./artifacts/bin/cnd-darwin-amd64.sha256) ${GITHUB_TOKEN} 0
+            bash ./update_homebrew_formula.sh $CIRCLE_TAG $CIRCLE_SHA1 $GITHUB_TOKEN 0
 
 workflows:
   version: 2
