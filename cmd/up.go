@@ -53,12 +53,16 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	name, err := deployments.DevModeOn(dev, namespace, client)
+	d, err := deployments.Get(namespace, dev.Swap.Deployment.Name, client)
 	if err != nil {
 		return err
 	}
 
-	pod, err := deployments.GetCNDPod(client, namespace, name, dev.Swap.Deployment.Container)
+	if err := deployments.DevModeOn(dev, d, client); err != nil {
+		return err
+	}
+
+	pod, err := deployments.GetCNDPod(dev, d, client)
 	if err != nil {
 		return err
 	}
@@ -67,12 +71,12 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	sy, err := syncthing.NewSyncthing(name, namespace, dev.Swap.Deployment.Container, dev.Mount.Source)
+	sy, err := syncthing.NewSyncthing(dev, namespace)
 	if err != nil {
 		return err
 	}
 
-	fullname := deployments.GetFullName(namespace, name)
+	fullname := deployments.GetFullName(namespace, d.Name)
 
 	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, fullname)
 	if err != nil {
@@ -83,7 +87,7 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	err = storage.Insert(namespace, name, dev.Swap.Deployment.Container, sy.LocalPath, sy.GUIAddress)
+	err = storage.Insert(namespace, dev, sy.GUIAddress)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
 			return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", fullname)
@@ -110,7 +114,7 @@ func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
 		log.Error(err)
 	}
 
-	storage.Stop(sy.Namespace, sy.Name, sy.Container)
+	storage.Stop(sy.Namespace, sy.Dev)
 	pf.Stop()
 	log.Debugf("stopped syncthing and port forwarding")
 }

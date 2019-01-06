@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/okteto/cnd/pkg/model"
 )
 
 func TestInsertGetListDelete(t *testing.T) {
@@ -19,7 +21,18 @@ func TestInsertGetListDelete(t *testing.T) {
 	if len(services) != 0 {
 		t.Fatalf("1 listing should be empty: %d", len(services))
 	}
-	err = Insert("project1", "service1", "dev1", "/folder1", "localhost1")
+	dev1 := &model.Dev{
+		Swap: model.Swap{
+			Deployment: model.Deployment{
+				Name:      "service1",
+				Container: "dev1",
+			},
+		},
+		Mount: model.Mount{
+			Source: "/folder1",
+		},
+	}
+	err = Insert("project1", dev1, "localhost1")
 	if err != nil {
 		t.Fatalf("error 1 inserting: %s", err)
 	}
@@ -27,7 +40,18 @@ func TestInsertGetListDelete(t *testing.T) {
 	if len(services) != 1 {
 		t.Fatalf("2 listing should be 1: %d", len(services))
 	}
-	err = Insert("project2", "service2", "dev2", "/folder2", "localhost2")
+	dev2 := &model.Dev{
+		Swap: model.Swap{
+			Deployment: model.Deployment{
+				Name:      "service2",
+				Container: "dev2",
+			},
+		},
+		Mount: model.Mount{
+			Source: "/folder2",
+		},
+	}
+	err = Insert("project2", dev2, "localhost2")
 	if err != nil {
 		t.Fatalf("error 1 inserting: %s", err)
 	}
@@ -47,7 +71,7 @@ func TestInsertGetListDelete(t *testing.T) {
 		t.Fatalf("wrong host: %s", svc.Syncthing)
 	}
 
-	err = Delete("project1", "service1", "dev1")
+	err = Delete("project1", dev1)
 	if err != nil {
 		t.Fatalf("error deleting service: %s", err)
 	}
