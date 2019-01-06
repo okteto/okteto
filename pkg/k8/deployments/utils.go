@@ -76,8 +76,7 @@ func setAnnotation(o metav1.Object, key, value string) {
 	o.SetAnnotations(annotations)
 }
 
-// GetDevContainerOrFirst returns the named container or the first user-defined one
-func GetDevContainerOrFirst(container string, containers []apiv1.Container) string {
+func getDevContainerOrFirst(container string, containers []apiv1.Container) string {
 	if container == "" {
 		for _, c := range containers {
 			if c.Name != model.CNDSyncContainerName {
