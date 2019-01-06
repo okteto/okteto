@@ -10,7 +10,7 @@ Clone this repo and move to this example folder.
 
 ```console
 git clone https://github.com/okteto/cnd
-cd cnd/examples/vote/kubectl
+cd cnd/examples/vote-kubectl
 ```
 
 run the Voting App by executing:
@@ -30,6 +30,7 @@ If you are running in minikube, the Voting App is available on port 31000 in the
 In order to activate your Cloud Native Development, execute:
 
 ```console
+cd vote
 cnd up
 ```
 

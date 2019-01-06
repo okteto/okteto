@@ -4,5 +4,5 @@ swap:
     container: vote
     command: ["python", "app.py"]
 mount:
-  source: vote
+  source: .
   target: /app
