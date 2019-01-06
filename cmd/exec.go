@@ -14,6 +14,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	errNoCNDEnvironment = fmt.Errorf("There aren't any cloud native development environments active in your current folder")
+)
+
 //Exec executes a command on the CND container
 func Exec() *cobra.Command {
 	cmd := &cobra.Command{
@@ -72,8 +76,9 @@ func findDevEnvironment() (string, string, string, error) {
 	}
 
 	if len(candidates) == 0 {
-		return "", "", "", fmt.Errorf("There aren't any cloud native development environments active in your current folder")
+		return "", "", "", errNoCNDEnvironment
 	}
+
 	if len(candidates) > 1 {
 		fmt.Printf("warning: there are %d cloud native development environments active in your current folder, using '%s'\n", len(candidates), deploymentFullName)
 	}

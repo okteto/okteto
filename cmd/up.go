@@ -32,6 +32,11 @@ func Up() *cobra.Command {
 func executeUp(devPath string) error {
 	fmt.Println("Activating your cloud native development environment...")
 
+	namespace, deploymentName, _, err := findDevEnvironment()
+	if err != errNoCNDEnvironment {
+		return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", deployments.GetFullName(namespace, deploymentName))
+	}
+
 	namespace, client, restConfig, err := getKubernetesClient()
 	if err != nil {
 		return err
