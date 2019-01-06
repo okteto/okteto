@@ -26,7 +26,7 @@ go get github.com/okteto/cnd
 
 You can get also get a prebuilt binary [from our releases page](https://github.com/okteto/cnd/releases/latest)
 
-## Upgrade
+# Upgrade
 
 ## Homebrew
 Upgrade to the latest stable version by executing:
