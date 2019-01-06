@@ -14,6 +14,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	errNoCNDEnvironment = fmt.Errorf("There aren't any cloud native development environments active in your current folder")
+)
+
 //Exec executes a command on the CND container
 func Exec() *cobra.Command {
 	cmd := &cobra.Command{
@@ -35,12 +39,12 @@ func Exec() *cobra.Command {
 }
 
 func executeExec(args []string) error {
-	namespace, deployment, devContainer, err := findDevEnvironment()
+	namespace, deployment, devContainer, err := findDevEnvironment(true)
 	if err != nil {
 		return err
 	}
 
-	_, client, config, err := getKubernetesClient()
+	_, client, config, err := getKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}
@@ -54,7 +58,7 @@ func executeExec(args []string) error {
 	return exec.Exec(client, config, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
 }
 
-func findDevEnvironment() (string, string, string, error) {
+func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 	services := storage.All()
 	candidates := []storage.Service{}
 	deploymentFullName := ""
@@ -63,6 +67,10 @@ func findDevEnvironment() (string, string, string, error) {
 
 	for name, svc := range services {
 		if strings.HasPrefix(folder, svc.Folder) {
+			if mustBeRunning && svc.Syncthing == "" {
+				continue
+			}
+
 			candidates = append(candidates, svc)
 			if deploymentFullName == "" {
 				deploymentFullName = name
@@ -72,8 +80,9 @@ func findDevEnvironment() (string, string, string, error) {
 	}
 
 	if len(candidates) == 0 {
-		return "", "", "", fmt.Errorf("There aren't any cloud native development environments active in your current folder")
+		return "", "", "", errNoCNDEnvironment
 	}
+
 	if len(candidates) > 1 {
 		fmt.Printf("warning: there are %d cloud native development environments active in your current folder, using '%s'\n", len(candidates), deploymentFullName)
 	}

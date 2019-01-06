@@ -7,7 +7,7 @@ import (
 	"github.com/okteto/cnd/pkg/syncthing"
 
 	"github.com/okteto/cnd/pkg/k8/deployments"
-	"github.com/okteto/cnd/pkg/model"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -17,26 +17,34 @@ func Down() *cobra.Command {
 		Use:   "down",
 		Short: "Deactivate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeDown(c.devPath)
+			return executeDown()
 		},
 	}
 
 	return cmd
 }
 
-func executeDown(devPath string) error {
+func executeDown() error {
 	fmt.Println("Deactivating your cloud native development environment...")
-	dev, err := model.ReadDev(devPath)
+
+	namespace, deployment, _, err := findDevEnvironment(false)
+
+	if err != nil {
+		if err == errNoCNDEnvironment {
+			log.Debugf("No CND environment running")
+			return nil
+		}
+
+		log.Error(err)
+		return fmt.Errorf("failed to deactivate your cloud native environment")
+	}
+
+	_, client, _, err := getKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}
 
-	namespace, client, _, err := getKubernetesClient()
-	if err != nil {
-		return err
-	}
-
-	name, err := deployments.DevModeOff(dev, namespace, client)
+	name, err := deployments.DevModeOff(namespace, deployment, client)
 	if err != nil {
 		return err
 	}
