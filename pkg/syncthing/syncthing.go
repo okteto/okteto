@@ -15,6 +15,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/okteto/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -42,9 +43,8 @@ type Syncthing struct {
 	binPath          string
 	home             string
 	Name             string
+	Dev              *model.Dev
 	Namespace        string
-	Container        string
-	LocalPath        string
 	RemoteAddress    string
 	RemoteDeviceID   string
 	APIKey           string
@@ -58,7 +58,7 @@ func getCNDHome() string {
 }
 
 // NewSyncthing constructs a new Syncthing.
-func NewSyncthing(name, namespace, container, localPath string) (*Syncthing, error) {
+func NewSyncthing(dev *model.Dev, namespace string) (*Syncthing, error) {
 
 	remotePort, err := getAvailablePort()
 	if err != nil {
@@ -78,11 +78,9 @@ func NewSyncthing(name, namespace, container, localPath string) (*Syncthing, err
 	s := &Syncthing{
 		APIKey:           "cnd",
 		binPath:          "syncthing",
-		Name:             name,
+		Dev:              dev,
 		Namespace:        namespace,
-		Container:        container,
-		home:             path.Join(getCNDHome(), namespace, name),
-		LocalPath:        localPath,
+		home:             path.Join(getCNDHome(), namespace, dev.Swap.Deployment.Name),
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
 		FileWatcherDelay: DefaultFileWatcherDelay,

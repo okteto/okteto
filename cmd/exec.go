@@ -49,7 +49,16 @@ func executeExec(args []string) error {
 		return err
 	}
 
-	pod, err := deployments.GetCNDPod(client, namespace, deployment, devContainer)
+	d, err := deployments.Get(namespace, deployment, client)
+	if err != nil {
+		return err
+	}
+	dev, err := deployments.GetDevFromAnnotation(d)
+	if err != nil {
+		return err
+	}
+
+	pod, err := deployments.GetCNDPod(dev, d, client)
 	if err != nil {
 		return err
 	}

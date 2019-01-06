@@ -16,7 +16,10 @@ const (
 	CNDLabel = "cnd.okteto.com/deployment"
 
 	// CNDDeploymentAnnotation is the original deployment manifest
-	CNDDeploymentAnnotation = "cnd.okteto.com/manifest"
+	CNDDeploymentAnnotation = "cnd.okteto.com/deployment"
+
+	// CNDDevAnnotation is the active cnd configuration
+	CNDDevAnnotation = "cnd.okteto.com/dev"
 
 	// CNDInitSyncContainerName is the name of the container initializing the shared volume
 	CNDInitSyncContainerName = "cnd-init-syncthing"

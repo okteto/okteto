@@ -22,6 +22,9 @@ func translateToDevModeDeployment(d *appsv1.Deployment, dev *model.Dev) error {
 		return err
 	}
 	setAnnotation(d.GetObjectMeta(), model.CNDDeploymentAnnotation, string(manifest))
+	if err := setDevAsAnnotation(d, dev); err != nil {
+		return err
+	}
 	setLabel(d.GetObjectMeta(), model.CNDLabel, d.Name)
 	setLabel(d.Spec.Template.GetObjectMeta(), model.CNDLabel, d.Name)
 	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds

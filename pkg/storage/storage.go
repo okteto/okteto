@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/okteto/cnd/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -56,14 +57,14 @@ func load() (*Storage, error) {
 }
 
 //Insert inserts a new service entry
-func Insert(namespace, deployment, container, folder, host string) error {
+func Insert(namespace string, dev *model.Dev, host string) error {
 	s, err := load()
 	if err != nil {
 		return err
 	}
 
-	fullName := fmt.Sprintf("%s/%s/%s", namespace, deployment, container)
-	svc, err := newService(folder, host)
+	fullName := getFullName(namespace, dev)
+	svc, err := newService(dev.Mount.Source, host)
 	if err != nil {
 		return err
 	}
@@ -83,13 +84,13 @@ func Insert(namespace, deployment, container, folder, host string) error {
 }
 
 //Get gets a service entry
-func Get(namespace, deployment, container string) (*Service, error) {
+func Get(namespace string, dev *model.Dev) (*Service, error) {
 	s, err := load()
 	if err != nil {
 		return nil, err
 	}
 
-	fullName := fmt.Sprintf("%s/%s/%s", namespace, deployment, container)
+	fullName := getFullName(namespace, dev)
 	svc, ok := s.Services[fullName]
 	if !ok {
 		return nil, fmt.Errorf("there aren't any active cloud native development environments available for '%s'", fullName)
@@ -98,13 +99,13 @@ func Get(namespace, deployment, container string) (*Service, error) {
 }
 
 //Stop marks a service entry as stopped
-func Stop(namespace, deployment, container string) error {
+func Stop(namespace string, dev *model.Dev) error {
 	s, err := load()
 	if err != nil {
 		return err
 	}
 
-	fullName := fmt.Sprintf("%s/%s/%s", namespace, deployment, container)
+	fullName := getFullName(namespace, dev)
 	svc, ok := s.Services[fullName]
 	if ok {
 		svc.Syncthing = ""
@@ -115,13 +116,13 @@ func Stop(namespace, deployment, container string) error {
 }
 
 //Delete deletes a service entry
-func Delete(namespace, deployment, container string) error {
+func Delete(namespace string, dev *model.Dev) error {
 	s, err := load()
 	if err != nil {
 		return err
 	}
 
-	fullName := fmt.Sprintf("%s/%s/%s", namespace, deployment, container)
+	fullName := getFullName(namespace, dev)
 	delete(s.Services, fullName)
 	return s.save()
 }
@@ -166,4 +167,8 @@ func newService(folder, host string) (Service, error) {
 		return Service{}, err
 	}
 	return Service{Folder: absFolder, Syncthing: host}, nil
+}
+
+func getFullName(namespace string, dev *model.Dev) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, dev.Swap.Deployment.Name, dev.Swap.Deployment.Container)
 }

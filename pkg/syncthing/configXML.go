@@ -1,7 +1,7 @@
 package syncthing
 
 const configXML = `<configuration version="28">
-    <folder id="esall-z6asd" label="cnd" path="{{.LocalPath}}" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+    <folder id="esall-z6asd" label="cnd" path="{{.Dev.Mount.Source}}" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
         <filesystemType>basic</filesystemType>
         <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
         <device id="{{.RemoteDeviceID}}" introducedBy=""></device>

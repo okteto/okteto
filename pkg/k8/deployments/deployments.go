@@ -17,58 +17,58 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+//Get returns a deployment object given its name and namespace
+func Get(namespace, deploymentName string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+
+	if namespace == "" {
+		return nil, fmt.Errorf("empty namespace")
+	}
+
+	d, err := c.AppsV1().Deployments(namespace).Get(deploymentName, metav1.GetOptions{})
+	if err != nil {
+		log.Debugf("error while retrieving the deployment: %s", err)
+	}
+
+	return d, err
+}
+
 //DevModeOn activates a cloud native development for a given k8 deployment
-func DevModeOn(dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
-	d, err := loadDeployment(namespace, dev.Swap.Deployment.Name, c)
-	if err != nil {
-		return "", err
-	}
-
+func DevModeOn(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	dev.Swap.Deployment.Container = getDevContainerOrFirst(dev.Swap.Deployment.Container, d.Spec.Template.Spec.Containers)
-
-	if err != nil {
-		return "", err
-	}
 
 	manifest := getAnnotation(d.GetObjectMeta(), model.CNDDeploymentAnnotation)
 	if manifest != "" {
 		dOrig := &appsv1.Deployment{}
 		if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
-			return "", err
+			return err
 		}
 		dOrig.ResourceVersion = ""
 		d = dOrig
 	}
 
 	if err := translateToDevModeDeployment(d, dev); err != nil {
-		return "", err
+		return err
 	}
 
-	name, err := deploy(d, c)
-	if err != nil {
-		return "", err
+	if err := deploy(d, c); err != nil {
+		return err
 	}
 
-	return name, nil
+	return nil
 }
 
 //DevModeOff deactivates a cloud native development
-func DevModeOff(namespace, deploymentName string, c *kubernetes.Clientset) (string, error) {
-	d, err := loadDeployment(namespace, deploymentName, c)
-	if err != nil {
-		return "", err
-	}
-
+func DevModeOff(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	manifest := getAnnotation(d.GetObjectMeta(), model.CNDDeploymentAnnotation)
 	if manifest == "" {
 		fullname := GetFullName(d.Namespace, d.Name)
 		log.Debugf("%s doesn't have the %s annotation", fullname, model.CNDDeploymentAnnotation)
-		return d.Name, nil
+		return nil
 	}
 
 	dOrig := &appsv1.Deployment{}
 	if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
-		return "", err
+		return err
 	}
 	dOrig.ResourceVersion = ""
 
@@ -76,7 +76,7 @@ func DevModeOff(namespace, deploymentName string, c *kubernetes.Clientset) (stri
 	return deploy(dOrig, c)
 }
 
-func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) (string, error) {
+func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	deploymentName := GetFullName(d.Namespace, d.Name)
 	dClient := c.AppsV1().Deployments(d.Namespace)
 
@@ -84,27 +84,27 @@ func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) (string, error) {
 		log.Infof("Creating deployment '%s'...", deploymentName)
 		_, err := dClient.Create(d)
 		if err != nil {
-			return "", fmt.Errorf("Error creating kubernetes deployment: %s", err)
+			return fmt.Errorf("Error creating kubernetes deployment: %s", err)
 		}
 		log.Infof("Created deployment %s", deploymentName)
 	} else {
 		log.Infof("Updating deployment '%s'...", deploymentName)
 		_, err := dClient.Update(d)
 		if err != nil {
-			return "", fmt.Errorf("Error updating kubernetes deployment: %s", err)
+			return fmt.Errorf("Error updating kubernetes deployment: %s", err)
 		}
 	}
 
-	return d.Name, nil
+	return nil
 }
 
 // GetCNDPod returns the pod that has the cnd containers
-func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer string) (*apiv1.Pod, error) {
+func GetCNDPod(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	tries := 0
 	for tries < 30 {
 
-		pods, err := c.CoreV1().Pods(namespace).List(metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, deploymentName),
+		pods, err := c.CoreV1().Pods(d.Namespace).List(metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, d.Name),
 		})
 
 		if err != nil {
@@ -121,12 +121,9 @@ func GetCNDPod(c *kubernetes.Clientset, namespace, deploymentName, devContainer 
 		}
 
 		if len(pendingOrRunningPods) == 1 {
-			if devContainer != "" {
-				if !isContainerInPod(&pendingOrRunningPods[0], devContainer) {
-					return nil, fmt.Errorf("container %s doesn't exist in the pod", devContainer)
-				}
+			if !isContainerInPod(&pendingOrRunningPods[0], dev.Swap.Deployment.Container) {
+				return nil, fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
 			}
-
 			return &pendingOrRunningPods[0], nil
 		}
 
