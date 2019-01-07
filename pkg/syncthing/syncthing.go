@@ -53,10 +53,6 @@ type Syncthing struct {
 	ListenAddress    string
 }
 
-func getCNDHome() string {
-	return path.Join(os.Getenv("HOME"), ".cnd")
-}
-
 // NewSyncthing constructs a new Syncthing.
 func NewSyncthing(dev *model.Dev, namespace string) (*Syncthing, error) {
 
@@ -80,7 +76,7 @@ func NewSyncthing(dev *model.Dev, namespace string) (*Syncthing, error) {
 		binPath:          "syncthing",
 		Dev:              dev,
 		Namespace:        namespace,
-		home:             path.Join(getCNDHome(), namespace, dev.Swap.Deployment.Name),
+		home:             path.Join(model.GetCNDHome(), namespace, dev.Swap.Deployment.Name),
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
 		FileWatcherDelay: DefaultFileWatcherDelay,
