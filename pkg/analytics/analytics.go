@@ -44,11 +44,17 @@ type event struct {
 const endpoint = "https://us-central1-okteto-prod.cloudfunctions.net/cnd-analytics"
 
 var (
-	client   http.Client
-	userID   string
+	userID string
+
+	client = http.Client{
+		Timeout: 65 * time.Second,
+	}
+
 	flagPath = path.Join(os.Getenv("HOME"), ".cnd", ".noanalytics")
-	wg       = sync.WaitGroup{}
-	enabled  = true
+
+	wg = sync.WaitGroup{}
+
+	enabled = true
 )
 
 const (
@@ -72,10 +78,6 @@ const (
 )
 
 func init() {
-	client = http.Client{
-		Timeout: 65 * time.Second,
-	}
-
 	var err error
 	userID, err = machineid.ProtectedID("cnd")
 	if err != nil {
