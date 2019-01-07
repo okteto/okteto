@@ -11,6 +11,7 @@ type languageDefault struct {
 	image   string
 	command []string
 	path    string
+	scripts map[string]string
 }
 
 const (
@@ -32,6 +33,9 @@ func init() {
 		image:   "okteto/node:11",
 		command: []string{"sh", "-c", "yarn install && yarn start"},
 		path:    "/usr/src/app",
+		scripts: map[string]string{
+			"test": "yarn run test",
+		},
 	}
 
 	languageDefaults[golang] = languageDefault{
@@ -62,6 +66,7 @@ func GetDevConfig(language string) *model.Dev {
 	dev.Swap.Deployment.Command = vals.command
 	dev.Mount.Source = "."
 	dev.Mount.Target = vals.path
+	dev.Scripts = vals.scripts
 	dev.Scripts[helloCommandName] = "echo Your cluster ♥ you"
 	return dev
 }
