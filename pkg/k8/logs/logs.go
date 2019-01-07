@@ -27,19 +27,14 @@ func StreamLogs(d *appsv1.Deployment, container string, c *kubernetes.Clientset,
 			readCloser.Close()
 			log.Debugf("closed stream reader")
 		}
-
 		end = true
 		return
 	}()
 
-	var wait time.Duration
 	for !end {
-		time.Sleep(wait * time.Second)
 		pod, err := deployments.GetCNDPod(d, c)
 		if err != nil {
-			if wait < 10 {
-				wait++
-			}
+			time.Sleep(time.Second)
 			continue
 		}
 
@@ -49,7 +44,7 @@ func StreamLogs(d *appsv1.Deployment, container string, c *kubernetes.Clientset,
 			pod.Name,
 			&apiv1.PodLogOptions{
 				Container:  container,
-				Timestamps: true,
+				Timestamps: false,
 				Follow:     true,
 				TailLines:  &tailLines,
 			},
@@ -57,12 +52,9 @@ func StreamLogs(d *appsv1.Deployment, container string, c *kubernetes.Clientset,
 
 		readCloser, err = req.Stream()
 		if err != nil {
-			if wait < 10 {
-				wait++
-			}
+			time.Sleep(time.Second)
 			continue
 		}
-		wait = 0
 
 		if _, err := io.Copy(os.Stdout, readCloser); err != nil {
 			if err.Error() != "http2: response body closed" {

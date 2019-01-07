@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/okteto/cnd/pkg/model"
 	"github.com/okteto/cnd/pkg/storage"
 	"github.com/okteto/cnd/pkg/syncthing"
 
@@ -27,7 +28,7 @@ func Down() *cobra.Command {
 func executeDown() error {
 	fmt.Println("Deactivating your cloud native development environment...")
 
-	namespace, deployment, _, err := findDevEnvironment(false)
+	namespace, deployment, container, err := findDevEnvironment(false)
 
 	if err != nil {
 		if err == errNoCNDEnvironment {
@@ -48,31 +49,26 @@ func executeDown() error {
 	if err != nil {
 		return err
 	}
-	dev, err := deployments.GetDevFromAnnotation(d)
+	if err := deployments.DevModeOff(d, client); err != nil {
+		return err
+	}
+
+	sy, err := syncthing.NewSyncthing(namespace, d.Name, nil)
 	if err != nil {
 		return err
 	}
 
-	err = deployments.DevModeOff(dev, d, client)
-	if err != nil {
-		return err
-	}
-
-	syncthing, err := syncthing.NewSyncthing(dev, namespace)
-	if err != nil {
-		return err
-	}
-
+	dev := &model.Dev{Swap: model.Swap{Deployment: model.Deployment{Name: deployment, Container: container}}}
 	if err := storage.Delete(namespace, dev); err != nil {
 		return err
 	}
 
-	err = syncthing.Stop()
+	err = sy.Stop()
 	if err != nil {
 		return err
 	}
 
-	err = syncthing.RemoveFolder()
+	err = sy.RemoveFolder()
 	if err != nil {
 		return err
 	}

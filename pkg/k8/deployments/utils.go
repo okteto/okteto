@@ -6,7 +6,6 @@ import (
 
 	"github.com/okteto/cnd/pkg/model"
 
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -14,6 +13,55 @@ import (
 // GetFullName returns the full name of the deployment. This is mostly used for logs and labels
 func GetFullName(namespace, deploymentName string) string {
 	return fmt.Sprintf("%s/%s", namespace, deploymentName)
+}
+
+// GetAndUpdateDevListFromAnnotation returns the active cloud dev environments from the deployment annotations
+func GetAndUpdateDevListFromAnnotation(o metav1.Object, dev *model.Dev) ([]*model.Dev, error) {
+	devList, err := getDevListFromAnnotation(o)
+	if err != nil {
+		return nil, err
+	}
+	for i, v := range devList {
+		if dev.Swap.Deployment.Name == v.Swap.Deployment.Name {
+			if dev.Swap.Deployment.Container == v.Swap.Deployment.Container {
+				devList[i] = dev
+				return devList, nil
+			}
+		}
+	}
+	devList = append(devList, dev)
+	return devList, nil
+}
+
+func getDevListFromAnnotation(o metav1.Object) ([]*model.Dev, error) {
+	devList := []*model.Dev{}
+	devListAnnotation := getAnnotation(o, model.CNDDevListAnnotation)
+	if devListAnnotation == "" {
+		return devList, nil
+	}
+	if err := json.Unmarshal([]byte(devListAnnotation), &devList); err != nil {
+		return nil, err
+	}
+	return devList, nil
+}
+
+func setDevListAsAnnotation(o metav1.Object, devList []*model.Dev) error {
+	devListBytes, err := json.Marshal(devList)
+	if err != nil {
+		return err
+	}
+	setAnnotation(o, model.CNDDevListAnnotation, string(devListBytes))
+	return nil
+}
+
+// GetDevContainerOrFirst returns the first container if container is empty
+func GetDevContainerOrFirst(container string, containers []apiv1.Container) string {
+	if container == "" {
+		for _, c := range containers {
+			return c.Name
+		}
+	}
+	return container
 }
 
 func getLabel(o metav1.Object, key string) string {
@@ -48,42 +96,4 @@ func setAnnotation(o metav1.Object, key, value string) {
 	}
 	annotations[key] = value
 	o.SetAnnotations(annotations)
-}
-
-func GetDevFromAnnotation(d *appsv1.Deployment) (*model.Dev, error) {
-	dev := &model.Dev{}
-	annotations := d.GetObjectMeta().GetAnnotations()
-	if annotations == nil {
-		return nil, fmt.Errorf("the deployment '%s' is not a cloud native environment", d.Name)
-	}
-	for k, v := range annotations {
-		if k == model.CNDDevAnnotation {
-			if err := json.Unmarshal([]byte(v), dev); err != nil {
-				return nil, err
-			}
-			return dev, nil
-		}
-	}
-	return nil, fmt.Errorf("the deployment '%s' is not a cloud native environment", d.Name)
-}
-
-func setDevAsAnnotation(d *appsv1.Deployment, dev *model.Dev) error {
-	devBytes, err := json.Marshal(dev)
-	if err != nil {
-		return err
-	}
-	setAnnotation(d.GetObjectMeta(), model.CNDDevAnnotation, string(devBytes))
-	return nil
-}
-
-func getDevContainerOrFirst(container string, containers []apiv1.Container) string {
-	if container == "" {
-		for _, c := range containers {
-			if c.Name != model.CNDSyncContainerName {
-				container = c.Name
-			}
-		}
-	}
-
-	return container
 }
