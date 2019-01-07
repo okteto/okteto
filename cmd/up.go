@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/okteto/cnd/pkg/analytics"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/okteto/cnd/pkg/k8/deployments"
@@ -24,6 +26,8 @@ func Up() *cobra.Command {
 		Use:   "up",
 		Short: "Activate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			analytics.Send(analytics.EventUp, c.actionID)
+			defer analytics.Send(analytics.EventUpEnd, c.actionID)
 			return executeUp(devPath, namespace)
 		},
 	}

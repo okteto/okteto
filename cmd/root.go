@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/okteto/cnd/pkg/analytics"
 	"github.com/okteto/cnd/pkg/k8/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -12,10 +13,14 @@ import (
 
 type config struct {
 	logLevel string
+	actionID string
 }
 
 var (
-	c    = &config{}
+	c = &config{
+		actionID: analytics.NewActionID(),
+	}
+
 	root = &cobra.Command{
 		Use:   "cnd COMMAND [ARG...]",
 		Short: "Manage cloud native environments",
@@ -26,6 +31,8 @@ var (
 			}
 
 			ccmd.SilenceUsage = true
+		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		},
 	}
 )
@@ -40,6 +47,7 @@ func init() {
 		List(),
 		Run(),
 		Create(),
+		Analytics(),
 	)
 }
 

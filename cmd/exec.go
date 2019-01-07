@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/okteto/cnd/pkg/analytics"
 	"github.com/okteto/cnd/pkg/storage"
 	log "github.com/sirupsen/logrus"
 
@@ -24,6 +25,8 @@ func Exec() *cobra.Command {
 		Use:   "exec COMMAND",
 		Short: "Execute a command in the cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			analytics.Send(analytics.EventExec, c.actionID)
+			defer analytics.Send(analytics.EventExecEnd, c.actionID)
 			return executeExec(args)
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
