@@ -38,7 +38,6 @@ var (
 	endpoint string
 	client   http.Client
 	userID   string
-	enabled  bool
 	flagPath string
 )
 
@@ -79,10 +78,6 @@ func init() {
 		log.Debugf("failed to generate a machine id")
 		userID = "na"
 	}
-
-	if _, err := os.Stat("/path/to/whatever"); !os.IsNotExist(err) {
-		enabled = false
-	}
 }
 
 // NewActionID returns an action
@@ -106,13 +101,11 @@ func Send(e EventName, actionID string) {
 		return
 	}
 
-	if !enabled {
-		log.Debug("analytics are not enabled, skipping")
+	if !isEnabled() {
 		return
 	}
 
 	log.Debugf("sending: %s", string(data))
-
 	req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(data))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
@@ -152,4 +145,12 @@ func Enable() error {
 	}
 
 	return os.Remove(flagPath)
+}
+
+func isEnabled() bool {
+	if _, err := os.Stat(flagPath); !os.IsNotExist(err) {
+		return false
+	}
+
+	return true
 }
