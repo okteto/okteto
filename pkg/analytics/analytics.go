@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"path"
 	"runtime"
 	"sync"
 	"time"
@@ -43,7 +44,7 @@ const endpoint = "https://us-central1-okteto-prod.cloudfunctions.net/cnd-analyti
 var (
 	client   http.Client
 	userID   string
-	flagPath string
+	flagPath = path.Join(os.Getenv("HOME"), ".cnd", ".noanalytics")
 	wg       = sync.WaitGroup{}
 )
 

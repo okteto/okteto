@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/okteto/cnd/pkg/analytics"
 	"github.com/spf13/cobra"
 )
@@ -13,12 +15,30 @@ func Analytics() *cobra.Command {
 		Short: "Enable / Disable analytics",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if disable {
-				return analytics.Disable()
+				return disableAnalytics()
 			}
 
-			return analytics.Enable()
+			return enableAnalytics()
 		},
 	}
 	cmd.Flags().BoolVarP(&disable, "disable", "d", false, "disable analytics")
 	return cmd
+}
+
+func disableAnalytics() error {
+	if err := analytics.Disable(); err != nil {
+		return err
+	}
+
+	fmt.Println("Analytics have been disabled")
+	return nil
+}
+
+func enableAnalytics() error {
+	if err := analytics.Enable(); err != nil {
+		return err
+	}
+
+	fmt.Println("Analytics have been enabled")
+	return nil
 }
