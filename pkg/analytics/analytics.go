@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
-	"path"
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
@@ -34,8 +33,9 @@ type event struct {
 	Version string `json:"version"`
 }
 
+const endpoint = "https://us-central1-okteto-prod.cloudfunctions.net/cnd-analytics"
+
 var (
-	endpoint string
 	client   http.Client
 	userID   string
 	flagPath string
@@ -62,12 +62,6 @@ const (
 )
 
 func init() {
-	flagPath = path.Join(os.Getenv("HOME"), ".cnd", ".noanalytics")
-	endpoint = os.Getenv("CND_ANALYTICS")
-	if endpoint == "" {
-		endpoint = "https://us-central1-development-218409.cloudfunctions.net/cnd-analytics"
-	}
-
 	client = http.Client{
 		Timeout: 65 * time.Second,
 	}
