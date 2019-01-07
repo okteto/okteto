@@ -21,6 +21,14 @@
   revision = "d6e3b3328b783f23731bc4d058875b0371ff8109"
 
 [[projects]]
+  digest = "1:ecaca8524449859fb08112667afb43c090a0fd5a7e51e5d7e10853a144e0973e"
+  name = "github.com/denisbrodbeck/machineid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e2e48f90c87f1f77286682531a46ff99e95d8089"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:5c709df1e94c6dbee6fdd9699b11e3cdfa06870b1e828e9311e4e879b2ae6a4a"
   name = "github.com/docker/docker"
   packages = [
@@ -351,11 +359,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:850d28ab022512e2cd3cf511a77f363c29e22689b4031f2050871f5de47ae4a0"
+  digest = "1:bba026d911b9c705ccd996294284e5174cdb28e7c4a7e4bbcd8ac9f2a5885c1b"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
+    "windows/registry",
   ]
   pruneopts = "UT"
   revision = "4497e2df6f9e69048a54498c7affbbec3294ad47"
@@ -616,6 +625,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/denisbrodbeck/machineid",
     "github.com/mholt/archiver",
     "github.com/satori/go.uuid",
     "github.com/sirupsen/logrus",

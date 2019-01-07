@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"os"
+	"sync"
 
+	"github.com/okteto/cnd/pkg/analytics"
 	"github.com/okteto/cnd/pkg/k8/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -12,10 +14,16 @@ import (
 
 type config struct {
 	logLevel string
+	actionID string
 }
 
 var (
-	c    = &config{}
+	c = &config{
+		actionID: analytics.NewActionID(),
+	}
+
+	analyticsWG = sync.WaitGroup{}
+
 	root = &cobra.Command{
 		Use:   "cnd COMMAND [ARG...]",
 		Short: "Manage cloud native environments",
@@ -40,13 +48,14 @@ func init() {
 		List(),
 		Run(),
 		Create(),
+		Analytics(),
 	)
 }
 
 // Execute runs the root command
 func Execute() {
 	if err := root.Execute(); err != nil {
-		os.Exit(1)
+		exit()
 	}
 }
 
@@ -56,4 +65,9 @@ func getKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest
 
 func addDevPathFlag(cmd *cobra.Command, devPath *string) {
 	cmd.Flags().StringVarP(devPath, "file", "f", "cnd.yml", "path to the cnd manifest file")
+}
+
+func exit() {
+	analytics.Wait()
+	os.Exit(1)
 }
