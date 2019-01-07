@@ -35,8 +35,6 @@ var (
 
 			ccmd.SilenceUsage = true
 		},
-		PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		},
 	}
 )
 

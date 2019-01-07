@@ -102,7 +102,7 @@ func Send(e EventName, actionID string) {
 
 		data, err := json.Marshal(ev)
 		if err != nil {
-			log.Debugf("failed to marshall analytic event: %s", err)
+			log.Debugf("[%s] failed to marshall analytic event: %s", actionID, err)
 			return
 		}
 
@@ -110,21 +110,19 @@ func Send(e EventName, actionID string) {
 			return
 		}
 
-		log.Debugf("sending: %s", string(data))
+		log.Debugf("[%s] sending analytics: %s", actionID, string(data))
 		req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(data))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Debugf("failed to send the analytics: %s", err)
+			log.Debugf("[%s] failed to send the analytics: %s", actionID, err)
 			return
 		}
 
 		if resp.StatusCode > 300 {
-			log.Debugf("analytics fail to process request: %d", resp.StatusCode)
+			log.Debugf("[%s] analytics fail to process request: %d", actionID, resp.StatusCode)
 			return
 		}
-
-		log.Debugf("analytics sucess: %d", resp.StatusCode)
 	}()
 }
 
@@ -161,6 +159,7 @@ func isEnabled() bool {
 	return true
 }
 
+// Wait for the analytics to be finished
 func Wait() {
 	wg.Wait()
 }
