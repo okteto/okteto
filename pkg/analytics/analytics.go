@@ -50,7 +50,7 @@ var (
 		Timeout: 65 * time.Second,
 	}
 
-	flagPath = path.Join(os.Getenv("HOME"), ".cnd", ".noanalytics")
+	flagPath = path.Join(model.GetCNDHome(), ".noanalytics")
 
 	wg = sync.WaitGroup{}
 
@@ -68,13 +68,13 @@ const (
 	EventExec = "exec"
 
 	// EventExecEnd event for when exec finishes
-	EventExecEnd = "execupend"
+	EventExecEnd = "execend"
 
 	// EventRun event for run
 	EventRun = "run"
 
 	// EventRunEnd event for when run finishes
-	EventRunEnd = "runenc"
+	EventRunEnd = "runend"
 )
 
 func init() {

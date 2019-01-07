@@ -35,7 +35,7 @@ type Service struct {
 }
 
 func init() {
-	stPath = path.Join(os.Getenv("HOME"), ".cnd", ".state")
+	stPath = path.Join(model.GetCNDHome(), ".state")
 }
 func load() (*Storage, error) {
 	var s Storage
