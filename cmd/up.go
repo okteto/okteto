@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 
 	"github.com/okteto/cnd/pkg/analytics"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/okteto/cnd/pkg/k8/deployments"
 	"github.com/okteto/cnd/pkg/k8/forward"
+	"github.com/okteto/cnd/pkg/k8/logs"
 	"github.com/okteto/cnd/pkg/storage"
 	"github.com/okteto/cnd/pkg/syncthing"
 
@@ -66,7 +68,7 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	pod, err := deployments.GetCNDPod(dev, d, client)
+	pod, err := deployments.GetCNDPod(d, client)
 	if err != nil {
 		return err
 	}
@@ -108,7 +110,21 @@ func executeUp(devPath, namespace string) error {
 		return
 	}()
 
-	return pf.Start(client, restConfig, pod, dev.Swap.Deployment.Container)
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	ready := make(chan bool)
+	go pf.Start(client, restConfig, pod, ready, &wg)
+	<-ready
+
+	fmt.Printf("Linking '%s' to %s/%s...", dev.Mount.Source, fullname, dev.Swap.Deployment.Container)
+	fmt.Println()
+	fmt.Printf("Ready! Go to your local IDE and continue coding!")
+	fmt.Println()
+
+	go logs.StreamLogs(d, dev.Swap.Deployment.Container, client, restConfig, &wg)
+	wg.Wait()
+	return nil
 }
 
 func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {

@@ -56,12 +56,8 @@ func executeExec(args []string) error {
 	if err != nil {
 		return err
 	}
-	dev, err := deployments.GetDevFromAnnotation(d)
-	if err != nil {
-		return err
-	}
 
-	pod, err := deployments.GetCNDPod(dev, d, client)
+	pod, err := deployments.GetCNDPod(d, client)
 	if err != nil {
 		return err
 	}

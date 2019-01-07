@@ -99,7 +99,7 @@ func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 }
 
 // GetCNDPod returns the pod that has the cnd containers
-func GetCNDPod(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+func GetCNDPod(d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	tries := 0
 	for tries < 30 {
 
@@ -121,9 +121,6 @@ func GetCNDPod(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (*
 		}
 
 		if len(pendingOrRunningPods) == 1 {
-			if !isContainerInPod(&pendingOrRunningPods[0], dev.Swap.Deployment.Container) {
-				return nil, fmt.Errorf("container %s doesn't exist in the pod", dev.Swap.Deployment.Container)
-			}
 			return &pendingOrRunningPods[0], nil
 		}
 
