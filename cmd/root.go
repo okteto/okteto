@@ -8,6 +8,7 @@ import (
 	"github.com/okteto/cnd/pkg/k8/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	runtime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -50,6 +51,16 @@ func init() {
 		Create(),
 		Analytics(),
 	)
+
+	// override client-go error handlers to downgrade the "logging before flag.Parse" error
+	errorHandlers := []func(error){
+		func(e error) {
+			log.Debugf("unhandled error: %s", e)
+		},
+	}
+
+	runtime.ErrorHandlers = errorHandlers
+
 }
 
 // Execute runs the root command
