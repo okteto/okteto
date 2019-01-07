@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -32,6 +33,9 @@ type event struct {
 
 	//Version of the cli
 	Version string `json:"version"`
+
+	//OS of the user
+	OS string `json:"os"`
 }
 
 const endpoint = "https://us-central1-okteto-prod.cloudfunctions.net/cnd-analytics"
@@ -93,6 +97,7 @@ func Send(e EventName, actionID string) {
 			Time:     time.Now().UTC().Unix(),
 			Version:  model.VersionString,
 			User:     userID,
+			OS:       runtime.GOOS,
 		}
 
 		data, err := json.Marshal(ev)
