@@ -94,6 +94,9 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 	}
 
 	parts := strings.SplitN(deploymentFullName, "/", 3)
+	if len(parts) < 3 {
+		return "", "", "", fmt.Errorf("unable to access the cnd local state. Remove the folder '~/.cnd' and try again")
+	}
 	namespace := parts[0]
 	deploymentName := parts[1]
 	devContainer := parts[2]
