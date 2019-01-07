@@ -25,19 +25,28 @@ pushd $(mktemp -d)
 
 git clone --depth 1 https://${GITHUB_TOKEN}@github.com/okteto/homebrew-cnd.git
 pushd homebrew-cnd
+
 cat << EOF > Formula/cnd.rb
 class Cnd < Formula
     desc "CLI for cloud native development"
     homepage "https://github.com/okteto/cnd"
-    version "$VERSION"
-    url "https://github.com/okteto/cnd/releases/download/#{version}/cnd-darwin-amd64"
-    sha256 "$SHA"
-    
+    url "https://github.com/okteto/cnd.git",
+      :tag      => "$VERSION",
+      :revision => "$SHA"
+    head "https://github.com/okteto/cnd.git"
+
     depends_on "syncthing"
+    depends_on "go" => :build
 
     def install
-        bin.install "cnd-darwin-amd64"
-        mv bin/"cnd-darwin-amd64", bin/"cnd"
+      ENV["GOPATH"] = buildpath
+      ENV["VERSION_STRING"] = "$VERSION"
+      contents = Dir["{*,.git,.gitignore}"]
+      (buildpath/"src/github.com/okteto/cnd").install contents
+      cd "src/github.com/okteto/cnd" do
+        system "make"
+        bin.install "bin/cnd"
+      end
     end
 
     # Homebrew requires tests.
@@ -47,6 +56,7 @@ class Cnd < Formula
 end
 EOF
 
+cat Formula/cnd.rb
 git add Formula/cnd.rb
 git config --global user.name "okteto"
 git config --global user.email "ci@okteto.com"
