@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 
-	"github.com/okteto/cnd/pkg/k8/logs"
-	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -51,7 +50,8 @@ func NewCNDPortForward(localPath, remoteAddress, deploymentName string) (*CNDPor
 
 // Start starts a port foward for the specified port. The function will block until
 // p.Stop is called
-func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string) error {
+func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, ready chan<- bool, wg *sync.WaitGroup) error {
+	defer wg.Done()
 	req := c.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace(pod.Namespace).
@@ -80,14 +80,8 @@ func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod
 	go func() {
 		select {
 		case <-pf.Ready:
-			fmt.Printf("Linking '%s' to %s...", p.LocalPath, p.DeploymentName)
-			fmt.Println()
-			fmt.Printf("Ready! Go to your local IDE and continue coding!")
-			fmt.Println()
 			p.IsReady = true
-			if err := logs.Logs(c, config, pod, container); err != nil {
-				log.Errorf("couldn't retrieve logs for %s/%s: %s", pod.Namespace, container, err)
-			}
+			ready <- p.IsReady
 		}
 	}()
 

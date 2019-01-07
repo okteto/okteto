@@ -16,16 +16,6 @@ func GetFullName(namespace, deploymentName string) string {
 	return fmt.Sprintf("%s/%s", namespace, deploymentName)
 }
 
-func isContainerInPod(pod *apiv1.Pod, container string) bool {
-	for _, c := range pod.Spec.Containers {
-		if c.Name == container {
-			return true
-		}
-	}
-
-	return false
-}
-
 func getLabel(o metav1.Object, key string) string {
 	labels := o.GetLabels()
 	if labels != nil {
