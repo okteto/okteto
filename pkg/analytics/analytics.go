@@ -3,6 +3,8 @@ package analytics
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -115,10 +117,14 @@ func Send(e EventName, actionID string) {
 		req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(data))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := client.Do(req)
+
 		if err != nil {
 			log.Debugf("[%s] failed to send the analytics: %s", actionID, err)
 			return
 		}
+
+		io.Copy(ioutil.Discard, resp.Body)
+		defer resp.Body.Close()
 
 		if resp.StatusCode > 300 {
 			log.Debugf("[%s] analytics fail to process request: %d", actionID, resp.StatusCode)
