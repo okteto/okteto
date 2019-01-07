@@ -48,6 +48,7 @@ var (
 	userID   string
 	flagPath = path.Join(os.Getenv("HOME"), ".cnd", ".noanalytics")
 	wg       = sync.WaitGroup{}
+	enabled  = true
 )
 
 const (
@@ -81,6 +82,8 @@ func init() {
 		log.Debugf("failed to generate a machine id")
 		userID = "na"
 	}
+
+	enabled = isEnabled()
 }
 
 // NewActionID returns an action
@@ -109,7 +112,7 @@ func Send(e EventName, actionID string) {
 			return
 		}
 
-		if !isEnabled() {
+		if !enabled {
 			return
 		}
 
