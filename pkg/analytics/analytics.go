@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
@@ -39,6 +40,7 @@ var (
 	client   http.Client
 	userID   string
 	flagPath string
+	wg       = sync.WaitGroup{}
 )
 
 const (
@@ -81,39 +83,44 @@ func NewActionID() string {
 
 // Send send analytics event
 func Send(e EventName, actionID string) {
-	ev := event{
-		ActionID: actionID,
-		Event:    e,
-		Time:     time.Now().UTC().Unix(),
-		Version:  model.VersionString,
-		User:     userID,
-	}
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
 
-	data, err := json.Marshal(ev)
-	if err != nil {
-		log.Debugf("failed to marshall analytic event: %s", err)
-		return
-	}
+		ev := event{
+			ActionID: actionID,
+			Event:    e,
+			Time:     time.Now().UTC().Unix(),
+			Version:  model.VersionString,
+			User:     userID,
+		}
 
-	if !isEnabled() {
-		return
-	}
+		data, err := json.Marshal(ev)
+		if err != nil {
+			log.Debugf("failed to marshall analytic event: %s", err)
+			return
+		}
 
-	log.Debugf("sending: %s", string(data))
-	req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(data))
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Debugf("failed to send the analytics: %s", err)
-		return
-	}
+		if !isEnabled() {
+			return
+		}
 
-	if resp.StatusCode > 300 {
-		log.Debugf("analytics fail to process request: %d", resp.StatusCode)
-		return
-	}
+		log.Debugf("sending: %s", string(data))
+		req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(data))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Debugf("failed to send the analytics: %s", err)
+			return
+		}
 
-	log.Debugf("analytics sucess: %d", resp.StatusCode)
+		if resp.StatusCode > 300 {
+			log.Debugf("analytics fail to process request: %d", resp.StatusCode)
+			return
+		}
+
+		log.Debugf("analytics sucess: %d", resp.StatusCode)
+	}()
 }
 
 // Disable disables analytics
@@ -147,4 +154,8 @@ func isEnabled() bool {
 	}
 
 	return true
+}
+
+func Wait() {
+	wg.Wait()
 }
