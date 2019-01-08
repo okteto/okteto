@@ -25,7 +25,7 @@ func Test_updateCNDContainer(t *testing.T) {
 		Command: []string{"/run"},
 		Args:    []string{"all"},
 	}
-	updateCndContainer(c, dev)
+	updateCndContainer(c, dev, "mynamespace")
 
 	if c.Image != "okteto/test" {
 		t.Errorf("Image wasn't updated: %+v", c)
@@ -45,6 +45,10 @@ func Test_updateCNDContainer(t *testing.T) {
 
 	if c.VolumeMounts[0].MountPath != c.WorkingDir {
 		t.Errorf("CND mount wasn't set: %+v", c)
+	}
+
+	if c.Env == nil || c.Env[0].Name != cndEnvNamespace {
+		t.Errorf("CND dev context wasn't set: %+v", c)
 	}
 
 }
