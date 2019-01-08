@@ -2,11 +2,7 @@ swap:
   deployment:
     name: vote
     container: vote
-    #command: ["python", "app.py"]
-    command: 
-    - sh
-    - -c
-    - tail -f /dev/null 
+    command: ["python", "app.py"]
 mount:
   source: .
   target: /app

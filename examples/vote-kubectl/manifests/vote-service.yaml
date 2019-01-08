@@ -8,6 +8,6 @@ spec:
   - name: "vote-service"
     port: 5000
     targetPort: 80
-    nodePort: 31100
+    nodePort: 31000
   selector:
     app: vote
