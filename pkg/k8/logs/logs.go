@@ -68,7 +68,7 @@ func StreamLogs(d *appsv1.Deployment, container string, c *kubernetes.Clientset,
 		}
 		wait = 0
 		if err := writeLogs(cancellationCtx, os.Stdout, readCloser); err != nil {
-			log.Errorf("couldn't retrieve logs for %s/%s/%s: %s", pod.Name, d.Name, container, err)
+			log.Infof("couldn't retrieve logs for %s/%s/%s: %s", pod.Name, d.Name, container, err)
 		}
 
 		readCloser = nil

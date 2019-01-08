@@ -26,7 +26,7 @@ func Get(namespace, deploymentName string, c *kubernetes.Clientset) (*appsv1.Dep
 
 	d, err := c.AppsV1().Deployments(namespace).Get(deploymentName, metav1.GetOptions{})
 	if err != nil {
-		log.Debugf("error while retrieving the deployment: %s", err)
+		log.Debugf("error while retrieving the deployment %s: %s", GetFullName(namespace, deploymentName), err)
 	}
 
 	return d, err
