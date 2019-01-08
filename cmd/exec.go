@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/okteto/cnd/pkg/analytics"
+	"github.com/okteto/cnd/pkg/model"
 	"github.com/okteto/cnd/pkg/storage"
 	log "github.com/sirupsen/logrus"
 
@@ -95,7 +96,7 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 
 	parts := strings.SplitN(deploymentFullName, "/", 3)
 	if len(parts) < 3 {
-		return "", "", "", fmt.Errorf("unable to access the cnd local state. Remove the folder '~/.cnd' and try again")
+		return "", "", "", fmt.Errorf("unable to parse the cnd local state. Remove '%s' and try again", model.GetCNDHome())
 	}
 	namespace := parts[0]
 	deploymentName := parts[1]

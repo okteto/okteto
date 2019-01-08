@@ -1,5 +1,15 @@
-<configuration version="28">
-    <folder id="esall-z6asd" label="cnd" path="/var/cnd-sync" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+package secrets
+
+import (
+	"bytes"
+	"html/template"
+
+	"github.com/okteto/cnd/pkg/model"
+)
+
+const configXML = `<configuration version="28">
+{{ range $key, $value := . }}
+    <folder id="cnd-{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" label="{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" path="/var/cnd-sync/{{ $value.Swap.Deployment.Container }}" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
         <filesystemType>basic</filesystemType>
         <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
         <device id="ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU" introducedBy=""></device>
@@ -20,6 +30,7 @@
         <markerName>.stfolder</markerName>
         <useLargeBlocks>false</useLargeBlocks>
     </folder>
+{{ end }}
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
         <address>dynamic</address>
         <paused>false</paused>
@@ -79,4 +90,13 @@
         <setLowPriority>true</setLowPriority>
         <minHomeDiskFreePct>0</minHomeDiskFreePct>
     </options>
-</configuration>
+</configuration>`
+
+func getConfigXML(devList []*model.Dev) ([]byte, error) {
+	configTemplate := template.Must(template.New("syncthingConfig").Parse(configXML))
+	buf := new(bytes.Buffer)
+	if err := configTemplate.Execute(buf, devList); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
