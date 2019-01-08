@@ -7,6 +7,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+)
+
+const (
+	cndEnvNamespace = "CND_KUBERNETES_NAMESPACE"
 )
 
 var (
@@ -31,7 +36,7 @@ func translateToDevModeDeployment(d *appsv1.Deployment, dev *model.Dev) error {
 
 	for i, c := range d.Spec.Template.Spec.Containers {
 		if c.Name == dev.Swap.Deployment.Container || dev.Swap.Deployment.Container == "" {
-			updateCndContainer(&d.Spec.Template.Spec.Containers[i], dev)
+			updateCndContainer(&d.Spec.Template.Spec.Containers[i], dev, d.Namespace)
 			break
 		}
 	}
@@ -47,7 +52,7 @@ func translateToDevModeDeployment(d *appsv1.Deployment, dev *model.Dev) error {
 	return nil
 }
 
-func updateCndContainer(c *apiv1.Container, dev *model.Dev) {
+func updateCndContainer(c *apiv1.Container, dev *model.Dev, namespace string) {
 	if dev.Swap.Deployment.Image != "" {
 		c.Image = dev.Swap.Deployment.Image
 	}
@@ -78,6 +83,17 @@ func updateCndContainer(c *apiv1.Container, dev *model.Dev) {
 	)
 
 	c.Resources = apiv1.ResourceRequirements{}
+
+	if c.Env == nil {
+		c.Env = []v1.EnvVar{}
+	}
+
+	namespaceEnvVar := v1.EnvVar{
+		Name:  cndEnvNamespace,
+		Value: namespace,
+	}
+
+	c.Env = append(c.Env, namespaceEnvVar)
 }
 
 func createInitSyncthingContainer(d *appsv1.Deployment, dev *model.Dev) {
