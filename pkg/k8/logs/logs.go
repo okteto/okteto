@@ -1,6 +1,7 @@
 package logs
 
 import (
+	"context"
 	"io"
 	"os"
 	"os/signal"
@@ -22,6 +23,9 @@ func StreamLogs(d *appsv1.Deployment, container string, c *kubernetes.Clientset,
 	var readCloser io.ReadCloser
 	end := false
 
+	cancellationCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt)
 	go func() {
@@ -29,7 +33,9 @@ func StreamLogs(d *appsv1.Deployment, container string, c *kubernetes.Clientset,
 		if readCloser != nil {
 			readCloser.Close()
 		}
+		cancellationCtx.Done()
 		end = true
+		return
 	}()
 
 	var wait time.Duration
@@ -61,10 +67,31 @@ func StreamLogs(d *appsv1.Deployment, container string, c *kubernetes.Clientset,
 			continue
 		}
 		wait = 0
-		if _, err = io.Copy(os.Stdout, readCloser); err != nil {
-			log.Errorf("couldn't retrieve logs for %s/%s: %s", pod.Namespace, container, err)
+		if err := writeLogs(cancellationCtx, os.Stdout, readCloser); err != nil {
+			log.Infof("couldn't retrieve logs for %s/%s/%s: %s", pod.Name, d.Name, container, err)
 		}
+
 		readCloser = nil
 	}
 	return
+}
+
+type readerFunc func(p []byte) (n int, err error)
+
+func (rf readerFunc) Read(p []byte) (n int, err error) { return rf(p) }
+
+func writeLogs(ctx context.Context, out io.Writer, in io.Reader) error {
+	// Based on http://ixday.github.io/post/golang-cancel-copy/
+	_, err := io.Copy(out, readerFunc(func(p []byte) (int, error) {
+
+		select {
+
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		default:
+			return in.Read(p)
+		}
+	}))
+
+	return err
 }
