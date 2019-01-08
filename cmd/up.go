@@ -45,7 +45,6 @@ func executeUp(devPath, namespace string) error {
 	n, deploymentName, c, err := findDevEnvironment(true)
 
 	if err != errNoCNDEnvironment {
-		log.Info(err)
 		return fmt.Errorf("there is already an entry for %s/%s Are you running 'cnd up' somewhere else?", deployments.GetFullName(n, deploymentName), c)
 	}
 
@@ -111,7 +110,7 @@ func executeUp(devPath, namespace string) error {
 	}()
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 
 	ready := make(chan bool)
 	go pf.Start(client, restConfig, pod, ready, &wg)
@@ -122,7 +121,7 @@ func executeUp(devPath, namespace string) error {
 	fmt.Printf("Ready! Go to your local IDE and continue coding!")
 	fmt.Println()
 
-	go logs.StreamLogs(d, dev.Swap.Deployment.Container, client, restConfig, &wg)
+	go logs.StreamLogs(d, dev.Swap.Deployment.Container, client, restConfig)
 	wg.Wait()
 	return nil
 }
