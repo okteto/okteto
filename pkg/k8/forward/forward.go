@@ -2,6 +2,7 @@ package forward
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -46,10 +47,22 @@ func NewCNDPortForward(remoteAddress string) (*CNDPortForward, error) {
 	}, nil
 }
 
-// Start starts a port foward for the specified port. The function will block until
-// p.Stop is called
-func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, ready chan<- bool, wg *sync.WaitGroup) error {
+// Start starts a port foward for the specified port.
+func (p *CNDPortForward) Start(
+	ctx context.Context, wg *sync.WaitGroup,
+	c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, ready chan<- bool) error {
 	defer wg.Done()
+	p.start(c, config, pod, ready)
+
+	<-ctx.Done()
+	if p.StopChan != nil {
+		close(p.StopChan)
+		<-p.StopChan
+	}
+	return nil
+}
+
+func (p *CNDPortForward) start(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, ready chan<- bool) error {
 	req := c.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace(pod.Namespace).
@@ -75,21 +88,10 @@ func (p *CNDPortForward) Start(c *kubernetes.Clientset, config *rest.Config, pod
 		return err
 	}
 
-	go func() {
-		select {
-		case <-pf.Ready:
-			p.IsReady = true
-			ready <- p.IsReady
-		}
-	}()
+	go pf.ForwardPorts()
 
-	return pf.ForwardPorts()
-}
-
-// Stop stops the port forwarding
-func (p *CNDPortForward) Stop() {
-	if p.StopChan != nil {
-		close(p.StopChan)
-		<-p.StopChan
-	}
+	<-pf.Ready
+	p.IsReady = true
+	ready <- p.IsReady
+	return nil
 }

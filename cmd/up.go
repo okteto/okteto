@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -107,19 +108,12 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	channel := make(chan os.Signal, 1)
-	signal.Notify(channel, os.Interrupt)
-	go func() {
-		<-channel
-		stop(dev, sy, pf)
-		return
-	}()
-
+	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
-	wg.Add(1)
 
 	ready := make(chan bool)
-	go pf.Start(client, restConfig, pod, ready, &wg)
+	wg.Add(1)
+	go pf.Start(ctx, &wg, client, restConfig, pod, ready)
 	<-ready
 
 	fmt.Printf("Linking '%s' to %s/%s...", dev.Mount.Source, fullname, dev.Swap.Deployment.Container)
@@ -127,7 +121,14 @@ func executeUp(devPath, namespace string) error {
 	fmt.Printf("Ready! Go to your local IDE and continue coding!")
 	fmt.Println()
 
-	go logs.StreamLogs(d, dev.Swap.Deployment.Container, client, restConfig)
+	wg.Add(1)
+	go logs.StreamLogs(ctx, &wg, d, dev.Swap.Deployment.Container, client, restConfig)
+
+	stopChannel := make(chan os.Signal, 1)
+	signal.Notify(stopChannel, os.Interrupt)
+	<-stopChannel
+	stop(dev, sy, pf)
+	cancel()
 	wg.Wait()
 	return nil
 }
@@ -140,6 +141,5 @@ func stop(dev *model.Dev, sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
 	}
 
 	storage.Stop(sy.Namespace, dev)
-	pf.Stop()
 	log.Debugf("stopped syncthing and port forwarding")
 }

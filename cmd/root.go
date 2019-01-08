@@ -65,9 +65,12 @@ func init() {
 
 // Execute runs the root command
 func Execute() {
+	exitCode := 0
 	if err := root.Execute(); err != nil {
-		exit()
+		exitCode = 1
 	}
+	analytics.Wait()
+	os.Exit(exitCode)
 }
 
 func getKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, error) {
@@ -76,9 +79,4 @@ func getKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest
 
 func addDevPathFlag(cmd *cobra.Command, devPath *string) {
 	cmd.Flags().StringVarP(devPath, "file", "f", "cnd.yml", "path to the cnd manifest file")
-}
-
-func exit() {
-	analytics.Wait()
-	os.Exit(1)
 }
