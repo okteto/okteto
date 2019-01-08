@@ -67,6 +67,11 @@ func GetDevConfig(language string) *model.Dev {
 	dev.Mount.Source = "."
 	dev.Mount.Target = vals.path
 	dev.Scripts = vals.scripts
+
+	if dev.Scripts == nil {
+		dev.Scripts = make(map[string]string)
+	}
+
 	dev.Scripts[helloCommandName] = "echo Your cluster ♥ you"
 	return dev
 }
