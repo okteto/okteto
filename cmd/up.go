@@ -57,13 +57,20 @@ func executeUp(devPath, namespace string) error {
 	if err != nil {
 		return err
 	}
-
 	d, err := deployments.Get(namespace, dev.Swap.Deployment.Name, client)
 	if err != nil {
 		return err
 	}
+	dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(
+		dev.Swap.Deployment.Container,
+		d.Spec.Template.Spec.Containers,
+	)
+	devList, err := deployments.GetAndUpdateDevListFromAnnotation(d.GetObjectMeta(), dev)
+	if err != nil {
+		return err
+	}
 
-	if err := deployments.DevModeOn(dev, d, client); err != nil {
+	if err := deployments.DevModeOn(d, devList, client); err != nil {
 		return err
 	}
 
@@ -72,18 +79,18 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	if err := deployments.InitVolumeWithTarball(client, restConfig, namespace, pod.Name, dev.Mount.Source); err != nil {
+	if err := deployments.InitVolumeWithTarball(client, restConfig, namespace, pod.Name, devList); err != nil {
 		return err
 	}
 
-	sy, err := syncthing.NewSyncthing(dev, namespace)
+	sy, err := syncthing.NewSyncthing(namespace, d.Name, devList)
 	if err != nil {
 		return err
 	}
 
 	fullname := deployments.GetFullName(namespace, d.Name)
 
-	pf, err := forward.NewCNDPortForward(dev.Mount.Source, sy.RemoteAddress, fullname)
+	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
 	if err != nil {
 		return err
 	}
@@ -97,7 +104,6 @@ func executeUp(devPath, namespace string) error {
 		if err == storage.ErrAlreadyRunning {
 			return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", fullname)
 		}
-
 		return err
 	}
 
@@ -105,7 +111,7 @@ func executeUp(devPath, namespace string) error {
 	signal.Notify(channel, os.Interrupt)
 	go func() {
 		<-channel
-		stop(sy, pf)
+		stop(dev, sy, pf)
 		return
 	}()
 
@@ -126,14 +132,14 @@ func executeUp(devPath, namespace string) error {
 	return nil
 }
 
-func stop(sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
+func stop(dev *model.Dev, sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
 	fmt.Println()
 	log.Debugf("stopping syncthing and port forwarding")
 	if err := sy.Stop(); err != nil {
 		log.Error(err)
 	}
 
-	storage.Stop(sy.Namespace, sy.Dev)
+	storage.Stop(sy.Namespace, dev)
 	pf.Stop()
 	log.Debugf("stopped syncthing and port forwarding")
 }

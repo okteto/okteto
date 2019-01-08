@@ -18,44 +18,47 @@ const (
 	// CNDDeploymentAnnotation is the original deployment manifest
 	CNDDeploymentAnnotation = "cnd.okteto.com/deployment"
 
-	// CNDDevAnnotation is the active cnd configuration
-	CNDDevAnnotation = "cnd.okteto.com/dev"
+	// CNDDevListAnnotation is the list of cnd manifest annotations
+	CNDDevListAnnotation = "cnd.okteto.com/cnd"
 
-	// CNDInitSyncContainerName is the name of the container initializing the shared volume
-	CNDInitSyncContainerName = "cnd-init-syncthing"
+	// CNDSyncContainer is the name of the container running syncthing
+	CNDSyncContainer = "cnd-sync"
 
-	// CNDSyncContainerName is the name of the container running syncthing
-	CNDSyncContainerName = "cnd-syncthing"
+	// CNDSyncSecretVolume is the name of the volume mounting the secret
+	CNDSyncSecretVolume = "cnd-sync-secret"
 
-	// CNDSyncVolumeName is the name of synched volume
-	CNDSyncVolumeName = "cnd-sync"
+	cndDevAnnotationTemplate     = "cnd.okteto.com/dev-%s"
+	cndInitSyncContainerTemplate = "cnd-init-%s"
+	cndSyncVolumeTemplate        = "cnd-data-%s"
+	cndSyncMountTemplate         = "/var/cnd-sync/%s"
+	cndSyncSecretTemplate        = "cnd-secret-%s"
 )
 
 //Dev represents a cloud native development environment
 type Dev struct {
-	Swap    Swap              `yaml:"swap"`
-	Mount   Mount             `yaml:"mount"`
-	Scripts map[string]string `yaml:"scripts"`
+	Swap    Swap              `json:"swap" yaml:"swap"`
+	Mount   Mount             `json:"mount" yaml:"mount"`
+	Scripts map[string]string `json:"scripts" yaml:"scripts"`
 }
 
 //Swap represents the metadata for the container to be swapped
 type Swap struct {
-	Deployment Deployment `yaml:"deployment"`
+	Deployment Deployment `json:"deployment" yaml:"deployment"`
 }
 
 //Deployment represents the container to be swapped
 type Deployment struct {
-	Name      string   `yaml:"name"`
-	Container string   `yaml:"container,omitempty"`
-	Image     string   `yaml:"image"`
-	Command   []string `yaml:"command,omitempty"`
-	Args      []string `yaml:"args,omitempty"`
+	Name      string   `json:"name" yaml:"name"`
+	Container string   `json:"container,omitempty" yaml:"container,omitempty"`
+	Image     string   `json:"image" yaml:"image"`
+	Command   []string `json:"command,omitempty" yaml:"command,omitempty"`
+	Args      []string `json:"args,omitempty" yaml:"args,omitempty"`
 }
 
 //Mount represents how the local filesystem is mounted
 type Mount struct {
-	Source string `yaml:"source"`
-	Target string `yaml:"target"`
+	Source string `json:"source" yaml:"source"`
+	Target string `json:"target" yaml:"target"`
 }
 
 //NewDev returns a new instance of dev with default values
@@ -140,4 +143,24 @@ func (dev *Dev) fixPath(originalPath string) {
 			dev.Mount.Source = path.Join(wd, path.Dir(originalPath), dev.Mount.Source)
 		}
 	}
+}
+
+// GetCNDInitSyncContainer returns the CND init sync container name for a given container
+func (dev *Dev) GetCNDInitSyncContainer() string {
+	return fmt.Sprintf(cndInitSyncContainerTemplate, dev.Swap.Deployment.Container)
+}
+
+// GetCNDSyncVolume returns the CND sync volume name for a given container
+func (dev *Dev) GetCNDSyncVolume() string {
+	return fmt.Sprintf(cndSyncVolumeTemplate, dev.Swap.Deployment.Container)
+}
+
+// GetCNDSyncMount returns the CND sync mount for a given container
+func (dev *Dev) GetCNDSyncMount() string {
+	return fmt.Sprintf(cndSyncMountTemplate, dev.Swap.Deployment.Container)
+}
+
+// GetCNDSyncSecret returns the CND sync secret for a given deployment
+func GetCNDSyncSecret(deployment string) string {
+	return fmt.Sprintf(cndSyncSecretTemplate, deployment)
 }

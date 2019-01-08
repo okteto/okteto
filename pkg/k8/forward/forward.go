@@ -28,7 +28,7 @@ type CNDPortForward struct {
 }
 
 //NewCNDPortForward initializes and returns a new port forward structure
-func NewCNDPortForward(localPath, remoteAddress, deploymentName string) (*CNDPortForward, error) {
+func NewCNDPortForward(remoteAddress string) (*CNDPortForward, error) {
 	parsed, err := url.Parse(remoteAddress)
 	if err != nil {
 		return nil, err
@@ -37,14 +37,12 @@ func NewCNDPortForward(localPath, remoteAddress, deploymentName string) (*CNDPor
 	port, _ := strconv.Atoi(parsed.Port())
 
 	return &CNDPortForward{
-		LocalPort:      port,
-		RemotePort:     22000,
-		StopChan:       make(chan struct{}, 1),
-		ReadyChan:      make(chan struct{}, 1),
-		Out:            new(bytes.Buffer),
-		LocalPath:      localPath,
-		DeploymentName: deploymentName,
-		IsReady:        false,
+		LocalPort:  port,
+		RemotePort: 22000,
+		StopChan:   make(chan struct{}, 1),
+		ReadyChan:  make(chan struct{}, 1),
+		Out:        new(bytes.Buffer),
+		IsReady:    false,
 	}, nil
 }
 

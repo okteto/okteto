@@ -43,7 +43,7 @@ type Syncthing struct {
 	binPath          string
 	home             string
 	Name             string
-	Dev              *model.Dev
+	DevList          []*model.Dev
 	Namespace        string
 	RemoteAddress    string
 	RemoteDeviceID   string
@@ -54,7 +54,7 @@ type Syncthing struct {
 }
 
 // NewSyncthing constructs a new Syncthing.
-func NewSyncthing(dev *model.Dev, namespace string) (*Syncthing, error) {
+func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthing, error) {
 
 	remotePort, err := getAvailablePort()
 	if err != nil {
@@ -74,9 +74,10 @@ func NewSyncthing(dev *model.Dev, namespace string) (*Syncthing, error) {
 	s := &Syncthing{
 		APIKey:           "cnd",
 		binPath:          "syncthing",
-		Dev:              dev,
+		home:             path.Join(model.GetCNDHome(), namespace, deployment),
+		Name:             deployment,
+		DevList:          devList,
 		Namespace:        namespace,
-		home:             path.Join(model.GetCNDHome(), namespace, dev.Swap.Deployment.Name),
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
 		FileWatcherDelay: DefaultFileWatcherDelay,

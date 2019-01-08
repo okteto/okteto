@@ -14,12 +14,17 @@ const (
 	cndEnvNamespace = "CND_KUBERNETES_NAMESPACE"
 )
 
+const (
+	initSyncImageTag = "okteto/init-syncthing:0.4.0"
+	syncImageTag     = "okteto/syncthing:0.4.0"
+)
+
 var (
 	devReplicas                      int32 = 1
 	devTerminationGracePeriodSeconds int64
 )
 
-func translateToDevModeDeployment(d *appsv1.Deployment, dev *model.Dev) error {
+func translateToDevModeDeployment(d *appsv1.Deployment, devList []*model.Dev) error {
 
 	d.Status = appsv1.DeploymentStatus{}
 	manifest, err := json.Marshal(d)
@@ -27,23 +32,27 @@ func translateToDevModeDeployment(d *appsv1.Deployment, dev *model.Dev) error {
 		return err
 	}
 	setAnnotation(d.GetObjectMeta(), model.CNDDeploymentAnnotation, string(manifest))
-	if err := setDevAsAnnotation(d, dev); err != nil {
+	if err := setDevListAsAnnotation(d.GetObjectMeta(), devList); err != nil {
 		return err
 	}
 	setLabel(d.GetObjectMeta(), model.CNDLabel, d.Name)
 	setLabel(d.Spec.Template.GetObjectMeta(), model.CNDLabel, d.Name)
+	d.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
-	for i, c := range d.Spec.Template.Spec.Containers {
-		if c.Name == dev.Swap.Deployment.Container || dev.Swap.Deployment.Container == "" {
-			updateCndContainer(&d.Spec.Template.Spec.Containers[i], dev, d.Namespace)
-			break
+	for _, dev := range devList {
+		for i, c := range d.Spec.Template.Spec.Containers {
+			if c.Name == dev.Swap.Deployment.Container {
+				updateCndContainer(&d.Spec.Template.Spec.Containers[i], dev, d.Namespace)
+				break
+			}
 		}
+		createInitSyncthingContainer(d, dev)
+		createSyncthingVolume(d, dev)
 	}
 
-	createInitSyncthingContainer(d, dev)
-	createSyncthingContainer(d, dev)
-	createSyncthingVolume(d, dev)
+	createSyncthingContainer(d, devList)
+	createSyncthingSecretVolume(d)
 
 	if *(d.Spec.Replicas) != devReplicas {
 		log.Info("cnd only supports running with 1 replica")
@@ -73,7 +82,7 @@ func updateCndContainer(c *apiv1.Container, dev *model.Dev, namespace string) {
 	}
 
 	volumeMount := apiv1.VolumeMount{
-		Name:      model.CNDSyncVolumeName,
+		Name:      dev.GetCNDSyncVolume(),
 		MountPath: dev.Mount.Target,
 	}
 
@@ -98,11 +107,11 @@ func updateCndContainer(c *apiv1.Container, dev *model.Dev, namespace string) {
 
 func createInitSyncthingContainer(d *appsv1.Deployment, dev *model.Dev) {
 	initSyncthingContainer := apiv1.Container{
-		Name:  model.CNDInitSyncContainerName,
-		Image: "okteto/init-syncthing:0.3.4",
+		Name:  dev.GetCNDInitSyncContainer(),
+		Image: initSyncImageTag,
 		VolumeMounts: []apiv1.VolumeMount{
 			apiv1.VolumeMount{
-				Name:      model.CNDSyncVolumeName,
+				Name:      dev.GetCNDSyncVolume(),
 				MountPath: "/src",
 			},
 		},
@@ -115,14 +124,15 @@ func createInitSyncthingContainer(d *appsv1.Deployment, dev *model.Dev) {
 	d.Spec.Template.Spec.InitContainers = append(d.Spec.Template.Spec.InitContainers, initSyncthingContainer)
 }
 
-func createSyncthingContainer(d *appsv1.Deployment, dev *model.Dev) {
+func createSyncthingContainer(d *appsv1.Deployment, devList []*model.Dev) {
 	syncthingContainer := apiv1.Container{
-		Name:  model.CNDSyncContainerName,
-		Image: "okteto/syncthing:latest",
+		Name:            model.CNDSyncContainer,
+		Image:           syncImageTag,
+		ImagePullPolicy: apiv1.PullAlways,
 		VolumeMounts: []apiv1.VolumeMount{
 			apiv1.VolumeMount{
-				Name:      model.CNDSyncVolumeName,
-				MountPath: "/var/cnd-sync",
+				Name:      model.CNDSyncSecretVolume,
+				MountPath: "/var/syncthing/secret/",
 			},
 		},
 		Ports: []apiv1.ContainerPort{
@@ -134,7 +144,15 @@ func createSyncthingContainer(d *appsv1.Deployment, dev *model.Dev) {
 			},
 		},
 	}
-
+	for _, dev := range devList {
+		syncthingContainer.VolumeMounts = append(
+			syncthingContainer.VolumeMounts,
+			apiv1.VolumeMount{
+				Name:      dev.GetCNDSyncVolume(),
+				MountPath: dev.GetCNDSyncMount(),
+			},
+		)
+	}
 	d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, syncthingContainer)
 }
 
@@ -143,7 +161,27 @@ func createSyncthingVolume(d *appsv1.Deployment, dev *model.Dev) {
 		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
 	}
 
-	syncVolume := apiv1.Volume{Name: model.CNDSyncVolumeName}
+	syncVolume := apiv1.Volume{Name: dev.GetCNDSyncVolume()}
+
+	d.Spec.Template.Spec.Volumes = append(
+		d.Spec.Template.Spec.Volumes,
+		syncVolume,
+	)
+}
+
+func createSyncthingSecretVolume(d *appsv1.Deployment) {
+	if d.Spec.Template.Spec.Volumes == nil {
+		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
+	}
+
+	syncVolume := apiv1.Volume{
+		Name: model.CNDSyncSecretVolume,
+		VolumeSource: apiv1.VolumeSource{
+			Secret: &apiv1.SecretVolumeSource{
+				SecretName: model.GetCNDSyncSecret(d.Name),
+			},
+		},
+	}
 
 	d.Spec.Template.Spec.Volumes = append(
 		d.Spec.Template.Spec.Volumes,
