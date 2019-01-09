@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: movies
+spec:
+  type: NodePort
+  ports:
+  - name: "movies-service"
+    port: 5000
+    targetPort: 9000
+    nodePort: 32000
+  - name: "movies-service-hmr"
+    port: 5001
+    targetPort: 9001
+    nodePort: 32001
+  selector:
+    app: movies

@@ -1,0 +1,14 @@
+swap:
+  deployment:
+    name: movies
+    image: okteto/node:11
+    command:
+     - sh
+     - -c
+     - tail -f /dev/null
+mount:
+  source: .
+  target: /usr/src/app
+scripts:
+    start: yarn start
+

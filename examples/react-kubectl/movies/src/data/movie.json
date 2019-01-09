@@ -1,0 +1,412 @@
+{
+  "id": 27,
+  "page": 1,
+  "results": [
+    {
+      "id": 424139,
+      "video": false,
+      "vote_count": 551,
+      "vote_average": 6.7,
+      "title": "Halloween",
+      "release_date": "2018-10-18",
+      "original_language": "en",
+      "original_title": "Halloween",
+      "genre_ids": [
+        27,
+        53
+      ],
+      "backdrop_path": "/tZ358Wk4BnOc4FjdGsiexAUvCMH.jpg",
+      "adult": false,
+      "overview": "Laurie Strode comes to her final confrontation with Michael Myers, the masked figure who has haunted her since she narrowly escaped his killing spree on Halloween night four decades ago.",
+      "poster_path": "/bXs0zkv2iGVViZEy78teg2ycDBm.jpg",
+      "popularity": 258.21
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/fgsHxz21B27hOOqQBiw9L6yWcM7.jpg",
+      "genre_ids": [
+        27,
+        9648,
+        53
+      ],
+      "id": 439079,
+      "original_language": "en",
+      "original_title": "The Nun",
+      "overview": "When a young nun at a cloistered abbey in Romania takes her own life, a priest with a haunted past and a novitiate on the threshold of her final vows are sent by the Vatican to investigate. Together they uncover the order’s unholy secret. Risking not only their lives but their faith and their very souls, they confront a malevolent force in the form of the same demonic nun that first terrorized audiences in “The Conjuring 2” as the abbey becomes a horrific battleground between the living and the damned.",
+      "poster_path": "/sFC1ElvoKGdHJIWRpNB3xWJ9lJA.jpg",
+      "release_date": "2018-09-05",
+      "title": "The Nun",
+      "video": false,
+      "vote_average": 5.8,
+      "vote_count": 1289,
+      "popularity": 137.653
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/f4E0ocYeToEuXvczZv6QArrMDJ.jpg",
+      "genre_ids": [
+        28,
+        27,
+        878,
+        53
+      ],
+      "id": 346910,
+      "original_language": "en",
+      "original_title": "The Predator",
+      "overview": "From the outer reaches of space to the small-town streets of suburbia, the hunt comes home. Now, the universe’s most lethal hunters are stronger, smarter and deadlier than ever before, having genetically upgraded themselves with DNA from other species. When a young boy accidentally triggers their return to Earth, only a ragtag crew of ex-soldiers and a disgruntled science teacher can prevent the end of the human race.",
+      "poster_path": "/wMq9kQXTeQCHUZOG4fAe5cAxyUA.jpg",
+      "release_date": "2018-09-13",
+      "title": "The Predator",
+      "video": false,
+      "vote_average": 5.3,
+      "vote_count": 712,
+      "popularity": 95.878
+    },
+    {
+      "id": 442249,
+      "video": false,
+      "vote_count": 1145,
+      "vote_average": 5.8,
+      "title": "The First Purge",
+      "release_date": "2018-07-04",
+      "original_language": "en",
+      "original_title": "The First Purge",
+      "genre_ids": [
+        28,
+        27,
+        878,
+        53
+      ],
+      "backdrop_path": "/1hJbE72WiRuWH11QPNiHsvt29xA.jpg",
+      "adult": false,
+      "overview": "To push the crime rate below one percent for the rest of the year, the New Founding Fathers of America test a sociological theory that vents aggression for one night in one isolated community. But when the violence of oppressors meets the rage of the others, the contagion will explode from the trial-city borders and spread across the nation.",
+      "poster_path": "/litjsBoiydO6JlO70uOX4N3WnNL.jpg",
+      "popularity": 66.933
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/zWGAnbxjjwY3xFGuOeR26LGbBlG.jpg",
+      "genre_ids": [
+        27,
+        53
+      ],
+      "id": 238636,
+      "original_language": "en",
+      "original_title": "The Purge: Anarchy",
+      "overview": "One night per year, the government sanctions a 12-hour period in which citizens can commit any crime they wish -- including murder -- without fear of punishment or imprisonment. Leo, a sergeant who lost his son, plans a vigilante mission of revenge during the mayhem. However, instead of a death-dealing avenger, he becomes the unexpected protector of four innocent strangers who desperately need his help if they are to survive the night.",
+      "poster_path": "/l1DRl40x2OWUoPP42v8fjKdS1Z3.jpg",
+      "release_date": "2014-07-17",
+      "title": "The Purge: Anarchy",
+      "video": false,
+      "vote_average": 6.6,
+      "vote_count": 3239,
+      "popularity": 55.886
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/1sZ9Nnic1ldHhHttAMDmNxaNM04.jpg",
+      "genre_ids": [
+        27,
+        878,
+        53
+      ],
+      "id": 158015,
+      "original_language": "en",
+      "original_title": "The Purge",
+      "overview": "Given the country's overcrowded prisons, the U.S. government begins to allow 12-hour periods of time in which all illegal activity is legal. During one of these free-for-alls, a family must protect themselves from a home invasion.",
+      "poster_path": "/tGGJOuLHX7UDlTz57sjfhW1qreP.jpg",
+      "release_date": "2013-05-31",
+      "title": "The Purge",
+      "video": false,
+      "vote_average": 6.2,
+      "vote_count": 4048,
+      "popularity": 55.667
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/9xYg9ScjGaO2HrLfOfYZirTrB3o.jpg",
+      "genre_ids": [
+        12,
+        35,
+        14,
+        27,
+        10751
+      ],
+      "id": 442062,
+      "original_language": "en",
+      "original_title": "Goosebumps 2: Haunted Halloween",
+      "overview": "Two boys face an onslaught from witches, monsters, ghouls and a talking dummy after they discover a mysterious book by author R. L. Stine.",
+      "poster_path": "/8bcpki9GfXdXj9esFpPtlate8v0.jpg",
+      "release_date": "2018-10-11",
+      "title": "Goosebumps 2: Haunted Halloween",
+      "video": false,
+      "vote_average": 5.9,
+      "vote_count": 83,
+      "popularity": 50.24
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/tNa19CK0CQZl5rxZ35QRdKAT2s0.jpg",
+      "genre_ids": [
+        28,
+        27,
+        53
+      ],
+      "id": 460885,
+      "original_language": "en",
+      "original_title": "Mandy",
+      "overview": "The Shadow Mountains, 1983. Red and Mandy lead a loving and peaceful existence; but when their pine-scented haven is savagely destroyed, Red is catapulted into a phantasmagoric journey filled with bloody vengeance and laced with fire.",
+      "poster_path": "/m0yf7J7HsKeK6E81SMRcX8vx6mH.jpg",
+      "release_date": "2018-09-13",
+      "title": "Mandy",
+      "video": false,
+      "vote_average": 6.4,
+      "vote_count": 206,
+      "popularity": 44.062
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/tQvvRReWhrXnj28s4AIp2PblByg.jpg",
+      "genre_ids": [
+        14,
+        27,
+        9648,
+        53,
+        10751
+      ],
+      "id": 463821,
+      "original_language": "en",
+      "original_title": "The House with a Clock in Its Walls",
+      "overview": "Ten-year-old Lewis goes to live with his uncle in a creaky old house that contains a mysterious ticktock noise. When Lewis accidentally awakens the dead, the town's sleepy facade magically springs to life with a secret world of witches and warlocks.",
+      "poster_path": "/qM66Hv4ByAxnilr0jaqCA9uOD4Y.jpg",
+      "release_date": "2018-09-15",
+      "title": "The House with a Clock in Its Walls",
+      "video": false,
+      "vote_average": 6.4,
+      "vote_count": 200,
+      "popularity": 37.775
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/lPhsKTtycmbp6bzJAG662Pd5U3N.jpg",
+      "genre_ids": [
+        28,
+        27,
+        53
+      ],
+      "id": 316727,
+      "original_language": "en",
+      "original_title": "The Purge: Election Year",
+      "overview": "Two years after choosing not to kill the man who killed his son, former police sergeant Leo Barnes has become head of security for Senator Charlene Roan, the front runner in the next Presidential election due to her vow to eliminate the Purge. On the night of what should be the final Purge, a betrayal from within the government forces Barnes and Roan out onto the street where they must fight to survive the night.",
+      "poster_path": "/sm7p6NvWOBSDywdIPhmiX3SLSH8.jpg",
+      "release_date": "2016-06-29",
+      "title": "The Purge: Election Year",
+      "video": false,
+      "vote_average": 6.3,
+      "vote_count": 2474,
+      "popularity": 36.291
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/wKrIeRiFRt0AEjMwzHjkvyhxIuM.jpg",
+      "genre_ids": [
+        27
+      ],
+      "id": 458969,
+      "original_language": "en",
+      "original_title": "Monster Party",
+      "overview": "Three teenage thieves infiltrate a mansion dinner party, unaware that it is secretly being hosted by a serial killer cult for the social elite.",
+      "poster_path": "/db6f237Ed3b8uigSzyRXpF4GxvP.jpg",
+      "release_date": "2018-11-02",
+      "title": "Monster Party",
+      "video": false,
+      "vote_average": 0,
+      "vote_count": 1,
+      "popularity": 35.235
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/roYyPiQDQKmIKUEhO912693tSja.jpg",
+      "genre_ids": [
+        18,
+        27,
+        878,
+        53
+      ],
+      "id": 447332,
+      "original_language": "en",
+      "original_title": "A Quiet Place",
+      "overview": "A family is forced to live in silence while hiding from creatures that hunt by sound.",
+      "poster_path": "/nAU74GmpUk7t5iklEp3bufwDq4n.jpg",
+      "release_date": "2018-04-03",
+      "title": "A Quiet Place",
+      "video": false,
+      "vote_average": 7.2,
+      "vote_count": 3576,
+      "popularity": 34.711
+    },
+    {
+      "id": 948,
+      "video": false,
+      "vote_count": 1903,
+      "vote_average": 7.5,
+      "title": "Halloween",
+      "release_date": "1978-10-24",
+      "original_language": "en",
+      "original_title": "Halloween",
+      "genre_ids": [
+        27,
+        53
+      ],
+      "backdrop_path": "/6Io0gvfEVpMQsB46yXOKCpSJOoJ.jpg",
+      "adult": false,
+      "overview": "Fifteen years after murdering his sister on Halloween Night 1963, Michael Myers escapes from a mental hospital and returns to the small town of Haddonfield, Illinois to kill again.",
+      "poster_path": "/vjoOFOTBJcJvA1weJejlZ92LZD4.jpg",
+      "popularity": 31.984
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/yVWiOMpzf7gullGvug83r7gMdha.jpg",
+      "genre_ids": [
+        18,
+        27,
+        9648,
+        53
+      ],
+      "id": 493922,
+      "original_language": "en",
+      "original_title": "Hereditary",
+      "overview": "When Ellen, the matriarch of the Graham family, passes away, her daughter’s family begins to unravel cryptic and increasingly terrifying secrets about their ancestry.",
+      "poster_path": "/lHV8HHlhwNup2VbpiACtlKzaGIQ.jpg",
+      "release_date": "2018-06-04",
+      "title": "Hereditary",
+      "video": false,
+      "vote_average": 6.9,
+      "vote_count": 1311,
+      "popularity": 31.229
+    },
+    {
+      "id": 508830,
+      "video": false,
+      "vote_count": 1,
+      "vote_average": 5,
+      "title": "Kamen Rider Amazons The Movie: The Final Judgement",
+      "release_date": "2018-05-19",
+      "original_language": "ja",
+      "original_title": "仮面ライダーアマゾンズ THE MOVIE 最後ノ審判",
+      "genre_ids": [
+        28,
+        12,
+        27,
+        878
+      ],
+      "backdrop_path": "/p8RXmzb2dvF6P8oDKRAUom1W2ro.jpg",
+      "adult": false,
+      "overview": "The “Amazon Livestock Project,” a mysterious care facility, the Amazon extermination organization 4C (Competitive Creatures Control Center) pursuing Haruka Misuzawa . . . all come together in a tale of symbiosis and competition; the mortal combat between the carnivore and herbivore. And, finally, an end to the troubles and conflicts of the Riders, two beings confronting a fierce fate.",
+      "poster_path": "/putlftM2cvILAwSmOn6gO0G0C7s.jpg",
+      "popularity": 30.393
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/22cUd4Yg5euCxIwWzXrL4m4otkU.jpg",
+      "genre_ids": [
+        28,
+        27,
+        878,
+        53
+      ],
+      "id": 500664,
+      "original_language": "en",
+      "original_title": "Upgrade",
+      "overview": "A brutal mugging leaves Grey Trace paralyzed in the hospital and his beloved wife dead. A billionaire inventor soon offers Trace a cure — an artificial intelligence implant called STEM that will enhance his body. Now able to walk, Grey finds that he also has superhuman strength and agility — skills he uses to seek revenge against the thugs who destroyed his life.",
+      "poster_path": "/8fDtXi6gVw8WUMWGT9XFz7YwkuE.jpg",
+      "release_date": "2018-06-01",
+      "title": "Upgrade",
+      "video": false,
+      "vote_average": 7.3,
+      "vote_count": 605,
+      "popularity": 30.205
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/fLL6WfUXvdQee1fD4xuzNnWfVBk.jpg",
+      "genre_ids": [
+        80,
+        27,
+        9648
+      ],
+      "id": 176,
+      "original_language": "en",
+      "original_title": "Saw",
+      "overview": "Obsessed with teaching his victims the value of life, a deranged, sadistic serial killer abducts the morally wayward. Once captured, they must face impossible choices in a horrific game of survival. The victims must fight to win their lives back, or die trying...",
+      "poster_path": "/dHYvIgsax8ZFgkz1OslE4V6Pnf5.jpg",
+      "release_date": "2004-10-01",
+      "title": "Saw",
+      "video": false,
+      "vote_average": 7.3,
+      "vote_count": 4033,
+      "popularity": 26.363
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/6jajFcaY2YsfGQstJ5HaqZNVseX.jpg",
+      "genre_ids": [
+        27,
+        878,
+        53
+      ],
+      "id": 126889,
+      "original_language": "en",
+      "original_title": "Alien: Covenant",
+      "overview": "Bound for a remote planet on the far side of the galaxy, the crew of the colony ship 'Covenant' discovers what is thought to be an uncharted paradise, but is actually a dark, dangerous world—which has a sole inhabitant: the 'synthetic', David, survivor of the doomed Prometheus expedition.",
+      "poster_path": "/zecMELPbU5YMQpC81Z8ImaaXuf9.jpg",
+      "release_date": "2017-05-09",
+      "title": "Alien: Covenant",
+      "video": false,
+      "vote_average": 5.9,
+      "vote_count": 4325,
+      "popularity": 25.812
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "genre_ids": [
+        27,
+        53
+      ],
+      "id": 426373,
+      "original_language": "en",
+      "original_title": "Peripheral",
+      "overview": "Bobbi Johnson is a young literary sensation facing her difficult second novel. Already dealing with a crazed stalker and her junkie ex-boyfriend, Bobbi is convinced by her publisher to use new smart editing software and finds herself going head-to-head with an artificial intelligence determined to write her book for her.",
+      "poster_path": "/o5ISOststfjZr3rwyWvZgMgTWSq.jpg",
+      "release_date": "2018-11-03",
+      "title": "Peripheral",
+      "video": false,
+      "vote_average": 0,
+      "vote_count": 0,
+      "popularity": 25.383
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/5OlAmzEUaO0A12cM7g5g420w4d7.jpg",
+      "genre_ids": [
+        27,
+        9648,
+        53
+      ],
+      "id": 419430,
+      "original_language": "en",
+      "original_title": "Get Out",
+      "overview": "Chris and his girlfriend Rose go upstate to visit her parents for the weekend. At first, Chris reads the family's overly accommodating behavior as nervous attempts to deal with their daughter's interracial relationship, but as the weekend progresses, a series of increasingly disturbing discoveries lead him to a truth that he never could have imagined.",
+      "poster_path": "/1SwAVYpuLj8KsHxllTF8Dt9dSSX.jpg",
+      "release_date": "2017-02-24",
+      "title": "Get Out",
+      "video": false,
+      "vote_average": 7.4,
+      "vote_count": 6770,
+      "popularity": 24.949
+    }
+  ],
+  "total_pages": 994,
+  "total_results": 19866
+}
