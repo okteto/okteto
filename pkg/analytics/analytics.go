@@ -99,6 +99,10 @@ func Send(e EventName, actionID string) {
 		wg.Add(1)
 		defer wg.Done()
 
+		if !enabled {
+			return
+		}
+
 		ev := event{
 			ActionID: actionID,
 			Event:    e,
@@ -111,10 +115,6 @@ func Send(e EventName, actionID string) {
 		data, err := json.Marshal(ev)
 		if err != nil {
 			log.Debugf("[%s] failed to marshall analytic event: %s", actionID, err)
-			return
-		}
-
-		if !enabled {
 			return
 		}
 
@@ -173,5 +173,28 @@ func isEnabled() bool {
 
 // Wait for the analytics to be finished
 func Wait() {
-	wg.Wait()
+	if !enabled {
+		return
+	}
+	log.Debug("waiting for analytics...")
+
+	waitCh1 := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(waitCh1)
+	}()
+
+	waitCh2 := make(chan struct{})
+	go func() {
+		time.Sleep(1 * time.Second)
+		close(waitCh2)
+	}()
+
+	select {
+	case <-waitCh1:
+		log.Debug("all analytics were sent")
+	case <-waitCh2:
+		log.Debug("some analytics were not time sent")
+		return
+	}
 }

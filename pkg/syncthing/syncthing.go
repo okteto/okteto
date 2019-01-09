@@ -2,6 +2,7 @@ package syncthing
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/okteto/cnd/pkg/model"
@@ -170,7 +172,9 @@ func getAvailablePort() (int, error) {
 }
 
 // Run starts up a local syncthing process to serve files from.
-func (s *Syncthing) Run() error {
+func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
 	if err := s.initConfig(); err != nil {
 		return err
 	}
@@ -207,6 +211,15 @@ func (s *Syncthing) Run() error {
 	}
 
 	log.Infof("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
+
+	go func() {
+		<-ctx.Done()
+		if err := s.Stop(); err != nil {
+			log.Error(err)
+		}
+		log.Debug("syncthing clean shutdown")
+		return
+	}()
 	return nil
 }
 

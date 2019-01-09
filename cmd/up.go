@@ -1,14 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"sync"
 
 	"github.com/okteto/cnd/pkg/analytics"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/okteto/cnd/pkg/k8/deployments"
 	"github.com/okteto/cnd/pkg/k8/forward"
@@ -95,11 +94,18 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	if err := sy.Run(); err != nil {
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+
+	defer shutdown(cancel, &wg)
+
+	wg.Add(1)
+	if err := sy.Run(ctx, &wg); err != nil {
 		return err
 	}
 
-	err = storage.Insert(namespace, dev, sy.GUIAddress)
+	wg.Add(1)
+	err = storage.Insert(ctx, &wg, namespace, dev, sy.GUIAddress)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
 			return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", fullname)
@@ -107,19 +113,9 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	channel := make(chan os.Signal, 1)
-	signal.Notify(channel, os.Interrupt)
-	go func() {
-		<-channel
-		stop(dev, sy, pf)
-		return
-	}()
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
 	ready := make(chan bool)
-	go pf.Start(client, restConfig, pod, ready, &wg)
+	wg.Add(1)
+	go pf.Start(ctx, &wg, client, restConfig, pod, ready)
 	<-ready
 
 	fmt.Printf("Linking '%s' to %s/%s...", dev.Mount.Source, fullname, dev.Swap.Deployment.Container)
@@ -127,19 +123,17 @@ func executeUp(devPath, namespace string) error {
 	fmt.Printf("Ready! Go to your local IDE and continue coding!")
 	fmt.Println()
 
-	go logs.StreamLogs(d, dev.Swap.Deployment.Container, client, restConfig)
-	wg.Wait()
+	wg.Add(1)
+	go logs.StreamLogs(ctx, &wg, d, dev.Swap.Deployment.Container, client, restConfig)
+
+	stopChannel := make(chan os.Signal, 1)
+	signal.Notify(stopChannel, os.Interrupt)
+	<-stopChannel
+	fmt.Println()
 	return nil
 }
 
-func stop(dev *model.Dev, sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
-	fmt.Println()
-	log.Debugf("stopping syncthing and port forwarding")
-	if err := sy.Stop(); err != nil {
-		log.Error(err)
-	}
-
-	storage.Stop(sy.Namespace, dev)
-	pf.Stop()
-	log.Debugf("stopped syncthing and port forwarding")
+func shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
+	cancel()
+	wg.Wait()
 }
