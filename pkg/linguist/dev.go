@@ -46,7 +46,7 @@ func init() {
 
 	languageDefaults[python] = languageDefault{
 		image:   "python",
-		command: []string{"sh", "-c", "pip install requirements.txt && python app.py"},
+		command: []string{"sh", "-c", "pip install -r requirements.txt && python app.py"},
 		path:    "/usr/src/app",
 	}
 
