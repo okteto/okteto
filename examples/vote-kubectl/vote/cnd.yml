@@ -1,8 +1,0 @@
-swap:
-  deployment:
-    name: vote
-    container: vote
-    command: ["python", "app.py"]
-mount:
-  source: .
-  target: /app

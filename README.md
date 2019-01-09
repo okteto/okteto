@@ -17,7 +17,7 @@ CND helps you achieve this with a mix of kubernetes automation, file synching be
 - Learn more details on [how it works](docs/how-does-it-work.md).
 - Get started following our [installation guides](docs/installation.md).
 - Check the CND [CLI reference](docs/cli-reference.md) and the [YAML config reference](docs/yml-reference.md).
-- Explore our [examples](examples).
+- Explore our [examples](https://github.com/okteto/examples) repository.
 
 ## Stay in Touch
 Got questions? Have feedback? Come talk to us in 
