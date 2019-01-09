@@ -9,8 +9,6 @@ import (
 
 	"github.com/okteto/cnd/pkg/analytics"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/okteto/cnd/pkg/k8/deployments"
 	"github.com/okteto/cnd/pkg/k8/forward"
 	"github.com/okteto/cnd/pkg/k8/logs"
@@ -96,20 +94,24 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	if err := sy.Run(); err != nil {
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+
+	defer shutdown(cancel, &wg)
+
+	wg.Add(1)
+	if err := sy.Run(ctx, &wg); err != nil {
 		return err
 	}
 
-	err = storage.Insert(namespace, dev, sy.GUIAddress)
+	wg.Add(1)
+	err = storage.Insert(ctx, &wg, namespace, dev, sy.GUIAddress)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
 			return fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", fullname)
 		}
 		return err
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
 
 	ready := make(chan bool)
 	wg.Add(1)
@@ -127,19 +129,11 @@ func executeUp(devPath, namespace string) error {
 	stopChannel := make(chan os.Signal, 1)
 	signal.Notify(stopChannel, os.Interrupt)
 	<-stopChannel
-	stop(dev, sy, pf)
-	cancel()
-	wg.Wait()
+	fmt.Println()
 	return nil
 }
 
-func stop(dev *model.Dev, sy *syncthing.Syncthing, pf *forward.CNDPortForward) {
-	fmt.Println()
-	log.Debugf("stopping syncthing and port forwarding")
-	if err := sy.Stop(); err != nil {
-		log.Error(err)
-	}
-
-	storage.Stop(sy.Namespace, dev)
-	log.Debugf("stopped syncthing and port forwarding")
+func shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
+	cancel()
+	wg.Wait()
 }

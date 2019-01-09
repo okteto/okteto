@@ -32,7 +32,7 @@ func TestInsertGetListDelete(t *testing.T) {
 			Source: "/folder1",
 		},
 	}
-	err = Insert("project1", dev1, "localhost1")
+	err = insert("project1", dev1, "localhost1")
 	if err != nil {
 		t.Fatalf("error 1 inserting: %s", err)
 	}
@@ -51,7 +51,7 @@ func TestInsertGetListDelete(t *testing.T) {
 			Source: "/folder2",
 		},
 	}
-	err = Insert("project2", dev2, "localhost2")
+	err = insert("project2", dev2, "localhost2")
 	if err != nil {
 		t.Fatalf("error 1 inserting: %s", err)
 	}

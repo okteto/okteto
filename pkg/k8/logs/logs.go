@@ -28,6 +28,7 @@ func StreamLogs(
 		}
 		select {
 		case <-ctx.Done():
+			log.Debug("stream logs clean shutdown")
 			return
 		default:
 			time.Sleep(1 * time.Second)

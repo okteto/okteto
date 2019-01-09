@@ -1,11 +1,15 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/okteto/cnd/pkg/model"
 	yaml "gopkg.in/yaml.v2"
@@ -57,7 +61,29 @@ func load() (*Storage, error) {
 }
 
 //Insert inserts a new service entry
-func Insert(namespace string, dev *model.Dev, host string) error {
+func Insert(
+	ctx context.Context, wg *sync.WaitGroup,
+	namespace string, dev *model.Dev, host string) error {
+
+	defer wg.Done()
+
+	if err := insert(namespace, dev, host); err != nil {
+		return err
+	}
+
+	go func() {
+		<-ctx.Done()
+		if err := Stop(namespace, dev); err != nil {
+			log.Error(err)
+		}
+		log.Debug("insert clean shutdown")
+		return
+	}()
+
+	return nil
+}
+
+func insert(namespace string, dev *model.Dev, host string) error {
 	s, err := load()
 	if err != nil {
 		return err
@@ -80,7 +106,10 @@ func Insert(namespace string, dev *model.Dev, host string) error {
 	}
 
 	s.Services[fullName] = svc
-	return s.save()
+	if err := s.save(); err != nil {
+		return err
+	}
+	return nil
 }
 
 //Get gets a service entry

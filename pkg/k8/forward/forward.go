@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -59,6 +60,7 @@ func (p *CNDPortForward) Start(
 		close(p.StopChan)
 		<-p.StopChan
 	}
+	log.Debug("port forward clean shutdown")
 	return nil
 }
 
