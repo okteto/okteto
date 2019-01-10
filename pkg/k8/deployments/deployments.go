@@ -1,15 +1,18 @@
 package deployments
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"encoding/json"
 
+	. "github.com/logrusorgru/aurora"
 	"github.com/okteto/cnd/pkg/k8/cp"
 	"github.com/okteto/cnd/pkg/k8/secrets"
 	"github.com/okteto/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/fields"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -107,6 +110,36 @@ func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	}
 
 	return nil
+}
+
+//GetPodEvents shows the events of a given pod
+func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) {
+	field := fields.Set{}
+	field["involvedObject.uid"] = string(pod.GetUID())
+	watch, err := c.Core().Events(pod.Namespace).Watch(
+		metav1.ListOptions{
+			FieldSelector: field.AsSelector().String(),
+		},
+	)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	ch := watch.ResultChan()
+	for {
+		select {
+		case e := <-ch:
+			event := e.Object.(*apiv1.Event)
+			if event.Type == "Normal" {
+				log.Debug(event.Message)
+			} else {
+				fmt.Println(Red("Kubernetes: "), event.Message)
+			}
+		case <-ctx.Done():
+			log.Debug("pod events shutdown")
+			return
+		}
+	}
 }
 
 // GetCNDPod returns the pod that has the cnd containers

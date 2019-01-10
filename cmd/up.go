@@ -78,6 +78,12 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	defer shutdown(cancel, &wg)
+
+	go deployments.GetPodEvents(ctx, pod, client)
+
 	if err := deployments.InitVolumeWithTarball(client, restConfig, namespace, pod.Name, devList); err != nil {
 		return err
 	}
@@ -93,11 +99,6 @@ func executeUp(devPath, namespace string) error {
 	if err != nil {
 		return err
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
-
-	defer shutdown(cancel, &wg)
 
 	wg.Add(1)
 	if err := sy.Run(ctx, &wg); err != nil {
