@@ -1,5 +1,5 @@
 /*
-Copyright 2014 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,6 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package wait provides tools for polling or listening for changes
-// to a condition.
-package wait // import "k8s.io/apimachinery/pkg/util/wait"
+// Package discovery provides ways to discover server-supported
+// API groups, versions and resources.
+package discovery

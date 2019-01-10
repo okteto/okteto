@@ -185,6 +185,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:be40f095cd741773905744f16c1f7a21fd9226ccd0529f019deb7da6d667f71c"
+  name = "github.com/logrusorgru/aurora"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a7b3b318ed4e1ae5b80602b08627267303c68572"
+
+[[projects]]
   digest = "1:67b3e2eb7a5bcfe8374b617315f1a8dfdff3c131a451eb2c01664790ef6dd4e6"
   name = "github.com/mholt/archiver"
   packages = ["."]
@@ -457,8 +465,7 @@
   version = "v2.2.1"
 
 [[projects]]
-  branch = "release-1.11"
-  digest = "1:6163e6e8fcdb2c545db15aa5fe492fb5c2d59ad54f58fa1cba07f12ceac6d77b"
+  digest = "1:faf52d216e0d651ee48a5ee8fb43f818a6c36bf4246282a5e30b8985da5581ff"
   name = "k8s.io/api"
   packages = [
     "admissionregistration/v1alpha1",
@@ -472,10 +479,12 @@
     "authorization/v1beta1",
     "autoscaling/v1",
     "autoscaling/v2beta1",
+    "autoscaling/v2beta2",
     "batch/v1",
     "batch/v1beta1",
     "batch/v2alpha1",
     "certificates/v1beta1",
+    "coordination/v1beta1",
     "core/v1",
     "events/v1beta1",
     "extensions/v1beta1",
@@ -492,11 +501,11 @@
     "storage/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "4e7be11eab3ffcfc1876898b8272df53785a9504"
+  revision = "b503174bad5991eb66f18247f52e41c3258f6348"
+  version = "kubernetes-1.12.3"
 
 [[projects]]
-  branch = "release-1.11"
-  digest = "1:877ad3c9cc041a088068af1fecee632942fba1ca145136a061b1b240388c2800"
+  digest = "1:06544168fc806f198a2aba2c12efcaa69c7b28c162c3b054a2e0c855b086e78c"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -526,13 +535,13 @@
     "pkg/util/httpstream/spdy",
     "pkg/util/intstr",
     "pkg/util/json",
+    "pkg/util/naming",
     "pkg/util/net",
     "pkg/util/remotecommand",
     "pkg/util/runtime",
     "pkg/util/sets",
     "pkg/util/validation",
     "pkg/util/validation/field",
-    "pkg/util/wait",
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
@@ -540,11 +549,11 @@
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "UT"
-  revision = "def12e63c512da17043b4f0293f52d1006603d9f"
+  revision = "eddba98df674a16931d2d4ba75edc3a389bf633a"
+  version = "kubernetes-1.12.3"
 
 [[projects]]
-  branch = "release-8.0"
-  digest = "1:b351915cfc1249e8a3928a9d701ec55127ab5a095b5d6b9ca30df82af8a1a114"
+  digest = "1:5a3f0ecc9c280d5d8b918629efcf9877d0cac882902dd08f47eeceaf2173e367"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -561,10 +570,12 @@
     "kubernetes/typed/authorization/v1beta1",
     "kubernetes/typed/autoscaling/v1",
     "kubernetes/typed/autoscaling/v2beta1",
+    "kubernetes/typed/autoscaling/v2beta2",
     "kubernetes/typed/batch/v1",
     "kubernetes/typed/batch/v1beta1",
     "kubernetes/typed/batch/v2alpha1",
     "kubernetes/typed/certificates/v1beta1",
+    "kubernetes/typed/coordination/v1beta1",
     "kubernetes/typed/core/v1",
     "kubernetes/typed/events/v1beta1",
     "kubernetes/typed/extensions/v1beta1",
@@ -608,24 +619,26 @@
     "util/jsonpath",
   ]
   pruneopts = "UT"
-  revision = "02543cdbce0d797d9ff46ead45cd58e0e3cdf622"
+  revision = "d082d5923d3cc0bfbb066ee5fbdea3d0ca79acf8"
+  version = "kubernetes-1.12.3"
 
 [[projects]]
-  digest = "1:a1697009fc28722de0f8e357435a981de388dc21ec9e2d7e348ce6d9667564c5"
+  digest = "1:46ea096edc14e29c1a5bb0f459753757544c4ed8d88e0fceec4be519d634d4bb"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/kubectl/util/term",
     "pkg/util/interrupt",
   ]
   pruneopts = "UT"
-  revision = "4ed3216f3ec431b140b1d899130a69fc671678f4"
-  version = "v1.12.1"
+  revision = "eec55b9ba98609a46fee712359c7b5b365bdd920"
+  version = "v1.13.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/denisbrodbeck/machineid",
+    "github.com/logrusorgru/aurora",
     "github.com/mholt/archiver",
     "github.com/satori/go.uuid",
     "github.com/sirupsen/logrus",
@@ -635,6 +648,8 @@
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/fields",
+    "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
