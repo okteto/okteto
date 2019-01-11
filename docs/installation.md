@@ -1,6 +1,10 @@
 # Installation
 
-## Homebrew install
+You will need the following components to get started with cnd:
+
+## CND
+
+### Hombrew
 
 ```console
 brew tap okteto/cnd
@@ -13,7 +17,7 @@ brew tap okteto/cnd
 brew install --HEAD cnd
 ```
 
-## Manual install
+### Manual install
 
 The synching functionality of **cnd** is provided by [syncthing](https://docs.syncthing.net).
 
@@ -31,6 +35,13 @@ go get github.com/okteto/cnd
 ```
 
 You can get also get a prebuilt binary [from our releases page](https://github.com/okteto/cnd/releases/latest)
+
+## Kubernetes
+We've tested cnd with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/), [GKE](https://cloud.google.com/kubernetes-engine/), [AKS](https://azure.microsoft.com/en-us/services/kubernetes-service/), and [Digital Ocean Kubernetes](https://www.digitalocean.com/products/kubernetes/) but any Kubernetes cluster will work. 
+
+
+## Kubectl
+cnd uses your local kubectl [installation and configuration](https://kubernetes.io/docs/tasks/tools/install-kubectl). Configure the current-context with your target cluster for development.
 
 # Upgrade
 
