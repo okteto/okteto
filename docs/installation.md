@@ -37,7 +37,7 @@ go get github.com/okteto/cnd
 You can get also get a prebuilt binary [from our releases page](https://github.com/okteto/cnd/releases/latest)
 
 ## Kubernetes
-We've tested cnd with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/), [GKE](https://cloud.google.com/kubernetes-engine/), and [Digital Ocean Kubernetes](https://www.digitalocean.com/products/kubernetes/) but any Kubernetes cluster will work. 
+We've tested cnd with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/), [GKE](https://cloud.google.com/kubernetes-engine/), [AKS](https://azure.microsoft.com/en-us/services/kubernetes-service/), and [Digital Ocean Kubernetes](https://www.digitalocean.com/products/kubernetes/) but any Kubernetes cluster will work. 
 
 
 ## Kubectl
