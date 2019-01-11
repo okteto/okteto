@@ -18,6 +18,7 @@ const (
 	javascript       = "javascript"
 	golang           = "go"
 	python           = "python"
+	java             = "java"
 	unrecognized     = "unrecognized"
 	helloCommandName = "hello"
 )
@@ -47,6 +48,12 @@ func init() {
 	languageDefaults[python] = languageDefault{
 		image:   "python",
 		command: []string{"sh", "-c", "pip install -r requirements.txt && python app.py"},
+		path:    "/usr/src/app",
+	}
+
+	languageDefaults[java] = languageDefault{
+		image:   "openjdk:alpine",
+		command: tailCommand,
 		path:    "/usr/src/app",
 	}
 
@@ -87,6 +94,8 @@ func normalizeLanguage(language string) string {
 		return javascript
 	case "python":
 		return python
+	case "java":
+		return java
 	case "go":
 		return golang
 	default:
