@@ -107,6 +107,7 @@ func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 		if err != nil {
 			return fmt.Errorf("Error updating kubernetes deployment: %s", err)
 		}
+		log.Debugf("Updated deployment '%s'...", deploymentName)
 	}
 
 	return nil
@@ -143,10 +144,10 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 }
 
 // GetCNDPod returns the pod that has the cnd containers
-func GetCNDPod(d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	tries := 0
+	log.Debugf("Waiting for cnd pod to be ready")
 	for tries < 30 {
-
 		pods, err := c.CoreV1().Pods(d.Namespace).List(metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, d.Name),
 		})
@@ -161,6 +162,8 @@ func GetCNDPod(d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error
 				if pod.GetObjectMeta().GetDeletionTimestamp() == nil {
 					pendingOrRunningPods = append(pendingOrRunningPods, pod)
 				}
+			} else {
+				log.Debugf("cnd pod is on %s, waiting", pod.Status.String())
 			}
 		}
 
@@ -176,18 +179,27 @@ func GetCNDPod(d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error
 			return nil, fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
 		}
 
-		tries++
-		time.Sleep(1 * time.Second)
+		ticker := time.NewTicker(1 * time.Second)
+		select {
+		case <-ticker.C:
+			tries++
+			continue
+		case <-ctx.Done():
+			log.Debug("cancelling call to get cnd pod")
+			return nil, ctx.Err()
+		}
 	}
 
+	log.Debugf("cnd pod wasn't running after 30 seconds")
 	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 }
 
-// InitVolumeWithTarball initializes the remote volume with a local tarball
-func InitVolumeWithTarball(c *kubernetes.Clientset, config *rest.Config, namespace, podName string, devList []*model.Dev) error {
+func waitForInitToBeReady(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, namespace, podName string, devList []*model.Dev) error {
+	ticker := time.NewTicker(1 * time.Second)
 	for _, dev := range devList {
 		copied := false
 		tries := 0
+
 		for tries < 30 && !copied {
 			pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 			if err != nil {
@@ -199,6 +211,7 @@ func InitVolumeWithTarball(c *kubernetes.Clientset, config *rest.Config, namespa
 						time.Sleep(1 * time.Second)
 					}
 					if status.State.Running != nil {
+						log.Debugf("cnd-sync init cointainer is now running, sending the tarball")
 						if copied {
 							time.Sleep(1 * time.Second)
 						} else {
@@ -217,13 +230,30 @@ func InitVolumeWithTarball(c *kubernetes.Clientset, config *rest.Config, namespa
 					break
 				}
 			}
-			tries++
+
+			select {
+			case <-ticker.C:
+				tries++
+				continue
+			case <-ctx.Done():
+				log.Debug("cancelling call to get cnd pod")
+				return ctx.Err()
+			}
 		}
 		if tries == 30 {
+			log.Debugf("cnd-sync didn't finish copying the tarball after 30 seconds")
 			return fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 		}
 	}
+
+	return nil
+}
+
+func waitForDevPodToBeRunning(ctx context.Context, c *kubernetes.Clientset, namespace, podName string) error {
+	ticker := time.NewTicker(1 * time.Second)
+
 	tries := 0
+	log.Debugf("waiting for dev container to start running")
 	for tries < 30 {
 		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 		if err != nil {
@@ -232,8 +262,27 @@ func InitVolumeWithTarball(c *kubernetes.Clientset, config *rest.Config, namespa
 		if pod.Status.Phase == apiv1.PodRunning {
 			return nil
 		}
-		tries++
-		time.Sleep(1 * time.Second)
+
+		select {
+		case <-ticker.C:
+			tries++
+			continue
+		case <-ctx.Done():
+			log.Debug("cancelling call to get cnd pod")
+			return ctx.Err()
+		}
 	}
+
+	log.Debugf("dev container didn't start running after 30 seconds")
 	return fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
+}
+
+// InitVolumeWithTarball initializes the remote volume with a local tarball
+func InitVolumeWithTarball(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, namespace, podName string, devList []*model.Dev) error {
+
+	if err := waitForInitToBeReady(ctx, c, config, namespace, podName, devList); err != nil {
+		return err
+	}
+
+	return waitForDevPodToBeRunning(ctx, c, namespace, podName)
 }
