@@ -41,6 +41,7 @@ func Up() *cobra.Command {
 func executeUp(devPath, namespace string) error {
 	fmt.Println("Activating your cloud native development environment...")
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	n, deploymentName, c, err := findDevEnvironment(true)
 
