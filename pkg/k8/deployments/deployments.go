@@ -146,6 +146,8 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 // GetCNDPod returns the pod that has the cnd containers
 func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	tries := 0
+	ticker := time.NewTicker(1 * time.Second)
+
 	log.Debugf("Waiting for cnd pod to be ready")
 	for tries < 30 {
 		pods, err := c.CoreV1().Pods(d.Namespace).List(metav1.ListOptions{
@@ -179,7 +181,6 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 			return nil, fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
 		}
 
-		ticker := time.NewTicker(1 * time.Second)
 		select {
 		case <-ticker.C:
 			tries++
