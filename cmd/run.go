@@ -23,7 +23,7 @@ func Run() *cobra.Command {
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 || args[0] == "" {
-				return errors.New("run requires the SCRIPT argument")
+				return errors.New("run requires the SCRIPT argument.")
 			}
 
 			return nil
@@ -44,7 +44,7 @@ func executeRun(devPath string, args []string) error {
 		return executeExec(parseArguments(val, args))
 	}
 
-	return fmt.Errorf("%s is not defined in %s", args[0], devPath)
+	return fmt.Errorf("%s is not defined in %s. [%s]", args[0], devPath, strings.Join(getScripts(dev), ", "))
 
 }
 
@@ -56,4 +56,13 @@ func parseArguments(scriptArgs string, extraArgs []string) []string {
 
 	return mergedArgs
 
+}
+
+func getScripts(d *model.Dev) []string {
+	keys := make([]string, 0)
+	for key := range d.Scripts {
+		keys = append(keys, key)
+	}
+
+	return keys
 }
