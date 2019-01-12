@@ -52,9 +52,12 @@ func init() {
 	}
 
 	languageDefaults[java] = languageDefault{
-		image:   "openjdk:alpine",
-		command: tailCommand,
-		path:    "/usr/src/app",
+		image:   "gradle:5.1-jdk11",
+		command: []string{"gradle", "build", "-continuous", "--scan"},
+		path:    "/home/gradle",
+		scripts: map[string]string{
+			"boot": "gradle bootRun",
+		},
 	}
 
 	languageDefaults[unrecognized] = languageDefault{

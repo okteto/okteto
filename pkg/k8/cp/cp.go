@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-var tarCommand = []string{"tar", "-xzf", "-", "--strip-components=1", "-C", "/src"}
+var tarCommand = []string{"tar", "-xzf", "-", "--strip-components=1", "-C", "/src", "--owner=0", "--group=0"}
 var touchCommand = []string{"touch", "/initialized"}
 
 // Copy copies a local folder to the remote volume
