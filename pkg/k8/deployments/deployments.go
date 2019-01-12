@@ -130,7 +130,17 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 	for {
 		select {
 		case e := <-ch:
-			event := e.Object.(*apiv1.Event)
+			if e.Object == nil {
+				log.Infof("received an nil event.Object from the pod event call: %+v", e)
+				continue
+			}
+
+			event, ok := e.Object.(*apiv1.Event)
+			if !ok {
+				log.Infof("couldn't convert e.Object to apiv1.Event: %+v", e)
+				continue
+			}
+
 			if event.Type == "Normal" {
 				log.Debug(event.Message)
 			} else {
