@@ -18,6 +18,7 @@ const (
 	javascript       = "javascript"
 	golang           = "go"
 	python           = "python"
+	java             = "java"
 	unrecognized     = "unrecognized"
 	helloCommandName = "hello"
 )
@@ -48,6 +49,15 @@ func init() {
 		image:   "python",
 		command: []string{"sh", "-c", "pip install -r requirements.txt && python app.py"},
 		path:    "/usr/src/app",
+	}
+
+	languageDefaults[java] = languageDefault{
+		image:   "gradle:5.1-jdk11",
+		command: []string{"gradle", "build", "-continuous", "--scan"},
+		path:    "/home/gradle",
+		scripts: map[string]string{
+			"boot": "gradle bootRun",
+		},
 	}
 
 	languageDefaults[unrecognized] = languageDefault{
@@ -87,6 +97,8 @@ func normalizeLanguage(language string) string {
 		return javascript
 	case "python":
 		return python
+	case "java":
+		return java
 	case "go":
 		return golang
 	default:

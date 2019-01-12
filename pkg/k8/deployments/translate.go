@@ -11,10 +11,7 @@ import (
 )
 
 const (
-	cndEnvNamespace = "CND_KUBERNETES_NAMESPACE"
-)
-
-const (
+	cndEnvNamespace  = "CND_KUBERNETES_NAMESPACE"
 	initSyncImageTag = "okteto/init-syncthing:0.4.0"
 	syncImageTag     = "okteto/syncthing:0.4.0"
 )
@@ -22,6 +19,7 @@ const (
 var (
 	devReplicas                      int32 = 1
 	devTerminationGracePeriodSeconds int64
+	rootUID                          = int64(0)
 )
 
 func translateToDevModeDeployment(d *appsv1.Deployment, devList []*model.Dev) error {
@@ -62,6 +60,12 @@ func translateToDevModeDeployment(d *appsv1.Deployment, devList []*model.Dev) er
 }
 
 func updateCndContainer(c *apiv1.Container, dev *model.Dev, namespace string) {
+	if c.SecurityContext == nil {
+		c.SecurityContext = &v1.SecurityContext{}
+	}
+
+	c.SecurityContext.RunAsUser = &rootUID
+
 	if dev.Swap.Deployment.Image != "" {
 		c.Image = dev.Swap.Deployment.Image
 	}

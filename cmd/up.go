@@ -40,6 +40,8 @@ func Up() *cobra.Command {
 
 func executeUp(devPath, namespace string) error {
 	fmt.Println("Activating your cloud native development environment...")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	n, deploymentName, c, err := findDevEnvironment(true)
 
@@ -73,18 +75,17 @@ func executeUp(devPath, namespace string) error {
 		return err
 	}
 
-	pod, err := deployments.GetCNDPod(d, client)
+	pod, err := deployments.GetCNDPod(ctx, d, client)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	defer shutdown(cancel, &wg)
 
 	go deployments.GetPodEvents(ctx, pod, client)
 
-	if err := deployments.InitVolumeWithTarball(client, restConfig, namespace, pod.Name, devList); err != nil {
+	if err := deployments.InitVolumeWithTarball(ctx, client, restConfig, namespace, pod.Name, devList); err != nil {
 		return err
 	}
 

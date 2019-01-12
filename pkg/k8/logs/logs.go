@@ -37,7 +37,7 @@ func StreamLogs(
 }
 
 func streamLogs(ctx context.Context, d *appsv1.Deployment, container string, c *kubernetes.Clientset, config *rest.Config) error {
-	pod, err := deployments.GetCNDPod(d, c)
+	pod, err := deployments.GetCNDPod(ctx, d, c)
 	if err != nil {
 		return err
 	}

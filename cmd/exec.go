@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -43,6 +44,9 @@ func Exec() *cobra.Command {
 }
 
 func executeExec(args []string) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	namespace, deployment, devContainer, err := findDevEnvironment(true)
 	if err != nil {
 		return err
@@ -58,7 +62,7 @@ func executeExec(args []string) error {
 		return err
 	}
 
-	pod, err := deployments.GetCNDPod(d, client)
+	pod, err := deployments.GetCNDPod(ctx, d, client)
 	if err != nil {
 		return err
 	}
