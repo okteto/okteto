@@ -19,8 +19,10 @@ type Config struct {
 	// AnalyticsEndpoint is the endpoint to use for analytics
 	AnalyticsEndpoint string
 
-	//
-	// CNDFolderName is the name of the base folder that stores the state on the client machine
+	// CNDHomePath is the path of the base folder for all the CND files
+	CNDHomePath string
+
+	// CNDFolderName is the name of the  folder that stores the state on the client machine
 	CNDFolderName string
 
 	// CNDManifestFileName is the name of the manifest file e.g. cnd.yml
@@ -89,7 +91,12 @@ func GetCNDHome() string {
 		cndFolder = overrideConfig.CNDFolderName
 	}
 
-	home := path.Join(os.Getenv("HOME"), cndFolder)
+	var cndHome = os.Getenv("HOME")
+	if overrideConfig.CNDHomePath != "" {
+		cndHome = overrideConfig.CNDHomePath
+	}
+
+	home := path.Join(cndHome, cndFolder)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
 		log.Errorf("failed to create the home directory: %s", err)
