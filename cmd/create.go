@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/okteto/cnd/pkg/config"
 	"github.com/okteto/cnd/pkg/linguist"
 	yaml "gopkg.in/yaml.v2"
 
@@ -18,7 +19,7 @@ func Create() *cobra.Command {
 	var devPath string
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Automatically create the cnd manifest file",
+		Short: fmt.Sprintf("Automatically create the %s manifest file", config.GetBinaryName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return executeCreate(devPath)
 		},

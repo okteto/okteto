@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/okteto/cnd/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -11,9 +11,9 @@ import (
 func Version() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "View the version of the cnd binary",
+		Short: fmt.Sprintf("View the version of the %s binary", config.GetBinaryName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("cnd version %s \n", model.VersionString)
+			fmt.Printf("%s version %s \n", config.GetBinaryName(), config.VersionString)
 			return nil
 		},
 	}

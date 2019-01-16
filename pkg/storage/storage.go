@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/okteto/cnd/pkg/config"
 	"github.com/okteto/cnd/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -39,7 +40,7 @@ type Service struct {
 }
 
 func init() {
-	stPath = path.Join(model.GetCNDHome(), ".state")
+	stPath = path.Join(config.GetCNDHome(), ".state")
 }
 func load() (*Storage, error) {
 	var s Storage

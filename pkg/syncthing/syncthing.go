@@ -17,6 +17,7 @@ import (
 	"sync"
 	"text/template"
 
+	"github.com/okteto/cnd/pkg/config"
 	"github.com/okteto/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
 )
@@ -26,11 +27,12 @@ var (
 )
 
 const (
-	certFile   = "cert.pem"
-	keyFile    = "key.pem"
-	configFile = "config.xml"
-	portFile   = ".port"
-	logFile    = "syncthing.log"
+	certFile         = "cert.pem"
+	keyFile          = "key.pem"
+	configFile       = "config.xml"
+	portFile         = ".port"
+	logFile          = "syncthing.log"
+	syncthingPidFile = "syncthing.pid"
 
 	// DefaultRemoteDeviceID remote syncthing ID
 	DefaultRemoteDeviceID = "ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU"
@@ -76,7 +78,7 @@ func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthin
 	s := &Syncthing{
 		APIKey:           "cnd",
 		binPath:          "syncthing",
-		home:             path.Join(model.GetCNDHome(), namespace, deployment),
+		home:             path.Join(config.GetCNDHome(), namespace, deployment),
 		Name:             deployment,
 		DevList:          devList,
 		Namespace:        namespace,
@@ -179,7 +181,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	pidPath := filepath.Join(s.home, "syncthing.pid")
+	pidPath := filepath.Join(s.home, syncthingPidFile)
 
 	if err := s.cleanupDaemon(pidPath); err != nil {
 		return err
@@ -225,7 +227,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 // Stop halts the background process and cleans up.
 func (s *Syncthing) Stop() error {
-	pidPath := filepath.Join(s.home, "syncthing.pid")
+	pidPath := filepath.Join(s.home, syncthingPidFile)
 
 	if err := s.cleanupDaemon(pidPath); err != nil {
 		return err

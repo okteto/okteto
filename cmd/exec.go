@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/okteto/cnd/pkg/analytics"
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/okteto/cnd/pkg/config"
 	"github.com/okteto/cnd/pkg/storage"
 	log "github.com/sirupsen/logrus"
 
@@ -52,7 +52,7 @@ func executeExec(args []string) error {
 		return err
 	}
 
-	_, client, config, err := getKubernetesClient(namespace)
+	_, client, cfg, err := getKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func executeExec(args []string) error {
 	}
 
 	log.Debugf("running command `%s` on %s", strings.Join(args, " "), pod.Name)
-	return exec.Exec(client, config, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
+	return exec.Exec(client, cfg, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
 }
 
 func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
@@ -100,7 +100,7 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 
 	parts := strings.SplitN(deploymentFullName, "/", 3)
 	if len(parts) < 3 {
-		return "", "", "", fmt.Errorf("unable to parse the cnd local state. Remove '%s' and try again", model.GetCNDHome())
+		return "", "", "", fmt.Errorf("unable to parse the cnd local state. Remove '%s' and try again", config.GetCNDHome())
 	}
 	namespace := parts[0]
 	deploymentName := parts[1]
