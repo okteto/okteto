@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/okteto/cnd/pkg/config"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )
@@ -41,16 +41,12 @@ type event struct {
 	OS string `json:"os"`
 }
 
-const endpoint = "https://us-central1-okteto-prod.cloudfunctions.net/cnd-analytics"
-
 var (
 	userID string
 
 	client = http.Client{
 		Timeout: 65 * time.Second,
 	}
-
-	flagPath = path.Join(model.GetCNDHome(), ".noanalytics")
 
 	wg = sync.WaitGroup{}
 
@@ -107,7 +103,7 @@ func Send(e EventName, actionID string) {
 			ActionID: actionID,
 			Event:    e,
 			Time:     time.Now().UTC().Unix(),
-			Version:  model.VersionString,
+			Version:  config.VersionString,
 			User:     userID,
 			OS:       runtime.GOOS,
 		}
@@ -119,7 +115,7 @@ func Send(e EventName, actionID string) {
 		}
 
 		log.Debugf("[%s] sending analytics: %s", actionID, string(data))
-		req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(data))
+		req, _ := http.NewRequest("POST", config.GetAnalyticsEndpoint(), bytes.NewBuffer(data))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := client.Do(req)
 
@@ -140,9 +136,9 @@ func Send(e EventName, actionID string) {
 
 // Disable disables analytics
 func Disable() error {
-	var _, err = os.Stat(flagPath)
+	var _, err = os.Stat(getFlagPath())
 	if os.IsNotExist(err) {
-		var file, err = os.Create(flagPath)
+		var file, err = os.Create(getFlagPath())
 		if err != nil {
 			return err
 		}
@@ -155,16 +151,16 @@ func Disable() error {
 
 // Enable enables analytics
 func Enable() error {
-	var _, err = os.Stat(flagPath)
+	var _, err = os.Stat(getFlagPath())
 	if os.IsNotExist(err) {
 		return nil
 	}
 
-	return os.Remove(flagPath)
+	return os.Remove(getFlagPath())
 }
 
 func isEnabled() bool {
-	if _, err := os.Stat(flagPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(getFlagPath()); !os.IsNotExist(err) {
 		return false
 	}
 
@@ -197,4 +193,8 @@ func Wait() {
 		log.Debug("some analytics were not time sent")
 		return
 	}
+}
+
+func getFlagPath() string {
+	return path.Join(config.GetCNDHome(), ".noanalytics")
 }

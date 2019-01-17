@@ -82,7 +82,7 @@ func GetDevConfig(language string) *model.Dev {
 		dev.Scripts = make(map[string]string)
 	}
 
-	dev.Scripts[helloCommandName] = "echo Your cluster ♥ you"
+	dev.Scripts[helloCommandName] = "echo Your cluster ♥s you"
 	return dev
 }
 

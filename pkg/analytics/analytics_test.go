@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"testing"
+
+	"github.com/okteto/cnd/pkg/config"
 )
 
 func Test_isEnabled(t *testing.T) {
@@ -13,7 +15,9 @@ func Test_isEnabled(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	flagPath = tmpfile.Name()
+	config.SetConfig(&config.Config{
+		CNDHomePath: tmpfile.Name(),
+	})
 
 	if isEnabled() {
 		t.Error("didn't detect that analytics was disabled")
