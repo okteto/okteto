@@ -5,17 +5,20 @@ import (
 	"os"
 	"testing"
 
+	"github.com/okteto/cnd/pkg/config"
+
 	"github.com/okteto/cnd/pkg/model"
 )
 
 func TestInsertGetListDelete(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "cnd-storage")
+	tmp, err := ioutil.TempDir("", "cnd-storage")
 	if err != nil {
-		t.Fatalf("error creating temporal file: %s", err)
+		t.Fatalf("error creating temporal dir: %s", err)
 	}
 
-	stPath = tmpfile.Name()
-	defer os.Remove(tmpfile.Name())
+	defer os.RemoveAll(tmp)
+
+	config.SetConfig(&config.Config{CNDHomePath: tmp})
 
 	services := All()
 	if len(services) != 0 {
