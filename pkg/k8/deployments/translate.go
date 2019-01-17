@@ -165,8 +165,13 @@ func createSyncthingVolume(d *appsv1.Deployment, dev *model.Dev) {
 		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
 	}
 
-	syncVolume := apiv1.Volume{Name: dev.GetCNDSyncVolume()}
+	for _, v := range d.Spec.Template.Spec.Volumes {
+		if v.Name == dev.GetCNDSyncVolume() {
+			return
+		}
+	}
 
+	syncVolume := apiv1.Volume{Name: dev.GetCNDSyncVolume()}
 	d.Spec.Template.Spec.Volumes = append(
 		d.Spec.Template.Spec.Volumes,
 		syncVolume,
