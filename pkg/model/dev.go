@@ -111,6 +111,7 @@ func ReadDev(devPath string) (*Dev, error) {
 	return d, nil
 }
 
+// LoadDev loads the dev object from the array, plus defaults.
 func LoadDev(b []byte) (*Dev, error) {
 	dev := Dev{
 		Mount: Mount{
