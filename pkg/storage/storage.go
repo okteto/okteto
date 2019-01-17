@@ -21,7 +21,6 @@ const (
 )
 
 var (
-	stPath string
 	// ErrAlreadyRunning indicates a "cnd up" command is already running
 	ErrAlreadyRunning = fmt.Errorf("up-already-running")
 )
@@ -39,18 +38,18 @@ type Service struct {
 	Syncthing string `yaml:"syncthing,omitempty"`
 }
 
-func init() {
-	stPath = path.Join(config.GetCNDHome(), ".state")
+func getSTPath() string {
+	return path.Join(config.GetCNDHome(), ".state")
 }
 func load() (*Storage, error) {
 	var s Storage
-	s.path = stPath
+	s.path = getSTPath()
 	s.Version = version
 	s.Services = map[string]Service{}
-	if _, err := os.Stat(stPath); os.IsNotExist(err) {
+	if _, err := os.Stat(getSTPath()); os.IsNotExist(err) {
 		return &s, nil
 	}
-	bytes, err := ioutil.ReadFile(stPath)
+	bytes, err := ioutil.ReadFile(getSTPath())
 	if err != nil {
 		return nil, fmt.Errorf("error reading the storage file: %s", err.Error())
 	}

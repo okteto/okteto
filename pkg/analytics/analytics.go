@@ -49,8 +49,6 @@ var (
 	}
 
 	wg = sync.WaitGroup{}
-
-	enabled = true
 )
 
 const (
@@ -80,8 +78,6 @@ func init() {
 		log.Debugf("failed to generate a machine id")
 		userID = "na"
 	}
-
-	enabled = isEnabled()
 }
 
 // NewActionID returns an action
@@ -95,7 +91,7 @@ func Send(e EventName, actionID string) {
 		wg.Add(1)
 		defer wg.Done()
 
-		if !enabled {
+		if !isEnabled() {
 			return
 		}
 
@@ -169,7 +165,7 @@ func isEnabled() bool {
 
 // Wait for the analytics to be finished
 func Wait() {
-	if !enabled {
+	if !isEnabled() {
 		return
 	}
 	log.Debug("waiting for analytics...")
