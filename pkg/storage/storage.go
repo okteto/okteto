@@ -102,6 +102,7 @@ func insert(namespace string, dev *model.Dev, host string) error {
 		}
 
 		if svc2.Syncthing != "" {
+			log.Debugf("There's a service already running: %+v", svc2)
 			return ErrAlreadyRunning
 		}
 	}
