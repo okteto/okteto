@@ -13,6 +13,7 @@ import (
 	"github.com/okteto/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/watch"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -113,31 +114,46 @@ func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	return nil
 }
 
-//GetPodEvents shows the events of a given pod
-func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) {
-	field := fields.Set{}
-	field["involvedObject.uid"] = string(pod.GetUID())
-	watch, err := c.Core().Events(pod.Namespace).Watch(
+func getPodEventChannel(namespace string, field fields.Set, c *kubernetes.Clientset) (<-chan watch.Event, error) {
+	w, err := c.Core().Events(namespace).Watch(
 		metav1.ListOptions{
 			FieldSelector: field.AsSelector().String(),
 		},
 	)
 	if err != nil {
 		log.Error(err)
+		return nil, err
+	}
+	ch := w.ResultChan()
+	return ch, nil
+}
+
+//GetPodEvents shows the events of a given pod
+func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) {
+	field := fields.Set{}
+	field["involvedObject.uid"] = string(pod.GetUID())
+	ch, err := getPodEventChannel(pod.Namespace, field, c)
+	if err != nil {
 		return
 	}
-	ch := watch.ResultChan()
+
 	for {
 		select {
 		case e := <-ch:
 			if e.Object == nil {
 				log.Infof("received an nil event.Object from the pod event call: %+v", e)
+				time.Sleep(1 * time.Second)
+				ch, err = getPodEventChannel(pod.Namespace, field, c)
+				if err != nil {
+					return
+				}
 				continue
 			}
 
 			event, ok := e.Object.(*apiv1.Event)
 			if !ok {
-				log.Infof("couldn't convert e.Object to apiv1.Event: %+v", e)
+				log.Errorf("couldn't convert e.Object to apiv1.Event: %+v", e)
+				time.Sleep(1 * time.Second)
 				continue
 			}
 
@@ -146,6 +162,7 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 			} else {
 				fmt.Println(Red("Kubernetes: "), event.Message)
 			}
+
 		case <-ctx.Done():
 			log.Debug("pod events shutdown")
 			return
