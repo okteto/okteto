@@ -40,7 +40,7 @@ func executeDown() error {
 		return fmt.Errorf("failed to deactivate your cloud native environment")
 	}
 
-	_, client, _, err := getKubernetesClient(namespace)
+	_, client, _, err := GetKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}

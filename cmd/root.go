@@ -29,6 +29,16 @@ var (
 	}
 
 	analyticsWG = sync.WaitGroup{}
+	commands    = []*cobra.Command{
+		Up(),
+		Exec(),
+		Down(),
+		Version(),
+		List(),
+		Run(),
+		Create(),
+		Analytics(),
+	}
 )
 
 // Execute runs the root command
@@ -47,16 +57,7 @@ func Execute() {
 	}
 
 	root.PersistentFlags().StringVarP(&c.logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
-	root.AddCommand(
-		Up(),
-		Exec(),
-		Down(),
-		Version(),
-		List(),
-		Run(),
-		Create(),
-		Analytics(),
-	)
+	root.AddCommand(commands...)
 
 	// override client-go error handlers to downgrade the "logging before flag.Parse" error
 	errorHandlers := []func(error){
@@ -76,10 +77,21 @@ func Execute() {
 	os.Exit(exitCode)
 }
 
-func getKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, error) {
+// GetKubernetesClient returns the configured kubernetes client for the specified namespace, or the default if empty
+func GetKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, error) {
 	return client.Get(namespace)
 }
 
 func addDevPathFlag(cmd *cobra.Command, devPath *string) {
 	cmd.Flags().StringVarP(devPath, "file", "f", config.CNDManifestFileName(), "path to the manifest file")
+}
+
+// GetActionID returns the actionID used to correlate different actions in the same command
+func GetActionID() string {
+	return c.actionID
+}
+
+// Register registers a new command with cnd's root command
+func Register(c *cobra.Command) {
+	commands = append(commands, c)
 }

@@ -19,8 +19,8 @@ func Run() *cobra.Command {
 		Use:   "run SCRIPT ARGS",
 		Short: fmt.Sprintf("Run a script defined in your %s file directly in your cloud native environment", config.CNDManifestFileName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			analytics.Send(analytics.EventRun, c.actionID)
-			defer analytics.Send(analytics.EventRunEnd, c.actionID)
+			analytics.Send(analytics.EventRun, GetActionID())
+			defer analytics.Send(analytics.EventRunEnd, GetActionID())
 			return executeRun(devPath, args)
 		},
 		Args: func(cmd *cobra.Command, args []string) error {

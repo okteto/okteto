@@ -27,8 +27,8 @@ func Exec() *cobra.Command {
 		Use:   "exec COMMAND",
 		Short: "Execute a command in the cloud native environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			analytics.Send(analytics.EventExec, c.actionID)
-			defer analytics.Send(analytics.EventExecEnd, c.actionID)
+			analytics.Send(analytics.EventExec, GetActionID())
+			defer analytics.Send(analytics.EventExecEnd, GetActionID())
 			return executeExec(args)
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
@@ -52,7 +52,7 @@ func executeExec(args []string) error {
 		return err
 	}
 
-	_, client, cfg, err := getKubernetesClient(namespace)
+	_, client, cfg, err := GetKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}

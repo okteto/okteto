@@ -98,7 +98,7 @@ func ReadDev(devPath string) (*Dev, error) {
 		return nil, err
 	}
 
-	d, err := loadDev(b)
+	d, err := LoadDev(b)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func ReadDev(devPath string) (*Dev, error) {
 	return d, nil
 }
 
-func loadDev(b []byte) (*Dev, error) {
+func LoadDev(b []byte) (*Dev, error) {
 	dev := Dev{
 		Mount: Mount{
 			Source: ".",
