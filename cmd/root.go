@@ -23,21 +23,23 @@ type cliConfig struct {
 	actionID string
 }
 
+type commandFunc func() *cobra.Command
+
 var (
 	c = &cliConfig{
 		actionID: analytics.NewActionID(),
 	}
 
 	analyticsWG = sync.WaitGroup{}
-	commands    = []*cobra.Command{
-		Up(),
-		Exec(),
-		Down(),
-		Version(),
-		List(),
-		Run(),
-		Create(),
-		Analytics(),
+	commandsFN  = []commandFunc{
+		Up,
+		Exec,
+		Down,
+		Version,
+		List,
+		Run,
+		Create,
+		Analytics,
 	}
 )
 
@@ -57,7 +59,10 @@ func Execute() {
 	}
 
 	root.PersistentFlags().StringVarP(&c.logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
-	root.AddCommand(commands...)
+
+	for _, fn := range commandsFN {
+		root.AddCommand(fn())
+	}
 
 	// override client-go error handlers to downgrade the "logging before flag.Parse" error
 	errorHandlers := []func(error){
@@ -92,6 +97,6 @@ func GetActionID() string {
 }
 
 // Register registers a new command with cnd's root command
-func Register(c *cobra.Command) {
-	commands = append(commands, c)
+func Register(fn commandFunc) {
+	commandsFN = append(commandsFN, fn)
 }
