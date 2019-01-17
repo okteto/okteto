@@ -99,7 +99,6 @@ func Deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 		log.Infof("Creating deployment on '%s'...", d.Namespace)
 		_, err := dClient.Create(d)
 		if err != nil {
-			log.Infof("%+v", d.GetObjectMeta())
 			return fmt.Errorf("Error creating kubernetes deployment: %s", err)
 		}
 		log.Infof("Created deployment %s", deploymentName)
