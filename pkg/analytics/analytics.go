@@ -186,7 +186,7 @@ func Wait() {
 	case <-waitCh1:
 		log.Debug("all analytics were sent")
 	case <-waitCh2:
-		log.Debug("some analytics were not time sent")
+		log.Debug("some analytics were not sent before shutdown")
 		return
 	}
 }

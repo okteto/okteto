@@ -13,17 +13,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 //StreamLogs stremas logs from a container
-func StreamLogs(
-	ctx context.Context, wg *sync.WaitGroup,
-	d *appsv1.Deployment, container string, c *kubernetes.Clientset, config *rest.Config,
-) {
+func StreamLogs(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, container string, c *kubernetes.Clientset) {
 	defer wg.Done()
 	for {
-		if err := streamLogs(ctx, d, container, c, config); err != nil {
+		if err := streamLogs(ctx, d, container, c); err != nil {
 			log.Infof("couldn't stream logs for %s/%s: %s", d.Name, container, err)
 		}
 		select {
@@ -36,7 +32,7 @@ func StreamLogs(
 	}
 }
 
-func streamLogs(ctx context.Context, d *appsv1.Deployment, container string, c *kubernetes.Clientset, config *rest.Config) error {
+func streamLogs(ctx context.Context, d *appsv1.Deployment, container string, c *kubernetes.Clientset) error {
 	pod, err := deployments.GetCNDPod(ctx, d, c)
 	if err != nil {
 		return err

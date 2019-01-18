@@ -56,7 +56,7 @@ func DevModeOn(d *appsv1.Deployment, devList []*model.Dev, c *kubernetes.Clients
 		return err
 	}
 
-	if err := deploy(d, c); err != nil {
+	if err := Deploy(d, c); err != nil {
 		return err
 	}
 
@@ -79,7 +79,7 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	dOrig.ResourceVersion = ""
 
 	log.Infof("restoring the production configuration")
-	if err := deploy(dOrig, c); err != nil {
+	if err := Deploy(dOrig, c); err != nil {
 		return err
 	}
 
@@ -91,12 +91,13 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	return nil
 }
 
-func deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
+// Deploy deploys or updates d
+func Deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	deploymentName := GetFullName(d.Namespace, d.Name)
 	dClient := c.AppsV1().Deployments(d.Namespace)
 
 	if d.Name == "" {
-		log.Infof("Creating deployment '%s'...", deploymentName)
+		log.Infof("Creating deployment on '%s'...", d.Namespace)
 		_, err := dClient.Create(d)
 		if err != nil {
 			return fmt.Errorf("Error creating kubernetes deployment: %s", err)

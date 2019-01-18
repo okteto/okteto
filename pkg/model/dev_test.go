@@ -67,7 +67,7 @@ swap:
 mount:
   source: /Users/example/app
   target: /app`)
-	d, err := loadDev(manifest)
+	d, err := LoadDev(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func Test_loadDevDefaults(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d, err := loadDev(tt.manifest)
+			d, err := LoadDev(tt.manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
