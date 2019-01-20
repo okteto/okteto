@@ -47,7 +47,6 @@ class Cnd < Formula
         system "make"
         bin.install "bin/cnd"
       end
-      mkdir_p "#{ENV["home"}/.cnd"
     end
 
     # Homebrew requires tests.

@@ -85,7 +85,7 @@ func Execute() {
 
 // GetKubernetesClient returns the configured kubernetes client for the specified namespace, or the default if empty
 func GetKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, error) {
-	kubePath := path.Join(config.GetCNDHome(), ".kubeconfig")
+	kubePath := path.Join(config.GetCNDHome(), "kubeconfig")
 	if _, err := os.Stat(kubePath); os.IsNotExist(err) {
 		return client.Get(namespace, "")
 	}
