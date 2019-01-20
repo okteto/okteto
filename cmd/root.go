@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 	"sync"
 
 	"github.com/okteto/cnd/pkg/analytics"
@@ -84,7 +85,12 @@ func Execute() {
 
 // GetKubernetesClient returns the configured kubernetes client for the specified namespace, or the default if empty
 func GetKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, error) {
-	return client.Get(namespace)
+	kubePath := path.Join(config.GetCNDHome(), ".kubeconfig")
+	if _, err := os.Stat(kubePath); os.IsNotExist(err) {
+		return client.Get(namespace, "")
+	}
+
+	return client.Get(namespace, kubePath)
 }
 
 func addDevPathFlag(cmd *cobra.Command, devPath *string) {
