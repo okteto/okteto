@@ -20,7 +20,9 @@ func StreamLogs(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, c
 	defer wg.Done()
 	for {
 		if err := streamLogs(ctx, d, container, c); err != nil {
-			log.Infof("couldn't stream logs for %s/%s: %s", d.Name, container, err)
+			if err != context.Canceled {
+				log.Infof("couldn't stream logs for %s/%s: %s", d.Name, container, err)
+			}
 		}
 		select {
 		case <-ctx.Done():
