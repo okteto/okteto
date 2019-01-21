@@ -1,9 +1,6 @@
 package client
 
 import (
-	"os"
-	"path"
-
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -15,10 +12,6 @@ import (
 // If namespace is empty, it will use the default namespace configured.
 // If path is empty, it will use the default path configuration
 func Get(namespace, configPath string) (string, *kubernetes.Clientset, *rest.Config, error) {
-	if configPath == "" {
-		configPath = path.Join(os.Getenv("HOME"), ".kube/config")
-	}
-
 	log.Debugf("reading kubernetes configuration from %s", configPath)
 
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
