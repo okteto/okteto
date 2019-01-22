@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/okteto/cnd/pkg/analytics"
+	"github.com/okteto/cnd/pkg/config"
 	"github.com/okteto/cnd/pkg/model"
 
 	"github.com/okteto/cnd/pkg/k8/deployments"
@@ -71,7 +72,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	n, deploymentName, c, err := findDevEnvironment(true)
 
 	if err != errNoCNDEnvironment {
-		return nil, fmt.Errorf("there is already an entry for %s/%s Are you running 'cnd up' somewhere else?", deployments.GetFullName(n, deploymentName), c)
+		return nil, fmt.Errorf("there is already an entry for %s/%s Are you running '%s up' somewhere else?", config.GetBinaryName(), deployments.GetFullName(n, deploymentName), c)
 	}
 
 	namespace, client, restConfig, err := GetKubernetesClient(namespace)
@@ -128,7 +129,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	err = storage.Insert(ctx, wg, namespace, dev, sy.GUIAddress)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
-			return nil, fmt.Errorf("there is already an entry for %s. Are you running 'cnd up' somewhere else?", fullname)
+			return nil, fmt.Errorf("there is already an entry for %s. Are you running '%s up' somewhere else?", config.GetBinaryName(), fullname)
 		}
 		return nil, err
 	}
