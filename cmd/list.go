@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/okteto/cnd/pkg/syncthing"
 
@@ -31,42 +30,17 @@ type listOutputEnvironment struct {
 	Errors     []string `yaml:"errors,omitempty"`
 }
 
-//Event struct
-type Event struct {
+type event struct {
 	Type string `json:"type,omitempty"`
-	Data Data   `json:"data,omitempty"`
+	Data struct {
+		Completion float64 `json:"completion,omitempty"`
+	} `json:"data,omitempty"`
 }
 
-//SyncthingErrors struct
-type SyncthingErrors struct {
-	Errors []SyncthingError `json:"errors,omitempty"`
-}
-
-//SyncthingError struct
-type SyncthingError struct {
-	Message string `json:"message,omitempty"`
-}
-
-//Data event data
-type Data struct {
-	Completion float64 `json:"completion,omitempty"`
-}
-
-type addAPIKeyTransport struct {
-	T http.RoundTripper
-}
-
-func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("X-API-Key", "cnd")
-	return akt.T.RoundTrip(req)
-}
-
-func init() {
-	transport := &addAPIKeyTransport{http.DefaultTransport}
-	restClient = &http.Client{
-		Timeout:   60 * time.Second,
-		Transport: transport,
-	}
+type syncthingErrors struct {
+	Errors []struct {
+		Message string `json:"message,omitempty"`
+	} `json:"errors,omitempty"`
 }
 
 //List implements the list logic
@@ -131,7 +105,7 @@ func getStatus(s storage.Service) (float64, error) {
 		return 0, fmt.Errorf("error getting syncthing state: %s", err)
 	}
 
-	var events []Event
+	var events []event
 	if err := json.Unmarshal(body, &events); err != nil {
 		return 0, fmt.Errorf("error getting syncthing state: %s", err)
 	}
@@ -156,7 +130,7 @@ func getErrors(s storage.Service) ([]string, error) {
 		return nil, fmt.Errorf("error getting syncthing errors: %s", err)
 	}
 
-	var errors SyncthingErrors
+	var errors syncthingErrors
 	if err := json.Unmarshal(body, &errors); err != nil {
 		return nil, fmt.Errorf("error getting syncthing errors: %s", err)
 	}

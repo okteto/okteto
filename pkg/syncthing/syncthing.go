@@ -300,11 +300,9 @@ type addAPIKeyTransport struct {
 }
 
 type syncthingConnections struct {
-	Connections map[string]syncthingConnection `json:"connections,omitempty"`
-}
-
-type syncthingConnection struct {
-	Connected bool `json:"connected,omitempty"`
+	Connections map[string]struct {
+		Connected bool `json:"connected,omitempty"`
+	} `json:"connections,omitempty"`
 }
 
 //Monitor verifies that syncthing is not in a disconnected state. If so, it sends a message to the

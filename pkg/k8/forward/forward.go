@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -53,7 +52,7 @@ func NewCNDPortForward(remoteAddress string) (*CNDPortForward, error) {
 // Start starts a port foward for the specified port.
 func (p *CNDPortForward) Start(ctx context.Context, wg *sync.WaitGroup,
 	c *kubernetes.Clientset, config *rest.Config,
-	pod *apiv1.Pod, d *appsv1.Deployment, ready chan<- bool) error {
+	pod *apiv1.Pod, ready chan<- bool) error {
 
 	defer wg.Done()
 	p.start(c, config, pod, ready)
@@ -93,7 +92,7 @@ func (p *CNDPortForward) start(c *kubernetes.Clientset, config *rest.Config, pod
 		return err
 	}
 
-	go forwardPorts(pf, p)
+	go forwardPorts(pf)
 
 	<-pf.Ready
 	p.IsReady = true
@@ -101,17 +100,17 @@ func (p *CNDPortForward) start(c *kubernetes.Clientset, config *rest.Config, pod
 	return nil
 }
 
-func forwardPorts(pf *portforward.PortForwarder, p *CNDPortForward) {
+func forwardPorts(pf *portforward.PortForwarder) {
 	err := pf.ForwardPorts()
 
 	if err != nil {
 		if strings.Contains(err.Error(), "lost connection to pod") {
-			log.Infof("forwardPorts lost connectiont to pod")
+			log.Debugf("forwardPorts lost connectiont to pod")
 			return
 		}
 
-		log.Infof("forwardPorts closed due to error: %s", err)
+		log.Debugf("forwardPorts closed due to error: %s", err)
 	} else {
-		log.Infof("forwardPorts closed")
+		log.Debugf("forwardPorts closed")
 	}
 }

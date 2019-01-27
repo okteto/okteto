@@ -170,7 +170,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 
 	ready := make(chan bool)
 	wg.Add(1)
-	go pf.Start(ctx, wg, client, restConfig, pod, d, ready)
+	go pf.Start(ctx, wg, client, restConfig, pod, ready)
 	<-ready
 
 	wg.Add(1)
@@ -182,6 +182,5 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 
 func shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
 	cancel()
-	log.Debugf("waiting for sync group")
 	wg.Wait()
 }
