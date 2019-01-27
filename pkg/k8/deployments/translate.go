@@ -12,7 +12,7 @@ import (
 
 const (
 	cndEnvNamespace  = "CND_KUBERNETES_NAMESPACE"
-	initSyncImageTag = "okteto/init-syncthing:0.4.0"
+	initSyncImageTag = "okteto/init-syncthing:0.4.1"
 	syncImageTag     = "okteto/syncthing:0.4.0"
 )
 
