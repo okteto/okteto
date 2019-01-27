@@ -65,13 +65,15 @@ func Insert(
 	ctx context.Context, wg *sync.WaitGroup,
 	namespace string, dev *model.Dev, host string) error {
 
-	defer wg.Done()
-
 	if err := insert(namespace, dev, host); err != nil {
 		return err
 	}
 
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
+
 		<-ctx.Done()
 		if err := Stop(namespace, dev); err != nil {
 			log.Error(err)

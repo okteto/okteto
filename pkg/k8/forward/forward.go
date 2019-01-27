@@ -51,20 +51,8 @@ func NewCNDPortForward(remoteAddress string) (*CNDPortForward, error) {
 // Start starts a port foward for the specified port.
 func (p *CNDPortForward) Start(
 	ctx context.Context, wg *sync.WaitGroup,
-	c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, ready chan<- bool) error {
-	defer wg.Done()
-	p.start(c, config, pod, ready)
+	c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod) error {
 
-	<-ctx.Done()
-	if p.StopChan != nil {
-		close(p.StopChan)
-		<-p.StopChan
-	}
-	log.Debug("port forward clean shutdown")
-	return nil
-}
-
-func (p *CNDPortForward) start(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, ready chan<- bool) error {
 	req := c.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace(pod.Namespace).
@@ -90,10 +78,20 @@ func (p *CNDPortForward) start(c *kubernetes.Clientset, config *rest.Config, pod
 		return err
 	}
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		if p.StopChan != nil {
+			close(p.StopChan)
+			<-p.StopChan
+		}
+		log.Debug("port forward clean shutdown")
+	}()
+
 	go pf.ForwardPorts()
 
 	<-pf.Ready
 	p.IsReady = true
-	ready <- p.IsReady
 	return nil
 }
