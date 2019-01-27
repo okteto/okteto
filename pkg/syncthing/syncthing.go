@@ -30,6 +30,7 @@ var (
 )
 
 const (
+	binaryNane       = "syncthing"
 	certFile         = "cert.pem"
 	keyFile          = "key.pem"
 	configFile       = "config.xml"
@@ -64,6 +65,18 @@ type Syncthing struct {
 // NewSyncthing constructs a new Syncthing.
 func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthing, error) {
 
+	fullPath, err := exec.LookPath(binaryNane)
+	if err != nil {
+		if strings.HasSuffix(err.Error(), exec.ErrNotFound.Error()) {
+			return nil, fmt.Errorf("cannot find syncthing in your PATH. Make sure syncthing is installed")
+		}
+
+		log.Infof("unknown error when looking for syncthing: %s", err)
+		return nil, err
+	}
+
+	log.Debugf("running syncthing from %s", fullPath)
+
 	remotePort, err := getAvailablePort()
 	if err != nil {
 		return nil, err
@@ -81,7 +94,7 @@ func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthin
 
 	s := &Syncthing{
 		APIKey:           "cnd",
-		binPath:          "syncthing",
+		binPath:          fullPath,
 		home:             path.Join(config.GetCNDHome(), namespace, deployment),
 		Name:             deployment,
 		DevList:          devList,
@@ -188,7 +201,6 @@ func getAvailablePort() (int, error) {
 
 // Run starts up a local syncthing process to serve files from.
 func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
-	defer wg.Done()
 
 	if err := s.initConfig(); err != nil {
 		return err
@@ -227,7 +239,9 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 	log.Infof("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		<-ctx.Done()
 		if err := s.Stop(); err != nil {
 			log.Error(err)

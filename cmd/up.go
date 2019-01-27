@@ -128,6 +128,11 @@ func ActivateDevEnvironment(ctx context.Context, wg *sync.WaitGroup, dev *model.
 		return nil, err
 	}
 
+	sy, err := syncthing.NewSyncthing(namespace, d.Name, devList)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := deployments.DevModeOn(d, devList, client); err != nil {
 		return nil, err
 	}
@@ -143,11 +148,6 @@ func ActivateDevEnvironment(ctx context.Context, wg *sync.WaitGroup, dev *model.
 		return nil, err
 	}
 
-	sy, err := syncthing.NewSyncthing(namespace, d.Name, devList)
-	if err != nil {
-		return nil, err
-	}
-
 	fullname := deployments.GetFullName(namespace, d.Name)
 
 	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
@@ -155,12 +155,10 @@ func ActivateDevEnvironment(ctx context.Context, wg *sync.WaitGroup, dev *model.
 		return nil, err
 	}
 
-	wg.Add(1)
 	if err := sy.Run(ctx, wg); err != nil {
 		return nil, err
 	}
 
-	wg.Add(1)
 	err = storage.Insert(ctx, wg, namespace, dev, sy.GUIAddress)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
@@ -169,10 +167,9 @@ func ActivateDevEnvironment(ctx context.Context, wg *sync.WaitGroup, dev *model.
 		return nil, err
 	}
 
-	ready := make(chan bool)
-	wg.Add(1)
-	go pf.Start(ctx, wg, client, restConfig, pod, ready)
-	<-ready
+	if err := pf.Start(ctx, wg, client, restConfig, pod); err != nil {
+		return nil, fmt.Errorf("couldn't start the connection to your cluster: %s", err)
+	}
 
 	wg.Add(1)
 	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)
