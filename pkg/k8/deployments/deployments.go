@@ -159,7 +159,7 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 			}
 
 			if event.Type == "Normal" {
-				log.Debug(event.Message)
+				log.Debugf("kubernetes: %s", event.Message)
 			} else {
 				fmt.Println(Red("Kubernetes: "), event.Message)
 			}

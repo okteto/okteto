@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 
 	"github.com/okteto/cnd/pkg/analytics"
 	"github.com/okteto/cnd/pkg/config"
 	"github.com/okteto/cnd/pkg/model"
+	log "github.com/sirupsen/logrus"
+	runtime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/okteto/cnd/pkg/k8/deployments"
 	"github.com/okteto/cnd/pkg/k8/forward"
@@ -38,26 +41,54 @@ func Up() *cobra.Command {
 			fmt.Println("Activating your cloud native development environment...")
 
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 			var wg sync.WaitGroup
 			defer shutdown(cancel, &wg)
+
+			reconnectChannel := make(chan struct{})
+			runtime.ErrorHandlers = []func(error){
+				func(e error) {
+					if strings.Contains(e.Error(), "an error occurred forwarding") ||
+						strings.Contains(e.Error(), "error creating forwarding stream") {
+						reconnectChannel <- struct{}{}
+						return
+					}
+
+					log.Debugf("unhandled error: %s", e)
+				},
+			}
 
 			d, err := ExecuteUp(ctx, &wg, dev, namespace)
 			if err != nil {
 				return err
 			}
 
-			fullname := deployments.GetFullName(d.Namespace, d.Name)
-			fmt.Printf("Linking '%s' to %s/%s...", dev.Mount.Source, fullname, dev.Swap.Deployment.Container)
+			fmt.Printf("Linking '%s' to %s/%s...", dev.Mount.Source, deployments.GetFullName(d.Namespace, d.Name), dev.Swap.Deployment.Container)
 			fmt.Println()
 			fmt.Printf("Ready! Go to your local IDE and continue coding!")
 			fmt.Println()
 
 			stopChannel := make(chan os.Signal, 1)
 			signal.Notify(stopChannel, os.Interrupt)
-			<-stopChannel
-			fmt.Println()
-			return nil
+
+			for {
+				select {
+				case <-stopChannel:
+					fmt.Println()
+					return nil
+				case <-reconnectChannel:
+					log.Infof("reconnecting")
+					shutdown(cancel, &wg)
+
+					ctx, cancel := context.WithCancel(context.Background())
+					defer shutdown(cancel, &wg)
+					wg = sync.WaitGroup{}
+					d, err = ExecuteUp(ctx, &wg, dev, namespace)
+					if err != nil {
+						return err
+					}
+				}
+			}
+
 		},
 	}
 
@@ -136,7 +167,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 
 	ready := make(chan bool)
 	wg.Add(1)
-	go pf.Start(ctx, wg, client, restConfig, pod, ready)
+	go pf.Start(ctx, wg, client, restConfig, pod, d, ready)
 	<-ready
 
 	wg.Add(1)
