@@ -11,6 +11,7 @@ echo "Waiting for tarball to be uploaded..."
 i=0
 while [ ! -f /initialized ] && [ "$i" -lt 60 ]; do
 	sleep 1
+	i=$(($i+1))
 done
 
 if [ "$i" -eq 60 ]; then
