@@ -93,6 +93,11 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 		return nil, err
 	}
 
+	sy, err := syncthing.NewSyncthing(namespace, d.Name, devList)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := deployments.DevModeOn(d, devList, client); err != nil {
 		return nil, err
 	}
@@ -105,11 +110,6 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	go deployments.GetPodEvents(ctx, pod, client)
 
 	if err := deployments.InitVolumeWithTarball(ctx, client, restConfig, namespace, pod.Name, devList); err != nil {
-		return nil, err
-	}
-
-	sy, err := syncthing.NewSyncthing(namespace, d.Name, devList)
-	if err != nil {
 		return nil, err
 	}
 

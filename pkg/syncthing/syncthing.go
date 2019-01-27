@@ -27,6 +27,7 @@ var (
 )
 
 const (
+	binaryNane       = "syncthing"
 	certFile         = "cert.pem"
 	keyFile          = "key.pem"
 	configFile       = "config.xml"
@@ -60,6 +61,18 @@ type Syncthing struct {
 // NewSyncthing constructs a new Syncthing.
 func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthing, error) {
 
+	fullPath, err := exec.LookPath(binaryNane)
+	if err != nil {
+		if strings.HasSuffix(err.Error(), exec.ErrNotFound.Error()) {
+			return nil, fmt.Errorf("cannot find syncthing in your PATH. Make sure syncthing is installed")
+		}
+
+		log.Infof("unknown error when looking for syncthing: %s", err)
+		return nil, err
+	}
+
+	log.Debugf("running syncthing from %s", fullPath)
+
 	remotePort, err := getAvailablePort()
 	if err != nil {
 		return nil, err
@@ -77,7 +90,7 @@ func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthin
 
 	s := &Syncthing{
 		APIKey:           "cnd",
-		binPath:          "syncthing",
+		binPath:          fullPath,
 		home:             path.Join(config.GetCNDHome(), namespace, deployment),
 		Name:             deployment,
 		DevList:          devList,
