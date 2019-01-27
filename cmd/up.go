@@ -120,12 +120,10 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 		return nil, err
 	}
 
-	wg.Add(1)
 	if err := sy.Run(ctx, wg); err != nil {
 		return nil, err
 	}
 
-	wg.Add(1)
 	err = storage.Insert(ctx, wg, namespace, dev, sy.GUIAddress)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
@@ -134,10 +132,9 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 		return nil, err
 	}
 
-	ready := make(chan bool)
-	wg.Add(1)
-	go pf.Start(ctx, wg, client, restConfig, pod, ready)
-	<-ready
+	if err := pf.Start(ctx, wg, client, restConfig, pod); err != nil {
+		return nil, fmt.Errorf("couldn't start the connection to your cluster: %s", err)
+	}
 
 	wg.Add(1)
 	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)
