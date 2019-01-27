@@ -3,10 +3,12 @@ package syncthing
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -16,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/okteto/cnd/pkg/config"
 	"github.com/okteto/cnd/pkg/model"
@@ -55,6 +58,7 @@ type Syncthing struct {
 	FileWatcherDelay int
 	GUIAddress       string
 	ListenAddress    string
+	RestClient       *http.Client
 }
 
 // NewSyncthing constructs a new Syncthing.
@@ -87,9 +91,18 @@ func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthin
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("127.0.0.1:%d", guiPort),
 		ListenAddress:    fmt.Sprintf("0.0.0.0:%d", listenPort),
+		RestClient:       NewRestClient(),
 	}
 
 	return s, nil
+}
+
+//NewRestClient returns a new rest client configured to call the syncthing api
+func NewRestClient() *http.Client {
+	return &http.Client{
+		Timeout:   15 * time.Second,
+		Transport: &addAPIKeyTransport{http.DefaultTransport},
+	}
 }
 
 // Normally, syscall.Kill would be good enough. Unfortunately, that's not
@@ -280,4 +293,89 @@ func isEmpty(path string) (bool, error) {
 		return true, nil
 	}
 	return false, err // Either not empty or error, suits both cases
+}
+
+type addAPIKeyTransport struct {
+	T http.RoundTripper
+}
+
+type syncthingConnections struct {
+	Connections map[string]syncthingConnection `json:"connections,omitempty"`
+}
+
+type syncthingConnection struct {
+	Connected bool `json:"connected,omitempty"`
+}
+
+//Monitor verifies that syncthing is not in a disconnected state. If so, it sends a message to the
+// disconnected channel and exits
+func (s *Syncthing) Monitor(ctx context.Context, disconnected chan struct{}) {
+	ticker := time.NewTicker(10 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			if !s.isConnectedToRemote() {
+				disconnected <- struct{}{}
+				return
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (s *Syncthing) isConnectedToRemote() bool {
+	body, err := s.GetFromAPI("rest/system/connections")
+	if err != nil {
+		log.Debugf("error when getting connections from the api: %s", err)
+		return true
+	}
+
+	var conns syncthingConnections
+	if err := json.Unmarshal(body, &conns); err != nil {
+		return true
+	}
+
+	if val, ok := conns.Connections[s.RemoteDeviceID]; ok {
+		return val.Connected
+	}
+
+	log.Infof("RemoteDeviceID %s missing from the response", s.RemoteDeviceID)
+	return true
+}
+
+// GetFromAPI calls the syncthing API and returns the parsed json or an error
+func (s *Syncthing) GetFromAPI(url string) ([]byte, error) {
+	urlPath := path.Join(s.GUIAddress, url)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s", urlPath), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	q.Add("limit", "30")
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := s.RestClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("bad response from syncthing api %s %d: %s", req.URL.String(), resp.StatusCode, string(body))
+	}
+
+	return body, nil
+}
+
+func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Add("X-API-Key", "cnd")
+	return akt.T.RoundTrip(req)
 }

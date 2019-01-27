@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"path"
 	"strings"
 	"time"
+
+	"github.com/okteto/cnd/pkg/syncthing"
 
 	"github.com/okteto/cnd/pkg/storage"
 	log "github.com/sirupsen/logrus"
@@ -122,34 +122,18 @@ func list(yamlOutput bool) error {
 }
 
 func getStatus(s storage.Service) (float64, error) {
-	urlPath := path.Join(s.Syncthing, "rest", "events")
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s", urlPath), nil)
-	if err != nil {
-		return 100, err
-	}
+	sy := syncthing.Syncthing{}
+	sy.GUIAddress = s.Syncthing
+	sy.RestClient = syncthing.NewRestClient()
 
-	// add query parameters
-	q := req.URL.Query()
-	q.Add("limit", "30")
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := restClient.Do(req)
+	body, err := sy.GetFromAPI("rest/events")
 	if err != nil {
 		return 0, fmt.Errorf("error getting syncthing state: %s", err)
 	}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, err
-	}
-	if resp.StatusCode != 200 {
-		return 0, fmt.Errorf("error %d getting synchthing status: %s", resp.StatusCode, string(body))
-	}
 	var events []Event
-	err = json.Unmarshal(body, &events)
-	if err != nil {
-		return 0, fmt.Errorf("error unmarshalling events: %s", err.Error())
+	if err := json.Unmarshal(body, &events); err != nil {
+		return 0, fmt.Errorf("error getting syncthing state: %s", err)
 	}
 
 	for i := len(events) - 1; i >= 0; i-- {
@@ -163,36 +147,18 @@ func getStatus(s storage.Service) (float64, error) {
 }
 
 func getErrors(s storage.Service) ([]string, error) {
-	urlPath := path.Join(s.Syncthing, "rest", "system", "error")
-	log.Debugf("getting errors via %s", urlPath)
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s", urlPath), nil)
-	if err != nil {
-		return nil, err
-	}
+	sy := syncthing.Syncthing{}
+	sy.GUIAddress = s.Syncthing
+	sy.RestClient = syncthing.NewRestClient()
 
-	// add query parameters
-	q := req.URL.Query()
-	q.Add("limit", "5")
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := restClient.Do(req)
+	body, err := sy.GetFromAPI("rest/system/error")
 	if err != nil {
-		return nil, fmt.Errorf("error calling the syncthing api: %s", err)
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("error %d getting folder sync errors: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("error getting syncthing errors: %s", err)
 	}
 
 	var errors SyncthingErrors
-	err = json.Unmarshal(body, &errors)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling folder sync errors: %s", err.Error())
+	if err := json.Unmarshal(body, &errors); err != nil {
+		return nil, fmt.Errorf("error getting syncthing errors: %s", err)
 	}
 
 	parsedErrors := make([]string, len(errors.Errors))

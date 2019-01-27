@@ -44,11 +44,13 @@ func Up() *cobra.Command {
 			var wg sync.WaitGroup
 			defer shutdown(cancel, &wg)
 
-			reconnectChannel := make(chan struct{})
+			reconnectChannel := make(chan struct{}, 1)
 			runtime.ErrorHandlers = []func(error){
 				func(e error) {
 					if strings.Contains(e.Error(), "an error occurred forwarding") ||
-						strings.Contains(e.Error(), "error creating forwarding stream") {
+						strings.Contains(e.Error(), "error creating forwarding stream") ||
+						strings.Contains(e.Error(), "lost connection to pod") {
+						log.Debugf("connectivity error, sending a reconnection request: %s", e)
 						reconnectChannel <- struct{}{}
 						return
 					}
@@ -57,7 +59,7 @@ func Up() *cobra.Command {
 				},
 			}
 
-			d, err := ExecuteUp(ctx, &wg, dev, namespace)
+			d, err := ExecuteUp(ctx, &wg, dev, namespace, reconnectChannel)
 			if err != nil {
 				return err
 			}
@@ -78,11 +80,12 @@ func Up() *cobra.Command {
 				case <-reconnectChannel:
 					log.Infof("reconnecting")
 					shutdown(cancel, &wg)
+					storage.Stop(namespace, dev)
 
 					ctx, cancel := context.WithCancel(context.Background())
 					defer shutdown(cancel, &wg)
 					wg = sync.WaitGroup{}
-					d, err = ExecuteUp(ctx, &wg, dev, namespace)
+					d, err = ExecuteUp(ctx, &wg, dev, namespace, reconnectChannel)
 					if err != nil {
 						return err
 					}
@@ -98,7 +101,7 @@ func Up() *cobra.Command {
 }
 
 // ExecuteUp runs all the logic for the up command
-func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string) (*appsv1.Deployment, error) {
+func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, reconnectChannel chan struct{}) (*appsv1.Deployment, error) {
 
 	n, deploymentName, c, err := findDevEnvironment(true)
 
@@ -172,11 +175,13 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 
 	wg.Add(1)
 	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)
+	go sy.Monitor(ctx, reconnectChannel)
 
 	return d, nil
 }
 
 func shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
 	cancel()
+	log.Debugf("waiting for sync group")
 	wg.Wait()
 }
