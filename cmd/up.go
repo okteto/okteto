@@ -40,10 +40,6 @@ func Up() *cobra.Command {
 			defer analytics.Send(analytics.EventUpEnd, GetActionID())
 			fmt.Println("Activating your cloud native development environment...")
 
-			ctx, cancel := context.WithCancel(context.Background())
-			var wg sync.WaitGroup
-			defer shutdown(cancel, &wg)
-
 			reconnectChannel := make(chan struct{}, 1)
 			runtime.ErrorHandlers = []func(error){
 				func(e error) {
@@ -59,7 +55,11 @@ func Up() *cobra.Command {
 				},
 			}
 
-			d, err := ExecuteUp(ctx, &wg, dev, namespace, reconnectChannel)
+			ctx, cancel := context.WithCancel(context.Background())
+			var wg sync.WaitGroup
+			defer shutdown(cancel, &wg)
+
+			d, err := ActivateDevEnvironment(ctx, &wg, dev, namespace, reconnectChannel)
 			if err != nil {
 				return err
 			}
@@ -78,14 +78,15 @@ func Up() *cobra.Command {
 					fmt.Println()
 					return nil
 				case <-reconnectChannel:
-					log.Infof("reconnecting")
+					log.Infof("reconnecting to your cnd environment")
 					shutdown(cancel, &wg)
 					storage.Stop(namespace, dev)
 
 					ctx, cancel := context.WithCancel(context.Background())
-					defer shutdown(cancel, &wg)
 					wg = sync.WaitGroup{}
-					d, err = ExecuteUp(ctx, &wg, dev, namespace, reconnectChannel)
+					defer shutdown(cancel, &wg)
+
+					d, err = ActivateDevEnvironment(ctx, &wg, dev, namespace, reconnectChannel)
 					if err != nil {
 						return err
 					}
@@ -100,8 +101,8 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-// ExecuteUp runs all the logic for the up command
-func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, reconnectChannel chan struct{}) (*appsv1.Deployment, error) {
+// ActivateDevEnvironment runs all the logic to activate your dev env
+func ActivateDevEnvironment(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, reconnectChannel chan struct{}) (*appsv1.Deployment, error) {
 
 	n, deploymentName, c, err := findDevEnvironment(true)
 
