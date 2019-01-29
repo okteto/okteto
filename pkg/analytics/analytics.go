@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
-	"github.com/okteto/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )

@@ -3,7 +3,7 @@ package linguist
 import (
 	"strings"
 
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
 )
 

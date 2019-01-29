@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/okteto/cnd/pkg/k8/deployments"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"

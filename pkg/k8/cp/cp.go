@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/mholt/archiver"
-	"github.com/okteto/cnd/pkg/k8/exec"
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/exec"
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
 
-	"github.com/okteto/cnd/pkg/analytics"
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	"github.com/spf13/cobra"
 )
 

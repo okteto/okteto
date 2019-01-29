@@ -6,9 +6,9 @@ import (
 	"path"
 	"sync"
 
-	"github.com/okteto/cnd/pkg/analytics"
-	"github.com/okteto/cnd/pkg/config"
-	"github.com/okteto/cnd/pkg/k8/client"
+	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	runtime "k8s.io/apimachinery/pkg/util/runtime"

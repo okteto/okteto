@@ -7,15 +7,15 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/okteto/cnd/pkg/analytics"
-	"github.com/okteto/cnd/pkg/config"
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 
-	"github.com/okteto/cnd/pkg/k8/deployments"
-	"github.com/okteto/cnd/pkg/k8/forward"
-	"github.com/okteto/cnd/pkg/k8/logs"
-	"github.com/okteto/cnd/pkg/storage"
-	"github.com/okteto/cnd/pkg/syncthing"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/forward"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/logs"
+	"github.com/cloudnativedevelopment/cnd/pkg/storage"
+	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 )

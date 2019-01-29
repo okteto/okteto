@@ -6,7 +6,7 @@ jobs:
         environment:
           DEBUG: true
 
-    working_directory: /go/src/github.com/okteto/cnd
+    working_directory: /go/src/github.com/cloudnativedevelopment/cnd
 
     environment:
         BINARY_NAME: "cnd"
@@ -48,7 +48,7 @@ jobs:
       - run:
           name: "Publish Release on GitHub"
           command: |
-            ghr -u okteto -r cnd -c $CIRCLE_SHA1 -token $GITHUB_TOKEN -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
+            ghr -u cloudnativedevelopment -r cnd -c $CIRCLE_SHA1 -token $GITHUB_TOKEN -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
       - deploy:
           name: "Update brew formula"
           command: |

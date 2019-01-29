@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/okteto/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/spf13/cobra"
 )
 

@@ -3,7 +3,7 @@ package deployments
 import (
 	"testing"
 
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 )
 
