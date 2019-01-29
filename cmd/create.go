@@ -6,8 +6,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/okteto/cnd/pkg/config"
-	"github.com/okteto/cnd/pkg/linguist"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/linguist"
 	yaml "gopkg.in/yaml.v2"
 
 	log "github.com/sirupsen/logrus"

@@ -17,8 +17,8 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/okteto/cnd/pkg/config"
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -7,13 +7,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/okteto/cnd/pkg/analytics"
-	"github.com/okteto/cnd/pkg/config"
-	"github.com/okteto/cnd/pkg/storage"
+	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/storage"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/okteto/cnd/pkg/k8/deployments"
-	"github.com/okteto/cnd/pkg/k8/exec"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/exec"
 	"github.com/spf13/cobra"
 )
 

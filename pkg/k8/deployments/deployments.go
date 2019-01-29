@@ -8,9 +8,9 @@ import (
 	"encoding/json"
 
 	. "github.com/logrusorgru/aurora"
-	"github.com/okteto/cnd/pkg/k8/cp"
-	"github.com/okteto/cnd/pkg/k8/secrets"
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/cp"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/secrets"
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/watch"

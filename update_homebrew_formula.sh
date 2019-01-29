@@ -29,11 +29,11 @@ pushd homebrew-cnd
 cat << EOF > Formula/cnd.rb
 class Cnd < Formula
     desc "CLI for cloud native development"
-    homepage "https://github.com/okteto/cnd"
-    url "https://github.com/okteto/cnd.git",
+    homepage "https://github.com/cloudnativedevelopment/cnd"
+    url "https://github.com/cloudnativedevelopment/cnd.git",
       :tag      => "$VERSION",
       :revision => "$SHA"
-    head "https://github.com/okteto/cnd.git"
+    head "https://github.com/cloudnativedevelopment/cnd.git"
 
     depends_on "syncthing"
     depends_on "go" => :build
@@ -42,8 +42,8 @@ class Cnd < Formula
       ENV["GOPATH"] = buildpath
       ENV["VERSION_STRING"] = "$VERSION"
       contents = Dir["{*,.git,.gitignore}"]
-      (buildpath/"src/github.com/okteto/cnd").install contents
-      cd "src/github.com/okteto/cnd" do
+      (buildpath/"src/github.com/cloudnativedevelopment/cnd").install contents
+      cd "src/github.com/cloudnativedevelopment/cnd" do
         system "make"
         bin.install "bin/cnd"
       end

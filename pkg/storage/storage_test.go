@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
 
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 )
 
 func TestInsertGetListDelete(t *testing.T) {

@@ -19,7 +19,7 @@ brew install --HEAD cnd
 
 ### Manual install
 
-You can get prebuilt binaries for macOS, Linux and Windows [from our releases page](https://github.com/okteto/cnd/releases/latest)
+You can get prebuilt binaries for macOS, Linux and Windows [from our releases page](https://github.com/cloudnativedevelopment/cnd/releases/latest)
 
 
 ### From source
@@ -36,7 +36,7 @@ which syncthing
 Install **cnd** from source by executing:
 
 ```console
-go get github.com/okteto/cnd
+go get github.com/cloudnativedevelopment/cnd
 ```
 
 ## Kubernetes
@@ -60,4 +60,4 @@ brew upgrade --HEAD cnd
 ```
 
 ## Manually 
-You can get our latest available binary [from our releases page](https://github.com/okteto/cnd/releases/latest). 
+You can get our latest available binary [from our releases page](https://github.com/cloudnativedevelopment/cnd/releases/latest). 

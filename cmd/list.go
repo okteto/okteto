@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/cnd/pkg/storage"
+	"github.com/cloudnativedevelopment/cnd/pkg/storage"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"

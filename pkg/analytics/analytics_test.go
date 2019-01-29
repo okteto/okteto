@@ -7,7 +7,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/okteto/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/config"
 )
 
 func Test_isEnabled(t *testing.T) {

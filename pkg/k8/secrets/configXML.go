@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"html/template"
 
-	"github.com/okteto/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 )
 
 const configXML = `<configuration version="28">

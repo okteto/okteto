@@ -5,7 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/okteto/cnd/cmd"
+	"github.com/cloudnativedevelopment/cnd/cmd"
 )
 
 func main() {
