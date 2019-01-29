@@ -28,10 +28,16 @@ var (
 // ProcessDirectory walks a directory and returns a list of guess for the programming language
 func ProcessDirectory(root string) ([]string, error) {
 	out := make(map[string][]string, 0)
-	analysisDeadline := time.Now().Add(5 * time.Second)
+	analysisTimeout := false
+
+	timer := time.AfterFunc(5*time.Second, func() {
+		analysisTimeout = true
+	})
+
+	defer timer.Stop()
 
 	err := filepath.Walk(root, func(path string, f os.FileInfo, err error) error {
-		if time.Now().After(analysisDeadline) {
+		if analysisTimeout {
 			log.Debugf("linguist analysis timed out")
 			return errAnalysisTimeOut
 		}
