@@ -87,6 +87,10 @@ func ProcessDirectory(root string) ([]string, error) {
 		return nil, err
 	}
 
+	if len(out) == 0 {
+		out[unrecognized] = []string{}
+	}
+
 	return sortLanguagesByUsage(out), nil
 }
 
