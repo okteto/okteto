@@ -6,11 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mholt/archiver"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/exec"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
+	"github.com/mholt/archiver"
 	uuid "github.com/satori/go.uuid"
-	log "github.com/sirupsen/logrus"
+
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

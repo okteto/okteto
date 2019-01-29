@@ -11,7 +11,7 @@ import (
 	"sort"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	enry "gopkg.in/src-d/enry.v1"
 )
 
@@ -48,7 +48,7 @@ func ProcessDirectory(root string) ([]string, error) {
 
 		relativePath, err := filepath.Rel(root, path)
 		if err != nil {
-			log.Println(err)
+			log.Info(err)
 			return nil
 		}
 
@@ -78,7 +78,7 @@ func ProcessDirectory(root string) ([]string, error) {
 			if language, ok = enry.GetLanguageByFilename(path); !ok {
 				content, err := readFile(path, readFileLimit)
 				if err != nil {
-					log.Println(err)
+					log.Info(err)
 					return nil
 				}
 

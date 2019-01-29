@@ -1,20 +1,12 @@
 package main
 
 import (
-	"os"
-
-	log "github.com/sirupsen/logrus"
-
+	"github.com/Sirupsen/logrus"
 	"github.com/cloudnativedevelopment/cnd/cmd"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 )
 
 func main() {
-	// Output to stdout instead of the default stderr
-	// Can be any io.Writer, see below for File example
-	log.SetOutput(os.Stdout)
-
-	// Only log the warning severity or above.
-	log.SetLevel(log.WarnLevel)
-
+	log.Init(logrus.WarnLevel)
 	cmd.Execute()
 }

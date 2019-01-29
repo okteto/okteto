@@ -17,7 +17,7 @@ func Test_isEnabled(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "")
 	if err != nil {
-		log.Fatal(err)
+		log.LogFatal(err)
 	}
 
 	defer os.RemoveAll(tmpdir)

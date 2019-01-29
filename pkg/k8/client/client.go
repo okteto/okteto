@@ -1,7 +1,7 @@
 package client
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

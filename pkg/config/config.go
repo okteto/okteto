@@ -4,7 +4,7 @@ import (
 	"os"
 	"path"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 )
 
 // These values will be stamped at build time

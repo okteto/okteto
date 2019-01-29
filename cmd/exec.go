@@ -9,8 +9,8 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/storage"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/exec"
