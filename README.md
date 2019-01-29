@@ -2,7 +2,7 @@
 
 **Maintainers:** [Okteto](https://github.com/okteto)
 
-[![CircleCI](https://circleci.com/gh/okteto/cnd.svg?style=svg)](https://circleci.com/gh/okteto/cnd)
+[![CircleCI](https://circleci.com/gh/cloudnativedevelopment/cnd.svg?style=svg)](https://circleci.com/gh/cloudnativedevelopment/cnd)
 
 ## Overview
 
