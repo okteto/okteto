@@ -19,6 +19,7 @@ const (
 	golang           = "go"
 	python           = "python"
 	java             = "java"
+	ruby             = "ruby"
 	unrecognized     = "unrecognized"
 	helloCommandName = "hello"
 )
@@ -40,13 +41,13 @@ func init() {
 	}
 
 	languageDefaults[golang] = languageDefault{
-		image:   "golang",
+		image:   "golang:1",
 		command: tailCommand,
 		path:    "/go/src/app",
 	}
 
 	languageDefaults[python] = languageDefault{
-		image:   "python",
+		image:   "python:3",
 		command: []string{"sh", "-c", "pip install -r requirements.txt && python app.py"},
 		path:    "/usr/src/app",
 	}
@@ -60,6 +61,16 @@ func init() {
 		},
 	}
 
+	languageDefaults[ruby] = languageDefault{
+		image:   "ruby:2",
+		command: tailCommand,
+		path:    "/usr/src/app",
+		scripts: map[string]string{
+			"migrate": "rails db:migrate",
+			"server":  "rails s -e development",
+		},
+	}
+
 	languageDefaults[unrecognized] = languageDefault{
 		image:   "ubuntu",
 		command: tailCommand,
@@ -70,7 +81,6 @@ func init() {
 // GetDevConfig returns the default dev for the specified language
 func GetDevConfig(language string) *model.Dev {
 	vals := languageDefaults[normalizeLanguage(language)]
-
 	dev := model.NewDev()
 	dev.Swap.Deployment.Image = vals.image
 	dev.Swap.Deployment.Command = vals.command
@@ -99,6 +109,8 @@ func normalizeLanguage(language string) string {
 		return python
 	case "java":
 		return java
+	case "ruby":
+		return ruby
 	case "go":
 		return golang
 	default:
