@@ -2,7 +2,13 @@
 
 **Maintainers:** [Okteto](https://github.com/okteto)
 
+[![GitHub release](http://img.shields.io/github/release/cloudnativedevelopment/cnd.svg?style=flat-square)][release]
 [![CircleCI](https://circleci.com/gh/cloudnativedevelopment/cnd.svg?style=svg)](https://circleci.com/gh/cloudnativedevelopment/cnd)
+[![Apache License 2.0](https://img.shields.io/github/license/cloudnativedevelopment/cnd.svg?style=flat-square)][license]
+
+[release]: https://github.com/cloudnativedevelopment/cnd/releases
+[license]: https://github.com/cloudnativedevelopment/cnd/blob/master/LICENSE
+
 
 ## Overview
 
