@@ -2,12 +2,14 @@ package linguist
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	enry "gopkg.in/src-d/enry.v1"
@@ -17,15 +19,21 @@ const (
 	readFileLimit = 16 * 1024 * 1024
 )
 
+var (
+	errAnalysisTimeOut = errors.New("analysis timed out")
+)
+
 // this is all based on enry's main command https://github.com/src-d/enry
 
 // ProcessDirectory walks a directory and returns a list of guess for the programming language
 func ProcessDirectory(root string) ([]string, error) {
 	out := make(map[string][]string, 0)
+	analysisDeadline := time.Now().Add(5 * time.Second)
+
 	err := filepath.Walk(root, func(path string, f os.FileInfo, err error) error {
-		if err != nil {
-			log.Println(err)
-			return filepath.SkipDir
+		if time.Now().After(analysisDeadline) {
+			log.Debugf("linguist analysis timed out")
+			return errAnalysisTimeOut
 		}
 
 		if !f.Mode().IsDir() && !f.Mode().IsRegular() {
@@ -83,8 +91,12 @@ func ProcessDirectory(root string) ([]string, error) {
 		return nil
 	})
 
-	if err != nil {
+	if err != nil && err != errAnalysisTimeOut {
 		return nil, err
+	}
+
+	if len(out) == 0 {
+		out[unrecognized] = []string{}
 	}
 
 	return sortLanguagesByUsage(out), nil
