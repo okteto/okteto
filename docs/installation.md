@@ -7,13 +7,13 @@ You will need the following components to get started with cnd:
 ### Hombrew
 
 ```console
-brew tap okteto/cnd
+brew tap cloudnativedevelopment/cnd
 brew install cnd
 ```
 
 You can install to the latest unstable version by executing:
 ```console
-brew tap okteto/cnd
+brew tap cloudnativedevelopment/cnd
 brew install --HEAD cnd
 ```
 
