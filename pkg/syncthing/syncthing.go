@@ -307,7 +307,7 @@ func Exists(home string) bool {
 		}
 	}
 
-	process, err := os.FindProcess(int(pid))
+	process, err := os.FindProcess(pid)
 	if err != nil {
 		return false
 	}
