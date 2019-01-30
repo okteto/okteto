@@ -36,9 +36,10 @@ const (
 
 //Dev represents a cloud native development environment
 type Dev struct {
-	Swap    Swap              `json:"swap" yaml:"swap"`
-	Mount   Mount             `json:"mount" yaml:"mount"`
-	Scripts map[string]string `json:"scripts" yaml:"scripts"`
+	Swap        Swap              `json:"swap" yaml:"swap"`
+	Mount       Mount             `json:"mount" yaml:"mount"`
+	Scripts     map[string]string `json:"scripts" yaml:"scripts"`
+	Environment map[string]string `json:"environment,omitempty" yaml:"environment,omitempty"`
 }
 
 //Swap represents the metadata for the container to be swapped
@@ -71,7 +72,8 @@ func NewDev() *Dev {
 			Source: ".",
 			Target: "/app",
 		},
-		Scripts: make(map[string]string),
+		Scripts:     make(map[string]string),
+		Environment: make(map[string]string),
 	}
 }
 
@@ -113,14 +115,9 @@ func ReadDev(devPath string) (*Dev, error) {
 
 // LoadDev loads the dev object from the array, plus defaults.
 func LoadDev(b []byte) (*Dev, error) {
-	dev := Dev{
-		Mount: Mount{
-			Source: ".",
-			Target: "/src",
-		},
-	}
+	dev := NewDev()
 
-	err := yaml.Unmarshal(b, &dev)
+	err := yaml.Unmarshal(b, dev)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +127,7 @@ func LoadDev(b []byte) (*Dev, error) {
 		dev.Mount.Source = filepath.Join(home, dev.Mount.Source[2:])
 	}
 
-	return &dev, nil
+	return dev, nil
 }
 
 func (dev *Dev) fixPath(originalPath string) {

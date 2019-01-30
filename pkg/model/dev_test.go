@@ -87,9 +87,10 @@ mount:
 
 func Test_loadDevDefaults(t *testing.T) {
 	var tests = []struct {
-		name     string
-		manifest []byte
-		expected []string
+		name                string
+		manifest            []byte
+		expectedScripts     map[string]string
+		expectedEnvironment map[string]string
 	}{
 		{
 			"long script",
@@ -103,7 +104,9 @@ func Test_loadDevDefaults(t *testing.T) {
               target: /app
             scripts:
               run: "uwsgi --gevent 100 --http-socket 0.0.0.0:8000 --mount /=app:app --python-autoreload 1"`),
-			[]string{"--gevent", "100", "--http-socket", "0.0.0.0:8000", "--mount", "/=app:app", "--python-autoreload", "1"},
+			map[string]string{
+				"run": "uwsgi --gevent 100 --http-socket 0.0.0.0:8000 --mount /=app:app --python-autoreload 1"},
+			map[string]string{},
 		},
 		{
 			"basic script",
@@ -117,7 +120,29 @@ func Test_loadDevDefaults(t *testing.T) {
               target: /app
             scripts:
               run: "start.sh"`),
-			[]string{"start.sh"},
+			map[string]string{"run": "start.sh"},
+			map[string]string{},
+		},
+		{
+			"env vars",
+			[]byte(`
+            swap:
+              deployment:
+                name: service
+                container: core
+            mount:
+              source: /src
+              target: /app
+            scripts:
+              run: "start.sh"
+            environment:
+                ENV:  production
+                name: test-node`),
+			map[string]string{"run": "start.sh"},
+			map[string]string{
+				"ENV":  "production",
+				"name": "test-node",
+			},
 		},
 	}
 
@@ -135,8 +160,13 @@ func Test_loadDevDefaults(t *testing.T) {
 			if d.Swap.Deployment.Args != nil || len(d.Swap.Deployment.Args) != 0 {
 				t.Errorf("args was not parsed: %+v", d)
 			}
-			if reflect.DeepEqual(d.Scripts["run"], tt.expected) {
-				t.Errorf("script was not parsed correctly")
+
+			if !reflect.DeepEqual(d.Environment, tt.expectedEnvironment) {
+				t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Environment, tt.expectedEnvironment)
+			}
+
+			if !reflect.DeepEqual(d.Scripts, tt.expectedScripts) {
+				t.Errorf("script was not parsed correctly:\n%+v\n%+v", d.Scripts, tt.expectedScripts)
 			}
 
 		})
