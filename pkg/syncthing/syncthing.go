@@ -15,12 +15,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"text/template"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
+
+	ps "github.com/mitchellh/go-ps"
 )
 
 var (
@@ -28,7 +29,7 @@ var (
 )
 
 const (
-	binaryNane       = "syncthing"
+	binaryName       = "syncthing"
 	certFile         = "cert.pem"
 	keyFile          = "key.pem"
 	configFile       = "config.xml"
@@ -62,7 +63,7 @@ type Syncthing struct {
 // NewSyncthing constructs a new Syncthing.
 func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthing, error) {
 
-	fullPath, err := exec.LookPath(binaryNane)
+	fullPath, err := exec.LookPath(binaryName)
 	if err != nil {
 		if strings.HasSuffix(err.Error(), exec.ErrNotFound.Error()) {
 			return nil, fmt.Errorf("cannot find syncthing in your PATH. Make sure syncthing is installed")
@@ -307,20 +308,21 @@ func Exists(home string) bool {
 		}
 	}
 
-	process, err := os.FindProcess(pid)
-	if err != nil {
+	process, err := ps.FindProcess(pid)
+	if process == nil && err == nil {
 		return false
 	}
 
-	if runtime.GOOS == "windows" {
+	if err != nil {
+		log.Infof("error when looking up the process: %s", err)
 		return true
 	}
 
-	if err := process.Signal(syscall.Signal(0)); err != nil {
-		if strings.Contains(err.Error(), "process already finished") {
-			return false
-		}
+	log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
+
+	if process.Executable() == binaryName {
+		return true
 	}
 
-	return true
+	return false
 }

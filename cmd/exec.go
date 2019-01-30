@@ -85,6 +85,7 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 				}
 
 				if storage.RemoveIfStale(&svc, name) {
+					log.Debugf("found stale entry for %s", name)
 					continue
 				}
 			}
