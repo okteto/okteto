@@ -58,7 +58,7 @@ func Test_mergeEnvironmentVariables(t *testing.T) {
 	tests := []struct {
 		name       string
 		deployment []v1.EnvVar
-		dev        map[string]string
+		dev        []model.EnvVar
 		expected   []v1.EnvVar
 	}{
 		{
@@ -66,7 +66,7 @@ func Test_mergeEnvironmentVariables(t *testing.T) {
 			nil,
 			nil,
 			[]v1.EnvVar{
-				v1.EnvVar{
+				{
 					Name:  "CND_KUBERNETES_NAMESPACE",
 					Value: "cnd-namespace",
 				},
@@ -75,9 +75,9 @@ func Test_mergeEnvironmentVariables(t *testing.T) {
 		{
 			"both-empty",
 			[]v1.EnvVar{},
-			map[string]string{},
+			[]model.EnvVar{},
 			[]v1.EnvVar{
-				v1.EnvVar{
+				{
 					Name:  "CND_KUBERNETES_NAMESPACE",
 					Value: "cnd-namespace",
 				},
@@ -86,37 +86,42 @@ func Test_mergeEnvironmentVariables(t *testing.T) {
 		{
 			"no-overlap",
 			[]v1.EnvVar{
-				v1.EnvVar{
+				{
 					Name:  "deployment",
 					Value: "value-from-deployment",
 				},
-				v1.EnvVar{
+				{
 					Name:  "another-deployment",
 					Value: "another-value-from-deployment",
 				},
 			},
-			map[string]string{
-				"dev":  "on",
-				"test": "true",
+			[]model.EnvVar{
+				{
+					Name:  "dev",
+					Value: "on"},
+				{
+					Name:  "test",
+					Value: "true",
+				},
 			},
 			[]v1.EnvVar{
-				v1.EnvVar{
+				{
 					Name:  "CND_KUBERNETES_NAMESPACE",
 					Value: "cnd-namespace",
 				},
-				v1.EnvVar{
+				{
 					Name:  "another-deployment",
 					Value: "another-value-from-deployment",
 				},
-				v1.EnvVar{
+				{
 					Name:  "deployment",
 					Value: "value-from-deployment",
 				},
-				v1.EnvVar{
+				{
 					Name:  "dev",
 					Value: "on",
 				},
-				v1.EnvVar{
+				{
 					Name:  "test",
 					Value: "true",
 				},
@@ -125,38 +130,47 @@ func Test_mergeEnvironmentVariables(t *testing.T) {
 		{
 			"overlap",
 			[]v1.EnvVar{
-				v1.EnvVar{
+				{
 					Name:  "deployment",
 					Value: "value-from-deployment",
 				},
-				v1.EnvVar{
+				{
 					Name:  "another-deployment",
 					Value: "another-value-from-deployment",
 				},
 			},
-			map[string]string{
-				"dev":                "on",
-				"test":               "true",
-				"another-deployment": "overriden-value-from-dev",
-			},
-			[]v1.EnvVar{
-				v1.EnvVar{
-					Name:  "CND_KUBERNETES_NAMESPACE",
-					Value: "cnd-namespace",
-				},
-				v1.EnvVar{
-					Name:  "another-deployment",
-					Value: "overriden-value-from-dev",
-				},
-				v1.EnvVar{
-					Name:  "deployment",
-					Value: "value-from-deployment",
-				},
-				v1.EnvVar{
+			[]model.EnvVar{
+				{
 					Name:  "dev",
 					Value: "on",
 				},
-				v1.EnvVar{
+				{
+					Name:  "test",
+					Value: "true",
+				},
+				{
+					Name:  "another-deployment",
+					Value: "overriden-value-from-dev",
+				},
+			},
+			[]v1.EnvVar{
+				{
+					Name:  "CND_KUBERNETES_NAMESPACE",
+					Value: "cnd-namespace",
+				},
+				{
+					Name:  "another-deployment",
+					Value: "overriden-value-from-dev",
+				},
+				{
+					Name:  "deployment",
+					Value: "value-from-deployment",
+				},
+				{
+					Name:  "dev",
+					Value: "on",
+				},
+				{
 					Name:  "test",
 					Value: "true",
 				},

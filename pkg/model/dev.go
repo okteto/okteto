@@ -39,7 +39,7 @@ type Dev struct {
 	Swap        Swap              `json:"swap" yaml:"swap"`
 	Mount       Mount             `json:"mount" yaml:"mount"`
 	Scripts     map[string]string `json:"scripts" yaml:"scripts"`
-	Environment map[string]string `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Environment []EnvVar          `json:"environment,omitempty" yaml:"environment,omitempty"`
 }
 
 //Swap represents the metadata for the container to be swapped
@@ -62,6 +62,45 @@ type Mount struct {
 	Target string `json:"target" yaml:"target"`
 }
 
+// EnvVar represents an environment value. When loaded, it will expand from the current env
+type EnvVar struct {
+	Name  string
+	Value string
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw string
+	err := unmarshal(&raw)
+	if err != nil {
+		return err
+	}
+
+	parts := strings.SplitN(raw, "=", 2)
+	e.Name = parts[0]
+	if len(parts) == 2 {
+		if strings.HasPrefix(parts[1], "$") {
+			e.Value = os.ExpandEnv(parts[1])
+			return nil
+		}
+
+		e.Value = parts[1]
+		return nil
+	}
+
+	val := os.ExpandEnv(parts[0])
+	if val != parts[0] {
+		e.Value = val
+	}
+
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (e *EnvVar) MarshalYAML() (interface{}, error) {
+	return e.Name + "=" + e.Value, nil
+}
+
 //NewDev returns a new instance of dev with default values
 func NewDev() *Dev {
 	return &Dev{
@@ -73,7 +112,7 @@ func NewDev() *Dev {
 			Target: "/app",
 		},
 		Scripts:     make(map[string]string),
-		Environment: make(map[string]string),
+		Environment: make([]EnvVar, 0),
 	}
 }
 

@@ -101,7 +101,7 @@ func updateCndContainer(c *apiv1.Container, dev *model.Dev, namespace string) {
 	c.Env = mergeEnvironmentVariables(c.Env, dev.Environment, namespace)
 }
 
-func mergeEnvironmentVariables(current []v1.EnvVar, dev map[string]string, namespace string) []v1.EnvVar {
+func mergeEnvironmentVariables(current []v1.EnvVar, dev []model.EnvVar, namespace string) []v1.EnvVar {
 	mergedEnv := map[string]string{}
 
 	for _, k := range current {
@@ -110,8 +110,8 @@ func mergeEnvironmentVariables(current []v1.EnvVar, dev map[string]string, names
 
 	mergedEnv[cndEnvNamespace] = namespace
 
-	for k, v := range dev {
-		mergedEnv[k] = v
+	for _, val := range dev {
+		mergedEnv[val.Name] = val.Value
 	}
 
 	finalMerge := make([]v1.EnvVar, len(mergedEnv))

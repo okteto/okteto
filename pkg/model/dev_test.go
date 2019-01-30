@@ -5,6 +5,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 func Test_fixPath(t *testing.T) {
@@ -90,7 +92,7 @@ func Test_loadDevDefaults(t *testing.T) {
 		name                string
 		manifest            []byte
 		expectedScripts     map[string]string
-		expectedEnvironment map[string]string
+		expectedEnvironment []EnvVar
 	}{
 		{
 			"long script",
@@ -106,7 +108,7 @@ func Test_loadDevDefaults(t *testing.T) {
               run: "uwsgi --gevent 100 --http-socket 0.0.0.0:8000 --mount /=app:app --python-autoreload 1"`),
 			map[string]string{
 				"run": "uwsgi --gevent 100 --http-socket 0.0.0.0:8000 --mount /=app:app --python-autoreload 1"},
-			map[string]string{},
+			[]EnvVar{},
 		},
 		{
 			"basic script",
@@ -121,7 +123,7 @@ func Test_loadDevDefaults(t *testing.T) {
             scripts:
               run: "start.sh"`),
 			map[string]string{"run": "start.sh"},
-			map[string]string{},
+			[]EnvVar{},
 		},
 		{
 			"env vars",
@@ -136,12 +138,12 @@ func Test_loadDevDefaults(t *testing.T) {
             scripts:
               run: "start.sh"
             environment:
-                ENV:  production
-                name: test-node`),
+                - ENV=production
+                - name=test-node`),
 			map[string]string{"run": "start.sh"},
-			map[string]string{
-				"ENV":  "production",
-				"name": "test-node",
+			[]EnvVar{
+				{Name: "ENV", Value: "production"},
+				{Name: "name", Value: "test-node"},
 			},
 		},
 	}
@@ -172,4 +174,60 @@ func Test_loadDevDefaults(t *testing.T) {
 		})
 	}
 
+}
+func TestEnvVarMashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected EnvVar
+	}{
+		{
+			"key-value",
+			[]byte(`env=production`),
+			EnvVar{Name: "env", Value: "production"},
+		},
+		{
+			"key-value-complex",
+			[]byte(`env='production=11231231asa#$˜GADAFA'`),
+			EnvVar{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
+		},
+		{
+			"key-value-os",
+			[]byte(`env=$DEV_ENV`),
+			EnvVar{Name: "env", Value: "test_environment"},
+		},
+		{
+			"no-value-no-os",
+			[]byte(`noenv`),
+			EnvVar{Name: "noenv", Value: ""},
+		},
+		{
+			"no-value-no-os-equal",
+			[]byte(`noenv=`),
+			EnvVar{Name: "noenv", Value: ""},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			var result EnvVar
+			if err := os.Setenv("DEV_ENV", "test_environment"); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := yaml.Unmarshal(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+
+			_, err := yaml.Marshal(&result)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 }
