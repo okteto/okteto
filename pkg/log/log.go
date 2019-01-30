@@ -42,8 +42,8 @@ func Init(level logrus.Level) {
 func getRollingLog(path string) io.Writer {
 	return &lumberjack.Logger{
 		Filename:   path,
-		MaxSize:    10, // megabytes
-		MaxBackups: 3,
+		MaxSize:    1, // megabytes
+		MaxBackups: 10,
 		MaxAge:     28, //days
 		Compress:   true,
 	}
@@ -58,32 +58,38 @@ func SetLevel(level string) {
 	}
 }
 
+// Debug writes a debug-level log
 func Debug(args ...interface{}) {
 	log.out.Debug(args...)
 	log.file.Debug(args...)
 }
 
+// Debugf writes a debug-level log with a format
 func Debugf(format string, args ...interface{}) {
 	log.out.Debugf(format, args...)
 	log.file.Debugf(format, args...)
 }
 
+// Info writes a info-level log
 func Info(args ...interface{}) {
 	log.out.Info(args...)
 	log.file.Info(args...)
 }
 
+// Infof writes a info-level log with a format
 func Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	log.file.Infof(format, args...)
 
 }
 
+// Error writes a error-level log
 func Error(args ...interface{}) {
 	log.out.Error(args...)
 	log.file.Error(args...)
 }
 
+// Errorf writes a error-level log with a format
 func Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
 	log.file.Errorf(format, args...)
