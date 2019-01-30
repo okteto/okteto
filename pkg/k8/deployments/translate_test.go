@@ -5,6 +5,7 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 func Test_updateCNDContainer(t *testing.T) {
@@ -51,4 +52,145 @@ func Test_updateCNDContainer(t *testing.T) {
 		t.Errorf("CND dev context wasn't set: %+v", c)
 	}
 
+}
+
+func Test_mergeEnvironmentVariables(t *testing.T) {
+	tests := []struct {
+		name       string
+		deployment []v1.EnvVar
+		dev        []model.EnvVar
+		expected   []v1.EnvVar
+	}{
+		{
+			"both-nil",
+			nil,
+			nil,
+			[]v1.EnvVar{
+				{
+					Name:  "CND_KUBERNETES_NAMESPACE",
+					Value: "cnd-namespace",
+				},
+			},
+		},
+		{
+			"both-empty",
+			[]v1.EnvVar{},
+			[]model.EnvVar{},
+			[]v1.EnvVar{
+				{
+					Name:  "CND_KUBERNETES_NAMESPACE",
+					Value: "cnd-namespace",
+				},
+			},
+		},
+		{
+			"no-overlap",
+			[]v1.EnvVar{
+				{
+					Name:  "deployment",
+					Value: "value-from-deployment",
+				},
+				{
+					Name:  "another-deployment",
+					Value: "another-value-from-deployment",
+				},
+			},
+			[]model.EnvVar{
+				{
+					Name:  "dev",
+					Value: "on"},
+				{
+					Name:  "test",
+					Value: "true",
+				},
+			},
+			[]v1.EnvVar{
+				{
+					Name:  "CND_KUBERNETES_NAMESPACE",
+					Value: "cnd-namespace",
+				},
+				{
+					Name:  "another-deployment",
+					Value: "another-value-from-deployment",
+				},
+				{
+					Name:  "deployment",
+					Value: "value-from-deployment",
+				},
+				{
+					Name:  "dev",
+					Value: "on",
+				},
+				{
+					Name:  "test",
+					Value: "true",
+				},
+			},
+		},
+		{
+			"overlap",
+			[]v1.EnvVar{
+				{
+					Name:  "deployment",
+					Value: "value-from-deployment",
+				},
+				{
+					Name:  "another-deployment",
+					Value: "another-value-from-deployment",
+				},
+			},
+			[]model.EnvVar{
+				{
+					Name:  "dev",
+					Value: "on",
+				},
+				{
+					Name:  "test",
+					Value: "true",
+				},
+				{
+					Name:  "another-deployment",
+					Value: "overriden-value-from-dev",
+				},
+			},
+			[]v1.EnvVar{
+				{
+					Name:  "CND_KUBERNETES_NAMESPACE",
+					Value: "cnd-namespace",
+				},
+				{
+					Name:  "another-deployment",
+					Value: "overriden-value-from-dev",
+				},
+				{
+					Name:  "deployment",
+					Value: "value-from-deployment",
+				},
+				{
+					Name:  "dev",
+					Value: "on",
+				},
+				{
+					Name:  "test",
+					Value: "true",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := mergeEnvironmentVariables(tt.deployment, tt.dev, "cnd-namespace")
+			for i := range result {
+				if result[i].Name != tt.expected[i].Name {
+					t.Fatalf("failed to merge name. '%s' != '%s'.\nActual\n%+v\nExpected\n%+v", result[i].Name, tt.expected[i].Name, result, tt.expected)
+				}
+
+				if result[i].Value != tt.expected[i].Value {
+					t.Fatalf("failed to merge value. '%s' != '%s'.\nActual\n%+v\nExpected\n%+v", result[i].Value, tt.expected[i].Value, result, tt.expected)
+				}
+			}
+
+		})
+	}
 }

@@ -11,6 +11,8 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/secrets"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
+
+	// github.com/logrusorgru/aurora requires the usage of dot imports
 	. "github.com/logrusorgru/aurora"
 
 	"k8s.io/apimachinery/pkg/fields"
