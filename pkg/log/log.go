@@ -17,12 +17,12 @@ type logger struct {
 	file *logrus.Logger
 }
 
-var log = &logger{}
+var log = &logger{
+	out: logrus.New(),
+}
 
 // Init configures the logger for the package to use.
 func Init(level logrus.Level) {
-	log = &logger{}
-	log.out = logrus.New()
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
 
@@ -61,36 +61,49 @@ func SetLevel(level string) {
 // Debug writes a debug-level log
 func Debug(args ...interface{}) {
 	log.out.Debug(args...)
-	log.file.Debug(args...)
+	if log.file != nil {
+		log.file.Debug(args...)
+	}
+
 }
 
 // Debugf writes a debug-level log with a format
 func Debugf(format string, args ...interface{}) {
 	log.out.Debugf(format, args...)
-	log.file.Debugf(format, args...)
+	if log.file != nil {
+		log.file.Debugf(format, args...)
+	}
 }
 
 // Info writes a info-level log
 func Info(args ...interface{}) {
 	log.out.Info(args...)
-	log.file.Info(args...)
+	if log.file != nil {
+		log.file.Info(args...)
+	}
 }
 
 // Infof writes a info-level log with a format
 func Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	log.file.Infof(format, args...)
+	if log.file != nil {
+		log.file.Infof(format, args...)
+	}
 
 }
 
 // Error writes a error-level log
 func Error(args ...interface{}) {
 	log.out.Error(args...)
-	log.file.Error(args...)
+	if log.file != nil {
+		log.file.Error(args...)
+	}
 }
 
 // Errorf writes a error-level log with a format
 func Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
-	log.file.Errorf(format, args...)
+	if log.file != nil {
+		log.file.Errorf(format, args...)
+	}
 }
