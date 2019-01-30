@@ -15,9 +15,13 @@ arch = $(word 2, $(temp))
 build-all: $(PLATFORMS)
 
 $(PLATFORMS):
-	GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/cloudnativedevelopment/cnd/pkg/config.VersionString=${VERSION_STRING}" -o "bin/cnd-$(os)-$(arch)" 
+	GO111MODULE=on GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/cloudnativedevelopment/cnd/pkg/config.VersionString=${VERSION_STRING}" -o "bin/cnd-$(os)-$(arch)" 
 	sha256sum "bin/cnd-$(os)-$(arch)" > "bin/cnd-$(os)-$(arch).sha256"  
 
 .PHONY: build
 build:
-	 go build -ldflags "-X github.com/cloudnativedevelopment/cnd/pkg/config.VersionString=${VERSION_STRING}" -o ${BINDIR}/cnd
+	 GO111MODULE=on go build -ldflags "-X github.com/cloudnativedevelopment/cnd/pkg/config.VersionString=${VERSION_STRING}" -o ${BINDIR}/cnd
+
+.PHONY: dep
+dep:
+	GO111MODULE=on go mod tidy
