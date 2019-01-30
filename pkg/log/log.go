@@ -8,7 +8,7 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 

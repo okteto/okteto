@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/cloudnativedevelopment/cnd/cmd"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
