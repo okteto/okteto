@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"text/template"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
@@ -114,22 +115,9 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 		return nil
 	}
 
-	if _, err := os.Stat(pidPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-
-		return err
-	}
-
-	content, err := ioutil.ReadFile(pidPath) // nolint: gosec
-	if err != nil {
-		return err
-	}
-
-	pid, pidErr := strconv.Atoi(string(content))
-	if pidErr != nil {
-		return pidErr
+	pid, err := getPID(pidPath)
+	if os.IsNotExist(err) {
+		return nil
 	}
 
 	proc := os.Process{Pid: pid}
@@ -294,4 +282,45 @@ func isEmpty(path string) (bool, error) {
 		return true, nil
 	}
 	return false, err // Either not empty or error, suits both cases
+}
+
+func getPID(pidPath string) (int, error) {
+	if _, err := os.Stat(pidPath); err != nil {
+		return 0, err
+	}
+
+	content, err := ioutil.ReadFile(pidPath) // nolint: gosec
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.Atoi(string(content))
+}
+
+// Exists returns true if the syncthing process exists
+func Exists(home string) bool {
+	pidPath := filepath.Join(home, syncthingPidFile)
+	pid, err := getPID(pidPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+
+	process, err := os.FindProcess(int(pid))
+	if err != nil {
+		return false
+	}
+
+	if runtime.GOOS == "windows" {
+		return true
+	}
+
+	if err := process.Signal(syscall.Signal(0)); err != nil {
+		if strings.Contains(err.Error(), "process already finished") {
+			return false
+		}
+	}
+
+	return true
 }

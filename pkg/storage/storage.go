@@ -7,11 +7,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -59,7 +61,7 @@ func load() (*Storage, error) {
 	return &s, nil
 }
 
-//Insert inserts a new service entry
+//Insert inserts a new service entry, and cleans it up when the context is cancelled
 func Insert(
 	ctx context.Context, wg *sync.WaitGroup,
 	namespace string, dev *model.Dev, host string) error {
@@ -148,12 +150,16 @@ func Stop(namespace string, dev *model.Dev) error {
 
 //Delete deletes a service entry
 func Delete(namespace string, dev *model.Dev) error {
+	fullName := getFullName(namespace, dev)
+	return deleteEntry(fullName)
+}
+
+func deleteEntry(fullName string) error {
 	s, err := load()
 	if err != nil {
 		return err
 	}
 
-	fullName := getFullName(namespace, dev)
 	delete(s.Services, fullName)
 	return s.save()
 }
@@ -202,4 +208,37 @@ func newService(folder, host string) (Service, error) {
 
 func getFullName(namespace string, dev *model.Dev) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, dev.Swap.Deployment.Name, dev.Swap.Deployment.Container)
+}
+
+func getServiceFolder(fullName string) (string, error) {
+	parts := strings.Split(fullName, "/")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("invalid state file, please remove %s from %s manualy and try again", fullName, getSTPath())
+	}
+
+	return path.Join(config.GetCNDHome(), parts[0], parts[1]), nil
+}
+
+// RemoveIfStale removes the entry from the state file if it's stale
+// It will return true if the service entry was stale and it was successfully removed.
+func RemoveIfStale(svc *Service, fullName string) bool {
+	serviceFolder, err := getServiceFolder(fullName)
+	if err != nil {
+		log.Infof("state is malformed, manual action might be required: %s", err)
+		return false
+	}
+
+	if _, err := os.Stat(serviceFolder); os.IsNotExist(err) {
+		log.Debugf("%s doesn't exist, removing %s from state", serviceFolder, fullName)
+		deleteEntry(fullName)
+		return true
+	}
+
+	if !syncthing.Exists(serviceFolder) {
+		log.Debugf("%s/syncthing.pid is not running anymore, removing %s from state", serviceFolder, fullName)
+		deleteEntry(fullName)
+		return true
+	}
+
+	return false
 }

@@ -129,6 +129,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	err = storage.Insert(ctx, wg, namespace, dev, sy.GUIAddress)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
+			log.Infof("failed to insert new state value for %s", fullname)
 			return nil, fmt.Errorf("there is already an entry for %s. Are you running '%s up' somewhere else?", config.GetBinaryName(), fullname)
 		}
 		return nil, err
