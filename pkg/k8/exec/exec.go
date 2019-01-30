@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -11,8 +12,6 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/util/exec"
 	"k8s.io/kubernetes/pkg/kubectl/util/term"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Exec executes the command in the cnd container

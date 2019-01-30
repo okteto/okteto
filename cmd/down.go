@@ -3,12 +3,13 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	"github.com/cloudnativedevelopment/cnd/pkg/storage"
 	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/spf13/cobra"
 )
 

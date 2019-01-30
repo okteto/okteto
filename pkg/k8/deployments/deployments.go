@@ -7,11 +7,12 @@ import (
 
 	"encoding/json"
 
-	. "github.com/logrusorgru/aurora"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/cp"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/secrets"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
-	log "github.com/sirupsen/logrus"
+	. "github.com/logrusorgru/aurora"
+
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/watch"
 

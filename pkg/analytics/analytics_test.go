@@ -2,7 +2,6 @@ package analytics
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"testing"
@@ -17,7 +16,7 @@ func Test_isEnabled(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	defer os.RemoveAll(tmpdir)

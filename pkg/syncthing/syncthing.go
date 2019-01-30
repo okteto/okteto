@@ -18,8 +18,8 @@ import (
 	"text/template"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
-	log "github.com/sirupsen/logrus"
 )
 
 var (

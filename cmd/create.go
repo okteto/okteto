@@ -8,9 +8,9 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/cloudnativedevelopment/cnd/pkg/linguist"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 

@@ -3,8 +3,8 @@ package linguist
 import (
 	"strings"
 
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
-	log "github.com/sirupsen/logrus"
 )
 
 type languageDefault struct {
