@@ -6,10 +6,9 @@ jobs:
         environment:
           DEBUG: true
 
-    working_directory: /go/src/github.com/cloudnativedevelopment/cnd
-
     environment:
         BINARY_NAME: "cnd"
+        GO111MODULE: "on"
 
     steps:
       - checkout
