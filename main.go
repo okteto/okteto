@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/cloudnativedevelopment/cnd/cmd"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
@@ -8,5 +10,5 @@ import (
 
 func main() {
 	log.Init(logrus.WarnLevel)
-	cmd.Execute()
+	os.Exit(cmd.Execute())
 }

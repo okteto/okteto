@@ -1,10 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path"
-
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
 )
 
 // These values will be stamped at build time
@@ -99,7 +98,7 @@ func GetCNDHome() string {
 	home := path.Join(cndHome, cndFolder)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
-		log.Errorf("failed to create the home directory: %s", err)
+		fmt.Printf("failed to create the home directory: %s\n", err)
 	}
 
 	return home

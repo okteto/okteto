@@ -72,6 +72,7 @@ func Execute() int {
 
 	exitCode := 0
 	if err := root.Execute(); err != nil {
+		log.Infof("Command failed: %s", err)
 		exitCode = 1
 	}
 
