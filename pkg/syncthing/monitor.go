@@ -16,13 +16,13 @@ func (s *Syncthing) isConnectedToRemote() bool {
 	body, err := s.GetFromAPI("rest/system/connections")
 	if err != nil {
 		log.Infof("error when getting connections from the api: %s", err)
-		return true
+		return false
 	}
 
 	var conns syncthingConnections
 	if err := json.Unmarshal(body, &conns); err != nil {
 		log.Infof("error when unmarshalling response: %s", err)
-		return true
+		return false
 	}
 
 	if val, ok := conns.Connections[s.RemoteDeviceID]; ok {
@@ -30,7 +30,7 @@ func (s *Syncthing) isConnectedToRemote() bool {
 	}
 
 	log.Infof("RemoteDeviceID %s missing from the response", s.RemoteDeviceID)
-	return true
+	return false
 }
 
 //Monitor verifies that syncthing is not in a disconnected state. If so, it sends a message to the
@@ -41,14 +41,13 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnected chan struct{}) {
 		select {
 		case <-ticker.C:
 			if !s.isConnectedToRemote() {
+				log.Debugf("not connected to syncthing, try %d/%d", consecutiveErrors, maxConsecutiveErrors)
 				consecutiveErrors++
 				if consecutiveErrors > maxConsecutiveErrors {
 					log.Infof("not connected to syncthing, sending disconnect notification")
 					disconnected <- struct{}{}
 					return
 				}
-
-				log.Debugf("not connected to syncthing, try %d/%d", consecutiveErrors, maxConsecutiveErrors)
 			} else {
 				consecutiveErrors = 1
 			}
