@@ -1,14 +1,11 @@
 package syncthing
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path"
 	"time"
-
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
 )
 
 type addAPIKeyTransport struct {
@@ -34,26 +31,6 @@ func NewAPIClient() *http.Client {
 		Timeout:   15 * time.Second,
 		Transport: &addAPIKeyTransport{http.DefaultTransport},
 	}
-}
-
-func (s *Syncthing) isConnectedToRemote() bool {
-	body, err := s.GetFromAPI("rest/system/connections")
-	if err != nil {
-		log.Debugf("error when getting connections from the api: %s", err)
-		return true
-	}
-
-	var conns syncthingConnections
-	if err := json.Unmarshal(body, &conns); err != nil {
-		return true
-	}
-
-	if val, ok := conns.Connections[s.RemoteDeviceID]; ok {
-		return val.Connected
-	}
-
-	log.Infof("RemoteDeviceID %s missing from the response", s.RemoteDeviceID)
-	return true
 }
 
 // GetFromAPI calls the syncthing API and returns the parsed json or an error
