@@ -2,6 +2,7 @@ package deployments
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
@@ -97,17 +98,39 @@ func updateCndContainer(c *apiv1.Container, dev *model.Dev, namespace string) {
 	)
 
 	c.Resources = apiv1.ResourceRequirements{}
+	c.Env = mergeEnvironmentVariables(c.Env, dev.Environment, namespace)
+}
 
-	if c.Env == nil {
-		c.Env = []v1.EnvVar{}
+func mergeEnvironmentVariables(current []v1.EnvVar, dev map[string]string, namespace string) []v1.EnvVar {
+	mergedEnv := map[string]string{}
+
+	for _, k := range current {
+		mergedEnv[k.Name] = k.Value
 	}
 
-	namespaceEnvVar := v1.EnvVar{
-		Name:  cndEnvNamespace,
-		Value: namespace,
+	mergedEnv[cndEnvNamespace] = namespace
+
+	for k, v := range dev {
+		mergedEnv[k] = v
 	}
 
-	c.Env = append(c.Env, namespaceEnvVar)
+	finalMerge := make([]v1.EnvVar, len(mergedEnv))
+	counter := 0
+	for k, v := range mergedEnv {
+		finalMerge[counter] = v1.EnvVar{
+			Name:  k,
+			Value: v,
+		}
+
+		counter++
+	}
+
+	sort.Slice(finalMerge, func(i, j int) bool {
+		return finalMerge[i].Name < finalMerge[j].Name
+	})
+
+	return finalMerge
+
 }
 
 func createInitSyncthingContainer(d *appsv1.Deployment, dev *model.Dev) {

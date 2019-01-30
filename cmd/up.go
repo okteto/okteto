@@ -9,6 +9,7 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
@@ -55,6 +56,7 @@ func Up() *cobra.Command {
 
 			stopChannel := make(chan os.Signal, 1)
 			signal.Notify(stopChannel, os.Interrupt)
+			log.Debugf("%s ready, waiting for stop signal to shut down", fullname)
 			<-stopChannel
 			fmt.Println()
 			return nil
