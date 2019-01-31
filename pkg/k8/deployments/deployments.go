@@ -156,7 +156,7 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 
 			event, ok := e.Object.(*apiv1.Event)
 			if !ok {
-				log.Errorf("couldn't convert e.Object to apiv1.Event: %+v", e)
+				log.Infof("couldn't convert e.Object to apiv1.Event: %+v", e)
 				time.Sleep(1 * time.Second)
 				continue
 			}
@@ -247,7 +247,7 @@ func waitForInitToBeReady(ctx context.Context, c *kubernetes.Clientset, config *
 						if copied {
 							time.Sleep(1 * time.Second)
 						} else {
-							if err := cp.Copy(c, config, namespace, pod, dev); err != nil {
+							if err := cp.Copy(ctx, c, config, namespace, pod, dev); err != nil {
 								return err
 							}
 							copied = true
