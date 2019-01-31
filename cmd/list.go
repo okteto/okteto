@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/storage"
 	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -119,7 +119,7 @@ func getStatus(sy *syncthing.Syncthing, s storage.Service) (float64, error) {
 		}
 	}
 
-	return 100, nil
+	return 0, nil
 }
 
 func getErrors(sy *syncthing.Syncthing, s storage.Service) ([]string, error) {
