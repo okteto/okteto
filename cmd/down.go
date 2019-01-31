@@ -19,6 +19,7 @@ func Down() *cobra.Command {
 		Use:   "down",
 		Short: "Deactivate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log.Debug("starting down command")
 			return executeDown()
 		},
 	}

@@ -190,6 +190,11 @@ func reconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Dep
 }
 
 func shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
+	log.Debugf("cancelling context")
 	cancel()
+
+	log.Debugf("waiting for tasks for be done")
 	wg.Wait()
+
+	log.Debugf("completed shutdown sequence")
 }
