@@ -137,11 +137,6 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 
 	fullname := deployments.GetFullName(namespace, d.Name)
 
-	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	if err := sy.Run(ctx, wg); err != nil {
 		return nil, nil, err
 	}
@@ -152,6 +147,11 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 			log.Infof("failed to insert new state value for %s", fullname)
 			return nil, nil, fmt.Errorf("there is already an entry for %s. Are you running '%s up' somewhere else?", config.GetBinaryName(), fullname)
 		}
+		return nil, nil, err
+	}
+
+	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
+	if err != nil {
 		return nil, nil, err
 	}
 

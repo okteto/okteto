@@ -85,12 +85,18 @@ func (p *CNDPortForward) Start(
 	p.wg = wg
 	p.wg.Add(1)
 
-	go func() {
-		<-ctx.Done()
-		log.Debugf("starting portforward cancellation sequence")
-		p.Stop()
-		return
-	}()
+	go func(t context.Context, c *CNDPortForward) {
+		for {
+			select {
+			case <-t.Done():
+				log.Debugf("starting portforward cancellation sequence")
+				p.Stop()
+				return
+			case <-c.StopChan:
+				return
+			}
+		}
+	}(ctx, p)
 
 	p.IsReady = false
 	go func(f *portforward.PortForwarder) {
