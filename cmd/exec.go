@@ -68,7 +68,7 @@ func executeExec(args []string) error {
 	}
 
 	log.Debugf("running command `%s` on %s", strings.Join(args, " "), pod.Name)
-	return exec.Exec(client, cfg, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
+	return exec.Exec(ctx, client, cfg, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
 }
 
 func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {

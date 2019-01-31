@@ -1,70 +1,67 @@
 package exec
 
 import (
+	"context"
+	"fmt"
 	"io"
-	"net/http"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/client-go/util/exec"
-	"k8s.io/kubernetes/pkg/kubectl/util/term"
+	kexec "k8s.io/kubernetes/pkg/kubectl/cmd/exec"
 )
 
 // Exec executes the command in the cnd container
-func Exec(c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string, tty bool, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
+func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string, tty bool, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
 
-	t := term.TTY{
-		In:  stdin,
-		Out: stdout,
-		Raw: true,
+	if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
+		return fmt.Errorf("cannot exec into a cloud native development environment that's not active; current status is %s", pod.Status.Phase)
 	}
 
-	sizeQueue := t.MonitorSize(t.GetSize())
+	p := &kexec.ExecOptions{}
+	p.Config = config
+	p.Command = command
+	p.Executor = &kexec.DefaultRemoteExecutor{}
+	p.IOStreams = genericclioptions.IOStreams{In: stdin, Out: stdout, ErrOut: stderr}
+	p.Stdin = true
+	p.TTY = tty
 
-	req := c.CoreV1().RESTClient().Post().
-		Namespace(pod.Namespace).
-		Resource("pods").
-		Name(pod.Name).
-		SubResource("exec").
-		VersionedParams(&apiv1.PodExecOptions{
-			Container: container,
-			Command:   command,
-			Stdin:     true,
-			Stdout:    true,
-			Stderr:    true,
-			TTY:       tty,
-		}, scheme.ParameterCodec)
+	t := p.SetupTTY()
+
+	var sizeQueue remotecommand.TerminalSizeQueue
+	if t.Raw {
+		// this call spawns a goroutine to monitor/update the terminal size
+		sizeQueue = t.MonitorSize(t.GetSize())
+
+		// unset p.Err if it was previously set because both stdout and stderr go over p.Out when tty is
+		// true
+		p.ErrOut = nil
+	}
 
 	fn := func() error {
-		exec, err := remotecommand.NewSPDYExecutor(config, http.MethodPost, req.URL())
-		if err != nil {
-			log.Errorf("failed to establish the remote executor: %s", err.Error())
-			return err
-		}
+		req := c.CoreV1().RESTClient().Post().
+			Resource("pods").
+			Name(pod.Name).
+			Namespace(pod.Namespace).
+			SubResource("exec").
+			Param("container", container)
+		req.VersionedParams(&apiv1.PodExecOptions{
+			Container: container,
+			Command:   p.Command,
+			Stdin:     p.Stdin,
+			Stdout:    p.Out != nil,
+			Stderr:    p.ErrOut != nil,
+			TTY:       t.Raw,
+		}, scheme.ParameterCodec)
 
-		return exec.Stream(remotecommand.StreamOptions{
-			Stdin:             stdin,
-			Stdout:            stdout,
-			Stderr:            stderr,
-			Tty:               t.Raw,
-			TerminalSizeQueue: sizeQueue,
-		})
+		req.Context(ctx)
+		return p.Executor.Execute("POST", req.URL(), config, p.In, p.Out, p.ErrOut, t.Raw, sizeQueue)
 	}
 
 	if err := t.Safe(fn); err != nil {
-		if v, ok := err.(exec.CodeExitError); ok {
-			// 130 is the exit code for ctrl+c or exit commands
-			if v.Code == 130 {
-				log.Infof("ignoring error 130")
-				return nil
-			}
-		}
-
-		log.Infof("failed to start the command stream: %s", err.Error())
 		return err
 	}
 

@@ -2,6 +2,7 @@ package cp
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,7 +22,7 @@ var tarCommand = []string{"tar", "-xzf", "-", "--strip-components=1", "-C", "/sr
 var touchCommand = []string{"touch", "/initialized"}
 
 // Copy copies a local folder to the remote volume
-func Copy(c *kubernetes.Clientset, config *rest.Config, namespace string, pod *apiv1.Pod, dev *model.Dev) error {
+func Copy(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, namespace string, pod *apiv1.Pod, dev *model.Dev) error {
 	dir := os.TempDir()
 	tarfile := filepath.Join(dir, fmt.Sprintf("tarball-%s.tgz", uuid.NewV4().String()))
 	if err := archiver.Archive([]string{dev.Mount.Source}, tarfile); err != nil {
@@ -36,12 +37,12 @@ func Copy(c *kubernetes.Clientset, config *rest.Config, namespace string, pod *a
 	}
 	reader := bufio.NewReader(file)
 	log.Info("Sending tarball...")
-	if err := exec.Exec(c, config, pod, dev.GetCNDInitSyncContainer(), false, reader, os.Stdout, os.Stderr, tarCommand); err != nil {
+	if err := exec.Exec(ctx, c, config, pod, dev.GetCNDInitSyncContainer(), false, reader, os.Stdout, os.Stderr, tarCommand); err != nil {
 		log.Errorf("failed to sent tarball: %s", err.Error())
 		return fmt.Errorf("Failed to send tarball")
 	}
 	log.Info("Tarball sent")
-	if err := exec.Exec(c, config, pod, dev.GetCNDInitSyncContainer(), false, os.Stdin, os.Stdout, os.Stderr, touchCommand); err != nil {
+	if err := exec.Exec(ctx, c, config, pod, dev.GetCNDInitSyncContainer(), false, os.Stdin, os.Stdout, os.Stderr, touchCommand); err != nil {
 		log.Errorf("failed to sent initialized flag: %s", err.Error())
 		return fmt.Errorf("Failed to send initialized flag")
 	}
