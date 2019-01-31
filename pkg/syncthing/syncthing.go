@@ -20,6 +20,8 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
+
+	ps "github.com/mitchellh/go-ps"
 )
 
 var (
@@ -27,7 +29,7 @@ var (
 )
 
 const (
-	binaryNane       = "syncthing"
+	binaryName       = "syncthing"
 	certFile         = "cert.pem"
 	keyFile          = "key.pem"
 	configFile       = "config.xml"
@@ -61,7 +63,7 @@ type Syncthing struct {
 // NewSyncthing constructs a new Syncthing.
 func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthing, error) {
 
-	fullPath, err := exec.LookPath(binaryNane)
+	fullPath, err := exec.LookPath(binaryName)
 	if err != nil {
 		if strings.HasSuffix(err.Error(), exec.ErrNotFound.Error()) {
 			return nil, fmt.Errorf("cannot find syncthing in your PATH. Make sure syncthing is installed")
@@ -114,22 +116,9 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 		return nil
 	}
 
-	if _, err := os.Stat(pidPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-
-		return err
-	}
-
-	content, err := ioutil.ReadFile(pidPath) // nolint: gosec
-	if err != nil {
-		return err
-	}
-
-	pid, pidErr := strconv.Atoi(string(content))
-	if pidErr != nil {
-		return pidErr
+	pid, err := getPID(pidPath)
+	if os.IsNotExist(err) {
+		return nil
 	}
 
 	proc := os.Process{Pid: pid}
@@ -294,4 +283,46 @@ func isEmpty(path string) (bool, error) {
 		return true, nil
 	}
 	return false, err // Either not empty or error, suits both cases
+}
+
+func getPID(pidPath string) (int, error) {
+	if _, err := os.Stat(pidPath); err != nil {
+		return 0, err
+	}
+
+	content, err := ioutil.ReadFile(pidPath) // nolint: gosec
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.Atoi(string(content))
+}
+
+// Exists returns true if the syncthing process exists
+func Exists(home string) bool {
+	pidPath := filepath.Join(home, syncthingPidFile)
+	pid, err := getPID(pidPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+
+	process, err := ps.FindProcess(pid)
+	if process == nil && err == nil {
+		return false
+	}
+
+	if err != nil {
+		log.Infof("error when looking up the process: %s", err)
+		return true
+	}
+
+	log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
+
+	if process.Executable() == binaryName {
+		return true
+	}
+
+	return false
 }

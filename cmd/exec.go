@@ -79,8 +79,15 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 
 	for name, svc := range services {
 		if strings.HasPrefix(folder, svc.Folder) {
-			if mustBeRunning && svc.Syncthing == "" {
-				continue
+			if mustBeRunning {
+				if svc.Syncthing == "" {
+					continue
+				}
+
+				if storage.RemoveIfStale(&svc, name) {
+					log.Debugf("found stale entry for %s", name)
+					continue
+				}
 			}
 
 			candidates = append(candidates, svc)

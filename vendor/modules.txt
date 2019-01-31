@@ -56,6 +56,8 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/logrusorgru/aurora
 # github.com/mholt/archiver v3.1.1+incompatible
 github.com/mholt/archiver
+# github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
+github.com/mitchellh/go-ps
 # github.com/mitchellh/go-wordwrap v1.0.0
 github.com/mitchellh/go-wordwrap
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
@@ -127,6 +129,8 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
+# gopkg.in/natefinch/lumberjack.v2 v2.0.0
+gopkg.in/natefinch/lumberjack.v2
 # gopkg.in/src-d/enry.v1 v1.6.7
 gopkg.in/src-d/enry.v1
 gopkg.in/src-d/enry.v1/data
