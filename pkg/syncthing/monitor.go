@@ -45,7 +45,10 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnected chan struct{}) {
 				consecutiveErrors++
 				if consecutiveErrors > maxConsecutiveErrors {
 					log.Infof("not connected to syncthing, sending disconnect notification")
-					disconnected <- struct{}{}
+					if disconnected != nil {
+						disconnected <- struct{}{}
+					}
+
 					return
 				}
 			} else {
