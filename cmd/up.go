@@ -65,7 +65,7 @@ func Up() *cobra.Command {
 					fmt.Println()
 					return nil
 				case <-disconnectChannel:
-					return fmt.Errorf("syncthing is not available, disconnecting")
+					return fmt.Errorf("Cluster connection lost. Run '%s up' to connect again", config.GetBinaryName())
 				}
 			}
 		},
