@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"syscall"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
@@ -60,9 +59,6 @@ func Up() *cobra.Command {
 			stopChannel := make(chan os.Signal, 1)
 			signal.Notify(stopChannel, os.Interrupt)
 
-			debugChannel := make(chan os.Signal, 1)
-			signal.Notify(debugChannel, syscall.SIGUSR2)
-
 			log.Debugf("%s ready, waiting for stop signal to shut down", fullname)
 			for {
 				select {
@@ -70,9 +66,6 @@ func Up() *cobra.Command {
 					log.Debugf("CTRL+C received, starting shutdown sequence")
 					fmt.Println()
 					return nil
-				case <-debugChannel:
-					log.Debugf("SIGUSR2 received, reconnecting port forward")
-					disconnectChannel <- struct{}{}
 				case <-disconnectChannel:
 					log.Debug("Cluster connection lost, reconnecting...")
 					reconnectPortForward(ctx, &wg, d, pf)
