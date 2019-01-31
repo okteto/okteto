@@ -9,6 +9,7 @@ import (
 )
 
 var consecutiveErrors = 1
+var backoffPolicy = []time.Duration{5 * time.Second, 10 * time.Second, 10 * time.Second}
 
 const maxConsecutiveErrors = 3
 
@@ -26,6 +27,10 @@ func (s *Syncthing) isConnectedToRemote() bool {
 	}
 
 	if val, ok := conns.Connections[s.RemoteDeviceID]; ok {
+		if !val.Connected {
+			log.Debugf("remote device looks disconnected: %+v", conns)
+		}
+
 		return val.Connected
 	}
 
@@ -34,9 +39,9 @@ func (s *Syncthing) isConnectedToRemote() bool {
 }
 
 //Monitor verifies that syncthing is not in a disconnected state. If so, it sends a message to the
-// disconnected channel and exits
+// disconnected channel if available.
 func (s *Syncthing) Monitor(ctx context.Context, disconnected chan struct{}) {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(backoffPolicy[consecutiveErrors])
 	for {
 		select {
 		case <-ticker.C:
@@ -47,16 +52,21 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnected chan struct{}) {
 					log.Infof("not connected to syncthing, sending disconnect notification")
 					if disconnected != nil {
 						disconnected <- struct{}{}
+						consecutiveErrors = 1
 					}
-
-					return
 				}
 			} else {
+				if consecutiveErrors > 1 {
+					log.Infof("successfully connected to syncthing")
+				}
+
 				consecutiveErrors = 1
 			}
 
 		case <-ctx.Done():
 			return
 		}
+
+		ticker = time.NewTicker(backoffPolicy[consecutiveErrors])
 	}
 }

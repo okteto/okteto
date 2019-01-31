@@ -41,7 +41,6 @@ func Up() *cobra.Command {
 			fmt.Println("Activating your cloud native development environment...")
 
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 			var wg sync.WaitGroup
 			defer shutdown(cancel, &wg)
 
@@ -68,6 +67,7 @@ func Up() *cobra.Command {
 			for {
 				select {
 				case <-stopChannel:
+					log.Debugf("CTRL+C received, starting shutdown sequence")
 					fmt.Println()
 					return nil
 				case <-debugChannel:
