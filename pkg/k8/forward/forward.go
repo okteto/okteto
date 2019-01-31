@@ -87,7 +87,7 @@ func (p *CNDPortForward) Start(
 
 	go func() {
 		<-ctx.Done()
-		log.Debugf("initiating portforward cancellation sequence")
+		log.Debugf("starting portforward cancellation sequence")
 		p.Stop()
 		return
 	}()
@@ -115,5 +115,5 @@ func (p *CNDPortForward) Stop() {
 		close(p.StopChan)
 		<-p.StopChan
 	}
-	log.Debug("port forward clean shutdown")
+	log.Debug("port forward stopped gracefully")
 }
