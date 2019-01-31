@@ -4,15 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"path"
 	"strings"
-	"time"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/storage"
-
+	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -32,42 +29,17 @@ type listOutputEnvironment struct {
 	Errors     []string `yaml:"errors,omitempty"`
 }
 
-//Event struct
-type Event struct {
+type event struct {
 	Type string `json:"type,omitempty"`
-	Data Data   `json:"data,omitempty"`
+	Data struct {
+		Completion float64 `json:"completion,omitempty"`
+	} `json:"data,omitempty"`
 }
 
-//SyncthingErrors struct
-type SyncthingErrors struct {
-	Errors []SyncthingError `json:"errors,omitempty"`
-}
-
-//SyncthingError struct
-type SyncthingError struct {
-	Message string `json:"message,omitempty"`
-}
-
-//Data event data
-type Data struct {
-	Completion float64 `json:"completion,omitempty"`
-}
-
-type addAPIKeyTransport struct {
-	T http.RoundTripper
-}
-
-func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("X-API-Key", "cnd")
-	return akt.T.RoundTrip(req)
-}
-
-func init() {
-	transport := &addAPIKeyTransport{http.DefaultTransport}
-	restClient = &http.Client{
-		Timeout:   60 * time.Second,
-		Transport: transport,
-	}
+type syncthingErrors struct {
+	Errors []struct {
+		Message string `json:"message,omitempty"`
+	} `json:"errors,omitempty"`
 }
 
 //List implements the list logic
@@ -91,13 +63,20 @@ func list(yamlOutput bool) error {
 		Environments: []listOutputEnvironment{},
 	}
 
+	client := syncthing.NewAPIClient()
+
 	for name, svc := range services {
 		env := listOutputEnvironment{
 			Name:   name,
 			Source: svc.Folder,
 		}
 
-		completion, err := getStatus(svc)
+		sy := &syncthing.Syncthing{
+			GUIAddress: svc.Syncthing,
+			Client:     client,
+		}
+
+		completion, err := getStatus(sy, svc)
 		if err == nil {
 			env.Completion = fmt.Sprintf("%2.f%%", completion)
 		} else {
@@ -105,7 +84,7 @@ func list(yamlOutput bool) error {
 			env.Completion = "?"
 		}
 
-		apiErrors, err := getErrors(svc)
+		apiErrors, err := getErrors(sy, svc)
 		if err != nil {
 			log.Infof("Failed to get errors of %s: %s", svc.Folder, err)
 			continue
@@ -122,35 +101,15 @@ func list(yamlOutput bool) error {
 	return printDirectly(&output)
 }
 
-func getStatus(s storage.Service) (float64, error) {
-	urlPath := path.Join(s.Syncthing, "rest", "events")
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s", urlPath), nil)
-	if err != nil {
-		return 100, err
-	}
-
-	// add query parameters
-	q := req.URL.Query()
-	q.Add("limit", "30")
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := restClient.Do(req)
+func getStatus(sy *syncthing.Syncthing, s storage.Service) (float64, error) {
+	body, err := sy.GetFromAPI("rest/events")
 	if err != nil {
 		return 0, fmt.Errorf("error getting syncthing state: %s", err)
 	}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, err
-	}
-	if resp.StatusCode != 200 {
-		return 0, fmt.Errorf("error %d getting synchthing status: %s", resp.StatusCode, string(body))
-	}
-	var events []Event
-	err = json.Unmarshal(body, &events)
-	if err != nil {
-		return 0, fmt.Errorf("error unmarshalling events: %s", err.Error())
+	var events []event
+	if err := json.Unmarshal(body, &events); err != nil {
+		return 0, fmt.Errorf("error getting syncthing state: %s", err)
 	}
 
 	for i := len(events) - 1; i >= 0; i-- {
@@ -163,37 +122,15 @@ func getStatus(s storage.Service) (float64, error) {
 	return 100, nil
 }
 
-func getErrors(s storage.Service) ([]string, error) {
-	urlPath := path.Join(s.Syncthing, "rest", "system", "error")
-	log.Debugf("getting errors via %s", urlPath)
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s", urlPath), nil)
+func getErrors(sy *syncthing.Syncthing, s storage.Service) ([]string, error) {
+	body, err := sy.GetFromAPI("rest/system/error")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting syncthing errors: %s", err)
 	}
 
-	// add query parameters
-	q := req.URL.Query()
-	q.Add("limit", "5")
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := restClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error calling the syncthing api: %s", err)
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("error %d getting folder sync errors: %s", resp.StatusCode, string(body))
-	}
-
-	var errors SyncthingErrors
-	err = json.Unmarshal(body, &errors)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling folder sync errors: %s", err.Error())
+	var errors syncthingErrors
+	if err := json.Unmarshal(body, &errors); err != nil {
+		return nil, fmt.Errorf("error getting syncthing errors: %s", err)
 	}
 
 	parsedErrors := make([]string, len(errors.Errors))

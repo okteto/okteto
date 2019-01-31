@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -58,6 +59,7 @@ type Syncthing struct {
 	FileWatcherDelay int
 	GUIAddress       string
 	ListenAddress    string
+	Client           *http.Client
 }
 
 // NewSyncthing constructs a new Syncthing.
@@ -102,6 +104,7 @@ func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthin
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("127.0.0.1:%d", guiPort),
 		ListenAddress:    fmt.Sprintf("0.0.0.0:%d", listenPort),
+		Client:           NewAPIClient(),
 	}
 
 	return s, nil

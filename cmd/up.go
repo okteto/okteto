@@ -43,7 +43,9 @@ func Up() *cobra.Command {
 			var wg sync.WaitGroup
 			defer shutdown(cancel, &wg)
 
-			d, err := ExecuteUp(ctx, &wg, dev, namespace)
+			disconnectChannel := make(chan struct{}, 1)
+
+			d, err := ExecuteUp(ctx, &wg, dev, namespace, disconnectChannel)
 			if err != nil {
 				return err
 			}
@@ -57,9 +59,15 @@ func Up() *cobra.Command {
 			stopChannel := make(chan os.Signal, 1)
 			signal.Notify(stopChannel, os.Interrupt)
 			log.Debugf("%s ready, waiting for stop signal to shut down", fullname)
-			<-stopChannel
-			fmt.Println()
-			return nil
+			for {
+				select {
+				case <-stopChannel:
+					fmt.Println()
+					return nil
+				case <-disconnectChannel:
+					return fmt.Errorf("Cluster connection lost. Run '%s up' to connect again", config.GetBinaryName())
+				}
+			}
 		},
 	}
 
@@ -69,7 +77,7 @@ func Up() *cobra.Command {
 }
 
 // ExecuteUp runs all the logic for the up command
-func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string) (*appsv1.Deployment, error) {
+func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, monitor chan struct{}) (*appsv1.Deployment, error) {
 
 	n, deploymentName, c, err := findDevEnvironment(true)
 
@@ -142,6 +150,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	wg.Add(1)
 	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)
 
+	go sy.Monitor(ctx, monitor)
 	return d, nil
 }
 
