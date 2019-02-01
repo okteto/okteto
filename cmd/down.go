@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
@@ -42,13 +43,18 @@ func executeDown() error {
 		return fmt.Errorf("failed to deactivate your cloud native environment")
 	}
 
-	_, client, _, err := GetKubernetesClient(namespace)
+	_, client, _, k8sContext, err := GetKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}
 
 	d, err := deployments.Get(namespace, deployment, client)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			fullname := deployments.GetFullName(namespace, deployment)
+			return fmt.Errorf("deployment %s not found [current context: %s]", fullname, k8sContext)
+		}
+
 		return err
 	}
 	if err := deployments.DevModeOff(d, client); err != nil {

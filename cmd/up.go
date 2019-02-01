@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
@@ -88,17 +89,22 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 		return nil, nil, fmt.Errorf("there is already an entry for %s/%s Are you running '%s up' somewhere else?", config.GetBinaryName(), deployments.GetFullName(n, deploymentName), c)
 	}
 
-	namespace, client, restConfig, err := GetKubernetesClient(namespace)
+	namespace, client, restConfig, k8sContext, err := GetKubernetesClient(namespace)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	fullname := deployments.GetFullName(namespace, dev.Swap.Deployment.Name)
 
-	log.Debugf("getting the existing deployment: %s", fullname)
+	log.Debugf("getting deployment %s", fullname)
 	d, err := deployments.Get(namespace, dev.Swap.Deployment.Name, client)
 	if err != nil {
-		return nil, nil, err
+		log.Debug(err)
+		if strings.Contains(err.Error(), "not found") {
+			return nil, nil, fmt.Errorf("deployment %s not found [current context: %s]", fullname, k8sContext)
+		}
+
+		return nil, nil, fmt.Errorf("couldn't get deployment %s from your cluster. Please try again", fullname)
 	}
 
 	dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(
@@ -167,7 +173,7 @@ func reconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Dep
 
 	pf.Stop()
 
-	_, client, restConfig, err := GetKubernetesClient(d.Namespace)
+	_, client, restConfig, _, err := GetKubernetesClient(d.Namespace)
 	if err != nil {
 		return err
 	}

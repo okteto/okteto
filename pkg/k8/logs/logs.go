@@ -18,9 +18,10 @@ import (
 func StreamLogs(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, container string, c *kubernetes.Clientset) {
 	defer wg.Done()
 	for {
+		log.Debugf("streaming logs for %s/%s", d.Name, container)
 		if err := streamLogs(ctx, d, container, c); err != nil {
 			if err != context.Canceled {
-				log.Infof("couldn't stream logs for %s/%s: %s", d.Name, container, err)
+				log.Infof("error when streaming logs for %s/%s: %s", d.Name, container, err)
 			}
 		}
 		select {
