@@ -36,7 +36,7 @@ func Copy(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, nam
 		return err
 	}
 	reader := bufio.NewReader(file)
-	log.Info("Sending tarball...")
+	log.Info("sending tarball...")
 	if err := exec.Exec(ctx, c, config, pod, dev.GetCNDInitSyncContainer(), false, reader, os.Stdout, os.Stderr, tarCommand); err != nil {
 		log.Errorf("failed to sent tarball: %s", err.Error())
 		return fmt.Errorf("Failed to send tarball")

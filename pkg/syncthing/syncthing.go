@@ -216,7 +216,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	log.Infof("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
+	log.Infof("syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 
 	wg.Add(1)
 	go func() {

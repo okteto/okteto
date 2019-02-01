@@ -104,19 +104,19 @@ func Deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	dClient := c.AppsV1().Deployments(d.Namespace)
 
 	if d.Name == "" {
-		log.Infof("Creating deployment on '%s'...", d.Namespace)
+		log.Infof("creating deployment on '%s'...", d.Namespace)
 		_, err := dClient.Create(d)
 		if err != nil {
 			return fmt.Errorf("Error creating kubernetes deployment: %s", err)
 		}
-		log.Infof("Created deployment %s", deploymentName)
+		log.Infof("created deployment %s", deploymentName)
 	} else {
-		log.Infof("Updating deployment '%s'...", deploymentName)
+		log.Infof("updating deployment '%s'...", deploymentName)
 		_, err := dClient.Update(d)
 		if err != nil {
 			return fmt.Errorf("Error updating kubernetes deployment: %s", err)
 		}
-		log.Debugf("Updated deployment '%s'...", deploymentName)
+		log.Debugf("updated deployment '%s'...", deploymentName)
 	}
 
 	return nil
@@ -166,7 +166,7 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 			}
 
 			if event.Type == "Normal" {
-				log.Debugf("Kubernetes: %s", event.Message)
+				log.Debugf("kubernetes: %s", event.Message)
 			} else {
 				fmt.Println(Red("Kubernetes: "), event.Message)
 			}
@@ -183,7 +183,7 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
 
-	log.Debugf("Waiting for cnd pod to be ready")
+	log.Debugf("waiting for cnd pod to be ready")
 	for tries < maxRetries {
 		pods, err := c.CoreV1().Pods(d.Namespace).List(metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, d.Name),
@@ -205,6 +205,7 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 		}
 
 		if len(pendingOrRunningPods) == 1 {
+			log.Debugf("CND pod is ready")
 			return &pendingOrRunningPods[0], nil
 		}
 
@@ -296,6 +297,7 @@ func waitForDevPodToBeRunning(ctx context.Context, c *kubernetes.Clientset, name
 			return err
 		}
 		if pod.Status.Phase == apiv1.PodRunning {
+			log.Debugf("dev container is running")
 			return nil
 		}
 

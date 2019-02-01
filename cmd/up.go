@@ -98,6 +98,8 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 		return nil, nil, err
 	}
 
+	fullname := deployments.GetFullName(namespace, d.Name)
+
 	dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(
 		dev.Swap.Deployment.Container,
 		d.Spec.Template.Spec.Containers,
@@ -113,9 +115,12 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 		return nil, nil, err
 	}
 
+	log.Debugf("enabling dev mode on %s", fullname)
 	if err := deployments.DevModeOn(d, devList, client); err != nil {
 		return nil, nil, err
 	}
+
+	log.Debugf("enabled dev mode on %s", fullname)
 
 	pod, err := deployments.GetCNDPod(ctx, d, client)
 	if err != nil {
@@ -127,8 +132,6 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	if err := deployments.InitVolumeWithTarball(ctx, client, restConfig, namespace, pod.Name, devList); err != nil {
 		return nil, nil, err
 	}
-
-	fullname := deployments.GetFullName(namespace, d.Name)
 
 	if err := sy.Run(ctx, wg); err != nil {
 		return nil, nil, err
@@ -149,8 +152,10 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	}
 
 	if err := pf.Start(ctx, wg, client, restConfig, pod); err != nil {
-		return nil, nil, fmt.Errorf("couldn't start the connection to your cluster: %s", err)
+		return nil, nil, fmt.Errorf("couldn't connect to your cluster: %s", err)
 	}
+
+	log.Debugf("syncthing port forward started")
 
 	wg.Add(1)
 	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)

@@ -37,13 +37,13 @@ func Create(d *appsv1.Deployment, devList []*model.Dev, c *kubernetes.Clientset)
 		if err != nil {
 			return fmt.Errorf("Error creating kubernetes sync secret: %s", err)
 		}
-		log.Infof("Created syncthing secret '%s'.", secretName)
+		log.Infof("created syncthing secret '%s'.", secretName)
 	} else {
 		_, err := c.Core().Secrets(d.Namespace).Update(data)
 		if err != nil {
-			return fmt.Errorf("Error updating kubernetes sync secret: %s", err)
+			return fmt.Errorf("error updating kubernetes sync secret: %s", err)
 		}
-		log.Infof("Sync secret '%s' was updated.", secretName)
+		log.Infof("sync secret '%s' was updated.", secretName)
 	}
 	return nil
 }
