@@ -25,6 +25,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const (
+	maxRetries = 300
+)
+
 //Get returns a deployment object given its name and namespace
 func Get(namespace, deployment string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
 	if namespace == "" {
@@ -180,7 +184,7 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 	ticker := time.NewTicker(1 * time.Second)
 
 	log.Debugf("Waiting for cnd pod to be ready")
-	for tries < 30 {
+	for tries < maxRetries {
 		pods, err := c.CoreV1().Pods(d.Namespace).List(metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, d.Name),
 		})
@@ -222,7 +226,7 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 		}
 	}
 
-	log.Debugf("cnd pod wasn't running after 30 seconds")
+	log.Debugf("cnd pod wasn't running after %d seconds", maxRetries)
 	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 }
 
@@ -232,7 +236,7 @@ func waitForInitToBeReady(ctx context.Context, c *kubernetes.Clientset, config *
 		copied := false
 		tries := 0
 
-		for tries < 30 && !copied {
+		for tries < maxRetries && !copied {
 			pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 			if err != nil {
 				return err
@@ -272,8 +276,8 @@ func waitForInitToBeReady(ctx context.Context, c *kubernetes.Clientset, config *
 				return ctx.Err()
 			}
 		}
-		if tries == 30 {
-			log.Debugf("cnd-sync didn't finish copying the tarball after 30 seconds")
+		if tries == maxRetries {
+			log.Debugf("cnd-sync didn't finish copying the tarball after %d seconds", maxRetries)
 			return fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 		}
 	}
@@ -286,7 +290,7 @@ func waitForDevPodToBeRunning(ctx context.Context, c *kubernetes.Clientset, name
 
 	tries := 0
 	log.Debugf("waiting for dev container to start running")
-	for tries < 30 {
+	for tries < maxRetries {
 		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -305,7 +309,7 @@ func waitForDevPodToBeRunning(ctx context.Context, c *kubernetes.Clientset, name
 		}
 	}
 
-	log.Debugf("dev container didn't start running after 30 seconds")
+	log.Debugf("dev container didn't start running after %d seconds", maxRetries)
 	return fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 }
 
