@@ -29,6 +29,7 @@ func Up() *cobra.Command {
 		Use:   "up",
 		Short: "Activate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log.Debugf("starting up command")
 			dev, err := model.ReadDev(devPath)
 			if err != nil {
 				return err
@@ -39,13 +40,12 @@ func Up() *cobra.Command {
 			fmt.Println("Activating your cloud native development environment...")
 
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 			var wg sync.WaitGroup
 			defer shutdown(cancel, &wg)
 
 			disconnectChannel := make(chan struct{}, 1)
 
-			d, err := ExecuteUp(ctx, &wg, dev, namespace, disconnectChannel)
+			d, pf, err := ExecuteUp(ctx, &wg, dev, namespace, disconnectChannel)
 			if err != nil {
 				return err
 			}
@@ -58,14 +58,17 @@ func Up() *cobra.Command {
 
 			stopChannel := make(chan os.Signal, 1)
 			signal.Notify(stopChannel, os.Interrupt)
+
 			log.Debugf("%s ready, waiting for stop signal to shut down", fullname)
 			for {
 				select {
 				case <-stopChannel:
+					log.Debugf("CTRL+C received, starting shutdown sequence")
 					fmt.Println()
 					return nil
 				case <-disconnectChannel:
-					return fmt.Errorf("Cluster connection lost. Run '%s up' to connect again", config.GetBinaryName())
+					log.Debug("Cluster connection lost, reconnecting...")
+					reconnectPortForward(ctx, &wg, d, pf)
 				}
 			}
 		},
@@ -77,84 +80,114 @@ func Up() *cobra.Command {
 }
 
 // ExecuteUp runs all the logic for the up command
-func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, monitor chan struct{}) (*appsv1.Deployment, error) {
+func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, monitor chan struct{}) (*appsv1.Deployment, *forward.CNDPortForward, error) {
 
 	n, deploymentName, c, err := findDevEnvironment(true)
 
 	if err != errNoCNDEnvironment {
-		return nil, fmt.Errorf("there is already an entry for %s/%s Are you running '%s up' somewhere else?", config.GetBinaryName(), deployments.GetFullName(n, deploymentName), c)
+		return nil, nil, fmt.Errorf("there is already an entry for %s/%s Are you running '%s up' somewhere else?", config.GetBinaryName(), deployments.GetFullName(n, deploymentName), c)
 	}
 
 	namespace, client, restConfig, err := GetKubernetesClient(namespace)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	d, err := deployments.Get(namespace, dev.Swap.Deployment.Name, client)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
 	dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(
 		dev.Swap.Deployment.Container,
 		d.Spec.Template.Spec.Containers,
 	)
+
 	devList, err := deployments.GetAndUpdateDevListFromAnnotation(d.GetObjectMeta(), dev)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	sy, err := syncthing.NewSyncthing(namespace, d.Name, devList)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err := deployments.DevModeOn(d, devList, client); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	pod, err := deployments.GetCNDPod(ctx, d, client)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	go deployments.GetPodEvents(ctx, pod, client)
 
 	if err := deployments.InitVolumeWithTarball(ctx, client, restConfig, namespace, pod.Name, devList); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	fullname := deployments.GetFullName(namespace, d.Name)
 
-	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
-	if err != nil {
-		return nil, err
-	}
-
 	if err := sy.Run(ctx, wg); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	err = storage.Insert(ctx, wg, namespace, dev, sy.GUIAddress)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
 			log.Infof("failed to insert new state value for %s", fullname)
-			return nil, fmt.Errorf("there is already an entry for %s. Are you running '%s up' somewhere else?", config.GetBinaryName(), fullname)
+			return nil, nil, fmt.Errorf("there is already an entry for %s. Are you running '%s up' somewhere else?", config.GetBinaryName(), fullname)
 		}
-		return nil, err
+		return nil, nil, err
+	}
+
+	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if err := pf.Start(ctx, wg, client, restConfig, pod); err != nil {
-		return nil, fmt.Errorf("couldn't start the connection to your cluster: %s", err)
+		return nil, nil, fmt.Errorf("couldn't start the connection to your cluster: %s", err)
 	}
 
 	wg.Add(1)
 	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)
 
 	go sy.Monitor(ctx, monitor)
-	return d, nil
+	return d, pf, nil
+}
+
+func reconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, pf *forward.CNDPortForward) error {
+
+	pf.Stop()
+
+	_, client, restConfig, err := GetKubernetesClient(d.Namespace)
+	if err != nil {
+		return err
+	}
+
+	pod, err := deployments.GetCNDPod(ctx, d, client)
+	if err != nil {
+		return err
+	}
+
+	if err := pf.Start(ctx, wg, client, restConfig, pod); err != nil {
+		return fmt.Errorf("couldn't start the connection to your cluster: %s", err)
+	}
+
+	log.Infof("reconnected port-forwarder-%d:%d", pf.LocalPort, pf.RemotePort)
+
+	return nil
 }
 
 func shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
+	log.Debugf("cancelling context")
 	cancel()
+
+	log.Debugf("waiting for tasks for be done")
 	wg.Wait()
+
+	log.Debugf("completed shutdown sequence")
 }

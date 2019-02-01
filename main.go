@@ -9,6 +9,6 @@ import (
 )
 
 func main() {
-	log.Init(logrus.WarnLevel)
+	log.Init(logrus.WarnLevel, cmd.GetActionID())
 	os.Exit(cmd.Execute())
 }

@@ -57,7 +57,6 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 			TTY:       t.Raw,
 		}, scheme.ParameterCodec)
 
-		req.Context(ctx)
 		return p.Executor.Execute("POST", req.URL(), config, p.In, p.Out, p.ErrOut, t.Raw, sizeQueue)
 	}
 
