@@ -14,7 +14,7 @@ import (
 
 type logger struct {
 	out  *logrus.Logger
-	file *logrus.Logger
+	file *logrus.Entry
 }
 
 var log = &logger{
@@ -22,21 +22,21 @@ var log = &logger{
 }
 
 // Init configures the logger for the package to use.
-func Init(level logrus.Level) {
+func Init(level logrus.Level, actionID string) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
 
-	log.file = logrus.New()
-	log.file.SetFormatter(&logrus.TextFormatter{
+	fileLogger := logrus.New()
+	fileLogger.SetFormatter(&logrus.TextFormatter{
 		DisableColors: true,
 		FullTimestamp: true,
 	})
 
 	logPath := path.Join(config.GetCNDHome(), fmt.Sprintf("%s%s", config.GetBinaryName(), ".log"))
 	rolling := getRollingLog(logPath)
-	log.file.SetOutput(rolling)
-	log.file.SetLevel(logrus.DebugLevel)
-
+	fileLogger.SetOutput(rolling)
+	fileLogger.SetLevel(logrus.DebugLevel)
+	log.file = fileLogger.WithFields(logrus.Fields{"action": actionID})
 }
 
 func getRollingLog(path string) io.Writer {

@@ -20,13 +20,14 @@ import (
 //CNDPortForward holds the information of the port forward
 type CNDPortForward struct {
 	StopChan       chan struct{}
-	ReadyChan      chan struct{}
 	IsReady        bool
 	LocalPort      int
 	RemotePort     int
 	LocalPath      string
 	DeploymentName string
 	Out            *bytes.Buffer
+	wg             *sync.WaitGroup
+	mux            sync.Mutex
 }
 
 //NewCNDPortForward initializes and returns a new port forward structure
@@ -41,10 +42,8 @@ func NewCNDPortForward(remoteAddress string) (*CNDPortForward, error) {
 	return &CNDPortForward{
 		LocalPort:  port,
 		RemotePort: 22000,
-		StopChan:   make(chan struct{}, 1),
-		ReadyChan:  make(chan struct{}, 1),
-		Out:        new(bytes.Buffer),
 		IsReady:    false,
+		Out:        new(bytes.Buffer),
 	}, nil
 }
 
@@ -52,6 +51,9 @@ func NewCNDPortForward(remoteAddress string) (*CNDPortForward, error) {
 func (p *CNDPortForward) Start(
 	ctx context.Context, wg *sync.WaitGroup,
 	c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod) error {
+
+	p.mux.Lock()
+	defer p.mux.Unlock()
 
 	req := c.CoreV1().RESTClient().Post().
 		Resource("pods").
@@ -65,12 +67,14 @@ func (p *CNDPortForward) Start(
 	}
 
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", req.URL())
-
+	p.StopChan = make(chan struct{}, 1)
+	p.Out = new(bytes.Buffer)
+	ready := make(chan struct{}, 1)
 	pf, err := portforward.New(
 		dialer,
 		[]string{fmt.Sprintf("%d:%d", p.LocalPort, p.RemotePort)},
 		p.StopChan,
-		p.ReadyChan,
+		ready,
 		p.Out,
 		p.Out)
 
@@ -78,20 +82,44 @@ func (p *CNDPortForward) Start(
 		return err
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-ctx.Done()
-		if p.StopChan != nil {
-			close(p.StopChan)
-			<-p.StopChan
-		}
-		log.Debug("port forward clean shutdown")
-	}()
+	p.wg = wg
+	p.wg.Add(1)
 
-	go pf.ForwardPorts()
+	go func(t context.Context, c *CNDPortForward) {
+		for {
+			select {
+			case <-t.Done():
+				log.Debugf("starting portforward cancellation sequence")
+				p.Stop()
+				return
+			case <-c.StopChan:
+				return
+			}
+		}
+	}(ctx, p)
+
+	p.IsReady = false
+	go func(f *portforward.PortForwarder) {
+		f.ForwardPorts()
+		log.Debugf("forwardPorts goroutine finished")
+		return
+	}(pf)
 
 	<-pf.Ready
 	p.IsReady = true
 	return nil
+}
+
+// Stop cleanly shutdowns the port forwarder
+func (p *CNDPortForward) Stop() {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	defer p.wg.Done()
+	log.Debugf("[port-forward-%d:%d]: %s", p.LocalPort, p.RemotePort, p.Out.String())
+	if p.StopChan != nil {
+		close(p.StopChan)
+		<-p.StopChan
+	}
+	log.Debug("port forward stopped gracefully")
 }
