@@ -93,12 +93,13 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 		return nil, nil, err
 	}
 
+	fullname := deployments.GetFullName(namespace, dev.Swap.Deployment.Name)
+
+	log.Debugf("getting the existing deployment: %s", fullname)
 	d, err := deployments.Get(namespace, dev.Swap.Deployment.Name, client)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	fullname := deployments.GetFullName(namespace, d.Name)
 
 	dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(
 		dev.Swap.Deployment.Container,
@@ -154,8 +155,6 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	if err := pf.Start(ctx, wg, client, restConfig, pod); err != nil {
 		return nil, nil, fmt.Errorf("couldn't connect to your cluster: %s", err)
 	}
-
-	log.Debugf("syncthing port forward started")
 
 	wg.Add(1)
 	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)

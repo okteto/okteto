@@ -183,7 +183,6 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
 
-	log.Debugf("waiting for cnd pod to be ready")
 	for tries < maxRetries {
 		pods, err := c.CoreV1().Pods(d.Namespace).List(metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, d.Name),
@@ -200,12 +199,12 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 					pendingOrRunningPods = append(pendingOrRunningPods, pod)
 				}
 			} else {
-				log.Debugf("cnd pod is on %s, waiting", pod.Status.String())
+				log.Debugf("cnd pod is on %s, waiting for it to be running", pod.Status.String())
 			}
 		}
 
 		if len(pendingOrRunningPods) == 1 {
-			log.Debugf("CND pod is ready")
+			log.Debugf("cnd pod is ready")
 			return &pendingOrRunningPods[0], nil
 		}
 

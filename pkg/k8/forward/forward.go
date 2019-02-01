@@ -89,7 +89,7 @@ func (p *CNDPortForward) Start(
 		for {
 			select {
 			case <-t.Done():
-				log.Debugf("starting portforward cancellation sequence")
+				log.Debugf("[port-forward-%d:%d] starting portforward cancellation sequence", c.LocalPort, c.RemotePort)
 				p.Stop()
 				return
 			case <-c.StopChan:
@@ -99,14 +99,15 @@ func (p *CNDPortForward) Start(
 	}(ctx, p)
 
 	p.IsReady = false
-	go func(f *portforward.PortForwarder) {
+	go func(f *portforward.PortForwarder, local, remote int) {
 		f.ForwardPorts()
-		log.Debugf("forwardPorts goroutine finished")
+		log.Debugf("[port-forward-%d:%d] forwardPorts goroutine finished", local, remote)
 		return
-	}(pf)
+	}(pf, p.LocalPort, p.RemotePort)
 
 	<-pf.Ready
 	p.IsReady = true
+	log.Debugf("[port-forward-%d:%d] connection ready", p.LocalPort, p.RemotePort)
 	return nil
 }
 
@@ -116,10 +117,11 @@ func (p *CNDPortForward) Stop() {
 	defer p.mux.Unlock()
 
 	defer p.wg.Done()
-	log.Debugf("[port-forward-%d:%d]: %s", p.LocalPort, p.RemotePort, p.Out.String())
+	log.Debugf("[port-forward-%d:%d] logged:\n%s", p.LocalPort, p.RemotePort, p.Out.String())
 	if p.StopChan != nil {
 		close(p.StopChan)
 		<-p.StopChan
 	}
-	log.Debug("port forward stopped gracefully")
+
+	log.Debugf("[port-forward-%d:%d] stopped gracefully", p.LocalPort, p.RemotePort)
 }

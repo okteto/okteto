@@ -15,13 +15,18 @@ import (
 //Create creates the syncthing config secret
 func Create(d *appsv1.Deployment, devList []*model.Dev, c *kubernetes.Clientset) error {
 	secretName := model.GetCNDSyncSecret(d.Name)
+	log.Debugf("creating configuration secret %s", secretName)
+
 	s, err := c.Core().Secrets(d.Namespace).Get(secretName, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return fmt.Errorf("Error getting kubernetes secret: %s", err)
+		log.Infof("Error getting kubernetes secret: %s", err)
+		return fmt.Errorf("Error getting kubernetes secret. Please retry")
 	}
+
 	config, err := getConfigXML(devList)
 	if err != nil {
-		return fmt.Errorf("Error generating syncthing configuration: %s", err)
+		log.Infof("Error generating syncthing configuration: %s", err)
+		return fmt.Errorf("Error generating syncthing configuration. Please retry")
 	}
 	data := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: secretName},
@@ -35,13 +40,16 @@ func Create(d *appsv1.Deployment, devList []*model.Dev, c *kubernetes.Clientset)
 	if s.Name == "" {
 		_, err := c.Core().Secrets(d.Namespace).Create(data)
 		if err != nil {
-			return fmt.Errorf("Error creating kubernetes sync secret: %s", err)
+			log.Infof("error creating kubernetes sync secret: %s", err)
+			return fmt.Errorf("Error creating kubernetes sync secret. Please retry")
 		}
+
 		log.Infof("created syncthing secret '%s'.", secretName)
 	} else {
 		_, err := c.Core().Secrets(d.Namespace).Update(data)
 		if err != nil {
-			return fmt.Errorf("error updating kubernetes sync secret: %s", err)
+			log.Infof("error updating kubernetes sync secret: %s", err)
+			return fmt.Errorf("error updating kubernetes sync secret. Please retry")
 		}
 		log.Infof("sync secret '%s' was updated.", secretName)
 	}
