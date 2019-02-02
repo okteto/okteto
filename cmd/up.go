@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
@@ -20,6 +21,13 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
+)
+
+var (
+	maxReconnectionAttempts     = 5 // this will cause up to exit after 5 continuous minutes of disconnection
+	reconnectionAttempts        = 0
+	lastReconnectionAttempt     = time.Now()
+	reconnectionAttemptsTimeout = 5 * time.Minute
 )
 
 //Up starts a cloud native environment
@@ -62,6 +70,8 @@ func Up() *cobra.Command {
 			signal.Notify(stopChannel, os.Interrupt)
 
 			log.Debugf("%s ready, waiting for stop signal to shut down", fullname)
+
+			resetAttempts := time.NewTimer(5 * time.Minute)
 			for {
 				select {
 				case <-stopChannel:
@@ -69,8 +79,15 @@ func Up() *cobra.Command {
 					fmt.Println()
 					return nil
 				case <-disconnectChannel:
-					log.Debug("cluster connection lost, reconnecting")
+					log.Info("cluster connection lost, reconnecting")
+					if reconnectionAttempts > maxReconnectionAttempts {
+						return fmt.Errorf("please check your configuration and run '%s up' again", config.GetBinaryName())
+					}
+
 					reconnectPortForward(ctx, &wg, d, pf)
+				case <-resetAttempts.C:
+					log.Debug("resetting reconnection attempts counter")
+					reconnectionAttempts = 0
 				}
 			}
 		},
@@ -197,7 +214,18 @@ func shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
 	cancel()
 
 	log.Debugf("waiting for tasks for be done")
-	wg.Wait()
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
 
-	log.Debugf("completed shutdown sequence")
+	select {
+	case <-done:
+		log.Debugf("completed shutdown sequence")
+		return
+	case <-time.After(500 * time.Millisecond):
+		log.Debugf("tasks didn't finish, terminating")
+		return
+	}
 }

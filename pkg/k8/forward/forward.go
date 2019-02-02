@@ -83,7 +83,6 @@ func (p *CNDPortForward) Start(
 	}
 
 	p.wg = wg
-	p.wg.Add(1)
 
 	p.IsReady = false
 	go func(f *portforward.PortForwarder, local, remote int) {
@@ -101,6 +100,7 @@ func (p *CNDPortForward) Start(
 	p.IsReady = true
 	log.Debugf("[port-forward-%d:%d] connection ready", p.LocalPort, p.RemotePort)
 
+	p.wg.Add(1)
 	go func(t context.Context, c *CNDPortForward) {
 		for {
 			select {

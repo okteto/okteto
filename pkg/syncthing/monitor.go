@@ -9,7 +9,7 @@ import (
 )
 
 var consecutiveErrors = 1
-var backoffPolicy = []time.Duration{5 * time.Second, 10 * time.Second, 10 * time.Second, 20 * time.Second, 30 * time.Second}
+var backoffPolicy = []time.Duration{5 * time.Second, 10 * time.Second, 10 * time.Second, 20 * time.Second, 20 * time.Second}
 
 const maxConsecutiveErrors = 3
 
