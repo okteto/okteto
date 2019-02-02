@@ -1,15 +1,16 @@
 package log
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
-
 	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
+	"k8s.io/klog"
 )
 
 const (
@@ -43,6 +44,12 @@ func Init(level logrus.Level, actionID string) {
 	fileLogger.SetOutput(rolling)
 	fileLogger.SetLevel(logrus.DebugLevel)
 	log.file = fileLogger.WithFields(logrus.Fields{"action": actionID})
+
+	klog.InitFlags(nil)
+	flag.Set("logtostderr", "false")
+	flag.Set("alsologtostderr", "false")
+	flag.Parse()
+	klog.SetOutput(log.file.Writer())
 }
 
 func getRollingLog(path string) io.Writer {

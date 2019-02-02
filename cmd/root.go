@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -15,6 +14,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	kExec "k8s.io/client-go/util/exec"
 
 	// Load the GCP library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -45,15 +45,6 @@ var (
 	}
 )
 
-func init() {
-	// hack to make flag.Parsed return true such that glog is happy
-	// about the flags having been parsed
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	/* #nosec */
-	_ = fs.Parse([]string{})
-	flag.CommandLine = fs
-}
-
 // Execute runs the root command
 func Execute() int {
 	root := &cobra.Command{
@@ -83,8 +74,14 @@ func Execute() int {
 
 	exitCode := 0
 	if err := root.Execute(); err != nil {
-		log.Red(err.Error())
-		exitCode = 1
+
+		if cerr, ok := err.(kExec.CodeExitError); ok {
+			exitCode = cerr.ExitStatus()
+			log.Red("Command failed")
+		} else {
+			log.Red(err.Error())
+			exitCode = 1
+		}
 	}
 
 	analytics.Wait()
