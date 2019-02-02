@@ -245,7 +245,7 @@ func Shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
 	case <-done:
 		log.Debugf("completed shutdown sequence")
 		return
-	case <-time.After(500 * time.Millisecond):
+	case <-time.After(1 * time.Second):
 		log.Debugf("tasks didn't finish, terminating")
 		return
 	}
