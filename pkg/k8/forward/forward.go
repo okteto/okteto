@@ -85,6 +85,22 @@ func (p *CNDPortForward) Start(
 	p.wg = wg
 	p.wg.Add(1)
 
+	p.IsReady = false
+	go func(f *portforward.PortForwarder, local, remote int) {
+		err := f.ForwardPorts()
+		if err == nil {
+			log.Debugf("[port-forward-%d:%d] goroutine forwarding finished", local, remote)
+		} else {
+			log.Debugf("[port-forward-%d:%d] goroutine forwarding finished with errors: %s", local, remote, err)
+		}
+
+		return
+	}(pf, p.LocalPort, p.RemotePort)
+
+	<-pf.Ready
+	p.IsReady = true
+	log.Debugf("[port-forward-%d:%d] connection ready", p.LocalPort, p.RemotePort)
+
 	go func(t context.Context, c *CNDPortForward) {
 		for {
 			select {
@@ -98,25 +114,15 @@ func (p *CNDPortForward) Start(
 		}
 	}(ctx, p)
 
-	p.IsReady = false
-	go func(f *portforward.PortForwarder, local, remote int) {
-		err := f.ForwardPorts()
-		log.Debugf("[port-forward-%d:%d] goroutine forwarding finished: %s", local, remote, err)
-		return
-	}(pf, p.LocalPort, p.RemotePort)
-
-	<-pf.Ready
-	p.IsReady = true
-	log.Debugf("[port-forward-%d:%d] connection ready", p.LocalPort, p.RemotePort)
 	return nil
 }
 
 // Stop cleanly shutdowns the port forwarder
 func (p *CNDPortForward) Stop() {
+	log.Debugf("[port-forward-%d:%d] stopping", p.LocalPort, p.RemotePort)
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	defer p.wg.Done()
 	log.Debugf("[port-forward-%d:%d] logged:\n%s", p.LocalPort, p.RemotePort, p.Out.String())
 	if p.StopChan != nil && p.IsReady {
 		p.IsReady = false
@@ -124,5 +130,5 @@ func (p *CNDPortForward) Stop() {
 		<-p.StopChan
 	}
 
-	log.Debugf("[port-forward-%d:%d] stopped gracefully", p.LocalPort, p.RemotePort)
+	log.Debugf("[port-forward-%d:%d] stopped", p.LocalPort, p.RemotePort)
 }
