@@ -26,7 +26,6 @@ type CNDPortForward struct {
 	LocalPath      string
 	DeploymentName string
 	Out            *bytes.Buffer
-	wg             *sync.WaitGroup
 	mux            sync.Mutex
 }
 
@@ -82,8 +81,6 @@ func (p *CNDPortForward) Start(
 		return err
 	}
 
-	p.wg = wg
-
 	p.IsReady = false
 	go func(f *portforward.PortForwarder, local, remote int) {
 		err := f.ForwardPorts()
@@ -100,7 +97,6 @@ func (p *CNDPortForward) Start(
 	p.IsReady = true
 	log.Debugf("[port-forward-%d:%d] connection ready", p.LocalPort, p.RemotePort)
 
-	p.wg.Add(1)
 	go func(t context.Context, c *CNDPortForward) {
 		for {
 			select {
