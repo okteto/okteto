@@ -12,9 +12,6 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 
-	// github.com/logrusorgru/aurora requires the usage of dot imports
-	. "github.com/logrusorgru/aurora"
-
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/watch"
 
@@ -168,7 +165,7 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 			if event.Type == "Normal" {
 				log.Debugf("kubernetes: %s", event.Message)
 			} else {
-				fmt.Println(Red("Kubernetes: "), event.Message)
+				log.Red("Kubernetes: %s", event.Message)
 			}
 
 		case <-ctx.Done():

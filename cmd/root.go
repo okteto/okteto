@@ -57,8 +57,9 @@ func init() {
 // Execute runs the root command
 func Execute() int {
 	root := &cobra.Command{
-		Use:   fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
-		Short: "Manage cloud native environments",
+		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
+		Short:         "Manage cloud native environments",
+		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			log.SetLevel(c.logLevel)
 			ccmd.SilenceUsage = true
@@ -82,7 +83,7 @@ func Execute() int {
 
 	exitCode := 0
 	if err := root.Execute(); err != nil {
-		log.Infof("Command failed: %s", err)
+		log.Red(err.Error())
 		exitCode = 1
 	}
 

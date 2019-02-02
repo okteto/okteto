@@ -23,11 +23,14 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-var (
-	maxReconnectionAttempts     = 5 // this will cause up to exit after 5 continuous minutes of disconnection
-	reconnectionAttempts        = 0
-	lastReconnectionAttempt     = time.Now()
+const (
+	maxReconnectionAttempts     = 2 // this will cause the command to exit after 5 minutes of disconnection
 	reconnectionAttemptsTimeout = 5 * time.Minute
+)
+
+var (
+	reconnectionAttempts    = 0
+	lastReconnectionAttempt = time.Now()
 )
 
 //Up starts a cloud native environment
@@ -53,8 +56,8 @@ func Up() *cobra.Command {
 			defer shutdown(cancel, &wg)
 
 			disconnectChannel := make(chan struct{}, 1)
-
-			d, pf, err := ExecuteUp(ctx, &wg, dev, namespace, disconnectChannel)
+			reconnectChannel := make(chan struct{}, 1)
+			d, pf, err := ExecuteUp(ctx, &wg, dev, namespace, disconnectChannel, reconnectChannel)
 			if err != nil {
 				log.Debugf("failed to execute up: %s", err)
 				return err
@@ -78,12 +81,18 @@ func Up() *cobra.Command {
 					log.Debugf("CTRL+C received, starting shutdown sequence")
 					fmt.Println()
 					return nil
+				case <-reconnectChannel:
+					reconnectionAttempts = 0
+					log.Infof("cluster reconnection successful")
+					log.Green("Reconnected to your cluster 😎.")
 				case <-disconnectChannel:
-					log.Info("cluster connection lost, reconnecting")
+					log.Infof("cluster connection lost, reconnecting %d/%d", reconnectionAttempts, maxReconnectionAttempts)
+					reconnectionAttempts++
 					if reconnectionAttempts > maxReconnectionAttempts {
-						return fmt.Errorf("please check your configuration and run '%s up' again", config.GetBinaryName())
+						return fmt.Errorf("Lost connection to your cluster. Plase check your network connection and run '%s up' again", config.GetBinaryName())
 					}
 
+					log.Yellow("Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves.")
 					reconnectPortForward(ctx, &wg, d, pf)
 				case <-resetAttempts.C:
 					log.Debug("resetting reconnection attempts counter")
@@ -99,7 +108,7 @@ func Up() *cobra.Command {
 }
 
 // ExecuteUp runs all the logic for the up command
-func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, monitor chan struct{}) (*appsv1.Deployment, *forward.CNDPortForward, error) {
+func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, disconnect, reconnect chan struct{}) (*appsv1.Deployment, *forward.CNDPortForward, error) {
 
 	n, deploymentName, c, err := findDevEnvironment(true)
 
@@ -182,7 +191,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 
 	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)
 
-	go sy.Monitor(ctx, monitor)
+	go sy.Monitor(ctx, disconnect, reconnect)
 	return d, pf, nil
 }
 

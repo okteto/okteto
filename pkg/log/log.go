@@ -12,6 +12,12 @@ import (
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
+const (
+	red    = "\033[1;31m%s\033[0m\n"
+	yellow = "\033[1;33m%s\033[0m\n"
+	green  = "\033[1;34m%s\033[0m"
+)
+
 type logger struct {
 	out  *logrus.Logger
 	file *logrus.Entry
@@ -106,4 +112,22 @@ func Errorf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
 	}
+}
+
+// Red writes a line in red
+func Red(format string, args ...interface{}) {
+	fmt.Printf(red, fmt.Sprintf(format, args...))
+	log.file.Errorf(format, args...)
+}
+
+// Yellow writes a line in yellow
+func Yellow(format string, args ...interface{}) {
+	fmt.Printf(yellow, fmt.Sprintf(format, args...))
+	log.file.Warnf(format, args...)
+}
+
+// Green writes a line in green
+func Green(format string, args ...interface{}) {
+	fmt.Printf(green, fmt.Sprintf(format, args...))
+	log.file.Infof(format, args...)
 }
