@@ -205,6 +205,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	return d, pf, nil
 }
 
+// ReconnectPortForward stops pf and starts it again with the same ports
 func ReconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, pf *forward.CNDPortForward) error {
 
 	pf.Stop()
