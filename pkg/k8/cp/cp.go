@@ -26,7 +26,7 @@ func Copy(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, nam
 	dir := os.TempDir()
 	tarfile := filepath.Join(dir, fmt.Sprintf("tarball-%s.tgz", uuid.NewV4().String()))
 	if err := archiver.Archive([]string{dev.Mount.Source}, tarfile); err != nil {
-		log.Errorf("failed to tar source folder: %s", err.Error())
+		log.Infof("failed to tar source folder: %s", err.Error())
 		return fmt.Errorf("Failed to tar source folder")
 	}
 	defer os.Remove(tarfile)
@@ -36,14 +36,14 @@ func Copy(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, nam
 		return err
 	}
 	reader := bufio.NewReader(file)
-	log.Info("Sending tarball...")
+	log.Info("sending tarball...")
 	if err := exec.Exec(ctx, c, config, pod, dev.GetCNDInitSyncContainer(), false, reader, os.Stdout, os.Stderr, tarCommand); err != nil {
-		log.Errorf("failed to sent tarball: %s", err.Error())
+		log.Infof("failed to sent tarball: %s", err.Error())
 		return fmt.Errorf("Failed to send tarball")
 	}
 	log.Info("Tarball sent")
 	if err := exec.Exec(ctx, c, config, pod, dev.GetCNDInitSyncContainer(), false, os.Stdin, os.Stdout, os.Stderr, touchCommand); err != nil {
-		log.Errorf("failed to sent initialized flag: %s", err.Error())
+		log.Infof("failed to sent initialized flag: %s", err.Error())
 		return fmt.Errorf("Failed to send initialized flag")
 	}
 	return nil

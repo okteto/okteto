@@ -26,7 +26,6 @@ type CNDPortForward struct {
 	LocalPath      string
 	DeploymentName string
 	Out            *bytes.Buffer
-	wg             *sync.WaitGroup
 	mux            sync.Mutex
 }
 
@@ -82,14 +81,27 @@ func (p *CNDPortForward) Start(
 		return err
 	}
 
-	p.wg = wg
-	p.wg.Add(1)
+	p.IsReady = false
+	go func(f *portforward.PortForwarder, local, remote int) {
+		err := f.ForwardPorts()
+		if err == nil {
+			log.Debugf("[port-forward-%d:%d] goroutine forwarding finished", local, remote)
+		} else {
+			log.Debugf("[port-forward-%d:%d] goroutine forwarding finished with errors: %s", local, remote, err)
+		}
+
+		return
+	}(pf, p.LocalPort, p.RemotePort)
+
+	<-pf.Ready
+	p.IsReady = true
+	log.Debugf("[port-forward-%d:%d] connection ready", p.LocalPort, p.RemotePort)
 
 	go func(t context.Context, c *CNDPortForward) {
 		for {
 			select {
 			case <-t.Done():
-				log.Debugf("starting portforward cancellation sequence")
+				log.Debugf("[port-forward-%d:%d] starting cancellation sequence", c.LocalPort, c.RemotePort)
 				p.Stop()
 				return
 			case <-c.StopChan:
@@ -98,28 +110,21 @@ func (p *CNDPortForward) Start(
 		}
 	}(ctx, p)
 
-	p.IsReady = false
-	go func(f *portforward.PortForwarder) {
-		f.ForwardPorts()
-		log.Debugf("forwardPorts goroutine finished")
-		return
-	}(pf)
-
-	<-pf.Ready
-	p.IsReady = true
 	return nil
 }
 
 // Stop cleanly shutdowns the port forwarder
 func (p *CNDPortForward) Stop() {
+	log.Debugf("[port-forward-%d:%d] stopping", p.LocalPort, p.RemotePort)
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	defer p.wg.Done()
-	log.Debugf("[port-forward-%d:%d]: %s", p.LocalPort, p.RemotePort, p.Out.String())
-	if p.StopChan != nil {
+	log.Debugf("[port-forward-%d:%d] logged:\n%s", p.LocalPort, p.RemotePort, p.Out.String())
+	if p.StopChan != nil && p.IsReady {
+		p.IsReady = false
 		close(p.StopChan)
 		<-p.StopChan
 	}
-	log.Debug("port forward stopped gracefully")
+
+	log.Debugf("[port-forward-%d:%d] stopped", p.LocalPort, p.RemotePort)
 }

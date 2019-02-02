@@ -16,19 +16,23 @@ import (
 
 //StreamLogs stremas logs from a container
 func StreamLogs(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, container string, c *kubernetes.Clientset) {
+	wg.Add(1)
 	defer wg.Done()
+
 	for {
+		log.Debugf("streaming logs for %s/%s", d.Name, container)
 		if err := streamLogs(ctx, d, container, c); err != nil {
 			if err != context.Canceled {
-				log.Infof("couldn't stream logs for %s/%s: %s", d.Name, container, err)
+				log.Infof("error when streaming logs for %s/%s: %s", d.Name, container, err)
 			}
+
 		}
 		select {
 		case <-ctx.Done():
 			log.Debug("stream logs clean shutdown")
 			return
 		default:
-			time.Sleep(1 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}
 }

@@ -52,13 +52,18 @@ func executeExec(args []string) error {
 		return err
 	}
 
-	_, client, cfg, err := GetKubernetesClient(namespace)
+	_, client, cfg, k8sContext, err := GetKubernetesClient(namespace)
 	if err != nil {
 		return err
 	}
 
 	d, err := deployments.Get(namespace, deployment, client)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			fullname := deployments.GetFullName(namespace, deployment)
+			return fmt.Errorf("deployment %s not found [current context: %s]", fullname, k8sContext)
+		}
+
 		return err
 	}
 

@@ -11,7 +11,7 @@ import (
 //Get returns a kubernetes client.
 // If namespace is empty, it will use the default namespace configured.
 // If path is empty, it will use the default path configuration
-func Get(namespace, configPath string) (string, *kubernetes.Clientset, *rest.Config, error) {
+func Get(namespace, configPath string) (string, *kubernetes.Clientset, *rest.Config, string, error) {
 	log.Debugf("reading kubernetes configuration from %s", configPath)
 
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
@@ -22,19 +22,24 @@ func Get(namespace, configPath string) (string, *kubernetes.Clientset, *rest.Con
 		var err error
 		namespace, _, err = clientConfig.Namespace()
 		if err != nil {
-			return "", nil, nil, err
+			return "", nil, nil, "", err
 		}
 	}
 
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
-		return "", nil, nil, err
+		return "", nil, nil, "", err
 	}
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return "", nil, nil, err
+		return "", nil, nil, "", err
 	}
 
-	return namespace, client, config, nil
+	rc, err := clientConfig.RawConfig()
+	if err != nil {
+		return "", nil, nil, "", err
+	}
+
+	return namespace, client, config, rc.CurrentContext, nil
 }

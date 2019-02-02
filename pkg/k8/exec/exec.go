@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -61,6 +62,10 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 	}
 
 	if err := t.Safe(fn); err != nil {
+		if strings.Contains(err.Error(), "exit code 130") {
+			return nil
+		}
+
 		return err
 	}
 

@@ -12,9 +12,6 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 
-	// github.com/logrusorgru/aurora requires the usage of dot imports
-	. "github.com/logrusorgru/aurora"
-
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/watch"
 
@@ -104,19 +101,19 @@ func Deploy(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	dClient := c.AppsV1().Deployments(d.Namespace)
 
 	if d.Name == "" {
-		log.Infof("Creating deployment on '%s'...", d.Namespace)
+		log.Infof("creating deployment on '%s'...", d.Namespace)
 		_, err := dClient.Create(d)
 		if err != nil {
 			return fmt.Errorf("Error creating kubernetes deployment: %s", err)
 		}
-		log.Infof("Created deployment %s", deploymentName)
+		log.Infof("created deployment %s", deploymentName)
 	} else {
-		log.Infof("Updating deployment '%s'...", deploymentName)
+		log.Infof("updating deployment '%s'...", deploymentName)
 		_, err := dClient.Update(d)
 		if err != nil {
 			return fmt.Errorf("Error updating kubernetes deployment: %s", err)
 		}
-		log.Debugf("Updated deployment '%s'...", deploymentName)
+		log.Debugf("updated deployment '%s'...", deploymentName)
 	}
 
 	return nil
@@ -129,7 +126,7 @@ func getPodEventChannel(namespace string, field fields.Set, c *kubernetes.Client
 		},
 	)
 	if err != nil {
-		log.Error(err)
+		log.Info(err)
 		return nil, err
 	}
 	ch := w.ResultChan()
@@ -166,9 +163,9 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 			}
 
 			if event.Type == "Normal" {
-				log.Debugf("Kubernetes: %s", event.Message)
+				log.Debugf("kubernetes: %s", event.Message)
 			} else {
-				fmt.Println(Red("Kubernetes: "), event.Message)
+				log.Red("Kubernetes: %s", event.Message)
 			}
 
 		case <-ctx.Done():
@@ -183,7 +180,6 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
 
-	log.Debugf("Waiting for cnd pod to be ready")
 	for tries < maxRetries {
 		pods, err := c.CoreV1().Pods(d.Namespace).List(metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, d.Name),
@@ -200,11 +196,12 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 					pendingOrRunningPods = append(pendingOrRunningPods, pod)
 				}
 			} else {
-				log.Debugf("cnd pod is on %s, waiting", pod.Status.String())
+				log.Debugf("cnd pod is on %s, waiting for it to be running", pod.Status.String())
 			}
 		}
 
 		if len(pendingOrRunningPods) == 1 {
+			log.Debugf("cnd pod is ready")
 			return &pendingOrRunningPods[0], nil
 		}
 
@@ -296,6 +293,7 @@ func waitForDevPodToBeRunning(ctx context.Context, c *kubernetes.Clientset, name
 			return err
 		}
 		if pod.Status.Phase == apiv1.PodRunning {
+			log.Debugf("dev container is running")
 			return nil
 		}
 

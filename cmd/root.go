@@ -57,8 +57,9 @@ func init() {
 // Execute runs the root command
 func Execute() int {
 	root := &cobra.Command{
-		Use:   fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
-		Short: "Manage cloud native environments",
+		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
+		Short:         "Manage cloud native environments",
+		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			log.SetLevel(c.logLevel)
 			ccmd.SilenceUsage = true
@@ -82,7 +83,7 @@ func Execute() int {
 
 	exitCode := 0
 	if err := root.Execute(); err != nil {
-		log.Infof("Command failed: %s", err)
+		log.Red(err.Error())
 		exitCode = 1
 	}
 
@@ -91,7 +92,7 @@ func Execute() int {
 }
 
 // GetKubernetesClient returns the configured kubernetes client for the specified namespace, or the default if empty
-func GetKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, error) {
+func GetKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, string, error) {
 	kubePath := path.Join(config.GetCNDHome(), "kubeconfig")
 	if _, err := os.Stat(kubePath); os.IsNotExist(err) {
 		defaultConfigPath := path.Join(os.Getenv("HOME"), ".kube/config")

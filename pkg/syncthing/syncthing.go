@@ -216,14 +216,14 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	log.Infof("Syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
+	log.Infof("syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 
-	wg.Add(1)
 	go func() {
+		wg.Add(1)
 		defer wg.Done()
 		<-ctx.Done()
 		if err := s.Stop(); err != nil {
-			log.Error(err)
+			log.Info(err)
 		}
 		log.Debug("syncthing clean shutdown")
 		return
