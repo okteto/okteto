@@ -76,6 +76,10 @@ func list(yamlOutput bool) error {
 			Client:     client,
 		}
 
+		if sy.GUIAddress == "" {
+			continue
+		}
+
 		completion, err := getStatus(sy, svc)
 		if err == nil {
 			env.Completion = fmt.Sprintf("%2.f%%", completion)
@@ -109,7 +113,7 @@ func getStatus(sy *syncthing.Syncthing, s storage.Service) (float64, error) {
 
 	var events []event
 	if err := json.Unmarshal(body, &events); err != nil {
-		return 0, fmt.Errorf("error getting syncthing state: %s", err)
+		return 0, fmt.Errorf("error unmarshalling syncthing state: %s", err)
 	}
 
 	for i := len(events) - 1; i >= 0; i-- {
