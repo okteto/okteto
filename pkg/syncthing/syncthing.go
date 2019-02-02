@@ -218,8 +218,8 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 	log.Infof("syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 
-	wg.Add(1)
 	go func() {
+		wg.Add(1)
 		defer wg.Done()
 		<-ctx.Done()
 		if err := s.Stop(); err != nil {

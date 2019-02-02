@@ -70,9 +70,8 @@ func Insert(
 		return err
 	}
 
-	wg.Add(1)
-
 	go func() {
+		wg.Add(1)
 		defer wg.Done()
 
 		<-ctx.Done()

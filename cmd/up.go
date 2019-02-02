@@ -48,6 +48,7 @@ func Up() *cobra.Command {
 
 			d, pf, err := ExecuteUp(ctx, &wg, dev, namespace, disconnectChannel)
 			if err != nil {
+				log.Debugf("failed to execute up: %s", err)
 				return err
 			}
 
@@ -68,7 +69,7 @@ func Up() *cobra.Command {
 					fmt.Println()
 					return nil
 				case <-disconnectChannel:
-					log.Debug("Cluster connection lost, reconnecting...")
+					log.Debug("cluster connection lost, reconnecting")
 					reconnectPortForward(ctx, &wg, d, pf)
 				}
 			}
@@ -162,7 +163,6 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 		return nil, nil, fmt.Errorf("couldn't connect to your cluster: %s", err)
 	}
 
-	wg.Add(1)
 	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)
 
 	go sy.Monitor(ctx, monitor)
