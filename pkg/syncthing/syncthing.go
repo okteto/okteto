@@ -223,7 +223,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		defer wg.Done()
 		<-ctx.Done()
 		if err := s.Stop(); err != nil {
-			log.Error(err)
+			log.Info(err)
 		}
 		log.Debug("syncthing clean shutdown")
 		return

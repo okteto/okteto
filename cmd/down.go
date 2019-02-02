@@ -39,7 +39,7 @@ func executeDown() error {
 			return nil
 		}
 
-		log.Error(err)
+		log.Info(err)
 		return fmt.Errorf("failed to deactivate your cloud native environment")
 	}
 

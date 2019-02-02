@@ -129,7 +129,7 @@ func getPodEventChannel(namespace string, field fields.Set, c *kubernetes.Client
 		},
 	)
 	if err != nil {
-		log.Error(err)
+		log.Info(err)
 		return nil, err
 	}
 	ch := w.ResultChan()

@@ -77,7 +77,7 @@ func Insert(
 
 		<-ctx.Done()
 		if err := Stop(namespace, dev); err != nil {
-			log.Error(err)
+			log.Info(err)
 		}
 		log.Debug("insert clean shutdown")
 		return

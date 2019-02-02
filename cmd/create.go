@@ -49,12 +49,12 @@ func executeCreate(devPath string) error {
 	dev.Swap.Deployment.Name = path.Base(root)
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
-		log.Error(err)
+		log.Info(err)
 		return fmt.Errorf("Failed to generate your cnd manifest")
 	}
 
 	if err := ioutil.WriteFile(devPath, marshalled, 0600); err != nil {
-		log.Error(err)
+		log.Info(err)
 		return fmt.Errorf("Failed to generate your cnd manifest")
 	}
 
