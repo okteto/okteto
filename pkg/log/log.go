@@ -15,7 +15,7 @@ import (
 const (
 	red    = "\033[1;31m%s\033[0m\n"
 	yellow = "\033[1;33m%s\033[0m\n"
-	green  = "\033[1;34m%s\033[0m"
+	green  = "\033[1;32m%s\033[0m\n"
 )
 
 type logger struct {

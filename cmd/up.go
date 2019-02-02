@@ -23,16 +23,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-const (
-	maxReconnectionAttempts     = 2 // this will cause the command to exit after 5 minutes of disconnection
-	reconnectionAttemptsTimeout = 5 * time.Minute
-)
-
-var (
-	reconnectionAttempts    = 0
-	lastReconnectionAttempt = time.Now()
-)
-
 //Up starts a cloud native environment
 func Up() *cobra.Command {
 	var namespace string
@@ -53,7 +43,7 @@ func Up() *cobra.Command {
 
 			ctx, cancel := context.WithCancel(context.Background())
 			var wg sync.WaitGroup
-			defer shutdown(cancel, &wg)
+			defer Shutdown(cancel, &wg)
 
 			disconnectChannel := make(chan struct{}, 1)
 			reconnectChannel := make(chan struct{}, 1)
@@ -66,45 +56,65 @@ func Up() *cobra.Command {
 			fullname := deployments.GetFullName(d.Namespace, d.Name)
 			fmt.Printf("Linking '%s' to %s/%s...", dev.Mount.Source, fullname, dev.Swap.Deployment.Container)
 			fmt.Println()
-			fmt.Printf("Ready! Go to your local IDE and continue coding!")
-			fmt.Println()
-
-			stopChannel := make(chan os.Signal, 1)
-			signal.Notify(stopChannel, os.Interrupt)
+			log.Green("Ready. Go to your IDE and start coding 😎!")
 
 			log.Debugf("%s ready, waiting for stop signal to shut down", fullname)
 
-			resetAttempts := time.NewTimer(5 * time.Minute)
-			for {
-				select {
-				case <-stopChannel:
-					log.Debugf("CTRL+C received, starting shutdown sequence")
-					fmt.Println()
-					return nil
-				case <-reconnectChannel:
-					reconnectionAttempts = 0
-					log.Infof("cluster reconnection successful")
-					log.Green("Reconnected to your cluster 😎.")
-				case <-disconnectChannel:
-					log.Infof("cluster connection lost, reconnecting %d/%d", reconnectionAttempts, maxReconnectionAttempts)
-					reconnectionAttempts++
-					if reconnectionAttempts > maxReconnectionAttempts {
-						return fmt.Errorf("Lost connection to your cluster. Plase check your network connection and run '%s up' again", config.GetBinaryName())
-					}
-
-					log.Yellow("Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves.")
-					reconnectPortForward(ctx, &wg, d, pf)
-				case <-resetAttempts.C:
-					log.Debug("resetting reconnection attempts counter")
-					reconnectionAttempts = 0
-				}
-			}
+			return WaitUntilExit(ctx, reconnectChannel, disconnectChannel, &wg, d, pf)
 		},
 	}
 
 	addDevPathFlag(cmd, &devPath)
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "kubernetes namespace to use (defaults to the current kube config namespace)")
 	return cmd
+}
+
+// WaitUntilExit blocks execution until a stop signal is sent or a disconnect event
+func WaitUntilExit(ctx context.Context, reconnect, disconnect chan struct{}, wg *sync.WaitGroup, d *appsv1.Deployment, pf *forward.CNDPortForward) error {
+	maxReconnectionAttempts := 6 // this will cause the command to exit after 3 minutes of disconnection
+	resetAttempts := time.NewTimer(5 * time.Minute)
+	displayDisconnectionNotification := true
+	displayReconnectionNotification := false
+	reconnectionAttempts := 0
+	errLostConnection := fmt.Errorf("Lost connection to your cluster. Plase check your network connection and run '%s up' again", config.GetBinaryName())
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+
+	for {
+		select {
+		case <-stop:
+			log.Debugf("CTRL+C received, starting shutdown sequence")
+			fmt.Println()
+			return nil
+		case <-reconnect:
+			reconnectionAttempts = 0
+			if displayReconnectionNotification {
+				log.Green("Reconnected to your cluster.")
+				displayDisconnectionNotification = true
+				displayReconnectionNotification = false
+			}
+		case <-disconnect:
+			log.Infof("cluster connection lost, reconnecting %d/%d", reconnectionAttempts, maxReconnectionAttempts)
+			reconnectionAttempts++
+			if reconnectionAttempts > maxReconnectionAttempts {
+				return errLostConnection
+			}
+
+			if displayDisconnectionNotification {
+				log.Yellow("Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves.")
+				displayReconnectionNotification = true
+				displayDisconnectionNotification = false
+			}
+
+			if err := ReconnectPortForward(ctx, wg, d, pf); err != nil {
+				log.Infof("failed to reconnect port forward. will retry: %s", err)
+			}
+		case <-resetAttempts.C:
+			log.Debug("resetting reconnection attempts counter")
+			reconnectionAttempts = 0
+		}
+	}
 }
 
 // ExecuteUp runs all the logic for the up command
@@ -195,7 +205,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 	return d, pf, nil
 }
 
-func reconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, pf *forward.CNDPortForward) error {
+func ReconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, pf *forward.CNDPortForward) error {
 
 	pf.Stop()
 
@@ -218,7 +228,8 @@ func reconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Dep
 	return nil
 }
 
-func shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
+// Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
+func Shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
 	log.Debugf("cancelling context")
 	cancel()
 
