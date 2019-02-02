@@ -184,7 +184,7 @@ func reconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Dep
 	}
 
 	if err := pf.Start(ctx, wg, client, restConfig, pod); err != nil {
-		return fmt.Errorf("couldn't start the connection to your cluster: %s", err)
+		return fmt.Errorf("couldn't connect to your cluster: %s", err)
 	}
 
 	log.Infof("reconnected port-forwarder-%d:%d", pf.LocalPort, pf.RemotePort)

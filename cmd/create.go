@@ -41,7 +41,7 @@ func executeCreate(devPath string) error {
 
 	languagesDiscovered, err := linguist.ProcessDirectory(root)
 	if err != nil {
-		log.Error(err)
+		log.Info(err)
 		return fmt.Errorf("Failed to determine the language of the current directory")
 	}
 

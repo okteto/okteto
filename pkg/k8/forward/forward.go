@@ -89,7 +89,7 @@ func (p *CNDPortForward) Start(
 		for {
 			select {
 			case <-t.Done():
-				log.Debugf("[port-forward-%d:%d] starting portforward cancellation sequence", c.LocalPort, c.RemotePort)
+				log.Debugf("[port-forward-%d:%d] starting cancellation sequence", c.LocalPort, c.RemotePort)
 				p.Stop()
 				return
 			case <-c.StopChan:
@@ -100,8 +100,8 @@ func (p *CNDPortForward) Start(
 
 	p.IsReady = false
 	go func(f *portforward.PortForwarder, local, remote int) {
-		f.ForwardPorts()
-		log.Debugf("[port-forward-%d:%d] forwardPorts goroutine finished", local, remote)
+		err := f.ForwardPorts()
+		log.Debugf("[port-forward-%d:%d] goroutine forwarding finished: %s", local, remote, err)
 		return
 	}(pf, p.LocalPort, p.RemotePort)
 
@@ -118,7 +118,8 @@ func (p *CNDPortForward) Stop() {
 
 	defer p.wg.Done()
 	log.Debugf("[port-forward-%d:%d] logged:\n%s", p.LocalPort, p.RemotePort, p.Out.String())
-	if p.StopChan != nil {
+	if p.StopChan != nil && p.IsReady {
+		p.IsReady = false
 		close(p.StopChan)
 		<-p.StopChan
 	}
