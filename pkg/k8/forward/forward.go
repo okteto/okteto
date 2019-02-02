@@ -82,8 +82,6 @@ func (p *CNDPortForward) Start(
 		return err
 	}
 
-	p.wg = wg
-
 	p.IsReady = false
 	go func(f *portforward.PortForwarder, local, remote int) {
 		err := f.ForwardPorts()
