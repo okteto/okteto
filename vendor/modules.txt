@@ -33,8 +33,6 @@ github.com/dsnet/compress
 github.com/evanphx/json-patch
 # github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d
 github.com/exponent-io/jsonpath
-# github.com/ghodss/yaml v1.0.0
-github.com/ghodss/yaml
 # github.com/go-openapi/jsonpointer v0.17.0
 github.com/go-openapi/jsonpointer
 # github.com/go-openapi/jsonreference v0.17.0
@@ -46,8 +44,6 @@ github.com/go-openapi/swag
 # github.com/gogo/protobuf v1.1.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-# github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-github.com/golang/glog
 # github.com/golang/protobuf v1.2.0
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes/any
@@ -174,13 +170,14 @@ gopkg.in/src-d/enry.v1/regex
 gopkg.in/toqueteos/substring.v1
 # gopkg.in/yaml.v2 v2.2.1
 gopkg.in/yaml.v2
-# k8s.io/api v0.0.0-20181126151915-b503174bad59
+# k8s.io/api v0.0.0-20190202010724-74b699b93c15
 k8s.io/api/apps/v1
 k8s.io/api/core/v1
 k8s.io/api/admissionregistration/v1alpha1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/apps/v1beta1
 k8s.io/api/apps/v1beta2
+k8s.io/api/auditregistration/v1alpha1
 k8s.io/api/authentication/v1
 k8s.io/api/authentication/v1beta1
 k8s.io/api/authorization/v1
@@ -208,7 +205,7 @@ k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
 k8s.io/api/admission/v1beta1
 k8s.io/api/imagepolicy/v1alpha1
-# k8s.io/apimachinery v0.0.0-20181126123746-eddba98df674
+# k8s.io/apimachinery v0.0.0-20190117220443-572dfc7bdfcb
 k8s.io/apimachinery/pkg/util/runtime
 k8s.io/apimachinery/pkg/apis/meta/v1
 k8s.io/apimachinery/pkg/fields
@@ -249,11 +246,11 @@ k8s.io/apimachinery/pkg/runtime/serializer/protobuf
 k8s.io/apimachinery/pkg/runtime/serializer/recognizer
 k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/pkg/util/framer
-# k8s.io/cli-runtime v0.0.0-20190126175526-e67305b1e9ff
+# k8s.io/cli-runtime v0.0.0-20190202014047-491c94071cfa
 k8s.io/cli-runtime/pkg/genericclioptions
 k8s.io/cli-runtime/pkg/genericclioptions/printers
 k8s.io/cli-runtime/pkg/genericclioptions/resource
-# k8s.io/client-go v0.0.0-20181126152608-d082d5923d3c
+# k8s.io/client-go v10.0.0+incompatible
 k8s.io/client-go/kubernetes
 k8s.io/client-go/plugin/pkg/client/auth/gcp
 k8s.io/client-go/rest
@@ -269,6 +266,7 @@ k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1
 k8s.io/client-go/kubernetes/typed/apps/v1
 k8s.io/client-go/kubernetes/typed/apps/v1beta1
 k8s.io/client-go/kubernetes/typed/apps/v1beta2
+k8s.io/client-go/kubernetes/typed/auditregistration/v1alpha1
 k8s.io/client-go/kubernetes/typed/authentication/v1
 k8s.io/client-go/kubernetes/typed/authentication/v1beta1
 k8s.io/client-go/kubernetes/typed/authorization/v1
@@ -330,7 +328,7 @@ k8s.io/klog
 # k8s.io/kube-openapi v0.0.0-20190115222348-ced9eb3070a5
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/proto/validation
-# k8s.io/kubernetes v1.13.2
+# k8s.io/kubernetes v1.13.3
 k8s.io/kubernetes/pkg/kubectl/cmd/exec
 k8s.io/kubernetes/pkg/kubectl/cmd/util
 k8s.io/kubernetes/pkg/kubectl/scheme

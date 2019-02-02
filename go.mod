@@ -18,7 +18,6 @@ require (
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-openapi/spec v0.18.0 // indirect
 	github.com/gogo/protobuf v1.1.1 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.2.0 // indirect
@@ -62,13 +61,13 @@ require (
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/yaml.v2 v2.2.1
 	gotest.tools v2.2.0+incompatible // indirect
-	k8s.io/api v0.0.0-20181126151915-b503174bad59
-	k8s.io/apimachinery v0.0.0-20181126123746-eddba98df674
-	k8s.io/cli-runtime v0.0.0-20190126175526-e67305b1e9ff
-	k8s.io/client-go v0.0.0-20181126152608-d082d5923d3c
+	k8s.io/api v0.0.0-20190202010724-74b699b93c15
+	k8s.io/apimachinery v0.0.0-20190117220443-572dfc7bdfcb
+	k8s.io/cli-runtime v0.0.0-20190202014047-491c94071cfa
+	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v0.1.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20190115222348-ced9eb3070a5 // indirect
-	k8s.io/kubernetes v1.13.2
+	k8s.io/kubernetes v1.13.3
 	k8s.io/utils v0.0.0-20190129030815-ed37f7428a91 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
