@@ -73,11 +73,12 @@ type Builder struct {
 	stream bool
 	dir    bool
 
-	labelSelector     *string
-	fieldSelector     *string
-	selectAll         bool
-	limitChunks       int64
-	requestTransforms []RequestTransform
+	labelSelector        *string
+	fieldSelector        *string
+	selectAll            bool
+	includeUninitialized bool
+	limitChunks          int64
+	requestTransforms    []RequestTransform
 
 	resources []string
 
@@ -437,6 +438,12 @@ func (b *Builder) FieldSelectorParam(s string) *Builder {
 // ExportParam accepts the export boolean for these resources
 func (b *Builder) ExportParam(export bool) *Builder {
 	b.export = export
+	return b
+}
+
+// IncludeUninitialized accepts the include-uninitialized boolean for these resources
+func (b *Builder) IncludeUninitialized(includeUninitialized bool) *Builder {
+	b.includeUninitialized = includeUninitialized
 	return b
 }
 
@@ -837,7 +844,7 @@ func (b *Builder) visitBySelector() *Result {
 		if mapping.Scope.Name() != meta.RESTScopeNameNamespace {
 			selectorNamespace = ""
 		}
-		visitors = append(visitors, NewSelector(client, mapping, selectorNamespace, labelSelector, fieldSelector, b.export, b.limitChunks))
+		visitors = append(visitors, NewSelector(client, mapping, selectorNamespace, labelSelector, fieldSelector, b.export, b.includeUninitialized, b.limitChunks))
 	}
 	if b.continueOnError {
 		result.visitor = EagerVisitorList(visitors)
