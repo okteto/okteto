@@ -2,6 +2,8 @@ package deployments
 
 import (
 	"encoding/json"
+	"fmt"
+	"path"
 	"sort"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
@@ -134,14 +136,29 @@ func mergeEnvironmentVariables(current []v1.EnvVar, dev []model.EnvVar, namespac
 }
 
 func createInitSyncthingContainer(d *appsv1.Deployment, dev *model.Dev) {
+	image := dev.Swap.Deployment.Image
+	if image == "" {
+		for _, c := range d.Spec.Template.Spec.Containers {
+			if c.Name == dev.Swap.Deployment.Container {
+				image = c.Image
+				break
+			}
+		}
+	}
+	source := path.Join(dev.Mount.Target, "*")
 	initSyncthingContainer := apiv1.Container{
 		Name:  dev.GetCNDInitSyncContainer(),
-		Image: initSyncImageTag,
+		Image: image,
 		VolumeMounts: []apiv1.VolumeMount{
 			apiv1.VolumeMount{
 				Name:      dev.GetCNDSyncVolume(),
-				MountPath: "/src",
+				MountPath: "/cnd/init",
 			},
+		},
+		Command: []string{
+			"sh",
+			"-c",
+			fmt.Sprintf(`[ "$(ls -A /cnd/init)" ] || mv %s /cnd/init || true`, source),
 		},
 	}
 
