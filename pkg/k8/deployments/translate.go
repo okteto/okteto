@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
+	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -185,7 +186,7 @@ func createSyncthingContainer(d *appsv1.Deployment, devList []*model.Dev) {
 				ContainerPort: 8384,
 			},
 			apiv1.ContainerPort{
-				ContainerPort: 22000,
+				ContainerPort: syncthing.ClusterPort,
 			},
 		},
 	}
