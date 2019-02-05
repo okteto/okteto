@@ -30,8 +30,9 @@ func Get(namespace string) (string, *kubernetes.Clientset, *rest.Config, string,
 		kubeconfig = kubeconfigEnv
 	}
 
-	if len(kubeconfig) == 0 {
-		return "", nil, nil, "", fmt.Errorf("error initializing config. The KUBECONFIG environment variable must be defined.")
+	_, err := os.Stat(kubeconfig)
+	if err != nil && os.IsNotExist(err) {
+		return "", nil, nil, "", fmt.Errorf("Kubernetes configuration does not exit at %s", kubeconfig)
 	}
 
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
