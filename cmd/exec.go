@@ -12,6 +12,7 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/storage"
 
+	k8Client "github.com/cloudnativedevelopment/cnd/pkg/k8/client"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/exec"
 	"github.com/spf13/cobra"
@@ -52,7 +53,7 @@ func executeExec(args []string) error {
 		return err
 	}
 
-	_, client, cfg, k8sContext, err := GetKubernetesClient(namespace)
+	_, client, cfg, k8sContext, err := k8Client.Get(namespace)
 	if err != nil {
 		return err
 	}

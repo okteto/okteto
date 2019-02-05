@@ -2,18 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path"
 	"sync"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
-	"github.com/cloudnativedevelopment/cnd/pkg/k8/client"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/spf13/cobra"
 	runtime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	kExec "k8s.io/client-go/util/exec"
 
 	// Load the GCP library for authentication
@@ -86,16 +81,6 @@ func Execute() int {
 
 	analytics.Wait()
 	return exitCode
-}
-
-// GetKubernetesClient returns the configured kubernetes client for the specified namespace, or the default if empty
-func GetKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, string, error) {
-	kubePath := path.Join(config.GetCNDHome(), "kubeconfig")
-	if _, err := os.Stat(kubePath); os.IsNotExist(err) {
-		kubePath = path.Join(os.Getenv("HOME"), ".kube/config")
-	}
-
-	return client.Get(namespace, kubePath)
 }
 
 func addDevPathFlag(cmd *cobra.Command, devPath *string) {

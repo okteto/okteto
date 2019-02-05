@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	k8Client "github.com/cloudnativedevelopment/cnd/pkg/k8/client"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 
@@ -134,7 +135,7 @@ func (up *UpContext) WaitUntilExit() error {
 				displayDisconnectionNotification = false
 			}
 
-			if err := ReconnectPortForward(up.Context, up.client, up.deployment, up.forwarder); err != nil {
+			if err := up.ReconnectPortForward(); err != nil {
 				log.Infof("failed to reconnect port forward. will retry: %s", err)
 			}
 		case err := <-up.forwarder.ErrChan:
@@ -162,7 +163,7 @@ func (up *UpContext) Execute() error {
 		return fmt.Errorf("there is already an entry for %s/%s Are you running '%s up' somewhere else?", config.GetBinaryName(), deployments.GetFullName(n, deploymentName), c)
 	}
 
-	up.namespace, up.client, up.restConfig, up.currentContext, err = GetKubernetesClient(up.namespace)
+	up.namespace, up.client, up.restConfig, up.currentContext, err = k8Client.Get(up.namespace)
 	if err != nil {
 		return err
 	}
@@ -248,16 +249,16 @@ func (up *UpContext) StreamLogsAndEvents() {
 }
 
 // ReconnectPortForward stops pf and starts it again with the same ports
-func ReconnectPortForward(ctx context.Context, c *kubernetes.Clientset, d *appsv1.Deployment, pf *forward.CNDPortForwardManager) error {
+func (up *UpContext) ReconnectPortForward() error {
 
-	pf.Stop()
+	up.forwarder.Stop()
 
-	pod, err := deployments.GetCNDPod(ctx, d, c)
+	pod, err := deployments.GetCNDPod(up.Context, up.deployment, up.client)
 	if err != nil {
 		return err
 	}
 
-	pf.Start(pod)
+	up.forwarder.Start(pod)
 	return nil
 }
 
