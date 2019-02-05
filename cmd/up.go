@@ -173,7 +173,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 
 	go deployments.GetPodEvents(ctx, pod, client)
 
-	if err := deployments.InitVolumeWithTarball(ctx, client, restConfig, namespace, pod.Name, devList); err != nil {
+	if err := deployments.WaitForDevPodToBeRunning(ctx, client, namespace, pod.Name); err != nil {
 		return nil, nil, err
 	}
 

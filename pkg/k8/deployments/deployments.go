@@ -7,7 +7,6 @@ import (
 
 	"encoding/json"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/k8/cp"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/secrets"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
@@ -19,7 +18,6 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -227,62 +225,8 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 }
 
-func waitForInitToBeReady(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, namespace, podName string, devList []*model.Dev) error {
-	ticker := time.NewTicker(1 * time.Second)
-	for _, dev := range devList {
-		copied := false
-		tries := 0
-
-		for tries < maxRetries && !copied {
-			pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			for _, status := range pod.Status.InitContainerStatuses {
-				if status.Name == dev.GetCNDInitSyncContainer() {
-					if status.State.Waiting != nil {
-						time.Sleep(1 * time.Second)
-					}
-					if status.State.Running != nil {
-						log.Debugf("cnd-sync init cointainer is now running, sending the tarball")
-						if copied {
-							time.Sleep(1 * time.Second)
-						} else {
-							if err := cp.Copy(ctx, c, config, namespace, pod, dev); err != nil {
-								return err
-							}
-							copied = true
-						}
-					}
-					if status.State.Terminated != nil {
-						if status.State.Terminated.ExitCode != 0 {
-							return fmt.Errorf("Volume initialization failed with exit code %d", status.State.Terminated.ExitCode)
-						}
-						copied = true
-					}
-					break
-				}
-			}
-
-			select {
-			case <-ticker.C:
-				tries++
-				continue
-			case <-ctx.Done():
-				log.Debug("cancelling call to get cnd pod")
-				return ctx.Err()
-			}
-		}
-		if tries == maxRetries {
-			log.Debugf("cnd-sync didn't finish copying the tarball after %d seconds", maxRetries)
-			return fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
-		}
-	}
-
-	return nil
-}
-
-func waitForDevPodToBeRunning(ctx context.Context, c *kubernetes.Clientset, namespace, podName string) error {
+// WaitForDevPodToBeRunning holds until the dev pod is running
+func WaitForDevPodToBeRunning(ctx context.Context, c *kubernetes.Clientset, namespace, podName string) error {
 	ticker := time.NewTicker(1 * time.Second)
 
 	tries := 0
@@ -309,14 +253,4 @@ func waitForDevPodToBeRunning(ctx context.Context, c *kubernetes.Clientset, name
 
 	log.Debugf("dev container didn't start running after %d seconds", maxRetries)
 	return fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
-}
-
-// InitVolumeWithTarball initializes the remote volume with a local tarball
-func InitVolumeWithTarball(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, namespace, podName string, devList []*model.Dev) error {
-
-	if err := waitForInitToBeReady(ctx, c, config, namespace, podName, devList); err != nil {
-		return err
-	}
-
-	return waitForDevPodToBeRunning(ctx, c, namespace, podName)
 }
