@@ -138,6 +138,8 @@ func (up *UpContext) WaitUntilExit() error {
 			if err := ReconnectPortForward(up.Context, up.client, up.deployment, up.forwarder); err != nil {
 				log.Infof("failed to reconnect port forward. will retry: %s", err)
 			}
+		case err := <-up.forwarder.ErrChan:
+			log.Yellow(err.Error())
 		case <-resetAttempts.C:
 			log.Debug("resetting reconnection attempts counter")
 			reconnectionAttempts = 0

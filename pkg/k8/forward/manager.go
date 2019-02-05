@@ -21,7 +21,7 @@ type CNDPortForwardManager struct {
 	ctx          context.Context
 	restConfig   *rest.Config
 	client       *kubernetes.Clientset
-	errchan      chan error
+	ErrChan      chan error
 }
 
 type portForwardHealthcheck struct {
@@ -36,7 +36,7 @@ func NewCNDPortForwardManager(ctx context.Context, restConfig *rest.Config, c *k
 		portForwards: make(map[int]*CNDPortForward),
 		restConfig:   restConfig,
 		client:       c,
-		errchan:      make(chan error, 1),
+		ErrChan:      make(chan error, 1),
 	}
 }
 
@@ -85,7 +85,8 @@ func (p *CNDPortForwardManager) Start(pod *apiv1.Pod) {
 					log.Debugf("[port-forward-%d:%d] goroutine forwarding finished with errors: %s", f.localPort, f.remotePort, err)
 				}
 
-				p.errchan <- fmt.Errorf("couldn't connect to your cluster: %s", err)
+				close(ready)
+				p.ErrChan <- fmt.Errorf("Unable to listen on %d:%d", f.localPort, f.remotePort)
 			}
 		}(pf, ready)
 	}
