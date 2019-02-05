@@ -56,13 +56,7 @@ require (
 	golang.org/x/sys v0.0.0-20190204203706-41f3e6584952 // indirect
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
 	google.golang.org/appengine v1.2.0 // indirect
-	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
-	gopkg.in/cheggaaa/pb.v2 v2.0.6 // indirect
-	gopkg.in/fatih/color.v1 v1.7.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/mattn/go-colorable.v0 v0.1.0 // indirect
-	gopkg.in/mattn/go-isatty.v0 v0.0.4 // indirect
-	gopkg.in/mattn/go-runewidth.v0 v0.0.4 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/src-d/enry.v1 v1.6.7
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
