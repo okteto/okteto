@@ -9,11 +9,49 @@ github.com/MakeNowJust/heredoc
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
+# github.com/aws/aws-sdk-go v1.15.78
+github.com/aws/aws-sdk-go/aws
+github.com/aws/aws-sdk-go/aws/credentials
+github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds
+github.com/aws/aws-sdk-go/aws/ec2metadata
+github.com/aws/aws-sdk-go/aws/session
+github.com/aws/aws-sdk-go/service/s3
+github.com/aws/aws-sdk-go/aws/awserr
+github.com/aws/aws-sdk-go/aws/endpoints
+github.com/aws/aws-sdk-go/internal/sdkio
+github.com/aws/aws-sdk-go/internal/ini
+github.com/aws/aws-sdk-go/internal/shareddefaults
+github.com/aws/aws-sdk-go/aws/client
+github.com/aws/aws-sdk-go/internal/sdkuri
+github.com/aws/aws-sdk-go/aws/client/metadata
+github.com/aws/aws-sdk-go/aws/corehandlers
+github.com/aws/aws-sdk-go/aws/request
+github.com/aws/aws-sdk-go/aws/credentials/stscreds
+github.com/aws/aws-sdk-go/aws/csm
+github.com/aws/aws-sdk-go/aws/defaults
+github.com/aws/aws-sdk-go/aws/awsutil
+github.com/aws/aws-sdk-go/aws/signer/v4
+github.com/aws/aws-sdk-go/internal/s3err
+github.com/aws/aws-sdk-go/private/protocol
+github.com/aws/aws-sdk-go/private/protocol/eventstream
+github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi
+github.com/aws/aws-sdk-go/private/protocol/rest
+github.com/aws/aws-sdk-go/private/protocol/restxml
+github.com/aws/aws-sdk-go/internal/sdkrand
+github.com/aws/aws-sdk-go/service/sts
+github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
+github.com/aws/aws-sdk-go/private/protocol/query
+github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
+github.com/aws/aws-sdk-go/private/protocol/query/queryutil
+# github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d
+github.com/bgentry/go-netrc/netrc
 # github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1
 github.com/chai2010/gettext-go/gettext
 github.com/chai2010/gettext-go/gettext/mo
 github.com/chai2010/gettext-go/gettext/plural
 github.com/chai2010/gettext-go/gettext/po
+# github.com/cheggaaa/pb v1.0.27
+github.com/cheggaaa/pb
 # github.com/denisbrodbeck/machineid v1.0.0
 github.com/denisbrodbeck/machineid
 # github.com/docker/docker v0.0.0-20180612054059-a9fbbdc8dd87
@@ -63,10 +101,21 @@ github.com/googleapis/gnostic/extensions
 # github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7
 github.com/gregjones/httpcache
 github.com/gregjones/httpcache/diskcache
+# github.com/hashicorp/go-cleanhttp v0.5.0
+github.com/hashicorp/go-cleanhttp
+# github.com/hashicorp/go-getter v1.0.2
+github.com/hashicorp/go-getter
+github.com/hashicorp/go-getter/helper/url
+# github.com/hashicorp/go-safetemp v1.0.0
+github.com/hashicorp/go-safetemp
+# github.com/hashicorp/go-version v1.1.0
+github.com/hashicorp/go-version
 # github.com/imdario/mergo v0.3.6
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
+# github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8
+github.com/jmespath/go-jmespath
 # github.com/json-iterator/go v1.1.5
 github.com/json-iterator/go
 # github.com/konsorten/go-windows-terminal-sequences v1.0.1
@@ -75,10 +124,16 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
 github.com/mailru/easyjson/buffer
+# github.com/mattn/go-runewidth v0.0.4
+github.com/mattn/go-runewidth
 # github.com/mholt/archiver v3.1.1+incompatible
 github.com/mholt/archiver
+# github.com/mitchellh/go-homedir v1.0.0
+github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
 github.com/mitchellh/go-ps
+# github.com/mitchellh/go-testing-interface v1.0.0
+github.com/mitchellh/go-testing-interface
 # github.com/mitchellh/go-wordwrap v1.0.0
 github.com/mitchellh/go-wordwrap
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
@@ -115,7 +170,7 @@ github.com/ulikunitz/xz/internal/hash
 github.com/xi2/xz
 # golang.org/x/crypto v0.0.0-20181001203147-e3636079e1a4
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20181005035420-146acd28ed58
+# golang.org/x/net v0.0.0-20181114220301-adae6a3d119a
 golang.org/x/net/http2
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
@@ -128,7 +183,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20181005133103-4497e2df6f9e
+# golang.org/x/sys v0.0.0-20190204203706-41f3e6584952
 golang.org/x/sys/unix
 golang.org/x/sys/windows/registry
 golang.org/x/sys/windows
@@ -254,6 +309,7 @@ k8s.io/cli-runtime/pkg/genericclioptions/resource
 k8s.io/client-go/kubernetes
 k8s.io/client-go/plugin/pkg/client/auth/gcp
 k8s.io/client-go/rest
+k8s.io/client-go/util/exec
 k8s.io/client-go/tools/clientcmd
 k8s.io/client-go/tools/clientcmd/api
 k8s.io/client-go/kubernetes/scheme
@@ -305,7 +361,6 @@ k8s.io/client-go/tools/auth
 k8s.io/client-go/tools/clientcmd/api/latest
 k8s.io/client-go/util/homedir
 k8s.io/client-go/restmapper
-k8s.io/client-go/util/exec
 k8s.io/client-go/tools/reference
 k8s.io/client-go/util/integer
 k8s.io/client-go/third_party/forked/golang/template
