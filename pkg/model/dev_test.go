@@ -93,6 +93,7 @@ func Test_loadDevDefaults(t *testing.T) {
 		manifest            []byte
 		expectedScripts     map[string]string
 		expectedEnvironment []EnvVar
+		expectedForward     []Forward
 	}{
 		{
 			"long script",
@@ -109,6 +110,7 @@ func Test_loadDevDefaults(t *testing.T) {
 			map[string]string{
 				"run": "uwsgi --gevent 100 --http-socket 0.0.0.0:8000 --mount /=app:app --python-autoreload 1"},
 			[]EnvVar{},
+			[]Forward{},
 		},
 		{
 			"basic script",
@@ -124,6 +126,7 @@ func Test_loadDevDefaults(t *testing.T) {
               run: "start.sh"`),
 			map[string]string{"run": "start.sh"},
 			[]EnvVar{},
+			[]Forward{},
 		},
 		{
 			"env vars",
@@ -145,6 +148,29 @@ func Test_loadDevDefaults(t *testing.T) {
 				{Name: "ENV", Value: "production"},
 				{Name: "name", Value: "test-node"},
 			},
+			[]Forward{},
+		},
+		{
+			"forward",
+			[]byte(`
+            swap:
+              deployment:
+                name: service
+                container: core
+            mount:
+              source: /src
+              target: /app
+            scripts:
+              run: "start.sh"
+            forward:
+                - 9000:8000
+                - 9001:8001`),
+			map[string]string{"run": "start.sh"},
+			[]EnvVar{},
+			[]Forward{
+				{Local: 9000, Remote: 8000},
+				{Local: 9001, Remote: 8001},
+			},
 		},
 	}
 
@@ -165,6 +191,10 @@ func Test_loadDevDefaults(t *testing.T) {
 
 			if !reflect.DeepEqual(d.Environment, tt.expectedEnvironment) {
 				t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Environment, tt.expectedEnvironment)
+			}
+
+			if !reflect.DeepEqual(d.Forward, tt.expectedForward) {
+				t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Forward, tt.expectedForward)
 			}
 
 			if !reflect.DeepEqual(d.Scripts, tt.expectedScripts) {

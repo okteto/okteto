@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	yaml "gopkg.in/yaml.v2"
@@ -40,6 +41,7 @@ type Dev struct {
 	Mount       Mount             `json:"mount" yaml:"mount"`
 	Scripts     map[string]string `json:"scripts" yaml:"scripts"`
 	Environment []EnvVar          `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Forward     []Forward         `json:"forward,omitempty" yaml:"forward,omitempty"`
 }
 
 //Swap represents the metadata for the container to be swapped
@@ -101,6 +103,42 @@ func (e *EnvVar) MarshalYAML() (interface{}, error) {
 	return e.Name + "=" + e.Value, nil
 }
 
+// Forward represents a port forwarding definition
+type Forward struct {
+	Local  int64
+	Remote int64
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw string
+	err := unmarshal(&raw)
+	if err != nil {
+		return err
+	}
+
+	parts := strings.SplitN(raw, ":", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("Wrong port-forward syntax '%s', must be of the form 'localPort:RemotePort'", raw)
+	}
+	localPort, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return fmt.Errorf("Cannot convert remote port '%s' in port-forward '%s'", parts[0], raw)
+	}
+	remotePort, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return fmt.Errorf("Cannot convert remote port '%s' in port-forward '%s'", parts[1], raw)
+	}
+	f.Local = localPort
+	f.Remote = remotePort
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (f *Forward) MarshalYAML() (interface{}, error) {
+	return strconv.FormatInt(f.Local, 10) + ":" + strconv.FormatInt(f.Remote, 10), nil
+}
+
 //NewDev returns a new instance of dev with default values
 func NewDev() *Dev {
 	return &Dev{
@@ -113,6 +151,7 @@ func NewDev() *Dev {
 		},
 		Scripts:     make(map[string]string),
 		Environment: make([]EnvVar, 0),
+		Forward:     make([]Forward, 0),
 	}
 }
 
