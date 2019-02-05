@@ -3,6 +3,7 @@ package forward
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -38,7 +39,7 @@ func (p *CNDPortForward) start(config *rest.Config, requestURL *url.URL, pod *ap
 		[]string{fmt.Sprintf("%d:%d", p.localPort, p.remotePort)},
 		p.stopChan,
 		ready,
-		p.out,
+		ioutil.Discard,
 		p.out)
 
 	if err != nil {
@@ -50,6 +51,7 @@ func (p *CNDPortForward) start(config *rest.Config, requestURL *url.URL, pod *ap
 
 func (p *CNDPortForward) stop() {
 	log.Debugf("[port-forward-%d:%d] stopping", p.localPort, p.remotePort)
+	log.Debugf("[port-forward-%d:%d] logged errors: %s", p.localPort, p.remotePort, p.out.String())
 	close(p.stopChan)
 	<-p.stopChan
 	log.Debugf("[port-forward-%d:%d] stopped", p.localPort, p.remotePort)
