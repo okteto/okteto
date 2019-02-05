@@ -1,7 +1,11 @@
 package client
 
 import (
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
+	"fmt"
+	"os"
+	"path"
+	"runtime"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -11,11 +15,27 @@ import (
 //Get returns a kubernetes client.
 // If namespace is empty, it will use the default namespace configured.
 // If path is empty, it will use the default path configuration
-func Get(namespace, configPath string) (string, *kubernetes.Clientset, *rest.Config, string, error) {
-	log.Debugf("reading kubernetes configuration from %s", configPath)
+func Get(namespace string) (string, *kubernetes.Clientset, *rest.Config, string, error) {
+	home := os.Getenv("HOME")
+	if runtime.GOOS == "windows" {
+		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
+		if home == "" {
+			home = os.Getenv("USERPROFILE")
+		}
+	}
+
+	kubeconfig := path.Join(home, ".kube", "config")
+	kubeconfigEnv := os.Getenv("KUBECONFIG")
+	if len(kubeconfigEnv) > 0 {
+		kubeconfig = kubeconfigEnv
+	}
+
+	if len(kubeconfig) == 0 {
+		return "", nil, nil, "", fmt.Errorf("error initializing config. The KUBECONFIG environment variable must be defined.")
+	}
 
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath},
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig},
 		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}})
 
 	if namespace == "" {

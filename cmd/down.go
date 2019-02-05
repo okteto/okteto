@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	k8Client "github.com/cloudnativedevelopment/cnd/pkg/k8/client"
+	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	"github.com/cloudnativedevelopment/cnd/pkg/storage"
 	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
-
-	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
 
 	"github.com/spf13/cobra"
 )
@@ -43,7 +43,7 @@ func executeDown() error {
 		return fmt.Errorf("failed to deactivate your cloud native environment")
 	}
 
-	_, client, _, k8sContext, err := GetKubernetesClient(namespace)
+	_, client, _, k8sContext, err := k8Client.Get(namespace)
 	if err != nil {
 		return err
 	}
