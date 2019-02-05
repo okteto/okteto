@@ -43,6 +43,9 @@ const (
 
 	// DefaultFileWatcherDelay how much to wait before starting a sync after a file change
 	DefaultFileWatcherDelay = 5
+
+	// ClusterPort is the port used by syncthing in the cluster
+	ClusterPort = 22000
 )
 
 // Syncthing represents the local syncthing process.
@@ -54,6 +57,7 @@ type Syncthing struct {
 	DevList          []*model.Dev
 	Namespace        string
 	RemoteAddress    string
+	RemotePort       int
 	RemoteDeviceID   string
 	APIKey           string
 	FileWatcherDelay int
@@ -98,6 +102,7 @@ func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthin
 		GUIAddress:       fmt.Sprintf("127.0.0.1:%d", guiPort),
 		ListenAddress:    fmt.Sprintf("0.0.0.0:%d", listenPort),
 		Client:           NewAPIClient(),
+		RemotePort:       remotePort,
 	}
 
 	return s, nil

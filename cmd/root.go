@@ -92,8 +92,7 @@ func Execute() int {
 func GetKubernetesClient(namespace string) (string, *kubernetes.Clientset, *rest.Config, string, error) {
 	kubePath := path.Join(config.GetCNDHome(), "kubeconfig")
 	if _, err := os.Stat(kubePath); os.IsNotExist(err) {
-		defaultConfigPath := path.Join(os.Getenv("HOME"), ".kube/config")
-		return client.Get(namespace, defaultConfigPath)
+		kubePath = path.Join(os.Getenv("HOME"), ".kube/config")
 	}
 
 	return client.Get(namespace, kubePath)

@@ -197,6 +197,7 @@ gotest.tools v2.2.0+incompatible h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=
 gotest.tools v2.2.0+incompatible/go.mod h1:DsYFclhRJ6vuDpmuTbkuFWG+y2sxOXAzmJt81HFBacw=
 k8s.io/api v0.0.0-20190202010724-74b699b93c15 h1:AoUGjnJ3PJMFz+Rkp4lx3X+6mPUnY1MESJhbUSGX+pc=
 k8s.io/api v0.0.0-20190202010724-74b699b93c15/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
+k8s.io/api v0.0.0-20190205051315-663a691defed h1:BeBnW9pfhbIWrE02hF4jApNKhb/ucBzQbiiVZWKoqH4=
 k8s.io/apimachinery v0.0.0-20190117220443-572dfc7bdfcb h1:+mNFBkhBgd0wFJ1K18cOYw3LVW7aMIM/pazb4i44aS0=
 k8s.io/apimachinery v0.0.0-20190117220443-572dfc7bdfcb/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
 k8s.io/cli-runtime v0.0.0-20190202014047-491c94071cfa h1:F4h6+U1yezv2Ce0aaw7Z8qRwP3oILrH14chQ+ym1Rp0=

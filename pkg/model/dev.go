@@ -105,8 +105,8 @@ func (e *EnvVar) MarshalYAML() (interface{}, error) {
 
 // Forward represents a port forwarding definition
 type Forward struct {
-	Local  int64
-	Remote int64
+	Local  int
+	Remote int
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -121,11 +121,11 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if len(parts) != 2 {
 		return fmt.Errorf("Wrong port-forward syntax '%s', must be of the form 'localPort:RemotePort'", raw)
 	}
-	localPort, err := strconv.ParseInt(parts[0], 10, 64)
+	localPort, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return fmt.Errorf("Cannot convert remote port '%s' in port-forward '%s'", parts[0], raw)
 	}
-	remotePort, err := strconv.ParseInt(parts[1], 10, 64)
+	remotePort, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return fmt.Errorf("Cannot convert remote port '%s' in port-forward '%s'", parts[1], raw)
 	}
@@ -136,7 +136,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (f *Forward) MarshalYAML() (interface{}, error) {
-	return strconv.FormatInt(f.Local, 10) + ":" + strconv.FormatInt(f.Remote, 10), nil
+	return fmt.Sprintf("%d:%d", f.Local, f.Remote), nil
 }
 
 //NewDev returns a new instance of dev with default values

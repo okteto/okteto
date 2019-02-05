@@ -21,7 +21,30 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
+
+// UpContext is the common context of all operations performed during
+// the up command
+type UpContext struct {
+	Context        context.Context
+	Cancel         context.CancelFunc
+	wg             *sync.WaitGroup
+	dev            *model.Dev
+	client         *kubernetes.Clientset
+	restConfig     *rest.Config
+	currentContext string
+	namespace      string
+	deployment     *appsv1.Deployment
+	deploymentName string
+	pod            *apiv1.Pod
+	forwarder      *forward.CNDPortForwardManager
+	disconnect     chan struct{}
+	reconnect      chan struct{}
+	sy             *syncthing.Syncthing
+}
 
 //Up starts a cloud native environment
 func Up() *cobra.Command {
@@ -32,7 +55,9 @@ func Up() *cobra.Command {
 		Short: "Activate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debugf("starting up command")
-			dev, err := model.ReadDev(devPath)
+			up := &UpContext{}
+			var err error
+			up.dev, err = model.ReadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -41,25 +66,29 @@ func Up() *cobra.Command {
 			defer analytics.Send(analytics.EventUpEnd, GetActionID())
 			fmt.Println("Activating your cloud native development environment...")
 
-			ctx, cancel := context.WithCancel(context.Background())
-			var wg sync.WaitGroup
-			defer Shutdown(cancel, &wg)
+			up.namespace = namespace
+			up.wg = &sync.WaitGroup{}
+			up.Context, up.Cancel = context.WithCancel(context.Background())
+			defer up.Shutdown()
 
-			disconnectChannel := make(chan struct{}, 1)
-			reconnectChannel := make(chan struct{}, 1)
-			d, pf, err := ExecuteUp(ctx, &wg, dev, namespace, disconnectChannel, reconnectChannel)
+			up.disconnect = make(chan struct{}, 1)
+			up.reconnect = make(chan struct{}, 1)
+
+			err = up.Execute()
 			if err != nil {
 				return err
 			}
 
-			fullname := deployments.GetFullName(d.Namespace, d.Name)
-			fmt.Printf("Linking '%s' to %s/%s...", dev.Mount.Source, fullname, dev.Swap.Deployment.Container)
+			up.StreamLogsAndEvents()
+			go up.sy.Monitor(up.Context, up.disconnect, up.reconnect)
+
+			fmt.Printf("Linking '%s' to %s/%s...", up.dev.Mount.Source, up.deploymentName, up.dev.Swap.Deployment.Container)
 			fmt.Println()
 			log.Green("Ready. Go to your IDE and start coding 😎!")
 
-			log.Debugf("%s ready, waiting for stop signal to shut down", fullname)
+			log.Debugf("%s ready, waiting for stop signal to shut down", up.deploymentName)
 
-			return WaitUntilExit(ctx, reconnectChannel, disconnectChannel, &wg, d, pf)
+			return up.WaitUntilExit()
 		},
 	}
 
@@ -69,7 +98,7 @@ func Up() *cobra.Command {
 }
 
 // WaitUntilExit blocks execution until a stop signal is sent or a disconnect event
-func WaitUntilExit(ctx context.Context, reconnect, disconnect chan struct{}, wg *sync.WaitGroup, d *appsv1.Deployment, pf *forward.CNDPortForward) error {
+func (up *UpContext) WaitUntilExit() error {
 	maxReconnectionAttempts := 6 // this will cause the command to exit after 3 minutes of disconnection
 	resetAttempts := time.NewTimer(5 * time.Minute)
 	displayDisconnectionNotification := true
@@ -86,14 +115,14 @@ func WaitUntilExit(ctx context.Context, reconnect, disconnect chan struct{}, wg 
 			log.Debugf("CTRL+C received, starting shutdown sequence")
 			fmt.Println()
 			return nil
-		case <-reconnect:
+		case <-up.reconnect:
 			reconnectionAttempts = 0
 			if displayReconnectionNotification {
 				log.Green("Reconnected to your cluster.")
 				displayDisconnectionNotification = true
 				displayReconnectionNotification = false
 			}
-		case <-disconnect:
+		case <-up.disconnect:
 			log.Infof("cluster connection lost, reconnecting %d/%d", reconnectionAttempts, maxReconnectionAttempts)
 			reconnectionAttempts++
 			if reconnectionAttempts > maxReconnectionAttempts {
@@ -106,7 +135,7 @@ func WaitUntilExit(ctx context.Context, reconnect, disconnect chan struct{}, wg 
 				displayDisconnectionNotification = false
 			}
 
-			if err := ReconnectPortForward(ctx, wg, d, pf); err != nil {
+			if err := ReconnectPortForward(up.Context, up.client, up.deployment, up.forwarder); err != nil {
 				log.Infof("failed to reconnect port forward. will retry: %s", err)
 			}
 		case <-resetAttempts.C:
@@ -116,135 +145,135 @@ func WaitUntilExit(ctx context.Context, reconnect, disconnect chan struct{}, wg 
 	}
 }
 
-// ExecuteUp runs all the logic for the up command
-func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, disconnect, reconnect chan struct{}) (*appsv1.Deployment, *forward.CNDPortForward, error) {
+// Execute runs all the logic for the up command
+func (up *UpContext) Execute() error {
 
 	if !syncthing.IsInstalled() {
 		fmt.Println("Installing dependencies...")
-		if err := downloadSyncthing(ctx); err != nil {
-			return nil, nil, fmt.Errorf("couldn't download syncthing, please try again")
+		if err := downloadSyncthing(up.Context); err != nil {
+			return fmt.Errorf("couldn't download syncthing, please try again")
 		}
 
 	}
 	n, deploymentName, c, err := findDevEnvironment(true)
 
 	if err != errNoCNDEnvironment {
-		return nil, nil, fmt.Errorf("there is already an entry for %s/%s Are you running '%s up' somewhere else?", config.GetBinaryName(), deployments.GetFullName(n, deploymentName), c)
+		return fmt.Errorf("there is already an entry for %s/%s Are you running '%s up' somewhere else?", config.GetBinaryName(), deployments.GetFullName(n, deploymentName), c)
 	}
 
-	namespace, client, restConfig, k8sContext, err := GetKubernetesClient(namespace)
+	up.namespace, up.client, up.restConfig, up.currentContext, err = GetKubernetesClient(up.namespace)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	fullname := deployments.GetFullName(namespace, dev.Swap.Deployment.Name)
+	up.deploymentName = deployments.GetFullName(up.namespace, up.dev.Swap.Deployment.Name)
+	log.Debugf("getting deployment %s", up.deploymentName)
 
-	log.Debugf("getting deployment %s", fullname)
-	d, err := deployments.Get(namespace, dev.Swap.Deployment.Name, client)
+	up.deployment, err = deployments.Get(up.namespace, up.dev.Swap.Deployment.Name, up.client)
 	if err != nil {
 		log.Debug(err)
 		if strings.Contains(err.Error(), "not found") {
-			return nil, nil, fmt.Errorf("deployment %s not found [current context: %s]", fullname, k8sContext)
+			return fmt.Errorf("deployment %s not found [current context: %s]", up.deploymentName, up.currentContext)
 		}
 
-		return nil, nil, fmt.Errorf("couldn't get deployment %s from your cluster. Please try again", fullname)
+		return fmt.Errorf("couldn't get deployment %s from your cluster. Please try again", up.deploymentName)
 	}
 
-	dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(
-		dev.Swap.Deployment.Container,
-		d.Spec.Template.Spec.Containers,
+	up.dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(
+		up.dev.Swap.Deployment.Container,
+		up.deployment.Spec.Template.Spec.Containers,
 	)
 
-	devList, err := deployments.GetAndUpdateDevListFromAnnotation(d.GetObjectMeta(), dev)
+	devList, err := deployments.GetAndUpdateDevListFromAnnotation(up.deployment.GetObjectMeta(), up.dev)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	sy, err := syncthing.NewSyncthing(namespace, d.Name, devList)
+	up.sy, err = syncthing.NewSyncthing(up.namespace, up.deployment.Name, devList)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	log.Debugf("enabling dev mode on %s", fullname)
-	if err := deployments.DevModeOn(d, devList, client); err != nil {
-		return nil, nil, err
+	log.Debugf("enabling dev mode on %s", up.deploymentName)
+	if err := deployments.DevModeOn(up.deployment, devList, up.client); err != nil {
+		return err
 	}
 
-	log.Debugf("enabled dev mode on %s", fullname)
+	log.Debugf("enabled dev mode on %s", up.deploymentName)
 
-	pod, err := deployments.GetCNDPod(ctx, d, client)
+	up.pod, err = deployments.GetCNDPod(up.Context, up.deployment, up.client)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	go deployments.GetPodEvents(ctx, pod, client)
-
-	if err := deployments.WaitForDevPodToBeRunning(ctx, client, namespace, pod.Name); err != nil {
-		return nil, nil, err
+	if err := deployments.WaitForDevPodToBeRunning(up.Context, up.client, up.namespace, up.pod.Name); err != nil {
+		return err
 	}
 
-	if err := sy.Run(ctx, wg); err != nil {
-		return nil, nil, err
+	if err := up.sy.Run(up.Context, up.wg); err != nil {
+		return err
 	}
 
-	err = storage.Insert(ctx, wg, namespace, dev, sy.GUIAddress)
+	err = storage.Insert(up.Context, up.wg, up.namespace, up.dev, up.sy.GUIAddress)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
-			log.Infof("failed to insert new state value for %s", fullname)
-			return nil, nil, fmt.Errorf("there is already an entry for %s. Are you running '%s up' somewhere else?", config.GetBinaryName(), fullname)
+			log.Infof("failed to insert new state value for %s", up.deploymentName)
+			return fmt.Errorf("there is already an entry for %s. Are you running '%s up' somewhere else?", config.GetBinaryName(), up.deploymentName)
 		}
-		return nil, nil, err
+		return err
 	}
 
-	pf, err := forward.NewCNDPortForward(sy.RemoteAddress)
-	if err != nil {
-		return nil, nil, err
+	up.forwarder = forward.NewCNDPortForwardManager(up.Context, up.restConfig, up.client)
+	if err := up.forwarder.Add(up.sy.RemotePort, syncthing.ClusterPort, up.sy.IsConnected); err != nil {
+		return err
 	}
 
-	if err := pf.Start(ctx, wg, client, restConfig, pod); err != nil {
-		return nil, nil, fmt.Errorf("couldn't connect to your cluster: %s", err)
+	for _, f := range up.dev.Forward {
+		if err := up.forwarder.Add(f.Local, f.Remote, up.sy.IsConnected); err != nil {
+			return err
+		}
 	}
 
-	go logs.StreamLogs(ctx, wg, d, dev.Swap.Deployment.Container, client)
+	up.forwarder.Start(up.pod)
+	return nil
+}
 
-	go sy.Monitor(ctx, disconnect, reconnect)
-	return d, pf, nil
+// StreamLogsAndEvents starts go routines to:
+// - get pod events
+// - get container logs
+func (up *UpContext) StreamLogsAndEvents() {
+	go deployments.GetPodEvents(up.Context, up.pod, up.client)
+	go logs.StreamLogs(up.Context, up.wg, up.deployment, up.dev.Swap.Deployment.Container, up.client)
 }
 
 // ReconnectPortForward stops pf and starts it again with the same ports
-func ReconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, pf *forward.CNDPortForward) error {
+func ReconnectPortForward(ctx context.Context, c *kubernetes.Clientset, d *appsv1.Deployment, pf *forward.CNDPortForwardManager) error {
 
 	pf.Stop()
 
-	_, client, restConfig, _, err := GetKubernetesClient(d.Namespace)
+	pod, err := deployments.GetCNDPod(ctx, d, c)
 	if err != nil {
 		return err
 	}
 
-	pod, err := deployments.GetCNDPod(ctx, d, client)
-	if err != nil {
-		return err
-	}
-
-	if err := pf.Start(ctx, wg, client, restConfig, pod); err != nil {
-		return fmt.Errorf("couldn't connect to your cluster: %s", err)
-	}
-
-	log.Infof("reconnected port-forwarder-%d:%d", pf.LocalPort, pf.RemotePort)
-
+	pf.Start(pod)
 	return nil
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
-func Shutdown(cancel context.CancelFunc, wg *sync.WaitGroup) {
+func (up *UpContext) Shutdown() {
 	log.Debugf("cancelling context")
-	cancel()
+	up.Cancel()
 
 	log.Debugf("waiting for tasks for be done")
 	done := make(chan struct{})
 	go func() {
-		wg.Wait()
+		up.wg.Wait()
 		close(done)
+	}()
+
+	go func() {
+		up.forwarder.Stop()
 	}()
 
 	select {
