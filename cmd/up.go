@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	k8Client "github.com/cloudnativedevelopment/cnd/pkg/k8/client"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 
@@ -132,7 +133,7 @@ func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespac
 		return nil, nil, fmt.Errorf("there is already an entry for %s/%s Are you running '%s up' somewhere else?", config.GetBinaryName(), deployments.GetFullName(n, deploymentName), c)
 	}
 
-	namespace, client, restConfig, k8sContext, err := GetKubernetesClient(namespace)
+	namespace, client, restConfig, k8sContext, err := k8Client.Get(namespace)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -216,7 +217,7 @@ func ReconnectPortForward(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Dep
 
 	pf.Stop()
 
-	_, client, restConfig, _, err := GetKubernetesClient(d.Namespace)
+	_, client, restConfig, _, err := k8Client.Get(d.Namespace)
 	if err != nil {
 		return err
 	}
