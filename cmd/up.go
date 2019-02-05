@@ -80,7 +80,6 @@ func Up() *cobra.Command {
 			}
 
 			up.StreamLogsAndEvents()
-			go up.sy.Monitor(up.Context, up.disconnect, up.reconnect)
 
 			fmt.Printf("Linking '%s' to %s/%s...", up.dev.Mount.Source, up.deploymentName, up.dev.Swap.Deployment.Container)
 			fmt.Println()

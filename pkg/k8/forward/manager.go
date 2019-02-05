@@ -136,6 +136,7 @@ func (p *CNDPortForwardManager) Monitor(ctx context.Context, disconnect, reconne
 				if pf.h() {
 					if healthchecks[k].isDisconnected {
 						healthchecks[k].lastConnectionTime = time.Now()
+						healthchecks[k].isDisconnected = false
 						reconnect <- struct{}{}
 					}
 
@@ -145,7 +146,7 @@ func (p *CNDPortForwardManager) Monitor(ctx context.Context, disconnect, reconne
 				currentWait := time.Now().Sub(healthchecks[k].lastConnectionTime)
 				if currentWait > maxWait {
 					healthchecks[k].isDisconnected = true
-					log.Infof("not connected to syncthing for %s seconds, sending disconnect notification", currentWait)
+					log.Infof("[port-forward-%d:%d] not connected  for %s seconds, sending disconnect notification", pf.localPort, pf.remotePort, currentWait)
 					disconnect <- struct{}{}
 					healthchecks[k].lastConnectionTime = time.Now()
 				}

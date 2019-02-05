@@ -1,9 +1,7 @@
 package syncthing
 
 import (
-	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 )
@@ -33,42 +31,4 @@ func (s *Syncthing) IsConnected() bool {
 
 	log.Infof("RemoteDeviceID %s missing from the response", s.RemoteDeviceID)
 	return false
-}
-
-// Monitor will send a message to disconnected if the 'externalDevice' shows as disconnected for more than 30 seconds.
-func (s *Syncthing) Monitor(ctx context.Context, disconnect, reconnect chan struct{}) {
-	ticker := time.NewTicker(5 * time.Second)
-	maxWait := 30 * time.Second
-	lastConnectionTime := time.Now()
-	isDisconnected := false
-
-	for {
-		select {
-		case <-ticker.C:
-			if s.IsConnected() {
-				lastConnectionTime = time.Now()
-				if isDisconnected {
-					if reconnect != nil {
-						reconnect <- struct{}{}
-					}
-
-					isDisconnected = true
-				}
-
-			} else {
-				currentWait := time.Now().Sub(lastConnectionTime)
-				if currentWait > maxWait {
-					isDisconnected = true
-					if disconnect != nil {
-						log.Infof("not connected to syncthing for %s seconds, sending disconnect notification", currentWait)
-						disconnect <- struct{}{}
-						lastConnectionTime = time.Now()
-					}
-				}
-			}
-
-		case <-ctx.Done():
-			return
-		}
-	}
 }
