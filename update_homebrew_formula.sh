@@ -35,7 +35,6 @@ class Cnd < Formula
       :revision => "$SHA"
     head "https://github.com/cloudnativedevelopment/cnd.git"
 
-    depends_on "syncthing"
     depends_on "go" => :build
 
     def install

@@ -49,7 +49,6 @@ func Up() *cobra.Command {
 			reconnectChannel := make(chan struct{}, 1)
 			d, pf, err := ExecuteUp(ctx, &wg, dev, namespace, disconnectChannel, reconnectChannel)
 			if err != nil {
-				log.Debugf("failed to execute up: %s", err)
 				return err
 			}
 
@@ -120,6 +119,13 @@ func WaitUntilExit(ctx context.Context, reconnect, disconnect chan struct{}, wg 
 // ExecuteUp runs all the logic for the up command
 func ExecuteUp(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, namespace string, disconnect, reconnect chan struct{}) (*appsv1.Deployment, *forward.CNDPortForward, error) {
 
+	if !syncthing.IsInstalled() {
+		fmt.Println("Installing dependencies...")
+		if err := downloadSyncthing(ctx); err != nil {
+			return nil, nil, fmt.Errorf("couldn't download syncthing, please try again")
+		}
+
+	}
 	n, deploymentName, c, err := findDevEnvironment(true)
 
 	if err != errNoCNDEnvironment {

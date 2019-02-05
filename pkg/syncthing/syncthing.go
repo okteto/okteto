@@ -65,17 +65,10 @@ type Syncthing struct {
 // NewSyncthing constructs a new Syncthing.
 func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthing, error) {
 
-	fullPath, err := exec.LookPath(binaryName)
-	if err != nil {
-		if strings.HasSuffix(err.Error(), exec.ErrNotFound.Error()) {
-			return nil, fmt.Errorf("cannot find syncthing in your PATH. Make sure syncthing is installed")
-		}
-
-		log.Infof("unknown error when looking for syncthing: %s", err)
-		return nil, err
+	fullPath := GetInstallPath()
+	if !IsInstalled() {
+		return nil, fmt.Errorf("cannot find syncthing. Make sure syncthing is installed in %s", fullPath)
 	}
-
-	log.Debugf("running syncthing from %s", fullPath)
 
 	remotePort, err := getAvailablePort()
 	if err != nil {
@@ -328,4 +321,19 @@ func Exists(home string) bool {
 	}
 
 	return false
+}
+
+// IsInstalled return true if syncthing is already installed
+func IsInstalled() bool {
+	_, err := os.Stat(GetInstallPath())
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
+// GetInstallPath returns the expected install path for syncthing
+func GetInstallPath() string {
+	return path.Join(config.GetCNDHome(), binaryName)
 }
