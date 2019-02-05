@@ -50,7 +50,6 @@ func (p *CNDPortForward) start(config *rest.Config, requestURL *url.URL, pod *ap
 
 func (p *CNDPortForward) stop() {
 	log.Debugf("[port-forward-%d:%d] stopping", p.localPort, p.remotePort)
-	log.Debugf("[port-forward-%d:%d] logged:\n%s", p.localPort, p.remotePort, p.out.String())
 	close(p.stopChan)
 	<-p.stopChan
 	log.Debugf("[port-forward-%d:%d] stopped", p.localPort, p.remotePort)
