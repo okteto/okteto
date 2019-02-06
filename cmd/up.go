@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -56,7 +57,12 @@ func Up() *cobra.Command {
 		Short: "Activate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debugf("starting up command")
-			up := &UpContext{}
+			up := &UpContext{
+				WG:         &sync.WaitGroup{},
+				Disconnect: make(chan struct{}, 1),
+				Reconnect:  make(chan struct{}, 1),
+			}
+
 			var err error
 			up.Dev, err = model.ReadDev(devPath)
 			if err != nil {
@@ -68,12 +74,8 @@ func Up() *cobra.Command {
 			fmt.Println("Activating your cloud native development environment...")
 
 			up.Namespace = namespace
-			up.WG = &sync.WaitGroup{}
 			up.Context, up.Cancel = context.WithCancel(context.Background())
 			defer up.Shutdown()
-
-			up.Disconnect = make(chan struct{}, 1)
-			up.Reconnect = make(chan struct{}, 1)
 
 			err = up.Execute()
 			if err != nil {
@@ -82,11 +84,9 @@ func Up() *cobra.Command {
 
 			up.StreamLogsAndEvents()
 
-			fmt.Printf("Linking '%s' to %s/%s...", up.Dev.Mount.Source, up.DeploymentName, up.Dev.Swap.Deployment.Container)
-			fmt.Println()
-			log.Green("Ready. Go to your IDE and start coding 😎!")
-
-			log.Debugf("%s ready, waiting for stop signal to shut down", up.DeploymentName)
+			disp := up.getDisplayContext()
+			fmt.Println(disp)
+			log.Debugf(up.String())
 
 			return up.WaitUntilExit()
 		},
@@ -164,7 +164,7 @@ func (up *UpContext) Execute() error {
 	n, deploymentName, c, err := findDevEnvironment(true)
 
 	if err != errNoCNDEnvironment {
-		return fmt.Errorf("there is already an entry for %s/%s Are you running '%s up' somewhere else?", config.GetBinaryName(), deployments.GetFullName(n, deploymentName), c)
+		return fmt.Errorf("there is already an entry for %s/%s. Are you running '%s up' somewhere else?", deployments.GetFullName(n, deploymentName), c, config.GetBinaryName())
 	}
 
 	up.Namespace, up.Client, up.RestConfig, up.CurrentContext, err = k8Client.Get(up.Namespace)
@@ -279,7 +279,11 @@ func (up *UpContext) Shutdown() {
 	}()
 
 	go func() {
-		up.Forwarder.Stop()
+		if up.Forwarder != nil {
+			up.Forwarder.Stop()
+		}
+
+		return
 	}()
 
 	select {
@@ -290,4 +294,41 @@ func (up *UpContext) Shutdown() {
 		log.Debugf("tasks didn't finish, terminating")
 		return
 	}
+}
+
+func (up *UpContext) getDisplayContext() string {
+	buf := bytes.NewBufferString("")
+	buf.WriteString(fmt.Sprintf("%s %s\n", log.SuccessSymbol, log.GreenString("Environment activated!")))
+
+	if len(up.Dev.Forward) > 0 {
+		buf.WriteString(log.BlueString("    Ports:\n"))
+		for _, f := range up.Dev.Forward {
+			buf.WriteString(fmt.Sprintf("       %d -> %d\n", f.Local, f.Remote))
+		}
+	}
+
+	buf.WriteString(log.BlueString("    Cluster:"))
+	buf.WriteString(fmt.Sprintf("     %s\n", up.CurrentContext))
+	buf.WriteString(log.BlueString("    Deployment:"))
+	buf.WriteString(fmt.Sprintf("  %s\n", up.DeploymentName))
+	return buf.String()
+}
+
+func (up *UpContext) String() string {
+	buf := bytes.NewBufferString("")
+	buf.WriteString(fmt.Sprintf("context: %s\n", up.CurrentContext))
+	buf.WriteString(fmt.Sprintf("deployment: %s\n", up.DeploymentName))
+	buf.WriteString(fmt.Sprintf("container: %s\n", up.Dev.Swap.Deployment.Container))
+
+	buf.WriteString("forward:\n")
+	for _, p := range up.Dev.Forward {
+		buf.WriteString(fmt.Sprintf("  %d->%d\n", p.Local, p.Remote))
+	}
+
+	buf.WriteString("environment:\n")
+	for _, e := range up.Dev.Environment {
+		buf.WriteString(fmt.Sprintf("  %s=?\n", e.Name))
+	}
+
+	return buf.String()
 }

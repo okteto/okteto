@@ -36,7 +36,7 @@ func executeDown() error {
 	if err != nil {
 		if err == errNoCNDEnvironment {
 			log.Debugf("No CND environment running")
-			return nil
+			return deactivateSuccess()
 		}
 
 		log.Info(err)
@@ -81,6 +81,10 @@ func executeDown() error {
 		return err
 	}
 
-	fmt.Println("Cloud native development environment deactivated")
+	return deactivateSuccess()
+}
+
+func deactivateSuccess() error {
+	fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Environment deactivated"))
 	return nil
 }
