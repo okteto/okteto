@@ -111,6 +111,10 @@ func (up *UpContext) WaitUntilExit() error {
 
 	for {
 		select {
+		case <-up.Context.Done():
+			log.Debug("stopping due to cancellation context")
+			fmt.Println()
+			return nil
 		case <-stop:
 			log.Debugf("CTRL+C received, starting shutdown sequence")
 			fmt.Println()
