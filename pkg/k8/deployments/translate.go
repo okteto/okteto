@@ -174,7 +174,7 @@ func createSyncthingContainer(d *appsv1.Deployment, devList []*model.Dev) {
 	syncthingContainer := apiv1.Container{
 		Name:            model.CNDSyncContainer,
 		Image:           syncImageTag,
-		ImagePullPolicy: apiv1.PullAlways,
+		ImagePullPolicy: apiv1.IfNotPresent,
 		VolumeMounts: []apiv1.VolumeMount{
 			apiv1.VolumeMount{
 				Name:      model.CNDSyncSecretVolume,
