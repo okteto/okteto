@@ -17,6 +17,7 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 
+	"github.com/briandowns/spinner"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/forward"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/logs"
@@ -77,7 +78,9 @@ func Up() *cobra.Command {
 
 			analytics.Send(analytics.EventUp, GetActionID())
 			defer analytics.Send(analytics.EventUpEnd, GetActionID())
-			fmt.Println("Activating your cloud native development environment...")
+			s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+			s.Suffix = " Activating your cloud native development environment..."
+			s.Start()
 
 			up.Namespace = namespace
 			defer up.Shutdown()
@@ -90,6 +93,7 @@ func Up() *cobra.Command {
 				up.ErrChan = make(chan error, 1)
 
 				err = up.Execute(isRetry)
+				s.Stop()
 				if err != nil {
 					return err
 				}
@@ -107,8 +111,6 @@ func Up() *cobra.Command {
 				}
 
 				err = up.WaitUntilExit()
-				close(up.ErrChan)
-
 				if err == errors.ErrPodIsGone {
 					log.Yellow("Detected change in the dev environment, reconnecting.")
 					up.Shutdown()
