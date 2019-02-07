@@ -66,6 +66,11 @@ func list(yamlOutput bool) error {
 	client := syncthing.NewAPIClient()
 
 	for name, svc := range services {
+		if storage.RemoveIfStale(&svc, name) {
+			log.Debugf("found stale entry for %s", name)
+			continue
+		}
+
 		env := listOutputEnvironment{
 			Name:   name,
 			Source: svc.Folder,
