@@ -133,7 +133,7 @@ func getPodEventChannel(namespace string, field fields.Set, c *kubernetes.Client
 
 //GetPodEvents shows the events of a given pod
 func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) {
-	log.Debug("Start monitoring events for pod-%s", pod.Name)
+	log.Debugf("Start monitoring events for pod-%s", pod.Name)
 	field := fields.Set{}
 	field["involvedObject.uid"] = string(pod.GetUID())
 	ch, err := getPodEventChannel(pod.Namespace, field, c)
