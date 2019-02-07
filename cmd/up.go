@@ -107,8 +107,6 @@ func Up() *cobra.Command {
 				}
 
 				err = up.WaitUntilExit()
-				close(up.ErrChan)
-
 				if err == errors.ErrPodIsGone {
 					log.Yellow("Detected change in the dev environment, reconnecting.")
 					up.Shutdown()
