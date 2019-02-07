@@ -264,12 +264,6 @@ func (up *UpContext) Execute(isRetry bool) error {
 		return err
 	}
 
-	log.Debugf("pod-%s is ready, waiting for it to be running %s", up.DeploymentName, up.Pod.Name)
-
-	if err := deployments.WaitForDevPodToBeRunning(up.Context, up.Client, up.Namespace, up.Pod.Name); err != nil {
-		return err
-	}
-
 	if err := up.Sy.Run(up.Context, up.WG); err != nil {
 		return err
 	}

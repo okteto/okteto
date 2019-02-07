@@ -196,12 +196,12 @@ func GetCNDPod(ctx context.Context, namespace, name string, c *kubernetes.Client
 					pendingOrRunningPods = append(pendingOrRunningPods, pod)
 				}
 			} else {
-				log.Debugf("cnd pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.String())
+				log.Debugf("cnd pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.Phase)
 			}
 		}
 
 		if len(pendingOrRunningPods) == 1 {
-			log.Debugf("cnd pod %s/%s is ready", pendingOrRunningPods[0].Namespace, pendingOrRunningPods[0].Name)
+			log.Debugf("cnd %s/pod/%s is %s", pendingOrRunningPods[0].Namespace, pendingOrRunningPods[0].Name, pendingOrRunningPods[0].Status.Phase)
 			return &pendingOrRunningPods[0], nil
 		}
 
