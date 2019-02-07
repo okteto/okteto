@@ -31,7 +31,7 @@ func Down() *cobra.Command {
 func executeDown() error {
 	fmt.Println("Deactivating your cloud native development environment...")
 
-	namespace, deployment, container, err := findDevEnvironment(false)
+	namespace, deployment, container, _, err := findDevEnvironment(false, true)
 
 	if err != nil {
 		if err == errNoCNDEnvironment {

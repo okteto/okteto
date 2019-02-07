@@ -2,7 +2,6 @@ package exec
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strings"
 
@@ -16,11 +15,7 @@ import (
 )
 
 // Exec executes the command in the cnd container
-func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod *apiv1.Pod, container string, tty bool, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
-
-	if pod.Status.Phase == apiv1.PodSucceeded || pod.Status.Phase == apiv1.PodFailed {
-		return fmt.Errorf("cannot exec into a cloud native development environment that's not active; current status is %s", pod.Status.Phase)
-	}
+func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, podNamespace, podName, container string, tty bool, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
 
 	p := &kexec.ExecOptions{}
 	p.Config = config
@@ -45,8 +40,8 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 	fn := func() error {
 		req := c.CoreV1().RESTClient().Post().
 			Resource("pods").
-			Name(pod.Name).
-			Namespace(pod.Namespace).
+			Name(podName).
+			Namespace(podNamespace).
 			SubResource("exec").
 			Param("container", container)
 		req.VersionedParams(&apiv1.PodExecOptions{

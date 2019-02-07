@@ -48,7 +48,7 @@ func executeExec(args []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	namespace, deployment, devContainer, err := findDevEnvironment(true)
+	namespace, deployment, devContainer, podName, err := findDevEnvironment(true, false)
 	if err != nil {
 		return err
 	}
@@ -58,19 +58,36 @@ func executeExec(args []string) error {
 		return err
 	}
 
+	if podName != "" {
+		log.Debugf("running command on %s/pod/%s", namespace, podName)
+		err = exec.Exec(ctx, client, cfg, namespace, podName, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
+		if err == nil {
+			return nil
+		}
+
+		if !strings.Contains(err.Error(), "not found") {
+			return err
+		}
+
+		log.Debugf("error running command on %s/pod/%s: %s", namespace, podName, err)
+	}
+
+	log.Debugf("retrieving the new pod name for %s/%s and running command", namespace, deployment)
 	pod, err := deployments.GetCNDPod(ctx, namespace, deployment, client)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("running command `%s` on %s", strings.Join(args, " "), pod.Name)
-	return exec.Exec(ctx, client, cfg, pod, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
+	err = exec.Exec(ctx, client, cfg, namespace, pod.Name, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
+
+	return err
 }
 
-func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
+func findDevEnvironment(mustBeRunning, checkForStale bool) (string, string, string, string, error) {
 	services := storage.All()
 	candidates := []storage.Service{}
 	deploymentFullName := ""
+	podName := ""
 	folder, _ := os.Getwd()
 
 	for name, svc := range services {
@@ -79,7 +96,9 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 				if svc.Syncthing == "" {
 					continue
 				}
+			}
 
+			if checkForStale {
 				if storage.RemoveIfStale(&svc, name) {
 					log.Debugf("found stale entry for %s", name)
 					continue
@@ -90,11 +109,15 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 			if deploymentFullName == "" {
 				deploymentFullName = name
 			}
+
+			if podName == "" {
+				podName = svc.Pod
+			}
 		}
 	}
 
 	if len(candidates) == 0 {
-		return "", "", "", errNoCNDEnvironment
+		return "", "", "", "", errNoCNDEnvironment
 	}
 
 	if len(candidates) > 1 {
@@ -103,11 +126,11 @@ func findDevEnvironment(mustBeRunning bool) (string, string, string, error) {
 
 	parts := strings.SplitN(deploymentFullName, "/", 3)
 	if len(parts) < 3 {
-		return "", "", "", fmt.Errorf("unable to parse the cnd local state. Remove '%s' and try again", config.GetCNDHome())
+		return "", "", "", "", fmt.Errorf("unable to parse the cnd local state. Remove '%s' and try again", config.GetCNDHome())
 	}
 	namespace := parts[0]
 	deploymentName := parts[1]
 	devContainer := parts[2]
 
-	return namespace, deploymentName, devContainer, nil
+	return namespace, deploymentName, devContainer, podName, nil
 }
