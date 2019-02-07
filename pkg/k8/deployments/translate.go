@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
-	"sort"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
@@ -101,39 +100,29 @@ func updateCndContainer(c *apiv1.Container, dev *model.Dev, namespace string) {
 	)
 
 	c.Resources = apiv1.ResourceRequirements{}
-	c.Env = mergeEnvironmentVariables(c.Env, dev.Environment, namespace)
+	mergeEnvironmentVariables(c, dev.Environment, namespace)
 }
 
-func mergeEnvironmentVariables(current []v1.EnvVar, dev []model.EnvVar, namespace string) []v1.EnvVar {
-	mergedEnv := map[string]string{}
+func mergeEnvironmentVariables(c *v1.Container, devEnv []model.EnvVar, namespace string) {
+	devEnv = append(devEnv, model.EnvVar{Name: cndEnvNamespace, Value: namespace})
+	unusedDevEnv := map[string]string{}
 
-	for _, k := range current {
-		mergedEnv[k.Name] = k.Value
+	for _, val := range devEnv {
+		unusedDevEnv[val.Name] = val.Value
 	}
 
-	mergedEnv[cndEnvNamespace] = namespace
-
-	for _, val := range dev {
-		mergedEnv[val.Name] = val.Value
-	}
-
-	finalMerge := make([]v1.EnvVar, len(mergedEnv))
-	counter := 0
-	for k, v := range mergedEnv {
-		finalMerge[counter] = v1.EnvVar{
-			Name:  k,
-			Value: v,
+	for i, envvar := range c.Env {
+		if value, ok := unusedDevEnv[envvar.Name]; ok {
+			c.Env[i] = v1.EnvVar{Name: envvar.Name, Value: value}
+			delete(unusedDevEnv, envvar.Name)
 		}
-
-		counter++
 	}
 
-	sort.Slice(finalMerge, func(i, j int) bool {
-		return finalMerge[i].Name < finalMerge[j].Name
-	})
-
-	return finalMerge
-
+	for _, envvar := range devEnv {
+		if value, ok := unusedDevEnv[envvar.Name]; ok {
+			c.Env = append(c.Env, v1.EnvVar{Name: envvar.Name, Value: value})
+		}
+	}
 }
 
 func createInitSyncthingContainer(d *appsv1.Deployment, dev *model.Dev) {
@@ -174,7 +163,7 @@ func createSyncthingContainer(d *appsv1.Deployment, devList []*model.Dev) {
 	syncthingContainer := apiv1.Container{
 		Name:            model.CNDSyncContainer,
 		Image:           syncImageTag,
-		ImagePullPolicy: apiv1.PullAlways,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
 		VolumeMounts: []apiv1.VolumeMount{
 			apiv1.VolumeMount{
 				Name:      model.CNDSyncSecretVolume,
