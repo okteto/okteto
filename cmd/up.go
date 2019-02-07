@@ -199,7 +199,7 @@ func (up *UpContext) Execute(isRetry bool) error {
 		}
 
 	}
-	n, deploymentName, c, err := findDevEnvironment(true)
+	n, deploymentName, c, _, err := findDevEnvironment(true, true)
 
 	if err != errNoCNDEnvironment {
 		return fmt.Errorf("there is already an entry for %s/%s. Are you running '%s up' somewhere else?", deployments.GetFullName(n, deploymentName), c, config.GetBinaryName())
@@ -259,12 +259,8 @@ func (up *UpContext) Execute(isRetry bool) error {
 
 	log.Debugf("enabled dev mode on %s", up.DeploymentName)
 
-	up.Pod, err = deployments.GetCNDPod(up.Context, up.Deployment, up.Client)
+	up.Pod, err = deployments.GetCNDPod(up.Context, up.Deployment.Namespace, up.Deployment.Name, up.Client)
 	if err != nil {
-		return err
-	}
-
-	if err := deployments.WaitForDevPodToBeRunning(up.Context, up.Client, up.Namespace, up.Pod.Name); err != nil {
 		return err
 	}
 
@@ -272,7 +268,7 @@ func (up *UpContext) Execute(isRetry bool) error {
 		return err
 	}
 
-	err = storage.Insert(up.Context, up.WG, up.Namespace, up.Dev, up.Sy.GUIAddress)
+	err = storage.Insert(up.Context, up.WG, up.Namespace, up.Dev, up.Sy.GUIAddress, up.Pod.Name)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
 			log.Infof("failed to insert new state value for %s", up.DeploymentName)

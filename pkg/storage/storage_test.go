@@ -35,7 +35,7 @@ func TestInsertGetListDelete(t *testing.T) {
 			Source: "/folder1",
 		},
 	}
-	err = insert("project1", dev1, "localhost1")
+	err = insert("project1", dev1, "localhost1", "pod1")
 	if err != nil {
 		t.Fatalf("error 1 inserting: %s", err)
 	}
@@ -54,7 +54,7 @@ func TestInsertGetListDelete(t *testing.T) {
 			Source: "/folder2",
 		},
 	}
-	err = insert("project2", dev2, "localhost2")
+	err = insert("project2", dev2, "localhost2", "pod2")
 	if err != nil {
 		t.Fatalf("error 1 inserting: %s", err)
 	}
@@ -72,6 +72,10 @@ func TestInsertGetListDelete(t *testing.T) {
 
 	if svc.Syncthing != "localhost1" {
 		t.Fatalf("wrong host: %s", svc.Syncthing)
+	}
+
+	if svc.Pod != "pod1" {
+		t.Fatalf("wrong pod: %s", svc.Pod)
 	}
 
 	err = Delete("project1", dev1)

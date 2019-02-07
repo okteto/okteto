@@ -175,13 +175,14 @@ func GetPodEvents(ctx context.Context, pod *apiv1.Pod, c *kubernetes.Clientset) 
 }
 
 // GetCNDPod returns the pod that has the cnd containers
-func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+func GetCNDPod(ctx context.Context, namespace, name string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
 
 	for tries < maxRetries {
-		pods, err := c.CoreV1().Pods(d.Namespace).List(metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, d.Name),
+		log.Debugf("getting cnd pod-%s", name)
+		pods, err := c.CoreV1().Pods(namespace).List(metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", model.CNDLabel, name),
 		})
 
 		if err != nil {
@@ -190,17 +191,17 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 
 		var pendingOrRunningPods []apiv1.Pod
 		for _, pod := range pods.Items {
-			if pod.Status.Phase == apiv1.PodRunning || pod.Status.Phase == apiv1.PodPending {
+			if pod.Status.Phase == apiv1.PodRunning {
 				if pod.GetObjectMeta().GetDeletionTimestamp() == nil {
 					pendingOrRunningPods = append(pendingOrRunningPods, pod)
 				}
 			} else {
-				log.Debugf("cnd pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.String())
+				log.Debugf("cnd pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.Phase)
 			}
 		}
 
 		if len(pendingOrRunningPods) == 1 {
-			log.Debugf("cnd pod %s/%s is ready", pendingOrRunningPods[0].Namespace, pendingOrRunningPods[0].Name)
+			log.Debugf("cnd %s/pod/%s is %s", pendingOrRunningPods[0].Namespace, pendingOrRunningPods[0].Name, pendingOrRunningPods[0].Status.Phase)
 			return &pendingOrRunningPods[0], nil
 		}
 
@@ -224,34 +225,4 @@ func GetCNDPod(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientse
 
 	log.Debugf("cnd pod wasn't running after %d seconds", maxRetries)
 	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
-}
-
-// WaitForDevPodToBeRunning holds until the dev pod is running
-func WaitForDevPodToBeRunning(ctx context.Context, c *kubernetes.Clientset, namespace, podName string) error {
-	ticker := time.NewTicker(1 * time.Second)
-
-	tries := 0
-	log.Debugf("waiting for dev container to start running")
-	for tries < maxRetries {
-		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if pod.Status.Phase == apiv1.PodRunning {
-			log.Debugf("dev container is running")
-			return nil
-		}
-
-		select {
-		case <-ticker.C:
-			tries++
-			continue
-		case <-ctx.Done():
-			log.Debug("cancelling call to get cnd pod")
-			return ctx.Err()
-		}
-	}
-
-	log.Debugf("dev container didn't start running after %d seconds", maxRetries)
-	return fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 }
