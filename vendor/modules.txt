@@ -45,6 +45,8 @@ github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
 github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 # github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d
 github.com/bgentry/go-netrc/netrc
+# github.com/briandowns/spinner v0.0.0-20190126160308-b298438e1f0d
+github.com/briandowns/spinner
 # github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1
 github.com/chai2010/gettext-go/gettext
 github.com/chai2010/gettext-go/gettext/mo
@@ -60,13 +62,6 @@ github.com/docker/docker/pkg/term/windows
 # github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29
 github.com/docker/spdystream
 github.com/docker/spdystream/spdy
-# github.com/dsnet/compress v0.0.0-20171208185109-cc9eb1d7ad76
-github.com/dsnet/compress/bzip2
-github.com/dsnet/compress/bzip2/internal/sais
-github.com/dsnet/compress/internal
-github.com/dsnet/compress/internal/errors
-github.com/dsnet/compress/internal/prefix
-github.com/dsnet/compress
 # github.com/evanphx/json-patch v4.1.0+incompatible
 github.com/evanphx/json-patch
 # github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d
@@ -90,8 +85,6 @@ github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
-github.com/golang/snappy
 # github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
 github.com/google/btree
 # github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf
@@ -132,8 +125,6 @@ github.com/mattn/go-colorable
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.4
 github.com/mattn/go-runewidth
-# github.com/mholt/archiver v3.1.1+incompatible
-github.com/mholt/archiver
 # github.com/mitchellh/go-homedir v1.0.0
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
@@ -148,13 +139,8 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/moovweb/rubex v0.0.0-20160224233712-cb849acea614
 github.com/moovweb/rubex
-# github.com/nwaples/rardecode v1.0.0
-github.com/nwaples/rardecode
 # github.com/peterbourgon/diskv v2.0.1+incompatible
 github.com/peterbourgon/diskv
-# github.com/pierrec/lz4 v0.0.0-20181005164709-635575b42742
-github.com/pierrec/lz4
-github.com/pierrec/lz4/internal/xxh32
 # github.com/russross/blackfriday v1.5.2
 github.com/russross/blackfriday
 # github.com/satori/go.uuid v1.2.0
@@ -172,8 +158,6 @@ github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
 github.com/ulikunitz/xz/internal/hash
-# github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
-github.com/xi2/xz
 # golang.org/x/crypto v0.0.0-20181001203147-e3636079e1a4
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.0.0-20181114220301-adae6a3d119a

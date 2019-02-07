@@ -14,6 +14,8 @@ github.com/aws/aws-sdk-go v1.15.78 h1:LaXy6lWR0YK7LKyuU0QWy2ws/LWTPfYV/UgfiBu4tv
 github.com/aws/aws-sdk-go v1.15.78/go.mod h1:E3/ieXAlvM0XWO57iftYVDLLvQ824smPP3ATZkfNZeM=
 github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d h1:xDfNPAt8lFiC1UJrqV3uuy861HCTo708pDMbjHHdCas=
 github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d/go.mod h1:6QX/PXZ00z/TKoufEY6K/a0k6AhaJrQKdFe6OfVXsa4=
+github.com/briandowns/spinner v0.0.0-20190126160308-b298438e1f0d h1:DUZNZG41M8EjyojwYV51Gq16PpFhNGybP6EyWSPhqo0=
+github.com/briandowns/spinner v0.0.0-20190126160308-b298438e1f0d/go.mod h1:hw/JEQBIE+c/BLI4aKM8UU8v+ZqrD3h7HC27kKt8JQU=
 github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9 h1:dumfMK24rLnvfJrI7VK9nUw+HntxzWpxf/6kST6tL2o=
 github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9/go.mod h1:MCsKum/O9rTzo1Z6ubBQJKJIm76t+3/4A/cD79RMN1Q=
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 h1:HD4PLRzjuCVW79mQ0/pdsalOLHJ+FaEoqJLxfltpb2U=
