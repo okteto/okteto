@@ -30,13 +30,13 @@ type portForwardHealthcheck struct {
 }
 
 // NewCNDPortForwardManager initializes a new instance
-func NewCNDPortForwardManager(ctx context.Context, restConfig *rest.Config, c *kubernetes.Clientset) *CNDPortForwardManager {
+func NewCNDPortForwardManager(ctx context.Context, restConfig *rest.Config, c *kubernetes.Clientset, errchan chan error) *CNDPortForwardManager {
 	return &CNDPortForwardManager{
 		ctx:          ctx,
 		portForwards: make(map[int]*CNDPortForward),
 		restConfig:   restConfig,
 		client:       c,
-		ErrChan:      make(chan error, 1),
+		ErrChan:      errchan,
 	}
 }
 
@@ -114,6 +114,7 @@ func (p *CNDPortForwardManager) Stop() {
 	}
 
 	wg.Wait()
+	p.portForwards = nil
 }
 
 // Monitor will send a message to disconnected if healthcheck of a port shows as disconnected for more than 30 seconds.

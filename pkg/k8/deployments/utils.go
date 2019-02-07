@@ -15,6 +15,16 @@ func GetFullName(namespace, deploymentName string) string {
 	return fmt.Sprintf("%s/%s", namespace, deploymentName)
 }
 
+// IsDevModeEnabled returns true if the deployment has dev annotations
+func IsDevModeEnabled(o metav1.Object) (bool, error) {
+	l, err := getDevListFromAnnotation(o)
+	if err != nil {
+		return false, err
+	}
+
+	return (len(l) > 0), nil
+}
+
 // GetAndUpdateDevListFromAnnotation returns the active cloud dev environments from the deployment annotations
 func GetAndUpdateDevListFromAnnotation(o metav1.Object, dev *model.Dev) ([]*model.Dev, error) {
 	devList, err := getDevListFromAnnotation(o)
