@@ -12,6 +12,7 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/errors"
 	k8Client "github.com/cloudnativedevelopment/cnd/pkg/k8/client"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
@@ -24,9 +25,13 @@ import (
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	runtime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
+
+// ReconnectingMessage is the messaged show when we are trying to reconnect
+const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
 // UpContext is the common context of all operations performed during
 // the up command
@@ -46,6 +51,7 @@ type UpContext struct {
 	Disconnect     chan struct{}
 	Reconnect      chan struct{}
 	Sy             *syncthing.Syncthing
+	ErrChan        chan error
 }
 
 //Up starts a cloud native environment
@@ -74,21 +80,45 @@ func Up() *cobra.Command {
 			fmt.Println("Activating your cloud native development environment...")
 
 			up.Namespace = namespace
-			up.Context, up.Cancel = context.WithCancel(context.Background())
 			defer up.Shutdown()
 
-			err = up.Execute()
-			if err != nil {
+			runtime.ErrorHandlers = []func(error){up.handleRuntimeError}
+
+			isRetry := false
+			for {
+				up.Context, up.Cancel = context.WithCancel(context.Background())
+				up.ErrChan = make(chan error, 1)
+
+				err = up.Execute(isRetry)
+				if err != nil {
+					return err
+				}
+
+				up.StreamLogsAndEvents()
+
+				disp := up.getDisplayContext()
+
+				if !isRetry {
+					fmt.Println(disp)
+					log.Debugf(up.String())
+				} else {
+					log.Green("Reconnected to your cluster.")
+					fmt.Println()
+				}
+
+				err = up.WaitUntilExit()
+				close(up.ErrChan)
+
+				if err == errors.ErrPodIsGone {
+					log.Yellow("Detected change in the dev environment, reconnecting.")
+					up.Shutdown()
+					isRetry = true
+					continue
+				}
+
 				return err
 			}
 
-			up.StreamLogsAndEvents()
-
-			disp := up.getDisplayContext()
-			fmt.Println(disp)
-			log.Debugf(up.String())
-
-			return up.WaitUntilExit()
 		},
 	}
 
@@ -97,24 +127,28 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-// WaitUntilExit blocks execution until a stop signal is sent or a disconnect event
+func (up *UpContext) handleRuntimeError(err error) {
+	if strings.Contains(err.Error(), "container not running") || strings.Contains(err.Error(), "No such container") {
+		up.ErrChan <- errors.ErrPodIsGone
+		return
+	}
+
+	log.Debugf("unknown unhandled error: %s", err)
+}
+
+// WaitUntilExit blocks execution until a stop signal is sent or a disconnect event or an error
 func (up *UpContext) WaitUntilExit() error {
 	maxReconnectionAttempts := 6 // this will cause the command to exit after 3 minutes of disconnection
 	resetAttempts := time.NewTimer(5 * time.Minute)
 	displayDisconnectionNotification := true
 	displayReconnectionNotification := false
 	reconnectionAttempts := 0
-	errLostConnection := fmt.Errorf("Lost connection to your cluster. Plase check your network connection and run '%s up' again", config.GetBinaryName())
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
 	for {
 		select {
-		case <-up.Context.Done():
-			log.Debug("stopping due to cancellation context")
-			fmt.Println()
-			return nil
 		case <-stop:
 			log.Debugf("CTRL+C received, starting shutdown sequence")
 			fmt.Println()
@@ -130,20 +164,24 @@ func (up *UpContext) WaitUntilExit() error {
 			log.Infof("cluster connection lost, reconnecting %d/%d", reconnectionAttempts, maxReconnectionAttempts)
 			reconnectionAttempts++
 			if reconnectionAttempts > maxReconnectionAttempts {
-				return errLostConnection
+				return errors.ErrLostConnection
 			}
 
 			if displayDisconnectionNotification {
-				log.Yellow("Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves.")
+				log.Yellow(ReconnectingMessage)
 				displayReconnectionNotification = true
 				displayDisconnectionNotification = false
 			}
 
-			if err := up.ReconnectPortForward(); err != nil {
-				log.Infof("failed to reconnect port forward. will retry: %s", err)
+			up.ErrChan <- errors.ErrPodIsGone
+
+		case err := <-up.ErrChan:
+			if err == errors.ErrPodIsGone {
+				return err
 			}
-		case err := <-up.Forwarder.ErrChan:
+
 			log.Yellow(err.Error())
+
 		case <-resetAttempts.C:
 			log.Debug("resetting reconnection attempts counter")
 			reconnectionAttempts = 0
@@ -152,7 +190,7 @@ func (up *UpContext) WaitUntilExit() error {
 }
 
 // Execute runs all the logic for the up command
-func (up *UpContext) Execute() error {
+func (up *UpContext) Execute(isRetry bool) error {
 
 	if !syncthing.IsInstalled() {
 		fmt.Println("Installing dependencies...")
@@ -183,6 +221,20 @@ func (up *UpContext) Execute() error {
 		}
 
 		return fmt.Errorf("couldn't get deployment %s from your cluster. Please try again", up.DeploymentName)
+	}
+
+	if isRetry {
+		// check if is dev deployment, if not, bail out
+		enabled, err := deployments.IsDevModeEnabled(up.Deployment.GetObjectMeta())
+		if err != nil {
+			log.Infof("couldn't determine if the deployment has the dev mode enabled: %s", err)
+			return fmt.Errorf("couldn't get deployment %s from your cluster. Please try again", up.DeploymentName)
+		}
+
+		if !enabled {
+			log.Infof("deployment is no longer in dev mode, shutting down")
+			return errors.ErrNotDevDeployment
+		}
 	}
 
 	up.Dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(
@@ -229,7 +281,7 @@ func (up *UpContext) Execute() error {
 		return err
 	}
 
-	up.Forwarder = forward.NewCNDPortForwardManager(up.Context, up.RestConfig, up.Client)
+	up.Forwarder = forward.NewCNDPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
 	if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort, up.Sy.IsConnected); err != nil {
 		return err
 	}
@@ -249,32 +301,22 @@ func (up *UpContext) Execute() error {
 // - get container logs
 func (up *UpContext) StreamLogsAndEvents() {
 	go deployments.GetPodEvents(up.Context, up.Pod, up.Client)
-	go logs.StreamLogs(up.Context, up.WG, up.Deployment, up.Dev.Swap.Deployment.Container, up.Client)
-}
-
-// ReconnectPortForward stops pf and starts it again with the same ports
-func (up *UpContext) ReconnectPortForward() error {
-
-	up.Forwarder.Stop()
-
-	pod, err := deployments.GetCNDPod(up.Context, up.Deployment, up.Client)
-	if err != nil {
-		return err
-	}
-
-	up.Forwarder.Start(pod)
-	return nil
+	go logs.StreamLogs(up.Context, up.WG, up.Pod, up.Dev.Swap.Deployment.Container, up.Client, up.ErrChan)
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
 func (up *UpContext) Shutdown() {
 	log.Debugf("cancelling context")
-	up.Cancel()
+	if up.Cancel != nil {
+		up.Cancel()
+	}
 
 	log.Debugf("waiting for tasks for be done")
 	done := make(chan struct{})
 	go func() {
-		up.WG.Wait()
+		if up.WG != nil {
+			up.WG.Wait()
+		}
 		close(done)
 	}()
 

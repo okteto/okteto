@@ -4,29 +4,38 @@ import (
 	"context"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
+	"github.com/cloudnativedevelopment/cnd/pkg/errors"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 //StreamLogs stremas logs from a container
-func StreamLogs(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, container string, c *kubernetes.Clientset) {
+func StreamLogs(ctx context.Context, wg *sync.WaitGroup, pod *apiv1.Pod, container string, c *kubernetes.Clientset, errChan chan error) {
 	wg.Add(1)
 	defer wg.Done()
+	log.Debugf("streaming logs for %s/%s/%s", pod.Namespace, pod.Name, container)
 
 	for {
-		log.Debugf("streaming logs for %s/%s", d.Name, container)
-		if err := streamLogs(ctx, d, container, c); err != nil {
-			if err != context.Canceled {
-				log.Infof("error when streaming logs for %s/%s: %s", d.Name, container, err)
+		if err := streamLogs(ctx, pod, container, c); err != nil {
+			if err == context.Canceled {
+				return
 			}
 
+			if strings.Contains(err.Error(), "not found") {
+				log.Debugf("pod is gone, stopping streaming logs")
+				errChan <- errors.ErrPodIsGone
+				return
+			}
+
+			log.Infof("error when streaming logs for %s/%s/%s: %s", pod.Namespace, pod.Name, container, err)
+
 		}
+
 		select {
 		case <-ctx.Done():
 			log.Debug("stream logs clean shutdown")
@@ -37,11 +46,7 @@ func StreamLogs(ctx context.Context, wg *sync.WaitGroup, d *appsv1.Deployment, c
 	}
 }
 
-func streamLogs(ctx context.Context, d *appsv1.Deployment, container string, c *kubernetes.Clientset) error {
-	pod, err := deployments.GetCNDPod(ctx, d, c)
-	if err != nil {
-		return err
-	}
+func streamLogs(ctx context.Context, pod *apiv1.Pod, container string, c *kubernetes.Clientset) error {
 	var tailLines int64
 	tailLines = 100
 	req := c.CoreV1().Pods(pod.Namespace).GetLogs(
