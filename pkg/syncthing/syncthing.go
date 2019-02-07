@@ -52,7 +52,7 @@ const (
 type Syncthing struct {
 	cmd              *exec.Cmd
 	binPath          string
-	home             string
+	Home             string
 	Name             string
 	DevList          []*model.Dev
 	Namespace        string
@@ -92,7 +92,7 @@ func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthin
 	s := &Syncthing{
 		APIKey:           "cnd",
 		binPath:          fullPath,
-		home:             path.Join(config.GetCNDHome(), namespace, deployment),
+		Home:             path.Join(config.GetCNDHome(), namespace, deployment),
 		Name:             deployment,
 		DevList:          devList,
 		Namespace:        namespace,
@@ -138,22 +138,22 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 }
 
 func (s *Syncthing) initConfig() error {
-	os.MkdirAll(s.home, 0700)
+	os.MkdirAll(s.Home, 0700)
 
 	buf := new(bytes.Buffer)
 	if err := configTemplate.Execute(buf, s); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(path.Join(s.home, configFile), buf.Bytes(), 0700); err != nil {
+	if err := ioutil.WriteFile(path.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(path.Join(s.home, certFile), cert, 0700); err != nil {
+	if err := ioutil.WriteFile(path.Join(s.Home, certFile), cert, 0700); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(path.Join(s.home, keyFile), key, 0700); err != nil {
+	if err := ioutil.WriteFile(path.Join(s.Home, keyFile), key, 0700); err != nil {
 		return err
 	}
 
@@ -183,17 +183,17 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	pidPath := filepath.Join(s.home, syncthingPidFile)
+	pidPath := filepath.Join(s.Home, syncthingPidFile)
 
 	if err := s.cleanupDaemon(pidPath); err != nil {
 		return err
 	}
 
 	cmdArgs := []string{
-		"-home", s.home,
+		"-home", s.Home,
 		"-no-browser",
 		"-verbose",
-		"-logfile", path.Join(s.home, logFile),
+		"-logfile", path.Join(s.Home, logFile),
 	}
 
 	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
@@ -231,7 +231,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 // Stop halts the background process and cleans up.
 func (s *Syncthing) Stop() error {
-	pidPath := filepath.Join(s.home, syncthingPidFile)
+	pidPath := filepath.Join(s.Home, syncthingPidFile)
 
 	if err := s.cleanupDaemon(pidPath); err != nil {
 		return err
@@ -242,19 +242,24 @@ func (s *Syncthing) Stop() error {
 
 // RemoveFolder deletes all the files created by the syncthing instance
 func (s *Syncthing) RemoveFolder() error {
-	if s.home == "" {
+	if s.Home == "" {
 		log.Info("the home directory is not set when deleting")
 		return nil
 	}
 
-	if err := os.RemoveAll(s.home); err != nil {
+	if _, err := filepath.Rel(config.GetCNDHome(), s.Home); err != nil {
+		log.Debugf("%s is not inside %s, ignoring", s.Home, config.GetCNDHome())
+		return nil
+	}
+
+	if err := os.RemoveAll(s.Home); err != nil {
 		log.Info(err)
 		return nil
 	}
 
-	parentDir := path.Dir(s.home)
+	parentDir := path.Dir(s.Home)
 	if parentDir != "." {
-		empty, err := isEmpty(parentDir)
+		empty, err := isDirEmpty(parentDir)
 		if err != nil {
 			log.Info(err)
 			return nil
@@ -263,7 +268,7 @@ func (s *Syncthing) RemoveFolder() error {
 		if empty {
 			log.Debugf("deleting %s since it's empty", parentDir)
 			if err := os.RemoveAll(parentDir); err != nil {
-				log.Info(err)
+				log.Infof("couldn't delete folder: %s", err)
 				return nil
 			}
 		}
@@ -272,7 +277,7 @@ func (s *Syncthing) RemoveFolder() error {
 	return nil
 }
 
-func isEmpty(path string) (bool, error) {
+func isDirEmpty(path string) (bool, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return false, err

@@ -163,8 +163,18 @@ func deleteEntry(fullName string) error {
 	if err != nil {
 		return err
 	}
+	serviceFolder, err := getServiceFolder(fullName)
+
+	sy := syncthing.Syncthing{
+		Home: serviceFolder,
+	}
+
+	if err := sy.RemoveFolder(); err != nil {
+		log.Errorf("couldn't delete %s. Please delete manually.", serviceFolder)
+	}
 
 	delete(s.Services, fullName)
+
 	return s.save()
 }
 
