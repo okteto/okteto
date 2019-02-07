@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/cloudnativedevelopment/cnd/pkg/errors"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/spf13/cobra"
 	runtime "k8s.io/apimachinery/pkg/util/runtime"
@@ -71,7 +72,10 @@ func Execute() int {
 	exitCode := 0
 	if err := root.Execute(); err != nil {
 		errorMessage := ""
-		if cerr, ok := err.(kExec.CodeExitError); ok {
+		if err == errors.ErrNotDevDeployment {
+			exitCode = 137
+			errorMessage = err.Error()
+		} else if cerr, ok := err.(kExec.CodeExitError); ok {
 			exitCode = cerr.ExitStatus()
 			errorMessage = "Command failed"
 		} else {

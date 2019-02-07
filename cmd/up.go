@@ -314,7 +314,9 @@ func (up *UpContext) Shutdown() {
 	log.Debugf("waiting for tasks for be done")
 	done := make(chan struct{})
 	go func() {
-		up.WG.Wait()
+		if up.WG != nil {
+			up.WG.Wait()
+		}
 		close(done)
 	}()
 
