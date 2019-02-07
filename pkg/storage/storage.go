@@ -14,6 +14,7 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
+	ps "github.com/mitchellh/go-ps"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -37,11 +38,13 @@ type Storage struct {
 type Service struct {
 	Folder    string `yaml:"folder,omitempty"`
 	Syncthing string `yaml:"syncthing,omitempty"`
+	PID       int    `yaml:"pid,omitempty"`
 }
 
 func getSTPath() string {
 	return path.Join(config.GetCNDHome(), ".state")
 }
+
 func load() (*Storage, error) {
 	var s Storage
 	s.path = getSTPath()
@@ -107,6 +110,8 @@ func insert(namespace string, dev *model.Dev, host string) error {
 			return ErrAlreadyRunning
 		}
 	}
+
+	svc.PID = os.Getpid()
 
 	s.Services[fullName] = svc
 	if err := s.save(); err != nil {
@@ -235,6 +240,24 @@ func RemoveIfStale(svc *Service, fullName string) bool {
 
 	if !syncthing.Exists(serviceFolder) {
 		log.Debugf("%s/syncthing.pid is not running anymore, removing %s from state", serviceFolder, fullName)
+		deleteEntry(fullName)
+		return true
+	}
+
+	if svc.PID == 0 {
+		log.Debugf("%s didn't have a PID", fullName)
+		return false
+	}
+
+	process, err := ps.FindProcess(svc.PID)
+	if process == nil && err == nil {
+		log.Debugf("pid-%d is not running anymore, removing %s from state", svc.PID, fullName)
+		deleteEntry(fullName)
+		return true
+	}
+
+	if process.Executable() != config.GetBinaryName() {
+		log.Debugf("CND with pid-%d is not running anymore, removing %s from state", svc.PID, fullName)
 		deleteEntry(fullName)
 		return true
 	}
