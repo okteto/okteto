@@ -170,7 +170,7 @@ func deleteEntry(fullName string) error {
 	}
 
 	if err := sy.RemoveFolder(); err != nil {
-		log.Errorf("couldn't delete %s. Please delete manually.", serviceFolder)
+		log.Infof("couldn't delete %s. Please delete manually.", serviceFolder)
 	}
 
 	delete(s.Services, fullName)
@@ -260,14 +260,16 @@ func RemoveIfStale(svc *Service, fullName string) bool {
 	}
 
 	process, err := ps.FindProcess(svc.PID)
-	if process == nil && err == nil {
-		log.Debugf("pid-%d is not running anymore, removing %s from state", svc.PID, fullName)
-		deleteEntry(fullName)
-		return true
-	}
+	if (process == nil && err == nil) || (process.Executable() != config.GetBinaryName()) {
+		log.Debugf("original pid-%d is not running anymore, removing %s from state", svc.PID, fullName)
+		sy := syncthing.Syncthing{
+			Home: serviceFolder,
+		}
 
-	if process.Executable() != config.GetBinaryName() {
-		log.Debugf("CND with pid-%d is not running anymore, removing %s from state", svc.PID, fullName)
+		if err := sy.Stop(); err != nil {
+			log.Debugf("Couldn't stop rogue syncthing at %s/syncthing.pid: %s", serviceFolder, err)
+		}
+
 		deleteEntry(fullName)
 		return true
 	}

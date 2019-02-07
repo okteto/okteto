@@ -122,8 +122,22 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 		return nil
 	}
 
-	proc := os.Process{Pid: pid}
+	process, err := ps.FindProcess(pid)
+	if process == nil && err == nil {
+		return nil
+	}
 
+	if err != nil {
+		log.Infof("error when looking up the process: %s", err)
+		return err
+	}
+
+	if process.Executable() != binaryName {
+		log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
+		return nil
+	}
+
+	proc := os.Process{Pid: process.Pid()}
 	if err := proc.Signal(os.Interrupt); err != nil {
 		if strings.Contains(err.Error(), "process already finished") {
 			return nil
