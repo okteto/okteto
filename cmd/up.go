@@ -259,10 +259,12 @@ func (up *UpContext) Execute(isRetry bool) error {
 
 	log.Debugf("enabled dev mode on %s", up.DeploymentName)
 
-	up.Pod, err = deployments.GetCNDPod(up.Context, up.Deployment, up.Client)
+	up.Pod, err = deployments.GetCNDPod(up.Context, up.Deployment.Namespace, up.Deployment.Name, up.Client)
 	if err != nil {
 		return err
 	}
+
+	log.Debugf("pod-%s is ready, waiting for it to be running %s", up.DeploymentName, up.Pod.Name)
 
 	if err := deployments.WaitForDevPodToBeRunning(up.Context, up.Client, up.Namespace, up.Pod.Name); err != nil {
 		return err

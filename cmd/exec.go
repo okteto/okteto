@@ -53,22 +53,12 @@ func executeExec(args []string) error {
 		return err
 	}
 
-	_, client, cfg, k8sContext, err := k8Client.Get(namespace)
+	_, client, cfg, _, err := k8Client.Get(namespace)
 	if err != nil {
 		return err
 	}
 
-	d, err := deployments.Get(namespace, deployment, client)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			fullname := deployments.GetFullName(namespace, deployment)
-			return fmt.Errorf("deployment %s not found [current context: %s]", fullname, k8sContext)
-		}
-
-		return err
-	}
-
-	pod, err := deployments.GetCNDPod(ctx, d, client)
+	pod, err := deployments.GetCNDPod(ctx, namespace, deployment, client)
 	if err != nil {
 		return err
 	}
