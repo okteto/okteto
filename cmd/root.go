@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
@@ -69,14 +70,16 @@ func Execute() int {
 
 	exitCode := 0
 	if err := root.Execute(); err != nil {
-
+		errorMessage := ""
 		if cerr, ok := err.(kExec.CodeExitError); ok {
 			exitCode = cerr.ExitStatus()
-			log.Red("Command failed")
+			errorMessage = "Command failed"
 		} else {
-			log.Red(err.Error())
+			errorMessage = err.Error()
 			exitCode = 1
 		}
+
+		fmt.Printf("%s %s\n", log.ErrorSymbol, log.RedString(upperCaseString(errorMessage)))
 	}
 
 	analytics.Wait()
@@ -95,4 +98,18 @@ func GetActionID() string {
 // Register registers a new command with cnd's root command
 func Register(fn commandFunc) {
 	commandsFN = append(commandsFN, fn)
+}
+
+func upperCaseString(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
+
+	u := strings.ToUpper(string(s[0]))
+
+	if len(s) == 1 {
+		return u
+	}
+
+	return u + string(s[1:])
 }

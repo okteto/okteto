@@ -166,12 +166,12 @@ func printDirectly(o *listOutput) error {
 	fmt.Println("Active cloud native development environments:")
 	for _, e := range o.Environments {
 		var buff bytes.Buffer
-		buff.WriteString(fmt.Sprintf("\t%s\n", e.Name))
-		buff.WriteString(fmt.Sprintf("\t\t%-15s%s\n", "source:", e.Source))
-		buff.WriteString(fmt.Sprintf("\t\t%-15s%s\n", "completion:", e.Completion))
+		buff.WriteString(fmt.Sprintf("  %s\n", log.BlueString(e.Name)))
+		buff.WriteString(fmt.Sprintf("    %s     %s\n", log.BlueString("source:"), e.Source))
+		buff.WriteString(fmt.Sprintf("    %s %s\n", log.BlueString("completion:"), e.Completion))
 
 		for _, er := range e.Errors {
-			buff.WriteString(fmt.Sprintf("\t\t%-15s%s\n", "error:", er))
+			buff.WriteString(fmt.Sprintf("    %s      %s\n", "error:", er))
 		}
 
 		fmt.Println(buff.String())
