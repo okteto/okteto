@@ -100,6 +100,10 @@ func (p *CNDPortForwardManager) Start(pod *apiv1.Pod) {
 func (p *CNDPortForwardManager) Stop() {
 	var wg sync.WaitGroup
 
+	if p.portForwards == nil {
+		return
+	}
+
 	for _, pf := range p.portForwards {
 		wg.Add(1)
 		go func(f *CNDPortForward) {

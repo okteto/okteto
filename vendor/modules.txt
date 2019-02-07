@@ -71,6 +71,8 @@ github.com/dsnet/compress
 github.com/evanphx/json-patch
 # github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d
 github.com/exponent-io/jsonpath
+# github.com/fatih/color v1.7.0
+github.com/fatih/color
 # github.com/go-openapi/jsonpointer v0.17.0
 github.com/go-openapi/jsonpointer
 # github.com/go-openapi/jsonreference v0.17.0
@@ -124,6 +126,10 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
 github.com/mailru/easyjson/buffer
+# github.com/mattn/go-colorable v0.0.9
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.4
+github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.4
 github.com/mattn/go-runewidth
 # github.com/mholt/archiver v3.1.1+incompatible

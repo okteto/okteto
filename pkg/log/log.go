@@ -8,15 +8,36 @@ import (
 	"path"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
+	"github.com/fatih/color"
 	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 	"k8s.io/klog"
 )
 
-const (
-	red    = "\033[1;31m%s\033[0m\n"
-	yellow = "\033[1;33m%s\033[0m\n"
-	green  = "\033[1;32m%s\033[0m\n"
+var (
+	// RedString adds the red ansi color and applies the format
+	RedString = color.New(color.FgHiRed).SprintfFunc()
+
+	// GreenString adds the green ansi color and applies the format
+	GreenString = color.New(color.FgHiGreen).SprintfFunc()
+
+	// YellowString adds the yellow ansi color and applies the format
+	YellowString = color.New(color.FgHiYellow).SprintfFunc()
+
+	// BlueString adds the blue ansi color and applies the format
+	BlueString = color.New(color.FgHiBlue).SprintfFunc()
+
+	// SymbolString adds the terminal's background color as foreground, and green as background and applies the format
+	SymbolString = color.New(color.BgGreen, color.FgBlack).SprintfFunc()
+
+	// ErrorSymbolString adds the terminal's background color as foreground, and red as background and applies the format
+	ErrorSymbolString = color.New(color.BgHiRed, color.FgBlack).SprintfFunc()
+
+	// ErrorSymbol is an X with the error color applied
+	ErrorSymbol = ErrorSymbolString(" ✕ ")
+
+	// SuccessSymbol is a checkmark with the success color applied
+	SuccessSymbol = SymbolString(" ✓ ")
 )
 
 type logger struct {
@@ -123,18 +144,18 @@ func Errorf(format string, args ...interface{}) {
 
 // Red writes a line in red
 func Red(format string, args ...interface{}) {
-	fmt.Printf(red, fmt.Sprintf(format, args...))
+	fmt.Println(RedString(format, args...))
 	log.file.Errorf(format, args...)
 }
 
 // Yellow writes a line in yellow
 func Yellow(format string, args ...interface{}) {
-	fmt.Printf(yellow, fmt.Sprintf(format, args...))
+	fmt.Println(YellowString(format, args...))
 	log.file.Warnf(format, args...)
 }
 
 // Green writes a line in green
 func Green(format string, args ...interface{}) {
-	fmt.Printf(green, fmt.Sprintf(format, args...))
+	fmt.Println(GreenString(format, args...))
 	log.file.Infof(format, args...)
 }
