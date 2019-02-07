@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/briandowns/spinner"
 	k8Client "github.com/cloudnativedevelopment/cnd/pkg/k8/client"
 	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
@@ -29,13 +31,16 @@ func Down() *cobra.Command {
 }
 
 func executeDown() error {
-	fmt.Println("Deactivating your cloud native development environment...")
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.Suffix = " Deactivating your cloud native development environment..."
+	s.Start()
 
 	namespace, deployment, container, _, err := findDevEnvironment(false, true)
 
 	if err != nil {
 		if err == errNoCNDEnvironment {
 			log.Debugf("No CND environment running")
+			s.Stop()
 			return deactivateSuccess()
 		}
 
@@ -81,6 +86,7 @@ func executeDown() error {
 		return err
 	}
 
+	s.Stop()
 	return deactivateSuccess()
 }
 
