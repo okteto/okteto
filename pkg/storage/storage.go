@@ -95,7 +95,7 @@ func insert(namespace string, dev *model.Dev, host, pod string) error {
 		return err
 	}
 
-	fullName := getFullName(namespace, dev)
+	fullName := getFullName(namespace, dev.Swap.Deployment.Name, dev.Swap.Deployment.Container)
 	svc, err := newService(dev.Mount.Source, host)
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func Get(namespace string, dev *model.Dev) (*Service, error) {
 		return nil, err
 	}
 
-	fullName := getFullName(namespace, dev)
+	fullName := getFullName(namespace, dev.Swap.Deployment.Name, dev.Swap.Deployment.Container)
 	svc, ok := s.Services[fullName]
 	if !ok {
 		return nil, fmt.Errorf("there aren't any active cloud native development environments available for '%s'", fullName)
@@ -138,24 +138,30 @@ func Get(namespace string, dev *model.Dev) (*Service, error) {
 
 //Stop marks a service entry as stopped
 func Stop(namespace string, dev *model.Dev) error {
+	fullName := getFullName(namespace, dev.Swap.Deployment.Name, dev.Swap.Deployment.Container)
+	return stop(fullName)
+}
+
+func stop(name string) error {
 	s, err := load()
 	if err != nil {
 		return err
 	}
 
-	fullName := getFullName(namespace, dev)
-	svc, ok := s.Services[fullName]
+	svc, ok := s.Services[name]
 	if ok {
 		svc.Syncthing = ""
-		s.Services[fullName] = svc
+		svc.PID = 0
+		s.Services[name] = svc
 		return s.save()
 	}
+
 	return nil
 }
 
 //Delete deletes a service entry
 func Delete(namespace string, dev *model.Dev) error {
-	fullName := getFullName(namespace, dev)
+	fullName := getFullName(namespace, dev.Swap.Deployment.Name, dev.Swap.Deployment.Container)
 	return deleteEntry(fullName)
 }
 
@@ -164,18 +170,8 @@ func deleteEntry(fullName string) error {
 	if err != nil {
 		return err
 	}
-	serviceFolder, err := getServiceFolder(fullName)
-
-	sy := syncthing.Syncthing{
-		Home: serviceFolder,
-	}
-
-	if err := sy.RemoveFolder(); err != nil {
-		log.Infof("couldn't delete %s. Please delete manually.", serviceFolder)
-	}
 
 	delete(s.Services, fullName)
-
 	return s.save()
 }
 
@@ -221,8 +217,8 @@ func newService(folder, host string) (Service, error) {
 	return Service{Folder: absFolder, Syncthing: host}, nil
 }
 
-func getFullName(namespace string, dev *model.Dev) string {
-	return fmt.Sprintf("%s/%s/%s", namespace, dev.Swap.Deployment.Name, dev.Swap.Deployment.Container)
+func getFullName(namespace, deploymentName, container string) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, deploymentName, container)
 }
 
 func getServiceFolder(fullName string) (string, error) {
@@ -237,32 +233,20 @@ func getServiceFolder(fullName string) (string, error) {
 // RemoveIfStale removes the entry from the state file if it's stale
 // It will return true if the service entry was stale and it was successfully removed.
 func RemoveIfStale(svc *Service, fullName string) bool {
-	serviceFolder, err := getServiceFolder(fullName)
-	if err != nil {
-		log.Infof("state is malformed, manual action might be required: %s", err)
-		return false
-	}
-
-	if _, err := os.Stat(serviceFolder); os.IsNotExist(err) {
-		log.Debugf("%s doesn't exist, removing %s from state", serviceFolder, fullName)
-		deleteEntry(fullName)
-		return true
-	}
-
-	if !syncthing.Exists(serviceFolder) {
-		log.Debugf("%s/syncthing.pid is not running anymore, removing %s from state", serviceFolder, fullName)
-		deleteEntry(fullName)
-		return true
-	}
 
 	if svc.PID == 0 {
-		log.Debugf("%s didn't have a PID", fullName)
 		return false
 	}
 
 	process, err := ps.FindProcess(svc.PID)
 	if (process == nil && err == nil) || (process.Executable() != config.GetBinaryName()) {
 		log.Debugf("original pid-%d is not running anymore, removing %s from state", svc.PID, fullName)
+		serviceFolder, err := getServiceFolder(fullName)
+		if err != nil {
+			log.Infof("couldn't get folder: %s", err)
+			return false
+		}
+
 		sy := syncthing.Syncthing{
 			Home: serviceFolder,
 		}
@@ -271,7 +255,11 @@ func RemoveIfStale(svc *Service, fullName string) bool {
 			log.Debugf("Couldn't stop rogue syncthing at %s/syncthing.pid: %s", serviceFolder, err)
 		}
 
-		deleteEntry(fullName)
+		if err := stop(fullName); err != nil {
+			log.Debugf("Couldn't mark %s as stopped: %s", fullName, err)
+			return false
+		}
+
 		return true
 	}
 
