@@ -249,6 +249,11 @@ func RemoveIfStale(svc *Service, fullName string) bool {
 		return true
 	}
 
+	if svc.Syncthing == "" {
+		// If syncthing value is empty, it was correctly shutdown
+		return false
+	}
+
 	if !syncthing.Exists(serviceFolder) {
 		log.Debugf("%s/syncthing.pid is not running anymore, removing %s from state", serviceFolder, fullName)
 		deleteEntry(fullName)
