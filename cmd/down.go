@@ -71,7 +71,7 @@ func executeDown() error {
 		return err
 	}
 
-	sy, err := syncthing.NewSyncthing(namespace, d.Name, nil)
+	sy, err := syncthing.NewSyncthing(namespace, d.Name, nil, false)
 	if err != nil {
 		return err
 	}

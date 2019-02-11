@@ -64,29 +64,40 @@ type Syncthing struct {
 	GUIAddress       string
 	ListenAddress    string
 	Client           *http.Client
+	Primary          bool
 }
 
 // NewSyncthing constructs a new Syncthing.
-func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthing, error) {
+func NewSyncthing(namespace, deployment string, devList []*model.Dev, primary bool) (*Syncthing, error) {
 
 	fullPath := GetInstallPath()
 	if !IsInstalled() {
 		return nil, fmt.Errorf("cannot find syncthing. Make sure syncthing is installed in %s", fullPath)
 	}
 
-	remotePort, err := getAvailablePort()
-	if err != nil {
-		return nil, err
+	var err error
+	remotePort := 0
+	if primary {
+		remotePort, err = getAvailablePort()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	guiPort, err := getAvailablePort()
-	if err != nil {
-		return nil, err
+	guiPort := 0
+	if primary {
+		guiPort, err = getAvailablePort()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	listenPort, err := getAvailablePort()
-	if err != nil {
-		return nil, err
+	listenPort := 0
+	if primary {
+		listenPort, err = getAvailablePort()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	s := &Syncthing{
@@ -103,6 +114,7 @@ func NewSyncthing(namespace, deployment string, devList []*model.Dev) (*Syncthin
 		ListenAddress:    fmt.Sprintf("0.0.0.0:%d", listenPort),
 		Client:           NewAPIClient(),
 		RemotePort:       remotePort,
+		Primary:          primary,
 	}
 
 	return s, nil
@@ -192,6 +204,9 @@ func getAvailablePort() (int, error) {
 
 // Run starts up a local syncthing process to serve files from.
 func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
+	if !s.Primary {
+		return nil
+	}
 
 	if err := s.initConfig(); err != nil {
 		return err

@@ -9,6 +9,10 @@ import (
 // IsConnected returns true if it can talk to the syncthing API endpoint
 // and the remote device looks connected
 func (s *Syncthing) IsConnected() bool {
+	if !s.Primary {
+		return true
+	}
+
 	body, err := s.GetFromAPI("rest/system/connections")
 	if err != nil {
 		log.Infof("error when getting connections from the api: %s", err)

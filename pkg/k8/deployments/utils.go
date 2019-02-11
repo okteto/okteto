@@ -32,11 +32,9 @@ func GetAndUpdateDevListFromAnnotation(o metav1.Object, dev *model.Dev) ([]*mode
 		return nil, err
 	}
 	for i, v := range devList {
-		if dev.Swap.Deployment.Name == v.Swap.Deployment.Name {
-			if dev.Swap.Deployment.Container == v.Swap.Deployment.Container {
-				devList[i] = dev
-				return devList, nil
-			}
+		if dev.Swap.Deployment.Container == v.Swap.Deployment.Container {
+			devList[i] = dev
+			return devList, nil
 		}
 	}
 	devList = append(devList, dev)
