@@ -249,7 +249,8 @@ func (up *UpContext) Execute(isRetry bool) error {
 		return err
 	}
 
-	up.Sy, err = syncthing.NewSyncthing(up.Namespace, up.Deployment.Name, devList)
+	primary := up.Dev.Swap.Deployment.Container == devList[0].Swap.Deployment.Container
+	up.Sy, err = syncthing.NewSyncthing(up.Namespace, up.Deployment.Name, devList, primary)
 	if err != nil {
 		return err
 	}
@@ -280,8 +281,10 @@ func (up *UpContext) Execute(isRetry bool) error {
 	}
 
 	up.Forwarder = forward.NewCNDPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
-	if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort, up.Sy.IsConnected); err != nil {
-		return err
+	if up.Sy.Primary {
+		if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort, up.Sy.IsConnected); err != nil {
+			return err
+		}
 	}
 
 	for _, f := range up.Dev.Forward {
