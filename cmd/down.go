@@ -23,7 +23,18 @@ func Down() *cobra.Command {
 		Short: "Deactivate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting down command")
-			return executeDown()
+			s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+			s.Suffix = " Deactivating your cloud native development environment..."
+			s.Start()
+			err := executeDown()
+			s.Stop()
+			if err == nil {
+				fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Environment deactivated"))
+				return nil
+			}
+
+			return err
+
 		},
 	}
 
@@ -31,17 +42,11 @@ func Down() *cobra.Command {
 }
 
 func executeDown() error {
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	s.Suffix = " Deactivating your cloud native development environment..."
-	s.Start()
-
 	namespace, deployment, container, _, err := findDevEnvironment(false, true)
-
 	if err != nil {
 		if err == errNoCNDEnvironment {
 			log.Debugf("No CND environment running")
-			s.Stop()
-			return deactivateSuccess()
+			return nil
 		}
 
 		log.Info(err)
@@ -86,11 +91,5 @@ func executeDown() error {
 		return err
 	}
 
-	s.Stop()
-	return deactivateSuccess()
-}
-
-func deactivateSuccess() error {
-	fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Environment deactivated"))
 	return nil
 }
