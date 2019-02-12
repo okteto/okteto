@@ -121,7 +121,7 @@ func findDevEnvironment(mustBeRunning, checkForStale bool) (string, string, stri
 	}
 
 	if len(candidates) > 1 {
-		fmt.Printf("warning: there are %d cloud native development environments active in your current folder, using '%s'\n", len(candidates), deploymentFullName)
+		log.Infof("there are %d cloud native development environments active in your current folder, using '%s'\n", len(candidates), deploymentFullName)
 	}
 
 	parts := strings.SplitN(deploymentFullName, "/", 3)
