@@ -13,9 +13,9 @@ import (
 
 var (
 	downloadPath = map[string]string{
-		"linux":   "https://s3-us-west-1.amazonaws.com/okteto-cli/syncthing-1.0.0/linux/syncthing",
-		"darwin":  "https://s3-us-west-1.amazonaws.com/okteto-cli/syncthing-1.0.0/darwin/syncthing",
-		"windows": "https://s3-us-west-1.amazonaws.com/okteto-cli/syncthing-1.0.0/windows/syncthing.exe",
+		"linux":   "https://downloads.okteto.com/cli/syncthing-1.0.0/linux/syncthing",
+		"darwin":  "https://downloads.okteto.com/cli/syncthing-1.0.0/darwin/syncthing",
+		"windows": "https://downloads.okteto.com/cli/syncthing-1.0.0/windows/syncthing.exe",
 	}
 )
 
