@@ -200,7 +200,7 @@ func LoadDev(b []byte) (*Dev, error) {
 	}
 
 	if strings.HasPrefix(dev.Mount.Source, "~/") {
-		home := os.Getenv("HOME")
+		home := GetHomeDir()
 		dev.Mount.Source = filepath.Join(home, dev.Mount.Source[2:])
 	}
 

@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
+
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -16,14 +17,7 @@ import (
 // If namespace is empty, it will use the default namespace configured.
 // If path is empty, it will use the default path configuration
 func Get(namespace string) (string, *kubernetes.Clientset, *rest.Config, string, error) {
-	home := os.Getenv("HOME")
-	if runtime.GOOS == "windows" {
-		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
-		if home == "" {
-			home = os.Getenv("USERPROFILE")
-		}
-	}
-
+	home := model.GetHomeDir()
 	kubeconfig := filepath.Join(home, ".kube", "config")
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
 	if len(kubeconfigEnv) > 0 {

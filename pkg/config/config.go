@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 )
 
 // These values will be stamped at build time
@@ -90,7 +92,8 @@ func GetCNDHome() string {
 		cndFolder = overrideConfig.CNDFolderName
 	}
 
-	var cndHome = os.Getenv("HOME")
+	cndHome := model.GetHomeDir()
+
 	if overrideConfig.CNDHomePath != "" {
 		cndHome = overrideConfig.CNDHomePath
 	}
