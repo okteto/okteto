@@ -3,7 +3,7 @@ package deployments
 import (
 	"encoding/json"
 	"fmt"
-	"path"
+	"path/filepath"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
@@ -135,7 +135,7 @@ func createInitSyncthingContainer(d *appsv1.Deployment, dev *model.Dev) {
 			}
 		}
 	}
-	source := path.Join(dev.Mount.Target, "*")
+	source := filepath.Join(dev.Mount.Target, "*")
 	initSyncthingContainer := apiv1.Container{
 		Name:  dev.GetCNDInitSyncContainer(),
 		Image: image,

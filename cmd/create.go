@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/cloudnativedevelopment/cnd/pkg/linguist"
@@ -46,7 +46,7 @@ func executeCreate(devPath string) error {
 	}
 
 	dev := linguist.GetDevConfig(languagesDiscovered[0])
-	dev.Swap.Deployment.Name = path.Base(root)
+	dev.Swap.Deployment.Name = filepath.Base(root)
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
 		log.Info(err)

@@ -3,7 +3,7 @@ package analytics
 import (
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
@@ -25,7 +25,7 @@ func Test_isEnabled(t *testing.T) {
 		CNDHomePath: tmpdir,
 	})
 
-	analyticsFlag := path.Join(tmpdir, ".cnd", ".noanalytics")
+	analyticsFlag := filepath.Join(tmpdir, ".cnd", ".noanalytics")
 	if analyticsFlag != getFlagPath() {
 		t.Errorf("got %s expected %s", getFlagPath(), analyticsFlag)
 	}

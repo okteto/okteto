@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -192,5 +192,5 @@ func Wait() {
 }
 
 func getFlagPath() string {
-	return path.Join(config.GetCNDHome(), ".noanalytics")
+	return filepath.Join(config.GetCNDHome(), ".noanalytics")
 }

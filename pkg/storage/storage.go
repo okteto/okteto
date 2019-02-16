@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -43,7 +42,7 @@ type Service struct {
 }
 
 func getSTPath() string {
-	return path.Join(config.GetCNDHome(), ".state")
+	return filepath.Join(config.GetCNDHome(), ".state")
 }
 
 func load() (*Storage, error) {
@@ -206,7 +205,7 @@ func fixPath(originalPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Join(folder, originalPath), nil
+	return filepath.Join(folder, originalPath), nil
 }
 
 func newService(folder, host string) (Service, error) {
@@ -227,7 +226,7 @@ func getServiceFolder(fullName string) (string, error) {
 		return "", fmt.Errorf("invalid state file, please remove %s from %s manualy and try again", fullName, getSTPath())
 	}
 
-	return path.Join(config.GetCNDHome(), parts[0], parts[1]), nil
+	return filepath.Join(config.GetCNDHome(), parts[0], parts[1]), nil
 }
 
 // RemoveIfStale removes the entry from the state file if it's stale

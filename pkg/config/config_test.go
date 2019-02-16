@@ -2,7 +2,7 @@ package config
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 )
 
@@ -13,7 +13,7 @@ func TestGetCNDHome(t *testing.T) {
 		config *Config
 	}{
 		{
-			"default", path.Join(os.Getenv("HOME"), ".cnd"), &Config{},
+			"default", filepath.Join(os.Getenv("HOME"), ".cnd"), &Config{},
 		},
 		{
 			"custom-path", "/tmp/foo/.cnd", &Config{CNDHomePath: "/tmp/foo"},

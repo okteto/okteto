@@ -3,7 +3,7 @@ package client
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 
 	"k8s.io/client-go/kubernetes"
@@ -24,7 +24,7 @@ func Get(namespace string) (string, *kubernetes.Clientset, *rest.Config, string,
 		}
 	}
 
-	kubeconfig := path.Join(home, ".kube", "config")
+	kubeconfig := filepath.Join(home, ".kube", "config")
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
 	if len(kubeconfigEnv) > 0 {
 		kubeconfig = kubeconfigEnv

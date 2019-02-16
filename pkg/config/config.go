@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 // These values will be stamped at build time
@@ -95,7 +95,7 @@ func GetCNDHome() string {
 		cndHome = overrideConfig.CNDHomePath
 	}
 
-	home := path.Join(cndHome, cndFolder)
+	home := filepath.Join(cndHome, cndFolder)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
 		fmt.Printf("failed to create the home directory: %s\n", err)

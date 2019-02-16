@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/fatih/color"
@@ -60,7 +60,7 @@ func Init(level logrus.Level, actionID string) {
 		FullTimestamp: true,
 	})
 
-	logPath := path.Join(config.GetCNDHome(), fmt.Sprintf("%s%s", config.GetBinaryName(), ".log"))
+	logPath := filepath.Join(config.GetCNDHome(), fmt.Sprintf("%s%s", config.GetBinaryName(), ".log"))
 	rolling := getRollingLog(logPath)
 	fileLogger.SetOutput(rolling)
 	fileLogger.SetLevel(logrus.DebugLevel)
