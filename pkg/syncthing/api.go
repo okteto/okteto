@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"path"
+	"path/filepath"
 	"time"
 )
 
@@ -35,7 +35,7 @@ func NewAPIClient() *http.Client {
 
 // GetFromAPI calls the syncthing API and returns the parsed json or an error
 func (s *Syncthing) GetFromAPI(url string) ([]byte, error) {
-	urlPath := path.Join(s.GUIAddress, url)
+	urlPath := filepath.Join(s.GUIAddress, url)
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s", urlPath), nil)
 	if err != nil {
 		return nil, err

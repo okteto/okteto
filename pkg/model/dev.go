@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -201,7 +200,7 @@ func LoadDev(b []byte) (*Dev, error) {
 	}
 
 	if strings.HasPrefix(dev.Mount.Source, "~/") {
-		home := os.Getenv("HOME")
+		home := GetHomeDir()
 		dev.Mount.Source = filepath.Join(home, dev.Mount.Source[2:])
 	}
 
@@ -213,10 +212,10 @@ func (dev *Dev) fixPath(originalPath string) {
 
 	if !filepath.IsAbs(dev.Mount.Source) {
 		if filepath.IsAbs(originalPath) {
-			dev.Mount.Source = path.Join(path.Dir(originalPath), dev.Mount.Source)
+			dev.Mount.Source = filepath.Join(filepath.Dir(originalPath), dev.Mount.Source)
 		} else {
 
-			dev.Mount.Source = path.Join(wd, path.Dir(originalPath), dev.Mount.Source)
+			dev.Mount.Source = filepath.Join(wd, filepath.Dir(originalPath), dev.Mount.Source)
 		}
 	}
 }

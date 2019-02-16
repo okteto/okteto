@@ -3,7 +3,9 @@ package config
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
+
+	"github.com/cloudnativedevelopment/cnd/pkg/model"
 )
 
 // These values will be stamped at build time
@@ -90,12 +92,13 @@ func GetCNDHome() string {
 		cndFolder = overrideConfig.CNDFolderName
 	}
 
-	var cndHome = os.Getenv("HOME")
+	cndHome := model.GetHomeDir()
+
 	if overrideConfig.CNDHomePath != "" {
 		cndHome = overrideConfig.CNDHomePath
 	}
 
-	home := path.Join(cndHome, cndFolder)
+	home := filepath.Join(cndHome, cndFolder)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
 		fmt.Printf("failed to create the home directory: %s\n", err)

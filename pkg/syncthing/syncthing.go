@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -101,7 +100,7 @@ func NewSyncthing(namespace, deployment string, devList []*model.Dev, primary bo
 	s := &Syncthing{
 		APIKey:           "cnd",
 		binPath:          fullPath,
-		Home:             path.Join(config.GetCNDHome(), namespace, deployment),
+		Home:             filepath.Join(config.GetCNDHome(), namespace, deployment),
 		Name:             deployment,
 		DevList:          devList,
 		Namespace:        namespace,
@@ -169,15 +168,15 @@ func (s *Syncthing) initConfig() error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(path.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(path.Join(s.Home, certFile), cert, 0700); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(s.Home, certFile), cert, 0700); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(path.Join(s.Home, keyFile), key, 0700); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(s.Home, keyFile), key, 0700); err != nil {
 		return err
 	}
 
@@ -220,7 +219,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		"-home", s.Home,
 		"-no-browser",
 		"-verbose",
-		"-logfile", path.Join(s.Home, logFile),
+		"-logfile", filepath.Join(s.Home, logFile),
 	}
 
 	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
@@ -284,7 +283,7 @@ func (s *Syncthing) RemoveFolder() error {
 		return nil
 	}
 
-	parentDir := path.Dir(s.Home)
+	parentDir := filepath.Dir(s.Home)
 	if parentDir != "." {
 		empty, err := isDirEmpty(parentDir)
 		if err != nil {
@@ -372,7 +371,7 @@ func IsInstalled() bool {
 
 // GetInstallPath returns the expected install path for syncthing
 func GetInstallPath() string {
-	return path.Join(config.GetCNDHome(), getBinaryName())
+	return filepath.Join(config.GetCNDHome(), getBinaryName())
 }
 
 func getBinaryName() string {
