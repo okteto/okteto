@@ -30,11 +30,9 @@ var (
 )
 
 const (
-	binaryName       = "syncthing"
 	certFile         = "cert.pem"
 	keyFile          = "key.pem"
 	configFile       = "config.xml"
-	portFile         = ".port"
 	logFile          = "syncthing.log"
 	syncthingPidFile = "syncthing.pid"
 
@@ -144,7 +142,7 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 		return err
 	}
 
-	if process.Executable() != binaryName {
+	if process.Executable() != getBinaryName() {
 		log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
 		return nil
 	}
@@ -355,7 +353,7 @@ func Exists(home string) bool {
 
 	log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
 
-	if process.Executable() == binaryName {
+	if process.Executable() == getBinaryName() {
 		return true
 	}
 
@@ -374,5 +372,13 @@ func IsInstalled() bool {
 
 // GetInstallPath returns the expected install path for syncthing
 func GetInstallPath() string {
-	return path.Join(config.GetCNDHome(), binaryName)
+	return path.Join(config.GetCNDHome(), getBinaryName())
+}
+
+func getBinaryName() string {
+	if runtime.GOOS == "windows" {
+		return "syncthing.exe"
+	}
+
+	return "syncthing"
 }
