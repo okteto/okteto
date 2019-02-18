@@ -73,6 +73,7 @@ func updateCndContainer(c *apiv1.Container, dev *model.Dev, namespace string) {
 	if dev.Swap.Deployment.Image != "" {
 		c.Image = dev.Swap.Deployment.Image
 	}
+	c.ImagePullPolicy = apiv1.PullAlways
 
 	if len(dev.Swap.Deployment.Command) > 0 {
 		c.Command = dev.Swap.Deployment.Command
