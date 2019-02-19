@@ -90,8 +90,12 @@ func Execute() int {
 	return exitCode
 }
 
-func addDevPathFlag(cmd *cobra.Command, devPath *string) {
-	cmd.Flags().StringVarP(devPath, "file", "f", config.CNDManifestFileName(), "path to the manifest file")
+func addDevPathFlag(cmd *cobra.Command, devPath *string, value string) {
+	cmd.Flags().StringVarP(devPath, "file", "f", value, "path to the manifest file")
+}
+
+func addNamespaceFlag(cmd *cobra.Command, namespace *string) {
+	cmd.Flags().StringVarP(namespace, "namespace", "n", "", "kubernetes namespace to use (defaults to the current kube config namespace)")
 }
 
 // GetActionID returns the actionID used to correlate different actions in the same command

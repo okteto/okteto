@@ -18,6 +18,8 @@ import (
 
 //Down stops a cloud native environment
 func Down() *cobra.Command {
+	var namespace string
+	var devPath string
 	cmd := &cobra.Command{
 		Use:   "down",
 		Short: "Deactivate your cloud native development environment",
@@ -26,7 +28,7 @@ func Down() *cobra.Command {
 			s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 			s.Suffix = " Deactivating your cloud native development environment..."
 			s.Start()
-			err := executeDown()
+			err := executeDown(namespace, devPath)
 			s.Stop()
 			if err == nil {
 				fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Environment deactivated"))
@@ -38,10 +40,12 @@ func Down() *cobra.Command {
 		},
 	}
 
+	addDevPathFlag(cmd, &devPath, "")
+	addNamespaceFlag(cmd, &namespace)
 	return cmd
 }
 
-func executeDown() error {
+func executeDown(searchNamespace, searchDevPath string) error {
 	namespace, deployment, container, _, err := findDevEnvironment(false, true)
 	if err != nil {
 		if err == errNoCNDEnvironment {
@@ -49,7 +53,18 @@ func executeDown() error {
 			return nil
 		}
 
-		return fmt.Errorf("failed to deactivate your cloud native environment: %s", err)
+		if err != errMultipleCNDEnvironment {
+			return fmt.Errorf("failed to deactivate your cloud native environment: %s", err)
+		}
+
+		if searchDevPath == "" {
+			return fmt.Errorf("%s: Please specify which environment to deactivate with the --file flag", err)
+		}
+
+		namespace, deployment, container, _, err = getDevEnvironment(searchNamespace, searchDevPath, false)
+		if err != nil {
+			return fmt.Errorf("failed to deactivate your cloud native environment: %s", err)
+		}
 	}
 
 	_, client, _, k8sContext, err := k8Client.Get(namespace)

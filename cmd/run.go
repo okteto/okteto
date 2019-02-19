@@ -15,13 +15,14 @@ import (
 //Run executes a custom command on the CND container
 func Run() *cobra.Command {
 	var devPath string
+	var namespace string
 	cmd := &cobra.Command{
 		Use:   "run SCRIPT ARGS",
 		Short: fmt.Sprintf("Run a script defined in your %s file directly in your cloud native environment", config.CNDManifestFileName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			analytics.Send(analytics.EventRun, GetActionID())
 			defer analytics.Send(analytics.EventRunEnd, GetActionID())
-			return executeRun(devPath, args)
+			return executeRun(namespace, devPath, args)
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 || args[0] == "" {
@@ -32,18 +33,19 @@ func Run() *cobra.Command {
 		},
 	}
 
-	addDevPathFlag(cmd, &devPath)
+	addDevPathFlag(cmd, &devPath, config.CNDManifestFileName())
+	addNamespaceFlag(cmd, &namespace)
 	return cmd
 }
 
-func executeRun(devPath string, args []string) error {
+func executeRun(namespace, devPath string, args []string) error {
 	dev, err := model.ReadDev(devPath)
 	if err != nil {
 		return err
 	}
 
 	if val, ok := dev.Scripts[args[0]]; ok {
-		return executeExec(parseArguments(val, args))
+		return executeExec(namespace, devPath, parseArguments(val, args))
 	}
 
 	return fmt.Errorf("%s is not defined in %s. [%s]", args[0], devPath, strings.Join(getScripts(dev), ", "))

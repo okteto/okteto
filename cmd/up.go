@@ -124,8 +124,8 @@ func Up() *cobra.Command {
 		},
 	}
 
-	addDevPathFlag(cmd, &devPath)
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "kubernetes namespace to use (defaults to the current kube config namespace)")
+	addDevPathFlag(cmd, &devPath, config.CNDManifestFileName())
+	addNamespaceFlag(cmd, &namespace)
 	return cmd
 }
 
