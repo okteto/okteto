@@ -63,7 +63,7 @@ func Up() *cobra.Command {
 		Use:   "up",
 		Short: "Activate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Debugf("starting up command")
+			log.Debug("starting up command")
 			up := &UpContext{
 				WG:         &sync.WaitGroup{},
 				Disconnect: make(chan struct{}, 1),
@@ -201,15 +201,19 @@ func (up *UpContext) Execute(isRetry bool) error {
 		}
 
 	}
-	n, deploymentName, c, _, err := findDevEnvironment(true, true)
 
-	if err != errNoCNDEnvironment {
-		return fmt.Errorf("there is already an entry for %s/%s. Are you running '%s up' somewhere else?", deployments.GetFullName(n, deploymentName), c, config.GetBinaryName())
-	}
-
+	var err error
 	up.Namespace, up.Client, up.RestConfig, up.CurrentContext, err = k8Client.Get(up.Namespace)
 	if err != nil {
 		return err
+	}
+
+	n, deploymentName, c, _, err := findDevEnvironment(true, true)
+
+	if err != errNoCNDEnvironment {
+		if n == up.Namespace && deploymentName == up.Dev.Swap.Deployment.Name && c == up.Dev.Swap.Deployment.Container {
+			return fmt.Errorf("there is already an entry for %s/%s. Are you running '%s up' somewhere else?", deployments.GetFullName(n, deploymentName), c, config.GetBinaryName())
+		}
 	}
 
 	up.DeploymentName = deployments.GetFullName(up.Namespace, up.Dev.Swap.Deployment.Name)
