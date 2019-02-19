@@ -2,7 +2,7 @@ package syncthing
 
 const configXML = `<configuration version="28">
 {{ range $key, $value := .DevList }}
-    <folder id="cnd-{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" label="{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" path="{{ $value.Mount.Source }}" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+    <folder id="cnd-{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" label="{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" path="{{ $value.Mount.Source }}" type="{{if $value.Mount.SendOnly}}sendonly{{else}}sendreceive{{end}}" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
         <filesystemType>basic</filesystemType>
         <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
         <device id="{{$.RemoteDeviceID}}" introducedBy=""></device>

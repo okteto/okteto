@@ -9,7 +9,7 @@ import (
 
 const configXML = `<configuration version="28">
 {{ range $key, $value := . }}
-    <folder id="cnd-{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" label="{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" path="/var/cnd-sync/{{ $value.Swap.Deployment.Container }}" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+    <folder id="cnd-{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" label="{{ $value.Swap.Deployment.Name }}-{{ $value.Swap.Deployment.Container }}" path="/var/cnd-sync/{{ $value.Swap.Deployment.Container }}" type="{{if $value.Mount.SendOnly}}receiveonly{{else}}sendreceive{{end}}" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
         <filesystemType>basic</filesystemType>
         <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
         <device id="ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU" introducedBy=""></device>
