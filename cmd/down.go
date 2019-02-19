@@ -49,8 +49,7 @@ func executeDown() error {
 			return nil
 		}
 
-		log.Info(err)
-		return fmt.Errorf("failed to deactivate your cloud native environment")
+		return fmt.Errorf("failed to deactivate your cloud native environment: %s", err)
 	}
 
 	_, client, _, k8sContext, err := k8Client.Get(namespace)

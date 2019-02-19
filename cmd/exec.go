@@ -19,7 +19,8 @@ import (
 )
 
 var (
-	errNoCNDEnvironment = fmt.Errorf("There aren't any cloud native development environments active in your current folder")
+	errNoCNDEnvironment       = fmt.Errorf("There aren't any cloud native development environments active in your current folder")
+	errMultipleCNDEnvironment = fmt.Errorf("There are multiple cloud native development environments active in your current folder")
 )
 
 //Exec executes a command on the CND container
@@ -121,7 +122,7 @@ func findDevEnvironment(mustBeRunning, checkForStale bool) (string, string, stri
 	}
 
 	if len(candidates) > 1 {
-		log.Infof("there are %d cloud native development environments active in your current folder, using '%s'\n", len(candidates), deploymentFullName)
+		return "", "", "", "", errMultipleCNDEnvironment
 	}
 
 	parts := strings.SplitN(deploymentFullName, "/", 3)
