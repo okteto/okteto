@@ -39,6 +39,7 @@ type Service struct {
 	Syncthing string `yaml:"syncthing,omitempty"`
 	PID       int    `yaml:"pid,omitempty"`
 	Pod       string `yaml:"pod,omitempty"`
+	Manifest  string `yaml:"manifest,omitempty"`
 }
 
 func getSTPath() string {
@@ -67,9 +68,9 @@ func load() (*Storage, error) {
 //Insert inserts a new service entry, and cleans it up when the context is cancelled
 func Insert(
 	ctx context.Context, wg *sync.WaitGroup,
-	namespace string, dev *model.Dev, host, pod string) error {
+	namespace string, dev *model.Dev, host, pod, manifest string) error {
 
-	if err := insert(namespace, dev, host, pod); err != nil {
+	if err := insert(namespace, dev, host, pod, manifest); err != nil {
 		return err
 	}
 
@@ -88,7 +89,7 @@ func Insert(
 	return nil
 }
 
-func insert(namespace string, dev *model.Dev, host, pod string) error {
+func insert(namespace string, dev *model.Dev, host, pod, manifest string) error {
 	s, err := load()
 	if err != nil {
 		return err
@@ -113,6 +114,7 @@ func insert(namespace string, dev *model.Dev, host, pod string) error {
 
 	svc.PID = os.Getpid()
 	svc.Pod = pod
+	svc.Manifest = manifest
 	s.Services[fullName] = svc
 	if err := s.save(); err != nil {
 		return err
