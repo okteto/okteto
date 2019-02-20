@@ -60,7 +60,7 @@ func load() (*Storage, error) {
 	}
 	err = yaml.Unmarshal(bytes, &s)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling the storage file: %s", err.Error())
+		return nil, fmt.Errorf("error unmarshaling the storage file: %s", err.Error())
 	}
 	return &s, nil
 }
@@ -225,7 +225,7 @@ func getFullName(namespace, deploymentName, container string) string {
 func getServiceFolder(fullName string) (string, error) {
 	parts := strings.Split(fullName, "/")
 	if len(parts) < 2 {
-		return "", fmt.Errorf("invalid state file, please remove %s from %s manualy and try again", fullName, getSTPath())
+		return "", fmt.Errorf("invalid state file, please remove %s from %s manually and try again", fullName, getSTPath())
 	}
 
 	return filepath.Join(config.GetCNDHome(), parts[0], parts[1]), nil
