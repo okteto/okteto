@@ -294,6 +294,13 @@ func (up *UpContext) Execute(isRetry bool) error {
 	}
 
 	up.Forwarder.Start(up.Pod)
+
+	if up.Dev.Mount.SendOnly {
+		if err := up.Sy.OverrideChanges(up.Context, up.WG, up.Dev); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -111,7 +111,7 @@ func list(yamlOutput bool) error {
 }
 
 func getStatus(sy *syncthing.Syncthing, s storage.Service) (float64, error) {
-	body, err := sy.GetFromAPI("rest/events")
+	body, err := sy.APICall("rest/events", "GET", 200, nil)
 	if err != nil {
 		return 0, fmt.Errorf("error getting syncthing state: %s", err)
 	}
@@ -132,7 +132,7 @@ func getStatus(sy *syncthing.Syncthing, s storage.Service) (float64, error) {
 }
 
 func getErrors(sy *syncthing.Syncthing, s storage.Service) ([]string, error) {
-	body, err := sy.GetFromAPI("rest/system/error")
+	body, err := sy.APICall("rest/system/error", "GET", 200, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error getting syncthing errors: %s", err)
 	}

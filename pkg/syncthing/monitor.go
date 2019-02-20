@@ -13,7 +13,7 @@ func (s *Syncthing) IsConnected() bool {
 		return true
 	}
 
-	body, err := s.GetFromAPI("rest/system/connections")
+	body, err := s.APICall("rest/system/connections", "GET", 200, nil)
 	if err != nil {
 		log.Infof("error when getting connections from the api: %s", err)
 		return false

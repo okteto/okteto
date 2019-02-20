@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
@@ -253,6 +254,34 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		return
 	}()
 	return nil
+}
+
+// OverrideChanges force the remote to be the same as the local file system
+func (s *Syncthing) OverrideChanges(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
+	if !s.Primary {
+		return nil
+	}
+
+	ticker := time.NewTicker(1 * time.Second)
+	folder := fmt.Sprintf("cnd-%s-%s", dev.Swap.Deployment.Name, dev.Swap.Deployment.Container)
+	params := map[string]string{"folder": folder}
+	for retries := 1; retries < 10; retries++ {
+		_, err := s.APICall("rest/db/override", "POST", 200, params)
+		if err != nil {
+			log.Infof("error calling 'override changes' syncthinng API: %s", err)
+			select {
+			case <-ticker.C:
+				continue
+			case <-ctx.Done():
+				log.Debug("cancelling call to 'override changes'")
+				return ctx.Err()
+			}
+		}
+		return nil
+	}
+
+	log.Infof("10 consecutive errors calling local syncthing")
+	return fmt.Errorf("Syncthing not respondinng after 5 consecutive calls")
 }
 
 // Stop halts the background process and cleans up.
