@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
@@ -16,11 +15,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	errNoCNDEnvironment       = fmt.Errorf("There aren't any cloud native development environments active in your current folder")
-	errMultipleCNDEnvironment = fmt.Errorf("There are multiple cloud native development environments active in your current folder")
-)
-
 //Exec executes a command on the CND container
 func Exec() *cobra.Command {
 	var devPath string
@@ -31,7 +25,12 @@ func Exec() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			analytics.Send(analytics.EventExec, GetActionID())
 			defer analytics.Send(analytics.EventExecEnd, GetActionID())
-			return executeExec(devPath, args)
+			err := executeExec(devPath, args)
+			if err == errMultipleCNDEnvironment {
+				exitInformation = "Use --file flag to specify the environment to use"
+			}
+
+			return err
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
@@ -57,7 +56,7 @@ func executeExec(searchDevPath string, args []string) error {
 		}
 
 		if searchDevPath == "" {
-			return fmt.Errorf("%s: Please specify which environment to use with the --file flag", err)
+			return errMultipleCNDEnvironment
 		}
 
 		namespace, deployment, devContainer, podName, err = getDevEnvironment(searchDevPath, true)

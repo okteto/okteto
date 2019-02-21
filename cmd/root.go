@@ -40,6 +40,8 @@ var (
 		Create,
 		Analytics,
 	}
+
+	exitInformation = ""
 )
 
 // Execute runs the root command
@@ -83,7 +85,12 @@ func Execute() int {
 			exitCode = 1
 		}
 
-		fmt.Printf("%s %s\n", log.ErrorSymbol, log.RedString(upperCaseString(errorMessage)))
+		fmt.Printf("%s %s", log.ErrorSymbol, log.RedString(upperCaseString(errorMessage)))
+		fmt.Println()
+		if len(exitInformation) > 0 {
+			fmt.Printf("%s %s", log.BlueString("Hint:"), exitInformation)
+			fmt.Println()
+		}
 	}
 
 	analytics.Wait()

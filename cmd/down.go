@@ -34,6 +34,10 @@ func Down() *cobra.Command {
 				return nil
 			}
 
+			if err == errMultipleCNDEnvironment {
+				exitInformation = "Use --file flag to specify the environment to deactivate"
+			}
+
 			return err
 
 		},
@@ -56,7 +60,7 @@ func executeDown(searchDevPath string) error {
 		}
 
 		if searchDevPath == "" {
-			return fmt.Errorf("%s: Please specify which environment to deactivate with the --file flag", err)
+			return errMultipleCNDEnvironment
 		}
 
 		namespace, deployment, container, _, err = getDevEnvironment(searchDevPath, false)

@@ -11,6 +11,11 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/storage"
 )
 
+var (
+	errNoCNDEnvironment       = fmt.Errorf("There aren't any cloud native development environments active in your current folder")
+	errMultipleCNDEnvironment = fmt.Errorf("There are multiple cloud native development environments active in your current folder")
+)
+
 func getFullPath(p string) string {
 	a, _ := filepath.Abs(p)
 	return a
