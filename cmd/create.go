@@ -28,6 +28,7 @@ spec:
       labels:
         app: {{ .Name }}
     spec:
+      terminationGracePeriodSeconds: 0
       containers:
       - image: {{ .Image }}
         name: {{ .Name }}
