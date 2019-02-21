@@ -58,7 +58,8 @@ func init() {
 		command: tailCommand,
 		path:    "/usr/src/app",
 		scripts: map[string]string{
-			"start": "pip install -r requirements.txt && python app.py",
+			"install": "pip install -r requirements.txt",
+			"start":   "python app.py",
 		},
 		forward: model.Forward{Local: 8080, Remote: 8080},
 	}
