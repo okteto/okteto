@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/cloudnativedevelopment/cnd/pkg/config"
@@ -12,6 +13,8 @@ import (
 	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/cloudnativedevelopment/cnd/pkg/model"
 	yaml "gopkg.in/yaml.v2"
+
+	"regexp"
 
 	"github.com/spf13/cobra"
 )
@@ -37,6 +40,8 @@ spec:
         - -f
         - /dev/null
 `
+
+var validKubeNameRegex = regexp.MustCompile("[^a-zA-Z0-9/.-]+")
 
 //Create automatically generates the manifest
 func Create() *cobra.Command {
@@ -77,7 +82,7 @@ func executeCreate(devPath string) error {
 	}
 
 	dev := linguist.GetDevConfig(languagesDiscovered[0])
-	dev.Swap.Deployment.Name = filepath.Base(root)
+	dev.Swap.Deployment.Name = getDeploymentName(root)
 
 	var env string
 	if languagesDiscovered[0] == "unrecognized" {
@@ -163,4 +168,11 @@ func fileExists(name string) bool {
 
 	return true
 
+}
+
+func getDeploymentName(name string) string {
+	deploymentName := filepath.Base(name)
+	deploymentName = strings.ToLower(deploymentName)
+	deploymentName = validKubeNameRegex.ReplaceAllString(deploymentName, "")
+	return deploymentName
 }

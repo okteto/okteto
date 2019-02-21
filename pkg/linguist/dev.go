@@ -100,7 +100,6 @@ func GetDevConfig(language string) *model.Dev {
 	dev := model.NewDev()
 	dev.Swap.Deployment.Image = vals.image
 	dev.Swap.Deployment.Command = vals.command
-	dev.Mount.Source = "."
 	dev.Mount.Target = vals.path
 	dev.Scripts = vals.scripts
 

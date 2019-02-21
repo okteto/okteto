@@ -59,9 +59,9 @@ type Deployment struct {
 
 //Mount represents how the local filesystem is mounted
 type Mount struct {
-	SendOnly bool   `json:"sendonly" yaml:"sendonly"`
-	Source   string `json:"source" yaml:"source"`
-	Target   string `json:"target" yaml:"target"`
+	SendOnly bool   `json:"sendonly" yaml:"sendonly,omitempty"`
+	Source   string `json:"source" yaml:"source,omitempty"`
+	Target   string `json:"target" yaml:"target,omitempty"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
