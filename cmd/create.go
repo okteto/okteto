@@ -30,6 +30,10 @@ spec:
       containers:
       - image: {{ .Image }}
         name: {{ .Name }}
+        command: 
+        - tail
+        - -f
+        - /dev/null
 `
 
 //Create automatically generates the manifest
@@ -73,6 +77,12 @@ func executeCreate(devPath string) error {
 	dev.Swap.Deployment.Name = filepath.Base(root)
 
 	var env string
+	if languagesDiscovered[0] == "unrecognized" {
+		fmt.Printf("Couldn't detect any language in your source. Recommended development environment: %s", log.BlueString(dev.Swap.Deployment.Image))
+	} else {
+		fmt.Printf("%s detected in your source. Recommended development environment: %s", languagesDiscovered[0], log.BlueString(dev.Swap.Deployment.Image))
+	}
+	fmt.Println()
 	fmt.Printf("Which docker image do you want to use for your development environment? [%s]: ", dev.Swap.Deployment.Image)
 	fmt.Scanln(&env)
 
@@ -120,7 +130,7 @@ func generateKubectlManifest(dev *model.Dev) error {
 		Image string
 	}{
 		Name:  dev.Swap.Deployment.Name,
-		Image: dev.Swap.Deployment.Container,
+		Image: dev.Swap.Deployment.Image,
 	}
 
 	t := template.Must(template.New("kubectlManifest").Parse(kubectlManifest))
