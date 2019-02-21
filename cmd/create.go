@@ -45,7 +45,8 @@ func Create() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := executeCreate(devPath)
 			if err == nil {
-				fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Cloud Native Environment created"))
+				fmt.Printf("%s %s", log.SuccessSymbol, log.GreenString("Cloud native environment created"))
+				fmt.Println()
 				return nil
 			}
 
@@ -78,9 +79,9 @@ func executeCreate(devPath string) error {
 
 	var env string
 	if languagesDiscovered[0] == "unrecognized" {
-		fmt.Printf("Couldn't detect any language in your source. Recommended development environment: %s", log.BlueString(dev.Swap.Deployment.Image))
+		fmt.Printf("Couldn't detect any language in your source. Recommended image for development: %s", log.BlueString(dev.Swap.Deployment.Image))
 	} else {
-		fmt.Printf("%s detected in your source. Recommended development environment: %s", languagesDiscovered[0], log.BlueString(dev.Swap.Deployment.Image))
+		fmt.Printf("%s detected in your source. Recommended image for development: %s", languagesDiscovered[0], log.BlueString(dev.Swap.Deployment.Image))
 	}
 	fmt.Println()
 	fmt.Printf("Which docker image do you want to use for your development environment? [%s]: ", dev.Swap.Deployment.Image)
@@ -103,7 +104,7 @@ func executeCreate(devPath string) error {
 
 	var kubectl string
 	for {
-		fmt.Printf("Create a kubernetes deployment manifest? [y/n]: ")
+		fmt.Printf("Create a Kubernetes deployment manifest? [y/n]: ")
 		fmt.Scanln(&kubectl)
 		if kubectl == "y" || kubectl == "n" {
 			break
@@ -136,12 +137,12 @@ func generateKubectlManifest(dev *model.Dev) error {
 	t := template.Must(template.New("kubectlManifest").Parse(kubectlManifest))
 	f, err := os.Create("deployment.yaml")
 	if err != nil {
-		return fmt.Errorf("Failed to generate your kubernetes deployment manifest")
+		return fmt.Errorf("Failed to generate your Kubernetes deployment manifest")
 	}
 
 	if err := t.Execute(f, data); err != nil {
 		log.Info(err)
-		return fmt.Errorf("Failed to generate your kubernetes deployment manifest: %s", err)
+		return fmt.Errorf("Failed to generate your Kubernetes deployment manifest: %s", err)
 	}
 
 	return nil
