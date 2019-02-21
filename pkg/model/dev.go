@@ -135,7 +135,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (f *Forward) MarshalYAML() (interface{}, error) {
+func (f Forward) MarshalYAML() (interface{}, error) {
 	return fmt.Sprintf("%d:%d", f.Local, f.Remote), nil
 }
 
