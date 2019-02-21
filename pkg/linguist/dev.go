@@ -12,6 +12,7 @@ type languageDefault struct {
 	command []string
 	path    string
 	scripts map[string]string
+	forward model.Forward
 }
 
 const (
@@ -38,18 +39,21 @@ func init() {
 		scripts: map[string]string{
 			"test": "yarn run test",
 		},
+		forward: model.Forward{Local: 3000, Remote: 3000},
 	}
 
 	languageDefaults[golang] = languageDefault{
 		image:   "golang:1",
 		command: tailCommand,
 		path:    "/go/src/app",
+		forward: model.Forward{Local: 8080, Remote: 8080},
 	}
 
 	languageDefaults[python] = languageDefault{
 		image:   "python:3",
 		command: []string{"sh", "-c", "pip install -r requirements.txt && python app.py"},
 		path:    "/usr/src/app",
+		forward: model.Forward{Local: 8080, Remote: 8080},
 	}
 
 	languageDefaults[java] = languageDefault{
@@ -59,6 +63,7 @@ func init() {
 		scripts: map[string]string{
 			"boot": "gradle bootRun",
 		},
+		forward: model.Forward{Local: 8080, Remote: 8080},
 	}
 
 	languageDefaults[ruby] = languageDefault{
@@ -69,12 +74,14 @@ func init() {
 			"migrate": "rails db:migrate",
 			"server":  "rails s -e development",
 		},
+		forward: model.Forward{Local: 3000, Remote: 3000},
 	}
 
 	languageDefaults[unrecognized] = languageDefault{
 		image:   "ubuntu",
 		command: tailCommand,
 		path:    "/usr/src/app",
+		forward: model.Forward{Local: 8080, Remote: 8080},
 	}
 }
 
@@ -93,6 +100,8 @@ func GetDevConfig(language string) *model.Dev {
 	}
 
 	dev.Scripts[helloCommandName] = "echo Your cluster ♥s you"
+
+	dev.Forward = []model.Forward{vals.forward}
 	return dev
 }
 
