@@ -63,7 +63,7 @@ func Up() *cobra.Command {
 		Use:   "up",
 		Short: "Activate your cloud native development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Debugf("starting up command")
+			log.Debug("starting up command")
 			up := &UpContext{
 				WG:         &sync.WaitGroup{},
 				Disconnect: make(chan struct{}, 1),
@@ -71,6 +71,8 @@ func Up() *cobra.Command {
 			}
 
 			var err error
+
+			devPath = getFullPath(devPath)
 			up.Dev, err = model.ReadDev(devPath)
 			if err != nil {
 				return err
@@ -92,7 +94,7 @@ func Up() *cobra.Command {
 				up.Context, up.Cancel = context.WithCancel(context.Background())
 				up.ErrChan = make(chan error, 1)
 
-				err = up.Execute(isRetry)
+				err = up.Execute(isRetry, devPath)
 				s.Stop()
 				if err != nil {
 					return err
@@ -124,8 +126,8 @@ func Up() *cobra.Command {
 		},
 	}
 
-	addDevPathFlag(cmd, &devPath)
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "kubernetes namespace to use (defaults to the current kube config namespace)")
+	addDevPathFlag(cmd, &devPath, config.CNDManifestFileName())
+	addNamespaceFlag(cmd, &namespace)
 	return cmd
 }
 
@@ -192,7 +194,7 @@ func (up *UpContext) WaitUntilExit() error {
 }
 
 // Execute runs all the logic for the up command
-func (up *UpContext) Execute(isRetry bool) error {
+func (up *UpContext) Execute(isRetry bool, devPath string) error {
 
 	if !syncthing.IsInstalled() {
 		fmt.Println("Installing dependencies...")
@@ -201,15 +203,19 @@ func (up *UpContext) Execute(isRetry bool) error {
 		}
 
 	}
-	n, deploymentName, c, _, err := findDevEnvironment(true, true)
 
-	if err != errNoCNDEnvironment {
-		return fmt.Errorf("there is already an entry for %s/%s. Are you running '%s up' somewhere else?", deployments.GetFullName(n, deploymentName), c, config.GetBinaryName())
-	}
-
+	var err error
 	up.Namespace, up.Client, up.RestConfig, up.CurrentContext, err = k8Client.Get(up.Namespace)
 	if err != nil {
 		return err
+	}
+
+	n, deploymentName, c, _, err := findDevEnvironment(true, true)
+
+	if err != errNoCNDEnvironment {
+		if n == up.Namespace && deploymentName == up.Dev.Swap.Deployment.Name && c == up.Dev.Swap.Deployment.Container {
+			return fmt.Errorf("there is already an entry for %s/%s. Are you running '%s up' somewhere else?", deployments.GetFullName(n, deploymentName), c, config.GetBinaryName())
+		}
 	}
 
 	up.DeploymentName = deployments.GetFullName(up.Namespace, up.Dev.Swap.Deployment.Name)
@@ -271,7 +277,7 @@ func (up *UpContext) Execute(isRetry bool) error {
 		return err
 	}
 
-	err = storage.Insert(up.Context, up.WG, up.Namespace, up.Dev, up.Sy.GUIAddress, up.Pod.Name)
+	err = storage.Insert(up.Context, up.WG, up.Namespace, up.Dev, up.Sy.GUIAddress, up.Pod.Name, devPath)
 	if err != nil {
 		if err == storage.ErrAlreadyRunning {
 			log.Infof("failed to insert new state value for %s", up.DeploymentName)

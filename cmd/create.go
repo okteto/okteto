@@ -25,7 +25,7 @@ func Create() *cobra.Command {
 		},
 	}
 
-	addDevPathFlag(cmd, &devPath)
+	addDevPathFlag(cmd, &devPath, config.CNDManifestFileName())
 	return cmd
 }
 

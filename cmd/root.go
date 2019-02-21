@@ -40,6 +40,8 @@ var (
 		Create,
 		Analytics,
 	}
+
+	exitInformation = ""
 )
 
 // Execute runs the root command
@@ -83,15 +85,24 @@ func Execute() int {
 			exitCode = 1
 		}
 
-		fmt.Printf("%s %s\n", log.ErrorSymbol, log.RedString(upperCaseString(errorMessage)))
+		fmt.Printf("%s %s", log.ErrorSymbol, log.RedString(upperCaseString(errorMessage)))
+		fmt.Println()
+		if len(exitInformation) > 0 {
+			fmt.Printf("%s %s", log.BlueString("Hint:"), exitInformation)
+			fmt.Println()
+		}
 	}
 
 	analytics.Wait()
 	return exitCode
 }
 
-func addDevPathFlag(cmd *cobra.Command, devPath *string) {
-	cmd.Flags().StringVarP(devPath, "file", "f", config.CNDManifestFileName(), "path to the manifest file")
+func addDevPathFlag(cmd *cobra.Command, devPath *string, value string) {
+	cmd.Flags().StringVarP(devPath, "file", "f", value, "path to the manifest file")
+}
+
+func addNamespaceFlag(cmd *cobra.Command, namespace *string) {
+	cmd.Flags().StringVarP(namespace, "namespace", "n", "", "kubernetes namespace to use (defaults to the current kube config namespace)")
 }
 
 // GetActionID returns the actionID used to correlate different actions in the same command

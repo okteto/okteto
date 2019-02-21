@@ -32,7 +32,7 @@ func Run() *cobra.Command {
 		},
 	}
 
-	addDevPathFlag(cmd, &devPath)
+	addDevPathFlag(cmd, &devPath, config.CNDManifestFileName())
 	return cmd
 }
 
@@ -43,7 +43,7 @@ func executeRun(devPath string, args []string) error {
 	}
 
 	if val, ok := dev.Scripts[args[0]]; ok {
-		return executeExec(parseArguments(val, args))
+		return executeExec(devPath, parseArguments(val, args))
 	}
 
 	return fmt.Errorf("%s is not defined in %s. [%s]", args[0], devPath, strings.Join(getScripts(dev), ", "))

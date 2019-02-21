@@ -39,6 +39,7 @@ type Service struct {
 	Syncthing string `yaml:"syncthing,omitempty"`
 	PID       int    `yaml:"pid,omitempty"`
 	Pod       string `yaml:"pod,omitempty"`
+	Manifest  string `yaml:"manifest,omitempty"`
 }
 
 func getSTPath() string {
@@ -59,7 +60,7 @@ func load() (*Storage, error) {
 	}
 	err = yaml.Unmarshal(bytes, &s)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling the storage file: %s", err.Error())
+		return nil, fmt.Errorf("error unmarshaling the storage file: %s", err.Error())
 	}
 	return &s, nil
 }
@@ -67,9 +68,9 @@ func load() (*Storage, error) {
 //Insert inserts a new service entry, and cleans it up when the context is cancelled
 func Insert(
 	ctx context.Context, wg *sync.WaitGroup,
-	namespace string, dev *model.Dev, host, pod string) error {
+	namespace string, dev *model.Dev, host, pod, manifest string) error {
 
-	if err := insert(namespace, dev, host, pod); err != nil {
+	if err := insert(namespace, dev, host, pod, manifest); err != nil {
 		return err
 	}
 
@@ -88,7 +89,7 @@ func Insert(
 	return nil
 }
 
-func insert(namespace string, dev *model.Dev, host, pod string) error {
+func insert(namespace string, dev *model.Dev, host, pod, manifest string) error {
 	s, err := load()
 	if err != nil {
 		return err
@@ -113,6 +114,7 @@ func insert(namespace string, dev *model.Dev, host, pod string) error {
 
 	svc.PID = os.Getpid()
 	svc.Pod = pod
+	svc.Manifest = manifest
 	s.Services[fullName] = svc
 	if err := s.save(); err != nil {
 		return err
@@ -223,7 +225,7 @@ func getFullName(namespace, deploymentName, container string) string {
 func getServiceFolder(fullName string) (string, error) {
 	parts := strings.Split(fullName, "/")
 	if len(parts) < 2 {
-		return "", fmt.Errorf("invalid state file, please remove %s from %s manualy and try again", fullName, getSTPath())
+		return "", fmt.Errorf("invalid state file, please remove %s from %s manually and try again", fullName, getSTPath())
 	}
 
 	return filepath.Join(config.GetCNDHome(), parts[0], parts[1]), nil
