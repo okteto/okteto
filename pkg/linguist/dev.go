@@ -34,10 +34,11 @@ func init() {
 	languageDefaults = make(map[string]languageDefault)
 	languageDefaults[javascript] = languageDefault{
 		image:   "okteto/node:11",
-		command: []string{"sh", "-c", "yarn install && yarn start"},
+		command: tailCommand,
 		path:    "/usr/src/app",
 		scripts: map[string]string{
-			"test": "yarn run test",
+			"test":  "yarn run test",
+			"start": "yarn install && yarn start",
 		},
 		forward: model.Forward{Local: 3000, Remote: 3000},
 	}
@@ -46,22 +47,29 @@ func init() {
 		image:   "golang:1",
 		command: tailCommand,
 		path:    "/go/src/app",
+		scripts: map[string]string{
+			"start": "go run main.go",
+		},
 		forward: model.Forward{Local: 8080, Remote: 8080},
 	}
 
 	languageDefaults[python] = languageDefault{
 		image:   "python:3",
-		command: []string{"sh", "-c", "pip install -r requirements.txt && python app.py"},
+		command: tailCommand,
 		path:    "/usr/src/app",
+		scripts: map[string]string{
+			"start": "pip install -r requirements.txt && python app.py",
+		},
 		forward: model.Forward{Local: 8080, Remote: 8080},
 	}
 
 	languageDefaults[java] = languageDefault{
 		image:   "gradle:5.1-jdk11",
-		command: []string{"gradle", "build", "-continuous", "--scan"},
+		command: tailCommand,
 		path:    "/home/gradle",
 		scripts: map[string]string{
-			"boot": "gradle bootRun",
+			"boot":  "gradle bootRun",
+			"start": "gradle build -continuous --scan",
 		},
 		forward: model.Forward{Local: 8080, Remote: 8080},
 	}
@@ -72,13 +80,13 @@ func init() {
 		path:    "/usr/src/app",
 		scripts: map[string]string{
 			"migrate": "rails db:migrate",
-			"server":  "rails s -e development",
+			"start":   "rails s -e development",
 		},
 		forward: model.Forward{Local: 3000, Remote: 3000},
 	}
 
 	languageDefaults[unrecognized] = languageDefault{
-		image:   "ubuntu",
+		image:   "ubuntu:bionic",
 		command: tailCommand,
 		path:    "/usr/src/app",
 		forward: model.Forward{Local: 8080, Remote: 8080},
