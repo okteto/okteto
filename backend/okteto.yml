@@ -1,0 +1,4 @@
+name: api
+image: golang:1.11-stretch
+workdir: /app
+command: ["bash"]
