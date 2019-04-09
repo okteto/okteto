@@ -19,9 +19,9 @@ import (
 	"text/template"
 	"time"
 
-	"cli/cnd/pkg/config"
-	"cli/cnd/pkg/log"
-	"cli/cnd/pkg/model"
+	"github.com/okteto/app/cli/pkg/config"
+	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/app/cli/pkg/model"
 
 	ps "github.com/mitchellh/go-ps"
 )
@@ -52,24 +52,23 @@ const (
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
-	cmd              *exec.Cmd
-	binPath          string
-	Home             string
-	Name             string
-	DevList          []*model.Dev
-	Namespace        string
-	RemoteAddress    string
-	RemoteGUIAddress string
-	RemotePort       int
-	RemoteGUIPort    int
-	RemoteDeviceID   string
 	APIKey           string
-	FileWatcherDelay int
-	GUIAddress       string
-	ListenAddress    string
+	binPath          string
 	Client           *http.Client
-	Primary          bool
+	cmd              *exec.Cmd
+	Dev              *model.Dev
+	FileWatcherDelay int
 	ForceSendOnly    bool
+	GUIAddress       string
+	Home             string
+	ListenAddress    string
+	RemoteAddress    string
+	RemoteDeviceID   string
+	RemoteGUIAddress string
+	RemoteGUIPort    int
+	RemotePort       int
+	Source           string
+	Type             string
 }
 
 // Status represents the status of a syncthing folder.
@@ -82,65 +81,54 @@ type Completion struct {
 	Completion float64 `json:"completion"`
 }
 
-// NewSyncthing constructs a new Syncthing.
-func NewSyncthing(namespace, deployment string, devList []*model.Dev, primary bool) (*Syncthing, error) {
-
+// New constructs a new Syncthing.
+func New(dev *model.Dev, space string) (*Syncthing, error) {
 	fullPath := GetInstallPath()
 	if !IsInstalled() {
 		return nil, fmt.Errorf("cannot find syncthing. Make sure syncthing is installed in %s", fullPath)
 	}
 
-	var err error
-	remotePort := 0
-	if primary {
-		remotePort, err = getAvailablePort()
-		if err != nil {
-			return nil, err
-		}
+	remotePort, err := getAvailablePort()
+	if err != nil {
+		return nil, err
 	}
 
-	remoteGUIPort := 0
-	if primary {
-		remoteGUIPort, err = getAvailablePort()
-		if err != nil {
-			return nil, err
-		}
+	remoteGUIPort, err := getAvailablePort()
+	if err != nil {
+		return nil, err
 	}
 
-	guiPort := 0
-	if primary {
-		guiPort, err = getAvailablePort()
-		if err != nil {
-			return nil, err
-		}
+	guiPort, err := getAvailablePort()
+	if err != nil {
+		return nil, err
 	}
 
-	listenPort := 0
-	if primary {
-		listenPort, err = getAvailablePort()
-		if err != nil {
-			return nil, err
-		}
+	listenPort, err := getAvailablePort()
+	if err != nil {
+		return nil, err
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
 	}
 
 	s := &Syncthing{
 		APIKey:           "cnd",
 		binPath:          fullPath,
-		Home:             filepath.Join(config.GetCNDHome(), namespace, deployment),
-		Name:             deployment,
-		DevList:          devList,
-		Namespace:        namespace,
-		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
-		RemoteGUIAddress: fmt.Sprintf("localhost:%d", remoteGUIPort),
-		RemoteDeviceID:   DefaultRemoteDeviceID,
+		Client:           NewAPIClient(),
+		Dev:              dev,
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("127.0.0.1:%d", guiPort),
+		Home:             filepath.Join(config.GetHome(), space, dev.Name),
 		ListenAddress:    fmt.Sprintf("0.0.0.0:%d", listenPort),
-		Client:           NewAPIClient(),
-		RemotePort:       remotePort,
+		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
+		RemoteDeviceID:   DefaultRemoteDeviceID,
+		RemoteGUIAddress: fmt.Sprintf("localhost:%d", remoteGUIPort),
 		RemoteGUIPort:    remoteGUIPort,
-		Primary:          primary,
-		ForceSendOnly:    true,
+		RemotePort:       remotePort,
+		Source:           wd,
+		Type:             "sendonly",
 	}
 
 	return s, nil
@@ -238,10 +226,6 @@ func getAvailablePort() (int, error) {
 
 // Run starts up a local syncthing process to serve files from.
 func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
-	if !s.Primary {
-		return nil
-	}
-
 	if err := s.initConfig(); err != nil {
 		return err
 	}
@@ -294,9 +278,6 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 // WaitForPing wait for local syncthing to ping
 func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup) error {
-	if !s.Primary {
-		return nil
-	}
 	ticker := time.NewTicker(500 * time.Millisecond)
 	log.Infof("waiting for local syncthing to be ready...")
 	for i := 0; i < 100; i++ {
@@ -318,11 +299,8 @@ func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup) error {
 
 // WaitForScanning waits for the local syncthing to scan local folder
 func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
-	if !s.Primary {
-		return nil
-	}
 	ticker := time.NewTicker(500 * time.Millisecond)
-	folder := fmt.Sprintf("cnd-%s-%s", dev.Name, dev.Container)
+	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
 	status := &Status{}
 	log.Infof("waiting for initial scan to complete...")
@@ -355,10 +333,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 
 // OverrideChanges force the remote to be the same as the local file system
 func (s *Syncthing) OverrideChanges(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
-	if !s.Primary {
-		return nil
-	}
-	folder := fmt.Sprintf("cnd-%s-%s", dev.Name, dev.Container)
+	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
 	log.Infof("forcing local state to the remote container...")
 	_, err := s.APICall("rest/db/override", "POST", 200, params, true)
@@ -367,11 +342,8 @@ func (s *Syncthing) OverrideChanges(ctx context.Context, wg *sync.WaitGroup, dev
 
 // WaitForCompletion waits for the remote to be totally synched
 func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
-	if !s.Primary {
-		return nil
-	}
 	ticker := time.NewTicker(1 * time.Second)
-	folder := fmt.Sprintf("cnd-%s-%s", dev.Name, dev.Container)
+	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
 	completion := &Completion{}
 	log.Infof("waiting for synchronization to complete...")
@@ -404,9 +376,6 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context, wg *sync.WaitGroup) error {
-	if !s.Primary {
-		return nil
-	}
 	log.Infof("restarting synchting...")
 	_, err := s.APICall("rest/system/restart", "POST", 200, nil, true)
 	return err
@@ -430,8 +399,8 @@ func (s *Syncthing) RemoveFolder() error {
 		return nil
 	}
 
-	if _, err := filepath.Rel(config.GetCNDHome(), s.Home); err != nil {
-		log.Debugf("%s is not inside %s, ignoring", s.Home, config.GetCNDHome())
+	if _, err := filepath.Rel(config.GetHome(), s.Home); err != nil {
+		log.Debugf("%s is not inside %s, ignoring", s.Home, config.GetHome())
 		return nil
 	}
 
@@ -528,7 +497,7 @@ func IsInstalled() bool {
 
 // GetInstallPath returns the expected install path for syncthing
 func GetInstallPath() string {
-	return filepath.Join(config.GetCNDHome(), getBinaryName())
+	return filepath.Join(config.GetHome(), getBinaryName())
 }
 
 func getBinaryName() string {

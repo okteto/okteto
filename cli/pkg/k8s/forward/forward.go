@@ -8,16 +8,15 @@ import (
 	"net/url"
 	"os"
 
-	"cli/cnd/pkg/log"
+	"github.com/okteto/app/cli/pkg/log"
 
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 )
 
-//CNDPortForward holds the information of the port forward
-type CNDPortForward struct {
+//PortForward holds the information of the port forward
+type PortForward struct {
 	stopChan   chan struct{}
 	isReady    bool
 	localPort  int
@@ -25,7 +24,7 @@ type CNDPortForward struct {
 	out        *bytes.Buffer
 }
 
-func (p *CNDPortForward) start(config *rest.Config, requestURL *url.URL, pod *apiv1.Pod, ready chan struct{}) error {
+func (p *PortForward) start(config *rest.Config, requestURL *url.URL, pod string, ready chan struct{}) error {
 
 	transport, upgrader, err := spdy.RoundTripperFor(config)
 	if err != nil {
@@ -58,7 +57,7 @@ func (p *CNDPortForward) start(config *rest.Config, requestURL *url.URL, pod *ap
 	return pf.ForwardPorts()
 }
 
-func (p *CNDPortForward) stop() {
+func (p *PortForward) stop() {
 	log.Debugf("[port-forward-%d:%d] stopping", p.localPort, p.remotePort)
 	log.Debugf("[port-forward-%d:%d] logged errors: %s", p.localPort, p.remotePort, p.out.String())
 	close(p.stopChan)

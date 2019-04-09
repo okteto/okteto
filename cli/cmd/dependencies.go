@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"sync"
 
-	"cli/cnd/pkg/log"
-	"cli/cnd/pkg/syncthing"
+	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/app/cli/pkg/syncthing"
 
 	getter "github.com/hashicorp/go-getter"
 )

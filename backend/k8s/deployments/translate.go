@@ -84,9 +84,6 @@ func translate(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 
 func translateDevContainer(c *apiv1.Container, dev *model.Dev, s *model.Space) {
 	c.SecurityContext = &apiv1.SecurityContext{}
-	if dev.RunAsUser != nil {
-		c.SecurityContext.RunAsUser = dev.RunAsUser
-	}
 	c.Image = dev.Image
 	c.ImagePullPolicy = apiv1.PullAlways
 	c.Command = []string{"tail"}
@@ -149,23 +146,11 @@ func translateInitOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 		},
 	}
 
-	if dev.RunAsUser == nil {
-		c.Command = []string{
-			"sh",
-			"-c",
-			fmt.Sprintf(`ls -A /okteto/init | grep -v "lost+found" || cp -Rf %s /okteto/init || true`, source),
-		}
-	} else {
-		c.SecurityContext = &apiv1.SecurityContext{}
-		var zero int64
-		c.SecurityContext.RunAsUser = &zero
-		c.Command = []string{
-			"sh",
-			"-c",
-			fmt.Sprintf(`ls -A /okteto/init | grep -v "lost+found" || (cp -Rf %s /okteto/init; chown -R %d:%d /okteto/init)`, source, *dev.RunAsUser, *dev.RunAsUser),
-		}
+	c.Command = []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`ls -A /okteto/init | grep -v "lost+found" || cp -Rf %s /okteto/init || true`, source),
 	}
-
 	d.Spec.Template.Spec.InitContainers = []apiv1.Container{c}
 }
 
@@ -190,10 +175,6 @@ func translateOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 		},
 
 		SecurityContext: &apiv1.SecurityContext{},
-	}
-
-	if dev.RunAsUser != nil {
-		c.SecurityContext.RunAsUser = dev.RunAsUser
 	}
 
 	c.VolumeMounts = append(

@@ -7,16 +7,15 @@ import (
 	"sync"
 	"time"
 
-	"cli/cnd/pkg/log"
+	"github.com/okteto/app/cli/pkg/log"
 
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-// CNDPortForwardManager keeps a list of all the active port forwards
-type CNDPortForwardManager struct {
-	portForwards map[int]*CNDPortForward
+// PortForwardManager keeps a list of all the active port forwards
+type PortForwardManager struct {
+	portForwards map[int]*PortForward
 	ctx          context.Context
 	restConfig   *rest.Config
 	client       *kubernetes.Clientset
@@ -28,11 +27,11 @@ type portForwardHealthcheck struct {
 	isDisconnected     bool
 }
 
-// NewCNDPortForwardManager initializes a new instance
-func NewCNDPortForwardManager(ctx context.Context, restConfig *rest.Config, c *kubernetes.Clientset, errchan chan error) *CNDPortForwardManager {
-	return &CNDPortForwardManager{
+// NewPortForwardManager initializes a new instance
+func NewPortForwardManager(ctx context.Context, restConfig *rest.Config, c *kubernetes.Clientset, errchan chan error) *PortForwardManager {
+	return &PortForwardManager{
 		ctx:          ctx,
-		portForwards: make(map[int]*CNDPortForward),
+		portForwards: make(map[int]*PortForward),
 		restConfig:   restConfig,
 		client:       c,
 		ErrChan:      errchan,
@@ -40,12 +39,12 @@ func NewCNDPortForwardManager(ctx context.Context, restConfig *rest.Config, c *k
 }
 
 // Add initializes a port forward
-func (p *CNDPortForwardManager) Add(localPort, remotePort int) error {
+func (p *PortForwardManager) Add(localPort, remotePort int) error {
 	if _, ok := p.portForwards[localPort]; ok {
 		return fmt.Errorf("port %d is already taken, please check your configuration", localPort)
 	}
 
-	p.portForwards[localPort] = &CNDPortForward{
+	p.portForwards[localPort] = &PortForward{
 		localPort:  localPort,
 		remotePort: remotePort,
 		out:        new(bytes.Buffer),
@@ -55,11 +54,11 @@ func (p *CNDPortForwardManager) Add(localPort, remotePort int) error {
 }
 
 // Start starts all the port forwarders
-func (p *CNDPortForwardManager) Start(pod *apiv1.Pod) {
+func (p *PortForwardManager) Start(pod, namespace string) {
 	req := p.client.CoreV1().RESTClient().Post().
 		Resource("pods").
-		Namespace(pod.Namespace).
-		Name(pod.Name).
+		Namespace(namespace).
+		Name(pod).
 		SubResource("portforward")
 
 	var wg sync.WaitGroup
@@ -67,15 +66,15 @@ func (p *CNDPortForwardManager) Start(pod *apiv1.Pod) {
 	for _, pf := range p.portForwards {
 		wg.Add(1)
 		ready := make(chan struct{}, 1)
-		go func(f *CNDPortForward, r chan struct{}) {
+		go func(f *PortForward, r chan struct{}) {
 			defer wg.Done()
 			<-r
 			log.Debugf("[port-forward-%d:%d] ready", f.localPort, f.remotePort)
 			return
 		}(pf, ready)
 
-		go func(f *CNDPortForward, r chan struct{}) {
-			log.Debugf("[port-forward-%d:%d] connecting to %s/pod/%s", f.localPort, f.remotePort, pod.Namespace, pod.Name)
+		go func(f *PortForward, r chan struct{}) {
+			log.Debugf("[port-forward-%d:%d] connecting to %s/pod/%s", f.localPort, f.remotePort, namespace, pod)
 			if err := f.start(p.restConfig, req.URL(), pod, r); err != nil {
 				if err == nil {
 					log.Debugf("[port-forward-%d:%d] goroutine forwarding finished", f.localPort, f.remotePort)
@@ -95,7 +94,7 @@ func (p *CNDPortForwardManager) Start(pod *apiv1.Pod) {
 }
 
 // Stop stops all the port forwarders
-func (p *CNDPortForwardManager) Stop() {
+func (p *PortForwardManager) Stop() {
 	var wg sync.WaitGroup
 
 	if p.portForwards == nil {
@@ -104,7 +103,7 @@ func (p *CNDPortForwardManager) Stop() {
 
 	for _, pf := range p.portForwards {
 		wg.Add(1)
-		go func(f *CNDPortForward) {
+		go func(f *PortForward) {
 			defer wg.Done()
 			f.stop()
 		}(pf)

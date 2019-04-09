@@ -2,8 +2,6 @@ package model
 
 import (
 	"fmt"
-	"os"
-	"runtime"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -27,7 +25,6 @@ type Dev struct {
 	Environment []EnvVar `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir     *Mount   `json:"workdir" yaml:"workdir"`
-	RunAsUser   *int64   `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
 	Services    []string `json:"services,omitempty" yaml:"services,omitempty"`
 }
 
@@ -86,19 +83,6 @@ func (dev *Dev) validate() error {
 	}
 
 	return nil
-}
-
-// GetHomeDir returns an OS-aware home dir
-func GetHomeDir() string {
-	home := os.Getenv("HOME")
-	if runtime.GOOS == "windows" {
-		home = os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
-		if home == "" {
-			home = os.Getenv("USERPROFILE")
-		}
-	}
-
-	return home
 }
 
 //GetVolumeName returns the okteto volume name for a given dev environment
