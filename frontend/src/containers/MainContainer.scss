@@ -3,25 +3,64 @@
 @import 'fonts.scss';
 
 .MainContainer {
-  background: $navy-dark;
+  $side-margin: 32px;
 
+  background: $navy-dark;
   position: relative;
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 1fr;
   grid-template-rows: 1fr;
   height: 100vh;
 
-  .ProjectContainer {
-    z-index: $top-z-index;
-    grid-column: 1 / 3;
-    grid-row: 1;
+  .Header {
+    min-height: 110px;
+    padding: 0 $side-margin;
+    font-size: 36px;
+    font-weight: 300;
   }
 
-  .ExplorerContainer {
-    grid-row: 2;
-  }
+  .EnvironmentList {
+    .EnvironmentItem {
+      padding: 12px $side-margin;
 
-  .ItemContainer {
-    grid-row: 2;
+      &:nth-child(odd) {
+        background-color: $navy;
+      }
+
+      &:hover {
+        background-color: rgba($navy-extra-dark, .6);
+      }
+
+      .Icon {
+        margin-right: 21px;
+        margin-left: 8px;
+      }
+      
+      .Name {
+        font-size: 22px;
+        line-height: 23px;
+        font-weight: 500;
+        margin-right: 24px;
+        width: 100px;
+      }
+
+      .Endpoint {
+        font-size: 18px;
+        font-weight: 300;
+
+        a {
+          cursor: pointer;
+          color: white;
+
+          &:visited {
+            color: white;
+          }
+
+          &:hover {
+            color: $green-400;
+          }
+        }
+      }
+    }
   }
 }

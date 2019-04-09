@@ -1,5 +1,14 @@
 const initialEnvironmentsState = {
-  byId: {},
+  byId: {
+    '1234': {
+      name: 'movies',
+      endpoint: 'https://movies.space.okteto.net'
+    },
+    '2345': {
+      name: 'api',
+      endpoint: 'https://api.space.okteto.net'
+    },
+  },
   isFetching: false
 };
 
