@@ -73,6 +73,15 @@ const icons = { /* eslint-disable */
     </svg>
   ),
 
+  plusCircle: (size, color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24">
+      <g fill="none" fillRule="evenodd">
+        <path d="M-2-2h28v28H-2z"/>
+        <path className="plusCirclePath" fill={color} fillRule="nonzero" d="M13.153 6.235h-2.306v4.612H6.235v2.306h4.612v4.612h2.306v-4.612h4.612v-2.306h-4.612V6.235zM12 .471C5.636.47.47 5.636.47 12S5.637 23.53 12 23.53c6.364 0 11.53-5.166 11.53-11.53C23.53 5.636 18.363.47 12 .47zm0 20.753c-5.084 0-9.224-4.14-9.224-9.224 0-5.084 4.14-9.224 9.224-9.224 5.084 0 9.224 4.14 9.224 9.224 0 5.084-4.14 9.224-9.224 9.224z"/>
+      </g>
+    </svg>
+  ),
+
   cli: (size, color) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 9 9">
       <g fill={color} fillRule="evenodd">

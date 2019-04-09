@@ -38,6 +38,14 @@
     height: 12px;
     overflow: hidden;
 
+    &.arrow-position-right {
+      left: 90%;
+    }
+
+    &.arrow-position-left {
+      left: 10%;
+    }
+
     &::after {
       content: '';
       position: absolute;
@@ -67,22 +75,5 @@
     right: 0;
     margin: 8px;
     cursor: pointer;
-  }
-
-  .hint-content {
-    h1 {
-      color: $black;
-      margin: 0;
-      font-weight: 500;
-      font-size: 16px;
-    }
-
-    h2 {
-      color: $black;
-      margin: 18px 0 14px 0;
-      font-weight: 500;
-      font-size: 20px;
-      line-height: 22px;
-    }
   }
 }

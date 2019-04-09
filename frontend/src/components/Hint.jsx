@@ -75,7 +75,7 @@ class Hint extends Component {
                   {this.props.children}
                 </div>
               </div>
-              <div className="arrow" />
+              <div className={`arrow arrow-position-${this.props.arrowPosition}`} />
             </div>
           </CSSTransition>
         }
@@ -93,7 +93,8 @@ Hint.defaultProps = {
   offsetY: '40',
   offsetX: '0',
   positionY: 'bottom',
-  positionX: 'center'
+  positionX: 'center',
+  arrowPosition: 'center'
 };
 
 Hint.propTypes = {
@@ -103,6 +104,7 @@ Hint.propTypes = {
   onOpen: PropTypes.func,
   onClose: PropTypes.func,
   width: PropTypes.string,
+  arrowPosition: PropTypes.string,
   positionX: PropTypes.string,
   positionY: PropTypes.string,
   offsetX: PropTypes.string,

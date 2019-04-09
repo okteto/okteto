@@ -10,12 +10,14 @@
     padding: 0;
 
     .toast {
-      height: 32px;
+      margin: 0 auto;
       min-height: 32px;
-      margin: 0;
+      padding: 18px 12px;
+      width: 60%;
+      box-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
 
       &.toast-type-info {
-        background-color: $blue-600;
+        background-color: $green-600;
 
         .toast-body {
           color: rgba(white, .8);
@@ -36,7 +38,7 @@
         font-family: $title-font;
         padding: 0 18px;
         margin: 0;
-        font-size: 16px;
+        font-size: 18px;
       }
 
       .toast-progress {
@@ -48,8 +50,8 @@
 }
 
 @keyframes toastIn {
-  from { opacity: 0; }
-  50% { opacity: 1; }
+  from { transform: translateY(-500px); }
+  50% { transform: translateY(0); }
 }
 
 .toastIn {
@@ -57,8 +59,8 @@
 }
 
 @keyframes toastOut {
-  from { opacity: 1; }
-  50% { opacity: 0; }
+  from { transform: translateY(0); }
+  90% { transform: translateY(-500px); }
   to { opacity: 0; }
 }
 

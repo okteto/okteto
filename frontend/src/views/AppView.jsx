@@ -27,7 +27,9 @@ AppView.propTypes = {
   dispatch: PropTypes.func
 };
 
-const AppViewWithRedux = ReactRedux.connect(state => {})(AppView);
+const AppViewWithRedux = ReactRedux.connect(state => {
+  return {};
+})(AppView);
 
 // Enable React Hot Loader for the root component.
-export default hot(module)(AppViewWithRedux);
+export default hot(module)(AppView);

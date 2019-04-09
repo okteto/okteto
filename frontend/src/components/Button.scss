@@ -5,7 +5,7 @@
   align-items: center;
   background: transparent;
   box-sizing: border-box;
-  padding: 8px 12px;
+  padding: 10px 18px;
   color: rgba($white, .90);
   cursor: pointer;
   border: 1px solid rgba($white, .4);
@@ -14,13 +14,12 @@
   flex-direction: row;
   font-family: $title-font;
   font-weight: 400;
-  font-size: 14px;
-  text-transform: uppercase;
+  font-size: 16px;
   outline: 0;
   margin-left: 8px;
 
   &.with-icon .button-content {
-    margin-left: 4px;
+    margin-left: 8px;
   }
 
   &.frameless {
@@ -28,12 +27,12 @@
   }
 
   &:hover {
-    background-color: rgba($white-100, .7);
+    background-color: rgba($white-100, .5);
     border-color: $white-400;
   }
 
   &:active {
-    background-color: $white-400;
+    background-color: rgba($white-400, .7);
   }
 
   &[disabled] {

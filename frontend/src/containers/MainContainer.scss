@@ -28,7 +28,7 @@
       }
 
       &:hover {
-        background-color: rgba($navy-extra-dark, .6);
+        background-color: rgba($white-100, .5);
       }
 
       .Icon {
@@ -60,6 +60,56 @@
             color: $green-400;
           }
         }
+      }
+    }
+  }
+
+  .ActionBar {
+    padding: 24px $side-margin;
+
+    .NewButtonContainer {
+      position: relative;
+    }
+  }
+
+  .HintNew {
+    user-select: text;
+    text-align: left;
+    font-size: 16px;
+
+    .HintNewContainer {
+      padding: 12px 8px;
+
+      h1 {
+        margin-bottom: 8px;
+        font-size: 32px;
+        line-height: normal;
+      }
+
+      code {
+        cursor: text;
+        margin-top: 12px;
+        font-family: $code-font;
+        background-color: $black;
+        padding: 12px 18px;
+        color: $white;
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 3px;
+        font-weight: normal;
+        font-size: 24px;
+
+        &.cli:before {
+          user-select: none;
+          content: '$';
+          padding-right: 6px;
+          color: $green-400;
+        }
+      }
+
+      .hint-link-buttons {
+        width: 100%;
+        margin-top: 12px;
       }
     }
   }
