@@ -7,7 +7,6 @@ import (
 
 //Get returns the k8s client
 func Get() (*kubernetes.Clientset, error) {
-	log.Debug("Get client")
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
