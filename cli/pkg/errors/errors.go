@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"cli/cnd/pkg/config"
+	"github.com/okteto/app/cli/pkg/config"
 )
 
 var (

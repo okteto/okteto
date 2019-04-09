@@ -14,7 +14,7 @@ import (
 	kexec "k8s.io/kubernetes/pkg/kubectl/cmd/exec"
 )
 
-// Exec executes the command in the cnd container
+// Exec executes the command in the dev environment container
 func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, podNamespace, podName, container string, tty bool, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
 
 	p := &kexec.ExecOptions{}
