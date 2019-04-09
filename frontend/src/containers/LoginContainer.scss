@@ -1,0 +1,58 @@
+@import 'colors.scss';
+
+.LoginContainer {
+  background-color: $navy;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  height: 100vh;
+
+  &.fade-appear {
+    opacity: 0;
+  }
+
+  &.fade-appear.fade-appear-active {
+    opacity: 1;
+    transition: opacity 100ms ease-in;
+  }
+
+  .logo {
+    margin-bottom: 32px;
+  }
+
+  .login-button {
+    font-size: 20px;
+    padding: 16px 20px;
+
+    .google-icon {
+      margin-right: 8px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .terms {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 16px;
+
+    a, a:visited {
+      color: $green-400;
+    }
+  }
+
+  .toast {
+    background-color: rgba(0, 0, 0, 0.7);
+
+    .toast-body {
+      padding-left: 18px;
+    }
+
+    .toast-progress {
+      height: 2px;
+      background: $white-500;
+    }
+  }
+}

@@ -1,0 +1,9 @@
+$normal-font: 'Sarabun', sans-serif;
+$title-font: 'Sarabun', sans-serif;
+$code-font: 'Inconsolata', sans-serif;
+
+:export {
+  normalFont: $normal-font;
+  titleFont: $title-font;
+  codeFont: $code-font;
+}

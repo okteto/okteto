@@ -1,0 +1,126 @@
+@import 'colors.scss';
+
+.Select {
+  .Select__control {
+    background: $navy-700;
+    border: 1px solid $navy;
+    border-radius: 3px;
+
+    &.Select__control-is-focused,
+    &:active {
+      box-shadow: $blue-600 0 0 0 1px;
+    }
+
+    &:hover {
+      border: 1px solid $navy;
+    }
+
+    .Select__input {
+      color: rgba($white, .8);
+      
+      input {
+        padding: 2px 10px;
+      }
+    }
+  }
+
+  .Select__single-value {
+    color: $white;
+  }
+
+  .Select__placeholder {
+    color: rgba($white, .5);
+  }
+
+  .Select__indicator {
+    color: rgba($white, .7);
+  }
+
+  .Select__indicator-separator {
+    background-color: rgba($white, .3);
+  }
+
+  .Select__menu {
+    border-radius: 2;
+    color: $black;
+    z-index: 10000;
+  }
+
+  .Select__multi-value {
+    background-color: $blue-800;
+
+    .Select__multi-value__label {
+      color: rgba(white, .8);
+      padding: 6px 8px;
+      font-weight: 400;
+    }
+
+    .Select__multi-value__remove:hover {
+      background-color: $blue-900;
+      color: white;
+    }
+  }
+}
+
+.Select.light {
+  .Select__control {
+    background: $white;
+    border: 1px solid rgba($black, .2);
+    border-radius: 3px;
+
+    &:hover {
+      border: 1px solid rgba($black, .4);
+    }
+
+    &.Select__control-is-focused,
+    &:active {
+      border: 1px solid rgba($blue-600, 1);
+      box-shadow: $blue-600 0 0 0 1px;
+    }
+
+    .Select__input {
+      color: rgba($black, .8);
+      
+      input {
+        padding: 2px 10px;
+      }
+    }
+  }
+
+  .Select__single-value {
+    color: $black;
+  }
+
+  .Select__placeholder {
+    color: rgba($black, .5);
+  }
+
+  .Select__indicator {
+    color: rgba($black, .7);
+  }
+
+  .Select__indicator-separator {
+    background-color: rgba($black, .3);
+  }
+
+  .Select__menu {
+    border-radius: 2;
+    color: $black;
+    z-index: 10000;
+  }
+
+  .Select__multi-value {
+    background-color: $blue-800;
+
+    .Select__multi-value__label {
+      color: rgba(white, .8);
+      padding: 6px 8px;
+      font-weight: 400;
+    }
+
+    .Select__multi-value__remove:hover {
+      background-color: $blue-900;
+      color: white;
+    }
+  }
+}

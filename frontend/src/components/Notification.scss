@@ -1,0 +1,71 @@
+@import 'colors.scss';
+@import 'fonts.scss';
+
+.Notification {
+  .toast-container {
+    width: 100%;
+    top: 0;
+    left: 0;
+    margin-left: 0;
+    padding: 0;
+
+    .toast {
+      height: 32px;
+      min-height: 32px;
+      margin: 0;
+
+      &.toast-type-info {
+        background-color: $blue-600;
+
+        .toast-body {
+          color: rgba(white, .8);
+        }
+      }
+
+      &.toast-type-warning {
+        .toast-body {
+          color: rgba(white, .8);
+        }
+      }
+      
+      .close-button {
+        margin-right: 12px;
+      }
+
+      .toast-body {
+        font-family: $title-font;
+        padding: 0 18px;
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .toast-progress {
+        height: 2px;
+        background: $white-500;
+      }
+    }
+  }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+.toastIn {
+  animation-name: toastIn;
+}
+
+@keyframes toastOut {
+  from { opacity: 1; }
+  50% { opacity: 0; }
+  to { opacity: 0; }
+}
+
+.toastOut {
+  animation-name: toastOut;
+}
+
+.animateToast {
+  animation-duration: 800ms;
+}

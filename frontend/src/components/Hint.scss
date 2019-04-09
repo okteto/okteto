@@ -1,0 +1,88 @@
+@import 'colors.scss';
+@import 'fonts.scss';
+
+.Hint {
+  cursor: default;
+  min-width: 210px;
+  transform: translate(-50%, 0);
+  padding: 28px;
+  color: rgba($black, .9);
+  background-color: #FFFFFF;
+  font-family: $title-font;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 16px;
+  text-transform: none;
+  border-radius: 5px;
+  position: absolute;
+  z-index: 99999999;
+  box-sizing: border-box;
+  height: auto;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+
+  &.fade-appear {
+    opacity: 0.01;
+  }
+
+  &.fade-appear.fade-appear-active {
+    opacity: 1;
+    transition: opacity 200ms ease-in;
+  }
+
+  .arrow {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -12px;
+    width: 24px;
+    height: 12px;
+    overflow: hidden;
+
+    &::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      left: 50%;
+      transform: translate(-50%,50%) rotate(45deg);
+      background-color: #FFFFFF;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.5);
+    }
+  }
+
+  &.top {
+    .arrow {
+      top: 100%;
+      bottom: unset;
+      
+      &::after {
+        top: -12px;
+      }
+    }
+  }
+
+  .hint-close-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 8px;
+    cursor: pointer;
+  }
+
+  .hint-content {
+    h1 {
+      color: $black;
+      margin: 0;
+      font-weight: 500;
+      font-size: 16px;
+    }
+
+    h2 {
+      color: $black;
+      margin: 18px 0 14px 0;
+      font-weight: 500;
+      font-size: 20px;
+      line-height: 22px;
+    }
+  }
+}

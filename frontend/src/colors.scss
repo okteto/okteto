@@ -1,0 +1,104 @@
+$navy: #292E3C;
+$navy-dark: #1E222B;
+$navy-extra-dark: #171B22;
+
+$navy-900: #3A4256;
+$navy-800: #424A61;
+$navy-700: #505975;
+
+:export {
+  navy700: $navy-700;
+}
+
+$green-400: #00D1CA;
+$green-600: #00b2ac;
+$green-700: #009994;
+$green-800: #008580;
+:export {
+  green400: $green-400;
+}
+
+$yellow-200: #f0d66f;
+$yellow-400: #E3C550;
+:export {
+  yellow200: $yellow-200;
+  yellow400: $yellow-400;
+}
+
+$red-900: hsl(353, 100%, 40%);
+$red-800: hsl(353, 100%, 45%);
+$red-800p: hsl(353, 50%, 45%);
+$red-700: hsl(353, 100%, 50%);
+$red-700p: hsl(353, 50%, 50%);
+$red-600: hsl(353, 100%, 55%);
+$red-500: hsl(353, 100%, 60%);
+$red-400: hsl(353, 100%, 65%);
+$red-300: hsl(353, 100%, 70%);
+$red-200: hsl(353, 100%, 75%);
+$red-100: hsl(353, 100%, 80%);
+
+:export {
+  red400: $red-400;
+}
+
+$white: white;
+$white-900: #ECEDEF;
+$white-800: #D9DADF;
+$white-700: #C6C9CF;
+$white-600: #B3B6BF;
+$white-500: #A0A4B0;
+$white-400: #8D92A0;
+$white-300: #7B8090;
+$white-200: #676E80;
+$white-100: #555C71;
+$white-50: #4B5369;
+:export {
+  white: $white;
+  white900: $white-900;
+  white800: $white-800;
+  white700: $white-700;
+  white600: $white-600;
+  white500: $white-500;
+  white400: $white-400;
+  white300: $white-300;
+  white200: $white-200;
+  white100: $white-100;
+  white50: $white-50;
+}
+
+$black: hsl(0, 0%, 0%);
+$black-900: hsl(0, 0%, 8%);
+$black-800: hsl(0, 0%, 16%);
+$black-700: hsl(0, 0%, 24%);
+$black-600: hsl(0, 0%, 32%);
+$black-500: hsl(0, 0%, 40%);
+$black-400: hsl(0, 0%, 48%);
+$black-300: hsl(0, 0%, 56%);
+$black-200: hsl(0, 0%, 64%);
+$black-100: hsl(0, 0%, 72%);
+$black-50: hsl(0, 0%, 76%);
+:export {
+  black: $black;
+  black900: $black-900;
+  black800: $black-800;
+  black700: $black-700;
+  black600: $black-600;
+  black500: $black-500;
+  black400: $black-400;
+  black300: $black-300;
+  black200: $black-200;
+  black100: $black-100;
+}
+$blue-400: #72D7FC;
+$blue-500: #4A90E2;
+$blue-600: #47afd4;
+$blue-700: #0080b3;
+$blue-800: #2c90b4;
+$blue-900: #187394;
+:export {
+  blue400: $blue-400;
+  blue500: $blue-500;
+  blue600: $blue-600;
+  blue700: $blue-700;
+}
+

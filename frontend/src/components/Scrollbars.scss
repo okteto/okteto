@@ -1,0 +1,45 @@
+.Scrollbars {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  overflow: auto;
+
+  .scrolling-content {
+    height: 100%;
+  }
+
+  .thumb-vertical {
+    background-color: rgba(0,0,0,.4); 
+    border-radius: 50px;
+    right: 3px;
+    z-index: 5;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background-color: rgba(0,0,0,0);
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar:hover {
+  background-color: rgba(0, 0, 0, 0.09);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.5);
+  border-radius: 100px;
+}
+::-webkit-scrollbar-thumb:active {
+  background: rgba(0,0,0,0.61);
+  border-radius: 100px;
+}
+
+// Add vertical min-height & horizontal min-width.
+::-webkit-scrollbar-thumb:vertical {
+  min-height: 10px;
+}
+::-webkit-scrollbar-thumb:horizontal {
+  min-width: 10px;
+}

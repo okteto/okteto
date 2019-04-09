@@ -1,0 +1,11 @@
+@import 'colors.scss';
+
+.Modal {
+  a.skylight-close-button {
+    &, &:visited, &:hover { 
+      color: black;
+      text-decoration: none; 
+    }
+  }
+}
+

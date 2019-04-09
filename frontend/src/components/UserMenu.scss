@@ -1,0 +1,92 @@
+@import 'colors.scss';
+@import 'fonts.scss';
+
+.UserMenu {
+  $avatar-size: 42px;
+
+  background-color: rgba($black, .95);
+  border-radius: 4px;
+  padding: 18px 24px;
+  box-shadow: 0 0px 4px 2px rgba(0, 0, 0, 0.41);
+
+  .name {
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .avatar {
+    align-self: baseline;
+    width: $avatar-size;
+    height: $avatar-size;
+    border-radius: $avatar-size;
+    margin-right: 12px;
+  }
+
+  .actions {
+    margin-top: 16px;
+  }
+
+  .token {
+    margin-top: 18px;
+
+    label {
+      margin-bottom: 2px;
+    }
+
+    input {
+      background-color: transparent;
+      color: white;
+      padding: 8px 12px;
+      padding-right: 0;
+      border: 1px solid rgba($white, .4);
+      border-radius: 2px;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      border-right: none;
+      height: 34px;
+      box-sizing: border-box;
+      width: 160px;
+    }
+
+    .clipboard-button {
+      margin-left: 0;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+  }
+
+  .logout-button {
+    font-size: 12px;
+    height: 34px;
+    margin: 0;
+    min-width: 120px;
+  }
+
+  .more-menu {
+    position: relative;
+
+    .more-menu-dropdown {
+      background-color: $white;
+      color: $black-900;
+      bottom: -34px;
+      min-width: 180px;
+      right: 0;
+      position: absolute;
+
+      .option {
+        cursor: pointer;
+        padding: 12px 16px;
+        font-size: 14px;
+
+        &:hover {
+          background-color: $blue-800;
+          color: white;
+        }
+
+        .Icon {
+          margin-right: 8px;
+        }
+      }
+    }
+  }
+}

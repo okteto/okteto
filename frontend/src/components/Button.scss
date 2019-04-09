@@ -1,0 +1,149 @@
+@import 'colors.scss';
+@import 'fonts.scss';
+
+.Button {
+  align-items: center;
+  background: transparent;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  color: rgba($white, .90);
+  cursor: pointer;
+  border: 1px solid rgba($white, .4);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: row;
+  font-family: $title-font;
+  font-weight: 400;
+  font-size: 14px;
+  text-transform: uppercase;
+  outline: 0;
+  margin-left: 8px;
+
+  &.with-icon .button-content {
+    margin-left: 4px;
+  }
+
+  &.frameless {
+    border-color: transparent;
+  }
+
+  &:hover {
+    background-color: rgba($white-100, .7);
+    border-color: $white-400;
+  }
+
+  &:active {
+    background-color: $white-400;
+  }
+
+  &[disabled] {
+    pointer-events: none;
+    opacity: .3;
+  }
+
+  &.light {
+    border-color: rgba($black, .9);
+    color: rgba($black, .9);
+    font-weight: 500;
+
+    &:hover {
+      background-color: rgba($black, .05); 
+    }
+    
+    &:active {
+      background-color: rgba($black, .15);
+    }
+  }
+
+  &.red {
+    background-color: $red-700p;
+    border-color: transparent;
+    font-weight: normal;
+    color: rgba($white, .95);
+
+    &:hover { 
+      background-color: rgba($red-400, .8);
+      border-color: transparent;
+    }
+
+    &:active { 
+      background-color: $red-800p;
+      border-color: transparent;
+    }
+
+    & > .Icon {
+      color: red;
+    }
+
+    &.solid {
+      background-color: $red-600;
+      color: $white;
+      border-color: $red-600;
+
+      &:hover { background-color: $red-800; }
+      &:active { background-color: $red-900; }
+    }
+  }
+
+  &.grey {
+    background-color: $black-200;
+    border-color: $black-200;
+    color: white;
+    font-weight: normal;
+
+    &.secondary {
+      background: none;
+      color: $black-200;
+
+      &:hover, &:active { background-color: white; }
+      &:hover { color: $black-500; border-color: $black-700; }
+      &:active { color: $black-300; border-color: $black-500; }
+    }
+
+    &:hover { background-color: $black-300; }
+    &:active { background-color: $black-200; }
+
+    &.solid {
+      background-color: $black-200;
+      color: $white;
+      border-color: $black-200;
+
+      &:hover { background-color: $black-500; }
+      &:active { background-color: $black-600; }
+
+      &.secondary { 
+        background: none;
+        border-color: transparent;
+        color: $black-400;
+
+        &:hover { border-color: $black-300; }
+        &:active { 
+          border-color: $black-300;
+          background-color: $black-300; 
+          color: $white;
+        }
+      }
+    }
+  }
+  
+  &.green {
+    &.solid {
+      background-color: $green-600;
+      border-color: $green-600;
+      color: white;
+      font-weight: normal;
+
+      &.secondary {
+        background-color: white;
+        color: $green-600;
+        &:hover, &:active { background-color: white; }
+        &:hover { color: $green-700; border-color: $green-700; }
+        &:active { color: $green-800; border-color: $green-800; }
+      }
+
+      &:hover { background-color: $green-700; }
+      &:active { background-color: $green-800; }
+    }
+  }
+}
+  

@@ -1,0 +1,27 @@
+@import 'colors.scss';
+@import 'layout.scss';
+@import 'fonts.scss';
+
+.MainContainer {
+  background: $navy-dark;
+
+  position: relative;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 1fr;
+  height: 100vh;
+
+  .ProjectContainer {
+    z-index: $top-z-index;
+    grid-column: 1 / 3;
+    grid-row: 1;
+  }
+
+  .ExplorerContainer {
+    grid-row: 2;
+  }
+
+  .ItemContainer {
+    grid-row: 2;
+  }
+}

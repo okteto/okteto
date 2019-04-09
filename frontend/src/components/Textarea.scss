@@ -1,0 +1,20 @@
+@import 'colors.scss';
+@import 'fonts.scss';
+
+.Textarea {
+  background: $navy-700;
+  border: 1px solid $navy;
+  border-radius: 3px;
+  box-sizing: border-box;
+  color: rgba($white, .8);
+  font-family: $title-font;
+  font-size: 14px;
+  min-height: 35px;
+  padding: 8px 10px;
+
+  &:active,
+  &:focus {
+    outline: 0;
+    box-shadow: $blue-600 0 0 0 1px;
+  }
+}

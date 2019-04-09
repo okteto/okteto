@@ -1,0 +1,145 @@
+$app-z-index: 10;
+$top-z-index: 20;
+$overlay-z-index: 30;
+
+// Flexbox.
+
+.layout.horizontal,
+.layout.vertical {
+	display: flex;
+}
+.layout.inline {
+	display: inline-flex;
+}
+.layout.horizontal {
+	flex-direction: row;
+}
+.layout.vertical {
+	flex-direction: column;
+}
+.layout.wrap {
+	flex-wrap: wrap;
+}
+.layout.no-wrap {
+	flex-wrap: nowrap;
+}
+.layout.center,
+.layout.center-center {
+	align-items: center;
+}
+.layout.center-justified,
+.layout.center-center {
+	justify-content: center;
+}
+.flex {
+	flex: 1;
+	flex-basis: 0.000000001px;
+}
+.flex-auto {
+	flex: 1 1 auto;
+}
+.flex-none {
+	flex: none;
+}
+.layout.horizontal-reverse,
+.layout.vertical-reverse {
+	display: flex;
+}
+.layout.horizontal-reverse {
+	flex-direction: row-reverse;
+}
+.layout.vertical-reverse {
+	flex-direction: column-reverse;
+}
+.layout.wrap-reverse {
+	flex-wrap: wrap-reverse;
+}
+/**
+ * Alignment in cross axis.
+ */
+.layout.start {
+	align-items: flex-start;
+}
+.layout.center,
+.layout.center-center {
+	align-items: center;
+}
+.layout.end {
+	align-items: flex-end;
+}
+.layout.baseline {
+	align-items: baseline;
+}
+/**
+ * Alignment in main axis.
+ */
+.layout.start-justified {
+	justify-content: flex-start;
+}
+.layout.center-justified,
+.layout.center-center {
+	justify-content: center;
+}
+.layout.end-justified {
+	justify-content: flex-end;
+}
+.layout.around-justified {
+	justify-content: space-around;
+}
+.layout.justified {
+	justify-content: space-between;
+}
+/**
+ * Self alignment.
+ */
+.self-start {
+	align-self: flex-start;
+}
+.self-center {
+	align-self: center;
+}
+.self-end {
+	align-self: flex-end;
+}
+.self-stretch {
+	align-self: stretch;
+}
+.self-baseline {
+	align-self: baseline;
+}
+/**
+ * multi-line alignment in main axis.
+ */
+.layout.start-aligned {
+	align-content: flex-start;
+}
+.layout.end-aligned {
+	align-content: flex-end;
+}
+.layout.center-aligned {
+	align-content: center;
+}
+.layout.between-aligned {
+	align-content: space-between;
+}
+.layout.around-aligned {
+	align-content: space-around;
+}
+.full-height {
+	height: 100%;
+}
+.full-width {
+	width: 100%;
+}
+.flex-auto-ellipsis {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+.flex-allow-ellipsis {
+	min-width: 0;
+}
+.ellipsis {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
