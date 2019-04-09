@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: inotify
+spec:
+  selector:
+    matchLabels:
+      name: inotify
+  template:
+    metadata:
+      labels:
+        name: inotify
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: inotify
+          image: busybox:latest
+          securityContext:
+            privileged: true
+          command:
+            - /bin/sh
+            - -c
+            - "echo 10048576 > /proc-aux/sys/fs/inotify/max_user_watches && tail -f /dev/null"
+          volumeMounts:
+          - mountPath: /proc-aux
+            name: proc-volume
+      volumes:
+      - name: proc-volume
+        hostPath:
+          path: /proc

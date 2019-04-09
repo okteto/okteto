@@ -1,21 +1,33 @@
 package main
 
 import (
-	"github.com/okteto/app/k8s/client"
-	"github.com/okteto/app/log"
-	"github.com/okteto/app/model"
+	"github.com/okteto/app/backend/app"
+	"github.com/okteto/app/backend/log"
+	"github.com/okteto/app/backend/model"
 )
 
 func main() {
 	log.Info("Starting app...")
-	s := model.Space{
+	s := &model.Space{
 		Name: "oktako",
 		User: "oktiko",
 	}
-	c := client.Get()
-	if err := namespaces.Create(s, c); err != nil 
-	{
-		log.Info("ERROR": err)
+	if err := app.CreateSpace(s); err != nil {
+		log.Info("ERROR1", err)
+	}
+
+	dev := &model.Dev{
+		Name:  "test",
+		Image: "okteto/desk:0.1.2",
+		WorkDir: &model.Mount{
+			Path: "/app",
+			Size: "10Gi",
+		},
+		Command: []string{"sh"},
+	}
+
+	if err := app.DevModeOn(dev, s); err != nil {
+		log.Info("ERROR2", err)
 	}
 
 	log.Info("Exit")
