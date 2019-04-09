@@ -1,13 +1,13 @@
 import React, { Component } from 'react';
 import * as ReactRedux from 'react-redux';
 import PropTypes from 'prop-types';
-import { GoogleLogin } from 'react-google-login';
 import autobind from 'autobind-decorator';
 import { CSSTransition } from 'react-transition-group';
 
 import Icon from 'components/Icon';
+import Button from 'components/Button';
 import { notify } from 'components/Notification';
-import { authenticateWithGoogle } from 'actions/session';
+import { loginWithGoogle } from 'actions/session';
 
 import 'containers/LoginContainer.scss';
 import colors from 'colors.scss';
@@ -20,7 +20,7 @@ class LoginContainer extends Component {
   @autobind
   onLoginSuccess(response) {
     if (response.tokenId) {
-      this.props.dispatch(authenticateWithGoogle(response.tokenId));
+      this.props.dispatch(loginWithGoogle(response.tokenId));
     } else {
       notify(`Login Failed: Wrong or missing Google TokenID`, 'error');
     }
@@ -43,15 +43,13 @@ class LoginContainer extends Component {
             <div className="logo">
               <Icon icon="okteto" size="64" />
             </div>
-            <GoogleLogin
+            <Button
               className="Button login-button layout horizontal center"
-              clientId={this.props.config.google}
-              buttonText="Login with Google"
-              onSuccess={this.onLoginSuccess}
-              onFailure={this.onLoginFailure}>
-              <Icon className="google-icon" icon="google" color={colors.white900} />
-              Login with Google
-            </GoogleLogin>
+              icon="github"
+              color={colors.white900}
+            >
+              Login with Github
+            </Button>
             <div className="terms">
               By proceeding, you agree to the 
               the <a href="https://okteto.com/legal">Terms of Service</a> and<br /> acknowledge you 
@@ -66,13 +64,11 @@ class LoginContainer extends Component {
 
 LoginContainer.propTypes = {
   session: PropTypes.object.isRequired,
-  config: PropTypes.object.isRequired,
   dispatch: PropTypes.func.isRequired
 };
 
 export default ReactRedux.connect(state => {
   return {
-    config: state.config,
     session: state.session
   };
 })(LoginContainer);

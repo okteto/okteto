@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
@@ -74,6 +75,9 @@ module.exports = {
     ]),
     new HtmlWebpackPlugin({
       template: './index.hbs'
+    }),
+    new webpack.DefinePlugin({
+      VERSION: require('./package.json').version
     })
   ]
 };

@@ -21,7 +21,7 @@
 
   .EnvironmentList {
     .EnvironmentItem {
-      padding: 12px $side-margin;
+      padding: 20px $side-margin;
 
       &:nth-child(odd) {
         background-color: $navy;
@@ -38,19 +38,23 @@
       
       .Name {
         font-size: 22px;
-        line-height: 23px;
+        line-height: 17px;
         font-weight: 500;
         margin-right: 24px;
         width: 100px;
       }
 
-      .Endpoint {
+      .Endpoints {
         font-size: 18px;
         font-weight: 300;
 
         a {
           cursor: pointer;
           color: white;
+          
+          &:not(:last-child) {
+            margin-bottom: 14px;
+          }
 
           &:visited {
             color: white;

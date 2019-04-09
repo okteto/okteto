@@ -2,14 +2,17 @@ import React, { Component } from 'react';
 import * as ReactRedux from 'react-redux';
 import PropTypes from 'prop-types';
 import * as clipboard from 'clipboard-polyfill';
+import autobind from 'autobind-decorator';
 
+import { refreshEnvironments } from 'actions/environments';
 import Button from '../components/Button';
 import Hint from '../components/Hint';
 import Icon from '../components/Icon';
 import { notify } from '../components/Notification';
 
 import 'containers/MainContainer.scss';
-import colors from 'colors.scss';
+
+const POLLING_INTERVAL = 10000;
 
 class MainContainer extends Component {
   constructor(props) {
@@ -18,6 +21,18 @@ class MainContainer extends Component {
     this.state = {
       showNewHint: false
     };
+
+    this.props.dispatch(refreshEnvironments());
+    this.poll = setInterval(this.handlePollEnvironments, POLLING_INTERVAL);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.poll);
+  }
+
+  @autobind
+  handlePollEnvironments() {
+    this.props.dispatch(refreshEnvironments());
   }
 
   render() {
@@ -29,11 +44,13 @@ class MainContainer extends Component {
         </div>
         <div className="EnvironmentList layout vertical">
           {Object.keys(environments).map(id => 
-            <div key={id}className="EnvironmentItem layout horizontal center">
+            <div key={id}className="EnvironmentItem layout horizontal start">
               <Icon className="Icon" icon="mirror" size="20"/>
               <div className="Name">{environments[id].name}</div>
-              <div className="Endpoint">
-                <a>{environments[id].endpoint}</a>
+              <div className="Endpoints layout vertical">
+                {environments[id].endpoints.map(url =>
+                  <a key={`${id}-${url}`}>{url}</a>
+                )}
               </div>
             </div>
           )}

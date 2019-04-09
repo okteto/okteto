@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { hot } from 'react-hot-loader';
 
 import MainContainer from 'containers/MainContainer';
+import LoginContainer from 'containers/LoginContainer';
 import Notification from 'components/Notification';
 
 import 'views/AppView.scss';
@@ -16,20 +17,28 @@ class AppView extends Component {
   render() {
     return (
       <div className="AppView">
-        <MainContainer />
         <Notification />
+        {!this.props.session.isAuthenticated &&
+          <LoginContainer />
+        }
+        {this.props.session.isAuthenticated &&
+          <MainContainer />
+        }
       </div>
     );
   }
 }
 
 AppView.propTypes = {
+  session: PropTypes.object.isRequired,
   dispatch: PropTypes.func
 };
 
 const AppViewWithRedux = ReactRedux.connect(state => {
-  return {};
+  return {
+    session: state.session
+  };
 })(AppView);
 
 // Enable React Hot Loader for the root component.
-export default hot(module)(AppView);
+export default hot(module)(AppViewWithRedux);
