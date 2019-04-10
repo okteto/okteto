@@ -25,6 +25,10 @@ export default (state = initialSessionState, action) => {
         }
       };
     }
+    case 'SAVE_SESSION': {
+      localStorage.setItem('session', JSON.stringify(state || {}));
+      return state;
+    }
     default: {
       return state;
     }

@@ -16,6 +16,7 @@ export const loginWithGithub = code => {
     }).then(e => {
       localStorage.setItem(environment.apiTokenKeyName, e.data.auth.token);
       dispatch(authSuccess(e.data.auth));
+      dispatch(saveSession());
     }).catch(err => notify(`Authentication error: ${err}`, 'error'));
   };
 };
