@@ -88,14 +88,14 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev, s *model.Space) {
 	c.ImagePullPolicy = apiv1.PullAlways
 	c.Command = []string{"tail"}
 	c.Args = []string{"-f", "/dev/null"}
-	c.WorkingDir = dev.WorkDir.Path
+	c.WorkingDir = dev.WorkDir
 	c.ReadinessProbe = nil
 	c.LivenessProbe = nil
 
 	c.VolumeMounts = []apiv1.VolumeMount{
 		apiv1.VolumeMount{
 			Name:      dev.GetVolumeName(),
-			MountPath: dev.WorkDir.Path,
+			MountPath: dev.WorkDir,
 		},
 	}
 	translateResources(c)
@@ -134,7 +134,7 @@ func translateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {
 }
 
 func translateInitOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
-	source := filepath.Join(dev.WorkDir.Path, "*")
+	source := filepath.Join(dev.WorkDir, "*")
 	c := apiv1.Container{
 		Name:  oktetoInitContainer,
 		Image: dev.Image,

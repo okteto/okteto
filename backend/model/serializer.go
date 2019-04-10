@@ -43,34 +43,3 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 func (e *EnvVar) MarshalYAML() (interface{}, error) {
 	return e.Name + "=" + e.Value, nil
 }
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (m *Mount) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var sMount serialMount
-	var raw string
-	err := unmarshal(&raw)
-	if err == nil {
-		m.Path = raw
-	} else {
-		err := unmarshal(&sMount)
-		if err != nil {
-			return err
-		}
-		m.Source = sMount.Source
-		m.Path = sMount.Path
-		m.Size = sMount.Size
-	}
-	return nil
-}
-
-// MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (m *Mount) MarshalYAML() (interface{}, error) {
-	if m.Source == "" && m.Size == "" {
-		return m.Path, nil
-	}
-	return &serialMount{
-		Source: m.Source,
-		Path:   m.Path,
-		Size:   m.Size,
-	}, nil
-}

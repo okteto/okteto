@@ -6,7 +6,6 @@ type User struct {
 	Email string `json:"email,omitempty" yaml:"email,omitempty"`
 	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
 	Token string `json:"token,omitempty" yaml:"token,omitempty"`
-	Email string `json:"email,omitempty" yaml:"email,omitempty"`
 }
 
 // NewUser returns a new user with an auth token initialized
