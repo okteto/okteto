@@ -17,7 +17,7 @@ func main() {
 
 	log.Info("Starting app...")
 	http.Handle("/graphql", graphql.Handler())
-	fmt.Printf("Server is running on port %s", port)
+	log.Infof("Server is running at http://0.0.0.0:%s", port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil); err != nil {
 		log.Fatal(err)
 	}

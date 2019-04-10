@@ -11,7 +11,8 @@ module.exports = merge({
     port: 9000,
     proxy: {
       '/graphql': 'http://api:8000'
-    }
+    },
+    disableHostCheck: true
   },
   plugins: [
     new webpack.DefinePlugin({
