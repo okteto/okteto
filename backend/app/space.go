@@ -16,7 +16,7 @@ import (
 func CreateSpace(s *model.Space) error {
 	c, err := client.Get()
 	if err != nil {
-		return fmt.Errorf("error getting k8s client: ", err)
+		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 
 	if err := namespaces.Create(s, c); err != nil {

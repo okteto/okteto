@@ -1,6 +1,5 @@
 {
   "name": "okteto-app-frontend",
-  "version": "0.0.1",
   "description": "",
   "scripts": {
     "start": "yarn devel",

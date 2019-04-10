@@ -86,7 +86,7 @@ spec:
       - path: /
         backend:
           serviceName: okteto-frontend
-          servicePort: 8000
+          servicePort: 9000
   tls:
   - hosts:
     - cloud.okteto.net

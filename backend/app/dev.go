@@ -10,11 +10,11 @@ import (
 	"github.com/okteto/app/backend/model"
 )
 
-//DevModeOn activates a development environemnt
+//DevModeOn activates a development environment
 func DevModeOn(dev *model.Dev, s *model.Space) error {
 	c, err := client.Get()
 	if err != nil {
-		return fmt.Errorf("error getting k8s client: ", err)
+		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 
 	if err := secrets.Create(dev, s, c); err != nil {
@@ -36,7 +36,7 @@ func DevModeOn(dev *model.Dev, s *model.Space) error {
 func DevModeOff(dev *model.Dev, s *model.Space, removeVolumes bool) error {
 	c, err := client.Get()
 	if err != nil {
-		return fmt.Errorf("error getting k8s client: ", err)
+		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 
 	if err := secrets.Destroy(dev, s, c); err != nil {

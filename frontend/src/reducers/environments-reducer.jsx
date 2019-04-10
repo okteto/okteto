@@ -14,7 +14,7 @@ export default (state = initialEnvironmentsState, action) => {
     case 'RECEIVE_ENVIRONMENTS': {
       return {
         ...state,
-        byId: action.environments.reduce((map, environment) => {
+        byId: Array.from(action.environments).reduce((map, environment) => {
           map[environment.id] = environment;
           return map;
         }, {}),
