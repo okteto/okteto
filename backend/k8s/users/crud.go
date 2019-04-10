@@ -2,6 +2,7 @@ package spaces
 
 import (
 	"fmt"
+	"io/ioutil"
 
 	"github.com/okteto/app/backend/k8s/users/client"
 	"github.com/okteto/app/backend/k8s/users/v1alpha1"
@@ -9,8 +10,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const namespaceFile = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+
 var c *client.UserV1Alpha1Client
-var namespace = "pablo"
+var namespace string
 
 func getClient() (*client.UserV1Alpha1Client, error) {
 	var err error
@@ -19,6 +22,11 @@ func getClient() (*client.UserV1Alpha1Client, error) {
 		if err != nil {
 			return nil, err
 		}
+		b, err := ioutil.ReadFile(namespaceFile)
+		if err != nil {
+			return nil, fmt.Errorf("error getting namespace: %s", err)
+		}
+		namespace = string(b)
 	}
 	return c, nil
 }
@@ -30,9 +38,11 @@ func GetByToken(token string) (*model.User, error) {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	users, err := uClient.Users(namespace).List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("token=%s", token),
-	})
+	users, err := uClient.Users(namespace).List(
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("token=%s", token),
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
