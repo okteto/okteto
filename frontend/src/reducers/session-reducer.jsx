@@ -1,6 +1,6 @@
 const initialSessionState = {
   user: {},
-  isAuthenticated: true, // false // Change once Authentication is done.
+  isAuthenticated: false, 
 };
 
 export default (state = initialSessionState, action) => {
