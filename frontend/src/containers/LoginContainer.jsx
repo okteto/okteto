@@ -3,11 +3,12 @@ import * as ReactRedux from 'react-redux';
 import PropTypes from 'prop-types';
 import autobind from 'autobind-decorator';
 import { CSSTransition } from 'react-transition-group';
+import GitHubLogin from 'react-github-login';
 
 import Icon from 'components/Icon';
-import Button from 'components/Button';
 import { notify } from 'components/Notification';
-import { loginWithGoogle } from 'actions/session';
+import { loginWithGithub } from 'actions/session';
+import environment from 'common/environment';
 
 import 'containers/LoginContainer.scss';
 import colors from 'colors.scss';
@@ -20,9 +21,9 @@ class LoginContainer extends Component {
   @autobind
   onLoginSuccess(response) {
     if (response.tokenId) {
-      this.props.dispatch(loginWithGoogle(response.tokenId));
+      this.props.dispatch(loginWithGithub(response.tokenId));
     } else {
-      notify(`Login Failed: Wrong or missing Google TokenID`, 'error');
+      notify(`Login Failed: Wrong or missing Github token_id`, 'error');
     }
   }
 
@@ -43,13 +44,16 @@ class LoginContainer extends Component {
             <div className="logo">
               <Icon icon="okteto" size="64" />
             </div>
-            <Button
-              className="Button login-button layout horizontal center"
-              icon="github"
-              color={colors.white900}
-            >
+
+            <GitHubLogin 
+              className="Button LoginButton"
+              clientId={environment.githubClientId}
+              onSuccess={this.onLoginSuccess}
+              onFailure={this.onLoginFailure}>
+              <Icon icon="github" size="20" color={colors.white900} />
               Login with Github
-            </Button>
+            </GitHubLogin>
+
             <div className="terms">
               By proceeding, you agree to the 
               the <a href="https://okteto.com/legal">Terms of Service</a> and<br /> acknowledge you 
