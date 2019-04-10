@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/okteto/app/backend/k8s/client"
+	"github.com/okteto/app/backend/k8s/deployments"
 	"github.com/okteto/app/backend/k8s/namespaces"
 	"github.com/okteto/app/backend/k8s/networkpolicies"
 	"github.com/okteto/app/backend/k8s/rolebindings"
@@ -76,4 +77,35 @@ func GetCredential(user string) (string, error) {
 	}
 
 	return credential, err
+}
+
+//ListDevEnvs returns the dev environments for a given user
+func ListDevEnvs(user string) ([]*model.Dev, error) {
+	spaces, err := spaces.List(user)
+	if err != nil {
+		return nil, err
+	}
+	if len(spaces) != 1 {
+		return nil, fmt.Errorf("The user has %d spaces, instead of 1", len(spaces))
+	}
+	s := spaces[0]
+	c, err := client.Get()
+	if err != nil {
+		return nil, fmt.Errorf("error getting k8s client: %s", err)
+	}
+
+	deploys, err := deployments.List(s, c)
+	if err != nil {
+		return nil, fmt.Errorf("error getting deployments: %s", err)
+	}
+
+	result := []*model.Dev{}
+	for _, d := range deploys {
+		dev := &model.Dev{
+			Name:      d.Name,
+			Endpoints: []string{fmt.Sprintf("%s.okteto.net/%s", s.Name, d.Name)},
+		}
+		result = append(result, dev)
+	}
+	return result, nil
 }
