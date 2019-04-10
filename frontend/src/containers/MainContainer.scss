@@ -66,6 +66,19 @@
         }
       }
     }
+
+    @media screen and (max-width: 500px) {
+      .EnvironmentItem {
+        &.layout.horizontal {
+          flex-direction: column;
+        }
+
+        .Endpoints {
+          margin-top: 18px;
+          margin-left: 50px;
+        }
+      }
+    }
   }
 
   .ActionBar {

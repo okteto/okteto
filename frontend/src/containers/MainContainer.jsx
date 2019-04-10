@@ -66,9 +66,11 @@ class MainContainer extends Component {
 
         <div className="EnvironmentList layout vertical">
           {Object.keys(environments).map(id => 
-            <div key={id}className="EnvironmentItem layout horizontal start">
-              <Icon className="Icon" icon="mirror" size="20"/>
-              <div className="Name">{environments[id].name}</div>
+            <div key={id} className="EnvironmentItem layout horizontal start">
+              <div className="layout horizontal start">
+                <Icon className="Icon" icon="mirror" size="20"/>
+                <div className="Name">{environments[id].name}</div>
+              </div>
               <div className="Endpoints layout vertical">
                 {environments[id].endpoints.map(url =>
                   <a key={`${id}-${url}`}>{url}</a>
