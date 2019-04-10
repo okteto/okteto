@@ -10,7 +10,8 @@ module.exports = merge({
     host: '0.0.0.0',
     port: 9000,
     proxy: {
-      '/graphql': 'http://api:8000'
+      '/graphql': 'http://api:8000',
+      '/github': 'http://api:8000'
     },
     disableHostCheck: true
   },

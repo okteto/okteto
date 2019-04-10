@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/browser';
+import { getToken } from 'common/environment';
 
 const rootPath = '/graphql';
 
@@ -52,9 +53,11 @@ const request = (resource, init = {}, options = {}) => {
   const headers = {
     ...init.headers
   };
-  // if (config.auth) {
-  //   headers.Authorization = `Bearer ${getToken()}`;
-  // }
+
+  if (config.auth) {
+    headers.Authorization = `Bearer ${getToken()}`;
+  }
+
   return fetch(`${rootPath}/${resource}`.replace(/\/$/, ''), {
     ...init,
     headers: new Headers({ ...headers })

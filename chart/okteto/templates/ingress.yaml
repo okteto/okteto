@@ -29,11 +29,14 @@ spec:
     - host: {{ . | quote }}
       http:
         paths:
+          - path: "/github"
+            backend:
+              serviceName: api
+              servicePort: 8000
           - path: "/graphql"
             backend:
               serviceName: api
               servicePort: 8000
-
           - path: "/"
             backend:
               serviceName: frontend

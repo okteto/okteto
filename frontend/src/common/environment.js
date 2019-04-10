@@ -7,8 +7,15 @@
 
 /* global VERSION, MODE, GITHUB_CLIENT_ID */
 
+const apiTokenKeyName = 'apitoken';
+
+export const getToken = () => {
+  return localStorage.getItem(apiTokenKeyName);
+}
+
 export default {
   version: VERSION,
   mode: MODE,
-  githubClientId: GITHUB_CLIENT_ID
+  githubClientId: GITHUB_CLIENT_ID,
+  apiTokenKeyName
 };
