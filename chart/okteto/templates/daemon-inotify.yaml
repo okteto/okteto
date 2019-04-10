@@ -1,0 +1,37 @@
+apiVersion: apps/v1beta2
+kind: DaemonSet
+metadata:
+  name: "{{ include "okteto.fullname" . }}-inotify"
+  labels:
+    app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-inotify"
+    helm.sh/chart: {{ include "okteto.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-inotify"
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-inotify"
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: inotify
+          image: busybox:latest
+          securityContext:
+            privileged: true
+          command:
+            - /bin/sh
+            - -c
+            - "echo 10048576 > /proc-aux/sys/fs/inotify/max_user_watches && tail -f /dev/null"
+          volumeMounts:
+          - mountPath: /proc-aux
+            name: proc-volume
+      volumes:
+      - name: proc-volume
+        hostPath:
+          path: /proc

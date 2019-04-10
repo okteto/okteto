@@ -1,19 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "okteto.fullname" . }}
+  name: "{{ include "okteto.fullname" . }}-frontend"
   labels:
-    app.kubernetes.io/name: {{ include "okteto.name" . }}
+    app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-frontend"
     helm.sh/chart: {{ include "okteto.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   type: {{ .Values.services.type }}
   ports:
-    - port: {{ .Values.services.api.port }}
-      name: api
     - port: {{ .Values.services.frontend.port }}
       name: frontend
   selector:
-    app.kubernetes.io/name: {{ include "okteto.name" .}}
+    app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-frontend"
     app.kubernetes.io/instance: {{ .Release.Name }}

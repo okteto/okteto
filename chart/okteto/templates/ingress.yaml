@@ -1,6 +1,5 @@
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "okteto.fullname" . -}}
-{{- $ingressPath := .Values.ingress.path -}}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -30,15 +29,15 @@ spec:
     - host: {{ . | quote }}
       http:
         paths:
-          - path: {{ $ingressPath . "/api"}}
+          - path: "/api"
             backend:
-              serviceName: {{ $fullName }}
-              servicePort: {{ .Values.service.api.port }}
+              serviceName: "{{ $fullName }}-api"
+              servicePort: 8000
 
-          - path: {{ $ingressPath }}
+          - path: "/"
             backend:
-              serviceName: {{ $fullName }}
-              servicePort: {{ .Values.service.frontend.port }}
+              serviceName: "{{ $fullName }}-frontend"
+              servicePort: 9000
           
   {{- end }}
 {{- end }}

@@ -26,7 +26,6 @@ ingress:
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
-  path: /
   hosts:
     - chart-example.local
   tls: []
@@ -43,7 +42,7 @@ rbac:
   # Role kind (Role or ClusterRole)
   roleKind: ClusterRole
   # Role binding kind (RoleBinding or ClusterRoleBinding)
-roleBindingKind: ClusterRoleBinding
+  roleBindingKind: ClusterRoleBinding
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -56,9 +55,3 @@ resources: {}
   # requests:
   #  cpu: 100m
   #  memory: 128Mi
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity: {}
