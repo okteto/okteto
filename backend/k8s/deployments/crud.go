@@ -59,6 +59,15 @@ func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	return nil
 }
 
+//List lists the deployments in a space
+func List(s *model.Space, c *kubernetes.Clientset) ([]*appsv1.Deployment, error) {
+	deploys, err := c.AppsV1().Deployments(s.Name).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return deploys.Items, nil
+}
+
 // Destroy destroys a deployment
 func Destroy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 	log.Infof("destroying deployment '%s' in '%s' ...", dev.Name, s.Name)
