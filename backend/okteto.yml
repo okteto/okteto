@@ -1,4 +1,6 @@
 name: api
-image: golang:1.11-stretch
+image: golang
 workdir: /backend
 command: ["bash"]
+forward:
+  - "8000:8000"

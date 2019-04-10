@@ -1,4 +1,6 @@
-name: api
-image: golang:1.11-stretch
+name: frontend
+image: node:10
 workdir: /app
 command: ["bash"]
+forward:
+  - "9000:9000"

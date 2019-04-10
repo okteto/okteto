@@ -20,12 +20,14 @@ var supportedServices = map[string]bool{
 
 //Dev represents a development environment
 type Dev struct {
+	ID          string   `json:"id" yaml:"id"`
 	Name        string   `json:"name" yaml:"name"`
 	Image       string   `json:"image" yaml:"image"`
 	Environment []EnvVar `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir     *Mount   `json:"workdir" yaml:"workdir"`
 	Services    []string `json:"services,omitempty" yaml:"services,omitempty"`
+	Endpoints   []string `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
 //Mount represents how the local filesystem is mounted

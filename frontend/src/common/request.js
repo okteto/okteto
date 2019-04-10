@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/browser';
 
-const rootPath = '/api/v1';
+const rootPath = '/graphql';
 
 const errors = {
   'InvalidJson': 'Invalid data format'
@@ -44,21 +44,6 @@ const handleJSONResponse = (response) => {
 };
 
 const request = (resource, init = {}, options = {}) => {
-  // REMOVE when api is implemented.
-  // if (resource === '/environments' && init.method === 'get') {
-  //   return Promise.resolve([
-  //     {
-  //       id: '1234',
-  //       name: 'movies',
-  //       endpoints: ['https://movies.space.okteto.net']
-  //     },
-  //     {
-  //       id: '2345',
-  //       name: 'api',
-  //       endpoints: ['https://api.space.okteto.net', 'https://api2.space.okteto.net']
-  //     },
-  //   ]);
-  // }
 
   const config = {
     auth: true,
@@ -70,7 +55,7 @@ const request = (resource, init = {}, options = {}) => {
   // if (config.auth) {
   //   headers.Authorization = `Bearer ${getToken()}`;
   // }
-  return fetch(`${rootPath}/${resource.replace(/^\//g, '')}`, {
+  return fetch(`${rootPath}/${resource}`.replace(/\/$/, ''), {
     ...init,
     headers: new Headers({ ...headers })
   }).then(config.responseType === 'json' ? handleJSONResponse : handleResponse);

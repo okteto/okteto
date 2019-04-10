@@ -10,6 +10,8 @@ require (
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/google/uuid v0.0.0-20171113160352-8c31c18f31ed // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
+	github.com/graphql-go/graphql v0.7.8
+	github.com/graphql-go/handler v0.2.3
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/json-iterator/go v0.0.0-20180701071628-ab8a2e0c74be // indirect
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936

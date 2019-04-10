@@ -6,11 +6,18 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 module.exports = merge({
   mode: 'development',
   devtool: 'source-map',
+  devServer: {
+    host: '0.0.0.0',
+    port: 9000,
+    proxy: {
+      '/graphql': 'http://api:8000'
+    }
+  },
   plugins: [
     new webpack.DefinePlugin({
       MODE: JSON.stringify('development')
     }),
-    new webpack.HotModuleReplacementPlugin(),
+    //new webpack.HotModuleReplacementPlugin(),
     // Uncomment this line to analyze bundle:
     // new BundleAnalyzerPlugin()
   ]
