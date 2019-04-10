@@ -9,8 +9,8 @@ import (
 func main() {
 	log.Info("Starting app...")
 	s := &model.Space{
-		Name: "oktako",
-		User: "oktiko",
+		Name:    "oktako",
+		Members: []string{"oktiko"},
 	}
 	if err := app.CreateSpace(s); err != nil {
 		log.Info("ERROR1", err)
