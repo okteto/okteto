@@ -1,7 +1,9 @@
 @import 'colors.scss';
 @import 'fonts.scss';
+@import 'layout.scss';
 
 .UserMenu {
+  z-index: $top-z-index;
   background-color: white;
   border-radius: 2px;
   padding: 12px 0;
