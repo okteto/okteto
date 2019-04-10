@@ -3,8 +3,8 @@ package model
 //User represents a user
 type User struct {
 	ID    string `json:"id,omitempty" yaml:"id,omitempty"`
-	Email string `json:"email,omitempty" yaml:"email,omitempty"`
 	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
+	Email string `json:"email,omitempty" yaml:"email,omitempty"`
 	Token string `json:"token,omitempty" yaml:"token,omitempty"`
 }
 
@@ -12,8 +12,8 @@ type User struct {
 func NewUser(id, email, name string) *User {
 	return &User{
 		ID:    id,
-		Email: email,
 		Name:  name,
+		Email: email,
 		Token: GenerateRandomString(40),
 	}
 }
