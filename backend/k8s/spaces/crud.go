@@ -28,7 +28,7 @@ func List(user string) ([]*model.Space, error) {
 	result := []*model.Space{}
 	sClient, err := getClient()
 	if err != nil {
-		return nil, fmt.Errorf("error getting k8s client: ", err)
+		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
 
 	spaces, err := sClient.Spaces(namespace).List(metav1.ListOptions{
@@ -54,7 +54,7 @@ func List(user string) ([]*model.Space, error) {
 func Create(s *model.Space) error {
 	sClient, err := getClient()
 	if err != nil {
-		return fmt.Errorf("error getting k8s client: ", err)
+		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 
 	labels := map[string]string{}
@@ -76,7 +76,7 @@ func Create(s *model.Space) error {
 func Delete(s *model.Space) error {
 	sClient, err := getClient()
 	if err != nil {
-		return fmt.Errorf("error getting k8s client: ", err)
+		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 	return sClient.Spaces(namespace).Delete(s.Name, &metav1.DeleteOptions{})
 }
