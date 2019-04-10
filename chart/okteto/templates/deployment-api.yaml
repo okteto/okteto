@@ -18,6 +18,7 @@ spec:
         app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-api"
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      serviceAccountName: {{ include "okteto.fullname" . }}
       containers:
         - name: api
           image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"
