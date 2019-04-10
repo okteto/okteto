@@ -17,7 +17,7 @@ module.exports = merge({
     new webpack.DefinePlugin({
       MODE: JSON.stringify('development')
     }),
-    //new webpack.HotModuleReplacementPlugin(),
+    new webpack.HotModuleReplacementPlugin(),
     // Uncomment this line to analyze bundle:
     // new BundleAnalyzerPlugin()
   ]
