@@ -29,14 +29,14 @@ spec:
     - host: {{ . | quote }}
       http:
         paths:
-          - path: "/api"
+          - path: "/graphql"
             backend:
-              serviceName: "{{ $fullName }}-api"
+              serviceName: api
               servicePort: 8000
 
           - path: "/"
             backend:
-              serviceName: "{{ $fullName }}-frontend"
+              serviceName: frontend
               servicePort: 9000
           
   {{- end }}

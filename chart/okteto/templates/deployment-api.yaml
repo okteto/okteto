@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "{{ include "okteto.fullname" . }}-api"
+  name: api
   labels:
     app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-api"
     helm.sh/chart: {{ include "okteto.chart" . }}
