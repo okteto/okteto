@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -24,30 +23,7 @@ var oauth2Config = &oauth2.Config{
 // AuthHandler handles the github calback authentication
 func AuthHandler() http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		code := r.FormValue("code")
-		if len(code) == 0 {
-			log.Errorf("code is missing from request")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		u, err := Auth(code)
-		if err != nil {
-			log.Errorf("github auth failed: %s", err)
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		b, err := json.Marshal(u)
-		if err != nil {
-			log.Errorf("user marshalling failed: %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(b)
+		// TODO: why is this handler invoked?
 		return
 	}
 
