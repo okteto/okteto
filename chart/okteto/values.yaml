@@ -36,7 +36,6 @@ ingress:
 ## Install Default RBAC roles and bindings
 rbac:
   install: false
-  serviceAccountName: default
   # Role reference
   roleRef: cluster-admin
   # Role kind (Role or ClusterRole)
