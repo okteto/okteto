@@ -14,11 +14,11 @@ ingress:
     kubernetes.io/tls-acme: "true"
   path: /
   hosts:
-    - cloud.okteto.net
+    - cloud.usa.okteto.net
   tls: 
     - secretName: okteto
       hosts:
-        - cloud.okteto.net
+        - cloud.usa.okteto.net
 
 ## Install Default RBAC roles and bindings
 rbac:
