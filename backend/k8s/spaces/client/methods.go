@@ -61,7 +61,6 @@ func (c *spaceClient) Create(space *v1alpha1.Space) (*v1alpha1.Space, error) {
 	return &result, err
 }
 
-// Update takes the representation of a space and updates it
 func (c *spaceClient) Update(space *v1alpha1.Space) (*v1alpha1.Space, error) {
 	result := &v1alpha1.Space{}
 	err := c.restClient.
@@ -75,7 +74,6 @@ func (c *spaceClient) Update(space *v1alpha1.Space) (*v1alpha1.Space, error) {
 	return result, err
 }
 
-// Delete takes name of the space and deletes it.
 func (c *spaceClient) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.restClient.
 		Delete().
