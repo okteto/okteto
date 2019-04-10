@@ -1,10 +1,9 @@
 import request from 'common/request';
 import { notify } from 'components/Notification';
-import environment from 'common/environment';
 
-export const loginWithGoogle = (token) => {
-  return (dispatch) => {
-    return request(`/auth/google`, {
+export const loginWithGithub = token => {
+  return dispatch => {
+    return request(`/auth/github`, {
       method: 'post',
       headers: {
         "Content-Type": "application/json"
@@ -14,8 +13,6 @@ export const loginWithGoogle = (token) => {
       responseType: 'json'
     }).then(user => {
       dispatch(authSuccess(user));
-      dispatch(saveSession());
-      return user.projects;
     }).catch(err => notify(`Authentication error: ${err}`, 'error'));
   };
 };
@@ -57,7 +54,6 @@ export const refreshSession = () => {
       responseType: 'json'
     }).then(user => {
       dispatch(updateSession(user));
-      dispatch(saveSession());
     }).catch(err => notify(`Session error: ${err}`, 'error'));
   };
 };

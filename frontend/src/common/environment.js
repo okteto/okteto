@@ -5,9 +5,10 @@
  * @see {webpack.config.js}
  */
 
-/* global VERSION, MODE */
+/* global VERSION, MODE, GITHUB_CLIENT_ID */
 
 export default {
   version: VERSION,
-  mode: MODE
+  mode: MODE,
+  githubClientId: GITHUB_CLIENT_ID
 };

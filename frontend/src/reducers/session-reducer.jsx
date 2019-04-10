@@ -1,6 +1,6 @@
 const initialSessionState = {
   user: {},
-  isAuthenticated: true // false // Change once Authentication is done.
+  isAuthenticated: true, // false // Change once Authentication is done.
 };
 
 export default (state = initialSessionState, action) => {
@@ -24,13 +24,6 @@ export default (state = initialSessionState, action) => {
           ...action.user
         }
       };
-    }
-    case 'SAVE_SESSION': {
-      localStorage.setItem('session', JSON.stringify(state || {}));
-      return state;
-    }
-    case 'AFTER_RESTORE_SESSION': {
-      return {...action.session};
     }
     default: {
       return state;

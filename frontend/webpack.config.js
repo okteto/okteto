@@ -77,7 +77,8 @@ module.exports = {
       template: './index.hbs'
     }),
     new webpack.DefinePlugin({
-      VERSION: require('./package.json').version
+      VERSION: JSON.stringify(require('./package.json').version),
+      GITHUB_CLIENT_ID: JSON.stringify('47867be52b46a2d9d302')
     })
   ]
 };

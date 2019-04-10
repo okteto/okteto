@@ -76,6 +76,7 @@
     "react-collapse": "^4.0.3",
     "react-dom": "^16.6.0",
     "react-favicon": "^0.0.14",
+    "react-github-login": "git://github.com/rlamana/react-github-login#popup-size-position",
     "react-hot-loader": "4.3.11",
     "react-moment": "0.8.1",
     "react-motion": "^0.5.2",
