@@ -32,8 +32,8 @@ func Create(s *model.Space, c *kubernetes.Clientset) error {
 	return nil
 }
 
-//GetCredential returns the credential for accessing the dev mode container
-func GetCredential(s *model.Space) (string, error) {
+//GetCredentialConfig returns the credential for accessing the dev mode container
+func GetCredentialConfig(s *model.Space) (string, error) {
 	log.Debug("Get service account credential")
 	c, err := client.Get()
 	if err != nil {
@@ -47,5 +47,5 @@ func GetCredential(s *model.Space) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(secret.Data["token"]), nil
+	return getConfigB64(s, string(secret.Data["ca.crt"]), string(secret.Data["token"])), nil
 }
