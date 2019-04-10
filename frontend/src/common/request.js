@@ -45,20 +45,20 @@ const handleJSONResponse = (response) => {
 
 const request = (resource, init = {}, options = {}) => {
   // REMOVE when api is implemented.
-  // if (resource === '/environments' && init.method === 'get') {
-  //   return Promise.resolve([
-  //     {
-  //       id: '1234',
-  //       name: 'movies',
-  //       endpoints: ['https://movies.space.okteto.net']
-  //     },
-  //     {
-  //       id: '2345',
-  //       name: 'api',
-  //       endpoints: ['https://api.space.okteto.net', 'https://api2.space.okteto.net']
-  //     },
-  //   ]);
-  // }
+  if (resource === '/environments' && init.method === 'get') {
+    return Promise.resolve([
+      {
+        id: '1234',
+        name: 'movies',
+        endpoints: ['https://movies.space.okteto.net']
+      },
+      {
+        id: '2345',
+        name: 'api',
+        endpoints: ['https://api.space.okteto.net', 'https://api2.space.okteto.net']
+      },
+    ]);
+  }
 
   const config = {
     auth: true,

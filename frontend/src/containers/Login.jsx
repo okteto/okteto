@@ -10,10 +10,10 @@ import { notify } from 'components/Notification';
 import { loginWithGithub } from 'actions/session';
 import environment from 'common/environment';
 
-import 'containers/LoginContainer.scss';
+import 'containers/Login.scss';
 import colors from 'colors.scss';
 
-class LoginContainer extends Component {
+class Login extends Component {
   constructor(props) {
     super(props);
   }
@@ -39,7 +39,7 @@ class LoginContainer extends Component {
         classNames="fade"
         appear={true}
         timeout={5000}>
-        <div className="LoginContainer">
+        <div className="Login">
           <div className="layout vertical center-center">
             <div className="logo">
               <Icon icon="okteto" size="64" />
@@ -66,7 +66,7 @@ class LoginContainer extends Component {
   }
 }
 
-LoginContainer.propTypes = {
+Login.propTypes = {
   session: PropTypes.object.isRequired,
   dispatch: PropTypes.func.isRequired
 };
@@ -75,4 +75,4 @@ export default ReactRedux.connect(state => {
   return {
     session: state.session
   };
-})(LoginContainer);
+})(Login);

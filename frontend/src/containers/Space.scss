@@ -2,9 +2,7 @@
 @import 'layout.scss';
 @import 'fonts.scss';
 
-.MainContainer {
-  $side-margin: 32px;
-
+.Space {
   background: $navy-dark;
   position: relative;
   display: grid;
@@ -12,31 +10,32 @@
   grid-template-rows: 1fr;
   height: 100vh;
 
-  .Header {
-    min-height: 110px;
-    padding: 0 $side-margin;
-    font-size: 34px;
-    font-weight: 300;
-  }
-
   .EnvironmentList {
     .EnvironmentItem {
+      position: relative;
       padding: 20px $side-margin;
+      box-sizing: border-box;
 
       &:nth-child(odd) {
         background-color: $navy;
       }
 
-      &:hover {
-        background-color: rgba($white-100, .5);
+      &:hover::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 3px;
+        background-color: $green-400;
       }
 
-      .Icon {
+      .EnvironmentItemIcon {
         margin-right: 21px;
         margin-left: 8px;
       }
       
-      .Name {
+      .EnvironmentItemName {
         font-size: 22px;
         line-height: 17px;
         font-weight: 500;
@@ -44,7 +43,7 @@
         width: 100px;
       }
 
-      .Endpoints {
+      .EnvironmentItemEndpoints {
         font-size: 18px;
         font-weight: 300;
 
@@ -128,40 +127,6 @@
         width: 100%;
         margin-top: 12px;
       }
-    }
-  }
-
-  .User {
-    position: relative;
-
-    .UserAtom {
-      font-size: 20px;
-      cursor: pointer;
-
-      .Avatar {
-        background-color: $green-600;
-        width: 24px;
-        height: 24px;
-        border-radius: 48px;
-        margin-right: 8px;
-        overflow: hidden;
-
-        .Icon {
-          margin-left: -32px;
-          margin-top: -5px;
-        }
-      }
-
-      .Username {
-        margin-top: -4px;
-        margin-right: 8px;
-      }
-    }
-
-    .UserMenu {
-      position: absolute;
-      top: 16px;
-      right: 0;
     }
   }
 }

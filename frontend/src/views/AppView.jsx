@@ -3,8 +3,8 @@ import * as ReactRedux from 'react-redux';
 import PropTypes from 'prop-types';
 import { hot } from 'react-hot-loader';
 
-import MainContainer from 'containers/MainContainer';
-import LoginContainer from 'containers/LoginContainer';
+import Space from 'containers/Space';
+import Login from 'containers/Login';
 import Notification from 'components/Notification';
 
 import 'views/AppView.scss';
@@ -19,10 +19,10 @@ class AppView extends Component {
       <div className="AppView">
         <Notification />
         {!this.props.session.isAuthenticated &&
-          <LoginContainer />
+          <Login />
         }
         {this.props.session.isAuthenticated &&
-          <MainContainer />
+          <Space />
         }
       </div>
     );

@@ -3,26 +3,24 @@ import * as ReactRedux from 'react-redux';
 import PropTypes from 'prop-types';
 import * as clipboard from 'clipboard-polyfill';
 import autobind from 'autobind-decorator';
-import colors from 'colors.scss';
 
 import { refreshEnvironments } from 'actions/environments';
-import UserMenu from 'components/UserMenu';
+import Header from './Header';
 import Button from '../components/Button';
 import Hint from '../components/Hint';
 import Icon from '../components/Icon';
 import { notify } from '../components/Notification';
 
-import 'containers/MainContainer.scss';
+import 'containers/Space.scss';
 
 const POLLING_INTERVAL = 10000;
 
-class MainContainer extends Component {
+class Space extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      showNewHint: false,
-      showUserMenu: false
+      showNewHint: false
     };
 
     this.props.dispatch(refreshEnvironments());
@@ -41,40 +39,24 @@ class MainContainer extends Component {
   render() {
     const { environments, user } = this.props;
     return (
-      <div className="MainContainer layout vertical">
-        <div className="Header layout horizontal center">
-          {`${user.username}'s space`}
-          <div className="flex-auto" />
-          <div className="User">
-            <div className="UserAtom layout horizontal center"
-              onClick={() => this.setState({ showUserMenu: true })}>
-              <div className="Avatar">
-                <Icon icon="logo" size="52" color={colors.navyDark} />
-              </div>
-              <div className="Username">{user.username}</div>
-              <Icon icon="plus" size="12" color="white" />
-            </div>
-            {this.state.showUserMenu && 
-              <UserMenu
-                user={user} 
-                onLogout={() => {}}
-                onClose={() => this.setState({ showUserMenu: false })}
-              />
-            }
-          </div>
-        </div>
+      <div className="Space layout vertical">
+        <Header title={`${user.username}'s space`} />
 
         <div className="EnvironmentList layout vertical">
           {Object.keys(environments).map(id => 
             <div key={id} className="EnvironmentItem layout horizontal start">
               <div className="layout horizontal start">
-                <Icon className="Icon" icon="mirror" size="20"/>
-                <div className="Name">{environments[id].name}</div>
+                <Icon className="EnvironmentItemIcon" icon="mirror" size="20"/>
+                <div className="EnvironmentItemName">{environments[id].name}</div>
               </div>
-              <div className="Endpoints layout vertical">
+              <div className="EnvironmentItemEndpoints layout vertical">
                 {environments[id].endpoints.map(url =>
                   <a key={`${id}-${url}`}>{url}</a>
                 )}
+              </div>
+              <div className="flex-auto" />
+              <div className="Buttons">
+                <Button icon="plus" iconSize="20" frameless />
               </div>
             </div>
           )}
@@ -131,10 +113,10 @@ class MainContainer extends Component {
   }
 }
 
-MainContainer.defaultProps = {
+Space.defaultProps = {
 };
 
-MainContainer.propTypes = {
+Space.propTypes = {
   dispatch: PropTypes.func,
   user: PropTypes.object.isRequired,
   environments: PropTypes.object.isRequired
@@ -145,4 +127,4 @@ export default ReactRedux.connect(state => {
     environments: state.environments.byId || {},
     user: state.session.user
   };
-})(MainContainer);
+})(Space);

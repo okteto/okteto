@@ -25,6 +25,7 @@ class Button extends Component {
           light: this.props.light,
           secondary: this.props.secondary,
           frameless: this.props.frameless,
+          captionless: !this.props.children,
           'with-icon': !!this.props.icon
         })}
         disabled={this.props.disabled}
