@@ -17,16 +17,6 @@ const icons = { /* eslint-disable */
     </svg>
   ),
 
-  service: (size, color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 32 32">
-      <g fill={color} fillRule="evenodd">
-        <path className="mass" d="M9.876 20.785a7.771 7.771 0 1 1 12.248-9.57 7.771 7.771 0 0 1-12.248 9.57z"/>
-        <path className="orbit" d="M3.39 25.85C-2.048 18.886-.813 8.831 6.15 3.391c6.963-5.44 17.017-4.207 22.457 2.756a2.667 2.667 0 0 1-4.203 3.283A10.666 10.666 0 0 0 5.34 16.327a10.664 10.664 0 0 0 19.447 5.722 2.667 2.667 0 0 1 4.392 3.023 16.002 16.002 0 0 1-25.788.777z"/>
-        <path className="satellite" d="M26.682 15.411a2.667 2.667 0 1 1 5.294.65 2.667 2.667 0 0 1-5.294-.65z"/>
-      </g>
-    </svg>
-  ),
-
   mirror: (size, color) => (
     <svg xmlns="http://www.w3.org/2000/svg" height={size} viewBox="0 0 49 28">
       <g fill="none" fillRule="nonzero">

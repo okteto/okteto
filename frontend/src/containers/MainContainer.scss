@@ -15,7 +15,7 @@
   .Header {
     min-height: 110px;
     padding: 0 $side-margin;
-    font-size: 36px;
+    font-size: 34px;
     font-weight: 300;
   }
 
@@ -115,6 +115,40 @@
         width: 100%;
         margin-top: 12px;
       }
+    }
+  }
+
+  .User {
+    position: relative;
+
+    .UserAtom {
+      font-size: 20px;
+      cursor: pointer;
+
+      .Avatar {
+        background-color: $green-600;
+        width: 24px;
+        height: 24px;
+        border-radius: 48px;
+        margin-right: 8px;
+        overflow: hidden;
+
+        .Icon {
+          margin-left: -32px;
+          margin-top: -5px;
+        }
+      }
+
+      .Username {
+        margin-top: -4px;
+        margin-right: 8px;
+      }
+    }
+
+    .UserMenu {
+      position: absolute;
+      top: 16px;
+      right: 0;
     }
   }
 }

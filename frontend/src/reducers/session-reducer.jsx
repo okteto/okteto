@@ -1,5 +1,9 @@
 const initialSessionState = {
-  user: {},
+  // user: {},
+  user: {
+    username: 'cindy',
+    email: 'cindy@okteto.com'
+  },
   isAuthenticated: true, // false // Change once Authentication is done.
 };
 

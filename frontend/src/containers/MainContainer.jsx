@@ -3,8 +3,10 @@ import * as ReactRedux from 'react-redux';
 import PropTypes from 'prop-types';
 import * as clipboard from 'clipboard-polyfill';
 import autobind from 'autobind-decorator';
+import colors from 'colors.scss';
 
 import { refreshEnvironments } from 'actions/environments';
+import UserMenu from 'components/UserMenu';
 import Button from '../components/Button';
 import Hint from '../components/Hint';
 import Icon from '../components/Icon';
@@ -19,7 +21,8 @@ class MainContainer extends Component {
     super(props);
 
     this.state = {
-      showNewHint: false
+      showNewHint: false,
+      showUserMenu: false
     };
 
     this.props.dispatch(refreshEnvironments());
@@ -36,12 +39,31 @@ class MainContainer extends Component {
   }
 
   render() {
-    const { environments } = this.props;
+    const { environments, user } = this.props;
     return (
       <div className="MainContainer layout vertical">
         <div className="Header layout horizontal center">
-          space
+          {`${user.username}'s space`}
+          <div className="flex-auto" />
+          <div className="User">
+            <div className="UserAtom layout horizontal center"
+              onClick={() => this.setState({ showUserMenu: true })}>
+              <div className="Avatar">
+                <Icon icon="logo" size="52" color={colors.navyDark} />
+              </div>
+              <div className="Username">{user.username}</div>
+              <Icon icon="plus" size="12" color="white" />
+            </div>
+            {this.state.showUserMenu && 
+              <UserMenu
+                user={user} 
+                onLogout={() => {}}
+                onClose={() => this.setState({ showUserMenu: false })}
+              />
+            }
+          </div>
         </div>
+
         <div className="EnvironmentList layout vertical">
           {Object.keys(environments).map(id => 
             <div key={id}className="EnvironmentItem layout horizontal start">
@@ -55,6 +77,7 @@ class MainContainer extends Component {
             </div>
           )}
         </div>
+
         <div className="ActionBar layout horizontal center">
           <div className="flex-auto"></div>
           <div className="NewButtonContainer">
@@ -111,11 +134,13 @@ MainContainer.defaultProps = {
 
 MainContainer.propTypes = {
   dispatch: PropTypes.func,
+  user: PropTypes.object.isRequired,
   environments: PropTypes.object.isRequired
 };
 
 export default ReactRedux.connect(state => {
   return {
-    environments: state.environments.byId || {}
+    environments: state.environments.byId || {},
+    user: state.session.user
   };
 })(MainContainer);
