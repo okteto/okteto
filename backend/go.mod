@@ -10,6 +10,8 @@ require (
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/golang/groupcache v0.0.0-20160516000752-02826c3e7903 // indirect
 	github.com/golang/protobuf v1.3.1 // indirect
+	github.com/google/go-github v17.0.0+incompatible
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/google/uuid v0.0.0-20171113160352-8c31c18f31ed // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
@@ -26,7 +28,7 @@ require (
 	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/pflag v1.0.1 // indirect
 	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3 // indirect
-	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a // indirect
+	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect

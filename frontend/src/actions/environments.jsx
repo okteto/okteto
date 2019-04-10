@@ -4,7 +4,15 @@ import request from 'common/request';
 import { notify } from 'components/Notification';
 
 const fetchEnvironments = () => {
-  return request(``, { method: 'post', body: JSON.stringify({ query: '{ environments { id,name,endpoints } }' })}, { responseType: 'json' });
+  return request(``, 
+    { 
+      method: 'post', 
+      auth: true,
+      body: JSON.stringify(
+          { query: `{ environments { id,name,endpoints } }` })
+    }, 
+    { responseType: 'json' }
+  );
 };
 
 export const requestEnvironments = () => {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/okteto/app/backend/github"
 	"github.com/okteto/app/backend/graphql"
 	"github.com/okteto/app/backend/log"
 )
@@ -16,6 +17,7 @@ func main() {
 	}
 
 	log.Info("Starting app...")
+	http.Handle("/github/callback", github.AuthHandler())
 	http.Handle("/graphql", graphql.Handler())
 	log.Infof("Server is running at http://0.0.0.0:%s", port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil); err != nil {
