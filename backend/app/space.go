@@ -10,19 +10,18 @@ import (
 	"github.com/okteto/app/backend/k8s/rolebindings"
 	"github.com/okteto/app/backend/k8s/roles"
 	"github.com/okteto/app/backend/k8s/serviceaccounts"
-	"github.com/okteto/app/backend/k8s/spaces"
 	"github.com/okteto/app/backend/model"
 )
 
 //CreateSpace configures a namespace for a given user
 func CreateSpace(user string) (*model.Space, error) {
-	items, err := spaces.List(user)
-	if err != nil {
-		return nil, err
-	}
-	if len(items) > 0 {
-		return items[0], nil
-	}
+	// items, err := spaces.List(user)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if len(items) > 0 {
+	// 	return items[0], nil
+	// }
 
 	c, err := client.Get()
 	if err != nil {
@@ -54,24 +53,29 @@ func CreateSpace(user string) (*model.Space, error) {
 		return nil, err
 	}
 
-	if err := spaces.Create(s); err != nil {
-		return nil, err
-	}
+	// if err := spaces.Create(s); err != nil {
+	// 	return nil, err
+	// }
 
 	return s, nil
 }
 
 //GetCredential returns the credentials of the user for her space
 func GetCredential(user string) (string, error) {
-	spaces, err := spaces.List(user)
-	if err != nil {
-		return "", err
-	}
-	if len(spaces) != 1 {
-		return "", fmt.Errorf("The user has %d spaces, instead of 1", len(spaces))
+	// spaces, err := spaces.List(user)
+	// if err != nil {
+	// 	return "", err
+	// }
+	// if len(spaces) != 1 {
+	// 	return "", fmt.Errorf("The user has %d spaces, instead of 1", len(spaces))
+	// }
+
+	s := &model.Space{
+		Name:    user,
+		Members: []string{user},
 	}
 
-	credential, err := serviceaccounts.GetCredentialConfig(spaces[0])
+	credential, err := serviceaccounts.GetCredentialConfig(s)
 	if err != nil {
 		return "", err
 	}
@@ -81,14 +85,19 @@ func GetCredential(user string) (string, error) {
 
 //ListDevEnvs returns the dev environments for a given user
 func ListDevEnvs(user string) ([]*model.Dev, error) {
-	spaces, err := spaces.List(user)
-	if err != nil {
-		return nil, err
+	// spaces, err := spaces.List(user)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if len(spaces) != 1 {
+	// 	return nil, fmt.Errorf("The user has %d spaces, instead of 1", len(spaces))
+	// }
+	// s := spaces[0]
+
+	s := &model.Space{
+		Name:    user,
+		Members: []string{user},
 	}
-	if len(spaces) != 1 {
-		return nil, fmt.Errorf("The user has %d spaces, instead of 1", len(spaces))
-	}
-	s := spaces[0]
 	c, err := client.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)

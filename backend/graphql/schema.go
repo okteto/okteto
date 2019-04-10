@@ -7,7 +7,6 @@ import (
 	"github.com/okteto/app/backend/app"
 	"github.com/okteto/app/backend/github"
 	"github.com/okteto/app/backend/log"
-	"github.com/okteto/app/backend/model"
 )
 
 var devEnvironmentType = graphql.NewObject(
@@ -126,8 +125,8 @@ var mutationType = graphql.NewObject(
 						return nil, fmt.Errorf("failed to authenticate")
 					}
 
-					s := &model.Space{Name: u.ID, Members: []string{u.ID}}
-					if err := app.CreateSpace(s); err != nil {
+					s, err := app.CreateSpace(u.ID)
+					if err != nil {
 						log.Errorf("failed to create space for %s: %s", s.Name, err)
 						return nil, fmt.Errorf("failed to create your space")
 					}
