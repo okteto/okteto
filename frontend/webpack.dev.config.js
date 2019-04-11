@@ -8,7 +8,7 @@ module.exports = merge({
   devtool: 'source-map',
   devServer: {
     host: '0.0.0.0',
-    port: 9000,
+    port: 8000,
     proxy: {
       '/graphql': 'http://api:8000',
       '/github': 'http://api:8000'
