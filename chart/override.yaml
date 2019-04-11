@@ -4,11 +4,11 @@ githubAuth:
 
 images:
   api:
-    repository: nginx
-    tag: alpine
+    repository: gcr.io/free-tier-219708/api
+    tag: latest
   frontend:
-    repository: nginx
-    tag: alpine
+    repository: gcr.io/free-tier-219708/frontend
+    tag: latest
   pullPolicy: Always
 
 clusterPublicEndpoint: "35.204.232.187"

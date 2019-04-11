@@ -12,8 +12,7 @@ module.exports = {
     './index.jsx'
   ],
   output: {
-    filename: 'app.[hash].js',
-    path: '/pod-data',
+    filename: 'app.[hash].js'
   },
   resolve: {
     extensions: ['.js', '.jsx', '.scss'],
