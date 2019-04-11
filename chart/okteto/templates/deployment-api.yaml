@@ -34,10 +34,7 @@ spec:
               protocol: TCP
           env:
             - name: GITHUB_CLIENTID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "okteto.fullname" . }}
-                  key: githubClientId
+              value: {{ .Values.githubAuth.clientId }}
             - name: GITHUB_CLIENTSECRET
               valueFrom:
                 secretKeyRef:
