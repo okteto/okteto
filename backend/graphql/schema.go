@@ -70,6 +70,11 @@ var queryType = graphql.NewObject(
 				Type:        graphql.NewList(devEnvironmentType),
 				Description: "Get environment list",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					_, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
 					return devEnvironments, nil
 				},
 			},
@@ -82,6 +87,11 @@ var queryType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					_, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
 					id := params.Args["id"].(string)
 					for _, d := range devEnvironments {
 						if d.ID == id {
@@ -95,7 +105,12 @@ var queryType = graphql.NewObject(
 				Type:        credentialsType,
 				Description: "Get credentials of the space",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					c, err := app.GetCredential("rberrelleza")
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
+					c, err := app.GetCredential(u)
 					if err != nil {
 						log.Errorf("failed to get credentials: %s", err)
 						return nil, fmt.Errorf("failed to get credentials")
@@ -151,6 +166,11 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
 					d := &model.Dev{
 						Name:    params.Args["name"].(string),
 						Image:   params.Args["image"].(string),
@@ -158,7 +178,7 @@ var mutationType = graphql.NewObject(
 					}
 
 					s := &model.Space{
-						Name: "rberrelleza",
+						Name: u,
 					}
 
 					if err := app.DevModeOn(d, s); err != nil {
@@ -179,12 +199,17 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
 					d := &model.Dev{
 						Name: params.Args["name"].(string),
 					}
 
 					s := &model.Space{
-						Name: "rberrelleza",
+						Name: u,
 					}
 
 					if err := app.DevModeOff(d, s, false); err != nil {

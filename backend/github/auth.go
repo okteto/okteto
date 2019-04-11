@@ -33,7 +33,6 @@ func AuthHandler() http.Handler {
 
 // Auth authenticates a github user based in the code
 func Auth(code string) (*model.User, error) {
-	log.Infof(code)
 	t, err := oauth2Config.Exchange(oauth2.NoContext, code)
 	if err != nil {
 		return nil, err
