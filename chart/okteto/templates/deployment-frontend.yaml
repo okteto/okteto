@@ -26,5 +26,8 @@ spec:
             - name: http
               containerPort: {{ .Values.services.frontend.port }}
               protocol: TCP
+          env:
+            - name: GITHUB_CLIENTID
+              value: {{ .Values.githubAuth.clientId }}
           resources:
 {{ toYaml .Values.resources.frontend | indent 12 }}
