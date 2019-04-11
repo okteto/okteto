@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/google/go-github/github"
 	"github.com/okteto/app/backend/k8s/users"
@@ -15,8 +16,8 @@ import (
 )
 
 var oauth2Config = &oauth2.Config{
-	ClientID:     "47867be52b46a2d9d302",
-	ClientSecret: "9afa94d61dfac781d18ecc5c49cdfccb61d024a5",
+	ClientID:     os.Getenv("GITHUB_CLIENTID"),
+	ClientSecret: os.Getenv("GITHUB_SECRETID"),
 	RedirectURL:  "https://cloud.usa.okteto.net/github/callback",
 	Endpoint:     githubOAuth.Endpoint,
 }
