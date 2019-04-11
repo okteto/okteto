@@ -70,35 +70,18 @@ var queryType = graphql.NewObject(
 				Type:        graphql.NewList(devEnvironmentType),
 				Description: "Get environment list",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					_, err := validateToken(params.Context)
+					u, err := validateToken(params.Context)
 					if err != nil {
 						return nil, err
 					}
 
-					return devEnvironments, nil
-				},
-			},
-			"environmentByID": &graphql.Field{
-				Type:        devEnvironmentType,
-				Description: "Get environment by ID",
-				Args: graphql.FieldConfigArgument{
-					"id": &graphql.ArgumentConfig{
-						Type: graphql.NewNonNull(graphql.ID),
-					},
-				},
-				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					_, err := validateToken(params.Context)
+					l, err := app.ListDevEnvs(u)
 					if err != nil {
-						return nil, err
+						log.Errorf("failed to get dev envs for %s", u)
+						return nil, fmt.Errorf("failed to get your environments")
 					}
 
-					id := params.Args["id"].(string)
-					for _, d := range devEnvironments {
-						if d.ID == id {
-							return d, nil
-						}
-					}
-					return nil, fmt.Errorf("%s not found", id)
+					return l, nil
 				},
 			},
 			"credentials": &graphql.Field{
