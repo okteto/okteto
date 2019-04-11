@@ -7,6 +7,8 @@ images:
     tag: alpine
   pullPolicy: Always
 
+clusterPublicEndpoint: "35.204.232.187"
+
 ingress:
   enabled: true
   annotations:

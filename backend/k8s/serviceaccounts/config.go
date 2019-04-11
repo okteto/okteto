@@ -3,6 +3,7 @@ package serviceaccounts
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	"github.com/okteto/app/backend/model"
 )
@@ -30,7 +31,7 @@ users:
 )
 
 func getConfigB64(s *model.Space, caCert, token string) string {
-	endpoint := "35.204.232.187" //TODO: set envvar
+	endpoint := os.Getenv("CLUSTER_PUBLIC_ENDPOINT")
 	encodedCaCert := base64.StdEncoding.EncodeToString([]byte(caCert))
 	configValue := fmt.Sprintf(
 		configTemplate,
