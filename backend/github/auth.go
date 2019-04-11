@@ -25,14 +25,6 @@ var oauth2Config = &oauth2.Config{
 func AuthHandler() http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		// TODO: why is this handler invoked on login?
-		//code := r.URL.Query().Get("code")
-		//log.Infof("auth with code: %s", code)
-		//_, err := Auth(code)
-		//if err != nil {
-		//	log.Errorf("error during authentication: %s", err)
-		//	w.WriteHeader(http.StatusUnauthorized)
-		//	return
-		//}
 
 		w.WriteHeader(http.StatusOK)
 		return
