@@ -1,5 +1,6 @@
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "okteto.fullname" . -}}
+{{- $root := . -}}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -32,15 +33,15 @@ spec:
           - path: "/github"
             backend:
               serviceName: api
-              servicePort: 8000
+              servicePort: {{ $root.Values.services.api.port }}
           - path: "/graphql"
             backend:
               serviceName: api
-              servicePort: 8000
+              servicePort: {{ $root.Values.services.api.port }}
           - path: "/"
             backend:
               serviceName: frontend
-              servicePort: 8000
+              servicePort: {{ $root.Values.services.frontend.port }}
           
   {{- end }}
 {{- end }}
