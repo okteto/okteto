@@ -7,7 +7,12 @@ import (
 	"github.com/okteto/app/backend/app"
 	"github.com/okteto/app/backend/github"
 	"github.com/okteto/app/backend/log"
+	"github.com/okteto/app/backend/model"
 )
+
+type credential struct {
+	Config string
+}
 
 var devEnvironmentType = graphql.NewObject(
 	graphql.ObjectConfig{
@@ -26,27 +31,12 @@ var devEnvironmentType = graphql.NewObject(
 	},
 )
 
-var userType = graphql.NewObject(
+var credentialsType = graphql.NewObject(
 	graphql.ObjectConfig{
-		Name: "User",
+		Name: "Credential",
 		Fields: graphql.Fields{
-			"id": &graphql.Field{
-				Type: graphql.ID,
-			},
-			"email": &graphql.Field{
+			"config": &graphql.Field{
 				Type: graphql.String,
-			},
-			"name": &graphql.Field{
-				Type: graphql.String,
-			},
-			"githubUserId": &graphql.Field{
-				Type: graphql.String,
-			},
-			"createdAt": &graphql.Field{
-				Type: graphql.DateTime,
-			},
-			"updatedAt": &graphql.Field{
-				Type: graphql.DateTime,
 			},
 		},
 	},
@@ -80,25 +70,36 @@ var queryType = graphql.NewObject(
 				Type:        graphql.NewList(devEnvironmentType),
 				Description: "Get environment list",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					return devEnvironments, nil
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
+					l, err := app.ListDevEnvs(u)
+					if err != nil {
+						log.Errorf("failed to get dev envs for %s", u)
+						return nil, fmt.Errorf("failed to get your environments")
+					}
+
+					return l, nil
 				},
 			},
-			"environmentByID": &graphql.Field{
-				Type:        devEnvironmentType,
-				Description: "Get environment by ID",
-				Args: graphql.FieldConfigArgument{
-					"id": &graphql.ArgumentConfig{
-						Type: graphql.NewNonNull(graphql.ID),
-					},
-				},
+			"credentials": &graphql.Field{
+				Type:        credentialsType,
+				Description: "Get credentials of the space",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					id := params.Args["id"].(string)
-					for _, d := range devEnvironments {
-						if d.ID == id {
-							return d, nil
-						}
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
 					}
-					return nil, fmt.Errorf("%s not found", id)
+
+					c, err := app.GetCredential(u)
+					if err != nil {
+						log.Errorf("failed to get credentials: %s", err)
+						return nil, fmt.Errorf("failed to get credentials")
+					}
+
+					return credential{Config: c}, nil
 				},
 			},
 		},
@@ -125,15 +126,82 @@ var mutationType = graphql.NewObject(
 						return nil, fmt.Errorf("failed to authenticate")
 					}
 
-					s, err := app.CreateSpace(u.ID)
-					if err != nil {
-						log.Errorf("failed to create space for %s: %s", s.Name, err)
+					if _, err := app.CreateSpace(u.ID); err != nil {
+						log.Errorf("failed to create space for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to create your space")
 					}
 
-					log.Infof("space created for %s", s.Name)
-
 					return u, nil
+				},
+			},
+			"up": &graphql.Field{
+				Type:        devEnvironmentType,
+				Description: "Create dev mode",
+				Args: graphql.FieldConfigArgument{
+					"name": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"image": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"workdir": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
+					d := &model.Dev{
+						Name:    params.Args["name"].(string),
+						Image:   params.Args["image"].(string),
+						WorkDir: params.Args["workdir"].(string),
+					}
+
+					s := &model.Space{
+						Name: u,
+					}
+
+					if err := app.DevModeOn(d, s); err != nil {
+						log.Errorf("failed to enable dev mode: %s", err)
+						return nil, fmt.Errorf("failed to enable dev mode")
+					}
+
+					return d, nil
+
+				},
+			},
+			"down": &graphql.Field{
+				Type:        devEnvironmentType,
+				Description: "Delete dev space",
+				Args: graphql.FieldConfigArgument{
+					"name": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
+					d := &model.Dev{
+						Name: params.Args["name"].(string),
+					}
+
+					s := &model.Space{
+						Name: u,
+					}
+
+					if err := app.DevModeOff(d, s, false); err != nil {
+						log.Errorf("failed to enable dev mode: %s", err)
+						return nil, fmt.Errorf("failed to enable dev mode")
+					}
+
+					return d, nil
+
 				},
 			},
 		},

@@ -25,16 +25,9 @@ type Dev struct {
 	Image       string   `json:"image" yaml:"image"`
 	Environment []EnvVar `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
-	WorkDir     *Mount   `json:"workdir" yaml:"workdir"`
+	WorkDir     string   `json:"workdir" yaml:"workdir"`
 	Services    []string `json:"services,omitempty" yaml:"services,omitempty"`
 	Endpoints   []string `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
-}
-
-//Mount represents how the local filesystem is mounted
-type Mount struct {
-	Source string `json:"source,omitempty" yaml:"source,omitempty"`
-	Path   string `json:"path" yaml:"path,omitempty"`
-	Size   string `json:"size,omitempty" yaml:"size,omitempty"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
@@ -45,32 +38,17 @@ type EnvVar struct {
 
 func read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
-		WorkDir:     &Mount{},
+		WorkDir:     "/app",
 		Image:       "okteto/desk:0.1.2",
 		Environment: make([]EnvVar, 0),
-		Command:     make([]string, 0),
+		Command:     []string{"sh"},
 		Services:    make([]string, 0),
 	}
 	if err := yaml.Unmarshal(bytes, dev); err != nil {
 		return nil, err
 	}
-	if err := dev.setDefaults(); err != nil {
-		return nil, err
-	}
-	return dev, nil
-}
 
-func (dev *Dev) setDefaults() error {
-	if len(dev.Command) == 0 {
-		dev.Command = []string{"sh"}
-	}
-	if dev.WorkDir.Path == "" {
-		dev.WorkDir.Path = "/okteto"
-	}
-	if dev.WorkDir.Size == "" {
-		dev.WorkDir.Size = "10Gi"
-	}
-	return nil
+	return dev, nil
 }
 
 func (dev *Dev) validate() error {
