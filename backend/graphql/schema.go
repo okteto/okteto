@@ -10,6 +10,10 @@ import (
 	"github.com/okteto/app/backend/model"
 )
 
+type credential struct {
+	Config string
+}
+
 var devEnvironmentType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "DevEnvironment",
@@ -31,7 +35,7 @@ var credentialsType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Credential",
 		Fields: graphql.Fields{
-			"credential": &graphql.Field{
+			"config": &graphql.Field{
 				Type: graphql.String,
 			},
 		},
@@ -97,7 +101,7 @@ var queryType = graphql.NewObject(
 						return nil, fmt.Errorf("failed to get credentials")
 					}
 
-					return c, nil
+					return credential{Config: c}, nil
 				},
 			},
 		},
@@ -134,7 +138,7 @@ var mutationType = graphql.NewObject(
 			},
 			"up": &graphql.Field{
 				Type:        devEnvironmentType,
-				Description: "Activate dev mode",
+				Description: "Create dev mode",
 				Args: graphql.FieldConfigArgument{
 					"name": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
@@ -158,6 +162,32 @@ var mutationType = graphql.NewObject(
 					}
 
 					if err := app.DevModeOn(d, s); err != nil {
+						log.Errorf("failed to enable dev mode: %s", err)
+						return nil, fmt.Errorf("failed to enable dev mode")
+					}
+
+					return d, nil
+
+				},
+			},
+			"down": &graphql.Field{
+				Type:        devEnvironmentType,
+				Description: "Delete dev space",
+				Args: graphql.FieldConfigArgument{
+					"name": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					d := &model.Dev{
+						Name: params.Args["name"].(string),
+					}
+
+					s := &model.Space{
+						Name: "rberrelleza",
+					}
+
+					if err := app.DevModeOff(d, s, false); err != nil {
 						log.Errorf("failed to enable dev mode: %s", err)
 						return nil, fmt.Errorf("failed to enable dev mode")
 					}

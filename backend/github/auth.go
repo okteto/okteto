@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/google/go-github/github"
+	"github.com/okteto/app/backend/k8s/users"
 	"github.com/okteto/app/backend/log"
 	"github.com/okteto/app/backend/model"
 
@@ -63,5 +64,12 @@ func Auth(code string) (*model.User, error) {
 		email = *githubUser.Email
 	}
 
-	return model.NewUser(*githubUser.Login, email, name), nil
+	u := model.NewUser(*githubUser.Login, email, name)
+	u, err = users.FindOrCreate(u)
+	if err != nil {
+		log.Errorf("failed to create user: %s", err)
+		return nil, fmt.Errorf("failed to create user")
+	}
+
+	return u, nil
 }

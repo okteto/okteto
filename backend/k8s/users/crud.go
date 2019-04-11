@@ -1,11 +1,13 @@
-package spaces
+package users
 
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/okteto/app/backend/k8s/users/client"
 	"github.com/okteto/app/backend/k8s/users/v1alpha1"
+	"github.com/okteto/app/backend/log"
 	"github.com/okteto/app/backend/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -29,6 +31,31 @@ func getClient() (*client.UserV1Alpha1Client, error) {
 		namespace = string(b)
 	}
 	return c, nil
+}
+
+// GetByID gets a user by her ID
+func GetByID(id string) (*model.User, error) {
+	uClient, err := getClient()
+	if err != nil {
+		return nil, fmt.Errorf("error getting k8s client: %s", err)
+	}
+
+	u, err := uClient.Users(namespace).Get(id, metav1.GetOptions{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	token, ok := u.GetObjectMeta().GetLabels()["token"]
+	if !ok {
+		return nil, fmt.Errorf("user %s doesn't have a token", id)
+	}
+
+	return &model.User{
+		ID:    u.Name,
+		Token: token,
+		Email: u.Email,
+	}, nil
 }
 
 // GetByToken gets a user by her token
@@ -63,12 +90,12 @@ func GetByToken(token string) (*model.User, error) {
 	}, nil
 }
 
-// Create creates a user
-func Create(u *model.User) error {
+func create(u *model.User) error {
 	uClient, err := getClient()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}
+
 	uCRD := v1alpha1.User{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   u.ID,
@@ -76,8 +103,30 @@ func Create(u *model.User) error {
 		},
 		Email: u.Email,
 	}
+
 	_, err = uClient.Users(namespace).Create(&uCRD)
 	return err
+
+}
+
+// FindOrCreate returns a user or creates it if it doesn't exists
+func FindOrCreate(u *model.User) (*model.User, error) {
+	found, err := GetByID(u.ID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			err = create(u)
+
+			if err == nil {
+				log.Infof("created %s", u.ID)
+			}
+
+			return u, err
+		}
+
+		return nil, err
+	}
+
+	return found, nil
 }
 
 // Delete deletes a user
