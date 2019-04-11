@@ -1,0 +1,6 @@
+okteto.yml
+.stfolder
+.stignore
+backend
+gin-bin
+Dockerfile

@@ -26,7 +26,7 @@ services:
   api:
     port: 8000
   frontend:
-    port: 9000
+    port: 8000
 
 ingress:
   enabled: false
