@@ -1,3 +1,7 @@
+githubAuth:
+  clientId: "47867be52b46a2d9d302"
+  clientSecret: "9afa94d61dfac781d18ecc5c49cdfccb61d024a5"
+
 images:
   api:
     repository: nginx

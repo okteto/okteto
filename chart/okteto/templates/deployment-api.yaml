@@ -17,6 +17,8 @@ spec:
       labels:
         app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-api"
         app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ include "okteto.fullname" . }}
       containers:
@@ -30,5 +32,16 @@ spec:
             - name: http
               containerPort: {{ .Values.services.api.port }}
               protocol: TCP
+          env:
+            - name: GITHUB_CLIENTID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "okteto.fullname" . }}
+                  key: githubClientId
+            - name: GITHUB_CLIENTSECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "okteto.fullname" . }}
+                  key: githubClientSecret
           resources:
 {{ toYaml .Values.resources.api | indent 12 }}

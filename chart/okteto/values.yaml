@@ -2,6 +2,11 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# In order to use github authentication you need to create an OAuth App and set the client and secret here
+githubAuth:
+  clientId: ""
+  clientSecret: ""
+
 images:
   api:
     repository: okteto/api
