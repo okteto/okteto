@@ -25,14 +25,13 @@ spec:
         - name: api
           image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"
           imagePullPolicy: {{ .Values.images.pullPolicy }}
-          env:
-          - name: CLUSTER_PUBLIC_ENDPOINT
-            value: "{{ .Values.clusterPublicEndpoint }}"
           ports:
             - name: http
               containerPort: {{ .Values.services.api.port }}
               protocol: TCP
           env:
+            - name: CLUSTER_PUBLIC_ENDPOINT
+              value: "{{ .Values.clusterPublicEndpoint }}"
             - name: GITHUB_CLIENTID
               value: {{ .Values.githubAuth.clientId }}
             - name: GITHUB_CLIENTSECRET

@@ -12,8 +12,10 @@ import (
 	"github.com/okteto/app/cli/pkg/config"
 	"github.com/okteto/app/cli/pkg/errors"
 	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
+	"github.com/okteto/app/cli/pkg/k8s/pods"
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/app/cli/pkg/okteto"
 
 	"github.com/okteto/app/cli/pkg/k8s/forward"
 	"github.com/okteto/app/cli/pkg/syncthing"
@@ -128,7 +130,7 @@ func (up *UpContext) Activate(devPath string) {
 			log.Green("Reconnected to your cluster.")
 		}
 
-		args := []string{"exec", "--"}
+		args := []string{"exec", "--pod", up.Pod, "--"}
 		args = append(args, up.Dev.Command...)
 		cmd := exec.Command(config.GetBinaryFullPath(), args...)
 		cmd.Stdin = os.Stdin
@@ -197,22 +199,25 @@ func (up *UpContext) WaitUntilExitOrInterrupt(cmd *exec.Cmd) error {
 // Execute runs all the logic for the up command
 func (up *UpContext) Execute(isRetry bool) error {
 	var err error
-	up.Client, up.RestConfig, err = k8Client.Get()
+	var namespace string
+	up.Client, up.RestConfig, namespace, err = k8Client.Get()
 	if err != nil {
 		return err
 	}
 
-	namespace := "oktako"
 	up.Sy, err = syncthing.New(up.Dev, namespace)
 	if err != nil {
 		return err
 	}
 
-	// if err := deployments.DevModeOn(up.Deployment, devList, up.Client); err != nil {
-	// 	return err
-	// }
+	if err := okteto.DevModeOn(up.Dev); err != nil {
+		return err
+	}
 
-	up.Pod = "test-5f6b55cd84-n9lll"
+	up.Pod, err = pods.GetDevPod(up.Context, up.Dev, namespace, up.Client)
+	if err != nil {
+		return err
+	}
 
 	if err := up.Sy.Run(up.Context, up.WG); err != nil {
 		return err

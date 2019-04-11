@@ -18,6 +18,7 @@ clusters:
 contexts:
 - context:
     cluster: okteto-space
+    namespace: %s
     user: okteto-user
   name: okteto-context
 current-context: okteto-context
@@ -37,6 +38,7 @@ func getConfigB64(s *model.Space, caCert, token string) string {
 		configTemplate,
 		encodedCaCert,
 		endpoint,
+		s.Name,
 		token,
 	)
 	encoded := base64.StdEncoding.EncodeToString([]byte(configValue))

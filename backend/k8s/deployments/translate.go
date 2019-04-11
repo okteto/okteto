@@ -48,7 +48,8 @@ func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": dev.Name,
+						"app":       dev.Name,
+						oktetoLabel: dev.Name,
 					},
 				},
 				Spec: apiv1.PodSpec{

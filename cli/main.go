@@ -21,8 +21,8 @@ var VersionString string
 
 func init() {
 	config.SetConfig(&config.Config{
-		FolderName:       ".stereo",
-		ManifestFileName: "stereo.yml",
+		FolderName:       ".okteto",
+		ManifestFileName: "okteto.yml",
 	})
 }
 
