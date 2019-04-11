@@ -40,7 +40,7 @@ spec:
           - path: "/"
             backend:
               serviceName: frontend
-              servicePort: 9000
+              servicePort: 8000
           
   {{- end }}
 {{- end }}
