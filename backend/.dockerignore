@@ -3,3 +3,4 @@ okteto.yml
 .stignore
 backend
 gin-bin
+Dockerfile
