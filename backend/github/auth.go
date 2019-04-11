@@ -17,7 +17,7 @@ import (
 
 var oauth2Config = &oauth2.Config{
 	ClientID:     os.Getenv("GITHUB_CLIENTID"),
-	ClientSecret: os.Getenv("GITHUB_SECRETID"),
+	ClientSecret: os.Getenv("GITHUB_CLIENTSECRET"),
 	RedirectURL:  "https://cloud.usa.okteto.net/github/callback",
 	Endpoint:     githubOAuth.Endpoint,
 }
