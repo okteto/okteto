@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -77,7 +77,7 @@ func GetHome() string {
 	home = filepath.Join(home, folder)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
-		fmt.Printf("failed to create the home directory: %s\n", err)
+		log.Fatalf("failed to create the home directory: %s\n", err)
 	}
 
 	return home

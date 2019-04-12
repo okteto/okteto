@@ -44,11 +44,13 @@ func RunDatabase(name string) error {
 	progress.Suffix = " Creating your cloud database..."
 	progress.Start()
 
-	if err := okteto.CreateDatabase(name); err != nil {
-		progress.Stop()
+	err := okteto.CreateDatabase(name)
+	progress.Stop()
+
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Your '%s' instance is ready", name)
-	progress.Stop()
+
+	fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Your '%s' instance is ready", name))
 	return nil
 }

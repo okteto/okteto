@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	"math/rand"
 
+	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/okteto"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
@@ -78,7 +78,8 @@ func Login() *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Logged in as %s\n", user)
+			fmt.Printf("%s %s", log.SuccessSymbol, log.GreenString("Logged in as %s", user))
+			fmt.Println()
 			return nil
 		},
 	}

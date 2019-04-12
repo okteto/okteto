@@ -130,6 +130,8 @@ func (up *UpContext) Activate(devPath string) {
 			log.Green("Reconnected to your cluster.")
 		}
 
+		fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Your environment is ready"))
+		fmt.Println()
 		args := []string{"exec", "--pod", up.Pod, "--"}
 		args = append(args, up.Dev.Command...)
 		cmd := exec.Command(config.GetBinaryFullPath(), args...)

@@ -58,7 +58,8 @@ func main() {
 	root.AddCommand(cmd.Login())
 
 	if err := root.Execute(); err != nil {
-		log.Errorf(err.Error())
+		fmt.Printf("%s %s", log.ErrorSymbol, log.RedString(err.Error()))
+		fmt.Println()
 		os.Exit(1)
 	}
 }

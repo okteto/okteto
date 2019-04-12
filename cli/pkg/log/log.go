@@ -76,6 +76,11 @@ func Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 }
 
+// Fatal writes a fatal-level log
+func Fatal(args ...interface{}) {
+	log.out.Fatal(args...)
+}
+
 // Error writes a error-level log
 func Error(args ...interface{}) {
 	log.out.Error(args...)
