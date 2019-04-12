@@ -9,6 +9,15 @@
   grid-template-rows: 1fr;
   height: 100vh;
 
+  .EmptySpace {
+    position: relative;
+    
+    h2 {
+      font-size: 28px;
+      margin-top: 12px;
+    }
+  }
+
   .EnvironmentList {
     .EnvironmentItem {
       position: relative;
@@ -136,41 +145,62 @@
     user-select: text;
     text-align: left;
     font-size: 16px;
+    padding: 32px;
 
-    .HintNewContainer {
-      padding: 12px 8px;
+    .step {
+      margin-top: 32px;
 
-      h1 {
-        margin-bottom: 8px;
+      .number {
+        color: $green-400;
+        font-weight: 600;
         font-size: 32px;
-        line-height: normal;
+      }
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: normal;
+    }
+
+    p {
+      margin-bottom: 12px;
+      font-size: 17px;
+    }
+
+    code {
+      cursor: text;
+      font-family: $code-font;
+      background-color: $black;
+      padding: 10px 14px;
+      color: $white;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 3px;
+      font-weight: normal;
+      font-size: 20px;
+      line-height: 22px;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      white-space: nowrap;
+      overflow: hidden;
+
+      &.cli:before {
+        user-select: none;
+        content: '$';
+        padding-right: 6px;
+        color: $green-400;
       }
 
-      code {
-        cursor: text;
-        margin-top: 12px;
-        font-family: $code-font;
-        background-color: $black;
-        padding: 12px 18px;
-        color: $white;
-        width: 100%;
-        box-sizing: border-box;
-        border-radius: 3px;
-        font-weight: normal;
-        font-size: 24px;
-
-        &.cli:before {
-          user-select: none;
-          content: '$';
-          padding-right: 6px;
-          color: $green-400;
-        }
+      &.cli-okteto:before {
+        content: 'okteto>';
       }
+    }
 
-      .hint-link-buttons {
-        width: 100%;
-        margin-top: 12px;
-      }
+    .ClipboardButton {
+      padding: 0 10px;
+      margin-left: 0;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
     }
   }
 }

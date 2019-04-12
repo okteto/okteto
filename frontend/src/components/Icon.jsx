@@ -20,13 +20,32 @@ const icons = { /* eslint-disable */
     </svg>
   ),
 
-  spaceship: (size, color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 72 75">
-      <g fill={color} fillRule="nonzero">
-        <path d="M67 26a3 3 0 0 0-3-3H52v2h12a1 1 0 0 1 1 1v41H7V26a1 1 0 0 1 1-1h12v-2H8a3 3 0 0 0-3 3v41H0v5a3 3 0 0 0 3 3h66a3 3 0 0 0 3-3v-5h-5V26zm3 43v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3h31v1h6v-1h31z"/>
-        <path d="M13 47h2v2h-2zM50 53h2v2h-2zM19 53h2v2h-2zM59 60h2v2h-2zM56 46h2v2h-2zM11 60h2v2h-2zM34 5h4v2h-4z"/>
-        <path d="M13 38h2v3h6v-3h2v3h6v-3h1v6h5v2h2v-2h5v-6h1v3h6v-3h2v3h6v-3h2v-6L42 21.75V7c0-3.24-2.62-7-6-7s-6 3.76-6 7v14.75L13 32v6zm34 1h-2v-1h2v1zm8 0h-2v-1h2v1zM42 24.09L56.84 33H42v-8.91zM42 35h15v1H42v-1zm-2 7h-3v-3h3v3zM32 7c0-2.25 1.85-5 4-5s4 2.75 4 5v30h-3v-3h-2v3h-3V7zm0 32h3v3h-3v-3zm-13 0h-2v-1h2v1zm8 0h-2v-1h2v1zm3-14.91V33H15.16L30 24.09zM15 35h15v1H15v-1zM27 55h2v6h-2zM31 54h2v8h-2zM43 56h2v6h-2zM39 50h2v9h-2zM35 51h2v5h-2zM35 58h2v5h-2zM43 51h2v3h-2zM27 50h2v3h-2z"/>
-        <path d="M27 43h2v5h-2zM43 46h2v3h-2zM31 46h2v5h-2z"/>
+  emptySpace: (size, color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" height={size} viewBox="0 0 158 210">
+      <defs>
+        <linearGradient id="a" x1="73.402%" x2="63.781%" y1="42.277%" y2="50%">
+          <stop offset="0%" stopColor="#00EAE7" stopOpacity=".185"/>
+          <stop offset="100%" stopColor="#00D1CA" stopOpacity=".074"/>
+        </linearGradient>
+        <linearGradient id="b" x1="50%" x2="50%" y1="50%" y2="14.818%">
+          <stop offset="0%" stopColor="#00EAE7" stopOpacity="0"/>
+          <stop offset="100%" stopColor="#00D1CA" stopOpacity=".092"/>
+        </linearGradient>
+        <linearGradient id="c" x1="35.755%" x2="58.583%" y1="69.583%" y2="5.113%">
+          <stop offset="0%" stopColor="#00EAE7" stopOpacity=".26"/>
+          <stop offset="100%" stopColor="#00D1CA" stopOpacity=".074"/>
+        </linearGradient>
+        <linearGradient id="d" x1="59.702%" x2="51.297%" y1="12.625%" y2="45.45%">
+          <stop offset="0%" stopColor="#00EAE7" stopOpacity=".26"/>
+          <stop offset="100%" stopColor="#00D1CA" stopOpacity=".074"/>
+        </linearGradient>
+      </defs>
+      <g fill="none" fillRule="nonzero" opacity=".331">
+        <path fill="#000" fillOpacity=".565" d="M78.962 123.824l78.962 43.05-78.962 43.05L0 166.874z" opacity=".49"/>
+        <path fill="url(#a)" d="M79.883 0l76.2 41.653-76.2 41.654-76.2-41.654z"/>
+        <path fill="url(#b)" d="M79.883 101.48l76.2 41.653-76.2 41.654-76.2-41.654z"/>
+        <path fill="url(#c)" d="M3.823 143.044V41.78l76.02 41.52-.302 100.9z"/>
+        <path fill="url(#d)" d="M156.003 41.745L79.87 83.257l-.484 101.125 76.617-41.467z"/>
       </g>
     </svg>
   ),
