@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/okteto/app/cli/pkg/config"
 	"github.com/okteto/app/cli/pkg/k8s/exec"
 
 	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
@@ -17,8 +16,9 @@ import (
 func Exec() *cobra.Command {
 	var pod string
 	cmd := &cobra.Command{
-		Use:   "exec COMMAND",
-		Short: "Execute a command in the cloud dev environment",
+		Use:    "exec COMMAND",
+		Hidden: true,
+		Short:  "Execute a command in the cloud dev environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := executeExec(pod, args)
 			return err
@@ -31,7 +31,7 @@ func Exec() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&pod, "pod", "p", config.ManifestFileName(), "pod where it is executed")
+	cmd.Flags().StringVarP(&pod, "pod", "p", "", "pod where it is executed")
 	return cmd
 }
 

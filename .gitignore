@@ -11,5 +11,5 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-chart/override.yaml
+chart/override*.yaml
 cli/okteto

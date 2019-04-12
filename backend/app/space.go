@@ -119,3 +119,16 @@ func ListDevEnvs(user string) ([]*model.Dev, error) {
 	}
 	return result, nil
 }
+
+// ListDatabases returns the deployed DBs for u
+func ListDatabases(u string) ([]model.DB, error) {
+	return []model.DB{}, nil
+}
+
+func CreateDatabase(u string, n string) (*model.DB, error) {
+	return &model.DB{}, nil
+}
+
+func DeleteDatabase(u string, n string) (*model.DB, error) {
+	return &model.DB{}, nil
+}

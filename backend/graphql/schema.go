@@ -62,6 +62,23 @@ var authenticatedUserType = graphql.NewObject(
 	},
 )
 
+var databaseType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "Database",
+		Fields: graphql.Fields{
+			"id": &graphql.Field{
+				Type: graphql.ID,
+			},
+			"name": &graphql.Field{
+				Type: graphql.String,
+			},
+			"endpoint": &graphql.Field{
+				Type: graphql.String,
+			},
+		},
+	},
+)
+
 var queryType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Query",
@@ -100,6 +117,24 @@ var queryType = graphql.NewObject(
 					}
 
 					return credential{Config: c}, nil
+				},
+			},
+			"databases": &graphql.Field{
+				Type:        graphql.NewList(databaseType),
+				Description: "Get databases of the space",
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
+					d, err := app.ListDatabases(u)
+					if err != nil {
+						log.Errorf("failed to get databases for %s", u)
+						return nil, fmt.Errorf("failed to get your databases")
+					}
+
+					return d, nil
 				},
 			},
 		},
@@ -200,6 +235,56 @@ var mutationType = graphql.NewObject(
 
 					return d, nil
 
+				},
+			},
+			"createDatabase": &graphql.Field{
+				Type:        databaseType,
+				Description: "Create a database",
+				Args: graphql.FieldConfigArgument{
+					"name": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
+					name := params.Args["name"].(string)
+
+					d, err := app.CreateDatabase(u, name)
+					if err != nil {
+						log.Errorf("failed to create database for %s: %s", u, err)
+						return nil, fmt.Errorf("failed to create your database")
+					}
+
+					return d, nil
+				},
+			},
+			"deleteDatabase": &graphql.Field{
+				Type:        databaseType,
+				Description: "Delete a database",
+				Args: graphql.FieldConfigArgument{
+					"name": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
+					name := params.Args["name"].(string)
+
+					d, err := app.DeleteDatabase(u, name)
+					if err != nil {
+						log.Errorf("failed to delete database for %s: %s", u, err)
+						return nil, fmt.Errorf("failed to delete your database")
+					}
+
+					return d, nil
 				},
 			},
 		},
