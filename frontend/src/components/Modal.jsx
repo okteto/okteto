@@ -25,7 +25,9 @@ class Modal extends Component {
       minHeight: this.props.height ? `${this.props.height}px` : 'auto',
       width: `${this.props.width}px`,
       marginLeft: `-${this.props.width/2}px`,
-      padding: '20px',
+      padding: '24px 32px',
+      fontSize: '18px',
+      lineHeight: 'normal',
       zIndex: 99999999
     };
 
@@ -35,14 +37,15 @@ class Modal extends Component {
     };
 
     const titleStyle = {
-      fontSize: '20px',
+      fontSize: '22px',
+      fontWeight: '600',
       color: '#171B22',
-      marginBottom: '32px'
+      marginBottom: '24px'
     };
 
     const closeButtonStyle = {
-      top: '15px',
-      right: '20px',
+      top: '8px',
+      right: '24px',
       textDecoration: 'none'
     };
 
@@ -66,7 +69,7 @@ class Modal extends Component {
 }
 
 Modal.defaultProps = {
-  width: 200
+  width: 250
 };
 
 Modal.propTypes = {

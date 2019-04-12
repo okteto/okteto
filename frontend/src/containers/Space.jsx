@@ -5,11 +5,12 @@ import * as clipboard from 'clipboard-polyfill';
 import autobind from 'autobind-decorator';
 
 import { refreshEnvironments } from 'actions/environments';
+import { notify } from 'components/Notification';
+import Button from 'components/Button';
+import Hint from 'components/Hint';
+import Icon from 'components/Icon';
 import Header from './Header';
-import Button from '../components/Button';
-import Hint from '../components/Hint';
-import Icon from '../components/Icon';
-import { notify } from '../components/Notification';
+import DeleteDialog from './DeleteDialog';
 
 import 'containers/Space.scss';
 
@@ -36,6 +37,11 @@ class Space extends Component {
     this.props.dispatch(refreshEnvironments());
   }
 
+  @autobind
+  handleDelete(environment) {
+    this.deleteDialog.getWrappedInstance().open(environment);
+  }
+
   render() {
     const { environments, user } = this.props;
     return (
@@ -45,27 +51,31 @@ class Space extends Component {
         <div className="EnvironmentList layout vertical">
           {Object.keys(environments).map(id => 
             <div key={id} className="EnvironmentItem layout horizontal start">
-              <div className="layout horizontal start">
-                <Icon className="EnvironmentItemIcon" icon="mirror" size="20"/>
-                <div className="EnvironmentItemName ellipsis" 
-                  title={environments[id].name}>
-                  {environments[id].name}
-                </div>
+              <div className="EnvironmentItemIcon">
+                <Icon icon="mirror" size="20"/>
               </div>
-              <div className="EnvironmentItemEndpoints layout vertical flex-auto">
+              <div className="EnvironmentItemName ellipsis" 
+                title={environments[id].name}>
+                {environments[id].name}
+              </div>
+              <div className="EnvironmentItemEndpoints layout vertical">
                 {environments[id].endpoints.map(url =>
-                  <a className="ellipsis" 
-                    key={`${id}-${url}`} 
+                  <a className="ellipsis layout horizontal center" 
+                    key={`${id}-${url}`}
                     href={url}
                     rel="noreferrer noopener" 
                     target="_blank">
                     {url}
+                    <Icon icon="external" size="18" />
                   </a>
                 )}
               </div>
-              {/* <div className="Buttons">
-                <Button icon="plus" iconSize="20" frameless />
-              </div> */}
+              <div className="flex-auto" />
+              <div className="EnvironmentItemActions layout horizontal center">
+                <div className="ActionButton" onClick={() => this.handleDelete(environments[id])}>
+                  <Icon icon="delete" size="24" />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -118,6 +128,8 @@ class Space extends Component {
             </Hint>
           </div>
         </div>
+
+        <DeleteDialog ref={ref => this.deleteDialog = ref} />
       </div>
     );  
   }

@@ -5,12 +5,6 @@ import PropTypes from 'prop-types';
 import 'components/Icon.scss';
 
 const icons = { /* eslint-disable */
-  google: (size, color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-      <path fill={color} d="M457.732 216.625c2.628 14.041 4.063 28.743 4.063 44.098C461.796 380.688 381.481 466 260.204 466c-116.023 0-210-93.977-210-210s93.977-210 210-210c56.704 0 104.077 20.867 140.44 54.73l-59.204 59.197v-.135c-22.046-21.002-50-31.762-81.236-31.762-69.297 0-125.604 58.537-125.604 127.841 0 69.29 56.306 127.968 125.604 127.968 62.87 0 105.653-35.965 114.46-85.312h-114.46v-81.902h197.528z"/>
-    </svg>
-  ),
-
   github: (size, color) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
       <path fill={color} d="M457.732 216.625c2.628 14.041 4.063 28.743 4.063 44.098C461.796 380.688 381.481 466 260.204 466c-116.023 0-210-93.977-210-210s93.977-210 210-210c56.704 0 104.077 20.867 140.44 54.73l-59.204 59.197v-.135c-22.046-21.002-50-31.762-81.236-31.762-69.297 0-125.604 58.537-125.604 127.841 0 69.29 56.306 127.968 125.604 127.968 62.87 0 105.653-35.965 114.46-85.312h-114.46v-81.902h197.528z"/>
@@ -73,14 +67,14 @@ const icons = { /* eslint-disable */
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24">
       <g fill="none" fillRule="evenodd">
         <path d="M-2-2h28v28H-2z"/>
-        <path className="plusCirclePath" fill={color} fillRule="nonzero" d="M13.153 6.235h-2.306v4.612H6.235v2.306h4.612v4.612h2.306v-4.612h4.612v-2.306h-4.612V6.235zM12 .471C5.636.47.47 5.636.47 12S5.637 23.53 12 23.53c6.364 0 11.53-5.166 11.53-11.53C23.53 5.636 18.363.47 12 .47zm0 20.753c-5.084 0-9.224-4.14-9.224-9.224 0-5.084 4.14-9.224 9.224-9.224 5.084 0 9.224 4.14 9.224 9.224 0 5.084-4.14 9.224-9.224 9.224z"/>
+        <path className="colorable plusCirclePath" fill={color} fillRule="nonzero" d="M13.153 6.235h-2.306v4.612H6.235v2.306h4.612v4.612h2.306v-4.612h4.612v-2.306h-4.612V6.235zM12 .471C5.636.47.47 5.636.47 12S5.637 23.53 12 23.53c6.364 0 11.53-5.166 11.53-11.53C23.53 5.636 18.363.47 12 .47zm0 20.753c-5.084 0-9.224-4.14-9.224-9.224 0-5.084 4.14-9.224 9.224-9.224 5.084 0 9.224 4.14 9.224 9.224 0 5.084-4.14 9.224-9.224 9.224z"/>
       </g>
     </svg>
   ),
 
   cli: (size, color) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 9 9">
-      <g fill={color} fillRule="evenodd">
+      <g className="colorable" fill={color} fillRule="evenodd">
         <path d="M5.18452136 4.75L.72597653.5 0 1.2996455 3.68395735 4.75 0 8.29541446.72597653 9zM5 8h4v1H5z"/>
       </g>
     </svg>
@@ -88,7 +82,7 @@ const icons = { /* eslint-disable */
 
   arrowDown: (size, color) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24">
-      <path fill={color} d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+      <path className="colorable" fill={color} d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
       <path fill="none" d="M0 0h24v24H0V0z"/>
     </svg>
   ),
@@ -96,14 +90,28 @@ const icons = { /* eslint-disable */
   exit: (size, color) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24">
       <path d="M0 0h24v24H0z" fill="none"/>
-      <path fill={color} d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+      <path className="colorable" fill={color} d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
     </svg>
   ),
 
   clipboard: (size, color) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24">
       <path d="M0 0h24v24H0z" fill="none"/>
-      <path fill={color} d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 15l-5-5h3V9h4v4h3l-5 5z"/>
+      <path className="colorable" fill={color} d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 15l-5-5h3V9h4v4h3l-5 5z"/>
+    </svg>
+  ),
+
+  delete: (size, color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24">
+      <path className="colorable" fill={color} d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+      <path d="M0 0h24v24H0z" fill="none"/>
+    </svg>
+  ),
+
+  external: (size, color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24">
+      <path d="M0 0h24v24H0z" fill="none"/>
+      <path className="colorable" fill={color} d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
     </svg>
   )
 }; /* eslint-enable */

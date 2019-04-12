@@ -4,16 +4,15 @@ import request from 'common/request';
 import { notify } from 'components/Notification';
 
 const fetchEnvironments = () => {
-  return request(``, 
-    { 
-      method: 'post', 
-      auth: true,
-      body: JSON.stringify({ 
-        query: `{ environments { id,name,endpoints } }` 
-      })
-    }, 
-    { responseType: 'json' }
-  );
+  return request(``, { 
+    method: 'post', 
+    auth: true,
+    body: JSON.stringify({ 
+      query: `{ environments { id,name,endpoints } }` 
+    })
+  }, { 
+    responseType: 'json' 
+  });
 };
 
 export const requestEnvironments = () => {
@@ -45,14 +44,24 @@ export const refreshEnvironments = () => {
   };
 };
 
-export const deleteEnvironment = projectId => {
+export const deleteEnvironment = environment => {
   return dispatch => {
-    // mixpanel.track('Delete Project');
+    // mixpanel.track('Delete Environment');
 
-    return request(`/environments/${projectId}`, {
-      method: 'delete'
+    return request(``, {
+      method: 'delete',
+      auth: true,
+      body: JSON.stringify({ 
+        query: `mutation {
+          down(name: "${environment.name}") {
+            name
+          }
+        }` 
+      })
+    }, { 
+      responseType: 'json' 
     }).then(() => {
       dispatch(refreshEnvironments());
-    }).catch(err => notify(`Failed to destroy: ${err}`, 'error'));
+    }).catch(err => notify(`Failed to delete: ${err}`, 'error'));
   };
 };

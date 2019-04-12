@@ -1,0 +1,17 @@
+.DeleteDialog {
+  .delete-label {
+    margin-top: 18px;
+  }
+
+  .delete-input {
+    margin-top: 6px;
+    padding: 8px;
+    border: 1px solid rgba(black, .2);
+    font-size: 18px;
+
+    &:focus,
+    &:active {
+      outline: none;
+    }
+  }
+}

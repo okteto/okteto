@@ -18,6 +18,10 @@
 
       &:nth-child(odd) {
         background-color: $navy;
+
+        .EnvironmentItemActions {
+          background-color: rgba($navy, .8);
+        }
       }
 
       &:hover::before {
@@ -31,21 +35,25 @@
       }
 
       .EnvironmentItemIcon {
+        height: 20px;
         margin-right: 21px;
         margin-left: 8px;
       }
       
       .EnvironmentItemName {
-        font-size: 22px;
-        line-height: 17px;
+        height: 20px;
+        font-size: 20px;
+        line-height: 20px;
         font-weight: 500;
         margin-right: 24px;
+        margin-top: -2px;
         width: 20vw;
       }
 
       .EnvironmentItemEndpoints {
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 200;
+        margin-top: -2px;
 
         a {
           cursor: pointer;
@@ -61,6 +69,38 @@
 
           &:hover {
             color: $green-400;
+
+            .Icon .colorable {
+              fill: $green-400;
+            }
+          }
+
+          .Icon {
+            margin-left: 4px;
+            margin-top: 2px;
+          }
+        }
+      }
+
+      &:hover .EnvironmentItemActions {
+        display: flex;
+      }
+
+      .EnvironmentItemActions {
+        display: none;
+        position: absolute;
+        right: 0;
+        height: 100%;
+        top: 0;
+        padding: 0 24px;
+
+        .ActionButton {
+          padding: 8px;
+          cursor: pointer;
+
+          &:hover {
+            background-color: rgba($white-100, .5);
+            border-radius: 48px;
           }
         }
       }
