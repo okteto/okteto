@@ -30,6 +30,8 @@ spec:
               containerPort: {{ .Values.services.api.port }}
               protocol: TCP
           env:
+            - name: OKTETO_BASE_DOMAIN
+              value: "{{ .Values.oktetoBaseDomain }}"
             - name: CLUSTER_PUBLIC_ENDPOINT
               value: "{{ .Values.clusterPublicEndpoint }}"
             - name: GITHUB_CLIENTID

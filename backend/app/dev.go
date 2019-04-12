@@ -5,7 +5,9 @@ import (
 
 	"github.com/okteto/app/backend/k8s/client"
 	"github.com/okteto/app/backend/k8s/deployments"
+	"github.com/okteto/app/backend/k8s/ingresses"
 	"github.com/okteto/app/backend/k8s/secrets"
+	"github.com/okteto/app/backend/k8s/services"
 	"github.com/okteto/app/backend/k8s/volumes"
 	"github.com/okteto/app/backend/model"
 )
@@ -29,6 +31,14 @@ func DevModeOn(dev *model.Dev, s *model.Space) error {
 		return err
 	}
 
+	if err := services.Deploy(dev, s, c); err != nil {
+		return err
+	}
+
+	if err := ingresses.Deploy(dev, s, c); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -39,7 +49,15 @@ func DevModeOff(dev *model.Dev, s *model.Space, removeVolumes bool) error {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	if err := secrets.Destroy(dev, s, c); err != nil {
+	if err := ingresses.Destroy(dev, s, c); err != nil {
+		return err
+	}
+
+	if err := services.Destroy(dev, s, c); err != nil {
+		return err
+	}
+
+	if err := deployments.Destroy(dev, s, c); err != nil {
 		return err
 	}
 
@@ -49,7 +67,7 @@ func DevModeOff(dev *model.Dev, s *model.Space, removeVolumes bool) error {
 		}
 	}
 
-	if err := deployments.Destroy(dev, s, c); err != nil {
+	if err := secrets.Destroy(dev, s, c); err != nil {
 		return err
 	}
 

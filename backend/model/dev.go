@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"os"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -17,6 +18,8 @@ var supportedServices = map[string]bool{
 	"mysql":    true,
 	"postgres": true,
 }
+
+var oktetoBaseDomain = os.Getenv("OKTETO_BASE_DOMAIN")
 
 //Dev represents a development environment
 type Dev struct {
@@ -73,4 +76,14 @@ func (dev *Dev) GetVolumeName() string {
 //GetSecretName returns the okteto secret name for a given dev environment
 func (dev *Dev) GetSecretName() string {
 	return fmt.Sprintf(oktetoSecretTemplate, dev.Name)
+}
+
+//Domain returns the dev environment domain
+func (dev *Dev) Domain(s *Space) string {
+	return fmt.Sprintf("%s-%s.%s", dev.Name, s.Name, oktetoBaseDomain)
+}
+
+//CertificateName returns the cretificate name for a dev environment
+func (dev *Dev) CertificateName() string {
+	return fmt.Sprintf("%s-letsencrypt", dev.Name)
 }
