@@ -7,11 +7,16 @@ import Space from 'containers/Space';
 import Login from 'containers/Login';
 import Notification from 'components/Notification';
 
+import { restoreSession } from 'actions/session';
+
 import 'views/AppView.scss';
 
 class AppView extends Component {
   constructor(props) {
     super(props);
+
+    // Restore any existing session.
+    this.props.dispatch(restoreSession());
   }
 
   render() {

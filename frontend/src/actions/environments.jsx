@@ -8,8 +8,9 @@ const fetchEnvironments = () => {
     { 
       method: 'post', 
       auth: true,
-      body: JSON.stringify(
-          { query: `{ environments { id,name,endpoints } }` })
+      body: JSON.stringify({ 
+        query: `{ environments { id,name,endpoints } }` 
+      })
     }, 
     { responseType: 'json' }
   );

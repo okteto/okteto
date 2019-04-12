@@ -5,6 +5,7 @@ import colors from 'colors.scss';
 
 import UserMenu from 'components/UserMenu';
 import Icon from 'components/Icon';
+import { logout } from 'actions/session';
 
 import 'containers/Header.scss';
 
@@ -21,7 +22,7 @@ class Header extends Component {
     const { user } = this.props;
     return (
       <div className="Header horizontal layout center">
-        {`${user.username}'s space`}
+        {`${user.id}'s space`}
         <div className="flex-auto" />
         <div className="User">
           <div className="UserAtom layout horizontal center"
@@ -29,13 +30,15 @@ class Header extends Component {
             <div className="Avatar">
               <Icon icon="logo" size="52" color={colors.navyDark} />
             </div>
-            <div className="Username">{user.username}</div>
-            <Icon icon="plus" size="12" color="white" />
+            <div className="Username">{user.id}</div>
+            <Icon icon="arrowDown" size="24" color="white" />
           </div>
           {this.state.showUserMenu && 
             <UserMenu
               user={user} 
-              onLogout={() => {}}
+              onLogout={() => {
+                this.props.dispatch(logout());
+              }}
               onClose={() => this.setState({ showUserMenu: false })}
             />
           }

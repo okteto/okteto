@@ -29,15 +29,11 @@ class UserMenu extends Component {
       <div className="UserMenu MenuItemList layout vertical" 
         onClick={this.handleOutsideClick}>
         <div className="MenuTitle layout horizontal center flex-auto">
-          {user.username}
-        </div>
-        <div className="MenuItem layout horizontal center flex-auto">
-          <Icon icon="plus" size="22" color="black" />
-          Profile
+          {user.id}
         </div>
         <div className="MenuItem layout horizontal center flex-auto"
           onClick={this.props.onLogout}>
-          <Icon icon="plus" size="22" color="black" />
+          <Icon icon="exit" size="22" color="black" />
           Log out
         </div>
       </div>

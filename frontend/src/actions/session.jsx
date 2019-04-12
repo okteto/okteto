@@ -2,6 +2,8 @@ import request from 'common/request';
 import { notify } from 'components/Notification';
 import environment from 'common/environment';
 
+export const SESSION_KEY = 'okteto-session';
+
 export const loginWithGithub = code => {
   return dispatch => {
     return request(``, {
@@ -25,7 +27,7 @@ export const loginWithGithub = code => {
   };
 };
 
-export const authSuccess = (user) => {
+export const authSuccess = user => {
   return {
     type: 'AUTH_SUCCESS',
     user
@@ -33,13 +35,28 @@ export const authSuccess = (user) => {
 };
 
 export const logout = () => {
+  localStorage.removeItem(SESSION_KEY);
   return { type: 'LOGOUT' };
 };
 
-export const afterRestoreSession = (session) => {
+export const restoreSession = () => {
+  return (dispatch) => {
+    const session = JSON.parse(localStorage.getItem(SESSION_KEY)) || {};
+    
+    dispatch(restoreSessionSuccess(session));
+
+    if (session.user && session.user.id) {
+      // mixpanel.identify(session.user.userID, {
+      //   origin: 'Restored Session'
+      // });
+    }
+  };
+};
+
+export const restoreSessionSuccess = (session) => {
   return { 
-    type: 'AFTER_RESTORE_SESSION',
-    session: session
+    type: 'RESTORE_SESSION_SUCCESS',
+    session
   };
 };
 
@@ -47,34 +64,9 @@ export const saveSession = () => {
   return { type: 'SAVE_SESSION' };
 };
 
-export const updateSession = (user) => {
+export const updateSession = user => {
   return { 
     type: 'UPDATE_SESSION',
     user
-  };
-};
-
-export const refreshSession = () => {
-  return (dispatch) => {
-    return request(`/users`, {
-      method: 'get'
-    }, {
-      responseType: 'json'
-    }).then(user => {
-      dispatch(updateSession(user));
-    }).catch(err => notify(`Session error: ${err}`, 'error'));
-  };
-};
-
-export const deleteAccount = () => {
-  return (dispatch) => {
-    return request(`/users`, {
-      method: 'delete',
-      headers: {
-        "Content-Type": "application/json"
-      }
-    }).then(() => {
-      dispatch(logout());
-    }).catch(err => notify(`Authentication error: ${err}`, 'error'));
   };
 };

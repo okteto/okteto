@@ -1,9 +1,6 @@
+import { SESSION_KEY } from 'actions/session';
+
 const initialSessionState = {
-  // user: {
-  //   username: 'cindy',
-  //   email: 'cindy@okteto.com'
-  // },
-  // isAuthenticated: true, // false // Change once Authentication is done.
   user: {},
   isAuthenticated: false,
 };
@@ -18,8 +15,9 @@ export default (state = initialSessionState, action) => {
         ...initialSessionState
       };
     }
-    case 'LOGOUT': {
-      return {...initialSessionState};
+    case 'SAVE_SESSION': {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(state || initialSessionState));
+      return state;
     }
     case 'UPDATE_SESSION': {
       return {
@@ -30,9 +28,11 @@ export default (state = initialSessionState, action) => {
         }
       };
     }
-    case 'SAVE_SESSION': {
-      localStorage.setItem('session', JSON.stringify(state || {}));
-      return state;
+    case 'RESTORE_SESSION_SUCCESS': {
+      return action.session;
+    }
+    case 'LOGOUT': {
+      return {...initialSessionState};
     }
     default: {
       return state;

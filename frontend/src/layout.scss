@@ -140,6 +140,7 @@ $side-margin: 32px;
 	min-width: 0;
 }
 .ellipsis {
+	display: inline-block;
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;

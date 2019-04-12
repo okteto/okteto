@@ -40,24 +40,32 @@ class Space extends Component {
     const { environments, user } = this.props;
     return (
       <div className="Space layout vertical">
-        <Header title={`${user.username}'s space`} />
+        <Header title={`${user.id}'s space`} />
 
         <div className="EnvironmentList layout vertical">
           {Object.keys(environments).map(id => 
             <div key={id} className="EnvironmentItem layout horizontal start">
               <div className="layout horizontal start">
                 <Icon className="EnvironmentItemIcon" icon="mirror" size="20"/>
-                <div className="EnvironmentItemName">{environments[id].name}</div>
+                <div className="EnvironmentItemName ellipsis" 
+                  title={environments[id].name}>
+                  {environments[id].name}
+                </div>
               </div>
-              <div className="EnvironmentItemEndpoints layout vertical">
+              <div className="EnvironmentItemEndpoints layout vertical flex-auto">
                 {environments[id].endpoints.map(url =>
-                  <a key={`${id}-${url}`}>{url}</a>
+                  <a className="ellipsis" 
+                    key={`${id}-${url}`} 
+                    href={url}
+                    rel="noreferrer noopener" 
+                    target="_blank">
+                    {url}
+                  </a>
                 )}
               </div>
-              <div className="flex-auto" />
-              <div className="Buttons">
+              {/* <div className="Buttons">
                 <Button icon="plus" iconSize="20" frameless />
-              </div>
+              </div> */}
             </div>
           )}
         </div>
@@ -94,14 +102,16 @@ class Space extends Component {
                     okteto up
                   </code>
                   <Button
-                    icon="copy"
+                    icon="clipboard"
+                    iconSize="24"
                     onClick={() => {
                       clipboard.writeText(`okteto up`);
                       notify('Copied to clipboard!');
                       // mixpanel.track('Copied CLI Command');
                       this.setState({ showNewHint: false });
                     }}
-                    light>
+                    light
+                    frameless>
                   </Button>
                 </div>
               </div>
