@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 const (
 	//REDIS the redis database type
 	REDIS = "redis"
@@ -13,6 +15,7 @@ const (
 type DB struct {
 	ID       string `json:"id" yaml:"id"`
 	Name     string `json:"name" yaml:"name"`
+	Password string
 	Endpoint string `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
@@ -20,11 +23,11 @@ type DB struct {
 func (db *DB) GetEndpoint() string {
 	switch db.Name {
 	case MONGO:
-		return "mongodb://mongo:27017/database-name"
+		return "mongodb://mongo:27017"
 	case REDIS:
 		return "redis://redis:6379"
 	case POSTGRES:
-		return "postgresql://user:password@postgres:5432/db"
+		return fmt.Sprintf("postgresql://okteto:%s@postgres:5432/db", db.Password)
 	}
 	return ""
 }

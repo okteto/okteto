@@ -113,6 +113,19 @@ func ListDatabases(u *model.User) ([]*model.DB, error) {
 			ID:   sfs.Name,
 			Name: sfs.Name,
 		}
+		if db.Name == model.POSTGRES {
+			for _, c := range sfs.Spec.Template.Spec.Containers {
+				if c.Name == model.POSTGRES {
+					for _, e := range c.Env {
+						if e.Name == "POSTGRES_PASSWORD" {
+							db.Password = e.Value
+							break
+						}
+					}
+					break
+				}
+			}
+		}
 		db.Endpoint = db.GetEndpoint()
 		result = append(result, db)
 	}

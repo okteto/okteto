@@ -23,11 +23,12 @@ func Deploy(db *model.DB, s *model.Space, c *kubernetes.Clientset) error {
 	var dbSFS *appsv1.StatefulSet
 	switch db.Name {
 	case model.MONGO:
-		dbSFS = mongo.TranslateStatefulSet(s)
+		dbSFS = mongo.TranslateStatefulSet(db, s)
 	case model.REDIS:
-		dbSFS = redis.TranslateStatefulSet(s)
+		dbSFS = redis.TranslateStatefulSet(db, s)
 	case model.POSTGRES:
-		dbSFS = postgres.TranslateStatefulSet(s)
+		db.Password = model.GenerateRandomString(10)
+		dbSFS = postgres.TranslateStatefulSet(db, s)
 	}
 	if exists(dbSFS, s, c) {
 		if err := update(dbSFS, s, c); err != nil {

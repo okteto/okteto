@@ -10,7 +10,7 @@ import (
 var devReplicas int32 = 1
 
 //TranslateStatefulSet returns the statefulset for postgres
-func TranslateStatefulSet(s *model.Space) *appsv1.StatefulSet {
+func TranslateStatefulSet(db *model.DB, s *model.Space) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      model.POSTGRES,
@@ -44,11 +44,11 @@ func TranslateStatefulSet(s *model.Space) *appsv1.StatefulSet {
 							Env: []apiv1.EnvVar{
 								apiv1.EnvVar{
 									Name:  "POSTGRES_USER",
-									Value: "user",
+									Value: "okteto",
 								},
 								apiv1.EnvVar{
 									Name:  "POSTGRES_PASSWORD",
-									Value: "password",
+									Value: db.Password,
 								},
 								apiv1.EnvVar{
 									Name:  "POSTGRES_DB",
