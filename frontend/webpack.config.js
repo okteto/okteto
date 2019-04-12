@@ -12,8 +12,7 @@ module.exports = {
     './index.jsx'
   ],
   output: {
-    filename: 'app.[hash].js',
-    path: '/pod-data',
+    filename: 'app.[hash].js'
   },
   resolve: {
     extensions: ['.js', '.jsx', '.scss'],
@@ -78,7 +77,7 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       VERSION: JSON.stringify(require('./package.json').version),
-      GITHUB_CLIENT_ID: JSON.stringify('47867be52b46a2d9d302')
+      GITHUB_CLIENT_ID: JSON.stringify(process.env.GITHUB_CLIENTID)
     })
   ]
 };

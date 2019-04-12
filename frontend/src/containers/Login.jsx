@@ -20,8 +20,8 @@ class Login extends Component {
 
   @autobind
   onLoginSuccess(response) {
-    if (response.tokenId) {
-      this.props.dispatch(loginWithGithub(response.tokenId));
+    if (response.code) {
+      this.props.dispatch(loginWithGithub(response.code));
     } else {
       notify(`Login Failed: Wrong or missing Github token_id`, 'error');
     }

@@ -1,10 +1,11 @@
 const initialSessionState = {
-  // user: {},
-  user: {
-    username: 'cindy',
-    email: 'cindy@okteto.com'
-  },
-  isAuthenticated: true, // false // Change once Authentication is done.
+  // user: {
+  //   username: 'cindy',
+  //   email: 'cindy@okteto.com'
+  // },
+  // isAuthenticated: true, // false // Change once Authentication is done.
+  user: {},
+  isAuthenticated: false,
 };
 
 export default (state = initialSessionState, action) => {
@@ -28,6 +29,10 @@ export default (state = initialSessionState, action) => {
           ...action.user
         }
       };
+    }
+    case 'SAVE_SESSION': {
+      localStorage.setItem('session', JSON.stringify(state || {}));
+      return state;
     }
     default: {
       return state;

@@ -1,18 +1,26 @@
 import request from 'common/request';
 import { notify } from 'components/Notification';
+import environment from 'common/environment';
 
-export const loginWithGithub = token => {
+export const loginWithGithub = code => {
   return dispatch => {
-    return request(`/auth/github`, {
+    return request(``, {
       method: 'post',
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ token })
+      body: JSON.stringify(
+        { query: `mutation{ auth(code:"${code}"){ id,name,email,token } }` })
     }, {
       responseType: 'json'
-    }).then(user => {
-      dispatch(authSuccess(user));
+    }).then(e => {
+      if (e.errors) {
+        notify(`Authentication error: ${e.errors[0].message}`, 'error')
+      } else {
+        localStorage.setItem(environment.apiTokenKeyName, e.data.auth.token);
+        dispatch(authSuccess(e.data.auth));
+        dispatch(saveSession());
+      }
     }).catch(err => notify(`Authentication error: ${err}`, 'error'));
   };
 };

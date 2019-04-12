@@ -1,34 +1,27 @@
 package main
 
 import (
-	"github.com/okteto/app/backend/app"
+	"fmt"
+	"net/http"
+	"os"
+
+	"github.com/okteto/app/backend/github"
+	"github.com/okteto/app/backend/graphql"
 	"github.com/okteto/app/backend/log"
-	"github.com/okteto/app/backend/model"
 )
 
 func main() {
+	port := os.Getenv("PORT")
+	if len(port) == 0 {
+		port = "8000"
+	}
+
 	log.Info("Starting app...")
-	s := &model.Space{
-		Name: "oktako",
-		User: "oktiko",
+	http.Handle("/github/callback", github.AuthHandler())
+	http.Handle("/github/authorization-code", github.AuthCLIHandler())
+	http.Handle("/graphql", graphql.TokenMiddleware(graphql.Handler()))
+	log.Infof("Server is running at http://0.0.0.0:%s", port)
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil); err != nil {
+		log.Fatal(err)
 	}
-	if err := app.CreateSpace(s); err != nil {
-		log.Info("ERROR1", err)
-	}
-
-	dev := &model.Dev{
-		Name:  "test",
-		Image: "okteto/desk:0.1.2",
-		WorkDir: &model.Mount{
-			Path: "/app",
-			Size: "10Gi",
-		},
-		Command: []string{"sh"},
-	}
-
-	if err := app.DevModeOn(dev, s); err != nil {
-		log.Info("ERROR2", err)
-	}
-
-	log.Info("Exit")
 }

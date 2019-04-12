@@ -4,7 +4,15 @@ import request from 'common/request';
 import { notify } from 'components/Notification';
 
 const fetchEnvironments = () => {
-  return request(`/environments`, { method: 'get'}, { responseType: 'json' });
+  return request(``, 
+    { 
+      method: 'post', 
+      auth: true,
+      body: JSON.stringify(
+          { query: `{ environments { id,name,endpoints } }` })
+    }, 
+    { responseType: 'json' }
+  );
 };
 
 export const requestEnvironments = () => {
@@ -30,8 +38,8 @@ export const handleFetchError = err => {
 export const refreshEnvironments = () => {
   return dispatch => {
     dispatch(requestEnvironments());
-    fetchEnvironments().then(environments => {
-      dispatch(receiveEnvironments(environments));
+    fetchEnvironments().then(e => {
+      dispatch(receiveEnvironments(e.data.environments));
     }).catch(err => dispatch(handleFetchError(err)));
   };
 };

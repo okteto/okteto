@@ -1,15 +1,22 @@
-apiVersion: apps/v1
+apiVersion: apps/v1beta2
 kind: DaemonSet
 metadata:
-  name: inotify
+  name: "{{ include "okteto.fullname" . }}-inotify"
+  labels:
+    app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-inotify"
+    helm.sh/chart: {{ include "okteto.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   selector:
     matchLabels:
-      name: inotify
+      app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-inotify"
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        name: inotify
+        app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-inotify"
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       terminationGracePeriodSeconds: 0
       containers:

@@ -13,6 +13,8 @@ import (
 	"github.com/okteto/app/cli/cmd"
 
 	// Load the GCP library for authentication
+
+	"k8s.io/apimachinery/pkg/util/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
@@ -21,9 +23,18 @@ var VersionString string
 
 func init() {
 	config.SetConfig(&config.Config{
-		FolderName:       ".stereo",
-		ManifestFileName: "stereo.yml",
+		FolderName:       ".okteto",
+		ManifestFileName: "okteto.yml",
 	})
+
+	// override client-go error handlers to downgrade the "logging before flag.Parse" error
+	errorHandlers := []func(error){
+		func(e error) {
+			log.Debugf("unhandled error: %s", e)
+		},
+	}
+
+	runtime.ErrorHandlers = errorHandlers
 }
 
 func main() {
@@ -43,6 +54,8 @@ func main() {
 	root.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
 	root.AddCommand(cmd.Up())
 	root.AddCommand(cmd.Exec())
+	root.AddCommand(cmd.Login())
+
 	if err := root.Execute(); err != nil {
 		log.Errorf(err.Error())
 		os.Exit(1)

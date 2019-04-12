@@ -9,7 +9,7 @@ import (
 )
 
 func translate(dev *model.Dev) *apiv1.PersistentVolumeClaim {
-	quantDisk, _ := resource.ParseQuantity(dev.WorkDir.Size)
+	quantDisk, _ := resource.ParseQuantity("10Gi")
 	return &apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dev.GetVolumeName(),

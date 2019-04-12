@@ -1,4 +1,11 @@
 name: api
-image: golang:1.11-stretch
-workdir: /backend
+image: okteto/golang:1.12
+workdir: /app
 command: ["bash"]
+forward:
+  - "8000:8000"
+volumes:
+  - name: go-pkg
+    path: /go/pkg/
+  - name: go-cache
+    path: /root/.cache/go-build/

@@ -6,7 +6,7 @@ import (
 
 	"github.com/okteto/app/backend/log"
 	"github.com/okteto/app/backend/model"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -53,7 +53,7 @@ func Create(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 	} else {
 		_, err := c.CoreV1().Secrets(s.Name).Update(data)
 		if err != nil {
-			return fmt.Errorf("error updating kubernetes okteto secret: ", err)
+			return fmt.Errorf("error updating kubernetes okteto secret: %s", err)
 		}
 		log.Infof("okteto secret '%s' was updated.", secretName)
 	}
