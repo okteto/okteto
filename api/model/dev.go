@@ -29,7 +29,6 @@ type Dev struct {
 	Environment []EnvVar `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir     string   `json:"workdir" yaml:"workdir"`
-	Services    []string `json:"services,omitempty" yaml:"services,omitempty"`
 	Endpoints   []string `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
@@ -45,7 +44,6 @@ func read(bytes []byte) (*Dev, error) {
 		Image:       "okteto/desk:0.1.2",
 		Environment: make([]EnvVar, 0),
 		Command:     []string{"sh"},
-		Services:    make([]string, 0),
 	}
 	if err := yaml.Unmarshal(bytes, dev); err != nil {
 		return nil, err
@@ -57,12 +55,6 @@ func read(bytes []byte) (*Dev, error) {
 func (dev *Dev) validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("Name cannot be empty")
-	}
-
-	for _, service := range dev.Services {
-		if _, ok := supportedServices[service]; !ok {
-			return fmt.Errorf("Unsupported service '%s'", service)
-		}
 	}
 
 	return nil

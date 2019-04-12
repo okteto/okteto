@@ -188,9 +188,6 @@ var mutationType = graphql.NewObject(
 					"workdir": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
-					"services": &graphql.ArgumentConfig{
-						Type: graphql.NewList(graphql.String),
-					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					u, err := validateToken(params.Context)
@@ -319,17 +316,10 @@ var Schema, _ = graphql.NewSchema(
 )
 
 func buildDev(args map[string]interface{}) *model.Dev {
-	aInterface := args["services"].([]interface{})
-	sv := make([]string, len(aInterface))
-	for i, v := range aInterface {
-		sv[i] = v.(string)
-	}
-
 	d := &model.Dev{
-		Name:     args["name"].(string),
-		Image:    args["image"].(string),
-		WorkDir:  args["workdir"].(string),
-		Services: sv,
+		Name:    args["name"].(string),
+		Image:   args["image"].(string),
+		WorkDir: args["workdir"].(string),
 	}
 
 	return d
