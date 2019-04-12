@@ -3,6 +3,7 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/app/cli/pkg/model"
@@ -15,12 +16,22 @@ func DevModeOn(dev *model.Dev) error {
 		return fmt.Errorf("error getting okteto client: %s", err)
 	}
 
-	req := graphql.NewRequest(fmt.Sprintf(`
-		mutation {
-			up(name: "%s", image: "%s", workdir: "%s") {
-		  		name
-			}
-	  	}`, dev.Name, dev.Image, dev.WorkDir))
+	var services string
+	if dev.Services != nil && len(dev.Services) > 0 {
+		services = strings.Join(dev.Services, `","`)
+		services = fmt.Sprintf(`["%s"]`, services)
+	} else {
+		services = "[]"
+	}
+
+	query := fmt.Sprintf(`
+	mutation {
+		up(name: "%s", image: "%s", workdir: "%s", services: %s) {
+			  name
+		}
+	  }`, dev.Name, dev.Image, dev.WorkDir, services)
+
+	req := graphql.NewRequest(query)
 
 	oktetoToken, err := getToken()
 	if err != nil {
