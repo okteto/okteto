@@ -53,7 +53,7 @@ func Up() *cobra.Command {
 	var devPath string
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Activate your cloud development environment",
+		Short: "Activates a cloud development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting up command")
 
