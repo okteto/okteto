@@ -89,7 +89,7 @@ func RunUp(dev *model.Dev, devPath string) error {
 	}
 
 	up.progress = spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	up.progress.Suffix = " Activating your cloud native development environment..."
+	up.progress.Suffix = " Activating your cloud development environment..."
 	up.progress.Start()
 
 	defer up.Shutdown()

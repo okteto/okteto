@@ -33,7 +33,7 @@ func GetK8sB64Config() (string, error) {
 
 	oktetoToken, err := getToken()
 	if err != nil {
-		return "", fmt.Errorf("please login")
+		return "", fmt.Errorf("please execute 'okteto login'")
 	}
 
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", oktetoToken))

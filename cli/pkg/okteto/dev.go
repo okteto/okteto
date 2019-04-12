@@ -35,7 +35,7 @@ func DevModeOn(dev *model.Dev) error {
 
 	oktetoToken, err := getToken()
 	if err != nil {
-		return fmt.Errorf("please login")
+		return errNoLogin
 	}
 
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", oktetoToken))
