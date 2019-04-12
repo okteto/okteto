@@ -14,10 +14,7 @@ var graphqlClient *graphql.Client
 
 func getClient() (*graphql.Client, error) {
 	if graphqlClient == nil {
-		oktetoURL := os.Getenv("OKTETO_URL")
-		if oktetoURL == "" {
-			oktetoURL = "https://cloud.okteto.com"
-		}
+		oktetoURL := GetURL()
 		u, err := url.Parse(oktetoURL)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing '%s'", oktetoURL)
@@ -38,4 +35,13 @@ func getToken() (string, error) {
 	}
 
 	return string(b), nil
+}
+
+// GetURL returns the okteto URL
+func GetURL() string {
+	oktetoURL := os.Getenv("OKTETO_URL")
+	if oktetoURL == "" {
+		oktetoURL = "https://cloud.okteto.com"
+	}
+	return oktetoURL
 }

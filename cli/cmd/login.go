@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"math/rand"
@@ -15,10 +14,6 @@ import (
 	"github.com/okteto/app/cli/pkg/okteto"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
-)
-
-const (
-	prodURL = "https://cloud.usa.okteto.net"
 )
 
 var (
@@ -31,15 +26,12 @@ func Login() *cobra.Command {
 		Use:   "login",
 		Short: "Login with Okteto",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			baseURL := os.Getenv("OKTETO_URL")
-			if len(baseURL) == 0 {
-				baseURL = prodURL
-			}
+			oktetoURL := okteto.GetURL()
 
 			port := 55000
 
 			handler := authHandler{
-				baseURL:  baseURL,
+				baseURL:  oktetoURL,
 				ctx:      context.Background(),
 				state:    randToken(),
 				errChan:  make(chan error, 2),
