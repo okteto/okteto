@@ -13,6 +13,8 @@ import (
 	"github.com/okteto/app/cli/cmd"
 
 	// Load the GCP library for authentication
+
+	"k8s.io/apimachinery/pkg/util/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
@@ -24,6 +26,15 @@ func init() {
 		FolderName:       ".okteto",
 		ManifestFileName: "okteto.yml",
 	})
+
+	// override client-go error handlers to downgrade the "logging before flag.Parse" error
+	errorHandlers := []func(error){
+		func(e error) {
+			log.Debugf("unhandled error: %s", e)
+		},
+	}
+
+	runtime.ErrorHandlers = errorHandlers
 }
 
 func main() {
