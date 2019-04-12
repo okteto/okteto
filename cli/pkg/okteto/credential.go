@@ -17,7 +17,7 @@ type Credential struct {
 	Config string
 }
 
-// GetK8sB64Config returns the space config creddentials
+// GetK8sB64Config returns the space config credentials
 func GetK8sB64Config() (string, error) {
 	c, err := getClient()
 	if err != nil {
@@ -33,7 +33,7 @@ func GetK8sB64Config() (string, error) {
 
 	oktetoToken, err := getToken()
 	if err != nil {
-		return "", fmt.Errorf("please execute 'okteto login'")
+		return "", fmt.Errorf("authorization token not found. please run 'okteto login' and try again")
 	}
 
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", oktetoToken))
@@ -42,7 +42,7 @@ func GetK8sB64Config() (string, error) {
 
 	var cred Credentials
 	if err := c.Run(ctx, req, &cred); err != nil {
-		return "", fmt.Errorf("error getting space credentials: %s", err)
+		return "", fmt.Errorf("couldn't get your credentials, please run 'okteto login' and try again")
 	}
 
 	return cred.Credentials.Config, nil

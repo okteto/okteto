@@ -43,7 +43,7 @@ func DevModeOn(dev *model.Dev) error {
 	ctx := context.Background()
 
 	if err := c.Run(ctx, req, nil); err != nil {
-		return fmt.Errorf("error activating dev environment: %s", err)
+		return fmt.Errorf("failed to activate your dev environment, please try again")
 	}
 
 	return nil
