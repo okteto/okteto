@@ -147,6 +147,9 @@ var mutationType = graphql.NewObject(
 					"workdir": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
+					"services": &graphql.ArgumentConfig{
+						Type: graphql.NewList(graphql.String),
+					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					u, err := validateToken(params.Context)
@@ -154,12 +157,7 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 
-					d := &model.Dev{
-						Name:    params.Args["name"].(string),
-						Image:   params.Args["image"].(string),
-						WorkDir: params.Args["workdir"].(string),
-					}
-
+					d := buildDev(params.Args)
 					s := &model.Space{
 						Name: u,
 					}
@@ -215,3 +213,20 @@ var Schema, _ = graphql.NewSchema(
 		Mutation: mutationType,
 	},
 )
+
+func buildDev(args map[string]interface{}) *model.Dev {
+	aInterface := args["services"].([]interface{})
+	sv := make([]string, len(aInterface))
+	for i, v := range aInterface {
+		sv[i] = v.(string)
+	}
+
+	d := &model.Dev{
+		Name:     args["name"].(string),
+		Image:    args["image"].(string),
+		WorkDir:  args["workdir"].(string),
+		Services: sv,
+	}
+
+	return d
+}
