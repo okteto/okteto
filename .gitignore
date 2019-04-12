@@ -12,3 +12,4 @@
 *.out
 
 chart/override.yaml
+cli/okteto

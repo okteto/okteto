@@ -111,6 +111,7 @@ func ListDevEnvs(user string) ([]*model.Dev, error) {
 	result := []*model.Dev{}
 	for _, d := range deploys {
 		dev := &model.Dev{
+			ID:        d.Name,
 			Name:      d.Name,
 			Endpoints: []string{fmt.Sprintf("%s.okteto.net/%s", s.Name, d.Name)},
 		}

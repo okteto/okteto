@@ -22,6 +22,11 @@ func DevModeOn(dev *model.Dev) error {
 			}
 	  	}`, dev.Name, dev.Image, dev.WorkDir))
 
+	oktetoToken, err := getToken()
+	if err != nil {
+		return fmt.Errorf("please login")
+	}
+
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", oktetoToken))
 
 	ctx := context.Background()

@@ -68,7 +68,7 @@ func GetHome() string {
 		folder = overrideConfig.FolderName
 	}
 
-	home := GetHomeDir()
+	home := getHomeDir()
 
 	if overrideConfig.HomePath != "" {
 		home = overrideConfig.HomePath
@@ -84,7 +84,7 @@ func GetHome() string {
 }
 
 // GetHomeDir returns the OS home dir
-func GetHomeDir() string {
+func getHomeDir() string {
 	home := os.Getenv("HOME")
 	if runtime.GOOS == "windows" {
 		home = os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
