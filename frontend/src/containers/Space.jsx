@@ -46,7 +46,7 @@ class Space extends Component {
     const { environments, user } = this.props;
     return (
       <div className="Space layout vertical">
-        <Header title={`${user.id}'s space`} />
+        <Header title={`${user.githubID}'s space`} />
 
         <div className="EnvironmentList layout vertical">
           {Object.keys(environments).map(id => 

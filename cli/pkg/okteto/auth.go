@@ -20,7 +20,7 @@ func Auth(ctx context.Context, code string) (string, error) {
 	q := fmt.Sprintf(`
 				mutation {
 					auth(code: "%s") {
-					  id,token
+					  githubID,token
 					}
 				  }`, code)
 
@@ -28,8 +28,8 @@ func Auth(ctx context.Context, code string) (string, error) {
 
 	type User struct {
 		Auth struct {
-			ID    string
-			Token string
+			GithubID string
+			Token    string
 		}
 	}
 
@@ -38,7 +38,7 @@ func Auth(ctx context.Context, code string) (string, error) {
 		return "", fmt.Errorf("unauthorized request: %s", err)
 	}
 
-	if len(user.Auth.ID) == 0 || len(user.Auth.Token) == 0 {
+	if len(user.Auth.GithubID) == 0 || len(user.Auth.Token) == 0 {
 		return "", fmt.Errorf("empty response")
 	}
 
@@ -46,7 +46,7 @@ func Auth(ctx context.Context, code string) (string, error) {
 		return "", err
 	}
 
-	return user.Auth.ID, nil
+	return user.Auth.GithubID, nil
 }
 
 func getTokenPath() string {

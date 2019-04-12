@@ -22,7 +22,7 @@ class Header extends Component {
     const { user } = this.props;
     return (
       <div className="Header horizontal layout center">
-        {`${user.id}'s space`}
+        {`${user.githubID}'s space`}
         <div className="flex-auto" />
         <div className="User">
           <div className="UserAtom layout horizontal center"
@@ -30,7 +30,7 @@ class Header extends Component {
             <div className="Avatar">
               <Icon icon="logo" size="52" color={colors.navyDark} />
             </div>
-            <div className="Username">{user.id}</div>
+            <div className="Username">{user.githubID}</div>
             <Icon icon="arrowDown" size="24" color="white" />
           </div>
           {this.state.showUserMenu && 

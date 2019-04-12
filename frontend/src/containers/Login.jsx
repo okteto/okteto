@@ -49,7 +49,8 @@ class Login extends Component {
               className="Button LoginButton"
               clientId={environment.githubClientId}
               onSuccess={this.onLoginSuccess}
-              onFailure={this.onLoginFailure}>
+              onFailure={this.onLoginFailure}
+            >
               <Icon icon="github" size="20" color={colors.white900} />
               Login with Github
             </GitHubLogin>

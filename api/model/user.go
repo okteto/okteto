@@ -1,19 +1,29 @@
 package model
 
+import (
+	uuid "github.com/satori/go.uuid"
+)
+
 //User represents a user
 type User struct {
-	ID    string `json:"id,omitempty" yaml:"id,omitempty"`
-	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
-	Email string `json:"email,omitempty" yaml:"email,omitempty"`
-	Token string `json:"token,omitempty" yaml:"token,omitempty"`
+	ID       string
+	GithubID string
+	Avatar   string
+	Name     string
+	Email    string
+	Token    string
 }
 
-// NewUser returns a new user with an auth token initialized
-func NewUser(id, email, name string) *User {
+// NewUser returns a new user with an id and auth token initialized
+func NewUser(githubID, email, name, avatar string) *User {
+	id := uuid.NewV4()
+
 	return &User{
-		ID:    id,
-		Name:  name,
-		Email: email,
-		Token: GenerateRandomString(40),
+		ID:       id.String(),
+		GithubID: githubID,
+		Name:     name,
+		Email:    email,
+		Avatar:   avatar,
+		Token:    GenerateRandomString(40),
 	}
 }

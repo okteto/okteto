@@ -16,14 +16,6 @@ import (
 
 //CreateSpace configures a namespace for a given user
 func CreateSpace(user string) (*model.Space, error) {
-	// items, err := spaces.List(user)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if len(items) > 0 {
-	// 	return items[0], nil
-	// }
-
 	c, err := client.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
@@ -54,23 +46,11 @@ func CreateSpace(user string) (*model.Space, error) {
 		return nil, err
 	}
 
-	// if err := spaces.Create(s); err != nil {
-	// 	return nil, err
-	// }
-
 	return s, nil
 }
 
 //GetCredential returns the credentials of the user for her space
 func GetCredential(user string) (string, error) {
-	// spaces, err := spaces.List(user)
-	// if err != nil {
-	// 	return "", err
-	// }
-	// if len(spaces) != 1 {
-	// 	return "", fmt.Errorf("The user has %d spaces, instead of 1", len(spaces))
-	// }
-
 	s := &model.Space{
 		Name:    user,
 		Members: []string{user},
@@ -86,15 +66,6 @@ func GetCredential(user string) (string, error) {
 
 //ListDevEnvs returns the dev environments for a given user
 func ListDevEnvs(user string) ([]*model.Dev, error) {
-	// spaces, err := spaces.List(user)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if len(spaces) != 1 {
-	// 	return nil, fmt.Errorf("The user has %d spaces, instead of 1", len(spaces))
-	// }
-	// s := spaces[0]
-
 	s := &model.Space{
 		Name:    user,
 		Members: []string{user},

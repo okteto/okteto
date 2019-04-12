@@ -10,10 +10,10 @@ import (
 // UserInterface TBD
 type UserInterface interface {
 	List(opts metav1.ListOptions) (*v1alpha1.UserList, error)
-	Get(name string, options metav1.GetOptions) (*v1alpha1.User, error)
+	Get(id string, options metav1.GetOptions) (*v1alpha1.User, error)
 	Create(*v1alpha1.User) (*v1alpha1.User, error)
 	Update(*v1alpha1.User) (*v1alpha1.User, error)
-	Delete(name string, options *metav1.DeleteOptions) error
+	Delete(id string, options *metav1.DeleteOptions) error
 }
 
 type userClient struct {

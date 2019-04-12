@@ -49,6 +49,9 @@ var authenticatedUserType = graphql.NewObject(
 			"id": &graphql.Field{
 				Type: graphql.ID,
 			},
+			"githubID": &graphql.Field{
+				Type: graphql.String,
+			},
 			"email": &graphql.Field{
 				Type: graphql.String,
 			},
@@ -56,6 +59,9 @@ var authenticatedUserType = graphql.NewObject(
 				Type: graphql.String,
 			},
 			"token": &graphql.Field{
+				Type: graphql.String,
+			},
+			"avatar": &graphql.Field{
 				Type: graphql.String,
 			},
 		},

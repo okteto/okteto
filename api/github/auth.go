@@ -99,35 +99,63 @@ func AuthHandler() http.Handler {
 
 // Auth authenticates a github user based in the code
 func Auth(code string) (*model.User, error) {
-	t, err := oauth2Config.Exchange(oauth2.NoContext, code)
+	ctx := context.Background()
+	log.Info("authenticating user via github")
+	t, err := oauth2Config.Exchange(ctx, code)
 	if err != nil {
 		return nil, err
 	}
 
-	oauthClient := oauth2Config.Client(oauth2.NoContext, t)
+	oauthClient := oauth2Config.Client(ctx, t)
 	client := github.NewClient(oauthClient)
 	githubUser, _, err := client.Users.Get(context.Background(), "")
 	if err != nil {
 		return nil, err
 	}
 
+	log.Info("authenticated user via github")
+
 	if githubUser.Login == nil {
-		return nil, fmt.Errorf("githubUser.Login is nil")
+		log.Errorf("githubUser.Login is nil")
+		return nil, fmt.Errorf("internal server error")
 	}
 
-	var name = ""
-	if githubUser.Name == nil {
-		log.Errorf("githubUser.Name is nil")
-	} else {
-		name = *githubUser.Name
+	e := githubUser.GetEmail()
+	if len(e) == 0 {
+		log.Infof("user doesn't have a visible email displayed, falling back to the github emails API")
+		em, err := getUserEmail(ctx, client)
+		if err != nil {
+			log.Errorf("error when retrieving the email: %s", err)
+		} else {
+			e = em
+		}
 	}
 
-	u := model.NewUser(*githubUser.Login, "", name)
+	u := model.NewUser(githubUser.GetLogin(), e, githubUser.GetName(), githubUser.GetAvatarURL())
 	u, err = users.FindOrCreate(u)
 	if err != nil {
 		log.Errorf("failed to create user: %s", err)
 		return nil, fmt.Errorf("failed to create user")
 	}
 
+	log.Infof("created user via github login: %s", u.ID)
+
 	return u, nil
+}
+
+func getUserEmail(ctx context.Context, client *github.Client) (string, error) {
+	r, _, err := client.Users.ListEmails(ctx, &github.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	if r != nil {
+		for _, em := range r {
+			p := em.GetPrimary()
+			if p {
+				return em.GetEmail(), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("not found")
 }

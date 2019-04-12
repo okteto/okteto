@@ -12,7 +12,7 @@ export const loginWithGithub = code => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(
-        { query: `mutation{ auth(code:"${code}"){ id,name,email,token } }` })
+        { query: `mutation{ auth(code:"${code}"){ id,githubID,avatar,name,email,token } }` })
     }, {
       responseType: 'json'
     }).then(e => {

@@ -16,6 +16,7 @@ const namespaceFile = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 
 var c *client.UserV1Alpha1Client
 var namespace string
+var errNotFound = fmt.Errorf("not found")
 
 func getClient() (*client.UserV1Alpha1Client, error) {
 	var err error
@@ -33,29 +34,34 @@ func getClient() (*client.UserV1Alpha1Client, error) {
 	return c, nil
 }
 
-// GetByID gets a user by her ID
-func GetByID(id string) (*model.User, error) {
+// GetByGithubID gets a user by her githubID
+func GetByGithubID(githubID string) (*model.User, error) {
+	log.Info("finding user by her githubID")
 	uClient, err := getClient()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	u, err := uClient.Users(namespace).Get(id, metav1.GetOptions{})
-
+	users, err := uClient.Users(namespace).List(
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("github=%s", githubID),
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	token, ok := u.GetObjectMeta().GetLabels()["token"]
-	if !ok {
-		return nil, fmt.Errorf("user %s doesn't have a token", id)
+	if len(users.Items) == 0 {
+		log.Info("user not found by her githubID")
+		return nil, errNotFound
 	}
 
-	return &model.User{
-		ID:    u.Name,
-		Token: token,
-		Email: u.Email,
-	}, nil
+	if len(users.Items) > 1 {
+		return nil, fmt.Errorf("%d users returned for a single githubID", len(users.Items))
+	}
+
+	u := users.Items[0]
+	log.Info("found user by her githubID")
+	return v1alpha1.ToModel(&u), nil
 }
 
 // GetByToken gets a user by her token
@@ -74,20 +80,15 @@ func GetByToken(token string) (*model.User, error) {
 		return nil, err
 	}
 	if len(users.Items) == 0 {
-		return nil, nil
+		return nil, errNotFound
 	}
 
 	if len(users.Items) > 1 {
 		return nil, fmt.Errorf("%d users returned for a single token", len(users.Items))
 	}
 
-	user := users.Items[0]
-
-	return &model.User{
-		ID:    user.Name,
-		Token: token,
-		Email: user.Email,
-	}, nil
+	u := users.Items[0]
+	return v1alpha1.ToModel(&u), nil
 }
 
 func create(u *model.User) error {
@@ -96,28 +97,21 @@ func create(u *model.User) error {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	uCRD := v1alpha1.User{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   u.ID,
-			Labels: map[string]string{"token": u.Token},
-		},
-		Email: u.Email,
-	}
-
-	_, err = uClient.Users(namespace).Create(&uCRD)
+	uCRD := v1alpha1.NewUser(u)
+	_, err = uClient.Users(namespace).Create(uCRD)
 	return err
-
 }
 
 // FindOrCreate returns a user or creates it if it doesn't exists
 func FindOrCreate(u *model.User) (*model.User, error) {
-	found, err := GetByID(u.ID)
+	found, err := GetByGithubID(u.GithubID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
+			log.Info("user not found, creating")
 			err = create(u)
 
 			if err == nil {
-				log.Infof("created %s", u.ID)
+				log.Infof("created %s for %s", u.ID, u.GithubID)
 			}
 
 			return u, err
