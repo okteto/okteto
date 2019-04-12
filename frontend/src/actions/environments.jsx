@@ -49,7 +49,7 @@ export const deleteEnvironment = environment => {
     // mixpanel.track('Delete Environment');
 
     return request(``, {
-      method: 'delete',
+      method: 'post',
       auth: true,
       body: JSON.stringify({ 
         query: `mutation {
