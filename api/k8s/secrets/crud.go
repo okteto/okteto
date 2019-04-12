@@ -13,7 +13,7 @@ import (
 
 // Get returns the value of a secret
 func Get(name string, s *model.Space, c *kubernetes.Clientset) (*v1.Secret, error) {
-	secret, err := c.CoreV1().Secrets(s.Name).Get(name, metav1.GetOptions{})
+	secret, err := c.CoreV1().Secrets(s.ID).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return secret, fmt.Errorf("Error getting kubernetes secret: %s", err)
 	}
@@ -44,14 +44,14 @@ func Create(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 		},
 	}
 	if sct.Name == "" {
-		_, err := c.CoreV1().Secrets(s.Name).Create(data)
+		_, err := c.CoreV1().Secrets(s.ID).Create(data)
 		if err != nil {
 			return fmt.Errorf("error creating kubernetes sync secret: %s", err)
 		}
 
 		log.Infof("created okteto secret '%s'.", secretName)
 	} else {
-		_, err := c.CoreV1().Secrets(s.Name).Update(data)
+		_, err := c.CoreV1().Secrets(s.ID).Update(data)
 		if err != nil {
 			return fmt.Errorf("error updating kubernetes okteto secret: %s", err)
 		}
@@ -63,7 +63,7 @@ func Create(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 //Destroy deletes the syncthing config secret
 func Destroy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 	secretName := dev.GetSecretName()
-	err := c.CoreV1().Secrets(s.Name).Delete(secretName, &metav1.DeleteOptions{})
+	err := c.CoreV1().Secrets(s.ID).Delete(secretName, &metav1.DeleteOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return nil

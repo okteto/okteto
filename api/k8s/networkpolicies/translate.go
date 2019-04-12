@@ -10,7 +10,7 @@ import (
 func translate(s *model.Space) *netv1.NetworkPolicy {
 	return &netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: s.Name,
+			Name: s.ID,
 		},
 		Spec: netv1.NetworkPolicySpec{
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress, netv1.PolicyTypeEgress},
@@ -19,7 +19,7 @@ func translate(s *model.Space) *netv1.NetworkPolicy {
 					From: []netv1.NetworkPolicyPeer{
 						netv1.NetworkPolicyPeer{
 							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"name": s.Name},
+								MatchLabels: map[string]string{"name": s.ID},
 							},
 						},
 					},
@@ -31,7 +31,7 @@ func translate(s *model.Space) *netv1.NetworkPolicy {
 			// 		To: []netv1.NetworkPolicyPeer{
 			// 			netv1.NetworkPolicyPeer{
 			// 				NamespaceSelector: &metav1.LabelSelector{
-			// 					MatchLabels: map[string]string{"name": s.Name},
+			// 					MatchLabels: map[string]string{"name": s.ID},
 			// 				},
 			// 			},
 			// 		},

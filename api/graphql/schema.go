@@ -100,7 +100,7 @@ var queryType = graphql.NewObject(
 
 					l, err := app.ListDevEnvs(u)
 					if err != nil {
-						log.Errorf("failed to get dev envs for %s", u)
+						log.Errorf("failed to get dev envs for %s", u.ID)
 						return nil, fmt.Errorf("failed to get your environments")
 					}
 
@@ -134,13 +134,13 @@ var queryType = graphql.NewObject(
 						return nil, err
 					}
 
-					d, err := app.ListDatabases(u)
+					l, err := app.ListDatabases(u)
 					if err != nil {
-						log.Errorf("failed to get databases for %s", u)
+						log.Errorf("failed to get databases for %s", u.ID)
 						return nil, fmt.Errorf("failed to get your databases")
 					}
 
-					return d, nil
+					return l, nil
 				},
 			},
 		},
@@ -167,7 +167,7 @@ var mutationType = graphql.NewObject(
 						return nil, fmt.Errorf("failed to authenticate")
 					}
 
-					if _, err := app.CreateSpace(u.ID); err != nil {
+					if _, err := app.CreateSpace(u); err != nil {
 						log.Errorf("failed to create space for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to create your space")
 					}
@@ -195,17 +195,13 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 
-					d := buildDev(params.Args)
-					s := &model.Space{
-						Name: u,
-					}
-
-					if err := app.DevModeOn(d, s); err != nil {
+					dev := buildDev(params.Args)
+					if err := app.DevModeOn(u, dev); err != nil {
 						log.Errorf("failed to enable dev mode: %s", err)
 						return nil, fmt.Errorf("failed to enable dev mode")
 					}
 
-					return d, nil
+					return dev, nil
 
 				},
 			},
@@ -223,20 +219,15 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 
-					d := &model.Dev{
+					dev := &model.Dev{
 						Name: params.Args["name"].(string),
 					}
-
-					s := &model.Space{
-						Name: u,
-					}
-
-					if err := app.DevModeOff(d, s, false); err != nil {
+					if err := app.DevModeOff(u, dev, false); err != nil {
 						log.Errorf("failed to enable dev mode: %s", err)
 						return nil, fmt.Errorf("failed to enable dev mode")
 					}
 
-					return d, nil
+					return dev, nil
 
 				},
 			},
@@ -254,17 +245,12 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 
-					name := params.Args["name"].(string)
-
 					db := &model.DB{
-						Name: name,
+						Name: params.Args["name"].(string),
 					}
-					s := &model.Space{
-						Name: u,
-					}
-					err = app.CreateDatabase(db, s)
+					err = app.CreateDatabase(u, db)
 					if err != nil {
-						log.Errorf("failed to create database for %s: %s", u, err)
+						log.Errorf("failed to create database for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to create your database")
 					}
 
@@ -285,18 +271,12 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 
-					name := params.Args["name"].(string)
-
 					db := &model.DB{
-						Name: name,
+						Name: params.Args["name"].(string),
 					}
-					s := &model.Space{
-						Name: u,
-					}
-
-					err = app.DestroyDatabase(db, s)
+					err = app.DestroyDatabase(u, db)
 					if err != nil {
-						log.Errorf("failed to destroy database for %s: %s", u, err)
+						log.Errorf("failed to destroy database for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to delete your database")
 					}
 

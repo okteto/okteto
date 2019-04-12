@@ -42,7 +42,7 @@ func Deploy(db *model.DB, s *model.Space, c *kubernetes.Clientset) error {
 }
 
 func exists(dbSFS *appsv1.StatefulSet, s *model.Space, c *kubernetes.Clientset) bool {
-	dbSFS, err := c.AppsV1().StatefulSets(s.Name).Get(dbSFS.Name, metav1.GetOptions{})
+	dbSFS, err := c.AppsV1().StatefulSets(s.ID).Get(dbSFS.Name, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
@@ -50,8 +50,8 @@ func exists(dbSFS *appsv1.StatefulSet, s *model.Space, c *kubernetes.Clientset) 
 }
 
 func create(dbSFS *appsv1.StatefulSet, s *model.Space, c *kubernetes.Clientset) error {
-	log.Infof("creating statefulset '%s' in '%s'...", dbSFS.Name, s.Name)
-	sfsClient := c.AppsV1().StatefulSets(s.Name)
+	log.Infof("creating statefulset '%s' in '%s'...", dbSFS.Name, s.ID)
+	sfsClient := c.AppsV1().StatefulSets(s.ID)
 	_, err := sfsClient.Create(dbSFS)
 	if err != nil {
 		return fmt.Errorf("error creating kubernetes statefulset: %s", err)
@@ -61,8 +61,8 @@ func create(dbSFS *appsv1.StatefulSet, s *model.Space, c *kubernetes.Clientset) 
 }
 
 func update(dbSFS *appsv1.StatefulSet, s *model.Space, c *kubernetes.Clientset) error {
-	log.Infof("updating statefulset '%s' in '%s' ...", dbSFS.Name, s.Name)
-	sfsClient := c.AppsV1().StatefulSets(s.Name)
+	log.Infof("updating statefulset '%s' in '%s' ...", dbSFS.Name, s.ID)
+	sfsClient := c.AppsV1().StatefulSets(s.ID)
 	if _, err := sfsClient.Update(dbSFS); err != nil {
 		return fmt.Errorf("error updating kubernetes statefulset: %s", err)
 	}
@@ -72,7 +72,7 @@ func update(dbSFS *appsv1.StatefulSet, s *model.Space, c *kubernetes.Clientset) 
 
 //List lists the statefulsets in a space
 func List(s *model.Space, c *kubernetes.Clientset) ([]appsv1.StatefulSet, error) {
-	stss, err := c.AppsV1().StatefulSets(s.Name).List(metav1.ListOptions{})
+	stss, err := c.AppsV1().StatefulSets(s.ID).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +81,8 @@ func List(s *model.Space, c *kubernetes.Clientset) ([]appsv1.StatefulSet, error)
 
 // Destroy destroys a database
 func Destroy(db *model.DB, s *model.Space, c *kubernetes.Clientset) error {
-	log.Infof("destroying statefulset '%s' in '%s' ...", db.Name, s.Name)
-	sfsClient := c.AppsV1().StatefulSets(s.Name)
+	log.Infof("destroying statefulset '%s' in '%s' ...", db.Name, s.ID)
+	sfsClient := c.AppsV1().StatefulSets(s.ID)
 	if err := sfsClient.Delete(db.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds}); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return fmt.Errorf("couldn't destroy statefulset: %s", err)

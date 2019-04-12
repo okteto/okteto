@@ -52,7 +52,7 @@ func List(user string) ([]*model.Space, error) {
 		result = append(
 			result,
 			&model.Space{
-				Name:    s.Name,
+				ID:      s.ID,
 				Members: []string{user},
 			},
 		)
@@ -73,7 +73,7 @@ func Create(s *model.Space) error {
 	}
 	sCRD := v1alpha1.Space{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   s.Name,
+			Name:   s.ID,
 			Labels: labels,
 		},
 	}
@@ -88,5 +88,5 @@ func Delete(s *model.Space) error {
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}
-	return sClient.Spaces(namespace).Delete(s.Name, &metav1.DeleteOptions{})
+	return sClient.Spaces(namespace).Delete(s.ID, &metav1.DeleteOptions{})
 }

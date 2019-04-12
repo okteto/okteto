@@ -15,8 +15,8 @@ import (
 
 // Create creates the namespace for a given space
 func Create(s *model.Space, c *kubernetes.Clientset) error {
-	log.Debugf("Creating network policy '%s'...", s.Name)
-	n, err := c.CoreV1().Namespaces().Get(s.Name, metav1.GetOptions{})
+	log.Debugf("Creating network policy '%s'...", s.ID)
+	n, err := c.CoreV1().Namespaces().Get(s.ID, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("Error getting kubernetes namespace: %s", err)
 	}
@@ -26,9 +26,9 @@ func Create(s *model.Space, c *kubernetes.Clientset) error {
 		if err != nil {
 			return fmt.Errorf("Error creating kubernetes namespace: %s", err)
 		}
-		log.Debugf("Created namespace '%s'.", s.Name)
+		log.Debugf("Created namespace '%s'.", s.ID)
 	} else {
-		log.Debugf("Namespace '%s' was already created.", s.Name)
+		log.Debugf("Namespace '%s' was already created.", s.ID)
 	}
 	return nil
 }

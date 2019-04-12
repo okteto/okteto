@@ -13,7 +13,11 @@ import (
 )
 
 //DevModeOn activates a development environment
-func DevModeOn(dev *model.Dev, s *model.Space) error {
+func DevModeOn(u *model.User, dev *model.Dev) error {
+	s := &model.Space{
+		ID:   u.ID,
+		Name: u.GithubID,
+	}
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
@@ -44,7 +48,11 @@ func DevModeOn(dev *model.Dev, s *model.Space) error {
 }
 
 //DevModeOff deactivates a development environment
-func DevModeOff(dev *model.Dev, s *model.Space, removeVolumes bool) error {
+func DevModeOff(u *model.User, dev *model.Dev, removeVolumes bool) error {
+	s := &model.Space{
+		ID:   u.ID,
+		Name: u.GithubID,
+	}
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)

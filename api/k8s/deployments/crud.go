@@ -29,7 +29,7 @@ func Deploy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 }
 
 func exists(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) bool {
-	d, err := c.AppsV1().Deployments(s.Name).Get(dev.Name, metav1.GetOptions{})
+	d, err := c.AppsV1().Deployments(s.ID).Get(dev.Name, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
@@ -59,7 +59,7 @@ func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 
 //List lists the deployments in a space
 func List(s *model.Space, c *kubernetes.Clientset) ([]appsv1.Deployment, error) {
-	deploys, err := c.AppsV1().Deployments(s.Name).List(metav1.ListOptions{})
+	deploys, err := c.AppsV1().Deployments(s.ID).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +68,8 @@ func List(s *model.Space, c *kubernetes.Clientset) ([]appsv1.Deployment, error) 
 
 // Destroy destroys a deployment
 func Destroy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
-	log.Infof("destroying deployment '%s' in '%s' ...", dev.Name, s.Name)
-	dClient := c.AppsV1().Deployments(s.Name)
+	log.Infof("destroying deployment '%s' in '%s' ...", dev.Name, s.ID)
+	dClient := c.AppsV1().Deployments(s.ID)
 	if err := dClient.Delete(dev.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds}); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return fmt.Errorf("couldn't destroy deployment: %s", err)

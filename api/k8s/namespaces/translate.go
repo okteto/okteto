@@ -10,7 +10,7 @@ import (
 func translate(s *model.Space) *v1.Namespace {
 	return &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: s.Name,
+			Name: s.ID,
 		},
 	}
 }

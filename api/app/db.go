@@ -14,7 +14,11 @@ import (
 )
 
 //CreateDatabase creates a database
-func CreateDatabase(db *model.DB, s *model.Space) error {
+func CreateDatabase(u *model.User, db *model.DB) error {
+	s := &model.Space{
+		ID:   u.ID,
+		Name: u.GithubID,
+	}
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
@@ -42,7 +46,11 @@ func CreateDatabase(db *model.DB, s *model.Space) error {
 }
 
 //DestroyDatabase destroys a database
-func DestroyDatabase(db *model.DB, s *model.Space) error {
+func DestroyDatabase(u *model.User, db *model.DB) error {
+	s := &model.Space{
+		ID:   u.ID,
+		Name: u.GithubID,
+	}
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)

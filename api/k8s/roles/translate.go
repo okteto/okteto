@@ -9,8 +9,8 @@ import (
 func translate(s *model.Space) *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.Name,
-			Namespace: s.Name,
+			Name:      s.ID,
+			Namespace: s.ID,
 		},
 		Rules: []rbacv1.PolicyRule{
 			rbacv1.PolicyRule{

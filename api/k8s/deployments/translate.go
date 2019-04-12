@@ -33,7 +33,7 @@ func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
-			Namespace: s.Name,
+			Namespace: s.ID,
 			Labels: map[string]string{
 				oktetoLabel: dev.Name,
 			},

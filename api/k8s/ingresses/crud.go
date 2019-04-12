@@ -12,7 +12,7 @@ import (
 
 //Deploy deploys a k8s ingress
 func Deploy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
-	iClient := c.ExtensionsV1beta1().Ingresses(s.Name)
+	iClient := c.ExtensionsV1beta1().Ingresses(s.ID)
 	newIngress := translate(dev, s)
 	currentIngress, err := iClient.Get(dev.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
@@ -39,7 +39,7 @@ func Deploy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 //Destroy destroys the k8s ingress
 func Destroy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 	log.Infof("deleting ingress '%s'...", dev.Name)
-	iClient := c.ExtensionsV1beta1().Ingresses(s.Name)
+	iClient := c.ExtensionsV1beta1().Ingresses(s.ID)
 	err := iClient.Delete(dev.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {

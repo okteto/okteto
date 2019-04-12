@@ -12,7 +12,7 @@ func TranslateService(s *model.Space) *apiv1.Service {
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      model.MONGO,
-			Namespace: s.Name,
+			Namespace: s.ID,
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{"app": model.MONGO},

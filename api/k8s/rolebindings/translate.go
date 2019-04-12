@@ -9,20 +9,20 @@ import (
 func translate(s *model.Space) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.Name,
-			Namespace: s.Name,
+			Name:      s.ID,
+			Namespace: s.ID,
 		},
 		Subjects: []rbacv1.Subject{
 			rbacv1.Subject{
 				Kind:      "ServiceAccount",
-				Name:      s.Name,
-				Namespace: s.Name,
+				Name:      s.ID,
+				Namespace: s.ID,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
-			Name:     s.Name,
+			Name:     s.ID,
 		},
 	}
 }

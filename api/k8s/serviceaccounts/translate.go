@@ -9,8 +9,8 @@ import (
 func translate(s *model.Space) *apiv1.ServiceAccount {
 	return &apiv1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.Name,
-			Namespace: s.Name,
+			Name:      s.ID,
+			Namespace: s.ID,
 		},
 	}
 }

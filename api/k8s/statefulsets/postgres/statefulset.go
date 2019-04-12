@@ -14,7 +14,7 @@ func TranslateStatefulSet(s *model.Space) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      model.POSTGRES,
-			Namespace: s.Name,
+			Namespace: s.ID,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: model.POSTGRES,

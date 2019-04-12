@@ -15,20 +15,20 @@ import (
 
 // Create creates the network policies of a given space
 func Create(s *model.Space, c *kubernetes.Clientset) error {
-	log.Debugf("Creating network policy '%s'...", s.Name)
-	n, err := c.NetworkingV1().NetworkPolicies(s.Name).Get(s.Name, metav1.GetOptions{})
+	log.Debugf("Creating network policy '%s'...", s.ID)
+	n, err := c.NetworkingV1().NetworkPolicies(s.ID).Get(s.ID, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("Error getting kubernetes network policy: %s", err)
 	}
 	if n.Name == "" {
 		n := translate(s)
-		_, err := c.NetworkingV1().NetworkPolicies(s.Name).Create(n)
+		_, err := c.NetworkingV1().NetworkPolicies(s.ID).Create(n)
 		if err != nil {
 			return fmt.Errorf("Error creating kubernetes network policy: %s", err)
 		}
-		log.Debugf("Created network policy '%s'.", s.Name)
+		log.Debugf("Created network policy '%s'.", s.ID)
 	} else {
-		log.Debugf("Network policy '%s' was already created.", s.Name)
+		log.Debugf("Network policy '%s' was already created.", s.ID)
 	}
 	return nil
 }

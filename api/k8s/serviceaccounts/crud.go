@@ -14,21 +14,21 @@ import (
 
 //Create creates a service account for a given space
 func Create(s *model.Space, c *kubernetes.Clientset) error {
-	log.Debugf("Creating service account '%s'...", s.Name)
-	sa, err := c.CoreV1().ServiceAccounts(s.Name).Get(s.Name, metav1.GetOptions{})
+	log.Debugf("Creating service account '%s'...", s.ID)
+	sa, err := c.CoreV1().ServiceAccounts(s.ID).Get(s.ID, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("Error getting kubernetes service account: %s", err)
 	}
 	if sa.Name != "" {
-		log.Debugf("Service account '%s' was already created", s.Name)
+		log.Debugf("Service account '%s' was already created", s.ID)
 		return nil
 	}
 	sa = translate(s)
-	_, err = c.CoreV1().ServiceAccounts(s.Name).Create(sa)
+	_, err = c.CoreV1().ServiceAccounts(s.ID).Create(sa)
 	if err != nil {
 		return fmt.Errorf("Error creating kubernetes service account: %s", err)
 	}
-	log.Debugf("Created service account '%s'.", s.Name)
+	log.Debugf("Created service account '%s'.", s.ID)
 	return nil
 }
 
@@ -39,7 +39,7 @@ func GetCredentialConfig(s *model.Space) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sa, err := c.CoreV1().ServiceAccounts(s.Name).Get(s.Name, metav1.GetOptions{})
+	sa, err := c.CoreV1().ServiceAccounts(s.ID).Get(s.ID, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("Error getting kubernetes service account: %s", err)
 	}

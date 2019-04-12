@@ -38,7 +38,7 @@ func getConfigB64(s *model.Space, caCert, token string) string {
 		configTemplate,
 		encodedCaCert,
 		endpoint,
-		s.Name,
+		s.ID,
 		token,
 	)
 	encoded := base64.StdEncoding.EncodeToString([]byte(configValue))

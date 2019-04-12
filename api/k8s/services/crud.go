@@ -13,7 +13,7 @@ import (
 
 //Deploy deploys a k8s service
 func Deploy(new *apiv1.Service, s *model.Space, c *kubernetes.Clientset) error {
-	sClient := c.CoreV1().Services(s.Name)
+	sClient := c.CoreV1().Services(s.ID)
 	old, err := sClient.Get(new.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes service: %s", err)
@@ -40,7 +40,7 @@ func Deploy(new *apiv1.Service, s *model.Space, c *kubernetes.Clientset) error {
 //Destroy destroys a k8s service
 func Destroy(name string, s *model.Space, c *kubernetes.Clientset) error {
 	log.Infof("deleting service '%s'...", name)
-	sClient := c.CoreV1().Services(s.Name)
+	sClient := c.CoreV1().Services(s.ID)
 	err := sClient.Delete(name, &metav1.DeleteOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {

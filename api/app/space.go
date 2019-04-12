@@ -15,15 +15,15 @@ import (
 )
 
 //CreateSpace configures a namespace for a given user
-func CreateSpace(user string) (*model.Space, error) {
+func CreateSpace(u *model.User) (*model.Space, error) {
 	c, err := client.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
 
 	s := &model.Space{
-		Name:    user,
-		Members: []string{user},
+		ID:   u.ID,
+		Name: u.GithubID,
 	}
 
 	if err := namespaces.Create(s, c); err != nil {
@@ -50,10 +50,10 @@ func CreateSpace(user string) (*model.Space, error) {
 }
 
 //GetCredential returns the credentials of the user for her space
-func GetCredential(user string) (string, error) {
+func GetCredential(u *model.User) (string, error) {
 	s := &model.Space{
-		Name:    user,
-		Members: []string{user},
+		ID:   u.ID,
+		Name: u.GithubID,
 	}
 
 	credential, err := serviceaccounts.GetCredentialConfig(s)
@@ -65,10 +65,10 @@ func GetCredential(user string) (string, error) {
 }
 
 //ListDevEnvs returns the dev environments for a given user
-func ListDevEnvs(user string) ([]*model.Dev, error) {
+func ListDevEnvs(u *model.User) ([]*model.Dev, error) {
 	s := &model.Space{
-		Name:    user,
-		Members: []string{user},
+		ID:   u.ID,
+		Name: u.GithubID,
 	}
 	c, err := client.Get()
 	if err != nil {
@@ -93,10 +93,10 @@ func ListDevEnvs(user string) ([]*model.Dev, error) {
 }
 
 //ListDatabases returns the databases for a given user
-func ListDatabases(user string) ([]*model.DB, error) {
+func ListDatabases(u *model.User) ([]*model.DB, error) {
 	s := &model.Space{
-		Name:    user,
-		Members: []string{user},
+		ID:   u.ID,
+		Name: u.GithubID,
 	}
 	c, err := client.Get()
 	if err != nil {
