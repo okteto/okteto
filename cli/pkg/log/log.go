@@ -32,6 +32,9 @@ var (
 
 	// SuccessSymbol is a checkmark with the success color applied
 	SuccessSymbol = SymbolString(" ✓ ")
+
+	// InformationSymbol is a checkmark with the information color applied
+	InformationSymbol = BlueString(" ⓘ ")
 )
 
 type logger struct {

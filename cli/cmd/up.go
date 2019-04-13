@@ -65,6 +65,13 @@ func Up() *cobra.Command {
 			}
 
 			devPath = getFullPath(devPath)
+
+			if _, err := os.Stat(devPath); os.IsNotExist(err) {
+				if err := createManifest(devPath); err != nil {
+					return fmt.Errorf("couldn't create your manifest: %s", err)
+				}
+			}
+
 			dev, err := model.Get(devPath)
 			if err != nil {
 				return err
