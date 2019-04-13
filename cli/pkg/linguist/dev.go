@@ -8,8 +8,9 @@ import (
 )
 
 type languageDefault struct {
-	image string
-	path  string
+	image   string
+	path    string
+	command []string
 }
 
 const (
@@ -30,33 +31,39 @@ var (
 func init() {
 	languageDefaults = make(map[string]languageDefault)
 	languageDefaults[javascript] = languageDefault{
-		image: "okteto/node:11",
-		path:  "/usr/src/app",
+		image:   "okteto/node:10",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
 	}
 
 	languageDefaults[golang] = languageDefault{
-		image: "golang:1",
-		path:  "/go/src/app",
+		image:   "okteto/golang:1",
+		path:    "/go/src/app",
+		command: []string{"bash"},
 	}
 
 	languageDefaults[python] = languageDefault{
-		image: "python:3",
-		path:  "/usr/src/app",
+		image:   "okteto/python:3",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
 	}
 
 	languageDefaults[java] = languageDefault{
-		image: "gradle:5.1-jdk11",
-		path:  "/home/gradle",
+		image:   "okteto/gradle:5.1-jdk11",
+		path:    "/home/gradle",
+		command: []string{"bash"},
 	}
 
 	languageDefaults[ruby] = languageDefault{
-		image: "ruby:2",
-		path:  "/usr/src/app",
+		image:   "okteto/ruby:2",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
 	}
 
 	languageDefaults[Unrecognized] = languageDefault{
-		image: "okteto/desk:0.1.2",
-		path:  "/app",
+		image:   "okteto/desk:0.1.3",
+		path:    "/app",
+		command: []string{"bash"},
 	}
 }
 
@@ -81,6 +88,7 @@ func GetDevConfig(language string) *model.Dev {
 	dev := &model.Dev{
 		Image:   vals.image,
 		WorkDir: vals.path,
+		Command: vals.command,
 	}
 
 	return dev

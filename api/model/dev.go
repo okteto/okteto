@@ -41,7 +41,7 @@ type EnvVar struct {
 func read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		WorkDir:     "/app",
-		Image:       "okteto/desk:0.1.2",
+		Image:       "okteto/desk:0.1.3",
 		Environment: make([]EnvVar, 0),
 		Command:     []string{"sh"},
 	}
