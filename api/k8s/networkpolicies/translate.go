@@ -20,9 +20,11 @@ func translate(s *model.Space) *netv1.NetworkPolicy {
 						netv1.NetworkPolicyPeer{
 							NamespaceSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
-									Key:      "app.kubernetes.io/name",
-									Operator: metav1.LabelSelectorOpIn,
-									Values:   []string{s.ID, "ingress-nginx"},
+									metav1.LabelSelectorRequirement{
+										Key:      "app.kubernetes.io/name",
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{s.ID, "ingress-nginx"},
+									},
 								},
 							},
 						},
