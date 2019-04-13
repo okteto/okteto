@@ -17,7 +17,7 @@ func Handler() *handler.Handler {
 	h := handler.New(&handler.Config{
 		Schema:   &Schema,
 		Pretty:   true,
-		GraphiQL: true,
+		GraphiQL: false,
 	})
 
 	return h
