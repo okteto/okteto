@@ -6,14 +6,17 @@ import { hot } from 'react-hot-loader';
 import Space from 'containers/Space';
 import Login from 'containers/Login';
 import Notification from 'components/Notification';
-
-import { restoreSession } from 'actions/session';
+import { restoreSession, logout } from 'actions/session';
 
 import 'views/AppView.scss';
 
 class AppView extends Component {
   constructor(props) {
     super(props);
+
+    document.addEventListener('logout', () => {
+      this.props.dispatch(logout());
+    });
 
     // Restore any existing session.
     this.props.dispatch(restoreSession());

@@ -4,14 +4,8 @@ import request from 'common/request';
 import { notify } from 'components/Notification';
 
 const fetchEnvironments = () => {
-  return request(``, { 
-    method: 'post', 
-    auth: true,
-    body: JSON.stringify({ 
-      query: `{ environments { id,name,endpoints } }` 
-    })
-  }, { 
-    responseType: 'json' 
+  return request(`{ environments { id,name,endpoints } }`, { 
+    auth: true
   });
 };
 
@@ -29,7 +23,7 @@ export const receiveEnvironments = environments => {
 };
 
 export const handleFetchError = err => {
-  notify(`Project error: ${err}`, 'error');
+  notify(`Error: ${err}`, 'error');
   return {
     type: 'HANDLE_FETCH_ERROR'
   };
@@ -48,18 +42,12 @@ export const deleteEnvironment = environment => {
   return dispatch => {
     // mixpanel.track('Delete Environment');
 
-    return request(``, {
-      method: 'post',
-      auth: true,
-      body: JSON.stringify({ 
-        query: `mutation {
-          down(name: "${environment.name}") {
-            name
-          }
-        }` 
-      })
-    }, { 
-      responseType: 'json' 
+    return request(`mutation {
+      down(name: "${environment.name}") {
+        name
+      }
+    }`, {
+      auth: true
     }).then(() => {
       dispatch(refreshEnvironments());
     }).catch(err => notify(`Failed to delete: ${err}`, 'error'));

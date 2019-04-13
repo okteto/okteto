@@ -6,24 +6,16 @@ export const SESSION_KEY = 'okteto-session';
 
 export const loginWithGithub = code => {
   return dispatch => {
-    return request(``, {
-      method: 'post',
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(
-        { query: `mutation{ auth(code:"${code}"){ id,githubID,avatar,name,email,token } }` })
-    }, {
-      responseType: 'json'
-    }).then(e => {
-      if (e.errors) {
-        notify(`Authentication error: ${e.errors[0].message}`, 'error')
-      } else {
-        localStorage.setItem(environment.apiTokenKeyName, e.data.auth.token);
-        dispatch(authSuccess(e.data.auth));
-        dispatch(saveSession());
-      }
-    }).catch(err => notify(`Authentication error: ${err}`, 'error'));
+    return request(`mutation{ auth(code:"${code}"){ id,githubID,avatar,name,email,token } }`)
+      .then(e => {
+        if (e.errors) {
+          notify(`Authentication error: ${e.errors[0].message}`, 'error')
+        } else {
+          localStorage.setItem(environment.apiTokenKeyName, e.data.auth.token);
+          dispatch(authSuccess(e.data.auth));
+          dispatch(saveSession());
+        }
+      }).catch(err => notify(`Authentication error: ${err}`, 'error'));
   };
 };
 

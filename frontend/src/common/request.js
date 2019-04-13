@@ -1,54 +1,36 @@
-import * as Sentry from '@sentry/browser';
 import { getToken } from 'common/environment';
 
 const rootPath = '/graphql';
 
 const errors = {
-  'InvalidJson': 'Invalid data format'
+  'not-authorized': 'Session expired'
 };
 
-const getErrorText = (error) => {
-  if (error.code && errors[error.code]) {
-    const message = errors[error.code];
-    if (typeof message === "string") {
-      return message;
+const getErrorText = (message) => {
+  return errors[message] || 'Unknown error occurred';
+};
+
+const handleQLResponse = (response) => {
+  return response.json().then(content => {
+    if (content.errors && content.errors.length > 0) {
+      for (let error of Array.from(content.errors)) {
+        if (error.message === 'not-authorized') {
+          document.dispatchEvent(new Event('logout'));
+          return Promise.reject(getErrorText(error.message));
+        }
+      }
+      return Promise.reject('Unknown error occurred');
     }
-
-    return message(error.data);
-  }
-  return 'Unkown error occurred';
+    return content;
+  });
 };
 
-const handleResponse = (response) => {
-  if (!response.ok) {
-    if (response.status >= 500) {
-      Sentry.captureMessage(`Request to ${response.url} failed: ${response.status}`);
-      return Promise.reject('Internal Server Error');
-    } else if (response.status === 400 || response.status == 409) {
-      // Bad Request or Conflict.
-      return response.json().then(error => {
-        return Promise.reject(getErrorText(error));
-      });
-    } else if (response.status === 401) {
-      // Unauthorized.
-      document.dispatchEvent(new Event('logout'));
-      return Promise.reject('Unauthorized');
-    }
-
-    return Promise.reject(response.statusText);
-  }
-  return response.text();
-};
-
-const handleJSONResponse = (response) => {
-  return handleResponse(response).then(content => Promise.resolve(JSON.parse(content)));
-};
-
-const request = (resource, init = {}, options = {}) => {
+const request = (query = '', init = {}, options = {}) => {
   const config = {
     auth: true,
     ...options
   };
+
   const headers = {
     ...init.headers
   };
@@ -57,10 +39,12 @@ const request = (resource, init = {}, options = {}) => {
     headers.Authorization = `Bearer ${getToken()}`;
   }
 
-  return fetch(`${rootPath}/${resource}`.replace(/\/$/, ''), {
+  return fetch(`${rootPath}/`.replace(/\/$/, ''), {
     ...init,
-    headers: new Headers({ ...headers })
-  }).then(config.responseType === 'json' ? handleJSONResponse : handleResponse);
+    method: 'post',
+    headers: new Headers({ ...headers }),
+    body: JSON.stringify({ query })
+  }).then(handleQLResponse);
 };
 
 export default request;
