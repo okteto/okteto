@@ -13,7 +13,7 @@ func translate(s *model.Space) *netv1.NetworkPolicy {
 			Name: s.ID,
 		},
 		Spec: netv1.NetworkPolicySpec{
-			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress, netv1.PolicyTypeEgress},
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
 			Ingress: []netv1.NetworkPolicyIngressRule{
 				netv1.NetworkPolicyIngressRule{
 					From: []netv1.NetworkPolicyPeer{
