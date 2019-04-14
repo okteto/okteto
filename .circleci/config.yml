@@ -7,6 +7,9 @@ jobs:
       - image: circleci/golang:1.12
     steps:
       - checkout
+      - restore_cache: 
+          keys:
+            - v1-pkg-cache
       - run:
           command: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
           working_directory: cli
@@ -15,7 +18,10 @@ jobs:
           root: cli
           paths:
             - bin
-
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - ~/.cache/go-build
       - store_artifacts:
           path: cli/bin
           destination: binaries
@@ -54,6 +60,9 @@ jobs:
       - image: circleci/golang:1.12
     steps:
       - checkout
+      - restore_cache: 
+          keys:
+            - v1-pkg-cache
       - run:
           command: make build
           working_directory: api
@@ -62,7 +71,10 @@ jobs:
           root: api
           paths:
             - bin
-
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - ~/.cache/go-build
       - store_artifacts:
           path: api/bin
           destination: binaries
@@ -73,13 +85,21 @@ jobs:
       - GITHUB_CLIENTID: "47867be52b46a2d9d302"
     steps:
       - checkout
+      - restore_cache:
+          name: Restore Yarn Package Cache
+          keys:
+            - yarn-packages-{{ checksum "yarn.lock" }}
       - run:
-          command: yarn install
+          command: yarn install --frozen-lockfile
           working_directory: frontend
       - run:
           command: yarn build
           working_directory: frontend
-
+      - save_cache:
+          name: Save Yarn Package Cache
+          key: yarn-packages-{{ checksum "yarn.lock" }}
+          paths:
+            - ~/.cache/yarn
       - persist_to_workspace:
           root: frontend
           paths:
