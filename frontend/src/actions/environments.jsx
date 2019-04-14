@@ -50,6 +50,6 @@ export const deleteEnvironment = environment => {
       auth: true
     }).then(() => {
       dispatch(refreshEnvironments());
-    }).catch(err => notify(`Failed to delete: ${err}`, 'error'));
+    }).catch(err => notify(`Error: ${err}`, 'error'));
   };
 };

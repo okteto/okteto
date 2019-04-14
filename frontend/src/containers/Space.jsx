@@ -5,12 +5,17 @@ import * as clipboard from 'clipboard-polyfill';
 import autobind from 'autobind-decorator';
 
 import { refreshEnvironments } from 'actions/environments';
+import { refreshDatabases } from 'actions/databases';
 import { notify } from 'components/Notification';
 import Button from 'components/Button';
 import Hint from 'components/Hint';
 import Icon from 'components/Icon';
+import NewMenu from 'components/NewMenu';
+import colors from 'colors.scss';
 import Header from './Header';
-import DeleteDialog from './DeleteDialog';
+import CreateDatabaseDialog from './Dialogs/CreateDatabase';
+import CreateEnvironmentDialog from './Dialogs/CreateEnvironment';
+import DeleteDialog from './Dialogs/DeleteDialog';
 
 import 'containers/Space.scss';
 
@@ -21,10 +26,11 @@ class Space extends Component {
     super(props);
 
     this.state = {
-      showNewHint: false
+      showNewMenu: false
     };
 
     this.props.dispatch(refreshEnvironments());
+    this.props.dispatch(refreshDatabases());
     this.poll = setInterval(this.handlePollEnvironments, POLLING_INTERVAL);
   }
 
@@ -34,22 +40,39 @@ class Space extends Component {
 
   @autobind
   handlePollEnvironments() {
+    // TODO: Should be merged into same graphql query.
     this.props.dispatch(refreshEnvironments());
+    this.props.dispatch(refreshDatabases());
   }
 
   @autobind
-  handleDelete(environment) {
-    this.deleteDialog.getWrappedInstance().open(environment);
+  handleCreateDatabase() {
+    this.createDatabaseDialog.getWrappedInstance().open();
+  }
+
+  @autobind
+  handleCreateEnvironment() {
+    this.createEnvironmentDialog.getWrappedInstance().open();
+  }
+
+  @autobind
+  handleDeleteEnvironment(environment) {
+    this.deleteDialog.getWrappedInstance().open(environment, 'environment');
+  }
+
+  @autobind
+  handleDeleteDatabase(database) {
+    this.deleteDialog.getWrappedInstance().open(database, 'database');
   }
 
   render() {
-    const { environments, user } = this.props;
+    const { environments, databases, user } = this.props;
     const environmentList = Object.values(environments);
+    const databaseList = Object.values(databases);
+    const isEmpty = environmentList.length === 0 && databaseList.length === 0;
 
     const HintContent = () => (
-      <div className="layout vertical">
-        <h1>Start a new environment</h1>
-        
+      <div className="HintContent layout vertical">
         <div className="step layout vertical">
           <p>
             <span className="number">1.</span> Install <strong>Okteto CLI</strong>:
@@ -90,7 +113,6 @@ class Space extends Component {
                 clipboard.writeText(`okteto up`);
                 notify('Copied to clipboard!');
                 // mixpanel.track('Copied CLI Command');
-                this.setState({ showNewHint: false });
               }}
               light
               frameless>
@@ -104,7 +126,8 @@ class Space extends Component {
           </p>
           <div className="layout horizontal">
             <code className="cli cli-okteto flex-auto">
-              yarn start<br/> Running server at http://{user.id}.okteto.net
+              yarn start<br/> 
+              <span className="output">Running server at http://{user.githubID}.okteto.net</span>
             </code>
           </div>
         </div>
@@ -116,7 +139,7 @@ class Space extends Component {
       <div className="Space layout vertical">
         <Header title={`${user.githubID}'s space`} />
 
-        {environmentList.length === 0 &&
+        {isEmpty &&
           <div className="EmptySpace layout vertical center">
             <Icon icon="emptySpace" size="140" />
             <h2>Your space is empty.</h2>
@@ -134,75 +157,96 @@ class Space extends Component {
                 positionY="bottom"
                 hideCloseButton
               >
+                <h1>Start a new environment</h1>
                 <HintContent />
               </Hint>
             </div>
           </div>
         }
 
-        {environmentList.length > 0 && 
-          <>
-            <div className="EnvironmentList layout vertical">
-              {environmentList.map(environment =>
-                <div key={environment.id} className="EnvironmentItem layout horizontal start">
-                  <div className="EnvironmentItemIcon">
-                    <Icon icon="mirror" size="20"/>
-                  </div>
-                  <div className="EnvironmentItemName ellipsis" 
-                    title={environment.name}>
-                    {environment.name}
-                  </div>
-                  <div className="EnvironmentItemEndpoints layout vertical">
-                    {environment.endpoints.map(url =>
-                      <a className="ellipsis layout horizontal center" 
-                        key={`${environment.id}-${url}`}
-                        href={url}
-                        rel="noreferrer noopener" 
-                        target="_blank">
-                        {url}
-                        <Icon icon="external" size="18" />
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex-auto" />
-                  <div className="EnvironmentItemActions layout horizontal center">
-                    <div className="ActionButton" onClick={() => this.handleDelete(environment)}>
-                      <Icon icon="delete" size="24" />
-                    </div>
-                  </div>
+        <div className="List layout vertical">
+          {environmentList.map(environment =>
+            <div key={environment.id} className="Item layout horizontal start">
+              <div className="ItemIcon">
+                <Icon icon="mirror" size="20"/>
+              </div>
+              <div className="ItemName ellipsis" 
+                title={environment.name}>
+                {environment.name}
+              </div>
+              <div className="ItemEndpoints layout vertical">
+                {environment.endpoints.map(url =>
+                  <a className="ellipsis layout horizontal center" 
+                    key={`${environment.id}-${url}`}
+                    href={url}
+                    rel="noreferrer noopener" 
+                    target="_blank">
+                    {url}
+                    <Icon icon="external" size="18" />
+                  </a>
+                )}
+              </div>
+              <div className="flex-auto" />
+              <div className="ItemActions layout horizontal center">
+                <div className="ActionButton" 
+                  onClick={() => this.handleDeleteEnvironment(environment)}>
+                  <Icon icon="delete" size="24" />
                 </div>
-              )}
-            </div>
-
-            <div className="ActionBar layout horizontal center">
-              <div className="flex-auto"></div>
-              <div className="NewButtonContainer">
-                <Button 
-                  className="NewButton" 
-                  icon="plusCircle" 
-                  iconSize="18"
-                  onClick={() => this.setState({ showNewHint: true })}
-                >
-                  New Environment
-                </Button>
-                <Hint 
-                  className="HintNew"
-                  open={this.state.showNewHint}
-                  onClose={() => this.setState({ showNewHint: false })}
-                  width="520"
-                  arrowPosition="right"
-                  offsetY="46"
-                  offsetX="-50"
-                  positionX="left"
-                >
-                  <HintContent />
-                </Hint>
               </div>
             </div>
-          </>
+          )}
+
+          {databaseList.map(database =>
+            <div key={database.name} className="Item layout horizontal start">
+              <div className="ItemIcon">
+                <Icon icon="database" size="20"/>
+              </div>
+              <div className="ItemName ellipsis" 
+                title={database.name}>
+                {database.name}
+              </div>
+              <div className="ItemEndpoints layout vertical">
+                {database.endpoint}
+              </div>
+              <div className="flex-auto" />
+              <div className="ItemActions layout horizontal center">
+                <div className="ActionButton" 
+                  onClick={() => this.handleDeleteDatabase(database)}>
+                  <Icon icon="delete" size="24" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!isEmpty && 
+          <div className="ActionBar layout horizontal center">
+            <div className="flex-auto"></div>
+            <div className="NewButtonContainer">
+              <div className="NewButton" onClick={() => this.setState({ showNewMenu: true })}>
+                <Icon
+                  className="NewButton" 
+                  icon="plusCircle" 
+                  size="36"
+                  color={colors.green400}
+                />
+              </div>
+              {this.state.showNewMenu && 
+                <NewMenu
+                  onNewEnvironment={() => this.handleCreateEnvironment()}
+                  onNewDatabase={() => this.handleCreateDatabase()}
+                  onClose={() => this.setState({ showNewMenu: false })}
+                />
+              }
+            </div>
+          </div>
         }
 
         <DeleteDialog ref={ref => this.deleteDialog = ref} />
+        <CreateDatabaseDialog ref={ref => this.createDatabaseDialog = ref} />
+        <CreateEnvironmentDialog ref={ref => this.createEnvironmentDialog = ref}>
+          <HintContent />
+        </CreateEnvironmentDialog>
       </div>
     );  
   }
@@ -214,12 +258,14 @@ Space.defaultProps = {
 Space.propTypes = {
   dispatch: PropTypes.func,
   user: PropTypes.object.isRequired,
-  environments: PropTypes.object.isRequired
+  environments: PropTypes.object.isRequired,
+  databases: PropTypes.object.isRequired
 };
 
 export default ReactRedux.connect(state => {
   return {
     environments: state.environments.byId || {},
+    databases: state.databases.byName || {},
     user: state.session.user
   };
 })(Space);

@@ -18,8 +18,8 @@
     }
   }
 
-  .EnvironmentList {
-    .EnvironmentItem {
+  .List {
+    .Item {
       position: relative;
       padding: 20px $side-margin;
       box-sizing: border-box;
@@ -28,7 +28,7 @@
       &:nth-child(odd) {
         background-color: $navy;
 
-        .EnvironmentItemActions {
+        .ItemActions {
           background-color: rgba($navy, .8);
         }
       }
@@ -43,13 +43,13 @@
         background-color: $green-400;
       }
 
-      .EnvironmentItemIcon {
+      .ItemIcon {
         height: 20px;
         margin-right: 21px;
         margin-left: 8px;
       }
       
-      .EnvironmentItemName {
+      .ItemName {
         height: 20px;
         font-size: 20px;
         line-height: 20px;
@@ -59,7 +59,7 @@
         width: 20vw;
       }
 
-      .EnvironmentItemEndpoints {
+      .ItemEndpoints {
         font-size: 17px;
         font-weight: 200;
         margin-top: -2px;
@@ -91,11 +91,11 @@
         }
       }
 
-      &:hover .EnvironmentItemActions {
+      &:hover .ItemActions {
         display: flex;
       }
 
-      .EnvironmentItemActions {
+      .ItemActions {
         display: none;
         position: absolute;
         right: 0;
@@ -116,16 +116,16 @@
     }
 
     @media screen and (max-width: 500px) {
-      .EnvironmentItem {
+      .Item {
         &.layout.horizontal {
           flex-direction: column;
         }
 
-        .EnvironmentItemName {
+        .ItemName {
           width: auto;
         }
 
-        .EnvironmentItemEndpoints {
+        .ItemEndpoints {
           margin-top: 18px;
           margin-left: 50px;
         }
@@ -138,17 +138,33 @@
 
     .NewButtonContainer {
       position: relative;
+
+      .NewButton {
+        cursor: pointer;
+      }
     }
   }
 
   .HintNew {
+    padding: 32px 36px;
+
+    h1 {
+      font-size: 24px;
+      font-weight: normal;
+      line-height: 26px;
+      margin-bottom: 24px;
+    }
+  }
+
+  .HintContent {
     user-select: text;
     text-align: left;
     font-size: 16px;
-    padding: 32px;
 
     .step {
-      margin-top: 32px;
+      &:not(:first-child) {
+        margin-top: 28px;
+      }
 
       .number {
         color: $green-400;
@@ -157,14 +173,9 @@
       }
     }
 
-    h1 {
-      font-size: 24px;
-      font-weight: normal;
-    }
-
     p {
       margin-bottom: 12px;
-      font-size: 17px;
+      font-size: 18px;
     }
 
     code {
@@ -193,6 +204,10 @@
 
       &.cli-okteto:before {
         content: 'okteto>';
+      }
+
+      .output {
+        color: rgba(white, .6);
       }
     }
 

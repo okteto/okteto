@@ -6,6 +6,7 @@ import autobind from 'autobind-decorator';
 import Button from 'components/Button';
 import Modal from 'components/Modal';
 import { deleteEnvironment } from 'actions/environments';
+import { deleteDatabase } from 'actions/databases';
 
 import './DeleteDialog.scss';
 
@@ -20,7 +21,11 @@ class DeleteDialog extends Component {
 
   @autobind
   handleConfirmClick() {
-    this.props.dispatch(deleteEnvironment(this.state.environment));
+    if (this.state.type === 'environment') {
+      this.props.dispatch(deleteEnvironment(this.state.item));
+    } else if (this.state.type === 'database') {
+      this.props.dispatch(deleteDatabase(this.state.item));
+    }
     this.close();
   }
 
@@ -29,14 +34,11 @@ class DeleteDialog extends Component {
     this.close();
   }
 
-  open(environment) {
-    if (!environment) return;
-
-    this.setState({
-      environment: environment
-    });
-
-    this.dialog && this.dialog.open();
+  open(item, type) {
+    if (item && ['environment', 'database'].includes(type)) {
+      this.setState({ item, type });
+      this.dialog && this.dialog.open();
+    }
   }
 
   close() {
@@ -44,22 +46,22 @@ class DeleteDialog extends Component {
   }
 
   render() {
-    const { environment } = this.state;
+    const { item, type } = this.state;
     return (
       <Modal 
         className="DeleteDialog"
         ref={ref => this.dialog = ref} 
-        title="Delete Environment"
+        title={`Delete ${type}`}
         width={450}>
         <div className="delete-dialog-content layout vertical">
           <p>
-            Are you sure you want to delete environment&nbsp;
-            <strong>{environment ? environment.name : ''}</strong>?
+            Are you sure you want to delete {type}&nbsp;
+            <strong>{item ? item.name : ''}</strong>?
           </p>
           <div style={{ height: '20px' }} />
           <div className="layout horizontal-reverse center">
             <Button 
-              disabled={!environment}
+              disabled={!item}
               color="red"
               solid
               onClick={this.handleConfirmClick}>

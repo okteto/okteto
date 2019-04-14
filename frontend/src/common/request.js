@@ -7,7 +7,7 @@ const errors = {
 };
 
 const getErrorText = (message) => {
-  return errors[message] || 'Unknown error occurred';
+  return errors[message] || message;
 };
 
 const handleQLResponse = (response) => {
@@ -18,8 +18,8 @@ const handleQLResponse = (response) => {
           document.dispatchEvent(new Event('logout'));
           return Promise.reject(getErrorText(error.message));
         }
+        return Promise.reject(getErrorText(error.message));
       }
-      return Promise.reject('Unknown error occurred');
     }
     return content;
   });

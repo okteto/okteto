@@ -28,7 +28,9 @@ class Modal extends Component {
       padding: '24px 32px',
       fontSize: '18px',
       lineHeight: 'normal',
-      zIndex: 99999999
+      zIndex: 99999999,
+      top: `${50 - this.props.offsetTop}%`,
+      left: `${50 - this.props.offsetLeft}%`
     };
 
     const overlayStyles = {
@@ -69,13 +71,17 @@ class Modal extends Component {
 }
 
 Modal.defaultProps = {
-  width: 250
+  width: 250,
+  offsetTop: 0,
+  offsetLeft: 0
 };
 
 Modal.propTypes = {
   title: PropTypes.string,
   height: PropTypes.number,
   width: PropTypes.number,
+  offsetTop: PropTypes.number,
+  offsetLeft: PropTypes.number,
   onOpen: PropTypes.func,
   onClose: PropTypes.func,
   className: PropTypes.string,

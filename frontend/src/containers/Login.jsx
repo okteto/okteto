@@ -42,7 +42,7 @@ class Login extends Component {
         <div className="Login">
           <div className="layout vertical center-center">
             <div className="logo">
-              <Icon icon="okteto" size="64" />
+              <Icon icon="okteto" size="52" />
             </div>
 
             <GitHubLogin 
@@ -51,7 +51,7 @@ class Login extends Component {
               onSuccess={this.onLoginSuccess}
               onFailure={this.onLoginFailure}
             >
-              <Icon icon="github" size="20" color={colors.white900} />
+              <Icon icon="github" size="24" color={colors.white900} />
               Login with Github
             </GitHubLogin>
 

@@ -1,9 +1,5 @@
-.DeleteDialog {
-  .delete-label {
-    margin-top: 18px;
-  }
-
-  .delete-input {
+.CreateDatabase {
+  .NameInput {
     margin-top: 6px;
     padding: 8px;
     border: 1px solid rgba(black, .2);
@@ -12,6 +8,12 @@
     &:focus,
     &:active {
       outline: none;
+    }
+
+    &::placeholder {
+      color: black;
+      opacity: .3;
+      font-style: italic;
     }
   }
 }
