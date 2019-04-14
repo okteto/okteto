@@ -1,0 +1,73 @@
+version: 2
+jobs:
+  build-cli:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run:
+          command: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
+          working_directory: cli
+
+      - persist_to_workspace:
+          root: cli
+          paths:
+            - bin
+
+      - store_artifacts:
+          path: cli/bin
+          destination: binaries
+  publish-cli:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./artifacts
+      - run:
+          name: "Publish CLI Release"
+          command: |
+            echo "$CIRCLE_TAG code release goes here"
+  build-api:
+    docker:
+      - image: docker:latest
+    steps:
+      - checkout
+      - run:
+          command: docker build -t api .
+          working_directory: api
+  build-frontend:
+    docker:
+      - image: docker:latest
+    steps:
+      - checkout
+      - run:
+          command: docker build -t frontend .
+          working_directory: frontend
+workflows:
+  version: 2
+  test:
+    jobs:
+      - build-api:
+          filters:
+            tags:
+              only: /.*/
+      - build-cli:
+          filters:
+            tags:
+              only: /.*/
+      - build-frontend:
+          filters:
+            tags:
+              only: /.*/
+  release-cli:
+    jobs:
+      - build-cli:
+          filters:
+            tags:
+              only: /^\d+\.\d+\.\d+$/
+      - publish-cli:
+          requires: build-cli
+          filters:
+            tags:
+              only: /^\d+\.\d+\.\d+$/

@@ -18,9 +18,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
-// VersionString the version of the cli
-var VersionString string
-
 func init() {
 	config.SetConfig(&config.Config{
 		FolderName:       ".okteto",
@@ -56,6 +53,7 @@ func main() {
 	root.AddCommand(cmd.Database())
 	root.AddCommand(cmd.Exec())
 	root.AddCommand(cmd.Login())
+	root.AddCommand(cmd.Version())
 
 	if err := root.Execute(); err != nil {
 		fmt.Printf("%s %s", log.ErrorSymbol, log.RedString(err.Error()))
