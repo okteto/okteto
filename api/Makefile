@@ -1,3 +1,9 @@
+BINDIR    := $(CURDIR)/bin
+
+.PHONY: build
+build:
+	go build -o "bin/okteto-api-$(label)" 
+
 .PHONY: push
 push:
 	docker push gcr.io/free-tier-219708/api
