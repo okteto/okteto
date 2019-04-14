@@ -24,10 +24,6 @@ func CreateDatabase(u *model.User, db *model.DB) error {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	if err := statefulsets.Deploy(db, s, c); err != nil {
-		return err
-	}
-
 	var dbService *apiv1.Service
 	switch db.Name {
 	case model.MONGO:
@@ -39,6 +35,11 @@ func CreateDatabase(u *model.User, db *model.DB) error {
 	default:
 		return fmt.Errorf("Supported databases are: mongo, redis or postgres")
 	}
+
+	if err := statefulsets.Deploy(db, s, c); err != nil {
+		return err
+	}
+
 	if err := services.Deploy(dbService, s, c); err != nil {
 		return err
 	}
