@@ -28,7 +28,12 @@ class Header extends Component {
           <div className="UserAtom layout horizontal center"
             onClick={() => this.setState({ showUserMenu: true })}>
             <div className="Avatar">
-              <Icon icon="logo" size="52" color={colors.navyDark} />
+              {!user.avatar && 
+                <Icon icon="logo" size="52" color={colors.navyDark} />
+              }
+              {user.avatar && 
+                <img src={user.avatar} width="24" />
+              }
             </div>
             <div className="Username">{user.githubID}</div>
             <Icon icon="arrowDown" size="24" color="white" />
