@@ -28,7 +28,7 @@ curl https://get.okteto.com -sSfL | sh
 okteto login
 ```
 
-### Step 4: Create your Okteto environment
+### Step 4: Create your Okteto Environment
 
 Clone the samples repository and move to the `vote` folder:
 ```console
@@ -36,27 +36,30 @@ $ git clone https://github.com/okteto/cloud-samples
 $ cd cloud-samples/vote
 ```
 
-and now execute:
+This application requires a Redis Database to be running in your Okteto Space. Just create it by executing:
+
+```console
+okteto database redis
+```
+
+Now create your Okteto Environment by exxecuting:
 
 ```console
 okteto up
 ```
 
-The `okteto up` command will create an Okteto Environment that automatically synchronizes and applies your local code changes. In the Okteto Terminal, execute:
+The `okteto up` command will automatically synchronize and applies your local code changes to your Okteto Environment. In the Okteto Terminal, run your application by execute:
 
 ```console
 pip install -r requirements.txt
 python app.py
 ```
 
-Check that your application is running by going to [Okteto](https://cloud.okteto.com) and clicking the endpoint of your application.
-
-As you can see, the app is failing because it requires a redis database running on your Okteto Environment. Go to 
-[Okteto](https://cloud.okteto.com) and click the `+` buttom on the right, pick `Database` and then `Redis`. This will create a Redis Database in your Okteo Space. After a few seconds, check again your application and now you should have your python application up and running.
+Check that your application is running by going to [Okteto](https://cloud.okteto.com) and clicking the endpoint of your application. You have deployed your first Okteto Application 😎! 
 
 ### Step 5: Develop directly in the cloud
 
-Open `vote/app.py` in your favorite IDE. Change the `optionA` in line 8 from "Cats" to "Otters" and save your changes.
+Now things gets more exciting. Open `vote/app.py` in your favorite IDE. Change the `optionA` in line 8 from "Cats" to "Otters" and save your changes.
 
 If you go back to the Okteto Trminal, you'll notice that flask already detected the code changes and reloaded your application.
 ```console
@@ -67,4 +70,4 @@ If you go back to the Okteto Trminal, you'll notice that flask already detected 
  * Debugger PIN: 778-756-428
 ```
 
-Go back to the browser, and reload the application. Notice how your changes to your application are instantly applied 😎! 
+Go back to the browser, and reload the application. Notice how your changes are instantly applied 😎! 
