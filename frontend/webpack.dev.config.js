@@ -10,6 +10,7 @@ module.exports = merge({
     host: '0.0.0.0',
     port: 8000,
     proxy: {
+      '/healthz': 'http://api:8000',
       '/graphql': 'http://api:8000',
       '/github': 'http://api:8000'
     },

@@ -7,13 +7,15 @@ githubAuth:
   clientId: ""
   clientSecret: ""
 
+replicas: 2
+
 images:
   api:
-    repository: okteto/api
-    tag: cloud
+    repository: gcr.io/okteto-prod/api
+    tag: 0.1.0
   frontend:
-    repository: okteto/frontend
-    tag: cloud
+    repository: gcr.io/okteto-prod/frontend
+    tag: 0.1.0
   pullPolicy: Always
 
 nameOverride: ""

@@ -18,6 +18,7 @@ spec:
         app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-frontend"
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      replicas: {{ .Values.replicas }}
       containers:
         - name: frontend
           image: "{{ .Values.images.frontend.repository }}:{{ .Values.images.frontend.tag }}"
@@ -29,5 +30,18 @@ spec:
           env:
             - name: GITHUB_CLIENTID
               value: {{ .Values.githubAuth.clientId }}
+          livenessProbe:
+            httpGet:
+              path: /index.html
+              port: {{ .Values.services.frontend.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: {{ .Values.services.frontend.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          
           resources:
 {{ toYaml .Values.resources.frontend | indent 12 }}

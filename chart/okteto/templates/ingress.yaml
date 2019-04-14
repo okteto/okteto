@@ -30,6 +30,10 @@ spec:
     - host: {{ . | quote }}
       http:
         paths:
+          - path: "/healthz"
+            backend:
+              serviceName: api
+              servicePort: {{ $root.Values.services.api.port }}
           - path: "/github"
             backend:
               serviceName: api

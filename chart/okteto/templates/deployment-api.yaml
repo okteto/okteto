@@ -21,6 +21,7 @@ spec:
         checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ include "okteto.fullname" . }}
+      replicas: {{ .Values.replicas }}
       containers:
         - name: api
           image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"
@@ -43,5 +44,17 @@ spec:
                 secretKeyRef:
                   name: {{ include "okteto.fullname" . }}
                   key: githubClientSecret
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.services.api.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.services.api.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
           resources:
 {{ toYaml .Values.resources.api | indent 12 }}
