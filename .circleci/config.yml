@@ -95,15 +95,15 @@ workflows:
       - build-api:
           filters:
             tags:
-              only: /.*/
+              ignore: /^\d+\.\d+\.\d+$/
       - build-cli:
           filters:
             tags:
-              only: /.*/
+              ignore: /^\d+\.\d+\.\d+$/
       - build-frontend:
           filters:
             tags:
-              only: /.*/
+              ignore: /^\d+\.\d+\.\d+$/
   release-cli:
     jobs:
       - build-cli:
