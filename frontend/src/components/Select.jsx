@@ -13,15 +13,21 @@ class Select extends Component {
   @autobind
   onChange(option) {
     if (this.props.onChange) {
-      this.props.onChange(option.value);
+      this.props.onChange(option ? option.value : null);
     }
+  }
+
+  clear() {
+    this.selectRef.select.clearValue();
   }
 
   render() {
     const { value, options } = this.props;
     const option = options.find(option => option.value == value);
+
     return (
       <ReactSelect
+        ref={ref => this.selectRef = ref}
         className={`Select ${this.props.palette}`}
         classNamePrefix="Select" 
         isSearchable={this.props.isSearchable} 

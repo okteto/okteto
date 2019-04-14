@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import autobind from 'autobind-decorator';
 
 import Button from 'components/Button';
+import Select from 'components/Select';
 import Modal from 'components/Modal';
 import { createDatabase } from 'actions/databases';
 
@@ -14,36 +15,19 @@ class CreateDatabase extends Component {
     super(props);
 
     this.state = {
-      name: ''
+      type: null
     };
   }
 
   @autobind
   handleConfirmClick() {
-    const name = this.state.name.trim();
-    if (!name) return;
-    this.props.dispatch(createDatabase(name));
+    this.props.dispatch(createDatabase(this.state.type));
     this.close();
-    this.reset();
   }
 
   @autobind
   handleCancelClick() {
     this.close();
-  }
-
-  @autobind
-  handleKeyDown(event) {
-    if (event.key === 'Enter' && document.activeElement === this.nameInput) {
-      this.handleConfirmClick();
-    }
-  }
-
-  @autobind
-  handleKeyUp(event) {
-    // Force value to lowercase.
-    event.target.value = event.target.value.toLocaleLowerCase();
-    this.setState({ name: event.target.value });
   }
 
   open() {
@@ -52,32 +36,47 @@ class CreateDatabase extends Component {
 
   close() {
     this.dialog && this.dialog.close();
+    this.reset();
   }
 
   reset() {
-    this.nameInput.value = '';
-    this.setState({ name: '' });
+    this.setState({ type: null });
+    this.select.clear();
   }
 
   render() {
+    const existingDatabases = Object.keys(this.props.databases);
+    const options = [
+      { value: 'mongo', label: 'Mongodb' },
+      { value: 'redis', label: 'Redis'},
+      { value: 'postgres', label: 'Postgres'}
+    ].map(option => {
+      return {
+        ...option,
+        isDisabled: existingDatabases.includes(option.value)
+      };
+    });
+
     return (
-      <Modal 
+      <Modal
         className="CreateDatabase"
         ref={ref => this.dialog = ref} 
         title="New database"
         width={450}>
         <div className="create-dialog-content layout vertical">
-          <input className="NameInput"
-            ref={ref => this.nameInput = ref}
-            type="text"
-            name="name"
-            onKeyUp={this.handleKeyUp}
-            onKeyDown={this.handleKeyDown}
-            placeholder="Database name" />
+          <Select
+            ref={ref => this.select = ref}
+            classNamePrefix="Select" 
+            isSearchable={false}
+            options={options}
+            onChange={value => this.setState({ type: value })}
+            value={this.state.type}
+            palette="light"
+          />
           <div style={{ height: '20px' }} />
           <div className="layout horizontal-reverse center">
             <Button 
-              disabled={!this.state.name}
+              disabled={!this.state.type}
               color="green"
               solid
               onClick={this.handleConfirmClick}>
@@ -98,9 +97,12 @@ class CreateDatabase extends Component {
 }
 
 CreateDatabase.propTypes = {
-  dispatch: PropTypes.func.isRequired
+  dispatch: PropTypes.func.isRequired,
+  databases: PropTypes.object
 };
 
-export default ReactRedux.connect(() => {
-  return {};
+export default ReactRedux.connect(state => {
+  return {
+    databases: state.databases.byName || {},
+  };
 }, null, null, { withRef: true })(CreateDatabase);
