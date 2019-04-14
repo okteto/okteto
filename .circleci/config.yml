@@ -40,8 +40,8 @@ jobs:
           aws-region: AWS_REGION
           arguments: |
             --acl public-read \
-            --metadata version=${CIRCLE_TAG}
-            --cache-control "max-age=86400"
+            --metadata version=${CIRCLE_TAG} \
+            --cache-control "max-age=86400" \
           overwrite: true
       - aws-s3/sync:
           from: ./artifacts/bin
@@ -51,8 +51,8 @@ jobs:
           aws-region: AWS_REGION
           arguments: |
             --acl public-read \
-            --metadata version=${CIRCLE_TAG}
-            --cache-control "max-age=86400"
+            --metadata version=${CIRCLE_TAG} \
+            --cache-control "max-age=86400" \
           overwrite: false
             
   build-api:
