@@ -9,7 +9,7 @@ import (
 )
 
 // DevModeOn activates a dev environment
-func DevModeOn(dev *model.Dev) error {
+func DevModeOn(dev *model.Dev, devPath string) error {
 	c, err := getClient()
 	if err != nil {
 		return fmt.Errorf("error getting okteto client: %s", err)
@@ -17,10 +17,10 @@ func DevModeOn(dev *model.Dev) error {
 
 	query := fmt.Sprintf(`
 	mutation {
-		up(name: "%s", image: "%s", workdir: "%s") {
+		up(name: "%s", image: "%s", workdir: "%s", devPath: "%s") {
 			  name
 		}
-	  }`, dev.Name, dev.Image, dev.WorkDir)
+	  }`, dev.Name, dev.Image, dev.WorkDir, devPath)
 
 	req := graphql.NewRequest(query)
 

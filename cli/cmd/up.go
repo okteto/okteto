@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -34,6 +35,7 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 type UpContext struct {
 	Context    context.Context
 	Cancel     context.CancelFunc
+	DevPath    string
 	WG         *sync.WaitGroup
 	Dev        *model.Dev
 	Client     *kubernetes.Clientset
@@ -89,6 +91,7 @@ func RunUp(dev *model.Dev, devPath string) error {
 	up := &UpContext{
 		WG:         &sync.WaitGroup{},
 		Dev:        dev,
+		DevPath:    filepath.Base(devPath),
 		Disconnect: make(chan struct{}, 1),
 		Running:    make(chan error, 1),
 		Exit:       make(chan error, 1),
@@ -213,12 +216,12 @@ func (up *UpContext) Execute(isRetry bool) error {
 		return err
 	}
 
-	up.Sy, err = syncthing.New(up.Dev, namespace)
+	up.Sy, err = syncthing.New(up.Dev, up.DevPath, namespace)
 	if err != nil {
 		return err
 	}
 
-	if err := okteto.DevModeOn(up.Dev); err != nil {
+	if err := okteto.DevModeOn(up.Dev, up.DevPath); err != nil {
 		return err
 	}
 

@@ -6,14 +6,12 @@ var (
 )
 
 func init() {
-	defaultIgnore = []byte(`okteto.yml
-.git
+	defaultIgnore = []byte(`.git
 `)
 	// based on the list available at https://github.com/github/gitignore
 	stignore = make(map[string][]byte, 0)
 
-	stignore[javascript] = []byte(`okteto.yml
-.git
+	stignore[javascript] = []byte(`.git
 # Logs
 logs
 *.log
@@ -96,8 +94,7 @@ typings/
 .dynamodb/
 `)
 
-	stignore[golang] = []byte(`okteto.yml
-.git
+	stignore[golang] = []byte(`.git
 *.exe
 *.exe~
 *.dll
@@ -111,8 +108,7 @@ typings/
 *.out
 `)
 
-	stignore[python] = []byte(`okteto.yml
-.git
+	stignore[python] = []byte(`.git
 Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -231,8 +227,7 @@ dmypy.json
 .pyre/
 `)
 
-	stignore[java] = []byte(`okteto.yml
-.git
+	stignore[java] = []byte(`.git
 .gradle
 build
 
@@ -246,8 +241,7 @@ gradle-app.setting
 .gradletasknamecache
 `)
 
-	stignore[ruby] = []byte(`okteto.yml
-*.gem
+	stignore[ruby] = []byte(`*.gem
 *.rbc
 /.config
 /coverage/

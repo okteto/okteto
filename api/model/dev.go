@@ -29,6 +29,7 @@ type Dev struct {
 	Environment []EnvVar `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir     string   `json:"workdir" yaml:"workdir"`
+	DevPath     string
 	Endpoints   []string `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
