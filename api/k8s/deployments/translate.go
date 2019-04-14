@@ -30,6 +30,7 @@ var (
 )
 
 func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
+	noServiceAccountToken := false
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
@@ -53,6 +54,7 @@ func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 					},
 				},
 				Spec: apiv1.PodSpec{
+					AutomountServiceAccountToken:  &noServiceAccountToken,
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Containers: []apiv1.Container{
 						apiv1.Container{

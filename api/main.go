@@ -33,6 +33,10 @@ func validateConfiguration() {
 		log.Fatal("CLUSTER_PUBLIC_ENDPOINT is not defined")
 	}
 
+	if len(os.Getenv("OKTETO_CLUSTER_CIDR")) == 0 {
+		log.Fatal("OKTETO_CLUSTER_CIDR is not defined")
+	}
+
 	if len(os.Getenv("GITHUB_CLIENTID")) == 0 {
 		log.Fatal("GITHUB_CLIENTID is not defined")
 	}

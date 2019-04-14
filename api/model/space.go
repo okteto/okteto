@@ -25,3 +25,13 @@ func (s *Space) validate() error {
 
 	return nil
 }
+
+//GetNetworkPolicyName returns the network policy name for a namespace
+func (s *Space) GetNetworkPolicyName() string {
+	return s.ID
+}
+
+//GetDNSPolicyName returns the dns policy name for a namespace
+func (s *Space) GetDNSPolicyName() string {
+	return fmt.Sprintf("dns-%s", s.ID)
+}

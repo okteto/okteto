@@ -32,6 +32,8 @@ spec:
           env:
             - name: OKTETO_BASE_DOMAIN
               value: "{{ .Values.oktetoBaseDomain }}"
+            - name: OKTETO_CLUSTER_CIDR
+              value: "{{ .Values.oktetoClusterCIDR }}"
             - name: CLUSTER_PUBLIC_ENDPOINT
               value: "{{ .Values.clusterPublicEndpoint }}"
             - name: GITHUB_CLIENTID

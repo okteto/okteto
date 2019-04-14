@@ -21,6 +21,7 @@ fullnameOverride: ""
 
 clusterPublicEndpoint: ""
 oktetoBaseDomain: ""
+oktetoClusterCIDR: ""
 
 services:
   type: ClusterIP
