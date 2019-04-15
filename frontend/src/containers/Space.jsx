@@ -28,7 +28,8 @@ class Space extends Component {
     super(props);
 
     this.state = {
-      showNewMenu: false
+      showNewMenu: false,
+      showHintNew: true
     };
 
     this.props.dispatch(refreshEnvironments());
@@ -73,6 +74,31 @@ class Space extends Component {
     const databaseList = Object.values(databases);
     const isEmpty = environmentList.length === 0 && databaseList.length === 0;
 
+    const NewButton = (props) => (
+      <div className="NewButtonContainer">
+        <div className="NewButton" onClick={() => this.setState({ showNewMenu: true })}>
+          <Icon
+            className="NewButton" 
+            icon="plusCircle" 
+            size="36"
+            color={colors.green400}
+          />
+        </div>
+        {this.state.showNewMenu && 
+          <NewMenu
+            position={props.menuPosition}
+            onNewEnvironment={() => this.handleCreateEnvironment()}
+            onNewDatabase={() => this.handleCreateDatabase()}
+            onClose={() => this.setState({ showNewMenu: false })}
+          />
+        }
+      </div>
+    );
+
+    const installCmdWin = 'wget https://downloads.okteto.com/cloud/cli/okteto-Windows-x86_64' + 
+      ' -OutFile c:\\windows\\system32\\okteto.exe';
+    const installCmdUnix = 'curl https://okteto.com/get -sSfL | sh';
+
     const HintContent = () => (
       <div className="HintContent layout vertical">
         <div className="step layout vertical">
@@ -82,10 +108,10 @@ class Space extends Component {
           <div className="layout horizontal">
             <code className="cli flex-auto">
               {!isWindows() &&
-                <>curl https://okteto.com/get -sSfL | sh</>
+                <>{ installCmdUnix }</>
               }
               {isWindows() &&
-                <>wget https://downloads.okteto.com/cloud/cli/okteto-Windows-x86_64 -OutFile c:\windows\system32\okteto.exe</>
+                <>{ installCmdWin }</>
               }
             </code>
             <Button
@@ -93,7 +119,7 @@ class Space extends Component {
               icon="clipboard"
               iconSize="24"
               onClick={() => {
-                clipboard.writeText(`curl https://get.okteto.com -sSfL | sh`);
+                clipboard.writeText(isWindows() ? installCmdWin : installCmdUnix);
                 notify('Copied to clipboard!');
                 analytics.set('Copied Install Command');
                 analytics.track('Copy Install Command');
@@ -144,30 +170,32 @@ class Space extends Component {
       </div>
     );
 
+    const NewMenuContent = NewMenu.NewMenuContent(
+      this.handleCreateEnvironment, this.handleCreateDatabase);
+
     return (
       <div className="Space layout vertical">
         <Header title={`${user.githubID}'s space`} />
 
         {isEmpty && isLoaded &&
           <div className="EmptySpace layout vertical center">
-            <Icon icon="emptySpace" size="140" />
+            <Icon icon="emptySpace" size="160" />
             <h2>Your space is empty.</h2>
-            <div style={{
-              position: 'relative'
-            }}>
+            <div style={{ position: 'relative' }}>
               <Hint 
                 className="HintNew"
-                open={true}
-                width="532"
+                open={this.state.showHintNew}
+                width="300"
                 arrowPosition="center"
                 offsetY="24"
                 offsetX="0"
                 positionX="center"
                 positionY="bottom"
+                onTop={false}
                 hideCloseButton
               >
-                <h1>Start a new environment</h1>
-                <HintContent />
+                <h3>Create a new resource:</h3>
+                <NewMenuContent />
               </Hint>
             </div>
           </div>
@@ -232,23 +260,7 @@ class Space extends Component {
           
             <div className="ActionBar layout horizontal center">
               <div className="flex-auto"></div>
-              <div className="NewButtonContainer">
-                <div className="NewButton" onClick={() => this.setState({ showNewMenu: true })}>
-                  <Icon
-                    className="NewButton" 
-                    icon="plusCircle" 
-                    size="36"
-                    color={colors.green400}
-                  />
-                </div>
-                {this.state.showNewMenu && 
-                  <NewMenu
-                    onNewEnvironment={() => this.handleCreateEnvironment()}
-                    onNewDatabase={() => this.handleCreateDatabase()}
-                    onClose={() => this.setState({ showNewMenu: false })}
-                  />
-                }
-              </div>
+              <NewButton menuPosition="right" />
             </div>
           </>
         }

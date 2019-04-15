@@ -11,6 +11,23 @@ class NewMenu extends Component {
     super(props);
   }
 
+  static NewMenuContent(onNewEnvironment, onNewDatabase) {
+    return () => (
+      <div className="NewMenuContent layout vertical">
+        <div className="MenuItem MenuItemEnvironment layout horizontal center flex-auto"
+          onClick={onNewEnvironment}>
+          <Icon icon="mirror" size="18" color="black" />
+          Environment
+        </div>
+        <div className="MenuItem MenuItemDatabase layout horizontal center flex-auto"
+          onClick={onNewDatabase}>
+          <Icon icon="database" size="22" color="black" />
+          Database
+        </div>
+      </div>
+    );
+  }
+
   componentDidMount() {
     document.addEventListener('click', this.handleOutsideClick);
   }
@@ -24,25 +41,24 @@ class NewMenu extends Component {
   }
   
   render() {
+    const NewMenuContent = NewMenu.NewMenuContent(
+      this.props.onNewEnvironment, this.props.onNewDatabase);
+
     return (
-      <div className="NewMenu MenuItemList layout vertical" 
+      <div className={`NewMenu MenuItemList layout vertical position-${this.props.position}`}
         onClick={this.handleOutsideClick}>
-        <div className="MenuItem MenuItemEnvironment layout horizontal center flex-auto"
-          onClick={this.props.onNewEnvironment}>
-          <Icon icon="mirror" size="18" color="black" />
-          Environment
-        </div>
-        <div className="MenuItem MenuItemDatabase layout horizontal center flex-auto"
-          onClick={this.props.onNewDatabase}>
-          <Icon icon="database" size="22" color="black" />
-          Database
-        </div>
+        <NewMenuContent />
       </div>
     );
   }
 }
 
+NewMenu.defaultProps = {
+  position: 'left'
+};
+
 NewMenu.propTypes = {
+  position: PropTypes.string,
   onNewEnvironment: PropTypes.func.isRequired,
   onNewDatabase: PropTypes.func.isRequired,
   onClose: PropTypes.func

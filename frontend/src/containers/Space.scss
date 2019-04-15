@@ -16,12 +16,35 @@
       font-size: 28px;
       margin-top: 12px;
     }
+
+    .HintNew {
+      padding: 32px 0;
+      font-size: 22px;
+      font-weight: normal;
+      line-height: 24px;
+      text-align: center;
+
+      h3 {
+        font-size: 22px;
+        font-weight: normal;
+        line-height: 26px;
+      }
+
+      .NewMenuContent {
+        padding-top: 18px;
+
+        .MenuItem {
+          padding-left: 48px;
+          font-size: 20px;
+        }
+      }
+    }
   }
 
   .List {
     .Item {
       position: relative;
-      padding: 20px $side-margin;
+      padding: 20px $side-margin 16px $side-margin;
       box-sizing: border-box;
       cursor: default;
 
@@ -50,7 +73,7 @@
       }
       
       .ItemName {
-        height: 20px;
+        height: 24px;
         font-size: 20px;
         line-height: 20px;
         font-weight: 500;
@@ -61,8 +84,7 @@
 
       .ItemEndpoints {
         font-size: 17px;
-        font-weight: 200;
-        margin-top: -2px;
+        font-weight: 200;s
 
         a {
           cursor: pointer;
@@ -133,27 +155,16 @@
     }
   }
 
-  .ActionBar {
-    padding: 24px $side-margin;
+  .NewButtonContainer {
+    position: relative;
 
-    .NewButtonContainer {
-      position: relative;
-
-      .NewButton {
-        cursor: pointer;
-      }
+    .NewButton {
+      cursor: pointer;
     }
   }
 
-  .HintNew {
-    padding: 32px 36px;
-
-    h1 {
-      font-size: 24px;
-      font-weight: normal;
-      line-height: 26px;
-      margin-bottom: 24px;
-    }
+  .ActionBar {
+    padding: 24px $side-margin;
   }
 
   .HintContent {

@@ -56,6 +56,7 @@ class Hint extends Component {
               className={`Hint ${this.props.className} ${this.props.positionY}`}
               style={{
                 width: `${this.props.width}px`,
+                zIndex: this.props.onTop ? 99999999 : 'auto',
                 ...positionStyles
               }}
               ref={e => { this.hint = e; }}
@@ -94,7 +95,8 @@ Hint.defaultProps = {
   offsetX: '0',
   positionY: 'bottom',
   positionX: 'center',
-  arrowPosition: 'center'
+  arrowPosition: 'center',
+  onTop: true
 };
 
 Hint.propTypes = {
@@ -103,6 +105,7 @@ Hint.propTypes = {
   hideCloseButton: PropTypes.bool,
   onOpen: PropTypes.func,
   onClose: PropTypes.func,
+  onTop: PropTypes.bool,
   width: PropTypes.string,
   arrowPosition: PropTypes.string,
   positionX: PropTypes.string,
