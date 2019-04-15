@@ -55,7 +55,7 @@ func Up() *cobra.Command {
 	var devPath string
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Activates a cloud development environment",
+		Short: "Activates your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting up command")
 
@@ -99,7 +99,7 @@ func RunUp(dev *model.Dev, devPath string) error {
 	}
 
 	up.progress = spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	up.progress.Suffix = " Activating your cloud development environment..."
+	up.progress.Suffix = " Activating your Okteto Environment..."
 	up.progress.Start()
 
 	defer up.Shutdown()
@@ -140,7 +140,7 @@ func (up *UpContext) Activate(devPath string) {
 			log.Green("Reconnected to your cluster.")
 		}
 
-		fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Your environment is ready"))
+		fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Your Okteto Environment is ready"))
 		args := []string{"exec", "--pod", up.Pod, "--"}
 		args = append(args, up.Dev.Command...)
 		cmd := exec.Command(config.GetBinaryFullPath(), args...)
@@ -161,17 +161,15 @@ func (up *UpContext) Activate(devPath string) {
 		}()
 
 		prevError = up.WaitUntilExitOrInterrupt(cmd)
-		if prevError != nil {
-			if prevError == errors.ErrLostConnection {
-				log.Yellow("Connection lost to the cloud native development environment, reconnecting...")
-				fmt.Println()
-			}
-			if prevError == errors.ErrCommandFailed {
-				log.Yellow("Restarting...")
-				fmt.Println()
-			}
+		if prevError != nil && prevError == errors.ErrLostConnection {
+			log.Yellow("Connection lost to your Okteto Environment, reconnecting...")
+			fmt.Println()
+		}
+		if prevError != nil && prevError == errors.ErrCommandFailed && !up.Sy.IsConnected() {
+			log.Yellow("Connection lost to your Okteto Environment, reconnecting...")
 			up.Shutdown()
 			continue
+
 		}
 
 		up.Exit <- nil
