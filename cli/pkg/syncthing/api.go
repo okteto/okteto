@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"path/filepath"
+	"path"
 	"time"
 )
 
@@ -58,9 +58,9 @@ func NewAPIClient() *http.Client {
 func (s *Syncthing) APICall(url, method string, code int, params map[string]string, local bool) ([]byte, error) {
 	var urlPath string
 	if local {
-		urlPath = filepath.Join(s.GUIAddress, url)
+		urlPath = path.Join(s.GUIAddress, url)
 	} else {
-		urlPath = filepath.Join(s.RemoteGUIAddress, url)
+		urlPath = path.Join(s.RemoteGUIAddress, url)
 	}
 	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), nil)
 	if err != nil {

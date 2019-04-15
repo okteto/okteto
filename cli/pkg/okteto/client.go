@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/machinebox/graphql"
 )
@@ -19,7 +19,7 @@ func getClient() (*graphql.Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing '%s'", oktetoURL)
 		}
-		u.Path = filepath.Join(u.Path, "graphql")
+		u.Path = path.Join(u.Path, "graphql")
 		oktetoURL = u.String()
 
 		graphqlClient = graphql.NewClient(oktetoURL)

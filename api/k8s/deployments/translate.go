@@ -152,7 +152,7 @@ func translateInitOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 	c.Command = []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`touch %s; (ls -A /okteto/init | grep -v "lost+found" || cp -Rf %s /okteto/init || true)`, dev.DevPath, source),
+		fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || cp -Rf %s /okteto/init); touch /okteto/init/%s", source, dev.DevPath),
 	}
 	d.Spec.Template.Spec.InitContainers = []apiv1.Container{c}
 }
