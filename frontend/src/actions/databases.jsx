@@ -1,5 +1,4 @@
-// import mixpanel from 'mixpanel-browser';
-
+import analytics from 'common/analytics';
 import request from 'common/request';
 import { notify } from 'components/Notification';
 
@@ -40,7 +39,7 @@ export const refreshDatabases = () => {
 
 export const createDatabase = (name) => {
   return dispatch => {
-    // mixpanel.track('Create Database');
+    analytics.track('Create Database');
 
     return request(`mutation {
       createDatabase(name: "${name}") {
@@ -56,7 +55,7 @@ export const createDatabase = (name) => {
 
 export const deleteDatabase = database => {
   return dispatch => {
-    // mixpanel.track('Delete Database');
+    analytics.track('Delete Database');
 
     return request(`mutation {
       deleteDatabase(name: "${database.name}") {

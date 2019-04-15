@@ -1,6 +1,7 @@
 import request from 'common/request';
 import { notify } from 'components/Notification';
 import environment from 'common/environment';
+import analytics from 'common/analytics';
 
 export const SESSION_KEY = 'okteto-session';
 
@@ -20,9 +21,21 @@ export const loginWithGithub = code => {
 };
 
 export const authSuccess = user => {
+  analytics.init(user);
+  analytics.increment('Logins');
+
   return {
     type: 'AUTH_SUCCESS',
     user
+  };
+};
+
+export const restoreSessionSuccess = (session) => {
+  analytics.init(session.user);
+
+  return { 
+    type: 'RESTORE_SESSION_SUCCESS',
+    session
   };
 };
 
@@ -33,22 +46,12 @@ export const logout = () => {
 
 export const restoreSession = () => {
   return (dispatch) => {
-    const session = JSON.parse(localStorage.getItem(SESSION_KEY)) || {};
-    
-    dispatch(restoreSessionSuccess(session));
-
-    if (session.user && session.user.id) {
-      // mixpanel.identify(session.user.userID, {
-      //   origin: 'Restored Session'
-      // });
+    const session = JSON.parse(localStorage.getItem(SESSION_KEY));
+    if (!session) {
+      dispatch(logout());
+    } else {
+      dispatch(restoreSessionSuccess(session));
     }
-  };
-};
-
-export const restoreSessionSuccess = (session) => {
-  return { 
-    type: 'RESTORE_SESSION_SUCCESS',
-    session
   };
 };
 

@@ -1,6 +1,5 @@
-// import mixpanel from 'mixpanel-browser';
-
 import request from 'common/request';
+import analytics from 'common/analytics';
 import { notify } from 'components/Notification';
 
 const fetchEnvironments = () => {
@@ -40,7 +39,7 @@ export const refreshEnvironments = () => {
 
 export const deleteEnvironment = environment => {
   return dispatch => {
-    // mixpanel.track('Delete Environment');
+    analytics.track('Delete Environment');
 
     return request(`mutation {
       down(name: "${environment.name}") {

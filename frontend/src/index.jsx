@@ -4,6 +4,7 @@ import { createStore, applyMiddleware, compose } from 'redux';
 import { Provider } from 'react-redux';
 import thunk from 'redux-thunk';
 import smoothscroll from 'smoothscroll-polyfill';
+import 'whatwg-fetch';
 
 import reducers from 'reducers';
 import AppView from 'views/AppView';

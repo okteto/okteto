@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import * as clipboard from 'clipboard-polyfill';
 import autobind from 'autobind-decorator';
 
+import analytics from 'common/analytics';
 import { refreshEnvironments } from 'actions/environments';
 import { refreshDatabases } from 'actions/databases';
 import { notify } from 'components/Notification';
@@ -88,7 +89,8 @@ class Space extends Component {
               onClick={() => {
                 clipboard.writeText(`curl https://get.okteto.com -sSfL | sh`);
                 notify('Copied to clipboard!');
-                // mixpanel.track('Copied CLI Command');
+                analytics.set('Copied Install Command');
+                analytics.track('Copy Install Command');
               }}
               light
               frameless>
@@ -112,7 +114,8 @@ class Space extends Component {
               onClick={() => {
                 clipboard.writeText(`okteto up`);
                 notify('Copied to clipboard!');
-                // mixpanel.track('Copied CLI Command');
+                analytics.set('Copied Okteto Command');
+                analytics.track('Copy Okteto Command');
               }}
               light
               frameless>
