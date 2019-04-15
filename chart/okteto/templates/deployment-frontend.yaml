@@ -38,7 +38,7 @@ spec:
             periodSeconds: 5
           readinessProbe:
             httpGet:
-              path: /api/healthz
+              path: /index.html
               port: {{ .Values.services.frontend.port }}
             initialDelaySeconds: 5
             periodSeconds: 5
