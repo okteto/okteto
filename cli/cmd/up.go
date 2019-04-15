@@ -164,12 +164,14 @@ func (up *UpContext) Activate(devPath string) {
 		if prevError != nil && prevError == errors.ErrLostConnection {
 			log.Yellow("Connection lost to your Okteto Environment, reconnecting...")
 			fmt.Println()
+			up.Shutdown()
+			continue
 		}
 		if prevError != nil && prevError == errors.ErrCommandFailed && !up.Sy.IsConnected() {
 			log.Yellow("Connection lost to your Okteto Environment, reconnecting...")
+			fmt.Println()
 			up.Shutdown()
 			continue
-
 		}
 
 		up.Exit <- nil
