@@ -1,5 +1,6 @@
 @import 'colors.scss';
 @import 'fonts.scss';
+@import 'layout.scss';
 
 .Notification {
   .toast-container {
@@ -8,6 +9,7 @@
     left: 0;
     margin-left: 0;
     padding: 0;
+    z-index: $notification-z-index;
 
     .toast {
       margin: 0 auto;

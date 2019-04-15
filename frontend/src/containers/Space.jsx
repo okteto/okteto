@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import * as ReactRedux from 'react-redux';
 import PropTypes from 'prop-types';
+import isWindows from 'is-windows';
 import * as clipboard from 'clipboard-polyfill';
 import autobind from 'autobind-decorator';
 
@@ -80,7 +81,12 @@ class Space extends Component {
           </p>
           <div className="layout horizontal">
             <code className="cli flex-auto">
-              curl https://get.okteto.com -sSfL | sh
+              {!isWindows() &&
+                <>curl https://okteto.com/get -sSfL | sh</>
+              }
+              {isWindows() &&
+                <>wget https://downloads.okteto.com/cloud/cli/okteto-Windows-x86_64 -OutFile c:\windows\system32\okteto.exe</>
+              }
             </code>
             <Button
               className="ClipboardButton"

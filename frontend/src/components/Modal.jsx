@@ -4,6 +4,7 @@ import Skylight from 'react-skylight';
 import classnames from 'classnames';
 
 import 'components/Modal.scss';
+import layout from 'layout.scss';
 
 class Modal extends Component {
   constructor(props) {
@@ -28,14 +29,14 @@ class Modal extends Component {
       padding: '24px 32px',
       fontSize: '18px',
       lineHeight: 'normal',
-      zIndex: 99999999,
+      zIndex: layout.overlayZIndex + 1,
       top: `${50 - this.props.offsetTop}%`,
       left: `${50 - this.props.offsetLeft}%`
     };
 
     const overlayStyles = {
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      zIndex: 99999999
+      zIndex: layout.overlayZIndex,
     };
 
     const titleStyle = {

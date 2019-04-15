@@ -51,6 +51,7 @@
     "classnames": "^2.2.5",
     "clipboard-polyfill": "^2.7.0",
     "dom-css": "^2.1.0",
+    "is-windows": "^1.0.2",
     "mixpanel-browser": "^2.27.1",
     "moment": "^2.22.0",
     "moment-timezone": "^0.5.14",

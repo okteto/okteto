@@ -194,6 +194,7 @@
       border-bottom-right-radius: 0;
       white-space: nowrap;
       overflow: hidden;
+      overflow-x: auto;
 
       &.cli:before {
         user-select: none;
