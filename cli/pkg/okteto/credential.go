@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/machinebox/graphql"
+	"github.com/okteto/app/cli/pkg/errors"
 )
 
 // Credentials top body answer
@@ -33,7 +34,7 @@ func GetK8sB64Config() (string, error) {
 
 	oktetoToken, err := getToken()
 	if err != nil {
-		return "", fmt.Errorf("authorization token not found. please run 'okteto login' and try again")
+		return "", errors.ErrNotLogged
 	}
 
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", oktetoToken))
@@ -42,7 +43,7 @@ func GetK8sB64Config() (string, error) {
 
 	var cred Credentials
 	if err := c.Run(ctx, req, &cred); err != nil {
-		return "", fmt.Errorf("couldn't get your credentials, please run 'okteto login' and try again")
+		return "", errors.ErrNotLogged
 	}
 
 	return cred.Credentials.Config, nil

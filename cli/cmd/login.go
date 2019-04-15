@@ -70,8 +70,7 @@ func Login() *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("%s %s", log.SuccessSymbol, log.GreenString("Logged in as %s", user))
-			fmt.Println()
+			log.Success("Logged in as %s", user)
 			return nil
 		},
 	}

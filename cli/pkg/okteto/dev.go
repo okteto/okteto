@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/machinebox/graphql"
+	"github.com/okteto/app/cli/pkg/errors"
 	"github.com/okteto/app/cli/pkg/model"
 )
 
@@ -26,7 +27,7 @@ func DevModeOn(dev *model.Dev, devPath string) error {
 
 	oktetoToken, err := getToken()
 	if err != nil {
-		return errNoLogin
+		return errors.ErrNotLogged
 	}
 
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", oktetoToken))

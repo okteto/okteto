@@ -3,38 +3,26 @@ package log
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/fatih/color"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	// RedString adds the red ansi color and applies the format
-	RedString = color.New(color.FgHiRed).SprintfFunc()
+	redString = color.New(color.FgHiRed).SprintfFunc()
 
-	// GreenString adds the green ansi color and applies the format
-	GreenString = color.New(color.FgHiGreen).SprintfFunc()
+	greenString = color.New(color.FgHiGreen).SprintfFunc()
 
-	// YellowString adds the yellow ansi color and applies the format
-	YellowString = color.New(color.FgHiYellow).SprintfFunc()
+	yellowString = color.New(color.FgHiYellow).SprintfFunc()
 
-	// BlueString adds the blue ansi color and applies the format
-	BlueString = color.New(color.FgHiBlue).SprintfFunc()
+	blueString = color.New(color.FgHiBlue).SprintfFunc()
 
-	// SymbolString adds the terminal's background color as foreground, and green as background and applies the format
-	SymbolString = color.New(color.BgGreen, color.FgBlack).SprintfFunc()
+	errorSymbol = color.New(color.BgHiRed, color.FgBlack).Sprint(" x ")
 
-	// ErrorSymbolString adds the terminal's background color as foreground, and red as background and applies the format
-	ErrorSymbolString = color.New(color.BgHiRed, color.FgBlack).SprintfFunc()
+	successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" ✓ ")
 
-	// ErrorSymbol is an X with the error color applied
-	ErrorSymbol = ErrorSymbolString(" ✕ ")
-
-	// SuccessSymbol is a checkmark with the success color applied
-	SuccessSymbol = SymbolString(" ✓ ")
-
-	// InformationSymbol is a checkmark with the information color applied
-	InformationSymbol = BlueString(" ⓘ ")
+	informationSymbol = color.New(color.BgHiBlue, color.FgBlack).Sprint(" i ")
 )
 
 type logger struct {
@@ -43,6 +31,12 @@ type logger struct {
 
 var log = &logger{
 	out: logrus.New(),
+}
+
+func init() {
+	if runtime.GOOS == "windows" {
+		successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" + ")
+	}
 }
 
 // Init configures the logger for the package to use.
@@ -94,17 +88,27 @@ func Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
 }
 
-// Red writes a line in red
-func Red(format string, args ...interface{}) {
-	fmt.Println(RedString(format, args...))
-}
-
 // Yellow writes a line in yellow
 func Yellow(format string, args ...interface{}) {
-	fmt.Println(YellowString(format, args...))
+	fmt.Fprintln(color.Output, yellowString(format, args...))
 }
 
 // Green writes a line in green
 func Green(format string, args ...interface{}) {
-	fmt.Println(GreenString(format, args...))
+	fmt.Fprintln(color.Output, greenString(format, args...))
+}
+
+// Success prints a message with the success symbol first, and the text in green
+func Success(format string, args ...interface{}) {
+	fmt.Fprintf(color.Output, "%s %s\n", successSymbol, greenString(format, args...))
+}
+
+// Information prints a message with the information symbol first, and the text in blue
+func Information(format string, args ...interface{}) {
+	fmt.Fprintf(color.Output, "%s %s\n", informationSymbol, blueString(format, args...))
+}
+
+// Fail prints a message with the error symbol first, and the text in red
+func Fail(format string, args ...interface{}) {
+	fmt.Fprintf(color.Output, "%s %s\n", errorSymbol, redString(format, args...))
 }

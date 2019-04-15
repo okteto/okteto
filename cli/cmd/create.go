@@ -39,6 +39,6 @@ func createManifest(devPath string) error {
 		return fmt.Errorf("Failed to generate your manifest")
 	}
 
-	fmt.Printf("%s %s\n", log.InformationSymbol, log.BlueString("%s automatically generated", filepath.Base(devPath)))
+	log.Information("%s automatically generated", filepath.Base(devPath))
 	return nil
 }

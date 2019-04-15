@@ -51,6 +51,6 @@ func RunDatabase(name string) error {
 		return err
 	}
 
-	fmt.Printf("%s %s\n", log.SuccessSymbol, log.GreenString("Your '%s' instance is ready", name))
+	log.Success("Your '%s' instance is ready", name)
 	return nil
 }

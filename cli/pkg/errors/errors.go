@@ -16,4 +16,7 @@ var (
 
 	// ErrCommandFailed is raised when the command execution failed
 	ErrCommandFailed = errors.New("Command execution failed")
+
+	// ErrNotLogged is raised when we can't get the user token
+	ErrNotLogged = fmt.Errorf("please run 'okteto login' and try again")
 )

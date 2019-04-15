@@ -56,8 +56,7 @@ func main() {
 	root.AddCommand(cmd.Version())
 
 	if err := root.Execute(); err != nil {
-		fmt.Printf("%s %s", log.ErrorSymbol, log.RedString(err.Error()))
-		fmt.Println()
+		log.Fail(err.Error())
 		os.Exit(1)
 	}
 }
