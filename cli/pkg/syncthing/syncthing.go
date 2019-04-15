@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"text/template"
 	"time"
@@ -136,15 +135,7 @@ func New(dev *model.Dev, devPath, space string) (*Syncthing, error) {
 	return s, nil
 }
 
-// Normally, syscall.Kill would be good enough. Unfortunately, that's not
-// supported in windows. While this isn't tested on windows it at least gets
-// past the compiler.
 func (s *Syncthing) cleanupDaemon(pidPath string) error {
-	// Deal with Windows conditions by bailing
-	if runtime.GOOS == "windows" {
-		return nil
-	}
-
 	pid, err := getPID(pidPath)
 	if os.IsNotExist(err) {
 		return nil
@@ -165,18 +156,7 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 		return nil
 	}
 
-	proc := os.Process{Pid: process.Pid()}
-	if err := proc.Signal(os.Interrupt); err != nil {
-		if strings.Contains(err.Error(), "process already finished") {
-			return nil
-		}
-
-		return err
-	}
-
-	defer proc.Wait() // nolint: errcheck
-
-	return nil
+	return terminate(pid)
 }
 
 func (s *Syncthing) initConfig() error {
