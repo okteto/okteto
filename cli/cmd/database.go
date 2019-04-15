@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/okteto"
 
-	"github.com/briandowns/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -40,12 +38,11 @@ func Database() *cobra.Command {
 
 //RunDatabase creates a database
 func RunDatabase(name string) error {
-	progress := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	progress.Suffix = " Creating your cloud database..."
-	progress.Start()
+	progress := newProgressBar("Creating your cloud database...")
+	progress.start()
 
 	err := okteto.CreateDatabase(name)
-	progress.Stop()
+	progress.stop()
 
 	if err != nil {
 		return err

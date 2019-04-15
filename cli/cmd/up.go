@@ -21,7 +21,6 @@ import (
 	"github.com/okteto/app/cli/pkg/k8s/forward"
 	"github.com/okteto/app/cli/pkg/syncthing"
 
-	"github.com/briandowns/spinner"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -47,7 +46,7 @@ type UpContext struct {
 	Exit       chan error
 	Sy         *syncthing.Syncthing
 	ErrChan    chan error
-	progress   *spinner.Spinner
+	progress   *progress
 }
 
 //Up starts a cloud dev environment
@@ -98,9 +97,8 @@ func RunUp(dev *model.Dev, devPath string) error {
 		ErrChan:    make(chan error, 1),
 	}
 
-	up.progress = spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	up.progress.Suffix = " Activating your Okteto Environment..."
-	up.progress.Start()
+	up.progress = newProgressBar("Activating your Okteto Environment...")
+	up.progress.start()
 
 	defer up.Shutdown()
 
@@ -129,7 +127,7 @@ func (up *UpContext) Activate(devPath string) {
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		err := up.Execute(prevError != nil)
-		up.progress.Stop()
+		up.progress.stop()
 		if err != nil {
 			up.Exit <- err
 			return
