@@ -68,7 +68,7 @@ class Space extends Component {
   }
 
   render() {
-    const { environments, databases, user } = this.props;
+    const { environments, databases, user, isLoaded } = this.props;
     const environmentList = Object.values(environments);
     const databaseList = Object.values(databases);
     const isEmpty = environmentList.length === 0 && databaseList.length === 0;
@@ -148,7 +148,7 @@ class Space extends Component {
       <div className="Space layout vertical">
         <Header title={`${user.githubID}'s space`} />
 
-        {isEmpty &&
+        {isEmpty && isLoaded &&
           <div className="EmptySpace layout vertical center">
             <Icon icon="emptySpace" size="140" />
             <h2>Your space is empty.</h2>
@@ -173,82 +173,84 @@ class Space extends Component {
           </div>
         }
 
-        <div className="List layout vertical">
-          {environmentList.map(environment =>
-            <div key={environment.id} className="Item layout horizontal start">
-              <div className="ItemIcon">
-                <Icon icon="mirror" size="20"/>
-              </div>
-              <div className="ItemName ellipsis" 
-                title={environment.name}>
-                {environment.name}
-              </div>
-              <div className="ItemEndpoints layout vertical">
-                {environment.endpoints.map(url =>
-                  <a className="ellipsis layout horizontal center" 
-                    key={`${environment.id}-${url}`}
-                    href={url}
-                    rel="noreferrer noopener" 
-                    target="_blank">
-                    {url}
-                    <Icon icon="external" size="18" />
-                  </a>
-                )}
-              </div>
-              <div className="flex-auto" />
-              <div className="ItemActions layout horizontal center">
-                <div className="ActionButton" 
-                  onClick={() => this.handleDeleteEnvironment(environment)}>
-                  <Icon icon="delete" size="24" />
+        {!isEmpty && isLoaded &&
+          <>
+            <div className="List layout vertical">
+              {environmentList.map(environment =>
+                <div key={environment.id} className="Item layout horizontal start">
+                  <div className="ItemIcon">
+                    <Icon icon="mirror" size="20"/>
+                  </div>
+                  <div className="ItemName ellipsis" 
+                    title={environment.name}>
+                    {environment.name}
+                  </div>
+                  <div className="ItemEndpoints layout vertical">
+                    {environment.endpoints.map(url =>
+                      <a className="ellipsis layout horizontal center" 
+                        key={`${environment.id}-${url}`}
+                        href={url}
+                        rel="noreferrer noopener" 
+                        target="_blank">
+                        {url}
+                        <Icon icon="external" size="18" />
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex-auto" />
+                  <div className="ItemActions layout horizontal center">
+                    <div className="ActionButton" 
+                      onClick={() => this.handleDeleteEnvironment(environment)}>
+                      <Icon icon="delete" size="24" />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {databaseList.map(database =>
-            <div key={database.name} className="Item layout horizontal start">
-              <div className="ItemIcon">
-                <Icon icon="database" size="20"/>
-              </div>
-              <div className="ItemName ellipsis" 
-                title={database.name}>
-                {database.name}
-              </div>
-              <div className="ItemEndpoints layout vertical">
-                {database.endpoint}
-              </div>
-              <div className="flex-auto" />
-              <div className="ItemActions layout horizontal center">
-                <div className="ActionButton" 
-                  onClick={() => this.handleDeleteDatabase(database)}>
-                  <Icon icon="delete" size="24" />
+              {databaseList.map(database =>
+                <div key={database.name} className="Item layout horizontal start">
+                  <div className="ItemIcon">
+                    <Icon icon="database" size="20"/>
+                  </div>
+                  <div className="ItemName ellipsis" 
+                    title={database.name}>
+                    {database.name}
+                  </div>
+                  <div className="ItemEndpoints layout vertical">
+                    {database.endpoint}
+                  </div>
+                  <div className="flex-auto" />
+                  <div className="ItemActions layout horizontal center">
+                    <div className="ActionButton" 
+                      onClick={() => this.handleDeleteDatabase(database)}>
+                      <Icon icon="delete" size="24" />
+                    </div>
+                  </div>
                 </div>
+              )}
+            </div>
+          
+            <div className="ActionBar layout horizontal center">
+              <div className="flex-auto"></div>
+              <div className="NewButtonContainer">
+                <div className="NewButton" onClick={() => this.setState({ showNewMenu: true })}>
+                  <Icon
+                    className="NewButton" 
+                    icon="plusCircle" 
+                    size="36"
+                    color={colors.green400}
+                  />
+                </div>
+                {this.state.showNewMenu && 
+                  <NewMenu
+                    onNewEnvironment={() => this.handleCreateEnvironment()}
+                    onNewDatabase={() => this.handleCreateDatabase()}
+                    onClose={() => this.setState({ showNewMenu: false })}
+                  />
+                }
               </div>
             </div>
-          )}
-        </div>
-
-        {!isEmpty && 
-          <div className="ActionBar layout horizontal center">
-            <div className="flex-auto"></div>
-            <div className="NewButtonContainer">
-              <div className="NewButton" onClick={() => this.setState({ showNewMenu: true })}>
-                <Icon
-                  className="NewButton" 
-                  icon="plusCircle" 
-                  size="36"
-                  color={colors.green400}
-                />
-              </div>
-              {this.state.showNewMenu && 
-                <NewMenu
-                  onNewEnvironment={() => this.handleCreateEnvironment()}
-                  onNewDatabase={() => this.handleCreateDatabase()}
-                  onClose={() => this.setState({ showNewMenu: false })}
-                />
-              }
-            </div>
-          </div>
+          </>
         }
 
         <DeleteDialog ref={ref => this.deleteDialog = ref} />
@@ -268,13 +270,15 @@ Space.propTypes = {
   dispatch: PropTypes.func,
   user: PropTypes.object.isRequired,
   environments: PropTypes.object.isRequired,
-  databases: PropTypes.object.isRequired
+  databases: PropTypes.object.isRequired,
+  isLoaded: PropTypes.bool.isRequired
 };
 
 export default ReactRedux.connect(state => {
   return {
     environments: state.environments.byId || {},
     databases: state.databases.byName || {},
-    user: state.session.user
+    user: state.session.user,
+    isLoaded: state.environments.isLoaded || false
   };
 })(Space);

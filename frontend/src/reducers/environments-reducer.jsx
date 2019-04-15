@@ -1,6 +1,7 @@
 const initialEnvironmentsState = {
   byId: {},
-  isFetching: false
+  isFetching: false,
+  isLoaded: false
 };
 
 export default (state = initialEnvironmentsState, action) => {
@@ -18,7 +19,8 @@ export default (state = initialEnvironmentsState, action) => {
           map[environment.id] = environment;
           return map;
         }, {}),
-        isFetching: false
+        isFetching: false,
+        isLoaded: true
       };
     }
     case 'HANDLE_FETCH_ERROR': {
