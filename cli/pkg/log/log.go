@@ -12,7 +12,7 @@ import (
 var (
 	redString = color.New(color.FgHiRed).SprintfFunc()
 
-	greenString = color.New(color.FgHiGreen).SprintfFunc()
+	greenString = color.New(color.FgGreen).SprintfFunc()
 
 	yellowString = color.New(color.FgHiYellow).SprintfFunc()
 
