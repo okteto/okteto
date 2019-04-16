@@ -6,6 +6,7 @@ import (
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/app/cli/pkg/errors"
+	"github.com/okteto/app/cli/pkg/log"
 )
 
 // Credentials top body answer
@@ -34,6 +35,7 @@ func GetK8sB64Config() (string, error) {
 
 	oktetoToken, err := getToken()
 	if err != nil {
+		log.Infof("couldn't get token for credential: %s", err)
 		return "", errors.ErrNotLogged
 	}
 
@@ -43,6 +45,7 @@ func GetK8sB64Config() (string, error) {
 
 	var cred Credentials
 	if err := c.Run(ctx, req, &cred); err != nil {
+		log.Infof("couldn't get credentials from grapqhl endpoint: %s", err)
 		return "", errors.ErrNotLogged
 	}
 

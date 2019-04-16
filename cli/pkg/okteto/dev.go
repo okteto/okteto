@@ -6,6 +6,7 @@ import (
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/app/cli/pkg/errors"
+	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
 )
 
@@ -27,6 +28,7 @@ func DevModeOn(dev *model.Dev, devPath string) error {
 
 	oktetoToken, err := getToken()
 	if err != nil {
+		log.Infof("couldn't get token for up: %s", err)
 		return errors.ErrNotLogged
 	}
 

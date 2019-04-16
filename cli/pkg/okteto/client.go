@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"github.com/machinebox/graphql"
+	"github.com/okteto/app/cli/pkg/log"
 )
 
 var graphqlClient *graphql.Client
@@ -28,6 +29,11 @@ func getClient() (*graphql.Client, error) {
 }
 
 func getToken() (string, error) {
+	if t := os.Getenv("OKTETO_TOKEN"); len(t) > 0 {
+		log.Info("using token from environment")
+		return t, nil
+	}
+
 	p := getTokenPath()
 	b, err := ioutil.ReadFile(p)
 	if err != nil {
