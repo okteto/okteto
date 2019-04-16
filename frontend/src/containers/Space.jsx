@@ -215,7 +215,7 @@ class Space extends Component {
                   </div>
                   <div className="ItemEndpoints layout vertical">
                     {environment.endpoints.map(url =>
-                      <a className="ellipsis layout horizontal center" 
+                      <a className="ItemEndPointUrl ellipsis layout horizontal center" 
                         key={`${environment.id}-${url}`}
                         href={url}
                         rel="noreferrer noopener" 
