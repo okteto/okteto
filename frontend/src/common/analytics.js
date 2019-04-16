@@ -9,6 +9,12 @@ export default {
     ga.initialize(GA_TOKEN);
     mixpanel.init(MIXPANEL_TOKEN);
     mixpanel.identify(user.email);
+    mixpanel.people.set({ 
+      '$name': user.name,
+      '$email': user.email,
+      'oktetoId': user.id,
+      'githubId': user.githubID
+    })
   },
 
   track: (eventName, properties = {}) => {
