@@ -1,6 +1,7 @@
 package okteto
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -8,6 +9,7 @@ import (
 	"path"
 
 	"github.com/machinebox/graphql"
+	"github.com/okteto/app/cli/pkg/errors"
 	"github.com/okteto/app/cli/pkg/log"
 )
 
@@ -41,6 +43,29 @@ func getToken() (string, error) {
 	}
 
 	return string(b), nil
+}
+
+func query(query string, result interface{}) error {
+	oktetoToken, err := getToken()
+	if err != nil {
+		log.Infof("couldn't get token for up: %s", err)
+		return errors.ErrNotLogged
+	}
+
+	req := graphql.NewRequest(query)
+	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", oktetoToken))
+	ctx := context.Background()
+
+	c, err := getClient()
+	if err != nil {
+		return fmt.Errorf("error getting okteto client: %s", err)
+	}
+
+	if err := c.Run(ctx, req, result); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetURL returns the okteto URL

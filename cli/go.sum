@@ -1,11 +1,11 @@
 cloud.google.com/go v0.29.0 h1:gv/9Wwq5WPVIGaROMQg8tw4jLFFiyacODxEIrlz0wTw=
 cloud.google.com/go v0.29.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
+github.com/Atrox/haikunatorgo v2.0.0+incompatible h1:c1/QLRQ//Yzdg2RG/lrK5lwH66egKC40FbHKZb6dqUg=
+github.com/Atrox/haikunatorgo v2.0.0+incompatible/go.mod h1:IlB2YHjrCmxeK0g3e4pUGwKw6BuBu2IyumoFwuHsF1U=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 h1:w+iIsaOQNcT7OZ575w+acHgRric5iCyQh+xv+KJ4HB8=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78/go.mod h1:LmzpDX56iTiv29bbRTIsUNlaFfuhWRQBWjQdVyAevI8=
 github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e h1:eb0Pzkt15Bm7f2FFYv7sjY7NPFi3cPkS3tv1CcrFBWA=
 github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e/go.mod h1:64YHyfSL2R96J44Nlwm39UHepQbyR5q10x7iYa1ks2E=
-github.com/Pallinder/go-randomdata v1.1.0 h1:gUubB1IEUliFmzjqjhf+bgkg1o6uoFIkRsP3VrhEcx8=
-github.com/Pallinder/go-randomdata v1.1.0/go.mod h1:yHmJgulpD2Nfrm0cR9tI/+oAgRqCQQixsA8HyRZfV9Y=
 github.com/PuerkitoBio/purell v1.1.0 h1:rmGxhojJlM0tuKtfdvliR84CFHljx9ag64t2xmVkjK4=
 github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 h1:d+Bc7a5rLufV/sSk/8dngufqelfh6jnri85riMAaF/M=

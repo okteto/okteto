@@ -5,10 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
-	randomdata "github.com/Pallinder/go-randomdata"
+	haikunator "github.com/Atrox/haikunatorgo"
 	"github.com/okteto/app/cli/pkg/linguist"
 	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/app/cli/pkg/okteto"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -24,7 +26,14 @@ func createManifest(devPath string) error {
 	}
 
 	dev := linguist.GetDevConfig(languagesDiscovered[0])
-	dev.Name = fmt.Sprintf("%s-%s", randomdata.Adjective(), randomdata.Noun())
+	n, err := getName()
+
+	if err != nil {
+		return err
+	}
+
+	dev.Name = n
+
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
 		return fmt.Errorf("Failed to generate your manifest")
@@ -41,4 +50,29 @@ func createManifest(devPath string) error {
 
 	log.Information("%s automatically generated", filepath.Base(devPath))
 	return nil
+}
+
+func getName() (string, error) {
+	haikunator := haikunator.New()
+	haikunator.TokenLength = 0
+
+	envs, err := okteto.GetDevEnvironments()
+	if err != nil {
+		log.Infof("failed to get dev environments: %s", err)
+		return haikunator.Haikunate(), nil
+	}
+
+	for i := 0; i < 20; i++ {
+		n := haikunator.Haikunate()
+		for _, e := range envs {
+			if strings.HasPrefix(e.Name, n) {
+				log.Debugf("%s already exists, generating new name: %+v", n, e)
+				continue
+			}
+		}
+
+		return n, nil
+	}
+
+	return "", fmt.Errorf("failed to generate unique name")
 }

@@ -2,9 +2,9 @@ module github.com/okteto/app/cli
 
 require (
 	cloud.google.com/go v0.29.0 // indirect
+	github.com/Atrox/haikunatorgo v2.0.0+incompatible
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
-	github.com/Pallinder/go-randomdata v1.1.0
 	github.com/briandowns/spinner v0.0.0-20190126160308-b298438e1f0d
 	github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect

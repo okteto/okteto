@@ -1,10 +1,6 @@
 package okteto
 
 import (
-	"context"
-	"fmt"
-
-	"github.com/machinebox/graphql"
 	"github.com/okteto/app/cli/pkg/errors"
 	"github.com/okteto/app/cli/pkg/log"
 )
@@ -21,30 +17,14 @@ type Credential struct {
 
 // GetK8sB64Config returns the space config credentials
 func GetK8sB64Config() (string, error) {
-	c, err := getClient()
-	if err != nil {
-		return "", fmt.Errorf("error getting okteto client: %s", err)
-	}
-
-	req := graphql.NewRequest(`
-		query{
+	q := ` query{
 			credentials{
 				config
 			},
-		}`)
-
-	oktetoToken, err := getToken()
-	if err != nil {
-		log.Infof("couldn't get token for credential: %s", err)
-		return "", errors.ErrNotLogged
-	}
-
-	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", oktetoToken))
-
-	ctx := context.Background()
+		}`
 
 	var cred Credentials
-	if err := c.Run(ctx, req, &cred); err != nil {
+	if err := query(q, &cred); err != nil {
 		log.Infof("couldn't get credentials from grapqhl endpoint: %s", err)
 		return "", errors.ErrNotLogged
 	}
