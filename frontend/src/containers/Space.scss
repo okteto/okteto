@@ -1,5 +1,5 @@
 @import 'colors.scss';
-@import 'layout.scss';
+@import 'constants.scss';
 @import 'fonts.scss';
 
 .Space {
@@ -84,7 +84,7 @@
 
       .ItemEndpoints {
         font-size: 17px;
-        font-weight: 200;s
+        font-weight: 200;
 
         .ItemEndPointUrl {
           cursor: pointer;
@@ -174,7 +174,7 @@
 
     .step {
       &:not(:first-child) {
-        margin-top: 28px;
+        margin-top: 24px;
       }
 
       .number {
@@ -186,7 +186,7 @@
 
     p {
       margin-bottom: 12px;
-      font-size: 18px;
+      font-size: 20px;
     }
 
     code {

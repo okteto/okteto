@@ -132,7 +132,31 @@ class Space extends Component {
 
         <div className="step layout vertical">
           <p>
-            <span className="number">2.</span> From your <strong>local repository</strong> launch 
+            <span className="number">2.</span> Login from the CLI:
+          </p>
+          <div className="layout horizontal">
+            <code className="cli flex-auto">
+              okteto login
+            </code>
+            <Button
+              className="ClipboardButton"
+              icon="clipboard"
+              iconSize="24"
+              onClick={() => {
+                clipboard.writeText(`okteto login`);
+                notify('Copied to clipboard!');
+                analytics.set('Copied Okteto Command');
+                analytics.track('Copy Okteto Command');
+              }}
+              light
+              frameless>
+            </Button>
+          </div>
+        </div>
+
+        <div className="step layout vertical">
+          <p>
+            <span className="number">3.</span> From your <strong>local repository</strong> launch 
             okteto:
           </p>
           <div className="layout horizontal">
@@ -157,14 +181,8 @@ class Space extends Component {
 
         <div className="step layout vertical">
           <p>
-            <span className="number">3.</span> Code in the cluster from your favorite IDE!
+            You can now code <strong>in the cluster</strong> from your machine!
           </p>
-          <div className="layout horizontal">
-            <code className="cli cli-okteto flex-auto">
-              yarn start<br/> 
-              <span className="output">Running server at http://{user.githubID}.okteto.net</span>
-            </code>
-          </div>
         </div>
 
       </div>

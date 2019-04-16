@@ -36,9 +36,6 @@ module.exports = {
         loader: 'style-loader'
       }, {
         loader: 'css-loader',
-        options: {
-          includePaths: [appPath]
-        }
       }, {
         loader: 'postcss-loader'
       }]
@@ -52,7 +49,7 @@ module.exports = {
       }, {
         loader: 'postcss-loader'
       }, {
-        loader: 'fast-sass-loader',
+        loader: 'sass-loader',
         options: {
           includePaths: [appPath]
         }

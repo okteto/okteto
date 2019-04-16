@@ -1,13 +1,4 @@
-$app-z-index: 10;
-$top-z-index: 20;
-$overlay-z-index: 500;
-$notification-z-index: 600;
-:export {
-  overlayZIndex: $overlay-z-index;
-  notificationZIndex: $notification-z-index;
-}
 
-$side-margin: 32px;
 
 // Flexbox.
 
