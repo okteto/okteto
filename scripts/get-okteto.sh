@@ -1,5 +1,7 @@
 #!/bin/sh
 
+{ # Prevent execution if this script was only partially downloaded
+
 set -e
 
 green="\033[32m"
@@ -18,3 +20,5 @@ curl -L $URL -o /usr/local/bin/okteto
 chmod +x /usr/local/bin/okteto
 
 printf "$green> Successfully installed!\n$reset"
+
+} # End of wrapping

@@ -3,6 +3,7 @@ package okteto
 import (
 	"fmt"
 
+	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
 )
 
@@ -47,7 +48,8 @@ func GetDevEnvironments() ([]Environment, error) {
 	}
 
 	if err := query(q, &e); err != nil {
-		return nil, fmt.Errorf("failed to get your dev environments, please try again")
+		log.Infof("failed to get your dev environments: %s", err)
+		return nil, err
 	}
 
 	return e.Environments, nil
