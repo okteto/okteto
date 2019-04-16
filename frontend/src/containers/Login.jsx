@@ -42,7 +42,7 @@ class Login extends Component {
         <div className="Login">
           <div className="layout vertical center-center">
             <div className="logo">
-              <Icon icon="okteto" size="52" />
+              <Icon icon="okteto" size="150" />
             </div>
 
             <GitHubLogin 

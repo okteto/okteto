@@ -21,11 +21,13 @@
   }
 
   .LoginButton {
-    font-size: 22px;
-    padding: 16px 20px;
+    font-size: 24px;
+    padding: 16px 28px;
+    padding-right: 32px;
+    line-height: 25px;
 
     .Icon {
-      margin-right: 8px;
+      margin-right: 12px;
       width: 20px;
       height: 20px;
     }
