@@ -6,31 +6,31 @@ import (
 	"github.com/okteto/app/cli/pkg/model"
 )
 
-// Environments top body answer
-type Environments struct {
-	Environments []Environment
-}
-
 // Environment is the information about the dev environment
 type Environment struct {
-	Name string
+	Name      string
+	Endpoints []string
 }
 
 // DevModeOn activates a dev environment
-func DevModeOn(dev *model.Dev, devPath string) error {
+func DevModeOn(dev *model.Dev, devPath string) (*Environment, error) {
 
 	q := fmt.Sprintf(`
 	mutation {
 		up(name: "%s", image: "%s", workdir: "%s", devPath: "%s") {
-			  name
+			  name, endpoints
 		}
 	  }`, dev.Name, dev.Image, dev.WorkDir, devPath)
 
-	if err := query(q, nil); err != nil {
-		return fmt.Errorf("failed to activate your dev environment, please try again")
+	var u struct {
+		Up Environment
 	}
 
-	return nil
+	if err := query(q, &u); err != nil {
+		return nil, fmt.Errorf("failed to activate your dev environment, please try again")
+	}
+
+	return &u.Up, nil
 }
 
 // GetDevEnvironments returns the name of all the dev environments
@@ -42,7 +42,10 @@ func GetDevEnvironments() ([]Environment, error) {
 		}
 	}`
 
-	var e Environments
+	var e struct {
+		Environments []Environment
+	}
+
 	if err := query(q, &e); err != nil {
 		return nil, fmt.Errorf("failed to get your dev environments, please try again")
 	}

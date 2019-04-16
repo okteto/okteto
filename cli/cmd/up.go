@@ -37,6 +37,7 @@ type UpContext struct {
 	DevPath    string
 	WG         *sync.WaitGroup
 	Dev        *model.Dev
+	Result     *okteto.Environment
 	Client     *kubernetes.Clientset
 	RestConfig *rest.Config
 	Pod        string
@@ -138,8 +139,7 @@ func (up *UpContext) Activate(devPath string) {
 			log.Green("Reconnected to your cluster.")
 		}
 
-		log.Success("Your Okteto Environment is ready")
-		fmt.Println()
+		printDisplayContext(up.Result.Name, up.Result.Endpoints)
 
 		args := []string{"exec", "--pod", up.Pod, "--"}
 		args = append(args, up.Dev.Command...)
@@ -221,7 +221,7 @@ func (up *UpContext) Execute(isRetry bool) error {
 		return err
 	}
 
-	if err := okteto.DevModeOn(up.Dev, up.DevPath); err != nil {
+	if up.Result, err = okteto.DevModeOn(up.Dev, up.DevPath); err != nil {
 		return err
 	}
 
@@ -301,4 +301,14 @@ func (up *UpContext) Shutdown() {
 		log.Debugf("tasks didn't finish, terminating")
 		return
 	}
+}
+
+func printDisplayContext(name string, endpoints []string) {
+	log.Success("Your Okteto Environment is ready")
+	log.Println(fmt.Sprintf("    %s     %s", log.BlueString("Name:"), name))
+	if len(endpoints) > 0 {
+		log.Println(fmt.Sprintf("    %s %s", log.BlueString("Endpoint:"), endpoints[0]))
+	}
+
+	fmt.Println()
 }

@@ -98,6 +98,11 @@ func Green(format string, args ...interface{}) {
 	fmt.Fprintln(color.Output, greenString(format, args...))
 }
 
+// BlueString returns a string in blue
+func BlueString(format string, args ...interface{}) string {
+	return blueString(format, args...)
+}
+
 // Success prints a message with the success symbol first, and the text in green
 func Success(format string, args ...interface{}) {
 	fmt.Fprintf(color.Output, "%s %s\n", successSymbol, greenString(format, args...))
@@ -111,4 +116,9 @@ func Information(format string, args ...interface{}) {
 // Fail prints a message with the error symbol first, and the text in red
 func Fail(format string, args ...interface{}) {
 	fmt.Fprintf(color.Output, "%s %s\n", errorSymbol, redString(format, args...))
+}
+
+// Println writes a line with colors
+func Println(args ...interface{}) {
+	fmt.Fprintln(color.Output, args...)
 }

@@ -4,6 +4,9 @@ workdir: /app
 command: ["bash"]
 forward:
   - "8000:8000"
+resources:
+  requests:
+    cpu: "500m"
 volumes:
   - name: go-pkg
     path: /go/pkg/

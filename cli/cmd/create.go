@@ -58,8 +58,7 @@ func getName() (string, error) {
 
 	envs, err := okteto.GetDevEnvironments()
 	if err != nil {
-		log.Infof("failed to get dev environments: %s", err)
-		return haikunator.Haikunate(), nil
+		return "", err
 	}
 
 	for i := 0; i < 20; i++ {

@@ -204,6 +204,7 @@ var mutationType = graphql.NewObject(
 						return nil, fmt.Errorf("failed to enable dev mode")
 					}
 
+					dev.Endpoints = app.BuildEndpoints(u, dev)
 					return dev, nil
 
 				},

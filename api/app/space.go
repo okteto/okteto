@@ -70,6 +70,7 @@ func ListDevEnvs(u *model.User) ([]*model.Dev, error) {
 		ID:   u.ID,
 		Name: u.GithubID,
 	}
+
 	c, err := client.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
@@ -86,7 +87,7 @@ func ListDevEnvs(u *model.User) ([]*model.Dev, error) {
 			ID:   d.Name,
 			Name: d.Name,
 		}
-		dev.Endpoints = []string{fmt.Sprintf("https://%s", dev.GetEndpoint(s))}
+		dev.Endpoints = BuildEndpoints(u, dev)
 		result = append(result, dev)
 	}
 	return result, nil
@@ -131,4 +132,14 @@ func ListDatabases(u *model.User) ([]*model.DB, error) {
 	}
 
 	return result, nil
+}
+
+// BuildEndpoints builds the endpoints with the FQDN for the specific user and dev env
+func BuildEndpoints(u *model.User, d *model.Dev) []string {
+	s := &model.Space{
+		ID:   u.ID,
+		Name: u.GithubID,
+	}
+
+	return []string{fmt.Sprintf("https://%s", d.GetEndpoint(s))}
 }
