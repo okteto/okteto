@@ -7,13 +7,20 @@ import smoothscroll from 'smoothscroll-polyfill';
 import 'whatwg-fetch';
 
 import reducers from 'reducers';
+import environment from 'common/environment';
 import AppView from 'views/AppView';
 
 import 'index.scss';
 
-// To enable Redux devtools.
-const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
-const store = createStore(reducers, composeEnhancers(applyMiddleware(thunk)));
+let store;
+if (environment.mode === 'development') {
+  // To enable Redux devtools.
+  const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
+  store = createStore(reducers, composeEnhancers(applyMiddleware(thunk)));
+} else {
+  store = createStore(reducers, applyMiddleware(thunk));
+}
+
 smoothscroll.polyfill();
 
 ReactDOM.render(
