@@ -97,7 +97,7 @@ class Space extends Component {
 
     const installCmdWin = 'wget https://downloads.okteto.com/cloud/cli/okteto-Windows-x86_64' + 
       ' -OutFile c:\\windows\\system32\\okteto.exe';
-    const installCmdUnix = 'curl https://okteto.com/get -sSfL | sh';
+    const installCmdUnix = 'curl https://get.okteto.com -sSfL | sh';
 
     const HintContent = () => (
       <div className="HintContent layout vertical">
