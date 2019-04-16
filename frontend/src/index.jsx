@@ -6,11 +6,11 @@ import thunk from 'redux-thunk';
 import smoothscroll from 'smoothscroll-polyfill';
 import 'whatwg-fetch';
 
+import 'index.scss';
+
 import reducers from 'reducers';
 import environment from 'common/environment';
 import AppView from 'views/AppView';
-
-import 'index.scss';
 
 let store;
 if (environment.mode === 'development') {
