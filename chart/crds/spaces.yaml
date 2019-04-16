@@ -1,0 +1,14 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: spaces.crd.okteto.com
+  labels:
+    app.kubernetes.io/name: spaces.crd.okteto.com
+spec:
+  group: crd.okteto.com
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: spaces
+    singular: space
+    kind: Space

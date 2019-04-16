@@ -42,7 +42,7 @@ jobs:
             --acl public-read \
             --metadata version=${CIRCLE_TAG} \
             --cache-control "max-age=86400" \
-          overwrite: true
+            --exclude "*.*.*/" \
       - aws-s3/sync:
           from: ./artifacts/bin
           to: "s3://downloads.okteto.com/cloud/cli/${CIRCLE_TAG}"
