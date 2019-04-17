@@ -14,21 +14,22 @@ type Environment struct {
 }
 
 // DevModeOn activates a dev environment
-func DevModeOn(dev *model.Dev, devPath string) (*Environment, error) {
+func DevModeOn(dev *model.Dev, devPath string, attach bool) (*Environment, error) {
 
 	q := fmt.Sprintf(`
 	mutation {
-		up(name: "%s", image: "%s", workdir: "%s", devPath: "%s") {
+		up(name: "%s", image: "%s", workdir: "%s", devPath: "%s", attach: %t) {
 			  name, endpoints
 		}
-	  }`, dev.Name, dev.Image, dev.WorkDir, devPath)
+	  }`, dev.Name, dev.Image, dev.WorkDir, devPath, attach)
 
 	var u struct {
 		Up Environment
 	}
 
+	log.Debugf("executing graphql query: %s", q)
 	if err := query(q, &u); err != nil {
-		return nil, fmt.Errorf("failed to activate your dev environment, please try again")
+		return nil, fmt.Errorf("failed to activate your dev environment: %s", err)
 	}
 
 	return &u.Up, nil

@@ -246,7 +246,7 @@ func (up *UpContext) devMode() error {
 		return err
 	}
 
-	if up.Result, err = okteto.DevModeOn(up.Dev, up.DevPath); err != nil {
+	if up.Result, err = okteto.DevModeOn(up.Dev, up.DevPath, isRetry); err != nil {
 		return err
 	}
 

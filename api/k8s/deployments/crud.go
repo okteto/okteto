@@ -29,6 +29,9 @@ func Deploy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 			return err
 		}
 	} else {
+		if dev.Attach {
+			return fmt.Errorf("Your Okteto Environment has been removed")
+		}
 		if numDeploys >= maxDevEnvironments {
 			return fmt.Errorf("You cannot create more than %d environments in your space", maxDevEnvironments)
 		}

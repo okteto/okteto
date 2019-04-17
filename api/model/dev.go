@@ -30,6 +30,7 @@ type Dev struct {
 	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir     string   `json:"workdir" yaml:"workdir"`
 	DevPath     string
+	Attach      bool
 	Endpoints   []string `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 

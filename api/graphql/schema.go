@@ -191,6 +191,9 @@ var mutationType = graphql.NewObject(
 					"devPath": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
+					"attach": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.Boolean),
+					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					u, err := validateToken(params.Context)
@@ -305,7 +308,7 @@ func buildDev(args map[string]interface{}) *model.Dev {
 		Image:   args["image"].(string),
 		WorkDir: args["workdir"].(string),
 		DevPath: args["devPath"].(string),
+		Attach:  args["attach"].(bool),
 	}
-
 	return d
 }
