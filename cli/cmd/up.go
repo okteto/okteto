@@ -47,7 +47,7 @@ type UpContext struct {
 	Exit       chan error
 	Sy         *syncthing.Syncthing
 	ErrChan    chan error
-	progress   *progress
+	Namespace  string
 }
 
 //Up starts a cloud dev environment
@@ -98,10 +98,7 @@ func RunUp(dev *model.Dev, devPath string) error {
 		ErrChan:    make(chan error, 1),
 	}
 
-	up.progress = newProgressBar("Activating your Okteto Environment...")
-	up.progress.start()
-
-	defer up.Shutdown()
+	defer up.shutdown()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -127,8 +124,32 @@ func (up *UpContext) Activate(devPath string) {
 	var prevError error
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
-		err := up.Execute(prevError != nil)
-		up.progress.stop()
+		progress := newProgressBar("Activating your Okteto Environment...")
+		progress.start()
+		err := up.devMode()
+		progress.stop()
+		if err != nil {
+			up.Exit <- err
+			return
+		}
+
+		fmt.Println(" ✓  Okteto Environment activated")
+
+		progress = newProgressBar("Synchronizing your files...")
+		progress.start()
+		err = up.startSync()
+		progress.stop()
+		if err != nil {
+			up.Exit <- err
+			return
+		}
+
+		fmt.Println(" ✓  Files synchronized")
+
+		progress = newProgressBar("Finalizing configuration...")
+		progress.start()
+		err = up.forceLocalSyncState()
+		progress.stop()
 		if err != nil {
 			up.Exit <- err
 			return
@@ -164,13 +185,13 @@ func (up *UpContext) Activate(devPath string) {
 		if prevError != nil && prevError == errors.ErrLostConnection {
 			log.Yellow("Connection lost to your Okteto Environment, reconnecting...")
 			fmt.Println()
-			up.Shutdown()
+			up.shutdown()
 			continue
 		}
 		if prevError != nil && prevError == errors.ErrCommandFailed && !up.Sy.IsConnected() {
 			log.Yellow("Connection lost to your Okteto Environment, reconnecting...")
 			fmt.Println()
-			up.Shutdown()
+			up.shutdown()
 			continue
 		}
 
@@ -207,16 +228,14 @@ func (up *UpContext) WaitUntilExitOrInterrupt(cmd *exec.Cmd) error {
 	}
 }
 
-// Execute runs all the logic for the up command
-func (up *UpContext) Execute(isRetry bool) error {
+func (up *UpContext) devMode() error {
 	var err error
-	var namespace string
-	up.Client, up.RestConfig, namespace, err = k8Client.Get()
+	up.Client, up.RestConfig, up.Namespace, err = k8Client.Get()
 	if err != nil {
 		return err
 	}
 
-	up.Sy, err = syncthing.New(up.Dev, up.DevPath, namespace)
+	up.Sy, err = syncthing.New(up.Dev, up.DevPath, up.Namespace)
 	if err != nil {
 		return err
 	}
@@ -225,11 +244,15 @@ func (up *UpContext) Execute(isRetry bool) error {
 		return err
 	}
 
-	up.Pod, err = pods.GetDevPod(up.Context, up.Dev, namespace, up.Client)
+	up.Pod, err = pods.GetDevPod(up.Context, up.Dev, up.Namespace, up.Client)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (up *UpContext) startSync() error {
 	if err := up.Sy.Run(up.Context, up.WG); err != nil {
 		return err
 	}
@@ -242,18 +265,25 @@ func (up *UpContext) Execute(isRetry bool) error {
 		return err
 	}
 
-	up.Forwarder.Start(up.Pod, namespace)
+	up.Forwarder.Start(up.Pod, up.Namespace)
 	go up.Sy.Monitor(up.Context, up.WG, up.Disconnect)
 
 	if err := up.Sy.WaitForPing(up.Context, up.WG); err != nil {
 		return err
 	}
+
 	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (up *UpContext) forceLocalSyncState() error {
 	if err := up.Sy.OverrideChanges(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
+
 	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
@@ -262,6 +292,7 @@ func (up *UpContext) Execute(isRetry bool) error {
 	if err := up.Sy.UpdateConfig(); err != nil {
 		return err
 	}
+
 	if err := up.Sy.Restart(up.Context, up.WG); err != nil {
 		return err
 	}
@@ -270,7 +301,7 @@ func (up *UpContext) Execute(isRetry bool) error {
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
-func (up *UpContext) Shutdown() {
+func (up *UpContext) shutdown() {
 	log.Debugf("cancelling context")
 	if up.Cancel != nil {
 		up.Cancel()

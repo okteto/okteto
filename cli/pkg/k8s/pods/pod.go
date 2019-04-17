@@ -29,7 +29,8 @@ func GetDevPod(ctx context.Context, dev *model.Dev, namespace string, c *kuberne
 			},
 		)
 		if err != nil {
-			return "", fmt.Errorf("error listing pods: %s", err)
+			log.Infof("error listing pods: %s", err)
+			return "", fmt.Errorf("failed to retrieve dev environment information")
 		}
 
 		var pendingOrRunningPods []apiv1.Pod
