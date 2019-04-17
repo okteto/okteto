@@ -15,7 +15,7 @@ type UserV1Alpha1Interface interface {
 
 // UserV1Alpha1Client TBD
 type UserV1Alpha1Client struct {
-	restClient rest.Interface
+	RESTClient rest.Interface
 }
 
 //Get returns the k8s client
@@ -42,13 +42,13 @@ func NewForConfig(c *rest.Config) (*UserV1Alpha1Client, error) {
 		return nil, err
 	}
 
-	return &UserV1Alpha1Client{restClient: client}, nil
+	return &UserV1Alpha1Client{RESTClient: client}, nil
 }
 
 // Users TBD
 func (c *UserV1Alpha1Client) Users(namespace string) UserInterface {
 	return &userClient{
-		restClient: c.restClient,
+		RESTClient: c.RESTClient,
 		ns:         namespace,
 	}
 }

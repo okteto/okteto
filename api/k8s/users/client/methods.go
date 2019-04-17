@@ -17,13 +17,13 @@ type UserInterface interface {
 }
 
 type userClient struct {
-	restClient rest.Interface
+	RESTClient rest.Interface
 	ns         string
 }
 
 func (c *userClient) List(opts metav1.ListOptions) (*v1alpha1.UserList, error) {
 	result := v1alpha1.UserList{}
-	err := c.restClient.
+	err := c.RESTClient.
 		Get().
 		Namespace(c.ns).
 		Resource("users").
@@ -36,7 +36,7 @@ func (c *userClient) List(opts metav1.ListOptions) (*v1alpha1.UserList, error) {
 
 func (c *userClient) Get(name string, opts metav1.GetOptions) (*v1alpha1.User, error) {
 	result := v1alpha1.User{}
-	err := c.restClient.
+	err := c.RESTClient.
 		Get().
 		Namespace(c.ns).
 		Resource("users").
@@ -50,7 +50,7 @@ func (c *userClient) Get(name string, opts metav1.GetOptions) (*v1alpha1.User, e
 
 func (c *userClient) Create(user *v1alpha1.User) (*v1alpha1.User, error) {
 	result := v1alpha1.User{}
-	err := c.restClient.
+	err := c.RESTClient.
 		Post().
 		Namespace(c.ns).
 		Resource("users").
@@ -63,7 +63,7 @@ func (c *userClient) Create(user *v1alpha1.User) (*v1alpha1.User, error) {
 
 func (c *userClient) Update(user *v1alpha1.User) (*v1alpha1.User, error) {
 	result := &v1alpha1.User{}
-	err := c.restClient.
+	err := c.RESTClient.
 		Put().
 		Namespace(c.ns).
 		Resource("users").
@@ -75,7 +75,7 @@ func (c *userClient) Update(user *v1alpha1.User) (*v1alpha1.User, error) {
 }
 
 func (c *userClient) Delete(name string, options *metav1.DeleteOptions) error {
-	return c.restClient.
+	return c.RESTClient.
 		Delete().
 		Namespace(c.ns).
 		Resource("users").
