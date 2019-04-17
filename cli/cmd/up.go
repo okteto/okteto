@@ -132,7 +132,7 @@ func (up *UpContext) Activate(devPath string) {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		progress := newProgressBar("Activating your Okteto Environment...")
 		progress.start()
-		err := up.devMode()
+		err := up.devMode(prevError != nil)
 		progress.stop()
 		if err != nil {
 			up.Exit <- err
@@ -234,7 +234,7 @@ func (up *UpContext) WaitUntilExitOrInterrupt(cmd *exec.Cmd) error {
 	}
 }
 
-func (up *UpContext) devMode() error {
+func (up *UpContext) devMode(isRetry bool) error {
 	var err error
 	up.Client, up.RestConfig, up.Namespace, err = k8Client.Get()
 	if err != nil {

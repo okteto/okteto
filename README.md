@@ -1,5 +1,7 @@
 # Okteto Cloud
 
+[![CircleCI](https://circleci.com/gh/okteto/app.svg?style=svg)](https://circleci.com/gh/okteto/app)
+
 ## Setup
 In production, we use tiller with SSL. You'll need to copy the tiller certificates from the keybase to your helm folder for it to work 
 

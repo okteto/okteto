@@ -33,6 +33,7 @@ func TokenMiddleware(next http.Handler) http.Handler {
 
 		if len(splitToken) > 1 {
 			reqToken := splitToken[1]
+			reqToken = strings.TrimSpace(reqToken)
 			ctx = context.WithValue(ctx, authTokenKey, reqToken)
 		}
 

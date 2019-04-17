@@ -2,7 +2,7 @@ BINDIR    := $(CURDIR)/bin
 
 .PHONY: build
 build:
-	go build -o "bin/okteto-api-$(label)" 
+	go build -o "bin/okteto-api" 
 
 .PHONY: push
 push:

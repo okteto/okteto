@@ -13,3 +13,4 @@
 
 chart/override*.yaml
 cli/okteto
+api/bin/okteto-api
