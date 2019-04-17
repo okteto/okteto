@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/okteto/app/cli/pkg/log"
 )
 
 // IsConnected returns true if it can ping the remote syncthing
@@ -25,6 +27,7 @@ func (s *Syncthing) Monitor(ctx context.Context, wg *sync.WaitGroup, disconnect 
 		case <-ticker.C:
 			if !s.IsConnected() {
 				if !s.IsConnected() {
+					log.Debug("not connected to syncthing, sending disconnect signal")
 					disconnect <- struct{}{}
 					return
 				}

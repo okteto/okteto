@@ -180,6 +180,8 @@ func (up *UpContext) Activate(devPath string) {
 			return
 		}
 
+		log.Debugf("started new okteto exec")
+
 		go func() {
 			up.WG.Add(1)
 			defer up.WG.Done()
@@ -211,6 +213,7 @@ func (up *UpContext) WaitUntilExitOrInterrupt(cmd *exec.Cmd) error {
 	for {
 		select {
 		case <-up.Context.Done():
+			log.Debug("context is done, sending interrupt to process")
 			if err := cmd.Process.Signal(os.Interrupt); err != nil {
 				log.Infof("Failed to kill process: %s", err)
 			}
@@ -226,6 +229,7 @@ func (up *UpContext) WaitUntilExitOrInterrupt(cmd *exec.Cmd) error {
 		case err := <-up.ErrChan:
 			log.Yellow(err.Error())
 		case <-up.Disconnect:
+			log.Debug("disconnected, sending interrupt to process")
 			if err := cmd.Process.Signal(os.Interrupt); err != nil {
 				log.Infof("Failed to kill process: %s", err)
 			}
@@ -299,11 +303,7 @@ func (up *UpContext) forceLocalSyncState() error {
 		return err
 	}
 
-	if err := up.Sy.Restart(up.Context, up.WG); err != nil {
-		return err
-	}
-
-	return nil
+	return up.Sy.Restart(up.Context, up.WG)
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds

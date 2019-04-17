@@ -27,7 +27,6 @@ func DevModeOn(dev *model.Dev, devPath string, attach bool) (*Environment, error
 		Up Environment
 	}
 
-	log.Debugf("executing graphql query: %s", q)
 	if err := query(q, &u); err != nil {
 		return nil, fmt.Errorf("failed to activate your dev environment: %s", err)
 	}
