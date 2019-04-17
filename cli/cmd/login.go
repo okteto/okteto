@@ -11,6 +11,7 @@ import (
 	"math/rand"
 
 	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/app/cli/pkg/model"
 	"github.com/okteto/app/cli/pkg/okteto"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
@@ -28,7 +29,11 @@ func Login() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoURL := okteto.GetURL()
 
-			port := 55000
+			port, err := model.GetAvailablePort()
+			if err != nil {
+				log.Infof("couldn't access the network: %s", err)
+				return fmt.Errorf("couldn't access the network")
+			}
 
 			handler := authHandler{
 				baseURL:  oktetoURL,

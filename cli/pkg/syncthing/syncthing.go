@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -88,22 +87,22 @@ func New(dev *model.Dev, devPath, space string) (*Syncthing, error) {
 		return nil, fmt.Errorf("cannot find syncthing. Make sure syncthing is installed in %s", fullPath)
 	}
 
-	remotePort, err := getAvailablePort()
+	remotePort, err := model.GetAvailablePort()
 	if err != nil {
 		return nil, err
 	}
 
-	remoteGUIPort, err := getAvailablePort()
+	remoteGUIPort, err := model.GetAvailablePort()
 	if err != nil {
 		return nil, err
 	}
 
-	guiPort, err := getAvailablePort()
+	guiPort, err := model.GetAvailablePort()
 	if err != nil {
 		return nil, err
 	}
 
-	listenPort, err := getAvailablePort()
+	listenPort, err := model.GetAvailablePort()
 	if err != nil {
 		return nil, err
 	}
@@ -188,22 +187,6 @@ func (s *Syncthing) UpdateConfig() error {
 		return err
 	}
 	return nil
-}
-
-func getAvailablePort() (int, error) {
-	address, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	listener, err := net.ListenTCP("tcp", address)
-	if err != nil {
-		return 0, err
-	}
-
-	defer listener.Close()
-	return listener.Addr().(*net.TCPAddr).Port, nil
-
 }
 
 // Run starts up a local syncthing process to serve files from.
