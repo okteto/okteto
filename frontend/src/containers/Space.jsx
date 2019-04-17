@@ -224,12 +224,14 @@ class Space extends Component {
             <div className="List layout vertical">
               {environmentList.map(environment =>
                 <div key={environment.id} className="Item layout horizontal start">
-                  <div className="ItemIcon">
-                    <Icon icon="mirror" size="20"/>
-                  </div>
-                  <div className="ItemName ellipsis" 
-                    title={environment.name}>
-                    {environment.name}
+                  <div className="layout horizontal center">
+                    <div className="ItemIcon">
+                      <Icon icon="mirror" size="20"/>
+                    </div>
+                    <div className="ItemName ellipsis" 
+                      title={environment.name}>
+                      {environment.name}
+                    </div>
                   </div>
                   <div className="ItemEndpoints layout vertical">
                     {environment.endpoints.map(url =>
@@ -255,12 +257,14 @@ class Space extends Component {
 
               {databaseList.map(database =>
                 <div key={database.name} className="Item layout horizontal start">
-                  <div className="ItemIcon">
-                    <Icon icon="database" size="20"/>
-                  </div>
-                  <div className="ItemName ellipsis" 
-                    title={database.name}>
-                    {database.name}
+                  <div className="layout horizontal center">
+                    <div className="ItemIcon">
+                      <Icon icon="database" size="20"/>
+                    </div>
+                    <div className="ItemName ellipsis" 
+                      title={database.name}>
+                      {database.name}
+                    </div>
                   </div>
                   <div className="ItemEndpoints layout vertical">
                     {database.endpoint}

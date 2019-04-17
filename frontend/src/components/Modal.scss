@@ -7,5 +7,14 @@
       text-decoration: none; 
     }
   }
+
+  @media screen and (max-width: 500px) {
+    // Skyline css-in-js doesn't support media queries.
+    .skylight-dialog {
+      width: 100vw !important;
+      left: 0 !important;
+      margin-left: 0 !important;
+    }
+  }
 }
 

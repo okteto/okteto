@@ -31,7 +31,8 @@ class Modal extends Component {
       lineHeight: 'normal',
       zIndex: constants.overlayZIndex + 1,
       top: `${50 - this.props.offsetTop}%`,
-      left: `${50 - this.props.offsetLeft}%`
+      left: `${50 - this.props.offsetLeft}%`,
+      boxSizing: 'border-box'
     };
 
     const overlayStyles = {

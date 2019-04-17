@@ -32,7 +32,7 @@ class CreateEnvironment extends Component {
         className="Create environment"
         ref={ref => this.dialog = ref} 
         title="New environment"
-        width={500}
+        width={540}
         offsetTop={8}>
         <div className="create-dialog-content layout vertical">
           {this.props.children}

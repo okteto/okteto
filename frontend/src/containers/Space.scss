@@ -42,6 +42,8 @@
   }
 
   .List {
+    overflow-y: auto;
+
     .Item {
       position: relative;
       padding: 20px $side-margin 16px $side-margin;
