@@ -1,5 +1,5 @@
 .PHONY: prod
-prod: check build-api build-frontend tag-prod
+prod: check build-api build-frontend tag-prod push-prod
 
 .PHONY: tag-prod
 tag-prod:

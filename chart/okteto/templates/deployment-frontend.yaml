@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-frontend"
@@ -18,7 +19,6 @@ spec:
         app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-frontend"
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
-      replicas: {{ .Values.replicas }}
       containers:
         - name: frontend
           image: "{{ .Values.images.frontend.repository }}:{{ .Values.images.frontend.tag }}"

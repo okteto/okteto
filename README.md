@@ -26,10 +26,6 @@ The Makefile requires docker, and for you to be signed to the docker registries 
         
         make prod
 
-1. Push the docker images 
-        
-        make push-prod
-
 1. Update `/keybase/team/riberaproject/private/okteto-cloud/override-prod.yaml` as necessary.
 
 1. Upgrade prod

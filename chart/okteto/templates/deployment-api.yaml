@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-api"
@@ -21,7 +22,6 @@ spec:
         checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ include "okteto.fullname" . }}
-      replicas: {{ .Values.replicas }}
       containers:
         - name: api
           image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"
