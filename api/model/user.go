@@ -4,6 +4,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+const TokenLength = 40
+
 //User represents a user
 type User struct {
 	ID       string
@@ -24,6 +26,6 @@ func NewUser(githubID, email, name, avatar string) *User {
 		Name:     name,
 		Email:    email,
 		Avatar:   avatar,
-		Token:    GenerateRandomString(40),
+		Token:    GenerateRandomString(TokenLength),
 	}
 }

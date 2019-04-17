@@ -66,6 +66,13 @@ func GetByGithubID(githubID string) (*model.User, error) {
 
 // GetByToken gets a user by her token
 func GetByToken(token string) (*model.User, error) {
+	if len(token) == 0 {
+		return nil, fmt.Errorf("empty token")
+	}
+
+	if len(token) > model.TokenLength {
+		return nil, fmt.Errorf("malformed token, too long")
+	}
 	uClient, err := getClient()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)

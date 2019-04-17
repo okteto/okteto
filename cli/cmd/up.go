@@ -58,6 +58,12 @@ func Up() *cobra.Command {
 		Short: "Activates your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting up command")
+			u := upgradeAvailable()
+			if len(u) > 0 {
+				log.Yellow("Okteto %s is available. To upgrade:", u)
+				log.Yellow("    %s", getUpgradeCommand())
+				fmt.Println()
+			}
 
 			if !syncthing.IsInstalled() {
 				fmt.Println("Installing dependencies...")
