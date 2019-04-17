@@ -12,15 +12,26 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const maxDevEnvironments = 5
+
 //Deploy creates or updates the dev environment
 func Deploy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 	d := translate(dev, s)
+
+	deploys, err := c.AppsV1().Deployments(s.ID).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	numDeploys := len(deploys.Items)
 
 	if exists(dev, s, c) {
 		if err := update(d, c); err != nil {
 			return err
 		}
 	} else {
+		if numDeploys >= maxDevEnvironments {
+			return fmt.Errorf("You cannot create more than %d environments in your space", maxDevEnvironments)
+		}
 		if err := create(d, c); err != nil {
 			return err
 		}

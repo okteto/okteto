@@ -107,14 +107,14 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev, s *model.Space) {
 
 func translateResources(c *apiv1.Container) {
 	c.Resources.Requests = make(map[apiv1.ResourceName]resource.Quantity, 0)
-	parsed, _ := resource.ParseQuantity("0.5Gi")
+	parsed, _ := resource.ParseQuantity("0.250Gi")
 	c.Resources.Requests[apiv1.ResourceMemory] = parsed
-	parsed, _ = resource.ParseQuantity("0.250")
+	parsed, _ = resource.ParseQuantity("0.125")
 	c.Resources.Requests[apiv1.ResourceCPU] = parsed
 	c.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity, 0)
-	parsed, _ = resource.ParseQuantity("2Gi")
+	parsed, _ = resource.ParseQuantity("1Gi")
 	c.Resources.Limits[apiv1.ResourceMemory] = parsed
-	parsed, _ = resource.ParseQuantity("1")
+	parsed, _ = resource.ParseQuantity("0.5")
 	c.Resources.Limits[apiv1.ResourceCPU] = parsed
 }
 
