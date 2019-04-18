@@ -55,6 +55,23 @@ func TranslateStatefulSet(db *model.DB, s *model.Space) *appsv1.StatefulSet {
 									Value: "db",
 								},
 							},
+							VolumeMounts: []apiv1.VolumeMount{
+								apiv1.VolumeMount{
+									Name:      db.GetVolumeName(),
+									MountPath: db.GetVolumePath(),
+								},
+							},
+						},
+					},
+					Volumes: []apiv1.Volume{
+						apiv1.Volume{
+							Name: db.GetVolumeName(),
+							VolumeSource: apiv1.VolumeSource{
+								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+									ClaimName: db.GetVolumeName(),
+									ReadOnly:  false,
+								},
+							},
 						},
 					},
 				},

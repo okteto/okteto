@@ -27,7 +27,7 @@ func DevModeOn(u *model.User, dev *model.Dev) error {
 		return err
 	}
 
-	if err := volumes.Create(dev, s, c); err != nil {
+	if err := volumes.Create(dev.GetVolumeName(), s, c); err != nil {
 		return err
 	}
 
@@ -71,7 +71,7 @@ func DevModeOff(u *model.User, dev *model.Dev, removeVolumes bool) error {
 	}
 
 	if removeVolumes {
-		if err := volumes.Destroy(dev, s, c); err != nil {
+		if err := volumes.Destroy(dev.GetVolumeName(), s, c); err != nil {
 			return err
 		}
 	}

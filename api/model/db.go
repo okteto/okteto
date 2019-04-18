@@ -31,3 +31,29 @@ func (db *DB) GetEndpoint() string {
 	}
 	return ""
 }
+
+//GetVolumeName returns the okteto volume name for a given database
+func (db *DB) GetVolumeName() string {
+	switch db.Name {
+	case MONGO:
+		return "mongo-persistent-storage"
+	case REDIS:
+		return "redis-persistent-storage"
+	case POSTGRES:
+		return "postgres-persistent-storage"
+	}
+	return ""
+}
+
+//GetVolumePath returns the okteto volume path for a given database
+func (db *DB) GetVolumePath() string {
+	switch db.Name {
+	case MONGO:
+		return "/data/db"
+	case REDIS:
+		return "/data"
+	case POSTGRES:
+		return "/var/lib/postgresql/data"
+	}
+	return ""
+}

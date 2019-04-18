@@ -9,6 +9,7 @@ import (
 	"github.com/okteto/app/api/k8s/statefulsets/mongo"
 	"github.com/okteto/app/api/k8s/statefulsets/postgres"
 	"github.com/okteto/app/api/k8s/statefulsets/redis"
+	"github.com/okteto/app/api/k8s/volumes"
 	"github.com/okteto/app/api/model"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -22,6 +23,10 @@ func CreateDatabase(u *model.User, db *model.DB) error {
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
+	}
+
+	if err := volumes.Create(db.GetVolumeName(), s, c); err != nil {
+		return err
 	}
 
 	var dbService *apiv1.Service
@@ -62,6 +67,10 @@ func DestroyDatabase(u *model.User, db *model.DB) error {
 	}
 
 	if err := statefulsets.Destroy(db, s, c); err != nil {
+		return err
+	}
+
+	if err := volumes.Destroy(db.GetVolumeName(), s, c); err != nil {
 		return err
 	}
 

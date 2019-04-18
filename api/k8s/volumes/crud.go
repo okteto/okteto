@@ -12,9 +12,9 @@ import (
 )
 
 //Create deploys the volume claim for a given dev environment
-func Create(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
+func Create(name string, s *model.Space, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(s.ID)
-	pvc := translate(dev)
+	pvc := translate(name)
 	k8Volume, err := vClient.Get(pvc.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes volume claim: %s", err)
@@ -32,8 +32,8 @@ func Create(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 }
 
 //Destroy destroys the volume claim for a given dev environment
-func Destroy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
-	pvc := translate(dev)
+func Destroy(name string, s *model.Space, c *kubernetes.Clientset) error {
+	pvc := translate(name)
 	vClient := c.CoreV1().PersistentVolumeClaims(s.ID)
 	log.Infof("destroying volume claim '%s'...", pvc.Name)
 	err := vClient.Delete(pvc.Name, &metav1.DeleteOptions{})
