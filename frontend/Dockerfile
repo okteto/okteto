@@ -3,7 +3,9 @@ RUN mkdir /usr/src/app
 WORKDIR /usr/src/app
 
 ENV PATH /usr/src/app/node_modules/.bin:$PATH
-ENV GITHUB_CLIENTID "47867be52b46a2d9d302"
+
+# Defaults to the app configured for https://cloud.okteto.com
+ARG GITHUB_CLIENTID="47867be52b46a2d9d302"
 
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
