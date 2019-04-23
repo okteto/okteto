@@ -35,12 +35,10 @@ func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
 			Namespace: s.ID,
-			Labels: map[string]string{
-				oktetoLabel: dev.Name,
-			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &devReplicas,
+			Strategy: appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": dev.Name,
@@ -60,8 +58,7 @@ func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 						apiv1.Container{
 							Name:            "dev",
 							Image:           dev.Image,
-							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"tail", "-f", "/dev/null"},
+							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},
 				},
@@ -72,9 +69,8 @@ func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 
 func translate(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 	d := devSandbox(dev, s)
-	d.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
-	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
-	d.Spec.Replicas = &devReplicas
+	d.GetObjectMeta().SetLabels(map[string]string{oktetoLabel: dev.Name})
+
 	for i := range d.Spec.Template.Spec.Containers {
 		translateDevContainer(&d.Spec.Template.Spec.Containers[i], dev, s)
 	}
@@ -88,7 +84,6 @@ func translate(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 func translateDevContainer(c *apiv1.Container, dev *model.Dev, s *model.Space) {
 	c.SecurityContext = &apiv1.SecurityContext{}
 	c.Image = dev.Image
-	c.ImagePullPolicy = apiv1.PullAlways
 	c.Command = []string{"tail"}
 	c.Args = []string{"-f", "/dev/null"}
 	c.WorkingDir = dev.WorkDir

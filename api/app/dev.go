@@ -31,7 +31,34 @@ func DevModeOn(u *model.User, dev *model.Dev) error {
 		return err
 	}
 
-	if err := deployments.Deploy(dev, s, c); err != nil {
+	if err := deployments.DevOn(dev, s, c); err != nil {
+		return err
+	}
+
+	new := services.Translate(dev, s)
+	if err := services.Deploy(new, s, c); err != nil {
+		return err
+	}
+
+	if err := ingresses.Deploy(dev, s, c); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//RunImage runs a docker image
+func RunImage(u *model.User, dev *model.Dev) error {
+	s := &model.Space{
+		ID:   u.ID,
+		Name: u.GithubID,
+	}
+	c, err := client.Get()
+	if err != nil {
+		return fmt.Errorf("error getting k8s client: %s", err)
+	}
+
+	if err := deployments.Run(dev, s, c); err != nil {
 		return err
 	}
 

@@ -238,6 +238,35 @@ var mutationType = graphql.NewObject(
 
 				},
 			},
+			"run": &graphql.Field{
+				Type:        devEnvironmentType,
+				Description: "Run a docker image",
+				Args: graphql.FieldConfigArgument{
+					"name": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"image": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
+					dev := &model.Dev{
+						Name:  params.Args["name"].(string),
+						Image: params.Args["image"].(string),
+					}
+					if err := app.RunImage(u, dev); err != nil {
+						log.Errorf("failed to run image: %s", err)
+						return nil, fmt.Errorf("failed to run image")
+					}
+
+					return dev, nil
+				},
+			},
 			"createDatabase": &graphql.Field{
 				Type:        databaseType,
 				Description: "Create a database",

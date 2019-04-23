@@ -19,7 +19,7 @@ var supportedDatabases = map[string]bool{
 func Database() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "database",
-		Short: "Creates a cloud database",
+		Short: "Creates a cloud database in your Okteto Space",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting database command")
 

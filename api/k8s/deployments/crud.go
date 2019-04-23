@@ -14,8 +14,8 @@ import (
 
 const maxDevEnvironments = 5
 
-//Deploy creates or updates the dev environment
-func Deploy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
+//DevOn activates dev mode
+func DevOn(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 	d := translate(dev, s)
 
 	deploys, err := c.AppsV1().Deployments(s.ID).List(metav1.ListOptions{})
@@ -23,8 +23,14 @@ func Deploy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 		return err
 	}
 	numDeploys := len(deploys.Items)
+	dPrev := get(dev, deploys.Items)
 
-	if exists(dev, s, c) {
+	if dPrev != nil {
+		if dev.Attach {
+			if _, ok := dPrev.GetObjectMeta().GetLabels()[oktetoLabel]; !ok {
+				return fmt.Errorf("Your Okteto Environment has been deactivated")
+			}
+		}
 		if err := update(d, c); err != nil {
 			return err
 		}
@@ -42,12 +48,40 @@ func Deploy(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 	return nil
 }
 
-func exists(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) bool {
-	d, err := c.AppsV1().Deployments(s.ID).Get(dev.Name, metav1.GetOptions{})
+//Run replaces a dev environment by a deployment running a docker image
+func Run(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
+	d := devSandbox(dev, s)
+	translateResources(&d.Spec.Template.Spec.Containers[0])
+
+	deploys, err := c.AppsV1().Deployments(s.ID).List(metav1.ListOptions{})
 	if err != nil {
-		return false
+		return err
 	}
-	return d.Name != ""
+	numDeploys := len(deploys.Items)
+	dPrev := get(dev, deploys.Items)
+
+	if dPrev != nil {
+		if err := update(d, c); err != nil {
+			return err
+		}
+	} else {
+		if numDeploys >= maxDevEnvironments {
+			return fmt.Errorf("You cannot create more than %d environments in your space", maxDevEnvironments)
+		}
+		if err := create(d, c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func get(dev *model.Dev, l []appsv1.Deployment) *appsv1.Deployment {
+	for _, i := range l {
+		if i.Name == dev.Name {
+			return &i
+		}
+	}
+	return nil
 }
 
 func create(d *appsv1.Deployment, c *kubernetes.Clientset) error {
