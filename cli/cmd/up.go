@@ -128,11 +128,17 @@ func (up *UpContext) Activate(devPath string) {
 	up.WG.Add(1)
 	defer up.WG.Done()
 	var prevError error
+	attach := up.Dev.Attach
+
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		progress := newProgressBar("Activating your Okteto Environment...")
 		progress.start()
-		err := up.devMode(prevError != nil)
+		if prevError != nil {
+			attach = true
+		}
+
+		err := up.devMode(attach)
 		progress.stop()
 		if err != nil {
 			up.Exit <- err
