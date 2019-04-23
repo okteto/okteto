@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -74,7 +75,7 @@ func (dev *Dev) GetSecretName() string {
 
 //GetEndpoint returns the dev environment endpoint
 func (dev *Dev) GetEndpoint(s *Space) string {
-	return fmt.Sprintf("%s-%s.%s", dev.Name, s.Name, oktetoBaseDomain)
+	return strings.ToLower(fmt.Sprintf("%s-%s.%s", dev.Name, s.Name, oktetoBaseDomain))
 }
 
 //CertificateName returns the cretificate name for a dev environment
