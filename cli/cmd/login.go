@@ -24,10 +24,24 @@ var (
 //Login starts the login handshake with github and okteto
 func Login() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "login",
+		Use:   "login [URL]",
 		Short: "Login with Okteto",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoURL := okteto.GetURL()
+			oktetoURL := okteto.CloudURL
+			if len(args) > 0 {
+				u, err := url.Parse(args[0]); 
+				if err != nil {
+					return fmt.Errorf("malformed login URL")
+				}
+
+				if u.Scheme == "" {
+					u.Scheme = "https"
+				}
+
+				oktetoURL = u.String()
+			}
+
+			log.Debugf("authenticating with %s", oktetoURL)
 
 			port, err := model.GetAvailablePort()
 			if err != nil {
@@ -70,7 +84,7 @@ func Login() *cobra.Command {
 
 			fmt.Printf("Received code=%s\n", code)
 			fmt.Println("Getting an access token...")
-			user, err := okteto.Auth(handler.ctx, code)
+			user, err := okteto.Auth(handler.ctx, code, oktetoURL)
 			if err != nil {
 				return err
 			}
