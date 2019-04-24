@@ -19,7 +19,7 @@ The first thing you need to do is to login at https://cloud.okteto.com. This wil
 Install the Okteto CLI by running:
 
 ```console
-curl https://get.okteto.com -sSfL | sh
+curl https://get.okteto.com -sSfL | sudo sh
 ```
 
 ### Step 3: Login from the CLI

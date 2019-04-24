@@ -6,7 +6,6 @@ import (
 	"runtime"
 
 	"github.com/Masterminds/semver"
-	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/spf13/cobra"
 )
@@ -27,7 +26,7 @@ func Version() *cobra.Command {
 }
 
 func upgradeAvailable() string {
-	current, err := semver.NewVersion(config.VersionString)
+	current, err := semver.NewVersion(VersionString)
 	if err != nil {
 		return ""
 	}
@@ -60,5 +59,5 @@ func getUpgradeCommand() string {
 		return `wget https://downloads.okteto.com/cloud/cli/okteto-Windows-x86_64 -OutFile c:\windows\system32\okteto.exe`
 	}
 
-	return `curl https://get.okteto.com -sSfL | sh`
+	return `curl https://get.okteto.com -sSfL | sudo sh`
 }
