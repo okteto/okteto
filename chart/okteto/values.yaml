@@ -5,10 +5,10 @@ replicas: 2
 images:
   api:
     repository: gcr.io/okteto-prod/api
-    tag: 0.1.6
+    tag: 0.1.8
   frontend:
     repository: gcr.io/okteto-prod/frontend
-    tag: 0.1.6
+    tag: 0.1.8
   pullPolicy: Always
 nameOverride: ""
 fullnameOverride: ""

@@ -5,7 +5,7 @@ prod: check build-api build-frontend tag-prod push-prod
 tag-prod:
 	docker tag api gcr.io/okteto-prod/api:${TAG}
 	docker tag frontend gcr.io/okteto-prod/frontend:${TAG}
-	git tag "cloud-${TAG}"
+	git tag --force "cloud-${TAG}"
 	yq w -i chart/okteto/Chart.yaml appVersion "${TAG}"
 	yq w -i chart/okteto/values.yaml images.frontend.tag "${TAG}"
 	yq w -i chart/okteto/values.yaml images.api.tag "${TAG}"
