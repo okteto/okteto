@@ -41,13 +41,20 @@ func RunDatabase(name string) error {
 	progress := newProgressBar("Creating your cloud database...")
 	progress.start()
 
-	err := okteto.CreateDatabase(name)
+	db, err := okteto.CreateDatabase(name)
 	progress.stop()
 
 	if err != nil {
 		return err
 	}
 
-	log.Success("Your '%s' instance is ready", name)
+	printDisplayContext(fmt.Sprintf("Your %s instance is ready", db.Name), db.Name, []string{db.Endpoint})
 	return nil
+}
+
+func printDBDisplayContext(name, endpoint string) {
+	log.Success("Your %s instance is ready", name)
+	log.Println(fmt.Sprintf("    %s     %s", log.BlueString("Name:"), name))
+	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Endpoint:"), endpoint))
+	fmt.Println()
 }

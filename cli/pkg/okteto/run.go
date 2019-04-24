@@ -10,16 +10,16 @@ import (
 )
 
 // RunImage runs a docker image
-func RunImage(dev *model.Dev) error {
+func RunImage(dev *model.Dev) (*Environment, error) {
 	c, err := getClient()
 	if err != nil {
-		return fmt.Errorf("error getting okteto client: %s", err)
+		return nil, fmt.Errorf("error getting okteto client: %s", err)
 	}
 
 	query := fmt.Sprintf(`
 	  mutation {
 		run(name: "%s", image: "%s") {
-		  name
+		  name,endpoints
 		}
 	  }`, dev.Name, dev.Image)
 
@@ -27,16 +27,20 @@ func RunImage(dev *model.Dev) error {
 
 	oktetoToken, err := getToken()
 	if err != nil {
-		return errors.ErrNotLogged
+		return nil, errors.ErrNotLogged
 	}
 
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", oktetoToken))
 
 	ctx := context.Background()
 
-	if err := c.Run(ctx, req, nil); err != nil {
-		return fmt.Errorf("error running image: %s", err)
+	var r struct {
+		Run Environment
 	}
 
-	return nil
+	if err := c.Run(ctx, req, &r); err != nil {
+		return nil, fmt.Errorf("error running image: %s", err)
+	}
+
+	return &r.Run, nil
 }

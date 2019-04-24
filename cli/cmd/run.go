@@ -48,13 +48,13 @@ func RunRun(dev *model.Dev) error {
 	progress := newProgressBar(fmt.Sprintf("Running in '%s' your Okteto Space...", dev.Image))
 	progress.start()
 
-	err := okteto.RunImage(dev)
+	e, err := okteto.RunImage(dev)
 	progress.stop()
 
 	if err != nil {
 		return err
 	}
 
-	log.Success("Your '%s' instance is ready", dev.Name)
+	printDisplayContext("Your service is ready", e.Name, e.Endpoints)
 	return nil
 }

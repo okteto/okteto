@@ -172,7 +172,7 @@ func (up *UpContext) Activate(devPath string) {
 			log.Green("Reconnected to your cluster.")
 		}
 
-		printDisplayContext(up.Result.Name, up.Result.Endpoints)
+		printDisplayContext("Your Okteto Environment is ready", up.Result.Name, up.Result.Endpoints)
 
 		args := []string{"exec", "--pod", up.Pod, "--"}
 		args = append(args, up.Dev.Command...)
@@ -346,8 +346,8 @@ func (up *UpContext) shutdown() {
 	}
 }
 
-func printDisplayContext(name string, endpoints []string) {
-	log.Success("Your Okteto Environment is ready")
+func printDisplayContext(message, name string, endpoints []string) {
+	log.Success(message)
 	log.Println(fmt.Sprintf("    %s     %s", log.BlueString("Name:"), name))
 	if len(endpoints) > 0 {
 		log.Println(fmt.Sprintf("    %s %s", log.BlueString("Endpoint:"), endpoints[0]))

@@ -2,6 +2,7 @@ package graphql
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/graphql-go/graphql"
 	"github.com/okteto/app/api/app"
@@ -264,6 +265,7 @@ var mutationType = graphql.NewObject(
 						return nil, fmt.Errorf("failed to run image")
 					}
 
+					dev.Endpoints = app.BuildEndpoints(u, dev)
 					return dev, nil
 				},
 			},
@@ -290,6 +292,7 @@ var mutationType = graphql.NewObject(
 						return nil, fmt.Errorf("failed to create your database")
 					}
 
+					db.Endpoint = db.GetEndpoint()
 					return db, nil
 				},
 			},
@@ -333,7 +336,7 @@ var Schema, _ = graphql.NewSchema(
 
 func buildDev(args map[string]interface{}) *model.Dev {
 	d := &model.Dev{
-		Name:    args["name"].(string),
+		Name:    strings.ToLower(args["name"].(string)),
 		Image:   args["image"].(string),
 		WorkDir: args["workdir"].(string),
 		DevPath: args["devPath"].(string),
