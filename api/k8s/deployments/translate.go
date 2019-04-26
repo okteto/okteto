@@ -1,6 +1,7 @@
 package deployments
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -13,15 +14,19 @@ import (
 )
 
 const (
-	initSyncImageTag    = "okteto/init-syncthing:0.4.1"
-	syncImageTag        = "okteto/syncthing:0.4.2"
-	syncTCPPort         = 22000
-	syncGUIPort         = 8384
-	oktetoLabel         = "dev.okteto.com"
-	oktetoContainer     = "okteto"
-	oktetoSecretVolume  = "okteto-secret"
-	oktetoInitContainer = "okteto-init"
-	oktetoMount         = "/var/okteto"
+	initSyncImageTag           = "okteto/init-syncthing:0.4.1"
+	syncImageTag               = "okteto/syncthing:0.4.2"
+	syncTCPPort                = 22000
+	syncGUIPort                = 8384
+	oktetoLabel                = "dev.okteto.com"
+	oktetoContainer            = "okteto"
+	oktetoSecretVolume         = "okteto-secret"
+	oktetoInitContainer        = "okteto-init"
+	oktetoMount                = "/var/okteto"
+	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
+	oktetoDevAnnotation        = "dev.okteto.com/manifests"
+
+	revisionAnnotation = "deployment.kubernetes.io/revision"
 )
 
 var (
@@ -47,8 +52,7 @@ func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app":       dev.Name,
-						oktetoLabel: dev.Name,
+						"app": dev.Name,
 					},
 				},
 				Spec: apiv1.PodSpec{
@@ -67,38 +71,79 @@ func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 	}
 }
 
-func translate(dev *model.Dev, s *model.Space) *appsv1.Deployment {
-	d := devSandbox(dev, s)
-	d.GetObjectMeta().SetLabels(map[string]string{oktetoLabel: dev.Name})
+func translate(dev *model.Dev, d *appsv1.Deployment, s *model.Space) (*appsv1.Deployment, error) {
+	if d == nil {
+		d = devSandbox(dev, s)
+	}
+
+	manifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
+	if manifest != "" {
+		dOrig := &appsv1.Deployment{}
+		if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
+			return nil, err
+		}
+		dOrig.ResourceVersion = ""
+		annotations := dOrig.GetObjectMeta().GetAnnotations()
+		delete(annotations, revisionAnnotation)
+		dOrig.GetObjectMeta().SetAnnotations(annotations)
+		d = dOrig
+	}
+
+	d.Status = appsv1.DeploymentStatus{}
+	manifestBytes, err := json.Marshal(d)
+	if err != nil {
+		return nil, err
+	}
+	setAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
+	if err := setDevListAsAnnotation(d.GetObjectMeta(), dev); err != nil {
+		return nil, err
+	}
+	setLabel(d.GetObjectMeta(), oktetoLabel, dev.Name)
+	setLabel(d.Spec.Template.GetObjectMeta(), oktetoLabel, dev.Name)
+	d.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
+	d.Spec.Replicas = &devReplicas
 
 	for i := range d.Spec.Template.Spec.Containers {
 		translateDevContainer(&d.Spec.Template.Spec.Containers[i], dev, s)
+		break //TODO: support for specify a container
 	}
 	translateInitOktetoContainer(d, dev)
 	translateOktetoVolume(d, dev)
 	translateOktetoContainer(d, dev)
 	translateOktetoSecretVolume(d, dev)
-	return d
+	return d, nil
 }
 
 func translateDevContainer(c *apiv1.Container, dev *model.Dev, s *model.Space) {
 	c.Name = "dev"
 	c.SecurityContext = &apiv1.SecurityContext{}
 	c.Image = dev.Image
+	c.ImagePullPolicy = apiv1.PullAlways
 	c.Command = []string{"tail"}
 	c.Args = []string{"-f", "/dev/null"}
 	c.WorkingDir = dev.WorkDir
 	c.ReadinessProbe = nil
 	c.LivenessProbe = nil
+	translateResources(c)
+	translateEnvVars(c, dev.Environment)
 
-	c.VolumeMounts = []apiv1.VolumeMount{
+	if c.VolumeMounts == nil {
+		c.VolumeMounts = []apiv1.VolumeMount{}
+	}
+
+	for _, v := range c.VolumeMounts {
+		if v.Name == dev.GetVolumeName() {
+			return
+		}
+	}
+	c.VolumeMounts = append(
+		c.VolumeMounts,
 		apiv1.VolumeMount{
 			Name:      dev.GetVolumeName(),
 			MountPath: dev.WorkDir,
 		},
-	}
-	translateResources(c)
-	translateEnvVars(c, dev.Environment)
+	)
 }
 
 func translateResources(c *apiv1.Container) {
@@ -133,6 +178,11 @@ func translateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {
 }
 
 func translateInitOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
+	for _, c := range d.Spec.Template.Spec.InitContainers {
+		if c.Name == oktetoInitContainer {
+			return
+		}
+	}
 	source := filepath.Join(dev.WorkDir, "*")
 	c := apiv1.Container{
 		Name:  oktetoInitContainer,
@@ -143,17 +193,25 @@ func translateInitOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 				MountPath: "/okteto/init",
 			},
 		},
+		Command: []string{
+			"sh",
+			"-c",
+			fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || cp -Rf %s /okteto/init); touch /okteto/init/%s", source, dev.DevPath),
+		},
 	}
-
-	c.Command = []string{
-		"sh",
-		"-c",
-		fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || cp -Rf %s /okteto/init); touch /okteto/init/%s", source, dev.DevPath),
+	if d.Spec.Template.Spec.InitContainers == nil {
+		d.Spec.Template.Spec.InitContainers = []apiv1.Container{}
 	}
-	d.Spec.Template.Spec.InitContainers = []apiv1.Container{c}
+	d.Spec.Template.Spec.InitContainers = append(d.Spec.Template.Spec.InitContainers, c)
 }
 
 func translateOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
+	for _, c := range d.Spec.Template.Spec.Containers {
+		if c.Name == oktetoContainer {
+			return
+		}
+	}
+
 	c := apiv1.Container{
 		Name:            oktetoContainer,
 		Image:           syncImageTag,
@@ -162,6 +220,10 @@ func translateOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 			apiv1.VolumeMount{
 				Name:      oktetoSecretVolume,
 				MountPath: "/var/syncthing/secret/",
+			},
+			apiv1.VolumeMount{
+				Name:      dev.GetVolumeName(),
+				MountPath: oktetoMount,
 			},
 		},
 		Ports: []apiv1.ContainerPort{
@@ -172,17 +234,9 @@ func translateOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 				ContainerPort: syncTCPPort,
 			},
 		},
-
 		SecurityContext: &apiv1.SecurityContext{},
 	}
 
-	c.VolumeMounts = append(
-		c.VolumeMounts,
-		apiv1.VolumeMount{
-			Name:      dev.GetVolumeName(),
-			MountPath: oktetoMount,
-		},
-	)
 	d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, c)
 }
 
@@ -211,6 +265,11 @@ func translateOktetoVolume(d *appsv1.Deployment, dev *model.Dev) {
 func translateOktetoSecretVolume(d *appsv1.Deployment, dev *model.Dev) {
 	if d.Spec.Template.Spec.Volumes == nil {
 		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
+	}
+	for _, v := range d.Spec.Template.Spec.Volumes {
+		if v.Name == oktetoSecretVolume {
+			return
+		}
 	}
 
 	v := apiv1.Volume{

@@ -16,14 +16,16 @@ const maxDevEnvironments = 5
 
 //DevOn activates dev mode
 func DevOn(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
-	d := translate(dev, s)
-
 	deploys, err := c.AppsV1().Deployments(s.ID).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 	numDeploys := len(deploys.Items)
 	dPrev := get(dev, deploys.Items)
+	d, err := translate(dev, dPrev, s)
+	if err != nil {
+		return err
+	}
 
 	if dPrev != nil {
 		if dev.Attach {

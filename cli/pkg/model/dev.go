@@ -14,7 +14,6 @@ type Dev struct {
 	Environment []EnvVar `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir     string   `json:"workdir" yaml:"workdir"`
-	Attach      bool     `json:"attach" yaml:"attach"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
