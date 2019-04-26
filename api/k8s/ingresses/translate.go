@@ -13,7 +13,6 @@ func translate(dev *model.Dev, s *model.Space) *v1beta1.Ingress {
 			Name: dev.Name,
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",
-				"kubernetes.io/tls-acme":      "true",
 			},
 		},
 		Spec: v1beta1.IngressSpec{
@@ -37,7 +36,6 @@ func translate(dev *model.Dev, s *model.Space) *v1beta1.Ingress {
 			},
 			TLS: []v1beta1.IngressTLS{
 				v1beta1.IngressTLS{
-					SecretName: dev.CertificateName(),
 					Hosts:      []string{dev.GetEndpoint(s)},
 				},
 			},
