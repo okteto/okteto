@@ -82,6 +82,7 @@ func translate(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 }
 
 func translateDevContainer(c *apiv1.Container, dev *model.Dev, s *model.Space) {
+	c.Name = "dev"
 	c.SecurityContext = &apiv1.SecurityContext{}
 	c.Image = dev.Image
 	c.Command = []string{"tail"}
