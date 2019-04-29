@@ -59,5 +59,5 @@ func getUpgradeCommand() string {
 		return `wget https://downloads.okteto.com/cloud/cli/okteto-Windows-x86_64 -OutFile c:\windows\system32\okteto.exe`
 	}
 
-	return `curl https://get.okteto.com -sSfL | sudo sh`
+	return `curl https://get.okteto.com -sSfL | sh`
 }

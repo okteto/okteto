@@ -36,7 +36,7 @@ check:
 
 .PHONY: build-api
 build-api: 
-	docker build -t api api
+	env DOCKER_BUILDKIT=1 docker build -t api api
 
 .PHONY: build-frontend
 build-frontend: 
