@@ -13,6 +13,7 @@ type Dev struct {
 	Image       string   `json:"image" yaml:"image"`
 	Environment []EnvVar `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
+	Volumes     []string `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	WorkDir     string   `json:"workdir" yaml:"workdir"`
 }
 
@@ -67,6 +68,9 @@ func (dev *Dev) setDefaults() error {
 func (dev *Dev) validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("Name cannot be empty")
+	}
+	if len(dev.Volumes) > 2 {
+		return fmt.Errorf("The maximum number of volumes is 2")
 	}
 
 	return nil

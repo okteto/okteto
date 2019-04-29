@@ -2,6 +2,7 @@ package okteto
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
@@ -15,13 +16,18 @@ type Environment struct {
 
 // DevModeOn activates a dev environment
 func DevModeOn(dev *model.Dev, devPath string, attach bool) (*Environment, error) {
+	volumes := "[]"
+	if len(dev.Volumes) > 0 {
+		volumes = strings.Join(dev.Volumes, `", "`)
+		volumes = fmt.Sprintf(`["%s"]`, volumes)
+	}
 
 	q := fmt.Sprintf(`
 	mutation {
-		up(name: "%s", image: "%s", workdir: "%s", devPath: "%s", attach: %t) {
+		up(name: "%s", image: "%s", workdir: "%s", devPath: "%s", volumes: %s, attach: %t) {
 			  name, endpoints
 		}
-	  }`, dev.Name, dev.Image, dev.WorkDir, devPath, attach)
+	  }`, dev.Name, dev.Image, dev.WorkDir, devPath, volumes, attach)
 
 	var u struct {
 		Up Environment

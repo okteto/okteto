@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	oktetoVolumeTemplate = "okteto-%s"
-	oktetoSecretTemplate = "okteto-%s"
+	oktetoVolumeTemplate     = "okteto-%s"
+	oktetoVolumeDataTemplate = "okteto-%s-%d"
+	oktetoSecretTemplate     = "okteto-%s"
 )
 
 var supportedServices = map[string]bool{
@@ -31,6 +32,7 @@ type Dev struct {
 	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir     string   `json:"workdir" yaml:"workdir"`
 	DevPath     string
+	Volumes     []string `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	Attach      bool
 	Endpoints   []string `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
@@ -66,6 +68,11 @@ func (dev *Dev) validate() error {
 //GetVolumeName returns the okteto volume name for a given dev environment
 func (dev *Dev) GetVolumeName() string {
 	return fmt.Sprintf(oktetoVolumeTemplate, dev.Name)
+}
+
+//GetVolumeDataName returns the okteto volume name for a given dev environment
+func (dev *Dev) GetVolumeDataName(i int) string {
+	return fmt.Sprintf(oktetoVolumeDataTemplate, dev.Name, i)
 }
 
 //GetSecretName returns the okteto secret name for a given dev environment

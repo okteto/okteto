@@ -109,7 +109,7 @@ func translate(dev *model.Dev, d *appsv1.Deployment, s *model.Space) (*appsv1.De
 		break //TODO: support for specify a container
 	}
 	translateInitOktetoContainer(d, dev)
-	translateOktetoVolume(d, dev)
+	translateOktetoVolumes(d, dev)
 	translateOktetoContainer(d, dev)
 	translateOktetoSecretVolume(d, dev)
 	return d, nil
@@ -144,6 +144,15 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev, s *model.Space) {
 			MountPath: dev.WorkDir,
 		},
 	)
+	for i, v := range dev.Volumes {
+		c.VolumeMounts = append(
+			c.VolumeMounts,
+			apiv1.VolumeMount{
+				Name:      dev.GetVolumeDataName(i),
+				MountPath: v,
+			},
+		)
+	}
 }
 
 func translateResources(c *apiv1.Container) {
@@ -193,12 +202,19 @@ func translateInitOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 				MountPath: "/okteto/init",
 			},
 		},
-		Command: []string{
-			"sh",
-			"-c",
-			fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || cp -Rf %s /okteto/init); touch /okteto/init/%s", source, dev.DevPath),
-		},
 	}
+	command := fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || cp -Rf %s /okteto/init); touch /okteto/init/%s", source, dev.DevPath)
+	for i, v := range dev.Volumes {
+		c.VolumeMounts = append(
+			c.VolumeMounts,
+			apiv1.VolumeMount{
+				Name:      dev.GetVolumeDataName(i),
+				MountPath: fmt.Sprintf("/okteto/init-%d", i),
+			},
+		)
+		command = fmt.Sprintf("(%s) && cp -Rf %s/* /okteto/init-%d", command, v, i)
+	}
+	c.Command = []string{"sh", "-c", command}
 	if d.Spec.Template.Spec.InitContainers == nil {
 		d.Spec.Template.Spec.InitContainers = []apiv1.Container{}
 	}
@@ -240,7 +256,7 @@ func translateOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 	d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, c)
 }
 
-func translateOktetoVolume(d *appsv1.Deployment, dev *model.Dev) {
+func translateOktetoVolumes(d *appsv1.Deployment, dev *model.Dev) {
 	if d.Spec.Template.Spec.Volumes == nil {
 		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
 	}
@@ -260,6 +276,19 @@ func translateOktetoVolume(d *appsv1.Deployment, dev *model.Dev) {
 		},
 	}
 	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v)
+
+	for i := range dev.Volumes {
+		v = apiv1.Volume{
+			Name: dev.GetVolumeDataName(i),
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: dev.GetVolumeDataName(i),
+					ReadOnly:  false,
+				},
+			},
+		}
+		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v)
+	}
 }
 
 func translateOktetoSecretVolume(d *appsv1.Deployment, dev *model.Dev) {

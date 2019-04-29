@@ -14,6 +14,9 @@ import (
 
 //DevModeOn activates a development environment
 func DevModeOn(u *model.User, dev *model.Dev) error {
+	if len(dev.Volumes) > 2 {
+		return fmt.Errorf("the maximum number of volumes is 2")
+	}
 	s := &model.Space{
 		ID:   u.ID,
 		Name: u.GithubID,
@@ -29,6 +32,12 @@ func DevModeOn(u *model.User, dev *model.Dev) error {
 
 	if err := volumes.Create(dev.GetVolumeName(), s, c); err != nil {
 		return err
+	}
+
+	for i := range dev.Volumes {
+		if err := volumes.Create(dev.GetVolumeDataName(i), s, c); err != nil {
+			return err
+		}
 	}
 
 	if err := deployments.DevOn(dev, s, c); err != nil {
@@ -97,8 +106,12 @@ func DevModeOff(u *model.User, dev *model.Dev, removeVolumes bool) error {
 		return err
 	}
 
-	if removeVolumes {
-		if err := volumes.Destroy(dev.GetVolumeName(), s, c); err != nil {
+	if err := volumes.Destroy(dev.GetVolumeName(), s, c); err != nil {
+		return err
+	}
+
+	for i := range dev.Volumes {
+		if err := volumes.Destroy(dev.GetVolumeDataName(i), s, c); err != nil {
 			return err
 		}
 	}

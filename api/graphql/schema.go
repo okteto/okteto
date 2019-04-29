@@ -192,6 +192,9 @@ var mutationType = graphql.NewObject(
 					"devPath": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
+					"volumes": &graphql.ArgumentConfig{
+						Type: graphql.NewList(graphql.String),
+					},
 					"attach": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.Boolean),
 					},
@@ -335,12 +338,18 @@ var Schema, _ = graphql.NewSchema(
 )
 
 func buildDev(args map[string]interface{}) *model.Dev {
-	d := &model.Dev{
+	dev := &model.Dev{
 		Name:    strings.ToLower(args["name"].(string)),
 		Image:   args["image"].(string),
 		WorkDir: args["workdir"].(string),
 		DevPath: args["devPath"].(string),
+		Volumes: []string{},
 		Attach:  args["attach"].(bool),
 	}
-	return d
+	if args["volumes"] != nil {
+		for _, v := range args["volumes"].([]interface{}) {
+			dev.Volumes = append(dev.Volumes, v.(string))
+		}
+	}
+	return dev
 }
