@@ -21,10 +21,9 @@ export default (state = initialDatabasesState, action) => {
         isFetching: false
       };
     }
-    case 'HANDLE_FETCH_ERROR': {
+    case 'FAILED_RECEIVE_DATABASES': {
       return {
-        ...state,
-        isFetching: false
+        ...initialDatabasesState
       }
     }
     default: return state;

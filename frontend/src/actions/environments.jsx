@@ -21,10 +21,10 @@ export const receiveEnvironments = environments => {
   };
 };
 
-export const handleFetchError = err => {
+export const failedReceiveEnvironments = err => {
   notify(`Error: ${err}`, 'error');
   return {
-    type: 'HANDLE_FETCH_ERROR'
+    type: 'FAILED_RECEIVE_ENVIRONMENTS'
   };
 };
 
@@ -33,7 +33,7 @@ export const refreshEnvironments = () => {
     dispatch(requestEnvironments());
     fetchEnvironments().then(e => {
       dispatch(receiveEnvironments(e.data.environments));
-    }).catch(err => dispatch(handleFetchError(err)));
+    }).catch(err => dispatch(failedReceiveEnvironments(err)));
   };
 };
 

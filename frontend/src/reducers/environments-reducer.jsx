@@ -23,10 +23,10 @@ export default (state = initialEnvironmentsState, action) => {
         isLoaded: true
       };
     }
-    case 'HANDLE_FETCH_ERROR': {
+    case 'FAILED_RECEIVE_ENVIRONMENTS': {
       return {
-        ...state,
-        isFetching: false
+        ...initialEnvironmentsState,
+        isLoaded: true
       }
     }
     default: return state;

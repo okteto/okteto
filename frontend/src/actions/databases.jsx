@@ -21,10 +21,10 @@ export const receiveDatabases = databases => {
   };
 };
 
-export const handleFetchError = err => {
+export const failedReceiveDatabases = err => {
   notify(`Error: ${err}`, 'error');
   return {
-    type: 'HANDLE_FETCH_ERROR'
+    type: 'FAILED_RECEIVE_DATABASES'
   };
 };
 
@@ -33,7 +33,7 @@ export const refreshDatabases = () => {
     dispatch(requestDatabases());
     fetchDatabases().then(e => {
       dispatch(receiveDatabases(e.data.databases));
-    }).catch(err => dispatch(handleFetchError(err)));
+    }).catch(err => dispatch(failedReceiveDatabases(err)));
   };
 };
 

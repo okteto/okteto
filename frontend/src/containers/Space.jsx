@@ -73,6 +73,7 @@ class Space extends Component {
     const environmentList = Object.values(environments);
     const databaseList = Object.values(databases);
     const isEmpty = environmentList.length === 0 && databaseList.length === 0;
+    const isOnline = navigator.onLine;
 
     const NewButton = (props) => (
       <div className="NewButtonContainer">
@@ -195,7 +196,7 @@ class Space extends Component {
       <div className="Space layout vertical">
         <Header title={`${user.githubID}'s space`} />
 
-        {isEmpty && isLoaded &&
+        {isEmpty && isLoaded && isOnline &&
           <div className="EmptySpace layout vertical center">
             <Icon icon="emptySpace" size="160" />
             <h2>Your space is empty.</h2>
@@ -219,7 +220,7 @@ class Space extends Component {
           </div>
         }
 
-        {!isEmpty && isLoaded &&
+        {!isEmpty && isLoaded && isOnline &&
           <>
             <div className="List layout vertical">
               {environmentList.map(environment =>
@@ -287,6 +288,13 @@ class Space extends Component {
           </>
         }
 
+        {!isOnline && 
+          <div className="OfflineSpace layout vertical center">
+            <Icon icon="offline" size="140" /> 
+            <h2>You are offline.</h2>
+          </div>
+        }
+
         <DeleteDialog ref={ref => this.deleteDialog = ref} />
         <CreateDatabaseDialog ref={ref => this.createDatabaseDialog = ref} />
         <CreateEnvironmentDialog ref={ref => this.createEnvironmentDialog = ref}>
@@ -301,7 +309,7 @@ Space.defaultProps = {
 };
 
 Space.propTypes = {
-  dispatch: PropTypes.func,
+  dispatch: PropTypes.func.isRequired,
   user: PropTypes.object.isRequired,
   environments: PropTypes.object.isRequired,
   databases: PropTypes.object.isRequired,

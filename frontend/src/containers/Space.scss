@@ -41,6 +41,20 @@
     }
   }
 
+  .OfflineSpace {
+    position: relative;
+    margin: 52px 0;
+    
+    h2 {
+      font-size: 28px;
+      margin-top: 12px;
+    }
+
+    .Icon {
+      opacity: .1;
+    }
+  }
+
   .List {
     overflow-y: auto;
 
