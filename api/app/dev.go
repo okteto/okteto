@@ -94,6 +94,8 @@ func DevModeOff(u *model.User, dev *model.Dev, removeVolumes bool) error {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 
+	dev = deployments.GetDev(dev, s, c)
+
 	if err := ingresses.Destroy(dev, s, c); err != nil {
 		return err
 	}

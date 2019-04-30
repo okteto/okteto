@@ -41,6 +41,18 @@ func setAnnotation(o metav1.Object, key, value string) {
 	o.SetAnnotations(annotations)
 }
 
+func getDevListFromAnnotation(o metav1.Object) ([]*model.Dev, error) {
+	devList := []*model.Dev{}
+	devListAnnotation := getAnnotation(o, oktetoDevAnnotation)
+	if devListAnnotation == "" {
+		return devList, nil
+	}
+	if err := json.Unmarshal([]byte(devListAnnotation), &devList); err != nil {
+		return nil, err
+	}
+	return devList, nil
+}
+
 func setDevListAsAnnotation(o metav1.Object, dev *model.Dev) error {
 	devListBytes, err := json.Marshal([]*model.Dev{dev})
 	if err != nil {

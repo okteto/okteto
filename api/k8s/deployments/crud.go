@@ -14,6 +14,19 @@ import (
 
 const maxDevEnvironments = 5
 
+//GetDev gets the original dev manifest
+func GetDev(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) *model.Dev {
+	d, err := c.AppsV1().Deployments(s.ID).Get(dev.Name, metav1.GetOptions{})
+	if err != nil {
+		return dev
+	}
+	devList, err := getDevListFromAnnotation(d.GetObjectMeta())
+	if len(devList) == 1 {
+		return devList[0]
+	}
+	return dev
+}
+
 //DevOn activates dev mode
 func DevOn(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 	deploys, err := c.AppsV1().Deployments(s.ID).List(metav1.ListOptions{})
