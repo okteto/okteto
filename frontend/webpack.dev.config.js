@@ -8,11 +8,11 @@ module.exports = merge({
   devtool: 'source-map',
   devServer: {
     host: '0.0.0.0',
-    port: 8000,
+    port: 8080,
     proxy: {
-      '/healthz': 'http://api:8000',
-      '/graphql': 'http://api:8000',
-      '/github': 'http://api:8000'
+      '/healthz': 'http://api:8080',
+      '/graphql': 'http://api:8080',
+      '/github': 'http://api:8080'
     },
     disableHostCheck: true
   },

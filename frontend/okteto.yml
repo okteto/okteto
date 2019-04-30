@@ -3,4 +3,4 @@ image: node:10
 workdir: /app
 command: ["bash"]
 forward:
-  - "9000:8000"
+  - "9000:8080"

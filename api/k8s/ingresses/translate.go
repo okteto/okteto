@@ -26,7 +26,7 @@ func translate(dev *model.Dev, s *model.Space) *v1beta1.Ingress {
 									Path: "/",
 									Backend: v1beta1.IngressBackend{
 										ServiceName: dev.Name,
-										ServicePort: intstr.FromInt(8000),
+										ServicePort: intstr.FromInt(8080),
 									},
 								},
 							},
@@ -36,7 +36,7 @@ func translate(dev *model.Dev, s *model.Space) *v1beta1.Ingress {
 			},
 			TLS: []v1beta1.IngressTLS{
 				v1beta1.IngressTLS{
-					Hosts:      []string{dev.GetEndpoint(s)},
+					Hosts: []string{dev.GetEndpoint(s)},
 				},
 			},
 		},

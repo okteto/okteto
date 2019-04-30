@@ -14,4 +14,4 @@ docker:
 
 .PHONY: start
 start:
-	gin --port 8000 run main.go
+	gin --port 8080 run main.go

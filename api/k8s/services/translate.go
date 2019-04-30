@@ -18,9 +18,9 @@ func Translate(dev *model.Dev, s *model.Space) *apiv1.Service {
 			Type:     apiv1.ServiceTypeClusterIP,
 			Ports: []apiv1.ServicePort{
 				apiv1.ServicePort{
-					Name:       "p8000",
-					Port:       8000,
-					TargetPort: intstr.IntOrString{StrVal: "8000"},
+					Name:       "p8080",
+					Port:       8080,
+					TargetPort: intstr.IntOrString{StrVal: "8080"},
 				},
 			},
 		},

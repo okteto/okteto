@@ -20,5 +20,5 @@ RUN apk update \
         && update-ca-certificates 2>/dev/null || true
 
 COPY --from=builder /app/okteto /okteto
-EXPOSE 8000
+EXPOSE 8080
 CMD ["/okteto"]

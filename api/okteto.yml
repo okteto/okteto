@@ -3,7 +3,7 @@ image: okteto/golang:1.12
 workdir: /app
 command: ["bash"]
 forward:
-  - "8000:8000"
+  - "8080:8080"
 resources:
   requests:
     cpu: "500m"

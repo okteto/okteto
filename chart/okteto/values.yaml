@@ -18,9 +18,9 @@ oktetoClusterCIDR: ""
 services:
   type: ClusterIP
   api:
-    port: 8000
+    port: 8080
   frontend:
-    port: 8000
+    port: 8080
 ingress:
   enabled: false
   annotations: {}
