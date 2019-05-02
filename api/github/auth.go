@@ -48,6 +48,7 @@ func AuthCLIHandler() http.Handler {
 			ClientSecret: os.Getenv("GITHUB_CLIENTSECRET"),
 			Endpoint:     githubOAuth.Endpoint,
 			RedirectURL:  redirectURL.String(),
+			Scopes:       []string{"user:email"},
 		}
 
 		authURL := config.AuthCodeURL(state)
