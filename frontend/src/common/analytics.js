@@ -9,7 +9,7 @@ export default {
     ga.initialize(GA_TOKEN);
     mixpanel.init(MIXPANEL_TOKEN);
     mixpanel.identify(user.email);
-    mixpanel.people.set({ 
+    mixpanel.people.set({
       '$name': user.name,
       '$email': user.email,
       'oktetoId': user.id,
@@ -22,7 +22,11 @@ export default {
   },
 
   set: (property, value) => {
-    mixpanel.people.set(property, value);
+    const name = property.trim();
+    if (name === '') return;
+    const obj = {};
+    obj[name] = value;
+    mixpanel.people.set(obj);
   },
 
   increment: (property, value = 1) => {

@@ -239,6 +239,7 @@ class Space extends Component {
                       <a className="ItemEndPointUrl ellipsis layout horizontal center" 
                         key={`${environment.id}-${url}`}
                         href={url}
+                        onClick={() => analytics.track('Click Environment URL')}
                         rel="noreferrer noopener" 
                         target="_blank">
                         {url}
@@ -272,7 +273,7 @@ class Space extends Component {
                   </div>
                   <div className="flex-auto" />
                   <div className="ItemActions layout horizontal center">
-                    <div className="ActionButton" 
+                    <div className="ActionButton"
                       onClick={() => this.handleDeleteDatabase(database)}>
                       <Icon icon="delete" size="24" />
                     </div>
