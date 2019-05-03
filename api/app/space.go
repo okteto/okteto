@@ -88,7 +88,7 @@ func ListDevEnvs(u *model.User) ([]*model.Dev, error) {
 			Name: d.Name,
 		}
 		if deployments.IsDevModeOn(&d) {
-			dev.Dev = model.Member{
+			dev.Dev = &model.Member{
 				ID:       u.ID,
 				Name:     u.Name,
 				GithubID: u.GithubID,
