@@ -102,6 +102,24 @@ func ListDevEnvs(u *model.User) ([]*model.Dev, error) {
 	return result, nil
 }
 
+//ListSpaces returns the spaces for a given user
+func ListSpaces(u *model.User) ([]*model.Space, error) {
+	s := &model.Space{
+		ID:   u.ID,
+		Name: u.GithubID,
+		Members: []model.Member{
+			model.Member{
+				ID:       u.ID,
+				Name:     u.Name,
+				GithubID: u.GithubID,
+				Avatar:   u.Avatar,
+				Owner:    true,
+			},
+		},
+	}
+	return []*model.Space{s}, nil
+}
+
 //ListDatabases returns the databases for a given user
 func ListDatabases(u *model.User) ([]*model.DB, error) {
 	s := &model.Space{

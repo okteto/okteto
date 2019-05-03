@@ -15,6 +15,23 @@ type credential struct {
 	Config string
 }
 
+var spaceType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "Space",
+		Fields: graphql.Fields{
+			"id": &graphql.Field{
+				Type: graphql.ID,
+			},
+			"name": &graphql.Field{
+				Type: graphql.String,
+			},
+			"members": &graphql.Field{
+				Type: graphql.NewList(memberType),
+			},
+		},
+	},
+)
+
 var memberType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "member",
@@ -129,6 +146,24 @@ var queryType = graphql.NewObject(
 					if err != nil {
 						log.Errorf("failed to get dev envs for %s", u.ID)
 						return nil, fmt.Errorf("failed to get your environments")
+					}
+
+					return l, nil
+				},
+			},
+			"spaces": &graphql.Field{
+				Type:        graphql.NewList(spaceType),
+				Description: "Get space list",
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+
+					l, err := app.ListSpaces(u)
+					if err != nil {
+						log.Errorf("failed to get spaces for %s", u.ID)
+						return nil, fmt.Errorf("failed to get your spaces")
 					}
 
 					return l, nil
