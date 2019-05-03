@@ -87,6 +87,15 @@ func ListDevEnvs(u *model.User) ([]*model.Dev, error) {
 			ID:   d.Name,
 			Name: d.Name,
 		}
+		if deployments.IsDevModeOn(&d) {
+			dev.Dev = model.Member{
+				ID:       u.ID,
+				Name:     u.Name,
+				GithubID: u.GithubID,
+				Avatar:   u.Avatar,
+				Owner:    true,
+			}
+		}
 		dev.Endpoints = BuildEndpoints(u, dev)
 		result = append(result, dev)
 	}

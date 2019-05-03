@@ -34,6 +34,7 @@ type Dev struct {
 	DevPath     string
 	Volumes     []string `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	Attach      bool
+	Dev         Member   `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Endpoints   []string `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 

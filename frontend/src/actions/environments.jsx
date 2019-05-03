@@ -3,7 +3,7 @@ import analytics from 'common/analytics';
 import { notify } from 'components/Notification';
 
 const fetchEnvironments = () => {
-  return request(`{ environments { id,name,endpoints } }`, { 
+  return request(`{ environments { id,name, dev { id, name, githubID, avatar, owner }, endpoints } }`, { 
     auth: true
   });
 };

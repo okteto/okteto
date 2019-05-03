@@ -15,6 +15,29 @@ type credential struct {
 	Config string
 }
 
+var memberType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "member",
+		Fields: graphql.Fields{
+			"id": &graphql.Field{
+				Type: graphql.ID,
+			},
+			"githubID": &graphql.Field{
+				Type: graphql.String,
+			},
+			"name": &graphql.Field{
+				Type: graphql.String,
+			},
+			"avatar": &graphql.Field{
+				Type: graphql.String,
+			},
+			"owner": &graphql.Field{
+				Type: graphql.Boolean,
+			},
+		},
+	},
+)
+
 var devEnvironmentType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "DevEnvironment",
@@ -24,6 +47,9 @@ var devEnvironmentType = graphql.NewObject(
 			},
 			"name": &graphql.Field{
 				Type: graphql.String,
+			},
+			"dev": &graphql.Field{
+				Type: memberType,
 			},
 			"endpoints": &graphql.Field{
 				Type: graphql.NewList(graphql.String),

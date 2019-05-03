@@ -120,6 +120,16 @@ func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	return nil
 }
 
+//IsDevModeOn returns if a deployment is in devmode
+func IsDevModeOn(d *appsv1.Deployment) bool {
+	labels := d.GetObjectMeta().GetLabels()
+	if labels == nil {
+		return false
+	}
+	_, ok := labels[oktetoLabel]
+	return ok
+}
+
 //List lists the deployments in a space
 func List(s *model.Space, c *kubernetes.Clientset) ([]appsv1.Deployment, error) {
 	deploys, err := c.AppsV1().Deployments(s.ID).List(metav1.ListOptions{})
