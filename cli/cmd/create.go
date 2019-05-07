@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	haikunator "github.com/Atrox/haikunatorgo"
+	"github.com/okteto/app/cli/pkg/analytics"
 	"github.com/okteto/app/cli/pkg/linguist"
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/okteto"
@@ -49,6 +50,8 @@ func createManifest(devPath string) error {
 	}
 
 	log.Information("%s automatically generated", filepath.Base(devPath))
+	analytics.TrackCreate(languagesDiscovered[0], dev.Image, VersionString)
+
 	return nil
 }
 

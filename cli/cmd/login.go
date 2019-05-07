@@ -10,6 +10,7 @@ import (
 
 	"math/rand"
 
+	"github.com/okteto/app/cli/pkg/analytics"
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
 	"github.com/okteto/app/cli/pkg/okteto"
@@ -29,7 +30,7 @@ func Login() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoURL := okteto.CloudURL
 			if len(args) > 0 {
-				u, err := url.Parse(args[0]); 
+				u, err := url.Parse(args[0])
 				if err != nil {
 					return fmt.Errorf("malformed login URL")
 				}
@@ -90,6 +91,7 @@ func Login() *cobra.Command {
 			}
 
 			log.Success("Logged in as %s", user)
+			analytics.TrackLogin(VersionString)
 			return nil
 		},
 	}

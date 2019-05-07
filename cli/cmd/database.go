@@ -3,9 +3,9 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/okteto/app/cli/pkg/analytics"
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/okteto"
-
 	"github.com/spf13/cobra"
 )
 
@@ -49,6 +49,7 @@ func RunDatabase(name string) error {
 	}
 
 	printDisplayContext(fmt.Sprintf("Your %s instance is ready", db.Name), db.Name, []string{db.Endpoint})
+	analytics.TrackCreateDatabase(name, VersionString)
 	return nil
 }
 

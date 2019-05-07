@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/okteto/app/cli/pkg/analytics"
 	"github.com/okteto/app/cli/pkg/config"
 	"github.com/okteto/app/cli/pkg/errors"
 	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
@@ -84,6 +85,8 @@ func Up() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			analytics.TrackUp(dev.Image, VersionString)
 			return RunUp(dev, devPath)
 		},
 	}

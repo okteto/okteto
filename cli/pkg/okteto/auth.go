@@ -1,19 +1,19 @@
 package okteto
 
 import (
-	"os"
-	"net/url"
 	"context"
-	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"encoding/json"
+	"fmt"
 	"github.com/machinebox/graphql"
 	"github.com/okteto/app/cli/pkg/config"
 	"github.com/okteto/app/cli/pkg/log"
+	"io/ioutil"
+	"net/url"
+	"os"
+	"path/filepath"
 )
 
-const(
+const (
 	tokenFile = ".token.json"
 
 	// CloudURL is the default URL of okteto
@@ -23,8 +23,11 @@ const(
 // Token contains the auth token and the URL it belongs to
 type Token struct {
 	Token string
-	URL string
+	URL   string
+	ID    string
 }
+
+var token *Token
 
 // Auth authenticates in okteto with a github OAuth code
 func Auth(ctx context.Context, code, url string) (string, error) {
@@ -36,7 +39,7 @@ func Auth(ctx context.Context, code, url string) (string, error) {
 	q := fmt.Sprintf(`
 				mutation {
 					auth(code: "%s") {
-					  githubID,token
+					  githubID,token,id
 					}
 				  }`, code)
 
@@ -46,6 +49,7 @@ func Auth(ctx context.Context, code, url string) (string, error) {
 		Auth struct {
 			GithubID string
 			Token    string
+			ID       string
 		}
 	}
 
@@ -58,7 +62,7 @@ func Auth(ctx context.Context, code, url string) (string, error) {
 		return "", fmt.Errorf("empty response")
 	}
 
-	if err := saveToken(user.Auth.Token, url); err != nil {
+	if err := saveToken(user.Auth.ID, user.Auth.Token, url); err != nil {
 		return "", err
 	}
 
@@ -79,29 +83,44 @@ func getTokenFromEnv() (*Token, error) {
 	}
 
 	t.URL = p.String()
-	
+
 	return t, nil
 }
 
 func getToken() (*Token, error) {
-	if len(os.Getenv("OKTETO_TOKEN")) > 0 {
-		return getTokenFromEnv()
+	if token == nil {
+		if len(os.Getenv("OKTETO_TOKEN")) > 0 {
+			return getTokenFromEnv()
+		}
+
+		p := filepath.Join(config.GetHome(), tokenFile)
+
+		b, err := ioutil.ReadFile(p)
+		if err != nil {
+			return nil, err
+		}
+
+		token = &Token{}
+		if err := json.Unmarshal(b, token); err != nil {
+			return nil, err
+		}
 	}
 
-	p := filepath.Join(config.GetHome(), tokenFile)
-
-	b, err := ioutil.ReadFile(p)
-	if err != nil {
-		return nil, err
-	}
-
-	t := &Token{}
-	err = json.Unmarshal(b, t);
-	return t, err
+	return token, nil
 }
 
-func saveToken(token, url string) error {
-	t := Token{Token: token, URL: url}
+// GetUserID returns the userID of the authenticated user
+func GetUserID() string {
+	t, err := getToken()
+	if err != nil {
+		return "na"
+	}
+
+	return t.ID
+}
+
+func saveToken(id, token, url string) error {
+	t := Token{Token: token, URL: url, ID: id}
 	marshalled, err := json.Marshal(t)
 	if err != nil {
 		log.Infof("failed to marshal token: %s", err)
