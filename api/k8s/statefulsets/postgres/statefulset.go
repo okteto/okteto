@@ -54,6 +54,10 @@ func TranslateStatefulSet(db *model.DB, s *model.Space) *appsv1.StatefulSet {
 									Name:  "POSTGRES_DB",
 									Value: "db",
 								},
+								apiv1.EnvVar{
+									Name:  "PGDATA",
+									Value: db.GetVolumePath(),
+								},
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								apiv1.VolumeMount{
