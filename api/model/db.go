@@ -53,7 +53,7 @@ func (db *DB) GetVolumePath() string {
 	case REDIS:
 		return "/data"
 	case POSTGRES:
-		return "/var/lib/postgresql/data"
+		return "/var/lib/postgresql"
 	}
 	return ""
 }
