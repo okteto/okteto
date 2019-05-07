@@ -8,7 +8,7 @@ export default {
   init: (user) => {
     ga.initialize(GA_TOKEN);
     mixpanel.init(MIXPANEL_TOKEN);
-    mixpanel.identify(user.email);
+    mixpanel.identify(user.id);
     mixpanel.people.set({
       '$name': user.name,
       '$email': user.email,
