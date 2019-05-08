@@ -14,6 +14,7 @@ const (
 //DB represents a database
 type DB struct {
 	ID       string `json:"id" yaml:"id"`
+	Space    string `json:"space" yaml:"space"`
 	Name     string `json:"name" yaml:"name"`
 	Password string
 	Endpoint string `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`

@@ -22,12 +22,23 @@ func DevModeOn(dev *model.Dev, devPath string, attach bool) (*Environment, error
 		volumes = fmt.Sprintf(`["%s"]`, volumes)
 	}
 
-	q := fmt.Sprintf(`
-	mutation {
-		up(name: "%s", image: "%s", workdir: "%s", devPath: "%s", volumes: %s, attach: %t) {
-			  name, endpoints
-		}
-	  }`, dev.Name, dev.Image, dev.WorkDir, devPath, volumes, attach)
+	q := ""
+	if dev.Space == "" {
+		q = fmt.Sprintf(`
+		mutation {
+			up(name: "%s", image: "%s", workdir: "%s", devPath: "%s", volumes: %s, attach: %t) {
+				name, endpoints
+			}
+		}`, dev.Name, dev.Image, dev.WorkDir, devPath, volumes, attach)
+	} else {
+		q = fmt.Sprintf(`
+		mutation {
+			up(name: "%s", image: "%s", workdir: "%s", devPath: "%s", volumes: %s, attach: %t, space: "%s") {
+				name, endpoints
+			}
+		}`, dev.Name, dev.Image, dev.WorkDir, devPath, volumes, attach, dev.Space)
+
+	}
 
 	var u struct {
 		Up Environment

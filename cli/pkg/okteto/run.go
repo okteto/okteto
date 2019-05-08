@@ -8,12 +8,22 @@ import (
 
 // RunImage runs a docker image
 func RunImage(dev *model.Dev) (*Environment, error) {
-	q := fmt.Sprintf(`
-	  mutation {
-		run(name: "%s", image: "%s") {
-		  name,endpoints
-		}
-	  }`, dev.Name, dev.Image)
+	q := ""
+	if dev.Space == "" {
+		q = fmt.Sprintf(`
+		  mutation {
+				run(name: "%s", image: "%s") {
+		  		name,endpoints
+				}
+			}`, dev.Name, dev.Image)
+	} else {
+		q = fmt.Sprintf(`
+		  mutation {
+				run(name: "%s", image: "%s", space: "%s") {
+		  		name,endpoints
+				}
+			}`, dev.Name, dev.Image, dev.Space)
+	}
 
 	var r struct {
 		Run Environment

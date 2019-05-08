@@ -7,6 +7,8 @@ import (
 	"github.com/graphql-go/graphql"
 	"github.com/okteto/app/api/app"
 	"github.com/okteto/app/api/github"
+	"github.com/okteto/app/api/k8s/namespaces"
+	"github.com/okteto/app/api/k8s/serviceaccounts"
 	"github.com/okteto/app/api/log"
 	"github.com/okteto/app/api/model"
 )
@@ -61,6 +63,9 @@ var devEnvironmentType = graphql.NewObject(
 		Fields: graphql.Fields{
 			"id": &graphql.Field{
 				Type: graphql.ID,
+			},
+			"space": &graphql.Field{
+				Type: graphql.String,
 			},
 			"name": &graphql.Field{
 				Type: graphql.String,
@@ -119,6 +124,9 @@ var databaseType = graphql.NewObject(
 			"id": &graphql.Field{
 				Type: graphql.ID,
 			},
+			"space": &graphql.Field{
+				Type: graphql.String,
+			},
 			"name": &graphql.Field{
 				Type: graphql.String,
 			},
@@ -136,15 +144,28 @@ var queryType = graphql.NewObject(
 			"environments": &graphql.Field{
 				Type:        graphql.NewList(devEnvironmentType),
 				Description: "Get environment list",
+				Args: graphql.FieldConfigArgument{
+					"space": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					u, err := validateToken(params.Context)
 					if err != nil {
 						return nil, err
 					}
-
-					l, err := app.ListDevEnvs(u)
+					space := u.ID
+					if params.Args["space"] != nil {
+						space = params.Args["space"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
 					if err != nil {
-						log.Errorf("failed to get dev envs for %s", u.ID)
+						return nil, err
+					}
+
+					l, err := app.ListDevEnvs(u, s)
+					if err != nil {
+						log.Errorf("failed to get dev envs for %s in %s", u.ID, s.ID)
 						return nil, fmt.Errorf("failed to get your environments")
 					}
 
@@ -162,11 +183,32 @@ var queryType = graphql.NewObject(
 
 					l, err := app.ListSpaces(u)
 					if err != nil {
-						log.Errorf("failed to get spaces for %s", u.ID)
+						log.Errorf("failed to get spaces for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to get your spaces")
 					}
 
 					return l, nil
+				},
+			},
+			"space": &graphql.Field{
+				Type:        spaceType,
+				Description: "Get space",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+					id := params.Args["id"].(string)
+					s, err := namespaces.GetSpaceByID(id, u)
+					if err != nil {
+						return nil, err
+					}
+					return s, nil
 				},
 			},
 			"credentials": &graphql.Field{
@@ -190,15 +232,28 @@ var queryType = graphql.NewObject(
 			"databases": &graphql.Field{
 				Type:        graphql.NewList(databaseType),
 				Description: "Get databases of the space",
+				Args: graphql.FieldConfigArgument{
+					"space": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					u, err := validateToken(params.Context)
 					if err != nil {
 						return nil, err
 					}
-
-					l, err := app.ListDatabases(u)
+					space := u.ID
+					if params.Args["space"] != nil {
+						space = params.Args["space"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
 					if err != nil {
-						log.Errorf("failed to get databases for %s", u.ID)
+						return nil, err
+					}
+
+					l, err := app.ListDatabases(s)
+					if err != nil {
+						log.Errorf("failed to get databases for %s in %s", u.ID, s.ID)
 						return nil, fmt.Errorf("failed to get your databases")
 					}
 
@@ -221,7 +276,6 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-
 					code := params.Args["code"].(string)
 					u, err := github.Auth(code)
 					if err != nil {
@@ -229,9 +283,9 @@ var mutationType = graphql.NewObject(
 						return nil, fmt.Errorf("failed to authenticate")
 					}
 
-					if _, err := app.CreateSpace(u); err != nil {
-						log.Errorf("failed to create space for %s: %s", u.ID, err)
-						return nil, fmt.Errorf("failed to create your space")
+					if err := app.CreateUser(u); err != nil {
+						log.Errorf("failed to create user for %s: %s", u.ID, err)
+						return nil, fmt.Errorf("failed to create your user")
 					}
 
 					return u, nil
@@ -241,6 +295,9 @@ var mutationType = graphql.NewObject(
 				Type:        devEnvironmentType,
 				Description: "Create dev mode",
 				Args: graphql.FieldConfigArgument{
+					"space": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
 					"name": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
@@ -265,14 +322,22 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-
+					space := u.ID
+					if params.Args["space"] != nil {
+						space = params.Args["space"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
+					if err != nil {
+						return nil, err
+					}
 					dev := buildDev(params.Args)
-					if err := app.DevModeOn(u, dev); err != nil {
+					if err := app.DevModeOn(dev, s); err != nil {
 						log.Errorf("failed to enable dev mode: %s", err)
 						return nil, fmt.Errorf("failed to enable dev mode")
 					}
 
-					dev.Endpoints = app.BuildEndpoints(u, dev)
+					dev.Endpoints = app.BuildEndpoints(dev, s)
+					dev.Space = space
 					return dev, nil
 
 				},
@@ -281,6 +346,9 @@ var mutationType = graphql.NewObject(
 				Type:        devEnvironmentType,
 				Description: "Delete dev space",
 				Args: graphql.FieldConfigArgument{
+					"space": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
 					"name": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
@@ -291,14 +359,23 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 
+					space := u.ID
+					if params.Args["space"] != nil {
+						space = params.Args["space"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
+					if err != nil {
+						return nil, err
+					}
 					dev := &model.Dev{
 						Name: params.Args["name"].(string),
 					}
-					if err := app.DevModeOff(u, dev, false); err != nil {
+					if err := app.DevModeOff(dev, s); err != nil {
 						log.Errorf("failed to enable dev mode: %s", err)
 						return nil, fmt.Errorf("failed to enable dev mode")
 					}
 
+					dev.Space = space
 					return dev, nil
 
 				},
@@ -307,6 +384,9 @@ var mutationType = graphql.NewObject(
 				Type:        devEnvironmentType,
 				Description: "Run a docker image",
 				Args: graphql.FieldConfigArgument{
+					"space": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
 					"name": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
@@ -319,17 +399,25 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-
+					space := u.ID
+					if params.Args["space"] != nil {
+						space = params.Args["space"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
+					if err != nil {
+						return nil, err
+					}
 					dev := &model.Dev{
 						Name:  params.Args["name"].(string),
 						Image: params.Args["image"].(string),
 					}
-					if err := app.RunImage(u, dev); err != nil {
+					if err := app.RunImage(dev, s); err != nil {
 						log.Errorf("failed to run image: %s", err)
 						return nil, fmt.Errorf("failed to run image")
 					}
 
-					dev.Endpoints = app.BuildEndpoints(u, dev)
+					dev.Endpoints = app.BuildEndpoints(dev, s)
+					dev.Space = space
 					return dev, nil
 				},
 			},
@@ -337,6 +425,9 @@ var mutationType = graphql.NewObject(
 				Type:        databaseType,
 				Description: "Create a database",
 				Args: graphql.FieldConfigArgument{
+					"space": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
 					"name": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
@@ -346,17 +437,25 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-
+					space := u.ID
+					if params.Args["space"] != nil {
+						space = params.Args["space"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
+					if err != nil {
+						return nil, err
+					}
 					db := &model.DB{
 						Name: params.Args["name"].(string),
 					}
-					err = app.CreateDatabase(u, db)
+					err = app.CreateDatabase(db, s)
 					if err != nil {
 						log.Errorf("failed to create database for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to create your database")
 					}
 
 					db.Endpoint = db.GetEndpoint()
+					db.Space = space
 					return db, nil
 				},
 			},
@@ -364,6 +463,9 @@ var mutationType = graphql.NewObject(
 				Type:        databaseType,
 				Description: "Delete a database",
 				Args: graphql.FieldConfigArgument{
+					"space": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
 					"name": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
@@ -373,17 +475,206 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-
+					space := u.ID
+					if params.Args["space"] != nil {
+						space = params.Args["space"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
+					if err != nil {
+						return nil, err
+					}
 					db := &model.DB{
 						Name: params.Args["name"].(string),
 					}
-					err = app.DestroyDatabase(u, db)
+					err = app.DestroyDatabase(db, s)
 					if err != nil {
 						log.Errorf("failed to destroy database for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to delete your database")
 					}
-
+					db.Space = space
 					return db, nil
+				},
+			},
+			"createSpace": &graphql.Field{
+				Type:        spaceType,
+				Description: "Create a space",
+				Args: graphql.FieldConfigArgument{
+					"name": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"members": &graphql.ArgumentConfig{
+						Type: graphql.NewList(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+					members := []model.Member{}
+					if params.Args["members"] != nil {
+						for _, m := range params.Args["members"].([]interface{}) {
+							uMember, err := serviceaccounts.GetUserByGithubID(m.(string))
+							if err != nil {
+								return nil, err
+							}
+							members = append(
+								members,
+								model.Member{
+									ID:       uMember.ID,
+									Name:     uMember.Name,
+									GithubID: uMember.GithubID,
+									Avatar:   uMember.Avatar,
+									Owner:    false,
+								},
+							)
+						}
+					}
+					s := model.NewSpace(
+						params.Args["name"].(string),
+						u,
+						members,
+					)
+					err = app.CreateSpace(s, false)
+					if err != nil {
+						log.Errorf("failed to create space for %s: %s", u.ID, err)
+						return nil, fmt.Errorf("failed to create space")
+					}
+					return s, nil
+				},
+			},
+			"updateSpace": &graphql.Field{
+				Type:        spaceType,
+				Description: "Update a space",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"members": &graphql.ArgumentConfig{
+						Type: graphql.NewList(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+					space := u.ID
+					if params.Args["id"] != nil {
+						space = params.Args["id"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
+					if err != nil {
+						return nil, err
+					}
+					if !u.IsOwner(s) {
+						return nil, fmt.Errorf("your are not the owner of the space")
+					}
+					members := []model.Member{}
+					if params.Args["members"] != nil {
+						for _, m := range params.Args["members"].([]interface{}) {
+							uMember, err := serviceaccounts.GetUserByGithubID(m.(string))
+							if err != nil {
+								return nil, err
+							}
+							members = append(
+								members,
+								model.Member{
+									ID:       uMember.ID,
+									Name:     uMember.Name,
+									GithubID: uMember.GithubID,
+									Avatar:   uMember.Avatar,
+									Owner:    false,
+								},
+							)
+						}
+					}
+					s = model.NewSpace(
+						params.Args["name"].(string),
+						u,
+						members,
+					)
+					err = app.CreateSpace(s, true)
+					if err != nil {
+						log.Errorf("failed to update space for %s: %s", u.ID, err)
+						return nil, fmt.Errorf("failed to update space")
+					}
+					return s, nil
+				},
+			},
+			"leaveSpace": &graphql.Field{
+				Type:        spaceType,
+				Description: "Leave a space",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+					space := u.ID
+					if params.Args["id"] != nil {
+						space = params.Args["id"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
+					if err != nil {
+						return nil, err
+					}
+					if u.IsOwner(s) {
+						return nil, fmt.Errorf("the owner of the space cannot leave it")
+					}
+					members := []model.Member{}
+					for _, m := range s.Members {
+						if m.ID != u.ID {
+							members = append(members, m)
+						}
+					}
+					s.Members = members
+
+					err = app.CreateSpace(s, true)
+					if err != nil {
+						log.Errorf("failed to update space for %s: %s", u.ID, err)
+						return nil, fmt.Errorf("failed to update space")
+					}
+					return s, nil
+				},
+			},
+			"deleteSpace": &graphql.Field{
+				Type:        spaceType,
+				Description: "Delete a space",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					u, err := validateToken(params.Context)
+					if err != nil {
+						return nil, err
+					}
+					space := u.ID
+					if params.Args["id"] != nil {
+						space = params.Args["id"].(string)
+					}
+					s, err := namespaces.GetSpaceByID(space, u)
+					if err != nil {
+						return nil, err
+					}
+					if !u.IsOwner(s) {
+						return nil, fmt.Errorf("your are not the owner of the space")
+					}
+					if space == u.ID {
+						return nil, fmt.Errorf("the personal namespace cannot be deleted")
+					}
+					err = app.DeleteSpace(s)
+					if err != nil {
+						log.Errorf("failed to delete space for %s: %s", u.ID, err)
+						return nil, fmt.Errorf("failed to delete space")
+					}
+					return s, nil
 				},
 			},
 		},

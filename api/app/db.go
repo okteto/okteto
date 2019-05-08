@@ -15,11 +15,7 @@ import (
 )
 
 //CreateDatabase creates a database
-func CreateDatabase(u *model.User, db *model.DB) error {
-	s := &model.Space{
-		ID:   u.ID,
-		Name: u.GithubID,
-	}
+func CreateDatabase(db *model.DB, s *model.Space) error {
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
@@ -52,11 +48,7 @@ func CreateDatabase(u *model.User, db *model.DB) error {
 }
 
 //DestroyDatabase destroys a database
-func DestroyDatabase(u *model.User, db *model.DB) error {
-	s := &model.Space{
-		ID:   u.ID,
-		Name: u.GithubID,
-	}
+func DestroyDatabase(db *model.DB, s *model.Space) error {
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
@@ -75,4 +67,42 @@ func DestroyDatabase(u *model.User, db *model.DB) error {
 	}
 
 	return nil
+}
+
+//ListDatabases returns the databases for a given user
+func ListDatabases(s *model.Space) ([]*model.DB, error) {
+	c, err := client.Get()
+	if err != nil {
+		return nil, fmt.Errorf("error getting k8s client: %s", err)
+	}
+
+	sfss, err := statefulsets.List(s, c)
+	if err != nil {
+		return nil, fmt.Errorf("error getting statefulsets: %s", err)
+	}
+	result := []*model.DB{}
+	for _, sfs := range sfss {
+		db := &model.DB{
+			ID:    sfs.Name,
+			Space: s.ID,
+			Name:  sfs.Name,
+		}
+		if db.Name == model.POSTGRES {
+			for _, c := range sfs.Spec.Template.Spec.Containers {
+				if c.Name == model.POSTGRES {
+					for _, e := range c.Env {
+						if e.Name == "POSTGRES_PASSWORD" {
+							db.Password = e.Value
+							break
+						}
+					}
+					break
+				}
+			}
+		}
+		db.Endpoint = db.GetEndpoint()
+		result = append(result, db)
+	}
+
+	return result, nil
 }

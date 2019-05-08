@@ -12,8 +12,8 @@ import (
 )
 
 // Get returns the value of a secret
-func Get(name string, s *model.Space, c *kubernetes.Clientset) (*v1.Secret, error) {
-	secret, err := c.CoreV1().Secrets(s.ID).Get(name, metav1.GetOptions{})
+func Get(name, namespace string, c *kubernetes.Clientset) (*v1.Secret, error) {
+	secret, err := c.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return secret, fmt.Errorf("Error getting kubernetes secret: %s", err)
 	}
@@ -25,7 +25,7 @@ func Create(dev *model.Dev, s *model.Space, c *kubernetes.Clientset) error {
 	secretName := dev.GetSecretName()
 	log.Debugf("creating configuration secret %s", secretName)
 
-	sct, err := Get(secretName, s, c)
+	sct, err := Get(secretName, s.ID, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes secret: %s", err)
 	}

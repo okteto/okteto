@@ -54,6 +54,7 @@ type UpContext struct {
 //Up starts a cloud dev environment
 func Up() *cobra.Command {
 	var devPath string
+	var space string
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your Okteto Environment",
@@ -85,13 +86,21 @@ func Up() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			if space != "" {
+				var err error
+				space, err = okteto.GetSpaceID(space)
+				if err != nil {
+					return err
+				}
+				dev.Space = space
+			}
 			analytics.TrackUp(dev.Image, VersionString)
 			return RunUp(dev, devPath)
 		},
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
+	cmd.Flags().StringVarP(&space, "space", "s", "", "space where the up command is executed")
 	return cmd
 }
 
@@ -175,7 +184,14 @@ func (up *UpContext) Activate(devPath string) {
 
 		printDisplayContext("Your Okteto Environment is ready", up.Result.Name, up.Result.Endpoints)
 
-		args := []string{"exec", "--pod", up.Pod, "--"}
+		args := []string{"exec", "--pod", up.Pod}
+		if up.Dev.Space == "" {
+			args = append(args, "--")
+		} else {
+			args = append(args, "-s")
+			args = append(args, up.Dev.Space)
+			args = append(args, "--")
+		}
 		args = append(args, up.Dev.Command...)
 		cmd := exec.Command(config.GetBinaryFullPath(), args...)
 		cmd.Stdin = os.Stdin
@@ -250,6 +266,9 @@ func (up *UpContext) devMode(isRetry bool) error {
 	up.Client, up.RestConfig, up.Namespace, err = k8Client.Get()
 	if err != nil {
 		return err
+	}
+	if up.Dev.Space != "" {
+		up.Namespace = up.Dev.Space
 	}
 
 	up.Sy, err = syncthing.New(up.Dev, up.DevPath, up.Namespace)

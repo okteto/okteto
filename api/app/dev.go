@@ -13,13 +13,9 @@ import (
 )
 
 //DevModeOn activates a development environment
-func DevModeOn(u *model.User, dev *model.Dev) error {
+func DevModeOn(dev *model.Dev, s *model.Space) error {
 	if len(dev.Volumes) > 2 {
 		return fmt.Errorf("the maximum number of volumes is 2")
-	}
-	s := &model.Space{
-		ID:   u.ID,
-		Name: u.GithubID,
 	}
 	c, err := client.Get()
 	if err != nil {
@@ -57,11 +53,7 @@ func DevModeOn(u *model.User, dev *model.Dev) error {
 }
 
 //RunImage runs a docker image
-func RunImage(u *model.User, dev *model.Dev) error {
-	s := &model.Space{
-		ID:   u.ID,
-		Name: u.GithubID,
-	}
+func RunImage(dev *model.Dev, s *model.Space) error {
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
@@ -84,11 +76,7 @@ func RunImage(u *model.User, dev *model.Dev) error {
 }
 
 //DevModeOff deactivates a development environment
-func DevModeOff(u *model.User, dev *model.Dev, removeVolumes bool) error {
-	s := &model.Space{
-		ID:   u.ID,
-		Name: u.GithubID,
-	}
+func DevModeOff(dev *model.Dev, s *model.Space) error {
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
@@ -123,4 +111,43 @@ func DevModeOff(u *model.User, dev *model.Dev, removeVolumes bool) error {
 	}
 
 	return nil
+}
+
+//ListDevEnvs returns the dev environments for a given user
+func ListDevEnvs(u *model.User, s *model.Space) ([]*model.Dev, error) {
+	c, err := client.Get()
+	if err != nil {
+		return nil, fmt.Errorf("error getting k8s client: %s", err)
+	}
+
+	deploys, err := deployments.List(s, c)
+	if err != nil {
+		return nil, fmt.Errorf("error getting deployments: %s", err)
+	}
+
+	result := []*model.Dev{}
+	for _, d := range deploys {
+		dev := &model.Dev{
+			ID:    d.Name,
+			Space: s.ID,
+			Name:  d.Name,
+		}
+		if deployments.IsDevModeOn(&d) {
+			dev.Dev = &model.Member{
+				ID:       u.ID,
+				Name:     u.Name,
+				GithubID: u.GithubID,
+				Avatar:   u.Avatar,
+				Owner:    true,
+			}
+		}
+		dev.Endpoints = BuildEndpoints(dev, s)
+		result = append(result, dev)
+	}
+	return result, nil
+}
+
+// BuildEndpoints builds the endpoints with the FQDN for the specific user and dev env
+func BuildEndpoints(dev *model.Dev, s *model.Space) []string {
+	return []string{fmt.Sprintf("https://%s", dev.GetEndpoint(s))}
 }

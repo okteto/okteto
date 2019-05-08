@@ -11,13 +11,23 @@ type Database struct {
 }
 
 // CreateDatabase creates a cloud database
-func CreateDatabase(name string) (*Database, error) {
-	q := fmt.Sprintf(`
+func CreateDatabase(name, space string) (*Database, error) {
+	q := ""
+	if space == "" {
+		q = fmt.Sprintf(`
 	  mutation {
-		createDatabase(name: "%s") {
-		  name,endpoint
-		}
+			createDatabase(name: "%s") {
+		  	name, endpoint
+			}
 	  }`, name)
+	} else {
+		q = fmt.Sprintf(`
+	  mutation {
+			createDatabase(name: "%s", space: "%s") {
+		  	name, endpoint
+			}
+	  }`, name, space)
+	}
 
 	var d struct {
 		CreateDatabase Database

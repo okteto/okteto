@@ -18,7 +18,8 @@ var c *client.UserV1Alpha1Client
 var namespace string
 var errNotFound = fmt.Errorf("not found")
 
-func getClient() (*client.UserV1Alpha1Client, error) {
+//GetClient returns a user client
+func GetClient() (*client.UserV1Alpha1Client, error) {
 	var err error
 	if c == nil {
 		c, err = client.Get()
@@ -37,7 +38,7 @@ func getClient() (*client.UserV1Alpha1Client, error) {
 // GetByGithubID gets a user by her githubID
 func GetByGithubID(githubID string) (*model.User, error) {
 	log.Info("finding user by her githubID")
-	uClient, err := getClient()
+	uClient, err := GetClient()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
@@ -73,7 +74,7 @@ func GetByToken(token string) (*model.User, error) {
 	if len(token) > model.TokenLength {
 		return nil, fmt.Errorf("malformed token, too long")
 	}
-	uClient, err := getClient()
+	uClient, err := GetClient()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
@@ -99,7 +100,7 @@ func GetByToken(token string) (*model.User, error) {
 }
 
 func create(u *model.User) error {
-	uClient, err := getClient()
+	uClient, err := GetClient()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}
@@ -132,7 +133,7 @@ func FindOrCreate(u *model.User) (*model.User, error) {
 
 // Delete deletes a user
 func Delete(user string) error {
-	uClient, err := getClient()
+	uClient, err := GetClient()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}

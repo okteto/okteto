@@ -19,4 +19,7 @@ var (
 
 	// ErrNotLogged is raised when we can't get the user token
 	ErrNotLogged = fmt.Errorf("please run 'okteto login' and try again")
+
+	// ErrNotFound is raised when an object is not found
+	ErrNotFound = fmt.Errorf("not found")
 )

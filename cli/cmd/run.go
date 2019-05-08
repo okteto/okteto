@@ -15,6 +15,7 @@ import (
 //Run runs a docker image in a okteto space
 func Run() *cobra.Command {
 	var devPath string
+	var space string
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run a docker image in your Okteto Space",
@@ -30,9 +31,13 @@ func Run() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			if len(args) == 1 {
-				dev.Image = args[0]
+			if space != "" {
+				var err error
+				space, err = okteto.GetSpaceID(space)
+				if err != nil {
+					return err
+				}
+				dev.Space = space
 			}
 
 			return RunRun(dev)
@@ -40,6 +45,7 @@ func Run() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
+	cmd.Flags().StringVarP(&space, "space", "s", "", "space where the run command is executed")
 	return cmd
 }
 

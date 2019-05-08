@@ -17,6 +17,7 @@ var supportedDatabases = map[string]bool{
 
 //Database starts a cloud dev environment
 func Database() *cobra.Command {
+	var space string
 	cmd := &cobra.Command{
 		Use:   "database",
 		Short: "Creates a cloud database in your Okteto Space",
@@ -29,19 +30,27 @@ func Database() *cobra.Command {
 			if _, ok := supportedDatabases[args[0]]; !ok {
 				return fmt.Errorf("'database' command expects one argument ['mongo, 'redis' or 'postgres']")
 			}
-			return RunDatabase(args[0])
+			return RunDatabase(args[0], space)
 		},
 	}
-
+	cmd.Flags().StringVarP(&space, "space", "s", "", "space where the database command is executed")
 	return cmd
 }
 
 //RunDatabase creates a database
-func RunDatabase(name string) error {
+func RunDatabase(name, space string) error {
+	if space != "" {
+		var err error
+		space, err = okteto.GetSpaceID(space)
+		if err != nil {
+			return err
+		}
+	}
+
 	progress := newProgressBar("Creating your cloud database...")
 	progress.start()
 
-	db, err := okteto.CreateDatabase(name)
+	db, err := okteto.CreateDatabase(name, space)
 	progress.stop()
 
 	if err != nil {

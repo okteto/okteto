@@ -26,6 +26,7 @@ var oktetoBaseDomain = os.Getenv("OKTETO_BASE_DOMAIN")
 //Dev represents a development environment
 type Dev struct {
 	ID          string   `json:"id" yaml:"id"`
+	Space       string   `json:"space" yaml:"space"`
 	Name        string   `json:"name" yaml:"name"`
 	Image       string   `json:"image" yaml:"image"`
 	Environment []EnvVar `json:"environment,omitempty" yaml:"environment,omitempty"`
@@ -83,7 +84,12 @@ func (dev *Dev) GetSecretName() string {
 
 //GetEndpoint returns the dev environment endpoint
 func (dev *Dev) GetEndpoint(s *Space) string {
-	return strings.ToLower(fmt.Sprintf("%s-%s.%s", dev.Name, s.Name, oktetoBaseDomain))
+	owner := s.GetOwner()
+	if s.ID == owner.ID {
+		return strings.ToLower(fmt.Sprintf("%s-%s.%s", dev.Name, s.Name, oktetoBaseDomain))
+	}
+	return strings.ToLower(fmt.Sprintf("%s-%s-%s.%s", dev.Name, s.Name, owner.GithubID, oktetoBaseDomain))
+
 }
 
 //CertificateName returns the cretificate name for a dev environment

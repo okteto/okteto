@@ -1,16 +1,50 @@
 package serviceaccounts
 
 import (
+	"github.com/okteto/app/api/k8s/client"
 	"github.com/okteto/app/api/model"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func translate(s *model.Space) *apiv1.ServiceAccount {
+const (
+	//OktetoVersion represents the current service account data version
+	OktetoVersion = "1.0"
+	//OktetoLabel represents the owner of the service account
+	OktetoLabel = "dev.okteto.com"
+	//OktetoVersionLabel represents the data version of the service account
+	OktetoVersionLabel = "dev.okteto.com/version"
+	//OktetoIDLabel represents the okteto id of the service account
+	OktetoIDLabel = "dev.okteto.com/id"
+	//OktetoTokenLabel represents the token of the service account
+	OktetoTokenLabel = "dev.okteto.com/token"
+	//OktetoGithubIDLabel represents the githubid of the service account
+	OktetoGithubIDLabel = "dev.okteto.com/githubid"
+	//OktetoNameAnnotation represents the fullname of the service account
+	OktetoNameAnnotation = "dev.okteto.com/name"
+	//OktetoEmailAnnotation represents the email of the service account
+	OktetoEmailAnnotation = "dev.okteto.com/email"
+	//OktetoAvatarAnnotation represents the avatar of the service account
+	OktetoAvatarAnnotation = "dev.okteto.com/avatar"
+)
+
+func translate(u *model.User) *apiv1.ServiceAccount {
 	return &apiv1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.ID,
-			Namespace: s.ID,
+			Name:      u.ID,
+			Namespace: client.GetOktetoNamespace(),
+			Labels: map[string]string{
+				OktetoLabel:         "true",
+				OktetoVersionLabel:  OktetoVersion,
+				OktetoIDLabel:       u.ID,
+				OktetoTokenLabel:    u.Token,
+				OktetoGithubIDLabel: u.GithubID,
+			},
+			Annotations: map[string]string{
+				OktetoNameAnnotation:   u.Name,
+				OktetoEmailAnnotation:  u.Email,
+				OktetoAvatarAnnotation: u.Avatar,
+			},
 		},
 	}
 }

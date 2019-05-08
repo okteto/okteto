@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/google/go-github/github"
-	"github.com/okteto/app/api/k8s/users"
+	"github.com/okteto/app/api/app"
 	"github.com/okteto/app/api/log"
 	"github.com/okteto/app/api/model"
 
@@ -133,7 +133,7 @@ func Auth(code string) (*model.User, error) {
 	}
 
 	u := model.NewUser(githubUser.GetLogin(), e, githubUser.GetName(), githubUser.GetAvatarURL())
-	u, err = users.FindOrCreate(u)
+	u, err = app.FindOrKeepUser(u)
 	if err != nil {
 		log.Errorf("failed to create user: %s", err)
 		return nil, fmt.Errorf("failed to create user")

@@ -10,6 +10,7 @@ import (
 	"github.com/okteto/app/cli/pkg/k8s/exec"
 	"github.com/okteto/app/cli/pkg/k8s/pods"
 	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/app/cli/pkg/okteto"
 
 	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
 
@@ -20,6 +21,7 @@ import (
 func Exec() *cobra.Command {
 	var devPath string
 	var pod string
+	var space string
 	cmd := &cobra.Command{
 		Use:    "exec COMMAND",
 		Hidden: true,
@@ -35,7 +37,14 @@ func Exec() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			if space != "" {
+				var err error
+				space, err = okteto.GetSpaceID(space)
+				if err != nil {
+					return err
+				}
+				dev.Space = space
+			}
 			err = executeExec(pod, dev, args)
 			return err
 		},
@@ -49,6 +58,7 @@ func Exec() *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
 	cmd.Flags().StringVarP(&pod, "pod", "p", "", "pod where it is executed")
+	cmd.Flags().StringVarP(&space, "space", "s", "", "space where the exec command is executed")
 	return cmd
 }
 
@@ -59,6 +69,9 @@ func executeExec(pod string, dev *model.Dev, args []string) error {
 	client, cfg, namespace, err := k8Client.Get()
 	if err != nil {
 		return err
+	}
+	if dev.Space != "" {
+		namespace = dev.Space
 	}
 
 	if pod == "" {

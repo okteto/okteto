@@ -27,6 +27,12 @@ const (
 	oktetoDevAnnotation        = "dev.okteto.com/manifests"
 
 	revisionAnnotation = "deployment.kubernetes.io/revision"
+	//OktetoVersion represents the current service account data version
+	OktetoVersion = "1.0"
+	//OktetoLabel represents the owner of the deployment
+	OktetoLabel = "dev.okteto.com"
+	//OktetoVersionLabel represents the data version of the service account
+	OktetoVersionLabel = "dev.okteto.com/version"
 )
 
 var (
@@ -98,6 +104,8 @@ func translate(dev *model.Dev, d *appsv1.Deployment, s *model.Space) (*appsv1.De
 	if err := setDevListAsAnnotation(d.GetObjectMeta(), dev); err != nil {
 		return nil, err
 	}
+	setLabel(d.GetObjectMeta(), OktetoLabel, "true")
+	setLabel(d.GetObjectMeta(), OktetoVersionLabel, OktetoVersion)
 	setLabel(d.GetObjectMeta(), oktetoLabel, dev.Name)
 	setLabel(d.Spec.Template.GetObjectMeta(), oktetoLabel, dev.Name)
 	d.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
