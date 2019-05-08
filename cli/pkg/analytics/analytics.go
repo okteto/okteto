@@ -40,10 +40,11 @@ func init() {
 func TrackCreate(language, image, version string) {
 	if err := mixpanelClient.Track(okteto.GetUserID(), createEvent, &mixpanel.Event{
 		Properties: map[string]interface{}{
-			"image":    image,
-			"language": language,
-			"os":       runtime.GOOS,
-			"version":  version,
+			"image":             image,
+			"language":          language,
+			"os":                runtime.GOOS,
+			"version":           version,
+			"$referring_domain": okteto.GetURL(),
 		},
 	}); err != nil {
 		log.Errorf("Failed to send analytics: %s", err)
@@ -54,9 +55,10 @@ func TrackCreate(language, image, version string) {
 func TrackUp(image, version string) {
 	if err := mixpanelClient.Track(okteto.GetUserID(), upEvent, &mixpanel.Event{
 		Properties: map[string]interface{}{
-			"image":   image,
-			"os":      runtime.GOOS,
-			"version": version,
+			"image":             image,
+			"os":                runtime.GOOS,
+			"version":           version,
+			"$referring_domain": okteto.GetURL(),
 		},
 	}); err != nil {
 		log.Errorf("Failed to send analytics: %s", err)
@@ -67,8 +69,9 @@ func TrackUp(image, version string) {
 func TrackLogin(version string) {
 	if err := mixpanelClient.Track(okteto.GetUserID(), loginEvent, &mixpanel.Event{
 		Properties: map[string]interface{}{
-			"os":      runtime.GOOS,
-			"version": version,
+			"os":                runtime.GOOS,
+			"version":           version,
+			"$referring_domain": okteto.GetURL(),
 		},
 	}); err != nil {
 		log.Errorf("Failed to send analytics: %s", err)
@@ -79,9 +82,10 @@ func TrackLogin(version string) {
 func TrackCreateDatabase(database, version string) {
 	if err := mixpanelClient.Track(okteto.GetUserID(), createDatabaseEvent, &mixpanel.Event{
 		Properties: map[string]interface{}{
-			"database": database,
-			"os":       runtime.GOOS,
-			"version":  version,
+			"database":          database,
+			"os":                runtime.GOOS,
+			"version":           version,
+			"$referring_domain": okteto.GetURL(),
 		},
 	}); err != nil {
 		log.Errorf("Failed to send analytics: %s", err)

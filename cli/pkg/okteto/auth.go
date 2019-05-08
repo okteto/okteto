@@ -119,6 +119,16 @@ func GetUserID() string {
 	return t.ID
 }
 
+// GetURL returns the URL of the authenticated user
+func GetURL() string {
+	t, err := getToken()
+	if err != nil {
+		return "na"
+	}
+
+	return t.URL
+}
+
 func saveToken(id, token, url string) error {
 	t := Token{Token: token, URL: url, ID: id}
 	marshalled, err := json.Marshal(t)
