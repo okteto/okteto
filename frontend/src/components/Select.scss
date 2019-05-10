@@ -2,13 +2,22 @@
 
 .Select {
   .Select__control {
-    background: $navy-700;
+    background: $navy;
     border: 1px solid $navy;
     border-radius: 3px;
+    font-size: 14px;
+    padding: 0px;
+    padding-left: 10px;
+    box-sizing: border-box;
+
+    .Select__value-container {
+      padding: 0;
+    }
 
     &.Select__control-is-focused,
     &:active {
-      box-shadow: $blue-600 0 0 0 1px;
+      box-shadow: none;
+      outline: none;
     }
 
     &:hover {
@@ -17,6 +26,7 @@
 
     .Select__input {
       color: rgba($white, .8);
+      font-size: 14px;
       
       input {
         padding: 2px 10px;
@@ -44,6 +54,7 @@
     border-radius: 2;
     color: $black;
     z-index: 10000;
+    margin-top: 0;
   }
 
   .Select__multi-value {
@@ -74,8 +85,8 @@
 
     &.Select__control-is-focused,
     &:active {
-      border: 1px solid rgba($blue-600, 1);
-      box-shadow: $blue-600 0 0 0 1px;
+      box-shadow: none;
+      outline: none;
     }
 
     .Select__input {
@@ -110,12 +121,17 @@
   }
 
   .Select__multi-value {
-    background-color: $blue-800;
+    background-color: rgba($green-secondary, 1);
 
     .Select__multi-value__label {
-      color: rgba(white, .8);
-      padding: 6px 8px;
       font-weight: 400;
+      font-size: 14px;
+      line-height: 18px;
+      padding: 4px 8px 6px 8px;
+    }
+
+    .Select__multi-value__remove {
+      path { fill: white; }
     }
 
     .Select__multi-value__remove:hover {

@@ -1,0 +1,30 @@
+.CreateSpace {
+  h3 {
+    font-weight: 500;
+    font-size: 20px;
+    margin-top: 36px;
+    margin-bottom: 12px;
+  }
+
+  .NameInput {
+    margin-top: 6px;
+    padding: 8px;
+    border: 1px solid rgba(black, .2);
+    font-size: 18px;
+
+    &:focus,
+    &:active {
+      outline: none;
+    }
+
+    &::placeholder {
+      color: rgb(66, 55, 55);
+      opacity: .3;
+      font-style: italic;
+    }
+  }
+
+  .Buttons {
+    margin-top: 32px;
+  }
+}

@@ -53,8 +53,9 @@ class CreateEnvironment extends Component {
 }
 
 CreateEnvironment.propTypes = {
+  dispatch: PropTypes.func.isRequired,
   children: PropTypes.node.isRequired,
-  dispatch: PropTypes.func.isRequired
+  space: PropTypes.object.isRequired
 };
 
 export default ReactRedux.connect(() => {

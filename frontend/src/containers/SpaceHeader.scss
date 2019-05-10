@@ -1,0 +1,87 @@
+@import 'colors.scss';
+@import 'constants.scss';
+@import 'fonts.scss';
+
+.SpaceHeader {
+  padding: 0 $side-margin;
+  font-size: 32px;
+  font-weight: 200;
+  box-sizing: border-box;
+
+  &Actions {
+    margin-right: 24px;
+
+    .ActionButton {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 18px;
+      margin-right: 24px;
+      
+      .Icon {
+        margin-right: 6px;
+      }
+
+      &:hover {
+        color: $green;
+
+        .colorable {
+          fill: $green;
+        }
+      }
+
+      &.disabled {
+        opacity: .2;
+        pointer-events: none;
+      }
+    }
+  }
+
+  &User {
+    position: relative;
+    user-select: none;
+
+    .UserAtom {
+      font-size: 20px;
+      cursor: pointer;
+
+      .Avatar {
+        background-color: $green-600;
+        width: 24px;
+        height: 24px;
+        border-radius: 48px;
+        margin-right: 8px;
+        overflow: hidden;
+
+        .Icon {
+          margin-left: -32px;
+          margin-top: -5px;
+        }
+      }
+
+      .Username {
+        margin-top: -4px;
+      }
+
+      &:hover {
+        .Username {
+          color: $green;
+        }
+
+        .ArrowDownIcon {
+          .colorable { fill: $green; }
+        }
+      }
+    }
+
+    .UserMenu {
+      position: absolute;
+      top: 16px;
+      right: 0;
+    }
+  }
+}

@@ -16,13 +16,13 @@ class NewMenu extends Component {
       <div className="NewMenuContent layout vertical">
         <div className="MenuItem MenuItemEnvironment layout horizontal center flex-auto"
           onClick={onNewEnvironment}>
-          <Icon icon="mirror" size="18" color="black" />
-          Environment
+          <Icon icon="environmentOn" size="24" />
+          Add Environment
         </div>
         <div className="MenuItem MenuItemDatabase layout horizontal center flex-auto"
           onClick={onNewDatabase}>
-          <Icon icon="database" size="22" color="black" />
-          Database
+          <Icon icon="database" size="24" color="black" />
+          Add Database
         </div>
       </div>
     );

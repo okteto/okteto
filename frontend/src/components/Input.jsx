@@ -24,16 +24,27 @@ class Input extends Component {
     }
   }
 
+  focus() {
+    this.input.focus();
+  }
+
   render() {
+    const { value, placeholder, theme } = this.props;
+
+    if (this.input && this.input.value !== value) {
+      this.input.value = value;
+    }
+
     return (
       <input
-        id={this.props.id || `Input-${Date.now()}-${Math.random()}`}
-        className={classnames('Input', this.props.className)}
+        id={this.props.id || `Input-${Date.now()}`}
+        ref={ref => this.input = ref}
+        className={classnames('Input', this.props.className, { 'light': theme === 'light'})}
         type={this.props.type || 'text'}
         onChange={this.handleChange}
         onKeyPress={this.handleKeyPress}
-        value={this.props.value}
-        placeholder={this.props.placeholder}
+        placeholder={placeholder}
+        defaultValue={value}
       />
     );
   }
@@ -42,7 +53,8 @@ class Input extends Component {
 Input.defaultProps = {
   options: [],
   isSearchable: false,
-  value: ''
+  value: '',
+  theme: null
 };
 
 Input.propTypes = {
@@ -52,7 +64,8 @@ Input.propTypes = {
   onKeyPress: PropTypes.func,
   value: PropTypes.string,
   className: PropTypes.string,
-  placeholder: PropTypes.string
+  placeholder: PropTypes.string,
+  theme: PropTypes.string
 };
 
 export default Input;

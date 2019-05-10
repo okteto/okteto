@@ -6,7 +6,7 @@ import autobind from 'autobind-decorator';
 import Button from 'components/Button';
 import Select from 'components/Select';
 import Modal from 'components/Modal';
-import { createDatabase } from 'actions/databases';
+import { createDatabase } from 'actions/spaces';
 
 import './CreateDatabase.scss';
 
@@ -21,7 +21,8 @@ class CreateDatabase extends Component {
 
   @autobind
   handleConfirmClick() {
-    this.props.dispatch(createDatabase(this.state.type));
+    const { space } = this.props;
+    this.props.dispatch(createDatabase(space.id, this.state.type));
     this.close();
   }
 
@@ -45,7 +46,8 @@ class CreateDatabase extends Component {
   }
 
   render() {
-    const existingDatabases = Object.keys(this.props.databases);
+    const { space } = this.props;
+    const existingDatabases = space.databases.map(database => database.name);
     const options = [
       { value: 'mongo', label: 'Mongodb' },
       { value: 'redis', label: 'Redis'},
@@ -98,11 +100,9 @@ class CreateDatabase extends Component {
 
 CreateDatabase.propTypes = {
   dispatch: PropTypes.func.isRequired,
-  databases: PropTypes.object
+  space: PropTypes.object.isRequired
 };
 
-export default ReactRedux.connect(state => {
-  return {
-    databases: state.databases.byName || {},
-  };
+export default ReactRedux.connect(() => {
+  return {};
 }, null, null, { withRef: true })(CreateDatabase);

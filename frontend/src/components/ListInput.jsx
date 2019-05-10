@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import autobind from 'autobind-decorator';
+import classnames from 'classnames';
 import CreatableSelect from 'react-select/lib/Creatable';
 
 import 'components/ListInput.scss';
@@ -68,7 +69,9 @@ class ListInput extends Component {
     const options = toOptionList(this.props.value);
     return (
       <CreatableSelect
-        className="ListInput Select"
+        className={classnames('ListInput Select', this.props.className, { 
+          'light': this.props.theme === 'light'
+        })}
         classNamePrefix="Select"
         components={{
           DropdownIndicator: null
@@ -89,9 +92,11 @@ class ListInput extends Component {
 }
 
 ListInput.defaultProps = {
+  className: '',
   isClearable: false,
   placeholder: 'Type your list...',
-  value: []
+  value: [],
+  theme: null
 };
 
 ListInput.propTypes = {
@@ -99,7 +104,9 @@ ListInput.propTypes = {
   placeholder: PropTypes.string,
   onChange: PropTypes.func,
   isClearable: PropTypes.bool,
-  value: PropTypes.arrayOf(PropTypes.string)
+  value: PropTypes.arrayOf(PropTypes.string),
+  className: PropTypes.string,
+  theme: PropTypes.string
 };
 
 export default ListInput;

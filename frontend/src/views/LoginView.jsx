@@ -10,10 +10,10 @@ import { notify } from 'components/Notification';
 import { loginWithGithub } from 'actions/session';
 import environment from 'common/environment';
 
-import 'containers/Login.scss';
+import './LoginView.scss';
 import colors from 'colors.scss';
 
-class Login extends Component {
+class LoginView extends Component {
   constructor(props) {
     super(props);
   }
@@ -67,7 +67,7 @@ class Login extends Component {
   }
 }
 
-Login.propTypes = {
+LoginView.propTypes = {
   session: PropTypes.object.isRequired,
   dispatch: PropTypes.func.isRequired
 };
@@ -76,4 +76,4 @@ export default ReactRedux.connect(state => {
   return {
     session: state.session
   };
-})(Login);
+})(LoginView);

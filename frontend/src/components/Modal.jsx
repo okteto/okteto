@@ -11,6 +11,10 @@ class Modal extends Component {
     super(props);
   }
 
+  componentDidMount() {
+    this.modalContainer && document.body.appendChild(this.modalContainer);
+  }
+
   open() {
     this.modal && this.modal.show();
   }
@@ -54,7 +58,10 @@ class Modal extends Component {
     };
 
     return (
-      <div className={classnames('Modal', this.props.className)}>
+      <div 
+        className={classnames('Modal', this.props.className)} 
+        ref={ref => this.modalContainer = ref}
+      >
         <Skylight
           ref={ref => this.modal = ref}
           dialogStyles={dialogStyles}

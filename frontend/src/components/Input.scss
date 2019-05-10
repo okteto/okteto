@@ -2,7 +2,8 @@
 @import 'fonts.scss';
 
 .Input {
-  background: $navy-700;
+  box-sizing: border-box;
+  background: $navy;
   border: 1px solid $navy;
   border-radius: 3px;
   color: rgba($white, .8);
@@ -13,12 +14,22 @@
   &:active,
   &:focus {
     outline: 0;
-    box-shadow: $blue-600 0 0 0 1px;
   }
 
-  &::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  &::placeholder {
     color: white;
     opacity: .3;
     font-style: italic;
+  }
+
+  &.light {
+    background: white;
+    border: 1px solid rgba(black, .2);
+    border-radius: 3px;
+    color: $navy-dark;
+
+    &::placeholder {
+      color: grey;
+    }
   }
 }

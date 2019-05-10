@@ -5,7 +5,8 @@
   align-items: center;
   background: transparent;
   box-sizing: border-box;
-  padding: 10px 18px;
+  min-height: 42px;
+  padding: 0 18px;
   color: rgba($white, .90);
   cursor: pointer;
   border: 1px solid rgba($white, .4);
@@ -136,12 +137,12 @@
         background-color: white;
         color: $green-600;
         &:hover, &:active { background-color: white; }
-        &:hover { color: $green-700; border-color: $green-700; }
-        &:active { color: $green-800; border-color: $green-800; }
+        &:hover { color: $green-700; border-color: $green-secondary; }
+        &:active { color: $green-800; border-color: $green-tertiary; }
       }
 
-      &:hover { background-color: $green-700; }
-      &:active { background-color: $green-800; }
+      &:hover { background-color: $green-secondary; }
+      &:active { background-color: $green-tertiary; }
     }
   }
 }

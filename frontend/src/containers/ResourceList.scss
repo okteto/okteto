@@ -1,0 +1,161 @@
+@import 'colors.scss';
+@import 'constants.scss';
+
+.ResourceList {
+  overflow-y: auto;
+  display: grid;
+
+  &Item {
+    position: relative;
+    padding: 15px $side-margin 12px $side-margin;
+    box-sizing: border-box;
+    cursor: default;
+
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    align-items: center;
+    
+    @media screen and (max-width: 800px) {
+      grid-template-columns: 1fr;
+    }
+
+    &:nth-child(even) {
+      background-color: $navy-dark;
+
+      .ItemActions {
+        background-color: rgba($navy-dark, .8);
+      }
+    }
+
+    &:hover::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 2px;
+      background-color: $green;
+    }
+
+    .ItemIcon {
+      margin-right: 21px;
+      margin-left: 4px;
+    }
+
+    &.ItemDatabase {
+      .ItemIcon {
+        padding-left: 1px;
+      }
+    }
+    
+    .ItemName {
+      height: 24px;
+      font-size: 20px;
+      line-height: 20px;
+      font-weight: 500;
+      margin-right: 24px;
+    }
+
+    .ItemEndpoints {
+      font-size: 17px;
+      line-height: 17px;
+      font-weight: 200;
+
+      .ItemEndPoint {
+        cursor: pointer;
+        color: white;
+        
+        &:not(:last-child) {
+          margin-bottom: 14px;
+        }
+
+        &:visited {
+          color: white;
+        }
+
+        &:hover {
+          color: $green;
+
+          .Icon .colorable {
+            fill: $green;
+          }
+        }
+
+        .Url {
+          height: 24px;
+          line-height: 22px;
+        }
+
+        .Icon {
+          margin-top: 1px;
+          margin-left: 4px;
+        }
+      }
+    }
+
+    .ItemActiveUser {
+      margin-right: 64px;
+      margin-left: 24px;    
+      display: flex;
+      flex-direction: row-reverse;
+
+      .UserAtom {
+        font-size: 17px;
+
+        .Avatar {
+          background-color: $green-600;
+          width: 22px;
+          height: 22px;
+          border-radius: 48px;
+          margin-right: 8px;
+          overflow: hidden;
+
+          .Icon {
+            margin-left: -32px;
+            margin-top: -5px;
+          }
+        }
+      }
+    }
+
+    .ItemActions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: absolute;
+      right: 0;
+      height: 100%;
+      top: 0;
+      padding: 0 24px;
+      margin: auto;
+
+      .ActionButton {
+        padding: 8px;
+        cursor: pointer;
+        margin: auto 0;
+
+        &:hover {
+          background-color: rgba($white-100, .5);
+          border-radius: 48px;
+        }
+      }
+    }
+  }
+
+  @media screen and (max-width: 800px) {
+    $resource-item-margin: 54px;
+
+    &Item {
+      .ItemEndpoints {
+        margin-top: 12px;
+        margin-left: $resource-item-margin;
+      }
+
+      .ItemActiveUser {
+        flex-direction: row;
+        margin-top: 12px;
+        margin-left: $resource-item-margin;
+      }
+    }
+  }
+}

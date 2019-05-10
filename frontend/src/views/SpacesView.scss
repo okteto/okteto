@@ -1,0 +1,9 @@
+@import 'constants.scss';
+
+.SpacesView {
+  position: relative;
+  display: grid;
+  grid-template-columns: $explorer-width 1fr;
+  grid-template-rows: 1fr;
+  height: 100vh;
+}

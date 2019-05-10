@@ -18,23 +18,17 @@
 .NewMenuContent {
   .MenuItem {
     margin: 0;
-    min-width: 140px;
+    min-width: 180px;
     color: black;
     padding: 12px 18px;
     cursor: pointer;
 
     &:hover {
-      background-color: rgba(grey, .3);
+      background-color: rgba($grey, .4);
     }
 
     .Icon {
       margin-right: 12px;
-    }
-
-    &.MenuItemEnvironment {
-      .Icon {
-        padding: 0 2px;
-      }
     }
   }
 }

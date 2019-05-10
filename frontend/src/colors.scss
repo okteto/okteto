@@ -1,24 +1,28 @@
 $navy: #232935;
 $navy-dark: #1E222B;
-$navy-extra-dark: #171B22;
-
-$navy-900: #3A4256;
-$navy-800: #424A61;
-$navy-700: #505975;
+$navy-extra-dark: #191d24;
+$navy-extra-extra-dark: #111318;
 
 :export {
-  navy700: $navy-700;
+  navy: $navy;
   navyDark: $navy-dark;
   navyExtraDark: $navy-extra-dark;
 }
 
-$green-400: #00D1CA;
+$grey: #C1C7D0;
+
+$green: #00D1CA;
+
+$green-400: $green;
 $green-600: #00b2ac;
 $green-700: #009994;
 $green-800: #008580;
 :export {
   green400: $green-400;
 }
+
+$green-secondary: #1CA8B8;
+$green-tertiary: #308CAB;
 
 $yellow-200: #f0d66f;
 $yellow-400: #E3C550;

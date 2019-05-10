@@ -1,0 +1,74 @@
+@import 'colors.scss';
+
+.SpaceInvite {
+  &Input {
+    height: 36px;
+
+    input.Input {
+      height: 100%;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      border-bottom-left-radius: 0;
+      border-right: 0;
+      border-bottom-color: rgba(0,0,0,.1);
+    }
+
+    Button {
+      height: 100%;
+      min-height: 0;
+      margin-left: 0;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  }
+
+  &Members {
+    padding: 0;
+    border: 1px solid rgba(black, 0.2);
+    border-radius: 3px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: 0;
+    max-height: 134px;
+    overflow: hidden;
+    overflow-y: auto;
+
+    .Member {
+      cursor: pointer;
+      font-size: 14px;
+      padding: 6px 10px;
+
+      &:hover {
+        background-color: rgba($navy-dark, .05);
+      }
+
+      .Avatar {
+        margin-right: 6px;
+      }
+
+      .DeleteButton {
+        padding: 4px;
+        cursor: pointer;
+
+        .colorable { fill: rgba($navy-dark, .8) }
+
+        &:hover {
+          background-color: rgba($navy-dark, .1);
+          border-radius: 48px;
+        }
+      }
+
+      .OwnerLabel {
+        color: rgba(black, .4);
+        font-style: italic;
+      }
+    }
+
+    .EmptyMembers {
+      font-size: 14px;
+      padding: 10px;
+      opacity: .5;
+    }
+  }
+}
