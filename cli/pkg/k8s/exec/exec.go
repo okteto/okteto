@@ -53,7 +53,17 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 			TTY:       t.Raw,
 		}, scheme.ParameterCodec)
 
-		return p.Executor.Execute("POST", req.URL(), config, p.In, p.Out, p.ErrOut, t.Raw, sizeQueue)
+		done := make(chan error, 1)
+		go func() {
+			done <- p.Executor.Execute("POST", req.URL(), config, p.In, p.Out, p.ErrOut, t.Raw, sizeQueue)
+		}()
+
+		select {
+		case e := <-done:
+			return e
+		case <-ctx.Done():
+			return nil
+		}
 	}
 
 	if err := t.Safe(fn); err != nil {

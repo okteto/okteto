@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -184,19 +185,7 @@ func (up *UpContext) Activate(devPath string) {
 
 		printDisplayContext("Your Okteto Environment is ready", up.Result.Name, up.Result.Endpoints)
 
-		args := []string{"exec", "--pod", up.Pod}
-		if up.Dev.Space == "" {
-			args = append(args, "--")
-		} else {
-			args = append(args, "-s")
-			args = append(args, up.Dev.Space)
-			args = append(args, "--")
-		}
-		args = append(args, up.Dev.Command...)
-		cmd := exec.Command(config.GetBinaryFullPath(), args...)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		cmd, port := buildExecCommand(up.Dev, up.Pod)
 		if err := cmd.Start(); err != nil {
 			log.Infof("Failed to execute okteto exec: %s", err)
 			up.Exit <- err
@@ -212,15 +201,11 @@ func (up *UpContext) Activate(devPath string) {
 			return
 		}()
 
-		prevError = up.WaitUntilExitOrInterrupt(cmd)
-		if prevError != nil && prevError == errors.ErrLostConnection {
-			log.Yellow("Connection lost to your Okteto Environment, reconnecting...")
-			fmt.Println()
-			up.shutdown()
-			continue
-		}
-		if prevError != nil && prevError == errors.ErrCommandFailed && !up.Sy.IsConnected() {
-			log.Yellow("Connection lost to your Okteto Environment, reconnecting...")
+		execEndpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
+		prevError = up.WaitUntilExitOrInterrupt(execEndpoint)
+		if prevError != nil && (prevError == errors.ErrLostConnection ||
+			prevError == errors.ErrCommandFailed && !up.Sy.IsConnected()) {
+			log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...")
 			fmt.Println()
 			up.shutdown()
 			continue
@@ -232,13 +217,13 @@ func (up *UpContext) Activate(devPath string) {
 }
 
 // WaitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
-func (up *UpContext) WaitUntilExitOrInterrupt(cmd *exec.Cmd) error {
+func (up *UpContext) WaitUntilExitOrInterrupt(endpoint string) error {
 	for {
 		select {
 		case <-up.Context.Done():
 			log.Debug("context is done, sending interrupt to process")
-			if err := cmd.Process.Signal(os.Interrupt); err != nil {
-				log.Infof("Failed to kill process: %s", err)
+			if _, err := http.Get(endpoint); err != nil {
+				log.Infof("failed to communicate to exec: %s", err)
 			}
 			return nil
 
@@ -253,8 +238,8 @@ func (up *UpContext) WaitUntilExitOrInterrupt(cmd *exec.Cmd) error {
 			log.Yellow(err.Error())
 		case <-up.Disconnect:
 			log.Debug("disconnected, sending interrupt to process")
-			if err := cmd.Process.Signal(os.Interrupt); err != nil {
-				log.Infof("Failed to kill process: %s", err)
+			if _, err := http.Get(endpoint); err != nil {
+				log.Infof("failed to communicate to exec: %s", err)
 			}
 			return errors.ErrLostConnection
 		}
@@ -380,4 +365,28 @@ func printDisplayContext(message, name string, endpoints []string) {
 	}
 
 	fmt.Println()
+}
+
+func buildExecCommand(dev *model.Dev, pod string) (*exec.Cmd, int) {
+	port, err := model.GetAvailablePort()
+	if err != nil {
+		log.Infof("couldn't access the network: %s", err)
+		port = 15000
+	}
+
+	args := []string{"exec", "--pod", pod, "--port", fmt.Sprintf("%d", port)}
+
+	if dev.Space == "" {
+		args = append(args, "-s")
+		args = append(args, dev.Space)
+
+	}
+	args = append(args, "--")
+	args = append(args, dev.Command...)
+
+	cmd := exec.Command(config.GetBinaryFullPath(), args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd, port
 }

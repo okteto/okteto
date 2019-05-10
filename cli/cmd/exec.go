@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/okteto/app/cli/pkg/config"
 	"github.com/okteto/app/cli/pkg/k8s/exec"
 	"github.com/okteto/app/cli/pkg/k8s/pods"
+	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
 	"github.com/okteto/app/cli/pkg/okteto"
 
@@ -22,12 +24,27 @@ func Exec() *cobra.Command {
 	var devPath string
 	var pod string
 	var space string
+	var port int
+
 	cmd := &cobra.Command{
 		Use:    "exec COMMAND",
 		Hidden: true,
 		Short:  "Execute a command in the cloud dev environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			devPath = getFullPath(devPath)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			if port != 0 {
+				go func() {
+					http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+						log.Debug("canceling process due to a request")
+						cancel()
+					})
+
+					log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+				}()
+			}
 
 			if _, err := os.Stat(devPath); os.IsNotExist(err) {
 				return fmt.Errorf("'%s' does not exist", devPath)
@@ -45,7 +62,7 @@ func Exec() *cobra.Command {
 				}
 				dev.Space = space
 			}
-			err = executeExec(pod, dev, args)
+			err = executeExec(ctx, pod, dev, args)
 			return err
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
@@ -57,15 +74,16 @@ func Exec() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
-	cmd.Flags().StringVarP(&pod, "pod", "p", "", "pod where it is executed")
 	cmd.Flags().StringVarP(&space, "space", "s", "", "space where the exec command is executed")
+	cmd.Flags().StringVarP(&pod, "pod", "p", "", "pod where it is executed")
+	cmd.Flags().MarkHidden("pod")
+	cmd.Flags().IntVar(&port, "port", 0, "port to listen to signals")
+	cmd.Flags().MarkHidden("port")
+
 	return cmd
 }
 
-func executeExec(pod string, dev *model.Dev, args []string) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func executeExec(ctx context.Context, pod string, dev *model.Dev, args []string) error {
 	client, cfg, namespace, err := k8Client.Get()
 	if err != nil {
 		return err
