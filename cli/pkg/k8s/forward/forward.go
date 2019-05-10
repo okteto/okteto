@@ -60,6 +60,11 @@ func (p *PortForward) start(config *rest.Config, requestURL *url.URL, pod string
 func (p *PortForward) stop() {
 	log.Debugf("[port-forward-%d:%d] stopping", p.localPort, p.remotePort)
 	log.Debugf("[port-forward-%d:%d] logged errors: %s", p.localPort, p.remotePort, p.out.String())
+	if p.stopChan == nil {
+		log.Debugf("[port-forward-%d:%d] was nil", p.localPort, p.remotePort)
+		return
+	}
+
 	close(p.stopChan)
 	<-p.stopChan
 	log.Debugf("[port-forward-%d:%d] stopped", p.localPort, p.remotePort)

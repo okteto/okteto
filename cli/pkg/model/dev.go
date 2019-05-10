@@ -9,19 +9,26 @@ import (
 
 //Dev represents a cloud native development environment
 type Dev struct {
-	Name        string   `json:"name" yaml:"name"`
-	Space       string   `json:"space" yaml:"space"`
-	Image       string   `json:"image" yaml:"image"`
-	Environment []EnvVar `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Command     []string `json:"command,omitempty" yaml:"command,omitempty"`
-	Volumes     []string `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	WorkDir     string   `json:"workdir" yaml:"workdir"`
+	Name        string    `json:"name" yaml:"name"`
+	Space       string    `json:"space" yaml:"space"`
+	Image       string    `json:"image" yaml:"image"`
+	Environment []EnvVar  `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Command     []string  `json:"command,omitempty" yaml:"command,omitempty"`
+	Volumes     []string  `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	WorkDir     string    `json:"workdir" yaml:"workdir"`
+	Forward     []Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
 type EnvVar struct {
 	Name  string
 	Value string
+}
+
+// Forward represents a port forwarding definition
+type Forward struct {
+	Local  int
+	Remote int
 }
 
 //Get returns a Dev object from a given file
@@ -46,6 +53,7 @@ func read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		Environment: make([]EnvVar, 0),
 		Command:     make([]string, 0),
+		Forward:     make([]Forward, 0),
 	}
 	if err := yaml.Unmarshal(bytes, dev); err != nil {
 		return nil, err

@@ -47,7 +47,7 @@ func TrackCreate(language, image, version string) {
 			"$referring_domain": okteto.GetURL(),
 		},
 	}); err != nil {
-		log.Errorf("Failed to send analytics: %s", err)
+		log.Infof("Failed to send analytics: %s", err)
 	}
 }
 
@@ -61,7 +61,7 @@ func TrackUp(image, version string) {
 			"$referring_domain": okteto.GetURL(),
 		},
 	}); err != nil {
-		log.Errorf("Failed to send analytics: %s", err)
+		log.Infof("Failed to send analytics: %s", err)
 	}
 }
 
@@ -74,7 +74,7 @@ func TrackLogin(version string) {
 			"$referring_domain": okteto.GetURL(),
 		},
 	}); err != nil {
-		log.Errorf("Failed to send analytics: %s", err)
+		log.Infof("Failed to send analytics: %s", err)
 	}
 }
 
@@ -88,6 +88,6 @@ func TrackCreateDatabase(database, version string) {
 			"$referring_domain": okteto.GetURL(),
 		},
 	}); err != nil {
-		log.Errorf("Failed to send analytics: %s", err)
+		log.Infof("Failed to send analytics: %s", err)
 	}
 }

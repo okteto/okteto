@@ -301,6 +301,12 @@ func (up *UpContext) startSync() error {
 		return err
 	}
 
+	for _, f := range up.Dev.Forward {
+		if err := up.Forwarder.Add(f.Local, f.Remote); err != nil {
+			return err
+		}
+	}
+
 	up.Forwarder.Start(up.Pod, up.Namespace)
 	go up.Sy.Monitor(up.Context, up.WG, up.Disconnect)
 
