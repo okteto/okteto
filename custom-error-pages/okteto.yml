@@ -1,0 +1,7 @@
+image: okteto/custom-error-pages
+name: still-star
+space: ""
+image: okteto/golang:1
+command:
+- bash
+workdir: /go/src/app
