@@ -184,7 +184,6 @@ func (up *UpContext) Activate(devPath string) {
 		}
 
 		printDisplayContext("Your Okteto Environment is ready", up.Result.Name, up.Result.Endpoints)
-
 		cmd, port := buildExecCommand(up.Dev, up.Pod)
 		if err := cmd.Start(); err != nil {
 			log.Infof("Failed to execute okteto exec: %s", err)
@@ -376,11 +375,12 @@ func buildExecCommand(dev *model.Dev, pod string) (*exec.Cmd, int) {
 
 	args := []string{"exec", "--pod", pod, "--port", fmt.Sprintf("%d", port)}
 
-	if dev.Space == "" {
+	if len(dev.Space) > 0 {
 		args = append(args, "-s")
 		args = append(args, dev.Space)
 
 	}
+
 	args = append(args, "--")
 	args = append(args, dev.Command...)
 
