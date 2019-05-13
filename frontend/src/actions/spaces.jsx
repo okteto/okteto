@@ -256,7 +256,7 @@ export const shareSpace = (spaceId, members) => {
     analytics.track('Share Space');
 
     return request(`mutation ShareSpace($space: String!, $members: [String]) {
-      updateSpace(id: $space, members: $members}) {
+      updateSpace(id: $space, members: $members) {
         id
       }
     }`, {
