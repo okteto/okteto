@@ -2,6 +2,7 @@ const initialSpacesState = {
   list: [],
   deleting: [],
   current: null,
+  currentId: null,
   isFetching: false,
   isLoaded: false
 };
@@ -44,6 +45,18 @@ export default (state = initialSpacesState, action) => {
         current: action.space,
         isFetching: false,
         isLoaded: true
+      };
+    }
+    case 'DISCARD_RECEIVE_SPACE': {
+      return {
+        ...state,
+        isFetching: false,
+      };
+    }
+    case 'CHANGE_CURRENT_SPACE': {
+      return {
+        ...state,
+        currentId: action.spaceId,
       };
     }
     case 'FAILED_RECEIVE_SPACES': 

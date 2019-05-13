@@ -84,12 +84,24 @@ export const failedReceiveSpace = err => {
   };
 };
 
+export const discardReceiveSpace = spaceId => {
+  return {
+    type: 'DISCARD_RECEIVE_SPACE',
+    spaceId
+  };
+};
+
+export const changeCurrentSpace = spaceId => {
+  return {
+    type: 'CHANGE_CURRENT_SPACE',
+    spaceId
+  };
+};
+
 export const selectSpace = spaceId => {
   return dispatch => {
-    dispatch(requestSpace());
-    fetchSpace(spaceId).then(space => {
-      dispatch(receiveSpace(space));
-    }).catch(err => dispatch(failedReceiveSpace(err)));
+    dispatch(changeCurrentSpace(spaceId));
+    dispatch(refreshCurrentSpace());
   }
 };
 
@@ -119,8 +131,19 @@ export const refreshCurrentSpace = () => {
     const { spaces, session } = getState();
 
     // If no selected space, use personal space.
-    const currentSpaceId = spaces.current ? spaces.current.id : session.user.id;
-    dispatch(selectSpace(currentSpaceId));
+    const currentSpaceId = spaces.currentId ? spaces.currentId : session.user.id;
+
+    dispatch(requestSpace());
+    fetchSpace(currentSpaceId).then(space => {
+      const { spaces } = getState();
+
+      // Only accept those that match current selected space.
+      if (!space.current || space.id !== spaces.currentId) {
+        dispatch(receiveSpace(space));
+      } else {
+        dispatch(discardReceiveSpace());
+      }
+    }).catch(err => dispatch(failedReceiveSpace(err)));
   }
 };
 
@@ -155,7 +178,7 @@ export const createDatabase = (spaceId, name) => {
       space: spaceId,
       name
     }).then(() => {
-      dispatch(refreshSpaces());
+      dispatch(refreshCurrentSpace());
     }).catch(err => notify(`Error: ${err}`, 'error'));
   };
 };
@@ -172,7 +195,7 @@ export const deleteDatabase = database => {
       space: database.space,
       name: database.name
     }).then(() => {
-      dispatch(refreshSpaces());
+      dispatch(refreshCurrentSpace());
     }).catch(err => notify(`Error: ${err}`, 'error'));
   };
 };
@@ -189,7 +212,7 @@ export const deleteEnvironment = environment => {
       space: environment.space,
       name: environment.name
     }).then(() => {
-      dispatch(refreshSpaces());
+      dispatch(refreshCurrentSpace());
     }).catch(err => notify(`Error: ${err}`, 'error'));
   };
 };
@@ -206,6 +229,7 @@ export const deleteSpace = space => {
       space: space.id
     }).then(() => {
       const { session } = getState();
+      // Select personal space.
       dispatch(selectSpace(session.user.id));
       dispatch(deletingSpace(space.id));
       dispatch(refreshSpaces());
@@ -239,7 +263,7 @@ export const shareSpace = (spaceId, members) => {
       space: spaceId,
       members
     }).then(() => {
-      dispatch(refreshSpaces());
+      dispatch(refreshCurrentSpace());
     }).catch(err => notify(`Error: ${err}`, 'error'));
   };
 };

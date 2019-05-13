@@ -57,7 +57,7 @@
       }
 
       &.deleting {
-        opacity: .2;
+        display: none;
         pointer-events: none;
       }
 
