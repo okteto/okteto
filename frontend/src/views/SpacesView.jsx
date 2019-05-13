@@ -5,7 +5,7 @@ import autobind from 'autobind-decorator';
 
 import Space from 'containers/Space';
 import SpaceExplorer from 'containers/SpaceExplorer';
-import { refreshSpaces } from 'actions/spaces';
+import { refreshSpaces, refreshCurrentSpace } from 'actions/spaces';
 
 import 'views/SpacesView.scss';
 
@@ -16,6 +16,7 @@ class SpacesView extends Component {
     super(props);
     
     this.props.dispatch(refreshSpaces());
+    this.props.dispatch(refreshCurrentSpace());
     this.poll = setInterval(this.handlePollSpaces, POLLING_INTERVAL);
   }
 
@@ -26,6 +27,7 @@ class SpacesView extends Component {
   @autobind
   handlePollSpaces() {
     this.props.dispatch(refreshSpaces());
+    this.props.dispatch(refreshCurrentSpace());
   }
 
   render() {

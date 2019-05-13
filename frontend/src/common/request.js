@@ -1,7 +1,7 @@
 import { getToken } from 'common/environment';
+import { GraphQLClient } from 'graphql-request';
 
-const rootPath = '/graphql';
-const API_ERROR = 'api_error';
+const gqlEndpoint = '/graphql';
 
 const errors = {
   'not-authorized': 'Session expired'
@@ -11,55 +11,36 @@ const getErrorText = message => {
   return errors[message] || message;
 };
 
-const handleQLResponse = (response) => {
-  return response.json()
-    .then(content => {
-      if (content.errors && content.errors.length > 0) {
-        for (let error of Array.from(content.errors)) {
-          if (error.message === 'not-authorized') {
-            document.dispatchEvent(new Event('logout'));
-          }
-          return Promise.reject({
-            type: API_ERROR,
-            text: getErrorText(error.message)
-          });
+const handleGqlErrors = error => {
+  if (error.response) { // GraphQL error response.
+    const errors = error.response.errors;
+    if (errors && errors.length > 0) {
+      for (let error of Array.from(errors)) {
+        if (error.message === 'not-authorized') {
+          document.dispatchEvent(new Event('logout'));
         }
+        return Promise.reject(getErrorText(error.message));
       }
-      return content;
-    });
+    }
+  } else {
+    return Promise.reject(navigator.onLine ? 
+      'Server is not available.' : 
+      'Check your Internet connection.'
+    );
+  }
 };
 
-const request = (query = '', init = {}, options = {}) => {
-  const config = {
-    auth: true,
-    ...options
-  };
-
-  const headers = {
-    ...init.headers
-  };
-
-  if (config.auth) {
-    headers.Authorization = `Bearer ${getToken()}`;
-  }
-
-  return fetch(`${rootPath}/`.replace(/\/$/, ''), {
-    ...init,
-    method: 'post',
-    headers: new Headers({ ...headers }),
-    body: JSON.stringify({ query })
+const request = async (query = '', variables = {}, options = { auth: true }) => {
+  const graphQLClient = new GraphQLClient(gqlEndpoint, {
+    headers: options.auth ? { authorization: `Bearer ${getToken()}` } : {}
   })
-    .then(handleQLResponse)
-    .catch(error => {
-      if (!error.type) {
-        return Promise.reject(navigator.onLine ? 
-          'Server is not available.' : 
-          'Check your Internet connection.'
-        );
-      } else {
-        return Promise.reject(error.text);
-      }
-    });
+
+  try {
+    const data = await graphQLClient.request(query, variables);
+    return data;
+  } catch (error) {
+    return handleGqlErrors(error);
+  }
 };
 
 export default request;

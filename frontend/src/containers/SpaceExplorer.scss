@@ -56,6 +56,11 @@
         }
       }
 
+      &.deleting {
+        opacity: .2;
+        pointer-events: none;
+      }
+
       &:hover {
         background: rgba(black, .2);
       }

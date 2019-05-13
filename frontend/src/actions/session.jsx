@@ -7,16 +7,16 @@ export const SESSION_KEY = 'okteto-session';
 
 export const loginWithGithub = code => {
   return dispatch => {
-    return request(`mutation { 
+    return request(`mutation {
       auth(code: "${code}") { 
         id, githubID, avatar, name, email, token 
       } 
-    }`).then(e => {
-      if (e.errors) {
-        notify(`Authentication error: ${e.errors[0].message}`, 'error')
+    }`, {}, { auth: false }).then(data => {
+      if (data.errors) {
+        notify(`Authentication error: ${data.errors[0].message}`, 'error')
       } else {
-        localStorage.setItem(environment.apiTokenKeyName, e.data.auth.token);
-        dispatch(authSuccess(e.data.auth));
+        localStorage.setItem(environment.apiTokenKeyName, data.auth.token);
+        dispatch(authSuccess(data.auth));
         dispatch(saveSession());
       }
     }).catch(err => notify(`Authentication error: ${err}`, 'error'));

@@ -31,7 +31,9 @@ class CreateSpace extends Component {
   @autobind
   handleConfirmClick() {
     if (this.isValid()) {
-      this.props.dispatch(createSpace(this.state.name));
+      // TODO: Temporary disabled members due to api bug.
+      const members = []; //this.spaceInviteInput.getMembers();
+      this.props.dispatch(createSpace(this.state.name, members));
       this.close();
     }
   }
@@ -75,9 +77,11 @@ class CreateSpace extends Component {
             value={this.state.name}
           />
 
-          {/* TODO: Temporarily disabled. */}
+          {/* TODO: Temporary disabled members due to api bug. */}
           {/* <h3>Invite others</h3>
-          <SpaceInvite /> */}
+          <SpaceInvite
+            ref={ref => this.spaceInviteInput = ref} 
+          /> */}
 
           <div className="Buttons layout horizontal-reverse center">
             <Button

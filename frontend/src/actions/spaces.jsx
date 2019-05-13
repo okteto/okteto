@@ -2,34 +2,44 @@ import request from 'common/request';
 import analytics from 'common/analytics';
 import { notify } from 'components/Notification';
 
-const fetchAll = (spaceId) => {
-  return request(`{
-    spaces {
-      id, name 
+const getSpacesQuery = `spaces {
+  id, name 
+}`;
+
+const getSpaceQuery = `space(id: $space) {
+  id, name, members {
+    id, githubID, avatar, name, owner
+  }
+}
+environments(space: $space) {
+  id, name, space, endpoints, dev { 
+    id, name, githubID, avatar, owner
+  }
+}
+databases(space: $space) { 
+  name, space, endpoint 
+}`;
+
+const fetchSpaces = () => {
+  return request(`
+    query GetSpaces {
+      ${getSpacesQuery}
     }
-    space(id: "${spaceId}") {
-      id, name, members {
-        id, githubID, avatar, name, owner
-      }
+  `).then(response => response.spaces);
+};
+
+const fetchSpace = spaceId => {
+  return request(`
+    query GetSpace($space: String!) {
+      ${getSpaceQuery}
     }
-    environments(space: "${spaceId}") {
-      id, name, space, endpoints, dev { 
-        id, name, githubID, avatar, owner
-      }
-    }
-    databases(space: "${spaceId}") { 
-      name, space, endpoint 
-    }
-  }`, {
-    auth: true
+  `, {
+    space: spaceId
   }).then(response => {
     return {
-      space: {
-        ...response.data.space || {},
-        environments: response.data.environments || [],
-        databases: response.data.databases || []
-      },
-      spaces: response.data.spaces
+      ...response.space || {},
+      environments: response.environments || [],
+      databases: response.databases || []
     };
   });
 };
@@ -47,9 +57,15 @@ export const receiveSpaces = spaces => {
   };
 };
 
-export const receiveSelectedSpace = space => {
+export const requestSpace = () => {
   return {
-    type: 'RECEIVE_SELECTED_SPACE',
+    type: 'REQUEST_SPACE'
+  };
+};
+
+export const receiveSpace = space => {
+  return {
+    type: 'RECEIVE_SPACE',
     space
   };
 };
@@ -61,49 +77,68 @@ export const failedReceiveSpaces = err => {
   };
 };
 
-export const refreshSpaces = () => {
-  return (dispatch, getState) => {
-    const { spaces, session } = getState();
-    const currentSpaceId = spaces.current ? spaces.current.id : session.user.id;
-
-    if (!spaces.isFetching) {
-      dispatch(requestSpaces());
-      fetchAll(currentSpaceId).then(({ spaces, space }) => {
-        dispatch(receiveSpaces(spaces));
-        dispatch(receiveSelectedSpace(space));
-      }).catch(err => dispatch(failedReceiveSpaces(err)));
-    }
+export const failedReceiveSpace = err => {
+  notify(`Error: ${err}`, 'error');
+  return {
+    type: 'FAILED_RECEIVE_SPACE'
   };
 };
 
 export const selectSpace = spaceId => {
+  return dispatch => {
+    dispatch(requestSpace());
+    fetchSpace(spaceId).then(space => {
+      dispatch(receiveSpace(space));
+    }).catch(err => dispatch(failedReceiveSpace(err)));
+  }
+};
+
+export const refreshSpaces = () => {
   return (dispatch, getState) => {
     const { spaces } = getState();
 
     if (!spaces.isFetching) {
       dispatch(requestSpaces());
-      fetchAll(spaceId).then(({ spaces, space }) => {
-        dispatch(receiveSpaces(spaces));
-        dispatch(receiveSelectedSpace(space));
+      fetchSpaces().then(newSpaces => {
+        dispatch(receiveSpaces(newSpaces));
+
+        // Clean deleted spaces.
+        const { spaces } = getState();
+        for (const deletingSpace of spaces.deleting) {
+          if (!newSpaces.find(space => space.id === deletingSpace.id)) {
+            dispatch(deletedSpace(deletingSpace.id));
+          }
+        }
       }).catch(err => dispatch(failedReceiveSpaces(err)));
     }
   };
 };
 
-export const createSpace = (name) => {
+export const refreshCurrentSpace = () => {
+  return (dispatch, getState) => {
+    const { spaces, session } = getState();
+
+    // If no selected space, use personal space.
+    const currentSpaceId = spaces.current ? spaces.current.id : session.user.id;
+    dispatch(selectSpace(currentSpaceId));
+  }
+};
+
+export const createSpace = (name, members = []) => {
   return dispatch => {
     analytics.track('Create Space');
 
-    return request(`mutation {
-      createSpace(name: "${name}", members: []) {
+    return request(`mutation CreateSpace($name: String!, $members: [String]) {
+      createSpace(name: $name, members: $members) {
         id
       }
     }`, {
-      auth: true
+      name,
+      members
     }).then(response => {
-      const spaceId = response.data.createSpace.id;
-      // TODO: Select new created space.
+      const spaceId = response.createSpace.id;
       dispatch(refreshSpaces());
+      dispatch(selectSpace(spaceId));
     }).catch(err => notify(`Error: ${err}`, 'error'));
   };
 };
@@ -112,12 +147,13 @@ export const createDatabase = (spaceId, name) => {
   return dispatch => {
     analytics.track('Create Database');
 
-    return request(`mutation {
-      createDatabase(space: "${spaceId}", name: "${name}") {
+    return request(`mutation CreateDatabase($space: String!, $name: String!) {
+      createDatabase(space: $space, name: $name) {
         id
       }
     }`, {
-      auth: true
+      space: spaceId,
+      name
     }).then(() => {
       dispatch(refreshSpaces());
     }).catch(err => notify(`Error: ${err}`, 'error'));
@@ -128,12 +164,13 @@ export const deleteDatabase = database => {
   return dispatch => {
     analytics.track('Delete Database');
 
-    return request(`mutation {
-      deleteDatabase(space: "${database.space}", name: "${database.name}") {
+    return request(`mutation DeleteDatabase($space: String!, $name: String!){
+      deleteDatabase(space: $space, name: $name) {
         name
       }
     }`, {
-      auth: true
+      space: database.space,
+      name: database.name
     }).then(() => {
       dispatch(refreshSpaces());
     }).catch(err => notify(`Error: ${err}`, 'error'));
@@ -144,12 +181,13 @@ export const deleteEnvironment = environment => {
   return dispatch => {
     analytics.track('Delete Environment');
 
-    return request(`mutation {
-      down(space: "${environment.space}", name: "${environment.name}") {
+    return request(`mutation DeleteEnvironment($space: String!, $name: String!) {
+      down(space: $space, name: $name) {
         name
       }
     }`, {
-      auth: true
+      space: environment.space,
+      name: environment.name
     }).then(() => {
       dispatch(refreshSpaces());
     }).catch(err => notify(`Error: ${err}`, 'error'));
@@ -157,34 +195,49 @@ export const deleteEnvironment = environment => {
 };
 
 export const deleteSpace = space => {
-  return dispatch => {
+  return (dispatch, getState) => {
     analytics.track('Delete Space');
 
-    return request(`mutation { 
-      deleteSpace(id: "${space.id}") {
+    return request(`mutation DeleteSpace($space: String!) { 
+      deleteSpace(id: $space) {
         name
       } 
     }`, {
-      auth: true
+      space: space.id
     }).then(() => {
+      const { session } = getState();
+      dispatch(selectSpace(session.user.id));
+      dispatch(deletingSpace(space.id));
       dispatch(refreshSpaces());
     }).catch(err => notify(`Error: ${err}`, 'error'));
   };
 };
 
+export const deletingSpace = spaceId => {
+  return {
+    type: 'DELETING_SPACE',
+    spaceId
+  };
+};
+
+export const deletedSpace = spaceId => {
+  return {
+    type: 'DELETED_SPACE',
+    spaceId
+  };
+};
+
 export const shareSpace = (spaceId, members) => {
   return dispatch => {
-    analytics.track('Create Database');
+    analytics.track('Share Space');
 
-    const queryArray = members.reduce(
-      (query, member, i) => query + `"${member}"${i < members.length-1 ? ',' : ''}`, '');
-
-    return request(`mutation {
-      updateSpace(id: "${spaceId}", members: [${queryArray}]) {
+    return request(`mutation ShareSpace($space: String!, $members: [String]) {
+      updateSpace(id: $space, members: $members}) {
         id
       }
     }`, {
-      auth: true
+      space: spaceId,
+      members
     }).then(() => {
       dispatch(refreshSpaces());
     }).catch(err => notify(`Error: ${err}`, 'error'));

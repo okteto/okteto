@@ -7,12 +7,15 @@ import autobind from 'autobind-decorator';
 import Icon from 'components/Icon';
 import CreateSpaceDialog from 'containers/Dialogs/CreateSpace';
 import { selectSpace } from 'actions/spaces';
+import throttle from 'lodash.throttle';
 
 import './SpaceExplorer.scss';
 
 class SpaceExplorer extends Component {
   constructor(props) {
     super(props);
+
+    this.handleSelectSpace = throttle(this.handleSelectSpace, 1000);
   }
 
   @autobind
@@ -26,7 +29,7 @@ class SpaceExplorer extends Component {
   }
 
   render() {
-    const { spaces, user, currentSpace } = this.props;
+    const { spaces, deletingSpaces, user, currentSpace } = this.props;
 
     return (
       <div className="SpaceExplorer">
@@ -43,7 +46,8 @@ class SpaceExplorer extends Component {
                 <div 
                   key={space.id} 
                   className={classnames('SpaceExplorerListItem ellipsis', {
-                    selected: currentSpace.id === space.id
+                    selected: currentSpace.id === space.id,
+                    deleting: deletingSpaces.includes(space.id)
                   })}
                   title={spaceName}
                   onClick={() => this.handleSelectSpace(space)}
@@ -70,6 +74,7 @@ class SpaceExplorer extends Component {
 
 SpaceExplorer.propTypes = {
   spaces: PropTypes.arrayOf(PropTypes.object).isRequired,
+  deletingSpaces: PropTypes.arrayOf(PropTypes.string).isRequired,
   currentSpace: PropTypes.object.isRequired,
   user: PropTypes.object.isRequired,
   dispatch: PropTypes.func
@@ -78,6 +83,7 @@ SpaceExplorer.propTypes = {
 export default ReactRedux.connect(state => {
   return {
     spaces: state.spaces.list,
+    deletingSpaces: state.spaces.deleting,
     currentSpace: state.spaces.current,
     user: state.session.user,
   };

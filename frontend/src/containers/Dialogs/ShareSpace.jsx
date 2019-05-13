@@ -22,7 +22,7 @@ class ShareSpace extends Component {
   @autobind
   handleConfirmClick() {
     const members = this.spaceInviteInput.getMembers();
-    this.props.dispatch(shareSpace(this.props.space, members));
+    this.props.dispatch(shareSpace(this.props.space.id, members));
     this.close();
   }
 
