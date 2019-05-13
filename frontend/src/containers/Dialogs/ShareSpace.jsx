@@ -13,10 +13,6 @@ import './ShareSpace.scss';
 class ShareSpace extends Component {
   constructor(props) {
     super(props);
-
-    this.state = {
-      members: []
-    };
   }
 
   @autobind
@@ -41,8 +37,9 @@ class ShareSpace extends Component {
   }
 
   render() {
-    const members = this.props.space.members.map(member => member.githubID);
-    const owner = this.props.space.members.find(member => member.owner);
+    const { space } = this.props;
+    const members = space.members.map(member => member.githubID);
+    const owner = space.members.find(member => member.owner);
 
     return (
       <Modal
@@ -52,9 +49,10 @@ class ShareSpace extends Component {
         width={450}>
         <div className="create-dialog-content layout vertical">
           <SpaceInvite
+            key={space.id}
             members={members}
             owner={owner ? owner.githubID : null}
-            ref={ref => this.spaceInviteInput = ref} 
+            ref={ref => this.spaceInviteInput = ref}
           />
 
           <div className="Buttons layout horizontal-reverse center">

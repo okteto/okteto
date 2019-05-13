@@ -29,7 +29,7 @@ class CreateEnvironment extends Component {
   render() {
     return (
       <Modal 
-        className="Create environment"
+        className="CreateEnvironment"
         ref={ref => this.dialog = ref} 
         title="New environment"
         width={540}

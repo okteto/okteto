@@ -15,6 +15,10 @@ class Modal extends Component {
     this.modalContainer && document.body.appendChild(this.modalContainer);
   }
 
+  componentWillUnmount() {
+    this.modalContainer && document.body.removeChild(this.modalContainer);
+  }
+
   open() {
     this.modal && this.modal.show();
   }
