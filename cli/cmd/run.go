@@ -40,6 +40,10 @@ func Run() *cobra.Command {
 				dev.Space = space
 			}
 
+			if len(args) > 0 {
+				dev.Image = args[0]
+			}
+
 			return RunRun(dev)
 		},
 	}
