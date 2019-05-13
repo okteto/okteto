@@ -511,6 +511,10 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
+					name := params.Args["name"].(string)
+					if app.ExistsByName(name, u.ID) {
+						return nil, fmt.Errorf("'%s' already exists", name)
+					}
 					members := []model.Member{}
 					if params.Args["members"] != nil {
 						for _, m := range params.Args["members"].([]interface{}) {
@@ -530,12 +534,8 @@ var mutationType = graphql.NewObject(
 							)
 						}
 					}
-					s := model.NewSpace(
-						params.Args["name"].(string),
-						u,
-						members,
-					)
-					err = app.CreateSpace(s, false)
+					s := model.NewSpace(name, u, members)
+					err = app.CreateSpace(s)
 					if err != nil {
 						log.Errorf("failed to create space for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to create space")
@@ -584,17 +584,13 @@ var mutationType = graphql.NewObject(
 									Name:     uMember.Name,
 									GithubID: uMember.GithubID,
 									Avatar:   uMember.Avatar,
-									Owner:    false,
+									Owner:    uMember.ID == u.ID,
 								},
 							)
 						}
 					}
-					s = model.NewSpace(
-						params.Args["name"].(string),
-						u,
-						members,
-					)
-					err = app.CreateSpace(s, true)
+					s.Members = members
+					err = app.CreateSpace(s)
 					if err != nil {
 						log.Errorf("failed to update space for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to update space")
@@ -634,7 +630,7 @@ var mutationType = graphql.NewObject(
 					}
 					s.Members = members
 
-					err = app.CreateSpace(s, true)
+					err = app.CreateSpace(s)
 					if err != nil {
 						log.Errorf("failed to update space for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to update space")

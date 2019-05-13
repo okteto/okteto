@@ -44,7 +44,11 @@ func translate(s *model.Space) *v1.Namespace {
 	for _, m := range s.Members {
 		if m.Owner {
 			n.Labels[OktetoOwnerLabel] = m.ID
-			n.Labels[OktetoBasenameLabel] = fmt.Sprintf("%s-%s", s.Name, m.GithubID)
+			if m.ID == s.ID {
+				n.Labels[OktetoBasenameLabel] = m.GithubID
+			} else {
+				n.Labels[OktetoBasenameLabel] = fmt.Sprintf("%s-%s", s.Name, m.GithubID)
+			}
 		}
 		if m.ID != "" {
 			n.Labels[fmt.Sprintf(OktetoMemberLabelTemplate, m.ID)] = "true"

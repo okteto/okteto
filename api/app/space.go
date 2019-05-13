@@ -13,13 +13,13 @@ import (
 )
 
 //CreateSpace configures a namespace for a given user
-func CreateSpace(s *model.Space, upsert bool) error {
+func CreateSpace(s *model.Space) error {
 	c, err := client.Get()
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	if err := namespaces.Create(s, c, upsert); err != nil {
+	if err := namespaces.Create(s, c); err != nil {
 		return err
 	}
 
@@ -36,6 +36,23 @@ func CreateSpace(s *model.Space, upsert bool) error {
 	}
 
 	return nil
+}
+
+//ExistsByName returns if a space exists for a name
+func ExistsByName(name, owner string) bool {
+	c, err := client.Get()
+	if err != nil {
+		return true
+	}
+
+	olds, err := namespaces.GetByLabel(fmt.Sprintf("%s=%s, %s=%s", namespaces.OktetoNameLabel, name, namespaces.OktetoOwnerLabel, owner), c)
+	if err != nil {
+		return true
+	}
+	if len(olds) > 0 {
+		return true
+	}
+	return false
 }
 
 //DeleteSpace deletes a namespace for a given user
@@ -70,7 +87,9 @@ func ListSpaces(u *model.User) ([]*model.Space, error) {
 		s := namespaces.ToModel(&n)
 		if !u.IsOwner(s) {
 			owner := s.GetOwner()
-			s.Name = fmt.Sprintf("%s@%s", s.Name, owner.GithubID)
+			if owner.ID != s.ID {
+				s.Name = fmt.Sprintf("%s@%s", s.Name, owner.GithubID)
+			}
 		}
 		spaces = append(spaces, s)
 	}

@@ -17,7 +17,7 @@ import (
 )
 
 // Create creates the namespace for a given space
-func Create(s *model.Space, c *kubernetes.Clientset, upsert bool) error {
+func Create(s *model.Space, c *kubernetes.Clientset) error {
 	log.Debugf("Creating namespace '%s'...", s.ID)
 	old, err := c.CoreV1().Namespaces().Get(s.ID, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
@@ -30,7 +30,7 @@ func Create(s *model.Space, c *kubernetes.Clientset, upsert bool) error {
 			return fmt.Errorf("Error creating kubernetes namespace: %s", err)
 		}
 		log.Debugf("Created namespace '%s'.", s.ID)
-	} else if upsert {
+	} else {
 		_, err := c.CoreV1().Namespaces().Update(n)
 		if err != nil {
 			return fmt.Errorf("Error updating kubernetes namespace: %s", err)
@@ -47,7 +47,7 @@ func GetSpaceByID(id string, u *model.User) (*model.Space, error) {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	ns, err := getByLabel(fmt.Sprintf("%s=%s", OktetoIDLabel, id), c)
+	ns, err := GetByLabel(fmt.Sprintf("%s=%s", OktetoIDLabel, id), c)
 	if err != nil {
 		return nil, err
 	}
@@ -64,10 +64,11 @@ func GetSpaceByID(id string, u *model.User) (*model.Space, error) {
 			return s, nil
 		}
 	}
-	return nil, fmt.Errorf("namespace not found for id: %s", id)
+	return s, nil
 }
 
-func getByLabel(label string, c *kubernetes.Clientset) ([]v1.Namespace, error) {
+//GetByLabel query namespaces by label
+func GetByLabel(label string, c *kubernetes.Clientset) ([]v1.Namespace, error) {
 	sas, err := c.CoreV1().Namespaces().List(
 		metav1.ListOptions{
 			LabelSelector: label,

@@ -21,7 +21,7 @@ func CreateUser(u *model.User) error {
 	}
 
 	s := model.NewSpace(u.GithubID, u, []model.Member{})
-	if err := CreateSpace(s, true); err != nil {
+	if err := CreateSpace(s); err != nil {
 		return err
 	}
 	return nil
