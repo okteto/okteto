@@ -150,26 +150,84 @@ var queryType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
-					if err != nil {
-						return nil, err
-					}
-					space := u.ID
-					if params.Args["space"] != nil {
-						space = params.Args["space"].(string)
-					}
-					s, err := namespaces.GetSpaceByID(space, u)
-					if err != nil {
-						return nil, err
-					}
+					return func() (interface{}, error) {
+						u, err := validateToken(params.Context)
+						if err != nil {
+							return nil, err
+						}
+						space := u.ID
+						if params.Args["space"] != nil {
+							space = params.Args["space"].(string)
+						}
+						s, err := namespaces.GetSpaceByID(space, u)
+						if err != nil {
+							return nil, err
+						}
 
-					l, err := app.ListDevEnvs(u, s)
-					if err != nil {
-						log.Errorf("failed to get dev envs for %s in %s", u.ID, s.ID)
-						return nil, fmt.Errorf("failed to get your environments")
-					}
+						l, err := app.ListDevEnvs(u, s)
+						if err != nil {
+							log.Errorf("failed to get dev envs for %s in %s", u.ID, s.ID)
+							return nil, fmt.Errorf("failed to get your environments")
+						}
 
-					return l, nil
+						return l, nil
+					}, nil
+				},
+			},
+			"space": &graphql.Field{
+				Type:        spaceType,
+				Description: "Get space",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					return func() (interface{}, error) {
+						u, err := validateToken(params.Context)
+						if err != nil {
+							return nil, err
+						}
+						id := params.Args["id"].(string)
+						s, err := namespaces.GetSpaceByID(id, u)
+						if err != nil {
+							return nil, err
+						}
+						return s, nil
+					}, nil
+				},
+			},
+			"databases": &graphql.Field{
+				Type:        graphql.NewList(databaseType),
+				Description: "Get databases of the space",
+				Args: graphql.FieldConfigArgument{
+					"space": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					return func() (interface{}, error) {
+						u, err := validateToken(params.Context)
+						if err != nil {
+							return nil, err
+						}
+						space := u.ID
+						if params.Args["space"] != nil {
+							space = params.Args["space"].(string)
+						}
+						s, err := namespaces.GetSpaceByID(space, u)
+						if err != nil {
+							return nil, err
+						}
+
+						l, err := app.ListDatabases(s)
+						if err != nil {
+							log.Errorf("failed to get databases for %s in %s", u.ID, s.ID)
+							return nil, fmt.Errorf("failed to get your databases")
+						}
+
+						return l, nil
+					}, nil
 				},
 			},
 			"spaces": &graphql.Field{
@@ -190,27 +248,6 @@ var queryType = graphql.NewObject(
 					return l, nil
 				},
 			},
-			"space": &graphql.Field{
-				Type:        spaceType,
-				Description: "Get space",
-				Args: graphql.FieldConfigArgument{
-					"id": &graphql.ArgumentConfig{
-						Type: graphql.String,
-					},
-				},
-				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
-					if err != nil {
-						return nil, err
-					}
-					id := params.Args["id"].(string)
-					s, err := namespaces.GetSpaceByID(id, u)
-					if err != nil {
-						return nil, err
-					}
-					return s, nil
-				},
-			},
 			"credentials": &graphql.Field{
 				Type:        credentialsType,
 				Description: "Get credentials of the space",
@@ -227,37 +264,6 @@ var queryType = graphql.NewObject(
 					}
 
 					return credential{Config: c}, nil
-				},
-			},
-			"databases": &graphql.Field{
-				Type:        graphql.NewList(databaseType),
-				Description: "Get databases of the space",
-				Args: graphql.FieldConfigArgument{
-					"space": &graphql.ArgumentConfig{
-						Type: graphql.String,
-					},
-				},
-				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
-					if err != nil {
-						return nil, err
-					}
-					space := u.ID
-					if params.Args["space"] != nil {
-						space = params.Args["space"].(string)
-					}
-					s, err := namespaces.GetSpaceByID(space, u)
-					if err != nil {
-						return nil, err
-					}
-
-					l, err := app.ListDatabases(s)
-					if err != nil {
-						log.Errorf("failed to get databases for %s in %s", u.ID, s.ID)
-						return nil, fmt.Errorf("failed to get your databases")
-					}
-
-					return l, nil
 				},
 			},
 		},
