@@ -8,6 +8,7 @@ import autobind from 'autobind-decorator';
 import UserMenu from 'components/UserMenu';
 import ShareSpaceDialog from 'containers/Dialogs/ShareSpace';
 import DeleteSpaceDialog from 'containers/Dialogs/DeleteSpace';
+import LeaveSpaceDialog from 'containers/Dialogs/LeaveSpace';
 import Icon from 'components/Icon';
 import { logout } from 'actions/session';
 
@@ -32,29 +33,58 @@ class SpaceHeader extends Component {
     this.deleteSpaceDialog.getWrappedInstance().open();
   }
 
+  @autobind
+  handleLeaveSpace() {
+    this.leaveSpaceDialog.getWrappedInstance().open();
+  }
+
   render() {
     const { user, space } = this.props;
+    const owner = space.members.find(member => member.owner);
     const isPersonalSpace = space.id === user.id;
+    const isOwner = owner && owner.id === user.id;
     const spaceName = user.id === space.id ? `${user.githubID}'s space` : space.name;
 
     return (
       <div className="SpaceHeader horizontal layout center">
-        <div className="SpaceHeaderName">{spaceName}</div>
+        <div className="SpaceHeaderName">
+          {spaceName}
+          {!isOwner && 
+            <span className="Owner">
+              @{owner.githubID}
+            </span>
+          }
+        </div>
 
         <div className="flex-auto" /> 
         
         <div className="SpaceHeaderActions layout horizontal center">
-          <div className="ActionButton" onClick={this.handleShareSpace}>
+          <div 
+            className={classnames('ActionButton', { disabled: !isOwner })} 
+            onClick={this.handleShareSpace}>
             <Icon icon="share" size="18" />
             Share
           </div>
-          <div 
-            className={classnames('ActionButton', { disabled: isPersonalSpace })} 
-            onClick={this.handleDeleteSpace}
-          >
-            <Icon icon="cross" size="18" />
-            Delete
-          </div>
+
+          {isOwner &&
+            <div 
+              className={classnames('ActionButton', { disabled: isPersonalSpace })} 
+              onClick={this.handleDeleteSpace}
+            >
+              <Icon icon="cross" size="18" />
+              Delete
+            </div>
+          }
+
+          {!isOwner &&
+            <div 
+              className={classnames('ActionButton')} 
+              onClick={this.handleLeaveSpace}
+            >
+              <Icon icon="exit" size="18" />
+              Leave
+            </div>
+          }
         </div>
 
         <div className="SpaceHeaderUser">
@@ -89,6 +119,11 @@ class SpaceHeader extends Component {
         
         <DeleteSpaceDialog 
           ref={ref => this.deleteSpaceDialog = ref}
+          space={space}
+        />
+
+        <LeaveSpaceDialog 
+          ref={ref => this.leaveSpaceDialog = ref}
           space={space}
         />
 

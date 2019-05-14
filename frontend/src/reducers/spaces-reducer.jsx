@@ -7,17 +7,6 @@ const initialSpacesState = {
   isLoaded: false
 };
 
-const sortSpaces = spaces => {
-  const [home, ...rest] = spaces;
-  return [home, ...rest.sort((a, b) => {
-    var nameA = a.name.toUpperCase();
-    var nameB = b.name.toUpperCase();
-    if (nameA < nameB) return -1;
-    if (nameA > nameB) return 1;
-    return 0;
-  })];
-};
-
 export default (state = initialSpacesState, action) => {
   switch (action.type) {
     case 'REQUEST_SPACES': {
@@ -29,7 +18,7 @@ export default (state = initialSpacesState, action) => {
     case 'RECEIVE_SPACES': {
       return {
         ...state,
-        list: sortSpaces(action.spaces),
+        list: action.spaces,
         isFetching: false
       };
     }

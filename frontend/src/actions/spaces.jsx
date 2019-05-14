@@ -20,6 +20,7 @@ databases(space: $space) {
   name, space, endpoint 
 }`;
 
+
 const fetchSpaces = () => {
   return request(`
     query GetSpaces {
@@ -41,6 +42,19 @@ const fetchSpace = spaceId => {
       environments: response.environments || [],
       databases: response.databases || []
     };
+  });
+};
+
+const sortSpaces = (spaces, user) => {
+  return spaces.sort((a, b) => {
+    // Personal space should be placed first.
+    if (a.id === user.id) return -1;
+    if (b.id === user.id) return 1;
+    var nameA = a.name.toLowerCase();
+    var nameB = b.name.toLowerCase();
+    if (nameA < nameB) return -1;
+    if (nameA > nameB) return 1;
+    return 0;
   });
 };
 
@@ -107,12 +121,12 @@ export const selectSpace = spaceId => {
 
 export const refreshSpaces = () => {
   return (dispatch, getState) => {
-    const { spaces } = getState();
+    const { spaces, session } = getState();
 
     if (!spaces.isFetching) {
       dispatch(requestSpaces());
       fetchSpaces().then(newSpaces => {
-        dispatch(receiveSpaces(newSpaces));
+        dispatch(receiveSpaces(sortSpaces(newSpaces, session.user)));
 
         // Clean deleted spaces.
         const { spaces } = getState();
@@ -224,6 +238,26 @@ export const deleteSpace = space => {
     return request(`mutation DeleteSpace($space: String!) { 
       deleteSpace(id: $space) {
         name
+      } 
+    }`, {
+      space: space.id
+    }).then(() => {
+      const { session } = getState();
+      // Select personal space.
+      dispatch(selectSpace(session.user.id));
+      dispatch(deletingSpace(space.id));
+      dispatch(refreshSpaces());
+    }).catch(err => notify(`Error: ${err}`, 'error'));
+  };
+};
+
+export const leaveSpace = space => {
+  return (dispatch, getState) => {
+    analytics.track('Leave Space');
+
+    return request(`mutation LeaveSpace($space: String!) { 
+      leaveSpace(id: $space) {
+        id
       } 
     }`, {
       space: space.id
