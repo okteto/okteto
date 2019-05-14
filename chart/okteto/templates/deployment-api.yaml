@@ -35,6 +35,8 @@ spec:
               value: "{{ .Values.oktetoBaseDomain }}"
             - name: OKTETO_CLUSTER_CIDR
               value: "{{ .Values.oktetoClusterCIDR }}"
+            - name: OKTETO_SOFT_MULTITENANCY
+              value: "{{ .Values.softmultitenancy }}"
             - name: CLUSTER_PUBLIC_ENDPOINT
               value: "{{ .Values.clusterPublicEndpoint }}"
             - name: GITHUB_CLIENTID

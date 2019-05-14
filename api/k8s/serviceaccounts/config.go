@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-
-	"github.com/okteto/app/api/model"
 )
 
 const (
@@ -31,14 +29,14 @@ users:
 `
 )
 
-func getConfigB64(s *model.Space, caCert, token string) string {
+func getConfigB64(space, caCert, token string) string {
 	endpoint := os.Getenv("CLUSTER_PUBLIC_ENDPOINT")
 	encodedCaCert := base64.StdEncoding.EncodeToString([]byte(caCert))
 	configValue := fmt.Sprintf(
 		configTemplate,
 		encodedCaCert,
 		endpoint,
-		s.ID,
+		space,
 		token,
 	)
 	encoded := base64.StdEncoding.EncodeToString([]byte(configValue))

@@ -28,13 +28,8 @@ func CreateUser(u *model.User) error {
 }
 
 //GetCredential returns the credentials of the user for her space
-func GetCredential(u *model.User) (string, error) {
-	s := &model.Space{
-		ID:   u.ID,
-		Name: u.GithubID,
-	}
-
-	credential, err := serviceaccounts.GetCredentialConfig(s)
+func GetCredential(u *model.User, space string) (string, error) {
+	credential, err := serviceaccounts.GetCredentialConfig(u, space)
 	if err != nil {
 		return "", err
 	}

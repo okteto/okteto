@@ -14,7 +14,7 @@ import (
 
 //Get returns a kubernetes client.
 func Get() (*kubernetes.Clientset, *rest.Config, string, error) {
-	configB64, err := okteto.GetK8sB64Config()
+	configB64, err := okteto.GetK8sB64Config("")
 	if err != nil {
 		return nil, nil, "", err
 	}

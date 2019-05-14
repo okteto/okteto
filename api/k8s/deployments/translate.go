@@ -27,11 +27,11 @@ const (
 	oktetoDevAnnotation        = "dev.okteto.com/manifests"
 
 	revisionAnnotation = "deployment.kubernetes.io/revision"
-	//OktetoVersion represents the current service account data version
+	//OktetoVersion represents the current dev data version
 	OktetoVersion = "1.0"
 	//OktetoLabel represents the owner of the deployment
 	OktetoLabel = "dev.okteto.com"
-	//OktetoVersionLabel represents the data version of the service account
+	//OktetoVersionLabel represents the data version of the dev
 	OktetoVersionLabel = "dev.okteto.com/version"
 )
 
@@ -41,7 +41,6 @@ var (
 )
 
 func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
-	noServiceAccountToken := false
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
@@ -62,7 +61,6 @@ func devSandbox(dev *model.Dev, s *model.Space) *appsv1.Deployment {
 					},
 				},
 				Spec: apiv1.PodSpec{
-					AutomountServiceAccountToken:  &noServiceAccountToken,
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Containers: []apiv1.Container{
 						apiv1.Container{

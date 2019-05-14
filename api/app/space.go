@@ -4,8 +4,11 @@ import (
 	"fmt"
 
 	"github.com/okteto/app/api/k8s/client"
+	"github.com/okteto/app/api/k8s/limitranges"
 	"github.com/okteto/app/api/k8s/namespaces"
 	"github.com/okteto/app/api/k8s/networkpolicies"
+	"github.com/okteto/app/api/k8s/podpolicies"
+	"github.com/okteto/app/api/k8s/quotas"
 	"github.com/okteto/app/api/k8s/rolebindings"
 	"github.com/okteto/app/api/k8s/roles"
 	"github.com/okteto/app/api/model"
@@ -20,6 +23,18 @@ func CreateSpace(s *model.Space) error {
 	}
 
 	if err := namespaces.Create(s, c); err != nil {
+		return err
+	}
+
+	if err := podpolicies.Create(s, c); err != nil {
+		return err
+	}
+
+	if err := quotas.Create(s, c); err != nil {
+		return err
+	}
+
+	if err := limitranges.Create(s, c); err != nil {
 		return err
 	}
 

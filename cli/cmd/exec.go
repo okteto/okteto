@@ -27,9 +27,8 @@ func Exec() *cobra.Command {
 	var port int
 
 	cmd := &cobra.Command{
-		Use:    "exec COMMAND",
-		Hidden: true,
-		Short:  "Execute a command in the cloud dev environment",
+		Use:   "exec COMMAND",
+		Short: "Execute a command in your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			devPath = getFullPath(devPath)
 			ctx, cancel := context.WithCancel(context.Background())

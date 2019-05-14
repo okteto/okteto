@@ -14,19 +14,35 @@ func translate(s *model.Space) *rbacv1.Role {
 		},
 		Rules: []rbacv1.PolicyRule{
 			rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"pods", "pods/log"},
-				Verbs:     []string{"get", "list"},
+				APIGroups:     []string{"policy"},
+				Resources:     []string{"podsecuritypolicies"},
+				Verbs:         []string{"use"},
+				ResourceNames: []string{s.ID},
 			},
 			rbacv1.PolicyRule{
 				APIGroups: []string{""},
-				Resources: []string{"pods/exec"},
-				Verbs:     []string{"create"},
+				Resources: []string{"pods", "pods/log", "pods/exec", "pods/portforward", "configmaps", "secrets", "services", "events", "persistentvolumeclaims", "replicationcontrollers"},
+				Verbs:     []string{"*"},
 			},
 			rbacv1.PolicyRule{
-				APIGroups: []string{""},
-				Resources: []string{"pods/portforward"},
-				Verbs:     []string{"create"},
+				APIGroups: []string{"autoscaling"},
+				Resources: []string{"horizontalpodautoscalers"},
+				Verbs:     []string{"*"},
+			},
+			rbacv1.PolicyRule{
+				APIGroups: []string{"apps"},
+				Resources: []string{"daemonsets", "deployments", "replicasets", "statefulsets"},
+				Verbs:     []string{"*"},
+			},
+			rbacv1.PolicyRule{
+				APIGroups: []string{"batch"},
+				Resources: []string{"cronjobs", "jobs"},
+				Verbs:     []string{"*"},
+			},
+			rbacv1.PolicyRule{
+				APIGroups: []string{"extensions"},
+				Resources: []string{"deployments", "ingresses", "replicasets"},
+				Verbs:     []string{"*"},
 			},
 		},
 	}

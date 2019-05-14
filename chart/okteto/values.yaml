@@ -15,6 +15,7 @@ fullnameOverride: ""
 clusterPublicEndpoint: ""
 oktetoBaseDomain: ""
 oktetoClusterCIDR: ""
+softMultitenancy: "NO"
 services:
   type: ClusterIP
   api:
@@ -28,7 +29,7 @@ ingress:
   - chart-example.local
   tls: []
 rbac:
-  install: false
+  install: true
   roleRef: cluster-admin
   roleKind: ClusterRole
   roleBindingKind: ClusterRoleBinding

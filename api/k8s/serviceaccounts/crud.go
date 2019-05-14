@@ -38,13 +38,13 @@ func Create(u *model.User, c *kubernetes.Clientset) error {
 }
 
 //GetCredentialConfig returns the credential for accessing the dev mode container
-func GetCredentialConfig(s *model.Space) (string, error) {
+func GetCredentialConfig(u *model.User, space string) (string, error) {
 	log.Debug("Get service account credential")
 	c, err := client.Get()
 	if err != nil {
 		return "", err
 	}
-	sa, err := c.CoreV1().ServiceAccounts(client.GetOktetoNamespace()).Get(s.ID, metav1.GetOptions{})
+	sa, err := c.CoreV1().ServiceAccounts(client.GetOktetoNamespace()).Get(u.ID, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("Error getting kubernetes service account: %s", err)
 	}
@@ -52,7 +52,7 @@ func GetCredentialConfig(s *model.Space) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return getConfigB64(s, string(secret.Data["ca.crt"]), string(secret.Data["token"])), nil
+	return getConfigB64(space, string(secret.Data["ca.crt"]), string(secret.Data["token"])), nil
 }
 
 // GetUserByToken gets a user by her token

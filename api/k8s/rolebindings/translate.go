@@ -19,6 +19,11 @@ func translate(m *model.Member, s *model.Space) *rbacv1.RoleBinding {
 				Name:      m.ID,
 				Namespace: client.GetOktetoNamespace(),
 			},
+			rbacv1.Subject{
+				Kind:      "ServiceAccount",
+				Name:      "default",
+				Namespace: s.ID,
+			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",

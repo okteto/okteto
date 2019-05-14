@@ -251,13 +251,22 @@ var queryType = graphql.NewObject(
 			"credentials": &graphql.Field{
 				Type:        credentialsType,
 				Description: "Get credentials of the space",
+				Args: graphql.FieldConfigArgument{
+					"space": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					u, err := validateToken(params.Context)
 					if err != nil {
 						return nil, err
 					}
 
-					c, err := app.GetCredential(u)
+					space := u.ID
+					if params.Args["space"] != nil {
+						space = params.Args["space"].(string)
+					}
+					c, err := app.GetCredential(u, space)
 					if err != nil {
 						log.Errorf("failed to get credentials: %s", err)
 						return nil, fmt.Errorf("failed to get credentials")

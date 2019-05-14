@@ -1,6 +1,8 @@
 package okteto
 
 import (
+	"fmt"
+
 	"github.com/okteto/app/cli/pkg/errors"
 	"github.com/okteto/app/cli/pkg/log"
 )
@@ -16,12 +18,21 @@ type Credential struct {
 }
 
 // GetK8sB64Config returns the space config credentials
-func GetK8sB64Config() (string, error) {
-	q := ` query{
+func GetK8sB64Config(space string) (string, error) {
+	q := ""
+	if space == "" {
+		q = `query{
 			credentials{
 				config
 			},
 		}`
+	} else {
+		q = fmt.Sprintf(`query {
+			credentials(space: "%s") {
+				config
+				}
+			}`, space)
+	}
 
 	var cred Credentials
 	if err := query(q, &cred); err != nil {
