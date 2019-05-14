@@ -61,9 +61,7 @@ func DeleteSpace(s *model.Space) error {
 	if err != nil {
 		return fmt.Errorf("error getting k8s client: %s", err)
 	}
-	if err := namespaces.Destroy(s, c); err != nil {
-		return err
-	}
+	go namespaces.Destroy(s, c)
 	return nil
 }
 
@@ -77,6 +75,7 @@ func ListSpaces(u *model.User) ([]*model.Space, error) {
 	ns, err := c.CoreV1().Namespaces().List(
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=true", fmt.Sprintf(namespaces.OktetoMemberLabelTemplate, u.ID)),
+			FieldSelector: "status.phase=Active",
 		},
 	)
 	if err != nil {
