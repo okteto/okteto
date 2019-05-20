@@ -21,7 +21,7 @@ func translate(s *model.Space) *rbacv1.Role {
 			},
 			rbacv1.PolicyRule{
 				APIGroups: []string{""},
-				Resources: []string{"pods", "pods/log", "pods/exec", "pods/portforward", "configmaps", "secrets", "services", "events", "persistentvolumeclaims", "replicationcontrollers"},
+				Resources: []string{"pods", "pods/log", "pods/exec", "pods/portforward", "configmaps", "secrets", "services", "events", "persistentvolumeclaims", "persistentvolumes", "replicationcontrollers"},
 				Verbs:     []string{"*"},
 			},
 			rbacv1.PolicyRule{
