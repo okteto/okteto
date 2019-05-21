@@ -7,6 +7,7 @@ import (
 	"mime"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -26,11 +27,12 @@ var errorPages map[string][]byte
 
 func main() {
 	errorPages = make(map[string][]byte)
+	errorPages["500.html"] = loadErrorPage(500, ".html")
 	errorPages["502.html"] = loadErrorPage(502, ".html")
 	errorPages["503.html"] = loadErrorPage(502, ".html")
 
 	// 404 is the default
-	errorPages["404.html"] = loadErrorPage(502, ".html")
+	errorPages["404.html"] = loadErrorPage(500, ".html")
 
 	http.HandleFunc("/", errorHandler(errFilesPath))
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +55,8 @@ func loadErrorPage(code int, ext string) []byte {
 func errorHandler(path string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		errCode := r.Header.Get(CodeHeader)
+		log.Printf("handling error %s for %s", errCode, r.URL)
+
 		code, err := strconv.Atoi(errCode)
 		if err != nil {
 			code = 404
@@ -67,12 +71,17 @@ func errorHandler(path string) func(http.ResponseWriter, *http.Request) {
 		ext := "html"
 		cext, err := mime.ExtensionsByType(format)
 		if err != nil {
-			log.Printf("unexpected error reading media type extension: %v. Using %v", err, ext)
+			log.Printf("unexpected error reading media type extension: %s. Using %s", err.Error(), ext)
 			format = "text/html"
 		} else if len(cext) == 0 {
-			log.Printf("couldn't get media type extension. Using %v", ext)
+			log.Printf("couldn't get media type extension. Using %s", ext)
 		} else {
 			ext = cext[0]
+		}
+
+		ext = strings.TrimPrefix(ext, ".")
+		if ext == "htm" {
+			ext = "html"
 		}
 
 		w.Header().Set(ContentType, format)

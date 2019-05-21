@@ -18,7 +18,8 @@ RUN apk update \
         ca-certificates \
         && update-ca-certificates 2>/dev/null || true
 
-COPY --from=builder /app/pages /pages
 COPY www www
+COPY --from=builder /app/pages /pages
+
 EXPOSE 8080
 CMD ["/pages"]
