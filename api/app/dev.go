@@ -19,10 +19,7 @@ func DevModeOn(dev *model.Dev, s *model.Space) error {
 	if len(dev.Volumes) > 2 {
 		return fmt.Errorf("the maximum number of volumes is 2")
 	}
-	c, err := client.Get()
-	if err != nil {
-		return fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 
 	if err := secrets.Create(dev, s, c); err != nil {
 		return err
@@ -56,10 +53,7 @@ func DevModeOn(dev *model.Dev, s *model.Space) error {
 
 //RunImage runs a docker image
 func RunImage(dev *model.Dev, s *model.Space) error {
-	c, err := client.Get()
-	if err != nil {
-		return fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 
 	if err := deployments.Run(dev, s, c); err != nil {
 		return err
@@ -79,10 +73,7 @@ func RunImage(dev *model.Dev, s *model.Space) error {
 
 //DevModeOff deactivates a development environment
 func DevModeOff(dev *model.Dev, s *model.Space) error {
-	c, err := client.Get()
-	if err != nil {
-		return fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 
 	dev = deployments.GetDev(dev, s, c)
 
@@ -119,10 +110,7 @@ func DevModeOff(dev *model.Dev, s *model.Space) error {
 func ListDevEnvs(ctx context.Context, u *model.User, s *model.Space) ([]*model.Dev, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "app.listdevenvs")
 	defer span.Finish()
-	c, err := client.Get()
-	if err != nil {
-		return nil, fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 
 	deploys, err := deployments.List(s, c)
 	if err != nil {

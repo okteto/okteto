@@ -59,6 +59,11 @@ func Errorf(format string, args ...interface{}) {
 }
 
 // Fatal writes a fatal-level log with a format
+func Fatalf(format string, args ...interface{}) {
+	log.out.Fatalf(format, args...)
+}
+
+// Fatal writes a fatal-level log with a format
 func Fatal(args ...interface{}) {
 	log.out.Fatal(args...)
 }

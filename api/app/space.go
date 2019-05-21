@@ -19,10 +19,7 @@ import (
 
 //CreateSpace configures a namespace for a given user
 func CreateSpace(s *model.Space) error {
-	c, err := client.Get()
-	if err != nil {
-		return fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 
 	if err := namespaces.Create(s, c); err != nil {
 		return err
@@ -57,10 +54,7 @@ func CreateSpace(s *model.Space) error {
 
 //ExistsByName returns if a space exists for a name
 func ExistsByName(ctx context.Context, name, owner string) bool {
-	c, err := client.Get()
-	if err != nil {
-		return true
-	}
+	c := client.Get()
 
 	olds, err := namespaces.GetByLabel(ctx, fmt.Sprintf("%s=%s, %s=%s", namespaces.OktetoNameLabel, name, namespaces.OktetoOwnerLabel, owner), c)
 	if err != nil {
@@ -74,10 +68,7 @@ func ExistsByName(ctx context.Context, name, owner string) bool {
 
 //DeleteSpace deletes a namespace for a given user
 func DeleteSpace(s *model.Space) error {
-	c, err := client.Get()
-	if err != nil {
-		return fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 	go namespaces.Destroy(s, c)
 	return nil
 }
@@ -87,11 +78,7 @@ func ListSpaces(ctx context.Context, u *model.User) ([]*model.Space, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "app.space.listspaces")
 	defer span.Finish()
 
-	c, err := client.Get()
-	if err != nil {
-		return nil, fmt.Errorf("error getting k8s client: %s", err)
-	}
-
+	c := client.Get()
 	ns, err := c.CoreV1().Namespaces().List(
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=true", fmt.Sprintf(namespaces.OktetoMemberLabelTemplate, u.ID)),

@@ -42,10 +42,7 @@ func Create(u *model.User, c *kubernetes.Clientset) error {
 //GetCredentialConfig returns the credential for accessing the dev mode container
 func GetCredentialConfig(u *model.User, space string) (string, error) {
 	log.Debug("Get service account credential")
-	c, err := client.Get()
-	if err != nil {
-		return "", err
-	}
+	c := client.Get()
 	sa, err := c.CoreV1().ServiceAccounts(client.GetOktetoNamespace()).Get(u.ID, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("Error getting kubernetes service account: %s", err)
@@ -65,11 +62,8 @@ func GetUserByToken(ctx context.Context, token string) (*model.User, error) {
 	if len(token) > model.TokenLength {
 		return nil, fmt.Errorf("malformed token, too long")
 	}
-	c, err := client.Get()
-	if err != nil {
-		return nil, fmt.Errorf("error getting k8s client: %s", err)
-	}
 
+	c := client.Get()
 	sa, err := getByLabel(ctx, fmt.Sprintf("%s=%s", OktetoTokenLabel, token), c)
 	if err != nil {
 		return nil, err
@@ -80,10 +74,7 @@ func GetUserByToken(ctx context.Context, token string) (*model.User, error) {
 //GetUserByGithubID returns a user by githubID
 func GetUserByGithubID(ctx context.Context, githubID string) (*model.User, error) {
 	log.Debug("finding user by her githubID")
-	c, err := client.Get()
-	if err != nil {
-		return nil, fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 
 	sa, err := getByLabel(ctx, fmt.Sprintf("%s=%s", OktetoGithubIDLabel, githubID), c)
 	if err != nil {
@@ -95,10 +86,7 @@ func GetUserByGithubID(ctx context.Context, githubID string) (*model.User, error
 
 // GetUserByID gets a user by her id
 func GetUserByID(ctx context.Context, id string) (*model.User, error) {
-	c, err := client.Get()
-	if err != nil {
-		return nil, fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 
 	sa, err := getByLabel(ctx, fmt.Sprintf("%s=%s", OktetoIDLabel, id), c)
 	if err != nil {

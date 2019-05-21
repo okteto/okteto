@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/okteto/app/api/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -28,16 +29,18 @@ func GetOktetoNamespace() string {
 }
 
 //Get returns the k8s client
-func Get() (*kubernetes.Clientset, error) {
+func Get() *kubernetes.Clientset {
 	if client == nil {
+		log.Infof("initializing kubernetes client")
 		config, err := rest.InClusterConfig()
 		if err != nil {
-			return nil, err
+			log.Fatalf("failed to get kubernetes config: %s", err)
 		}
+
 		client, err = kubernetes.NewForConfig(config)
 		if err != nil {
-			return nil, err
+			log.Fatalf("failed to initialize kubernetes client: %s", err)
 		}
 	}
-	return client, nil
+	return client
 }

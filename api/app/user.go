@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/okteto/app/api/k8s/client"
@@ -12,10 +11,7 @@ import (
 
 //CreateUser configures a service account for a given user
 func CreateUser(u *model.User) error {
-	c, err := client.Get()
-	if err != nil {
-		return fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 
 	if err := serviceaccounts.Create(u, c); err != nil {
 		return err

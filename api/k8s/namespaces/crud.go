@@ -44,11 +44,7 @@ func Create(s *model.Space, c *kubernetes.Clientset) error {
 
 // GetSpaceByID gets a user by her id
 func GetSpaceByID(ctx context.Context, id string, u *model.User) (*model.Space, error) {
-	c, err := client.Get()
-	if err != nil {
-		return nil, fmt.Errorf("error getting k8s client: %s", err)
-	}
-
+	c := client.Get()
 	ns, err := GetByLabel(ctx, fmt.Sprintf("%s=%s", OktetoIDLabel, id), c)
 	if err != nil {
 		return nil, err

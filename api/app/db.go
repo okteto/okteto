@@ -16,11 +16,7 @@ import (
 
 //CreateDatabase creates a database
 func CreateDatabase(db *model.DB, s *model.Space) error {
-	c, err := client.Get()
-	if err != nil {
-		return fmt.Errorf("error getting k8s client: %s", err)
-	}
-
+	c := client.Get()
 	if err := volumes.Create(db.GetVolumeName(), s, c); err != nil {
 		return err
 	}
@@ -49,10 +45,7 @@ func CreateDatabase(db *model.DB, s *model.Space) error {
 
 //DestroyDatabase destroys a database
 func DestroyDatabase(db *model.DB, s *model.Space) error {
-	c, err := client.Get()
-	if err != nil {
-		return fmt.Errorf("error getting k8s client: %s", err)
-	}
+	c := client.Get()
 
 	if err := services.Destroy(db.Name, s, c); err != nil {
 		return err
@@ -71,11 +64,7 @@ func DestroyDatabase(db *model.DB, s *model.Space) error {
 
 //ListDatabases returns the databases for a given user
 func ListDatabases(s *model.Space) ([]*model.DB, error) {
-	c, err := client.Get()
-	if err != nil {
-		return nil, fmt.Errorf("error getting k8s client: %s", err)
-	}
-
+	c := client.Get()
 	sfss, err := statefulsets.List(s, c)
 	if err != nil {
 		return nil, fmt.Errorf("error getting statefulsets: %s", err)
