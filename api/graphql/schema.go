@@ -151,11 +151,12 @@ var queryType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.environments")
+
 					return func() (interface{}, error) {
-						span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.environments")
 						defer span.Finish()
 
-						u, err := validateToken(ctx)
+						u, err := getAuthenticatedUser(ctx)
 						if err != nil {
 							return nil, err
 						}
@@ -187,11 +188,12 @@ var queryType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.space")
+
 					return func() (interface{}, error) {
-						span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.space")
 						defer span.Finish()
 
-						u, err := validateToken(ctx)
+						u, err := getAuthenticatedUser(ctx)
 						if err != nil {
 							return nil, err
 						}
@@ -213,10 +215,11 @@ var queryType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.databases")
+
 					return func() (interface{}, error) {
-						span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.databases")
 						defer span.Finish()
-						u, err := validateToken(ctx)
+						u, err := getAuthenticatedUser(ctx)
 						if err != nil {
 							return nil, err
 						}
@@ -245,7 +248,7 @@ var queryType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.spaces")
 					defer span.Finish()
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -268,7 +271,7 @@ var queryType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					u, err := getAuthenticatedUser(params.Context)
 					if err != nil {
 						return nil, err
 					}
@@ -347,7 +350,7 @@ var mutationType = graphql.NewObject(
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.up")
 					defer span.Finish()
 
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -386,7 +389,7 @@ var mutationType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.down")
 					defer span.Finish()
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -429,7 +432,7 @@ var mutationType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.run")
 					defer span.Finish()
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -469,7 +472,7 @@ var mutationType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.createdatabase")
 					defer span.Finish()
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -509,7 +512,7 @@ var mutationType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.deletedatbase")
 					defer span.Finish()
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -547,7 +550,7 @@ var mutationType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.createspace")
 					defer span.Finish()
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -597,7 +600,7 @@ var mutationType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.updatespace")
 					defer span.Finish()
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -651,7 +654,7 @@ var mutationType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.leavespace")
 					defer span.Finish()
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -693,7 +696,7 @@ var mutationType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.deletespace")
 					defer span.Finish()
-					u, err := validateToken(ctx)
+					u, err := getAuthenticatedUser(ctx)
 					if err != nil {
 						return nil, err
 					}

@@ -2,11 +2,15 @@ package graphql
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
+	"github.com/okteto/app/api/k8s/serviceaccounts"
+	"github.com/okteto/app/api/log"
+	"github.com/okteto/app/api/model"
 )
 
 type key int
@@ -43,9 +47,36 @@ func TokenMiddleware(next http.Handler) http.Handler {
 		if len(splitToken) > 1 {
 			reqToken := splitToken[1]
 			reqToken = strings.TrimSpace(reqToken)
-			ctx = context.WithValue(ctx, authTokenKey, reqToken)
+			u, err := validateToken(ctx, reqToken)
+			if err == nil {
+				ctx = context.WithValue(ctx, authTokenKey, u)
+			} else {
+				log.Errorf("authentication failure %s", err)
+			}
 		}
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func validateToken(ctx context.Context, token string) (*model.User, error) {
+
+	u, err := serviceaccounts.GetUserByToken(ctx, token)
+	if err != nil {
+		log.Errorf("bad token: %s", err)
+		return nil, fmt.Errorf("not-authorized")
+	}
+
+	return u, nil
+}
+
+func getAuthenticatedUser(ctx context.Context) (*model.User, error) {
+	u := ctx.Value(authTokenKey)
+	us, ok := u.(*model.User)
+	if !ok {
+		log.Errorf("token stored was not a user: %+v", u)
+		return nil, fmt.Errorf("not-authorized")
+	}
+
+	return us, nil
 }
