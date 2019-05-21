@@ -1,12 +1,14 @@
 package namespaces
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/okteto/app/api/k8s/client"
 	"github.com/okteto/app/api/k8s/serviceaccounts"
 	"github.com/okteto/app/api/log"
+	"github.com/opentracing/opentracing-go"
 
 	"github.com/okteto/app/api/model"
 
@@ -41,13 +43,13 @@ func Create(s *model.Space, c *kubernetes.Clientset) error {
 }
 
 // GetSpaceByID gets a user by her id
-func GetSpaceByID(id string, u *model.User) (*model.Space, error) {
+func GetSpaceByID(ctx context.Context, id string, u *model.User) (*model.Space, error) {
 	c, err := client.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	ns, err := GetByLabel(fmt.Sprintf("%s=%s", OktetoIDLabel, id), c)
+	ns, err := GetByLabel(ctx, fmt.Sprintf("%s=%s", OktetoIDLabel, id), c)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +60,7 @@ func GetSpaceByID(id string, u *model.User) (*model.Space, error) {
 		return nil, fmt.Errorf("%d namespaces returned for id: %s", len(ns), id)
 	}
 
-	s := ToModel(&ns[0])
+	s := ToModel(ctx, &ns[0])
 	for _, m := range s.Members {
 		if m.ID == u.ID {
 			return s, nil
@@ -68,7 +70,10 @@ func GetSpaceByID(id string, u *model.User) (*model.Space, error) {
 }
 
 //GetByLabel query namespaces by label
-func GetByLabel(label string, c *kubernetes.Clientset) ([]v1.Namespace, error) {
+func GetByLabel(ctx context.Context, label string, c *kubernetes.Clientset) ([]v1.Namespace, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.namespaces.crud.getbylabel")
+	defer span.Finish()
+
 	sas, err := c.CoreV1().Namespaces().List(
 		metav1.ListOptions{
 			LabelSelector: label,
@@ -93,7 +98,7 @@ func Destroy(s *model.Space, c *kubernetes.Clientset) error {
 }
 
 // ToModel converts a namespace into a model.Space
-func ToModel(n *v1.Namespace) *model.Space {
+func ToModel(ctx context.Context, n *v1.Namespace) *model.Space {
 	s := &model.Space{
 		ID:      n.Name,
 		Name:    n.Labels[OktetoNameLabel],
@@ -106,7 +111,7 @@ func ToModel(n *v1.Namespace) *model.Space {
 			if n.Labels[OktetoOwnerLabel] == id {
 				owner = true
 			}
-			uMember, err := serviceaccounts.GetUserByID(id)
+			uMember, err := serviceaccounts.GetUserByID(ctx, id)
 			if err != nil {
 				log.Errorf("Error getting user %s", err)
 				//TODO: handle error

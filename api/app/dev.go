@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/okteto/app/api/k8s/client"
@@ -10,6 +11,7 @@ import (
 	"github.com/okteto/app/api/k8s/services"
 	"github.com/okteto/app/api/k8s/volumes"
 	"github.com/okteto/app/api/model"
+	"github.com/opentracing/opentracing-go"
 )
 
 //DevModeOn activates a development environment
@@ -114,7 +116,9 @@ func DevModeOff(dev *model.Dev, s *model.Space) error {
 }
 
 //ListDevEnvs returns the dev environments for a given user
-func ListDevEnvs(u *model.User, s *model.Space) ([]*model.Dev, error) {
+func ListDevEnvs(ctx context.Context, u *model.User, s *model.Space) ([]*model.Dev, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "app.listdevenvs")
+	defer span.Finish()
 	c, err := client.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)

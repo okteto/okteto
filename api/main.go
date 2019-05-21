@@ -5,10 +5,14 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
 	"github.com/okteto/app/api/github"
 	"github.com/okteto/app/api/graphql"
 	"github.com/okteto/app/api/health"
 	"github.com/okteto/app/api/log"
+	"github.com/okteto/app/api/tracing"
+	"github.com/opentracing-contrib/go-gorilla/gorilla"
+	"github.com/opentracing/opentracing-go"
 )
 
 func main() {
@@ -19,14 +23,30 @@ func main() {
 
 	validateConfiguration()
 
+	tracer, err := tracing.Get()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	opentracing.SetGlobalTracer(tracer)
+
 	log.Info("Starting app...")
-	http.Handle("/healthz", health.HealthcheckHandler())
-	http.Handle("/github/callback", github.AuthHandler())
-	http.Handle("/github/authorization-code", github.AuthCLIHandler())
-	http.Handle("/graphql", graphql.TokenMiddleware(graphql.Handler()))
+	r := mux.NewRouter()
+
+	r.Handle("/healthz", health.HealthcheckHandler())
+	r.Handle("/github/callback", github.AuthHandler())
+	r.Handle("/github/authorization-code", github.AuthCLIHandler())
+	r.Handle("/graphql", graphql.TokenMiddleware(graphql.Handler()))
+
+	// Add tracing to all routes
+	_ = r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		route.Handler(
+			gorilla.Middleware(tracer, route.GetHandler()))
+		return nil
+	})
 
 	log.Infof("Server is running at http://0.0.0.0:%s", port)
-	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil); err != nil {
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), r); err != nil {
 		log.Fatal(err)
 	}
 }

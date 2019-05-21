@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -38,8 +39,8 @@ func GetCredential(u *model.User, space string) (string, error) {
 }
 
 //FindOrKeepUser retrieves user if it exists
-func FindOrKeepUser(u *model.User) (*model.User, error) {
-	found, err := serviceaccounts.GetUserByGithubID(u.GithubID)
+func FindOrKeepUser(ctx context.Context, u *model.User) (*model.User, error) {
+	found, err := serviceaccounts.GetUserByGithubID(ctx, u.GithubID)
 	if err == nil {
 		return found, nil
 	}

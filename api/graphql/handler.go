@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 )
 
@@ -14,8 +15,17 @@ const authTokenKey key = 0
 
 // Handler returns an http handler for the GraphQL schema
 func Handler() *handler.Handler {
+
+	// Schema holds the GraphQL schema for Okteto
+	schema, _ := graphql.NewSchema(
+		graphql.SchemaConfig{
+			Query:    queryType,
+			Mutation: mutationType,
+		},
+	)
+
 	h := handler.New(&handler.Config{
-		Schema:   &Schema,
+		Schema:   &schema,
 		Pretty:   true,
 		GraphiQL: false,
 	})
@@ -27,7 +37,6 @@ func Handler() *handler.Handler {
 func TokenMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-
 		h := r.Header.Get("Authorization")
 		splitToken := strings.Split(h, "Bearer")
 

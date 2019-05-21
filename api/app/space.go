@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/okteto/app/api/k8s/client"
@@ -12,6 +13,7 @@ import (
 	"github.com/okteto/app/api/k8s/rolebindings"
 	"github.com/okteto/app/api/k8s/roles"
 	"github.com/okteto/app/api/model"
+	"github.com/opentracing/opentracing-go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -54,13 +56,13 @@ func CreateSpace(s *model.Space) error {
 }
 
 //ExistsByName returns if a space exists for a name
-func ExistsByName(name, owner string) bool {
+func ExistsByName(ctx context.Context, name, owner string) bool {
 	c, err := client.Get()
 	if err != nil {
 		return true
 	}
 
-	olds, err := namespaces.GetByLabel(fmt.Sprintf("%s=%s, %s=%s", namespaces.OktetoNameLabel, name, namespaces.OktetoOwnerLabel, owner), c)
+	olds, err := namespaces.GetByLabel(ctx, fmt.Sprintf("%s=%s, %s=%s", namespaces.OktetoNameLabel, name, namespaces.OktetoOwnerLabel, owner), c)
 	if err != nil {
 		return true
 	}
@@ -81,7 +83,10 @@ func DeleteSpace(s *model.Space) error {
 }
 
 //ListSpaces returns the spaces for a given user
-func ListSpaces(u *model.User) ([]*model.Space, error) {
+func ListSpaces(ctx context.Context, u *model.User) ([]*model.Space, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "app.space.listspaces")
+	defer span.Finish()
+
 	c, err := client.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
@@ -98,7 +103,7 @@ func ListSpaces(u *model.User) ([]*model.Space, error) {
 	}
 	spaces := []*model.Space{}
 	for _, n := range ns.Items {
-		s := namespaces.ToModel(&n)
+		s := namespaces.ToModel(ctx, &n)
 		if !u.IsOwner(s) {
 			owner := s.GetOwner()
 			if owner.ID != s.ID {

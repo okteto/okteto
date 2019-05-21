@@ -11,6 +11,7 @@ import (
 	"github.com/okteto/app/api/k8s/serviceaccounts"
 	"github.com/okteto/app/api/log"
 	"github.com/okteto/app/api/model"
+	"github.com/opentracing/opentracing-go"
 )
 
 type credential struct {
@@ -151,7 +152,10 @@ var queryType = graphql.NewObject(
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					return func() (interface{}, error) {
-						u, err := validateToken(params.Context)
+						span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.environments")
+						defer span.Finish()
+
+						u, err := validateToken(ctx)
 						if err != nil {
 							return nil, err
 						}
@@ -159,12 +163,12 @@ var queryType = graphql.NewObject(
 						if params.Args["space"] != nil {
 							space = params.Args["space"].(string)
 						}
-						s, err := namespaces.GetSpaceByID(space, u)
+						s, err := namespaces.GetSpaceByID(ctx, space, u)
 						if err != nil {
 							return nil, err
 						}
 
-						l, err := app.ListDevEnvs(u, s)
+						l, err := app.ListDevEnvs(ctx, u, s)
 						if err != nil {
 							log.Errorf("failed to get dev envs for %s in %s", u.ID, s.ID)
 							return nil, fmt.Errorf("failed to get your environments")
@@ -184,12 +188,15 @@ var queryType = graphql.NewObject(
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					return func() (interface{}, error) {
-						u, err := validateToken(params.Context)
+						span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.space")
+						defer span.Finish()
+
+						u, err := validateToken(ctx)
 						if err != nil {
 							return nil, err
 						}
 						id := params.Args["id"].(string)
-						s, err := namespaces.GetSpaceByID(id, u)
+						s, err := namespaces.GetSpaceByID(ctx, id, u)
 						if err != nil {
 							return nil, err
 						}
@@ -207,7 +214,9 @@ var queryType = graphql.NewObject(
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					return func() (interface{}, error) {
-						u, err := validateToken(params.Context)
+						span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.databases")
+						defer span.Finish()
+						u, err := validateToken(ctx)
 						if err != nil {
 							return nil, err
 						}
@@ -215,7 +224,7 @@ var queryType = graphql.NewObject(
 						if params.Args["space"] != nil {
 							space = params.Args["space"].(string)
 						}
-						s, err := namespaces.GetSpaceByID(space, u)
+						s, err := namespaces.GetSpaceByID(ctx, space, u)
 						if err != nil {
 							return nil, err
 						}
@@ -234,12 +243,14 @@ var queryType = graphql.NewObject(
 				Type:        graphql.NewList(spaceType),
 				Description: "Get space list",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.spaces")
+					defer span.Finish()
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
 
-					l, err := app.ListSpaces(u)
+					l, err := app.ListSpaces(ctx, u)
 					if err != nil {
 						log.Errorf("failed to get spaces for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to get your spaces")
@@ -292,7 +303,7 @@ var mutationType = graphql.NewObject(
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					code := params.Args["code"].(string)
-					u, err := github.Auth(code)
+					u, err := github.Auth(params.Context, code)
 					if err != nil {
 						log.Errorf("failed to auth user: %s", err)
 						return nil, fmt.Errorf("failed to authenticate")
@@ -333,7 +344,10 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.up")
+					defer span.Finish()
+
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -341,10 +355,11 @@ var mutationType = graphql.NewObject(
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
-					s, err := namespaces.GetSpaceByID(space, u)
+					s, err := namespaces.GetSpaceByID(ctx, space, u)
 					if err != nil {
 						return nil, err
 					}
+
 					dev := buildDev(params.Args)
 					if err := app.DevModeOn(dev, s); err != nil {
 						log.Errorf("failed to enable dev mode: %s", err)
@@ -369,7 +384,9 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.down")
+					defer span.Finish()
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -378,7 +395,7 @@ var mutationType = graphql.NewObject(
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
-					s, err := namespaces.GetSpaceByID(space, u)
+					s, err := namespaces.GetSpaceByID(ctx, space, u)
 					if err != nil {
 						return nil, err
 					}
@@ -410,7 +427,9 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.run")
+					defer span.Finish()
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -418,7 +437,7 @@ var mutationType = graphql.NewObject(
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
-					s, err := namespaces.GetSpaceByID(space, u)
+					s, err := namespaces.GetSpaceByID(ctx, space, u)
 					if err != nil {
 						return nil, err
 					}
@@ -448,7 +467,9 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.createdatabase")
+					defer span.Finish()
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -456,7 +477,7 @@ var mutationType = graphql.NewObject(
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
-					s, err := namespaces.GetSpaceByID(space, u)
+					s, err := namespaces.GetSpaceByID(ctx, space, u)
 					if err != nil {
 						return nil, err
 					}
@@ -486,7 +507,9 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.deletedatbase")
+					defer span.Finish()
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -494,7 +517,7 @@ var mutationType = graphql.NewObject(
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
-					s, err := namespaces.GetSpaceByID(space, u)
+					s, err := namespaces.GetSpaceByID(ctx, space, u)
 					if err != nil {
 						return nil, err
 					}
@@ -522,18 +545,20 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.createspace")
+					defer span.Finish()
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
 					name := params.Args["name"].(string)
-					if app.ExistsByName(name, u.ID) {
+					if app.ExistsByName(ctx, name, u.ID) {
 						return nil, fmt.Errorf("'%s' already exists", name)
 					}
 					members := []model.Member{}
 					if params.Args["members"] != nil {
 						for _, m := range params.Args["members"].([]interface{}) {
-							uMember, err := serviceaccounts.GetUserByGithubID(m.(string))
+							uMember, err := serviceaccounts.GetUserByGithubID(ctx, m.(string))
 							if err != nil {
 								return nil, err
 							}
@@ -570,7 +595,9 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.updatespace")
+					defer span.Finish()
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -578,7 +605,7 @@ var mutationType = graphql.NewObject(
 					if params.Args["id"] != nil {
 						space = params.Args["id"].(string)
 					}
-					s, err := namespaces.GetSpaceByID(space, u)
+					s, err := namespaces.GetSpaceByID(ctx, space, u)
 					if err != nil {
 						return nil, err
 					}
@@ -588,7 +615,7 @@ var mutationType = graphql.NewObject(
 					members := []model.Member{}
 					if params.Args["members"] != nil {
 						for _, m := range params.Args["members"].([]interface{}) {
-							uMember, err := serviceaccounts.GetUserByGithubID(m.(string))
+							uMember, err := serviceaccounts.GetUserByGithubID(ctx, m.(string))
 							if err != nil {
 								return nil, err
 							}
@@ -622,7 +649,9 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.leavespace")
+					defer span.Finish()
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -630,7 +659,7 @@ var mutationType = graphql.NewObject(
 					if params.Args["id"] != nil {
 						space = params.Args["id"].(string)
 					}
-					s, err := namespaces.GetSpaceByID(space, u)
+					s, err := namespaces.GetSpaceByID(ctx, space, u)
 					if err != nil {
 						return nil, err
 					}
@@ -662,7 +691,9 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					u, err := validateToken(params.Context)
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.deletespace")
+					defer span.Finish()
+					u, err := validateToken(ctx)
 					if err != nil {
 						return nil, err
 					}
@@ -670,7 +701,7 @@ var mutationType = graphql.NewObject(
 					if params.Args["id"] != nil {
 						space = params.Args["id"].(string)
 					}
-					s, err := namespaces.GetSpaceByID(space, u)
+					s, err := namespaces.GetSpaceByID(ctx, space, u)
 					if err != nil {
 						return nil, err
 					}
@@ -689,14 +720,6 @@ var mutationType = graphql.NewObject(
 				},
 			},
 		},
-	},
-)
-
-// Schema holds the GraphQL schema for Okteto
-var Schema, _ = graphql.NewSchema(
-	graphql.SchemaConfig{
-		Query:    queryType,
-		Mutation: mutationType,
 	},
 )
 

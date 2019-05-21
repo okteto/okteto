@@ -1,6 +1,7 @@
 package serviceaccounts
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/okteto/app/api/k8s/secrets"
 	"github.com/okteto/app/api/log"
 	"github.com/okteto/app/api/model"
+	"github.com/opentracing/opentracing-go"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -56,7 +58,7 @@ func GetCredentialConfig(u *model.User, space string) (string, error) {
 }
 
 // GetUserByToken gets a user by her token
-func GetUserByToken(token string) (*model.User, error) {
+func GetUserByToken(ctx context.Context, token string) (*model.User, error) {
 	if len(token) == 0 {
 		return nil, fmt.Errorf("empty token")
 	}
@@ -68,7 +70,7 @@ func GetUserByToken(token string) (*model.User, error) {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	sa, err := getByLabel(fmt.Sprintf("%s=%s", OktetoTokenLabel, token), c)
+	sa, err := getByLabel(ctx, fmt.Sprintf("%s=%s", OktetoTokenLabel, token), c)
 	if err != nil {
 		return nil, err
 	}
@@ -76,14 +78,14 @@ func GetUserByToken(token string) (*model.User, error) {
 }
 
 //GetUserByGithubID returns a user by githubID
-func GetUserByGithubID(githubID string) (*model.User, error) {
+func GetUserByGithubID(ctx context.Context, githubID string) (*model.User, error) {
 	log.Debug("finding user by her githubID")
 	c, err := client.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	sa, err := getByLabel(fmt.Sprintf("%s=%s", OktetoGithubIDLabel, githubID), c)
+	sa, err := getByLabel(ctx, fmt.Sprintf("%s=%s", OktetoGithubIDLabel, githubID), c)
 	if err != nil {
 		return nil, err
 	}
@@ -92,20 +94,23 @@ func GetUserByGithubID(githubID string) (*model.User, error) {
 }
 
 // GetUserByID gets a user by her id
-func GetUserByID(id string) (*model.User, error) {
+func GetUserByID(ctx context.Context, id string) (*model.User, error) {
 	c, err := client.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %s", err)
 	}
 
-	sa, err := getByLabel(fmt.Sprintf("%s=%s", OktetoIDLabel, id), c)
+	sa, err := getByLabel(ctx, fmt.Sprintf("%s=%s", OktetoIDLabel, id), c)
 	if err != nil {
 		return nil, err
 	}
 	return ToModel(sa), nil
 }
 
-func getByLabel(label string, c *kubernetes.Clientset) (*apiv1.ServiceAccount, error) {
+func getByLabel(ctx context.Context, label string, c *kubernetes.Clientset) (*apiv1.ServiceAccount, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.serviceaccounts.crud.getbylabel")
+	defer span.Finish()
+
 	sas, err := c.CoreV1().ServiceAccounts(client.GetOktetoNamespace()).List(
 		metav1.ListOptions{
 			LabelSelector: label,

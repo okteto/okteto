@@ -99,8 +99,7 @@ func AuthHandler() http.Handler {
 }
 
 // Auth authenticates a github user based in the code
-func Auth(code string) (*model.User, error) {
-	ctx := context.Background()
+func Auth(ctx context.Context, code string) (*model.User, error) {
 	log.Info("authenticating user via github")
 	t, err := oauth2Config.Exchange(ctx, code)
 	if err != nil {
@@ -133,7 +132,7 @@ func Auth(code string) (*model.User, error) {
 	}
 
 	u := model.NewUser(githubUser.GetLogin(), e, githubUser.GetName(), githubUser.GetAvatarURL())
-	u, err = app.FindOrKeepUser(u)
+	u, err = app.FindOrKeepUser(ctx, u)
 	if err != nil {
 		log.Errorf("failed to create user: %s", err)
 		return nil, fmt.Errorf("failed to create user")

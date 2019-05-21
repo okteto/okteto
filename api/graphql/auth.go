@@ -17,7 +17,7 @@ func validateToken(ctx context.Context) (*model.User, error) {
 		return nil, fmt.Errorf("not-authorized")
 	}
 
-	u, err := serviceaccounts.GetUserByToken(token)
+	u, err := serviceaccounts.GetUserByToken(ctx, token)
 	if err != nil {
 		log.Errorf("bad token: %s", err)
 		return nil, fmt.Errorf("not-authorized")
