@@ -60,7 +60,6 @@ func TokenMiddleware(next http.Handler) http.Handler {
 }
 
 func validateToken(ctx context.Context, token string) (*model.User, error) {
-
 	u, err := serviceaccounts.GetUserByToken(ctx, token)
 	if err != nil {
 		log.Errorf("bad token: %s", err)

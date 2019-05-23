@@ -18,6 +18,11 @@ type credential struct {
 	Config string
 }
 
+type result struct {
+	data interface{}
+	err  error
+}
+
 var spaceType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Space",
@@ -152,13 +157,11 @@ var queryType = graphql.NewObject(
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.environments")
-
-					return func() (interface{}, error) {
-						defer span.Finish()
-
+					ch := make(chan result, 1)
+					go func() {
 						u, err := getAuthenticatedUser(ctx)
 						if err != nil {
-							return nil, err
+							ch <- result{data: nil, err: err}
 						}
 						space := u.ID
 						if params.Args["space"] != nil {
@@ -166,16 +169,27 @@ var queryType = graphql.NewObject(
 						}
 						s, err := namespaces.GetSpaceByID(ctx, space, u)
 						if err != nil {
-							return nil, err
+							ch <- result{data: nil, err: err}
 						}
 
 						l, err := app.ListDevEnvs(ctx, u, s)
 						if err != nil {
 							log.Errorf("failed to get dev envs for %s in %s", u.ID, s.ID)
-							return nil, fmt.Errorf("failed to get your environments")
+							ch <- result{data: nil, err: fmt.Errorf("failed to get your environments")}
 						}
 
-						return l, nil
+						ch <- result{data: l, err: nil}
+						close(ch)
+					}()
+
+					return func() (interface{}, error) {
+						defer span.Finish()
+
+						r := <-ch
+						if r.err != nil {
+							return nil, r.err
+						}
+						return r.data, nil
 					}, nil
 				},
 			},
@@ -190,19 +204,28 @@ var queryType = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.space")
 
-					return func() (interface{}, error) {
-						defer span.Finish()
-
+					ch := make(chan result, 1)
+					go func() {
 						u, err := getAuthenticatedUser(ctx)
 						if err != nil {
-							return nil, err
+							ch <- result{data: nil, err: err}
 						}
 						id := params.Args["id"].(string)
 						s, err := namespaces.GetSpaceByID(ctx, id, u)
 						if err != nil {
-							return nil, err
+							ch <- result{data: nil, err: err}
 						}
-						return s, nil
+						ch <- result{data: s, err: nil}
+						close(ch)
+					}()
+
+					return func() (interface{}, error) {
+						defer span.Finish()
+						r := <-ch
+						if r.err != nil {
+							return nil, r.err
+						}
+						return r.data, nil
 					}, nil
 				},
 			},
@@ -216,12 +239,11 @@ var queryType = graphql.NewObject(
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.databases")
-
-					return func() (interface{}, error) {
-						defer span.Finish()
+					ch := make(chan result, 1)
+					go func() {
 						u, err := getAuthenticatedUser(ctx)
 						if err != nil {
-							return nil, err
+							ch <- result{data: nil, err: err}
 						}
 						space := u.ID
 						if params.Args["space"] != nil {
@@ -229,16 +251,26 @@ var queryType = graphql.NewObject(
 						}
 						s, err := namespaces.GetSpaceByID(ctx, space, u)
 						if err != nil {
-							return nil, err
+							ch <- result{data: nil, err: err}
 						}
 
 						l, err := app.ListDatabases(s)
 						if err != nil {
 							log.Errorf("failed to get databases for %s in %s", u.ID, s.ID)
-							return nil, fmt.Errorf("failed to get your databases")
+							ch <- result{data: nil, err: fmt.Errorf("failed to get your databases")}
 						}
 
-						return l, nil
+						ch <- result{data: l, err: nil}
+						close(ch)
+					}()
+
+					return func() (interface{}, error) {
+						defer span.Finish()
+						r := <-ch
+						if r.err != nil {
+							return nil, r.err
+						}
+						return r.data, nil
 					}, nil
 				},
 			},
