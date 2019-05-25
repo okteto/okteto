@@ -1,6 +1,7 @@
 package graphql
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -17,6 +18,10 @@ import (
 type credential struct {
 	Config string
 }
+
+var (
+	errInternalServerError = fmt.Errorf("internal-server-error")
+)
 
 type result struct {
 	data interface{}
@@ -36,6 +41,9 @@ var spaceType = graphql.NewObject(
 			"members": &graphql.Field{
 				Type: graphql.NewList(memberType),
 			},
+			"invited": &graphql.Field{
+				Type: graphql.NewList(memberType),
+			},
 		},
 	},
 )
@@ -48,6 +56,9 @@ var memberType = graphql.NewObject(
 				Type: graphql.ID,
 			},
 			"githubID": &graphql.Field{
+				Type: graphql.String,
+			},
+			"email": &graphql.Field{
 				Type: graphql.String,
 			},
 			"name": &graphql.Field{
@@ -303,6 +314,9 @@ var queryType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.credentials")
+					defer span.Finish()
+
 					u, err := getAuthenticatedUser(params.Context)
 					if err != nil {
 						return nil, err
@@ -312,7 +326,7 @@ var queryType = graphql.NewObject(
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
-					c, err := app.GetCredential(u, space)
+					c, err := app.GetCredential(ctx, u, space)
 					if err != nil {
 						log.Errorf("failed to get credentials: %s", err)
 						return nil, fmt.Errorf("failed to get credentials")
@@ -335,21 +349,40 @@ var mutationType = graphql.NewObject(
 					"code": &graphql.ArgumentConfig{
 						Type: graphql.NewNonNull(graphql.String),
 					},
+					"invite": &graphql.ArgumentConfig{
+						Type:         graphql.String,
+						DefaultValue: "",
+					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					span, ctx := opentracing.StartSpanFromContext(params.Context, "graphql.auth")
+					defer span.Finish()
+
 					code := params.Args["code"].(string)
-					u, err := github.Auth(params.Context, code)
+
+					githubID, email, name, avatar, err := github.Auth(ctx, code)
 					if err != nil {
 						log.Errorf("failed to auth user: %s", err)
 						return nil, fmt.Errorf("failed to authenticate")
 					}
 
-					if err := app.CreateUser(u); err != nil {
-						log.Errorf("failed to create user for %s: %s", u.ID, err)
-						return nil, fmt.Errorf("failed to create your user")
+					u, err := app.FindUserByGithubID(ctx, githubID)
+					if err == nil {
+						return u, nil
 					}
 
-					return u, nil
+					if app.IsNotFound(err) {
+						u := model.NewUser(githubID, email, name, avatar)
+						if err := app.CreateUser(ctx, u); err != nil {
+							log.Errorf("failed to create user for %s: %s", u.ID, err)
+							return nil, errInternalServerError
+						}
+
+						log.Infof("created user via github login: %s", u.ID)
+					}
+
+					log.Errorf("failed to authenticate user: %s", err)
+					return nil, errInternalServerError
 				},
 			},
 			"up": &graphql.Field{
@@ -645,33 +678,75 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 					if !u.IsOwner(s) {
-						return nil, fmt.Errorf("your are not the owner of the space")
+						log.Errorf("%s tried to update space %s, owner is: %+v", u.ID, s.ID, s.GetOwner())
+						return nil, fmt.Errorf("forbidden")
 					}
+
 					members := []model.Member{}
+					invited := []model.Member{}
+
 					if params.Args["members"] != nil {
-						for _, m := range params.Args["members"].([]interface{}) {
-							uMember, err := serviceaccounts.GetUserByGithubID(ctx, m.(string))
-							if err != nil {
-								return nil, err
+						memberList, ok := params.Args["members"].([]interface{})
+						if !ok {
+							log.Errorf("failed to parse list of members: %+v", members)
+							return nil, fmt.Errorf("bad-format")
+						}
+
+						for _, m := range memberList {
+							identifier, ok := m.(string)
+							if !ok {
+								log.Errorf("failed to parse m: %+v", m)
+								return nil, fmt.Errorf("malformed-email")
 							}
-							members = append(
-								members,
-								model.Member{
-									ID:       uMember.ID,
-									Name:     uMember.Name,
-									GithubID: uMember.GithubID,
-									Avatar:   uMember.Avatar,
-									Owner:    uMember.ID == u.ID,
-								},
-							)
+
+							var err error
+							var uMember *model.User
+							var email string
+							var githubID string
+							if strings.Contains(identifier, "@") {
+								email = identifier
+								uMember, err = app.FindUserByEmail(ctx, identifier)
+							} else {
+								// TODO remove this once the UI only allows emails
+								githubID = identifier
+								uMember, err = app.FindUserByGithubID(ctx, identifier)
+							}
+							var m model.Member
+							if err != nil {
+								if !app.IsNotFound(err) {
+									log.Errorf("failed to find user: %s", err)
+									return nil, errInternalServerError
+								}
+
+								m, err = invite(ctx, u.ID, email, githubID)
+								if err != nil {
+									return nil, err
+								}
+
+								invited = append(invited, m)
+
+								log.Infof("invited user %s to join okteto", m.ID)
+							} else {
+								m = toMember(u.ID, uMember)
+							}
+
+							members = append(members, m)
 						}
 					}
+
+					existingMembers := s.Members
 					s.Members = members
+					s.Invited = invited
+
 					err = app.CreateSpace(s)
 					if err != nil {
 						log.Errorf("failed to update space for %s: %s", u.ID, err)
 						return nil, fmt.Errorf("failed to update space")
 					}
+
+					c := context.Background()
+					go app.InviteNewMembers(c, u.Email, existingMembers, members)
+
 					return s, nil
 				},
 			},
@@ -741,7 +816,8 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 					if !u.IsOwner(s) {
-						return nil, fmt.Errorf("your are not the owner of the space")
+						log.Errorf("%s tried to delete space %s", u.ID, s.ID)
+						return nil, fmt.Errorf("forbidden")
 					}
 					if space == u.ID {
 						return nil, fmt.Errorf("the personal namespace cannot be deleted")
@@ -773,4 +849,25 @@ func buildDev(args map[string]interface{}) *model.Dev {
 		}
 	}
 	return dev
+}
+
+func toMember(currentID string, m *model.User) model.Member {
+	return model.Member{
+		ID:       m.ID,
+		Name:     m.Name,
+		GithubID: m.GithubID,
+		Avatar:   m.Avatar,
+		Owner:    m.ID == currentID,
+		Email:    m.Email,
+	}
+}
+
+func invite(ctx context.Context, currentID, email, githubID string) (model.Member, error) {
+	u, err := app.InviteUser(ctx, email, githubID)
+	if err != nil {
+		log.Errorf("failed to invite user %s/%s: %s", email, githubID, err)
+		return model.Member{}, errInternalServerError
+	}
+
+	return toMember(currentID, u), nil
 }

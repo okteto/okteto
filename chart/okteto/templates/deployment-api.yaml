@@ -33,6 +33,8 @@ spec:
           env:
             - name: OKTETO_BASE_DOMAIN
               value: "{{ .Values.oktetoBaseDomain }}"
+            - name: OKTETO_PUBLIC_URL
+              value: "{{ .Values.oktetoPublicURL }}"
             - name: OKTETO_CLUSTER_CIDR
               value: "{{ .Values.oktetoClusterCIDR }}"
             - name: OKTETO_SOFT_MULTITENANCY
@@ -46,6 +48,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "okteto.fullname" . }}
                   key: githubClientSecret
+            - name: MG_DOMAIN
+              value: {{ .Values.mailgun.domain }}
+            - name: MG_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "okteto.fullname" . }}
+                  key: mgApiKey
           livenessProbe:
             httpGet:
               path: /healthz

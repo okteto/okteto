@@ -14,6 +14,7 @@ type Space struct {
 	ID      string   `json:"id,omitempty" yaml:"id,omitempty"`
 	Name    string   `json:"name,omitempty" yaml:"name,omitempty"`
 	Members []Member `json:"members,omitempty" yaml:"members,omitempty"`
+	Invited []Member `json:"invited,omitempty" yaml:"invited,omitempty"`
 }
 
 //Member represents a member
@@ -23,6 +24,7 @@ type Member struct {
 	GithubID string `json:"githubID,omitempty" yaml:"githubID,omitempty"`
 	Avatar   string `json:"avatar,omitempty" yaml:"avatar,omitempty"`
 	Owner    bool   `json:"owner,omitempty" yaml:"owner,omitempty"`
+	Email    string `json:"email,omitempty" yaml:"email,omitempty"`
 }
 
 func (s *Space) validate() error {

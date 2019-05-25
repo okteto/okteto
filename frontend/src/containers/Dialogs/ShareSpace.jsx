@@ -38,7 +38,7 @@ class ShareSpace extends Component {
 
   render() {
     const { space } = this.props;
-    const members = space.members.map(member => member.githubID);
+    const members = space.members.map(member => member.githubID ? member.githubID : member.email);
     const owner = space.members.find(member => member.owner);
 
     return (

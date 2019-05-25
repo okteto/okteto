@@ -71,4 +71,8 @@ func validateConfiguration() {
 	if len(os.Getenv("OKTETO_BASE_DOMAIN")) == 0 {
 		log.Fatal("OKTETO_BASE_DOMAIN is not defined")
 	}
+
+	if len(os.Getenv("OKTETO_PUBLIC_URL")) == 0 {
+		log.Fatal("OKTETO_PUBLIC_URL is not defined")
+	}
 }

@@ -8,7 +8,7 @@ const getSpacesQuery = `spaces {
 
 const getSpaceQuery = `space(id: $space) {
   id, name, members {
-    id, githubID, avatar, name, owner
+    id, githubID, avatar, name, owner, email
   }
 }
 environments(space: $space) {
@@ -291,7 +291,9 @@ export const shareSpace = (spaceId, members) => {
 
     return request(`mutation ShareSpace($space: String!, $members: [String]) {
       updateSpace(id: $space, members: $members) {
-        id
+        id, invited{
+          id, email, githubID
+        }
       }
     }`, {
       space: spaceId,

@@ -109,7 +109,7 @@ func ToModel(ctx context.Context, n *v1.Namespace) *model.Space {
 			}
 			uMember, err := serviceaccounts.GetUserByID(ctx, id)
 			if err != nil {
-				log.Errorf("Error getting user %s", err)
+				log.Errorf("Error getting member %s of space %s: %s", id, n.Name, err)
 				//TODO: handle error
 				continue
 			}
@@ -121,6 +121,7 @@ func ToModel(ctx context.Context, n *v1.Namespace) *model.Space {
 					GithubID: uMember.GithubID,
 					Avatar:   uMember.Avatar,
 					Owner:    owner,
+					Email:    uMember.Email,
 				},
 			)
 		}

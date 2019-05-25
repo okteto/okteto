@@ -2,7 +2,9 @@ package serviceaccounts
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/okteto/app/api/k8s/client"
@@ -12,12 +14,15 @@ import (
 	"github.com/opentracing/opentracing-go"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 //Create creates a service account for a given space
-func Create(u *model.User, c *kubernetes.Clientset) error {
+func Create(ctx context.Context, u *model.User) error {
 	log.Debugf("Creating service account '%s'...", u.ID)
+	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.serviceaccounts.crud.create")
+	defer span.Finish()
+
+	c := client.Get()
 	old, err := c.CoreV1().ServiceAccounts(client.GetOktetoNamespace()).Get(u.ID, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("Error getting kubernetes service account: %s", err)
@@ -40,8 +45,11 @@ func Create(u *model.User, c *kubernetes.Clientset) error {
 }
 
 //GetCredentialConfig returns the credential for accessing the dev mode container
-func GetCredentialConfig(u *model.User, space string) (string, error) {
+func GetCredentialConfig(ctx context.Context, u *model.User, space string) (string, error) {
 	log.Debug("Get service account credential")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.namespaces.crud.getcredentialconfig")
+	defer span.Finish()
+
 	c := client.Get()
 	sa, err := c.CoreV1().ServiceAccounts(client.GetOktetoNamespace()).Get(u.ID, metav1.GetOptions{})
 	if err != nil {
@@ -63,42 +71,41 @@ func GetUserByToken(ctx context.Context, token string) (*model.User, error) {
 		return nil, fmt.Errorf("malformed token, too long")
 	}
 
-	c := client.Get()
-	sa, err := getByLabel(ctx, fmt.Sprintf("%s=%s", OktetoTokenLabel, token), c)
-	if err != nil {
-		return nil, err
-	}
-	return ToModel(sa), nil
+	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.serviceaccounts.crud.getbyuserbytoken")
+	defer span.Finish()
+
+	return getByLabel(fmt.Sprintf("%s=%s", OktetoTokenLabel, token))
 }
 
 //GetUserByGithubID returns a user by githubID
 func GetUserByGithubID(ctx context.Context, githubID string) (*model.User, error) {
-	log.Debug("finding user by her githubID")
-	c := client.Get()
-
-	sa, err := getByLabel(ctx, fmt.Sprintf("%s=%s", OktetoGithubIDLabel, githubID), c)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("found user by her githubID")
-	return ToModel(sa), nil
+	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.serviceaccounts.crud.getbyuserbygithubid")
+	defer span.Finish()
+	return getByLabel(fmt.Sprintf("%s=%s", OktetoGithubIDLabel, githubID))
 }
 
 // GetUserByID gets a user by her id
 func GetUserByID(ctx context.Context, id string) (*model.User, error) {
-	c := client.Get()
-
-	sa, err := getByLabel(ctx, fmt.Sprintf("%s=%s", OktetoIDLabel, id), c)
-	if err != nil {
-		return nil, err
-	}
-	return ToModel(sa), nil
+	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.serviceaccounts.crud.getbyuserbyid")
+	defer span.Finish()
+	return getByLabel(fmt.Sprintf("%s=%s", OktetoIDLabel, id))
 }
 
-func getByLabel(ctx context.Context, label string, c *kubernetes.Clientset) (*apiv1.ServiceAccount, error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.serviceaccounts.crud.getbylabel")
+//GetUserByEmail returns a user by Email
+func GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.serviceaccounts.crud.getbyuserbytoken")
 	defer span.Finish()
+	h := hashEmail(strings.ToLower(email))
+	return getByLabel(fmt.Sprintf("%s=%s", OktetoEmailLabel, h))
+}
 
+func hashEmail(e string) string {
+	h := md5.New()
+	io.WriteString(h, e)
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+func getByLabel(label string) (*model.User, error) {
+	c := client.Get()
 	sas, err := c.CoreV1().ServiceAccounts(client.GetOktetoNamespace()).List(
 		metav1.ListOptions{
 			LabelSelector: label,
@@ -110,7 +117,7 @@ func getByLabel(ctx context.Context, label string, c *kubernetes.Clientset) (*ap
 	if len(sas.Items) == 0 {
 		return nil, fmt.Errorf("not found")
 	}
-	return &sas.Items[0], nil
+	return ToModel(&sas.Items[0]), nil
 }
 
 // ToModel converts a service account into a model.User
@@ -122,5 +129,6 @@ func ToModel(sa *apiv1.ServiceAccount) *model.User {
 		Email:    sa.Annotations[OktetoEmailAnnotation],
 		Name:     sa.Annotations[OktetoNameAnnotation],
 		Avatar:   sa.Annotations[OktetoAvatarAnnotation],
+		Invite:   sa.Annotations[OktetoInviteLabel],
 	}
 }

@@ -2,18 +2,20 @@ package app
 
 import (
 	"context"
+	"os"
 	"strings"
 
-	"github.com/okteto/app/api/k8s/client"
+	"github.com/okteto/app/api/email"
 	"github.com/okteto/app/api/k8s/serviceaccounts"
+	"github.com/okteto/app/api/log"
 	"github.com/okteto/app/api/model"
 )
 
-//CreateUser configures a service account for a given user
-func CreateUser(u *model.User) error {
-	c := client.Get()
+var publicURL = os.Getenv("OKTETO_PUBLIC_URL")
 
-	if err := serviceaccounts.Create(u, c); err != nil {
+//CreateUser configures a service account for a given user
+func CreateUser(ctx context.Context, u *model.User) error {
+	if err := serviceaccounts.Create(ctx, u); err != nil {
 		return err
 	}
 
@@ -24,9 +26,22 @@ func CreateUser(u *model.User) error {
 	return nil
 }
 
+//InviteUser user creates a service account for a given user
+func InviteUser(ctx context.Context, email, githubID string) (*model.User, error) {
+	u := model.NewUser(githubID, email, "", "")
+	u.Invite = model.GetInvite()
+	u.Email = email
+
+	if err := serviceaccounts.Create(ctx, u); err != nil {
+		return nil, err
+	}
+
+	return u, nil
+}
+
 //GetCredential returns the credentials of the user for her space
-func GetCredential(u *model.User, space string) (string, error) {
-	credential, err := serviceaccounts.GetCredentialConfig(u, space)
+func GetCredential(ctx context.Context, u *model.User, space string) (string, error) {
+	credential, err := serviceaccounts.GetCredentialConfig(ctx, u, space)
 	if err != nil {
 		return "", err
 	}
@@ -34,14 +49,33 @@ func GetCredential(u *model.User, space string) (string, error) {
 	return credential, err
 }
 
-//FindOrKeepUser retrieves user if it exists
-func FindOrKeepUser(ctx context.Context, u *model.User) (*model.User, error) {
-	found, err := serviceaccounts.GetUserByGithubID(ctx, u.GithubID)
-	if err == nil {
-		return found, nil
+//FindUserByGithubID retrieves user if it exists
+func FindUserByGithubID(ctx context.Context, githubID string) (*model.User, error) {
+	return serviceaccounts.GetUserByGithubID(ctx, githubID)
+}
+
+//FindUserByEmail retrieves user if it exists
+func FindUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	return serviceaccounts.GetUserByEmail(ctx, email)
+}
+
+// IsNotFound returns true if err is of the type not found
+func IsNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "not found")
+}
+
+// InviteNewMembers sends an invite to every new member
+func InviteNewMembers(ctx context.Context, sender string, old, new []model.Member) {
+	o := make(map[string]struct{})
+	for _, m := range old {
+		o[m.ID] = struct{}{}
 	}
-	if !strings.Contains(err.Error(), "not found") {
-		return nil, err
+
+	for _, m := range new {
+		if _, ok := o[m.ID]; !ok {
+			if err := email.Invite(ctx, publicURL, sender, m.Email); err != nil {
+				log.Errorf("failed to send invite email to %s: %s", m.ID, err)
+			}
+		}
 	}
-	return u, nil
 }

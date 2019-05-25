@@ -92,7 +92,7 @@ func (dev *Dev) GetEndpoint(s *Space) string {
 
 }
 
-//CertificateName returns the cretificate name for a dev environment
+//CertificateName returns the certificate name for a dev environment
 func (dev *Dev) CertificateName() string {
 	return fmt.Sprintf("%s-letsencrypt", dev.Name)
 }

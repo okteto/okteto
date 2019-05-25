@@ -1,6 +1,9 @@
 githubAuth:
   clientId: ""
   clientSecret: ""
+mailgun:
+  apiKey: ""
+  domain: ""
 replicas: 2
 images:
   api:
@@ -14,6 +17,7 @@ nameOverride: ""
 fullnameOverride: ""
 clusterPublicEndpoint: ""
 oktetoBaseDomain: ""
+oktetoPublicURL: ""
 oktetoClusterCIDR: ""
 softMultitenancy: "NO"
 services:

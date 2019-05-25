@@ -63,7 +63,7 @@ func TranslateStatefulSet(db *model.DB, s *model.Space) *appsv1.StatefulSet {
 								apiv1.VolumeMount{
 									Name:      db.GetVolumeName(),
 									MountPath: db.GetVolumePath(),
-									SubPath: "postgresql-db",
+									SubPath:   "postgresql-db",
 								},
 							},
 						},
