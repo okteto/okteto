@@ -52,6 +52,7 @@
     "classnames": "^2.2.5",
     "clipboard-polyfill": "^2.7.0",
     "dom-css": "^2.1.0",
+    "email-validator": "^2.0.4",
     "graphql-request": "^1.8.2",
     "is-windows": "^1.0.2",
     "lodash.throttle": "^4.1.1",

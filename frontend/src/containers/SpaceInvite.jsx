@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import autobind from 'autobind-decorator';
+import * as EmailValidator from 'email-validator';
 
 import Button from 'components/Button';
 import Input from 'components/Input';
@@ -12,35 +13,54 @@ import './SpaceInvite.scss';
 class SpaceInvite extends Component {
   constructor(props) {
     super(props);
-
     this.state = {
       currentValue: '',
-      members: props.members
+      members: this.props.members,
+      membersCache: this.props.members
     };
   }
 
+  reset() {
+    this.setState({
+      currentValue: '',
+      members: this.props.members,
+      membersCache: this.props.members
+    });
+  }
+
   getMembers() {
-    return this.state.members
+    return this.state.members.map(member => member.username || member.email);
   }
 
   @autobind
   handleAddMember() {
     const { members, currentValue } = this.state;
     const value = currentValue.trim();
-    const compact = members => members.filter((v, i) => members.indexOf(v) === i);
-    if (value) {
+    if (value && !members.find(member => member.email === value)) {
+      let newMember = this.state.membersCache.find(member => member.email === value);
+      if (!newMember) {
+        let isEmail = EmailValidator.validate(value);
+        newMember = {
+          email: isEmail ? value : '',
+          username: !isEmail ? value : '',
+          new: true
+        };
+      }
       this.setState({
-        members: compact([value, ...members]),
+        members: [newMember, ...members],
         currentValue: ''
       });
     }
+
     this.inviteInput.focus();
   }
 
   @autobind
   handleRemoveMember(member) {
     this.setState({
-      members: this.state.members.filter(m => m !== member)
+      members: this.state.members.filter(m => {
+        return m.username !== member.username || m.email !== member.email;
+      })
     });
   }
 
@@ -61,7 +81,7 @@ class SpaceInvite extends Component {
               }
             }}
             ref={ref => this.inviteInput = ref}
-            placeholder="username"
+            placeholder="email address"
             theme="light"
             value={this.state.currentValue}
           />
@@ -71,21 +91,39 @@ class SpaceInvite extends Component {
           {this.state.members.map(member => (
             <div 
               className="Member layout horizontal center" 
-              key={member}
+              key={member.username + member.email}
             >
-              <Avatar username={member} size="18" />
-              {member}
-
+              { member.username &&
+                <>
+                  <Avatar className="UserAvatar" username={member.username} size="18" />
+                  {member.username}
+                </>
+              }
+              { !member.username && !member.new &&
+                <div className="layout horizontal center">
+                  <Icon className="UserAvatar" icon="user" size="18" />
+                  <div className="layout vertical">
+                    {member.email}
+                    <div className="MemberInfo">Invitation sent.</div>
+                  </div>
+                </div>
+              }
+              { !member.username && member.new &&
+                <div className="layout horizontal center">
+                  <Icon className="UserAvatar" icon="user" size="18" />
+                  {member.email}
+                </div>
+              }
               <div className="flex-auto"></div>
 
-              {this.props.owner !== member &&
+              {!member.owner &&
                 <div 
                   className="DeleteButton"
                   onClick={() => this.handleRemoveMember(member)}>
                   <Icon icon="trash" size="18" />
                 </div>
               }
-              {this.props.owner === member &&
+              {member.owner &&
                 <div className="OwnerLabel">Owner</div>
               }
             </div>
@@ -102,13 +140,11 @@ class SpaceInvite extends Component {
 }
 
 SpaceInvite.defaultProps = {
-  members: [],
-  owner: null
+  members: []
 };
 
 SpaceInvite.propTypes = {
-  members: PropTypes.arrayOf(PropTypes.string),
-  owner: PropTypes.string
+  members: PropTypes.arrayOf(PropTypes.object)
 };
 
 export default SpaceInvite;

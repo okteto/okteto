@@ -10,9 +10,9 @@ class Avatar extends Component {
   }
 
   render() {
-    const { size, username } = this.props;
+    const { size, username, className } = this.props;
     return (
-      <div className="Avatar">
+      <div className={`Avatar ${className}`}>
         <ReactAvatar githubHandle={username} size={size} round={`${size}px`} />
       </div>
     );
@@ -20,12 +20,14 @@ class Avatar extends Component {
 }
 
 Avatar.defaultProps = {
-  size: '24'
+  size: '24',
+  className: ''
 };
 
 Avatar.propTypes = {
   size: PropTypes.string,
-  username: PropTypes.string.isRequired
+  username: PropTypes.string.isRequired,
+  className: PropTypes.string
 };
 
 export default Avatar;

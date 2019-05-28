@@ -43,7 +43,12 @@
         background-color: rgba($navy-dark, .05);
       }
 
-      .Avatar {
+      &Info {
+        font-size: 12px;
+        color: rgba(black, .7);
+      }
+
+      .UserAvatar {
         margin-right: 6px;
       }
 

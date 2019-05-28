@@ -29,6 +29,7 @@ class ShareSpace extends Component {
 
   open() {
     this.dialog && this.dialog.open();
+    this.spaceInviteInput.reset();
     this.spaceInviteInput.focus();
   }
 
@@ -38,9 +39,14 @@ class ShareSpace extends Component {
 
   render() {
     const { space } = this.props;
-    const members = space.members.map(member => member.githubID ? member.githubID : member.email);
-    const owner = space.members.find(member => member.owner);
-
+    const members = space.members.map(member => {
+      return {
+        username: member.githubID,
+        email: member.email,
+        owner: member.owner
+      }; 
+    });
+    
     return (
       <Modal
         className="ShareSpace"
@@ -49,9 +55,7 @@ class ShareSpace extends Component {
         width={450}>
         <div className="create-dialog-content layout vertical">
           <SpaceInvite
-            key={space.id}
             members={members}
-            owner={owner ? owner.githubID : null}
             ref={ref => this.spaceInviteInput = ref}
           />
 
@@ -60,9 +64,9 @@ class ShareSpace extends Component {
               color="green"
               solid
               onClick={this.handleConfirmClick}>
-              Share
+              Save
             </Button>
-            <Button 
+            <Button
               color="grey"
               solid
               secondary
