@@ -47,13 +47,18 @@ class SpaceHeader extends Component {
 
     return (
       <div className="SpaceHeader horizontal layout center">
-        <div className="SpaceHeaderName">
-          {spaceName}
-          {!isOwner && 
-            <span className="Owner">
-              @{owner.githubID}
-            </span>
-          }
+        <div className="SpaceHeaderInfo layout vertical">
+          <div className="SpaceHeaderName">
+            {spaceName}
+            {!isOwner && 
+              <span className="Owner">
+                @{owner.githubID}
+              </span>
+            }
+          </div>
+          <div className="SpaceHeaderNamespace">
+            Namespace: {space.id}
+          </div>
         </div>
 
         <div className="flex-auto" /> 
