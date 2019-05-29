@@ -9,8 +9,9 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 
-COPY . . 
-RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=linux go build -o okteto
+COPY cmd cmd
+COPY pkg pkg 
+RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=linux go build -o okteto cmd/okteto/main.go
 
 FROM alpine
 RUN apk update \

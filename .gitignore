@@ -13,6 +13,6 @@
 
 chart/override*.yaml
 cli/okteto
-api/bin/okteto-api
+api/bin/okteto
 /go.mod
 /go.sum

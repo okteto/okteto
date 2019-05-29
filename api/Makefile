@@ -2,7 +2,7 @@ BINDIR    := $(CURDIR)/bin
 
 .PHONY: build
 build:
-	go build -o "bin/okteto-api" 
+	go build -o bin/okteto cmd/okteto/main.go
 
 .PHONY: push
 push:
@@ -14,4 +14,4 @@ docker:
 
 .PHONY: start
 start:
-	gin --port 8080 run main.go
+	cd cmd/okteto; gin --port 8080 run
