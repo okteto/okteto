@@ -10,7 +10,7 @@ import (
 //Dev represents a cloud native development environment
 type Dev struct {
 	Name        string    `json:"name" yaml:"name"`
-	Space       string    `json:"space" yaml:"space"`
+	Space       string    `json:"space,omitempty" yaml:"space,omitempty"`
 	Image       string    `json:"image" yaml:"image"`
 	Environment []EnvVar  `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string  `json:"command,omitempty" yaml:"command,omitempty"`

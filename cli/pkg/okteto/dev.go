@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
 )
 
@@ -50,25 +49,4 @@ func DevModeOn(dev *model.Dev, devPath string, attach bool) (*Environment, error
 	}
 
 	return &u.Up, nil
-}
-
-// GetDevEnvironments returns the name of all the dev environments
-func GetDevEnvironments() ([]Environment, error) {
-	q := `
-	query{
-		environments{
-		  name,
-		}
-	}`
-
-	var e struct {
-		Environments []Environment
-	}
-
-	if err := query(q, &e); err != nil {
-		log.Infof("failed to get your dev environments: %s", err)
-		return nil, err
-	}
-
-	return e.Environments, nil
 }
