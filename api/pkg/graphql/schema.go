@@ -391,6 +391,7 @@ var mutationType = graphql.NewObject(
 						}
 
 						log.Infof("created user via github login: %s", u.ID)
+						return u, nil
 					}
 
 					log.Errorf("failed to authenticate user: %s", err)
