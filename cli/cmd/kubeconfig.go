@@ -1,12 +1,8 @@
 package cmd
 
 import (
-	"encoding/base64"
-	"fmt"
-	"io/ioutil"
-	"path/filepath"
-
 	"github.com/okteto/app/cli/pkg/config"
+	"github.com/okteto/app/cli/pkg/k8s/client"
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/okteto"
 
@@ -15,15 +11,15 @@ import (
 
 //KubeConfig fetch credentials for the cluster
 func KubeConfig() *cobra.Command {
-	var space string
 	cmd := &cobra.Command{
 		Use:   "kubeconfig",
-		Short: "Downloads your k8s cluster credentials",
+		Short: "Downloads k8s credentials for a Okteto Space",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Debug("starting kubeconfig command")
-			if space != "" {
+			log.Debug("starting select command")
+			space := ""
+			if len(args) > 0 {
 				var err error
-				space, err = okteto.GetSpaceID(space)
+				space, err = okteto.GetSpaceID(args[0])
 				if err != nil {
 					return err
 				}
@@ -32,27 +28,15 @@ func KubeConfig() *cobra.Command {
 			return RunKubeConfig(space)
 		},
 	}
-	cmd.Flags().StringVarP(&space, "space", "s", "", "space where to get the k8s credentials")
 	return cmd
 }
 
 //RunKubeConfig starts the kubeconfig sequence
 func RunKubeConfig(space string) error {
-	home := config.GetHome()
-	configFile := filepath.Join(home, ".kubeconfig")
-	configB64, err := okteto.GetK8sB64Config(space)
-	if err != nil {
+	kubeConfigFile := config.GetKubeConfigFile()
+	if err := client.SetKubeConfig(kubeConfigFile, space); err != nil {
 		return err
 	}
-	configValue, err := base64.StdEncoding.DecodeString(configB64)
-	if err != nil {
-		return fmt.Errorf("Error decoding credentials: %s", err)
-	}
-	if err := ioutil.WriteFile(configFile, []byte(configValue), 0600); err != nil {
-		return fmt.Errorf("Error writing credentials: %s", err)
-	}
-	log.Success("Kubeconfig stored at %s", configFile)
-	log.Information("Configure kubectl to work on your Okteto Space by running:")
-	fmt.Printf("    export KUBECONFIG=%s\n", configFile)
+	log.Success("Updated context '%s' in '%s'", okteto.GetURLWithUnderscore(), kubeConfigFile)
 	return nil
 }

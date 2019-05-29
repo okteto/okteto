@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/okteto/app/api/k8s/client"
@@ -44,22 +45,29 @@ func Create(ctx context.Context, u *model.User) error {
 	return nil
 }
 
-//GetCredentialConfig returns the credential for accessing the dev mode container
-func GetCredentialConfig(ctx context.Context, u *model.User, space string) (string, error) {
+//GetCredentials returns the credential for accessing the Okteto Space
+func GetCredentials(ctx context.Context, u *model.User, space string) (*model.Credential, error) {
 	log.Debug("Get service account credential")
-	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.namespaces.crud.getcredentialconfig")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "k8s.namespaces.crud.getcredentials")
 	defer span.Finish()
 
 	c := client.Get()
 	sa, err := c.CoreV1().ServiceAccounts(client.GetOktetoNamespace()).Get(u.ID, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("Error getting kubernetes service account: %s", err)
+		return nil, fmt.Errorf("Error getting kubernetes service account: %s", err)
 	}
 	secret, err := secrets.Get(sa.Secrets[0].Name, client.GetOktetoNamespace(), c)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return getConfigB64(space, string(secret.Data["ca.crt"]), string(secret.Data["token"])), nil
+	cred := &model.Credential{
+		Server:      fmt.Sprintf("https://%s", os.Getenv("CLUSTER_PUBLIC_ENDPOINT")),
+		Certificate: string(secret.Data["ca.crt"]),
+		Token:       string(secret.Data["token"]),
+		Namespace:   space,
+		Config:      getConfigB64(space, string(secret.Data["ca.crt"]), string(secret.Data["token"])),
+	}
+	return cred, nil
 }
 
 // GetUserByToken gets a user by her token

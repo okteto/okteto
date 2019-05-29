@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/machinebox/graphql"
-	"github.com/okteto/app/cli/pkg/config"
-	"github.com/okteto/app/cli/pkg/log"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/machinebox/graphql"
+	"github.com/okteto/app/cli/pkg/config"
+	"github.com/okteto/app/cli/pkg/log"
 )
 
 const (
@@ -127,6 +129,12 @@ func GetURL() string {
 	}
 
 	return t.URL
+}
+
+// GetURLWithUnderscore returns the URL of the authenticated user with underscores
+func GetURLWithUnderscore() string {
+	u, _ := url.Parse(GetURL())
+	return strings.ReplaceAll(u.Host, ".", "_")
 }
 
 func saveToken(id, token, url string) error {

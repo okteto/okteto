@@ -12,24 +12,27 @@ type Credentials struct {
 	Credentials Credential
 }
 
-// Credential field answer
+//Credential represents an Okteto Space k8s credentials
 type Credential struct {
-	Config string
+	Server      string `json:"server" yaml:"server"`
+	Certificate string `json:"certificate" yaml:"certificate"`
+	Token       string `json:"token" yaml:"token"`
+	Namespace   string `json:"namespace" yaml:"namespace"`
 }
 
-// GetK8sB64Config returns the space config credentials
-func GetK8sB64Config(space string) (string, error) {
+// GetCredentials returns the space config credentials
+func GetCredentials(space string) (*Credential, error) {
 	q := ""
 	if space == "" {
 		q = `query{
 			credentials{
-				config
+				server, certificate, token, namespace
 			},
 		}`
 	} else {
 		q = fmt.Sprintf(`query {
 			credentials(space: "%s") {
-				config
+				server, certificate, token, namespace
 				}
 			}`, space)
 	}
@@ -37,8 +40,8 @@ func GetK8sB64Config(space string) (string, error) {
 	var cred Credentials
 	if err := query(q, &cred); err != nil {
 		log.Infof("couldn't get credentials from grapqhl endpoint: %s", err)
-		return "", errors.ErrNotLogged
+		return nil, errors.ErrNotLogged
 	}
 
-	return cred.Credentials.Config, nil
+	return &cred.Credentials, nil
 }

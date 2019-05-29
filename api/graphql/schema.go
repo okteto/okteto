@@ -101,6 +101,18 @@ var credentialsType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Credential",
 		Fields: graphql.Fields{
+			"server": &graphql.Field{
+				Type: graphql.String,
+			},
+			"certificate": &graphql.Field{
+				Type: graphql.String,
+			},
+			"token": &graphql.Field{
+				Type: graphql.String,
+			},
+			"namespace": &graphql.Field{
+				Type: graphql.String,
+			},
 			"config": &graphql.Field{
 				Type: graphql.String,
 			},
@@ -332,7 +344,7 @@ var queryType = graphql.NewObject(
 						return nil, fmt.Errorf("failed to get credentials")
 					}
 
-					return credential{Config: c}, nil
+					return c, nil
 				},
 			},
 		},

@@ -18,6 +18,15 @@ type User struct {
 	Invite   string
 }
 
+//Credential represents an Okteto Space k8s credentials
+type Credential struct {
+	Server      string `json:"server" yaml:"server"`
+	Certificate string `json:"certificate" yaml:"certificate"`
+	Token       string `json:"token" yaml:"token"`
+	Namespace   string `json:"namespace" yaml:"namespace"`
+	Config      string `json:"config" yaml:"config"`
+}
+
 //NewUser returns a new user with an id and auth token initialized
 func NewUser(githubID, email, name, avatar string) *User {
 	id := uuid.NewV4()

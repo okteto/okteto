@@ -40,10 +40,10 @@ func InviteUser(ctx context.Context, email, githubID string) (*model.User, error
 }
 
 //GetCredential returns the credentials of the user for her space
-func GetCredential(ctx context.Context, u *model.User, space string) (string, error) {
-	credential, err := serviceaccounts.GetCredentialConfig(ctx, u, space)
+func GetCredential(ctx context.Context, u *model.User, space string) (*model.Credential, error) {
+	credential, err := serviceaccounts.GetCredentials(ctx, u, space)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return credential, err

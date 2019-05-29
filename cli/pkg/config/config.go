@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+
 )
 
 var (
@@ -94,4 +96,22 @@ func getHomeDir() string {
 	}
 
 	return home
+}
+
+// GetKubeConfigFile
+func GetKubeConfigFile() string {
+	home := getHomeDir()
+	kubeconfig := filepath.Join(home, ".kube", "config")
+	kubeconfigEnv := os.Getenv("KUBECONFIG")
+	if len(kubeconfigEnv) > 0 {
+		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)
+	}
+	return kubeconfig
+}
+
+func splitKubeConfigEnv(value string) string {
+	if runtime.GOOS == "windows" {
+		return strings.Split(value, ";")[0]
+	}
+	return strings.Split(value, ":")[0]
 }
