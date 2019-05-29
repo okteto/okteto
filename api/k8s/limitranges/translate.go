@@ -26,8 +26,8 @@ func translate(s *model.Space) *apiv1.LimitRange {
 							apiv1.ResourceMemory: resource.MustParse("4Gi"),
 						},
 						DefaultRequest: apiv1.ResourceList{
-							apiv1.ResourceCPU:    resource.MustParse("0.5"),
-							apiv1.ResourceMemory: resource.MustParse("1Gi"),
+							apiv1.ResourceCPU:    resource.MustParse("0.250"),
+							apiv1.ResourceMemory: resource.MustParse("0.5Gi"),
 						},
 					},
 				},
@@ -43,8 +43,8 @@ func translate(s *model.Space) *apiv1.LimitRange {
 				apiv1.LimitRangeItem{
 					Type: apiv1.LimitTypeContainer,
 					Default: apiv1.ResourceList{
-						apiv1.ResourceCPU:    resource.MustParse("0.5"),
-						apiv1.ResourceMemory: resource.MustParse("1Gi"),
+						apiv1.ResourceCPU:    resource.MustParse("1"),
+						apiv1.ResourceMemory: resource.MustParse("2Gi"),
 					},
 					DefaultRequest: apiv1.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("0.125"),

@@ -168,9 +168,9 @@ func translateResources(c *apiv1.Container) {
 	parsed, _ = resource.ParseQuantity("0.125")
 	c.Resources.Requests[apiv1.ResourceCPU] = parsed
 	c.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity, 0)
-	parsed, _ = resource.ParseQuantity("1Gi")
+	parsed, _ = resource.ParseQuantity("2Gi")
 	c.Resources.Limits[apiv1.ResourceMemory] = parsed
-	parsed, _ = resource.ParseQuantity("0.5")
+	parsed, _ = resource.ParseQuantity("1")
 	c.Resources.Limits[apiv1.ResourceCPU] = parsed
 }
 
