@@ -46,6 +46,30 @@ func Get() (*kubernetes.Clientset, *rest.Config, string, error) {
 	return client, config, namespace, nil
 }
 
+//GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
+func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {
+	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}})
+
+	namespace, _, err := clientConfig.Namespace()
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	config, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	return client, config, namespace, nil
+}
+
 //SetKubeConfig update a kubeconfig file with okteto cluster credentials
 func SetKubeConfig(filename, space string) error {
 	oktetoURL := okteto.GetURLWithUnderscore()
@@ -106,4 +130,11 @@ func SetKubeConfig(filename, space string) error {
 		return err
 	}
 	return nil
+}
+
+func homeDir() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return h
+	}
+	return os.Getenv("USERPROFILE") // windows
 }

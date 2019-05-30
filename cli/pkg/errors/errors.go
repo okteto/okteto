@@ -3,6 +3,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/okteto/app/cli/pkg/config"
 )
@@ -23,3 +24,8 @@ var (
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
 )
+
+// IsNotFound returns true if err is of the type not found
+func IsNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "not found")
+}

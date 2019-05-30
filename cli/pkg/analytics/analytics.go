@@ -16,6 +16,7 @@ const (
 
 	createDatabaseEvent = "Create Database"
 	upEvent             = "Up"
+	downEvent           = "Down"
 	loginEvent          = "Login"
 	createEvent         = "Create Manifest"
 )
@@ -51,9 +52,23 @@ func TrackCreate(language, image, version string) {
 	}
 }
 
-// TrackUp sends a tracking event to mixpanel when the user starts a development environment
+// TrackUp sends a tracking event to mixpanel when the user activates a development environment
 func TrackUp(image, version string) {
 	if err := mixpanelClient.Track(okteto.GetUserID(), upEvent, &mixpanel.Event{
+		Properties: map[string]interface{}{
+			"image":             image,
+			"os":                runtime.GOOS,
+			"version":           version,
+			"$referring_domain": okteto.GetURL(),
+		},
+	}); err != nil {
+		log.Infof("Failed to send analytics: %s", err)
+	}
+}
+
+// TrackDown sends a tracking event to mixpanel when the user deactivates a development environment
+func TrackDown(image, version string) {
+	if err := mixpanelClient.Track(okteto.GetUserID(), downEvent, &mixpanel.Event{
 		Properties: map[string]interface{}{
 			"image":             image,
 			"os":                runtime.GOOS,
