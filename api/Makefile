@@ -14,4 +14,4 @@ docker:
 
 .PHONY: start
 start:
-	cd cmd/okteto; gin --port 8080 run
+	gin --port 8080 --path . --build cmd/okteto
