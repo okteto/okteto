@@ -13,7 +13,7 @@ export const loginWithGithub = code => {
       } 
     }`, {}, { auth: false }).then(data => {
       if (data.errors) {
-        notify(`Authentication error: ${data.errors[0].message}`, 'error')
+        notify(`Authentication error: ${data.errors[0].message}`, 'error');
       } else {
         localStorage.setItem(environment.apiTokenKeyName, data.auth.token);
         dispatch(authSuccess(data.auth));
