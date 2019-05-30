@@ -35,12 +35,17 @@ func Down() *cobra.Command {
 				return err
 			}
 
-			if len(namespace) > 0 {
+			if namespace != "" {
 				dev.Space = namespace
 			}
 
-			analytics.TrackDown(dev.Image, VersionString)
-			err = runDown(dev, devPath)
+			image := ""
+			if len(args) > 0 {
+				image = args[0]
+			}
+
+			analytics.TrackDown(image, VersionString)
+			err = runDown(dev, image)
 			if err == nil {
 				log.Success("Your Okteto Environment has been deactivated")
 				log.Println()
@@ -56,7 +61,7 @@ func Down() *cobra.Command {
 	return cmd
 }
 
-func runDown(dev *model.Dev, devPath string) error {
+func runDown(dev *model.Dev, image string) error {
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err
@@ -76,23 +81,11 @@ func runDown(dev *model.Dev, devPath string) error {
 
 	progress := newProgressBar("Deactivating your Okteto Environment...")
 	progress.start()
-	err = deployments.DevModeOff(d, dev, client)
+	err = deployments.DevModeOff(d, dev, image, client)
 	progress.stop()
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(" ✓  Okteto Environment deactivated")
-
-	progress = newProgressBar("Destroying your Okteto Volumes...")
-	progress.start()
-	err = deployments.DestroyVolumes(dev, client)
-	progress.stop()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(" ✓  Okteto Volumes destroyed")
 
 	return nil
 }

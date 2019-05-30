@@ -12,13 +12,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const (
-	devAnnotation            = "dev.okteto.com/deployment"
-	oktetoVolumeTemplate     = "okteto-%s"
-	oktetoVolumeDataTemplate = "okteto-%s-%d"
-	oktetoSecretTemplate     = "okteto-%s"
-)
-
 //Get returns a deployment object given its name and namespace
 func Get(namespace, name string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
 	if namespace == "" {
@@ -35,16 +28,20 @@ func Get(namespace, name string, c *kubernetes.Clientset) (*appsv1.Deployment, e
 }
 
 // DevModeOff deactivates dev mode for d
-func DevModeOff(d *appsv1.Deployment, dev *model.Dev, c *kubernetes.Clientset) error {
-	manifest := getAnnotation(d.GetObjectMeta(), devAnnotation)
-	if len(manifest) == 0 {
+func DevModeOff(d *appsv1.Deployment, dev *model.Dev, image string, c *kubernetes.Clientset) error {
+	dManifest := getAnnotation(d.GetObjectMeta(), deploymentAnnotation)
+	if len(dManifest) == 0 {
 		log.Infof("%s/%s is not an okteto environment", d.Namespace, d.Name)
 		return nil
 	}
 
 	dOrig := &appsv1.Deployment{}
-	if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
+	if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
 		return fmt.Errorf("malformed manifest: %s", err)
+	}
+
+	if image != "" {
+		dOrig.Spec.Template.Spec.Containers[0].Image = image
 	}
 
 	dOrig.ResourceVersion = ""
@@ -54,21 +51,6 @@ func DevModeOff(d *appsv1.Deployment, dev *model.Dev, c *kubernetes.Clientset) e
 
 	if err := deleteSecret(d, c); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-// DestroyVolumes deletes the volumes attached to the Okteto environment
-func DestroyVolumes(dev *model.Dev, c *kubernetes.Clientset) error {
-	if err := destroyVolume(fmt.Sprintf(oktetoVolumeTemplate, dev.Name), dev.Space, c); err != nil {
-		return err
-	}
-
-	for i := range dev.Volumes {
-		if err := destroyVolume(fmt.Sprintf(oktetoVolumeDataTemplate, dev.Name, i), dev.Space, c); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -96,22 +78,4 @@ func deleteSecret(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 		return fmt.Errorf("Error deleting kubernetes sync secret: %s", err)
 	}
 	return nil
-}
-
-func destroyVolume(namespace, name string, c *kubernetes.Clientset) error {
-	log.Debugf("destroying volume %s/%s", namespace, name)
-	err := c.Core().PersistentVolumeClaims(namespace).Delete(name, &metav1.DeleteOptions{})
-	if errors.IsNotFound(err) {
-		return nil
-	}
-
-	return err
-}
-
-func getAnnotation(o metav1.Object, key string) string {
-	annotations := o.GetAnnotations()
-	if annotations != nil {
-		return annotations[key]
-	}
-	return ""
 }
