@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    certmanager.k8s.io: true
+  name: cool-surf
+  namespace: 2cfc1b78-6157-426e-a575-070d79e64c23
+spec:
+  rules:
+  - host: ramiro.com
+    http:
+      paths:
+      - backend:
+          serviceName: cool-surf
+          servicePort: 8000
+        path: /
+  tls:
+  - hosts:
+    - cool-surf-carlosjsanch3z.cloud.okteto.net

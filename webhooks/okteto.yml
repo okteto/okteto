@@ -1,0 +1,5 @@
+name: webhook-server
+image: okteto/golang:1
+container: server
+workdir: /usr/src/app
+command: ["bash"]

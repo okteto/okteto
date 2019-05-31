@@ -1,0 +1,7 @@
+webhook
+deployment
+.stignore
+delete.sh
+deploy.sh
+*.yaml
+okteto.yml

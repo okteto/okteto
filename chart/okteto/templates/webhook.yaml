@@ -1,0 +1,63 @@
+{{- if .Values.ingress.enabled -}}
+{{- $ca := genCA "okteto-ca" 3650 }}
+{{- $cn := printf "webhook" }}
+{{- $altName1 := printf "webhook.%s"  .Release.Namespace }}
+{{- $altName2 := printf "webhook.%s.svc" .Release.Namespace }}
+{{- $cert := genSignedCert $cn nil (list $altName1 $altName2) 3650 $ca }}
+
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: webhook
+  labels:
+    app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-webhook"
+    helm.sh/chart: {{ include "okteto.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+webhooks:
+  - name: ingress.webhook.okteto.com
+    failurePolicy: Fail
+    clientConfig:
+      service:
+        name: webhook
+        path: "/mutate/ingress"
+        namespace: "{{ .Release.Namespace }}"
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+      - operations: [ "CREATE", "UPDATE" ]
+        apiGroups: ["extensions"]
+        apiVersions: ["v1beta1"]
+        resources: ["ingresses"]
+    namespaceSelector:
+      matchLabels:
+        dev.okteto.com: "true"
+  - name: service.webhook.okteto.com
+    clientConfig:
+      service:
+        name: webhook
+        path: "/mutate/service"
+        namespace: "{{ .Release.Namespace }}"
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+      - operations: [ "CREATE", "UPDATE", "DELETE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["services"]
+    namespaceSelector:
+      matchLabels:
+        dev.okteto.com: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "okteto.fullname" . }}-webhook
+  labels:
+    app.kubernetes.io/name: {{ include "okteto.fullname" . }}-webhook
+    helm.sh/chart: {{ include "okteto.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+type: Opaque
+data:
+  tls.crt: {{ b64enc $cert.Cert }}
+  tls.key: {{ b64enc $cert.Key }}
+{{- end }}

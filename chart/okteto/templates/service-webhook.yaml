@@ -1,0 +1,20 @@
+{{- if .Values.webhook.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook
+  labels:
+    app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-webhook"
+    helm.sh/chart: {{ include "okteto.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  type: {{ .Values.services.type }}
+  ports:
+    - port: 443
+      name: webhook
+      targetPort: {{ .Values.services.webhook.port }}
+  selector:
+    app.kubernetes.io/name: "{{ include "okteto.fullname" . }}-webhook"
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

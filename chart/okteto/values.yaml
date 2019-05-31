@@ -12,6 +12,9 @@ images:
   frontend:
     repository: gcr.io/okteto-prod/frontend
     tag: 1.0.1
+  webhook:
+    repository: gcr.io/okteto-prod/webhook
+    tag: 1.0.0
   pullPolicy: Always
 nameOverride: ""
 fullnameOverride: ""
@@ -26,12 +29,16 @@ services:
     port: 8080
   frontend:
     port: 8080
+  webhook:
+    port: 8443
 ingress:
   enabled: false
   annotations: {}
   hosts:
   - chart-example.local
   tls: []
+webhook:
+  enabled: true
 rbac:
   install: true
   roleRef: cluster-admin
