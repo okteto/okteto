@@ -82,12 +82,12 @@ func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
 	}
 }
 
-func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, error) {
+func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, *apiv1.Container, error) {
 	manifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if manifest != "" {
 		dOrig := &appsv1.Deployment{}
 		if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		dOrig.ResourceVersion = ""
 		annotations := dOrig.GetObjectMeta().GetAnnotations()
@@ -99,11 +99,11 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, error)
 	d.Status = appsv1.DeploymentStatus{}
 	manifestBytes, err := json.Marshal(d)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	setAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 	if err := setDevListAsAnnotation(d.GetObjectMeta(), dev); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	setLabel(d.GetObjectMeta(), OktetoLabel, "true")
 	setLabel(d.GetObjectMeta(), OktetoVersionLabel, OktetoVersion)
@@ -113,20 +113,38 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, error)
 	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 	d.Spec.Replicas = &devReplicas
 
-	for i := range d.Spec.Template.Spec.Containers {
-		translateDevContainer(&d.Spec.Template.Spec.Containers[i], dev)
-		break //TODO: support for specify a container
+	devContainer := getDevContainer(d, dev.Container)
+	if devContainer == nil {
+		return nil, nil, fmt.Errorf("container/%s doesn't exist in deployment/%s", dev.Container, d.Name)
 	}
+
+	translateDevContainer(devContainer, dev)
 	translateInitOktetoContainer(d, dev)
 	translateOktetoVolumes(d, dev)
 	translateOktetoContainer(d, dev)
 	translateOktetoSecretVolume(d, dev)
-	return d, nil
+	return d, devContainer, nil
+}
+
+func getDevContainer(d *appsv1.Deployment, name string) *apiv1.Container {
+	if len(name) == 0 {
+		return &d.Spec.Template.Spec.Containers[0]
+	}
+
+	for i, c := range d.Spec.Template.Spec.Containers {
+		if c.Name == name {
+			return &d.Spec.Template.Spec.Containers[i]
+		}
+	}
+
+	return nil
 }
 
 func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
-	c.Name = "dev"
-	c.SecurityContext = &apiv1.SecurityContext{}
+	if len(dev.Image) == 0 {
+		dev.Image = c.Image
+	}
+
 	c.Image = dev.Image
 	c.ImagePullPolicy = apiv1.PullAlways
 	c.Command = []string{"tail"}
@@ -134,6 +152,7 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
 	c.WorkingDir = dev.WorkDir
 	c.ReadinessProbe = nil
 	c.LivenessProbe = nil
+
 	translateResources(c)
 	translateEnvVars(c, dev.Environment)
 

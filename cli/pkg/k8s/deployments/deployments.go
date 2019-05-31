@@ -8,6 +8,7 @@ import (
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -28,22 +29,22 @@ func Get(name, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, e
 }
 
 //DevModeOn activates dev mode
-func DevModeOn(d *appsv1.Deployment, dev *model.Dev, forceCreate bool, c *kubernetes.Clientset) error {
-	d, err := translate(d, dev)
+func DevModeOn(d *appsv1.Deployment, dev *model.Dev, forceCreate bool, client *kubernetes.Clientset) (*apiv1.Container, error) {
+	d, container, err := translate(d, dev)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if forceCreate {
-		if err := create(d, c); err != nil {
-			return err
+		if err := create(d, client); err != nil {
+			return nil, err
 		}
 	} else {
-		if err := update(d, c); err != nil {
-			return err
+		if err := update(d, client); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return container, nil
 }
 
 //IsDevModeOn returns if a deployment is in devmode

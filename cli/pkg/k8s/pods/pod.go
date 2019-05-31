@@ -18,7 +18,7 @@ const (
 )
 
 // GetDevPod returns the dev pod for a deployment
-func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
+func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
 
@@ -30,7 +30,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (st
 		)
 		if err != nil {
 			log.Infof("error listing pods: %s", err)
-			return "", fmt.Errorf("failed to retrieve dev environment information")
+			return nil, fmt.Errorf("failed to retrieve dev environment information")
 		}
 
 		var pendingOrRunningPods []apiv1.Pod
@@ -46,7 +46,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (st
 
 		if len(pendingOrRunningPods) == 1 {
 			log.Debugf("%s/pod/%s is %s", pendingOrRunningPods[0].Namespace, pendingOrRunningPods[0].Name, pendingOrRunningPods[0].Status.Phase)
-			return pendingOrRunningPods[0].Name, nil
+			return &pendingOrRunningPods[0], nil
 		}
 
 		if len(pendingOrRunningPods) > 1 {
@@ -54,7 +54,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (st
 			for i, p := range pendingOrRunningPods {
 				podNames[i] = p.Name
 			}
-			return "", fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
+			return nil, fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
 		}
 		select {
 		case <-ticker.C:
@@ -62,10 +62,10 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (st
 			continue
 		case <-ctx.Done():
 			log.Debug("cancelling call to get cnd pod")
-			return "", ctx.Err()
+			return nil, ctx.Err()
 		}
 	}
 
 	log.Debugf("cnd pod wasn't running after %d seconds", maxRetries)
-	return "", fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
+	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 }

@@ -43,6 +43,7 @@ type UpContext struct {
 	Client     *kubernetes.Clientset
 	RestConfig *rest.Config
 	Pod        string
+	Container        string
 	Forwarder  *forward.PortForwardManager
 	Disconnect chan struct{}
 	Running    chan error
@@ -169,7 +170,7 @@ func (up *UpContext) Activate() {
 		}
 
 		printDisplayContext("Your Okteto Environment is ready", up.Dev.Name)
-		cmd, port := buildExecCommand(up.Dev, up.Pod)
+		cmd, port := up.buildExecCommand()
 		if err := cmd.Start(); err != nil {
 			log.Infof("Failed to execute okteto exec: %s", err)
 			up.Exit <- err
@@ -280,9 +281,12 @@ func (up *UpContext) devMode(isRetry bool) error {
 		}
 	}
 
-	if err := deployments.DevModeOn(d, up.Dev, create, up.Client); err != nil {
+	c, err := deployments.DevModeOn(d, up.Dev, create, up.Client) 
+	if err != nil {
 		return err
 	}
+
+	up.Container = c.Name
 
 	if create {
 		if err := services.Create(up.Dev, up.Client); err != nil {
@@ -290,10 +294,12 @@ func (up *UpContext) devMode(isRetry bool) error {
 		}
 	}
 
-	up.Pod, err = pods.GetDevPod(up.Context, up.Dev, up.Client)
+	p, err := pods.GetDevPod(up.Context, up.Dev, up.Client)
 	if err != nil {
 		return err
 	}
+
+	up.Pod = p.Name
 
 	return nil
 }
@@ -388,7 +394,7 @@ func printDisplayContext(message, name string) {
 	fmt.Println()
 }
 
-func buildExecCommand(dev *model.Dev, pod string) (*exec.Cmd, int) {
+func (up *UpContext) buildExecCommand() (*exec.Cmd, int) {
 	port, err := model.GetAvailablePort()
 	if err != nil {
 		log.Infof("couldn't access the network: %s", err)
@@ -398,14 +404,16 @@ func buildExecCommand(dev *model.Dev, pod string) (*exec.Cmd, int) {
 	args := []string{
 		"exec",
 		"--pod",
-		pod,
+		up.Pod,
+		"--container",
+		up.Container,
 		"--port",
 		fmt.Sprintf("%d", port),
 		"-n",
-		dev.Namespace,
+		up.Dev.Namespace,
 		"--",
 	}
-	args = append(args, dev.Command...)
+	args = append(args, up.Dev.Command...)
 
 	cmd := exec.Command(config.GetBinaryFullPath(), args...)
 	cmd.Stdin = os.Stdin

@@ -13,16 +13,16 @@ import (
 //Dev represents a cloud native development environment
 type Dev struct {
 	Name        string               `json:"name" yaml:"name"`
-	Namespace   string               `json:"namespace" yaml:"namespace"`
+	Namespace   string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container   string               `json:"container,omitempty" yaml:"container,omitempty"`
-	Image       string               `json:"image" yaml:"image"`
+	Image       string               `json:"image,omitempty" yaml:"image,omitempty"`
 	Environment []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string             `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir     string               `json:"workdir" yaml:"workdir"`
 	Volumes     []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	Forward     []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Resources   ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
-	DevPath     string
+	DevPath     string               `json:"-" yaml:"-"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
