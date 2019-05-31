@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"k8s.io/client-go/kubernetes"
@@ -12,39 +11,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-//Get returns a kubernetes client.
-func Get() (*kubernetes.Clientset, *rest.Config, string, error) {
-	configFile, err := ioutil.TempFile("", "k8-config")
-	if err != nil {
-		return nil, nil, "", err
-	}
-	kubeconfig := configFile.Name()
-	if err := SetKubeConfig(kubeconfig, ""); err != nil {
-		return nil, nil, "", err
-	}
-
-	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig},
-		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}})
-
-	namespace, _, err := clientConfig.Namespace()
-	if err != nil {
-		return nil, nil, "", err
-	}
-
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, nil, "", err
-	}
-
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, nil, "", err
-	}
-
-	return client, config, namespace, nil
-}
 
 //GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
 func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {

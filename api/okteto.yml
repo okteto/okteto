@@ -7,8 +7,3 @@ forward:
 resources:
   requests:
     cpu: "500m"
-volumes:
-  - name: go-pkg
-    path: /go/pkg/
-  - name: go-cache
-    path: /root/.cache/go-build/

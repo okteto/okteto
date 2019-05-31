@@ -77,7 +77,7 @@ func Exec() *cobra.Command {
 }
 
 func executeExec(ctx context.Context, pod string, dev *model.Dev, args []string) error {
-	client, cfg, namespace, err := k8Client.Get()
+	client, cfg, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err
 	}
