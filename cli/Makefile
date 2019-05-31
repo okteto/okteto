@@ -19,6 +19,9 @@ $(PLATFORMS):
 	GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/okteto/app/cli/cmd.VersionString=${VERSION_STRING}" -o "bin/okteto-$(label)" 
 	sha256sum "bin/okteto-$(label)" > "bin/okteto-$(label).sha256"  
 
+.PHONY: test
+test:
+	 go test ./...
 
 .PHONY: build
 build:

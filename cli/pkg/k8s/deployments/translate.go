@@ -153,7 +153,7 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
 	c.ReadinessProbe = nil
 	c.LivenessProbe = nil
 
-	translateResources(c)
+	translateResources(c, dev.Resources)
 	translateEnvVars(c, dev.Environment)
 
 	if c.VolumeMounts == nil {
@@ -183,17 +183,25 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
 	}
 }
 
-func translateResources(c *apiv1.Container) {
+func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
+
 	c.Resources.Requests = make(map[apiv1.ResourceName]resource.Quantity, 0)
-	parsed, _ := resource.ParseQuantity("0.250Gi")
-	c.Resources.Requests[apiv1.ResourceMemory] = parsed
-	parsed, _ = resource.ParseQuantity("0.125")
-	c.Resources.Requests[apiv1.ResourceCPU] = parsed
+	if v, ok := r.Requests[apiv1.ResourceMemory]; ok {
+		c.Resources.Requests[apiv1.ResourceMemory] = v
+	}
+
+	if v, ok := r.Requests[apiv1.ResourceCPU]; ok {
+		c.Resources.Requests[apiv1.ResourceCPU] = v
+	}
+
 	c.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity, 0)
-	parsed, _ = resource.ParseQuantity("2Gi")
-	c.Resources.Limits[apiv1.ResourceMemory] = parsed
-	parsed, _ = resource.ParseQuantity("1")
-	c.Resources.Limits[apiv1.ResourceCPU] = parsed
+	if v, ok := r.Limits[apiv1.ResourceMemory]; ok {
+		c.Resources.Limits[apiv1.ResourceMemory] = v
+	}
+
+	if v, ok := r.Limits[apiv1.ResourceCPU]; ok {
+		c.Resources.Limits[apiv1.ResourceCPU] = v
+	}
 }
 
 func translateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {

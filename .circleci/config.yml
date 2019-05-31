@@ -11,6 +11,9 @@ jobs:
           keys:
             - v1-pkg-cache
       - run:
+          command: make test
+          working_directory: cli
+      - run:
           command: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
           working_directory: cli
 
