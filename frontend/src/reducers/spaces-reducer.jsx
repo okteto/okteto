@@ -7,6 +7,10 @@ const initialSpacesState = {
   isLoaded: false
 };
 
+const allResourcesLoaded = state => {
+  return !!state.current && state.list.length > 0;
+};
+
 export default (state = initialSpacesState, action) => {
   switch (action.type) {
     case 'REQUEST_SPACES': {
@@ -16,10 +20,15 @@ export default (state = initialSpacesState, action) => {
       };
     }
     case 'RECEIVE_SPACES': {
-      return {
+      const newState = {
         ...state,
         list: action.spaces,
         isFetching: false
+      };
+      
+      return {
+        ...newState,
+        isLoaded: allResourcesLoaded(newState)
       };
     }
     case 'REQUEST_SPACE': {
@@ -29,11 +38,15 @@ export default (state = initialSpacesState, action) => {
       };
     }
     case 'RECEIVE_SPACE': {
-      return {
+      const newState = {
         ...state,
         current: action.space,
-        isFetching: false,
-        isLoaded: true
+        isFetching: false
+      };
+
+      return {
+        ...newState,
+        isLoaded: allResourcesLoaded(newState)
       };
     }
     case 'DISCARD_RECEIVE_SPACE': {
