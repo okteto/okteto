@@ -53,11 +53,6 @@ class SpaceExplorer extends Component {
                   onClick={() => this.handleSelectSpace(space)}
                 >
                   <div className="ellipsis">{ space.id }</div>
-                  { isPersonalSpace && 
-                    <div className="SpaceExplorerListItemSubtitle">
-                      Personal Namespace
-                    </div>
-                  }
                 </div>
               );
             })}

@@ -55,12 +55,6 @@ class SpaceHeader extends Component {
               </span>
             }
           </div>
-          
-          { isPersonalSpace && 
-            <div className="SpaceHeaderSubtitle">
-              Personal Namespace
-            </div>
-          }
         </div>
 
         <div className="flex-auto" /> 
