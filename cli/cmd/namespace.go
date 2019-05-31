@@ -9,32 +9,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//KubeConfig fetch credentials for the cluster
-func KubeConfig() *cobra.Command {
+//Namespace fetch credentials for a cluster namespace
+func Namespace() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "kubeconfig",
-		Short: "Downloads k8s credentials for a Okteto Space",
+		Use:   "namespace",
+		Short: "Downloads k8s credentials for a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Debug("starting select command")
-			space := ""
+			log.Debug("starting kubeconfig command")
+			namespace := ""
 			if len(args) > 0 {
-				var err error
-				space, err = okteto.GetSpaceID(args[0])
-				if err != nil {
-					return err
-				}
+				namespace = args[0]
 			}
 
-			return RunKubeConfig(space)
+			return RunNamespace(namespace)
 		},
 	}
 	return cmd
 }
 
-//RunKubeConfig starts the kubeconfig sequence
-func RunKubeConfig(space string) error {
+//RunNamespace starts the kubeconfig sequence
+func RunNamespace(namespace string) error {
 	kubeConfigFile := config.GetKubeConfigFile()
-	if err := client.SetKubeConfig(kubeConfigFile, space); err != nil {
+	if err := client.SetKubeConfig(kubeConfigFile, namespace); err != nil {
 		return err
 	}
 	log.Success("Updated context '%s' in '%s'", okteto.GetURLWithUnderscore(), kubeConfigFile)

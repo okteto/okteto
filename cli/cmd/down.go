@@ -36,7 +36,7 @@ func Down() *cobra.Command {
 			}
 
 			if namespace != "" {
-				dev.Space = namespace
+				dev.Namespace = namespace
 			}
 
 			image := ""
@@ -66,16 +66,15 @@ func runDown(dev *model.Dev, image string) error {
 	if err != nil {
 		return err
 	}
-	if dev.Space == "" {
-		dev.Space = namespace
+	if dev.Namespace == "" {
+		dev.Namespace = namespace
 	}
 
-	d, err := deployments.Get(dev.Space, dev.Name, client)
+	d, err := deployments.Get(dev.Name, dev.Namespace, client)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
 		}
-
 		return err
 	}
 

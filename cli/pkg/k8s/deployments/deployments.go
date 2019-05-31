@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/app/cli/pkg/errors"
+	"github.com/okteto/app/cli/pkg/k8s/secrets"
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -13,7 +13,7 @@ import (
 )
 
 //Get returns a deployment object given its name and namespace
-func Get(namespace, name string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+func Get(name, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
 	if namespace == "" {
 		return nil, fmt.Errorf("empty namespace")
 	}
@@ -27,9 +27,48 @@ func Get(namespace, name string, c *kubernetes.Clientset) (*appsv1.Deployment, e
 	return d, nil
 }
 
+//DevModeOn activates dev mode
+func DevModeOn(d *appsv1.Deployment, dev *model.Dev, forceCreate bool, c *kubernetes.Clientset) error {
+	d, err := translate(d, dev)
+	if err != nil {
+		return err
+	}
+
+	if forceCreate {
+		if err := create(d, c); err != nil {
+			return err
+		}
+	} else {
+		if err := update(d, c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//IsDevModeOn returns if a deployment is in devmode
+func IsDevModeOn(d *appsv1.Deployment) bool {
+	labels := d.GetObjectMeta().GetLabels()
+	if labels == nil {
+		return false
+	}
+	_, ok := labels[oktetoLabel]
+	return ok
+}
+
+//IsAutoCreate returns if the deplloyment is created from scratch
+func IsAutoCreate(d *appsv1.Deployment) bool {
+	annotations := d.GetObjectMeta().GetAnnotations()
+	if annotations == nil {
+		return false
+	}
+	_, ok := annotations[oktetoAutoCreateAnnotation]
+	return ok
+}
+
 // DevModeOff deactivates dev mode for d
 func DevModeOff(d *appsv1.Deployment, dev *model.Dev, image string, c *kubernetes.Clientset) error {
-	dManifest := getAnnotation(d.GetObjectMeta(), deploymentAnnotation)
+	dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if len(dManifest) == 0 {
 		log.Infof("%s/%s is not an okteto environment", d.Namespace, d.Name)
 		return nil
@@ -49,10 +88,19 @@ func DevModeOff(d *appsv1.Deployment, dev *model.Dev, image string, c *kubernete
 		return err
 	}
 
-	if err := deleteSecret(d, c); err != nil {
+	if err := secrets.Destroy(dev, c); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func create(d *appsv1.Deployment, c *kubernetes.Clientset) error {
+	log.Debugf("creating deployment %s/%s", d.Namespace, d.Name)
+	_, err := c.AppsV1().Deployments(d.Namespace).Create(d)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -61,21 +109,6 @@ func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	_, err := c.AppsV1().Deployments(d.Namespace).Update(d)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func deleteSecret(d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	secretName := fmt.Sprintf(oktetoSecretTemplate, d.Name)
-	log.Debugf("deleting secret %s/%s", d.Namespace, secretName)
-	err := c.Core().Secrets(d.Namespace).Delete(secretName, &metav1.DeleteOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil
-		}
-
-		return fmt.Errorf("Error deleting kubernetes sync secret: %s", err)
 	}
 	return nil
 }

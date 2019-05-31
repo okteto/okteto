@@ -3,20 +3,26 @@ package model
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 
 	yaml "gopkg.in/yaml.v2"
+	apiv1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
 //Dev represents a cloud native development environment
 type Dev struct {
-	Name        string    `json:"name" yaml:"name"`
-	Space       string    `json:"space,omitempty" yaml:"space,omitempty"`
-	Image       string    `json:"image" yaml:"image"`
-	Environment []EnvVar  `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Command     []string  `json:"command,omitempty" yaml:"command,omitempty"`
-	Volumes     []string  `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	WorkDir     string    `json:"workdir" yaml:"workdir"`
-	Forward     []Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Name        string               `json:"name" yaml:"name"`
+	Namespace   string               `json:"namespace" yaml:"namespace"`
+	Container   string               `json:"container,omitempty" yaml:"container,omitempty"`
+	Image       string               `json:"image" yaml:"image"`
+	Environment []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Command     []string             `json:"command,omitempty" yaml:"command,omitempty"`
+	WorkDir     string               `json:"workdir" yaml:"workdir"`
+	Volumes     []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	Forward     []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Resources   ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	DevPath     string
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
@@ -30,6 +36,15 @@ type Forward struct {
 	Local  int
 	Remote int
 }
+
+// ResourceRequirements describes the compute resource requirements.
+type ResourceRequirements struct {
+	Limits   ResourceList
+	Requests ResourceList
+}
+
+// ResourceList is a set of (resource name, quantity) pairs.
+type ResourceList map[apiv1.ResourceName]resource.Quantity
 
 //Get returns a Dev object from a given file
 func Get(devPath string) (*Dev, error) {
@@ -46,6 +61,8 @@ func Get(devPath string) (*Dev, error) {
 	if err := dev.validate(); err != nil {
 		return nil, err
 	}
+	dev.DevPath = filepath.Base(devPath)
+
 	return dev, nil
 }
 
@@ -54,6 +71,10 @@ func read(bytes []byte) (*Dev, error) {
 		Environment: make([]EnvVar, 0),
 		Command:     make([]string, 0),
 		Forward:     make([]Forward, 0),
+		Resources: ResourceRequirements{
+			Limits:   ResourceList{},
+			Requests: ResourceList{},
+		},
 	}
 	if err := yaml.Unmarshal(bytes, dev); err != nil {
 		return nil, err
@@ -78,9 +99,5 @@ func (dev *Dev) validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("Name cannot be empty")
 	}
-	if len(dev.Volumes) > 2 {
-		return fmt.Errorf("The maximum number of volumes is 2")
-	}
-
 	return nil
 }

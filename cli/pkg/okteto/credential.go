@@ -1,8 +1,6 @@
 package okteto
 
 import (
-	"fmt"
-
 	"github.com/okteto/app/cli/pkg/errors"
 	"github.com/okteto/app/cli/pkg/log"
 )
@@ -21,26 +19,21 @@ type Credential struct {
 }
 
 // GetCredentials returns the space config credentials
-func GetCredentials(space string) (*Credential, error) {
-	q := ""
-	if space == "" {
-		q = `query{
-			credentials{
-				server, certificate, token, namespace
-			},
-		}`
-	} else {
-		q = fmt.Sprintf(`query {
-			credentials(space: "%s") {
-				server, certificate, token, namespace
-				}
-			}`, space)
-	}
+func GetCredentials(namespace string) (*Credential, error) {
+	q := `query{
+		credentials{
+			server, certificate, token, namespace
+		},
+	}`
 
 	var cred Credentials
 	if err := query(q, &cred); err != nil {
 		log.Infof("couldn't get credentials from grapqhl endpoint: %s", err)
 		return nil, errors.ErrNotLogged
+	}
+
+	if namespace != "" {
+		cred.Credentials.Namespace = namespace
 	}
 
 	return &cred.Credentials, nil

@@ -12,7 +12,6 @@ import (
 	"github.com/okteto/app/cli/pkg/k8s/pods"
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
-	"github.com/okteto/app/cli/pkg/okteto"
 
 	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
 
@@ -23,7 +22,7 @@ import (
 func Exec() *cobra.Command {
 	var devPath string
 	var pod string
-	var space string
+	var namespace string
 	var port int
 
 	cmd := &cobra.Command{
@@ -53,13 +52,8 @@ func Exec() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if space != "" {
-				var err error
-				space, err = okteto.GetSpaceID(space)
-				if err != nil {
-					return err
-				}
-				dev.Space = space
+			if namespace != "" {
+				dev.Namespace = namespace
 			}
 			err = executeExec(ctx, pod, dev, args)
 			return err
@@ -73,7 +67,7 @@ func Exec() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
-	cmd.Flags().StringVarP(&space, "space", "s", "", "space where the exec command is executed")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the exec command is executed")
 	cmd.Flags().StringVarP(&pod, "pod", "p", "", "pod where it is executed")
 	cmd.Flags().MarkHidden("pod")
 	cmd.Flags().IntVar(&port, "port", 0, "port to listen to signals")
@@ -87,16 +81,16 @@ func executeExec(ctx context.Context, pod string, dev *model.Dev, args []string)
 	if err != nil {
 		return err
 	}
-	if dev.Space != "" {
-		namespace = dev.Space
+	if dev.Namespace != "" {
+		dev.Namespace = namespace
 	}
 
 	if pod == "" {
-		pod, err = pods.GetDevPod(ctx, dev, namespace, client)
+		pod, err = pods.GetDevPod(ctx, dev, client)
 		if err != nil {
 			return err
 		}
 	}
 
-	return exec.Exec(ctx, client, cfg, namespace, pod, "dev", true, os.Stdin, os.Stdout, os.Stderr, args)
+	return exec.Exec(ctx, client, cfg, dev.Namespace, pod, "dev", true, os.Stdin, os.Stdout, os.Stderr, args)
 }

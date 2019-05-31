@@ -18,12 +18,12 @@ const (
 )
 
 // GetDevPod returns the dev pod for a deployment
-func GetDevPod(ctx context.Context, dev *model.Dev, namespace string, c *kubernetes.Clientset) (string, error) {
+func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
 
 	for tries < maxRetries {
-		pods, err := c.CoreV1().Pods(namespace).List(
+		pods, err := c.CoreV1().Pods(dev.Namespace).List(
 			metav1.ListOptions{
 				LabelSelector: fmt.Sprintf("%s=%s", oktetoLabel, dev.Name),
 			},

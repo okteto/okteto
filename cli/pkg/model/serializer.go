@@ -5,15 +5,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
-)
 
-type serialMount struct {
-	SendOnly bool   `json:"sendonly,omitempty" yaml:"sendonly,omitempty"`
-	Source   string `json:"source,omitempty" yaml:"source,omitempty"`
-	Path     string `json:"path" yaml:"path,omitempty"`
-	Target   string `json:"target,omitempty" yaml:"target,omitempty"` //TODO: decrecated
-	Size     string `json:"size,omitempty" yaml:"size,omitempty"`
-}
+	apiv1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
+)
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -57,16 +52,13 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	parts := strings.SplitN(raw, ":", 2)
-
+	if len(parts) != 2 {
+		return fmt.Errorf("Wrong port-forward syntax '%s', must be of the form 'localPort:RemotePort'", raw)
+	}
 	localPort, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return fmt.Errorf("Cannot convert remote port '%s' in port-forward '%s'", parts[0], raw)
 	}
-
-	if len(parts) != 2 {
-		parts = append(parts, parts[0])
-	}
-
 	remotePort, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return fmt.Errorf("Cannot convert remote port '%s' in port-forward '%s'", parts[1], raw)
@@ -79,4 +71,34 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (f Forward) MarshalYAML() (interface{}, error) {
 	return fmt.Sprintf("%d:%d", f.Local, f.Remote), nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (r *ResourceList) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw map[apiv1.ResourceName]string
+	err := unmarshal(&raw)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range raw {
+		parsed, err := resource.ParseQuantity(v)
+		if err != nil {
+			return err
+		}
+
+		(*r)[k] = parsed
+	}
+
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (r ResourceList) MarshalYAML() (interface{}, error) {
+	m := make(map[apiv1.ResourceName]string, 0)
+	for k, v := range r {
+		m[k] = v.String()
+	}
+
+	return m, nil
 }

@@ -71,14 +71,14 @@ func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {
 }
 
 //SetKubeConfig update a kubeconfig file with okteto cluster credentials
-func SetKubeConfig(filename, space string) error {
+func SetKubeConfig(filename, namespace string) error {
 	oktetoURL := okteto.GetURLWithUnderscore()
 	clusterName := fmt.Sprintf("%s-cluster", oktetoURL)
 	userName := fmt.Sprintf("%s-user", oktetoURL)
 	contextName := fmt.Sprintf("%s-context", oktetoURL)
 
 	var cfg *clientcmdapi.Config
-	cred, err := okteto.GetCredentials(space)
+	cred, err := okteto.GetCredentials(namespace)
 	if err != nil {
 		return err
 	}

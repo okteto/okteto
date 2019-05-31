@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -15,10 +14,13 @@ import (
 	"github.com/okteto/app/cli/pkg/config"
 	"github.com/okteto/app/cli/pkg/errors"
 	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
+	"github.com/okteto/app/cli/pkg/k8s/deployments"
 	"github.com/okteto/app/cli/pkg/k8s/pods"
+	"github.com/okteto/app/cli/pkg/k8s/secrets"
+	"github.com/okteto/app/cli/pkg/k8s/services"
+	"github.com/okteto/app/cli/pkg/k8s/volumes"
 	"github.com/okteto/app/cli/pkg/log"
 	"github.com/okteto/app/cli/pkg/model"
-	"github.com/okteto/app/cli/pkg/okteto"
 
 	"github.com/okteto/app/cli/pkg/k8s/forward"
 	"github.com/okteto/app/cli/pkg/syncthing"
@@ -36,10 +38,8 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 type UpContext struct {
 	Context    context.Context
 	Cancel     context.CancelFunc
-	DevPath    string
 	WG         *sync.WaitGroup
 	Dev        *model.Dev
-	Result     *okteto.Environment
 	Client     *kubernetes.Clientset
 	RestConfig *rest.Config
 	Pod        string
@@ -49,13 +49,12 @@ type UpContext struct {
 	Exit       chan error
 	Sy         *syncthing.Syncthing
 	ErrChan    chan error
-	Namespace  string
 }
 
 //Up starts a cloud dev environment
 func Up() *cobra.Command {
 	var devPath string
-	var space string
+	var namespace string
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your Okteto Environment",
@@ -75,8 +74,6 @@ func Up() *cobra.Command {
 				}
 			}
 
-			devPath = getFullPath(devPath)
-
 			if _, err := os.Stat(devPath); os.IsNotExist(err) {
 				return fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto create'", devPath)
 			}
@@ -85,30 +82,24 @@ func Up() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if space != "" {
-				var err error
-				space, err = okteto.GetSpaceID(space)
-				if err != nil {
-					return err
-				}
-				dev.Space = space
+			if namespace != "" {
+				dev.Namespace = namespace
 			}
 			analytics.TrackUp(dev.Image, VersionString)
-			return RunUp(dev, devPath)
+			return RunUp(dev)
 		},
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
-	cmd.Flags().StringVarP(&space, "space", "s", "", "space where the up command is executed")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd
 }
 
 //RunUp starts the up sequence
-func RunUp(dev *model.Dev, devPath string) error {
+func RunUp(dev *model.Dev) error {
 	up := &UpContext{
 		WG:         &sync.WaitGroup{},
 		Dev:        dev,
-		DevPath:    filepath.Base(devPath),
 		Disconnect: make(chan struct{}, 1),
 		Running:    make(chan error, 1),
 		Exit:       make(chan error, 1),
@@ -119,7 +110,7 @@ func RunUp(dev *model.Dev, devPath string) error {
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	go up.Activate(devPath)
+	go up.Activate()
 	select {
 	case <-stop:
 		log.Debugf("CTRL+C received, starting shutdown sequence")
@@ -135,7 +126,7 @@ func RunUp(dev *model.Dev, devPath string) error {
 }
 
 // Activate activates the dev environment
-func (up *UpContext) Activate(devPath string) {
+func (up *UpContext) Activate() {
 	up.WG.Add(1)
 	defer up.WG.Done()
 	var prevError error
@@ -143,20 +134,16 @@ func (up *UpContext) Activate(devPath string) {
 
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
-		progress := newProgressBar("Activating your Okteto Environment...")
-		progress.start()
-
 		err := up.devMode(attach)
-		attach = true
-		progress.stop()
 		if err != nil {
 			up.Exit <- err
 			return
 		}
+		attach = true
 
 		fmt.Println(" ✓  Okteto Environment activated")
 
-		progress = newProgressBar("Synchronizing your files...")
+		progress := newProgressBar("Synchronizing your files...")
 		progress.start()
 		err = up.startSync()
 		progress.stop()
@@ -181,7 +168,7 @@ func (up *UpContext) Activate(devPath string) {
 			log.Green("Reconnected to your cluster.")
 		}
 
-		printDisplayContext("Your Okteto Environment is ready", up.Result.Name, up.Result.Endpoints)
+		printDisplayContext("Your Okteto Environment is ready", up.Dev.Name)
 		cmd, port := buildExecCommand(up.Dev, up.Pod)
 		if err := cmd.Start(); err != nil {
 			log.Infof("Failed to execute okteto exec: %s", err)
@@ -245,24 +232,65 @@ func (up *UpContext) WaitUntilExitOrInterrupt(endpoint string) error {
 
 func (up *UpContext) devMode(isRetry bool) error {
 	var err error
-	up.Client, up.RestConfig, up.Namespace, err = k8Client.Get()
+	var namespace string
+	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal()
 	if err != nil {
 		return err
 	}
-	if up.Dev.Space != "" {
-		up.Namespace = up.Dev.Space
+	if up.Dev.Namespace == "" {
+		up.Dev.Namespace = namespace
 	}
 
-	up.Sy, err = syncthing.New(up.Dev, up.DevPath, up.Namespace)
+	up.Sy, err = syncthing.New(up.Dev)
 	if err != nil {
 		return err
 	}
 
-	if up.Result, err = okteto.DevModeOn(up.Dev, up.DevPath, isRetry); err != nil {
+	d, err := deployments.Get(up.Dev.Name, up.Dev.Namespace, up.Client)
+	create := false
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		if !askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name)) {
+			return fmt.Errorf("deployment %s not found [current context: %s]", up.Dev.Name, up.Dev.Namespace)
+		}
+		d = deployments.GevDevSandbox(up.Dev)
+		create = false
+	}
+	progress := newProgressBar("Activating your Okteto Environment...")
+	progress.start()
+	defer progress.stop()
+
+	if isRetry && !deployments.IsDevModeOn(d) {
+		return fmt.Errorf("Your Okteto Environment has been deactivated")
+	}
+
+	if err := secrets.Create(up.Dev, up.Client); err != nil {
 		return err
 	}
 
-	up.Pod, err = pods.GetDevPod(up.Context, up.Dev, up.Namespace, up.Client)
+	if err := volumes.Create(volumes.GetVolumeName(up.Dev), up.Dev, up.Client); err != nil {
+		return err
+	}
+
+	for i := range up.Dev.Volumes {
+		if err := volumes.Create(volumes.GetVolumeDataName(up.Dev, i), up.Dev, up.Client); err != nil {
+			return err
+		}
+	}
+
+	if err := deployments.DevModeOn(d, up.Dev, create, up.Client); err != nil {
+		return err
+	}
+
+	if create {
+		if err := services.Create(up.Dev, up.Client); err != nil {
+			return err
+		}
+	}
+
+	up.Pod, err = pods.GetDevPod(up.Context, up.Dev, up.Client)
 	if err != nil {
 		return err
 	}
@@ -289,7 +317,7 @@ func (up *UpContext) startSync() error {
 		}
 	}
 
-	up.Forwarder.Start(up.Pod, up.Namespace)
+	up.Forwarder.Start(up.Pod, up.Dev.Namespace)
 	go up.Sy.Monitor(up.Context, up.WG, up.Disconnect)
 
 	if err := up.Sy.WaitForPing(up.Context, up.WG); err != nil {
@@ -354,13 +382,9 @@ func (up *UpContext) shutdown() {
 	}
 }
 
-func printDisplayContext(message, name string, endpoints []string) {
+func printDisplayContext(message, name string) {
 	log.Success(message)
 	log.Println(fmt.Sprintf("    %s     %s", log.BlueString("Name:"), name))
-	if len(endpoints) > 0 {
-		log.Println(fmt.Sprintf("    %s %s", log.BlueString("Endpoint:"), endpoints[0]))
-	}
-
 	fmt.Println()
 }
 
@@ -371,15 +395,16 @@ func buildExecCommand(dev *model.Dev, pod string) (*exec.Cmd, int) {
 		port = 15000
 	}
 
-	args := []string{"exec", "--pod", pod, "--port", fmt.Sprintf("%d", port)}
-
-	if len(dev.Space) > 0 {
-		args = append(args, "-s")
-		args = append(args, dev.Space)
-
+	args := []string{
+		"exec",
+		"--pod",
+		pod,
+		"--port",
+		fmt.Sprintf("%d", port),
+		"-n",
+		dev.Namespace,
+		"--",
 	}
-
-	args = append(args, "--")
 	args = append(args, dev.Command...)
 
 	cmd := exec.Command(config.GetBinaryFullPath(), args...)

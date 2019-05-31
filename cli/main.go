@@ -53,7 +53,7 @@ func main() {
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Exec())
 	root.AddCommand(cmd.Login())
-	root.AddCommand(cmd.KubeConfig())
+	root.AddCommand(cmd.Namespace())
 	root.AddCommand(cmd.Version())
 
 	if err := root.Execute(); err != nil {

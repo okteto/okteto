@@ -81,7 +81,7 @@ type Completion struct {
 }
 
 // New constructs a new Syncthing.
-func New(dev *model.Dev, devPath, space string) (*Syncthing, error) {
+func New(dev *model.Dev) (*Syncthing, error) {
 	fullPath := GetInstallPath()
 	if !IsInstalled() {
 		return nil, fmt.Errorf("cannot find syncthing. Make sure syncthing is installed in %s", fullPath)
@@ -117,10 +117,10 @@ func New(dev *model.Dev, devPath, space string) (*Syncthing, error) {
 		binPath:          fullPath,
 		Client:           NewAPIClient(),
 		Dev:              dev,
-		DevPath:          devPath,
+		DevPath:          dev.DevPath,
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("127.0.0.1:%d", guiPort),
-		Home:             filepath.Join(config.GetHome(), space, dev.Name),
+		Home:             filepath.Join(config.GetHome(), dev.Namespace, dev.Name),
 		ListenAddress:    fmt.Sprintf("0.0.0.0:%d", listenPort),
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
