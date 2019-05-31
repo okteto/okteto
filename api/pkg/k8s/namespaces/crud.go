@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/app/api/pkg/errors"
 	"github.com/okteto/app/api/pkg/k8s/client"
 	"github.com/okteto/app/api/pkg/k8s/serviceaccounts"
 	"github.com/okteto/app/api/pkg/log"
@@ -50,7 +51,8 @@ func GetSpaceByID(ctx context.Context, id string, u *model.User) (*model.Space, 
 		return nil, err
 	}
 	if len(ns) == 0 {
-		return nil, fmt.Errorf("namespace not found for id: %s", id)
+		log.Infof("namespace not found for id: %s", id)
+		return nil, errors.ErrNotFound
 	}
 	if len(ns) > 1 {
 		return nil, fmt.Errorf("%d namespaces returned for id: %s", len(ns), id)

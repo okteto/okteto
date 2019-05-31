@@ -27,7 +27,7 @@ const (
 	oktetoMount                = "/var/okteto"
 	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
 	oktetoDevAnnotation        = "dev.okteto.com/manifests"
-	oktetoAutoCreateAnnotation = "dev.okteto.com/autocreate"
+	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
 
 	revisionAnnotation = "deployment.kubernetes.io/revision"
 	//OktetoVersion represents the current dev data version
