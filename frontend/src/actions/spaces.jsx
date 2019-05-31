@@ -48,8 +48,8 @@ const fetchSpace = spaceId => {
 const sortSpaces = (spaces, user) => {
   return spaces.sort((a, b) => {
     // Personal space should be placed first.
-    if (a.id === user.id) return -1;
-    if (b.id === user.id) return 1;
+    if (a.id === user.githubID) return -1;
+    if (b.id === user.githubID) return 1;
     var idA = a.id.toLowerCase();
     var idB = b.id.toLowerCase();
     if (idA < idB) return -1;
