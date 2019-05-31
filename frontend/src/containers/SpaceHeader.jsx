@@ -49,11 +49,6 @@ class SpaceHeader extends Component {
         <div className="SpaceHeaderInfo layout vertical">
           <div className="SpaceHeaderName">
             {space.id}
-            {!isOwner && 
-              <span className="Owner">
-                @{owner.githubID}
-              </span>
-            }
           </div>
         </div>
 

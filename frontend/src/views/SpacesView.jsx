@@ -51,6 +51,7 @@ class SpacesView extends Component {
                 });
               }}
               minWidth='180'
+              maxWidth='450'
               enable={{ 
                 top:false, right:true, bottom:false, left:false, topRight:false, 
                 bottomRight:false, bottomLeft:false, topLeft:false 

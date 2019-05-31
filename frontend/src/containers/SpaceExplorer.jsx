@@ -52,7 +52,7 @@ class SpaceExplorer extends Component {
                   title={space.id}
                   onClick={() => this.handleSelectSpace(space)}
                 >
-                  <div className="ellipsis">{ space.id }</div>
+                  { space.id }
                 </div>
               );
             })}
