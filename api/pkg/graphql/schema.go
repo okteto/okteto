@@ -35,9 +35,6 @@ var spaceType = graphql.NewObject(
 			"id": &graphql.Field{
 				Type: graphql.ID,
 			},
-			"name": &graphql.Field{
-				Type: graphql.String,
-			},
 			"members": &graphql.Field{
 				Type: graphql.NewList(memberType),
 			},
@@ -185,20 +182,23 @@ var queryType = graphql.NewObject(
 						u, err := getAuthenticatedUser(ctx)
 						if err != nil {
 							ch <- result{data: nil, err: err}
+							return
 						}
-						space := u.ID
+						space := u.GithubID
 						if params.Args["space"] != nil {
 							space = params.Args["space"].(string)
 						}
 						s, err := namespaces.GetSpaceByID(ctx, space, u)
 						if err != nil {
 							ch <- result{data: nil, err: err}
+							return
 						}
 
 						l, err := app.ListDevEnvs(ctx, u, s)
 						if err != nil {
 							log.Errorf("failed to get dev envs for %s in %s", u.ID, s.ID)
 							ch <- result{data: nil, err: fmt.Errorf("failed to get your environments")}
+							return
 						}
 
 						ch <- result{data: l, err: nil}
@@ -232,11 +232,13 @@ var queryType = graphql.NewObject(
 						u, err := getAuthenticatedUser(ctx)
 						if err != nil {
 							ch <- result{data: nil, err: err}
+							return
 						}
 						id := params.Args["id"].(string)
 						s, err := namespaces.GetSpaceByID(ctx, id, u)
 						if err != nil {
 							ch <- result{data: nil, err: err}
+							return
 						}
 						ch <- result{data: s, err: nil}
 						close(ch)
@@ -267,20 +269,23 @@ var queryType = graphql.NewObject(
 						u, err := getAuthenticatedUser(ctx)
 						if err != nil {
 							ch <- result{data: nil, err: err}
+							return
 						}
-						space := u.ID
+						space := u.GithubID
 						if params.Args["space"] != nil {
 							space = params.Args["space"].(string)
 						}
 						s, err := namespaces.GetSpaceByID(ctx, space, u)
 						if err != nil {
 							ch <- result{data: nil, err: err}
+							return
 						}
 
 						l, err := app.ListDatabases(s)
 						if err != nil {
 							log.Errorf("failed to get databases for %s in %s", u.ID, s.ID)
 							ch <- result{data: nil, err: fmt.Errorf("failed to get your databases")}
+							return
 						}
 
 						ch <- result{data: l, err: nil}
@@ -334,7 +339,7 @@ var queryType = graphql.NewObject(
 						return nil, err
 					}
 
-					space := u.ID
+					space := u.GithubID
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
@@ -432,7 +437,7 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-					space := u.ID
+					space := u.GithubID
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
@@ -472,7 +477,7 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 
-					space := u.ID
+					space := u.GithubID
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
@@ -514,7 +519,7 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-					space := u.ID
+					space := u.GithubID
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
@@ -554,7 +559,7 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-					space := u.ID
+					space := u.GithubID
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
@@ -594,7 +599,7 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-					space := u.ID
+					space := u.GithubID
 					if params.Args["space"] != nil {
 						space = params.Args["space"].(string)
 					}
@@ -633,9 +638,7 @@ var mutationType = graphql.NewObject(
 						return nil, err
 					}
 					name := params.Args["name"].(string)
-					if app.ExistsByName(ctx, name, u.ID) {
-						return nil, fmt.Errorf("'%s' already exists", name)
-					}
+					name = fmt.Sprintf("%s-%s", name, u.GithubID)
 					members := []model.Member{}
 					if params.Args["members"] != nil {
 						for _, m := range params.Args["members"].([]interface{}) {
@@ -682,7 +685,7 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-					space := u.ID
+					space := u.GithubID
 					if params.Args["id"] != nil {
 						space = params.Args["id"].(string)
 					}
@@ -778,7 +781,7 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-					space := u.ID
+					space := u.GithubID
 					if params.Args["id"] != nil {
 						space = params.Args["id"].(string)
 					}
@@ -820,7 +823,7 @@ var mutationType = graphql.NewObject(
 					if err != nil {
 						return nil, err
 					}
-					space := u.ID
+					space := u.GithubID
 					if params.Args["id"] != nil {
 						space = params.Args["id"].(string)
 					}
@@ -832,7 +835,7 @@ var mutationType = graphql.NewObject(
 						log.Errorf("%s tried to delete space %s", u.ID, s.ID)
 						return nil, fmt.Errorf("forbidden")
 					}
-					if space == u.ID {
+					if space == u.GithubID {
 						return nil, fmt.Errorf("the personal namespace cannot be deleted")
 					}
 					err = app.DeleteSpace(s)

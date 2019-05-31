@@ -65,7 +65,7 @@ class CreateDatabase extends Component {
         ref={ref => this.dialog = ref} 
         title="New database"
         width={450}>
-        <div className="create-dialog-content layout vertical">
+        <div className="DialogContent layout vertical">
           <Select
             ref={ref => this.select = ref}
             classNamePrefix="Select" 

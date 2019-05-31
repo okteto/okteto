@@ -3,11 +3,11 @@ import analytics from 'common/analytics';
 import { notify } from 'components/Notification';
 
 const getSpacesQuery = `spaces {
-  id, name 
+  id 
 }`;
 
 const getSpaceQuery = `space(id: $space) {
-  id, name, members {
+  id, members {
     id, githubID, avatar, name, owner, email
   }
 }
@@ -50,10 +50,10 @@ const sortSpaces = (spaces, user) => {
     // Personal space should be placed first.
     if (a.id === user.id) return -1;
     if (b.id === user.id) return 1;
-    var nameA = a.name.toLowerCase();
-    var nameB = b.name.toLowerCase();
-    if (nameA < nameB) return -1;
-    if (nameA > nameB) return 1;
+    var idA = a.id.toLowerCase();
+    var idB = b.id.toLowerCase();
+    if (idA < idB) return -1;
+    if (idA > idB) return 1;
     return 0;
   });
 };
@@ -145,7 +145,7 @@ export const refreshCurrentSpace = () => {
     const { spaces, session } = getState();
 
     // If no selected space, use personal space.
-    const currentSpaceId = spaces.currentId ? spaces.currentId : session.user.id;
+    const currentSpaceId = spaces.currentId ? spaces.currentId : session.user.githubID;
 
     dispatch(requestSpace());
     fetchSpace(currentSpaceId).then(space => {
@@ -237,14 +237,14 @@ export const deleteSpace = space => {
 
     return request(`mutation DeleteSpace($space: String!) { 
       deleteSpace(id: $space) {
-        name
+        id
       } 
     }`, {
       space: space.id
     }).then(() => {
       const { session } = getState();
       // Select personal space.
-      dispatch(selectSpace(session.user.id));
+      dispatch(selectSpace(session.user.githubID));
       dispatch(deletingSpace(space.id));
       dispatch(refreshSpaces());
     }).catch(err => notify(`Error: ${err}`, 'error'));
@@ -264,7 +264,7 @@ export const leaveSpace = space => {
     }).then(() => {
       const { session } = getState();
       // Select personal space.
-      dispatch(selectSpace(session.user.id));
+      dispatch(selectSpace(session.user.githubID));
       dispatch(deletingSpace(space.id));
       dispatch(refreshSpaces());
     }).catch(err => notify(`Error: ${err}`, 'error'));

@@ -56,7 +56,7 @@ func GetSpaceByID(ctx context.Context, id string, u *model.User) (*model.Space, 
 		return nil, fmt.Errorf("%d namespaces returned for id: %s", len(ns), id)
 	}
 
-	s := ToModel(ctx, &ns[0])
+	s := ToModel(ctx, &ns[0], true)
 	for _, m := range s.Members {
 		if m.ID == u.ID {
 			return s, nil
@@ -94,11 +94,13 @@ func Destroy(s *model.Space, c *kubernetes.Clientset) error {
 }
 
 // ToModel converts a namespace into a model.Space
-func ToModel(ctx context.Context, n *v1.Namespace) *model.Space {
+func ToModel(ctx context.Context, n *v1.Namespace, members bool) *model.Space {
 	s := &model.Space{
 		ID:      n.Name,
-		Name:    n.Labels[OktetoNameLabel],
 		Members: []model.Member{},
+	}
+	if !members {
+		return s
 	}
 	for l := range n.Labels {
 		if strings.HasPrefix(l, "dev.okteto.com/member-") {

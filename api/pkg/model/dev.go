@@ -84,12 +84,7 @@ func (dev *Dev) GetSecretName() string {
 
 //GetEndpoint returns the dev environment endpoint
 func (dev *Dev) GetEndpoint(s *Space) string {
-	owner := s.GetOwner()
-	if s.ID == owner.ID {
-		return strings.ToLower(fmt.Sprintf("%s-%s.%s", dev.Name, s.Name, oktetoBaseDomain))
-	}
-	return strings.ToLower(fmt.Sprintf("%s-%s-%s.%s", dev.Name, s.Name, owner.GithubID, oktetoBaseDomain))
-
+	return strings.ToLower(fmt.Sprintf("%s-%s.%s", dev.Name, s.ID, oktetoBaseDomain))
 }
 
 //CertificateName returns the certificate name for a dev environment

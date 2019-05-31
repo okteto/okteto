@@ -51,9 +51,9 @@ class ShareSpace extends Component {
       <Modal
         className="ShareSpace"
         ref={ref => this.dialog = ref} 
-        title="Share Space"
+        title="Share Namespace"
         width={450}>
-        <div className="create-dialog-content layout vertical">
+        <div className="DialogContent layout vertical">
           <SpaceInvite
             members={members}
             ref={ref => this.spaceInviteInput = ref}

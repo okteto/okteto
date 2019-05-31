@@ -44,12 +44,12 @@ class DeleteSpace extends Component {
       <Modal 
         className="DeleteSpace"
         ref={ref => this.dialog = ref} 
-        title="Delete Space"
+        title="Delete Namespace"
         width={450}>
-        <div className="delete-dialog-content layout vertical">
+        <div className="DialogContent layout vertical">
           <p>
-            Are you sure you want to delete space&nbsp;
-            <strong>{space.name}</strong>?
+            Are you sure you want to delete namespace&nbsp;
+            <strong>{space.id}</strong>?
           </p>
           <div style={{ height: '20px' }} />
           <div className="layout horizontal-reverse center">

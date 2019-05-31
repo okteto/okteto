@@ -41,24 +41,26 @@ class SpaceHeader extends Component {
   render() {
     const { user, space } = this.props;
     const owner = space.members.find(member => member.owner);
-    const isPersonalSpace = space.id === user.id;
+    const isPersonalSpace = user.githubID === space.id;
     const isOwner = owner && owner.id === user.id;
-    const spaceName = user.id === space.id ? `${user.githubID}'s space` : space.name;
 
     return (
       <div className="SpaceHeader horizontal layout center">
         <div className="SpaceHeaderInfo layout vertical">
           <div className="SpaceHeaderName">
-            {spaceName}
+            {space.id}
             {!isOwner && 
               <span className="Owner">
                 @{owner.githubID}
               </span>
             }
           </div>
-          <div className="SpaceHeaderNamespace">
-            Namespace: {space.id}
-          </div>
+          
+          { isPersonalSpace && 
+            <div className="SpaceHeaderSubtitle">
+              Personal Namespace
+            </div>
+          }
         </div>
 
         <div className="flex-auto" /> 

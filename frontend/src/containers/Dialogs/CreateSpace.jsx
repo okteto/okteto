@@ -2,10 +2,10 @@ import React, { Component } from 'react';
 import * as ReactRedux from 'react-redux';
 import PropTypes from 'prop-types';
 import autobind from 'autobind-decorator';
+import AutosizeInput from 'react-input-autosize';
 
 import SpaceInvite from 'containers/SpaceInvite';
 import Button from 'components/Button';
-import Input from 'components/Input';
 import Modal from 'components/Modal';
 import { createSpace } from 'actions/spaces';
 
@@ -62,20 +62,37 @@ class CreateSpace extends Component {
   }
 
   render() {
+    const { user } = this.props;
+    const placeholder = 'name';
+
     return (
       <Modal
         className="CreateSpace"
         ref={ref => this.dialog = ref} 
-        title="New Space"
+        title="New Namespace"
         width={450}>
-        <div className="create-dialog-content layout vertical">
-          <Input
-            ref={ref => this.input = ref}
-            onChange={this.handleInputChange}
-            placeholder="space-name"
-            theme="light"
-            value={this.state.name}
-          />
+        <div className="DialogContent layout vertical">
+          <div className="CreateSpaceInput layout horizontal">
+            <AutosizeInput
+              className="NameInput"
+              placeholder={placeholder}
+              ref={ref => this.input = ref}
+              value={this.state.name}
+              onChange={event => this.handleInputChange(event.target.value)}
+            />
+            <div className="NameSuffix">
+              -&nbsp;{user.githubID}
+            </div>
+          </div>
+
+          <div className="Hints layout vertical">
+            <p>
+              Easily switch between namespaces from the Okteto CLI with&nbsp;
+              <code>  
+                okteto namespace {this.state.name||placeholder}-{user.githubID}
+              </code>.
+            </p>
+          </div>
 
           {/* TODO: Temporary disabled members due to api bug. */}
           {/* <h3>Invite others</h3>
@@ -106,9 +123,12 @@ class CreateSpace extends Component {
 }
 
 CreateSpace.propTypes = {
-  dispatch: PropTypes.func.isRequired
+  dispatch: PropTypes.func.isRequired,
+  user: PropTypes.object.isRequired
 };
 
-export default ReactRedux.connect(() => {
-  return {};
+export default ReactRedux.connect(state => {
+  return {
+    user: state.session.user
+  };
 }, null, null, { withRef: true })(CreateSpace);

@@ -3,21 +3,18 @@
 
 .SpaceExplorer {
   height: 100vh;
-  width: $explorer-width;
+  width: 100%;
   background: $navy-extra-dark;
   position: relative;
-  box-shadow: 0 0 6px 0 rgba(black, .3);
-  z-index: $app-z-index + 1;
 
   &Grid {
     display: grid;
-    grid-template-columns:  1fr;
+    grid-template-columns: 100%;
     grid-template-rows: $header-height auto;
     height: 100vh;
   }
 
   &Header {
-    width: $explorer-width;
     background: $navy-extra-extra-dark;
     position: relative;
 
@@ -27,7 +24,6 @@
   }
 
   &List {
-    width: $explorer-width;
     overflow: hidden;
     overflow-y: auto;
     padding-top: 28px;
@@ -35,10 +31,10 @@
     &Item {
       position: relative;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 300;
       
-      padding: 8px 20px;
+      padding: 12px 20px;
       padding-bottom: 10px;
 
       &.selected {
@@ -62,7 +58,14 @@
       }
 
       &:hover {
-        background: rgba(black, .2);
+        background: rgba(black, .3);
+      }
+
+      &Subtitle {
+        font-size: 14px;
+        opacity: .9;
+        margin-top: 2px;
+        font-weight: 300;
       }
     }
   }

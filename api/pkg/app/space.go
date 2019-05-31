@@ -52,20 +52,6 @@ func CreateSpace(s *model.Space) error {
 	return nil
 }
 
-//ExistsByName returns if a space exists for a name
-func ExistsByName(ctx context.Context, name, owner string) bool {
-	c := client.Get()
-
-	olds, err := namespaces.GetByLabel(ctx, fmt.Sprintf("%s=%s, %s=%s", namespaces.OktetoNameLabel, name, namespaces.OktetoOwnerLabel, owner), c)
-	if err != nil {
-		return true
-	}
-	if len(olds) > 0 {
-		return true
-	}
-	return false
-}
-
 //DeleteSpace deletes a namespace for a given user
 func DeleteSpace(s *model.Space) error {
 	c := client.Get()
@@ -90,13 +76,7 @@ func ListSpaces(ctx context.Context, u *model.User) ([]*model.Space, error) {
 	}
 	spaces := []*model.Space{}
 	for _, n := range ns.Items {
-		s := namespaces.ToModel(ctx, &n)
-		if !u.IsOwner(s) {
-			owner := s.GetOwner()
-			if owner.ID != s.ID {
-				s.Name = fmt.Sprintf("%s@%s", s.Name, owner.GithubID)
-			}
-		}
+		s := namespaces.ToModel(ctx, &n, false)
 		spaces = append(spaces, s)
 	}
 	return spaces, nil

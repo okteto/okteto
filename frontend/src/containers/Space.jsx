@@ -39,7 +39,7 @@ class Space extends Component {
   }
 
   render() {
-    const { space, environments, databases, user } = this.props;
+    const { space, environments, databases } = this.props;
     const isEmpty = environments.length === 0 && databases.length === 0;
     const isOnline = navigator.onLine;
 
@@ -158,12 +158,12 @@ class Space extends Component {
     return (
       <>
         <div className="Space">
-          <SpaceHeader title={`${user.githubID}'s space`} />
+          <SpaceHeader />
 
           {isEmpty && isOnline &&
             <div className="SpaceEmpty layout vertical center">
               <Icon icon="emptySpace" size="160" />
-              <h2>Your space is empty.</h2>
+              <h2>Your namespace is empty.</h2>
               <div style={{ position: 'relative' }}>
                 <Hint 
                   className="HintNew"
@@ -219,15 +219,13 @@ Space.propTypes = {
   dispatch: PropTypes.func.isRequired,
   space: PropTypes.object.isRequired,
   environments: PropTypes.arrayOf(PropTypes.object).isRequired,
-  databases: PropTypes.arrayOf(PropTypes.object).isRequired,
-  user: PropTypes.object.isRequired
+  databases: PropTypes.arrayOf(PropTypes.object).isRequired
 };
 
 export default ReactRedux.connect(state => {
   return {
     space: state.spaces.current || {},
     environments: state.spaces.current.environments || [],
-    databases: state.spaces.current.databases || [],
-    user: state.session.user
+    databases: state.spaces.current.databases || []
   };
 })(Space);

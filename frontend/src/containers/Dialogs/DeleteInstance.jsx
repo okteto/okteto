@@ -53,7 +53,7 @@ class DeleteInstance extends Component {
         ref={ref => this.dialog = ref} 
         title={`Delete ${type}`}
         width={450}>
-        <div className="delete-dialog-content layout vertical">
+        <div className="DialogContent layout vertical">
           <p>
             Are you sure you want to delete {type}&nbsp;
             <strong>{item ? item.name : ''}</strong>?

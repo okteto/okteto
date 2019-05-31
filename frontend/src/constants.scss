@@ -9,4 +9,7 @@ $notification-z-index: 600;
 
 $side-margin: 32px;
 $header-height: 120px;
-$explorer-width: 200px;
+$explorer-width: 220px;
+:export {
+  explorerWidth: $explorer-width;
+}

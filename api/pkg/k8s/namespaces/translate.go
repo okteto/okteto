@@ -20,8 +20,6 @@ const (
 	OktetoVersion = "1.0"
 	//OktetoVersionLabel represents the data version of the namespace
 	OktetoVersionLabel = "dev.okteto.com/version"
-	//OktetoNameLabel represents the okteto name for this namespace
-	OktetoNameLabel = "dev.okteto.com/name"
 	//OktetoBasenameLabel represents the okteto basename for this namespace
 	OktetoBasenameLabel = "dev.okteto.com/basename"
 	//OktetoMemberLabelTemplate represents the member labels
@@ -35,24 +33,17 @@ func translate(s *model.Space) *v1.Namespace {
 			Labels: map[string]string{
 				"app.kubernetes.io/name": s.ID,
 				OktetoIDLabel:            s.ID,
+				OktetoBasenameLabel:      s.ID,
 				OktetoLabel:              "true",
 				OktetoVersionLabel:       OktetoVersion,
-				OktetoNameLabel:          s.Name,
 			},
 		},
 	}
 	for _, m := range s.Members {
 		if m.Owner {
 			n.Labels[OktetoOwnerLabel] = m.ID
-			if m.ID == s.ID {
-				n.Labels[OktetoBasenameLabel] = m.GithubID
-			} else {
-				n.Labels[OktetoBasenameLabel] = fmt.Sprintf("%s-%s", s.Name, m.GithubID)
-			}
 		}
-		if m.ID != "" {
-			n.Labels[fmt.Sprintf(OktetoMemberLabelTemplate, m.ID)] = "true"
-		}
+		n.Labels[fmt.Sprintf(OktetoMemberLabelTemplate, m.ID)] = "true"
 	}
 	return n
 }

@@ -123,3 +123,58 @@ a {
 		text-decoration: underline;
 	}
 }
+
+p {
+	line-height: 1.5rem;
+}
+
+p > code {
+	display: inline;
+	color: rgba(45, 55, 71, 0.9);
+	font-family: $code-font;
+	font-size: .9em;
+	background: rgba(237, 240, 245, 0.5);
+	margin: 0;
+	border-radius: 3px;
+	padding: 2px 6px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: rgba(0, 0, 0, 0.1);
+	border-image: initial;
+	white-space: normal;
+}
+
+code {
+	display: block;
+	cursor: text;
+	font-family: $code-font;
+	background-color: $black;
+	padding: 8px 14px;
+	color: $white;
+	width: 100%;
+	box-sizing: border-box;
+	border-radius: 3px;
+	font-weight: normal;
+	font-size: 16px;
+	line-height: 26px;
+	white-space: nowrap;
+	overflow: hidden;
+	overflow-x: auto;
+
+	&.cli:before,
+	pre.cli:before {
+		user-select: none;
+		content: '$';
+		padding-right: 6px;
+		color: $green;
+	}
+
+	&.cli-okteto:before,
+	pre.cli-okteto:before {
+		content: 'okteto>';
+	}
+
+	.output {
+		color: rgba(white, .6);
+	}
+}

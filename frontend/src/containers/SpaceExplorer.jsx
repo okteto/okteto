@@ -34,25 +34,30 @@ class SpaceExplorer extends Component {
     return (
       <div className="SpaceExplorer">
         <div className="SpaceExplorerGrid">
-          <div className="SpaceExplorerHeader layout vertical center">
+          <div className="SpaceExplorerHeader layout vertical center full-width">
             <Icon icon="oktetoHorizontal" size="104" />
           </div>
 
-          <div className="SpaceExplorerList">
+          <div className="SpaceExplorerList full-width">
             {spaces.map(space => {
-              const spaceName = user.id === space.id ? `${user.githubID}'s space` : space.name;
+              const isPersonalSpace = user.githubID === space.id;
 
               return (
                 <div 
                   key={space.id} 
-                  className={classnames('SpaceExplorerListItem ellipsis', {
+                  className={classnames('SpaceExplorerListItem layout vertical', {
                     selected: currentSpace.id === space.id,
                     deleting: deletingSpaces.includes(space.id)
                   })}
-                  title={spaceName}
+                  title={space.id}
                   onClick={() => this.handleSelectSpace(space)}
                 >
-                  { spaceName }
+                  <div className="ellipsis">{ space.id }</div>
+                  { isPersonalSpace && 
+                    <div className="SpaceExplorerListItemSubtitle">
+                      Personal Namespace
+                    </div>
+                  }
                 </div>
               );
             })}

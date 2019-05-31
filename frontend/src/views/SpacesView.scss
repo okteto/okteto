@@ -3,7 +3,13 @@
 .SpacesView {
   position: relative;
   display: grid;
-  grid-template-columns: $explorer-width 1fr;
+  grid-template-columns: auto 1fr;
   grid-template-rows: 1fr;
   height: 100vh;
+
+  .ExplorerColumn {
+    box-shadow: 0 0 6px 0 rgba(black, .3);
+    z-index: $app-z-index + 1;
+    overflow: hidden;
+  }
 }

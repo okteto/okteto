@@ -34,7 +34,7 @@ class CreateEnvironment extends Component {
         title="New environment"
         width={540}
         offsetTop={8}>
-        <div className="create-dialog-content layout vertical">
+        <div className="DialogContent layout vertical">
           {this.props.children}
           <div style={{ height: '20px' }} />
           <div className="layout horizontal-reverse center">

@@ -130,7 +130,7 @@ class SpaceInvite extends Component {
           ))}
           {this.state.members.length === 0 && 
             <div className="EmptyMembers layout horizontal center">
-              Add members to share your development space.
+              Add members to share your development namespace.
             </div>
           }
         </div>

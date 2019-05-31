@@ -44,12 +44,12 @@ class LeaveSpace extends Component {
       <Modal 
         className="LeaveSpace"
         ref={ref => this.dialog = ref} 
-        title="Leave Space"
+        title="Leave Namespace"
         width={450}>
-        <div className="leave-dialog-content layout vertical">
+        <div className="DialogContent layout vertical">
           <p>
-            Are you sure you want to leave shared space&nbsp;
-            <strong>{space.name}</strong>?
+            Are you sure you want to leave shared namespace&nbsp;
+            <strong>{space.id}</strong>?
           </p>
           <div style={{ height: '20px' }} />
           <div className="layout horizontal-reverse center">
