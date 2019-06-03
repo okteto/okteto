@@ -1,27 +1,25 @@
-version: 2
+version: 2.1
+orbs:
+  aws-s3: circleci/aws-s3@1.0.6
 jobs:
   build:
     docker:
-      - image: circleci/golang:latest
-        environment:
-          DEBUG: true
-
-    environment:
-        BINARY_NAME: "cnd"
-        GO111MODULE: "on"
-
+      - image: circleci/golang:1.12
     steps:
       - checkout
-      - run: go test -v ./...
-      - run: go fmt ./...
-      - run: go vet ./...
+      - restore_cache: 
+          keys:
+            - v1-pkg-cache
+      - run: make test
       - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
-
       - persist_to_workspace:
           root: .
           paths:
             - bin
-
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - ~/.cache/go-build
       - store_artifacts:
           path: bin
           destination: binaries
@@ -36,22 +34,68 @@ jobs:
       - deploy:
           name: "Update brew formula"
           command: |
-            bash ./update_homebrew_formula.sh 0.0.1 $CIRCLE_SHA1 $GITHUB_TOKEN 1
-  publish-github-release:
+            sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
+            bash ./update_homebrew_formula.sh 0.0.1 fakeSHA $GITHUB_TOKEN 1
+
+  release:
     docker:
-      - image: cibuilds/github:0.10
+      - image: circleci/golang:1.12
     steps:
       - checkout
       - attach_workspace:
           at: ./artifacts
+      - aws-s3/sync:
+          from: ./artifacts/bin
+          to: "s3://downloads.okteto.com/cli"
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          aws-region: AWS_REGION
+          arguments: |
+            --acl public-read \
+            --metadata version=${CIRCLE_TAG} \
+            --cache-control "max-age=86400" \
+            --exclude "*.*.*/" \
+      - aws-s3/sync:
+          from: ./artifacts/bin
+          to: "s3://downloads.okteto.com/cli/${CIRCLE_TAG}"
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          aws-region: AWS_REGION
+          arguments: |
+            --acl public-read \
+            --metadata version=${CIRCLE_TAG} \
+            --cache-control "max-age=86400" \
+          overwrite: false
+      - aws-s3/copy:
+          from: "./artifacts/bin/okteto-Darwin-x86_64"
+          to: "s3://downloads.okteto.com/cloud/cli/okteto-Darwin-x86_64"
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          aws-region: AWS_REGION
+          arguments: |
+            --acl public-read \
+            --metadata version=${CIRCLE_TAG} \
+            --cache-control "max-age=86400"
+      - aws-s3/copy:
+          from: "./artifacts/bin/okteto-Darwin-x86_64"
+          to: "s3://downloads.okteto.com/cli/okteto-darwin-amd64"
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          aws-region: AWS_REGION
+          arguments: |
+            --acl public-read \
+            --metadata version=${CIRCLE_TAG} \
+            --cache-control "max-age=86400"
       - run:
           name: "Publish Release on GitHub"
           command: |
-            ghr -u cloudnativedevelopment -r cnd -c $CIRCLE_SHA1 -token $GITHUB_TOKEN -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
+            go get -u github.com/tcnksm/ghr
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
       - deploy:
           name: "Update brew formula"
           command: |
-            bash ./update_homebrew_formula.sh $CIRCLE_TAG $CIRCLE_SHA1 $GITHUB_TOKEN 0
+            sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
+            ./update_homebrew_formula.sh $CIRCLE_TAG $GITHUB_TOKEN $sha 0
 
 workflows:
   version: 2
@@ -67,7 +111,7 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - publish-github-release:
+      - release:
           requires:
             - build
           filters:
