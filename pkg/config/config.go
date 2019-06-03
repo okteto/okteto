@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -51,7 +50,7 @@ func GetHome() string {
 	home = filepath.Join(home, folderName)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
-		log.Fatalf("failed to create the okteto directory: %s\n", err)
+		panic("failed to create the okteto directory")
 	}
 
 	return home

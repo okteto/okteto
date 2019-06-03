@@ -2,11 +2,16 @@ package log
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/fatih/color"
+	"github.com/okteto/app/cli/pkg/config"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
@@ -26,23 +31,50 @@ var (
 )
 
 type logger struct {
-	out *logrus.Logger
+	out  *logrus.Logger
+	file *logrus.Entry
 }
 
 var log = &logger{
 	out: logrus.New(),
 }
 
+var ActionID string
+
 func init() {
 	if runtime.GOOS == "windows" {
 		successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" + ")
 	}
+
+	ActionID = uuid.NewV4().String()
 }
 
 // Init configures the logger for the package to use.
 func Init(level logrus.Level) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
+
+	fileLogger := logrus.New()
+	fileLogger.SetFormatter(&logrus.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	})
+
+	logPath := filepath.Join(config.GetHome(), fmt.Sprintf("%s%s", config.GetBinaryName(), ".log"))
+	rolling := getRollingLog(logPath)
+	fileLogger.SetOutput(rolling)
+	fileLogger.SetLevel(logrus.DebugLevel)
+	log.file = fileLogger.WithFields(logrus.Fields{"action": ActionID})
+}
+
+func getRollingLog(path string) io.Writer {
+	return &lumberjack.Logger{
+		Filename:   path,
+		MaxSize:    1, // megabytes
+		MaxBackups: 10,
+		MaxAge:     28, //days
+		Compress:   true,
+	}
 }
 
 // SetLevel sets the level of the main logger
@@ -56,36 +88,49 @@ func SetLevel(level string) {
 // Debug writes a debug-level log
 func Debug(args ...interface{}) {
 	log.out.Debug(args...)
+	if log.file != nil {
+		log.file.Debug(args...)
+	}
 }
 
 // Debugf writes a debug-level log with a format
 func Debugf(format string, args ...interface{}) {
 	log.out.Debugf(format, args...)
+	if log.file != nil {
+		log.file.Debugf(format, args...)
+	}
 }
 
 // Info writes a info-level log
 func Info(args ...interface{}) {
 	log.out.Info(args...)
+	if log.file != nil {
+		log.file.Info(args...)
+	}
 }
 
 // Infof writes a info-level log with a format
 func Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-}
-
-// Fatal writes a fatal-level log
-func Fatal(args ...interface{}) {
-	log.out.Fatal(args...)
+	if log.file != nil {
+		log.file.Infof(format, args...)
+	}
 }
 
 // Error writes a error-level log
 func Error(args ...interface{}) {
 	log.out.Error(args...)
+	if log.file != nil {
+		log.file.Error(args...)
+	}
 }
 
 // Errorf writes a error-level log with a format
 func Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
+	if log.file != nil {
+		log.file.Errorf(format, args...)
+	}
 }
 
 // Yellow writes a line in yellow

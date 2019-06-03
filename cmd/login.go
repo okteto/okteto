@@ -139,7 +139,7 @@ func buildAuthorizationURL(baseURL, state string, port int) string {
 
 	authorizationURL, err := url.Parse(fmt.Sprintf("%s/github/authorization-code", baseURL))
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Sprintf("failed to build authorizationURL: %s", err))
 	}
 	authorizationURL.RawQuery = params.Encode()
 	return authorizationURL.String()
