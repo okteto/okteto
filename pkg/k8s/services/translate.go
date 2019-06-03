@@ -7,10 +7,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const (
+	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
+)
+
 func translate(dev *model.Dev) *apiv1.Service {
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dev.Name,
+			Annotations: map[string]string{
+				oktetoAutoCreateAnnotation: "true",
+			},
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{"app": dev.Name},
