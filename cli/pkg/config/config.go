@@ -8,13 +8,9 @@ import (
 	"strings"
 )
 
-var (
-	defaultConfig = &Config{
-		FolderName:       ".okteto",
-		ManifestFileName: "okteto.yml",
-	}
-
-	overrideConfig = &Config{}
+const (
+	folderName       = ".okteto"
+	manifestFileName = "okteto.yml"
 )
 
 // Config holds all the configuration values.
@@ -29,27 +25,14 @@ type Config struct {
 	ManifestFileName string
 }
 
-//SetConfig sets the configuration object to use
-func SetConfig(newConfig *Config) {
-	overrideConfig = newConfig
-}
-
 // FolderName returns the name of the state folder
 func FolderName() string {
-	if overrideConfig.FolderName == "" {
-		return defaultConfig.FolderName
-	}
-
-	return overrideConfig.FolderName
+	return folderName
 }
 
 // ManifestFileName returns the name of the manifest file
 func ManifestFileName() string {
-	if overrideConfig.ManifestFileName == "" {
-		return defaultConfig.ManifestFileName
-	}
-
-	return overrideConfig.ManifestFileName
+	return manifestFileName
 }
 
 //GetBinaryName returns the name of the binary
@@ -64,21 +47,11 @@ func GetBinaryFullPath() string {
 
 // GetHome returns the path of the folder
 func GetHome() string {
-	var folder = defaultConfig.FolderName
-	if overrideConfig.FolderName != "" {
-		folder = overrideConfig.FolderName
-	}
-
 	home := getHomeDir()
-
-	if overrideConfig.HomePath != "" {
-		home = overrideConfig.HomePath
-	}
-
-	home = filepath.Join(home, folder)
+	home = filepath.Join(home, folderName)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
-		log.Fatalf("failed to create the home directory: %s\n", err)
+		log.Fatalf("failed to create the okteto directory: %s\n", err)
 	}
 
 	return home
@@ -97,7 +70,7 @@ func getHomeDir() string {
 	return home
 }
 
-// GetKubeConfigFile
+// GetKubeConfigFile returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration
 func GetKubeConfigFile() string {
 	home := getHomeDir()
 	kubeconfig := filepath.Join(home, ".kube", "config")

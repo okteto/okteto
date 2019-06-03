@@ -115,7 +115,7 @@ func getToken() (*Token, error) {
 func GetUserID() string {
 	t, err := getToken()
 	if err != nil {
-		return "na"
+		return ""
 	}
 
 	return t.ID

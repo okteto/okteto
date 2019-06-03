@@ -43,7 +43,7 @@ type UpContext struct {
 	Client     *kubernetes.Clientset
 	RestConfig *rest.Config
 	Pod        string
-	Container        string
+	Container  string
 	Forwarder  *forward.PortForwardManager
 	Disconnect chan struct{}
 	Running    chan error
@@ -281,7 +281,7 @@ func (up *UpContext) devMode(isRetry bool) error {
 		}
 	}
 
-	c, err := deployments.DevModeOn(d, up.Dev, create, up.Client) 
+	c, err := deployments.DevModeOn(d, up.Dev, create, up.Client)
 	if err != nil {
 		return err
 	}

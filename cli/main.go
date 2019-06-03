@@ -18,11 +18,6 @@ import (
 )
 
 func init() {
-	config.SetConfig(&config.Config{
-		FolderName:       ".okteto",
-		ManifestFileName: "okteto.yml",
-	})
-
 	// override client-go error handlers to downgrade the "logging before flag.Parse" error
 	errorHandlers := []func(error){
 		func(e error) {
@@ -55,6 +50,7 @@ func main() {
 	root.AddCommand(cmd.Login())
 	root.AddCommand(cmd.Namespace())
 	root.AddCommand(cmd.Version())
+	root.AddCommand(cmd.Analytics())
 
 	if err := root.Execute(); err != nil {
 		log.Fail(err.Error())
