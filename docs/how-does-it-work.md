@@ -1,4 +1,4 @@
-## How does CND work?
+## How does Okteto work?
 
 This is how a standard dev environment looks like:
 
