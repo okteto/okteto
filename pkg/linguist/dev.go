@@ -1,115 +1,96 @@
 package linguist
 
 import (
+	"sort"
 	"strings"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
-	"github.com/cloudnativedevelopment/cnd/pkg/model"
+	"github.com/okteto/app/cli/pkg/model"
 )
 
 type languageDefault struct {
 	image   string
-	command []string
 	path    string
-	scripts map[string]string
-	forward model.Forward
+	command []string
 }
 
 const (
-	javascript       = "javascript"
-	golang           = "go"
-	python           = "python"
-	java             = "java"
-	ruby             = "ruby"
-	unrecognized     = "unrecognized"
-	helloCommandName = "hello"
+	javascript = "javascript"
+	golang     = "go"
+	python     = "python"
+	java       = "java"
+	ruby       = "ruby"
+
+	// Unrecognized is the option returned when the linguist couldn't detect a language
+	Unrecognized = "other"
 )
 
 var (
 	languageDefaults map[string]languageDefault
-	tailCommand      = []string{"tail", "-f", "/dev/null"}
 )
 
 func init() {
 	languageDefaults = make(map[string]languageDefault)
 	languageDefaults[javascript] = languageDefault{
-		image:   "okteto/node:11",
-		command: tailCommand,
+		image:   "okteto/node:10",
 		path:    "/usr/src/app",
-		scripts: map[string]string{
-			"test":  "yarn run test",
-			"start": "yarn install && yarn start",
-		},
-		forward: model.Forward{Local: 3000, Remote: 3000},
+		command: []string{"bash"},
 	}
 
 	languageDefaults[golang] = languageDefault{
-		image:   "golang:1",
-		command: tailCommand,
+		image:   "okteto/golang:1",
 		path:    "/go/src/app",
-		scripts: map[string]string{
-			"start": "go run main.go",
-		},
-		forward: model.Forward{Local: 8080, Remote: 8080},
+		command: []string{"bash"},
 	}
 
 	languageDefaults[python] = languageDefault{
-		image:   "python:3",
-		command: tailCommand,
+		image:   "okteto/python:3",
 		path:    "/usr/src/app",
-		scripts: map[string]string{
-			"install": "pip install -r requirements.txt",
-			"start":   "python app.py",
-		},
-		forward: model.Forward{Local: 8080, Remote: 8080},
+		command: []string{"bash"},
 	}
 
 	languageDefaults[java] = languageDefault{
-		image:   "gradle:5.1-jdk11",
-		command: tailCommand,
+		image:   "okteto/gradle:5.1-jdk11",
 		path:    "/home/gradle",
-		scripts: map[string]string{
-			"boot":  "gradle bootRun",
-			"start": "gradle build -continuous --scan",
-		},
-		forward: model.Forward{Local: 8080, Remote: 8080},
+		command: []string{"bash"},
 	}
 
 	languageDefaults[ruby] = languageDefault{
-		image:   "ruby:2",
-		command: tailCommand,
+		image:   "okteto/ruby:2",
 		path:    "/usr/src/app",
-		scripts: map[string]string{
-			"migrate": "rails db:migrate",
-			"start":   "rails s -e development",
-		},
-		forward: model.Forward{Local: 3000, Remote: 3000},
+		command: []string{"bash"},
 	}
 
-	languageDefaults[unrecognized] = languageDefault{
-		image:   "ubuntu:bionic",
-		command: tailCommand,
-		path:    "/usr/src/app",
-		forward: model.Forward{Local: 8080, Remote: 8080},
+	languageDefaults[Unrecognized] = languageDefault{
+		image:   "okteto/desk:0.1.3",
+		path:    "/app",
+		command: []string{"bash"},
 	}
+}
+
+// GetSupportedLanguages returns a list of supported languages
+func GetSupportedLanguages() []string {
+	l := []string{}
+	for k := range languageDefaults {
+		if k != Unrecognized {
+			l = append(l, k)
+		}
+	}
+
+	sort.Strings(l)
+	l = append(l, Unrecognized)
+
+	return l
 }
 
 // GetDevConfig returns the default dev for the specified language
 func GetDevConfig(language string) *model.Dev {
 	vals := languageDefaults[normalizeLanguage(language)]
-	dev := model.NewDev()
-	dev.Swap.Deployment.Image = vals.image
-	dev.Swap.Deployment.Command = vals.command
-	dev.Mount.Target = vals.path
-	dev.Scripts = vals.scripts
-
-	if dev.Scripts == nil {
-		dev.Scripts = make(map[string]string)
+	dev := &model.Dev{
+		Image:   vals.image,
+		WorkDir: vals.path,
+		Command: vals.command,
 	}
 
-	dev.Scripts[helloCommandName] = "echo Your cluster ♥s you"
-
-	dev.Forward = []model.Forward{vals.forward}
 	return dev
 }
 
@@ -131,7 +112,6 @@ func normalizeLanguage(language string) string {
 	case "go":
 		return golang
 	default:
-		log.Debugf("unrecognized language: %s", lower)
-		return unrecognized
+		return Unrecognized
 	}
 }

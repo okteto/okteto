@@ -3,11 +3,12 @@ VERSION_STRING := $(shell git rev-parse --short HEAD)
 endif
 
 BINDIR    := $(CURDIR)/bin
-PLATFORMS := linux/amd64 darwin/amd64 windows/amd64
+PLATFORMS := linux/amd64/Linux-x86_64 darwin/amd64/Darwin-x86_64 windows/amd64/Windows-x86_64
 
 temp = $(subst /, ,$@)
 os = $(word 1, $(temp))
 arch = $(word 2, $(temp))
+label = $(word 3, $(temp))
 
 .DEFAULT_GOAL := build
 
@@ -15,12 +16,16 @@ arch = $(word 2, $(temp))
 build-all: $(PLATFORMS)
 
 $(PLATFORMS):
-	GO111MODULE=on GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/cloudnativedevelopment/cnd/pkg/config.VersionString=${VERSION_STRING}" -o "bin/cnd-$(os)-$(arch)" 
-	sha256sum "bin/cnd-$(os)-$(arch)" > "bin/cnd-$(os)-$(arch).sha256"  
+	GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/okteto/app/cli/cmd.VersionString=${VERSION_STRING}" -o "bin/okteto-$(label)" 
+	sha256sum "bin/okteto-$(label)" > "bin/okteto-$(label).sha256"  
+
+.PHONY: test
+test:
+	 go test ./...
 
 .PHONY: build
 build:
-	 GO111MODULE=on go build -ldflags "-X github.com/cloudnativedevelopment/cnd/pkg/config.VersionString=${VERSION_STRING}" -o ${BINDIR}/cnd
+	 go build -ldflags "-X github.com/okteto/app/cli/cmd.VersionString=${VERSION_STRING}" -o ${BINDIR}/okteto
 
 .PHONY: dep
 dep:

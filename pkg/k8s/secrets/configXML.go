@@ -1,10 +1,17 @@
-package syncthing
+package secrets
+
+import (
+	"bytes"
+	"html/template"
+
+	"github.com/okteto/app/cli/pkg/model"
+)
 
 const configXML = `<configuration version="28">
-<folder id="okteto-{{ .Dev.Name }}" label="{{ .Dev.Name }}" path="{{ .Source }}" type="{{ .Type }}" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="/var/okteto" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
-    <device id="{{$.RemoteDeviceID}}" introducedBy=""></device>
+    <device id="ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU" introducedBy=""></device>
     <minDiskFree unit="%">1</minDiskFree>
     <versioning></versioning>
     <copiers>0</copiers>
@@ -22,34 +29,36 @@ const configXML = `<configuration version="28">
     <markerName>{{ .DevPath }}</markerName>
     <useLargeBlocks>false</useLargeBlocks>
 </folder>
-<device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="local" introducer="false" skipIntroductionRemovals="false" introducedBy="">
+<device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
     <address>dynamic</address>
     <paused>false</paused>
     <autoAcceptFolders>false</autoAcceptFolders>
     <maxSendKbps>0</maxSendKbps>
     <maxRecvKbps>0</maxRecvKbps>
 </device>
-<device id="{{.RemoteDeviceID}}" name="remote" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
-    <address>{{.RemoteAddress}}</address>
+<device id="ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU" name="remote" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
+    <address>dynamic</address>
     <paused>false</paused>
     <autoAcceptFolders>false</autoAcceptFolders>
     <maxSendKbps>0</maxSendKbps>
     <maxRecvKbps>0</maxRecvKbps>
 </device>
 <gui enabled="true" tls="false" debugging="false">
-    <address>{{.GUIAddress}}</address>
-    <apikey>{{.APIKey}}</apikey>
+    <address>127.0.0.1:8384</address>
+    <apikey>cnd</apikey>
     <theme>default</theme>
 </gui>
 <ldap></ldap>
 <options>
-    <listenAddress>{{.ListenAddress}}</listenAddress>
+    <listenAddress>default</listenAddress>
     <globalAnnounceServer>default</globalAnnounceServer>
     <globalAnnounceEnabled>false</globalAnnounceEnabled>
     <localAnnounceEnabled>false</localAnnounceEnabled>
+    <localAnnouncePort>21027</localAnnouncePort>
+    <localAnnounceMCAddr>[ff12::8384]:21027</localAnnounceMCAddr>
     <maxSendKbps>0</maxSendKbps>
     <maxRecvKbps>0</maxRecvKbps>
-    <reconnectionIntervalS>30</reconnectionIntervalS>
+    <reconnectionIntervalS>60</reconnectionIntervalS>
     <relaysEnabled>false</relaysEnabled>
     <relayReconnectIntervalM>10</relayReconnectIntervalM>
     <startBrowser>false</startBrowser>
@@ -59,11 +68,12 @@ const configXML = `<configuration version="28">
     <natTimeoutSeconds>10</natTimeoutSeconds>
     <urAccepted>-1</urAccepted>
     <urSeen>3</urSeen>
+    <urUniqueID>PDhuWgmF</urUniqueID>
     <urURL>http://localhost</urURL>
     <urPostInsecurely>false</urPostInsecurely>
     <urInitialDelayS>1800</urInitialDelayS>
     <restartOnWakeup>true</restartOnWakeup>
-    <autoUpgradeIntervalH>0</autoUpgradeIntervalH>
+    <autoUpgradeIntervalH>12</autoUpgradeIntervalH>
     <upgradeToPreReleases>false</upgradeToPreReleases>
     <keepTemporariesH>24</keepTemporariesH>
     <cacheIgnoredFiles>false</cacheIgnoredFiles>
@@ -74,8 +84,17 @@ const configXML = `<configuration version="28">
     <overwriteRemoteDeviceNamesOnConnect>false</overwriteRemoteDeviceNamesOnConnect>
     <tempIndexMinBlocks>10</tempIndexMinBlocks>
     <trafficClass>0</trafficClass>
-    <defaultFolderPath></defaultFolderPath>
+    <defaultFolderPath>~</defaultFolderPath>
     <setLowPriority>true</setLowPriority>
     <minHomeDiskFreePct>0</minHomeDiskFreePct>
 </options>
 </configuration>`
+
+func getConfigXML(dev *model.Dev) ([]byte, error) {
+	configTemplate := template.Must(template.New("syncthingConfig").Parse(configXML))
+	buf := new(bytes.Buffer)
+	if err := configTemplate.Execute(buf, dev); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}

@@ -1,32 +1,31 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
-	"github.com/cloudnativedevelopment/cnd/pkg/config"
-	"github.com/cloudnativedevelopment/cnd/pkg/errors"
-	k8Client "github.com/cloudnativedevelopment/cnd/pkg/k8/client"
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
-	"github.com/cloudnativedevelopment/cnd/pkg/model"
+	"github.com/okteto/app/cli/pkg/analytics"
+	"github.com/okteto/app/cli/pkg/config"
+	"github.com/okteto/app/cli/pkg/errors"
+	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
+	"github.com/okteto/app/cli/pkg/k8s/deployments"
+	"github.com/okteto/app/cli/pkg/k8s/pods"
+	"github.com/okteto/app/cli/pkg/k8s/secrets"
+	"github.com/okteto/app/cli/pkg/k8s/services"
+	"github.com/okteto/app/cli/pkg/k8s/volumes"
+	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/app/cli/pkg/model"
 
-	"github.com/briandowns/spinner"
-	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
-	"github.com/cloudnativedevelopment/cnd/pkg/k8/forward"
-	"github.com/cloudnativedevelopment/cnd/pkg/k8/logs"
-	"github.com/cloudnativedevelopment/cnd/pkg/storage"
-	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
+	"github.com/okteto/app/cli/pkg/k8s/forward"
+	"github.com/okteto/app/cli/pkg/syncthing"
+
 	"github.com/spf13/cobra"
-	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
-	runtime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -37,289 +36,326 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 // UpContext is the common context of all operations performed during
 // the up command
 type UpContext struct {
-	Context        context.Context
-	Cancel         context.CancelFunc
-	WG             *sync.WaitGroup
-	Dev            *model.Dev
-	Client         *kubernetes.Clientset
-	RestConfig     *rest.Config
-	CurrentContext string
-	Namespace      string
-	Deployment     *appsv1.Deployment
-	DeploymentName string
-	Pod            *apiv1.Pod
-	Forwarder      *forward.CNDPortForwardManager
-	Disconnect     chan struct{}
-	Reconnect      chan struct{}
-	Sy             *syncthing.Syncthing
-	ErrChan        chan error
+	Context    context.Context
+	Cancel     context.CancelFunc
+	WG         *sync.WaitGroup
+	Dev        *model.Dev
+	Client     *kubernetes.Clientset
+	RestConfig *rest.Config
+	Pod        string
+	Container  string
+	Forwarder  *forward.PortForwardManager
+	Disconnect chan struct{}
+	Running    chan error
+	Exit       chan error
+	Sy         *syncthing.Syncthing
+	ErrChan    chan error
 }
 
-//Up starts a cloud native environment
+//Up starts a cloud dev environment
 func Up() *cobra.Command {
-	var namespace string
 	var devPath string
+	var namespace string
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Activate your cloud native development environment",
+		Short: "Activates your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting up command")
-			up := &UpContext{
-				WG:         &sync.WaitGroup{},
-				Disconnect: make(chan struct{}, 1),
-				Reconnect:  make(chan struct{}, 1),
+			u := upgradeAvailable()
+			if len(u) > 0 {
+				log.Yellow("Okteto %s is available. To upgrade:", u)
+				log.Yellow("    %s", getUpgradeCommand())
+				fmt.Println()
 			}
 
-			var err error
+			if !syncthing.IsInstalled() {
+				fmt.Println("Installing dependencies...")
+				if err := downloadSyncthing(); err != nil {
+					return fmt.Errorf("couldn't download syncthing, please try again")
+				}
+			}
 
-			devPath = getFullPath(devPath)
-			up.Dev, err = model.ReadDev(devPath)
+			if _, err := os.Stat(devPath); os.IsNotExist(err) {
+				return fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto create'", devPath)
+			}
+
+			dev, err := model.Get(devPath)
 			if err != nil {
 				return err
 			}
-
-			analytics.Send(analytics.EventUp, GetActionID())
-			defer analytics.Send(analytics.EventUpEnd, GetActionID())
-			s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-			s.Suffix = " Activating your cloud native development environment..."
-			s.Start()
-
-			up.Namespace = namespace
-			defer up.Shutdown()
-
-			runtime.ErrorHandlers = []func(error){up.handleRuntimeError}
-
-			isRetry := false
-			for {
-				up.Context, up.Cancel = context.WithCancel(context.Background())
-				up.ErrChan = make(chan error, 1)
-
-				err = up.Execute(isRetry, devPath)
-				s.Stop()
-				if err != nil {
-					return err
-				}
-
-				up.StreamLogsAndEvents()
-
-				disp := up.getDisplayContext()
-
-				if !isRetry {
-					fmt.Println(disp)
-					log.Debugf(up.String())
-				} else {
-					log.Green("Reconnected to your cluster.")
-					fmt.Println()
-				}
-
-				err = up.WaitUntilExit()
-				if err == errors.ErrPodIsGone {
-					log.Yellow("Detected change in the dev environment, reconnecting.")
-					up.Shutdown()
-					isRetry = true
-					continue
-				}
-
-				return err
+			if namespace != "" {
+				dev.Namespace = namespace
 			}
-
+			analytics.TrackUp(dev.Image, VersionString)
+			return RunUp(dev)
 		},
 	}
 
-	addDevPathFlag(cmd, &devPath, config.CNDManifestFileName())
-	addNamespaceFlag(cmd, &namespace)
+	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd
 }
 
-func (up *UpContext) handleRuntimeError(err error) {
-	if strings.Contains(err.Error(), "container not running") || strings.Contains(err.Error(), "No such container") {
-		up.ErrChan <- errors.ErrPodIsGone
-		return
+//RunUp starts the up sequence
+func RunUp(dev *model.Dev) error {
+	up := &UpContext{
+		WG:         &sync.WaitGroup{},
+		Dev:        dev,
+		Disconnect: make(chan struct{}, 1),
+		Running:    make(chan error, 1),
+		Exit:       make(chan error, 1),
+		ErrChan:    make(chan error, 1),
 	}
 
-	log.Debugf("unknown unhandled error: %s", err)
-}
-
-// WaitUntilExit blocks execution until a stop signal is sent or a disconnect event or an error
-func (up *UpContext) WaitUntilExit() error {
-	maxReconnectionAttempts := 6 // this will cause the command to exit after 3 minutes of disconnection
-	resetAttempts := time.NewTimer(5 * time.Minute)
-	displayDisconnectionNotification := true
-	displayReconnectionNotification := false
-	reconnectionAttempts := 0
+	defer up.shutdown()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+	go up.Activate()
+	select {
+	case <-stop:
+		log.Debugf("CTRL+C received, starting shutdown sequence")
+		fmt.Println()
+	case err := <-up.Exit:
+		if err == nil {
+			log.Debugf("finished channel received, starting shutdown sequence")
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
+// Activate activates the dev environment
+func (up *UpContext) Activate() {
+	up.WG.Add(1)
+	defer up.WG.Done()
+	var prevError error
+	attach := false
 
 	for {
-		select {
-		case <-stop:
-			log.Debugf("CTRL+C received, starting shutdown sequence")
+		up.Context, up.Cancel = context.WithCancel(context.Background())
+		err := up.devMode(attach)
+		if err != nil {
+			up.Exit <- err
+			return
+		}
+		attach = true
+
+		fmt.Println(" ✓  Okteto Environment activated")
+
+		progress := newProgressBar("Synchronizing your files...")
+		progress.start()
+		err = up.startSync()
+		progress.stop()
+		if err != nil {
+			up.Exit <- err
+			return
+		}
+
+		fmt.Println(" ✓  Files synchronized")
+
+		progress = newProgressBar("Finalizing configuration...")
+		progress.start()
+		err = up.forceLocalSyncState()
+		progress.stop()
+		if err != nil {
+			up.Exit <- err
+			return
+		}
+
+		switch prevError {
+		case errors.ErrLostConnection:
+			log.Green("Reconnected to your cluster.")
+		}
+
+		printDisplayContext("Your Okteto Environment is ready", up.Dev.Name)
+		cmd, port := up.buildExecCommand()
+		if err := cmd.Start(); err != nil {
+			log.Infof("Failed to execute okteto exec: %s", err)
+			up.Exit <- err
+			return
+		}
+
+		log.Debugf("started new okteto exec")
+
+		go func() {
+			up.WG.Add(1)
+			defer up.WG.Done()
+			up.Running <- cmd.Wait()
+			return
+		}()
+
+		execEndpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
+		prevError = up.WaitUntilExitOrInterrupt(execEndpoint)
+		if prevError != nil && (prevError == errors.ErrLostConnection ||
+			prevError == errors.ErrCommandFailed && !up.Sy.IsConnected()) {
+			log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...")
 			fmt.Println()
+			up.shutdown()
+			continue
+		}
+
+		up.Exit <- nil
+		return
+	}
+}
+
+// WaitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
+func (up *UpContext) WaitUntilExitOrInterrupt(endpoint string) error {
+	for {
+		select {
+		case <-up.Context.Done():
+			log.Debug("context is done, sending interrupt to process")
+			if _, err := http.Get(endpoint); err != nil {
+				log.Infof("failed to communicate to exec: %s", err)
+			}
 			return nil
-		case <-up.Reconnect:
-			reconnectionAttempts = 0
-			if displayReconnectionNotification {
-				log.Green("Reconnected to your cluster.")
-				displayDisconnectionNotification = true
-				displayReconnectionNotification = false
-			}
-		case <-up.Disconnect:
-			log.Infof("cluster connection lost, reconnecting %d/%d", reconnectionAttempts, maxReconnectionAttempts)
-			reconnectionAttempts++
-			if reconnectionAttempts > maxReconnectionAttempts {
-				return errors.ErrLostConnection
-			}
 
-			if displayDisconnectionNotification {
-				log.Yellow(ReconnectingMessage)
-				displayReconnectionNotification = true
-				displayDisconnectionNotification = false
+		case err := <-up.Running:
+			if err != nil {
+				log.Infof("Command execution error: %s\n", err)
+				return errors.ErrCommandFailed
 			}
-
-			up.ErrChan <- errors.ErrPodIsGone
+			return nil
 
 		case err := <-up.ErrChan:
-			if err == errors.ErrPodIsGone {
-				return err
-			}
-
 			log.Yellow(err.Error())
-
-		case <-resetAttempts.C:
-			log.Debug("resetting reconnection attempts counter")
-			reconnectionAttempts = 0
+		case <-up.Disconnect:
+			log.Debug("disconnected, sending interrupt to process")
+			if _, err := http.Get(endpoint); err != nil {
+				log.Infof("failed to communicate to exec: %s", err)
+			}
+			return errors.ErrLostConnection
 		}
 	}
 }
 
-// Execute runs all the logic for the up command
-func (up *UpContext) Execute(isRetry bool, devPath string) error {
-
-	if !syncthing.IsInstalled() {
-		fmt.Println("Installing dependencies...")
-		if err := downloadSyncthing(up.Context); err != nil {
-			return fmt.Errorf("couldn't download syncthing, please try again")
-		}
-
-	}
-
+func (up *UpContext) devMode(isRetry bool) error {
 	var err error
-	up.Namespace, up.Client, up.RestConfig, up.CurrentContext, err = k8Client.Get(up.Namespace)
+	var namespace string
+	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal()
+	if err != nil {
+		return err
+	}
+	if up.Dev.Namespace == "" {
+		up.Dev.Namespace = namespace
+	}
+
+	up.Sy, err = syncthing.New(up.Dev)
 	if err != nil {
 		return err
 	}
 
-	n, deploymentName, c, _, err := findDevEnvironment(true, true)
+	d, err := deployments.Get(up.Dev.Name, up.Dev.Namespace, up.Client)
+	create := false
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		if !askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name)) {
+			return fmt.Errorf("deployment %s not found [current context: %s]", up.Dev.Name, up.Dev.Namespace)
+		}
+		d = deployments.GevDevSandbox(up.Dev)
+		create = true
+	}
+	progress := newProgressBar("Activating your Okteto Environment...")
+	progress.start()
+	defer progress.stop()
 
-	if err != errNoCNDEnvironment {
-		if n == up.Namespace && deploymentName == up.Dev.Swap.Deployment.Name && c == up.Dev.Swap.Deployment.Container {
-			return fmt.Errorf("there is already an entry for %s/%s. Are you running '%s up' somewhere else?", deployments.GetFullName(n, deploymentName), c, config.GetBinaryName())
+	if isRetry && !deployments.IsDevModeOn(d) {
+		return fmt.Errorf("Your Okteto Environment has been deactivated")
+	}
+
+	if err := secrets.Create(up.Dev, up.Client); err != nil {
+		return err
+	}
+
+	if err := volumes.Create(volumes.GetVolumeName(up.Dev), up.Dev, up.Client); err != nil {
+		return err
+	}
+
+	for i := range up.Dev.Volumes {
+		if err := volumes.Create(volumes.GetVolumeDataName(up.Dev, i), up.Dev, up.Client); err != nil {
+			return err
 		}
 	}
 
-	up.DeploymentName = deployments.GetFullName(up.Namespace, up.Dev.Swap.Deployment.Name)
-	log.Debugf("getting deployment %s", up.DeploymentName)
-
-	up.Deployment, err = deployments.Get(up.Namespace, up.Dev.Swap.Deployment.Name, up.Client)
+	c, err := deployments.DevModeOn(d, up.Dev, create, up.Client)
 	if err != nil {
-		log.Debug(err)
-		if strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("deployment %s not found [current context: %s]", up.DeploymentName, up.CurrentContext)
-		}
-
-		return fmt.Errorf("couldn't get deployment %s from your cluster. Please try again", up.DeploymentName)
+		return err
 	}
 
-	if isRetry {
-		// check if is dev deployment, if not, bail out
-		enabled, err := deployments.IsDevModeEnabled(up.Deployment.GetObjectMeta())
-		if err != nil {
-			log.Infof("couldn't determine if the deployment has the dev mode enabled: %s", err)
-			return fmt.Errorf("couldn't get deployment %s from your cluster. Please try again", up.DeploymentName)
-		}
+	up.Container = c.Name
 
-		if !enabled {
-			log.Infof("deployment is no longer in dev mode, shutting down")
-			return errors.ErrNotDevDeployment
+	if create {
+		if err := services.Create(up.Dev, up.Client); err != nil {
+			return err
 		}
 	}
 
-	up.Dev.Swap.Deployment.Container = deployments.GetDevContainerOrFirst(
-		up.Dev.Swap.Deployment.Container,
-		up.Deployment.Spec.Template.Spec.Containers,
-	)
-
-	devList, err := deployments.GetAndUpdateDevListFromAnnotation(up.Deployment.GetObjectMeta(), up.Dev)
+	p, err := pods.GetDevPod(up.Context, up.Dev, up.Client)
 	if err != nil {
 		return err
 	}
 
-	primary := up.Dev.Swap.Deployment.Container == devList[0].Swap.Deployment.Container
-	up.Sy, err = syncthing.NewSyncthing(up.Namespace, up.Deployment.Name, devList, primary)
-	if err != nil {
-		return err
-	}
+	up.Pod = p.Name
 
-	log.Debugf("enabling dev mode on %s", up.DeploymentName)
-	if err := deployments.DevModeOn(up.Deployment, devList, up.Client); err != nil {
-		return err
-	}
+	return nil
+}
 
-	log.Debugf("enabled dev mode on %s", up.DeploymentName)
-
-	up.Pod, err = deployments.GetCNDPod(up.Context, up.Deployment.Namespace, up.Deployment.Name, up.Client)
-	if err != nil {
-		return err
-	}
-
+func (up *UpContext) startSync() error {
 	if err := up.Sy.Run(up.Context, up.WG); err != nil {
 		return err
 	}
 
-	err = storage.Insert(up.Context, up.WG, up.Namespace, up.Dev, up.Sy.GUIAddress, up.Pod.Name, devPath)
-	if err != nil {
-		if err == storage.ErrAlreadyRunning {
-			log.Infof("failed to insert new state value for %s", up.DeploymentName)
-			return fmt.Errorf("there is already an entry for %s. Are you running '%s up' somewhere else?", config.GetBinaryName(), up.DeploymentName)
-		}
+	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
+	if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
+		return err
+	}
+	if err := up.Forwarder.Add(up.Sy.RemoteGUIPort, syncthing.GUIPort); err != nil {
 		return err
 	}
 
-	up.Forwarder = forward.NewCNDPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
-	if up.Sy.Primary {
-		if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort, up.Sy.IsConnected); err != nil {
-			return err
-		}
-	}
-
 	for _, f := range up.Dev.Forward {
-		if err := up.Forwarder.Add(f.Local, f.Remote, up.Sy.IsConnected); err != nil {
+		if err := up.Forwarder.Add(f.Local, f.Remote); err != nil {
 			return err
 		}
 	}
 
-	up.Forwarder.Start(up.Pod)
+	up.Forwarder.Start(up.Pod, up.Dev.Namespace)
+	go up.Sy.Monitor(up.Context, up.WG, up.Disconnect)
 
-	if up.Dev.Mount.SendOnly {
-		if err := up.Sy.OverrideChanges(up.Context, up.WG, up.Dev); err != nil {
-			return err
-		}
+	if err := up.Sy.WaitForPing(up.Context, up.WG); err != nil {
+		return err
+	}
+
+	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// StreamLogsAndEvents starts go routines to:
-// - get pod events
-// - get container logs
-func (up *UpContext) StreamLogsAndEvents() {
-	go deployments.GetPodEvents(up.Context, up.Pod, up.Client)
-	go logs.StreamLogs(up.Context, up.WG, up.Pod, up.Dev.Swap.Deployment.Container, up.Client, up.ErrChan)
+func (up *UpContext) forceLocalSyncState() error {
+	if err := up.Sy.OverrideChanges(up.Context, up.WG, up.Dev); err != nil {
+		return err
+	}
+
+	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
+		return err
+	}
+
+	up.Sy.Type = "sendreceive"
+	if err := up.Sy.UpdateConfig(); err != nil {
+		return err
+	}
+
+	return up.Sy.Restart(up.Context, up.WG)
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
-func (up *UpContext) Shutdown() {
+func (up *UpContext) shutdown() {
 	log.Debugf("cancelling context")
 	if up.Cancel != nil {
 		up.Cancel()
@@ -352,39 +388,36 @@ func (up *UpContext) Shutdown() {
 	}
 }
 
-func (up *UpContext) getDisplayContext() string {
-	buf := bytes.NewBufferString("")
-	buf.WriteString(fmt.Sprintf("%s %s\n", log.SuccessSymbol, log.GreenString("Environment activated!")))
-
-	if len(up.Dev.Forward) > 0 {
-		buf.WriteString(log.BlueString("    Ports:\n"))
-		for _, f := range up.Dev.Forward {
-			buf.WriteString(fmt.Sprintf("       %d -> %d\n", f.Local, f.Remote))
-		}
-	}
-
-	buf.WriteString(log.BlueString("    Cluster:"))
-	buf.WriteString(fmt.Sprintf("     %s\n", up.CurrentContext))
-	buf.WriteString(log.BlueString("    Deployment:"))
-	buf.WriteString(fmt.Sprintf("  %s\n", up.DeploymentName))
-	return buf.String()
+func printDisplayContext(message, name string) {
+	log.Success(message)
+	log.Println(fmt.Sprintf("    %s     %s", log.BlueString("Name:"), name))
+	fmt.Println()
 }
 
-func (up *UpContext) String() string {
-	buf := bytes.NewBufferString("")
-	buf.WriteString(fmt.Sprintf("context: %s\n", up.CurrentContext))
-	buf.WriteString(fmt.Sprintf("deployment: %s\n", up.DeploymentName))
-	buf.WriteString(fmt.Sprintf("container: %s\n", up.Dev.Swap.Deployment.Container))
-
-	buf.WriteString("forward:\n")
-	for _, p := range up.Dev.Forward {
-		buf.WriteString(fmt.Sprintf("  %d->%d\n", p.Local, p.Remote))
+func (up *UpContext) buildExecCommand() (*exec.Cmd, int) {
+	port, err := model.GetAvailablePort()
+	if err != nil {
+		log.Infof("couldn't access the network: %s", err)
+		port = 15000
 	}
 
-	buf.WriteString("environment:\n")
-	for _, e := range up.Dev.Environment {
-		buf.WriteString(fmt.Sprintf("  %s=?\n", e.Name))
+	args := []string{
+		"exec",
+		"--pod",
+		up.Pod,
+		"--container",
+		up.Container,
+		"--port",
+		fmt.Sprintf("%d", port),
+		"-n",
+		up.Dev.Namespace,
+		"--",
 	}
+	args = append(args, up.Dev.Command...)
 
-	return buf.String()
+	cmd := exec.Command(config.GetBinaryFullPath(), args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd, port
 }

@@ -1,92 +1,53 @@
 package log
 
 import (
-	"flag"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
+	"runtime"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/config"
 	"github.com/fatih/color"
 	"github.com/sirupsen/logrus"
-	lumberjack "gopkg.in/natefinch/lumberjack.v2"
-	"k8s.io/klog"
 )
 
 var (
-	// RedString adds the red ansi color and applies the format
-	RedString = color.New(color.FgHiRed).SprintfFunc()
+	redString = color.New(color.FgHiRed).SprintfFunc()
 
-	// GreenString adds the green ansi color and applies the format
-	GreenString = color.New(color.FgHiGreen).SprintfFunc()
+	greenString = color.New(color.FgGreen).SprintfFunc()
 
-	// YellowString adds the yellow ansi color and applies the format
-	YellowString = color.New(color.FgHiYellow).SprintfFunc()
+	yellowString = color.New(color.FgHiYellow).SprintfFunc()
 
-	// BlueString adds the blue ansi color and applies the format
-	BlueString = color.New(color.FgHiBlue).SprintfFunc()
+	blueString = color.New(color.FgHiBlue).SprintfFunc()
 
-	// SymbolString adds the terminal's background color as foreground, and green as background and applies the format
-	SymbolString = color.New(color.BgGreen, color.FgBlack).SprintfFunc()
+	errorSymbol = color.New(color.BgHiRed, color.FgBlack).Sprint(" x ")
 
-	// ErrorSymbolString adds the terminal's background color as foreground, and red as background and applies the format
-	ErrorSymbolString = color.New(color.BgHiRed, color.FgBlack).SprintfFunc()
+	successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" ✓ ")
 
-	// ErrorSymbol is an X with the error color applied
-	ErrorSymbol = ErrorSymbolString(" ✕ ")
-
-	// SuccessSymbol is a checkmark with the success color applied
-	SuccessSymbol = SymbolString(" ✓ ")
+	informationSymbol = color.New(color.BgHiBlue, color.FgBlack).Sprint(" i ")
 )
 
 type logger struct {
-	out  *logrus.Logger
-	file *logrus.Entry
+	out *logrus.Logger
 }
 
 var log = &logger{
 	out: logrus.New(),
 }
 
-// Init configures the logger for the package to use.
-func Init(level logrus.Level, actionID string) {
-	log.out.SetOutput(os.Stdout)
-	log.out.SetLevel(level)
-
-	fileLogger := logrus.New()
-	fileLogger.SetFormatter(&logrus.TextFormatter{
-		DisableColors: true,
-		FullTimestamp: true,
-	})
-
-	logPath := filepath.Join(config.GetCNDHome(), fmt.Sprintf("%s%s", config.GetBinaryName(), ".log"))
-	rolling := getRollingLog(logPath)
-	fileLogger.SetOutput(rolling)
-	fileLogger.SetLevel(logrus.DebugLevel)
-	log.file = fileLogger.WithFields(logrus.Fields{"action": actionID})
-
-	klog.InitFlags(nil)
-	flag.Set("logtostderr", "false")
-	flag.Set("alsologtostderr", "false")
-	flag.Parse()
-	klog.SetOutput(log.file.Writer())
+func init() {
+	if runtime.GOOS == "windows" {
+		successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" + ")
+	}
 }
 
-func getRollingLog(path string) io.Writer {
-	return &lumberjack.Logger{
-		Filename:   path,
-		MaxSize:    1, // megabytes
-		MaxBackups: 10,
-		MaxAge:     28, //days
-		Compress:   true,
-	}
+// Init configures the logger for the package to use.
+func Init(level logrus.Level) {
+	log.out.SetOutput(os.Stdout)
+	log.out.SetLevel(level)
 }
 
 // SetLevel sets the level of the main logger
 func SetLevel(level string) {
 	l, err := logrus.ParseLevel(level)
-
 	if err == nil {
 		log.out.SetLevel(l)
 	}
@@ -95,67 +56,69 @@ func SetLevel(level string) {
 // Debug writes a debug-level log
 func Debug(args ...interface{}) {
 	log.out.Debug(args...)
-	if log.file != nil {
-		log.file.Debug(args...)
-	}
-
 }
 
 // Debugf writes a debug-level log with a format
 func Debugf(format string, args ...interface{}) {
 	log.out.Debugf(format, args...)
-	if log.file != nil {
-		log.file.Debugf(format, args...)
-	}
 }
 
 // Info writes a info-level log
 func Info(args ...interface{}) {
 	log.out.Info(args...)
-	if log.file != nil {
-		log.file.Info(args...)
-	}
 }
 
 // Infof writes a info-level log with a format
 func Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	if log.file != nil {
-		log.file.Infof(format, args...)
-	}
+}
 
+// Fatal writes a fatal-level log
+func Fatal(args ...interface{}) {
+	log.out.Fatal(args...)
 }
 
 // Error writes a error-level log
 func Error(args ...interface{}) {
 	log.out.Error(args...)
-	if log.file != nil {
-		log.file.Error(args...)
-	}
 }
 
 // Errorf writes a error-level log with a format
 func Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
-	if log.file != nil {
-		log.file.Errorf(format, args...)
-	}
-}
-
-// Red writes a line in red
-func Red(format string, args ...interface{}) {
-	fmt.Println(RedString(format, args...))
-	log.file.Errorf(format, args...)
 }
 
 // Yellow writes a line in yellow
 func Yellow(format string, args ...interface{}) {
-	fmt.Println(YellowString(format, args...))
-	log.file.Warnf(format, args...)
+	fmt.Fprintln(color.Output, yellowString(format, args...))
 }
 
 // Green writes a line in green
 func Green(format string, args ...interface{}) {
-	fmt.Println(GreenString(format, args...))
-	log.file.Infof(format, args...)
+	fmt.Fprintln(color.Output, greenString(format, args...))
+}
+
+// BlueString returns a string in blue
+func BlueString(format string, args ...interface{}) string {
+	return blueString(format, args...)
+}
+
+// Success prints a message with the success symbol first, and the text in green
+func Success(format string, args ...interface{}) {
+	fmt.Fprintf(color.Output, "%s %s\n", successSymbol, greenString(format, args...))
+}
+
+// Information prints a message with the information symbol first, and the text in blue
+func Information(format string, args ...interface{}) {
+	fmt.Fprintf(color.Output, "%s %s\n", informationSymbol, blueString(format, args...))
+}
+
+// Fail prints a message with the error symbol first, and the text in red
+func Fail(format string, args ...interface{}) {
+	fmt.Fprintf(color.Output, "%s %s\n", errorSymbol, redString(format, args...))
+}
+
+// Println writes a line with colors
+func Println(args ...interface{}) {
+	fmt.Fprintln(color.Output, args...)
 }

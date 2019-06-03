@@ -11,7 +11,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
+	"github.com/okteto/app/cli/pkg/log"
 	enry "gopkg.in/src-d/enry.v1"
 )
 
@@ -38,7 +38,6 @@ func ProcessDirectory(root string) ([]string, error) {
 
 	err := filepath.Walk(root, func(path string, f os.FileInfo, err error) error {
 		if analysisTimeout {
-			log.Debugf("linguist analysis timed out")
 			return errAnalysisTimeOut
 		}
 
@@ -102,7 +101,7 @@ func ProcessDirectory(root string) ([]string, error) {
 	}
 
 	if len(out) == 0 {
-		out[unrecognized] = []string{}
+		out[Unrecognized] = []string{}
 	}
 
 	return sortLanguagesByUsage(out), nil

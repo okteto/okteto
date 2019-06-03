@@ -3,94 +3,106 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"os"
-	"strings"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
+	"github.com/okteto/app/cli/pkg/config"
+	"github.com/okteto/app/cli/pkg/k8s/exec"
+	"github.com/okteto/app/cli/pkg/k8s/pods"
+	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/app/cli/pkg/model"
 
-	k8Client "github.com/cloudnativedevelopment/cnd/pkg/k8/client"
-	"github.com/cloudnativedevelopment/cnd/pkg/k8/deployments"
-	"github.com/cloudnativedevelopment/cnd/pkg/k8/exec"
+	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
+
 	"github.com/spf13/cobra"
 )
 
 //Exec executes a command on the CND container
 func Exec() *cobra.Command {
 	var devPath string
+	var pod string
+	var container string
+	var namespace string
+	var port int
 
 	cmd := &cobra.Command{
 		Use:   "exec COMMAND",
-		Short: "Execute a command in the cloud native environment",
+		Short: "Execute a command in your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			analytics.Send(analytics.EventExec, GetActionID())
-			defer analytics.Send(analytics.EventExecEnd, GetActionID())
-			err := executeExec(devPath, args)
-			if err == errMultipleCNDEnvironment {
-				exitInformation = "Use --file flag to specify the environment to use"
+			devPath = getFullPath(devPath)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			if port != 0 {
+				go func() {
+					http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+						log.Debug("canceling process due to a request")
+						cancel()
+					})
+
+					log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+				}()
 			}
 
+			if _, err := os.Stat(devPath); os.IsNotExist(err) {
+				return fmt.Errorf("'%s' does not exist", devPath)
+			}
+
+			dev, err := model.Get(devPath)
+			if err != nil {
+				return err
+			}
+			if namespace != "" {
+				dev.Namespace = namespace
+			}
+			err = executeExec(ctx, pod, container, dev, args)
 			return err
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return errors.New("exec requires the COMMAND argument")
 			}
-
 			return nil
 		},
 	}
 
-	addDevPathFlag(cmd, &devPath, "")
+	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the exec command is executed")
+	cmd.Flags().StringVarP(&pod, "pod", "p", "", "pod where it is executed")
+	cmd.Flags().MarkHidden("pod")
+	cmd.Flags().StringVarP(&container, "container", "c", "", "container where it is executed")
+	cmd.Flags().MarkHidden("container")
+	cmd.Flags().IntVar(&port, "port", 0, "port to listen to signals")
+	cmd.Flags().MarkHidden("port")
+
 	return cmd
 }
 
-func executeExec(searchDevPath string, args []string) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	namespace, deployment, devContainer, podName, err := findDevEnvironment(true, false)
+func executeExec(ctx context.Context, pod, container string, dev *model.Dev, args []string) error {
+	client, cfg, namespace, err := k8Client.GetLocal()
 	if err != nil {
-		if err != errMultipleCNDEnvironment {
-			return err
-		}
+		return err
+	}
 
-		if searchDevPath == "" {
-			return errMultipleCNDEnvironment
-		}
+	if dev.Namespace == "" {
+		dev.Namespace = namespace
+	}
 
-		namespace, deployment, devContainer, podName, err = getDevEnvironment(searchDevPath, true)
+	if len(pod) == 0 {
+		p, err := pods.GetDevPod(ctx, dev, client)
 		if err != nil {
 			return err
 		}
-	}
 
-	_, client, cfg, _, err := k8Client.Get(namespace)
-	if err != nil {
-		return err
-	}
-
-	if podName != "" {
-		log.Debugf("running command on %s/pod/%s", namespace, podName)
-		err = exec.Exec(ctx, client, cfg, namespace, podName, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
-		if err == nil {
-			return nil
+		pod = p.Name
+		if len(dev.Container) == 0 {
+			dev.Container = p.Spec.Containers[0].Name
 		}
-
-		if !strings.Contains(err.Error(), "not found") {
-			return err
-		}
-
-		log.Debugf("error running command on %s/pod/%s: %s", namespace, podName, err)
 	}
 
-	log.Debugf("retrieving the new pod name for %s/%s and running command", namespace, deployment)
-	pod, err := deployments.GetCNDPod(ctx, namespace, deployment, client)
-	if err != nil {
-		return err
+	if len(container) > 0 {
+		dev.Container = container
 	}
-
-	err = exec.Exec(ctx, client, cfg, namespace, pod.Name, devContainer, true, os.Stdin, os.Stdout, os.Stderr, args)
-
-	return err
+	return exec.Exec(ctx, client, cfg, dev.Namespace, pod, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, args)
 }

@@ -1,133 +1,104 @@
 package analytics
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
-	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"time"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/config"
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
 	"github.com/denisbrodbeck/machineid"
-	uuid "github.com/satori/go.uuid"
-)
-
-//EventName event name
-type EventName string
-
-type event struct {
-	//ActionID to correlate different events
-	ActionID string `json:"action"`
-
-	//Event name of the event
-	Event EventName `json:"event"`
-
-	//User local id of the client
-	User string `json:"uid"`
-
-	//Time time of the event
-	Time int64 `json:"time"`
-
-	//Version of the cli
-	Version string `json:"version"`
-
-	//OS of the user
-	OS string `json:"os"`
-}
-
-var (
-	userID string
-
-	client = http.Client{
-		Timeout: 65 * time.Second,
-	}
-
-	wg = sync.WaitGroup{}
+	"github.com/dukex/mixpanel"
+	"github.com/okteto/app/cli/pkg/config"
+	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/app/cli/pkg/okteto"
 )
 
 const (
-	// EventUp event for up
-	EventUp = "up"
+	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
-	// EventUpEnd event for when up finishes
-	EventUpEnd = "upend"
+	createDatabaseEvent = "Create Database"
+	upEvent             = "Up"
+	downEvent           = "Down"
+	loginEvent          = "Login"
+	createEvent         = "Create Manifest"
+	execEvent           = "Exec"
+)
 
-	// EventExec event for exec
-	EventExec = "exec"
-
-	// EventExecEnd event for when exec finishes
-	EventExecEnd = "execend"
-
-	// EventRun event for run
-	EventRun = "run"
-
-	// EventRunEnd event for when run finishes
-	EventRunEnd = "runend"
+var (
+	mixpanelClient mixpanel.Mixpanel
+	machineID      string
 )
 
 func init() {
+	c := &http.Client{
+		Timeout: time.Second * 5,
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout: 5 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 5 * time.Second,
+		},
+	}
+
+	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "")
+
 	var err error
-	userID, err = machineid.ProtectedID("cnd")
+	machineID, err = machineid.ProtectedID("okteto")
 	if err != nil {
 		log.Debugf("failed to generate a machine id")
-		userID = "na"
+		machineID = "na"
 	}
 }
 
-// NewActionID returns an action
-func NewActionID() string {
-	return uuid.NewV4().String()
+// TrackCreate sends a tracking event to mixpanel when the user creates a manifest
+func TrackCreate(language, image, version string) {
+	track(createEvent, version, image)
 }
 
-// Send send analytics event
-func Send(e EventName, actionID string) {
-	go func() {
-		wg.Add(1)
-		defer wg.Done()
+// TrackUp sends a tracking event to mixpanel when the user activates a development environment
+func TrackUp(image, version string) {
+	track(upEvent, version, image)
+}
 
-		if !isEnabled() {
-			return
+// TrackExec sends a tracking event to mixpanel when the user runs the exec command
+func TrackExec(image, version string) {
+	track(execEvent, version, image)
+}
+
+// TrackDown sends a tracking event to mixpanel when the user deactivates a development environment
+func TrackDown(image, version string) {
+	track(downEvent, version, image)
+}
+
+// TrackLogin sends a tracking event to mixpanel when the user logs in
+func TrackLogin(version string) {
+	track(loginEvent, version, "")
+}
+
+func track(event, version, image string) {
+	if isEnabled() {
+		e := &mixpanel.Event{
+			Properties: map[string]interface{}{
+				"os":                runtime.GOOS,
+				"version":           version,
+				"$referring_domain": okteto.GetURL(),
+				"image":             image,
+				"machine_id":        machineID,
+			},
 		}
 
-		ev := event{
-			ActionID: actionID,
-			Event:    e,
-			Time:     time.Now().UTC().Unix(),
-			Version:  config.VersionString,
-			User:     userID,
-			OS:       runtime.GOOS,
+		if err := mixpanelClient.Track(okteto.GetUserID(), event, e); err != nil {
+			log.Infof("Failed to send analytics: %s", err)
 		}
+	} else {
+		log.Debugf("not sending event for %s", event)
+	}
+}
 
-		data, err := json.Marshal(ev)
-		if err != nil {
-			log.Debugf("[%s] failed to marshall analytic event: %s", actionID, err)
-			return
-		}
-
-		log.Debugf("[%s] sending analytics: %s", actionID, string(data))
-		req, _ := http.NewRequest("POST", config.GetAnalyticsEndpoint(), bytes.NewBuffer(data))
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := client.Do(req)
-
-		if err != nil {
-			log.Debugf("[%s] failed to send the analytics: %s", actionID, err)
-			return
-		}
-
-		io.Copy(ioutil.Discard, resp.Body)
-		defer resp.Body.Close()
-
-		if resp.StatusCode > 300 {
-			log.Debugf("[%s] analytics fail to process request: %d", actionID, resp.StatusCode)
-			return
-		}
-	}()
+func getFlagPath() string {
+	return filepath.Join(config.GetHome(), ".noanalytics")
 }
 
 // Disable disables analytics
@@ -161,36 +132,4 @@ func isEnabled() bool {
 	}
 
 	return true
-}
-
-// Wait for the analytics to be finished
-func Wait() {
-	if !isEnabled() {
-		return
-	}
-	log.Debug("waiting for analytics...")
-
-	waitCh1 := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(waitCh1)
-	}()
-
-	waitCh2 := make(chan struct{})
-	go func() {
-		time.Sleep(1 * time.Second)
-		close(waitCh2)
-	}()
-
-	select {
-	case <-waitCh1:
-		log.Debug("all analytics were sent")
-	case <-waitCh2:
-		log.Debug("some analytics were not sent before shutdown")
-		return
-	}
-}
-
-func getFlagPath() string {
-	return filepath.Join(config.GetCNDHome(), ".noanalytics")
 }

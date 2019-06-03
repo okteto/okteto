@@ -1,13 +1,13 @@
 package cmd
 
 import (
-	"context"
 	"os"
 	"runtime"
 	"sync"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
-	"github.com/cloudnativedevelopment/cnd/pkg/syncthing"
+	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/app/cli/pkg/syncthing"
+
 	getter "github.com/hashicorp/go-getter"
 )
 
@@ -19,11 +19,10 @@ var (
 	}
 )
 
-func downloadSyncthing(ctx context.Context) error {
+func downloadSyncthing() error {
 	opts := []getter.ClientOption{getter.WithProgress(defaultProgressBar)}
 
 	client := &getter.Client{
-		Ctx:     ctx,
 		Src:     downloadPath[runtime.GOOS],
 		Dst:     syncthing.GetInstallPath(),
 		Mode:    getter.ClientModeFile,

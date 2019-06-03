@@ -1,108 +1,89 @@
 package config
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/cloudnativedevelopment/cnd/pkg/model"
+	"runtime"
+	"strings"
 )
 
-// These values will be stamped at build time
-var (
-	// VersionString is the canonical version string
-	VersionString string
+const (
+	folderName       = ".okteto"
+	manifestFileName = "okteto.yml"
 )
 
 // Config holds all the configuration values.
-// This is meant to be changed by implementors of CND.
 type Config struct {
-	// AnalyticsEndpoint is the endpoint to use for analytics
-	AnalyticsEndpoint string
+	// HomePath is the path of the base folder for all the Okteto files
+	HomePath string
 
-	// CNDHomePath is the path of the base folder for all the CND files
-	CNDHomePath string
+	// FolderName is the name of the  folder that stores the state on the client machine
+	FolderName string
 
-	// CNDFolderName is the name of the  folder that stores the state on the client machine
-	CNDFolderName string
-
-	// CNDManifestFileName is the name of the manifest file e.g. cnd.yml
-	CNDManifestFileName string
-
-	// BinaryName is the name of the CLI binary
-	BinaryName string
+	// ManifestFileName is the name of the manifest file
+	ManifestFileName string
 }
 
-var (
-	defaultConfig = &Config{
-		AnalyticsEndpoint:   "https://us-central1-okteto-prod.cloudfunctions.net/cnd-analytics",
-		CNDFolderName:       ".cnd",
-		CNDManifestFileName: "cnd.yml",
-		BinaryName:          "cnd",
-	}
-
-	overrideConfig = &Config{}
-)
-
-//SetConfig sets the configuration object to use
-func SetConfig(newConfig *Config) {
-	overrideConfig = newConfig
+// FolderName returns the name of the state folder
+func FolderName() string {
+	return folderName
 }
 
-// GetAnalyticsEndpoint returns the endpoint to use for analytics
-func GetAnalyticsEndpoint() string {
-	if overrideConfig.AnalyticsEndpoint == "" {
-		return defaultConfig.AnalyticsEndpoint
-	}
-
-	return overrideConfig.AnalyticsEndpoint
-}
-
-// CNDFolderName returns the name of the cnd folder
-func CNDFolderName() string {
-	if overrideConfig.CNDFolderName == "" {
-		return defaultConfig.CNDFolderName
-	}
-
-	return overrideConfig.CNDFolderName
-}
-
-// CNDManifestFileName returns the name of the manifest file
-func CNDManifestFileName() string {
-	if overrideConfig.CNDManifestFileName == "" {
-		return defaultConfig.CNDManifestFileName
-	}
-
-	return overrideConfig.CNDManifestFileName
+// ManifestFileName returns the name of the manifest file
+func ManifestFileName() string {
+	return manifestFileName
 }
 
 //GetBinaryName returns the name of the binary
 func GetBinaryName() string {
-	if overrideConfig.BinaryName == "" {
-		return defaultConfig.BinaryName
-	}
-
-	return overrideConfig.BinaryName
+	return filepath.Base(GetBinaryFullPath())
 }
 
-// GetCNDHome returns the path of the folder
-func GetCNDHome() string {
-	var cndFolder = defaultConfig.CNDFolderName
-	if overrideConfig.CNDFolderName != "" {
-		cndFolder = overrideConfig.CNDFolderName
-	}
+//GetBinaryFullPath returns the name of the binary
+func GetBinaryFullPath() string {
+	return os.Args[0]
+}
 
-	cndHome := model.GetHomeDir()
-
-	if overrideConfig.CNDHomePath != "" {
-		cndHome = overrideConfig.CNDHomePath
-	}
-
-	home := filepath.Join(cndHome, cndFolder)
+// GetHome returns the path of the folder
+func GetHome() string {
+	home := getHomeDir()
+	home = filepath.Join(home, folderName)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
-		fmt.Printf("failed to create the home directory: %s\n", err)
+		log.Fatalf("failed to create the okteto directory: %s\n", err)
 	}
 
 	return home
+}
+
+// GetHomeDir returns the OS home dir
+func getHomeDir() string {
+	home := os.Getenv("HOME")
+	if runtime.GOOS == "windows" {
+		home = os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
+		if home == "" {
+			home = os.Getenv("USERPROFILE")
+		}
+	}
+
+	return home
+}
+
+// GetKubeConfigFile returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration
+func GetKubeConfigFile() string {
+	home := getHomeDir()
+	kubeconfig := filepath.Join(home, ".kube", "config")
+	kubeconfigEnv := os.Getenv("KUBECONFIG")
+	if len(kubeconfigEnv) > 0 {
+		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)
+	}
+	return kubeconfig
+}
+
+func splitKubeConfigEnv(value string) string {
+	if runtime.GOOS == "windows" {
+		return strings.Split(value, ";")[0]
+	}
+	return strings.Split(value, ":")[0]
 }

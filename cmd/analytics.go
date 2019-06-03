@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/cloudnativedevelopment/cnd/pkg/analytics"
+	"github.com/okteto/app/cli/pkg/analytics"
+	"github.com/okteto/app/cli/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +29,7 @@ func disableAnalytics() error {
 		return err
 	}
 
-	fmt.Println("Analytics have been disabled")
+	log.Success("Analytics have been disabled")
 	return nil
 }
 
@@ -39,6 +38,6 @@ func enableAnalytics() error {
 		return err
 	}
 
-	fmt.Println("Analytics have been enabled")
+	log.Success("Analytics have been enabled")
 	return nil
 }

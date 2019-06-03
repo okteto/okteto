@@ -1,15 +1,9 @@
-# Binaries for programs and plugins
-cnd
+# Add any directories, files, or patterns you don't want to be tracked by version control
 
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+# IDEs
+.vscode
 
-# Test binary, build with `go test -c`
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
+# golang binary
+cli
+.syncthing*
 bin/*

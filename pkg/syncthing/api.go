@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"path/filepath"
+	"path"
 	"time"
 )
 
@@ -20,6 +20,27 @@ type syncthingConnections struct {
 	} `json:"connections,omitempty"`
 }
 
+type event struct {
+	Type string `json:"type,omitempty"`
+	Data struct {
+		Completion  float64 `json:"completion,omitempty"`
+		Folder      string  `json:"folder,omitempty"`
+		Device      string  `json:"device,omitempty"`
+		GlobalBytes int64   `json:"globalBytes,omitempty"`
+	} `json:"data,omitempty"`
+}
+
+type syncthingErrors struct {
+	Errors []struct {
+		Message string `json:"message,omitempty"`
+	} `json:"errors,omitempty"`
+}
+
+type completion struct {
+	Completion float64 `json:"completion,omitempty"`
+	NeedBytes  int     `json:"needBytes,omitempty"`
+}
+
 func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Add("X-API-Key", "cnd")
 	return akt.T.RoundTrip(req)
@@ -28,14 +49,19 @@ func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, err
 //NewAPIClient returns a new syncthing api client configured to call the syncthing api
 func NewAPIClient() *http.Client {
 	return &http.Client{
-		Timeout:   15 * time.Second,
+		Timeout:   5 * time.Second,
 		Transport: &addAPIKeyTransport{http.DefaultTransport},
 	}
 }
 
 // APICall calls the syncthing API and returns the parsed json or an error
-func (s *Syncthing) APICall(url, method string, code int, params map[string]string) ([]byte, error) {
-	urlPath := filepath.Join(s.GUIAddress, url)
+func (s *Syncthing) APICall(url, method string, code int, params map[string]string, local bool) ([]byte, error) {
+	var urlPath string
+	if local {
+		urlPath = path.Join(s.GUIAddress, url)
+	} else {
+		urlPath = path.Join(s.RemoteGUIAddress, url)
+	}
 	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), nil)
 	if err != nil {
 		return nil, err

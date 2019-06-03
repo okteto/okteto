@@ -5,41 +5,34 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
-	"text/template"
 
-	"github.com/cloudnativedevelopment/cnd/pkg/config"
-	"github.com/cloudnativedevelopment/cnd/pkg/linguist"
-	"github.com/cloudnativedevelopment/cnd/pkg/log"
-	"github.com/cloudnativedevelopment/cnd/pkg/model"
+	"github.com/okteto/app/cli/pkg/config"
+	"github.com/okteto/app/cli/pkg/linguist"
+	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/app/cli/pkg/model"
+
 	yaml "gopkg.in/yaml.v2"
 
-	"regexp"
-
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
-const kubectlManifest = `
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: {{ .Name }}
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: {{ .Name }}
-    spec:
-      terminationGracePeriodSeconds: 0
-      containers:
-      - image: {{ .Image }}
-        name: {{ .Name }}
-        command: 
-        - tail
-        - -f
-        - /dev/null
-`
+const (
+	stignore = ".stignore"
+)
+
+var wrongImageNames = map[string]bool{
+	"T":     true,
+	"TRUE":  true,
+	"Y":     true,
+	"YES":   true,
+	"F":     true,
+	"FALSE": true,
+	"N":     true,
+	"NO":    true,
+}
 
 var validKubeNameRegex = regexp.MustCompile("[^a-zA-Z0-9/.-]+")
 
@@ -48,11 +41,11 @@ func Create() *cobra.Command {
 	var devPath string
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Automatically create your cloud native environment",
+		Short: "Automatically create your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := executeCreate(devPath)
 			if err == nil {
-				fmt.Printf("%s %s", log.SuccessSymbol, log.GreenString("Cloud native environment created"))
+				log.Success(fmt.Sprintf("'%s' file created", devPath))
 				fmt.Println()
 				return nil
 			}
@@ -61,7 +54,7 @@ func Create() *cobra.Command {
 		},
 	}
 
-	addDevPathFlag(cmd, &devPath, config.CNDManifestFileName())
+	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
 	return cmd
 }
 
@@ -81,26 +74,15 @@ func executeCreate(devPath string) error {
 		return fmt.Errorf("Failed to determine the language of the current directory")
 	}
 
-	dev := linguist.GetDevConfig(languagesDiscovered[0])
-	dev.Swap.Deployment.Name = getDeploymentName(root)
-
-	var env string
-	if languagesDiscovered[0] == "unrecognized" {
-		fmt.Printf("Couldn't detect any language in your source. Recommended image for development: %s", log.BlueString(dev.Swap.Deployment.Image))
-	} else {
-		fmt.Printf("%s detected in your source. Recommended image for development: %s", languagesDiscovered[0], log.BlueString(dev.Swap.Deployment.Image))
-	}
-	fmt.Println()
-	fmt.Printf("Which docker image do you want to use for your development environment? [%s]: ", dev.Swap.Deployment.Image)
-	fmt.Scanln(&env)
-
-	if env != "" {
-		dev.Swap.Deployment.Image = env
+	dev, language, err := getDevelopmentEnvironment(languagesDiscovered[0])
+	if err != nil {
+		return err
 	}
 
+	dev.Name = getDeploymentName(filepath.Base(root))
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
-		log.Info(err)
+		log.Infof("failed to marshall dev environment: %s", err)
 		return fmt.Errorf("Failed to generate your manifest")
 	}
 
@@ -109,50 +91,71 @@ func executeCreate(devPath string) error {
 		return fmt.Errorf("Failed to generate your manifest")
 	}
 
-	var kubectl string
-	for {
-		fmt.Printf("Create a Kubernetes deployment manifest? [y/n]: ")
-		fmt.Scanln(&kubectl)
-		if kubectl == "y" || kubectl == "n" {
-			break
-
+	if !fileExists(stignore) {
+		log.Debugf("getting stignore for %s", language)
+		c := linguist.GetSTIgnore(language)
+		if err := ioutil.WriteFile(stignore, c, 0600); err != nil {
+			log.Infof("failed to write stignore: %s", err)
 		}
-
-		fmt.Println(log.RedString("input must be y or n"))
-	}
-
-	if kubectl == "y" {
-		return generateKubectlManifest(dev)
 	}
 
 	return nil
 }
 
-func generateKubectlManifest(dev *model.Dev) error {
-	path := "deployment.yaml"
-	if fileExists(path) {
-		return fmt.Errorf("%s already exists. Please delete it before running the command again", path)
-	}
-	data := struct {
-		Name  string
-		Image string
-	}{
-		Name:  dev.Swap.Deployment.Name,
-		Image: dev.Swap.Deployment.Image,
+func getDevelopmentEnvironment(language string) (*model.Dev, string, error) {
+	var env string
+	var dev *model.Dev
+
+	if language == linguist.Unrecognized {
+		supportedLanguages := linguist.GetSupportedLanguages()
+
+		prompt := promptui.Select{
+			Label: "Couldn't detect any language in current folder. Pick your project's main language from the list below",
+			Items: supportedLanguages,
+			Size:  len(supportedLanguages),
+			Templates: &promptui.SelectTemplates{
+				Label:    fmt.Sprintf("%s {{ . }}", log.BlueString("?")),
+				Selected: " ✓  {{ . | oktetoblue }}",
+				Active:   fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect),
+				Inactive: "  {{ . | oktetoblue }}",
+				FuncMap:  promptui.FuncMap,
+			},
+		}
+
+		prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			log.Debugf("invalid create option: %s", err)
+			return nil, "", fmt.Errorf("invalid option")
+		}
+
+		language = supportedLanguages[i]
+
+		dev = linguist.GetDevConfig(language)
+		fmt.Printf("Recommended image for development with %s: %s", language, log.BlueString(dev.Image))
+	} else {
+		dev = linguist.GetDevConfig(language)
+		fmt.Printf("%s detected in your source. Recommended image for development: %s", language, log.BlueString(dev.Image))
 	}
 
-	t := template.Must(template.New("kubectlManifest").Parse(kubectlManifest))
-	f, err := os.Create("deployment.yaml")
+	fmt.Println()
+	fmt.Printf("Which docker image do you want to use for your development environment? [%s]: ", dev.Image)
+	_, err := fmt.Scanln(&env)
+	fmt.Println()
 	if err != nil {
-		return fmt.Errorf("Failed to generate your Kubernetes deployment manifest")
+		log.Debugf("Scanln failed to read dev environment image: %s", err)
+		env = ""
+	}
+	if env != "" {
+		if _, ok := wrongImageNames[strings.ToUpper(env)]; ok {
+			log.Yellow("Ignoring docker image name: '%s', will use '%s' instead", env, dev.Image)
+		} else {
+			dev.Image = env
+		}
 	}
 
-	if err := t.Execute(f, data); err != nil {
-		log.Info(err)
-		return fmt.Errorf("Failed to generate your Kubernetes deployment manifest: %s", err)
-	}
-
-	return nil
+	return dev, language, nil
 }
 
 func fileExists(name string) bool {
