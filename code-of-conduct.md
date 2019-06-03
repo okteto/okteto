@@ -1,4 +1,4 @@
-# CND Code of Conduct v1.0
+# Okteto Code of Conduct v1.0
 
 ## Our Pledge
 

@@ -2,12 +2,12 @@
 
 **Maintainers:** [Okteto](https://github.com/okteto)
 
-[![GitHub release](http://img.shields.io/github/release/cloudnativedevelopment/cnd.svg?style=flat-square)][release]
-[![CircleCI](https://circleci.com/gh/cloudnativedevelopment/cnd.svg?style=svg)](https://circleci.com/gh/cloudnativedevelopment/cnd)
-[![Apache License 2.0](https://img.shields.io/github/license/cloudnativedevelopment/cnd.svg?style=flat-square)][license]
+[![GitHub release](http://img.shields.io/github/release/okteto/okteto.svg?style=flat-square)][release]
+[![CircleCI](https://circleci.com/gh/okteto/okteto.svg?style=svg)](https://circleci.com/gh/okteto/okteto)
+[![Apache License 2.0](https://img.shields.io/github/license/okteto/okteto.svg?style=flat-square)][license]
 
-[release]: https://github.com/cloudnativedevelopment/cnd/releases
-[license]: https://github.com/cloudnativedevelopment/cnd/blob/master/LICENSE
+[release]: https://github.com/okteto/okteto/releases
+[license]: https://github.com/okteto/okteto/blob/master/LICENSE
 
 
 ## Overview
@@ -15,7 +15,7 @@
 **Cloud Native Development** is about moving your entire development workflow to your kubernetes cluster to:
 
 1. Eliminate integration issues by developing the same way code runs in production.
-1. Write code as usual, from your favourite IDE.
+1. Write code as usual, from your favorite IDE.
 1. Forget about building, pushing or deploying containers. 
 
 Okteto helps you achieve this with a mix of kubernetes automation, file synching between your local file system and kubernetes and hot reloading of containers.
