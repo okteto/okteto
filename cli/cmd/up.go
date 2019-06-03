@@ -257,7 +257,7 @@ func (up *UpContext) devMode(isRetry bool) error {
 			return fmt.Errorf("deployment %s not found [current context: %s]", up.Dev.Name, up.Dev.Namespace)
 		}
 		d = deployments.GevDevSandbox(up.Dev)
-		create = false
+		create = true
 	}
 	progress := newProgressBar("Activating your Okteto Environment...")
 	progress.start()
