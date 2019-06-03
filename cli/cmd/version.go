@@ -31,7 +31,7 @@ func upgradeAvailable() string {
 		return ""
 	}
 
-	resp, err := http.Head("https://downloads.okteto.com/cloud/cli/okteto-Darwin-x86_64")
+	resp, err := http.Head("https://downloads.okteto.com/cli/okteto-Darwin-x86_64")
 	if err != nil {
 		log.Errorf("failed to get latest version: %s", err)
 		return ""
@@ -56,7 +56,7 @@ func upgradeAvailable() string {
 
 func getUpgradeCommand() string {
 	if runtime.GOOS == "windows" {
-		return `wget https://downloads.okteto.com/cloud/cli/okteto-Windows-x86_64 -OutFile c:\windows\system32\okteto.exe`
+		return `wget https://downloads.okteto.com/cli/okteto-Windows-x86_64 -OutFile c:\windows\system32\okteto.exe`
 	}
 
 	return `curl https://get.okteto.com -sSfL | sh`

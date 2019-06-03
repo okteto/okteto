@@ -59,7 +59,7 @@ class Space extends Component {
       </div>
     );
 
-    const installCmdWin = 'wget https://downloads.okteto.com/cloud/cli/okteto-Windows-x86_64' + 
+    const installCmdWin = 'wget https://downloads.okteto.com/cli/okteto-Windows-x86_64' + 
       ' -OutFile c:\\windows\\system32\\okteto.exe';
     const installCmdUnix = 'curl https://get.okteto.com -sSfL | sh';
 
