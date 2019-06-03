@@ -35,7 +35,7 @@ jobs:
           name: "Update brew formula"
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
-            bash ./update_homebrew_formula.sh 0.0.1 fakeSHA $GITHUB_TOKEN 1
+            bash ./update_homebrew_formula.sh 0.0.1 $GITHUB_TOKEN $sha 1
 
   release:
     docker:

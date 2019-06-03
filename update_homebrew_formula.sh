@@ -2,8 +2,8 @@
 set -e
 
 VERSION=$1
-SHA=$2
-GITHUB_TOKEN=$3
+GITHUB_TOKEN=$2
+SHA=$3
 DRYRUN=$4
 
 if [ -z "$VERSION" ]; then
@@ -26,7 +26,7 @@ pushd $(mktemp -d)
 git clone --depth 1 https://${GITHUB_TOKEN}@github.com/okteto/homebrew-cli.git
 pushd homebrew-cli
 
-cat << EOF > Formula/cli.rb
+cat << EOF > Formula/okteto.rb
 class Okteto < Formula
     desc "CLI for cloud native development"
     homepage "https://okteto.com"
