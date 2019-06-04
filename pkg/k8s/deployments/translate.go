@@ -8,6 +8,7 @@ import (
 	"github.com/okteto/app/cli/pkg/k8s/secrets"
 	"github.com/okteto/app/cli/pkg/k8s/volumes"
 	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/app/cli/pkg/okteto"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -27,6 +28,7 @@ const (
 	oktetoMount                = "/var/okteto"
 	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
 	oktetoDevAnnotation        = "dev.okteto.com/manifests"
+	oktetoUserIDAnnotation     = "dev.okteto.com/owner"
 	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
 
 	revisionAnnotation = "deployment.kubernetes.io/revision"
@@ -102,6 +104,8 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, *apiv1
 		return nil, nil, err
 	}
 	setAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
+	setAnnotation(d.GetObjectMeta(), oktetoUserIDAnnotation, okteto.GetUserID())
+
 	if err := setDevListAsAnnotation(d.GetObjectMeta(), dev); err != nil {
 		return nil, nil, err
 	}
