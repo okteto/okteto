@@ -41,7 +41,8 @@ func Exec() *cobra.Command {
 						cancel()
 					})
 
-					log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+					log.Error(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+					panic("webserver stopped handling requests")
 				}()
 			}
 
