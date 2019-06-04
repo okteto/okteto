@@ -45,8 +45,7 @@ func Create() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := executeCreate(devPath)
 			if err == nil {
-				log.Success(fmt.Sprintf("'%s' file created", devPath))
-				fmt.Println()
+				log.Success(fmt.Sprintf("Okteto manifest (%s) created", devPath))
 				return nil
 			}
 
