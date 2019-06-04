@@ -28,7 +28,7 @@ const (
 	oktetoMount                = "/var/okteto"
 	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
 	oktetoDevAnnotation        = "dev.okteto.com/manifests"
-	oktetoUserIDAnnotation     = "dev.okteto.com/owner"
+	oktetoDeveloperAnnotation  = "dev.okteto.com/developer"
 	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
 
 	revisionAnnotation = "deployment.kubernetes.io/revision"
@@ -104,7 +104,7 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, *apiv1
 		return nil, nil, err
 	}
 	setAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
-	setAnnotation(d.GetObjectMeta(), oktetoUserIDAnnotation, okteto.GetUserID())
+	setAnnotation(d.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
 
 	if err := setDevListAsAnnotation(d.GetObjectMeta(), dev); err != nil {
 		return nil, nil, err
