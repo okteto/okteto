@@ -21,6 +21,9 @@
 Okteto helps you achieve this with a mix of kubernetes automation, file synching between your local file system and kubernetes and hot reloading of containers.
 
 - Learn more details on [how it works](docs/how-does-it-work.md).
+- Get started following our [installation guides](docs/installation.md).
+- Check the Okteto [CLI reference](https://okteto.com/docs/reference/cli) and the [okteto.yml reference](https://okteto.com/docs/reference/manifest).
+- Explore our [examples](https://github.com/okteto/samples) repository.
 
 ## Stay in Touch
 Got questions? Have feedback? Come talk to us in 
