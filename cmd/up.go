@@ -169,7 +169,7 @@ func (up *UpContext) Activate() {
 			log.Green("Reconnected to your cluster.")
 		}
 
-		printDisplayContext("Your Okteto Environment is ready", up.Dev.Name)
+		printDisplayContext("Your Okteto Environment is ready", up.Dev.Name, up.Dev.Forward)
 		cmd, port := up.buildExecCommand()
 		if err := cmd.Start(); err != nil {
 			log.Infof("Failed to execute okteto exec: %s", err)
@@ -388,9 +388,19 @@ func (up *UpContext) shutdown() {
 	}
 }
 
-func printDisplayContext(message, name string) {
+func printDisplayContext(message, name string, ports []model.Forward) {
 	log.Success(message)
 	log.Println(fmt.Sprintf("    %s     %s", log.BlueString("Name:"), name))
+	if len(ports) > 0 {
+		if len(ports) == 1 {
+			log.Println(fmt.Sprintf("    %s  %d -> %d", log.BlueString("Forward:"), ports[0].Local, ports[0].Remote))
+		} else {
+			log.Println(fmt.Sprintf("    %s", log.BlueString("Forward:")))
+			for _, p := range ports {
+				log.Println(fmt.Sprintf("         %d -> %d", p.Local, p.Remote))
+			}
+		}
+	}
 	fmt.Println()
 }
 
