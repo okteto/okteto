@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"strings"
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/app/cli/pkg/errors"
@@ -40,10 +41,25 @@ func query(query string, result interface{}) error {
 	ctx := context.Background()
 
 	if err := c.Run(ctx, req, result); err != nil {
-		log.Infof("couldn't get credentials from grapqhl endpoint %s: %s", o.URL, err)
-		// todo: check for error type
-		return errors.ErrNotLogged
+		e := strings.TrimPrefix(err.Error(), "graphql: ")
+		if isNotAuthorized(e) {
+			return errors.ErrNotLogged
+		}
+
+		if isConnectionError(e) {
+			return errors.ErrInternalServerError
+		}
+
+		return fmt.Errorf(e)
 	}
 
 	return nil
+}
+
+func isNotAuthorized(s string) bool {
+	return strings.Contains(s, "not-authorized")
+}
+
+func isConnectionError(s string) bool {
+	return strings.Contains(s, "decoding response") || strings.Contains(s, "reading body")
 }
