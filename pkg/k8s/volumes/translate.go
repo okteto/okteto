@@ -43,7 +43,7 @@ func GetVolumeName(dev *model.Dev) string {
 
 //GetVolumeDataName returns the okteto volume name for a given dev environment
 func GetVolumeDataName(dev *model.Dev, i int) string {
-	n := fmt.Sprintf(oktetoVolumeDataTemplate, dev.Name, i)
+	n := fmt.Sprintf(oktetoVolumeDataTemplate, i, dev.Name)
 	if len(n) > 63 {
 		n = n[0:63]
 	}
