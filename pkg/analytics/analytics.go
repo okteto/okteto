@@ -89,7 +89,12 @@ func track(event, version, image string) {
 			},
 		}
 
-		if err := mixpanelClient.Track(okteto.GetUserID(), event, e); err != nil {
+		trackID := okteto.GetUserID()
+		if len(trackID) == 0 {
+			trackID = machineID
+		}
+
+		if err := mixpanelClient.Track(machineID, event, e); err != nil {
 			log.Infof("Failed to send analytics: %s", err)
 		}
 	} else {
