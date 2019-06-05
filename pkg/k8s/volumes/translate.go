@@ -11,7 +11,7 @@ import (
 
 const (
 	oktetoVolumeTemplate     = "okteto-%s"
-	oktetoVolumeDataTemplate = "okteto-%s-%d"
+	oktetoVolumeDataTemplate = "okteto-%d-%s"
 )
 
 func translate(name string) *apiv1.PersistentVolumeClaim {
