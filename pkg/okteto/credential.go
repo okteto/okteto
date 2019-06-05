@@ -1,5 +1,9 @@
 package okteto
 
+import (
+	"fmt"
+)
+
 // Credentials top body answer
 type Credentials struct {
 	Credentials Credential
@@ -15,19 +19,15 @@ type Credential struct {
 
 // GetCredentials returns the space config credentials
 func GetCredentials(namespace string) (*Credential, error) {
-	q := `query{
-		credentials{
+	q := fmt.Sprintf(`query{
+		credentials(space: "%s"){
 			server, certificate, token, namespace
 		},
-	}`
+	}`, namespace)
 
 	var cred Credentials
 	if err := query(q, &cred); err != nil {
 		return nil, err
-	}
-
-	if namespace != "" {
-		cred.Credentials.Namespace = namespace
 	}
 
 	return &cred.Credentials, nil

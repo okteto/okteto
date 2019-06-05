@@ -23,6 +23,9 @@ var (
 
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
+
+	// ErrInternalServerError is raised when an internal server error or similar is received
+	ErrInternalServerError = fmt.Errorf("internal server error, please try again")
 )
 
 // IsNotFound returns true if err is of the type not found
