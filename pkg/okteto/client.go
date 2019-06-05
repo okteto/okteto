@@ -63,7 +63,3 @@ func isNotAuthorized(s string) bool {
 func isConnectionError(s string) bool {
 	return strings.Contains(s, "decoding response") || strings.Contains(s, "reading body")
 }
-
-func isNotFound(s string) bool {
-	return strings.Contains(s, "not-found")
-}
