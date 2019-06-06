@@ -223,12 +223,15 @@ func (up *UpContext) devMode(isRetry bool) error {
 	d, err := deployments.Get(up.Dev.Name, up.Dev.Namespace, up.Client)
 	create := false
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if !errors.IsNotFound(err) || isRetry {
 			return err
 		}
-		if !askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name)) {
+
+		deploy := askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name))
+		if !deploy {
 			return fmt.Errorf("deployment %s not found [current context: %s]", up.Dev.Name, up.Dev.Namespace)
 		}
+
 		d = deployments.GevDevSandbox(up.Dev)
 		create = true
 	}
