@@ -118,6 +118,7 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, *apiv1
 	d.Spec.Replicas = &devReplicas
 
 	devContainer := getDevContainer(d, dev.Container)
+	dev.Container = devContainer.Name
 	if devContainer == nil {
 		return nil, nil, fmt.Errorf("container/%s doesn't exist in deployment/%s", dev.Container, d.Name)
 	}

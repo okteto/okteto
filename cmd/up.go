@@ -3,18 +3,18 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"sync"
 	"time"
 
+	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -99,12 +99,9 @@ func Up() *cobra.Command {
 //RunUp starts the up sequence
 func RunUp(dev *model.Dev) error {
 	up := &UpContext{
-		WG:         &sync.WaitGroup{},
-		Dev:        dev,
-		Disconnect: make(chan struct{}, 1),
-		Running:    make(chan error, 1),
-		Exit:       make(chan error, 1),
-		ErrChan:    make(chan error, 1),
+		WG:   &sync.WaitGroup{},
+		Dev:  dev,
+		Exit: make(chan error, 1),
 	}
 
 	defer up.shutdown()
@@ -128,19 +125,26 @@ func RunUp(dev *model.Dev) error {
 
 // Activate activates the dev environment
 func (up *UpContext) Activate() {
-	up.WG.Add(1)
-	defer up.WG.Done()
-	var prevError error
-	attach := false
+	retry := false
+	inFd, _ := term.GetFdInfo(os.Stdin)
+	state, err := term.SaveState(inFd)
+	if err != nil {
+		up.Exit <- err
+		return
+	}
 
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
-		err := up.devMode(attach)
+		up.Disconnect = make(chan struct{}, 1)
+		up.Running = make(chan error, 1)
+		up.ErrChan = make(chan error, 1)
+
+		err := up.devMode(retry)
 		if err != nil {
 			up.Exit <- err
 			return
 		}
-		attach = true
+		retry = true
 
 		fmt.Println(" ✓  Okteto Environment activated")
 
@@ -152,67 +156,36 @@ func (up *UpContext) Activate() {
 			up.Exit <- err
 			return
 		}
-
 		fmt.Println(" ✓  Files synchronized")
 
-		progress = newProgressBar("Finalizing configuration...")
-		progress.start()
-		err = up.forceLocalSyncState()
-		progress.stop()
-		if err != nil {
-			up.Exit <- err
-			return
-		}
-
-		switch prevError {
-		case errors.ErrLostConnection:
-			log.Green("Reconnected to your cluster.")
-		}
-
 		printDisplayContext("Your Okteto Environment is ready", up.Dev.Namespace, up.Dev.Name, up.Dev.Forward)
-		cmd, port := up.buildExecCommand()
-		if err := cmd.Start(); err != nil {
-			log.Infof("Failed to execute okteto exec: %s", err)
-			up.Exit <- err
-			return
-		}
-
-		log.Debugf("started new okteto exec")
 
 		go func() {
-			up.WG.Add(1)
-			defer up.WG.Done()
-			up.Running <- cmd.Wait()
+			up.Running <- up.runCommand()
 			return
 		}()
 
-		execEndpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
-		prevError = up.WaitUntilExitOrInterrupt(execEndpoint)
-		if prevError != nil && (prevError == errors.ErrLostConnection ||
-			prevError == errors.ErrCommandFailed && !up.Sy.IsConnected()) {
-			log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...")
-			fmt.Println()
-			up.shutdown()
-			continue
+		prevError := up.WaitUntilExitOrInterrupt()
+		term.RestoreTerminal(inFd, state)
+		if prevError != nil {
+			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !up.Sy.IsConnected()) {
+				log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...\n")
+				up.shutdown()
+				continue
+			}
 		}
 
-		up.Exit <- nil
+		up.Exit <- prevError
 		return
 	}
 }
 
 // WaitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
-func (up *UpContext) WaitUntilExitOrInterrupt(endpoint string) error {
+func (up *UpContext) WaitUntilExitOrInterrupt() error {
 	for {
 		select {
-		case <-up.Context.Done():
-			log.Debug("context is done, sending interrupt to process")
-			if _, err := http.Get(endpoint); err != nil {
-				log.Infof("failed to communicate to exec: %s", err)
-			}
-			return nil
-
 		case err := <-up.Running:
+			fmt.Println()
 			if err != nil {
 				log.Infof("Command execution error: %s\n", err)
 				return errors.ErrCommandFailed
@@ -221,11 +194,8 @@ func (up *UpContext) WaitUntilExitOrInterrupt(endpoint string) error {
 
 		case err := <-up.ErrChan:
 			log.Yellow(err.Error())
+
 		case <-up.Disconnect:
-			log.Debug("disconnected, sending interrupt to process")
-			if _, err := http.Get(endpoint); err != nil {
-				log.Infof("failed to communicate to exec: %s", err)
-			}
 			return errors.ErrLostConnection
 		}
 	}
@@ -334,10 +304,6 @@ func (up *UpContext) startSync() error {
 		return err
 	}
 
-	return nil
-}
-
-func (up *UpContext) forceLocalSyncState() error {
 	if err := up.Sy.OverrideChanges(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
@@ -352,6 +318,35 @@ func (up *UpContext) forceLocalSyncState() error {
 	}
 
 	return up.Sy.Restart(up.Context, up.WG)
+}
+
+func (up *UpContext) runCommand() error {
+	exec.Exec(
+		up.Context,
+		up.Client,
+		up.RestConfig,
+		up.Dev.Namespace,
+		up.Pod,
+		up.Dev.Container,
+		true,
+		os.Stdin,
+		os.Stdout,
+		os.Stderr,
+		[]string{"sh", "-c", "trap '' TERM && kill -- -1 && sleep 0.1 & kill -s KILL -- -1 >/dev/null 2>&1"},
+	)
+	return exec.Exec(
+		up.Context,
+		up.Client,
+		up.RestConfig,
+		up.Dev.Namespace,
+		up.Pod,
+		up.Dev.Container,
+		true,
+		os.Stdin,
+		os.Stdout,
+		os.Stderr,
+		up.Dev.Command,
+	)
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
@@ -399,32 +394,4 @@ func printDisplayContext(message, namespace, name string, ports []model.Forward)
 		}
 	}
 	fmt.Println()
-}
-
-func (up *UpContext) buildExecCommand() (*exec.Cmd, int) {
-	port, err := model.GetAvailablePort()
-	if err != nil {
-		log.Infof("couldn't access the network: %s", err)
-		port = 15000
-	}
-
-	args := []string{
-		"exec",
-		"--pod",
-		up.Pod,
-		"--container",
-		up.Container,
-		"--port",
-		fmt.Sprintf("%d", port),
-		"-n",
-		up.Dev.Namespace,
-		"--",
-	}
-	args = append(args, up.Dev.Command...)
-
-	cmd := exec.Command(config.GetBinaryFullPath(), args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd, port
 }
