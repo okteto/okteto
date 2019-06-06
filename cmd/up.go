@@ -166,7 +166,10 @@ func (up *UpContext) Activate() {
 		}()
 
 		prevError := up.WaitUntilExitOrInterrupt()
-		term.RestoreTerminal(inFd, state)
+		if err := term.RestoreTerminal(inFd, state); err != nil {
+			log.Debugf("failed to restore terminal: %s", err)
+		}
+
 		if prevError != nil {
 			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !up.Sy.IsConnected()) {
 				log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...\n")
