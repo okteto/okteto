@@ -11,7 +11,7 @@ require (
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/cheggaaa/pb v1.0.27
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/docker/docker v0.0.0-20180612054059-a9fbbdc8dd87 // indirect
+	github.com/docker/docker v0.0.0-20180612054059-a9fbbdc8dd87
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
