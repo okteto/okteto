@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/machinebox/graphql"
-	"github.com/okteto/app/cli/pkg/errors"
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log"
 )
 
 func getClient(oktetoURL string) (*graphql.Client, error) {

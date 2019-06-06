@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/app/cli/pkg/config"
+	"github.com/okteto/okteto/pkg/config"
 )
 
 var (

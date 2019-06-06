@@ -1,4 +1,4 @@
-module github.com/okteto/app/cli
+module github.com/okteto/okteto
 
 require (
 	cloud.google.com/go v0.39.0 // indirect

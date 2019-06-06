@@ -10,9 +10,9 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/dukex/mixpanel"
-	"github.com/okteto/app/cli/pkg/config"
-	"github.com/okteto/app/cli/pkg/log"
-	"github.com/okteto/app/cli/pkg/okteto"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 const (

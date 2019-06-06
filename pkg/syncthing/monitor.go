@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/log"
 )
 
 // IsConnected returns true if it can ping the remote syncthing

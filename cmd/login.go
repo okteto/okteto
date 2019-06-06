@@ -10,10 +10,10 @@ import (
 
 	"math/rand"
 
-	"github.com/okteto/app/cli/pkg/analytics"
-	"github.com/okteto/app/cli/pkg/log"
-	"github.com/okteto/app/cli/pkg/model"
-	"github.com/okteto/app/cli/pkg/okteto"
+	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )

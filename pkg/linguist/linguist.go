@@ -11,7 +11,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/log"
 	enry "gopkg.in/src-d/enry.v1"
 )
 

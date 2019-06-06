@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/Masterminds/semver"
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 

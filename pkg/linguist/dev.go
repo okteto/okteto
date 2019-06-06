@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 type languageDefault struct {

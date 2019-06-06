@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"github.com/okteto/app/cli/pkg/config"
-	"github.com/okteto/app/cli/pkg/k8s/client"
-	"github.com/okteto/app/cli/pkg/log"
-	"github.com/okteto/app/cli/pkg/okteto"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/spf13/cobra"
 )

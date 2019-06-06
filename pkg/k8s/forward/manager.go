@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/log"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
