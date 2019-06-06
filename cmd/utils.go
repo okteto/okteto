@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/log"
 )
 
 func getFullPath(p string) string {

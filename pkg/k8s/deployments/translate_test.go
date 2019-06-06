@@ -3,7 +3,7 @@ package deployments
 import (
 	"testing"
 
-	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )

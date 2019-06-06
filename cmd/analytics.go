@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/okteto/app/cli/pkg/analytics"
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 

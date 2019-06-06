@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/log"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"

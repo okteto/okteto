@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/okteto/app/cli/pkg/config"
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/okteto/app/cli/cmd"
+	"github.com/okteto/okteto/cmd"
 
 	// Load the different library for authentication
 	"k8s.io/apimachinery/pkg/util/runtime"

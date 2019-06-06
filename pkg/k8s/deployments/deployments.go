@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/app/cli/pkg/k8s/secrets"
-	"github.com/okteto/app/cli/pkg/log"
-	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/okteto/pkg/k8s/secrets"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

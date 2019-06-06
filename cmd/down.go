@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/okteto/app/cli/pkg/analytics"
-	"github.com/okteto/app/cli/pkg/config"
-	"github.com/okteto/app/cli/pkg/errors"
-	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
-	"github.com/okteto/app/cli/pkg/k8s/deployments"
-	"github.com/okteto/app/cli/pkg/log"
-	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
 

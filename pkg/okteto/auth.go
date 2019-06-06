@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/machinebox/graphql"
-	"github.com/okteto/app/cli/pkg/config"
-	"github.com/okteto/app/cli/pkg/log"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/log"
 )
 
 const (

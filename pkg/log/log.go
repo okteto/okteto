@@ -8,7 +8,7 @@ import (
 	"runtime"
 
 	"github.com/fatih/color"
-	"github.com/okteto/app/cli/pkg/config"
+	"github.com/okteto/okteto/pkg/config"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"

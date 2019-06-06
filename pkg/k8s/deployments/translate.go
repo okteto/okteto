@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/okteto/app/cli/pkg/k8s/secrets"
-	"github.com/okteto/app/cli/pkg/k8s/volumes"
-	"github.com/okteto/app/cli/pkg/model"
-	"github.com/okteto/app/cli/pkg/okteto"
+	"github.com/okteto/okteto/pkg/k8s/secrets"
+	"github.com/okteto/okteto/pkg/k8s/volumes"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"

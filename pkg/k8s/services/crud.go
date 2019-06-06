@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/app/cli/pkg/log"
-	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )

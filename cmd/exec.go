@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/okteto/app/cli/pkg/config"
-	"github.com/okteto/app/cli/pkg/k8s/exec"
-	"github.com/okteto/app/cli/pkg/k8s/pods"
-	"github.com/okteto/app/cli/pkg/log"
-	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/exec"
+	"github.com/okteto/okteto/pkg/k8s/pods"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 
-	k8Client "github.com/okteto/app/cli/pkg/k8s/client"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 
 	"github.com/spf13/cobra"
 )

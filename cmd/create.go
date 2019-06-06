@@ -8,10 +8,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/okteto/app/cli/pkg/config"
-	"github.com/okteto/app/cli/pkg/linguist"
-	"github.com/okteto/app/cli/pkg/log"
-	"github.com/okteto/app/cli/pkg/model"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/linguist"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 
 	yaml "gopkg.in/yaml.v2"
 
