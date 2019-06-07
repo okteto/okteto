@@ -247,12 +247,12 @@ func (up *UpContext) devMode(isRetry bool) error {
 		return err
 	}
 
-	if err := volumes.Create(volumes.GetVolumeName(up.Dev), up.Dev, up.Client); err != nil {
+	if err := volumes.Create(up.Context, volumes.GetVolumeName(up.Dev), up.Dev, up.Client); err != nil {
 		return err
 	}
 
 	for i := range up.Dev.Volumes {
-		if err := volumes.Create(volumes.GetVolumeDataName(up.Dev, i), up.Dev, up.Client); err != nil {
+		if err := volumes.Create(up.Context, volumes.GetVolumeDataName(up.Dev, i), up.Dev, up.Client); err != nil {
 			return err
 		}
 	}
