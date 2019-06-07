@@ -57,7 +57,6 @@ func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &devReplicas,
-			Strategy: appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": dev.Name,
@@ -113,7 +112,6 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, *apiv1
 	setLabel(d.GetObjectMeta(), OktetoVersionLabel, OktetoVersion)
 	setLabel(d.GetObjectMeta(), oktetoLabel, dev.Name)
 	setLabel(d.Spec.Template.GetObjectMeta(), oktetoLabel, dev.Name)
-	d.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 	d.Spec.Replicas = &devReplicas
 
@@ -234,6 +232,10 @@ func translateInitOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 		}
 	}
 	source := filepath.Join(dev.WorkDir, "*")
+	reqMem, _ := resource.ParseQuantity("16Mi")
+	reqCPU, _ := resource.ParseQuantity("50m")
+	limMem, _ := resource.ParseQuantity("16Mi")
+	limCPU, _ := resource.ParseQuantity("50m")
 	c := apiv1.Container{
 		Name:  oktetoInitContainer,
 		Image: dev.Image,
@@ -241,6 +243,16 @@ func translateInitOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 			apiv1.VolumeMount{
 				Name:      volumes.GetVolumeName(dev),
 				MountPath: "/okteto/init",
+			},
+		},
+		Resources: apiv1.ResourceRequirements{
+			Requests: apiv1.ResourceList{
+				apiv1.ResourceMemory: reqMem,
+				apiv1.ResourceCPU:    reqCPU,
+			},
+			Limits: apiv1.ResourceList{
+				apiv1.ResourceMemory: limMem,
+				apiv1.ResourceCPU:    limCPU,
 			},
 		},
 	}
@@ -269,6 +281,10 @@ func translateOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 		}
 	}
 
+	reqMem, _ := resource.ParseQuantity("64Mi")
+	reqCPU, _ := resource.ParseQuantity("50m")
+	limMem, _ := resource.ParseQuantity("256Mi")
+	limCPU, _ := resource.ParseQuantity("200m")
 	c := apiv1.Container{
 		Name:            oktetoContainer,
 		Image:           syncImageTag,
@@ -281,6 +297,16 @@ func translateOktetoContainer(d *appsv1.Deployment, dev *model.Dev) {
 			apiv1.VolumeMount{
 				Name:      volumes.GetVolumeName(dev),
 				MountPath: oktetoMount,
+			},
+		},
+		Resources: apiv1.ResourceRequirements{
+			Requests: apiv1.ResourceList{
+				apiv1.ResourceMemory: reqMem,
+				apiv1.ResourceCPU:    reqCPU,
+			},
+			Limits: apiv1.ResourceList{
+				apiv1.ResourceMemory: limMem,
+				apiv1.ResourceCPU:    limCPU,
 			},
 		},
 		Ports: []apiv1.ContainerPort{
