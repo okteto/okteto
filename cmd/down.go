@@ -9,6 +9,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
@@ -17,6 +18,7 @@ import (
 //Down deactivates the development environment
 func Down() *cobra.Command {
 	var devPath string
+	var removeVolumes bool
 	var namespace string
 
 	cmd := &cobra.Command{
@@ -45,7 +47,7 @@ func Down() *cobra.Command {
 			}
 
 			analytics.TrackDown(image, VersionString)
-			err = runDown(dev, image)
+			err = runDown(dev, image, removeVolumes)
 			if err == nil {
 				log.Success("Your Okteto Environment has been deactivated")
 				log.Println()
@@ -57,17 +59,34 @@ func Down() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
+	cmd.Flags().BoolVarP(&removeVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd
 }
 
-func runDown(dev *model.Dev, image string) error {
+func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err
 	}
 	if dev.Namespace == "" {
 		dev.Namespace = namespace
+	}
+
+	progress := newProgressBar("Deactivating your Okteto Environment...")
+	progress.start()
+	defer progress.stop()
+
+	if removeVolumes {
+		if err := volumes.Destroy(volumes.GetVolumeName(dev), dev, client); err != nil {
+			return err
+		}
+	
+		for i := range dev.Volumes {
+			if err := volumes.Destroy(volumes.GetVolumeDataName(dev, i), dev, client); err != nil {
+				return err
+			}
+		}	
 	}
 
 	d, err := deployments.Get(dev.Name, dev.Namespace, client)
@@ -78,10 +97,7 @@ func runDown(dev *model.Dev, image string) error {
 		return err
 	}
 
-	progress := newProgressBar("Deactivating your Okteto Environment...")
-	progress.start()
 	err = deployments.DevModeOff(d, dev, image, client)
-	progress.stop()
 	if err != nil {
 		return err
 	}
