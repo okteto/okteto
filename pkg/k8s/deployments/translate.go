@@ -57,7 +57,6 @@ func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &devReplicas,
-			Strategy: appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": dev.Name,
@@ -113,7 +112,6 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, *apiv1
 	setLabel(d.GetObjectMeta(), OktetoVersionLabel, OktetoVersion)
 	setLabel(d.GetObjectMeta(), oktetoLabel, dev.Name)
 	setLabel(d.Spec.Template.GetObjectMeta(), oktetoLabel, dev.Name)
-	d.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 	d.Spec.Replicas = &devReplicas
 
