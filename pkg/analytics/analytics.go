@@ -23,6 +23,7 @@ const (
 	downEvent           = "Down"
 	loginEvent          = "Login"
 	createEvent         = "Create Manifest"
+	namespaceEvent      = "Namespace"
 	execEvent           = "Exec"
 )
 
@@ -55,6 +56,11 @@ func init() {
 // TrackCreate sends a tracking event to mixpanel when the user creates a manifest
 func TrackCreate(language, image, version string) {
 	track(createEvent, version, image)
+}
+
+// TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
+func TrackNamespace(version string) {
+	track(namespaceEvent, version, "")
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development environment
