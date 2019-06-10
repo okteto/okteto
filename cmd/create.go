@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
@@ -98,6 +99,7 @@ func executeCreate(devPath string) error {
 		}
 	}
 
+	analytics.TrackCreate(language, dev.Image, VersionString)
 	return nil
 }
 
