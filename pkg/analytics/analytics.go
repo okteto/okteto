@@ -100,7 +100,7 @@ func track(event, version, image string) {
 			trackID = machineID
 		}
 
-		if err := mixpanelClient.Track(machineID, event, e); err != nil {
+		if err := mixpanelClient.Track(trackID, event, e); err != nil {
 			log.Infof("Failed to send analytics: %s", err)
 		}
 	} else {
