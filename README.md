@@ -1,7 +1,5 @@
 # Okteto: A Tool for Cloud Native Developers
 
-**Maintainers:** [Okteto](https://github.com/okteto)
-
 [![GitHub release](http://img.shields.io/github/release/okteto/okteto.svg?style=flat-square)][release]
 [![CircleCI](https://circleci.com/gh/okteto/okteto.svg?style=svg)](https://circleci.com/gh/okteto/okteto)
 [![Apache License 2.0](https://img.shields.io/github/license/okteto/okteto.svg?style=flat-square)][license]
