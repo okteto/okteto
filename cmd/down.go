@@ -81,12 +81,12 @@ func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 		if err := volumes.Destroy(volumes.GetVolumeName(dev), dev, client); err != nil {
 			return err
 		}
-	
+
 		for i := range dev.Volumes {
 			if err := volumes.Destroy(volumes.GetVolumeDataName(dev, i), dev, client); err != nil {
 				return err
 			}
-		}	
+		}
 	}
 
 	d, err := deployments.Get(dev.Name, dev.Namespace, client)
