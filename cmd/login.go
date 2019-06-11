@@ -85,13 +85,13 @@ func Login() *cobra.Command {
 
 			fmt.Printf("Received code=%s\n", code)
 			fmt.Println("Getting an access token...")
-			user, err := okteto.Auth(handler.ctx, code, oktetoURL)
+			user, new, err := okteto.Auth(handler.ctx, code, oktetoURL)
 			if err != nil {
 				return err
 			}
 
 			log.Success("Logged in as %s", user)
-			analytics.TrackLogin(VersionString)
+			analytics.TrackLogin(VersionString, new)
 			return nil
 		},
 	}

@@ -79,7 +79,18 @@ func TrackDown(image, version string) {
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(version string) {
+func TrackLogin(version string, isNew bool) {
+	if isNew {
+		trackID := okteto.GetUserID()
+		if len(trackID) == 0 {
+			log.Errorf("userID wasn't set for a new user")
+		} else {
+			if err := mixpanelClient.Alias(machineID, trackID); err != nil {
+				log.Errorf("failed to alias %s to %s", machineID, trackID)
+			}
+		}
+	}
+
 	track(loginEvent, version, "")
 }
 
