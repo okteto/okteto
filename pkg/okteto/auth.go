@@ -32,16 +32,16 @@ type Token struct {
 var token *Token
 
 // Auth authenticates in okteto with a github OAuth code
-func Auth(ctx context.Context, code, url string) (string, error) {
+func Auth(ctx context.Context, code, url string) (string, bool, error) {
 	client, err := getClient(url)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	q := fmt.Sprintf(`
 				mutation {
 					auth(code: "%s") {
-					  githubID,token,id
+					  githubID,token,id,new
 					}
 				  }`, code)
 
@@ -52,23 +52,24 @@ func Auth(ctx context.Context, code, url string) (string, error) {
 			GithubID string
 			Token    string
 			ID       string
+			New      bool
 		}
 	}
 
 	var user User
 	if err := client.Run(ctx, req, &user); err != nil {
-		return "", fmt.Errorf("unauthorized request: %s", err)
+		return "", false, fmt.Errorf("unauthorized request: %s", err)
 	}
 
 	if len(user.Auth.GithubID) == 0 || len(user.Auth.Token) == 0 {
-		return "", fmt.Errorf("empty response")
+		return "", false, fmt.Errorf("empty response")
 	}
 
 	if err := saveToken(user.Auth.ID, user.Auth.Token, url); err != nil {
-		return "", err
+		return "", false, err
 	}
 
-	return user.Auth.GithubID, nil
+	return user.Auth.GithubID, user.Auth.New, nil
 }
 
 func getTokenFromEnv() (*Token, error) {

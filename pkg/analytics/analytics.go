@@ -25,6 +25,7 @@ const (
 	createEvent         = "Create Manifest"
 	namespaceEvent      = "Namespace"
 	execEvent           = "Exec"
+	signupEvent         = "Signup"
 )
 
 var (
@@ -79,8 +80,29 @@ func TrackDown(image, version string) {
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(version string) {
+func TrackLogin(version string, isNew bool) {
+	if isNew {
+		trackSignup(version)
+	}
+
 	track(loginEvent, version, "")
+}
+
+func trackSignup(version string) {
+	if !isEnabled() {
+		return
+	}
+
+	trackID := okteto.GetUserID()
+	if len(trackID) == 0 {
+		log.Errorf("userID wasn't set for a new user")
+	} else {
+		if err := mixpanelClient.Alias(machineID, trackID); err != nil {
+			log.Errorf("failed to alias %s to %s", machineID, trackID)
+		}
+	}
+
+	track(signupEvent, version, "")
 }
 
 func track(event, version, image string) {
@@ -92,6 +114,7 @@ func track(event, version, image string) {
 				"$referring_domain": okteto.GetURL(),
 				"image":             image,
 				"machine_id":        machineID,
+				"origin":            "cli",
 			},
 		}
 
