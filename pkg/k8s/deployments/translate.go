@@ -3,10 +3,13 @@ package deployments
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 
@@ -47,6 +50,8 @@ var (
 
 //GevDevSandbox returns a deployment sandbox
 func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
+	pullPolicy := getPullPolicy()
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
@@ -74,7 +79,7 @@ func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
 						apiv1.Container{
 							Name:            "dev",
 							Image:           dev.Image,
-							ImagePullPolicy: apiv1.PullAlways,
+							ImagePullPolicy: pullPolicy,
 						},
 					},
 				},
@@ -149,7 +154,7 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
 	}
 
 	c.Image = dev.Image
-	c.ImagePullPolicy = apiv1.PullAlways
+	c.ImagePullPolicy = getPullPolicy()
 	c.Command = []string{"tail"}
 	c.Args = []string{"-f", "/dev/null"}
 	c.WorkingDir = dev.WorkDir
@@ -378,4 +383,21 @@ func translateOktetoSecretVolume(d *appsv1.Deployment, dev *model.Dev) {
 	}
 
 	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v)
+}
+
+func getPullPolicy() apiv1.PullPolicy {
+	policy := strings.ToLower(os.Getenv("OKTETO_PULLPOLICY"))
+	switch policy {
+	case "always":
+		log.Debugf("overriding pull policy with %s", policy)
+		return apiv1.PullAlways
+	case "never":
+		log.Debugf("overriding pull policy with %s", policy)
+		return apiv1.PullNever
+	case "ifnotpresent":
+		log.Debugf("overriding pull policy with %s", policy)
+		return apiv1.PullIfNotPresent
+	default:
+		return apiv1.PullAlways
+	}
 }

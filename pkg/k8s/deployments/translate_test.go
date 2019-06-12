@@ -1,6 +1,8 @@
 package deployments
 
 import (
+	"os"
+	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -142,6 +144,29 @@ func Test_translateResources(t *testing.T) {
 
 			if a.Cmp(b) != 0 {
 				t.Errorf("limits %s: expected %s, got %s", apiv1.ResourceCPU, b.String(), a.String())
+			}
+		})
+	}
+}
+
+func Test_getPullPolicy(t *testing.T) {
+	tests := []struct {
+		name string
+		env  string
+		want apiv1.PullPolicy
+	}{
+		{name: "empty", env: "", want: apiv1.PullAlways},
+		{name: "bad", env: "badvalue", want: apiv1.PullAlways},
+		{name: "always", env: "always", want: apiv1.PullAlways},
+		{name: "never", env: "never", want: apiv1.PullNever},
+		{name: "ifnotpresent", env: "ifnotpresent", want: apiv1.PullIfNotPresent},
+		{name: "ifnotpresent-casing", env: "IfNotPresent", want: apiv1.PullIfNotPresent},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("OKTETO_PULLPOLICY", tt.env)
+			if got := getPullPolicy(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getPullPolicy() = %v, want %v", got, tt.want)
 			}
 		})
 	}
