@@ -3,10 +3,8 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/model"
@@ -25,15 +23,10 @@ func Exec() *cobra.Command {
 		Use:   "exec COMMAND",
 		Short: "Execute a command in your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			devPath = getFullPath(devPath)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			if _, err := os.Stat(devPath); os.IsNotExist(err) {
-				return fmt.Errorf("'%s' does not exist", devPath)
-			}
-
-			dev, err := model.Get(devPath)
+			dev, err := loadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -51,7 +44,7 @@ func Exec() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the exec command is executed")
 
 	return cmd

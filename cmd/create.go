@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -21,7 +20,9 @@ import (
 )
 
 const (
-	stignore = ".stignore"
+	stignore          = ".stignore"
+	defaultManifest   = "okteto.yml"
+	secondaryManifest = "okteto.yaml"
 )
 
 var wrongImageNames = map[string]bool{
@@ -54,7 +55,7 @@ func Create() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	return cmd
 }
 
@@ -157,21 +158,6 @@ func getDevelopmentEnvironment(language string) (*model.Dev, string, error) {
 	}
 
 	return dev, language, nil
-}
-
-func fileExists(name string) bool {
-
-	_, err := os.Stat(name)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	if err != nil {
-		log.Infof("Failed to check if %s exists: %s", name, err)
-	}
-
-	return true
-
 }
 
 func getDeploymentName(name string) string {
