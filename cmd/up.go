@@ -10,7 +10,6 @@ import (
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -75,11 +74,7 @@ func Up() *cobra.Command {
 				}
 			}
 
-			if _, err := os.Stat(devPath); os.IsNotExist(err) {
-				return fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto create'", devPath)
-			}
-
-			dev, err := model.Get(devPath)
+			dev, err := loadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -91,7 +86,7 @@ func Up() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd
 }

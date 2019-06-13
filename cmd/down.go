@@ -1,11 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -26,13 +22,8 @@ func Down() *cobra.Command {
 		Short: "Deactivates your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting down command")
-			devPath = getFullPath(devPath)
 
-			if _, err := os.Stat(devPath); os.IsNotExist(err) {
-				return fmt.Errorf("'%s' does not exist", devPath)
-			}
-
-			dev, err := model.Get(devPath)
+			dev, err := loadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -58,7 +49,7 @@ func Down() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", config.ManifestFileName(), "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&removeVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd

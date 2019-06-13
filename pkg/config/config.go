@@ -29,11 +29,6 @@ func FolderName() string {
 	return folderName
 }
 
-// ManifestFileName returns the name of the manifest file
-func ManifestFileName() string {
-	return manifestFileName
-}
-
 //GetBinaryName returns the name of the binary
 func GetBinaryName() string {
 	return filepath.Base(GetBinaryFullPath())

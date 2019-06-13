@@ -2,14 +2,24 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
+	"os"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 )
 
-func getFullPath(p string) string {
-	a, _ := filepath.Abs(p)
-	return a
+func loadDev(devPath string) (*model.Dev, error) {
+	if !fileExists(devPath) {
+		if devPath == defaultManifest {
+			if fileExists(secondaryManifest) {
+				return loadDev(secondaryManifest)
+			}
+		}
+
+		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto create'", devPath)
+	}
+
+	return model.Get(devPath)
 }
 
 func askYesNo(q string) bool {
@@ -29,4 +39,19 @@ func askYesNo(q string) bool {
 	}
 
 	return true
+}
+
+func fileExists(name string) bool {
+
+	_, err := os.Stat(name)
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	if err != nil {
+		log.Infof("Failed to check if %s exists: %s", name, err)
+	}
+
+	return true
+
 }
