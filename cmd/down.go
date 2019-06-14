@@ -41,7 +41,7 @@ func Down() *cobra.Command {
 			analytics.TrackDown(image, VersionString)
 			err = runDown(dev, image, removeVolumes)
 			if err == nil {
-				log.Success("Your Okteto Environment has been deactivated")
+				log.Success("Okteto Environment deactivated")
 				log.Println()
 				return nil
 			}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/k8s/code"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -31,10 +30,6 @@ func Get(name, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, e
 
 //DevModeOn activates dev mode
 func DevModeOn(d *appsv1.Deployment, dev *model.Dev, forceCreate bool, client *kubernetes.Clientset) (*apiv1.Container, error) {
-	if err := code.Deploy(dev, client); err != nil {
-		return nil, err
-	}
-
 	d, container, err := translate(d, dev)
 	if err != nil {
 		return nil, err

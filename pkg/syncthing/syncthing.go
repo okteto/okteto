@@ -243,9 +243,9 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 // WaitForPing wait for local syncthing to ping
 func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup) error {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(200 * time.Millisecond)
 	log.Infof("waiting for local syncthing to be ready...")
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 200; i++ {
 		_, err := s.APICall("rest/system/ping", "GET", 200, nil, true)
 		if err == nil {
 			return nil
@@ -264,12 +264,12 @@ func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup) error {
 
 // WaitForScanning waits for the local syncthing to scan local folder
 func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(200 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
 	status := &Status{}
 	log.Infof("waiting for initial scan to complete...")
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 200; i++ {
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -307,7 +307,7 @@ func (s *Syncthing) OverrideChanges(ctx context.Context, wg *sync.WaitGroup, dev
 
 // WaitForCompletion waits for the remote to be totally synched
 func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
 	completion := &Completion{}
