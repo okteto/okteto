@@ -31,16 +31,6 @@ func translate(name string) *apiv1.PersistentVolumeClaim {
 	}
 }
 
-//GetVolumeName returns the okteto volume name for a given dev environment
-func GetVolumeName(dev *model.Dev) string {
-	n := fmt.Sprintf(oktetoVolumeTemplate, dev.Name)
-	if len(n) > 63 {
-		n = n[0:63]
-	}
-
-	return n
-}
-
 //GetVolumeDataName returns the okteto volume name for a given dev environment
 func GetVolumeDataName(dev *model.Dev, i int) string {
 	n := fmt.Sprintf(oktetoVolumeDataTemplate, i, dev.Name)
