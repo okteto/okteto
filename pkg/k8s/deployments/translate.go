@@ -6,11 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/k8s/code"
-	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -164,14 +163,14 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
 	}
 
 	for _, v := range c.VolumeMounts {
-		if v.Name == dev.Name {
+		if v.Name == dev.GetSyncVolumeName() {
 			return
 		}
 	}
 	c.VolumeMounts = append(
 		c.VolumeMounts,
 		apiv1.VolumeMount{
-			Name:      dev.Name,
+			Name:      dev.GetSyncVolumeName(),
 			MountPath: dev.WorkDir,
 		},
 	)
@@ -179,7 +178,7 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
 		c.VolumeMounts = append(
 			c.VolumeMounts,
 			apiv1.VolumeMount{
-				Name:      volumes.GetVolumeDataName(dev, i),
+				Name:      dev.GetDataVolumeName(i),
 				MountPath: v,
 			},
 		)
@@ -225,13 +224,13 @@ func translateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {
 }
 
 func translateOktetoVolumes(d *appsv1.Deployment, dev *model.Dev) {
-	code.AddCodeVolume(dev, &d.Spec.Template.Spec)
+	syncK8s.AddCodeVolume(dev, &d.Spec.Template.Spec)
 	for i := range dev.Volumes {
 		v := apiv1.Volume{
-			Name: volumes.GetVolumeDataName(dev, i),
+			Name: dev.GetDataVolumeName(i),
 			VolumeSource: apiv1.VolumeSource{
 				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: volumes.GetVolumeDataName(dev, i),
+					ClaimName: dev.GetDataVolumeName(i),
 					ReadOnly:  false,
 				},
 			},

@@ -10,6 +10,12 @@ import (
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
+const (
+	oktetoVolumeTemplate      = "okteto-%s"
+	oktetoStatefulSetTemplate = "okteto-%s"
+	oktetoVolumeDataTemplate  = "okteto-%d-%s"
+)
+
 //Dev represents a cloud native development environment
 type Dev struct {
 	Name        string               `json:"name" yaml:"name"`
@@ -100,4 +106,34 @@ func (dev *Dev) validate() error {
 		return fmt.Errorf("Name cannot be empty")
 	}
 	return nil
+}
+
+//GetSyncStatefulSetName returns the syncthing statefulset name for a given dev environment
+func (dev *Dev) GetSyncStatefulSetName() string {
+	n := fmt.Sprintf(oktetoStatefulSetTemplate, dev.Name)
+	if len(n) > 63 {
+		n = n[0:63]
+	}
+
+	return n
+}
+
+//GetSyncVolumeName returns the syncthing volume name for a given dev environment
+func (dev *Dev) GetSyncVolumeName() string {
+	n := fmt.Sprintf(oktetoVolumeTemplate, dev.Name)
+	if len(n) > 63 {
+		n = n[0:63]
+	}
+
+	return n
+}
+
+//GetDataVolumeName returns the data volume name for a given dev environment
+func (dev *Dev) GetDataVolumeName(i int) string {
+	n := fmt.Sprintf(oktetoVolumeDataTemplate, i, dev.Name)
+	if len(n) > 63 {
+		n = n[0:63]
+	}
+
+	return n
 }

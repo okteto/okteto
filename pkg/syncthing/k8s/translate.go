@@ -1,4 +1,4 @@
-package code
+package k8s
 
 import (
 	"fmt"
@@ -37,11 +37,11 @@ func translate(dev *model.Dev) *appsv1.StatefulSet {
 	limCPU, _ := resource.ParseQuantity("200m")
 	ss := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dev.Name,
+			Name:      dev.GetSyncStatefulSetName(),
 			Namespace: dev.Namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: dev.Name,
+			ServiceName: dev.GetSyncStatefulSetName(),
 			Replicas:    &devReplicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -78,7 +78,7 @@ func translate(dev *model.Dev) *appsv1.StatefulSet {
 									MountPath: "/var/syncthing/secret/",
 								},
 								apiv1.VolumeMount{
-									Name:      dev.Name,
+									Name:      dev.GetSyncVolumeName(),
 									MountPath: oktetoMount,
 								},
 							},
@@ -134,7 +134,7 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			apiv1.VolumeMount{
-				Name:      dev.Name,
+				Name:      dev.GetSyncVolumeName(),
 				MountPath: "/okteto/init",
 			},
 		},
@@ -147,15 +147,15 @@ func AddCodeVolume(dev *model.Dev, spec *apiv1.PodSpec) {
 		spec.Volumes = []apiv1.Volume{}
 	}
 	for _, v := range spec.Volumes {
-		if v.Name == dev.Name {
+		if v.Name == dev.GetSyncVolumeName() {
 			return
 		}
 	}
 	v := apiv1.Volume{
-		Name: dev.Name,
+		Name: dev.GetSyncVolumeName(),
 		VolumeSource: apiv1.VolumeSource{
 			PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-				ClaimName: dev.Name,
+				ClaimName: dev.GetSyncVolumeName(),
 				ReadOnly:  false,
 			},
 		},

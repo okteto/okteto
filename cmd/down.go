@@ -4,7 +4,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/code"
+	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
@@ -70,16 +70,16 @@ func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 	defer progress.stop()
 
 	if removeVolumes {
-		if err := code.Destroy(dev, client); err != nil {
+		if err := syncK8s.Destroy(dev, client); err != nil {
 			return err
 		}
 
-		if err := volumes.Destroy(dev.Name, dev, client); err != nil {
+		if err := volumes.Destroy(dev.GetSyncVolumeName(), dev, client); err != nil {
 			return err
 		}
 
 		for i := range dev.Volumes {
-			if err := volumes.Destroy(volumes.GetVolumeDataName(dev, i), dev, client); err != nil {
+			if err := volumes.Destroy(dev.GetDataVolumeName(i), dev, client); err != nil {
 				return err
 			}
 		}

@@ -12,7 +12,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/code"
+	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -229,11 +229,11 @@ func (up *UpContext) sync() error {
 		return err
 	}
 
-	if err := volumes.Create(up.Context, up.Dev.Name, up.Dev, up.Client); err != nil {
+	if err := volumes.Create(up.Context, up.Dev.GetSyncVolumeName(), up.Dev, up.Client); err != nil {
 		return err
 	}
 
-	if err := code.Deploy(up.Dev, up.Client); err != nil {
+	if err := syncK8s.Deploy(up.Dev, up.Client); err != nil {
 		return err
 	}
 
@@ -299,7 +299,7 @@ func (up *UpContext) devMode(isRetry bool) error {
 	}
 
 	for i := range up.Dev.Volumes {
-		if err := volumes.Create(up.Context, volumes.GetVolumeDataName(up.Dev, i), up.Dev, up.Client); err != nil {
+		if err := volumes.Create(up.Context, up.Dev.GetDataVolumeName(i), up.Dev, up.Client); err != nil {
 			return err
 		}
 	}
