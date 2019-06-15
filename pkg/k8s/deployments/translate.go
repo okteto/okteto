@@ -18,13 +18,8 @@ import (
 )
 
 const (
-	initSyncImageTag           = "okteto/init-syncthing:0.4.1"
-	syncImageTag               = "okteto/syncthing:0.4.2"
-	syncTCPPort                = 22000
-	syncGUIPort                = 8384
 	oktetoLabel                = "dev.okteto.com"
 	oktetoContainer            = "okteto"
-	oktetoSecretVolume         = "okteto-secret"
 	oktetoInitContainer        = "okteto-init"
 	oktetoMount                = "/var/okteto"
 	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
