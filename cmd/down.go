@@ -4,6 +4,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
@@ -40,7 +41,7 @@ func Down() *cobra.Command {
 			analytics.TrackDown(image, VersionString)
 			err = runDown(dev, image, removeVolumes)
 			if err == nil {
-				log.Success("Your Okteto Environment has been deactivated")
+				log.Success("Okteto Environment deactivated")
 				log.Println()
 				return nil
 			}
@@ -69,12 +70,16 @@ func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 	defer progress.stop()
 
 	if removeVolumes {
-		if err := volumes.Destroy(volumes.GetVolumeName(dev), dev, client); err != nil {
+		if err := syncK8s.Destroy(dev, client); err != nil {
+			return err
+		}
+
+		if err := volumes.Destroy(dev.GetSyncVolumeName(), dev, client); err != nil {
 			return err
 		}
 
 		for i := range dev.Volumes {
-			if err := volumes.Destroy(volumes.GetVolumeDataName(dev, i), dev, client); err != nil {
+			if err := volumes.Destroy(dev.GetDataVolumeName(i), dev, client); err != nil {
 				return err
 			}
 		}

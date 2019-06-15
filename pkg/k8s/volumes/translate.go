@@ -1,17 +1,9 @@
 package volumes
 
 import (
-	"fmt"
-
-	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	oktetoVolumeTemplate     = "okteto-%s"
-	oktetoVolumeDataTemplate = "okteto-%d-%s"
 )
 
 func translate(name string) *apiv1.PersistentVolumeClaim {
@@ -29,24 +21,4 @@ func translate(name string) *apiv1.PersistentVolumeClaim {
 			},
 		},
 	}
-}
-
-//GetVolumeName returns the okteto volume name for a given dev environment
-func GetVolumeName(dev *model.Dev) string {
-	n := fmt.Sprintf(oktetoVolumeTemplate, dev.Name)
-	if len(n) > 63 {
-		n = n[0:63]
-	}
-
-	return n
-}
-
-//GetVolumeDataName returns the okteto volume name for a given dev environment
-func GetVolumeDataName(dev *model.Dev, i int) string {
-	n := fmt.Sprintf(oktetoVolumeDataTemplate, i, dev.Name)
-	if len(n) > 63 {
-		n = n[0:63]
-	}
-
-	return n
 }

@@ -13,19 +13,22 @@ import (
 )
 
 const (
-	oktetoLabel = "dev.okteto.com"
-	maxRetries  = 300
+	// OktetoDevLabel indicates a dev pod
+	OktetoDevLabel = "dev.okteto.com"
+	// OktetoSyncLabel indicates a synthing pod
+	OktetoSyncLabel = "syncthing.okteto.com"
+	maxRetries      = 300
 )
 
 // GetDevPod returns the dev pod for a deployment
-func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
 
 	for tries < maxRetries {
 		pods, err := c.CoreV1().Pods(dev.Namespace).List(
 			metav1.ListOptions{
-				LabelSelector: fmt.Sprintf("%s=%s", oktetoLabel, dev.Name),
+				LabelSelector: fmt.Sprintf("%s=%s", label, dev.Name),
 			},
 		)
 		if err != nil {
@@ -33,29 +36,22 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (*a
 			return nil, fmt.Errorf("failed to retrieve dev environment information")
 		}
 
-		var pendingOrRunningPods []apiv1.Pod
+		var runningPods []apiv1.Pod
 		for _, pod := range pods.Items {
 			if pod.Status.Phase == apiv1.PodRunning {
 				if pod.GetObjectMeta().GetDeletionTimestamp() == nil {
-					pendingOrRunningPods = append(pendingOrRunningPods, pod)
+					runningPods = append(runningPods, pod)
 				}
 			} else {
 				log.Debugf("pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.Phase)
 			}
 		}
 
-		if len(pendingOrRunningPods) == 1 {
-			log.Debugf("%s/pod/%s is %s", pendingOrRunningPods[0].Namespace, pendingOrRunningPods[0].Name, pendingOrRunningPods[0].Status.Phase)
-			return &pendingOrRunningPods[0], nil
+		if len(runningPods) == 1 {
+			log.Debugf("%s/pod/%s is %s", runningPods[0].Namespace, runningPods[0].Name, runningPods[0].Status.Phase)
+			return &runningPods[0], nil
 		}
 
-		if len(pendingOrRunningPods) > 1 {
-			podNames := make([]string, len(pendingOrRunningPods))
-			for i, p := range pendingOrRunningPods {
-				podNames[i] = p.Name
-			}
-			return nil, fmt.Errorf("more than one cloud native environment have the same name: %+v. Please restart your environment", podNames)
-		}
 		select {
 		case <-ticker.C:
 			tries++
@@ -66,6 +62,6 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (*a
 		}
 	}
 
-	log.Debugf("cnd pod wasn't running after %d seconds", maxRetries)
+	log.Debugf("dev pod wasn't running after %d seconds", maxRetries)
 	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 }
