@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -28,23 +26,30 @@ func Get(name, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, e
 	return d, nil
 }
 
-//DevModeOn activates dev mode
-func DevModeOn(d *appsv1.Deployment, dev *model.Dev, forceCreate bool, client *kubernetes.Clientset) (*apiv1.Container, error) {
-	d, container, err := translate(d, dev)
-	if err != nil {
-		return nil, err
-	}
-
+//Deploy creates or updates a deployment
+func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset) error {
 	if forceCreate {
 		if err := create(d, client); err != nil {
-			return nil, err
+			return err
 		}
 	} else {
 		if err := update(d, client); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return container, nil
+	return nil
+}
+
+//TraslateDevMode translates the deployment manifests to put them in dev mode
+func TraslateDevMode(deploys map[string]*appsv1.Deployment, dev *model.Dev) error {
+	for name, d := range deploys {
+		d, err := translate(d, dev)
+		if err != nil {
+			return err
+		}
+		deploys[name] = d
+	}
+	return nil
 }
 
 //IsDevModeOn returns if a deployment is in devmode
@@ -86,10 +91,6 @@ func DevModeOff(d *appsv1.Deployment, dev *model.Dev, image string, c *kubernete
 
 	dOrig.ResourceVersion = ""
 	if err := update(dOrig, c); err != nil {
-		return err
-	}
-
-	if err := secrets.Destroy(dev, c); err != nil {
 		return err
 	}
 

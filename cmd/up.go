@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 
 	"github.com/spf13/cobra"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -44,7 +45,6 @@ type UpContext struct {
 	RestConfig    *rest.Config
 	DevPod        string
 	SyncPod       string
-	Container     string
 	DevForwarder  *forward.PortForwardManager
 	SyncForwarder *forward.PortForwardManager
 	Disconnect    chan struct{}
@@ -147,6 +147,26 @@ func (up *UpContext) Activate() {
 		up.Running = make(chan error, 1)
 		up.ErrChan = make(chan error, 1)
 
+		d, err := deployments.Get(up.Dev.Name, up.Dev.Namespace, up.Client)
+		create := false
+		if err != nil {
+			if !errors.IsNotFound(err) || retry {
+				up.Exit <- err
+				return
+			}
+			d = deployments.GevDevSandbox(up.Dev)
+			create = true
+		}
+		devContainer := deployments.GetDevContainer(d, up.Dev.Image)
+		if up.Dev.Image == "" {
+			up.Dev.Image = devContainer.Image
+		}
+
+		if retry && !deployments.IsDevModeOn(d) {
+			up.Exit <- fmt.Errorf("Okteto Environment has been deactivated")
+			return
+		}
+
 		err = up.sync()
 		if err != nil {
 			up.Exit <- err
@@ -154,7 +174,7 @@ func (up *UpContext) Activate() {
 		}
 		log.Success("Files synchronized")
 
-		err = up.devMode(retry)
+		err = up.devMode(retry, d, create)
 		if err != nil {
 			up.Exit <- err
 			return
@@ -280,36 +300,42 @@ func (up *UpContext) sync() error {
 	return up.Sy.Restart(up.Context, up.WG)
 }
 
-func (up *UpContext) devMode(isRetry bool) error {
-	d, err := deployments.Get(up.Dev.Name, up.Dev.Namespace, up.Client)
-	create := false
-	if err != nil {
-		if !errors.IsNotFound(err) || isRetry {
-			return err
-		}
-		d = deployments.GevDevSandbox(up.Dev)
-		create = true
-	}
+func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) error {
 	progress := newProgressBar("Activating your Okteto Environment...")
 	progress.start()
 	defer progress.stop()
-
-	if isRetry && !deployments.IsDevModeOn(d) {
-		return fmt.Errorf("Okteto Environment has been deactivated")
-	}
 
 	for i := range up.Dev.Volumes {
 		if err := volumes.Create(up.Context, up.Dev.GetDataVolumeName(i), up.Dev, up.Client); err != nil {
 			return err
 		}
 	}
+	deploys := map[string]*appsv1.Deployment{up.Dev.Name: d}
 
-	c, err := deployments.DevModeOn(d, up.Dev, create, up.Client)
-	if err != nil {
+	for _, s := range up.Dev.Services {
+		if _, ok := deploys[s.Name]; ok {
+			continue
+		}
+		d, err := deployments.Get(s.Name, up.Dev.Namespace, up.Client)
+		if err != nil {
+			return err
+		}
+		deploys[s.Name] = d
+	}
+
+	if err := deployments.TraslateDevMode(deploys, up.Dev); err != nil {
 		return err
 	}
 
-	up.Container = c.Name
+	for _, d := range deploys {
+		forceCreate := false
+		if d.Name == up.Dev.Name {
+			forceCreate = create
+		}
+		if err := deployments.Deploy(d, forceCreate, up.Client); err != nil {
+			return err
+		}
+	}
 
 	if create {
 		if err := services.Create(up.Dev, up.Client); err != nil {

@@ -3,10 +3,7 @@ package deployments
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
 
-	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
@@ -43,8 +40,9 @@ var (
 
 //GevDevSandbox returns a deployment sandbox
 func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
-	pullPolicy := getPullPolicy()
-
+	if dev.Image == "" {
+		dev.Image = "okteto/desk:0.1.3"
+	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
@@ -72,8 +70,9 @@ func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
 						apiv1.Container{
 							Name:            "dev",
 							Image:           dev.Image,
-							ImagePullPolicy: pullPolicy,
-						},
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"tail"},
+							Args:            []string{"-f", "/dev/null"}},
 					},
 				},
 			},
@@ -81,12 +80,12 @@ func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
 	}
 }
 
-func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, *apiv1.Container, error) {
+func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, error) {
 	manifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if manifest != "" {
 		dOrig := &appsv1.Deployment{}
 		if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		dOrig.ResourceVersion = ""
 		annotations := dOrig.GetObjectMeta().GetAnnotations()
@@ -98,32 +97,60 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, *apiv1
 	d.Status = appsv1.DeploymentStatus{}
 	manifestBytes, err := json.Marshal(d)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	setAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 	setAnnotation(d.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
 
 	if err := setDevListAsAnnotation(d.GetObjectMeta(), dev); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	setLabel(d.GetObjectMeta(), OktetoVersionLabel, OktetoVersion)
 	setLabel(d.GetObjectMeta(), oktetoLabel, dev.Name)
 	setLabel(d.Spec.Template.GetObjectMeta(), oktetoLabel, dev.Name)
+	d.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 	d.Spec.Replicas = &devReplicas
 
-	devContainer := getDevContainer(d, dev.Container)
-	dev.Container = devContainer.Name
-	if devContainer == nil {
-		return nil, nil, fmt.Errorf("container/%s doesn't exist in deployment/%s", dev.Container, d.Name)
+	if dev.Name == d.Name {
+		devContainer := GetDevContainer(d, dev.Container)
+		if devContainer == nil {
+			return nil, fmt.Errorf("Container '%s' not found in deployment '%s'", dev.Container, dev.Name)
+		}
+		dev.Container = devContainer.Name
+
+		translateDevContainer(devContainer, dev, true)
+		translateOktetoVolumes(dev.GetSyncVolumeName(), d, dev)
+
+		for i, v := range dev.Volumes {
+			devContainer.VolumeMounts = append(
+				devContainer.VolumeMounts,
+				apiv1.VolumeMount{
+					Name:      dev.GetDataVolumeName(i),
+					MountPath: v,
+				},
+			)
+		}
 	}
 
-	translateDevContainer(devContainer, dev)
-	translateOktetoVolumes(d, dev)
-	return d, devContainer, nil
+	for _, s := range dev.Services {
+		if d.Name != s.Name {
+			continue
+		}
+		devContainer := GetDevContainer(d, s.Container)
+		if devContainer == nil {
+			return nil, fmt.Errorf("Container '%s' not found in deployment '%s'", s.Container, s.Name)
+		}
+		s.Container = devContainer.Name
+
+		translateDevContainer(devContainer, &s, false)
+		translateOktetoVolumes(dev.GetSyncVolumeName(), d, &s)
+	}
+	return d, nil
 }
 
-func getDevContainer(d *appsv1.Deployment, name string) *apiv1.Container {
+//GetDevContainer returns the dev container of a given deployment
+func GetDevContainer(d *appsv1.Deployment, name string) *apiv1.Container {
 	if len(name) == 0 {
 		return &d.Spec.Template.Spec.Containers[0]
 	}
@@ -137,18 +164,25 @@ func getDevContainer(d *appsv1.Deployment, name string) *apiv1.Container {
 	return nil
 }
 
-func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
+func translateDevContainer(c *apiv1.Container, dev *model.Dev, it bool) {
 	if len(dev.Image) == 0 {
 		dev.Image = c.Image
 	}
 
 	c.Image = dev.Image
-	c.ImagePullPolicy = getPullPolicy()
-	c.Command = []string{"tail"}
-	c.Args = []string{"-f", "/dev/null"}
-	c.WorkingDir = dev.WorkDir
-	c.ReadinessProbe = nil
-	c.LivenessProbe = nil
+	if dev.WorkDir != "" {
+		c.WorkingDir = dev.WorkDir
+	}
+
+	if it {
+		c.Command = []string{"tail"}
+		c.Args = []string{"-f", "/dev/null"}
+		c.ReadinessProbe = nil
+		c.LivenessProbe = nil
+	} else if len(dev.Command) > 0 {
+		c.Command = dev.Command
+		c.Args = []string{}
+	}
 
 	translateResources(c, dev.Resources)
 	translateEnvVars(c, dev.Environment)
@@ -157,8 +191,10 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
 		c.VolumeMounts = []apiv1.VolumeMount{}
 	}
 
-	for _, v := range c.VolumeMounts {
+	for i, v := range c.VolumeMounts {
 		if v.Name == dev.GetSyncVolumeName() {
+			c.VolumeMounts[i].MountPath = dev.MountPath
+			c.VolumeMounts[i].SubPath = dev.SubPath
 			return
 		}
 	}
@@ -166,18 +202,10 @@ func translateDevContainer(c *apiv1.Container, dev *model.Dev) {
 		c.VolumeMounts,
 		apiv1.VolumeMount{
 			Name:      dev.GetSyncVolumeName(),
-			MountPath: dev.WorkDir,
+			MountPath: dev.MountPath,
+			SubPath:   dev.SubPath,
 		},
 	)
-	for i, v := range dev.Volumes {
-		c.VolumeMounts = append(
-			c.VolumeMounts,
-			apiv1.VolumeMount{
-				Name:      dev.GetDataVolumeName(i),
-				MountPath: v,
-			},
-		)
-	}
 }
 
 func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
@@ -218,8 +246,8 @@ func translateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {
 	}
 }
 
-func translateOktetoVolumes(d *appsv1.Deployment, dev *model.Dev) {
-	syncK8s.AddCodeVolume(dev, &d.Spec.Template.Spec)
+func translateOktetoVolumes(name string, d *appsv1.Deployment, dev *model.Dev) {
+	syncK8s.AddCodeVolume(name, dev, &d.Spec.Template.Spec)
 	for i := range dev.Volumes {
 		v := apiv1.Volume{
 			Name: dev.GetDataVolumeName(i),
@@ -231,22 +259,5 @@ func translateOktetoVolumes(d *appsv1.Deployment, dev *model.Dev) {
 			},
 		}
 		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v)
-	}
-}
-
-func getPullPolicy() apiv1.PullPolicy {
-	policy := strings.ToLower(os.Getenv("OKTETO_PULLPOLICY"))
-	switch policy {
-	case "always":
-		log.Debugf("overriding pull policy with %s", policy)
-		return apiv1.PullAlways
-	case "never":
-		log.Debugf("overriding pull policy with %s", policy)
-		return apiv1.PullNever
-	case "ifnotpresent":
-		log.Debugf("overriding pull policy with %s", policy)
-		return apiv1.PullIfNotPresent
-	default:
-		return apiv1.PullAlways
 	}
 }
