@@ -12,7 +12,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -21,6 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
 
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -70,7 +70,7 @@ func Up() *cobra.Command {
 				fmt.Println()
 			}
 
-			if !syncthing.IsInstalled() {
+			if syncthingUpgradeAvailable() {
 				fmt.Println("Installing dependencies...")
 				if err := downloadSyncthing(); err != nil {
 					return fmt.Errorf("couldn't download syncthing, please try again")
@@ -224,7 +224,7 @@ func (up *UpContext) sync() error {
 	if err := up.Sy.Run(up.Context, up.WG); err != nil {
 		return err
 	}
-		
+
 	if err := secrets.Create(up.Dev, up.Client); err != nil {
 		return err
 	}

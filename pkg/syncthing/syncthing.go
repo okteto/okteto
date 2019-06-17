@@ -83,10 +83,6 @@ type Completion struct {
 // New constructs a new Syncthing.
 func New(dev *model.Dev) (*Syncthing, error) {
 	fullPath := GetInstallPath()
-	if !IsInstalled() {
-		return nil, fmt.Errorf("cannot find syncthing. Make sure syncthing is installed in %s", fullPath)
-	}
-
 	remotePort, err := model.GetAvailablePort()
 	if err != nil {
 		return nil, err
@@ -448,16 +444,6 @@ func Exists(home string) bool {
 	}
 
 	return false
-}
-
-// IsInstalled return true if syncthing is already installed
-func IsInstalled() bool {
-	_, err := os.Stat(GetInstallPath())
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	return true
 }
 
 // GetInstallPath returns the expected install path for syncthing

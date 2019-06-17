@@ -4,11 +4,11 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
 	"github.com/spf13/cobra"
 )
 
