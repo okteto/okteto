@@ -83,8 +83,6 @@ func Login() *cobra.Command {
 				return e
 			}
 
-			fmt.Printf("Received code=%s\n", code)
-			fmt.Println("Getting an access token...")
 			user, new, err := okteto.Auth(handler.ctx, code, oktetoURL)
 			if err != nil {
 				return err
