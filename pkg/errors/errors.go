@@ -26,6 +26,9 @@ var (
 
 	// ErrInternalServerError is raised when an internal server error or similar is received
 	ErrInternalServerError = fmt.Errorf("internal server error, please try again")
+
+	// ErrQuota is returned when there aren't enough resources to enable dev mode
+	ErrQuota = fmt.Errorf("Quota exceeded, please free some resources and try again")
 )
 
 // IsNotFound returns true if err is of the type not found
