@@ -15,9 +15,9 @@ import (
 
 var (
 	downloadPath = map[string]string{
-		"linux":   "https://downloads.okteto.com/cli/syncthing/syncthing-Linux-x86_64",
-		"darwin":  "https://downloads.okteto.com/cli/syncthing/syncthing-Darwin-x86_64",
-		"windows": "https://downloads.okteto.com/cli/syncthing/syncthing-Windows-x86_64",
+		"linux":   "https://downloads.okteto.com/cli/syncthing/1.1.4/syncthing-Linux-x86_64",
+		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.1.4/syncthing-Darwin-x86_64",
+		"windows": "https://downloads.okteto.com/cli/syncthing/1.1.4/syncthing-Windows-x86_64",
 	}
 
 	syncthingVersion = semver.MustParse("1.1.4")
