@@ -40,7 +40,7 @@ func Auth(ctx context.Context, code, url string) (string, bool, error) {
 
 	q := fmt.Sprintf(`
 				mutation {
-					auth(code: "%s") {
+					auth(code: "%s", source: "cli") {
 					  githubID,token,id,new
 					}
 				  }`, code)
