@@ -5,6 +5,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -70,6 +71,10 @@ func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 	defer progress.stop()
 
 	if removeVolumes {
+		if err := secrets.Destroy(dev, client); err != nil {
+			return err
+		}
+
 		if err := syncK8s.Destroy(dev, client); err != nil {
 			return err
 		}
@@ -86,16 +91,28 @@ func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 	}
 
 	d, err := deployments.Get(dev.Name, dev.Namespace, client)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil
+	if err == nil {
+		err = deployments.DevModeOff(d, dev, image, client)
+		if err != nil {
+			return err
 		}
-		return err
+	} else {
+		if !errors.IsNotFound(err) {
+			return err
+		}
 	}
-
-	err = deployments.DevModeOff(d, dev, image, client)
-	if err != nil {
-		return err
+	for _, s := range dev.Services {
+		d, err := deployments.Get(s.Name, dev.Namespace, client)
+		if err == nil {
+			err = deployments.DevModeOff(d, &s, "", client)
+			if err != nil {
+				return err
+			}
+		} else {
+			if !errors.IsNotFound(err) {
+				return err
+			}
+		}
 	}
 
 	return nil

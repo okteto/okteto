@@ -106,7 +106,7 @@ func translate(dev *model.Dev) *appsv1.StatefulSet {
 			},
 		},
 	}
-	AddCodeVolume(dev, &ss.Spec.Template.Spec)
+	AddCodeVolume(dev.GetSyncVolumeName(), dev, &ss.Spec.Template.Spec)
 
 	return ss
 }
@@ -142,7 +142,7 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 }
 
 //AddCodeVolume adds the code volume info to a pod spec
-func AddCodeVolume(dev *model.Dev, spec *apiv1.PodSpec) {
+func AddCodeVolume(name string, dev *model.Dev, spec *apiv1.PodSpec) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
 	}
@@ -155,7 +155,7 @@ func AddCodeVolume(dev *model.Dev, spec *apiv1.PodSpec) {
 		Name: dev.GetSyncVolumeName(),
 		VolumeSource: apiv1.VolumeSource{
 			PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-				ClaimName: dev.GetSyncVolumeName(),
+				ClaimName: name,
 				ReadOnly:  false,
 			},
 		},

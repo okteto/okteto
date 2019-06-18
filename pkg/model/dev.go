@@ -25,10 +25,13 @@ type Dev struct {
 	Environment []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command     []string             `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir     string               `json:"workdir" yaml:"workdir"`
+	MountPath   string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
+	SubPath     string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
 	Volumes     []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	Forward     []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Resources   ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath     string               `json:"-" yaml:"-"`
+	Services    []Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
@@ -77,10 +80,12 @@ func read(bytes []byte) (*Dev, error) {
 		Environment: make([]EnvVar, 0),
 		Command:     make([]string, 0),
 		Forward:     make([]Forward, 0),
+		Volumes:     make([]string, 0),
 		Resources: ResourceRequirements{
 			Limits:   ResourceList{},
 			Requests: ResourceList{},
 		},
+		Services: make([]Dev, 0),
 	}
 	if err := yaml.Unmarshal(bytes, dev); err != nil {
 		return nil, err
@@ -95,8 +100,24 @@ func (dev *Dev) setDefaults() error {
 	if len(dev.Command) == 0 {
 		dev.Command = []string{"sh"}
 	}
-	if dev.WorkDir == "" {
+	if dev.MountPath == "" && dev.WorkDir == "" {
+		dev.MountPath = "/okteto"
 		dev.WorkDir = "/okteto"
+	}
+	if dev.WorkDir != "" && dev.MountPath == "" {
+		dev.MountPath = dev.WorkDir
+	}
+	for i, s := range dev.Services {
+		if s.MountPath == "" && s.WorkDir == "" {
+			dev.Services[i].MountPath = "/okteto"
+			dev.Services[i].WorkDir = "/okteto"
+		}
+		if s.WorkDir != "" && s.MountPath == "" {
+			dev.Services[i].MountPath = s.WorkDir
+		}
+		dev.Services[i].Forward = make([]Forward, 0)
+		dev.Services[i].Volumes = make([]string, 0)
+		dev.Services[i].Services = make([]Dev, 0)
 	}
 	return nil
 }
