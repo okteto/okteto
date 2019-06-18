@@ -48,6 +48,7 @@ func main() {
 	root.AddCommand(cmd.Up())
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Exec())
+	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.Login())
 	root.AddCommand(cmd.Namespace())
 	root.AddCommand(cmd.Version())

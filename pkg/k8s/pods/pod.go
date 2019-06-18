@@ -3,9 +3,8 @@ package pods
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -27,6 +26,10 @@ const (
 	maxRetries = 300
 
 	failedCreateReason = "FailedCreate"
+)
+
+var (
+	devTerminationGracePeriodSeconds int64
 )
 
 // GetDevPod returns the dev pod for a deployment
@@ -96,6 +99,33 @@ func isDeploymentFailed(namespace, name string, c *kubernetes.Clientset) error {
 			if strings.Contains(c.Message, "exceeded quota") {
 				return errors.ErrQuota
 			}
+		}
+	}
+
+	return nil
+}
+
+// Restart restarts the pods of a deployment
+func Restart(name, namespace string, c *kubernetes.Clientset) error {
+	pods, err := c.CoreV1().Pods(namespace).List(
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", OktetoDevLabel, name),
+		},
+	)
+	if err != nil {
+		log.Infof("error listing pods: %s", err)
+		return fmt.Errorf("failed to retrieve dev environment information")
+	}
+
+	for _, pod := range pods.Items {
+		log.Information("Restarting pod '%s'", pod.Name)
+		err := c.CoreV1().Pods(namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				log.Infof("service '%s' was already deleted.", name)
+				return nil
+			}
+			return fmt.Errorf("error deleting kubernetes service: %s", err)
 		}
 	}
 
