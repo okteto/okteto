@@ -18,7 +18,7 @@ func Restart() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "restart",
-		Short: "Restarts the pods of a Okteto Environment",
+		Short: "Restarts the pods of your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dev, err := loadDev(devPath)
 			if err != nil {
