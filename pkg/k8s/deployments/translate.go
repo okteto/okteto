@@ -106,8 +106,8 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, error)
 		return nil, err
 	}
 	setLabel(d.GetObjectMeta(), OktetoVersionLabel, OktetoVersion)
-	setLabel(d.GetObjectMeta(), oktetoLabel, dev.Name)
-	setLabel(d.Spec.Template.GetObjectMeta(), oktetoLabel, dev.Name)
+	setLabel(d.GetObjectMeta(), oktetoLabel, d.Name)
+	setLabel(d.Spec.Template.GetObjectMeta(), oktetoLabel, d.Name)
 	d.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 	d.Spec.Replicas = &devReplicas
@@ -115,7 +115,7 @@ func translate(d *appsv1.Deployment, dev *model.Dev) (*appsv1.Deployment, error)
 	if dev.Name == d.Name {
 		devContainer := GetDevContainer(d, dev.Container)
 		if devContainer == nil {
-			return nil, fmt.Errorf("Container '%s' not found in deployment '%s'", dev.Container, dev.Name)
+			return nil, fmt.Errorf("Container '%s' not found in deployment '%s'", dev.Container, d.Name)
 		}
 		dev.Container = devContainer.Name
 
