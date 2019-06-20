@@ -86,14 +86,14 @@ func translate(d *appsv1.Deployment, dev *model.Dev, nodeName string) (*appsv1.D
 		if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
 			return nil, err
 		}
-		dOrig.ResourceVersion = ""
-		annotations := dOrig.GetObjectMeta().GetAnnotations()
-		delete(annotations, revisionAnnotation)
-		dOrig.GetObjectMeta().SetAnnotations(annotations)
 		d = dOrig
 	}
 
 	d.Status = appsv1.DeploymentStatus{}
+	d.ResourceVersion = ""
+	annotations := d.GetObjectMeta().GetAnnotations()
+	delete(annotations, revisionAnnotation)
+	d.GetObjectMeta().SetAnnotations(annotations)
 	manifestBytes, err := json.Marshal(d)
 	if err != nil {
 		return nil, err

@@ -26,6 +26,7 @@ import (
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -157,7 +158,7 @@ func (up *UpContext) Activate() {
 			d = deployments.GevDevSandbox(up.Dev)
 			create = true
 		}
-		devContainer := deployments.GetDevContainer(d, up.Dev.Image)
+		devContainer := deployments.GetDevContainer(d, up.Dev.Container)
 		if up.Dev.Image == "" {
 			up.Dev.Image = devContainer.Image
 		}
@@ -167,7 +168,7 @@ func (up *UpContext) Activate() {
 			return
 		}
 
-		err = up.sync()
+		err = up.sync(d, devContainer)
 		if err != nil {
 			up.Exit <- err
 			return
@@ -230,7 +231,7 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *UpContext) sync() error {
+func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 	var err error
 	progress := newProgressBar("Synchronizing your files...")
 	progress.start()
@@ -249,7 +250,7 @@ func (up *UpContext) sync() error {
 		return err
 	}
 
-	if err := syncK8s.Deploy(up.Dev, up.Client); err != nil {
+	if err := syncK8s.Deploy(up.Dev, d, c, up.Client); err != nil {
 		return err
 	}
 
