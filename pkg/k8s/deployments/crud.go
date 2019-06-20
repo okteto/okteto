@@ -41,9 +41,9 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 }
 
 //TraslateDevMode translates the deployment manifests to put them in dev mode
-func TraslateDevMode(deploys map[string]*appsv1.Deployment, dev *model.Dev) error {
+func TraslateDevMode(deploys map[string]*appsv1.Deployment, dev *model.Dev, nodeName string) error {
 	for name, d := range deploys {
-		d, err := translate(d, dev)
+		d, err := translate(d, dev, nodeName)
 		if err != nil {
 			return err
 		}
