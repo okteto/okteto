@@ -14,13 +14,14 @@ import (
 )
 
 const (
-	oktetoSyncLabel     = "syncthing.okteto.com"
-	syncImageTag        = "okteto/syncthing:1.1.4"
-	syncTCPPort         = 22000
-	syncGUIPort         = 8384
-	oktetoContainer     = "okteto"
-	oktetoSecretVolume  = "okteto-secret"
-	oktetoInitContainer = "okteto-init"
+	oktetoSyncLabel    = "syncthing.okteto.com"
+	syncImageTag       = "okteto/syncthing:1.1.4"
+	syncTCPPort        = 22000
+	syncGUIPort        = 8384
+	oktetoContainer    = "okteto"
+	oktetoSecretVolume = "okteto-secret"
+	//OktetoInitContainer name of the okteto init container
+	OktetoInitContainer = "okteto-init"
 	oktetoMount         = "/var/okteto"
 )
 
@@ -28,7 +29,7 @@ var (
 	devReplicas int32 = 1
 )
 
-func translate(dev *model.Dev) *appsv1.StatefulSet {
+func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1.StatefulSet {
 	initContainer := translateInitContainer(dev)
 
 	reqMem, _ := resource.ParseQuantity("64Mi")
@@ -56,12 +57,14 @@ func translate(dev *model.Dev) *appsv1.StatefulSet {
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					SecurityContext:               d.Spec.Template.Spec.SecurityContext,
+					ImagePullSecrets:              d.Spec.Template.Spec.ImagePullSecrets,
 					InitContainers:                []apiv1.Container{*initContainer},
 					Containers: []apiv1.Container{
 						apiv1.Container{
 							Name:            oktetoContainer,
 							Image:           syncImageTag,
-							ImagePullPolicy: apiv1.PullIfNotPresent,
+							ImagePullPolicy: c.ImagePullPolicy,
 							Resources: apiv1.ResourceRequirements{
 								Requests: apiv1.ResourceList{
 									apiv1.ResourceMemory: reqMem,
@@ -119,7 +122,7 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 	source := filepath.Join(dev.WorkDir, "*")
 
 	c := &apiv1.Container{
-		Name:    oktetoInitContainer,
+		Name:    OktetoInitContainer,
 		Image:   dev.Image,
 		Command: []string{"sh", "-c", fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || cp -Rf %s /okteto/init); touch /okteto/init/%s", source, dev.DevPath)},
 		Resources: apiv1.ResourceRequirements{

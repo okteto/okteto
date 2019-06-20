@@ -8,6 +8,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -15,15 +16,15 @@ import (
 var devTerminationGracePeriodSeconds int64
 
 //Deploy creates or updates a syncthing stateful set
-func Deploy(dev *model.Dev, c *kubernetes.Clientset) error {
-	ss := translate(dev)
+func Deploy(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container, client *kubernetes.Clientset) error {
+	ss := translate(dev, d, c)
 
-	if exists(ss, c) {
-		if err := update(ss, c); err != nil {
+	if exists(ss, client) {
+		if err := update(ss, client); err != nil {
 			return err
 		}
 	} else {
-		if err := create(ss, c); err != nil {
+		if err := create(ss, client); err != nil {
 			return err
 		}
 	}
