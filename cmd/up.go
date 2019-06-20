@@ -158,7 +158,7 @@ func (up *UpContext) Activate() {
 			d = deployments.GevDevSandbox(up.Dev)
 			create = true
 		}
-		devContainer := deployments.GetDevContainer(d, up.Dev.Name)
+		devContainer := deployments.GetDevContainer(d, up.Dev.Container)
 		if up.Dev.Image == "" {
 			up.Dev.Image = devContainer.Image
 		}
