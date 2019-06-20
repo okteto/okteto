@@ -17,7 +17,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
-	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
@@ -45,6 +44,7 @@ type UpContext struct {
 	RestConfig    *rest.Config
 	DevPod        string
 	SyncPod       string
+	Node          string
 	DevForwarder  *forward.PortForwardManager
 	SyncForwarder *forward.PortForwardManager
 	Disconnect    chan struct{}
@@ -249,10 +249,6 @@ func (up *UpContext) sync() error {
 		return err
 	}
 
-	if err := volumes.Create(up.Context, up.Dev.GetSyncVolumeName(), up.Dev, up.Client); err != nil {
-		return err
-	}
-
 	if err := syncK8s.Deploy(up.Dev, up.Client); err != nil {
 		return err
 	}
@@ -263,6 +259,7 @@ func (up *UpContext) sync() error {
 	}
 
 	up.SyncPod = p.Name
+	up.Node = p.Spec.NodeName
 
 	up.SyncForwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
 	if err := up.SyncForwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
@@ -305,11 +302,6 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 	progress.start()
 	defer progress.stop()
 
-	for i := range up.Dev.Volumes {
-		if err := volumes.Create(up.Context, up.Dev.GetDataVolumeName(i), up.Dev, up.Client); err != nil {
-			return err
-		}
-	}
 	deploys := map[string]*appsv1.Deployment{up.Dev.Name: d}
 
 	for _, s := range up.Dev.Services {
@@ -323,7 +315,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		deploys[s.Name] = d
 	}
 
-	if err := deployments.TraslateDevMode(deploys, up.Dev); err != nil {
+	if err := deployments.TraslateDevMode(deploys, up.Dev, up.Node); err != nil {
 		return err
 	}
 

@@ -61,7 +61,7 @@ func update(ss *appsv1.StatefulSet, c *kubernetes.Clientset) error {
 func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
 	log.Infof("destroying syncthing statefulset '%s' ...", dev.Name)
 	sfsClient := c.AppsV1().StatefulSets(dev.Namespace)
-	if err := sfsClient.Delete(dev.GetSyncStatefulSetName(), &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds}); err != nil {
+	if err := sfsClient.Delete(dev.GetStatefulSetName(), &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds}); err != nil {
 		if !strings.Contains(err.Error(), "not found") {
 			return fmt.Errorf("couldn't destroy syncthing statefulset: %s", err)
 		}

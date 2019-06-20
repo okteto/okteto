@@ -79,12 +79,8 @@ func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 			return err
 		}
 
-		if err := volumes.Destroy(dev.GetSyncVolumeName(), dev, client); err != nil {
-			return err
-		}
-
-		for i := range dev.Volumes {
-			if err := volumes.Destroy(dev.GetDataVolumeName(i), dev, client); err != nil {
+		for i := 0; i <= len(dev.Volumes); i++ {
+			if err := volumes.Destroy(dev.GetVolumeName(i), dev, client); err != nil {
 				return err
 			}
 		}

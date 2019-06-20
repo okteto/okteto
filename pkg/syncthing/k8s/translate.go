@@ -37,11 +37,11 @@ func translate(dev *model.Dev) *appsv1.StatefulSet {
 	limCPU, _ := resource.ParseQuantity("200m")
 	ss := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dev.GetSyncStatefulSetName(),
+			Name:      dev.GetStatefulSetName(),
 			Namespace: dev.Namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: dev.GetSyncStatefulSetName(),
+			ServiceName: dev.GetStatefulSetName(),
 			Replicas:    &devReplicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -78,7 +78,7 @@ func translate(dev *model.Dev) *appsv1.StatefulSet {
 									MountPath: "/var/syncthing/secret/",
 								},
 								apiv1.VolumeMount{
-									Name:      dev.GetSyncVolumeName(),
+									Name:      dev.GetVolumeTemplateName(0),
 									MountPath: oktetoMount,
 								},
 							},
@@ -106,8 +106,8 @@ func translate(dev *model.Dev) *appsv1.StatefulSet {
 			},
 		},
 	}
-	AddCodeVolume(dev.GetSyncVolumeName(), dev, &ss.Spec.Template.Spec)
 
+	ss.Spec.VolumeClaimTemplates = translateVolumeClaimTemplates(dev)
 	return ss
 }
 
@@ -118,7 +118,7 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 	limCPU, _ := resource.ParseQuantity("50m")
 	source := filepath.Join(dev.WorkDir, "*")
 
-	return &apiv1.Container{
+	c := &apiv1.Container{
 		Name:    oktetoInitContainer,
 		Image:   dev.Image,
 		Command: []string{"sh", "-c", fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || cp -Rf %s /okteto/init); touch /okteto/init/%s", source, dev.DevPath)},
@@ -134,31 +134,45 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			apiv1.VolumeMount{
-				Name:      dev.GetSyncVolumeName(),
+				Name:      dev.GetVolumeTemplateName(0),
 				MountPath: "/okteto/init",
 			},
 		},
 	}
+
+	for i, v := range dev.Volumes {
+		c.VolumeMounts = append(
+			c.VolumeMounts,
+			apiv1.VolumeMount{
+				Name:      dev.GetVolumeTemplateName(i + 1),
+				MountPath: v,
+			},
+		)
+	}
+
+	return c
 }
 
-//AddCodeVolume adds the code volume info to a pod spec
-func AddCodeVolume(name string, dev *model.Dev, spec *apiv1.PodSpec) {
-	if spec.Volumes == nil {
-		spec.Volumes = []apiv1.Volume{}
-	}
-	for _, v := range spec.Volumes {
-		if v.Name == dev.GetSyncVolumeName() {
-			return
-		}
-	}
-	v := apiv1.Volume{
-		Name: dev.GetSyncVolumeName(),
-		VolumeSource: apiv1.VolumeSource{
-			PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-				ClaimName: name,
-				ReadOnly:  false,
+func translateVolumeClaimTemplates(dev *model.Dev) []apiv1.PersistentVolumeClaim {
+	quantDisk, _ := resource.ParseQuantity("10Gi")
+	result := []apiv1.PersistentVolumeClaim{}
+	for i := 0; i <= len(dev.Volumes); i++ {
+		result = append(
+			result,
+			apiv1.PersistentVolumeClaim{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: dev.GetVolumeTemplateName(i),
+				},
+				Spec: apiv1.PersistentVolumeClaimSpec{
+					AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+					Resources: apiv1.ResourceRequirements{
+						Requests: apiv1.ResourceList{
+							"storage": quantDisk,
+						},
+					},
+				},
 			},
-		},
+		)
 	}
-	spec.Volumes = append(spec.Volumes, v)
+	return result
 }

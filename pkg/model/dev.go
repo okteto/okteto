@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	oktetoVolumeTemplate      = "okteto-%s"
+	oktetoPodNameTemplate     = "%s-0"
 	oktetoStatefulSetTemplate = "okteto-%s"
-	oktetoVolumeDataTemplate  = "okteto-%d-%s"
+	oktetoVolumeNameTemplate  = "pvc-%d"
 )
 
 //Dev represents a cloud native development environment
@@ -129,32 +129,29 @@ func (dev *Dev) validate() error {
 	return nil
 }
 
-//GetSyncStatefulSetName returns the syncthing statefulset name for a given dev environment
-func (dev *Dev) GetSyncStatefulSetName() string {
+//GetStatefulSetName returns the syncthing statefulset name for a given dev environment
+func (dev *Dev) GetStatefulSetName() string {
 	n := fmt.Sprintf(oktetoStatefulSetTemplate, dev.Name)
-	if len(n) > 63 {
-		n = n[0:63]
+	if len(n) > 52 {
+		n = n[0:52]
 	}
-
 	return n
 }
 
-//GetSyncVolumeName returns the syncthing volume name for a given dev environment
-func (dev *Dev) GetSyncVolumeName() string {
-	n := fmt.Sprintf(oktetoVolumeTemplate, dev.Name)
-	if len(n) > 63 {
-		n = n[0:63]
-	}
-
-	return n
+//GetPodName returns the syncthing statefulset pod name for a given dev environment
+func (dev *Dev) GetPodName() string {
+	n := dev.GetStatefulSetName()
+	return fmt.Sprintf(oktetoPodNameTemplate, n)
 }
 
-//GetDataVolumeName returns the data volume name for a given dev environment
-func (dev *Dev) GetDataVolumeName(i int) string {
-	n := fmt.Sprintf(oktetoVolumeDataTemplate, i, dev.Name)
-	if len(n) > 63 {
-		n = n[0:63]
-	}
+//GetVolumeTemplateName returns the data volume name for a given dev environment
+func (dev *Dev) GetVolumeTemplateName(i int) string {
+	return fmt.Sprintf(oktetoVolumeNameTemplate, i)
+}
 
-	return n
+//GetVolumeName returns the data volume name for a given dev environment
+func (dev *Dev) GetVolumeName(i int) string {
+	volumeName := dev.GetVolumeTemplateName(i)
+	podName := dev.GetPodName()
+	return fmt.Sprintf("%s-%s", volumeName, podName)
 }
