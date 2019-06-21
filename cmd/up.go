@@ -272,8 +272,6 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 
 	up.SyncForwarder.Start(up.SyncPod, up.Dev.Namespace)
 
-	go up.Sy.Monitor(up.Context, up.WG, up.Disconnect)
-
 	if err := up.Sy.WaitForPing(up.Context, up.WG); err != nil {
 		return err
 	}
@@ -294,6 +292,8 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 	if err := up.Sy.UpdateConfig(); err != nil {
 		return err
 	}
+
+	go up.Sy.Monitor(up.Context, up.WG, up.Disconnect)
 
 	return up.Sy.Restart(up.Context, up.WG)
 }
