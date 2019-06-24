@@ -3,6 +3,7 @@ package volumes
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -16,12 +17,14 @@ import (
 func Destroy(name string, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	log.Infof("destroying volume claim '%s'...", name)
-	err := vClient.Delete(name, &metav1.DeleteOptions{})
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return nil
+	for {
+		err := vClient.Delete(name, &metav1.DeleteOptions{})
+		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				return nil
+			}
+			return fmt.Errorf("error getting kubernetes volume claim: %s", err)
 		}
-		return fmt.Errorf("error getting kubernetes volume claim: %s", err)
+		time.Sleep(1 * time.Second)
 	}
-	return nil
 }
