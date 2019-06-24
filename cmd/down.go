@@ -70,22 +70,6 @@ func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 	progress.start()
 	defer progress.stop()
 
-	if removeVolumes {
-		if err := secrets.Destroy(dev, client); err != nil {
-			return err
-		}
-
-		if err := syncK8s.Destroy(dev, client); err != nil {
-			return err
-		}
-
-		for i := 0; i <= len(dev.Volumes); i++ {
-			if err := volumes.Destroy(dev.GetVolumeName(i), dev, client); err != nil {
-				return err
-			}
-		}
-	}
-
 	d, err := deployments.Get(dev.Name, dev.Namespace, client)
 	if err == nil {
 		err = deployments.DevModeOff(d, dev, image, client)
@@ -106,6 +90,22 @@ func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 			}
 		} else {
 			if !errors.IsNotFound(err) {
+				return err
+			}
+		}
+	}
+
+	if removeVolumes {
+		if err := secrets.Destroy(dev, client); err != nil {
+			return err
+		}
+
+		if err := syncK8s.Destroy(dev, client); err != nil {
+			return err
+		}
+
+		for i := 0; i <= len(dev.Volumes); i++ {
+			if err := volumes.Destroy(dev.GetVolumeName(i), dev, client); err != nil {
 				return err
 			}
 		}
