@@ -16,7 +16,7 @@ func loadDev(devPath string) (*model.Dev, error) {
 			}
 		}
 
-		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto create'", devPath)
+		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
 	}
 
 	return model.Get(devPath)

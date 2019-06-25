@@ -44,7 +44,7 @@ func main() {
 	}
 
 	root.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
-	root.AddCommand(cmd.Create())
+	root.AddCommand(cmd.Init())
 	root.AddCommand(cmd.Up())
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Exec())
