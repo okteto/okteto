@@ -155,6 +155,13 @@ func (up *UpContext) Activate() {
 				up.Exit <- err
 				return
 			}
+
+			deploy := askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name))
+			if !deploy {
+				up.Exit <- fmt.Errorf("deployment %s not found [current context: %s]", up.Dev.Name, up.Dev.Namespace)
+				return
+			}
+
 			d = deployments.GevDevSandbox(up.Dev)
 			create = true
 		}
