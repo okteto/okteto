@@ -166,6 +166,10 @@ func (up *UpContext) Activate() {
 			create = true
 		}
 		devContainer := deployments.GetDevContainer(d, up.Dev.Container)
+		if devContainer == nil {
+			up.Exit <- fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
+			return
+		}
 		if up.Dev.Image == "" {
 			up.Dev.Image = devContainer.Image
 		}
