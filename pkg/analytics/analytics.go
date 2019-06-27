@@ -18,14 +18,13 @@ import (
 const (
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
-	createDatabaseEvent = "Create Database"
-	upEvent             = "Up"
-	downEvent           = "Down"
-	loginEvent          = "Login"
-	createEvent         = "Create Manifest"
-	namespaceEvent      = "Namespace"
-	execEvent           = "Exec"
-	signupEvent         = "Signup"
+	upEvent        = "Up"
+	downEvent      = "Down"
+	loginEvent     = "Login"
+	initEvent      = "Create Manifest"
+	namespaceEvent = "Namespace"
+	execEvent      = "Exec"
+	signupEvent    = "Signup"
 )
 
 var (
@@ -54,9 +53,9 @@ func init() {
 	}
 }
 
-// TrackCreate sends a tracking event to mixpanel when the user creates a manifest
-func TrackCreate(language, image, version string) {
-	track(createEvent, version, image)
+// TrackInit sends a tracking event to mixpanel when the user creates a manifest
+func TrackInit(language, image, version string) {
+	track(initEvent, version, image)
 }
 
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace

@@ -38,14 +38,14 @@ var wrongImageNames = map[string]bool{
 
 var validKubeNameRegex = regexp.MustCompile("[^a-zA-Z0-9/.-]+")
 
-//Create automatically generates the manifest
-func Create() *cobra.Command {
+//Init automatically generates the manifest
+func Init() *cobra.Command {
 	var devPath string
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Automatically create your okteto manifest file",
+		Use:   "init",
+		Short: "Automatically generates your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := executeCreate(devPath)
+			err := executeInit(devPath)
 			if err == nil {
 				log.Success(fmt.Sprintf("Okteto manifest (%s) created", devPath))
 				return nil
@@ -59,7 +59,7 @@ func Create() *cobra.Command {
 	return cmd
 }
 
-func executeCreate(devPath string) error {
+func executeInit(devPath string) error {
 	if fileExists(devPath) {
 		return fmt.Errorf("%s already exists. Please delete it before running the command again", devPath)
 	}
@@ -100,7 +100,7 @@ func executeCreate(devPath string) error {
 		}
 	}
 
-	analytics.TrackCreate(language, dev.Image, VersionString)
+	analytics.TrackInit(language, dev.Image, VersionString)
 	return nil
 }
 
@@ -128,7 +128,7 @@ func getDevelopmentEnvironment(language string) (*model.Dev, string, error) {
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			log.Debugf("invalid create option: %s", err)
+			log.Debugf("invalid init option: %s", err)
 			return nil, "", fmt.Errorf("invalid option")
 		}
 
