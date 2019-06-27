@@ -6,12 +6,10 @@ import (
 	"runtime"
 
 	"github.com/Masterminds/semver"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
-
-// VersionString the version of the cli
-var VersionString string
 
 //Version returns information about the binary
 func Version() *cobra.Command {
@@ -19,14 +17,14 @@ func Version() *cobra.Command {
 		Use:   "version",
 		Short: fmt.Sprintf("View the version of the okteto binary"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("okteto version %s \n", VersionString)
+			fmt.Printf("okteto version %s \n", config.VersionString)
 			return nil
 		},
 	}
 }
 
 func upgradeAvailable() string {
-	current, err := semver.NewVersion(VersionString)
+	current, err := semver.NewVersion(config.VersionString)
 	if err != nil {
 		return ""
 	}

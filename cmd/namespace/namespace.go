@@ -1,4 +1,4 @@
-package cmd
+package namespace
 
 import (
 	"github.com/okteto/okteto/pkg/analytics"
@@ -23,7 +23,7 @@ func Namespace() *cobra.Command {
 			}
 
 			err := RunNamespace(namespace)
-			analytics.TrackNamespace(VersionString)
+			analytics.TrackNamespace(config.VersionString)
 			return err
 		},
 	}

@@ -16,7 +16,7 @@ label = $(word 3, $(temp))
 build-all: $(PLATFORMS)
 
 $(PLATFORMS):
-	GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/okteto/okteto/cmd.VersionString=${VERSION_STRING}" -o "bin/okteto-$(label)" 
+	GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/okteto/okteto/pkg/config.VersionString=${VERSION_STRING}" -o "bin/okteto-$(label)" 
 	sha256sum "bin/okteto-$(label)" > "bin/okteto-$(label).sha256"  
 
 .PHONY: test
@@ -25,7 +25,7 @@ test:
 
 .PHONY: build
 build:
-	 go build -ldflags "-X github.com/okteto/okteto/cmd.VersionString=${VERSION_STRING}" -o ${BINDIR}/okteto
+	 go build -ldflags "-X github.com/okteto/okteto/pkg/config.VersionString=${VERSION_STRING}" -o ${BINDIR}/okteto
 
 .PHONY: dep
 dep:

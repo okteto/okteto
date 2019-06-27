@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/okteto/okteto/cmd"
+	"github.com/okteto/okteto/cmd/namespace"
 
 	// Load the different library for authentication
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -44,15 +45,17 @@ func main() {
 	}
 
 	root.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
+	root.AddCommand(cmd.Analytics())
+	root.AddCommand(cmd.Version())
+	root.AddCommand(cmd.Login())
+	root.AddCommand(cmd.Create())
+	root.AddCommand(cmd.Delete())
+	root.AddCommand(namespace.Namespace())
 	root.AddCommand(cmd.Init())
 	root.AddCommand(cmd.Up())
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Exec())
 	root.AddCommand(cmd.Restart())
-	root.AddCommand(cmd.Login())
-	root.AddCommand(cmd.Namespace())
-	root.AddCommand(cmd.Version())
-	root.AddCommand(cmd.Analytics())
 
 	if err := root.Execute(); err != nil {
 		log.Fail(err.Error())
