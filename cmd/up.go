@@ -3,8 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
+	"runtime"
+	"strconv"
 	"sync"
 	"time"
 
@@ -77,6 +80,8 @@ func Up() *cobra.Command {
 					return fmt.Errorf("couldn't download syncthing, please try again")
 				}
 			}
+
+			checkWatchesConfiguration()
 
 			dev, err := loadDev(devPath)
 			if err != nil {
@@ -441,4 +446,29 @@ func printDisplayContext(message, namespace, name string, ports []model.Forward)
 		}
 	}
 	fmt.Println()
+}
+
+func checkWatchesConfiguration() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+
+	w := "/proc/sys/fs/inotify/max_user_watches"
+	f, err := ioutil.ReadFile(w)
+	if err != nil {
+		log.Errorf("Fail to read %s: %s", w, err)
+	}
+
+	c, err := strconv.Atoi(string(f))
+	if err != nil {
+		log.Errorf("Fail to parse the value of  max_user_watches: %s", err)
+	}
+
+	log.Debugf("max_user_watches = %d", c)
+
+	if c <= 8192 {
+		log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low. This can affect Okteto's file synchronization performance.")
+		log.Yellow("We recommend you to raise it to at least 524288 to ensure proper performance.")
+		fmt.Println()
+	}
 }
