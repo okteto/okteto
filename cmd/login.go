@@ -26,7 +26,7 @@ var (
 //Login starts the login handshake with github and okteto
 func Login() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "login [URL]",
+		Use:   "login [url]",
 		Short: "Login with Okteto",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoURL := okteto.CloudURL

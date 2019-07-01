@@ -20,7 +20,7 @@ func Exec() *cobra.Command {
 	var namespace string
 
 	cmd := &cobra.Command{
-		Use:   "exec COMMAND",
+		Use:   "exec <command>",
 		Short: "Execute a command in your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, cancel := context.WithCancel(context.Background())

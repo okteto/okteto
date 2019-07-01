@@ -14,7 +14,7 @@ import (
 //Delete deletes a namespace
 func Delete() *cobra.Command {
 	return &cobra.Command{
-		Use:   "namespace",
+		Use:   "namespace <name>",
 		Short: fmt.Sprintf("Deletes a namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			analytics.TrackDeleteNamespace(config.VersionString)

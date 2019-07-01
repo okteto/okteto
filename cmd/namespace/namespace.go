@@ -13,7 +13,7 @@ import (
 //Namespace fetch credentials for a cluster namespace
 func Namespace() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "namespace",
+		Use:   "namespace [name]",
 		Short: "Downloads k8s credentials for a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting kubeconfig command")
