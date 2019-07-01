@@ -11,6 +11,7 @@ import (
 	"math/rand"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -95,7 +96,7 @@ func Login() *cobra.Command {
 			}
 
 			fmt.Println(log.BlueString("    Run `okteto namespace` to activate your Kubernetes configuration."))
-			analytics.TrackLogin(VersionString, new)
+			analytics.TrackLogin(config.VersionString, new)
 			return nil
 		},
 	}

@@ -18,13 +18,15 @@ import (
 const (
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
-	upEvent        = "Up"
-	downEvent      = "Down"
-	loginEvent     = "Login"
-	initEvent      = "Create Manifest"
-	namespaceEvent = "Namespace"
-	execEvent      = "Exec"
-	signupEvent    = "Signup"
+	upEvent              = "Up"
+	downEvent            = "Down"
+	loginEvent           = "Login"
+	initEvent            = "Create Manifest"
+	namespaceEvent       = "Namespace"
+	namespaceCreateEvent = "CreateNamespace"
+	namespaceDeleteEvent = "DeleteNamespace"
+	execEvent            = "Exec"
+	signupEvent          = "Signup"
 )
 
 var (
@@ -61,6 +63,16 @@ func TrackInit(language, image, version string) {
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
 func TrackNamespace(version string) {
 	track(namespaceEvent, version, "")
+}
+
+// TrackCreateNamespace sends a tracking event to mixpanel when the creates a namespace
+func TrackCreateNamespace(version string) {
+	track(namespaceCreateEvent, version, "")
+}
+
+// TrackDeleteNamespace sends a tracking event to mixpanel when the user deletes a namespace
+func TrackDeleteNamespace(version string) {
+	track(namespaceDeleteEvent, version, "")
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development environment

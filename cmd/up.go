@@ -13,6 +13,7 @@ import (
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -90,7 +91,7 @@ func Up() *cobra.Command {
 			if namespace != "" {
 				dev.Namespace = namespace
 			}
-			analytics.TrackUp(dev.Image, VersionString)
+			analytics.TrackUp(dev.Image, config.VersionString)
 			return RunUp(dev)
 		},
 	}

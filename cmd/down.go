@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -39,7 +40,7 @@ func Down() *cobra.Command {
 				image = args[0]
 			}
 
-			analytics.TrackDown(image, VersionString)
+			analytics.TrackDown(image, config.VersionString)
 			err = runDown(dev, image, removeVolumes)
 			if err == nil {
 				log.Success("Okteto Environment deactivated")

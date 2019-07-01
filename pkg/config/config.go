@@ -12,6 +12,9 @@ const (
 	manifestFileName = "okteto.yml"
 )
 
+// VersionString the version of the cli
+var VersionString string
+
 // Config holds all the configuration values.
 type Config struct {
 	// HomePath is the path of the base folder for all the Okteto files
