@@ -103,11 +103,6 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		return nil, err
 	}
 
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
 	s := &Syncthing{
 		APIKey:           "cnd",
 		binPath:          fullPath,
@@ -123,7 +118,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		RemoteGUIAddress: fmt.Sprintf("localhost:%d", remoteGUIPort),
 		RemoteGUIPort:    remoteGUIPort,
 		RemotePort:       remotePort,
-		Source:           wd,
+		Source:           dev.DevDir,
 		Type:             "sendonly",
 	}
 

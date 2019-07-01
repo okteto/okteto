@@ -31,6 +31,7 @@ type Dev struct {
 	Forward     []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Resources   ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath     string               `json:"-" yaml:"-"`
+	DevDir      string               `json:"-" yaml:"-"`
 	Services    []Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 }
 
@@ -68,6 +69,11 @@ func Get(devPath string) (*Dev, error) {
 	}
 
 	if err := dev.validate(); err != nil {
+		return nil, err
+	}
+
+	dev.DevDir, err = filepath.Abs(filepath.Dir(devPath))
+	if err != nil {
 		return nil, err
 	}
 	dev.DevPath = filepath.Base(devPath)
