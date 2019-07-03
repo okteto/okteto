@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	oktetoLabel                = "dev.okteto.com"
 	oktetoContainer            = "okteto"
 	oktetoInitContainer        = "okteto-init"
 	oktetoMount                = "/var/okteto"
@@ -22,14 +21,15 @@ const (
 	oktetoDevAnnotation        = "dev.okteto.com/manifests"
 	oktetoDeveloperAnnotation  = "dev.okteto.com/developer"
 	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
+	oktetoVersionAnnotation    = "dev.okteto.com/version"
 
 	revisionAnnotation = "deployment.kubernetes.io/revision"
 	//OktetoVersion represents the current dev data version
 	OktetoVersion = "1.0"
-	//OktetoLabel represents the owner of the deployment
-	OktetoLabel = "dev.okteto.com"
-	//OktetoVersionLabel represents the data version of the dev
-	OktetoVersionLabel = "dev.okteto.com/version"
+	// OktetoInteractiveDevLabel indicates the interactive dev pod
+	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
+	// OktetoDetachedDevLabel indicates the detached dev pods
+	OktetoDetachedDevLabel = "detached.dev.okteto.com"
 )
 
 var (
@@ -79,62 +79,50 @@ func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
 	}
 }
 
-func translate(d *appsv1.Deployment, dev *model.Dev, nodeName string) (*appsv1.Deployment, error) {
-	manifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
+func translate(main *model.Dev, dev *model.Dev, nodeName string) error {
+	manifest := getAnnotation(dev.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if manifest != "" {
 		dOrig := &appsv1.Deployment{}
 		if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
-			return nil, err
+			return err
 		}
-		d = dOrig
+		dev.Deployment = dOrig
 	}
 
-	d.Status = appsv1.DeploymentStatus{}
-	d.ResourceVersion = ""
-	annotations := d.GetObjectMeta().GetAnnotations()
+	dev.Deployment.Status = appsv1.DeploymentStatus{}
+	dev.Deployment.ResourceVersion = ""
+	annotations := dev.Deployment.GetObjectMeta().GetAnnotations()
 	delete(annotations, revisionAnnotation)
-	d.GetObjectMeta().SetAnnotations(annotations)
-	manifestBytes, err := json.Marshal(d)
+	dev.Deployment.GetObjectMeta().SetAnnotations(annotations)
+	manifestBytes, err := json.Marshal(dev.Deployment)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	setAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
-	setAnnotation(d.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
-
-	if err := setDevListAsAnnotation(d.GetObjectMeta(), dev); err != nil {
-		return nil, err
+	setAnnotation(dev.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
+	setAnnotation(dev.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
+	setAnnotation(dev.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
+	if err := setDevListAsAnnotation(dev.Deployment.GetObjectMeta(), dev); err != nil {
+		return err
 	}
-	setLabel(d.GetObjectMeta(), OktetoVersionLabel, OktetoVersion)
-	setLabel(d.GetObjectMeta(), oktetoLabel, d.Name)
-	setLabel(d.Spec.Template.GetObjectMeta(), oktetoLabel, d.Name)
-	d.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
-	d.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
-	d.Spec.Template.Spec.NodeName = nodeName
-	d.Spec.Replicas = &devReplicas
-
-	if dev.Name == d.Name {
-		devContainer := GetDevContainer(d, dev.Container)
-		if devContainer == nil {
-			return nil, fmt.Errorf("Container '%s' not found in deployment '%s'", dev.Container, d.Name)
-		}
-		dev.Container = devContainer.Name
-
-		translateDevContainer(devContainer, dev, dev)
+	if dev.Deployment == main.Deployment {
+		setLabel(dev.Deployment.Spec.Template.GetObjectMeta(), OktetoInteractiveDevLabel, main.Name)
+	} else {
+		setLabel(dev.Deployment.Spec.Template.GetObjectMeta(), OktetoDetachedDevLabel, main.Name)
 	}
-	translateOktetoVolumes(d, dev)
+	dev.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+	dev.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
+	dev.Deployment.Spec.Template.Spec.NodeName = nodeName
+	dev.Deployment.Spec.Replicas = &devReplicas
 
-	for _, s := range dev.Services {
-		if d.Name != s.Name {
-			continue
-		}
-		devContainer := GetDevContainer(d, s.Container)
-		if devContainer == nil {
-			return nil, fmt.Errorf("Container '%s' not found in deployment '%s'", s.Container, s.Name)
-		}
-		s.Container = devContainer.Name
-		translateDevContainer(devContainer, dev, &s)
+	devContainer := GetDevContainer(dev.Deployment, dev.Container)
+	if devContainer == nil {
+		return fmt.Errorf("Container '%s' not found in deployment '%s'", dev.Container, dev.Deployment.Name)
 	}
-	return d, nil
+	dev.Container = devContainer.Name
+
+	translateDevContainer(devContainer, main, dev)
+	translateOktetoVolumes(dev.Deployment, main)
+	return nil
 }
 
 //GetDevContainer returns the dev container of a given deployment
@@ -287,7 +275,7 @@ func translateOktetoVolumes(d *appsv1.Deployment, dev *model.Dev) {
 			},
 		}
 		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v)
-		if d.Name != dev.Name {
+		if d != dev.Deployment {
 			return
 		}
 	}

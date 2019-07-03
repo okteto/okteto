@@ -86,8 +86,8 @@ func TrackExec(image, version string) {
 }
 
 // TrackDown sends a tracking event to mixpanel when the user deactivates a development environment
-func TrackDown(image, version string) {
-	track(downEvent, version, image)
+func TrackDown(version string) {
+	track(downEvent, version, "")
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
