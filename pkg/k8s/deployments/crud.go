@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,18 +13,63 @@ import (
 )
 
 //Get returns a deployment object given its name and namespace
-func Get(name, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
 	if namespace == "" {
 		return nil, fmt.Errorf("empty namespace")
 	}
 
-	d, err := c.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		log.Debugf("error while retrieving deployment %s/%s: %s", namespace, name, err)
-		return nil, err
+	var d *appsv1.Deployment
+	var err error
+
+	if len(dev.Labels) == 0 {
+		d, err = c.AppsV1().Deployments(namespace).Get(dev.Name, metav1.GetOptions{})
+		if err != nil {
+			log.Debugf("error while retrieving deployment %s/%s: %s", namespace, dev.Name, err)
+			return nil, err
+		}
+	} else {
+		deploys, err := c.AppsV1().Deployments(namespace).List(
+			metav1.ListOptions{
+				LabelSelector: dev.LabelsSelector(),
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		if len(deploys.Items) == 0 {
+			return nil, fmt.Errorf("Deployment not found")
+		}
+		if len(deploys.Items) > 1 {
+			return nil, fmt.Errorf("Found '%d' deployments instead of 1", len(deploys.Items))
+		}
+		d = &deploys.Items[0]
 	}
 
 	return d, nil
+}
+
+//GetAll fills all the deployments pointed by a dev environment
+func GetAll(dev *model.Dev, c *kubernetes.Clientset) error {
+	d, err := Get(dev, dev.Namespace, c)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+	} else {
+		dev.Deployment = d
+	}
+
+	for _, s := range dev.Services {
+		d, err := Get(s, dev.Namespace, c)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		s.Deployment = d
+	}
+	return nil
 }
 
 //Deploy creates or updates a deployment
@@ -41,24 +87,31 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 }
 
 //TraslateDevMode translates the deployment manifests to put them in dev mode
-func TraslateDevMode(deploys map[string]*appsv1.Deployment, dev *model.Dev, nodeName string) error {
-	for name, d := range deploys {
-		d, err := translate(d, dev, nodeName)
+func TraslateDevMode(dev *model.Dev, nodeName string) error {
+	err := translate(dev, dev, nodeName)
+	if err != nil {
+		return err
+	}
+
+	for i, s := range dev.Services {
+		if s.Deployment == nil {
+			return fmt.Errorf("Deployment for service number %d not found", i)
+		}
+		err := translate(dev, s, nodeName)
 		if err != nil {
 			return err
 		}
-		deploys[name] = d
 	}
 	return nil
 }
 
 //IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
-	labels := d.GetObjectMeta().GetLabels()
-	if labels == nil {
+	annotations := d.GetObjectMeta().GetAnnotations()
+	if annotations == nil {
 		return false
 	}
-	_, ok := labels[oktetoLabel]
+	_, ok := annotations[oktetoDevAnnotation]
 	return ok
 }
 
@@ -73,7 +126,7 @@ func IsAutoCreate(d *appsv1.Deployment) bool {
 }
 
 // DevModeOff deactivates dev mode for d
-func DevModeOff(d *appsv1.Deployment, dev *model.Dev, image string, c *kubernetes.Clientset) error {
+func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if len(dManifest) == 0 {
 		log.Infof("%s/%s is not an okteto environment", d.Namespace, d.Name)
@@ -83,10 +136,6 @@ func DevModeOff(d *appsv1.Deployment, dev *model.Dev, image string, c *kubernete
 	dOrig := &appsv1.Deployment{}
 	if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
 		return fmt.Errorf("malformed manifest: %s", err)
-	}
-
-	if image != "" {
-		dOrig.Spec.Template.Spec.Containers[0].Image = image
 	}
 
 	dOrig.ResourceVersion = ""

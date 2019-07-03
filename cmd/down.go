@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
@@ -35,13 +34,8 @@ func Down() *cobra.Command {
 				dev.Namespace = namespace
 			}
 
-			image := ""
-			if len(args) > 0 {
-				image = args[0]
-			}
-
-			analytics.TrackDown(image, config.VersionString)
-			err = runDown(dev, image, removeVolumes)
+			analytics.TrackDown(config.VersionString)
+			err = runDown(dev, removeVolumes)
 			if err == nil {
 				log.Success("Okteto Environment deactivated")
 				log.Println()
@@ -58,7 +52,7 @@ func Down() *cobra.Command {
 	return cmd
 }
 
-func runDown(dev *model.Dev, image string, removeVolumes bool) error {
+func runDown(dev *model.Dev, removeVolumes bool) error {
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err
@@ -71,29 +65,29 @@ func runDown(dev *model.Dev, image string, removeVolumes bool) error {
 	progress.start()
 	defer progress.stop()
 
-	d, err := deployments.Get(dev.Name, dev.Namespace, client)
-	if err == nil {
-		err = deployments.DevModeOff(d, dev, image, client)
-		if err != nil {
-			return err
-		}
-	} else {
-		if !errors.IsNotFound(err) {
-			return err
-		}
+	if err := deployments.GetAll(dev, client); err != nil {
+		return err
 	}
-	for _, s := range dev.Services {
-		d, err := deployments.Get(s.Name, dev.Namespace, client)
-		if err == nil {
-			err = deployments.DevModeOff(d, &s, "", client)
-			if err != nil {
-				return err
-			}
-		} else {
-			if !errors.IsNotFound(err) {
-				return err
-			}
+	seen := map[string]bool{}
+
+	if dev.Deployment != nil {
+		if err := deployments.DevModeOff(dev.Deployment, client); err != nil {
+			return err
 		}
+		seen[dev.Deployment.Name] = true
+	}
+
+	for _, s := range dev.Services {
+		if s.Deployment == nil {
+			continue
+		}
+		if _, ok := seen[s.Deployment.Name]; ok {
+			continue
+		}
+		if err := deployments.DevModeOff(s.Deployment, client); err != nil {
+			return err
+		}
+		seen[s.Deployment.Name] = true
 	}
 
 	if removeVolumes {

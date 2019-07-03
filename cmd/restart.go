@@ -13,7 +13,6 @@ import (
 //Restart restarts the pods of a given dev mode deployment
 func Restart() *cobra.Command {
 	var namespace string
-	// get the name from it
 	var devPath string
 
 	cmd := &cobra.Command{
@@ -53,15 +52,8 @@ func executeRestart(dev *model.Dev) error {
 		dev.Namespace = namespace
 	}
 
-	restarted := map[string]bool{}
-	for _, s := range dev.Services {
-		if _, ok := restarted[s.Name]; ok {
-			continue
-		}
-		if err := pods.Restart(s.Name, dev.Namespace, client); err != nil {
-			return err
-		}
-		restarted[s.Name] = true
+	if err := pods.Restart(dev, client); err != nil {
+		return err
 	}
 
 	return nil

@@ -18,8 +18,11 @@ import (
 )
 
 const (
-	// OktetoDevLabel indicates a dev pod
-	OktetoDevLabel = "dev.okteto.com"
+	// OktetoInteractiveDevLabel indicates the interactive dev pod
+	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
+
+	// OktetoDetachedDevLabel indicates the detached dev pods
+	OktetoDetachedDevLabel = "detached.dev.okteto.com"
 
 	// OktetoSyncLabel indicates a synthing pod
 	OktetoSyncLabel = "syncthing.okteto.com"
@@ -51,7 +54,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.
 
 		if tries%10 == 0 && len(pods.Items) == 0 {
 			// every 30s check if the deployment failed
-			if err := isDeploymentFailed(dev.Namespace, dev.Name, c); err != nil {
+			if err := isDeploymentFailed(dev, c); err != nil {
 				return nil, err
 			}
 		}
@@ -98,8 +101,8 @@ func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.
 	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 }
 
-func isDeploymentFailed(namespace, name string, c *kubernetes.Clientset) error {
-	d, err := deployments.Get(name, namespace, c)
+func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {
+	d, err := deployments.Get(dev, dev.Namespace, c)
 	if err != nil {
 		log.Infof("failed to get deployment information: %s", err)
 		return nil
@@ -119,10 +122,10 @@ func isDeploymentFailed(namespace, name string, c *kubernetes.Clientset) error {
 }
 
 // Restart restarts the pods of a deployment
-func Restart(name, namespace string, c *kubernetes.Clientset) error {
-	pods, err := c.CoreV1().Pods(namespace).List(
+func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
+	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", OktetoDevLabel, name),
+			LabelSelector: fmt.Sprintf("%s=%s", OktetoDetachedDevLabel, dev.Name),
 		},
 	)
 	if err != nil {
@@ -132,10 +135,10 @@ func Restart(name, namespace string, c *kubernetes.Clientset) error {
 
 	for _, pod := range pods.Items {
 		log.Information("Restarting pod '%s'", pod.Name)
-		err := c.CoreV1().Pods(namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+		err := c.CoreV1().Pods(dev.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
-				log.Infof("service '%s' was already deleted.", name)
+				log.Infof("pod '%s' was already deleted.", pod.Name)
 				return nil
 			}
 			return fmt.Errorf("error deleting kubernetes service: %s", err)

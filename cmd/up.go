@@ -154,7 +154,7 @@ func (up *UpContext) Activate() {
 		up.Running = make(chan error, 1)
 		up.ErrChan = make(chan error, 1)
 
-		d, err := deployments.Get(up.Dev.Name, up.Dev.Namespace, up.Client)
+		d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
 		create := false
 		if err != nil {
 			if !errors.IsNotFound(err) || retry {
@@ -162,7 +162,13 @@ func (up *UpContext) Activate() {
 				return
 			}
 
-			deploy := askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name))
+			var deploy bool
+			if len(up.Dev.Labels) == 0 {
+				deploy = askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name))
+			} else {
+				up.Exit <- err
+				return
+			}
 			if !deploy {
 				up.Exit <- fmt.Errorf("deployment %s not found [current context: %s]", up.Dev.Name, up.Dev.Namespace)
 				return
@@ -320,31 +326,29 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 	progress.start()
 	defer progress.stop()
 
-	deploys := map[string]*appsv1.Deployment{up.Dev.Name: d}
-
-	for _, s := range up.Dev.Services {
-		if _, ok := deploys[s.Name]; ok {
-			continue
-		}
-		d, err := deployments.Get(s.Name, up.Dev.Namespace, up.Client)
-		if err != nil {
-			return err
-		}
-		deploys[s.Name] = d
+	err := deployments.GetAll(up.Dev, up.Client)
+	if err != nil {
+		return err
 	}
+	up.Dev.Deployment = d
 
-	if err := deployments.TraslateDevMode(deploys, up.Dev, up.Node); err != nil {
+	if err := deployments.TraslateDevMode(up.Dev, up.Node); err != nil {
 		return err
 	}
 
-	for _, d := range deploys {
-		forceCreate := false
-		if d.Name == up.Dev.Name {
-			forceCreate = create
+	if err := deployments.Deploy(d, create, up.Client); err != nil {
+		return err
+	}
+	seen := map[string]bool{up.Dev.Deployment.Name: true}
+
+	for _, s := range up.Dev.Services {
+		if _, ok := seen[s.Deployment.Name]; ok {
+			continue
 		}
-		if err := deployments.Deploy(d, forceCreate, up.Client); err != nil {
+		if err := deployments.Deploy(s.Deployment, false, up.Client); err != nil {
 			return err
 		}
+		seen[s.Deployment.Name] = true
 	}
 
 	if create {
@@ -353,7 +357,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		}
 	}
 
-	p, err := pods.GetDevPod(up.Context, up.Dev, pods.OktetoDevLabel, up.Client)
+	p, err := pods.GetDevPod(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client)
 	if err != nil {
 		return err
 	}

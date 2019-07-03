@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	yaml "gopkg.in/yaml.v2"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
@@ -19,6 +20,8 @@ const (
 //Dev represents a cloud native development environment
 type Dev struct {
 	Name        string               `json:"name" yaml:"name"`
+	Deployment  *appsv1.Deployment   `json:"-" yaml:"-"`
+	Labels      map[string]string    `json:"labels" yaml:"labels"`
 	Namespace   string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container   string               `json:"container,omitempty" yaml:"container,omitempty"`
 	Image       string               `json:"image,omitempty" yaml:"image,omitempty"`
@@ -32,7 +35,7 @@ type Dev struct {
 	Resources   ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath     string               `json:"-" yaml:"-"`
 	DevDir      string               `json:"-" yaml:"-"`
-	Services    []Dev                `json:"services,omitempty" yaml:"services,omitempty"`
+	Services    []*Dev               `json:"services,omitempty" yaml:"services,omitempty"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
@@ -91,7 +94,7 @@ func read(bytes []byte) (*Dev, error) {
 			Limits:   ResourceList{},
 			Requests: ResourceList{},
 		},
-		Services: make([]Dev, 0),
+		Services: make([]*Dev, 0),
 	}
 	if err := yaml.Unmarshal(bytes, dev); err != nil {
 		return nil, err
@@ -113,17 +116,27 @@ func (dev *Dev) setDefaults() error {
 	if dev.WorkDir != "" && dev.MountPath == "" {
 		dev.MountPath = dev.WorkDir
 	}
-	for i, s := range dev.Services {
+	if dev.Labels == nil {
+		dev.Labels = map[string]string{}
+	}
+	for _, s := range dev.Services {
 		if s.MountPath == "" && s.WorkDir == "" {
-			dev.Services[i].MountPath = "/okteto"
-			dev.Services[i].WorkDir = "/okteto"
+			s.MountPath = "/okteto"
+			s.WorkDir = "/okteto"
 		}
 		if s.WorkDir != "" && s.MountPath == "" {
-			dev.Services[i].MountPath = s.WorkDir
+			s.MountPath = s.WorkDir
 		}
-		dev.Services[i].Forward = make([]Forward, 0)
-		dev.Services[i].Volumes = make([]string, 0)
-		dev.Services[i].Services = make([]Dev, 0)
+		if s.Labels == nil {
+			s.Labels = map[string]string{}
+		}
+		if s.Name != "" && len(s.Labels) > 0 {
+			return fmt.Errorf("'name' and 'labels' cannot be defined at the same time for service '%s'", s.Name)
+		}
+		s.Namespace = ""
+		s.Forward = make([]Forward, 0)
+		s.Volumes = make([]string, 0)
+		s.Services = make([]*Dev, 0)
 	}
 	return nil
 }
@@ -160,4 +173,17 @@ func (dev *Dev) GetVolumeName(i int) string {
 	volumeName := dev.GetVolumeTemplateName(i)
 	podName := dev.GetPodName()
 	return fmt.Sprintf("%s-%s", volumeName, podName)
+}
+
+// LabelsSelector returns the labels of a Deployment as a k8s selector
+func (dev *Dev) LabelsSelector() string {
+	labels := ""
+	for k := range dev.Labels {
+		if labels == "" {
+			labels = fmt.Sprintf("%s=%s", k, dev.Labels[k])
+		} else {
+			labels = fmt.Sprintf("%s, %s=%s", labels, k, dev.Labels[k])
+		}
+	}
+	return labels
 }
