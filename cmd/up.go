@@ -205,7 +205,7 @@ func (up *UpContext) Activate() {
 		}
 		retry = true
 
-		printDisplayContext("Okteto Environment activated", up.Dev.Namespace, up.Dev.Name, up.Dev.Forward)
+		printDisplayContext("Okteto Environment activated", up.Dev)
 
 		go func() {
 			up.Running <- up.runCommand()
@@ -440,14 +440,14 @@ func (up *UpContext) shutdown() {
 	}
 }
 
-func printDisplayContext(message, namespace, name string, ports []model.Forward) {
+func printDisplayContext(message string, dev *model.Dev) {
 	log.Success(message)
-	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), namespace))
-	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), name))
-	if len(ports) > 0 {
-		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), ports[0].Local, ports[0].Remote))
-		for i := 1; i < len(ports); i++ {
-			log.Println(fmt.Sprintf("               %d -> %d", ports[i].Local, ports[i].Remote))
+	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
+	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Deployment.Name))
+	if len(dev.Forward) > 0 {
+		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
+		for i := 1; i < len(dev.Forward); i++ {
+			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
 		}
 	}
 	fmt.Println()
