@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -461,12 +462,15 @@ func checkWatchesConfiguration() {
 	w := "/proc/sys/fs/inotify/max_user_watches"
 	f, err := ioutil.ReadFile(w)
 	if err != nil {
-		log.Errorf("Fail to read %s: %s", w, err)
+		log.Infof("Fail to read %s: %s", w, err)
+		return
 	}
 
-	c, err := strconv.Atoi(string(f))
+	l := strings.TrimSuffix(string(f), "\n")
+	c, err := strconv.Atoi(l)
 	if err != nil {
-		log.Errorf("Fail to parse the value of  max_user_watches: %s", err)
+		log.Infof("Fail to parse the value of  max_user_watches: %s", err)
+		return
 	}
 
 	log.Debugf("max_user_watches = %d", c)
