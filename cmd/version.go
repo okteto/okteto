@@ -36,7 +36,11 @@ func upgradeAvailable() string {
 	}
 
 	defer resp.Body.Close()
-	v := resp.Header.Get("x-amz-meta-version")
+	v := resp.Header.Get("x-goog-meta-version")
+	if len(v) == 0 {
+		v = resp.Header.Get("x-amz-meta-version")
+	}
+
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
 		if err != nil {

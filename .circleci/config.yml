@@ -1,6 +1,4 @@
 version: 2.1
-orbs:
-  aws-s3: circleci/aws-s3@1.0.6
 jobs:
   build:
     docker:
@@ -39,53 +37,20 @@ jobs:
 
   release:
     docker:
-      - image: circleci/golang:1.12
+      - image: google/cloud-sdk
     steps:
-      - checkout
       - attach_workspace:
           at: ./artifacts
-      - aws-s3/sync:
-          from: ./artifacts/bin
-          to: "s3://downloads.okteto.com/cli"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_TAG} \
-            --cache-control "max-age=86400" \
-            --exclude "*.*.*/" \
-      - aws-s3/sync:
-          from: ./artifacts/bin
-          to: "s3://downloads.okteto.com/cli/${CIRCLE_TAG}"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_TAG} \
-            --cache-control "max-age=86400" \
-          overwrite: false
-      - aws-s3/copy:
-          from: "./artifacts/bin/okteto-Darwin-x86_64"
-          to: "s3://downloads.okteto.com/cloud/cli/okteto-Darwin-x86_64"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_TAG} \
-            --cache-control "max-age=86400"
-      - aws-s3/copy:
-          from: "./artifacts/bin/okteto-Darwin-x86_64"
-          to: "s3://downloads.okteto.com/cli/okteto-darwin-amd64"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_TAG} \
-            --cache-control "max-age=86400"
+      - run: |
+          echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
+          gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+          gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+          gsutil -h x-goog-meta-version:${TAG} rsync ./artifacts/bin gs://downloads.okteto.com/cli
+          gsutil -h x-goog-meta-version:${TAG} rsync ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
+          
+          # legacy
+          gsutil -h x-goog-meta-version:${TAG} cp ./artifacts/bin/okteto-Darwin-x86_64 gs://downloads.okteto.com/cli/okteto-Darwin-x86_64
+          gsutil -h x-goog-meta-version:${TAG} cp ./artifacts/bin/okteto-Darwin-x86_64 gs://downloads.okteto.com/cli/cli/okteto-darwin-amd64
       - run:
           name: "Publish Release on GitHub"
           command: |
@@ -96,7 +61,17 @@ jobs:
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             bash ./update_homebrew_formula.sh $CIRCLE_TAG $GITHUB_TOKEN $sha 0
-
+  release-master:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - attach_workspace:
+          at: ./artifacts
+      - run: |
+          echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
+          gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+          gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+          gsutil -h x-goog-meta-version:${CIRCLE_SHA1} rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/master
 workflows:
   version: 2
   build-release:
@@ -119,4 +94,10 @@ workflows:
               only: /^\d+\.\d+\.\d+$/
             branches:
               ignore: /.*/
+      - release-master:
+          requires:
+            - build
+          filters:
+            branches:
+              only: publish-to-gcp
       
