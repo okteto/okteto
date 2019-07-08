@@ -337,7 +337,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		return err
 	}
 
-	if err := deployments.Deploy(d, create, up.Client); err != nil {
+	if err := deployments.Deploy(up.Dev.Deployment, create, up.Client); err != nil {
 		return err
 	}
 	seen := map[string]bool{up.Dev.Deployment.Name: true}
