@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"runtime"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/okteto/okteto/pkg/config"
@@ -29,24 +31,34 @@ func upgradeAvailable() string {
 		return ""
 	}
 
-	resp, err := http.Head("https://downloads.okteto.com/cli/okteto-Darwin-x86_64")
+	resp, err := http.Get("https://downloads.okteto.com/cli/latest")
 	if err != nil {
-		log.Errorf("failed to get latest version: %s", err)
+		log.Infof("failed to get latest version: %s", err)
+		return ""
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Infof("failed to get latest version: %d", resp.StatusCode)
 		return ""
 	}
 
 	defer resp.Body.Close()
-	v := resp.Header.Get("x-goog-meta-version")
-	if len(v) == 0 {
-		v = resp.Header.Get("x-amz-meta-version")
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Infof("failed to read the latest version response: %s", err)
+		return ""
 	}
 
+	v := string(bodyBytes)
+	v = strings.TrimSuffix(v, "\n")
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
 		if err != nil {
-			log.Errorf("failed to parse latest version: %s", err)
+			log.Infof("failed to parse latest version '%s': %s", v, err)
 			return ""
 		}
+
+		log.Infof("latest version is %s", latest.String())
 
 		if latest.GreaterThan(current) {
 			return v

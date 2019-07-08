@@ -45,8 +45,12 @@ jobs:
           echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
           gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
           gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
-          gsutil -h x-goog-meta-version:${TAG} rsync ./artifacts/bin gs://downloads.okteto.com/cli
-          gsutil -h x-goog-meta-version:${TAG} rsync ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
+          
+          gsutil -m -h x-goog-meta-version:${TAG} rsync ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
+          
+          echo "${TAG}" > latest
+          gsutil -m -h x-goog-meta-version:${TAG} rsync ./artifacts/bin gs://downloads.okteto.com/cli
+        
           
           # legacy
           gsutil -h x-goog-meta-version:${TAG} cp ./artifacts/bin/okteto-Darwin-x86_64 gs://downloads.okteto.com/cli/okteto-Darwin-x86_64
