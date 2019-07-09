@@ -15,7 +15,6 @@ import (
 
 const (
 	oktetoContainer            = "okteto"
-	oktetoInitContainer        = "okteto-init"
 	oktetoMount                = "/var/okteto"
 	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
 	oktetoDevAnnotation        = "dev.okteto.com/manifests"

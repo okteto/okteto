@@ -10,7 +10,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	sync "github.com/okteto/okteto/pkg/syncthing/k8s"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,7 +67,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.
 			} else {
 				log.Debugf("pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.Phase)
 				for _, status := range pod.Status.InitContainerStatuses {
-					if status.Name == sync.OktetoInitContainer {
+					if status.Name == model.OktetoInitContainer {
 						if status.State.Terminated != nil && status.State.Terminated.ExitCode != 0 {
 							return nil, fmt.Errorf("Error initializing okteto volume. This is probably because your development image is not root. Please, add securityContext.runAsUser and securityContext.fsGroup to your deployment manifest")
 						}
@@ -99,6 +98,22 @@ func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.
 
 	log.Debugf("dev pod wasn't running after %d seconds", maxRetries)
 	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
+}
+
+// GetSyncNode returns the sync pod node
+func GetSyncNode(dev *model.Dev, c *kubernetes.Clientset) string{
+	pods, err := c.CoreV1().Pods(dev.Namespace).List(
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", OktetoSyncLabel, dev.Name),
+		},
+	)
+	if err != nil {
+		return ""
+	}
+	if len(pods.Items) > 0 {
+		return pods.Items[0].Spec.NodeName
+	}
+	return ""
 }
 
 func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {
