@@ -44,12 +44,30 @@ func upgradeAvailable() string {
 			return ""
 		}
 
-		if latest.GreaterThan(current) {
+		// check if it's a minor or major change, we don't notify on revision
+		if shouldNotify(latest, current) {
 			return v
 		}
 	}
 
 	return ""
+}
+
+func shouldNotify(latest, current *semver.Version) bool {
+	if current.GreaterThan(latest) {
+		return false
+	}
+
+	// check if it's a minor or major change, we don't notify on patch
+	if latest.Major() > current.Major() {
+		return true
+	}
+
+	if latest.Minor() > current.Minor() {
+		return true
+	}
+
+	return false
 }
 
 func getUpgradeCommand() string {
