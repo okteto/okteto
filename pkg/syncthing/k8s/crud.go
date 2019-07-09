@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
@@ -20,6 +21,7 @@ func Deploy(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container, client *ku
 	ss := translate(dev, d, c)
 
 	if exists(ss, client) {
+		ss.Spec.Template.Spec.NodeName = pods.GetSyncNode(dev, client)
 		if err := update(ss, client); err != nil {
 			if strings.Contains(err.Error(), "updates to statefulset spec for fields other than") {
 				return fmt.Errorf("You have done an incompatible change with your previous okteto configuration. Run 'okteto down -v' and execute 'okteto up' again")

@@ -20,9 +20,7 @@ const (
 	syncGUIPort        = 8384
 	oktetoContainer    = "okteto"
 	oktetoSecretVolume = "okteto-secret"
-	//OktetoInitContainer name of the okteto init container
-	OktetoInitContainer = "okteto-init"
-	oktetoMount         = "/var/okteto"
+	oktetoMount        = "/var/okteto"
 )
 
 var (
@@ -122,7 +120,7 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 	source := filepath.Join(dev.WorkDir, "*")
 
 	c := &apiv1.Container{
-		Name:    OktetoInitContainer,
+		Name:    model.OktetoInitContainer,
 		Image:   dev.Image,
 		Command: []string{"sh", "-c", fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || cp -Rf %s /okteto/init); touch /okteto/init/%s", source, dev.DevPath)},
 		Resources: apiv1.ResourceRequirements{

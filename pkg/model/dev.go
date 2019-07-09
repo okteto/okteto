@@ -15,6 +15,9 @@ const (
 	oktetoPodNameTemplate     = "%s-0"
 	oktetoStatefulSetTemplate = "okteto-%s"
 	oktetoVolumeNameTemplate  = "pvc-%d"
+
+	//OktetoInitContainer name of the okteto init container
+	OktetoInitContainer = "okteto-init"
 )
 
 //Dev represents a cloud native development environment
