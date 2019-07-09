@@ -26,6 +26,8 @@ const (
 	revisionAnnotation = "deployment.kubernetes.io/revision"
 	//OktetoVersion represents the current dev data version
 	OktetoVersion = "1.0"
+	// OktetoDevLabel indicates the dev pod
+	OktetoDevLabel = "dev.okteto.com"
 	// OktetoInteractiveDevLabel indicates the interactive dev pod
 	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
 	// OktetoDetachedDevLabel indicates the detached dev pods
@@ -101,6 +103,7 @@ func translate(main *model.Dev, dev *model.Dev, nodeName string) error {
 	setAnnotation(dev.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 	setAnnotation(dev.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
 	setAnnotation(dev.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
+	setLabel(dev.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
 	if err := setDevListAsAnnotation(dev.Deployment.GetObjectMeta(), dev); err != nil {
 		return err
 	}
