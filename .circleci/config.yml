@@ -34,7 +34,7 @@ jobs:
       - attach_workspace:
           at: ./artifacts
       - run: 
-          name: make integration
+          name: integration tests
           command: make integration
           environment:
             OKTETO_USER: cindylopez

@@ -25,7 +25,7 @@ test:
 
 .PHONY: integration
 integration:
-	 go test github.com/okteto/okteto/test/. -tags=integration
+	 go test github.com/okteto/okteto/integration -tags=integration -v
 
 .PHONY: build
 build:

@@ -1,6 +1,6 @@
 // +build integration
 
-package test
+package integration
 
 import (
 	"fmt"
