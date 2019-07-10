@@ -23,7 +23,26 @@ jobs:
       - store_artifacts:
           path: bin
           destination: binaries
-  
+  integration:
+     docker:
+      - image: okteto/desk:0.1.4
+      steps:
+      - checkout
+      - restore_cache: 
+          keys:
+            - v1-pkg-cache
+      - attach_workspace:
+          at: ./artifacts
+      - run: 
+          name: make integration
+          command: make integration
+          environment:
+            OKTETO_USER: cindylopez
+            OKTETO_PATH: ./artifacts/bin/okteto-Linux-x86_64
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - ~/.cache/go-build
   mock-publish-github-release:
     docker:
       - image: circleci/golang:1.12
@@ -105,6 +124,12 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - integration:
+          requires:
+            - build
+          filters:
+            branch:
+              only: feature/integration-test
       - mock-publish-github-release:
           requires:
             - build
