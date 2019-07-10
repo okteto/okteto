@@ -24,9 +24,9 @@ jobs:
           path: bin
           destination: binaries
   integration:
-     docker:
+    docker:
       - image: okteto/desk:0.1.4
-      steps:
+    steps:
       - checkout
       - restore_cache: 
           keys:
@@ -128,7 +128,7 @@ workflows:
           requires:
             - build
           filters:
-            branch:
+            branches:
               only: feature/integration-test
       - mock-publish-github-release:
           requires:
