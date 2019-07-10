@@ -35,10 +35,10 @@ jobs:
           at: ./artifacts
       - run: 
           name: integration tests
-          command: make integration
-          environment:
-            OKTETO_USER: cindylopez
-            OKTETO_PATH: ./artifacts/bin/okteto-Linux-x86_64
+          command: |
+            export OKTETO_USER=cindylopez
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            make integration
       - save_cache:
           key: v1-pkg-cache
           paths:

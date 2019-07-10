@@ -6,6 +6,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/linguist"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -41,7 +42,7 @@ var (
 //GevDevSandbox returns a deployment sandbox
 func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
 	if dev.Image == "" {
-		dev.Image = "okteto/desk:0.1.3"
+		dev.Image = linguist.DefaultImage
 	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
