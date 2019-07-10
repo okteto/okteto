@@ -81,50 +81,51 @@ func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
 	}
 }
 
-func translate(main *model.Dev, dev *model.Dev, nodeName string) error {
-	manifest := getAnnotation(dev.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation)
+func translate(t *model.Translation) error {
+	manifest := getAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if manifest != "" {
 		dOrig := &appsv1.Deployment{}
 		if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
 			return err
 		}
-		dev.Deployment = dOrig
+		t.Deployment = dOrig
 	}
 
-	dev.Deployment.Status = appsv1.DeploymentStatus{}
-	dev.Deployment.ResourceVersion = ""
-	annotations := dev.Deployment.GetObjectMeta().GetAnnotations()
+	t.Deployment.Status = appsv1.DeploymentStatus{}
+	t.Deployment.ResourceVersion = ""
+	annotations := t.Deployment.GetObjectMeta().GetAnnotations()
 	delete(annotations, revisionAnnotation)
-	dev.Deployment.GetObjectMeta().SetAnnotations(annotations)
-	manifestBytes, err := json.Marshal(dev.Deployment)
+	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
+	manifestBytes, err := json.Marshal(t.Deployment)
 	if err != nil {
 		return err
 	}
-	setAnnotation(dev.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
-	setAnnotation(dev.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
-	setAnnotation(dev.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
-	setLabel(dev.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
-	if err := setDevListAsAnnotation(dev.Deployment.GetObjectMeta(), dev); err != nil {
-		return err
-	}
-	if dev.Deployment == main.Deployment {
-		setLabel(dev.Deployment.Spec.Template.GetObjectMeta(), OktetoInteractiveDevLabel, main.Name)
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
+	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
+	// if err := setDevListAsAnnotation(t.Deployment.GetObjectMeta(), t.Rules); err != nil {
+	// 	return err
+	// }
+	if t.Interactive {
+		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoInteractiveDevLabel, t.Name)
 	} else {
-		setLabel(dev.Deployment.Spec.Template.GetObjectMeta(), OktetoDetachedDevLabel, main.Name)
+		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoDetachedDevLabel, t.Name)
 	}
-	dev.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
-	dev.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
-	dev.Deployment.Spec.Template.Spec.NodeName = nodeName
-	dev.Deployment.Spec.Replicas = &devReplicas
+	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
+	t.Deployment.Spec.Template.Spec.NodeName = t.Rules[0].Node
+	t.Deployment.Spec.Replicas = &devReplicas
 
-	devContainer := GetDevContainer(dev.Deployment, dev.Container)
-	if devContainer == nil {
-		return fmt.Errorf("Container '%s' not found in deployment '%s'", dev.Container, dev.Deployment.Name)
+	for _, rule := range t.Rules {
+		devContainer := GetDevContainer(t.Deployment, rule.Container)
+		if devContainer == nil {
+			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.Deployment.Name)
+		}
+		rule.Container = devContainer.Name
+		translateDevContainer(devContainer, rule)
+		translateOktetoVolumes(t.Deployment, rule)
 	}
-	dev.Container = devContainer.Name
-
-	translateDevContainer(devContainer, main, dev)
-	translateOktetoVolumes(dev.Deployment, main)
 	return nil
 }
 
@@ -143,29 +144,24 @@ func GetDevContainer(d *appsv1.Deployment, name string) *apiv1.Container {
 	return nil
 }
 
-func translateDevContainer(c *apiv1.Container, main *model.Dev, dev *model.Dev) {
-	if len(dev.Image) == 0 {
-		dev.Image = c.Image
+func translateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
+	if len(rule.Image) == 0 {
+		rule.Image = c.Image
 	}
 
-	c.Image = dev.Image
-	if dev.WorkDir != "" {
-		c.WorkingDir = dev.WorkDir
+	c.Image = rule.Image
+	if rule.WorkDir != "" {
+		c.WorkingDir = rule.WorkDir
 	}
 
-	if main == dev {
-		c.Command = []string{"tail"}
-		c.Args = []string{"-f", "/dev/null"}
-		c.ReadinessProbe = nil
-		c.LivenessProbe = nil
-	} else if len(dev.Command) > 0 {
-		c.Command = dev.Command
-		c.Args = []string{}
-	}
+	c.Command = rule.Command
+	c.Args = rule.Args
+	c.ReadinessProbe = nil
+	c.LivenessProbe = nil
 
-	translateResources(c, dev.Resources)
-	translateEnvVars(c, dev.Environment)
-	translateVolumeMounts(c, main, dev)
+	translateResources(c, rule.Resources)
+	translateEnvVars(c, rule.Environment)
+	translateVolumeMounts(c, rule)
 }
 
 func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
@@ -206,36 +202,17 @@ func translateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {
 	}
 }
 
-func translateVolumeMounts(c *apiv1.Container, main *model.Dev, dev *model.Dev) {
+func translateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 	if c.VolumeMounts == nil {
 		c.VolumeMounts = []apiv1.VolumeMount{}
 	}
 
-	found := false
-	for i, v := range c.VolumeMounts {
-		if v.Name == main.GetVolumeName(0) {
-			c.VolumeMounts[i].MountPath = dev.MountPath
-			c.VolumeMounts[i].SubPath = dev.SubPath
-			found = true
-			break
-		}
-	}
-	if !found {
-		c.VolumeMounts = append(
-			c.VolumeMounts,
-			apiv1.VolumeMount{
-				Name:      main.GetVolumeName(0),
-				MountPath: dev.MountPath,
-				SubPath:   dev.SubPath,
-			},
-		)
-	}
-
-	for i, v := range dev.Volumes {
+	for _, v := range rule.Volumes {
 		found := false
 		for j, vm := range c.VolumeMounts {
-			if vm.Name == main.GetVolumeName(i+1) {
-				c.VolumeMounts[j].MountPath = v
+			if vm.Name == v.Name {
+				c.VolumeMounts[j].MountPath = v.MountPath
+				c.VolumeMounts[j].SubPath = v.SubPath
 				found = true
 				break
 			}
@@ -246,21 +223,22 @@ func translateVolumeMounts(c *apiv1.Container, main *model.Dev, dev *model.Dev) 
 		c.VolumeMounts = append(
 			c.VolumeMounts,
 			apiv1.VolumeMount{
-				Name:      main.GetVolumeName(i + 1),
-				MountPath: v,
+				Name:      v.Name,
+				MountPath: v.MountPath,
+				SubPath:   v.SubPath,
 			},
 		)
 	}
 }
 
-func translateOktetoVolumes(d *appsv1.Deployment, dev *model.Dev) {
+func translateOktetoVolumes(d *appsv1.Deployment, rule *model.TranslationRule) {
 	if d.Spec.Template.Spec.Volumes == nil {
 		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
 	}
-	for i := 0; i <= len(dev.Volumes); i++ {
+	for _, v := range rule.Volumes {
 		found := false
-		for _, v := range d.Spec.Template.Spec.Volumes {
-			if v.Name == dev.GetVolumeName(i) {
+		for _, vm := range d.Spec.Template.Spec.Volumes {
+			if vm.Name == v.Name {
 				found = true
 				break
 			}
@@ -269,17 +247,14 @@ func translateOktetoVolumes(d *appsv1.Deployment, dev *model.Dev) {
 			continue
 		}
 		v := apiv1.Volume{
-			Name: dev.GetVolumeName(i),
+			Name: v.Name,
 			VolumeSource: apiv1.VolumeSource{
 				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: dev.GetVolumeName(i),
+					ClaimName: v.Name,
 					ReadOnly:  false,
 				},
 			},
 		}
 		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v)
-		if d != dev.Deployment {
-			return
-		}
 	}
 }

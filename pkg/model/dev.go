@@ -32,8 +32,7 @@ var (
 //Dev represents a cloud native development environment
 type Dev struct {
 	Name        string               `json:"name" yaml:"name"`
-	Deployment  *appsv1.Deployment   `json:"-" yaml:"-"`
-	Labels      map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels      map[string]string    `json:"labels" yaml:"labels"`
 	Namespace   string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container   string               `json:"container,omitempty" yaml:"container,omitempty"`
 	Image       string               `json:"image,omitempty" yaml:"image,omitempty"`
@@ -207,4 +206,43 @@ func (dev *Dev) LabelsSelector() string {
 		}
 	}
 	return labels
+}
+
+// ToTranslationRule translates a dev struct into a translation rule
+func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName string) *TranslationRule {
+	rule := &TranslationRule{
+		Node:        nodeName,
+		Container:   dev.Container,
+		Image:       dev.Image,
+		Environment: dev.Environment,
+		Command:     dev.Command,
+		WorkDir:     dev.WorkDir,
+		Volumes: []VolumeMount{
+			VolumeMount{
+				Name:      main.GetVolumeName(0),
+				MountPath: dev.MountPath,
+				SubPath:   dev.SubPath,
+			},
+		},
+		Resources: dev.Resources,
+	}
+
+	if main == dev {
+		rule.Command = []string{"tail"}
+		rule.Args = []string{"-f", "/dev/null"}
+	} else if len(dev.Command) > 0 {
+		rule.Command = dev.Command
+		rule.Args = []string{}
+	}
+
+	for i, v := range dev.Volumes {
+		rule.Volumes = append(
+			rule.Volumes,
+			VolumeMount{
+				Name:      main.GetVolumeName(i + 1),
+				MountPath: v,
+			},
+		)
+	}
+	return rule
 }

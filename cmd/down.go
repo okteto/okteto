@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
@@ -65,29 +66,22 @@ func runDown(dev *model.Dev, removeVolumes bool) error {
 	progress.start()
 	defer progress.stop()
 
-	if err := deployments.GetAll(dev, client); err != nil {
+	d, err := deployments.Get(dev, dev.Namespace, client)
+	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
-	seen := map[string]bool{}
-
-	if dev.Deployment != nil {
-		if err := deployments.DevModeOff(dev.Deployment, client); err != nil {
-			return err
-		}
-		seen[dev.Deployment.Name] = true
+	tr, err := deployments.GetTranslations(dev, d, "", client)
+	if err != nil {
+		return err
 	}
 
-	for _, s := range dev.Services {
-		if s.Deployment == nil {
+	for _, t := range tr {
+		if t.Deployment == nil {
 			continue
 		}
-		if _, ok := seen[s.Deployment.Name]; ok {
-			continue
-		}
-		if err := deployments.DevModeOff(s.Deployment, client); err != nil {
+		if err := deployments.DevModeOff(t.Deployment, client); err != nil {
 			return err
 		}
-		seen[s.Deployment.Name] = true
 	}
 
 	if removeVolumes {
