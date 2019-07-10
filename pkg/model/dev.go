@@ -26,7 +26,7 @@ var (
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
-	ValidKubeNameRegex = regexp.MustCompile(`[^a-zA-Z0-9\-]+`)
+	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
 )
 
 //Dev represents a cloud native development environment
