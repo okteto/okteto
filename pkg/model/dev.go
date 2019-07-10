@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,6 +20,13 @@ const (
 
 	//OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"
+)
+
+var (
+	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
+
+	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
+	ValidKubeNameRegex = regexp.MustCompile(`[^a-zA-Z0-9\-]+`)
 )
 
 //Dev represents a cloud native development environment
@@ -148,6 +157,15 @@ func (dev *Dev) validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("Name cannot be empty")
 	}
+
+	if ValidKubeNameRegex.MatchString(dev.Name) {
+		return errBadName
+	}
+
+	if strings.HasPrefix(dev.Name, "-") || strings.HasSuffix(dev.Name, "-") {
+		return errBadName
+	}
+
 	return nil
 }
 

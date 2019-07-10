@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -36,8 +35,6 @@ var wrongImageNames = map[string]bool{
 	"N":     true,
 	"NO":    true,
 }
-
-var validKubeNameRegex = regexp.MustCompile("[^a-zA-Z0-9/.-]+")
 
 //Init automatically generates the manifest
 func Init() *cobra.Command {
@@ -164,6 +161,7 @@ func getDevelopmentEnvironment(language string) (*model.Dev, string, error) {
 func getDeploymentName(name string) string {
 	deploymentName := filepath.Base(name)
 	deploymentName = strings.ToLower(deploymentName)
-	deploymentName = validKubeNameRegex.ReplaceAllString(deploymentName, "")
+	deploymentName = model.ValidKubeNameRegex.ReplaceAllString(deploymentName, "-")
+	log.Infof("deployment name: %s", deploymentName)
 	return deploymentName
 }

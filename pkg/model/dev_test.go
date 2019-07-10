@@ -140,3 +140,28 @@ forward:
 		})
 	}
 }
+
+func TestDev_validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		devName string
+		wantErr bool
+	}{
+		{name: "empty", devName: "", wantErr: true},
+		{name: "starts-with-dash", devName: "-bad-name", wantErr: true},
+		{name: "ends-with-dash", devName: "bad-name-", wantErr: true},
+		{name: "symbols", devName: "1$good-2", wantErr: true},
+		{name: "alphanumeric", devName: "good-2", wantErr: false},
+		{name: "good", devName: "good-name", wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev := &Dev{
+				Name: tt.devName,
+			}
+			if err := dev.validate(); (err != nil) != tt.wantErr {
+				t.Errorf("Dev.validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
