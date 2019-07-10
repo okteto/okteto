@@ -40,11 +40,8 @@ func TestAll(t *testing.T) {
 	}
 	log.Printf("created tempdir: %s", dir)
 
-	dPath := filepath.Join(dir, name)
+	dPath := filepath.Join(dir, "deployment.yaml")
 	if err := writeDeployment(name, dPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := deploy(name, dPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -57,6 +54,10 @@ func TestAll(t *testing.T) {
 	}
 
 	if err := createNamespace(namespace, oktetoPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := deploy(name, dPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -169,13 +170,13 @@ func waitForPod(name string, timeout int) error {
 		args := []string{"get", "pod", "-ojsonpath='{.status.phase}'", name}
 		cmd := exec.Command("/usr/local/bin/kubectl", args...)
 		o, err := cmd.CombinedOutput()
+		output := string(o)
+		log.Printf("`kubectl %s` output: %s", strings.Join(args, " "), output)
 		if err != nil {
-			log.Printf("`kubectl %s` failed: %s", strings.Join(args, " "), err)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 
-		output := string(o)
-		log.Printf("`kubectl %s` output: %s", strings.Join(args, " "), output)
 		if strings.Contains(output, "Running") {
 			return nil
 		}
@@ -201,6 +202,7 @@ func checkPVCIsGone(name string) error {
 }
 
 func createNamespace(namespace, oktetoPath string) error {
+	log.Printf("creating namespace %s", namespace)
 	args := []string{"create", "namespace", namespace, "-l", "debug"}
 	cmd := exec.Command(oktetoPath, args...)
 	if o, err := cmd.CombinedOutput(); err != nil {
@@ -263,12 +265,12 @@ func up(name, manifestPath, oktetoPath string) error {
 		}
 	}()
 
-	log.Println("waiting for the statefulset")
+	log.Println("waiting for the statefulset to be running")
 	if err := waitForPod(fmt.Sprintf("okteto-%s-0", name), 100); err != nil {
 		return err
 	}
 
-	log.Println("waiting for the deployment")
+	log.Println("waiting for the deployment to be running")
 	if err := waitForDeployment(name, 2, 30); err != nil {
 		return err
 	}
@@ -277,7 +279,7 @@ func up(name, manifestPath, oktetoPath string) error {
 }
 
 func deploy(name, path string) error {
-	// Deploy kubernetes manifest
+	log.Printf("deploying kubernetes manifest %s", path)
 	cmd := exec.Command("/usr/local/bin/kubectl", "apply", "-f", path)
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("kubectl apply failed: %s", string(o))
