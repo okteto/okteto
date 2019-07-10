@@ -129,15 +129,13 @@ workflows:
             - build
           filters:
             branches:
-              only: feature/integration-test
+              only: master
       - mock-publish-github-release:
           requires:
             - build
           filters:
             tags:
               only: /.*/
-            branches:
-              ignore: feature/integration-test
       - release:
           requires:
             - build
