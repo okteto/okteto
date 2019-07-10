@@ -33,95 +33,37 @@ func TestAll(t *testing.T) {
 
 	name := strings.ToLower(fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
-	// Create namespace
-	args := []string{"create", "namespace", namespace, "-l", "debug"}
-	cmd := exec.Command(oktetoPath, args...)
-	cmd.Env = os.Environ()
-	if o, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("%s %s: %s", oktetoPath, args, string(o))
-	}
 
-	_, _, n, err := k8Client.GetLocal()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if namespace != n {
-		t.Fatalf("current namespace is %s, expected %s", namespace, name)
-	}
-
-	log.Printf("created namespace: %s", namespace)
-
-	// Create kubernetes manifest
 	dir, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	log.Printf("created tempdir: %s", dir)
 
 	dPath := filepath.Join(dir, name)
-	dFile, err := os.Create(dPath)
-	if err != nil {
+	if err := writeDeployment(name, dPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := deploy(name, dPath); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := deploymentTemplate.Execute(dFile, deployment{Name: name}); err != nil {
+	contentPath := filepath.Join(dir, "index.html")
+	ioutil.WriteFile(contentPath, []byte(name), 0644)
+
+	manifestPath := filepath.Join(dir, "okteto.yml")
+	if err := writeManifest(manifestPath, name); err != nil {
 		t.Fatal(err)
 	}
 
-	// Deploy kubernetes manifest
-	cmd = exec.Command("/usr/local/bin/kubectl", "apply", "-f", dPath)
-	if o, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("kubectl apply failed: %s", string(o))
-	}
-
-	if err := waitForDeployment(name, 1, 30); err != nil {
+	if err := createNamespace(namespace, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
 
-	log.Println("started deployment")
-
-	// Create token file
-	tPath := filepath.Join(dir, "index.html")
-	ioutil.WriteFile(tPath, []byte(name), 0644)
-
-	// Write okteto manifest
-	oPath := filepath.Join(dir, "okteto.yml")
-	if err := writeManifest(oPath, name); err != nil {
+	if err := up(name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
 
-	// Start okteto
-	upCMD := exec.Command(oktetoPath, "up", "-f", oPath)
-	log.Println("starting okteto up")
-
-	//stdout, err := upCMD.StdoutPipe()
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-
-	go func() {
-		if err := upCMD.Start(); err != nil {
-			t.Fatalf("okteto up failed to start: %s", err)
-		}
-
-		if err := upCMD.Wait(); err != nil {
-			log.Printf("okteto up exited: %s", err)
-		}
-	}()
-
-	log.Println("waiting for the statefulset")
-	if err := waitForPod(fmt.Sprintf("okteto-%s-0", name), 100); err != nil {
-		t.Fatal(err)
-	}
-
-	log.Println("waiting for the deployment")
-	if err := waitForDeployment(name, 2, 30); err != nil {
-		t.Fatal(err)
-	}
-
-	// Check content
 	log.Println("getting synchronized content")
 	c, err := getContent(name, namespace)
 	if err != nil {
@@ -134,7 +76,7 @@ func TestAll(t *testing.T) {
 
 	// Update content in token file
 	updatedContent := fmt.Sprintf("%d", time.Now().Unix())
-	ioutil.WriteFile(tPath, []byte(updatedContent), 0644)
+	ioutil.WriteFile(contentPath, []byte(updatedContent), 0644)
 	time.Sleep(3 * time.Second)
 
 	log.Println("getting updated content")
@@ -145,6 +87,14 @@ func TestAll(t *testing.T) {
 
 	if c != updatedContent {
 		t.Fatalf("expected updated content to be %s, got %s", updatedContent, c)
+	}
+
+	if err := down(name, manifestPath, oktetoPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := deleteNamespace(oktetoPath, namespace); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -235,4 +185,120 @@ func waitForPod(name string, timeout int) error {
 
 	return fmt.Errorf("pod/%s wasn't ready after %d seconds", name, timeout)
 
+}
+
+func checkPVCIsGone(name string) error {
+	pvc := fmt.Sprintf("pvc-0-okteto-%s-0", name)
+	args := []string{"get", "pvc", pvc}
+	cmd := exec.Command("/usr/local/bin/kubectl", args...)
+	o, _ := cmd.CombinedOutput()
+	output := string(o)
+	if !strings.Contains(string(o), fmt.Sprintf(`persistentvolumeclaims "%s" not found`, pvc)) {
+		return fmt.Errorf("PVC wasn't deleted: %s", output)
+	}
+
+	return nil
+}
+
+func createNamespace(namespace, oktetoPath string) error {
+	args := []string{"create", "namespace", namespace, "-l", "debug"}
+	cmd := exec.Command(oktetoPath, args...)
+	if o, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, args, string(o))
+	}
+
+	_, _, n, err := k8Client.GetLocal()
+	if err != nil {
+		return err
+	}
+
+	if namespace != n {
+		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
+	}
+
+	return nil
+}
+
+func deleteNamespace(oktetoPath, namespace string) error {
+	log.Printf("okteto delete namespace %s", namespace)
+	deleteCMD := exec.Command(oktetoPath, "delete", "namespace", namespace)
+	if o, err := deleteCMD.CombinedOutput(); err != nil {
+		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
+	}
+
+	return nil
+}
+
+func down(name, manifestPath, oktetoPath string) error {
+	log.Printf("okteto down -f %s -v", manifestPath)
+	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
+	if o, err := downCMD.CombinedOutput(); err != nil {
+		return fmt.Errorf("okteto down failed: %s - %s", string(o), err)
+	}
+
+	log.Println("waiting for the deployment to be restored")
+	if err := waitForDeployment(name, 3, 30); err != nil {
+		return err
+	}
+
+	log.Printf("validate that the pvc was deleted")
+	if err := checkPVCIsGone(name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func up(name, manifestPath, oktetoPath string) error {
+	log.Println("starting okteto up")
+	upCMD := exec.Command(oktetoPath, "up", "-f", manifestPath)
+
+	go func() {
+		if err := upCMD.Start(); err != nil {
+			log.Fatalf("okteto up failed to start: %s", err)
+		}
+
+		if err := upCMD.Wait(); err != nil {
+			log.Printf("okteto up exited: %s", err)
+		}
+	}()
+
+	log.Println("waiting for the statefulset")
+	if err := waitForPod(fmt.Sprintf("okteto-%s-0", name), 100); err != nil {
+		return err
+	}
+
+	log.Println("waiting for the deployment")
+	if err := waitForDeployment(name, 2, 30); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deploy(name, path string) error {
+	// Deploy kubernetes manifest
+	cmd := exec.Command("/usr/local/bin/kubectl", "apply", "-f", path)
+	if o, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("kubectl apply failed: %s", string(o))
+	}
+
+	if err := waitForDeployment(name, 1, 30); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func writeDeployment(name, path string) error {
+	dFile, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	if err := deploymentTemplate.Execute(dFile, deployment{Name: name}); err != nil {
+		return err
+	}
+	defer dFile.Close()
+	return nil
 }
