@@ -25,7 +25,7 @@ jobs:
           destination: binaries
   integration:
     docker:
-      - image: okteto/desk:0.1.4
+      - image: okteto/desk:0.1.5
     steps:
       - checkout
       - restore_cache: 
@@ -136,6 +136,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: feature/integration-test
       - release:
           requires:
             - build
