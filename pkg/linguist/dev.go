@@ -22,6 +22,8 @@ const (
 
 	// Unrecognized is the option returned when the linguist couldn't detect a language
 	Unrecognized = "other"
+
+	DefaultImage = "okteto/desk:0.1.5"
 )
 
 var (
@@ -61,8 +63,8 @@ func init() {
 	}
 
 	languageDefaults[Unrecognized] = languageDefault{
-		image:   "okteto/desk:0.1.3",
-		path:    "/app",
+		image:   DefaultImage,
+		path:    "/usr/src/app",
 		command: []string{"bash"},
 	}
 }

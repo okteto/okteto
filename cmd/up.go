@@ -132,14 +132,19 @@ func RunUp(dev *model.Dev) error {
 // Activate activates the dev environment
 func (up *UpContext) Activate() {
 	retry := false
-	inFd, _ := term.GetFdInfo(os.Stdin)
-	state, err := term.SaveState(inFd)
-	if err != nil {
-		up.Exit <- err
-		return
+	var state *term.State
+	inFd, isTerm := term.GetFdInfo(os.Stdin)
+	if isTerm {
+		var err error
+		state, err = term.SaveState(inFd)
+		if err != nil {
+			up.Exit <- err
+			return
+		}
 	}
 
 	var namespace string
+	var err error
 	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal()
 	if err != nil {
 		up.Exit <- err
@@ -214,11 +219,13 @@ func (up *UpContext) Activate() {
 		}()
 
 		prevError := up.WaitUntilExitOrInterrupt()
-		log.Debug("Restoring terminal")
-		if err := term.RestoreTerminal(inFd, state); err != nil {
-			log.Debugf("failed to restore terminal: %s", err)
-		} else {
-			log.Debug("Terminal restored")
+		if isTerm {
+			log.Debug("Restoring terminal")
+			if err := term.RestoreTerminal(inFd, state); err != nil {
+				log.Debugf("failed to restore terminal: %s", err)
+			} else {
+				log.Debug("Terminal restored")
+			}
 		}
 
 		if prevError != nil {

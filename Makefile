@@ -23,6 +23,10 @@ $(PLATFORMS):
 test:
 	 go test ./...
 
+.PHONY: integration
+integration:
+	 go test github.com/okteto/okteto/integration -tags=integration -v
+
 .PHONY: build
 build:
 	 go build -ldflags "-X github.com/okteto/okteto/pkg/config.VersionString=${VERSION_STRING}" -o ${BINDIR}/okteto
