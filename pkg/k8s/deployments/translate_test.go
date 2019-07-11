@@ -1,10 +1,10 @@
 package deployments
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -22,7 +22,7 @@ services:
     image: worker:latest
     command: ["./run_worker.sh"]
     mountpath: /src
-    soubpath: /worker`)
+    subpath: /worker`)
 
 	dev, err := model.Read(manifest)
 	if err != nil {
@@ -80,8 +80,10 @@ services:
 			},
 		},
 	}
-	if !reflect.DeepEqual(d1.Spec.Template.Spec, d1OK.Spec.Template.Spec) {
-		t.Fatalf("Wrong d1 generation. Actual %+v, Expected %+v", d1.Spec.Template.Spec, d1OK.Spec.Template.Spec)
+	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
+	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
+	if string(marshalled1) != string(marshalled1OK) {
+		t.Fatalf("Wrong d1 generation.\nActual %s, \nExpected %s", string(marshalled1), string(marshalled1OK))
 	}
 
 	dev2 := dev.Services[0]
@@ -137,10 +139,11 @@ services:
 			},
 		},
 	}
-	if !reflect.DeepEqual(d2.Spec.Template.Spec, d2OK.Spec.Template.Spec) {
-		t.Fatalf("Wrong d2 generation. Actual %+v, Expected %+v", d2.Spec.Template.Spec, d2OK.Spec.Template.Spec)
+	marshalled2, _ := yaml.Marshal(d2.Spec.Template.Spec)
+	marshalled2OK, _ := yaml.Marshal(d2OK.Spec.Template.Spec)
+	if string(marshalled2) != string(marshalled2OK) {
+		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
 	}
-
 }
 
 func Test_translateResources(t *testing.T) {
