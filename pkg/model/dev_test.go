@@ -19,7 +19,7 @@ resources:
     memory: "128Mi"
     cpu: "500m"
 workdir: /app`)
-	d, err := read(manifest)
+	d, err := Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ forward:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d, err := read(tt.manifest)
+			d, err := Read(tt.manifest)
 			if err != nil {
 				t.Fatal(err)
 			}

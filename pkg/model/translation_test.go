@@ -17,7 +17,7 @@ services:
     image: worker:latest
     mountpath: /src`)
 
-	dev, err := read(manifest)
+	dev, err := Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -85,7 +85,7 @@ func Get(devPath string) (*Dev, error) {
 		return nil, err
 	}
 
-	dev, err := read(b)
+	dev, err := Read(b)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,8 @@ func Get(devPath string) (*Dev, error) {
 	return dev, nil
 }
 
-func read(bytes []byte) (*Dev, error) {
+//Read reads an okteto manifests
+func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		Environment: make([]EnvVar, 0),
 		Command:     make([]string, 0),
