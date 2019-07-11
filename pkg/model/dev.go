@@ -11,15 +11,20 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	oktetoPodNameTemplate     = "%s-0"
-	oktetoStatefulSetTemplate = "okteto-%s"
-	oktetoVolumeNameTemplate  = "pvc-%d"
+	oktetoPodNameTemplate      = "%s-0"
+	oktetoStatefulSetTemplate  = "okteto-%s"
+	oktetoVolumeNameTemplate   = "pvc-%d"
+	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
 
 	//OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"
+
+	//DefaultImage default image for sandboxes
+	DefaultImage = "okteto/desk:0.1.5"
 )
 
 var (
@@ -27,6 +32,9 @@ var (
 
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
 	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
+
+	devReplicas                      int32 = 1
+	devTerminationGracePeriodSeconds int64
 )
 
 //Dev represents a cloud native development environment
@@ -215,7 +223,6 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName stri
 		Container:   dev.Container,
 		Image:       dev.Image,
 		Environment: dev.Environment,
-		Command:     dev.Command,
 		WorkDir:     dev.WorkDir,
 		Volumes: []VolumeMount{
 			VolumeMount{
@@ -245,4 +252,46 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName stri
 		)
 	}
 	return rule
+}
+
+//GevSandbox returns a deployment sandbox
+func (dev *Dev) GevSandbox() *appsv1.Deployment {
+	if dev.Image == "" {
+		dev.Image = DefaultImage
+	}
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name,
+			Namespace: dev.Namespace,
+			Annotations: map[string]string{
+				oktetoAutoCreateAnnotation: "true",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &devReplicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": dev.Name,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": dev.Name,
+					},
+				},
+				Spec: apiv1.PodSpec{
+					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					Containers: []apiv1.Container{
+						apiv1.Container{
+							Name:            "dev",
+							Image:           dev.Image,
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"tail"},
+							Args:            []string{"-f", "/dev/null"}},
+					},
+				},
+			},
+		},
+	}
 }

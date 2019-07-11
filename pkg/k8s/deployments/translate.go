@@ -6,12 +6,10 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/linguist"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -38,48 +36,6 @@ var (
 	devReplicas                      int32 = 1
 	devTerminationGracePeriodSeconds int64
 )
-
-//GevDevSandbox returns a deployment sandbox
-func GevDevSandbox(dev *model.Dev) *appsv1.Deployment {
-	if dev.Image == "" {
-		dev.Image = linguist.DefaultImage
-	}
-	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      dev.Name,
-			Namespace: dev.Namespace,
-			Annotations: map[string]string{
-				oktetoAutoCreateAnnotation: "true",
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &devReplicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": dev.Name,
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": dev.Name,
-					},
-				},
-				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
-					Containers: []apiv1.Container{
-						apiv1.Container{
-							Name:            "dev",
-							Image:           dev.Image,
-							ImagePullPolicy: apiv1.PullAlways,
-							Command:         []string{"tail"},
-							Args:            []string{"-f", "/dev/null"}},
-					},
-				},
-			},
-		},
-	}
-}
 
 func translate(t *model.Translation) error {
 	manifest := getAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation)

@@ -180,7 +180,7 @@ func (up *UpContext) Activate() {
 				return
 			}
 
-			d = deployments.GevDevSandbox(up.Dev)
+			d = up.Dev.GevSandbox()
 			create = true
 		}
 		devContainer := deployments.GetDevContainer(d, up.Dev.Container)
