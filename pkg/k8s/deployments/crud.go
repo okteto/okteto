@@ -48,28 +48,39 @@ func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Dep
 	return d, nil
 }
 
-//GetAll fills all the deployments pointed by a dev environment
-func GetAll(dev *model.Dev, c *kubernetes.Clientset) error {
-	d, err := Get(dev, dev.Namespace, c)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			return err
+//GetTranslations fills all the deployments pointed by a dev environment
+func GetTranslations(dev *model.Dev, d *appsv1.Deployment, nodeName string, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
+	result := map[string]*model.Translation{}
+	if d != nil {
+		rule := dev.ToTranslationRule(dev, d, nodeName)
+		result[d.Name] = &model.Translation{
+			Interactive: true,
+			Name:        dev.Name,
+			Deployment:  d,
+			Rules:       []*model.TranslationRule{rule},
 		}
-	} else {
-		dev.Deployment = d
 	}
-
 	for _, s := range dev.Services {
 		d, err := Get(s, dev.Namespace, c)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				continue
 			}
-			return err
+			return nil, err
 		}
-		s.Deployment = d
+		rule := s.ToTranslationRule(dev, d, nodeName)
+		if _, ok := result[d.Name]; ok {
+			result[d.Name].Rules = append(result[d.Name].Rules, rule)
+		} else {
+			result[d.Name] = &model.Translation{
+				Name:        dev.Name,
+				Interactive: false,
+				Deployment:  d,
+				Rules:       []*model.TranslationRule{rule},
+			}
+		}
 	}
-	return nil
+	return result, nil
 }
 
 //Deploy creates or updates a deployment
@@ -87,17 +98,9 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 }
 
 //TraslateDevMode translates the deployment manifests to put them in dev mode
-func TraslateDevMode(dev *model.Dev, nodeName string) error {
-	err := translate(dev, dev, nodeName)
-	if err != nil {
-		return err
-	}
-
-	for i, s := range dev.Services {
-		if s.Deployment == nil {
-			return fmt.Errorf("Deployment for service number %d not found", i)
-		}
-		err := translate(dev, s, nodeName)
+func TraslateDevMode(tr map[string]*model.Translation) error {
+	for _, t := range tr {
+		err := translate(t)
 		if err != nil {
 			return err
 		}

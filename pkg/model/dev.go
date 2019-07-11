@@ -11,15 +11,20 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	oktetoPodNameTemplate     = "%s-0"
-	oktetoStatefulSetTemplate = "okteto-%s"
-	oktetoVolumeNameTemplate  = "pvc-%d"
+	oktetoPodNameTemplate      = "%s-0"
+	oktetoStatefulSetTemplate  = "okteto-%s"
+	oktetoVolumeNameTemplate   = "pvc-%d"
+	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
 
 	//OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"
+
+	//DefaultImage default image for sandboxes
+	DefaultImage = "okteto/desk:0.1.5"
 )
 
 var (
@@ -27,13 +32,15 @@ var (
 
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
 	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
+
+	devReplicas                      int32 = 1
+	devTerminationGracePeriodSeconds int64
 )
 
 //Dev represents a cloud native development environment
 type Dev struct {
 	Name        string               `json:"name" yaml:"name"`
-	Deployment  *appsv1.Deployment   `json:"-" yaml:"-"`
-	Labels      map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels      map[string]string    `json:"labels" yaml:"labels"`
 	Namespace   string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container   string               `json:"container,omitempty" yaml:"container,omitempty"`
 	Image       string               `json:"image,omitempty" yaml:"image,omitempty"`
@@ -78,7 +85,7 @@ func Get(devPath string) (*Dev, error) {
 		return nil, err
 	}
 
-	dev, err := read(b)
+	dev, err := Read(b)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +103,8 @@ func Get(devPath string) (*Dev, error) {
 	return dev, nil
 }
 
-func read(bytes []byte) (*Dev, error) {
+//Read reads an okteto manifests
+func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		Environment: make([]EnvVar, 0),
 		Command:     make([]string, 0),
@@ -207,4 +215,84 @@ func (dev *Dev) LabelsSelector() string {
 		}
 	}
 	return labels
+}
+
+// ToTranslationRule translates a dev struct into a translation rule
+func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName string) *TranslationRule {
+	rule := &TranslationRule{
+		Node:        nodeName,
+		Container:   dev.Container,
+		Image:       dev.Image,
+		Environment: dev.Environment,
+		WorkDir:     dev.WorkDir,
+		Volumes: []VolumeMount{
+			VolumeMount{
+				Name:      main.GetVolumeName(0),
+				MountPath: dev.MountPath,
+				SubPath:   dev.SubPath,
+			},
+		},
+		Resources: dev.Resources,
+	}
+
+	if main == dev {
+		rule.Command = []string{"tail"}
+		rule.Args = []string{"-f", "/dev/null"}
+	} else if len(dev.Command) > 0 {
+		rule.Command = dev.Command
+		rule.Args = []string{}
+	}
+
+	for i, v := range dev.Volumes {
+		rule.Volumes = append(
+			rule.Volumes,
+			VolumeMount{
+				Name:      main.GetVolumeName(i + 1),
+				MountPath: v,
+			},
+		)
+	}
+	return rule
+}
+
+//GevSandbox returns a deployment sandbox
+func (dev *Dev) GevSandbox() *appsv1.Deployment {
+	if dev.Image == "" {
+		dev.Image = DefaultImage
+	}
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name,
+			Namespace: dev.Namespace,
+			Annotations: map[string]string{
+				oktetoAutoCreateAnnotation: "true",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &devReplicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": dev.Name,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": dev.Name,
+					},
+				},
+				Spec: apiv1.PodSpec{
+					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					Containers: []apiv1.Container{
+						apiv1.Container{
+							Name:            "dev",
+							Image:           dev.Image,
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"tail"},
+							Args:            []string{"-f", "/dev/null"}},
+					},
+				},
+			},
+		},
+	}
 }

@@ -4,9 +4,147 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	yaml "gopkg.in/yaml.v2"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
+
+func Test_translate(t *testing.T) {
+	manifest := []byte(`name: web
+container: dev
+image: web:latest
+command: ["./run_web.sh"]
+workdir: /app
+services:
+  - name: worker
+    container: dev
+    image: worker:latest
+    command: ["./run_worker.sh"]
+    mountpath: /src
+    subpath: /worker`)
+
+	dev, err := model.Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d1 := dev.GevSandbox()
+	rule1 := dev.ToTranslationRule(dev, d1, "node")
+	tr1 := &model.Translation{
+		Interactive: true,
+		Name:        dev.Name,
+		Deployment:  d1,
+		Rules:       []*model.TranslationRule{rule1},
+	}
+	err = translate(tr1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d1OK := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: apiv1.PodTemplateSpec{
+				Spec: apiv1.PodSpec{
+					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					Volumes: []apiv1.Volume{
+						apiv1.Volume{
+							Name: "pvc-0-okteto-web-0",
+							VolumeSource: apiv1.VolumeSource{
+								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "pvc-0-okteto-web-0",
+									ReadOnly:  false,
+								},
+							},
+						},
+					},
+					NodeName: "node",
+					Containers: []apiv1.Container{
+						apiv1.Container{
+							Name:            "dev",
+							Image:           "web:latest",
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"tail"},
+							Args:            []string{"-f", "/dev/null"},
+							WorkingDir:      "/app",
+							VolumeMounts: []apiv1.VolumeMount{
+								apiv1.VolumeMount{
+									Name:      "pvc-0-okteto-web-0",
+									ReadOnly:  false,
+									MountPath: "/app",
+								},
+							},
+							LivenessProbe:  nil,
+							ReadinessProbe: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
+	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
+	if string(marshalled1) != string(marshalled1OK) {
+		t.Fatalf("Wrong d1 generation.\nActual %s, \nExpected %s", string(marshalled1), string(marshalled1OK))
+	}
+
+	dev2 := dev.Services[0]
+	d2 := dev2.GevSandbox()
+	rule2 := dev2.ToTranslationRule(dev, d2, "node")
+	tr2 := &model.Translation{
+		Interactive: false,
+		Name:        dev.Name,
+		Deployment:  d2,
+		Rules:       []*model.TranslationRule{rule2},
+	}
+	err = translate(tr2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d2OK := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: apiv1.PodTemplateSpec{
+				Spec: apiv1.PodSpec{
+					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					Volumes: []apiv1.Volume{
+						apiv1.Volume{
+							Name: "pvc-0-okteto-web-0",
+							VolumeSource: apiv1.VolumeSource{
+								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "pvc-0-okteto-web-0",
+									ReadOnly:  false,
+								},
+							},
+						},
+					},
+					NodeName: "node",
+					Containers: []apiv1.Container{
+						apiv1.Container{
+							Name:            "dev",
+							Image:           "worker:latest",
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"./run_worker.sh"},
+							Args:            []string{},
+							VolumeMounts: []apiv1.VolumeMount{
+								apiv1.VolumeMount{
+									Name:      "pvc-0-okteto-web-0",
+									ReadOnly:  false,
+									MountPath: "/src",
+									SubPath:   "/worker",
+								},
+							},
+							LivenessProbe:  nil,
+							ReadinessProbe: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+	marshalled2, _ := yaml.Marshal(d2.Spec.Template.Spec)
+	marshalled2OK, _ := yaml.Marshal(d2OK.Spec.Template.Spec)
+	if string(marshalled2) != string(marshalled2OK) {
+		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
+	}
+}
 
 func Test_translateResources(t *testing.T) {
 	type args struct {

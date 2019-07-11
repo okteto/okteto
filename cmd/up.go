@@ -180,7 +180,7 @@ func (up *UpContext) Activate() {
 				return
 			}
 
-			d = deployments.GevDevSandbox(up.Dev)
+			d = up.Dev.GevSandbox()
 			create = true
 		}
 		devContainer := deployments.GetDevContainer(d, up.Dev.Container)
@@ -188,6 +188,7 @@ func (up *UpContext) Activate() {
 			up.Exit <- fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 			return
 		}
+		up.Dev.Container = devContainer.Name
 		if up.Dev.Image == "" {
 			up.Dev.Image = devContainer.Image
 		}
@@ -334,31 +335,26 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 	progress.start()
 	defer progress.stop()
 
-	err := deployments.GetAll(up.Dev, up.Client)
+	tr, err := deployments.GetTranslations(up.Dev, d, up.Node, up.Client)
 	if err != nil {
 		return err
 	}
-	up.Dev.Deployment = d
 
-	if err := deployments.TraslateDevMode(up.Dev, up.Node); err != nil {
+	if err := deployments.TraslateDevMode(tr); err != nil {
 		return err
 	}
 
-	if err := deployments.Deploy(up.Dev.Deployment, create, up.Client); err != nil {
-		return err
-	}
-	seen := map[string]bool{up.Dev.Deployment.Name: true}
-
-	for _, s := range up.Dev.Services {
-		if _, ok := seen[s.Deployment.Name]; ok {
-			continue
+	for name := range tr {
+		if name == d.Name {
+			if err := deployments.Deploy(tr[name].Deployment, create, up.Client); err != nil {
+				return err
+			}
+		} else {
+			if err := deployments.Deploy(tr[name].Deployment, false, up.Client); err != nil {
+				return err
+			}
 		}
-		if err := deployments.Deploy(s.Deployment, false, up.Client); err != nil {
-			return err
-		}
-		seen[s.Deployment.Name] = true
 	}
-
 	if create {
 		if err := services.Create(up.Dev, up.Client); err != nil {
 			return err
@@ -451,7 +447,7 @@ func (up *UpContext) shutdown() {
 func printDisplayContext(message string, dev *model.Dev) {
 	log.Success(message)
 	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
-	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Deployment.Name))
+	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 	if len(dev.Forward) > 0 {
 		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
 		for i := 1; i < len(dev.Forward); i++ {
