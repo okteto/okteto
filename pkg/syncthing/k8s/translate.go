@@ -103,6 +103,8 @@ func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1
 							},
 						},
 					},
+					NodeSelector: d.Spec.Template.Spec.NodeSelector,
+					Affinity:     d.Spec.Template.Spec.Affinity,
 				},
 			},
 		},
