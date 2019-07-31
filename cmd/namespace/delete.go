@@ -17,8 +17,9 @@ func Delete() *cobra.Command {
 		Use:   "namespace <name>",
 		Short: fmt.Sprintf("Deletes a namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			analytics.TrackDeleteNamespace(config.VersionString)
-			return executeDeleteNamespace(args[0])
+			err := executeDeleteNamespace(args[0])
+			analytics.TrackDeleteNamespace(config.VersionString, err == nil)
+			return err
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {

@@ -23,7 +23,7 @@ func Namespace() *cobra.Command {
 			}
 
 			err := RunNamespace(namespace)
-			analytics.TrackNamespace(config.VersionString)
+			analytics.TrackNamespace(config.VersionString, err == nil)
 			return err
 		},
 	}
