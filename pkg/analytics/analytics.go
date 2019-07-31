@@ -91,12 +91,27 @@ func TrackDown(version string) {
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(version string, isNew bool) {
+func TrackLogin(name, email, oktetoID, githubID, version string, isNew bool) {
 	if isNew {
 		trackSignup(version)
 	}
 
 	track(loginEvent, version, "")
+	if len(name) == 0 {
+		name = githubID
+	}
+
+	if err := mixpanelClient.Update(oktetoID, &mixpanel.Update{
+		Operation: "$set",
+		Properties: map[string]interface{}{
+			"$name":    name,
+			"$email":   email,
+			"oktetoId": oktetoID,
+			"githubId": githubID,
+		},
+	}); err != nil {
+		log.Infof("failed to update user: %s", err)
+	}
 }
 
 func trackSignup(version string) {

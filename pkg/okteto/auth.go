@@ -29,47 +29,52 @@ type Token struct {
 	ID    string
 }
 
+// User contains the auth information of the logged in user
+type User struct {
+	Name     string
+	Email    string
+	GithubID string
+	Token    string
+	ID       string
+	New      bool
+}
+
 var token *Token
 
 // Auth authenticates in okteto with a github OAuth code
-func Auth(ctx context.Context, code, url string) (string, bool, error) {
+func Auth(ctx context.Context, code, url string) (*User, error) {
 	client, err := getClient(url)
 	if err != nil {
-		return "", false, err
+		return nil, err
 	}
 
 	q := fmt.Sprintf(`
 				mutation {
 					auth(code: "%s", source: "cli") {
-					  githubID,token,id,new
+					  id,name,email,githubID,token,new
 					}
 				  }`, code)
 
 	req := graphql.NewRequest(q)
 
-	type User struct {
-		Auth struct {
-			GithubID string
-			Token    string
-			ID       string
-			New      bool
-		}
+	type u struct {
+		Auth User
 	}
 
-	var user User
+	var user u
 	if err := client.Run(ctx, req, &user); err != nil {
-		return "", false, fmt.Errorf("unauthorized request: %s", err)
+		return nil, fmt.Errorf("unauthorized request: %s", err)
 	}
 
 	if len(user.Auth.GithubID) == 0 || len(user.Auth.Token) == 0 {
-		return "", false, fmt.Errorf("empty response")
+		return nil, fmt.Errorf("empty response")
 	}
 
 	if err := saveToken(user.Auth.ID, user.Auth.Token, url); err != nil {
-		return "", false, err
+		return nil, err
 	}
 
-	return user.Auth.GithubID, user.Auth.New, nil
+	return &user.Auth, nil
 }
 
 func getTokenFromEnv() (*Token, error) {
