@@ -27,6 +27,8 @@ const (
 	namespaceDeleteEvent = "DeleteNamespace"
 	execEvent            = "Exec"
 	signupEvent          = "Signup"
+	disableEvent         = "Disable Analytics"
+	enableEvent          = "Enable Analytics"
 )
 
 var (
@@ -90,8 +92,16 @@ func TrackDown(version string) {
 	track(downEvent, version, "")
 }
 
+func trackDisable(version string) {
+	track(disableEvent, version, "")
+}
+
 // TrackLogin sends a tracking event to mixpanel when the user logs in
 func TrackLogin(name, email, oktetoID, githubID, version string, isNew bool) {
+	if !isEnabled() {
+		return
+	}
+
 	if isNew {
 		trackSignup(version)
 	}
@@ -115,10 +125,6 @@ func TrackLogin(name, email, oktetoID, githubID, version string, isNew bool) {
 }
 
 func trackSignup(version string) {
-	if !isEnabled() {
-		return
-	}
-
 	trackID := okteto.GetUserID()
 	if len(trackID) == 0 {
 		log.Errorf("userID wasn't set for a new user")
@@ -162,7 +168,8 @@ func getFlagPath() string {
 }
 
 // Disable disables analytics
-func Disable() error {
+func Disable(version string) error {
+	trackDisable(version)
 	var _, err = os.Stat(getFlagPath())
 	if os.IsNotExist(err) {
 		var file, err = os.Create(getFlagPath())
@@ -177,7 +184,7 @@ func Disable() error {
 }
 
 // Enable enables analytics
-func Enable() error {
+func Enable(version string) error {
 	var _, err = os.Stat(getFlagPath())
 	if os.IsNotExist(err) {
 		return nil
