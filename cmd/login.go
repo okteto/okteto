@@ -84,19 +84,19 @@ func Login() *cobra.Command {
 				return e
 			}
 
-			user, new, err := okteto.Auth(handler.ctx, code, oktetoURL)
+			u, err := okteto.Auth(handler.ctx, code, oktetoURL)
 			if err != nil {
 				return err
 			}
 
 			if oktetoURL == okteto.CloudURL {
-				log.Success("Logged in as %s", user)
+				log.Success("Logged in as %s", u.GithubID)
 			} else {
-				log.Success("Logged in as %s @ %s", user, oktetoURL)
+				log.Success("Logged in as %s @ %s", u.GithubID, oktetoURL)
 			}
 
 			fmt.Println(log.BlueString("    Run `okteto namespace` to activate your Kubernetes configuration."))
-			analytics.TrackLogin(config.VersionString, new)
+			analytics.TrackLogin(u.Name, u.Email, u.ID, u.GithubID, config.VersionString, u.New)
 			return nil
 		},
 	}

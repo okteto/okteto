@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
@@ -25,7 +26,7 @@ func Analytics() *cobra.Command {
 }
 
 func disableAnalytics() error {
-	if err := analytics.Disable(); err != nil {
+	if err := analytics.Disable(config.VersionString); err != nil {
 		return err
 	}
 
@@ -34,7 +35,7 @@ func disableAnalytics() error {
 }
 
 func enableAnalytics() error {
-	if err := analytics.Enable(); err != nil {
+	if err := analytics.Enable(config.VersionString); err != nil {
 		return err
 	}
 
