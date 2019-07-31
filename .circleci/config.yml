@@ -38,6 +38,7 @@ jobs:
           command: |
             export OKTETO_USER=cindylopez
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            touch $HOME/.okteto/.noanalytics
             make integration
       - save_cache:
           key: v1-pkg-cache
