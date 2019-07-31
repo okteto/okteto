@@ -87,7 +87,7 @@ func executeInit(devPath string) error {
 
 	if err := ioutil.WriteFile(devPath, marshalled, 0600); err != nil {
 		log.Info(err)
-		return fmt.Errorf("Failed to generate your manifest")
+		return fmt.Errorf("Failed to write your manifest")
 	}
 
 	if !fileExists(stignore) {
@@ -98,7 +98,7 @@ func executeInit(devPath string) error {
 		}
 	}
 
-	analytics.TrackInit(language, dev.Image, config.VersionString)
+	analytics.TrackInit(language, dev.Image, config.VersionString, true)
 	return nil
 }
 
