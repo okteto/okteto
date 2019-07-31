@@ -95,7 +95,7 @@ func Login() *cobra.Command {
 				log.Success("Logged in as %s @ %s", user, oktetoURL)
 			}
 
-			fmt.Println(log.BlueString("    Run `okteto namespace` to activate your Kubernetes configuration."))
+			log.Hint("    Run `okteto namespace` to activate your Kubernetes configuration.")
 			analytics.TrackLogin(config.VersionString, new)
 			return nil
 		},
