@@ -133,7 +133,6 @@ workflows:
             branches:
               only: 
                 - master
-                - bugfix/fix-integration-test
       - mock-publish-github-release:
           requires:
             - build
