@@ -40,7 +40,7 @@ var (
 //Dev represents a cloud native development environment
 type Dev struct {
 	Name        string               `json:"name" yaml:"name"`
-	Labels      map[string]string    `json:"labels" yaml:"labels"`
+	Labels      map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Namespace   string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container   string               `json:"container,omitempty" yaml:"container,omitempty"`
 	Image       string               `json:"image,omitempty" yaml:"image,omitempty"`

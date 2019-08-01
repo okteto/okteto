@@ -76,7 +76,10 @@ func downloadSyncthing() error {
 
 	if err := client.Get(); err != nil {
 		log.Infof("failed to download syncthing from %s: %s", client.Src, err)
-		os.Remove(client.Dst)
+		if e := os.Remove(client.Dst); e != nil {
+			log.Infof("failed to delete partially downloaded %s: %s", client.Dst, e.Error())
+		}
+
 		return err
 	}
 
