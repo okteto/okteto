@@ -139,14 +139,19 @@ func trackSignup(version string, success bool) {
 
 func track(event, version, image string, success bool) {
 	if isEnabled() {
-		os := runtime.GOOS
-		if os == "darwin" {
-			os = "Mac OS X"
+		mpOS := ""
+		switch runtime.GOOS {
+		case "darwin":
+			mpOS = "Mac OS X"
+		case "windows":
+			mpOS = "Windows"
+		case "linux":
+			mpOS = "Linux"
 		}
 
 		e := &mixpanel.Event{
 			Properties: map[string]interface{}{
-				"$os":               os,
+				"$os":               mpOS,
 				"version":           version,
 				"$referring_domain": okteto.GetURL(),
 				"image":             image,
