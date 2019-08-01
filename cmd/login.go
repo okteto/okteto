@@ -86,6 +86,7 @@ func Login() *cobra.Command {
 
 			u, err := okteto.Auth(handler.ctx, code, oktetoURL)
 			if err != nil {
+				analytics.TrackLogin(u.Name, u.Email, u.ID, u.GithubID, config.VersionString, u.New, false)
 				return err
 			}
 
@@ -96,7 +97,7 @@ func Login() *cobra.Command {
 			}
 
 			log.Hint("    Run `okteto namespace` to activate your Kubernetes configuration.")
-			analytics.TrackLogin(u.Name, u.Email, u.ID, u.GithubID, config.VersionString, u.New)
+			analytics.TrackLogin(u.Name, u.Email, u.ID, u.GithubID, config.VersionString, u.New, true)
 			return nil
 		},
 	}

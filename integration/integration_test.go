@@ -277,7 +277,7 @@ func up(name, manifestPath, oktetoPath string) error {
 	}
 
 	log.Println("waiting for the deployment to be running")
-	if err := waitForDeployment(name, 2, 30); err != nil {
+	if err := waitForDeployment(name, 2, 120); err != nil {
 		return err
 	}
 

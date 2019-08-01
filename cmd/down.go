@@ -35,14 +35,13 @@ func Down() *cobra.Command {
 				dev.Namespace = namespace
 			}
 
-			analytics.TrackDown(config.VersionString)
 			err = runDown(dev, removeVolumes)
 			if err == nil {
 				log.Success("Okteto Environment deactivated")
 				log.Println()
-				return nil
 			}
 
+			analytics.TrackDown(config.VersionString, err == nil)
 			return err
 		},
 	}

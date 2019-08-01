@@ -92,8 +92,10 @@ func Up() *cobra.Command {
 			if namespace != "" {
 				dev.Namespace = namespace
 			}
-			analytics.TrackUp(dev.Image, config.VersionString)
-			return RunUp(dev)
+
+			err = RunUp(dev)
+			analytics.TrackUp(dev.Image, config.VersionString, err == nil)
+			return err
 		},
 	}
 
