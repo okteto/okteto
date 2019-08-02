@@ -26,12 +26,13 @@ services:
 	d1 := dev.GevSandbox()
 	rule1 := dev.ToTranslationRule(dev, d1, "node")
 	rule1OK := &TranslationRule{
-		Node:        "node",
-		Container:   "dev",
-		Image:       "web:latest",
-		Command:     []string{"tail"},
-		Args:        []string{"-f", "/dev/null"},
-		Environment: make([]EnvVar, 0),
+		Node:         "node",
+		Container:    "dev",
+		Image:        "web:latest",
+		Command:      []string{"tail"},
+		Args:         []string{"-f", "/dev/null"},
+		Healthchecks: false,
+		Environment:  make([]EnvVar, 0),
 		Resources: ResourceRequirements{
 			Limits:   ResourceList{},
 			Requests: ResourceList{},
@@ -54,12 +55,13 @@ services:
 	d2 := dev2.GevSandbox()
 	rule2 := dev2.ToTranslationRule(dev, d2, "node")
 	rule2OK := &TranslationRule{
-		Node:        "node",
-		Container:   "dev",
-		Image:       "worker:latest",
-		Command:     nil,
-		Args:        nil,
-		Environment: make([]EnvVar, 0),
+		Node:         "node",
+		Container:    "dev",
+		Image:        "worker:latest",
+		Command:      nil,
+		Args:         nil,
+		Healthchecks: true,
+		Environment:  make([]EnvVar, 0),
 		Resources: ResourceRequirements{
 			Limits:   ResourceList{},
 			Requests: ResourceList{},

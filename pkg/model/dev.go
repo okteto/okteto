@@ -236,11 +236,15 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName stri
 	}
 
 	if main == dev {
+		rule.Healthchecks = false
 		rule.Command = []string{"tail"}
 		rule.Args = []string{"-f", "/dev/null"}
-	} else if len(dev.Command) > 0 {
-		rule.Command = dev.Command
-		rule.Args = []string{}
+	} else {
+		rule.Healthchecks = true
+		if len(dev.Command) > 0 {
+			rule.Command = dev.Command
+			rule.Args = []string{}
+		}
 	}
 
 	for i, v := range dev.Volumes {
