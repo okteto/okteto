@@ -112,8 +112,11 @@ func translateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 
 	c.Command = rule.Command
 	c.Args = rule.Args
-	c.ReadinessProbe = nil
-	c.LivenessProbe = nil
+
+	if !rule.Healthchecks {
+		c.ReadinessProbe = nil
+		c.LivenessProbe = nil
+	}
 
 	translateResources(c, rule.Resources)
 	translateEnvVars(c, rule.Environment)
