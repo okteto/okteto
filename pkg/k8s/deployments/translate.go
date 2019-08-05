@@ -56,8 +56,6 @@ func translate(t *model.Translation) error {
 		}
 		t.Deployment = dOrig
 	}
-	t.Deployment.Status = appsv1.DeploymentStatus{}
-	t.Deployment.ResourceVersion = ""
 	annotations := t.Deployment.GetObjectMeta().GetAnnotations()
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
