@@ -185,7 +185,7 @@ func (up *UpContext) Activate() {
 			d = up.Dev.GevSandbox()
 			create = true
 		}
-		devContainer := deployments.GetDevContainer(d, up.Dev.Container)
+		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
 		if devContainer == nil {
 			up.Exit <- fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 			return

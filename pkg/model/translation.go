@@ -6,9 +6,10 @@ import (
 
 //Translation represents the information for translating a deployment
 type Translation struct {
-	Interactive bool               `json:"-"`
-	Name        string             `json:"-"`
+	Interactive bool               `json:"interactive"`
+	Name        string             `json:"name"`
 	Deployment  *appsv1.Deployment `json:"-"`
+	Replicas    int32              `json:"replicas"`
 	Rules       []*TranslationRule `json:"rules"`
 }
 

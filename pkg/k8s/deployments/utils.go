@@ -53,11 +53,11 @@ func getDevListFromAnnotation(o metav1.Object) ([]*model.Dev, error) {
 	return devList, nil
 }
 
-func setDevListAsAnnotation(o metav1.Object, rules []*model.TranslationRule) error {
-	ruleListBytes, err := json.Marshal(rules)
+func setTranslationAsAnnotation(o metav1.Object, tr *model.Translation) error {
+	translationBytes, err := json.Marshal(tr)
 	if err != nil {
 		return err
 	}
-	setAnnotation(o, oktetoDevAnnotation, string(ruleListBytes))
+	setAnnotation(o, OktetoTranslationAnnotation, string(translationBytes))
 	return nil
 }

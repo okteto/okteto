@@ -57,6 +57,7 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, nodeName string, c *k
 			Interactive: true,
 			Name:        dev.Name,
 			Deployment:  d,
+			Replicas:    *d.Spec.Replicas,
 			Rules:       []*model.TranslationRule{rule},
 		}
 	}
@@ -76,6 +77,7 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, nodeName string, c *k
 				Name:        dev.Name,
 				Interactive: false,
 				Deployment:  d,
+				Replicas:    *d.Spec.Replicas,
 				Rules:       []*model.TranslationRule{rule},
 			}
 		}
@@ -130,19 +132,37 @@ func IsAutoCreate(d *appsv1.Deployment) bool {
 
 // DevModeOff deactivates dev mode for d
 func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
-	if len(dManifest) == 0 {
-		log.Infof("%s/%s is not an okteto environment", d.Namespace, d.Name)
-		return nil
+	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), OktetoTranslationAnnotation)
+	if len(trRulesJSON) == 0 {
+		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
+		if len(dManifest) == 0 {
+			log.Infof("%s/%s is not an okteto environment", d.Namespace, d.Name)
+			return nil
+		}
+		dOrig := &appsv1.Deployment{}
+		if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
+			return fmt.Errorf("malformed manifest: %s", err)
+		}
+		d = dOrig
+	} else {
+		trRules := &model.Translation{}
+		if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
+			return fmt.Errorf("malformed tr rules: %s", err)
+		}
+		d.Spec.Replicas = &trRules.Replicas
+		annotations := d.GetObjectMeta().GetAnnotations()
+		delete(annotations, oktetoDeveloperAnnotation)
+		delete(annotations, oktetoVersionAnnotation)
+		d.GetObjectMeta().SetAnnotations(annotations)
+		annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
+		delete(annotations, OktetoTranslationAnnotation)
+		d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
+		labels := d.GetObjectMeta().GetLabels()
+		delete(labels, OktetoDevLabel)
+		d.GetObjectMeta().SetLabels(labels)
 	}
 
-	dOrig := &appsv1.Deployment{}
-	if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
-		return fmt.Errorf("malformed manifest: %s", err)
-	}
-
-	dOrig.ResourceVersion = ""
-	if err := update(dOrig, c); err != nil {
+	if err := update(d, c); err != nil {
 		return err
 	}
 
@@ -160,6 +180,8 @@ func create(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 
 func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	log.Debugf("updating deployment %s/%s", d.Namespace, d.Name)
+	d.ResourceVersion = ""
+	d.Status = appsv1.DeploymentStatus{}
 	_, err := c.AppsV1().Deployments(d.Namespace).Update(d)
 	if err != nil {
 		return err

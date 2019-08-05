@@ -3,6 +3,7 @@ package deployments
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -20,8 +21,8 @@ const (
 	oktetoDeveloperAnnotation  = "dev.okteto.com/developer"
 	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
+	revisionAnnotation         = "deployment.kubernetes.io/revision"
 
-	revisionAnnotation = "deployment.kubernetes.io/revision"
 	//OktetoVersion represents the current dev data version
 	OktetoVersion = "1.0"
 	// OktetoDevLabel indicates the dev pod
@@ -30,6 +31,8 @@ const (
 	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
 	// OktetoDetachedDevLabel indicates the detached dev pods
 	OktetoDetachedDevLabel = "detached.dev.okteto.com"
+	// OktetoTranslationAnnotation sets the translation rules
+	OktetoTranslationAnnotation = "dev.okteto.com/translation"
 )
 
 var (
@@ -38,6 +41,14 @@ var (
 )
 
 func translate(t *model.Translation) error {
+	for _, rule := range t.Rules {
+		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
+		if devContainer == nil {
+			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.Deployment.Name)
+		}
+		rule.Container = devContainer.Name
+	}
+
 	manifest := getAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if manifest != "" {
 		dOrig := &appsv1.Deployment{}
@@ -46,61 +57,60 @@ func translate(t *model.Translation) error {
 		}
 		t.Deployment = dOrig
 	}
-
-	t.Deployment.Status = appsv1.DeploymentStatus{}
-	t.Deployment.ResourceVersion = ""
 	annotations := t.Deployment.GetObjectMeta().GetAnnotations()
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
+
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
+	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
+	t.Deployment.Spec.Replicas = &devReplicas
+
+	if os.Getenv("OKTETO_CONTINUOUS_DEVELOPMENT") != "" {
+		return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
+	}
+
 	manifestBytes, err := json.Marshal(t.Deployment)
 	if err != nil {
 		return err
 	}
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
-	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
-	// if err := setDevListAsAnnotation(t.Deployment.GetObjectMeta(), t.Rules); err != nil {
-	// 	return err
-	// }
+
 	if t.Interactive {
 		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoInteractiveDevLabel, t.Name)
 	} else {
 		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoDetachedDevLabel, t.Name)
 	}
+
 	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 	t.Deployment.Spec.Template.Spec.NodeName = t.Rules[0].Node
-	t.Deployment.Spec.Replicas = &devReplicas
 
 	for _, rule := range t.Rules {
-		devContainer := GetDevContainer(t.Deployment, rule.Container)
-		if devContainer == nil {
-			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.Deployment.Name)
-		}
-		rule.Container = devContainer.Name
-		translateDevContainer(devContainer, rule)
-		translateOktetoVolumes(t.Deployment, rule)
+		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
+		TranslateDevContainer(devContainer, rule)
+		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 	}
 	return nil
 }
 
 //GetDevContainer returns the dev container of a given deployment
-func GetDevContainer(d *appsv1.Deployment, name string) *apiv1.Container {
+func GetDevContainer(spec *apiv1.PodSpec, name string) *apiv1.Container {
 	if len(name) == 0 {
-		return &d.Spec.Template.Spec.Containers[0]
+		return &spec.Containers[0]
 	}
 
-	for i, c := range d.Spec.Template.Spec.Containers {
+	for i, c := range spec.Containers {
 		if c.Name == name {
-			return &d.Spec.Template.Spec.Containers[i]
+			return &spec.Containers[i]
 		}
 	}
 
 	return nil
 }
 
-func translateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
+//TranslateDevContainer translates a dev container
+func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	if len(rule.Image) == 0 {
 		rule.Image = c.Image
 	}
@@ -190,13 +200,14 @@ func translateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 	}
 }
 
-func translateOktetoVolumes(d *appsv1.Deployment, rule *model.TranslationRule) {
-	if d.Spec.Template.Spec.Volumes == nil {
-		d.Spec.Template.Spec.Volumes = []apiv1.Volume{}
+//TranslateOktetoVolumes translates the dev volumes
+func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
+	if spec.Volumes == nil {
+		spec.Volumes = []apiv1.Volume{}
 	}
 	for _, v := range rule.Volumes {
 		found := false
-		for _, vm := range d.Spec.Template.Spec.Volumes {
+		for _, vm := range spec.Volumes {
 			if vm.Name == v.Name {
 				found = true
 				break
@@ -214,6 +225,6 @@ func translateOktetoVolumes(d *appsv1.Deployment, rule *model.TranslationRule) {
 				},
 			},
 		}
-		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v)
+		spec.Volumes = append(spec.Volumes, v)
 	}
 }
