@@ -206,8 +206,6 @@ func (up *UpContext) Activate() {
 			return
 		}
 
-		log.Success("Files synchronized")
-
 		err = up.devMode(retry, d, create)
 		if err != nil {
 			up.Exit <- err
@@ -271,6 +269,7 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 	if err != nil {
 		return err
 	}
+	log.Success("Persistent volume provisioned")
 
 	if err := up.startLocalSyncthing(); err != nil {
 		return err
@@ -280,11 +279,12 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 		return err
 	}
 
-	if err := up.synchronizeFiles(); err != nil {
+	if err := up.overrideChanges(); err != nil {
 		return err
 	}
 
-	return up.overrideChanges()
+	log.Success("Files synchronized")
+	return nil
 }
 
 func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Container) error {

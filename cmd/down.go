@@ -17,7 +17,7 @@ import (
 //Down deactivates the development environment
 func Down() *cobra.Command {
 	var devPath string
-	var removeVolumes bool
+	var rm bool
 	var namespace string
 
 	cmd := &cobra.Command{
@@ -35,24 +35,41 @@ func Down() *cobra.Command {
 				dev.Namespace = namespace
 			}
 
-			err = runDown(dev, removeVolumes)
-			if err == nil {
-				log.Success("Okteto Environment deactivated")
-				log.Println()
+			if err := runDown(dev); err != nil {
+				analytics.TrackDown(config.VersionString, false)
+				return err
 			}
 
-			analytics.TrackDown(config.VersionString, err == nil)
-			return err
+			log.Success("Okteto Environment deactivated")
+
+			if rm {
+				if err := removeVolumes(dev); err != nil {
+					analytics.TrackDown(config.VersionString, false)
+					return err
+				}
+
+				log.Success("Persistent volume deleted")
+			}
+
+			log.Println()
+
+			analytics.TrackDown(config.VersionString, true)
+
+			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
-	cmd.Flags().BoolVarP(&removeVolumes, "volumes", "v", false, "remove persistent volumes")
+	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd
 }
 
-func runDown(dev *model.Dev, removeVolumes bool) error {
+func runDown(dev *model.Dev) error {
+	progress := newProgressBar("Deactivating your Okteto Environment...")
+	progress.start()
+	defer progress.stop()
+
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err
@@ -60,10 +77,6 @@ func runDown(dev *model.Dev, removeVolumes bool) error {
 	if dev.Namespace == "" {
 		dev.Namespace = namespace
 	}
-
-	progress := newProgressBar("Deactivating your Okteto Environment...")
-	progress.start()
-	defer progress.stop()
 
 	d, err := deployments.Get(dev, dev.Namespace, client)
 	if err != nil && !errors.IsNotFound(err) {
@@ -83,19 +96,33 @@ func runDown(dev *model.Dev, removeVolumes bool) error {
 		}
 	}
 
-	if removeVolumes {
-		if err := secrets.Destroy(dev, client); err != nil {
-			return err
-		}
+	return nil
+}
 
-		if err := syncK8s.Destroy(dev, client); err != nil {
-			return err
-		}
+func removeVolumes(dev *model.Dev) error {
+	progress := newProgressBar("Deleting your persistent volume...")
+	progress.start()
+	defer progress.stop()
 
-		for i := 0; i <= len(dev.Volumes); i++ {
-			if err := volumes.Destroy(dev.GetVolumeName(i), dev, client); err != nil {
-				return err
-			}
+	client, _, namespace, err := k8Client.GetLocal()
+	if err != nil {
+		return err
+	}
+	if dev.Namespace == "" {
+		dev.Namespace = namespace
+	}
+
+	if err := secrets.Destroy(dev, client); err != nil {
+		return err
+	}
+
+	if err := syncK8s.Destroy(dev, client); err != nil {
+		return err
+	}
+
+	for i := 0; i <= len(dev.Volumes); i++ {
+		if err := volumes.Destroy(dev.GetVolumeName(i), dev, client); err != nil {
+			return err
 		}
 	}
 
