@@ -288,7 +288,7 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 }
 
 func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Container) error {
-	progress := newProgressBar("Provisioning your volume...")
+	progress := newProgressBar("Provisioning your persistent volume...")
 	progress.start()
 	defer progress.stop()
 
