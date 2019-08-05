@@ -132,7 +132,7 @@ func IsAutoCreate(d *appsv1.Deployment) bool {
 
 // DevModeOff deactivates dev mode for d
 func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	trRulesJSON := getAnnotation(d.GetObjectMeta(), oktetoTranslationAnnotation)
+	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), OktetoTranslationAnnotation)
 	if len(trRulesJSON) == 0 {
 		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 		if len(dManifest) == 0 {
@@ -151,10 +151,12 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 		}
 		d.Spec.Replicas = &trRules.Replicas
 		annotations := d.GetObjectMeta().GetAnnotations()
-		delete(annotations, oktetoTranslationAnnotation)
 		delete(annotations, oktetoDeveloperAnnotation)
 		delete(annotations, oktetoVersionAnnotation)
 		d.GetObjectMeta().SetAnnotations(annotations)
+		annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
+		delete(annotations, OktetoTranslationAnnotation)
+		d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
 		labels := d.GetObjectMeta().GetLabels()
 		delete(labels, OktetoDevLabel)
 		d.GetObjectMeta().SetLabels(labels)
