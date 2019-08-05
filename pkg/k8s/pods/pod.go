@@ -118,8 +118,11 @@ func GetSyncNode(dev *model.Dev, c *kubernetes.Clientset) string {
 
 //Exists returns if the dev pod still exists
 func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
-	_, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
-	return err == nil
+	pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+	if err != nil {
+		return false
+	}
+	return pod.GetObjectMeta().GetDeletionTimestamp() == nil
 }
 
 func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {
