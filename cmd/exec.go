@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os"
 
+	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/model"
@@ -34,6 +36,7 @@ func Exec() *cobra.Command {
 				dev.Namespace = namespace
 			}
 			err = executeExec(ctx, dev, args)
+			analytics.TrackExec(dev.Image, config.VersionString, err == nil)
 			return err
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
