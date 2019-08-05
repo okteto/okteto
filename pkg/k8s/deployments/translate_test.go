@@ -211,8 +211,14 @@ func Test_translateResources(t *testing.T) {
 				},
 				r: model.ResourceRequirements{},
 			},
-			expectedRequests: map[apiv1.ResourceName]resource.Quantity{},
-			expectedLimits:   map[apiv1.ResourceName]resource.Quantity{},
+			expectedRequests: map[apiv1.ResourceName]resource.Quantity{
+				apiv1.ResourceMemory: resource.MustParse("2Gi"),
+				apiv1.ResourceCPU:    resource.MustParse("1"),
+			},
+			expectedLimits: map[apiv1.ResourceName]resource.Quantity{
+				apiv1.ResourceMemory: resource.MustParse("0.250Gi"),
+				apiv1.ResourceCPU:    resource.MustParse("0.125"),
+			},
 		},
 		{
 			name: "limits-in-yaml-limits-in-container",

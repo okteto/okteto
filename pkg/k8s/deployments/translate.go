@@ -70,6 +70,7 @@ func translate(t *model.Translation) error {
 		return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 	}
 
+	t.Deployment.Status = appsv1.DeploymentStatus{}
 	manifestBytes, err := json.Marshal(t.Deployment)
 	if err != nil {
 		return err
@@ -134,7 +135,10 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 }
 
 func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
-	c.Resources.Requests = make(map[apiv1.ResourceName]resource.Quantity, 0)
+	if c.Resources.Requests == nil {
+		c.Resources.Requests = make(map[apiv1.ResourceName]resource.Quantity, 0)
+	}
+
 	if v, ok := r.Requests[apiv1.ResourceMemory]; ok {
 		c.Resources.Requests[apiv1.ResourceMemory] = v
 	}
@@ -143,7 +147,10 @@ func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
 		c.Resources.Requests[apiv1.ResourceCPU] = v
 	}
 
-	c.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity, 0)
+	if c.Resources.Limits == nil {
+		c.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity, 0)
+	}
+
 	if v, ok := r.Limits[apiv1.ResourceMemory]; ok {
 		c.Resources.Limits[apiv1.ResourceMemory] = v
 	}
