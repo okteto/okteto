@@ -250,7 +250,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup) error {
 			return ctx.Err()
 		}
 	}
-	return fmt.Errorf("Syncthing not respondinng after 50s")
+	return fmt.Errorf("Syncthing not responding after 50s")
 }
 
 // WaitForScanning waits for the local syncthing to scan local folder

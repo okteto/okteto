@@ -205,7 +205,6 @@ func (up *UpContext) Activate() {
 			up.Exit <- err
 			return
 		}
-		log.Success("Files synchronized")
 
 		err = up.devMode(retry, d, create)
 		if err != nil {
@@ -266,19 +265,32 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 }
 
 func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
-	var err error
-	progress := newProgressBar("Synchronizing your files...")
-	progress.start()
-	defer progress.stop()
-
-	up.Sy, err = syncthing.New(up.Dev)
+	err := up.startRemoteSyncthing(d, c)
 	if err != nil {
 		return err
 	}
+	log.Success("Persistent volume provisioned")
 
-	if err := up.Sy.Run(up.Context, up.WG); err != nil {
+	if err := up.startLocalSyncthing(); err != nil {
 		return err
 	}
+
+	if err := up.synchronizeFiles(); err != nil {
+		return err
+	}
+
+	if err := up.overrideChanges(); err != nil {
+		return err
+	}
+
+	log.Success("Files synchronized")
+	return nil
+}
+
+func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Container) error {
+	progress := newProgressBar("Provisioning your persistent volume...")
+	progress.start()
+	defer progress.stop()
 
 	if err := secrets.Create(up.Dev, up.Client); err != nil {
 		return err
@@ -295,6 +307,22 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 
 	up.SyncPod = p.Name
 	up.Node = p.Spec.NodeName
+	return nil
+}
+
+func (up *UpContext) startLocalSyncthing() error {
+	progress := newProgressBar("Starting the file synchronization service...")
+	progress.start()
+	defer progress.stop()
+	var err error
+	up.Sy, err = syncthing.New(up.Dev)
+	if err != nil {
+		return err
+	}
+
+	if err := up.Sy.Run(up.Context, up.WG); err != nil {
+		return err
+	}
 
 	up.SyncForwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
 	if err := up.SyncForwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
@@ -305,15 +333,20 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 	}
 
 	up.SyncForwarder.Start(up.SyncPod, up.Dev.Namespace)
+	return up.Sy.WaitForPing(up.Context, up.WG)
+}
 
-	if err := up.Sy.WaitForPing(up.Context, up.WG); err != nil {
-		return err
-	}
+func (up *UpContext) synchronizeFiles() error {
+	progress := newProgressBar("Synchronizing your files...")
+	progress.start()
+	defer progress.stop()
+	return up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev)
+}
 
-	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
-		return err
-	}
-
+func (up *UpContext) overrideChanges() error {
+	progress := newProgressBar("Overriding existing files in your Okteto environment...")
+	progress.start()
+	defer progress.stop()
 	if err := up.Sy.OverrideChanges(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
@@ -328,7 +361,6 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 	}
 
 	go up.Sy.Monitor(up.Context, up.WG, up.Disconnect)
-
 	return up.Sy.Restart(up.Context, up.WG)
 }
 
