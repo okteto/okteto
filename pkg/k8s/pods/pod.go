@@ -101,7 +101,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.
 }
 
 // GetSyncNode returns the sync pod node
-func GetSyncNode(dev *model.Dev, c *kubernetes.Clientset) string{
+func GetSyncNode(dev *model.Dev, c *kubernetes.Clientset) string {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", OktetoSyncLabel, dev.Name),
@@ -114,6 +114,12 @@ func GetSyncNode(dev *model.Dev, c *kubernetes.Clientset) string{
 		return pods.Items[0].Spec.NodeName
 	}
 	return ""
+}
+
+//Exists returns if the dev pod still exists
+func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
+	_, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+	return err == nil
 }
 
 func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {

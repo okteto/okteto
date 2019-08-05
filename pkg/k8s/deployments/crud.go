@@ -110,11 +110,11 @@ func TraslateDevMode(tr map[string]*model.Translation) error {
 
 //IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
-	annotations := d.GetObjectMeta().GetAnnotations()
-	if annotations == nil {
+	labels := d.GetObjectMeta().GetLabels()
+	if labels == nil {
 		return false
 	}
-	_, ok := annotations[oktetoDevAnnotation]
+	_, ok := labels[OktetoDevLabel]
 	return ok
 }
 
