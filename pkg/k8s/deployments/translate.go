@@ -3,6 +3,7 @@ package deployments
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -13,13 +14,14 @@ import (
 )
 
 const (
-	oktetoContainer            = "okteto"
-	oktetoMount                = "/var/okteto"
-	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
-	oktetoDevAnnotation        = "dev.okteto.com/manifests"
-	oktetoDeveloperAnnotation  = "dev.okteto.com/developer"
-	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
-	oktetoVersionAnnotation    = "dev.okteto.com/version"
+	oktetoContainer             = "okteto"
+	oktetoMount                 = "/var/okteto"
+	oktetoDeploymentAnnotation  = "dev.okteto.com/deployment"
+	oktetoDevAnnotation         = "dev.okteto.com/manifests"
+	oktetoDeveloperAnnotation   = "dev.okteto.com/developer"
+	oktetoAutoCreateAnnotation  = "dev.okteto.com/auto-ingress"
+	oktetoTranslationAnnotation = "dev.okteto.com/translation"
+	oktetoVersionAnnotation     = "dev.okteto.com/version"
 
 	revisionAnnotation = "deployment.kubernetes.io/revision"
 	//OktetoVersion represents the current dev data version
@@ -38,6 +40,14 @@ var (
 )
 
 func translate(t *model.Translation) error {
+	for _, rule := range t.Rules {
+		devContainer := GetDevContainer(t.Deployment, rule.Container)
+		if devContainer == nil {
+			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.Deployment.Name)
+		}
+		rule.Container = devContainer.Name
+	}
+
 	manifest := getAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if manifest != "" {
 		dOrig := &appsv1.Deployment{}
@@ -46,39 +56,39 @@ func translate(t *model.Translation) error {
 		}
 		t.Deployment = dOrig
 	}
-
 	t.Deployment.Status = appsv1.DeploymentStatus{}
 	t.Deployment.ResourceVersion = ""
 	annotations := t.Deployment.GetObjectMeta().GetAnnotations()
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
+
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
+	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
+	t.Deployment.Spec.Replicas = &devReplicas
+
+	if os.Getenv("OKTETO_CONTINUOUS_DEVELOPMENT") != "" {
+		return setTranslationAsAnnotation(t.Deployment.GetObjectMeta(), t)
+	}
+
 	manifestBytes, err := json.Marshal(t.Deployment)
 	if err != nil {
 		return err
 	}
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
-	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
-	// if err := setDevListAsAnnotation(t.Deployment.GetObjectMeta(), t.Rules); err != nil {
-	// 	return err
-	// }
+
 	if t.Interactive {
 		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoInteractiveDevLabel, t.Name)
 	} else {
 		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoDetachedDevLabel, t.Name)
 	}
+
 	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 	t.Deployment.Spec.Template.Spec.NodeName = t.Rules[0].Node
-	t.Deployment.Spec.Replicas = &devReplicas
 
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(t.Deployment, rule.Container)
-		if devContainer == nil {
-			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.Deployment.Name)
-		}
-		rule.Container = devContainer.Name
 		translateDevContainer(devContainer, rule)
 		translateOktetoVolumes(t.Deployment, rule)
 	}

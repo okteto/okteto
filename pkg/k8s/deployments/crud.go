@@ -57,6 +57,7 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, nodeName string, c *k
 			Interactive: true,
 			Name:        dev.Name,
 			Deployment:  d,
+			Replicas:    *d.Spec.Replicas,
 			Rules:       []*model.TranslationRule{rule},
 		}
 	}
@@ -76,6 +77,7 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, nodeName string, c *k
 				Name:        dev.Name,
 				Interactive: false,
 				Deployment:  d,
+				Replicas:    *d.Spec.Replicas,
 				Rules:       []*model.TranslationRule{rule},
 			}
 		}
