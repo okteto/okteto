@@ -231,7 +231,7 @@ func (up *UpContext) Activate() {
 		}
 
 		if prevError != nil {
-			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !up.Sy.IsConnected()) {
+			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !pods.Exists(up.DevPod, up.Dev.Namespace, up.Client)) {
 				log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...\n")
 				up.shutdown()
 				continue
