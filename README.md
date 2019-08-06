@@ -24,8 +24,7 @@ Okteto helps you achieve this with a mix of kubernetes automation, file synching
 - Explore our [examples](https://github.com/okteto/samples) repository.
 
 ## Stay in Touch
-Got questions? Have feedback? Come talk to us in 
-our [Slack workspace](https://okteto-community.slack.com/join/shared_invite/enQtNDg3MTMyMzA1OTg3LTY1NzE0MGM5YjMwOTAzN2YxZTU3ZjkzNTNkM2Y1YmJjMjlkODU5Mzc1YzY0OThkNWRhYzhkMTM2NWFlY2RkMDk).
+Got questions? Have feedback? Join [the conversation in Slack](https://kubernetes.slack.com/messages/CM1QMQGS0/)! If you don't already have a Kubernetes slack account, [sign up here](http://slack.k8s.io/). 
 
 Follow [@OktetoHQ](https://twitter.com/oktetohq) on Twitter for important announcements.
 
