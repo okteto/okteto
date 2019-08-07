@@ -39,22 +39,30 @@ var (
 
 //Dev represents a cloud native development environment
 type Dev struct {
-	Name        string               `json:"name" yaml:"name"`
-	Labels      map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Namespace   string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Container   string               `json:"container,omitempty" yaml:"container,omitempty"`
-	Image       string               `json:"image,omitempty" yaml:"image,omitempty"`
-	Environment []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Command     []string             `json:"command,omitempty" yaml:"command,omitempty"`
-	WorkDir     string               `json:"workdir" yaml:"workdir"`
-	MountPath   string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
-	SubPath     string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
-	Volumes     []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	Forward     []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
-	Resources   ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
-	DevPath     string               `json:"-" yaml:"-"`
-	DevDir      string               `json:"-" yaml:"-"`
-	Services    []*Dev               `json:"services,omitempty" yaml:"services,omitempty"`
+	Name            string               `json:"name" yaml:"name"`
+	Labels          map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Namespace       string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Container       string               `json:"container,omitempty" yaml:"container,omitempty"`
+	Image           string               `json:"image,omitempty" yaml:"image,omitempty"`
+	Environment     []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Command         []string             `json:"command,omitempty" yaml:"command,omitempty"`
+	WorkDir         string               `json:"workdir" yaml:"workdir"`
+	MountPath       string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
+	SubPath         string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
+	Volumes         []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	DevPath         string               `json:"-" yaml:"-"`
+	DevDir          string               `json:"-" yaml:"-"`
+	Services        []*Dev               `json:"services,omitempty" yaml:"services,omitempty"`
+}
+
+// SecurityContext represents a pod security context
+type SecurityContext struct {
+	RunAsUser  *int64 `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
+	RunAsGroup *int64 `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
+	FSGroup    *int64 `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
@@ -232,7 +240,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName stri
 				SubPath:   dev.SubPath,
 			},
 		},
-		Resources: dev.Resources,
+		SecurityContext: dev.SecurityContext,
+		Resources:       dev.Resources,
 	}
 
 	if main == dev {

@@ -11,11 +11,18 @@ import (
 )
 
 func Test_translate(t *testing.T) {
+	var runAsUser int64 = 100
+	var runAsGroup int64 = 101
+	var fsGroup int64 = 102
 	manifest := []byte(`name: web
 container: dev
 image: web:latest
 command: ["./run_web.sh"]
 workdir: /app
+securityContext:
+  runAsUser: 100
+  runAsGroup: 101
+  fsGroup: 102
 services:
   - name: worker
     container: dev
@@ -44,6 +51,11 @@ services:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
+					SecurityContext: &apiv1.PodSecurityContext{
+						RunAsUser: &runAsUser,
+						RunAsGroup: &runAsGroup,
+						FSGroup: &fsGroup,
+					},
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						apiv1.Volume{

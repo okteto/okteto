@@ -91,6 +91,13 @@ func translate(t *model.Translation) error {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		TranslateDevContainer(devContainer, rule)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
+		if rule.SecurityContext != nil {
+			t.Deployment.Spec.Template.Spec.SecurityContext = &apiv1.PodSecurityContext{
+				RunAsUser:  rule.SecurityContext.RunAsUser,
+				RunAsGroup: rule.SecurityContext.RunAsGroup,
+				FSGroup:    rule.SecurityContext.FSGroup,
+			}
+		}
 	}
 	return nil
 }
