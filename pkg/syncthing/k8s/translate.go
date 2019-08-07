@@ -110,6 +110,14 @@ func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1
 		},
 	}
 
+	if dev.SecurityContext != nil {
+		ss.Spec.Template.Spec.SecurityContext = &apiv1.PodSecurityContext{
+			RunAsUser:  dev.SecurityContext.RunAsUser,
+			RunAsGroup: dev.SecurityContext.RunAsGroup,
+			FSGroup:    dev.SecurityContext.FSGroup,
+		}
+	}
+
 	ss.Spec.VolumeClaimTemplates = translateVolumeClaimTemplates(dev)
 	return ss
 }
