@@ -128,7 +128,7 @@ func Read(bytes []byte) (*Dev, error) {
 	if err := yaml.UnmarshalStrict(bytes, dev); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder
-			sb.WriteString("invalid manifest:\n")
+			sb.WriteString("Invalid manifest:\n")
 			l := strings.Split(err.Error(), "\n")
 			for i := 1; i < len(l); i++ {
 				e := strings.TrimSuffix(l[i], "in type model.Dev")
