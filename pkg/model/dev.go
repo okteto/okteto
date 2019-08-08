@@ -126,7 +126,21 @@ func Read(bytes []byte) (*Dev, error) {
 		Services: make([]*Dev, 0),
 	}
 	if err := yaml.UnmarshalStrict(bytes, dev); err != nil {
-		msg := strings.TrimSuffix(err.Error(), "in type model.Dev")
+		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
+			var sb strings.Builder
+			sb.WriteString("invalid manifest:\n")
+			l := strings.Split(err.Error(), "\n")
+			for i := 1; i < len(l); i++ {
+				e := strings.TrimSuffix(l[i], "in type model.Dev")
+				e = strings.TrimSpace(e)
+				sb.WriteString(fmt.Sprintf("    - %s\n", e))
+			}
+
+			sb.WriteString("    See https://okteto.com/docs/reference/manifest for details")
+			return nil, errors.New(sb.String())
+		}
+		msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid manifest:", 1)
+		msg = strings.TrimSuffix(msg, "in type model.Dev")
 		return nil, errors.New(msg)
 	}
 	if err := dev.setDefaults(); err != nil {
