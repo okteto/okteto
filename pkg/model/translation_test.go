@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	yaml "gopkg.in/yaml.v2"
+	apiv1 "k8s.io/api/core/v1"
 )
 
 func TestDevToTranslationRule(t *testing.T) {
@@ -11,11 +12,13 @@ func TestDevToTranslationRule(t *testing.T) {
 container: dev
 image: web:latest
 command: ["./run_web.sh"]
+imagePullPolicy: Never
 mountpath: /app
 services:
   - name: worker
     container: dev
     image: worker:latest
+    imagePullPolicy: IfNotPresent
     mountpath: /src`)
 
 	dev, err := Read(manifest)
@@ -26,13 +29,14 @@ services:
 	d1 := dev.GevSandbox()
 	rule1 := dev.ToTranslationRule(dev, d1, "node")
 	rule1OK := &TranslationRule{
-		Node:         "node",
-		Container:    "dev",
-		Image:        "web:latest",
-		Command:      []string{"tail"},
-		Args:         []string{"-f", "/dev/null"},
-		Healthchecks: false,
-		Environment:  make([]EnvVar, 0),
+		Node:            "node",
+		Container:       "dev",
+		Image:           "web:latest",
+		ImagePullPolicy: apiv1.PullNever,
+		Command:         []string{"tail"},
+		Args:            []string{"-f", "/dev/null"},
+		Healthchecks:    false,
+		Environment:     make([]EnvVar, 0),
 		Resources: ResourceRequirements{
 			Limits:   ResourceList{},
 			Requests: ResourceList{},
@@ -55,13 +59,14 @@ services:
 	d2 := dev2.GevSandbox()
 	rule2 := dev2.ToTranslationRule(dev, d2, "node")
 	rule2OK := &TranslationRule{
-		Node:         "node",
-		Container:    "dev",
-		Image:        "worker:latest",
-		Command:      nil,
-		Args:         nil,
-		Healthchecks: true,
-		Environment:  make([]EnvVar, 0),
+		Node:            "node",
+		Container:       "dev",
+		Image:           "worker:latest",
+		ImagePullPolicy: apiv1.PullIfNotPresent,
+		Command:         nil,
+		Args:            nil,
+		Healthchecks:    true,
+		Environment:     make([]EnvVar, 0),
 		Resources: ResourceRequirements{
 			Limits:   ResourceList{},
 			Requests: ResourceList{},

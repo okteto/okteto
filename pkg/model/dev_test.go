@@ -3,6 +3,8 @@ package model
 import (
 	"reflect"
 	"testing"
+
+	apiv1 "k8s.io/api/core/v1"
 )
 
 func Test_loadDev(t *testing.T) {
@@ -157,7 +159,8 @@ func TestDev_validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dev := &Dev{
-				Name: tt.devName,
+				Name:            tt.devName,
+				ImagePullPolicy: apiv1.PullAlways,
 			}
 			if err := dev.validate(); (err != nil) != tt.wantErr {
 				t.Errorf("Dev.validate() error = %v, wantErr %v", err, tt.wantErr)

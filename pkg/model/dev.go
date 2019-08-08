@@ -44,6 +44,7 @@ type Dev struct {
 	Namespace       string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container       string               `json:"container,omitempty" yaml:"container,omitempty"`
 	Image           string               `json:"image,omitempty" yaml:"image,omitempty"`
+	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment     []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command         []string             `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir         string               `json:"workdir" yaml:"workdir"`
@@ -141,6 +142,9 @@ func (dev *Dev) setDefaults() error {
 		dev.MountPath = "/okteto"
 		dev.WorkDir = "/okteto"
 	}
+	if dev.ImagePullPolicy == "" {
+		dev.ImagePullPolicy = apiv1.PullAlways
+	}
 	if dev.WorkDir != "" && dev.MountPath == "" {
 		dev.MountPath = dev.WorkDir
 	}
@@ -151,6 +155,9 @@ func (dev *Dev) setDefaults() error {
 		if s.MountPath == "" && s.WorkDir == "" {
 			s.MountPath = "/okteto"
 			s.WorkDir = "/okteto"
+		}
+		if s.ImagePullPolicy == "" {
+			s.ImagePullPolicy = apiv1.PullAlways
 		}
 		if s.WorkDir != "" && s.MountPath == "" {
 			s.MountPath = s.WorkDir
@@ -182,6 +189,27 @@ func (dev *Dev) validate() error {
 		return errBadName
 	}
 
+	if err := validatePullPolicy(dev.ImagePullPolicy); err != nil {
+		return err
+	}
+
+	for _, s := range dev.Services {
+		if err := validatePullPolicy(s.ImagePullPolicy); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
+	switch pullPolicy {
+	case apiv1.PullAlways:
+	case apiv1.PullIfNotPresent:
+	case apiv1.PullNever:
+	default:
+		return fmt.Errorf("supported values for 'imagePullPolicy' are: 'Always', 'IfNotPresent' or 'Never'")
+	}
 	return nil
 }
 
@@ -228,11 +256,12 @@ func (dev *Dev) LabelsSelector() string {
 // ToTranslationRule translates a dev struct into a translation rule
 func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName string) *TranslationRule {
 	rule := &TranslationRule{
-		Node:        nodeName,
-		Container:   dev.Container,
-		Image:       dev.Image,
-		Environment: dev.Environment,
-		WorkDir:     dev.WorkDir,
+		Node:            nodeName,
+		Container:       dev.Container,
+		Image:           dev.Image,
+		ImagePullPolicy: dev.ImagePullPolicy,
+		Environment:     dev.Environment,
+		WorkDir:         dev.WorkDir,
 		Volumes: []VolumeMount{
 			VolumeMount{
 				Name:      main.GetVolumeName(0),
