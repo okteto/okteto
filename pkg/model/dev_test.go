@@ -53,6 +53,25 @@ workdir: /app`)
 	}
 }
 
+func Test_extraArgs(t *testing.T) {
+	manifest := []byte(`
+name: deployment
+container: core
+image: code/core:0.1.8
+command: ["uwsgi"]
+requests:
+    memory: "64Mi"
+    cpu: "250m"
+  limits:
+    memory: "128Mi"
+    cpu: "500m"
+workdir: /app`)
+	_, err := Read(manifest)
+	if err == nil {
+		t.Errorf("manifest with bad attribute didn't fail to load")
+	}
+}
+
 func Test_loadDevDefaults(t *testing.T) {
 	var tests = []struct {
 		name                string

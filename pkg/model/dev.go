@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -124,8 +125,9 @@ func Read(bytes []byte) (*Dev, error) {
 		},
 		Services: make([]*Dev, 0),
 	}
-	if err := yaml.Unmarshal(bytes, dev); err != nil {
-		return nil, err
+	if err := yaml.UnmarshalStrict(bytes, dev); err != nil {
+		msg := strings.TrimSuffix(err.Error(), "in type model.Dev")
+		return nil, errors.New(msg)
 	}
 	if err := dev.setDefaults(); err != nil {
 		return nil, err
