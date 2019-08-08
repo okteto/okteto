@@ -52,9 +52,9 @@ services:
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
 					SecurityContext: &apiv1.PodSecurityContext{
-						RunAsUser: &runAsUser,
+						RunAsUser:  &runAsUser,
 						RunAsGroup: &runAsGroup,
-						FSGroup: &fsGroup,
+						FSGroup:    &fsGroup,
 					},
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{

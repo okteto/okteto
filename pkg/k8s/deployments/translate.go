@@ -122,8 +122,9 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	if len(rule.Image) == 0 {
 		rule.Image = c.Image
 	}
-
 	c.Image = rule.Image
+	c.ImagePullPolicy = rule.ImagePullPolicy
+
 	if rule.WorkDir != "" {
 		c.WorkingDir = rule.WorkDir
 	}

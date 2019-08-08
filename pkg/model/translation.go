@@ -2,6 +2,7 @@ package model
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 )
 
 //Translation represents the information for translating a deployment
@@ -18,6 +19,7 @@ type TranslationRule struct {
 	Node            string               `json:"node,omitempty"`
 	Container       string               `json:"container,omitempty"`
 	Image           string               `json:"image,omitempty"`
+	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment     []EnvVar             `json:"environment,omitempty"`
 	Command         []string             `json:"command,omitempty"`
 	Args            []string             `json:"args,omitempty"`
