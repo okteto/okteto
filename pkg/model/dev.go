@@ -273,13 +273,10 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 	if dev.Image == "" {
 		dev.Image = DefaultImage
 	}
-	return &appsv1.Deployment{
+	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
-			Annotations: map[string]string{
-				oktetoAutoCreateAnnotation: "true",
-			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &devReplicas,
@@ -308,4 +305,8 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 			},
 		},
 	}
+	if len(dev.Services) == 0 {
+		d.ObjectMeta.Annotations = map[string]string{oktetoAutoCreateAnnotation: "true"}
+	}
+	return d
 }
