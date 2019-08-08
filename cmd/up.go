@@ -389,7 +389,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 			}
 		}
 	}
-	if create {
+	if create && len(up.Dev.Services) == 0 {
 		if err := services.Create(up.Dev, up.Client); err != nil {
 			return err
 		}
