@@ -114,13 +114,13 @@ func (a *authHandler) handle() http.Handler {
 		s := r.URL.Query().Get("state")
 
 		if a.state != s {
-			a.errChan <- fmt.Errorf("invalid request state")
+			a.errChan <- fmt.Errorf("Invalid request state")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		if _, err := w.Write(loginHTML); err != nil {
-			a.errChan <- fmt.Errorf("failed to write to the response: %s", err)
+			a.errChan <- fmt.Errorf("Failed to write to the response: %s", err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 

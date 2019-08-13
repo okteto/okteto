@@ -73,11 +73,9 @@ func (p *PortForwardManager) Start(pod, namespace string) {
 				log.Debugf("[port-forward-%d:%d] goroutine forwarding finished", f.localPort, f.remotePort)
 			} else {
 				log.Debugf("[port-forward-%d:%d] goroutine forwarding finished with errors: %s", f.localPort, f.remotePort, err)
+				close(ready)
+				p.ErrChan <- fmt.Errorf("Unable to listen on %d:%d", f.localPort, f.remotePort)
 			}
-
-			close(ready)
-			p.ErrChan <- fmt.Errorf("Unable to listen on %d:%d", f.localPort, f.remotePort)
-
 		}(pf, ready)
 	}
 
