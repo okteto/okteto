@@ -6,7 +6,7 @@
 
 [release]: https://github.com/okteto/okteto/releases
 [license]: https://github.com/okteto/okteto/blob/master/LICENSE
-
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3055/badge)](https://bestpractices.coreinfrastructure.org/projects/3055)
 
 ## Overview
 
