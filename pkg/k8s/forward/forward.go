@@ -18,7 +18,6 @@ import (
 //PortForward holds the information of the port forward
 type PortForward struct {
 	stopChan   chan struct{}
-	isReady    bool
 	localPort  int
 	remotePort int
 	out        *bytes.Buffer

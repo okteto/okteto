@@ -28,7 +28,6 @@ const (
 	execEvent            = "Exec"
 	signupEvent          = "Signup"
 	disableEvent         = "Disable Analytics"
-	enableEvent          = "Enable Analytics"
 )
 
 var (

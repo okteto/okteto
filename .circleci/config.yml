@@ -10,7 +10,7 @@ jobs:
       - restore_cache: 
           keys:
             - v1-pkg-cache
-      - run: make test static
+      - run: make test
       - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
       - persist_to_workspace:
           root: .

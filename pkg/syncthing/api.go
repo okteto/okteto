@@ -12,35 +12,6 @@ type addAPIKeyTransport struct {
 	T http.RoundTripper
 }
 
-// API types
-
-type syncthingConnections struct {
-	Connections map[string]struct {
-		Connected bool `json:"connected,omitempty"`
-	} `json:"connections,omitempty"`
-}
-
-type event struct {
-	Type string `json:"type,omitempty"`
-	Data struct {
-		Completion  float64 `json:"completion,omitempty"`
-		Folder      string  `json:"folder,omitempty"`
-		Device      string  `json:"device,omitempty"`
-		GlobalBytes int64   `json:"globalBytes,omitempty"`
-	} `json:"data,omitempty"`
-}
-
-type syncthingErrors struct {
-	Errors []struct {
-		Message string `json:"message,omitempty"`
-	} `json:"errors,omitempty"`
-}
-
-type completion struct {
-	Completion float64 `json:"completion,omitempty"`
-	NeedBytes  int     `json:"needBytes,omitempty"`
-}
-
 func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Add("X-API-Key", "cnd")
 	return akt.T.RoundTrip(req)
@@ -69,11 +40,11 @@ func (s *Syncthing) APICall(url, method string, code int, params map[string]stri
 
 	q := req.URL.Query()
 	q.Add("limit", "30")
-	if params != nil {
-		for key, value := range params {
-			q.Add(key, value)
-		}
+
+	for key, value := range params {
+		q.Add(key, value)
 	}
+
 	req.URL.RawQuery = q.Encode()
 
 	resp, err := s.Client.Do(req)

@@ -11,10 +11,7 @@ import (
 // IsConnected returns true if it can ping the remote syncthing
 func (s *Syncthing) IsConnected() bool {
 	_, err := s.APICall("rest/system/ping", "GET", 200, nil, false)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // Monitor will send a message to disconnected if remote syncthing is disconnected for more than 10 seconds.

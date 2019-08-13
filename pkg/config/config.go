@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	folderName       = ".okteto"
-	manifestFileName = "okteto.yml"
+	folderName = ".okteto"
 )
 
 // VersionString the version of the cli

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 
@@ -20,11 +19,6 @@ type PortForwardManager struct {
 	restConfig   *rest.Config
 	client       *kubernetes.Clientset
 	ErrChan      chan error
-}
-
-type portForwardHealthcheck struct {
-	lastConnectionTime time.Time
-	isDisconnected     bool
 }
 
 // NewPortForwardManager initializes a new instance
@@ -70,21 +64,20 @@ func (p *PortForwardManager) Start(pod, namespace string) {
 			defer wg.Done()
 			<-r
 			log.Debugf("[port-forward-%d:%d] ready", f.localPort, f.remotePort)
-			return
 		}(pf, ready)
 
 		go func(f *PortForward, r chan struct{}) {
 			log.Debugf("[port-forward-%d:%d] connecting to %s/pod/%s", f.localPort, f.remotePort, namespace, pod)
-			if err := f.start(p.restConfig, req.URL(), pod, r); err != nil {
-				if err == nil {
-					log.Debugf("[port-forward-%d:%d] goroutine forwarding finished", f.localPort, f.remotePort)
-				} else {
-					log.Debugf("[port-forward-%d:%d] goroutine forwarding finished with errors: %s", f.localPort, f.remotePort, err)
-				}
-
-				close(ready)
-				p.ErrChan <- fmt.Errorf("Unable to listen on %d:%d", f.localPort, f.remotePort)
+			err := f.start(p.restConfig, req.URL(), pod, r)
+			if err == nil {
+				log.Debugf("[port-forward-%d:%d] goroutine forwarding finished", f.localPort, f.remotePort)
+			} else {
+				log.Debugf("[port-forward-%d:%d] goroutine forwarding finished with errors: %s", f.localPort, f.remotePort, err)
 			}
+
+			close(ready)
+			p.ErrChan <- fmt.Errorf("Unable to listen on %d:%d", f.localPort, f.remotePort)
+
 		}(pf, ready)
 	}
 

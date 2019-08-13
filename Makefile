@@ -19,10 +19,9 @@ $(PLATFORMS):
 	GOOS=$(os) GOARCH=$(arch) go build -ldflags "-X github.com/okteto/okteto/pkg/config.VersionString=${VERSION_STRING}" -o "bin/okteto-$(label)" 
 	sha256sum "bin/okteto-$(label)" > "bin/okteto-$(label).sha256"  
 
-.PHONY: static
-static:
-	# ignores: error strings should not be capitalized (ST1005), at least one file in a package should have a package comment (ST1000)
-	 staticcheck --checks all,-ST1005,-ST1000 ./...
+.PHONY: lint
+lint:
+	golangci-lint run
 
 .PHONY: test
 test:

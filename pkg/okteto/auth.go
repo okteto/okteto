@@ -153,7 +153,7 @@ func saveToken(id, token, url string) error {
 
 	p := filepath.Join(config.GetHome(), tokenFile)
 	log.Debugf("saving token at %s", p)
-	if err := ioutil.WriteFile(p, marshalled, 400); err != nil {
+	if err := ioutil.WriteFile(p, marshalled, 0400); err != nil {
 		return fmt.Errorf("couldn't save authentication token: %s", err)
 	}
 

@@ -150,7 +150,9 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 }
 
 func (s *Syncthing) initConfig() error {
-	os.MkdirAll(s.Home, 0700)
+	if err := os.MkdirAll(s.Home, 0700); err != nil {
+		return fmt.Errorf("failed to create %s: %s", s.Home, err)
+	}
 
 	if err := s.UpdateConfig(); err != nil {
 		return err
@@ -219,15 +221,14 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 	log.Infof("syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		<-ctx.Done()
 		if err := s.Stop(); err != nil {
 			log.Info(err)
 		}
 		log.Debug("syncthing clean shutdown")
-		return
 	}()
 	return nil
 }
@@ -303,7 +304,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 	params := map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
 	completion := &Completion{}
 	log.Infof("waiting for synchronization to complete...")
-	for true {
+	for {
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -327,7 +328,6 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 			return nil
 		}
 	}
-	return nil
 }
 
 // Restart restarts the syncthing process
@@ -434,11 +434,7 @@ func Exists(home string) bool {
 
 	log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
 
-	if process.Executable() == getBinaryName() {
-		return true
-	}
-
-	return false
+	return process.Executable() == getBinaryName()
 }
 
 // GetInstallPath returns the expected install path for syncthing

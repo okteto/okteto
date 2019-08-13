@@ -14,10 +14,7 @@ import (
 )
 
 const (
-	oktetoContainer            = "okteto"
-	oktetoMount                = "/var/okteto"
 	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
-	oktetoDevAnnotation        = "dev.okteto.com/manifests"
 	oktetoDeveloperAnnotation  = "dev.okteto.com/developer"
 	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
@@ -144,7 +141,7 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 
 func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
 	if c.Resources.Requests == nil {
-		c.Resources.Requests = make(map[apiv1.ResourceName]resource.Quantity, 0)
+		c.Resources.Requests = make(map[apiv1.ResourceName]resource.Quantity)
 	}
 
 	if v, ok := r.Requests[apiv1.ResourceMemory]; ok {
@@ -156,7 +153,7 @@ func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
 	}
 
 	if c.Resources.Limits == nil {
-		c.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity, 0)
+		c.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity)
 	}
 
 	if v, ok := r.Limits[apiv1.ResourceMemory]; ok {

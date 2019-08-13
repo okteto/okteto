@@ -19,10 +19,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	errDone = fmt.Errorf("done")
-)
-
 //Login starts the login handshake with github and okteto
 func Login() *cobra.Command {
 	cmd := &cobra.Command{
@@ -118,14 +114,17 @@ func (a *authHandler) handle() http.Handler {
 		s := r.URL.Query().Get("state")
 
 		if a.state != s {
-			a.errChan <- fmt.Errorf("Invalid request state")
+			a.errChan <- fmt.Errorf("invalid request state")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		w.Write(loginHTML)
+		if _, err := w.Write(loginHTML); err != nil {
+			a.errChan <- fmt.Errorf("failed to write to the response: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+
 		a.response <- code
-		return
 	}
 
 	return http.HandlerFunc(fn)

@@ -95,7 +95,7 @@ func (r *ResourceList) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (r ResourceList) MarshalYAML() (interface{}, error) {
-	m := make(map[apiv1.ResourceName]string, 0)
+	m := make(map[apiv1.ResourceName]string)
 	for k, v := range r {
 		m[k] = v.String()
 	}

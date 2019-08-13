@@ -70,7 +70,7 @@ func executeInit(devPath string) error {
 	languagesDiscovered, err := linguist.ProcessDirectory(root)
 	if err != nil {
 		log.Info(err)
-		return fmt.Errorf("Failed to determine the language of the current directory")
+		return fmt.Errorf("failed to determine the language of the current directory")
 	}
 
 	dev, language, err := getDevelopmentEnvironment(languagesDiscovered[0])
@@ -82,12 +82,12 @@ func executeInit(devPath string) error {
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
 		log.Infof("failed to marshall dev environment: %s", err)
-		return fmt.Errorf("Failed to generate your manifest")
+		return fmt.Errorf("failed to generate your manifest")
 	}
 
 	if err := ioutil.WriteFile(devPath, marshalled, 0600); err != nil {
 		log.Info(err)
-		return fmt.Errorf("Failed to write your manifest")
+		return fmt.Errorf("failed to write your manifest")
 	}
 
 	if !fileExists(stignore) {
