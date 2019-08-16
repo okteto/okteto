@@ -21,7 +21,7 @@ var (
 	}
 
 	syncthingVersion = semver.MustParse("1.1.4")
-	versionRegex     = regexp.MustCompile("syncthing v(\\d+\\.\\d+\\.\\d+) .*")
+	versionRegex     = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
 func syncthingUpgradeAvailable() bool {

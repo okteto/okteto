@@ -217,7 +217,6 @@ func (up *UpContext) Activate() {
 
 		go func() {
 			up.Running <- up.runCommand()
-			return
 		}()
 
 		prevError := up.WaitUntilExitOrInterrupt()
@@ -414,7 +413,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 }
 
 func (up *UpContext) runCommand() error {
-	exec.Exec(
+	if err := exec.Exec(
 		up.Context,
 		up.Client,
 		up.RestConfig,
@@ -426,7 +425,10 @@ func (up *UpContext) runCommand() error {
 		os.Stdout,
 		os.Stderr,
 		[]string{"sh", "-c", "trap '' TERM && kill -- -1 && sleep 0.1 & kill -s KILL -- -1 >/dev/null 2>&1"},
-	)
+	); err != nil {
+		log.Infof("failed to kill existing session: %s", err)
+	}
+
 	return exec.Exec(
 		up.Context,
 		up.Client,
@@ -465,7 +467,6 @@ func (up *UpContext) shutdown() {
 		if up.SyncForwarder != nil {
 			up.SyncForwarder.Stop()
 		}
-		return
 	}()
 
 	select {
