@@ -29,7 +29,7 @@ func Destroy(name string, dev *model.Dev, c *kubernetes.Clientset) error {
 		err := vClient.Delete(name, &metav1.DeleteOptions{})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
-				log.Infof("volume claim '%s' successfully deleted", name)
+				log.Infof("volume claim '%s' successfully destroyed", name)
 				return nil
 			}
 
@@ -37,9 +37,12 @@ func Destroy(name string, dev *model.Dev, c *kubernetes.Clientset) error {
 		}
 
 		<-ticker.C
+		if i%10 == 5 {
+			log.Infof("waiting for volume claim '%s' to be destroyed...", name)
+		}
 	}
 
-	return fmt.Errorf("volume claim '%s' wasn't deleted after 300s", name)
+	return fmt.Errorf("volume claim '%s' wasn't destroyed after 300s", name)
 }
 
 func checkIfAttached(pvc string, dev *model.Dev, c *kubernetes.Clientset) error {
