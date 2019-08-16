@@ -49,8 +49,15 @@ func checkIfAttached(pvc string, dev *model.Dev, c *kubernetes.Clientset) error 
 		return nil
 	}
 
+	prefixes := []string{dev.Name}
+	for _, s := range dev.Services {
+		prefixes = append(prefixes, s.Name)
+	}
+
 	for _, p := range pods.Items {
-		if strings.HasPrefix(p.Name, dev.Name) {
+		if hasPrefix(p.Name, prefixes) {
+			// discard the pods that are part of the dev environment, since they might be in
+			// the process of being terminated
 			continue
 		}
 
@@ -66,4 +73,14 @@ func checkIfAttached(pvc string, dev *model.Dev, c *kubernetes.Clientset) error 
 
 	return nil
 
+}
+
+func hasPrefix(s string, prefixes []string) bool {
+	for _, p := range prefixes {
+		if strings.HasPrefix(s, p) {
+			return true
+		}
+	}
+
+	return false
 }
