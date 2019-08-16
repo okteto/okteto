@@ -24,7 +24,7 @@ func Down() *cobra.Command {
 		Use:   "down",
 		Short: "Deactivates your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Debug("starting down command")
+			log.Info("starting down command")
 
 			dev, err := loadDev(devPath)
 			if err != nil {
@@ -54,7 +54,7 @@ func Down() *cobra.Command {
 			log.Println()
 
 			analytics.TrackDown(config.VersionString, true)
-
+			log.Info("completed down command")
 			return nil
 		},
 	}
@@ -87,6 +87,10 @@ func runDown(dev *model.Dev) error {
 		return err
 	}
 
+	if len(tr) == 0 {
+		log.Info("no translations available in the deployment")
+	}
+
 	for _, t := range tr {
 		if t.Deployment == nil {
 			continue
@@ -100,6 +104,7 @@ func runDown(dev *model.Dev) error {
 }
 
 func removeVolumes(dev *model.Dev) error {
+	log.Info("deleting persistent volume")
 	progress := newProgressBar("Deleting your persistent volume...")
 	progress.start()
 	defer progress.stop()

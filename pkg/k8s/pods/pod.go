@@ -153,7 +153,7 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 		},
 	)
 	if err != nil {
-		log.Infof("error listing pods: %s", err)
+		log.Infof("error listing pods to restart: %s", err)
 		return fmt.Errorf("failed to retrieve dev environment information")
 	}
 
