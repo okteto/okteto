@@ -45,6 +45,9 @@ jobs:
           key: v1-pkg-cache
           paths:
             - ~/.cache/go-build
+      - store_artifacts:
+          path: ~/.okteto/okteto.log
+          
   mock-publish-github-release:
     docker:
       - image: circleci/golang:1.12
