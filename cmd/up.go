@@ -413,6 +413,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 }
 
 func (up *UpContext) runCommand() error {
+	in := strings.NewReader("\n")
 	if err := exec.Exec(
 		up.Context,
 		up.Client,
@@ -420,8 +421,8 @@ func (up *UpContext) runCommand() error {
 		up.Dev.Namespace,
 		up.DevPod,
 		up.Dev.Container,
-		true,
-		os.Stdin,
+		false,
+		in,
 		os.Stdout,
 		os.Stderr,
 		[]string{"sh", "-c", "trap '' TERM && kill -- -1 && sleep 0.1 & kill -s KILL -- -1 >/dev/null 2>&1"},
@@ -429,6 +430,7 @@ func (up *UpContext) runCommand() error {
 		log.Infof("failed to kill existing session: %s", err)
 	}
 
+	log.Infof("starting remote command")
 	return exec.Exec(
 		up.Context,
 		up.Client,
