@@ -40,11 +40,15 @@ jobs:
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             mkdir -p $HOME/.okteto
             touch $HOME/.okteto/.noanalytics
+            echo $HOME
             make integration
       - save_cache:
           key: v1-pkg-cache
           paths:
             - ~/.cache/go-build
+      - store_artifacts:
+          path: /home/circleci/.okteto/okteto.log
+          
   mock-publish-github-release:
     docker:
       - image: circleci/golang:1.12
