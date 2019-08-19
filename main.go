@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 
@@ -59,6 +60,12 @@ func main() {
 
 	if err := root.Execute(); err != nil {
 		log.Fail(err.Error())
+		if uErr, ok := err.(errors.UserError); ok {
+			if len(uErr.Hint) > 0 {
+				log.Hint(uErr.Hint)
+			}
+		}
+
 		os.Exit(1)
 	}
 }

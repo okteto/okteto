@@ -172,8 +172,13 @@ func (up *UpContext) Activate() {
 
 			var deploy bool
 			if len(up.Dev.Labels) == 0 {
-				deploy = askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name))
+				deploy = askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
 			} else {
+				if err == errors.ErrNotFound {
+					err = errors.UserError{
+						E:    fmt.Errorf("Didn't find a deployment in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
+						Hint: "Update your labels or use `okteto namespace` to select a different namespace and try again"}
+				}
 				up.Exit <- err
 				return
 			}

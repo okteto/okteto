@@ -128,6 +128,10 @@ func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
 func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {
 	d, err := deployments.Get(dev, dev.Namespace, c)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return err
+		}
+
 		log.Infof("failed to get deployment information: %s", err)
 		return nil
 	}
