@@ -14,16 +14,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const maxRetries = 300
+const maxRetries = 120
 
 //Destroy destroys the volume claim for a given dev environment
 func Destroy(name string, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	log.Infof("destroying volume claim '%s'...", name)
-
-	if err := checkIfAttached(name, dev, c); err != nil {
-		return err
-	}
 
 	ticker := time.NewTicker(1 * time.Second)
 	for i := 0; i < maxRetries; i++ {
@@ -43,7 +39,12 @@ func Destroy(name string, dev *model.Dev, c *kubernetes.Clientset) error {
 		}
 	}
 
-	return fmt.Errorf("volume claim '%s' wasn't destroyed after 300s", name)
+	if err := checkIfAttached(name, dev, c); err != nil {
+		return err
+	}
+
+	return fmt.Errorf("volume claim '%s' wasn't destroyed after 120s", name)
+
 }
 
 func checkIfAttached(pvc string, dev *model.Dev, c *kubernetes.Clientset) error {
@@ -57,10 +58,8 @@ func checkIfAttached(pvc string, dev *model.Dev, c *kubernetes.Clientset) error 
 		for _, v := range p.Spec.Volumes {
 			if v.PersistentVolumeClaim != nil {
 				if v.PersistentVolumeClaim.ClaimName == pvc {
-					if !isTerminating(&p) {
-						log.Infof("pvc/%s is still attached to pod/%s", pvc, p.Name)
-						return fmt.Errorf("can't delete your persistent volume since it's still attached to 'pod/%s'", p.Name)
-					}
+					log.Infof("pvc/%s is still attached to pod/%s", pvc, p.Name)
+					return fmt.Errorf("can't delete your volume claim since it's still attached to 'pod/%s'", p.Name)
 				}
 			}
 		}
