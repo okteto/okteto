@@ -297,7 +297,8 @@ func createNamespace(namespace, oktetoPath string) error {
 func deleteNamespace(oktetoPath, namespace string) error {
 	log.Printf("okteto delete namespace %s", namespace)
 	deleteCMD := exec.Command(oktetoPath, "delete", "namespace", namespace)
-	if o, err := deleteCMD.CombinedOutput(); err != nil {
+	o, err := deleteCMD.CombinedOutput(); 
+	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
 	}
 
@@ -307,8 +308,11 @@ func deleteNamespace(oktetoPath, namespace string) error {
 func down(name, manifestPath, oktetoPath string) error {
 	log.Printf("okteto down -f %s -v", manifestPath)
 	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
-	if o, err := downCMD.CombinedOutput(); err != nil {
-		return fmt.Errorf("okteto down failed: %s - %s", string(o), err)
+	
+	o, err := downCMD.CombinedOutput()
+	log.Printf("okteto down output:\n%s", string(o))
+	if err != nil {
+		return fmt.Errorf("okteto down failed: %s", err)
 	}
 
 	log.Println("waiting for the deployment to be restored")
@@ -383,6 +387,8 @@ func getOktetoPath() (string, error) {
 	if len(oktetoPath) == 0 {
 		oktetoPath = "/usr/local/bin/okteto"
 	}
+
+	log.Printf("using %s", oktetoPath)
 
 	var err error
 	oktetoPath, err = filepath.Abs(oktetoPath)

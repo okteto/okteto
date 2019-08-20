@@ -58,6 +58,7 @@ type UpContext struct {
 	Exit          chan error
 	Sy            *syncthing.Syncthing
 	ErrChan       chan error
+	success       bool
 }
 
 //Up starts a cloud dev environment
@@ -94,7 +95,6 @@ func Up() *cobra.Command {
 			}
 
 			err = RunUp(dev)
-			analytics.TrackUp(dev.Image, config.VersionString, err == nil)
 			return err
 		},
 	}
@@ -170,21 +170,28 @@ func (up *UpContext) Activate() {
 				return
 			}
 
-			var deploy bool
 			if len(up.Dev.Labels) == 0 {
-				deploy = askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name))
+				deploy := askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
+				if !deploy {
+					up.Exit <- errors.UserError{
+						E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", up.Dev.Name, up.Dev.Namespace),
+						Hint: "Deploy your application first or use `okteto namespace` to select a different namespace and try again"}
+					return
+				}
 			} else {
+				if err == errors.ErrNotFound {
+					err = errors.UserError{
+						E:    fmt.Errorf("Didn't find a deployment in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
+						Hint: "Update your labels or use `okteto namespace` to select a different namespace and try again"}
+				}
 				up.Exit <- err
-				return
-			}
-			if !deploy {
-				up.Exit <- fmt.Errorf("deployment %s not found [current context: %s]", up.Dev.Name, up.Dev.Namespace)
 				return
 			}
 
 			d = up.Dev.GevSandbox()
 			create = true
 		}
+
 		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
 		if devContainer == nil {
 			up.Exit <- fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
@@ -211,6 +218,8 @@ func (up *UpContext) Activate() {
 			up.Exit <- err
 			return
 		}
+
+		up.success = true
 		retry = true
 
 		printDisplayContext("Okteto Environment activated", up.Dev)
@@ -291,15 +300,18 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 	progress.start()
 	defer progress.stop()
 
+	log.Info("create deployment secrets")
 	if err := secrets.Create(up.Dev, up.Client); err != nil {
 		return err
 	}
 
+	log.Info("deploying syncK8s")
 	if err := syncK8s.Deploy(up.Dev, d, c, up.Client); err != nil {
 		return err
 	}
 
-	p, err := pods.GetDevPod(up.Context, up.Dev, pods.OktetoSyncLabel, up.Client)
+	log.Info("getting the sync pod")
+	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoSyncLabel, up.Client, true)
 	if err != nil {
 		return err
 	}
@@ -394,7 +406,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		}
 	}
 
-	p, err := pods.GetDevPod(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client)
+	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client, true)
 	if err != nil {
 		return err
 	}
@@ -413,6 +425,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 }
 
 func (up *UpContext) runCommand() error {
+	in := strings.NewReader("\n")
 	if err := exec.Exec(
 		up.Context,
 		up.Client,
@@ -420,8 +433,8 @@ func (up *UpContext) runCommand() error {
 		up.Dev.Namespace,
 		up.DevPod,
 		up.Dev.Container,
-		true,
-		os.Stdin,
+		false,
+		in,
 		os.Stdout,
 		os.Stderr,
 		[]string{"sh", "-c", "trap '' TERM && kill -- -1 && sleep 0.1 & kill -s KILL -- -1 >/dev/null 2>&1"},
@@ -429,6 +442,7 @@ func (up *UpContext) runCommand() error {
 		log.Infof("failed to kill existing session: %s", err)
 	}
 
+	log.Infof("starting remote command")
 	return exec.Exec(
 		up.Context,
 		up.Client,
@@ -446,7 +460,9 @@ func (up *UpContext) runCommand() error {
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
 func (up *UpContext) shutdown() {
-	log.Debugf("cancelling context")
+	log.Debugf("up shutdown")
+	analytics.TrackUp(up.Dev.Image, config.VersionString, up.success)
+
 	if up.Cancel != nil {
 		up.Cancel()
 	}

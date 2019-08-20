@@ -37,7 +37,7 @@ func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Dep
 			return nil, err
 		}
 		if len(deploys.Items) == 0 {
-			return nil, fmt.Errorf("Deployment not found")
+			return nil, errors.ErrNotFound
 		}
 		if len(deploys.Items) > 1 {
 			return nil, fmt.Errorf("Found '%d' deployments instead of 1", len(deploys.Items))

@@ -40,8 +40,9 @@ func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1
 			Namespace: dev.Namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: dev.GetStatefulSetName(),
-			Replicas:    &devReplicas,
+			ServiceName:         dev.GetStatefulSetName(),
+			PodManagementPolicy: appsv1.ParallelPodManagement,
+			Replicas:            &devReplicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					oktetoSyncLabel: dev.Name,

@@ -22,8 +22,9 @@ var devTerminationGracePeriodSeconds int64
 func Deploy(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container, client *kubernetes.Clientset) error {
 	ss := translate(dev, d, c)
 
-	if exists(ss, client) {
+	if old := exists(ss, client); old != nil {
 		ss.Spec.Template.Spec.NodeName = pods.GetSyncNode(dev, client)
+		ss.Spec.PodManagementPolicy = old.Spec.PodManagementPolicy
 		if err := update(ss, client); err != nil {
 			if strings.Contains(err.Error(), "updates to statefulset spec for fields other than") {
 				return fmt.Errorf("You have done an incompatible change with your previous okteto configuration. Run 'okteto down -v' and execute 'okteto up' again")
@@ -38,12 +39,12 @@ func Deploy(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container, client *ku
 	return nil
 }
 
-func exists(ss *appsv1.StatefulSet, c *kubernetes.Clientset) bool {
+func exists(ss *appsv1.StatefulSet, c *kubernetes.Clientset) *appsv1.StatefulSet {
 	ss, err := c.AppsV1().StatefulSets(ss.Namespace).Get(ss.Name, metav1.GetOptions{})
-	if err != nil {
-		return false
+	if err != nil || ss.Name == "" {
+		return nil
 	}
-	return ss.Name != ""
+	return ss
 }
 
 func create(ss *appsv1.StatefulSet, c *kubernetes.Clientset) error {

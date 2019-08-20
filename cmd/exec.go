@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"os"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/model"
@@ -37,11 +38,19 @@ func Exec() *cobra.Command {
 			}
 			err = executeExec(ctx, dev, args)
 			analytics.TrackExec(dev.Image, config.VersionString, err == nil)
+
+			if errors.IsNotFound(err) {
+				return errors.UserError{
+					E:    fmt.Errorf("Okteto environment not found in namespace %s", dev.Namespace),
+					Hint: "Run `okteto up` to launch it or use `okteto namespace` to select the correct namespace and try again",
+				}
+			}
+
 			return err
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
-				return errors.New("exec requires the COMMAND argument")
+				return fmt.Errorf("exec requires the COMMAND argument")
 			}
 			return nil
 		},
@@ -63,7 +72,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		dev.Namespace = namespace
 	}
 
-	p, err := pods.GetDevPod(ctx, dev, pods.OktetoInteractiveDevLabel, client)
+	p, err := pods.GetByLabel(ctx, dev, pods.OktetoInteractiveDevLabel, client, false)
 	if err != nil {
 		return err
 	}

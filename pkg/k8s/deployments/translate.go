@@ -126,8 +126,10 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 		c.WorkingDir = rule.WorkDir
 	}
 
-	c.Command = rule.Command
-	c.Args = rule.Args
+	if len(rule.Command) > 0 {
+		c.Command = rule.Command
+		c.Args = rule.Args
+	}
 
 	if !rule.Healthchecks {
 		c.ReadinessProbe = nil
