@@ -3,7 +3,9 @@ package k8s
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -72,6 +74,20 @@ func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
 			return fmt.Errorf("couldn't destroy syncthing statefulset: %s", err)
 		}
 	}
+
+	ticker := time.NewTicker(1 * time.Second)
+	for i := 0; i < 30; i++ {
+		_, err := sfsClient.Get(dev.GetStatefulSetName(), metav1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
+			return err
+		}
+		<-ticker.C
+	}
+
 	log.Infof("syncthing statefulset '%s' destroyed", dev.Name)
 	return nil
 }
