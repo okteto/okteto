@@ -8,6 +8,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes"
@@ -52,38 +53,30 @@ func checkIfAttached(pvc string, dev *model.Dev, c *kubernetes.Clientset) error 
 		return nil
 	}
 
-	prefixes := []string{dev.Name}
-	for _, s := range dev.Services {
-		prefixes = append(prefixes, s.Name)
-	}
-
 	for _, p := range pods.Items {
-		if hasPrefix(p.Name, prefixes) {
-			// discard the pods that are part of the dev environment, since they might be in
-			// the process of being terminated
-			continue
-		}
-
 		for _, v := range p.Spec.Volumes {
 			if v.PersistentVolumeClaim != nil {
 				if v.PersistentVolumeClaim.ClaimName == pvc {
-					log.Infof("pvc/%s is still attached to pod/%s", pvc, p.Name)
-					return fmt.Errorf("can't delete your persistent volume since it's still attached to 'pod/%s'", p.Name)
+					if !isTerminating(&p) {
+						log.Infof("pvc/%s is still attached to pod/%s", pvc, p.Name)
+						return fmt.Errorf("can't delete your persistent volume since it's still attached to 'pod/%s'", p.Name)
+					}
 				}
 			}
 		}
 	}
 
 	return nil
-
 }
 
-func hasPrefix(s string, prefixes []string) bool {
-	for _, p := range prefixes {
-		if strings.HasPrefix(s, p) {
-			return true
+func isTerminating(p *apiv1.Pod) bool {
+	log.Infof("pod %s is %s", p.Name, p.Status.Phase)
+	log.Infof("%+v", p)
+	if p.Status.Phase == apiv1.PodRunning {
+		if p.GetObjectMeta().GetDeletionTimestamp() == nil {
+			return false
 		}
 	}
 
-	return false
+	return true
 }
