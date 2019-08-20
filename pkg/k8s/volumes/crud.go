@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const maxRetries = 120
+const maxRetries = 90
 
 //Destroy destroys the volume claim for a given dev environment
 func Destroy(name string, dev *model.Dev, c *kubernetes.Clientset) error {
