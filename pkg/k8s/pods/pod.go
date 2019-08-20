@@ -53,11 +53,13 @@ func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes
 		if tries%10 == 0 && len(pods.Items) == 0 {
 			// every 30s check if the deployment failed
 			if err := isDeploymentFailed(dev, c); err != nil {
-				if waitUntilDeployed && errors.IsNotFound(err) {
-					continue
+				if !errors.IsNotFound(err) {
+					return nil, err
 				}
 
-				return nil, err
+				if !waitUntilDeployed {
+					return nil, err
+				}
 			}
 		}
 
