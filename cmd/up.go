@@ -311,9 +311,7 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 	log.Info("getting the sync pod")
 	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoSyncLabel, up.Client, true)
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			return err
-		}
+		return err
 	}
 
 	up.SyncPod = p.Name
