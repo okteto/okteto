@@ -62,7 +62,7 @@ func main() {
 		log.Fail(err.Error())
 		if uErr, ok := err.(errors.UserError); ok {
 			if len(uErr.Hint) > 0 {
-				log.Hint(uErr.Hint)
+				log.Hint("    %s", uErr.Hint)
 			}
 		}
 

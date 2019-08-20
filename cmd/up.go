@@ -170,9 +170,14 @@ func (up *UpContext) Activate() {
 				return
 			}
 
-			var deploy bool
 			if len(up.Dev.Labels) == 0 {
-				deploy = askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
+				deploy := askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
+				if !deploy {
+					up.Exit <- errors.UserError{
+						E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", up.Dev.Name, up.Dev.Namespace),
+						Hint: "Deploy your application first or use `okteto namespace` to select a different namespace and try again"}
+					return
+				}
 			} else {
 				if err == errors.ErrNotFound {
 					err = errors.UserError{
@@ -182,14 +187,11 @@ func (up *UpContext) Activate() {
 				up.Exit <- err
 				return
 			}
-			if !deploy {
-				up.Exit <- fmt.Errorf("deployment %s not found [current context: %s]", up.Dev.Name, up.Dev.Namespace)
-				return
-			}
 
 			d = up.Dev.GevSandbox()
 			create = true
 		}
+
 		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
 		if devContainer == nil {
 			up.Exit <- fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
