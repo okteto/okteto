@@ -58,6 +58,7 @@ type UpContext struct {
 	Exit          chan error
 	Sy            *syncthing.Syncthing
 	ErrChan       chan error
+	success       bool
 }
 
 //Up starts a cloud dev environment
@@ -94,7 +95,6 @@ func Up() *cobra.Command {
 			}
 
 			err = RunUp(dev)
-			analytics.TrackUp(dev.Image, config.VersionString, err == nil)
 			return err
 		},
 	}
@@ -216,6 +216,8 @@ func (up *UpContext) Activate() {
 			up.Exit <- err
 			return
 		}
+
+		up.success = true
 		retry = true
 
 		printDisplayContext("Okteto Environment activated", up.Dev)
@@ -453,7 +455,9 @@ func (up *UpContext) runCommand() error {
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
 func (up *UpContext) shutdown() {
-	log.Debugf("cancelling context")
+	log.Debugf("up shutdown")
+	analytics.TrackUp(up.Dev.Image, config.VersionString, up.success)
+
 	if up.Cancel != nil {
 		up.Cancel()
 	}
