@@ -35,11 +35,10 @@ var (
 	devTerminationGracePeriodSeconds int64
 )
 
-// GetDevPod returns the dev pod for a deployment
-func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+// GetByLabel returns the dev pod for a deployment
+func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
-
 	for tries < maxRetries {
 		pods, err := c.CoreV1().Pods(dev.Namespace).List(
 			metav1.ListOptions{
@@ -54,7 +53,13 @@ func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.
 		if tries%10 == 0 && len(pods.Items) == 0 {
 			// every 30s check if the deployment failed
 			if err := isDeploymentFailed(dev, c); err != nil {
-				return nil, err
+				if !errors.IsNotFound(err) {
+					return nil, err
+				}
+
+				if !waitUntilDeployed {
+					return nil, err
+				}
 			}
 		}
 

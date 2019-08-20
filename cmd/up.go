@@ -300,15 +300,18 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 	progress.start()
 	defer progress.stop()
 
+	log.Info("create deployment secrets")
 	if err := secrets.Create(up.Dev, up.Client); err != nil {
 		return err
 	}
 
+	log.Info("deploying syncK8s")
 	if err := syncK8s.Deploy(up.Dev, d, c, up.Client); err != nil {
 		return err
 	}
 
-	p, err := pods.GetDevPod(up.Context, up.Dev, pods.OktetoSyncLabel, up.Client)
+	log.Info("getting the sync pod")
+	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoSyncLabel, up.Client, true)
 	if err != nil {
 		return err
 	}
@@ -403,7 +406,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		}
 	}
 
-	p, err := pods.GetDevPod(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client)
+	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client, true)
 	if err != nil {
 		return err
 	}
