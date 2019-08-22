@@ -64,7 +64,9 @@ func translate(t *model.Translation) error {
 	t.Deployment.Spec.Replicas = &devReplicas
 
 	if os.Getenv("OKTETO_CONTINUOUS_DEVELOPMENT") != "" {
-		return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
+		o := t.Deployment.Spec.Template.GetObjectMeta()
+		setAnnotation(o, oktetoDeveloperAnnotation, okteto.GetUserID())
+		return setTranslationAsAnnotation(o, t)
 	}
 
 	t.Deployment.Status = appsv1.DeploymentStatus{}
