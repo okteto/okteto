@@ -437,7 +437,7 @@ func (up *UpContext) runCommand() error {
 		in,
 		os.Stdout,
 		os.Stderr,
-		[]string{"sh", "-c", "((cp -n /var/okteto/bin /usr/local/bin); (trap '' TERM && kill -- -1 && sleep 0.1 & kill -s KILL -- -1 )) >/dev/null 2>&1"},
+		[]string{"sh", "-c", "((cp /var/okteto/bin/* /usr/local/bin); (trap '' TERM && kill -- -1 && sleep 0.1 & kill -s KILL -- -1 )) >/dev/null 2>&1"},
 	); err != nil {
 		log.Infof("failed to kill existing session: %s", err)
 	}
