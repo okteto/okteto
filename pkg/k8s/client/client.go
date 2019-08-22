@@ -1,9 +1,13 @@
 package client
 
 import (
+	"fmt"
+	"os"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -11,7 +15,6 @@ import (
 var client *kubernetes.Clientset
 var config *rest.Config
 var namespace string
-var userID string
 
 //GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
 func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {
@@ -40,22 +43,64 @@ func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {
 	return client, config, namespace, nil
 }
 
-//GetUserID returns a user info of the ccurrent context
-func GetUserID() string {
-	if userID == "" {
-		clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			clientcmd.NewDefaultClientConfigLoadingRules(),
-			&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}})
+//SetKubeConfig update a kubeconfig file with okteto cluster credentials
+func SetKubeConfig(filename, namespace string) error {
+	oktetoURL := okteto.GetURLWithUnderscore()
+	clusterName := fmt.Sprintf("%s-cluster", oktetoURL)
+	userName := fmt.Sprintf("%s-user", oktetoURL)
+	contextName := fmt.Sprintf("%s-context", oktetoURL)
 
-		c, err := clientConfig.RawConfig()
-		if err != nil {
-			return ""
-		}
-		ctx, ok := c.Contexts[c.CurrentContext]
-		if !ok {
-			return ""
-		}
-		userID = ctx.AuthInfo
+	var cfg *clientcmdapi.Config
+	cred, err := okteto.GetCredentials(namespace)
+	if err != nil {
+		return err
 	}
-	return userID
+
+	_, err = os.Stat(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			cfg = clientcmdapi.NewConfig()
+		} else {
+			return err
+		}
+	} else {
+		cfg, err = clientcmd.LoadFromFile(filename)
+		if err != nil {
+			return err
+		}
+	}
+
+	//create cluster
+	cluster, ok := cfg.Clusters[clusterName]
+	if !ok {
+		cluster = clientcmdapi.NewCluster()
+	}
+	cluster.CertificateAuthorityData = []byte(cred.Certificate)
+	cluster.Server = cred.Server
+	cfg.Clusters[clusterName] = cluster
+
+	//create user
+	user, ok := cfg.AuthInfos[userName]
+	if !ok {
+		user = clientcmdapi.NewAuthInfo()
+	}
+	user.Token = cred.Token
+	cfg.AuthInfos[userName] = user
+
+	//create context
+	context, ok := cfg.Contexts[contextName]
+	if !ok {
+		context = clientcmdapi.NewContext()
+	}
+	context.Cluster = clusterName
+	context.AuthInfo = userName
+	context.Namespace = cred.Namespace
+	cfg.Contexts[contextName] = context
+
+	cfg.CurrentContext = contextName
+
+	if err := clientcmd.WriteToFile(*cfg, filename); err != nil {
+		return err
+	}
+	return nil
 }
