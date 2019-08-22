@@ -12,6 +12,7 @@ import (
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 )
 
@@ -120,8 +121,8 @@ func getToken() (*Token, error) {
 // GetUserID returns the userID of the authenticated user
 func GetUserID() string {
 	t, err := getToken()
-	if err != nil {
-		return ""
+	if err != nil || t.ID == "" {
+		return client.GetUserID()
 	}
 
 	return t.ID
