@@ -153,7 +153,13 @@ func saveToken(id, token, url string) error {
 
 	p := filepath.Join(config.GetHome(), tokenFile)
 	log.Debugf("saving token at %s", p)
-	if err := ioutil.WriteFile(p, marshalled, 0400); err != nil {
+	if _, err := os.Stat(p); err == nil {
+		err = os.Chmod(p, 0600)
+		if err != nil {
+			return fmt.Errorf("couldn't change token permissions: %s", err)
+		}
+	}
+	if err := ioutil.WriteFile(p, marshalled, 0600); err != nil {
 		return fmt.Errorf("couldn't save authentication token: %s", err)
 	}
 
