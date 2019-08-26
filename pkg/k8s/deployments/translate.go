@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 
@@ -63,10 +64,8 @@ func translate(t *model.Translation) error {
 	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
 	t.Deployment.Spec.Replicas = &devReplicas
 
-	if os.Getenv("OKTETO_CONTINUOUS_DEVELOPMENT") != "" {
-		o := t.Deployment.Spec.Template.GetObjectMeta()
-		setAnnotation(o, oktetoDeveloperAnnotation, okteto.GetUserID())
-		return setTranslationAsAnnotation(o, t)
+	if os.Getenv("OKTETO_CONTINUOUS_DEVELOPMENT") != "" || client.IsOktetoCloud() {
+		return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 	}
 
 	t.Deployment.Status = appsv1.DeploymentStatus{}
