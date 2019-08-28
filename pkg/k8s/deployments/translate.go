@@ -99,6 +99,7 @@ func translate(t *model.Translation) error {
 				FSGroup:    rule.SecurityContext.FSGroup,
 			}
 		}
+
 	}
 	return nil
 }
@@ -143,6 +144,7 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	translateResources(c, rule.Resources)
 	translateEnvVars(c, rule.Environment)
 	translateVolumeMounts(c, rule)
+	translateSecurityContext(c, rule.SecurityContext)
 }
 
 func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
@@ -244,5 +246,27 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 			},
 		}
 		spec.Volumes = append(spec.Volumes, v)
+	}
+}
+
+func translateSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
+	if s == nil || s.Capabilities == nil {
+		return
+	}
+
+	if c.SecurityContext == nil {
+		c.SecurityContext = &apiv1.SecurityContext{}
+	}
+
+	if c.SecurityContext.Capabilities == nil {
+		c.SecurityContext.Capabilities = &apiv1.Capabilities{}
+	}
+
+	for _, a := range s.Capabilities.Add {
+		c.SecurityContext.Capabilities.Add = append(c.SecurityContext.Capabilities.Add, a)
+	}
+
+	for _, d := range s.Capabilities.Drop {
+		c.SecurityContext.Capabilities.Drop = append(c.SecurityContext.Capabilities.Drop, d)
 	}
 }

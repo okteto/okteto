@@ -62,9 +62,16 @@ type Dev struct {
 
 // SecurityContext represents a pod security context
 type SecurityContext struct {
-	RunAsUser  *int64 `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
-	RunAsGroup *int64 `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
-	FSGroup    *int64 `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
+	RunAsUser    *int64        `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
+	RunAsGroup   *int64        `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
+	FSGroup      *int64        `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
+	Capabilities *Capabilities `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
+}
+
+// Capabilities sets the linux capabilities of a container
+type Capabilities struct {
+	Add  []apiv1.Capability `json:"add,omitempty" yaml:"add,omitempty"`
+	Drop []apiv1.Capability `json:"drop,omitempty" yaml:"drop,omitempty"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
