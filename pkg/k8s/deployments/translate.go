@@ -65,6 +65,9 @@ func translate(t *model.Translation) error {
 	t.Deployment.Spec.Replicas = &devReplicas
 
 	if os.Getenv("OKTETO_CONTINUOUS_DEVELOPMENT") != "" || client.IsOktetoCloud() {
+		if t.Interactive {
+			t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+		}
 		return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 	}
 
