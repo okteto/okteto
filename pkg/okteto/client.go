@@ -2,9 +2,9 @@ package okteto
 
 import (
 	"context"
-	"os"
 	"fmt"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 
@@ -76,7 +76,7 @@ func SetKubeConfig(filename, namespace string) error {
 	contextName := fmt.Sprintf("%s-context", oktetoURL)
 
 	var cfg *clientcmdapi.Config
-	cred, err :=GetCredentials(namespace)
+	cred, err := GetCredentials(namespace)
 	if err != nil {
 		return err
 	}

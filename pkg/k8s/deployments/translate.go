@@ -262,11 +262,6 @@ func translateSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
 		c.SecurityContext.Capabilities = &apiv1.Capabilities{}
 	}
 
-	for _, a := range s.Capabilities.Add {
-		c.SecurityContext.Capabilities.Add = append(c.SecurityContext.Capabilities.Add, a)
-	}
-
-	for _, d := range s.Capabilities.Drop {
-		c.SecurityContext.Capabilities.Drop = append(c.SecurityContext.Capabilities.Drop, d)
-	}
+	c.SecurityContext.Capabilities.Add = append(c.SecurityContext.Capabilities.Add, s.Capabilities.Add...)
+	c.SecurityContext.Capabilities.Drop = append(c.SecurityContext.Capabilities.Drop, s.Capabilities.Drop...)
 }
