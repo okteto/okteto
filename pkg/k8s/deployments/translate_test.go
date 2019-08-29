@@ -1,6 +1,7 @@
 package deployments
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -298,6 +299,75 @@ func Test_translateResources(t *testing.T) {
 
 			if a.Cmp(b) != 0 {
 				t.Errorf("limits %s: expected %s, got %s", apiv1.ResourceCPU, b.String(), a.String())
+			}
+		})
+	}
+}
+
+func Test_translateSecurityContext(t *testing.T) {
+	tests := []struct {
+		name         string
+		c            *apiv1.Container
+		s            *model.SecurityContext
+		expectedAdd  []apiv1.Capability
+		expectedDrop []apiv1.Capability
+	}{
+		{
+			name: "single-add",
+			c:    &apiv1.Container{},
+			s: &model.SecurityContext{
+				Capabilities: &model.Capabilities{
+					Add: []apiv1.Capability{"SYS_TRACE"},
+				},
+			},
+			expectedAdd: []apiv1.Capability{"SYS_TRACE"},
+		},
+		{
+			name: "add-drop",
+			c:    &apiv1.Container{},
+			s: &model.SecurityContext{
+				Capabilities: &model.Capabilities{
+					Add:  []apiv1.Capability{"SYS_TRACE"},
+					Drop: []apiv1.Capability{"SYS_NICE"},
+				},
+			},
+			expectedAdd:  []apiv1.Capability{"SYS_TRACE"},
+			expectedDrop: []apiv1.Capability{"SYS_NICE"},
+		},
+		{
+			name: "merge-uniques",
+			c: &apiv1.Container{
+				SecurityContext: &apiv1.SecurityContext{
+					Capabilities: &apiv1.Capabilities{
+						Add:  []apiv1.Capability{"SYS_FOO"},
+						Drop: []apiv1.Capability{"SYS_BAR"},
+					},
+				},
+			},
+			s: &model.SecurityContext{
+				Capabilities: &model.Capabilities{
+					Add:  []apiv1.Capability{"SYS_TRACE"},
+					Drop: []apiv1.Capability{"SYS_NICE"},
+				},
+			},
+			expectedAdd:  []apiv1.Capability{"SYS_FOO", "SYS_TRACE"},
+			expectedDrop: []apiv1.Capability{"SYS_BAR", "SYS_NICE"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			translateSecurityContext(tt.c, tt.s)
+			if tt.c.SecurityContext == nil {
+				t.Fatal("SecurityContext was nil")
+			}
+
+			if !reflect.DeepEqual(tt.c.SecurityContext.Capabilities.Add, tt.expectedAdd) {
+				t.Errorf("tt.c.SecurityContext.Capabilities.Add != tt.expectedAdd. Expected: %s, Got; %s", tt.expectedAdd, tt.c.SecurityContext.Capabilities.Add)
+			}
+
+			if !reflect.DeepEqual(tt.c.SecurityContext.Capabilities.Drop, tt.expectedDrop) {
+				t.Errorf("tt.c.SecurityContext.Capabilities.Drop != tt.expectedDrop. Expected: %s, Got; %s", tt.expectedDrop, tt.c.SecurityContext.Capabilities.Drop)
 			}
 		})
 	}

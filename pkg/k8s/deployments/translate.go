@@ -93,12 +93,23 @@ func translate(t *model.Translation) error {
 		TranslateDevContainer(devContainer, rule)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		if rule.SecurityContext != nil {
-			t.Deployment.Spec.Template.Spec.SecurityContext = &apiv1.PodSecurityContext{
-				RunAsUser:  rule.SecurityContext.RunAsUser,
-				RunAsGroup: rule.SecurityContext.RunAsGroup,
-				FSGroup:    rule.SecurityContext.FSGroup,
+			if t.Deployment.Spec.Template.Spec.SecurityContext == nil {
+				t.Deployment.Spec.Template.Spec.SecurityContext = &apiv1.PodSecurityContext{}
+			}
+
+			if rule.SecurityContext.RunAsUser != nil {
+				t.Deployment.Spec.Template.Spec.SecurityContext.RunAsUser = rule.SecurityContext.RunAsUser
+			}
+
+			if rule.SecurityContext.RunAsGroup != nil {
+				t.Deployment.Spec.Template.Spec.SecurityContext.RunAsGroup = rule.SecurityContext.RunAsGroup
+			}
+
+			if rule.SecurityContext.FSGroup != nil {
+				t.Deployment.Spec.Template.Spec.SecurityContext.FSGroup = rule.SecurityContext.FSGroup
 			}
 		}
+
 	}
 	return nil
 }
@@ -143,6 +154,7 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	translateResources(c, rule.Resources)
 	translateEnvVars(c, rule.Environment)
 	translateVolumeMounts(c, rule)
+	translateSecurityContext(c, rule.SecurityContext)
 }
 
 func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
@@ -245,4 +257,21 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 		}
 		spec.Volumes = append(spec.Volumes, v)
 	}
+}
+
+func translateSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
+	if s == nil || s.Capabilities == nil {
+		return
+	}
+
+	if c.SecurityContext == nil {
+		c.SecurityContext = &apiv1.SecurityContext{}
+	}
+
+	if c.SecurityContext.Capabilities == nil {
+		c.SecurityContext.Capabilities = &apiv1.Capabilities{}
+	}
+
+	c.SecurityContext.Capabilities.Add = append(c.SecurityContext.Capabilities.Add, s.Capabilities.Add...)
+	c.SecurityContext.Capabilities.Drop = append(c.SecurityContext.Capabilities.Drop, s.Capabilities.Drop...)
 }

@@ -26,6 +26,7 @@ func Deploy(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container, client *ku
 		ss.Spec.Template.Spec.NodeName = pods.GetSyncNode(dev, client)
 		ss.Spec.PodManagementPolicy = old.Spec.PodManagementPolicy
 		if err := update(ss, client); err != nil {
+			log.Infof("couldn't update the syncthing stateful set: %s", err)
 			if strings.Contains(err.Error(), "updates to statefulset spec for fields other than") {
 				return fmt.Errorf("You have done an incompatible change with your previous okteto configuration. Run 'okteto down -v' and execute 'okteto up' again")
 			}

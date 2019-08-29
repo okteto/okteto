@@ -39,10 +39,11 @@ var (
 func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
+	selector := fmt.Sprintf("%s=%s", label, dev.Name)
 	for tries < maxRetries {
 		pods, err := c.CoreV1().Pods(dev.Namespace).List(
 			metav1.ListOptions{
-				LabelSelector: fmt.Sprintf("%s=%s", label, dev.Name),
+				LabelSelector: selector,
 			},
 		)
 		if err != nil {
@@ -51,6 +52,7 @@ func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes
 		}
 
 		if tries%10 == 0 && len(pods.Items) == 0 {
+			log.Infof("Didn't find any pods for %s, checking if deployment is down", selector)
 			// every 30s check if the deployment failed
 			if err := isDeploymentFailed(dev, c); err != nil {
 				if !errors.IsNotFound(err) {
@@ -141,9 +143,7 @@ func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {
 		return nil
 	}
 
-	log.Debugf("%s/%s conditions", d.Namespace, d.Name)
 	for _, c := range d.Status.Conditions {
-		log.Debugf("status=%s, type=%s, transition=%s, lastUpdate=%s, reason=%s, message=%s", c.Status, c.Type, c.LastTransitionTime.String(), c.LastUpdateTime.String(), c.Reason, c.Message)
 		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == failedCreateReason && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
 				return errors.ErrQuota

@@ -20,6 +20,12 @@ resources:
   limits:
     memory: "128Mi"
     cpu: "500m"
+securityContext:
+  capabilities:
+    add:
+    - SYS_TRACE
+    drop:
+    - SYS_NICE
 workdir: /app`)
 	d, err := Read(manifest)
 	if err != nil {
@@ -52,6 +58,14 @@ workdir: /app`)
 	cpu = d.Resources.Limits["cpu"]
 	if cpu.String() != "500m" {
 		t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
+	}
+
+	if !reflect.DeepEqual(d.SecurityContext.Capabilities.Add, []apiv1.Capability{"SYS_TRACE"}) {
+		t.Errorf("SecurityContext.Capabilities.Add was not parsed correctly. Expected [SYS_TRACE]")
+	}
+
+	if !reflect.DeepEqual(d.SecurityContext.Capabilities.Drop, []apiv1.Capability{"SYS_NICE"}) {
+		t.Errorf("SecurityContext.Capabilities.Drop was not parsed correctly. Expected [SYS_NICE]")
 	}
 }
 
