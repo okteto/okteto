@@ -25,7 +25,7 @@ jobs:
           destination: binaries
   integration:
     docker:
-      - image: okteto/desk:0.1.5
+      - image: okteto/desk:latest
     steps:
       - checkout
       - restore_cache: 
