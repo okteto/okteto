@@ -304,7 +304,7 @@ func Test_translateResources(t *testing.T) {
 	}
 }
 
-func Test_transalateSecurityContext(t *testing.T) {
+func Test_translateSecurityContext(t *testing.T) {
 	tests := []struct {
 		name         string
 		c            *apiv1.Container
