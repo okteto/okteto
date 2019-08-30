@@ -7,6 +7,7 @@ import (
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
+	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -97,6 +98,21 @@ func runDown(dev *model.Dev) error {
 		}
 		if err := deployments.DevModeOff(t.Deployment, client); err != nil {
 			return err
+		}
+	}
+
+	if d == nil {
+		return nil
+	}
+
+	if _, ok := d.Annotations[model.OktetoAutoCreateAnnotation]; ok {
+		if err := deployments.Destroy(dev, client); err != nil {
+			return err
+		}
+		if len(dev.Services) == 0 {
+			if err := services.Destroy(dev, client); err != nil {
+				return err
+			}
 		}
 	}
 

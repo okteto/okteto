@@ -3,6 +3,7 @@ package deployments
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -120,16 +121,6 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 	return ok
 }
 
-//IsAutoCreate returns if the deplloyment is created from scratch
-func IsAutoCreate(d *appsv1.Deployment) bool {
-	annotations := d.GetObjectMeta().GetAnnotations()
-	if annotations == nil {
-		return false
-	}
-	_, ok := annotations[oktetoAutoCreateAnnotation]
-	return ok
-}
-
 // DevModeOff deactivates dev mode for d
 func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), OktetoTranslationAnnotation)
@@ -186,5 +177,21 @@ func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+//Destroy destroys a k8s service
+func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
+	log.Infof("deleting deployment '%s'...", dev.Name)
+	dClient := c.AppsV1().Deployments(dev.Namespace)
+	err := dClient.Delete(dev.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			log.Infof("deployment '%s' was already deleted.", dev.Name)
+			return nil
+		}
+		return fmt.Errorf("error deleting kubernetes deployment: %s", err)
+	}
+	log.Infof("deployment '%s' deleted", dev.Name)
 	return nil
 }

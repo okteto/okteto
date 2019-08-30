@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	oktetoPodNameTemplate      = "%s-0"
-	oktetoStatefulSetTemplate  = "okteto-%s"
-	oktetoVolumeNameTemplate   = "pvc-%d"
-	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
+	oktetoPodNameTemplate     = "%s-0"
+	oktetoStatefulSetTemplate = "okteto-%s"
+	oktetoVolumeNameTemplate  = "pvc-%d"
+	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
+	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 
 	//OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"
@@ -325,10 +326,13 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 	if dev.Image == "" {
 		dev.Image = DefaultImage
 	}
-	d := &appsv1.Deployment{
+	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
+			Annotations: map[string]string{
+				OktetoAutoCreateAnnotation: "true",
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &devReplicas,
@@ -357,8 +361,4 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 			},
 		},
 	}
-	if len(dev.Services) == 0 {
-		d.ObjectMeta.Annotations = map[string]string{oktetoAutoCreateAnnotation: "true"}
-	}
-	return d
 }
