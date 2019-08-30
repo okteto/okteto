@@ -25,7 +25,7 @@ const (
 	OktetoInitContainer = "okteto-init"
 
 	//DefaultImage default image for sandboxes
-	DefaultImage = "okteto/desk:0.1.5"
+	DefaultImage = "okteto/desk:latest"
 )
 
 var (
