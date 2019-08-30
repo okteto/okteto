@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	oktetoDevLabel     = "dev.okteto.com"
 	oktetoSyncLabel    = "syncthing.okteto.com"
 	syncImageTag       = "okteto/syncthing:1.1.4"
 	syncTCPPort        = 22000
@@ -39,9 +38,6 @@ func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.GetStatefulSetName(),
 			Namespace: dev.Namespace,
-			Labels: map[string]string{
-				oktetoDevLabel: "true",
-			},
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName:         dev.GetStatefulSetName(),
