@@ -233,12 +233,22 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 	return nil
 }
 
-// WaitForPing wait for local syncthing to ping
-func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup) error {
+// WaitForSyncthingReady wait for syncthing to be ready
+func (s *Syncthing) WaitForSyncthingReady(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, local bool) error {
+	if err := s.waitForPing(ctx, wg, local); err != nil {
+		return err
+	}
+	if err := s.waitForScanning(ctx, wg, dev, local); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Syncthing) waitForPing(ctx context.Context, wg *sync.WaitGroup, local bool) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	log.Infof("waiting for local syncthing to be ready...")
 	for i := 0; i < 200; i++ {
-		_, err := s.APICall("rest/system/ping", "GET", 200, nil, true)
+		_, err := s.APICall("rest/system/ping", "GET", 200, nil, local)
 		if err == nil {
 			return nil
 		}
@@ -254,8 +264,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup) error {
 	return fmt.Errorf("Syncthing not responding after 50s")
 }
 
-// WaitForScanning waits for the local syncthing to scan local folder
-func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
+func (s *Syncthing) waitForScanning(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, local bool) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
@@ -269,7 +278,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 			return ctx.Err()
 		}
 
-		body, err := s.APICall("rest/db/status", "GET", 200, params, true)
+		body, err := s.APICall("rest/db/status", "GET", 200, params, local)
 		if err != nil {
 			log.Infof("error calling 'rest/db/status' syncthing API: %s", err)
 			continue

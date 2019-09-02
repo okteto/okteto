@@ -287,10 +287,6 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 		return err
 	}
 
-	if err := up.overrideChanges(); err != nil {
-		return err
-	}
-
 	log.Success("Files synchronized")
 	return nil
 }
@@ -318,20 +314,9 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 
 	up.SyncPod = p.Name
 	up.Node = p.Spec.NodeName
-	return nil
-}
 
-func (up *UpContext) startLocalSyncthing() error {
-	progress := newProgressBar("Starting the file synchronization service...")
-	progress.start()
-	defer progress.stop()
-	var err error
 	up.Sy, err = syncthing.New(up.Dev)
 	if err != nil {
-		return err
-	}
-
-	if err := up.Sy.Run(up.Context, up.WG); err != nil {
 		return err
 	}
 
@@ -344,24 +329,29 @@ func (up *UpContext) startLocalSyncthing() error {
 	}
 
 	up.SyncForwarder.Start(up.SyncPod, up.Dev.Namespace)
-	return up.Sy.WaitForPing(up.Context, up.WG)
+	return up.Sy.WaitForSyncthingReady(up.Context, up.WG, up.Dev, false)
+}
+
+func (up *UpContext) startLocalSyncthing() error {
+	progress := newProgressBar("Starting the file synchronization service...")
+	progress.start()
+	defer progress.stop()
+
+	if err := up.Sy.Run(up.Context, up.WG); err != nil {
+		return err
+	}
+
+	return up.Sy.WaitForSyncthingReady(up.Context, up.WG, up.Dev, true)
 }
 
 func (up *UpContext) synchronizeFiles() error {
 	progress := newProgressBar("Synchronizing your files...")
 	progress.start()
 	defer progress.stop()
-	return up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev)
-}
 
-func (up *UpContext) overrideChanges() error {
-	progress := newProgressBar("Overriding existing files in your Okteto environment...")
-	progress.start()
-	defer progress.stop()
 	if err := up.Sy.OverrideChanges(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
-
 	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
