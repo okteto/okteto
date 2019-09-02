@@ -22,14 +22,14 @@ const configXML = `<configuration version="28">
     <markerName>{{ .DevPath }}</markerName>
     <useLargeBlocks>false</useLargeBlocks>
 </folder>
-<device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="local" introducer="false" skipIntroductionRemovals="false" introducedBy="">
+<device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="always" introducer="false" skipIntroductionRemovals="false" introducedBy="">
     <address>dynamic</address>
     <paused>false</paused>
     <autoAcceptFolders>false</autoAcceptFolders>
     <maxSendKbps>0</maxSendKbps>
     <maxRecvKbps>0</maxRecvKbps>
 </device>
-<device id="{{.RemoteDeviceID}}" name="remote" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
+<device id="{{.RemoteDeviceID}}" name="remote" compression="always" introducer="false" skipIntroductionRemovals="false" introducedBy="">
     <address>{{.RemoteAddress}}</address>
     <paused>false</paused>
     <autoAcceptFolders>false</autoAcceptFolders>
