@@ -77,7 +77,9 @@ type Status struct {
 
 // Completion represents the completion status of a syncthing folder.
 type Completion struct {
-	Completion float64 `json:"completion"`
+	Completion  float64 `json:"completion"`
+	GlobalBytes int64   `json:"globalBytes"`
+	NeedBytes   int64   `json:"needBytes"`
 }
 
 // New constructs a new Syncthing.
@@ -323,8 +325,11 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 			continue
 		}
 
-		log.Infof("syncthing folder is '%f'", completion.Completion)
-		if completion.Completion == 100 {
+		if completion.GlobalBytes == 0 {
+			return nil
+		}
+		log.Infof("syncthing folder is '%.2f'", (float64(completion.GlobalBytes-completion.NeedBytes)/float64(completion.GlobalBytes))*100)
+		if completion.NeedBytes == 0 {
 			return nil
 		}
 	}
