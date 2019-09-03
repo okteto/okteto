@@ -80,6 +80,7 @@ type Completion struct {
 	Completion  float64 `json:"completion"`
 	GlobalBytes int64   `json:"globalBytes"`
 	NeedBytes   int64   `json:"needBytes"`
+	NeedDeletes int64   `json:"needDeletes"`
 }
 
 // New constructs a new Syncthing.
@@ -248,7 +249,7 @@ func (s *Syncthing) WaitForSyncthingReady(ctx context.Context, wg *sync.WaitGrou
 
 func (s *Syncthing) waitForPing(ctx context.Context, wg *sync.WaitGroup, local bool) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
-	log.Infof("waiting for local syncthing to be ready...")
+	log.Infof("waiting for syncthing to be ready...")
 	for i := 0; i < 200; i++ {
 		_, err := s.APICall("rest/system/ping", "GET", 200, nil, local)
 		if err == nil {
@@ -314,6 +315,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
 	completion := &Completion{}
+	needZeroBytesIter := 0
 	log.Infof("waiting for synchronization to complete...")
 	for {
 		select {
@@ -337,9 +339,15 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 		if completion.GlobalBytes == 0 {
 			return nil
 		}
-		log.Infof("syncthing folder is '%.2f'", (float64(completion.GlobalBytes-completion.NeedBytes)/float64(completion.GlobalBytes))*100)
+		log.Infof("syncthing folder is %.2f%%, needDeletes %d",
+			(float64(completion.GlobalBytes-completion.NeedBytes)/float64(completion.GlobalBytes))*100,
+			completion.NeedDeletes,
+		)
 		if completion.NeedBytes == 0 {
-			return nil
+			needZeroBytesIter++
+			if completion.NeedDeletes == 0 || needZeroBytesIter >= 3 {
+				return nil
+			}
 		}
 	}
 }
