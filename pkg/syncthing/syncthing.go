@@ -297,7 +297,7 @@ func (s *Syncthing) waitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 			return nil
 		}
 	}
-	return fmt.Errorf("Syncthing not completed initial scan after 2min")
+	return fmt.Errorf("Syncthing not completed initial scan after 2min. Please, retry in a few minutes")
 }
 
 // OverrideChanges force the remote to be the same as the local file system
