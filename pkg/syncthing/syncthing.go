@@ -268,12 +268,12 @@ func (s *Syncthing) waitForPing(ctx context.Context, wg *sync.WaitGroup, local b
 }
 
 func (s *Syncthing) waitForScanning(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, local bool) error {
-	ticker := time.NewTicker(200 * time.Millisecond)
+	ticker := time.NewTicker(250 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
 	status := &Status{}
 	log.Infof("waiting for initial scan to complete...")
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 480; i++ {
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -297,7 +297,7 @@ func (s *Syncthing) waitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 			return nil
 		}
 	}
-	return fmt.Errorf("Syncthing not completed initial scan after 50s")
+	return fmt.Errorf("Syncthing not completed initial scan after 2min")
 }
 
 // OverrideChanges force the remote to be the same as the local file system
