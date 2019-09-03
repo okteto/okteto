@@ -14,13 +14,14 @@ import (
 )
 
 var (
-	downloadPath = map[string]string{
-		"linux":   "https://downloads.okteto.com/cli/syncthing/1.1.4/syncthing-Linux-x86_64",
-		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.1.4/syncthing-Darwin-x86_64",
-		"windows": "https://downloads.okteto.com/cli/syncthing/1.1.4/syncthing-Windows-x86_64",
+	// DownloadPath is the path of the syncthing binary.
+	SyncthingURL = map[string]string{
+		"linux":   "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Linux-x86_64",
+		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Darwin-x86_64",
+		"windows": "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Windows-x86_64",
 	}
 
-	syncthingVersion = semver.MustParse("1.1.4")
+	syncthingVersion = semver.MustParse("1.2.2")
 	versionRegex     = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
@@ -65,7 +66,7 @@ func downloadSyncthing() error {
 	opts := []getter.ClientOption{getter.WithProgress(defaultProgressBar)}
 
 	client := &getter.Client{
-		Src:     downloadPath[runtime.GOOS],
+		Src:     SyncthingURL[runtime.GOOS],
 		Dst:     syncthing.GetInstallPath(),
 		Mode:    getter.ClientModeFile,
 		Options: opts,

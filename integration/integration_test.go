@@ -16,6 +16,7 @@ import (
 	"text/template"
 
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/cmd"
 )
 
 var (
@@ -84,6 +85,26 @@ workdir: /usr/src/app
 `
 )
 
+func TestDownloadSyncthing(t *testing.T) {
+	var tests = []struct {
+		os string
+	}{
+		{os: "windows"}, {os: "darwin"}, {os: "linux"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.os, func(t *testing.T) {
+			res, err := http.Head(cmd.SyncthingURL[tt.os])
+			if err != nil {
+				t.Errorf("Failed to download syncthing: %s", err)
+			}
+
+			if res.StatusCode != 200 {
+				t.Errorf("Failed to download syncthing. Got status: %d", res.StatusCode)
+			}
+		})
+	}
+}
 func TestAll(t *testing.T) {
 	token := os.Getenv("OKTETO_TOKEN")
 	if len(token) == 0 {
