@@ -329,7 +329,7 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 	}
 
 	up.SyncForwarder.Start(up.SyncPod, up.Dev.Namespace)
-	return up.Sy.WaitForSyncthingReady(up.Context, up.WG, up.Dev, false)
+	return nil
 }
 
 func (up *UpContext) startLocalSyncthing() error {
@@ -341,7 +341,14 @@ func (up *UpContext) startLocalSyncthing() error {
 		return err
 	}
 
-	return up.Sy.WaitForSyncthingReady(up.Context, up.WG, up.Dev, true)
+	if err := up.Sy.WaitForPing(up.Context, up.WG, true); err != nil {
+		return err
+	}
+	up.Sy.SendStignoreFile(up.Context, up.WG, up.Dev)
+	if err := up.Sy.WaitForScanning(up.Context, up.WG, up.Dev, true); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (up *UpContext) synchronizeFiles() error {
