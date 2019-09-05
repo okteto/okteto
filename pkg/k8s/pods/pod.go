@@ -10,7 +10,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	sync "github.com/okteto/okteto/pkg/syncthing/k8s"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,15 +35,15 @@ var (
 	devTerminationGracePeriodSeconds int64
 )
 
-// GetDevPod returns the dev pod for a deployment
-func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+// GetByLabel returns the dev pod for a deployment
+func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	tries := 0
 	ticker := time.NewTicker(1 * time.Second)
-
+	selector := fmt.Sprintf("%s=%s", label, dev.Name)
 	for tries < maxRetries {
 		pods, err := c.CoreV1().Pods(dev.Namespace).List(
 			metav1.ListOptions{
-				LabelSelector: fmt.Sprintf("%s=%s", label, dev.Name),
+				LabelSelector: selector,
 			},
 		)
 		if err != nil {
@@ -53,9 +52,16 @@ func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.
 		}
 
 		if tries%10 == 0 && len(pods.Items) == 0 {
+			log.Infof("Didn't find any pods for %s, checking if deployment is down", selector)
 			// every 30s check if the deployment failed
 			if err := isDeploymentFailed(dev, c); err != nil {
-				return nil, err
+				if !errors.IsNotFound(err) {
+					return nil, err
+				}
+
+				if !waitUntilDeployed {
+					return nil, err
+				}
 			}
 		}
 
@@ -68,7 +74,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.
 			} else {
 				log.Debugf("pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.Phase)
 				for _, status := range pod.Status.InitContainerStatuses {
-					if status.Name == sync.OktetoInitContainer {
+					if status.Name == model.OktetoInitContainer {
 						if status.State.Terminated != nil && status.State.Terminated.ExitCode != 0 {
 							return nil, fmt.Errorf("Error initializing okteto volume. This is probably because your development image is not root. Please, add securityContext.runAsUser and securityContext.fsGroup to your deployment manifest")
 						}
@@ -101,16 +107,43 @@ func GetDevPod(ctx context.Context, dev *model.Dev, label string, c *kubernetes.
 	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
 }
 
+// GetSyncNode returns the sync pod node
+func GetSyncNode(dev *model.Dev, c *kubernetes.Clientset) string {
+	pods, err := c.CoreV1().Pods(dev.Namespace).List(
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", OktetoSyncLabel, dev.Name),
+		},
+	)
+	if err != nil {
+		return ""
+	}
+	if len(pods.Items) > 0 {
+		return pods.Items[0].Spec.NodeName
+	}
+	return ""
+}
+
+//Exists returns if the dev pod still exists
+func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
+	pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+	if err != nil {
+		return false
+	}
+	return pod.GetObjectMeta().GetDeletionTimestamp() == nil
+}
+
 func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {
 	d, err := deployments.Get(dev, dev.Namespace, c)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return err
+		}
+
 		log.Infof("failed to get deployment information: %s", err)
 		return nil
 	}
 
-	log.Debugf("%s/%s conditions", d.Namespace, d.Name)
 	for _, c := range d.Status.Conditions {
-		log.Debugf("status=%s, type=%s, transition=%s, lastUpdate=%s, reason=%s, message=%s", c.Status, c.Type, c.LastTransitionTime.String(), c.LastUpdateTime.String(), c.Reason, c.Message)
 		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == failedCreateReason && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
 				return errors.ErrQuota
@@ -129,7 +162,7 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 		},
 	)
 	if err != nil {
-		log.Infof("error listing pods: %s", err)
+		log.Infof("error listing pods to restart: %s", err)
 		return fmt.Errorf("failed to retrieve dev environment information")
 	}
 

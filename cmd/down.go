@@ -3,9 +3,11 @@ package cmd
 import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
+	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -16,14 +18,14 @@ import (
 //Down deactivates the development environment
 func Down() *cobra.Command {
 	var devPath string
-	var removeVolumes bool
+	var rm bool
 	var namespace string
 
 	cmd := &cobra.Command{
 		Use:   "down",
 		Short: "Deactivates your Okteto Environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Debug("starting down command")
+			log.Info("starting down command")
 
 			dev, err := loadDev(devPath)
 			if err != nil {
@@ -34,25 +36,41 @@ func Down() *cobra.Command {
 				dev.Namespace = namespace
 			}
 
-			analytics.TrackDown(config.VersionString)
-			err = runDown(dev, removeVolumes)
-			if err == nil {
-				log.Success("Okteto Environment deactivated")
-				log.Println()
-				return nil
+			if err := runDown(dev); err != nil {
+				analytics.TrackDown(config.VersionString, false)
+				return err
 			}
 
-			return err
+			log.Success("Okteto Environment deactivated")
+
+			if rm {
+				if err := removeVolumes(dev); err != nil {
+					analytics.TrackDown(config.VersionString, false)
+					return err
+				}
+
+				log.Success("Persistent volume deleted")
+			}
+
+			log.Println()
+
+			analytics.TrackDown(config.VersionString, true)
+			log.Info("completed down command")
+			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
-	cmd.Flags().BoolVarP(&removeVolumes, "volumes", "v", false, "remove persistent volumes")
+	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd
 }
 
-func runDown(dev *model.Dev, removeVolumes bool) error {
+func runDown(dev *model.Dev) error {
+	progress := newProgressBar("Deactivating your Okteto Environment...")
+	progress.start()
+	defer progress.stop()
+
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err
@@ -61,48 +79,71 @@ func runDown(dev *model.Dev, removeVolumes bool) error {
 		dev.Namespace = namespace
 	}
 
-	progress := newProgressBar("Deactivating your Okteto Environment...")
+	d, err := deployments.Get(dev, dev.Namespace, client)
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	tr, err := deployments.GetTranslations(dev, d, "", client)
+	if err != nil {
+		return err
+	}
+
+	if len(tr) == 0 {
+		log.Info("no translations available in the deployment")
+	}
+
+	for _, t := range tr {
+		if t.Deployment == nil {
+			continue
+		}
+		if err := deployments.DevModeOff(t.Deployment, client); err != nil {
+			return err
+		}
+	}
+
+	if d == nil {
+		return nil
+	}
+
+	if _, ok := d.Annotations[model.OktetoAutoCreateAnnotation]; ok {
+		if err := deployments.Destroy(dev, client); err != nil {
+			return err
+		}
+		if len(dev.Services) == 0 {
+			if err := services.Destroy(dev, client); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func removeVolumes(dev *model.Dev) error {
+	log.Info("deleting persistent volume")
+	progress := newProgressBar("Deleting your persistent volume...")
 	progress.start()
 	defer progress.stop()
 
-	if err := deployments.GetAll(dev, client); err != nil {
+	client, _, namespace, err := k8Client.GetLocal()
+	if err != nil {
 		return err
 	}
-	seen := map[string]bool{}
-
-	if dev.Deployment != nil {
-		if err := deployments.DevModeOff(dev.Deployment, client); err != nil {
-			return err
-		}
-		seen[dev.Deployment.Name] = true
+	if dev.Namespace == "" {
+		dev.Namespace = namespace
 	}
 
-	for _, s := range dev.Services {
-		if s.Deployment == nil {
-			continue
-		}
-		if _, ok := seen[s.Deployment.Name]; ok {
-			continue
-		}
-		if err := deployments.DevModeOff(s.Deployment, client); err != nil {
-			return err
-		}
-		seen[s.Deployment.Name] = true
+	if err := secrets.Destroy(dev, client); err != nil {
+		return err
 	}
 
-	if removeVolumes {
-		if err := secrets.Destroy(dev, client); err != nil {
-			return err
-		}
+	if err := syncK8s.Destroy(dev, client); err != nil {
+		return err
+	}
 
-		if err := syncK8s.Destroy(dev, client); err != nil {
+	for i := 0; i <= len(dev.Volumes); i++ {
+		if err := volumes.Destroy(dev.GetVolumeName(i), dev, client); err != nil {
 			return err
-		}
-
-		for i := 0; i <= len(dev.Volumes); i++ {
-			if err := volumes.Destroy(dev.GetVolumeName(i), dev, client); err != nil {
-				return err
-			}
 		}
 	}
 

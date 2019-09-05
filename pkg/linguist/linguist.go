@@ -27,7 +27,7 @@ var (
 
 // ProcessDirectory walks a directory and returns a list of guess for the programming language
 func ProcessDirectory(root string) ([]string, error) {
-	out := make(map[string][]string, 0)
+	out := make(map[string][]string)
 	analysisTimeout := false
 
 	timer := time.AfterFunc(5*time.Second, func() {
@@ -36,9 +36,13 @@ func ProcessDirectory(root string) ([]string, error) {
 
 	defer timer.Stop()
 
-	err := filepath.Walk(root, func(path string, f os.FileInfo, err error) error {
+	err := filepath.Walk(root, func(path string, f os.FileInfo, inErr error) error {
 		if analysisTimeout {
 			return errAnalysisTimeOut
+		}
+
+		if inErr != nil {
+			return inErr
 		}
 
 		if !f.Mode().IsDir() && !f.Mode().IsRegular() {

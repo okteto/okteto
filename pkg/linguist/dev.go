@@ -61,8 +61,8 @@ func init() {
 	}
 
 	languageDefaults[Unrecognized] = languageDefault{
-		image:   "okteto/desk:0.1.3",
-		path:    "/app",
+		image:   model.DefaultImage,
+		path:    "/usr/src/app",
 		command: []string{"bash"},
 	}
 }

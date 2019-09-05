@@ -2,7 +2,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - restore_cache: 
@@ -10,6 +10,7 @@ jobs:
             - v1-pkg-cache
       - run: make test
       - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
+      - run: env VERSION_STRING=$CIRCLE_TAG make latest
       - persist_to_workspace:
           root: .
           paths:
@@ -21,10 +22,35 @@ jobs:
       - store_artifacts:
           path: bin
           destination: binaries
-  
+  integration:
+    docker:
+      - image: okteto/desk:latest
+    steps:
+      - checkout
+      - restore_cache: 
+          keys:
+            - v1-pkg-cache
+      - attach_workspace:
+          at: ./artifacts
+      - run: 
+          name: integration tests
+          command: |
+            export OKTETO_USER=cindylopez
+            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            mkdir -p $HOME/.okteto
+            touch $HOME/.okteto/.noanalytics
+            echo $HOME
+            make integration
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - ~/.cache/go-build
+      - store_artifacts:
+          path: /home/circleci/.okteto/okteto.log
+          
   mock-publish-github-release:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - attach_workspace:
@@ -84,6 +110,19 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - integration:
+          requires:
+            - build
+          filters:
+            branches:
+              only: 
+                - master
+      - release-master:
+          requires:
+            - integration
+          filters:
+            branches:
+              only: master
       - mock-publish-github-release:
           requires:
             - build

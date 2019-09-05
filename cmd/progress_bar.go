@@ -37,7 +37,9 @@ func (cpb *progressBar) TrackProgress(src string, currentSize, totalSize int64, 
 	progressBarConfig(newPb, filepath.Base(src))
 	if cpb.pool == nil {
 		cpb.pool = pb.NewPool()
-		cpb.pool.Start()
+		if err := cpb.pool.Start(); err != nil {
+			return nil
+		}
 	}
 	cpb.pool.Add(newPb)
 	reader := newPb.NewProxyReader(stream)
@@ -52,7 +54,10 @@ func (cpb *progressBar) TrackProgress(src string, currentSize, totalSize int64, 
 			newPb.Finish()
 			cpb.pbs--
 			if cpb.pbs <= 0 {
-				cpb.pool.Stop()
+				if err := cpb.pool.Stop(); err != nil {
+					return err
+				}
+
 				cpb.pool = nil
 			}
 			return nil

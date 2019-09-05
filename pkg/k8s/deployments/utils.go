@@ -7,14 +7,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func getLabel(o metav1.Object, key string) string {
-	labels := o.GetLabels()
-	if labels != nil {
-		return labels[key]
-	}
-	return ""
-}
-
 func setLabel(o metav1.Object, key, value string) {
 	labels := o.GetLabels()
 	if labels == nil {
@@ -41,23 +33,11 @@ func setAnnotation(o metav1.Object, key, value string) {
 	o.SetAnnotations(annotations)
 }
 
-func getDevListFromAnnotation(o metav1.Object) ([]*model.Dev, error) {
-	devList := []*model.Dev{}
-	devListAnnotation := getAnnotation(o, oktetoDevAnnotation)
-	if devListAnnotation == "" {
-		return devList, nil
-	}
-	if err := json.Unmarshal([]byte(devListAnnotation), &devList); err != nil {
-		return nil, err
-	}
-	return devList, nil
-}
-
-func setDevListAsAnnotation(o metav1.Object, dev *model.Dev) error {
-	devListBytes, err := json.Marshal([]*model.Dev{dev})
+func setTranslationAsAnnotation(o metav1.Object, tr *model.Translation) error {
+	translationBytes, err := json.Marshal(tr)
 	if err != nil {
 		return err
 	}
-	setAnnotation(o, oktetoDevAnnotation, string(devListBytes))
+	setAnnotation(o, OktetoTranslationAnnotation, string(translationBytes))
 	return nil
 }

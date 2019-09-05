@@ -135,11 +135,13 @@ func Errorf(format string, args ...interface{}) {
 
 // Yellow writes a line in yellow
 func Yellow(format string, args ...interface{}) {
+	log.out.Infof(format, args...)
 	fmt.Fprintln(color.Output, yellowString(format, args...))
 }
 
 // Green writes a line in green
 func Green(format string, args ...interface{}) {
+	log.out.Infof(format, args...)
 	fmt.Fprintln(color.Output, greenString(format, args...))
 }
 
@@ -150,20 +152,30 @@ func BlueString(format string, args ...interface{}) string {
 
 // Success prints a message with the success symbol first, and the text in green
 func Success(format string, args ...interface{}) {
+	log.out.Infof(format, args...)
 	fmt.Fprintf(color.Output, "%s %s\n", successSymbol, greenString(format, args...))
 }
 
 // Information prints a message with the information symbol first, and the text in blue
 func Information(format string, args ...interface{}) {
+	log.out.Infof(format, args...)
 	fmt.Fprintf(color.Output, "%s %s\n", informationSymbol, blueString(format, args...))
+}
+
+// Hint prints a message with the text in blue
+func Hint(format string, args ...interface{}) {
+	log.out.Infof(format, args...)
+	fmt.Fprintf(color.Output, "%s\n", blueString(format, args...))
 }
 
 // Fail prints a message with the error symbol first, and the text in red
 func Fail(format string, args ...interface{}) {
+	log.out.Infof(format, args...)
 	fmt.Fprintf(color.Output, "%s %s\n", errorSymbol, redString(format, args...))
 }
 
 // Println writes a line with colors
 func Println(args ...interface{}) {
+	log.out.Info(args...)
 	fmt.Fprintln(color.Output, args...)
 }

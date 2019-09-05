@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
+	oktetoAutoIngressAnnotation = "dev.okteto.com/auto-ingress"
 )
 
 func translate(dev *model.Dev) *apiv1.Service {
@@ -17,7 +17,7 @@ func translate(dev *model.Dev) *apiv1.Service {
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
 			Annotations: map[string]string{
-				oktetoAutoCreateAnnotation: "true",
+				oktetoAutoIngressAnnotation: "true",
 			},
 		},
 		Spec: apiv1.ServiceSpec{

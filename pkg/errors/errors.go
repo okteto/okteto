@@ -8,6 +8,17 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 )
 
+// UserError is meant for errors displayed to the user. It can include a message and a hint
+type UserError struct {
+	E    error
+	Hint string
+}
+
+// Error returns the error message
+func (u UserError) Error() string {
+	return u.E.Error()
+}
+
 var (
 	// ErrLostConnection is raised when we lose network connectivity with the cluster
 	ErrLostConnection = fmt.Errorf("Lost connection to your cluster. Please check your network connection and run '%s up' again", config.GetBinaryName())

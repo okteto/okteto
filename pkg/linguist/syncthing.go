@@ -8,7 +8,7 @@ var (
 func init() {
 	defaultIgnore = []byte("/.git")
 	// based on the list available at https://github.com/github/gitignore
-	stignore = make(map[string][]byte, 0)
+	stignore = make(map[string][]byte)
 
 	stignore[javascript] = []byte(`/.git
 # Logs

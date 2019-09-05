@@ -3,6 +3,7 @@ package deployments
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -37,7 +38,7 @@ func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Dep
 			return nil, err
 		}
 		if len(deploys.Items) == 0 {
-			return nil, fmt.Errorf("Deployment not found")
+			return nil, errors.ErrNotFound
 		}
 		if len(deploys.Items) > 1 {
 			return nil, fmt.Errorf("Found '%d' deployments instead of 1", len(deploys.Items))
@@ -48,28 +49,41 @@ func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Dep
 	return d, nil
 }
 
-//GetAll fills all the deployments pointed by a dev environment
-func GetAll(dev *model.Dev, c *kubernetes.Clientset) error {
-	d, err := Get(dev, dev.Namespace, c)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			return err
+//GetTranslations fills all the deployments pointed by a dev environment
+func GetTranslations(dev *model.Dev, d *appsv1.Deployment, nodeName string, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
+	result := map[string]*model.Translation{}
+	if d != nil {
+		rule := dev.ToTranslationRule(dev, d, nodeName)
+		result[d.Name] = &model.Translation{
+			Interactive: true,
+			Name:        dev.Name,
+			Deployment:  d,
+			Replicas:    *d.Spec.Replicas,
+			Rules:       []*model.TranslationRule{rule},
 		}
-	} else {
-		dev.Deployment = d
 	}
-
 	for _, s := range dev.Services {
 		d, err := Get(s, dev.Namespace, c)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				continue
 			}
-			return err
+			return nil, err
 		}
-		s.Deployment = d
+		rule := s.ToTranslationRule(dev, d, nodeName)
+		if _, ok := result[d.Name]; ok {
+			result[d.Name].Rules = append(result[d.Name].Rules, rule)
+		} else {
+			result[d.Name] = &model.Translation{
+				Name:        dev.Name,
+				Interactive: false,
+				Deployment:  d,
+				Replicas:    *d.Spec.Replicas,
+				Rules:       []*model.TranslationRule{rule},
+			}
+		}
 	}
-	return nil
+	return result, nil
 }
 
 //Deploy creates or updates a deployment
@@ -87,17 +101,9 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 }
 
 //TraslateDevMode translates the deployment manifests to put them in dev mode
-func TraslateDevMode(dev *model.Dev, nodeName string) error {
-	err := translate(dev, dev, nodeName)
-	if err != nil {
-		return err
-	}
-
-	for i, s := range dev.Services {
-		if s.Deployment == nil {
-			return fmt.Errorf("Deployment for service number %d not found", i)
-		}
-		err := translate(dev, s, nodeName)
+func TraslateDevMode(tr map[string]*model.Translation) error {
+	for _, t := range tr {
+		err := translate(t)
 		if err != nil {
 			return err
 		}
@@ -107,39 +113,47 @@ func TraslateDevMode(dev *model.Dev, nodeName string) error {
 
 //IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
-	annotations := d.GetObjectMeta().GetAnnotations()
-	if annotations == nil {
+	labels := d.GetObjectMeta().GetLabels()
+	if labels == nil {
 		return false
 	}
-	_, ok := annotations[oktetoDevAnnotation]
-	return ok
-}
-
-//IsAutoCreate returns if the deplloyment is created from scratch
-func IsAutoCreate(d *appsv1.Deployment) bool {
-	annotations := d.GetObjectMeta().GetAnnotations()
-	if annotations == nil {
-		return false
-	}
-	_, ok := annotations[oktetoAutoCreateAnnotation]
+	_, ok := labels[OktetoDevLabel]
 	return ok
 }
 
 // DevModeOff deactivates dev mode for d
 func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
-	if len(dManifest) == 0 {
-		log.Infof("%s/%s is not an okteto environment", d.Namespace, d.Name)
-		return nil
+	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), OktetoTranslationAnnotation)
+	if len(trRulesJSON) == 0 {
+		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
+		if len(dManifest) == 0 {
+			log.Infof("%s/%s is not an okteto environment", d.Namespace, d.Name)
+			return nil
+		}
+		dOrig := &appsv1.Deployment{}
+		if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
+			return fmt.Errorf("malformed manifest: %s", err)
+		}
+		d = dOrig
+	} else {
+		trRules := &model.Translation{}
+		if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
+			return fmt.Errorf("malformed tr rules: %s", err)
+		}
+		d.Spec.Replicas = &trRules.Replicas
+		annotations := d.GetObjectMeta().GetAnnotations()
+		delete(annotations, oktetoDeveloperAnnotation)
+		delete(annotations, oktetoVersionAnnotation)
+		d.GetObjectMeta().SetAnnotations(annotations)
+		annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
+		delete(annotations, OktetoTranslationAnnotation)
+		d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
+		labels := d.GetObjectMeta().GetLabels()
+		delete(labels, OktetoDevLabel)
+		d.GetObjectMeta().SetLabels(labels)
 	}
 
-	dOrig := &appsv1.Deployment{}
-	if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
-		return fmt.Errorf("malformed manifest: %s", err)
-	}
-
-	dOrig.ResourceVersion = ""
-	if err := update(dOrig, c); err != nil {
+	if err := update(d, c); err != nil {
 		return err
 	}
 
@@ -157,9 +171,27 @@ func create(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 
 func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	log.Debugf("updating deployment %s/%s", d.Namespace, d.Name)
+	d.ResourceVersion = ""
+	d.Status = appsv1.DeploymentStatus{}
 	_, err := c.AppsV1().Deployments(d.Namespace).Update(d)
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+//Destroy destroys a k8s service
+func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
+	log.Infof("deleting deployment '%s'...", dev.Name)
+	dClient := c.AppsV1().Deployments(dev.Namespace)
+	err := dClient.Delete(dev.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			log.Infof("deployment '%s' was already deleted.", dev.Name)
+			return nil
+		}
+		return fmt.Errorf("error deleting kubernetes deployment: %s", err)
+	}
+	log.Infof("deployment '%s' deleted", dev.Name)
 	return nil
 }

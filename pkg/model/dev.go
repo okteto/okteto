@@ -1,41 +1,78 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
 	oktetoPodNameTemplate     = "%s-0"
 	oktetoStatefulSetTemplate = "okteto-%s"
 	oktetoVolumeNameTemplate  = "pvc-%d"
+	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
+	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
+
+	//OktetoInitContainer name of the okteto init container
+	OktetoInitContainer = "okteto-init"
+
+	//DefaultImage default image for sandboxes
+	DefaultImage = "okteto/desk:latest"
+)
+
+var (
+	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
+
+	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
+	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
+
+	devReplicas                      int32 = 1
+	devTerminationGracePeriodSeconds int64
 )
 
 //Dev represents a cloud native development environment
 type Dev struct {
-	Name        string               `json:"name" yaml:"name"`
-	Deployment  *appsv1.Deployment   `json:"-" yaml:"-"`
-	Labels      map[string]string    `json:"labels" yaml:"labels"`
-	Namespace   string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Container   string               `json:"container,omitempty" yaml:"container,omitempty"`
-	Image       string               `json:"image,omitempty" yaml:"image,omitempty"`
-	Environment []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Command     []string             `json:"command,omitempty" yaml:"command,omitempty"`
-	WorkDir     string               `json:"workdir" yaml:"workdir"`
-	MountPath   string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
-	SubPath     string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
-	Volumes     []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	Forward     []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
-	Resources   ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
-	DevPath     string               `json:"-" yaml:"-"`
-	DevDir      string               `json:"-" yaml:"-"`
-	Services    []*Dev               `json:"services,omitempty" yaml:"services,omitempty"`
+	Name            string               `json:"name" yaml:"name"`
+	Labels          map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Namespace       string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Container       string               `json:"container,omitempty" yaml:"container,omitempty"`
+	Image           string               `json:"image,omitempty" yaml:"image,omitempty"`
+	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	Environment     []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Command         []string             `json:"command,omitempty" yaml:"command,omitempty"`
+	WorkDir         string               `json:"workdir" yaml:"workdir"`
+	MountPath       string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
+	SubPath         string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
+	Volumes         []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	DevPath         string               `json:"-" yaml:"-"`
+	DevDir          string               `json:"-" yaml:"-"`
+	Services        []*Dev               `json:"services,omitempty" yaml:"services,omitempty"`
+}
+
+// SecurityContext represents a pod security context
+type SecurityContext struct {
+	RunAsUser    *int64        `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
+	RunAsGroup   *int64        `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
+	FSGroup      *int64        `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
+	Capabilities *Capabilities `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
+}
+
+// Capabilities sets the linux capabilities of a container
+type Capabilities struct {
+	Add  []apiv1.Capability `json:"add,omitempty" yaml:"add,omitempty"`
+	Drop []apiv1.Capability `json:"drop,omitempty" yaml:"drop,omitempty"`
 }
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
@@ -66,7 +103,7 @@ func Get(devPath string) (*Dev, error) {
 		return nil, err
 	}
 
-	dev, err := read(b)
+	dev, err := Read(b)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +121,8 @@ func Get(devPath string) (*Dev, error) {
 	return dev, nil
 }
 
-func read(bytes []byte) (*Dev, error) {
+//Read reads an okteto manifests
+func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		Environment: make([]EnvVar, 0),
 		Command:     make([]string, 0),
@@ -96,8 +134,23 @@ func read(bytes []byte) (*Dev, error) {
 		},
 		Services: make([]*Dev, 0),
 	}
-	if err := yaml.Unmarshal(bytes, dev); err != nil {
-		return nil, err
+	if err := yaml.UnmarshalStrict(bytes, dev); err != nil {
+		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
+			var sb strings.Builder
+			sb.WriteString("Invalid manifest:\n")
+			l := strings.Split(err.Error(), "\n")
+			for i := 1; i < len(l); i++ {
+				e := strings.TrimSuffix(l[i], "in type model.Dev")
+				e = strings.TrimSpace(e)
+				sb.WriteString(fmt.Sprintf("    - %s\n", e))
+			}
+
+			sb.WriteString("    See https://okteto.com/docs/reference/manifest for details")
+			return nil, errors.New(sb.String())
+		}
+		msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid manifest:", 1)
+		msg = strings.TrimSuffix(msg, "in type model.Dev")
+		return nil, errors.New(msg)
 	}
 	if err := dev.setDefaults(); err != nil {
 		return nil, err
@@ -113,6 +166,9 @@ func (dev *Dev) setDefaults() error {
 		dev.MountPath = "/okteto"
 		dev.WorkDir = "/okteto"
 	}
+	if dev.ImagePullPolicy == "" {
+		dev.ImagePullPolicy = apiv1.PullAlways
+	}
 	if dev.WorkDir != "" && dev.MountPath == "" {
 		dev.MountPath = dev.WorkDir
 	}
@@ -123,6 +179,9 @@ func (dev *Dev) setDefaults() error {
 		if s.MountPath == "" && s.WorkDir == "" {
 			s.MountPath = "/okteto"
 			s.WorkDir = "/okteto"
+		}
+		if s.ImagePullPolicy == "" {
+			s.ImagePullPolicy = apiv1.PullAlways
 		}
 		if s.WorkDir != "" && s.MountPath == "" {
 			s.MountPath = s.WorkDir
@@ -144,6 +203,36 @@ func (dev *Dev) setDefaults() error {
 func (dev *Dev) validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("Name cannot be empty")
+	}
+
+	if ValidKubeNameRegex.MatchString(dev.Name) {
+		return errBadName
+	}
+
+	if strings.HasPrefix(dev.Name, "-") || strings.HasSuffix(dev.Name, "-") {
+		return errBadName
+	}
+
+	if err := validatePullPolicy(dev.ImagePullPolicy); err != nil {
+		return err
+	}
+
+	for _, s := range dev.Services {
+		if err := validatePullPolicy(s.ImagePullPolicy); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
+	switch pullPolicy {
+	case apiv1.PullAlways:
+	case apiv1.PullIfNotPresent:
+	case apiv1.PullNever:
+	default:
+		return fmt.Errorf("supported values for 'imagePullPolicy' are: 'Always', 'IfNotPresent' or 'Never'")
 	}
 	return nil
 }
@@ -186,4 +275,90 @@ func (dev *Dev) LabelsSelector() string {
 		}
 	}
 	return labels
+}
+
+// ToTranslationRule translates a dev struct into a translation rule
+func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName string) *TranslationRule {
+	rule := &TranslationRule{
+		Node:            nodeName,
+		Container:       dev.Container,
+		Image:           dev.Image,
+		ImagePullPolicy: dev.ImagePullPolicy,
+		Environment:     dev.Environment,
+		WorkDir:         dev.WorkDir,
+		Volumes: []VolumeMount{
+			VolumeMount{
+				Name:      main.GetVolumeName(0),
+				MountPath: dev.MountPath,
+				SubPath:   dev.SubPath,
+			},
+		},
+		SecurityContext: dev.SecurityContext,
+		Resources:       dev.Resources,
+	}
+
+	if main == dev {
+		rule.Healthchecks = false
+		rule.Command = []string{"tail"}
+		rule.Args = []string{"-f", "/dev/null"}
+	} else {
+		rule.Healthchecks = true
+		if len(dev.Command) > 0 {
+			rule.Command = dev.Command
+			rule.Args = []string{}
+		}
+	}
+
+	for i, v := range dev.Volumes {
+		rule.Volumes = append(
+			rule.Volumes,
+			VolumeMount{
+				Name:      main.GetVolumeName(i + 1),
+				MountPath: v,
+			},
+		)
+	}
+	return rule
+}
+
+//GevSandbox returns a deployment sandbox
+func (dev *Dev) GevSandbox() *appsv1.Deployment {
+	if dev.Image == "" {
+		dev.Image = DefaultImage
+	}
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name,
+			Namespace: dev.Namespace,
+			Annotations: map[string]string{
+				OktetoAutoCreateAnnotation: "true",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &devReplicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": dev.Name,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": dev.Name,
+					},
+				},
+				Spec: apiv1.PodSpec{
+					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					Containers: []apiv1.Container{
+						apiv1.Container{
+							Name:            "dev",
+							Image:           dev.Image,
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"tail"},
+							Args:            []string{"-f", "/dev/null"}},
+					},
+				},
+			},
+		},
+	}
 }

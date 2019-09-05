@@ -6,12 +6,17 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
+
+var netClient = &http.Client{
+	Timeout: time.Second * 3,
+}
 
 //Version returns information about the binary
 func Version() *cobra.Command {
@@ -31,26 +36,11 @@ func upgradeAvailable() string {
 		return ""
 	}
 
-	resp, err := http.Get("https://downloads.okteto.com/cli/latest")
+	v, err := getVersion()
 	if err != nil {
-		log.Infof("failed to get latest version: %s", err)
-		return ""
+		log.Infof("failed to get the latest version from https://downloads.okteto.com/cli/latest: %s", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		log.Infof("failed to get latest version: %d", resp.StatusCode)
-		return ""
-	}
-
-	defer resp.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Infof("failed to read the latest version response: %s", err)
-		return ""
-	}
-
-	v := string(bodyBytes)
-	v = strings.TrimSuffix(v, "\n")
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
 		if err != nil {
@@ -58,14 +48,51 @@ func upgradeAvailable() string {
 			return ""
 		}
 
-		log.Infof("latest version is %s", latest.String())
-
-		if latest.GreaterThan(current) {
+		// check if it's a minor or major change, we don't notify on revision
+		if shouldNotify(latest, current) {
 			return v
 		}
 	}
 
 	return ""
+}
+
+func getVersion() (string, error) {
+	resp, err := netClient.Get("https://downloads.okteto.com/cli/latest")
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusCodeOK {
+		return "", fmt.Errorf("failed to get latest version, status code: %d", resp.StatusCode)
+	}
+
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	v := string(b)
+	v = strings.TrimSuffix("\n")
+	return v, nil
+}
+
+func shouldNotify(latest, current *semver.Version) bool {
+	if current.GreaterThan(latest) {
+		return false
+	}
+
+	// check if it's a minor or major change, we don't notify on patch
+	if latest.Major() > current.Major() {
+		return true
+	}
+
+	if latest.Minor() > current.Minor() {
+		return true
+	}
+
+	return false
 }
 
 func getUpgradeCommand() string {

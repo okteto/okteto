@@ -17,8 +17,9 @@ func Create() *cobra.Command {
 		Use:   "namespace <name>",
 		Short: fmt.Sprintf("Creates a namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			analytics.TrackCreateNamespace(config.VersionString)
-			return executeCreateNamespace(args[0])
+			err := executeCreateNamespace(args[0])
+			analytics.TrackCreateNamespace(config.VersionString, err == nil)
+			return err
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {

@@ -19,10 +19,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	errDone = fmt.Errorf("done")
-)
-
 //Login starts the login handshake with github and okteto
 func Login() *cobra.Command {
 	cmd := &cobra.Command{
@@ -84,19 +80,20 @@ func Login() *cobra.Command {
 				return e
 			}
 
-			user, new, err := okteto.Auth(handler.ctx, code, oktetoURL)
+			u, err := okteto.Auth(handler.ctx, code, oktetoURL)
 			if err != nil {
+				analytics.TrackLogin("", "", "", "", config.VersionString, false, false)
 				return err
 			}
 
 			if oktetoURL == okteto.CloudURL {
-				log.Success("Logged in as %s", user)
+				log.Success("Logged in as %s", u.GithubID)
 			} else {
-				log.Success("Logged in as %s @ %s", user, oktetoURL)
+				log.Success("Logged in as %s @ %s", u.GithubID, oktetoURL)
 			}
 
-			fmt.Println(log.BlueString("    Run `okteto namespace` to activate your Kubernetes configuration."))
-			analytics.TrackLogin(config.VersionString, new)
+			log.Hint("    Run `okteto namespace` to switch your context and download your Kubernetes credentials.")
+			analytics.TrackLogin(u.Name, u.Email, u.ID, u.GithubID, config.VersionString, u.New, true)
 			return nil
 		},
 	}
@@ -122,9 +119,12 @@ func (a *authHandler) handle() http.Handler {
 			return
 		}
 
-		w.Write(loginHTML)
+		if _, err := w.Write(loginHTML); err != nil {
+			a.errChan <- fmt.Errorf("Failed to write to the response: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+
 		a.response <- code
-		return
 	}
 
 	return http.HandlerFunc(fn)

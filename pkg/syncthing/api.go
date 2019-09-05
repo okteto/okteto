@@ -1,6 +1,7 @@
 package syncthing
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,35 +11,6 @@ import (
 
 type addAPIKeyTransport struct {
 	T http.RoundTripper
-}
-
-// API types
-
-type syncthingConnections struct {
-	Connections map[string]struct {
-		Connected bool `json:"connected,omitempty"`
-	} `json:"connections,omitempty"`
-}
-
-type event struct {
-	Type string `json:"type,omitempty"`
-	Data struct {
-		Completion  float64 `json:"completion,omitempty"`
-		Folder      string  `json:"folder,omitempty"`
-		Device      string  `json:"device,omitempty"`
-		GlobalBytes int64   `json:"globalBytes,omitempty"`
-	} `json:"data,omitempty"`
-}
-
-type syncthingErrors struct {
-	Errors []struct {
-		Message string `json:"message,omitempty"`
-	} `json:"errors,omitempty"`
-}
-
-type completion struct {
-	Completion float64 `json:"completion,omitempty"`
-	NeedBytes  int     `json:"needBytes,omitempty"`
 }
 
 func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -55,25 +27,25 @@ func NewAPIClient() *http.Client {
 }
 
 // APICall calls the syncthing API and returns the parsed json or an error
-func (s *Syncthing) APICall(url, method string, code int, params map[string]string, local bool) ([]byte, error) {
+func (s *Syncthing) APICall(url, method string, code int, params map[string]string, local bool, body []byte) ([]byte, error) {
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
 	} else {
 		urlPath = path.Join(s.RemoteGUIAddress, url)
 	}
-	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), nil)
+	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
 
 	q := req.URL.Query()
 	q.Add("limit", "30")
-	if params != nil {
-		for key, value := range params {
-			q.Add(key, value)
-		}
+
+	for key, value := range params {
+		q.Add(key, value)
 	}
+
 	req.URL.RawQuery = q.Encode()
 
 	resp, err := s.Client.Do(req)
@@ -82,7 +54,7 @@ func (s *Syncthing) APICall(url, method string, code int, params map[string]stri
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

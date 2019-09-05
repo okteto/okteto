@@ -58,6 +58,7 @@ type UpContext struct {
 	Exit          chan error
 	Sy            *syncthing.Syncthing
 	ErrChan       chan error
+	success       bool
 }
 
 //Up starts a cloud dev environment
@@ -92,8 +93,9 @@ func Up() *cobra.Command {
 			if namespace != "" {
 				dev.Namespace = namespace
 			}
-			analytics.TrackUp(dev.Image, config.VersionString)
-			return RunUp(dev)
+
+			err = RunUp(dev)
+			return err
 		},
 	}
 
@@ -132,14 +134,19 @@ func RunUp(dev *model.Dev) error {
 // Activate activates the dev environment
 func (up *UpContext) Activate() {
 	retry := false
-	inFd, _ := term.GetFdInfo(os.Stdin)
-	state, err := term.SaveState(inFd)
-	if err != nil {
-		up.Exit <- err
-		return
+	var state *term.State
+	inFd, isTerm := term.GetFdInfo(os.Stdin)
+	if isTerm {
+		var err error
+		state, err = term.SaveState(inFd)
+		if err != nil {
+			up.Exit <- err
+			return
+		}
 	}
 
 	var namespace string
+	var err error
 	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal()
 	if err != nil {
 		up.Exit <- err
@@ -163,26 +170,34 @@ func (up *UpContext) Activate() {
 				return
 			}
 
-			var deploy bool
 			if len(up.Dev.Labels) == 0 {
-				deploy = askYesNo(fmt.Sprintf("Deployment '%s' doesn't exist. Do you want to create a new one? [y/n]: ", up.Dev.Name))
+				deploy := askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
+				if !deploy {
+					up.Exit <- errors.UserError{
+						E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", up.Dev.Name, up.Dev.Namespace),
+						Hint: "Deploy your application first or use `okteto namespace` to select a different namespace and try again"}
+					return
+				}
 			} else {
+				if err == errors.ErrNotFound {
+					err = errors.UserError{
+						E:    fmt.Errorf("Didn't find a deployment in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
+						Hint: "Update your labels or use `okteto namespace` to select a different namespace and try again"}
+				}
 				up.Exit <- err
 				return
 			}
-			if !deploy {
-				up.Exit <- fmt.Errorf("deployment %s not found [current context: %s]", up.Dev.Name, up.Dev.Namespace)
-				return
-			}
 
-			d = deployments.GevDevSandbox(up.Dev)
+			d = up.Dev.GevSandbox()
 			create = true
 		}
-		devContainer := deployments.GetDevContainer(d, up.Dev.Container)
+
+		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
 		if devContainer == nil {
 			up.Exit <- fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 			return
 		}
+		up.Dev.Container = devContainer.Name
 		if up.Dev.Image == "" {
 			up.Dev.Image = devContainer.Image
 		}
@@ -197,32 +212,34 @@ func (up *UpContext) Activate() {
 			up.Exit <- err
 			return
 		}
-		log.Success("Files synchronized")
 
 		err = up.devMode(retry, d, create)
 		if err != nil {
 			up.Exit <- err
 			return
 		}
+
+		up.success = true
 		retry = true
 
 		printDisplayContext("Okteto Environment activated", up.Dev)
 
 		go func() {
 			up.Running <- up.runCommand()
-			return
 		}()
 
 		prevError := up.WaitUntilExitOrInterrupt()
-		log.Debug("Restoring terminal")
-		if err := term.RestoreTerminal(inFd, state); err != nil {
-			log.Debugf("failed to restore terminal: %s", err)
-		} else {
-			log.Debug("Terminal restored")
+		if isTerm {
+			log.Debug("Restoring terminal")
+			if err := term.RestoreTerminal(inFd, state); err != nil {
+				log.Debugf("failed to restore terminal: %s", err)
+			} else {
+				log.Debug("Terminal restored")
+			}
 		}
 
 		if prevError != nil {
-			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !up.Sy.IsConnected()) {
+			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !pods.Exists(up.DevPod, up.Dev.Namespace, up.Client)) {
 				log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...\n")
 				up.shutdown()
 				continue
@@ -256,35 +273,52 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 }
 
 func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
-	var err error
-	progress := newProgressBar("Synchronizing your files...")
-	progress.start()
-	defer progress.stop()
-
-	up.Sy, err = syncthing.New(up.Dev)
+	err := up.startRemoteSyncthing(d, c)
 	if err != nil {
 		return err
 	}
+	log.Success("Persistent volume provisioned")
 
-	if err := up.Sy.Run(up.Context, up.WG); err != nil {
+	if err := up.startLocalSyncthing(); err != nil {
 		return err
 	}
 
+	if err := up.synchronizeFiles(); err != nil {
+		return err
+	}
+
+	log.Success("Files synchronized")
+	return nil
+}
+
+func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Container) error {
+	progress := newProgressBar("Provisioning your persistent volume...")
+	progress.start()
+	defer progress.stop()
+
+	log.Info("create deployment secrets")
 	if err := secrets.Create(up.Dev, up.Client); err != nil {
 		return err
 	}
 
+	log.Info("deploying syncK8s")
 	if err := syncK8s.Deploy(up.Dev, d, c, up.Client); err != nil {
 		return err
 	}
 
-	p, err := pods.GetDevPod(up.Context, up.Dev, pods.OktetoSyncLabel, up.Client)
+	log.Info("getting the sync pod")
+	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoSyncLabel, up.Client, true)
 	if err != nil {
 		return err
 	}
 
 	up.SyncPod = p.Name
 	up.Node = p.Spec.NodeName
+
+	up.Sy, err = syncthing.New(up.Dev)
+	if err != nil {
+		return err
+	}
 
 	up.SyncForwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
 	if err := up.SyncForwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
@@ -295,19 +329,36 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 	}
 
 	up.SyncForwarder.Start(up.SyncPod, up.Dev.Namespace)
+	return nil
+}
 
-	if err := up.Sy.WaitForPing(up.Context, up.WG); err != nil {
+func (up *UpContext) startLocalSyncthing() error {
+	progress := newProgressBar("Starting the file synchronization service...")
+	progress.start()
+	defer progress.stop()
+
+	if err := up.Sy.Run(up.Context, up.WG); err != nil {
 		return err
 	}
 
-	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
+	if err := up.Sy.WaitForPing(up.Context, up.WG, true); err != nil {
 		return err
 	}
+	up.Sy.SendStignoreFile(up.Context, up.WG, up.Dev)
+	if err := up.Sy.WaitForScanning(up.Context, up.WG, up.Dev, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (up *UpContext) synchronizeFiles() error {
+	progress := newProgressBar("Synchronizing your files...")
+	progress.start()
+	defer progress.stop()
 
 	if err := up.Sy.OverrideChanges(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
-
 	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
@@ -318,7 +369,6 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 	}
 
 	go up.Sy.Monitor(up.Context, up.WG, up.Disconnect)
-
 	return up.Sy.Restart(up.Context, up.WG)
 }
 
@@ -327,38 +377,33 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 	progress.start()
 	defer progress.stop()
 
-	err := deployments.GetAll(up.Dev, up.Client)
+	tr, err := deployments.GetTranslations(up.Dev, d, up.Node, up.Client)
 	if err != nil {
 		return err
 	}
-	up.Dev.Deployment = d
 
-	if err := deployments.TraslateDevMode(up.Dev, up.Node); err != nil {
+	if err := deployments.TraslateDevMode(tr); err != nil {
 		return err
 	}
 
-	if err := deployments.Deploy(d, create, up.Client); err != nil {
-		return err
-	}
-	seen := map[string]bool{up.Dev.Deployment.Name: true}
-
-	for _, s := range up.Dev.Services {
-		if _, ok := seen[s.Deployment.Name]; ok {
-			continue
+	for name := range tr {
+		if name == d.Name {
+			if err := deployments.Deploy(tr[name].Deployment, create, up.Client); err != nil {
+				return err
+			}
+		} else {
+			if err := deployments.Deploy(tr[name].Deployment, false, up.Client); err != nil {
+				return err
+			}
 		}
-		if err := deployments.Deploy(s.Deployment, false, up.Client); err != nil {
-			return err
-		}
-		seen[s.Deployment.Name] = true
 	}
-
-	if create {
+	if create && len(up.Dev.Services) == 0 {
 		if err := services.Create(up.Dev, up.Client); err != nil {
 			return err
 		}
 	}
 
-	p, err := pods.GetDevPod(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client)
+	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client, true)
 	if err != nil {
 		return err
 	}
@@ -377,19 +422,24 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 }
 
 func (up *UpContext) runCommand() error {
-	exec.Exec(
+	in := strings.NewReader("\n")
+	if err := exec.Exec(
 		up.Context,
 		up.Client,
 		up.RestConfig,
 		up.Dev.Namespace,
 		up.DevPod,
 		up.Dev.Container,
-		true,
-		os.Stdin,
+		false,
+		in,
 		os.Stdout,
 		os.Stderr,
-		[]string{"sh", "-c", "trap '' TERM && kill -- -1 && sleep 0.1 & kill -s KILL -- -1 >/dev/null 2>&1"},
-	)
+		[]string{"sh", "-c", "((cp /var/okteto/bin/* /usr/local/bin); (trap '' TERM && kill -- -1 && sleep 0.1 & kill -s KILL -- -1 )) >/dev/null 2>&1"},
+	); err != nil {
+		log.Infof("failed to kill existing session: %s", err)
+	}
+
+	log.Infof("starting remote command")
 	return exec.Exec(
 		up.Context,
 		up.Client,
@@ -407,7 +457,9 @@ func (up *UpContext) runCommand() error {
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
 func (up *UpContext) shutdown() {
-	log.Debugf("cancelling context")
+	log.Debugf("up shutdown")
+	analytics.TrackUp(up.Dev.Image, config.VersionString, up.success)
+
 	if up.Cancel != nil {
 		up.Cancel()
 	}
@@ -428,7 +480,6 @@ func (up *UpContext) shutdown() {
 		if up.SyncForwarder != nil {
 			up.SyncForwarder.Stop()
 		}
-		return
 	}()
 
 	select {
@@ -444,7 +495,7 @@ func (up *UpContext) shutdown() {
 func printDisplayContext(message string, dev *model.Dev) {
 	log.Success(message)
 	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
-	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Deployment.Name))
+	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 	if len(dev.Forward) > 0 {
 		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
 		for i := 1; i < len(dev.Forward); i++ {

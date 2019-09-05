@@ -3,7 +3,6 @@ package namespace
 import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 
@@ -23,7 +22,7 @@ func Namespace() *cobra.Command {
 			}
 
 			err := RunNamespace(namespace)
-			analytics.TrackNamespace(config.VersionString)
+			analytics.TrackNamespace(config.VersionString, err == nil)
 			return err
 		},
 	}
@@ -33,7 +32,7 @@ func Namespace() *cobra.Command {
 //RunNamespace starts the kubeconfig sequence
 func RunNamespace(namespace string) error {
 	kubeConfigFile := config.GetKubeConfigFile()
-	if err := client.SetKubeConfig(kubeConfigFile, namespace); err != nil {
+	if err := okteto.SetKubeConfig(kubeConfigFile, namespace); err != nil {
 		return err
 	}
 	log.Success("Updated context '%s' in '%s'", okteto.GetURLWithUnderscore(), kubeConfigFile)

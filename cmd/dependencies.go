@@ -14,14 +14,15 @@ import (
 )
 
 var (
-	downloadPath = map[string]string{
-		"linux":   "https://downloads.okteto.com/cli/syncthing/1.1.4/syncthing-Linux-x86_64",
-		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.1.4/syncthing-Darwin-x86_64",
-		"windows": "https://downloads.okteto.com/cli/syncthing/1.1.4/syncthing-Windows-x86_64",
+	// SyncthingURL is the path of the syncthing binary.
+	SyncthingURL = map[string]string{
+		"linux":   "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Linux-x86_64",
+		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Darwin-x86_64",
+		"windows": "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Windows-x86_64",
 	}
 
-	syncthingVersion = semver.MustParse("1.1.4")
-	versionRegex     = regexp.MustCompile("syncthing v(\\d+\\.\\d+\\.\\d+) .*")
+	syncthingVersion = semver.MustParse("1.2.2")
+	versionRegex     = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
 func syncthingUpgradeAvailable() bool {
@@ -65,7 +66,7 @@ func downloadSyncthing() error {
 	opts := []getter.ClientOption{getter.WithProgress(defaultProgressBar)}
 
 	client := &getter.Client{
-		Src:     downloadPath[runtime.GOOS],
+		Src:     SyncthingURL[runtime.GOOS],
 		Dst:     syncthing.GetInstallPath(),
 		Mode:    getter.ClientModeFile,
 		Options: opts,
@@ -76,7 +77,10 @@ func downloadSyncthing() error {
 
 	if err := client.Get(); err != nil {
 		log.Infof("failed to download syncthing from %s: %s", client.Src, err)
-		os.Remove(client.Dst)
+		if e := os.Remove(client.Dst); e != nil {
+			log.Infof("failed to delete partially downloaded %s: %s", client.Dst, e.Error())
+		}
+
 		return err
 	}
 
