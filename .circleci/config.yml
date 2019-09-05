@@ -138,7 +138,6 @@ jobs:
           arguments: |
             --acl public-read \
             --metadata version=${CIRCLE_SHA1}
-          overwrite: true
 workflows:
   version: 2
   build-release:
