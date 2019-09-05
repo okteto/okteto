@@ -1,6 +1,7 @@
 package syncthing
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -26,14 +27,14 @@ func NewAPIClient() *http.Client {
 }
 
 // APICall calls the syncthing API and returns the parsed json or an error
-func (s *Syncthing) APICall(url, method string, code int, params map[string]string, local bool) ([]byte, error) {
+func (s *Syncthing) APICall(url, method string, code int, params map[string]string, local bool, body []byte) ([]byte, error) {
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
 	} else {
 		urlPath = path.Join(s.RemoteGUIAddress, url)
 	}
-	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), nil)
+	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +54,7 @@ func (s *Syncthing) APICall(url, method string, code int, params map[string]stri
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

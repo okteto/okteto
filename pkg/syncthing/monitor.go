@@ -10,7 +10,7 @@ import (
 
 // IsConnected returns true if it can ping the remote syncthing
 func (s *Syncthing) IsConnected() bool {
-	_, err := s.APICall("rest/system/ping", "GET", 200, nil, false)
+	_, err := s.APICall("rest/system/ping", "GET", 200, nil, false, nil)
 	return err == nil
 }
 

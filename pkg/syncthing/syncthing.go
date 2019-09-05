@@ -70,6 +70,11 @@ type Syncthing struct {
 	Type             string
 }
 
+//Ignores represents the .stignore file
+type Ignores struct {
+	Ignore []string `json:"ignore"`
+}
+
 // Status represents the status of a syncthing folder.
 type Status struct {
 	State string `json:"state"`
@@ -236,22 +241,12 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 	return nil
 }
 
-// WaitForSyncthingReady wait for syncthing to be ready
-func (s *Syncthing) WaitForSyncthingReady(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, local bool) error {
-	if err := s.waitForPing(ctx, wg, local); err != nil {
-		return err
-	}
-	if err := s.waitForScanning(ctx, wg, dev, local); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Syncthing) waitForPing(ctx context.Context, wg *sync.WaitGroup, local bool) error {
+//WaitForPing waits for synthing to be ready
+func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup, local bool) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	log.Infof("waiting for syncthing to be ready...")
 	for i := 0; i < 200; i++ {
-		_, err := s.APICall("rest/system/ping", "GET", 200, nil, local)
+		_, err := s.APICall("rest/system/ping", "GET", 200, nil, local, nil)
 		if err == nil {
 			return nil
 		}
@@ -267,7 +262,35 @@ func (s *Syncthing) waitForPing(ctx context.Context, wg *sync.WaitGroup, local b
 	return fmt.Errorf("Syncthing not responding after 50s")
 }
 
-func (s *Syncthing) waitForScanning(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, local bool) error {
+//SendStignoreFile sends .stignore from local to remote
+func (s *Syncthing) SendStignoreFile(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) {
+	log.Infof("Sending '.stignore' file to the remote container...")
+	folder := fmt.Sprintf("okteto-%s", dev.Name)
+	params := map[string]string{"folder": folder}
+	ignores := &Ignores{}
+	body, err := s.APICall("rest/db/ignores", "GET", 200, params, true, nil)
+	if err != nil {
+		log.Infof("error getting 'rest/db/ignores' syncthing API: %s", err)
+		return
+	}
+	err = json.Unmarshal(body, ignores)
+	if err != nil {
+		log.Infof("error unmarshaling 'rest/db/ignores': %s", err)
+		return
+	}
+	body, err = json.Marshal(ignores)
+	if err != nil {
+		log.Infof("error marshaling 'rest/db/ignores': %s", err)
+	}
+	_, err = s.APICall("rest/db/ignores", "POST", 200, params, false, body)
+	if err != nil {
+		log.Infof("error posting 'rest/db/ignores' syncthing API: %s", err)
+		return
+	}
+}
+
+//WaitForScanning waits for synthing to finish initial scanning
+func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, local bool) error {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
@@ -281,7 +304,7 @@ func (s *Syncthing) waitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 			return ctx.Err()
 		}
 
-		body, err := s.APICall("rest/db/status", "GET", 200, params, local)
+		body, err := s.APICall("rest/db/status", "GET", 200, params, local, nil)
 		if err != nil {
 			log.Infof("error calling 'rest/db/status' syncthing API: %s", err)
 			continue
@@ -305,7 +328,7 @@ func (s *Syncthing) OverrideChanges(ctx context.Context, wg *sync.WaitGroup, dev
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
 	log.Infof("forcing local state to the remote container...")
-	_, err := s.APICall("rest/db/override", "POST", 200, params, true)
+	_, err := s.APICall("rest/db/override", "POST", 200, params, true, nil)
 	return err
 }
 
@@ -325,7 +348,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 			return ctx.Err()
 		}
 
-		body, err := s.APICall("rest/db/completion", "GET", 200, params, true)
+		body, err := s.APICall("rest/db/completion", "GET", 200, params, true, nil)
 		if err != nil {
 			log.Infof("error calling 'rest/db/completion' syncthing API: %s", err)
 			continue
@@ -355,7 +378,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context, wg *sync.WaitGroup) error {
 	log.Infof("restarting synchting...")
-	_, err := s.APICall("rest/system/restart", "POST", 200, nil, true)
+	_, err := s.APICall("rest/system/restart", "POST", 200, nil, true, nil)
 	return err
 }
 
