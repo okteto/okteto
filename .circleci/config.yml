@@ -122,7 +122,23 @@ jobs:
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             bash ./update_homebrew_formula.sh $CIRCLE_TAG $GITHUB_TOKEN $sha 0
-
+  release-master:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./artifacts
+      - aws-s3/sync:
+          from: ./artifacts/bin
+          to: "s3://downloads.okteto.com/cli/master"
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          aws-region: AWS_REGION
+          arguments: |
+            --acl public-read \
+            --metadata version=${CIRCLE_SHA1}
+          overwrite: true
 workflows:
   version: 2
   build-release:
@@ -138,6 +154,12 @@ workflows:
             branches:
               only: 
                 - master
+      - release-master:
+          requires:
+            - integration
+          filters:
+            branches:
+              only: master
       - mock-publish-github-release:
           requires:
             - build
