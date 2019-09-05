@@ -63,7 +63,7 @@ func getVersion() (string, error) {
 		return "", err
 	}
 
-	if resp.StatusCode != http.StatusCodeOK {
+	if resp.StatusCode >= 300 {
 		return "", fmt.Errorf("failed to get latest version, status code: %d", resp.StatusCode)
 	}
 
@@ -74,7 +74,7 @@ func getVersion() (string, error) {
 	}
 
 	v := string(b)
-	v = strings.TrimSuffix("\n")
+	v = strings.TrimSuffix(v, "\n")
 	return v, nil
 }
 
