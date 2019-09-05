@@ -59,7 +59,7 @@ func upgradeAvailable() string {
 func getVersion() (string, error) {
 	resp, err := netClient.Get("https://downloads.okteto.com/cli/latest")
 	if err != nil {
-		log.Errorf("failed to get latest version: %s", err)
+		log.Infof("failed to get latest version: %s", err)
 		return "", err
 	}
 
