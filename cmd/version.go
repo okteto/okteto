@@ -2,14 +2,20 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"runtime"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
+
+var netClient = &http.Client{
+	Timeout: time.Second * 3,
+}
 
 //Version returns information about the binary
 func Version() *cobra.Command {
@@ -29,14 +35,11 @@ func upgradeAvailable() string {
 		return ""
 	}
 
-	resp, err := http.Head("https://downloads.okteto.com/cli/okteto-Darwin-x86_64")
+	v, err := getVersion()
 	if err != nil {
-		log.Errorf("failed to get latest version: %s", err)
-		return ""
+		log.Infof("failed to get the latest version from https://downloads.okteto.com/cli/latest: %s", err)
 	}
 
-	defer resp.Body.Close()
-	v := resp.Header.Get("x-amz-meta-version")
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
 		if err != nil {
@@ -51,6 +54,22 @@ func upgradeAvailable() string {
 	}
 
 	return ""
+}
+
+func getVersion() (string, error) {
+	resp, err := netClient.Get("https://downloads.okteto.com/cli/latest")
+	if err != nil {
+		log.Infof("failed to get latest version: %s", err)
+		return "", err
+	}
+
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }
 
 func shouldNotify(latest, current *semver.Version) bool {

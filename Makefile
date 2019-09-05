@@ -17,7 +17,11 @@ build-all: $(PLATFORMS)
 
 $(PLATFORMS):
 	GOOS=$(os) GOARCH=$(arch) $(BUILDCOMMAND) -o "bin/okteto-$(label)" 
-	sha256sum "bin/okteto-$(label)" > "bin/okteto-$(label).sha256"  
+	sha256sum "bin/okteto-$(label)" > "bin/okteto-$(label).sha256" 
+
+.PHONY: latest
+latest:
+	echo ${VERSION_STRING} > bin/latest
 
 .PHONY: lint
 lint:

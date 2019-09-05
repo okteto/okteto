@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	// DownloadPath is the path of the syncthing binary.
+	// SyncthingURL is the path of the syncthing binary.
 	SyncthingURL = map[string]string{
 		"linux":   "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Linux-x86_64",
 		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Darwin-x86_64",
