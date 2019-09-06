@@ -59,12 +59,8 @@ func translate(t *model.Translation) error {
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
 
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
-	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
-	t.Deployment.Spec.Replicas = &devReplicas
-
 	if os.Getenv("OKTETO_CONTINUOUS_DEVELOPMENT") != "" || client.IsOktetoCloud() {
+		commonTranslation(t)
 		if t.Interactive {
 			t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 		}
@@ -78,6 +74,7 @@ func translate(t *model.Translation) error {
 	}
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 
+	commonTranslation(t)
 	if t.Interactive {
 		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoInteractiveDevLabel, t.Name)
 	} else {
@@ -112,6 +109,13 @@ func translate(t *model.Translation) error {
 
 	}
 	return nil
+}
+
+func commonTranslation(t *model.Translation) {
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
+	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
+	t.Deployment.Spec.Replicas = &devReplicas
 }
 
 //GetDevContainer returns the dev container of a given deployment
