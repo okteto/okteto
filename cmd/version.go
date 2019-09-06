@@ -44,7 +44,7 @@ func upgradeAvailable() string {
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
 		if err != nil {
-			log.Info("failed to parse latest version '%s': %s", v, err)
+			log.Infof("failed to parse latest version '%s': %s", v, err)
 			return ""
 		}
 
