@@ -128,12 +128,16 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 	reqCPU, _ := resource.ParseQuantity("50m")
 	limMem, _ := resource.ParseQuantity("16Mi")
 	limCPU, _ := resource.ParseQuantity("50m")
-	source := filepath.Join(dev.WorkDir, "*")
+	source := filepath.Join(dev.MountPath, "*")
 
+	target := "/okteto/init"
+	if dev.SubPath != "" {
+		target = filepath.Join(target, dev.SubPath)
+	}
 	c := &apiv1.Container{
 		Name:    model.OktetoInitContainer,
 		Image:   dev.Image,
-		Command: []string{"sh", "-c", fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || cp -Rf %s /okteto/init); touch /okteto/init/%s", source, dev.DevPath)},
+		Command: []string{"sh", "-c", fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || mkdir -p %s && cp -Rf %s %s); touch /okteto/init/%s", target, source, target, dev.DevPath)},
 		Resources: apiv1.ResourceRequirements{
 			Requests: apiv1.ResourceList{
 				apiv1.ResourceMemory: reqMem,
