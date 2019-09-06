@@ -40,6 +40,9 @@ var (
 
 	// ErrQuota is returned when there aren't enough resources to enable dev mode
 	ErrQuota = fmt.Errorf("Quota exceeded, please free some resources and try again")
+
+	// ErrSyncFrozen is returned when syncthing has been frozen on the same bytes for 30 seconds
+	ErrSyncFrozen = fmt.Errorf("The synchronization service hasn't made any progress in the last 30 seconds")
 )
 
 // IsNotFound returns true if err is of the type not found
