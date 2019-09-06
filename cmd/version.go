@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -43,7 +44,7 @@ func upgradeAvailable() string {
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
 		if err != nil {
-			log.Errorf("failed to parse latest version: %s", err)
+			log.Infof("failed to parse latest version '%s': %s", v, err)
 			return ""
 		}
 
@@ -69,7 +70,9 @@ func getVersion() (string, error) {
 		return "", err
 	}
 
-	return string(b), nil
+	v := string(b)
+	v = strings.TrimSuffix(v, "\n")
+	return v, nil
 }
 
 func shouldNotify(latest, current *semver.Version) bool {
