@@ -33,7 +33,7 @@ func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1
 	reqMem, _ := resource.ParseQuantity("64Mi")
 	reqCPU, _ := resource.ParseQuantity("50m")
 	limMem, _ := resource.ParseQuantity("256Mi")
-	limCPU, _ := resource.ParseQuantity("1000m")
+	limCPU, _ := resource.ParseQuantity("500m")
 	ss := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.GetStatefulSetName(),
