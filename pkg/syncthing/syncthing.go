@@ -323,31 +323,37 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 	return fmt.Errorf("Syncthing not completed initial scan after 2min. Please, retry in a few minutes")
 }
 
-// OverrideChanges force the remote to be the same as the local file system
-func (s *Syncthing) OverrideChanges(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
-	folder := fmt.Sprintf("okteto-%s", dev.Name)
-	params := map[string]string{"folder": folder}
-	log.Infof("forcing local state to the remote container...")
-	_, err := s.APICall("rest/db/override", "POST", 200, params, true, nil)
-	return err
-}
-
 // WaitForCompletion waits for the remote to be totally synched
 func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
 	completion := &Completion{}
+	var prevNeedBytes int64
 	needZeroBytesIter := 0
 	log.Infof("waiting for synchronization to complete...")
 	for {
 		select {
 		case <-ticker.C:
+			if prevNeedBytes == completion.NeedBytes {
+				if needZeroBytesIter >= 50 {
+					return fmt.Errorf("The syncronization service is not making any progress for 30s...\n    Help us to improve okteto by opening an issue in https://github.com/okteto/okteto\n    Remember to attach the syncthing logs: '%s'", filepath.Join(s.Home, logFile))
+				}
+				needZeroBytesIter++
+			} else {
+				needZeroBytesIter = 0
+			}
 		case <-ctx.Done():
 			log.Debug("cancelling call to 'rest/db/completion'")
 			return ctx.Err()
 		}
 
+		if _, err := s.APICall("rest/db/override", "POST", 200, params, true, nil); err != nil {
+			//overwrite on each iteration to avoid sude effects of remote scannings
+			log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
+		}
+
+		prevNeedBytes = completion.NeedBytes
 		body, err := s.APICall("rest/db/completion", "GET", 200, params, true, nil)
 		if err != nil {
 			log.Infof("error calling 'rest/db/completion' syncthing API: %s", err)
@@ -362,15 +368,13 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 		if completion.GlobalBytes == 0 {
 			return nil
 		}
-		log.Infof("syncthing folder is %.2f%%, needDeletes %d",
+		log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
 			(float64(completion.GlobalBytes-completion.NeedBytes)/float64(completion.GlobalBytes))*100,
+			completion.NeedBytes,
 			completion.NeedDeletes,
 		)
 		if completion.NeedBytes == 0 {
-			needZeroBytesIter++
-			if completion.NeedDeletes == 0 || needZeroBytesIter >= 3 {
-				return nil
-			}
+			return nil
 		}
 	}
 }

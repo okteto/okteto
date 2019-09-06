@@ -356,9 +356,6 @@ func (up *UpContext) synchronizeFiles() error {
 	progress.start()
 	defer progress.stop()
 
-	if err := up.Sy.OverrideChanges(up.Context, up.WG, up.Dev); err != nil {
-		return err
-	}
 	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
 		return err
 	}
