@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
@@ -60,6 +61,7 @@ type Syncthing struct {
 	ForceSendOnly    bool
 	GUIAddress       string
 	Home             string
+	LogPath          string
 	ListenAddress    string
 	RemoteAddress    string
 	RemoteDeviceID   string
@@ -120,6 +122,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("127.0.0.1:%d", guiPort),
 		Home:             filepath.Join(config.GetHome(), dev.Namespace, dev.Name),
+		LogPath:          filepath.Join(config.GetHome(), dev.Namespace, dev.Name, logFile),
 		ListenAddress:    fmt.Sprintf("127.0.0.1:%d", listenPort),
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
@@ -206,7 +209,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		"-home", s.Home,
 		"-no-browser",
 		"-verbose",
-		"-logfile", filepath.Join(s.Home, logFile),
+		"-logfile", s.LogPath,
 	}
 
 	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
@@ -337,8 +340,9 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 		case <-ticker.C:
 			if prevNeedBytes == completion.NeedBytes {
 				if needZeroBytesIter >= 50 {
-					return fmt.Errorf("The syncronization service is not making any progress for 30s...\n    Help us to improve okteto by opening an issue in https://github.com/okteto/okteto\n    Remember to attach the syncthing logs: '%s'", filepath.Join(s.Home, logFile))
+					return errors.ErrSyncFrozen
 				}
+
 				needZeroBytesIter++
 			} else {
 				needZeroBytesIter = 0

@@ -357,6 +357,14 @@ func (up *UpContext) synchronizeFiles() error {
 	defer progress.stop()
 
 	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
+		if err == errors.ErrSyncFrozen {
+			return errors.UserError{
+				E: err,
+				Hint: fmt.Sprintf(`Help us improve okteto by filing an issue in https://github.com/okteto/okteto/issues/new.
+    Please include your syncthing log (%s) possible.`, up.Sy.LogPath),
+			}
+		}
+
 		return err
 	}
 
