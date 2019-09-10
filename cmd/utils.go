@@ -23,6 +23,10 @@ func loadDev(devPath string) (*model.Dev, error) {
 }
 
 func askYesNo(q string) bool {
+	if len(os.Getenv("OKTETO_YES")) > 0 {
+		return true
+	}
+
 	var answer string
 	for {
 		fmt.Print(q)
