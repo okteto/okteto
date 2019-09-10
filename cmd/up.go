@@ -171,7 +171,11 @@ func (up *UpContext) Activate() {
 			}
 
 			if len(up.Dev.Labels) == 0 {
-				deploy := askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
+				_, deploy := os.LookupEnv("OKTETO_AUTODEPLOY")
+				if !deploy {
+					deploy = askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
+				}
+
 				if !deploy {
 					up.Exit <- errors.UserError{
 						E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", up.Dev.Name, up.Dev.Namespace),
