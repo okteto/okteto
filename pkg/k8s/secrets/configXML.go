@@ -69,7 +69,7 @@ const configXML = `<configuration version="28">
     <urAccepted>-1</urAccepted>
     <urSeen>3</urSeen>
     <urUniqueID>PDhuWgmF</urUniqueID>
-    <urURL>http://localhost</urURL>
+    <urURL></urURL>
     <urPostInsecurely>false</urPostInsecurely>
     <urInitialDelayS>1800</urInitialDelayS>
     <restartOnWakeup>true</restartOnWakeup>
@@ -80,7 +80,7 @@ const configXML = `<configuration version="28">
     <progressUpdateIntervalS>5</progressUpdateIntervalS>
     <limitBandwidthInLan>false</limitBandwidthInLan>
     <minHomeDiskFree unit="%">1</minHomeDiskFree>
-    <releasesURL>http://localhost</releasesURL>
+    <releasesURL></releasesURL>
     <overwriteRemoteDeviceNamesOnConnect>false</overwriteRemoteDeviceNamesOnConnect>
     <tempIndexMinBlocks>10</tempIndexMinBlocks>
     <trafficClass>0</trafficClass>
