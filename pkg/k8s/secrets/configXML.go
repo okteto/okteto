@@ -7,7 +7,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-const configXML = `<configuration version="28">
+const configXML = `<configuration version="29">
 <folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="/var/okteto" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
@@ -87,6 +87,7 @@ const configXML = `<configuration version="28">
     <defaultFolderPath>~</defaultFolderPath>
     <setLowPriority>true</setLowPriority>
     <minHomeDiskFreePct>0</minHomeDiskFreePct>
+    <crashReportingEnabled>false</crashReportingEnabled>
 </options>
 </configuration>`
 
