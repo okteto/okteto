@@ -4,7 +4,7 @@ import "net"
 
 // GetAvailablePort returns a random port that's available
 func GetAvailablePort() (int, error) {
-	address, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	address, err := net.ResolveTCPAddr("tcp", ":0")
 	if err != nil {
 		return 0, err
 	}
