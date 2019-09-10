@@ -11,18 +11,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strconv"
 	"sync"
 	"text/template"
 	"time"
+
+	"crypto/tls"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-
-	ps "github.com/mitchellh/go-ps"
+	"github.com/syncthing/syncthing/lib/syncthing"
 )
 
 var (
@@ -51,6 +50,7 @@ const (
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
+	app              *syncthing.App
 	APIKey           string
 	binPath          string
 	Client           *http.Client
@@ -92,7 +92,6 @@ type Completion struct {
 
 // New constructs a new Syncthing.
 func New(dev *model.Dev) (*Syncthing, error) {
-	fullPath := GetInstallPath()
 	remotePort, err := model.GetAvailablePort()
 	if err != nil {
 		return nil, err
@@ -115,7 +114,6 @@ func New(dev *model.Dev) (*Syncthing, error) {
 
 	s := &Syncthing{
 		APIKey:           "cnd",
-		binPath:          fullPath,
 		Client:           NewAPIClient(),
 		Dev:              dev,
 		DevPath:          dev.DevPath,
@@ -134,30 +132,6 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	}
 
 	return s, nil
-}
-
-func (s *Syncthing) cleanupDaemon(pidPath string) error {
-	pid, err := getPID(pidPath)
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	process, err := ps.FindProcess(pid)
-	if process == nil && err == nil {
-		return nil
-	}
-
-	if err != nil {
-		log.Infof("error when looking up the process: %s", err)
-		return err
-	}
-
-	if process.Executable() != getBinaryName() {
-		log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
-		return nil
-	}
-
-	return terminate(pid)
 }
 
 func (s *Syncthing) initConfig() error {
@@ -180,7 +154,7 @@ func (s *Syncthing) initConfig() error {
 	return nil
 }
 
-// UpdateConfig updates the synchting config file
+// UpdateConfig updates the syncthing config file
 func (s *Syncthing) UpdateConfig() error {
 	buf := new(bytes.Buffer)
 	if err := configTemplate.Execute(buf, s); err != nil {
@@ -195,50 +169,18 @@ func (s *Syncthing) UpdateConfig() error {
 
 // Run starts up a local syncthing process to serve files from.
 func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
-	if err := s.initConfig(); err != nil {
+	if err := s.initSyncthingApp(); err != nil {
 		return err
 	}
 
-	pidPath := filepath.Join(s.Home, syncthingPidFile)
-
-	if err := s.cleanupDaemon(pidPath); err != nil {
-		return err
-	}
-
-	cmdArgs := []string{
-		"-home", s.Home,
-		"-no-browser",
-		"-verbose",
-		"-logfile", s.LogPath,
-	}
-
-	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
-	s.cmd.Env = append(os.Environ(), "STNOUPGRADE=1")
-
-	if err := s.cmd.Start(); err != nil {
-		return err
-	}
-
-	if s.cmd.Process == nil {
-		return nil
-	}
-
-	if err := ioutil.WriteFile(
-		pidPath,
-		[]byte(strconv.Itoa(s.cmd.Process.Pid)),
-		0600); err != nil {
-		return err
-	}
-
+	s.app.Start()
 	log.Infof("syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		if err := s.Stop(); err != nil {
-			log.Info(err)
-		}
+		s.app.Stop(syncthing.ExitSuccess)
 		log.Debug("syncthing clean shutdown")
 	}()
 	return nil
@@ -385,19 +327,21 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context, wg *sync.WaitGroup) error {
-	log.Infof("restarting synchting...")
-	_, err := s.APICall("rest/system/restart", "POST", 200, nil, true, nil)
-	return err
-}
+	log.Infof("restarting syncthing...")
+	status := s.app.Stop(syncthing.ExitSuccess)
+	if status == syncthing.ExitError {
+		log.Infof("failed to restart syncthing")
+		return fmt.Errorf("internal server error")
+	}
 
-// Stop halts the background process and cleans up.
-func (s *Syncthing) Stop() error {
-	pidPath := filepath.Join(s.Home, syncthingPidFile)
-
-	if err := s.cleanupDaemon(pidPath); err != nil {
+	s.app.Wait()
+	log.Infof("syncthing stopped")
+	if err := s.initSyncthingApp(); err != nil {
 		return err
 	}
 
+	s.app.Start()
+	log.Infof("restarted syncthing...")
 	return nil
 }
 
@@ -452,53 +396,35 @@ func isDirEmpty(path string) (bool, error) {
 	return false, err // Either not empty or error, suits both cases
 }
 
-func getPID(pidPath string) (int, error) {
-	if _, err := os.Stat(pidPath); err != nil {
-		return 0, err
+func (s *Syncthing) initSyncthingApp() error {
+	if err := s.initConfig(); err != nil {
+		return err
 	}
 
-	content, err := ioutil.ReadFile(pidPath) // nolint: gosec
+	cfgFile := filepath.Join(s.Home, configFile)
+	dbFile := filepath.Join(s.Home, "index-v0.14.0.db")
+	c, err := tls.X509KeyPair(cert, key)
 	if err != nil {
-		return 0, err
+		log.Errorf("failed to generate certs for synchronization service: %s", err)
+		return fmt.Errorf("internal server error")
 	}
 
-	return strconv.Atoi(string(content))
-}
-
-// Exists returns true if the syncthing process exists
-func Exists(home string) bool {
-	pidPath := filepath.Join(home, syncthingPidFile)
-	pid, err := getPID(pidPath)
+	cfg, err := syncthing.LoadConfigAtStartup(cfgFile, c, false, true)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
+		log.Errorf("failed to start synchronization service: %s", err)
+		return fmt.Errorf("internal server error")
 	}
 
-	process, err := ps.FindProcess(pid)
-	if process == nil && err == nil {
-		return false
-	}
-
+	ldb, err := syncthing.OpenGoleveldb(dbFile)
 	if err != nil {
-		log.Infof("error when looking up the process: %s", err)
-		return true
+		log.Errorf("failed to load the DB for the synchronization service: %s", err)
+		return fmt.Errorf("internal server error")
 	}
 
-	log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
+	s.app = syncthing.New(cfg, ldb, c, syncthing.Options{
+		NoUpgrade: true,
+		Verbose:   false,
+	})
 
-	return process.Executable() == getBinaryName()
-}
-
-// GetInstallPath returns the expected install path for syncthing
-func GetInstallPath() string {
-	return filepath.Join(config.GetHome(), getBinaryName())
-}
-
-func getBinaryName() string {
-	if runtime.GOOS == "windows" {
-		return "syncthing.exe"
-	}
-
-	return "syncthing"
+	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+	sylogger "github.com/syncthing/syncthing/lib/logger"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -47,6 +48,15 @@ func init() {
 	}
 
 	ActionID = uuid.NewV4().String()
+}
+
+// GetLogger returns the logger object
+func GetLogger() *logger {
+	return log
+}
+
+func (l *logger) AddHandler(level sylogger.LogLevel, h sylogger.MessageHandler) {
+	// to satisfy syncthing's log interface
 }
 
 // Init configures the logger for the package to use.

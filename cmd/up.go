@@ -77,13 +77,6 @@ func Up() *cobra.Command {
 				fmt.Println()
 			}
 
-			if syncthingUpgradeAvailable() {
-				fmt.Println("Installing dependencies...")
-				if err := downloadSyncthing(); err != nil {
-					return fmt.Errorf("couldn't download syncthing, please try again")
-				}
-			}
-
 			checkWatchesConfiguration()
 
 			dev, err := loadDev(devPath)
