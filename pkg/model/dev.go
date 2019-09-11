@@ -196,6 +196,10 @@ func (dev *Dev) setDefaults() error {
 		s.Forward = make([]Forward, 0)
 		s.Volumes = make([]string, 0)
 		s.Services = make([]*Dev, 0)
+		s.Resources = ResourceRequirements{
+			Limits:   ResourceList{},
+			Requests: ResourceList{},
+		}
 	}
 	return nil
 }
