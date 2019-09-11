@@ -3,15 +3,15 @@ package deployments
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
-	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -38,7 +38,7 @@ var (
 	devTerminationGracePeriodSeconds int64
 )
 
-func translate(t *model.Translation) error {
+func translate(t *model.Translation, ns string, c *kubernetes.Clientset) error {
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		if devContainer == nil {
@@ -59,7 +59,7 @@ func translate(t *model.Translation) error {
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
 
-	if os.Getenv("OKTETO_CONTINUOUS_DEVELOPMENT") != "" || client.IsOktetoCloud() {
+	if c != nil && namespaces.IsOktetoNamespace(ns, c) {
 		commonTranslation(t)
 		if t.Interactive {
 			t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}

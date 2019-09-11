@@ -38,16 +38,3 @@ func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {
 	}
 	return client, config, namespace, nil
 }
-
-//IsOktetoCloud returns if the kubernetes cluster is Okteto Cloud
-func IsOktetoCloud() bool {
-	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		clientcmd.NewDefaultClientConfigLoadingRules(),
-		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}})
-
-	c, err := clientConfig.RawConfig()
-	if err != nil {
-		return false
-	}
-	return c.CurrentContext == "cloud_okteto_com-context"
-}

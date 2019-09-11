@@ -391,7 +391,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		return err
 	}
 
-	if err := deployments.TraslateDevMode(tr); err != nil {
+	if err := deployments.TraslateDevMode(tr, up.Dev.Namespace, up.Client); err != nil {
 		return err
 	}
 
