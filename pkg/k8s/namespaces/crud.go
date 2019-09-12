@@ -18,6 +18,13 @@ const (
 	OktetoLabel = "dev.okteto.com"
 )
 
+var (
+	//LimitsSyncthingMemory used by syncthing
+	LimitsSyncthingMemory = resource.MustParse("256Mi")
+	//LimitsSyncthingCPU used by syncthing
+	LimitsSyncthingCPU = resource.MustParse("500m")
+)
+
 //IsOktetoNamespace checks if this is a namespace created by okteto
 func IsOktetoNamespace(ns string, c *kubernetes.Clientset) bool {
 	n, err := c.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
@@ -30,43 +37,26 @@ func IsOktetoNamespace(ns string, c *kubernetes.Clientset) bool {
 
 //CheckAvailableResources checks if therre are available resources for activating the dev env
 func CheckAvailableResources(dev *model.Dev, create bool, d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	needCPU := resource.MustParse("0")
-	needMemory := resource.MustParse("0")
-	if !existsSyncthing(dev, c) {
-		needCPU.Add(resource.MustParse("500m"))
-		needMemory.Add(resource.MustParse("256Mi"))
-	}
 	lr, err := c.CoreV1().LimitRanges(dev.Namespace).Get(dev.Namespace, metav1.GetOptions{})
 	if err != nil {
-		return err
+		log.Debugf("cannot query limit ranges: %s", err)
+		return nil
 	}
-	needCPU.Add(matchCPU(dev, true, 1, d.Spec.Template.Spec, lr))
-	needMemory.Add(matchMemory(dev, true, 1, d.Spec.Template.Spec, lr))
-	if !create {
-		needCPU.Sub(matchCPU(dev, false, d.Status.Replicas, d.Spec.Template.Spec, lr))
-		needMemory.Sub(matchMemory(dev, false, d.Status.Replicas, d.Spec.Template.Spec, lr))
+	if lr.Spec.Limits == nil || len(lr.Spec.Limits) == 0 {
+		log.Debugf("wrong limit range '%s': %s", dev.Namespace, err)
+		return nil
 	}
+	lri := lr.Spec.Limits[0].Default
 	rq, err := c.CoreV1().ResourceQuotas(dev.Namespace).Get(dev.Namespace, metav1.GetOptions{})
 	if err != nil {
-		return err
+		log.Debugf("cannot query resource quotas: %s", err)
+		return nil
 	}
-	usedCPU := rq.Status.Used[apiv1.ResourceLimitsCPU]
-	usedCPU.Add(needCPU)
-	totalCPU := rq.Status.Hard[apiv1.ResourceLimitsCPU]
-	if usedCPU.Value() > totalCPU.Value() {
-		usedCPU.Sub(needCPU)
-		totalCPU.Sub(usedCPU)
-		return fmt.Errorf("Activating your dev environment requires %s cpu and your remaining quota is %s cpu", needCPU.String(), totalCPU.String())
-	}
-	usedMemory := rq.Status.Used[apiv1.ResourceLimitsMemory]
-	usedMemory.Add(needMemory)
-	totalMemory := rq.Status.Hard[apiv1.ResourceLimitsMemory]
-	if usedMemory.Value() > totalMemory.Value() {
-		usedMemory.Sub(needMemory)
-		totalMemory.Sub(usedMemory)
-		return fmt.Errorf("Activating your dev environment requires %s of memory and your remaining quota is %s of memory", needMemory.String(), totalMemory.String())
-	}
-	return nil
+
+	isSyncthingRunning := existsSyncthing(dev, c)
+
+	needCPU, needMemory := getNeededResources(dev, d, create, lri, isSyncthingRunning)
+	return checkQuota(needCPU, needMemory, rq)
 }
 
 func existsSyncthing(dev *model.Dev, c *kubernetes.Clientset) bool {
@@ -77,22 +67,61 @@ func existsSyncthing(dev *model.Dev, c *kubernetes.Clientset) bool {
 	return true
 }
 
-func matchCPU(dev *model.Dev, isDev bool, replicas int32, spec apiv1.PodSpec, lr *apiv1.LimitRange) resource.Quantity {
+func getNeededResources(dev *model.Dev, d *appsv1.Deployment, create bool, rl apiv1.ResourceList, isSyncthingRunning bool) (resource.Quantity, resource.Quantity) {
+	needCPU := resource.MustParse("0")
+	needMemory := resource.MustParse("0")
+	if !isSyncthingRunning {
+		needCPU.Add(LimitsSyncthingCPU)
+		needMemory.Add(LimitsSyncthingMemory)
+	}
+	needCPU.Add(matchCPU(dev, true, 1, d.Spec.Template.Spec, rl))
+	needMemory.Add(matchMemory(dev, true, 1, d.Spec.Template.Spec, rl))
+	if !create {
+		needCPU.Sub(matchCPU(dev, false, d.Status.Replicas, d.Spec.Template.Spec, rl))
+		needMemory.Sub(matchMemory(dev, false, d.Status.Replicas, d.Spec.Template.Spec, rl))
+	}
+	return needCPU, needMemory
+}
+
+func checkQuota(needCPU resource.Quantity, needMemory resource.Quantity, rq *apiv1.ResourceQuota) error {
+	usedCPU := rq.Status.Used[apiv1.ResourceLimitsCPU]
+	totalNeedCPU := needCPU.DeepCopy()
+	totalNeedCPU.Add(usedCPU)
+	totalCPU := rq.Status.Hard[apiv1.ResourceLimitsCPU]
+	if totalNeedCPU.Value() > totalCPU.Value() {
+		availableCPU := totalCPU.DeepCopy()
+		availableCPU.Sub(usedCPU)
+		return fmt.Errorf("Activating your dev environment requires %s cpu and your remaining quota is %s cpu", needCPU.String(), availableCPU.String())
+	}
+	usedMemory := rq.Status.Used[apiv1.ResourceLimitsMemory]
+	totalNeedMemory := needMemory.DeepCopy()
+	totalNeedMemory.Add(usedMemory)
+	totalMemory := rq.Status.Hard[apiv1.ResourceLimitsMemory]
+	if totalNeedMemory.Value() > totalMemory.Value() {
+		availableMemory := totalMemory.DeepCopy()
+		availableMemory.Sub(usedMemory)
+		return fmt.Errorf("Activating your dev environment requires %s of memory and your remaining quota is %s of memory", needMemory.String(), availableMemory.String())
+	}
+	return nil
+}
+
+func matchCPU(dev *model.Dev, isDev bool, replicas int32, spec apiv1.PodSpec, rl apiv1.ResourceList) resource.Quantity {
 	cpuPod := resource.MustParse("0")
 	for _, c := range spec.Containers {
 		v, ok := dev.Resources.Limits[apiv1.ResourceCPU]
-		if !isDev || !ok {
-			if c.Resources.Limits == nil {
-				cpuPod.Add(lr.Spec.Limits[0].Default[apiv1.ResourceCPU])
-			} else {
-				cpuPod.Add(c.Resources.Limits[apiv1.ResourceCPU])
-			}
-		} else {
+		if isDev && ok && c.Name == dev.Container {
 			cpuPod.Add(v)
+		} else {
+			if c.Resources.Limits != nil {
+				if v, ok := c.Resources.Limits[apiv1.ResourceCPU]; ok {
+					cpuPod.Add(v)
+				} else {
+					cpuPod.Add(rl[apiv1.ResourceCPU])
+				}
+			} else {
+				cpuPod.Add(rl[apiv1.ResourceCPU])
+			}
 		}
-	}
-	if isDev {
-		return cpuPod
 	}
 	cpuTotal := cpuPod
 	for i := 1; int32(i) < replicas; i++ {
@@ -101,26 +130,27 @@ func matchCPU(dev *model.Dev, isDev bool, replicas int32, spec apiv1.PodSpec, lr
 	return cpuTotal
 }
 
-func matchMemory(dev *model.Dev, isDev bool, replicas int32, spec apiv1.PodSpec, lr *apiv1.LimitRange) resource.Quantity {
+func matchMemory(dev *model.Dev, isDev bool, replicas int32, spec apiv1.PodSpec, rl apiv1.ResourceList) resource.Quantity {
 	memoryPod := resource.MustParse("0")
 	for _, c := range spec.Containers {
 		v, ok := dev.Resources.Limits[apiv1.ResourceMemory]
-		if !isDev || !ok {
-			if c.Resources.Limits == nil {
-				memoryPod.Add(lr.Spec.Limits[0].Default[apiv1.ResourceMemory])
-			} else {
-				memoryPod.Add(c.Resources.Limits[apiv1.ResourceMemory])
-			}
-		} else {
+		if isDev && ok && c.Name == dev.Container {
 			memoryPod.Add(v)
+		} else {
+			if c.Resources.Limits != nil {
+				if v, ok := c.Resources.Limits[apiv1.ResourceMemory]; ok {
+					memoryPod.Add(v)
+				} else {
+					memoryPod.Add(rl[apiv1.ResourceMemory])
+				}
+			} else {
+				memoryPod.Add(rl[apiv1.ResourceMemory])
+			}
 		}
 	}
-	if isDev {
-		return memoryPod
-	}
-	meemoryTotal := memoryPod
+	memoryTotal := memoryPod
 	for i := 1; int32(i) < replicas; i++ {
-		meemoryTotal.Add(memoryPod)
+		memoryTotal.Add(memoryPod)
 	}
-	return meemoryTotal
+	return memoryTotal
 }
