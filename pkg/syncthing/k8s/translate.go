@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/model"
 
@@ -25,15 +26,11 @@ const (
 
 var (
 	devReplicas int32 = 1
+	//LimitsMemory used by syncthing
 )
 
 func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1.StatefulSet {
 	initContainer := translateInitContainer(dev)
-
-	reqMem, _ := resource.ParseQuantity("64Mi")
-	reqCPU, _ := resource.ParseQuantity("50m")
-	limMem, _ := resource.ParseQuantity("256Mi")
-	limCPU, _ := resource.ParseQuantity("500m")
 	ss := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.GetStatefulSetName(),
@@ -65,13 +62,9 @@ func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1
 							Image:           syncImageTag,
 							ImagePullPolicy: c.ImagePullPolicy,
 							Resources: apiv1.ResourceRequirements{
-								Requests: apiv1.ResourceList{
-									apiv1.ResourceMemory: reqMem,
-									apiv1.ResourceCPU:    reqCPU,
-								},
 								Limits: apiv1.ResourceList{
-									apiv1.ResourceMemory: limMem,
-									apiv1.ResourceCPU:    limCPU,
+									apiv1.ResourceMemory: namespaces.LimitsSyncthingMemory,
+									apiv1.ResourceCPU:    namespaces.LimitsSyncthingCPU,
 								},
 							},
 							VolumeMounts: []apiv1.VolumeMount{
@@ -124,12 +117,7 @@ func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1
 }
 
 func translateInitContainer(dev *model.Dev) *apiv1.Container {
-	reqMem, _ := resource.ParseQuantity("16Mi")
-	reqCPU, _ := resource.ParseQuantity("50m")
-	limMem, _ := resource.ParseQuantity("16Mi")
-	limCPU, _ := resource.ParseQuantity("50m")
 	source := filepath.Join(dev.MountPath, "*")
-
 	target := "/okteto/init"
 	if dev.SubPath != "" {
 		target = filepath.Join(target, dev.SubPath)
@@ -139,13 +127,9 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 		Image:   dev.Image,
 		Command: []string{"sh", "-c", fmt.Sprintf("(ls -A /okteto/init | grep -v lost+found || mkdir -p %s && cp -Rf %s %s); touch /okteto/init/%s", target, source, target, dev.DevPath)},
 		Resources: apiv1.ResourceRequirements{
-			Requests: apiv1.ResourceList{
-				apiv1.ResourceMemory: reqMem,
-				apiv1.ResourceCPU:    reqCPU,
-			},
 			Limits: apiv1.ResourceList{
-				apiv1.ResourceMemory: limMem,
-				apiv1.ResourceCPU:    limCPU,
+				apiv1.ResourceMemory: namespaces.LimitsSyncthingMemory,
+				apiv1.ResourceCPU:    namespaces.LimitsSyncthingCPU,
 			},
 		},
 		VolumeMounts: []apiv1.VolumeMount{

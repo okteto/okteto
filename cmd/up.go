@@ -19,6 +19,7 @@ import (
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/exec"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -194,6 +195,13 @@ func (up *UpContext) Activate() {
 
 			d = up.Dev.GevSandbox()
 			create = true
+		}
+
+		if namespaces.IsOktetoNamespace(up.Dev.Namespace, up.Client) {
+			if err := namespaces.CheckAvailableResources(up.Dev, create, d, up.Client); err != nil {
+				up.Exit <- err
+				return
+			}
 		}
 
 		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
