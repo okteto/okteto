@@ -3,6 +3,7 @@ package deployments
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
@@ -20,6 +21,7 @@ const (
 	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
 	revisionAnnotation         = "deployment.kubernetes.io/revision"
+	oktetoBinName              = "okteto-bin"
 
 	//OktetoVersion represents the current dev data version
 	OktetoVersion = "1.0"
@@ -60,11 +62,14 @@ func translate(t *model.Translation, ns string, c *kubernetes.Clientset) error {
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
 
 	if c != nil && namespaces.IsOktetoNamespace(ns, c) {
-		commonTranslation(t)
-		if t.Interactive {
-			t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+		_, v := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
+		if !v {
+			commonTranslation(t)
+			if t.Interactive {
+				t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+			}
+			return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 		}
-		return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 	}
 
 	t.Deployment.Status = appsv1.DeploymentStatus{}
@@ -88,7 +93,9 @@ func translate(t *model.Translation, ns string, c *kubernetes.Clientset) error {
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		TranslateDevContainer(devContainer, rule)
+		translateOktetoInitBinContainer(&t.Deployment.Spec.Template.Spec)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
+		translateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
 		if rule.SecurityContext != nil {
 			if t.Deployment.Spec.Template.Spec.SecurityContext == nil {
 				t.Deployment.Spec.Template.Spec.SecurityContext = &apiv1.PodSecurityContext{}
@@ -159,6 +166,7 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	translateEnvVars(c, rule.Environment)
 	translateVolumeMounts(c, rule)
 	translateSecurityContext(c, rule.SecurityContext)
+	translateOktetoBinVolumeMounts(c)
 }
 
 func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
@@ -234,6 +242,22 @@ func translateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 	}
 }
 
+func translateOktetoBinVolumeMounts(c *apiv1.Container) {
+	if c.VolumeMounts == nil {
+		c.VolumeMounts = []apiv1.VolumeMount{}
+	}
+	for _, vm := range c.VolumeMounts {
+		if vm.Name == oktetoBinName {
+			return
+		}
+	}
+	vm := apiv1.VolumeMount{
+		Name:      oktetoBinName,
+		MountPath: "/var/okteto/bin",
+	}
+	c.VolumeMounts = append(c.VolumeMounts, vm)
+}
+
 //TranslateOktetoVolumes translates the dev volumes
 func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	if spec.Volumes == nil {
@@ -263,6 +287,24 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	}
 }
 
+func translateOktetoBinVolume(spec *apiv1.PodSpec) {
+	if spec.Volumes == nil {
+		spec.Volumes = []apiv1.Volume{}
+	}
+	for _, v := range spec.Volumes {
+		if v.Name == oktetoBinName {
+			return
+		}
+	}
+	v := apiv1.Volume{
+		Name: oktetoBinName,
+		VolumeSource: apiv1.VolumeSource{
+			EmptyDir: &apiv1.EmptyDirVolumeSource{},
+		},
+	}
+	spec.Volumes = append(spec.Volumes, v)
+}
+
 func translateSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
 	if s == nil || s.Capabilities == nil {
 		return
@@ -278,4 +320,24 @@ func translateSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
 
 	c.SecurityContext.Capabilities.Add = append(c.SecurityContext.Capabilities.Add, s.Capabilities.Add...)
 	c.SecurityContext.Capabilities.Drop = append(c.SecurityContext.Capabilities.Drop, s.Capabilities.Drop...)
+}
+
+func translateOktetoInitBinContainer(spec *apiv1.PodSpec) {
+	c := apiv1.Container{
+		Name:            oktetoBinName,
+		Image:           "okteto/bin",
+		ImagePullPolicy: apiv1.PullAlways,
+		Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+		VolumeMounts: []apiv1.VolumeMount{
+			apiv1.VolumeMount{
+				Name:      oktetoBinName,
+				MountPath: "/okteto/bin",
+			},
+		},
+	}
+
+	if spec.InitContainers == nil {
+		spec.InitContainers = []apiv1.Container{}
+	}
+	spec.InitContainers = append(spec.InitContainers, c)
 }
