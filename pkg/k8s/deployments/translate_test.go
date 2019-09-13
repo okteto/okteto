@@ -68,8 +68,28 @@ services:
 								},
 							},
 						},
+						apiv1.Volume{
+							Name: oktetoBinName,
+							VolumeSource: apiv1.VolumeSource{
+								EmptyDir: &apiv1.EmptyDirVolumeSource{},
+							},
+						},
 					},
 					NodeName: "node",
+					InitContainers: []apiv1.Container{
+						apiv1.Container{
+							Name:            oktetoBinName,
+							Image:           "okteto/bin",
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							VolumeMounts: []apiv1.VolumeMount{
+								apiv1.VolumeMount{
+									Name:      oktetoBinName,
+									MountPath: "/okteto/bin",
+								},
+							},
+						},
+					},
 					Containers: []apiv1.Container{
 						apiv1.Container{
 							Name:            "dev",
@@ -83,6 +103,11 @@ services:
 									Name:      "pvc-0-okteto-web-0",
 									ReadOnly:  false,
 									MountPath: "/app",
+								},
+								apiv1.VolumeMount{
+									Name:      oktetoBinName,
+									ReadOnly:  false,
+									MountPath: "/var/okteto/bin",
 								},
 							},
 							LivenessProbe:  nil,
@@ -127,8 +152,28 @@ services:
 								},
 							},
 						},
+						apiv1.Volume{
+							Name: oktetoBinName,
+							VolumeSource: apiv1.VolumeSource{
+								EmptyDir: &apiv1.EmptyDirVolumeSource{},
+							},
+						},
 					},
 					NodeName: "node",
+					InitContainers: []apiv1.Container{
+						apiv1.Container{
+							Name:            oktetoBinName,
+							Image:           "okteto/bin",
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							VolumeMounts: []apiv1.VolumeMount{
+								apiv1.VolumeMount{
+									Name:      oktetoBinName,
+									MountPath: "/okteto/bin",
+								},
+							},
+						},
+					},
 					Containers: []apiv1.Container{
 						apiv1.Container{
 							Name:            "dev",
@@ -142,6 +187,11 @@ services:
 									ReadOnly:  false,
 									MountPath: "/src",
 									SubPath:   "/worker",
+								},
+								apiv1.VolumeMount{
+									Name:      oktetoBinName,
+									ReadOnly:  false,
+									MountPath: "/var/okteto/bin",
 								},
 							},
 							LivenessProbe:  nil,
