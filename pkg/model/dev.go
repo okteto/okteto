@@ -241,6 +241,31 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 	return nil
 }
 
+//LoadRemote configures remote execution
+func (dev *Dev) LoadRemote(load bool) {
+	if !load {
+		return
+	}
+	dev.Command = []string{"/var/okteto/bin/remote"}
+	dev.Forward = append(
+		dev.Forward,
+		Forward{
+			Local:  22000,
+			Remote: 22000,
+		},
+	)
+	if dev.SecurityContext == nil {
+		dev.SecurityContext = &SecurityContext{}
+	}
+	if dev.SecurityContext.Capabilities == nil {
+		dev.SecurityContext.Capabilities = &Capabilities{}
+	}
+	if dev.SecurityContext.Capabilities.Add == nil {
+		dev.SecurityContext.Capabilities.Add = []apiv1.Capability{}
+	}
+	dev.SecurityContext.Capabilities.Add = append(dev.SecurityContext.Capabilities.Add, "SYS_PTRACE")
+}
+
 //GetStatefulSetName returns the syncthing statefulset name for a given dev environment
 func (dev *Dev) GetStatefulSetName() string {
 	n := fmt.Sprintf(oktetoStatefulSetTemplate, dev.Name)
