@@ -104,7 +104,7 @@ func Up() *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
-	cmd.Flags().Int32VarP(&remote, "remote", "r", -1, "configures remote execution")
+	cmd.Flags().Int32VarP(&remote, "remote", "r", -1, "configures remote execution on the specified port")
 	return cmd
 }
 
