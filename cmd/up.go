@@ -92,6 +92,7 @@ func Up() *cobra.Command {
 			if namespace != "" {
 				dev.Namespace = namespace
 			}
+
 			dev.LoadRemote(remote)
 
 			err = RunUp(dev)
@@ -126,6 +127,7 @@ func RunUp(dev *model.Dev) error {
 		if err == nil {
 			log.Debugf("finished channel received, starting shutdown sequence")
 		} else {
+			up.updateStateFile(failed)
 			return err
 		}
 	}
@@ -219,6 +221,7 @@ func (up *UpContext) Activate() {
 			return
 		}
 
+		up.updateStateFile(starting)
 		err = up.sync(d, devContainer)
 		if err != nil {
 			up.Exit <- err
@@ -505,8 +508,6 @@ func (up *UpContext) shutdown() {
 			up.SyncForwarder.Stop()
 		}
 	}()
-
-	up.deleteStateFile()
 
 	select {
 	case <-done:

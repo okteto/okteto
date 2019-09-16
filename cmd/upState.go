@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
-	"os"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
@@ -12,28 +10,27 @@ import (
 type upState string
 
 const (
+	starting      upState = "starting"
 	provisioning  upState = "provisioning"
 	startingSync  upState = "startingSync"
 	synchronizing upState = "synchronizing"
 	activating    upState = "activating"
 	ready         upState = "ready"
+	failed        upState = "failed"
 )
 
-func (up *UpContext) updateStateFile(state upState) error {
+func (up *UpContext) updateStateFile(state upState) {
 	if len(up.Dev.Namespace) == 0 {
-		return fmt.Errorf("namespace is empty")
+		log.Info("can't update state file, namespace is empty")
 	}
 
 	if len(up.Dev.Name) == 0 {
-		return fmt.Errorf("name is empty")
+		log.Info("can't update state file, name is empty")
 	}
 
-	return ioutil.WriteFile(config.GetStateFile(up.Dev.Namespace, up.Dev.Name), []byte(state), 0644)
-}
-
-func (up *UpContext) deleteStateFile() {
-	path := config.GetStateFile(up.Dev.Namespace, up.Dev.Name)
-	if err := os.Remove(path); err != nil {
-		log.Infof("failed to delete %s", path)
+	s := config.GetStateFile(up.Dev.Namespace, up.Dev.Name)
+	log.Debugf("updating statefile %s with path %s", s, state)
+	if err := ioutil.WriteFile(s, []byte(state), 0644); err != nil {
+		log.Infof("can't update state file, %s", err)
 	}
 }
