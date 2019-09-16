@@ -2,7 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"runtime"
+	"strconv"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -49,5 +53,32 @@ func fileExists(name string) bool {
 	}
 
 	return true
+}
 
+func checkWatchesConfiguration() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+
+	w := "/proc/sys/fs/inotify/max_user_watches"
+	f, err := ioutil.ReadFile(w)
+	if err != nil {
+		log.Infof("Fail to read %s: %s", w, err)
+		return
+	}
+
+	l := strings.TrimSuffix(string(f), "\n")
+	c, err := strconv.Atoi(l)
+	if err != nil {
+		log.Infof("Fail to parse the value of  max_user_watches: %s", err)
+		return
+	}
+
+	log.Debugf("max_user_watches = %d", c)
+
+	if c <= 8192 {
+		log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low. This can affect Okteto's file synchronization performance.")
+		log.Yellow("We recommend you to raise it to at least 524288 to ensure proper performance.")
+		fmt.Println()
+	}
 }

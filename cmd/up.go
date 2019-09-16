@@ -3,11 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
-	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -306,6 +303,8 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Container) error {
 	progress := newProgressBar("Provisioning your persistent volume...")
 	progress.start()
+	up.updateStateFile(provisioning)
+
 	defer progress.stop()
 
 	log.Info("create deployment secrets")
@@ -347,6 +346,7 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 func (up *UpContext) startLocalSyncthing() error {
 	progress := newProgressBar("Starting the file synchronization service...")
 	progress.start()
+	up.updateStateFile(startingSync)
 	defer progress.stop()
 
 	if err := up.Sy.Run(up.Context, up.WG); err != nil {
@@ -365,6 +365,7 @@ func (up *UpContext) startLocalSyncthing() error {
 
 func (up *UpContext) synchronizeFiles() error {
 	progress := newProgressBar("Synchronizing your files...")
+	up.updateStateFile(synchronizing)
 	progress.start()
 	defer progress.stop()
 
@@ -391,6 +392,7 @@ func (up *UpContext) synchronizeFiles() error {
 
 func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) error {
 	progress := newProgressBar("Activating your Okteto Environment...")
+	up.updateStateFile(activating)
 	progress.start()
 	defer progress.stop()
 
@@ -457,6 +459,8 @@ func (up *UpContext) runCommand() error {
 	}
 
 	log.Infof("starting remote command")
+	up.updateStateFile(ready)
+
 	return exec.Exec(
 		up.Context,
 		up.Client,
@@ -499,6 +503,8 @@ func (up *UpContext) shutdown() {
 		}
 	}()
 
+	up.deleteStateFile()
+
 	select {
 	case <-done:
 		log.Debugf("completed shutdown sequence")
@@ -520,32 +526,4 @@ func printDisplayContext(message string, dev *model.Dev) {
 		}
 	}
 	fmt.Println()
-}
-
-func checkWatchesConfiguration() {
-	if runtime.GOOS != "linux" {
-		return
-	}
-
-	w := "/proc/sys/fs/inotify/max_user_watches"
-	f, err := ioutil.ReadFile(w)
-	if err != nil {
-		log.Infof("Fail to read %s: %s", w, err)
-		return
-	}
-
-	l := strings.TrimSuffix(string(f), "\n")
-	c, err := strconv.Atoi(l)
-	if err != nil {
-		log.Infof("Fail to parse the value of  max_user_watches: %s", err)
-		return
-	}
-
-	log.Debugf("max_user_watches = %d", c)
-
-	if c <= 8192 {
-		log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low. This can affect Okteto's file synchronization performance.")
-		log.Yellow("We recommend you to raise it to at least 524288 to ensure proper performance.")
-		fmt.Println()
-	}
 }
