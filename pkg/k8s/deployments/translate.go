@@ -18,7 +18,6 @@ import (
 const (
 	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
 	oktetoDeveloperAnnotation  = "dev.okteto.com/developer"
-	oktetoAutoCreateAnnotation = "dev.okteto.com/auto-ingress"
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
 	revisionAnnotation         = "deployment.kubernetes.io/revision"
 	oktetoBinName              = "okteto-bin"

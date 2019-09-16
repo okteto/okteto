@@ -19,16 +19,8 @@ type Config struct {
 	// HomePath is the path of the base folder for all the Okteto files
 	HomePath string
 
-	// FolderName is the name of the  folder that stores the state on the client machine
-	FolderName string
-
 	// ManifestFileName is the name of the manifest file
 	ManifestFileName string
-}
-
-// FolderName returns the name of the state folder
-func FolderName() string {
-	return folderName
 }
 
 //GetBinaryName returns the name of the binary
@@ -51,6 +43,23 @@ func GetHome() string {
 	}
 
 	return home
+}
+
+// GetDeploymentHome returns the path of the folder
+func GetDeploymentHome(namespace, name string) string {
+	home := getHomeDir()
+	home = filepath.Join(home, folderName, namespace, name)
+
+	if err := os.MkdirAll(home, 0700); err != nil {
+		panic("failed to create the okteto deployment directory")
+	}
+
+	return home
+}
+
+// GetStateFile returns the path to the state file
+func GetStateFile(namespace, name string) string {
+	return filepath.Join(GetDeploymentHome(namespace, name), "okteto.state")
 }
 
 // GetHomeDir returns the OS home dir

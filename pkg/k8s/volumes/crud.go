@@ -8,7 +8,6 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
-	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes"
@@ -66,16 +65,4 @@ func checkIfAttached(pvc string, dev *model.Dev, c *kubernetes.Clientset) error 
 	}
 
 	return nil
-}
-
-func isTerminating(p *apiv1.Pod) bool {
-	log.Infof("pod %s is %s", p.Name, p.Status.Phase)
-	log.Infof("%+v", p)
-	if p.Status.Phase == apiv1.PodRunning {
-		if p.GetObjectMeta().GetDeletionTimestamp() == nil {
-			return false
-		}
-	}
-
-	return true
 }
