@@ -254,6 +254,9 @@ func (dev *Dev) LoadRemote(load bool) {
 			Remote: 22000,
 		},
 	)
+
+	dev.Volumes = append(dev.Volumes, "/root/.vscode-server")
+
 	if dev.SecurityContext == nil {
 		dev.SecurityContext = &SecurityContext{}
 	}
