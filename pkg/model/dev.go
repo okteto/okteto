@@ -254,6 +254,14 @@ func (dev *Dev) LoadRemote(load bool) {
 			Remote: 22000,
 		},
 	)
+
+	if dev.Volumes == nil {
+		dev.Volumes = []string{}
+	}
+
+	// TODO: how to get path of the home folder for non-root users?
+	dev.Volumes = append(dev.Volumes, "/root/.vscode-server")
+
 	if dev.SecurityContext == nil {
 		dev.SecurityContext = &SecurityContext{}
 	}
