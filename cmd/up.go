@@ -63,7 +63,7 @@ type UpContext struct {
 func Up() *cobra.Command {
 	var devPath string
 	var namespace string
-	var remote bool
+	var remote int32
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your Okteto Environment",
@@ -93,7 +93,9 @@ func Up() *cobra.Command {
 				dev.Namespace = namespace
 			}
 
-			dev.LoadRemote(remote)
+			if remote > 0 {
+				dev.LoadRemote(int(remote))
+			}
 
 			err = RunUp(dev)
 			return err
@@ -102,7 +104,7 @@ func Up() *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
-	cmd.Flags().BoolVarP(&remote, "remote", "r", false, "configures remote execution")
+	cmd.Flags().Int32VarP(&remote, "remote", "r", -1, "configures remote execution")
 	return cmd
 }
 
