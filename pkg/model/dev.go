@@ -176,6 +176,14 @@ func (dev *Dev) setDefaults() error {
 	if dev.Labels == nil {
 		dev.Labels = map[string]string{}
 	}
+	vMap := map[string]bool{}
+	for _, v := range dev.Volumes {
+		vMap[strings.TrimSpace(v)] = true
+	}
+	dev.Volumes = make([]string, 0, len(vMap))
+	for k := range vMap {
+		dev.Volumes = append(dev.Volumes, k)
+	}
 	for _, s := range dev.Services {
 		if s.MountPath == "" && s.WorkDir == "" {
 			s.MountPath = "/okteto"
@@ -253,7 +261,16 @@ func (dev *Dev) LoadRemote(localPort int) {
 		},
 	)
 
-	dev.Volumes = append(dev.Volumes, "/root/.vscode-server")
+	found := false
+	for _, v := range dev.Volumes {
+		if v == "/root/.vscode-server" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		dev.Volumes = append(dev.Volumes, "/root/.vscode-server")
+	}
 
 	if dev.SecurityContext == nil {
 		dev.SecurityContext = &SecurityContext{}
