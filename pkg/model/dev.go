@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -242,15 +243,12 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 }
 
 //LoadRemote configures remote execution
-func (dev *Dev) LoadRemote(load bool) {
-	if !load {
-		return
-	}
+func (dev *Dev) LoadRemote(localPort int) {
 	dev.Command = []string{"/var/okteto/bin/remote"}
 	dev.Forward = append(
 		dev.Forward,
 		Forward{
-			Local:  22000,
+			Local:  localPort,
 			Remote: 22000,
 		},
 	)
@@ -266,7 +264,9 @@ func (dev *Dev) LoadRemote(load bool) {
 	if dev.SecurityContext.Capabilities.Add == nil {
 		dev.SecurityContext.Capabilities.Add = []apiv1.Capability{}
 	}
+
 	dev.SecurityContext.Capabilities.Add = append(dev.SecurityContext.Capabilities.Add, "SYS_PTRACE")
+	log.Infof("enabled remote mode")
 }
 
 //GetStatefulSetName returns the syncthing statefulset name for a given dev environment
