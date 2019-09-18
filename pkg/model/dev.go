@@ -176,6 +176,7 @@ func (dev *Dev) setDefaults() error {
 	if dev.Labels == nil {
 		dev.Labels = map[string]string{}
 	}
+	dev.Volumes = uniqueStrings(dev.Volumes)
 	for _, s := range dev.Services {
 		if s.MountPath == "" && s.WorkDir == "" {
 			s.MountPath = "/okteto"
@@ -254,6 +255,7 @@ func (dev *Dev) LoadRemote(localPort int) {
 	)
 
 	dev.Volumes = append(dev.Volumes, "/root/.vscode-server")
+	dev.Volumes = uniqueStrings(dev.Volumes)
 
 	if dev.SecurityContext == nil {
 		dev.SecurityContext = &SecurityContext{}
