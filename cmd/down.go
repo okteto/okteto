@@ -67,9 +67,9 @@ func Down() *cobra.Command {
 }
 
 func runDown(dev *model.Dev) error {
-	progress := newProgressSpinner("Deactivating your Okteto Environment...")
-	progress.start()
-	defer progress.stop()
+	spinner := newSpinner("Deactivating your Okteto Environment...")
+	spinner.start()
+	defer spinner.stop()
 
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
@@ -121,7 +121,7 @@ func runDown(dev *model.Dev) error {
 
 func removeVolumes(dev *model.Dev) error {
 	log.Info("deleting persistent volume")
-	progress := newProgressSpinner("Deleting your persistent volume...")
+	progress := newSpinner("Deleting your persistent volume...")
 	progress.start()
 	defer progress.stop()
 

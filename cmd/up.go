@@ -309,11 +309,11 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 }
 
 func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Container) error {
-	progress := newProgressSpinner("Provisioning your persistent volume...")
-	progress.start()
+	spinner := newSpinner("Provisioning your persistent volume...")
+	spinner.start()
 	up.updateStateFile(provisioning)
 
-	defer progress.stop()
+	defer spinner.stop()
 
 	log.Info("create deployment secrets")
 	if err := secrets.Create(up.Dev, up.Client); err != nil {
@@ -352,10 +352,10 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 }
 
 func (up *UpContext) startLocalSyncthing() error {
-	progress := newProgressSpinner("Starting the file synchronization service...")
-	progress.start()
+	spinner := newSpinner("Starting the file synchronization service...")
+	spinner.start()
 	up.updateStateFile(startingSync)
-	defer progress.stop()
+	defer spinner.stop()
 
 	if err := up.Sy.Run(up.Context, up.WG); err != nil {
 		return err
@@ -372,11 +372,10 @@ func (up *UpContext) startLocalSyncthing() error {
 }
 
 func (up *UpContext) synchronizeFiles() error {
-	progress := newProgressSpinner("Synchronizing your files...")
+	spinner := newSpinner("Synchronizing your files...")
 	up.updateStateFile(synchronizing)
-	progress.start()
-	defer progress.stop()
-
+	spinner.start()
+	defer spinner.stop()
 	reporter := make(chan float64)
 	defer close(reporter)
 
@@ -416,10 +415,10 @@ func (up *UpContext) synchronizeFiles() error {
 }
 
 func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) error {
-	progress := newProgressSpinner("Activating your Okteto Environment...")
+	spinner := newSpinner("Activating your Okteto Environment...")
 	up.updateStateFile(activating)
-	progress.start()
-	defer progress.stop()
+	spinner.start()
+	defer spinner.stop()
 
 	tr, err := deployments.GetTranslations(up.Dev, d, up.Node, up.Client)
 	if err != nil {

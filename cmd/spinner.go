@@ -5,22 +5,22 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/briandowns/spinner"
+	sp "github.com/briandowns/spinner"
 )
 
-type progress struct {
-	sp *spinner.Spinner
+type spinner struct {
+	sp *sp.Spinner
 }
 
-func newProgressSpinner(suffix string) *progress {
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+func newSpinner(suffix string) *spinner {
+	s := sp.New(sp.CharSets[14], 100*time.Millisecond)
 	s.Suffix = fmt.Sprintf(" %s", suffix)
-	return &progress{
+	return &spinner{
 		sp: s,
 	}
 }
 
-func (p *progress) start() {
+func (p *spinner) start() {
 	if runtime.GOOS == "windows" {
 		fmt.Printf(" %s\n", p.sp.Suffix)
 		return
@@ -29,7 +29,7 @@ func (p *progress) start() {
 	p.sp.Start()
 }
 
-func (p *progress) stop() {
+func (p *spinner) stop() {
 	if runtime.GOOS == "windows" {
 		return
 	}
@@ -37,6 +37,6 @@ func (p *progress) stop() {
 	p.sp.Stop()
 }
 
-func (p *progress) update(text string) {
+func (p *spinner) update(text string) {
 	p.sp.Suffix = fmt.Sprintf(" %s", text)
 }
