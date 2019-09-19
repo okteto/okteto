@@ -9,6 +9,7 @@ require (
 	github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/cheggaaa/pb v1.0.27
+	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
@@ -31,7 +32,6 @@ require (
 	github.com/machinebox/graphql v0.2.2
 	github.com/manifoldco/promptui v0.3.2
 	github.com/matryer/is v1.2.0 // indirect
-	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/psutil v0.0.0-20170126005127-e6c88f1e9be6
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect

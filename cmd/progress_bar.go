@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/cheggaaa/pb"
+	"github.com/cheggaaa/pb/v3"
 	getter "github.com/hashicorp/go-getter"
 )
 
@@ -14,15 +14,6 @@ var defaultProgressBar getter.ProgressTracker = &progressBar{}
 type progressBar struct {
 	// lock everything below
 	lock sync.Mutex
-
-	pool *pb.Pool
-
-	pbs int
-}
-
-func progressBarConfig(bar *pb.ProgressBar, prefix string) {
-	bar.SetUnits(pb.U_BYTES)
-	bar.Prefix(prefix)
 }
 
 // TrackProgress instantiates a new progress bar that will
@@ -33,18 +24,12 @@ func (cpb *progressBar) TrackProgress(src string, currentSize, totalSize int64, 
 	defer cpb.lock.Unlock()
 
 	newPb := pb.New64(totalSize)
-	newPb.Set64(currentSize)
-	progressBarConfig(newPb, filepath.Base(src))
-	if cpb.pool == nil {
-		cpb.pool = pb.NewPool()
-		if err := cpb.pool.Start(); err != nil {
-			return nil
-		}
-	}
-	cpb.pool.Add(newPb)
+	newPb.Set("prefix", filepath.Base(src))
+	newPb.SetCurrent(currentSize)
+	//bar.Prefix(prefix)
+	newPb.Start()
 	reader := newPb.NewProxyReader(stream)
 
-	cpb.pbs++
 	return &readCloser{
 		Reader: reader,
 		close: func() error {
@@ -52,14 +37,6 @@ func (cpb *progressBar) TrackProgress(src string, currentSize, totalSize int64, 
 			defer cpb.lock.Unlock()
 
 			newPb.Finish()
-			cpb.pbs--
-			if cpb.pbs <= 0 {
-				if err := cpb.pool.Stop(); err != nil {
-					return err
-				}
-
-				cpb.pool = nil
-			}
 			return nil
 		},
 	}
