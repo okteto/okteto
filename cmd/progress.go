@@ -36,3 +36,7 @@ func (p *progress) stop() {
 
 	p.sp.Stop()
 }
+
+func (p *progress) update(text string) {
+	p.sp.Suffix = fmt.Sprintf(" %s", text)
+}

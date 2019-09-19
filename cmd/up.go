@@ -377,12 +377,29 @@ func (up *UpContext) synchronizeFiles() error {
 	progress.start()
 	defer progress.stop()
 
-	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev); err != nil {
+	reporter := make(chan float64)
+	defer close(reporter)
+
+	go func() {
+		// only show the progress if sync takes more than 5 seconds
+		<-time.NewTicker(5 * time.Second).C
+
+		previous := 0.1
+		for c := range reporter {
+			if c > previous {
+				text := fmt.Sprintf("Synchronizing your files (%s)...", fmt.Sprintf("%6v", fmt.Sprintf("%.2f%%", c)))
+				progress.update(text)
+				previous = c
+			}
+		}
+	}()
+
+	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev, reporter); err != nil {
 		if err == errors.ErrSyncFrozen {
 			return errors.UserError{
 				E: err,
 				Hint: fmt.Sprintf(`Help us improve okteto by filing an issue in https://github.com/okteto/okteto/issues/new.
-    Please include your syncthing log (%s) possible.`, up.Sy.LogPath),
+    Please include your syncthing log (%s) if possible.`, up.Sy.LogPath),
 			}
 		}
 
