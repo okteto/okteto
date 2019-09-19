@@ -8,7 +8,6 @@ require (
 	github.com/briandowns/spinner v1.7.0
 	github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
-	github.com/cheggaaa/pb v1.0.27
 	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
