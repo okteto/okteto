@@ -19,6 +19,11 @@ func Test_renderProgressBar(t *testing.T) {
 			name:     "progress-30",
 		},
 		{
+			expected: "[--------------------------------->________________]  68%",
+			progress: 68.5,
+			name:     "progress-68.5",
+		},
+		{
 			expected: "[--------------------------------------------------] 100%",
 			progress: 100.0,
 			name:     "progress-100",
@@ -27,7 +32,7 @@ func Test_renderProgressBar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := renderProgressBar(tt.progress, 0.5)
+			actual := renderProgressBar("", tt.progress, 0.5)
 			if tt.expected != actual {
 				t.Errorf("\nexpected:\n%s\ngot:\n%s", tt.expected, actual)
 			}

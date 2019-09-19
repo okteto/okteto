@@ -51,8 +51,9 @@ type readCloser struct {
 
 func (c *readCloser) Close() error { return c.close() }
 
-func renderProgressBar(current float64, scalingFactor float64) string {
+func renderProgressBar(prefix string, current float64, scalingFactor float64) string {
 	var sb strings.Builder
+	_, _ = sb.WriteString(prefix)
 	_, _ = sb.WriteString("[")
 
 	scaledMax := int(100 * scalingFactor)

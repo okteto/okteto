@@ -374,6 +374,8 @@ func (up *UpContext) startLocalSyncthing() error {
 func (up *UpContext) synchronizeFiles() error {
 	postfix := "Synchronizing your files..."
 	spinner := newSpinner(postfix)
+	pbScaling := 0.30
+
 	up.updateStateFile(synchronizing)
 	spinner.start()
 	defer spinner.stop()
@@ -385,9 +387,8 @@ func (up *UpContext) synchronizeFiles() error {
 		for c := range reporter {
 			if c > previous {
 				// todo: how to calculate how many characters can the line fit?
-				p := fmt.Sprintf(postfix)
-				pb := renderProgressBar(c, .30)
-				spinner.update(fmt.Sprintf("%s %s", p, pb))
+				pb := renderProgressBar(postfix, c, pbScaling)
+				spinner.update(pb)
 				previous = c
 			}
 		}
@@ -405,6 +406,9 @@ func (up *UpContext) synchronizeFiles() error {
 
 		return err
 	}
+
+	// render to 100
+	spinner.update(renderProgressBar(postfix, 100, pbScaling))
 
 	up.Sy.Type = "sendreceive"
 	if err := up.Sy.UpdateConfig(); err != nil {
