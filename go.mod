@@ -5,7 +5,7 @@ require (
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.4.2
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
-	github.com/briandowns/spinner v0.0.0-20190126160308-b298438e1f0d
+	github.com/briandowns/spinner v1.7.0
 	github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/cheggaaa/pb v1.0.27
@@ -32,6 +32,7 @@ require (
 	github.com/machinebox/graphql v0.2.2
 	github.com/manifoldco/promptui v0.3.2
 	github.com/matryer/is v1.2.0 // indirect
+	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/mattn/psutil v0.0.0-20170126005127-e6c88f1e9be6
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
@@ -53,7 +54,7 @@ require (
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
 	golang.org/x/net v0.0.0-20190603091049-60506f45cf65 // indirect
 	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0 // indirect
-	golang.org/x/sys v0.0.0-20190602015325-4c4f7f33c9ed // indirect
+	golang.org/x/sys v0.0.0-20190919044723-0c1ff786ef13 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	golang.org/x/tools v0.0.0-20190603181926-178e83bc9d6a // indirect

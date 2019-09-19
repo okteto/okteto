@@ -14,6 +14,7 @@ type spinner struct {
 
 func newSpinner(suffix string) *spinner {
 	s := sp.New(sp.CharSets[14], 100*time.Millisecond)
+	s.HideCursor = true
 	s.Suffix = fmt.Sprintf(" %s", suffix)
 	return &spinner{
 		sp: s,

@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/cheggaaa/pb/v3"
@@ -48,3 +50,29 @@ type readCloser struct {
 }
 
 func (c *readCloser) Close() error { return c.close() }
+
+func renderProgressBar(current int) string {
+	var sb strings.Builder
+	_, _ = sb.WriteString("[")
+
+	for i := 0; i < current-1; i++ {
+		_, _ = sb.WriteString("-")
+	}
+
+	sb.WriteString(">")
+	for i := current + 1; i < 100; i++ {
+		_, _ = sb.WriteString("_")
+	}
+
+	for i := 0; i < 100; i++ {
+		if i == current {
+
+		}
+		_, _ = sb.WriteString("_")
+	}
+	_, _ = sb.WriteString("]")
+
+	_, _ = sb.WriteString(" ")
+	_, _ = sb.WriteString(fmt.Sprintf("%d%%", current))
+	return sb.String()
+}
