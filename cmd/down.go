@@ -67,7 +67,7 @@ func Down() *cobra.Command {
 }
 
 func runDown(dev *model.Dev) error {
-	progress := newProgressBar("Deactivating your Okteto Environment...")
+	progress := newProgressSpinner("Deactivating your Okteto Environment...")
 	progress.start()
 	defer progress.stop()
 
@@ -121,7 +121,7 @@ func runDown(dev *model.Dev) error {
 
 func removeVolumes(dev *model.Dev) error {
 	log.Info("deleting persistent volume")
-	progress := newProgressBar("Deleting your persistent volume...")
+	progress := newProgressSpinner("Deleting your persistent volume...")
 	progress.start()
 	defer progress.stop()
 

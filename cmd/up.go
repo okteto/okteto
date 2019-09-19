@@ -309,7 +309,7 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 }
 
 func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Container) error {
-	progress := newProgressBar("Provisioning your persistent volume...")
+	progress := newProgressSpinner("Provisioning your persistent volume...")
 	progress.start()
 	up.updateStateFile(provisioning)
 
@@ -352,7 +352,7 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 }
 
 func (up *UpContext) startLocalSyncthing() error {
-	progress := newProgressBar("Starting the file synchronization service...")
+	progress := newProgressSpinner("Starting the file synchronization service...")
 	progress.start()
 	up.updateStateFile(startingSync)
 	defer progress.stop()
@@ -372,7 +372,7 @@ func (up *UpContext) startLocalSyncthing() error {
 }
 
 func (up *UpContext) synchronizeFiles() error {
-	progress := newProgressBar("Synchronizing your files...")
+	progress := newProgressSpinner("Synchronizing your files...")
 	up.updateStateFile(synchronizing)
 	progress.start()
 	defer progress.stop()
@@ -416,7 +416,7 @@ func (up *UpContext) synchronizeFiles() error {
 }
 
 func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) error {
-	progress := newProgressBar("Activating your Okteto Environment...")
+	progress := newProgressSpinner("Activating your Okteto Environment...")
 	up.updateStateFile(activating)
 	progress.start()
 	defer progress.stop()
