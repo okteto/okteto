@@ -327,7 +327,8 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 }
 
 // WaitForCompletion waits for the remote to be totally synched
-func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) error {
+func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, reporter chan float64) error {
+	defer close(reporter)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
@@ -372,11 +373,16 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 		if completion.GlobalBytes == 0 {
 			return nil
 		}
+
+		progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
 		log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
-			(float64(completion.GlobalBytes-completion.NeedBytes)/float64(completion.GlobalBytes))*100,
+			progress,
 			completion.NeedBytes,
 			completion.NeedDeletes,
 		)
+
+		reporter <- progress
+
 		if completion.NeedBytes == 0 {
 			return nil
 		}
