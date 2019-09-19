@@ -51,28 +51,24 @@ type readCloser struct {
 
 func (c *readCloser) Close() error { return c.close() }
 
-func renderProgressBar(current int) string {
+func renderProgressBar(current float64, scalingFactor float64) string {
 	var sb strings.Builder
 	_, _ = sb.WriteString("[")
 
-	for i := 0; i < current-1; i++ {
-		_, _ = sb.WriteString("-")
+	scaledMax := int(100 * scalingFactor)
+	scaledCurrent := int(current * scalingFactor)
+
+	if scaledCurrent == 0 {
+		sb.WriteString(strings.Repeat("_", scaledMax))
+	} else if scaledCurrent >= scaledMax {
+		sb.WriteString(strings.Repeat("-", scaledMax))
+	} else {
+		sb.WriteString(strings.Repeat("-", scaledCurrent-1))
+		sb.WriteString(">")
+		sb.WriteString(strings.Repeat("_", scaledMax-scaledCurrent))
 	}
 
-	sb.WriteString(">")
-	for i := current + 1; i < 100; i++ {
-		_, _ = sb.WriteString("_")
-	}
-
-	for i := 0; i < 100; i++ {
-		if i == current {
-
-		}
-		_, _ = sb.WriteString("_")
-	}
 	_, _ = sb.WriteString("]")
-
-	_, _ = sb.WriteString(" ")
-	_, _ = sb.WriteString(fmt.Sprintf("%d%%", current))
+	_, _ = sb.WriteString(fmt.Sprintf(" %3v%%", int(current)))
 	return sb.String()
 }

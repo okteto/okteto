@@ -372,28 +372,29 @@ func (up *UpContext) startLocalSyncthing() error {
 }
 
 func (up *UpContext) synchronizeFiles() error {
-	spinner := newSpinner("Synchronizing your files...")
+	postfix := "Synchronizing your files..."
+	spinner := newSpinner(postfix)
 	up.updateStateFile(synchronizing)
 	spinner.start()
 	defer spinner.stop()
 	reporter := make(chan float64)
-	defer close(reporter)
-
 	go func() {
-		// only show the progress if sync takes more than 5 seconds
-		<-time.NewTicker(5 * time.Second).C
+		<-time.NewTicker(2 * time.Second).C
+		var previous float64
 
-		previous := 0.1
 		for c := range reporter {
 			if c > previous {
-				text := fmt.Sprintf("Synchronizing your files (%s)...", fmt.Sprintf("%6v", fmt.Sprintf("%.2f%%", c)))
-				progress.update(text)
+				// todo: how to calculate how many characters can the line fit?
+				p := fmt.Sprintf(postfix)
+				pb := renderProgressBar(c, .30)
+				spinner.update(fmt.Sprintf("%s %s", p, pb))
 				previous = c
 			}
 		}
 	}()
 
-	if err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev, reporter); err != nil {
+	err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev, reporter)
+	if err != nil {
 		if err == errors.ErrSyncFrozen {
 			return errors.UserError{
 				E: err,
