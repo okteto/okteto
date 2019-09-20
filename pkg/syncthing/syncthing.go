@@ -82,12 +82,15 @@ type Status struct {
 	State string `json:"state"`
 }
 
+//Event represents a syncthing event
+type Event struct {
+	ID   int        `json:"id,omitempty"`
+	Data Completion `json:"data,omitempty"`
+}
+
 // Completion represents the completion status of a syncthing folder.
 type Completion struct {
-	Completion  float64 `json:"completion"`
-	GlobalBytes int64   `json:"globalBytes"`
-	NeedBytes   int64   `json:"needBytes"`
-	NeedDeletes int64   `json:"needDeletes"`
+	Completion float64 `json:"completion"`
 }
 
 // New constructs a new Syncthing.
@@ -329,64 +332,44 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 // WaitForCompletion waits for the remote to be totally synched
 func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, reporter chan float64) error {
 	defer close(reporter)
-	ticker := time.NewTicker(500 * time.Millisecond)
-	folder := fmt.Sprintf("okteto-%s", dev.Name)
-	params := map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
-	completion := &Completion{}
-	var prevNeedBytes int64
-	needZeroBytesIter := 0
-	log.Infof("waiting for synchronization to complete...")
-	for {
-		select {
-		case <-ticker.C:
-			if prevNeedBytes == completion.NeedBytes {
-				if needZeroBytesIter >= 50 {
-					return errors.ErrSyncFrozen
-				}
-
-				needZeroBytesIter++
-			} else {
-				needZeroBytesIter = 0
-			}
-		case <-ctx.Done():
-			log.Debug("cancelling call to 'rest/db/completion'")
-			return ctx.Err()
-		}
-
+	params := map[string]string{
+		"events":  "FolderCompletion",
+		"device":  DefaultRemoteDeviceID,
+		"folder":  fmt.Sprintf("okteto-%s", dev.Name),
+		"timeout": "0",
+		"since":   "0",
+	}
+	var since int
+	var completion float64
+	log.Info("waiting for synchronization to complete...", completion)
+	for completion != 100 {
 		if _, err := s.APICall("rest/db/override", "POST", 200, params, true, nil); err != nil {
-			//overwrite on each iteration to avoid sude effects of remote scannings
+			//overwrite on each iteration to avoid side effects of remote scannings
 			log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
 		}
-
-		prevNeedBytes = completion.NeedBytes
-		body, err := s.APICall("rest/db/completion", "GET", 200, params, true, nil)
+		body, err := s.APICall("rest/events", "GET", 200, params, true, nil)
 		if err != nil {
-			log.Infof("error calling 'rest/db/completion' syncthing API: %s", err)
+			log.Infof("error calling 'rest/events' syncthing API: %s", err)
 			continue
 		}
-		err = json.Unmarshal(body, completion)
-		if err != nil {
-			log.Infof("error unmarshaling 'rest/db/completion': %s", err)
+		var events []Event
+		if err := json.Unmarshal(body, &events); err != nil {
+			log.Infof("error unmarshalling syncthing events: %s", err)
 			continue
 		}
-
-		if completion.GlobalBytes == 0 {
-			return nil
+		if len(events) > 0 {
+			since = events[len(events)-1].ID
+			completion = events[len(events)-1].Data.Completion
+		} else if completion > 0 {
+			return errors.ErrSyncFrozen
 		}
-
-		progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
-		log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
-			progress,
-			completion.NeedBytes,
-			completion.NeedDeletes,
-		)
-
-		reporter <- progress
-
-		if completion.NeedBytes == 0 {
-			return nil
-		}
+		params["timeout"] = "60"
+		params["limit"] = "1"
+		params["since"] = strconv.Itoa(since)
+		reporter <- completion
+		fmt.Println(completion)
 	}
+	return nil
 }
 
 // Restart restarts the syncthing process
