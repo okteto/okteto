@@ -6,17 +6,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/okteto/okteto/cmd"
+	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/spf13/cobra"
-
-	"github.com/sirupsen/logrus"
-
-	"github.com/okteto/okteto/cmd"
-	"github.com/okteto/okteto/cmd/namespace"
-
 	"github.com/opentracing/opentracing-go"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"go.undefinedlabs.com/scopeagent"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	"k8s.io/apimachinery/pkg/util/runtime"
