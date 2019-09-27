@@ -155,7 +155,7 @@ func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {
 }
 
 // Restart restarts the pods of a deployment
-func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
+func Restart(dev *model.Dev, c *kubernetes.Clientset, wait bool) error {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", OktetoDetachedDevLabel, dev.Name),
@@ -178,5 +178,47 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 		}
 	}
 
-	return nil
+	if !wait {
+		return nil
+	}
+
+	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", OktetoDetachedDevLabel, dev.Name), c)
+}
+
+func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error {
+	t := time.NewTicker(1 * time.Second)
+	for i := 0; i < 60; i++ {
+		pods, err := c.CoreV1().Pods(namespace).List(
+			metav1.ListOptions{
+				LabelSelector: selector,
+			},
+		)
+
+		if err != nil {
+			log.Infof("error listing pods to check status after restart: %s", err)
+			return fmt.Errorf("failed to retrieve dev environment information")
+		}
+
+		allRunning := true
+		for _, pod := range pods.Items {
+			switch pod.Status.Phase {
+			case apiv1.PodPending:
+				allRunning = false
+			case apiv1.PodFailed:
+				return fmt.Errorf("Pod %s failed to start", pod.Name)
+			case apiv1.PodRunning:
+				if pod.GetObjectMeta().GetDeletionTimestamp() != nil {
+					allRunning = false
+				}
+			}
+		}
+
+		if allRunning {
+			return nil
+		}
+
+		<-t.C
+	}
+
+	return fmt.Errorf("Pods didn't restart after 60 seconds")
 }
