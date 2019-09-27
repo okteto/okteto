@@ -19,8 +19,6 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-openapi/spec v0.18.0 // indirect
-	github.com/gogo/protobuf v1.1.1 // indirect
-	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/btree v1.0.0 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
@@ -47,17 +45,12 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
-	golang.org/x/crypto v0.0.0-20190530122614-20be4c3c3ed5 // indirect
+	go.undefinedlabs.com/scopeagent v0.0.0-20190924185420-1636227ee401 // indirect
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
-	golang.org/x/net v0.0.0-20190603091049-60506f45cf65 // indirect
 	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0 // indirect
 	golang.org/x/sys v0.0.0-20190919044723-0c1ff786ef13 // indirect
-	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	golang.org/x/tools v0.0.0-20190603181926-178e83bc9d6a // indirect
-	google.golang.org/appengine v1.6.0 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

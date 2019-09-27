@@ -17,7 +17,7 @@ import (
 
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/cmd"
-)
+	"go.undefinedlabs.com/scopeagent"
 
 var (
 	deploymentTemplate = template.Must(template.New("deployment").Parse(deploymentFormat))
@@ -85,7 +85,14 @@ workdir: /usr/src/app
 `
 )
 
+func TestMain(m *testing.M) {
+	os.Exit(scopeagent.GlobalAgent.Run(m))
+}
+
 func TestDownloadSyncthing(t *testing.T) {
+	test := scopeagent.StartTest(t)
+	defer test.End()
+	
 	var tests = []struct {
 		os string
 	}{
@@ -106,6 +113,9 @@ func TestDownloadSyncthing(t *testing.T) {
 	}
 }
 func TestAll(t *testing.T) {
+	test := scopeagent.StartTest(t)
+	defer test.End()
+	
 	token := os.Getenv("OKTETO_TOKEN")
 	if len(token) == 0 {
 		log.Println("OKTETO_TOKEN is not defined, using logged in user")

@@ -153,6 +153,7 @@ workflows:
             branches:
               only: 
                 - master
+                - scope-integration
       - release-master:
           requires:
             - integration
