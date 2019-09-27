@@ -93,9 +93,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestDownloadSyncthing(t *testing.T) {
-	test := scopeagent.StartTest(t)
-	defer test.End()
-
 	var tests = []struct {
 		os string
 	}{
@@ -104,13 +101,22 @@ func TestDownloadSyncthing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.os, func(t *testing.T) {
-			res, err := http.Head(cmd.SyncthingURL[tt.os])
+			test := scopeagent.StartTest(t)
+			defer test.End()
+
+			req, err := http.NewRequest("HEAD", cmd.SyncthingURL[tt.os], nil)
 			if err != nil {
-				t.Errorf("Failed to download syncthing: %s", err)
+				t.Fatal(err.Error())
+			}
+
+			req = req.WithContext(test.Context())
+			res, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("Failed to download syncthing: %s", err)
 			}
 
 			if res.StatusCode != 200 {
-				t.Errorf("Failed to download syncthing. Got status: %d", res.StatusCode)
+				t.Fatalf("Failed to download syncthing. Got status: %d", res.StatusCode)
 			}
 		})
 	}
