@@ -1,6 +1,7 @@
 package okteto
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -26,7 +27,7 @@ func GetCredentials(namespace string) (*Credential, error) {
 	}`, namespace)
 
 	var cred Credentials
-	if err := query(q, &cred); err != nil {
+	if err := query(context.Background(), q, &cred); err != nil {
 		return nil, err
 	}
 

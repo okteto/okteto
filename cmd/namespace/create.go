@@ -1,6 +1,7 @@
 package namespace
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -12,12 +13,12 @@ import (
 )
 
 //Create creates a namespace
-func Create() *cobra.Command {
+func Create(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
 		Use:   "namespace <name>",
 		Short: fmt.Sprintf("Creates a namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := executeCreateNamespace(args[0])
+			err := executeCreateNamespace(ctx, args[0])
 			analytics.TrackCreateNamespace(config.VersionString, err == nil)
 			return err
 		},
@@ -30,8 +31,8 @@ func Create() *cobra.Command {
 	}
 }
 
-func executeCreateNamespace(namespace string) error {
-	oktetoNS, err := okteto.CreateNamespace(namespace)
+func executeCreateNamespace(ctx context.Context, namespace string) error {
+	oktetoNS, err := okteto.CreateNamespace(ctx, namespace)
 	if err != nil {
 		return err
 	}

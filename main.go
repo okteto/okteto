@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,10 +16,12 @@ import (
 	"github.com/okteto/okteto/cmd"
 	"github.com/okteto/okteto/cmd/namespace"
 
-	// Load the different library for authentication
+	"github.com/opentracing/opentracing-go"
 	"go.undefinedlabs.com/scopeagent"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	"k8s.io/apimachinery/pkg/util/runtime"
+
+	// Load the different library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
@@ -45,7 +48,7 @@ func main() {
 	defer span.Finish()
 
 	// Create a new context to be used in my application
-	//_ := opentracing.ContextWithSpan(context.Background(), span)
+	ctx := opentracing.ContextWithSpan(context.Background(), span)
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -61,7 +64,7 @@ func main() {
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
-	root.AddCommand(cmd.Create())
+	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.Delete())
 	root.AddCommand(namespace.Namespace())
 	root.AddCommand(cmd.Init())

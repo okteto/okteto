@@ -27,7 +27,7 @@ func getClient(oktetoURL string) (*graphql.Client, error) {
 	return graphqlClient, nil
 }
 
-func query(query string, result interface{}) error {
+func query(ctx context.Context, query string, result interface{}) error {
 	o, err := getToken()
 	if err != nil {
 		log.Infof("couldn't get token: %s", err)
@@ -42,7 +42,6 @@ func query(query string, result interface{}) error {
 
 	req := graphql.NewRequest(query)
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", o.Token))
-	ctx := context.Background()
 
 	if err := c.Run(ctx, req, result); err != nil {
 		e := strings.TrimPrefix(err.Error(), "graphql: ")

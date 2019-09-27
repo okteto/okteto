@@ -395,9 +395,9 @@ func up(ctx context.Context, name, manifestPath, oktetoPath string) error {
 	cmd := exec.Command(oktetoPath, "up", "-f", manifestPath)
 	cmd.Env = os.Environ()
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-	defer span.Finish()
 
 	go func() {
+		defer span.Finish()
 		if err := cmd.Start(); err != nil {
 			log.Fatalf("okteto up failed to start: %s", err)
 		}
@@ -405,6 +405,7 @@ func up(ctx context.Context, name, manifestPath, oktetoPath string) error {
 		if err := cmd.Wait(); err != nil {
 			log.Printf("okteto up exited: %s", err)
 		}
+
 	}()
 
 	log.Println("waiting for the statefulset to be running")
