@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,12 +13,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 	"text/template"
+	"time"
 
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/cmd"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"go.undefinedlabs.com/scopeagent"
+	"go.undefinedlabs.com/scopeagent/instrumentation/process"
+)
 
 var (
 	deploymentTemplate = template.Must(template.New("deployment").Parse(deploymentFormat))
@@ -92,7 +95,7 @@ func TestMain(m *testing.M) {
 func TestDownloadSyncthing(t *testing.T) {
 	test := scopeagent.StartTest(t)
 	defer test.End()
-	
+
 	var tests = []struct {
 		os string
 	}{
@@ -114,8 +117,9 @@ func TestDownloadSyncthing(t *testing.T) {
 }
 func TestAll(t *testing.T) {
 	test := scopeagent.StartTest(t)
+	ctx := test.Context()
 	defer test.End()
-	
+
 	token := os.Getenv("OKTETO_TOKEN")
 	if len(token) == 0 {
 		log.Println("OKTETO_TOKEN is not defined, using logged in user")
@@ -126,7 +130,7 @@ func TestAll(t *testing.T) {
 		t.Fatalf("OKTETO_USER is not defined")
 	}
 
-	oktetoPath, err := getOktetoPath()
+	oktetoPath, err := getOktetoPath(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,15 +161,15 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := createNamespace(namespace, oktetoPath); err != nil {
+	if err := createNamespace(ctx, namespace, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := deploy(name, dPath); err != nil {
+	if err := deploy(ctx, name, dPath); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := up(name, manifestPath, oktetoPath); err != nil {
+	if err := up(ctx, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -194,19 +198,25 @@ func TestAll(t *testing.T) {
 		t.Fatalf("expected updated content to be %s, got %s", updatedContent, c)
 	}
 
-	if err := down(name, manifestPath, oktetoPath); err != nil {
+	if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := deleteNamespace(oktetoPath, namespace); err != nil {
+	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func waitForDeployment(name string, revision, timeout int) error {
+func waitForDeployment(ctx context.Context, name string, revision, timeout int) error {
 	for i := 0; i < timeout; i++ {
 		args := []string{"rollout", "status", "deployment", name, "--revision", fmt.Sprintf("%d", revision)}
+
 		cmd := exec.Command("kubectl", args...)
+		cmd.Env = os.Environ()
+
+		span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+		defer span.Finish()
+
 		o, _ := cmd.CombinedOutput()
 		log.Printf("kubectl %s", strings.Join(args, " "))
 		output := string(o)
@@ -269,10 +279,14 @@ func writeManifest(path, name string) error {
 	return nil
 }
 
-func waitForPod(name string, timeout int) error {
+func waitForPod(ctx context.Context, name string, timeout int) error {
 	for i := 0; i < timeout; i++ {
 		args := []string{"get", "pod", "-ojsonpath='{.status.phase}'", name}
 		cmd := exec.Command("kubectl", args...)
+		cmd.Env = os.Environ()
+
+		span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+		defer span.Finish()
 		o, err := cmd.CombinedOutput()
 		output := string(o)
 		log.Printf("`kubectl %s` output: %s", strings.Join(args, " "), output)
@@ -292,10 +306,13 @@ func waitForPod(name string, timeout int) error {
 
 }
 
-func checkPVCIsGone(name string) error {
+func checkPVCIsGone(ctx context.Context, name string) error {
 	pvc := fmt.Sprintf("pvc-0-okteto-%s-0", name)
 	args := []string{"get", "pvc", pvc}
 	cmd := exec.Command("kubectl", args...)
+	cmd.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
 	o, _ := cmd.CombinedOutput()
 	output := string(o)
 	if !strings.Contains(string(o), fmt.Sprintf(`persistentvolumeclaims "%s" not found`, pvc)) {
@@ -305,10 +322,13 @@ func checkPVCIsGone(name string) error {
 	return nil
 }
 
-func createNamespace(namespace, oktetoPath string) error {
+func createNamespace(ctx context.Context, namespace, oktetoPath string) error {
 	log.Printf("creating namespace %s", namespace)
 	args := []string{"create", "namespace", namespace, "-l", "debug"}
 	cmd := exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
 	}
@@ -325,10 +345,13 @@ func createNamespace(namespace, oktetoPath string) error {
 	return nil
 }
 
-func deleteNamespace(oktetoPath, namespace string) error {
+func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	log.Printf("okteto delete namespace %s", namespace)
-	deleteCMD := exec.Command(oktetoPath, "delete", "namespace", namespace)
-	o, err := deleteCMD.CombinedOutput(); 
+	cmd := exec.Command(oktetoPath, "delete", "namespace", namespace)
+	cmd.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
+	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
 	}
@@ -336,64 +359,73 @@ func deleteNamespace(oktetoPath, namespace string) error {
 	return nil
 }
 
-func down(name, manifestPath, oktetoPath string) error {
+func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 	log.Printf("okteto down -f %s -v", manifestPath)
-	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
-	
-	o, err := downCMD.CombinedOutput()
+	cmd := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
+	cmd.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
+	o, err := cmd.CombinedOutput()
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {
 		return fmt.Errorf("okteto down failed: %s", err)
 	}
 
 	log.Println("waiting for the deployment to be restored")
-	if err := waitForDeployment(name, 3, 30); err != nil {
+	if err := waitForDeployment(ctx, name, 3, 30); err != nil {
 		return err
 	}
 
 	log.Printf("validate that the pvc was deleted")
-	if err := checkPVCIsGone(name); err != nil {
+	if err := checkPVCIsGone(ctx, name); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func up(name, manifestPath, oktetoPath string) error {
+func up(ctx context.Context, name, manifestPath, oktetoPath string) error {
 	log.Println("starting okteto up")
-	upCMD := exec.Command(oktetoPath, "up", "-f", manifestPath)
+	cmd := exec.Command(oktetoPath, "up", "-f", manifestPath)
+	cmd.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
 
 	go func() {
-		if err := upCMD.Start(); err != nil {
+		if err := cmd.Start(); err != nil {
 			log.Fatalf("okteto up failed to start: %s", err)
 		}
 
-		if err := upCMD.Wait(); err != nil {
+		if err := cmd.Wait(); err != nil {
 			log.Printf("okteto up exited: %s", err)
 		}
 	}()
 
 	log.Println("waiting for the statefulset to be running")
-	if err := waitForPod(fmt.Sprintf("okteto-%s-0", name), 100); err != nil {
+	if err := waitForPod(ctx, fmt.Sprintf("okteto-%s-0", name), 100); err != nil {
 		return err
 	}
 
 	log.Println("waiting for the deployment to be running")
-	if err := waitForDeployment(name, 2, 120); err != nil {
+	if err := waitForDeployment(ctx, name, 2, 120); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func deploy(name, path string) error {
+func deploy(ctx context.Context, name, path string) error {
 	log.Printf("deploying kubernetes manifest %s", path)
 	cmd := exec.Command("kubectl", "apply", "-f", path)
+	cmd.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
+
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("kubectl apply failed: %s", string(o))
 	}
 
-	if err := waitForDeployment(name, 1, 30); err != nil {
+	if err := waitForDeployment(ctx, name, 1, 30); err != nil {
 		return err
 	}
 
@@ -413,7 +445,7 @@ func writeDeployment(name, path string) error {
 	return nil
 }
 
-func getOktetoPath() (string, error) {
+func getOktetoPath(ctx context.Context) (string, error) {
 	oktetoPath := os.Getenv("OKTETO_PATH")
 	if len(oktetoPath) == 0 {
 		oktetoPath = "/usr/local/bin/okteto"
@@ -428,6 +460,10 @@ func getOktetoPath() (string, error) {
 	}
 
 	cmd := exec.Command(oktetoPath, "version")
+	cmd.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
+
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("okteto version failed: %s - %s", string(o), err)
 	}

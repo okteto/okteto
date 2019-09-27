@@ -46,7 +46,7 @@ require (
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
-	go.undefinedlabs.com/scopeagent v0.0.0-20190924185420-1636227ee401 // indirect
+	go.undefinedlabs.com/scopeagent v0.0.0-20190924185420-1636227ee401
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
 	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0 // indirect
 	golang.org/x/sys v0.0.0-20190919044723-0c1ff786ef13 // indirect
