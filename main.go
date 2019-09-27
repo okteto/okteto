@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
@@ -15,6 +16,8 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 
 	// Load the different library for authentication
+	"go.undefinedlabs.com/scopeagent"
+	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -34,6 +37,15 @@ func init() {
 func main() {
 	log.Init(logrus.WarnLevel)
 	var logLevel string
+
+	defer scopeagent.GlobalAgent.Stop()
+
+	// Start a span representing this process execution, following the trace found in the environment (if available)
+	span := process.StartSpan(filepath.Base(os.Args[0]))
+	defer span.Finish()
+
+	// Create a new context to be used in my application
+	//_ := opentracing.ContextWithSpan(context.Background(), span)
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
