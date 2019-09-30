@@ -167,11 +167,9 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 	}
 
 	for _, pod := range pods.Items {
-		log.Information("Restarting pod '%s'", pod.Name)
 		err := c.CoreV1().Pods(dev.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
-				log.Infof("pod '%s' was already deleted.", pod.Name)
 				return nil
 			}
 			return fmt.Errorf("error deleting kubernetes service: %s", err)

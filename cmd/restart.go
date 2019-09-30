@@ -52,9 +52,11 @@ func executeRestart(dev *model.Dev) error {
 		dev.Namespace = namespace
 	}
 
+	log.Information("Restarting pods")
 	if err := pods.Restart(dev, client); err != nil {
 		return err
 	}
 
+	log.Information("All pods restarted")
 	return nil
 }
