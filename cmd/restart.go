@@ -52,11 +52,13 @@ func executeRestart(dev *model.Dev) error {
 		dev.Namespace = namespace
 	}
 
-	log.Information("Restarting pods")
+	spinner := newSpinner("Restarting your Okteto environment...")
+	spinner.start()
+	defer spinner.stop()
+
 	if err := pods.Restart(dev, client); err != nil {
 		return err
 	}
 
-	log.Information("All pods restarted")
 	return nil
 }
