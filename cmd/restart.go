@@ -43,6 +43,7 @@ func Restart() *cobra.Command {
 }
 
 func executeRestart(dev *model.Dev) error {
+	log.Infof("restarting okteto environment")
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err

@@ -184,6 +184,10 @@ func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error
 	notready := map[string]bool{}
 
 	for i := 0; i < 60; i++ {
+		if i%5 == 0 {
+			log.Infof("checking if pods are ready")
+		}
+
 		pods, err := c.CoreV1().Pods(namespace).List(
 			metav1.ListOptions{
 				LabelSelector: selector,
@@ -200,19 +204,27 @@ func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error
 			switch pod.Status.Phase {
 			case apiv1.PodPending:
 				allRunning = false
+				notready[pod.GetName()] = true
 			case apiv1.PodFailed:
 				return fmt.Errorf("Pod %s failed to start", pod.Name)
 			case apiv1.PodRunning:
-				if !isRunning(&pod) {
+				if isRunning(&pod) {
+					if _, ok := notready[pod.GetName()]; ok {
+						log.Infof("pod/%s is ready", pod.GetName())
+						delete(notready, pod.GetName())
+					}
+				} else {
 					allRunning = false
 					notready[pod.GetName()] = true
+					if i%5 == 0 {
+						log.Infof("pod/%s is not ready", pod.GetName())
+					}
 				}
-
-				delete(notready, pod.GetName())
 			}
 		}
 
 		if allRunning {
+			log.Infof("pods are ready")
 			return nil
 		}
 
