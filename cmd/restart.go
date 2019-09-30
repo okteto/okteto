@@ -14,7 +14,6 @@ import (
 func Restart() *cobra.Command {
 	var namespace string
 	var devPath string
-	var wait bool
 
 	cmd := &cobra.Command{
 		Use:   "restart",
@@ -28,7 +27,7 @@ func Restart() *cobra.Command {
 				dev.Namespace = namespace
 			}
 
-			if err := executeRestart(dev, wait); err != nil {
+			if err := executeRestart(dev); err != nil {
 				return err
 			}
 			log.Success("Okteto Environment restarted")
@@ -39,12 +38,11 @@ func Restart() *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the exec command is executed")
-	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until pods are ready")
 
 	return cmd
 }
 
-func executeRestart(dev *model.Dev, wait bool) error {
+func executeRestart(dev *model.Dev) error {
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err
@@ -54,7 +52,7 @@ func executeRestart(dev *model.Dev, wait bool) error {
 		dev.Namespace = namespace
 	}
 
-	if err := pods.Restart(dev, client, wait); err != nil {
+	if err := pods.Restart(dev, client); err != nil {
 		return err
 	}
 

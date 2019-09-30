@@ -155,7 +155,7 @@ func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {
 }
 
 // Restart restarts the pods of a deployment
-func Restart(dev *model.Dev, c *kubernetes.Clientset, wait bool) error {
+func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", OktetoDetachedDevLabel, dev.Name),
@@ -176,10 +176,6 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset, wait bool) error {
 			}
 			return fmt.Errorf("error deleting kubernetes service: %s", err)
 		}
-	}
-
-	if !wait {
-		return nil
 	}
 
 	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", OktetoDetachedDevLabel, dev.Name), c)
