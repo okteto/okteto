@@ -72,9 +72,10 @@ func isConnectionError(s string) bool {
 func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, host string) error {
 	clusterName := fmt.Sprintf("%s-cluster", host)
 	var contextName = ""
-	if namespace == userName {
+	if len(namespace) == 0 {
 		// don't include namespace for the personal namespace
 		contextName = fmt.Sprintf("%s-context", host)
+		namespace = cred.Namespace
 	} else {
 		contextName = fmt.Sprintf("%s-%s-context", host, namespace)
 	}
