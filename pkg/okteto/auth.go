@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/config"
@@ -135,12 +134,6 @@ func GetURL() string {
 	}
 
 	return t.URL
-}
-
-// GetURLWithUnderscore returns the URL of the authenticated user with underscores
-func GetURLWithUnderscore() string {
-	u, _ := url.Parse(GetURL())
-	return strings.ReplaceAll(u.Host, ".", "_")
 }
 
 func saveToken(id, token, url string) error {
