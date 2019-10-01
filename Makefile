@@ -3,7 +3,7 @@ VERSION_STRING := $(shell git rev-parse --short HEAD)
 endif
 
 BINDIR    := $(CURDIR)/bin
-PLATFORMS := linux/amd64/Linux-x86_64 darwin/amd64/Darwin-x86_64 windows/amd64/Windows-x86_64 linux/arm/Linux-arm
+PLATFORMS := linux/amd64/Linux-x86_64 darwin/amd64/Darwin-x86_64 windows/amd64/Windows-x86_64 linux/arm64/Linux-arm64
 BUILDCOMMAND := go build -ldflags "-X github.com/okteto/okteto/pkg/config.VersionString=${VERSION_STRING}" -tags "osusergo netgo static_build"
 temp = $(subst /, ,$@)
 os = $(word 1, $(temp))
