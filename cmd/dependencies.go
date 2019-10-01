@@ -17,6 +17,7 @@ var (
 	// SyncthingURL is the path of the syncthing binary.
 	SyncthingURL = map[string]string{
 		"linux":   "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Linux-x86_64",
+		"arm":     "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Linux-arm64",
 		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Darwin-x86_64",
 		"windows": "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Windows-x86_64",
 	}
@@ -65,8 +66,15 @@ func getCurrentSyncthingVersion() *semver.Version {
 func downloadSyncthing() error {
 	opts := []getter.ClientOption{getter.WithProgress(defaultProgressBar)}
 
+	src := SyncthingURL[runtime.GOOS]
+	if src == "linux" {
+		if runtime.GOARCH == "arm64" {
+			src = SyncthingURL["arm"]
+		}
+	}
+
 	client := &getter.Client{
-		Src:     SyncthingURL[runtime.GOOS],
+		Src:     src,
 		Dst:     syncthing.GetInstallPath(),
 		Mode:    getter.ClientModeFile,
 		Options: opts,
