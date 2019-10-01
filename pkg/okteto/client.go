@@ -70,14 +70,14 @@ func isConnectionError(s string) bool {
 
 //SetKubeConfig updates a kubeconfig file with okteto cluster credentials
 func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, host string) error {
-	clusterName := fmt.Sprintf("%s-cluster", host)
+	clusterName := fmt.Sprintf("%s", host)
 	var contextName = ""
 	if len(namespace) == 0 {
 		// don't include namespace for the personal namespace
-		contextName = fmt.Sprintf("%s-context", host)
+		contextName = fmt.Sprintf(host)
 		namespace = cred.Namespace
 	} else {
-		contextName = fmt.Sprintf("%s-%s-context", host, namespace)
+		contextName = fmt.Sprintf("%s-%s", host, namespace)
 	}
 
 	var cfg *clientcmdapi.Config
