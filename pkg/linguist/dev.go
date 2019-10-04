@@ -1,6 +1,7 @@
 package linguist
 
 import (
+	"os"
 	"sort"
 	"strings"
 
@@ -8,16 +9,21 @@ import (
 )
 
 type languageDefault struct {
-	image   string
-	path    string
-	command []string
+	image           string
+	path            string
+	command         []string
+	environment     []model.EnvVar
+	volumes         []string
+	forward         []model.Forward
+	securityContext *model.SecurityContext
 }
 
 const (
 	javascript = "javascript"
 	golang     = "go"
 	python     = "python"
-	java       = "java"
+	gradle     = "gradle"
+	maven      = "maven"
 	ruby       = "ruby"
 
 	// Unrecognized is the option returned when the linguist couldn't detect a language
@@ -26,6 +32,7 @@ const (
 
 var (
 	languageDefaults map[string]languageDefault
+	user1000         int64 = 1000
 )
 
 func init() {
@@ -48,10 +55,53 @@ func init() {
 		command: []string{"bash"},
 	}
 
-	languageDefaults[java] = languageDefault{
-		image:   "okteto/gradle:5.1-jdk11",
-		path:    "/home/gradle",
+	languageDefaults[gradle] = languageDefault{
+		image:   "okteto/gradle:latest",
 		command: []string{"bash"},
+		environment: []model.EnvVar{
+			model.EnvVar{
+				Name:  "JAVA_OPTS",
+				Value: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8088",
+			},
+		},
+		volumes: []string{"/home/gradle/.gradle"},
+		forward: []model.Forward{
+			model.Forward{
+				Local:  8080,
+				Remote: 8080,
+			},
+			model.Forward{
+				Local:  8088,
+				Remote: 8088,
+			},
+		},
+		securityContext: &model.SecurityContext{
+			RunAsUser:  &user1000,
+			RunAsGroup: &user1000,
+			FSGroup:    &user1000,
+		},
+	}
+
+	languageDefaults[maven] = languageDefault{
+		image:   "okteto/maven:latest",
+		command: []string{"bash"},
+		environment: []model.EnvVar{
+			model.EnvVar{
+				Name:  "JAVA_OPTS",
+				Value: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8088",
+			},
+		},
+		volumes: []string{"/root/.m2"},
+		forward: []model.Forward{
+			model.Forward{
+				Local:  8080,
+				Remote: 8080,
+			},
+			model.Forward{
+				Local:  8088,
+				Remote: 8088,
+			},
+		},
 	}
 
 	languageDefaults[ruby] = languageDefault{
@@ -62,7 +112,6 @@ func init() {
 
 	languageDefaults[Unrecognized] = languageDefault{
 		image:   model.DefaultImage,
-		path:    "/usr/src/app",
 		command: []string{"bash"},
 	}
 }
@@ -86,9 +135,13 @@ func GetSupportedLanguages() []string {
 func GetDevConfig(language string) *model.Dev {
 	vals := languageDefaults[normalizeLanguage(language)]
 	dev := &model.Dev{
-		Image:   vals.image,
-		WorkDir: vals.path,
-		Command: vals.command,
+		Image:           vals.image,
+		WorkDir:         vals.path,
+		Command:         vals.command,
+		Environment:     vals.environment,
+		Volumes:         vals.volumes,
+		Forward:         vals.forward,
+		SecurityContext: vals.securityContext,
 	}
 
 	return dev
@@ -106,7 +159,10 @@ func normalizeLanguage(language string) string {
 	case "python":
 		return python
 	case "java":
-		return java
+		if _, err := os.Stat("pom.xml"); !os.IsNotExist(err) {
+			return maven
+		}
+		return gradle
 	case "ruby":
 		return ruby
 	case "go":

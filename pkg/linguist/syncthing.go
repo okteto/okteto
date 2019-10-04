@@ -226,7 +226,7 @@ func init() {
 /.pyre
 `)
 
-	stignore[java] = []byte(`/.git
+	stignore[gradle] = []byte(`/.git
 /.gradle
 /build
 
@@ -238,6 +238,10 @@ func init() {
 
 # Cache of project
 /.gradletasknamecache
+`)
+
+	stignore[maven] = []byte(`/.git
+/?
 `)
 
 	stignore[ruby] = []byte(`/.git
