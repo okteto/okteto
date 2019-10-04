@@ -170,9 +170,20 @@ func (up *UpContext) Activate() {
 		d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
 		create := false
 		if err != nil {
-			if !errors.IsNotFound(err) || retry {
+			if errors.IsNotFound(err) && retry {
 				up.Exit <- err
 				return
+			}
+
+			if !errors.IsNotFound(err) && !retry {
+				up.Exit <- err
+				return
+			}
+
+			if !errors.IsNotFound(err) {
+				up.shutdown()
+				time.Sleep(3 * time.Second)
+				continue
 			}
 
 			if len(up.Dev.Labels) == 0 {
@@ -226,12 +237,25 @@ func (up *UpContext) Activate() {
 		up.updateStateFile(starting)
 		err = up.sync(d, devContainer)
 		if err != nil {
+			if retry {
+				uErr, ok := err.(errors.UserError)
+				if !ok || uErr.E != errors.ErrSyncFrozen {
+					log.Yellow("\nSyncthing configuration error, reconnecting: %s\n", err)
+					up.shutdown()
+					continue
+				}
+			}
 			up.Exit <- err
 			return
 		}
 
 		err = up.devMode(retry, d, create)
 		if err != nil {
+			if retry {
+				log.Yellow("\nActivating dev mode error, reconnecting: %s\n", err)
+				up.shutdown()
+				continue
+			}
 			up.Exit <- err
 			return
 		}
