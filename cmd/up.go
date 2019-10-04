@@ -219,7 +219,8 @@ func (up *UpContext) Activate() {
 		}
 
 		if retry && !deployments.IsDevModeOn(d) {
-			up.Exit <- fmt.Errorf("Okteto Environment has been deactivated")
+			log.Information("Okteto Environment has been deactivated")
+			up.Exit <- nil
 			return
 		}
 
