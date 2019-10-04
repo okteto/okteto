@@ -159,7 +159,7 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 
 func translateVolumeClaimTemplates(dev *model.Dev) []apiv1.PersistentVolumeClaim {
 	quantDisk := defaultDiskSize
-	if size, ok := os.LookupEnv("OKTETO_VOLUME"); ok {
+	if size, ok := os.LookupEnv("OKTETO_VOLUME_SIZE"); ok {
 		q, err := resource.ParseQuantity(size)
 		if err != nil {
 			log.Fatalf("%s is not a valid quantity", err)
