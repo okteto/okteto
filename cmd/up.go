@@ -161,6 +161,7 @@ func (up *UpContext) Activate() {
 		up.Dev.Namespace = namespace
 	}
 
+	logConnectionError := true
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		up.Disconnect = make(chan struct{}, 1)
@@ -182,9 +183,14 @@ func (up *UpContext) Activate() {
 
 			if !errors.IsNotFound(err) {
 				up.shutdown()
+				if logConnectionError {
+					log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...\n")
+					logConnectionError = false
+				}
 				time.Sleep(3 * time.Second)
 				continue
 			}
+			logConnectionError = true
 
 			if len(up.Dev.Labels) == 0 {
 				_, deploy := os.LookupEnv("OKTETO_AUTODEPLOY")
@@ -230,7 +236,8 @@ func (up *UpContext) Activate() {
 		}
 
 		if retry && !deployments.IsDevModeOn(d) {
-			up.Exit <- fmt.Errorf("Okteto Environment has been deactivated")
+			log.Information("Okteto Environment has been deactivated")
+			up.Exit <- nil
 			return
 		}
 
@@ -281,7 +288,6 @@ func (up *UpContext) Activate() {
 
 		if prevError != nil {
 			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !pods.Exists(up.DevPod, up.Dev.Namespace, up.Client)) {
-				log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...\n")
 				up.shutdown()
 				continue
 			}

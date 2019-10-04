@@ -1,6 +1,8 @@
 package client
 
 import (
+	"time"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -30,6 +32,7 @@ func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {
 		if err != nil {
 			return nil, nil, "", err
 		}
+		config.Timeout = 5 * time.Second
 
 		client, err = kubernetes.NewForConfig(config)
 		if err != nil {
