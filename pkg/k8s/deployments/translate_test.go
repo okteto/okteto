@@ -4,11 +4,13 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func Test_translate(t *testing.T) {
@@ -37,10 +39,12 @@ services:
 		t.Fatal(err)
 	}
 	d1 := dev.GevSandbox()
-	rule1 := dev.ToTranslationRule(dev, d1, "node")
+	rule1 := dev.ToTranslationRule(dev, d1)
 	tr1 := &model.Translation{
 		Interactive: true,
 		Name:        dev.Name,
+		Marker:      "okteto.yml",
+		Version:     model.TranslationVersion,
 		Deployment:  d1,
 		Rules:       []*model.TranslationRule{rule1},
 	}
@@ -52,6 +56,20 @@ services:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								apiv1.PodAffinityTerm{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											OktetoInteractiveDevLabel: "web",
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
 					SecurityContext: &apiv1.PodSecurityContext{
 						RunAsUser:  &runAsUser,
 						RunAsGroup: &runAsGroup,
@@ -60,10 +78,10 @@ services:
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						apiv1.Volume{
-							Name: "pvc-0-okteto-web-0",
+							Name: oktetoVolumName,
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: "pvc-0-okteto-web-0",
+									ClaimName: oktetoVolumName,
 									ReadOnly:  false,
 								},
 							},
@@ -74,13 +92,20 @@ services:
 								EmptyDir: &apiv1.EmptyDirVolumeSource{},
 							},
 						},
+						apiv1.Volume{
+							Name: oktetoSyncSecretVolume,
+							VolumeSource: apiv1.VolumeSource{
+								Secret: &apiv1.SecretVolumeSource{
+									SecretName: "okteto-web",
+								},
+							},
+						},
 					},
-					NodeName: "node",
 					InitContainers: []apiv1.Container{
 						apiv1.Container{
 							Name:            oktetoBinName,
 							Image:           "okteto/bin",
-							ImagePullPolicy: apiv1.PullAlways,
+							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
 								apiv1.VolumeMount{
@@ -100,14 +125,55 @@ services:
 							WorkingDir:      "/app",
 							VolumeMounts: []apiv1.VolumeMount{
 								apiv1.VolumeMount{
-									Name:      "pvc-0-okteto-web-0",
+									Name:      oktetoVolumName,
 									ReadOnly:  false,
 									MountPath: "/app",
+									SubPath:   "web/data-0",
 								},
 								apiv1.VolumeMount{
 									Name:      oktetoBinName,
 									ReadOnly:  false,
 									MountPath: "/var/okteto/bin",
+								},
+							},
+							LivenessProbe:  nil,
+							ReadinessProbe: nil,
+						},
+						apiv1.Container{
+							Name:            oktetoSyncContainer,
+							Image:           syncImageTag,
+							ImagePullPolicy: apiv1.PullIfNotPresent,
+							Env: []apiv1.EnvVar{
+								apiv1.EnvVar{
+									Name:  "MARKER_PATH",
+									Value: "/var/okteto/okteto.yml",
+								},
+							},
+							Resources: apiv1.ResourceRequirements{
+								Limits: apiv1.ResourceList{
+									apiv1.ResourceMemory: namespaces.LimitsSyncthingMemory,
+									apiv1.ResourceCPU:    namespaces.LimitsSyncthingCPU,
+								},
+							},
+							Ports: []apiv1.ContainerPort{
+								apiv1.ContainerPort{
+									ContainerPort: syncGUIPort,
+								},
+								apiv1.ContainerPort{
+									ContainerPort: syncTCPPort,
+								},
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								apiv1.VolumeMount{
+									Name:      oktetoSyncSecretVolume,
+									ReadOnly:  false,
+									MountPath: "/var/syncthing/secret/",
+								},
+								apiv1.VolumeMount{
+									Name:      oktetoVolumName,
+									ReadOnly:  false,
+									MountPath: "/var/okteto",
+									SubPath:   "web/data-0",
 								},
 							},
 							LivenessProbe:  nil,
@@ -121,15 +187,16 @@ services:
 	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
 	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
 	if string(marshalled1) != string(marshalled1OK) {
-		t.Fatalf("Wrong d1 generation.\nActual %s, \nExpected %s", string(marshalled1), string(marshalled1OK))
+		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
 	}
 
 	dev2 := dev.Services[0]
 	d2 := dev2.GevSandbox()
-	rule2 := dev2.ToTranslationRule(dev, d2, "node")
+	rule2 := dev2.ToTranslationRule(dev, d2)
 	tr2 := &model.Translation{
 		Interactive: false,
 		Name:        dev.Name,
+		Version:     model.TranslationVersion,
 		Deployment:  d2,
 		Rules:       []*model.TranslationRule{rule2},
 	}
@@ -141,35 +208,28 @@ services:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
-					Volumes: []apiv1.Volume{
-						apiv1.Volume{
-							Name: "pvc-0-okteto-web-0",
-							VolumeSource: apiv1.VolumeSource{
-								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: "pvc-0-okteto-web-0",
-									ReadOnly:  false,
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								apiv1.PodAffinityTerm{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											OktetoInteractiveDevLabel: "web",
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
 								},
 							},
 						},
-						apiv1.Volume{
-							Name: oktetoBinName,
-							VolumeSource: apiv1.VolumeSource{
-								EmptyDir: &apiv1.EmptyDirVolumeSource{},
-							},
-						},
 					},
-					NodeName: "node",
-					InitContainers: []apiv1.Container{
-						apiv1.Container{
-							Name:            oktetoBinName,
-							Image:           "okteto/bin",
-							ImagePullPolicy: apiv1.PullAlways,
-							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
-							VolumeMounts: []apiv1.VolumeMount{
-								apiv1.VolumeMount{
-									Name:      oktetoBinName,
-									MountPath: "/okteto/bin",
+					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					Volumes: []apiv1.Volume{
+						apiv1.Volume{
+							Name: oktetoVolumName,
+							VolumeSource: apiv1.VolumeSource{
+								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+									ClaimName: oktetoVolumName,
+									ReadOnly:  false,
 								},
 							},
 						},
@@ -183,15 +243,10 @@ services:
 							Args:            []string{},
 							VolumeMounts: []apiv1.VolumeMount{
 								apiv1.VolumeMount{
-									Name:      "pvc-0-okteto-web-0",
+									Name:      oktetoVolumName,
 									ReadOnly:  false,
 									MountPath: "/src",
-									SubPath:   "/worker",
-								},
-								apiv1.VolumeMount{
-									Name:      oktetoBinName,
-									ReadOnly:  false,
-									MountPath: "/var/okteto/bin",
+									SubPath:   "web/data-0",
 								},
 							},
 							LivenessProbe:  nil,
@@ -321,7 +376,7 @@ func Test_translateResources(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			translateResources(tt.args.c, tt.args.r)
+			TranslateResources(tt.args.c, tt.args.r)
 
 			a := tt.args.c.Resources.Requests[apiv1.ResourceMemory]
 			b := tt.expectedRequests[apiv1.ResourceMemory]
@@ -407,7 +462,7 @@ func Test_translateSecurityContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			translateSecurityContext(tt.c, tt.s)
+			TranslateSecurityContext(tt.c, tt.s)
 			if tt.c.SecurityContext == nil {
 				t.Fatal("SecurityContext was nil")
 			}

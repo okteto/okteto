@@ -20,16 +20,15 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
+	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
 
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -40,23 +39,20 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 // UpContext is the common context of all operations performed during
 // the up command
 type UpContext struct {
-	Context       context.Context
-	Cancel        context.CancelFunc
-	WG            *sync.WaitGroup
-	Dev           *model.Dev
-	Client        *kubernetes.Clientset
-	RestConfig    *rest.Config
-	DevPod        string
-	SyncPod       string
-	Node          string
-	DevForwarder  *forward.PortForwardManager
-	SyncForwarder *forward.PortForwardManager
-	Disconnect    chan struct{}
-	Running       chan error
-	Exit          chan error
-	Sy            *syncthing.Syncthing
-	ErrChan       chan error
-	success       bool
+	Context    context.Context
+	Cancel     context.CancelFunc
+	WG         *sync.WaitGroup
+	Dev        *model.Dev
+	Client     *kubernetes.Clientset
+	RestConfig *rest.Config
+	Pod        string
+	Forwarder  *forward.PortForwardManager
+	Disconnect chan struct{}
+	Running    chan error
+	Exit       chan error
+	Sy         *syncthing.Syncthing
+	ErrChan    chan error
+	success    bool
 }
 
 //Up starts a cloud dev environment
@@ -178,6 +174,11 @@ func (up *UpContext) Activate() {
 		up.Running = make(chan error, 1)
 		up.ErrChan = make(chan error, 1)
 
+		if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
+			up.Exit <- err
+			return
+		}
+
 		d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
 		create := false
 		if err != nil {
@@ -236,8 +237,9 @@ func (up *UpContext) Activate() {
 		}
 
 		up.updateStateFile(starting)
-		err = up.sync(d, devContainer)
-		if err != nil {
+
+		log.Info("create deployment secrets")
+		if err := secrets.Create(up.Dev, up.Client, up.Sy.GUIPasswordHash); err != nil {
 			up.Exit <- err
 			return
 		}
@@ -247,11 +249,18 @@ func (up *UpContext) Activate() {
 			up.Exit <- err
 			return
 		}
+		log.Success("Okteto Environment activated")
+
+		err = up.sync()
+		if err != nil {
+			up.Exit <- err
+			return
+		}
 
 		up.success = true
 		retry = true
 
-		printDisplayContext("Okteto Environment activated", up.Dev)
+		printDisplayContext("Files synchronized", up.Dev)
 
 		go func() {
 			up.Running <- up.runCommand()
@@ -268,7 +277,7 @@ func (up *UpContext) Activate() {
 		}
 
 		if prevError != nil {
-			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !pods.Exists(up.DevPod, up.Dev.Namespace, up.Client)) {
+			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !pods.Exists(up.Pod, up.Dev.Namespace, up.Client)) {
 				log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...\n")
 				up.shutdown()
 				continue
@@ -301,13 +310,68 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
-	err := up.startRemoteSyncthing(d, c)
+func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) error {
+	spinner := newSpinner("Activating your Okteto Environment...")
+	up.updateStateFile(activating)
+	spinner.start()
+	defer spinner.stop()
+
+	tr, err := deployments.GetTranslations(up.Dev, d, up.Client)
 	if err != nil {
 		return err
 	}
-	log.Success("Persistent volume provisioned")
 
+	if err := deployments.TraslateDevMode(tr, up.Dev.Namespace, up.Client); err != nil {
+		return err
+	}
+
+	for name := range tr {
+		if name == d.Name {
+			if err := deployments.Deploy(tr[name].Deployment, create, up.Client); err != nil {
+				return err
+			}
+		} else {
+			if err := deployments.Deploy(tr[name].Deployment, false, up.Client); err != nil {
+				return err
+			}
+		}
+	}
+	if create && len(up.Dev.Services) == 0 {
+		if err := services.Create(up.Dev, up.Client); err != nil {
+			return err
+		}
+	}
+
+	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client, true)
+	if err != nil {
+		return err
+	}
+
+	up.Pod = p.Name
+	sy, err := syncthing.New(up.Dev)
+	if err != nil {
+		return err
+	}
+	up.Sy = sy
+
+	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
+	for _, f := range up.Dev.Forward {
+		if err := up.Forwarder.Add(f.Local, f.Remote); err != nil {
+			return err
+		}
+	}
+	if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
+		return err
+	}
+	if err := up.Forwarder.Add(up.Sy.RemoteGUIPort, syncthing.GUIPort); err != nil {
+		return err
+	}
+	up.Forwarder.Start(up.Pod, up.Dev.Namespace)
+
+	return nil
+}
+
+func (up *UpContext) sync() error {
 	if err := up.startLocalSyncthing(); err != nil {
 		return err
 	}
@@ -316,51 +380,6 @@ func (up *UpContext) sync(d *appsv1.Deployment, c *apiv1.Container) error {
 		return err
 	}
 
-	log.Success("Files synchronized")
-	return nil
-}
-
-func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Container) error {
-	spinner := newSpinner("Provisioning your persistent volume...")
-	spinner.start()
-	up.updateStateFile(provisioning)
-
-	defer spinner.stop()
-
-	var err error
-	up.Sy, err = syncthing.New(up.Dev)
-	if err != nil {
-		return err
-	}
-
-	log.Info("create deployment secrets")
-	if err := secrets.Create(up.Dev, up.Client, up.Sy.GUIPasswordHash); err != nil {
-		return err
-	}
-
-	log.Info("deploying syncK8s")
-	if err := syncK8s.Deploy(up.Dev, d, c, up.Client); err != nil {
-		return err
-	}
-
-	log.Info("getting the sync pod")
-	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoSyncLabel, up.Client, true)
-	if err != nil {
-		return err
-	}
-
-	up.SyncPod = p.Name
-	up.Node = p.Spec.NodeName
-
-	up.SyncForwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
-	if err := up.SyncForwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
-		return err
-	}
-	if err := up.SyncForwarder.Add(up.Sy.RemoteGUIPort, syncthing.GUIPort); err != nil {
-		return err
-	}
-
-	up.SyncForwarder.Start(up.SyncPod, up.Dev.Namespace)
 	return nil
 }
 
@@ -432,56 +451,6 @@ func (up *UpContext) synchronizeFiles() error {
 	return up.Sy.Restart(up.Context, up.WG)
 }
 
-func (up *UpContext) devMode(isRetry bool, ns *apiv1.Namespace, d *appsv1.Deployment, create bool) error {
-	spinner := newSpinner("Activating your Okteto Environment...")
-	up.updateStateFile(activating)
-	spinner.start()
-	defer spinner.stop()
-
-	tr, err := deployments.GetTranslations(up.Dev, d, up.Node, up.Client)
-	if err != nil {
-		return err
-	}
-
-	if err := deployments.TraslateDevMode(tr, ns, up.Client); err != nil {
-		return err
-	}
-
-	for name := range tr {
-		if name == d.Name {
-			if err := deployments.Deploy(tr[name].Deployment, create, up.Client); err != nil {
-				return err
-			}
-		} else {
-			if err := deployments.Deploy(tr[name].Deployment, false, up.Client); err != nil {
-				return err
-			}
-		}
-	}
-	if create && len(up.Dev.Services) == 0 {
-		if err := services.Create(up.Dev, up.Client); err != nil {
-			return err
-		}
-	}
-
-	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client, true)
-	if err != nil {
-		return err
-	}
-
-	up.DevPod = p.Name
-
-	up.DevForwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
-	for _, f := range up.Dev.Forward {
-		if err := up.DevForwarder.Add(f.Local, f.Remote); err != nil {
-			return err
-		}
-	}
-	up.DevForwarder.Start(up.DevPod, up.Dev.Namespace)
-
-	return nil
-}
-
 func (up *UpContext) runCommand() error {
 	in := strings.NewReader("\n")
 	if err := exec.Exec(
@@ -489,7 +458,7 @@ func (up *UpContext) runCommand() error {
 		up.Client,
 		up.RestConfig,
 		up.Dev.Namespace,
-		up.DevPod,
+		up.Pod,
 		up.Dev.Container,
 		false,
 		in,
@@ -508,7 +477,7 @@ func (up *UpContext) runCommand() error {
 		up.Client,
 		up.RestConfig,
 		up.Dev.Namespace,
-		up.DevPod,
+		up.Pod,
 		up.Dev.Container,
 		true,
 		os.Stdin,
@@ -537,11 +506,8 @@ func (up *UpContext) shutdown() {
 	}()
 
 	go func() {
-		if up.DevForwarder != nil {
-			up.DevForwarder.Stop()
-		}
-		if up.SyncForwarder != nil {
-			up.SyncForwarder.Stop()
+		if up.Forwarder != nil {
+			up.Forwarder.Stop()
 		}
 	}()
 

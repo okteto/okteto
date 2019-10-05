@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	oktetoPodNameTemplate     = "%s-0"
 	oktetoStatefulSetTemplate = "okteto-%s"
-	oktetoVolumeNameTemplate  = "pvc-%d"
+	//OktetoVolumeName name of the okteto persistent volume
+	OktetoVolumeName          = "okteto"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 
@@ -28,6 +28,9 @@ const (
 
 	//DefaultImage default image for sandboxes
 	DefaultImage = "okteto/desk:latest"
+
+	//TranslationVersion version of the translation schema
+	TranslationVersion = "1.0"
 )
 
 var (
@@ -280,24 +283,6 @@ func (dev *Dev) GetStatefulSetName() string {
 	return n
 }
 
-//GetPodName returns the syncthing statefulset pod name for a given dev environment
-func (dev *Dev) GetPodName() string {
-	n := dev.GetStatefulSetName()
-	return fmt.Sprintf(oktetoPodNameTemplate, n)
-}
-
-//GetVolumeTemplateName returns the data volume name for a given dev environment
-func (dev *Dev) GetVolumeTemplateName(i int) string {
-	return fmt.Sprintf(oktetoVolumeNameTemplate, i)
-}
-
-//GetVolumeName returns the data volume name for a given dev environment
-func (dev *Dev) GetVolumeName(i int) string {
-	volumeName := dev.GetVolumeTemplateName(i)
-	podName := dev.GetPodName()
-	return fmt.Sprintf("%s-%s", volumeName, podName)
-}
-
 // LabelsSelector returns the labels of a Deployment as a k8s selector
 func (dev *Dev) LabelsSelector() string {
 	labels := ""
@@ -311,10 +296,17 @@ func (dev *Dev) LabelsSelector() string {
 	return labels
 }
 
+//FullSubPath returns the full subpath in the okteto volume
+func (dev *Dev) FullSubPath(i int, subPath string) string {
+	if dev.SubPath == "" {
+		return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i))
+	}
+	return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i), dev.SubPath)
+}
+
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName string) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationRule {
 	rule := &TranslationRule{
-		Node:            nodeName,
 		Container:       dev.Container,
 		Image:           dev.Image,
 		ImagePullPolicy: dev.ImagePullPolicy,
@@ -322,9 +314,9 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName stri
 		WorkDir:         dev.WorkDir,
 		Volumes: []VolumeMount{
 			VolumeMount{
-				Name:      main.GetVolumeName(0),
+				Name:      oktetoVolumeName,
 				MountPath: dev.MountPath,
-				SubPath:   dev.SubPath,
+				SubPath:   main.FullSubPath(0, dev.SubPath),
 			},
 		},
 		SecurityContext: dev.SecurityContext,
@@ -347,8 +339,9 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName stri
 		rule.Volumes = append(
 			rule.Volumes,
 			VolumeMount{
-				Name:      main.GetVolumeName(i + 1),
+				Name:      oktetoVolumeName,
 				MountPath: v,
+				SubPath:   main.FullSubPath(i+1, main.SubPath),
 			},
 		)
 	}

@@ -27,9 +27,8 @@ services:
 	}
 
 	d1 := dev.GevSandbox()
-	rule1 := dev.ToTranslationRule(dev, d1, "node")
+	rule1 := dev.ToTranslationRule(dev, d1)
 	rule1OK := &TranslationRule{
-		Node:            "node",
 		Container:       "dev",
 		Image:           "web:latest",
 		ImagePullPolicy: apiv1.PullNever,
@@ -43,8 +42,9 @@ services:
 		},
 		Volumes: []VolumeMount{
 			VolumeMount{
-				Name:      "pvc-0-okteto-web-0",
+				Name:      oktetoVolumeName,
 				MountPath: "/app",
+				SubPath:   "web/data-0",
 			},
 		},
 	}
@@ -57,9 +57,8 @@ services:
 
 	dev2 := dev.Services[0]
 	d2 := dev2.GevSandbox()
-	rule2 := dev2.ToTranslationRule(dev, d2, "node")
+	rule2 := dev2.ToTranslationRule(dev, d2)
 	rule2OK := &TranslationRule{
-		Node:            "node",
 		Container:       "dev",
 		Image:           "worker:latest",
 		ImagePullPolicy: apiv1.PullIfNotPresent,
@@ -73,8 +72,9 @@ services:
 		},
 		Volumes: []VolumeMount{
 			VolumeMount{
-				Name:      "pvc-0-okteto-web-0",
+				Name:      oktetoVolumeName,
 				MountPath: "/src",
+				SubPath:   "web/data-0",
 			},
 		},
 	}
