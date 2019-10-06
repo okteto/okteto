@@ -8,8 +8,6 @@
 [license]: https://github.com/okteto/okteto/blob/master/LICENSE
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3055/badge)](https://bestpractices.coreinfrastructure.org/projects/3055)
 
-Okteto lets you launch ephemeral development environments in Kubernetes. You can iterate in you application's source code locally and see the results immediately reflected in your Kubernetes cluster. No build, push or deploy required.
-
 ## Overview
 
 Kubernetes has made it very easy to deploy applications to the cloud at a higher scale than ever, but the development practices have not evolved at the same speed as application deployment patterns.
