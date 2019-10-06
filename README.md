@@ -40,12 +40,12 @@ Okteto is powered by [Syncthing](https://github.com/syncthing/syncthing). It wil
 Files are synchronized both ways. If you edit a file directly in your remote development environment, the changes will be reflected locally as well. Great for keeping your `package-lock.json` or `requirements.txt` up to date.
 
 ### Keep your own tools
-No need to change IDEs, tasks or deployment scripts. Okteto easily integrates and augments all of your existing tools.
+No need to change IDEs, tasks or deployment scripts. Okteto easily integrates and augments with your existing tools.
 
 Okteto is compatible with any Kubernetes cluster. From Minikube and k3s all the way to GKE, Digital Ocean or Civio.
 
 ## Learn more
-- [How does Okteto works?](docs/how-does-it-work.md).
+- [How does Okteto work?](docs/how-does-it-work.md)
 - Get started following our [installation guides](docs/installation.md).
 - Check the Okteto [CLI reference](https://okteto.com/docs/reference/cli) and the [okteto.yml reference](https://okteto.com/docs/reference/manifest).
 - Explore our [samples] to learn more about the power of Okteto (https://github.com/okteto/samples).
