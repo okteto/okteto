@@ -16,6 +16,8 @@ Kubernetes has made it very easy to deploy applications to the cloud at a higher
 
 Today, most developers try to either run parts of the infrastructure locally, or just test these integrations directly in the cluster via CI jobs or the "docker build, docker push, kubectl apply" cycle. It works, but this workflow is painful and incredibly slow.
 
+Okteto makes this cycle a lot faster by letting you launch your development environment directly in your Kubernetes cluster.
+
 ## Features
 
 ### Development environments on demand 
@@ -26,7 +28,9 @@ Your development environment is defined in a [simple yaml manifest](https://okte
  Check in your `okteto.yml` into your repo and make collaboration easier than ever. `git clone`, `okteto up` and you're ready to go.
 
 ### Faster iteration 
-Okteto detects your code changes, synchronizes your code to your development environment and restarts your processes. You don't need to build a container or redeploy your application to see your changes.
+Okteto detects your code changes, synchronizes your code to your development environment. Integrate this with existing compilers and hot reloaders to automatically see your changes in seconds.
+
+Use Okteto while you develop so you don't have to build your containers or redeploy your application every few seconds to validate your changes.
 
 ### File synchronization 
 Okteto is powered by [Syncthing](https://github.com/syncthing/syncthing). It will detect code changes instantly and automatically synchronize your file changes.
