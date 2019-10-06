@@ -25,25 +25,21 @@ Your development environment is defined in a [simple yaml manifest](https://okte
 - Run `okteto init` to inspect your project and generate your own config file 
 - Run `okteto up` to launch your development environment in seconds. 
 
- Check in your `okteto.yml` into your repo and make collaboration easier than ever. `git clone`, `okteto up` and you're ready to go.
-
-### Faster iteration 
-Okteto detects your code changes, synchronizes your code to your development environment. Integrate this with existing compilers and hot reloaders to automatically see your changes in seconds.
-
-Use Okteto while you develop so you don't have to build your containers or redeploy your application every few seconds to validate your changes.
-
-### File synchronization 
-Okteto is powered by [Syncthing](https://github.com/syncthing/syncthing). It will detect code changes instantly and automatically synchronize your file changes.
-
-Your files are stored in a persistent volume, allowing you to delete and relaunch your development environments without having to wait for all your files to synchronize every time.  
-
-Files are synchronized both ways. If you edit a file directly in your remote development environment, the changes will be reflected locally as well. Great for keeping your `package-lock.json` or `requirements.txt` up to date.
+Check in your `okteto.yml` into your repo and make collaboration easier than ever. `git clone`, `okteto up` and you're ready to go.
 
 ### Developer mode 
 
 You can swap your development environment with an existing Kubernetes deployment, and develop directly in a production-like environment. This helps eliminate integration issues since you're developing as if your were in production.
 
 Okteto supports applications with one or with multiple services.
+
+### Faster iteration
+
+Okteto detects your code changes, synchronizes your code to your development environment. Integrate this with existing compilers and hot reloaders to automatically see your changes in seconds.
+
+Okteto is powered by [Syncthing](https://github.com/syncthing/syncthing). It will detect code changes instantly and automatically synchronize your file changes. Your files will be stored in a persistent volume, allowing you to delete and relaunch your development environments without having to wait for all your files to synchronize every time.  
+
+Files are synchronized both ways. If you edit a file directly in your remote development environment, the changes will be reflected locally as well. Great for keeping your `package-lock.json` or `requirements.txt` up to date.
 
 ### Keep your own tools
 No need to change IDEs, tasks or deployment scripts. Okteto easily integrates and augments all of your existing tools.
