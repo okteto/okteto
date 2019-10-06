@@ -25,26 +25,24 @@ Your development environment is defined in a [simple yaml manifest](https://okte
 
 Check in your `okteto.yml` into your repo and make collaboration easier than ever. `git clone`, `okteto up` and you're ready to go.
 
-### Developer mode 
+### Developer Mode 
 
 You can swap your development environment with an existing Kubernetes deployment, and develop directly in a production-like environment. This helps eliminate integration issues since you're developing as if your were in production.
 
 Okteto supports applications with one or with multiple services.
 
-### Faster iteration
+### Kubernetes Live Development
 
-Okteto detects your code changes, synchronizes your code to your development environment. Integrate this with existing compilers and hot reloaders to automatically see your changes in seconds.
+Okteto detects your code changes, synchronizes your code to your development environment. Integrate this with existing compilers and hot reloaders to automatically see your changes in seconds. No commit, build, push or deploy required.
 
-Okteto is powered by [Syncthing](https://github.com/syncthing/syncthing). It will detect code changes instantly and automatically synchronize your file changes. Your files will be stored in a persistent volume, allowing you to delete and relaunch your development environments without having to wait for all your files to synchronize every time.  
+Okteto is powered by [Syncthing](https://github.com/syncthing/syncthing). It will detect code changes instantly and automatically synchronize your file changes. Files are synchronized both ways. If you edit a file directly in your remote development environment, the changes will be reflected locally as well. Great for keeping your `package-lock.json` or `requirements.txt` up to date.
 
-Files are synchronized both ways. If you edit a file directly in your remote development environment, the changes will be reflected locally as well. Great for keeping your `package-lock.json` or `requirements.txt` up to date.
-
-### Keep your own tools
+### Keep Your Own Tools
 No need to change IDEs, tasks or deployment scripts. Okteto easily integrates and augments with your existing tools.
 
-Okteto is compatible with any Kubernetes cluster. From Minikube and k3s all the way to GKE, Digital Ocean or Civio.
+Okteto is compatible with any Kubernetes cluster, local or remote. If you can run `kubectl apply` you can use Okteto. Our community uses Okteto in all major Kubernetes distros, from Minikube and k3s all the way to GKE, Digital Ocean, AKS, EKS and Civio.
 
-## Learn more
+## Learn More
 - [How does Okteto work?](docs/how-does-it-work.md)
 - Get started following our [installation guides](docs/installation.md).
 - Check the Okteto [CLI reference](https://okteto.com/docs/reference/cli) and the [okteto.yml reference](https://okteto.com/docs/reference/manifest).
