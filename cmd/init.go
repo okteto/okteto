@@ -135,11 +135,13 @@ func askForImage(language, defaultImage string) string {
 		image = ""
 	}
 
-	if image != "" {
-		if _, ok := wrongImageNames[strings.ToUpper(image)]; ok {
-			log.Yellow("Ignoring docker image name: '%s', will use '%s' instead", image, defaultImage)
-			image = defaultImage
-		}
+	if image == "" {
+		return defaultImage
+	}
+
+	if _, ok := wrongImageNames[strings.ToUpper(image)]; ok {
+		log.Yellow("Ignoring docker image name: '%s', will use '%s' instead", image, defaultImage)
+		image = defaultImage
 	}
 
 	return image
