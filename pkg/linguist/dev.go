@@ -113,7 +113,6 @@ func init() {
 
 	languageDefaults[csharp] = languageDefault{
 		image:   "mcr.microsoft.com/dotnet/core/sdk",
-		path:    "/usr/src/app",
 		command: []string{"bash"},
 		environment: []model.EnvVar{
 			{
