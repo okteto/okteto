@@ -60,7 +60,7 @@ func Init(level logrus.Level) {
 		FullTimestamp: true,
 	})
 
-	logPath := filepath.Join(config.GetHome(), fmt.Sprintf("%s%s", config.GetBinaryName(), ".log"))
+	logPath := filepath.Join(config.GetHome(), fmt.Sprintf("okteto.log"))
 	rolling := getRollingLog(logPath)
 	fileLogger.SetOutput(rolling)
 	fileLogger.SetLevel(logrus.DebugLevel)
