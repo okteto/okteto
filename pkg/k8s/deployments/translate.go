@@ -218,18 +218,6 @@ func translateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 	}
 
 	for _, v := range rule.Volumes {
-		found := false
-		for j, vm := range c.VolumeMounts {
-			if vm.Name == v.Name {
-				c.VolumeMounts[j].MountPath = v.MountPath
-				c.VolumeMounts[j].SubPath = v.SubPath
-				found = true
-				break
-			}
-		}
-		if found {
-			continue
-		}
 		c.VolumeMounts = append(
 			c.VolumeMounts,
 			apiv1.VolumeMount{
