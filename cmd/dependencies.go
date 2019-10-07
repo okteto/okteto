@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 
@@ -11,16 +13,18 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/syncthing"
 
+	"net/url"
+
 	getter "github.com/hashicorp/go-getter"
 )
 
 var (
 	// SyncthingURL is the path of the syncthing binary.
 	SyncthingURL = map[string]string{
-		"linux":   "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Linux-x86_64",
-		"arm64":   "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Linux-arm64",
-		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Darwin-x86_64",
-		"windows": "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Windows-x86_64",
+		"linux":   "https://github.com/syncthing/syncthing/releases/download/v1.3.0/syncthing-linux-amd64-v1.3.0.tar.gz",
+		"arm64":   "https://github.com/syncthing/syncthing/releases/download/v1.3.0/syncthing-linux-arm64-v1.3.0.tar.gz",
+		"darwin":  "https://github.com/syncthing/syncthing/releases/download/v1.3.0/syncthing-macos-amd64-v1.3.0.tar.gz",
+		"windows": "https://github.com/syncthing/syncthing/releases/download/v1.3.0/syncthing-windows-amd64-v1.3.0.zip",
 	}
 
 	syncthingVersion = semver.MustParse("1.3.0")
@@ -64,15 +68,15 @@ func getCurrentSyncthingVersion() *semver.Version {
 	return s
 }
 
-func getSyncthingURL() (string, error) {
+func getSyncthingURL(os string) (*url.URL, error) {
 	log.Debugf("downloading syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
 
-	src, ok := SyncthingURL[runtime.GOOS]
+	src, ok := SyncthingURL[os]
 	if !ok {
-		return "", fmt.Errorf("%s is not a supported platform", runtime.GOOS)
+		return nil, fmt.Errorf("%s is not a supported platform", runtime.GOOS)
 	}
 
-	if runtime.GOOS == "linux" {
+	if os == "linux" {
 		switch runtime.GOARCH {
 		case "arm":
 			src = SyncthingURL["arm"]
@@ -81,40 +85,54 @@ func getSyncthingURL() (string, error) {
 		}
 	}
 
-	return src, nil
+	return url.Parse(src)
 }
 
 func downloadSyncthing() error {
-	opts := []getter.ClientOption{getter.WithProgress(defaultProgressBar)}
-	src, err := getSyncthingURL()
+	opts := []getter.ClientOption{
+		getter.WithProgress(defaultProgressBar),
+	}
+
+	url, err := getSyncthingURL(runtime.GOOS)
 	if err != nil {
 		return err
 	}
 
+	tmp, err := ioutil.TempDir("", "")
+	if err != nil {
+		return err
+	}
+
+	defer os.RemoveAll(tmp)
+
 	client := &getter.Client{
-		Src:     src,
-		Dst:     syncthing.GetInstallPath(),
-		Mode:    getter.ClientModeFile,
+		Src:     url.String(),
+		Dst:     tmp,
+		Mode:    getter.ClientModeDir,
 		Options: opts,
 	}
 
-	log.Infof("downloading syncthing %s from %s", syncthingVersion, client.Src)
-	os.Remove(client.Dst)
+	log.Debugf("downloading syncthing %s from %s to %s", syncthingVersion, client.Src, client.Dst)
 
 	if err := client.Get(); err != nil {
 		log.Infof("failed to download syncthing from %s: %s", client.Src, err)
-		if e := os.Remove(client.Dst); e != nil {
-			log.Infof("failed to delete partially downloaded %s: %s", client.Dst, e.Error())
-		}
-
 		return err
 	}
 
-	if err := os.Chmod(client.Dst, 0700); err != nil {
+	subdir, err := getter.SubdirGlob(client.Dst, "*")
+	if err != nil {
+		return fmt.Errorf("syncthing download is malformed: %w", err)
+	}
+
+	if err := os.Rename(filepath.Join(subdir, syncthing.GetBinaryName()), syncthing.GetInstallPath()); err != nil {
+		return fmt.Errorf("failed to extract the syncthing binary to %s: %w", syncthing.GetInstallPath(), err)
+	}
+
+	if err := os.Chmod(syncthing.GetInstallPath(), 0700); err != nil {
 		return err
 	}
 
-	log.Infof("downloaded syncthing %s to %s", syncthingVersion, client.Dst)
+	log.Infof("downloaded syncthing %s to %s", syncthingVersion, syncthing.GetInstallPath())
 
 	return nil
 }

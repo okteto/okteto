@@ -165,7 +165,7 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 		return err
 	}
 
-	if process.Executable() != getBinaryName() {
+	if process.Executable() != GetBinaryName() {
 		log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
 		return nil
 	}
@@ -506,15 +506,16 @@ func Exists(home string) bool {
 
 	log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
 
-	return process.Executable() == getBinaryName()
+	return process.Executable() == GetBinaryName()
 }
 
 // GetInstallPath returns the expected install path for syncthing
 func GetInstallPath() string {
-	return filepath.Join(config.GetHome(), getBinaryName())
+	return filepath.Join(config.GetHome(), GetBinaryName())
 }
 
-func getBinaryName() string {
+// GetBinaryName returns the syncthing binary name
+func GetBinaryName() string {
 	if runtime.GOOS == "windows" {
 		return "syncthing.exe"
 	}
