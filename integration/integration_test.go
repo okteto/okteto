@@ -12,11 +12,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 	"text/template"
+	"time"
 
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/cmd"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 )
 
 var (
@@ -89,7 +89,7 @@ func TestDownloadSyncthing(t *testing.T) {
 	var tests = []struct {
 		os string
 	}{
-		{os: "windows"}, {os: "darwin"}, {os: "linux"},
+		{os: "windows"}, {os: "darwin"}, {os: "linux"}, {os: "arm64"},
 	}
 
 	for _, tt := range tests {
@@ -318,7 +318,7 @@ func createNamespace(namespace, oktetoPath string) error {
 func deleteNamespace(oktetoPath, namespace string) error {
 	log.Printf("okteto delete namespace %s", namespace)
 	deleteCMD := exec.Command(oktetoPath, "delete", "namespace", namespace)
-	o, err := deleteCMD.CombinedOutput(); 
+	o, err := deleteCMD.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
 	}
@@ -329,7 +329,7 @@ func deleteNamespace(oktetoPath, namespace string) error {
 func down(name, manifestPath, oktetoPath string) error {
 	log.Printf("okteto down -f %s -v", manifestPath)
 	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
-	
+
 	o, err := downCMD.CombinedOutput()
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {

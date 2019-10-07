@@ -18,7 +18,7 @@ import (
 
 const (
 	oktetoSyncLabel    = "syncthing.okteto.com"
-	syncImageTag       = "okteto/syncthing:1.2.2"
+	syncImageTag       = "okteto/syncthing:1.3.0"
 	syncTCPPort        = 22000
 	syncGUIPort        = 8384
 	oktetoContainer    = "okteto"
