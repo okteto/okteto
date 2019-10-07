@@ -1,7 +1,6 @@
 package linguist
 
 import (
-	"os"
 	"sort"
 	"strings"
 
@@ -24,6 +23,7 @@ const (
 	python     = "python"
 	gradle     = "gradle"
 	maven      = "maven"
+	java       = "java"
 	ruby       = "ruby"
 
 	// Unrecognized is the option returned when the linguist couldn't detect a language
@@ -133,7 +133,8 @@ func GetSupportedLanguages() []string {
 
 // GetDevConfig returns the default dev for the specified language
 func GetDevConfig(language string) *model.Dev {
-	vals := languageDefaults[normalizeLanguage(language)]
+	n := normalizeLanguage(language)
+	vals := languageDefaults[n]
 	dev := &model.Dev{
 		Image:           vals.image,
 		WorkDir:         vals.path,
@@ -156,13 +157,16 @@ func normalizeLanguage(language string) string {
 		return javascript
 	case "jsx":
 		return javascript
+	case "node":
+		return javascript
 	case "python":
 		return python
 	case "java":
-		if _, err := os.Stat("pom.xml"); !os.IsNotExist(err) {
-			return maven
-		}
 		return gradle
+	case "gradle":
+		return gradle
+	case "maven":
+		return maven
 	case "ruby":
 		return ruby
 	case "go":
