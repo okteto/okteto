@@ -42,7 +42,7 @@ services:
 		},
 		Volumes: []VolumeMount{
 			VolumeMount{
-				Name:      oktetoVolumeName,
+				Name:      OktetoVolumeName,
 				MountPath: "/app",
 				SubPath:   "web/data-0",
 			},
@@ -72,7 +72,7 @@ services:
 		},
 		Volumes: []VolumeMount{
 			VolumeMount{
-				Name:      oktetoVolumeName,
+				Name:      OktetoVolumeName,
 				MountPath: "/src",
 				SubPath:   "web/data-0",
 			},
