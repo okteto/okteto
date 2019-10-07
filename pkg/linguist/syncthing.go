@@ -304,6 +304,8 @@ func init() {
 /out
 /bin
 /obj/Debug
+/obj/Release
+/core.*.*.*
 `)
 
 }
