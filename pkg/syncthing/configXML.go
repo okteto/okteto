@@ -39,6 +39,8 @@ const configXML = `<configuration version="29">
 <gui enabled="true" tls="false" debugging="false">
     <address>{{.GUIAddress}}</address>
     <apikey>{{.APIKey}}</apikey>
+    <user>okteto</user>
+    <password>{{.GUIPasswordHash}}</password>
     <theme>default</theme>
 </gui>
 <ldap></ldap>

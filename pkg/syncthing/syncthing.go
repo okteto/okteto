@@ -21,8 +21,10 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"golang.org/x/crypto/bcrypt"
 
 	ps "github.com/mitchellh/go-ps"
+	uuid "github.com/satori/go.uuid"
 )
 
 var (
@@ -52,6 +54,8 @@ const (
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
 	APIKey           string
+	GUIPassword      string
+	GUIPasswordHash  string
 	binPath          string
 	Client           *http.Client
 	cmd              *exec.Cmd
@@ -113,8 +117,17 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		return nil, err
 	}
 
+	pwd := uuid.NewV4().String()
+	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), 0)
+	if err != nil {
+		log.Infof("couldn't hash the password %s", err)
+		hash = []byte("")
+	}
+
 	s := &Syncthing{
 		APIKey:           "cnd",
+		GUIPassword:      pwd,
+		GUIPasswordHash:  string(hash),
 		binPath:          fullPath,
 		Client:           NewAPIClient(),
 		Dev:              dev,
@@ -230,7 +243,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	log.Infof("syncthing running on http://%s and tcp://%s", s.GUIAddress, s.ListenAddress)
+	log.Infof("syncthing running on http://%s and tcp://%s with password '%s'", s.GUIAddress, s.ListenAddress, s.GUIPassword)
 
 	wg.Add(1)
 	go func() {
