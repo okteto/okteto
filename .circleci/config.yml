@@ -49,7 +49,7 @@ jobs:
           paths:
             - ~/.cache/go-build
       - store_artifacts:
-          path: /home/circleci/.okteto/okteto.log
+          path: /root/.okteto/okteto.log
           
   mock-publish-github-release:
     docker:
