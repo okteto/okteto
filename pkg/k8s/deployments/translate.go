@@ -39,7 +39,7 @@ var (
 	devTerminationGracePeriodSeconds int64
 )
 
-func translate(t *model.Translation, ns string, c *kubernetes.Clientset) error {
+func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		if devContainer == nil {
@@ -60,7 +60,7 @@ func translate(t *model.Translation, ns string, c *kubernetes.Clientset) error {
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
 
-	if c != nil && namespaces.IsOktetoNamespace(ns, c) {
+	if c != nil && namespaces.IsOktetoNamespace(ns) {
 		_, v := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
 		if !v {
 			commonTranslation(t)

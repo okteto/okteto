@@ -161,6 +161,17 @@ func (up *UpContext) Activate() {
 		up.Dev.Namespace = namespace
 	}
 
+	ns, err := namespaces.Get(up.Dev.Namespace, up.Client)
+	if err != nil {
+		up.Exit <- err
+		return
+	}
+
+	if !namespaces.IsOktetoAllowed(ns) {
+		up.Exit <- fmt.Errorf("`okteto up` is not allowed in this namespace")
+		return
+	}
+
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		up.Disconnect = make(chan struct{}, 1)
@@ -201,7 +212,7 @@ func (up *UpContext) Activate() {
 			create = true
 		}
 
-		if namespaces.IsOktetoNamespace(up.Dev.Namespace, up.Client) {
+		if namespaces.IsOktetoNamespace(ns) {
 			if err := namespaces.CheckAvailableResources(up.Dev, create, d, up.Client); err != nil {
 				up.Exit <- err
 				return
@@ -231,7 +242,7 @@ func (up *UpContext) Activate() {
 			return
 		}
 
-		err = up.devMode(retry, d, create)
+		err = up.devMode(retry, ns, d, create)
 		if err != nil {
 			up.Exit <- err
 			return
@@ -420,7 +431,7 @@ func (up *UpContext) synchronizeFiles() error {
 	return up.Sy.Restart(up.Context, up.WG)
 }
 
-func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) error {
+func (up *UpContext) devMode(isRetry bool, ns *apiv1.Namespace, d *appsv1.Deployment, create bool) error {
 	spinner := newSpinner("Activating your Okteto Environment...")
 	up.updateStateFile(activating)
 	spinner.start()
@@ -431,7 +442,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		return err
 	}
 
-	if err := deployments.TraslateDevMode(tr, up.Dev.Namespace, up.Client); err != nil {
+	if err := deployments.TraslateDevMode(tr, ns, up.Client); err != nil {
 		return err
 	}
 
