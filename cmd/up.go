@@ -29,6 +29,7 @@ import (
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -310,7 +311,7 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) error {
+func (up *UpContext) devMode(isRetry bool, ns *apiv1.Namespace, d *appsv1.Deployment, create bool) error {
 	spinner := newSpinner("Activating your Okteto Environment...")
 	up.updateStateFile(activating)
 	spinner.start()
@@ -321,7 +322,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		return err
 	}
 
-	if err := deployments.TraslateDevMode(tr, up.Dev.Namespace, up.Client); err != nil {
+	if err := deployments.TraslateDevMode(tr, ns, up.Client); err != nil {
 		return err
 	}
 

@@ -19,7 +19,7 @@ import (
 const (
 	oktetoStatefulSetTemplate = "okteto-%s"
 	//OktetoVolumeName name of the okteto persistent volume
-	OktetoVolumeName          = "okteto"
+	OktetoVolumeName = "okteto"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 
@@ -314,7 +314,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationR
 		WorkDir:         dev.WorkDir,
 		Volumes: []VolumeMount{
 			VolumeMount{
-				Name:      oktetoVolumeName,
+				Name:      OktetoVolumeName,
 				MountPath: dev.MountPath,
 				SubPath:   main.FullSubPath(0, dev.SubPath),
 			},
@@ -339,7 +339,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationR
 		rule.Volumes = append(
 			rule.Volumes,
 			VolumeMount{
-				Name:      oktetoVolumeName,
+				Name:      OktetoVolumeName,
 				MountPath: v,
 				SubPath:   main.FullSubPath(i+1, main.SubPath),
 			},
