@@ -18,6 +18,7 @@ type Translation struct {
 
 //TranslationRule represents how to apply a container translation in a deployment
 type TranslationRule struct {
+	Node            string               `json:"node,omitempty"`
 	Container       string               `json:"container,omitempty"`
 	Image           string               `json:"image,omitempty"`
 	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
