@@ -8,6 +8,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	apiv1 "k8s.io/api/core/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -101,7 +102,7 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 }
 
 //TraslateDevMode translates the deployment manifests to put them in dev mode
-func TraslateDevMode(tr map[string]*model.Translation, ns string, c *kubernetes.Clientset) error {
+func TraslateDevMode(tr map[string]*model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
 	for _, t := range tr {
 		err := translate(t, ns, c)
 		if err != nil {
