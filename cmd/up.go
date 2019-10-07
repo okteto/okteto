@@ -239,6 +239,12 @@ func (up *UpContext) Activate() {
 
 		up.updateStateFile(starting)
 
+		up.Sy, err = syncthing.New(up.Dev)
+		if err != nil {
+			up.Exit <- err
+			return
+		}
+
 		log.Info("create deployment secrets")
 		if err := secrets.Create(up.Dev, up.Client, up.Sy.GUIPasswordHash); err != nil {
 			up.Exit <- err
@@ -349,11 +355,6 @@ func (up *UpContext) devMode(isRetry bool, ns *apiv1.Namespace, d *appsv1.Deploy
 	}
 
 	up.Pod = p.Name
-	sy, err := syncthing.New(up.Dev)
-	if err != nil {
-		return err
-	}
-	up.Sy = sy
 
 	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
 	for _, f := range up.Dev.Forward {
