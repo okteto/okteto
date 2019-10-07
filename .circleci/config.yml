@@ -9,7 +9,7 @@ jobs:
       - checkout
       - restore_cache: 
           keys:
-            - v1-pkg-cache
+            - v2-pkg-cache
       - run: make test
       - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
       - run: env VERSION_STRING=$CIRCLE_TAG make latest
@@ -18,7 +18,7 @@ jobs:
           paths:
             - bin
       - save_cache:
-          key: v1-pkg-cache
+          key: v2-pkg-cache
           paths:
             - ~/.cache/go-build
       - store_artifacts:
@@ -31,7 +31,7 @@ jobs:
       - checkout
       - restore_cache: 
           keys:
-            - v1-pkg-cache
+            - v2-pkg-cache
       - attach_workspace:
           at: ./artifacts
       - run: 
@@ -45,7 +45,7 @@ jobs:
             echo $HOME
             make integration
       - save_cache:
-          key: v1-pkg-cache
+          key: v2-pkg-cache
           paths:
             - ~/.cache/go-build
       - store_artifacts:
