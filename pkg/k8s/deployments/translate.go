@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
@@ -26,13 +25,11 @@ const (
 	oktetoVolumName            = "okteto"
 
 	//syncthing
-	syncImageTag             = "okteto/syncthing:1.3.0"
+	oktetoBinImageTag        = "okteto/bin:1.0.0"
 	syncTCPPort              = 22000
 	syncGUIPort              = 8384
-	oktetoSyncContainer      = "okteto"
 	oktetoSyncSecretVolume   = "okteto-sync-secret"
 	oktetoSyncSecretTemplate = "okteto-%s"
-	oktetoSyncMount          = "/var/okteto"
 
 	//OktetoVersion represents the current dev data version
 	OktetoVersion = "1.0"
@@ -100,23 +97,21 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
-
+	if !t.Interactive {
+		TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
+	} else {
+		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
+	}
+	TranslateOktetoVolume(&t.Deployment.Spec.Template.Spec)
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		TranslateDevContainer(devContainer, rule)
-		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
-		if t.Interactive {
+		if rule.Marker != "" {
 			TranslateOktetoBinVolumeMounts(devContainer)
+			TranslateOktetoInitBinContainer(&t.Deployment.Spec.Template.Spec)
+			TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
 		}
-	}
-	if t.Interactive {
-		TranslateOktetoInitBinContainer(&t.Deployment.Spec.Template.Spec)
-		TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
-		TranslateOktetoSyncContainer(&t.Deployment.Spec.Template.Spec, t.Name, t.Marker)
-		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
-	} else {
-		TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)		
 	}
 	return nil
 }
@@ -190,7 +185,7 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	}
 
 	TranslateResources(c, rule.Resources)
-	TranslateEnvVars(c, rule.Environment)
+	TranslateEnvVars(c, rule)
 	TranslateVolumeMounts(c, rule)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
 }
@@ -223,9 +218,9 @@ func TranslateResources(c *apiv1.Container, r model.ResourceRequirements) {
 }
 
 //TranslateEnvVars translates the variables attached to a container
-func TranslateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {
+func TranslateEnvVars(c *apiv1.Container, rule *model.TranslationRule) {
 	unusedDevEnv := map[string]string{}
-	for _, val := range devEnv {
+	for _, val := range rule.Environment {
 		unusedDevEnv[val.Name] = val.Value
 	}
 	for i, envvar := range c.Env {
@@ -234,7 +229,7 @@ func TranslateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {
 			delete(unusedDevEnv, envvar.Name)
 		}
 	}
-	for _, envvar := range devEnv {
+	for _, envvar := range rule.Environment {
 		if value, ok := unusedDevEnv[envvar.Name]; ok {
 			c.Env = append(c.Env, apiv1.EnvVar{Name: envvar.Name, Value: value})
 		}
@@ -257,6 +252,17 @@ func TranslateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 			},
 		)
 	}
+
+	if rule.Marker == "" {
+		return
+	}
+	c.VolumeMounts = append(
+		c.VolumeMounts,
+		apiv1.VolumeMount{
+			Name:      oktetoSyncSecretVolume,
+			MountPath: "/var/syncthing/secret/",
+		},
+	)
 }
 
 //TranslateOktetoBinVolumeMounts translates the binaries mount attached to a container
@@ -276,10 +282,15 @@ func TranslateOktetoBinVolumeMounts(c *apiv1.Container) {
 	c.VolumeMounts = append(c.VolumeMounts, vm)
 }
 
-//TranslateOktetoVolumes translates the dev volumes
-func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
+//TranslateOktetoVolume translates the dev volume
+func TranslateOktetoVolume(spec *apiv1.PodSpec) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
+	}
+	for _, v := range spec.Volumes {
+		if v.Name == oktetoVolumName {
+			return
+		}
 	}
 	v := apiv1.Volume{
 		Name: oktetoVolumName,
@@ -357,7 +368,7 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 func TranslateOktetoInitBinContainer(spec *apiv1.PodSpec) {
 	c := apiv1.Container{
 		Name:            oktetoBinName,
-		Image:           "okteto/bin",
+		Image:           oktetoBinImageTag,
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 		VolumeMounts: []apiv1.VolumeMount{
@@ -374,49 +385,16 @@ func TranslateOktetoInitBinContainer(spec *apiv1.PodSpec) {
 	spec.InitContainers = append(spec.InitContainers, c)
 }
 
-//TranslateOktetoSyncContainer translates the syncthing container of a pod
-func TranslateOktetoSyncContainer(spec *apiv1.PodSpec, name, marker string) {
-	c := apiv1.Container{
-		Name:            oktetoSyncContainer,
-		Image:           syncImageTag,
-		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Env: []apiv1.EnvVar{
-			apiv1.EnvVar{
-				Name:  "MARKER_PATH",
-				Value: filepath.Join(oktetoSyncMount, marker),
-			},
-		},
-		Resources: apiv1.ResourceRequirements{
-			Limits: apiv1.ResourceList{
-				apiv1.ResourceMemory: namespaces.LimitsSyncthingMemory,
-				apiv1.ResourceCPU:    namespaces.LimitsSyncthingCPU,
-			},
-		},
-		VolumeMounts: []apiv1.VolumeMount{
-			apiv1.VolumeMount{
-				Name:      oktetoSyncSecretVolume,
-				MountPath: "/var/syncthing/secret/",
-			},
-			apiv1.VolumeMount{
-				Name:      oktetoVolumName,
-				MountPath: oktetoSyncMount,
-				SubPath:   filepath.Join(name, "data-0"),
-			},
-		},
-		Ports: []apiv1.ContainerPort{
-			apiv1.ContainerPort{
-				ContainerPort: syncGUIPort,
-			},
-			apiv1.ContainerPort{
-				ContainerPort: syncTCPPort,
-			},
-		},
-	}
-	spec.Containers = append(spec.Containers, c)
-}
-
 //TranslateOktetoSyncSecret translates the syncthing secret container of a pod
 func TranslateOktetoSyncSecret(spec *apiv1.PodSpec, name string) {
+	if spec.Volumes == nil {
+		spec.Volumes = []apiv1.Volume{}
+	}
+	for _, s := range spec.Volumes {
+		if s.Name == oktetoSyncSecretVolume {
+			return
+		}
+	}
 	v := apiv1.Volume{
 		Name: oktetoSyncSecretVolume,
 		VolumeSource: apiv1.VolumeSource{
@@ -424,9 +402,6 @@ func TranslateOktetoSyncSecret(spec *apiv1.PodSpec, name string) {
 				SecretName: fmt.Sprintf(oktetoSyncSecretTemplate, name),
 			},
 		},
-	}
-	if spec.Volumes == nil {
-		spec.Volumes = []apiv1.Volume{}
 	}
 	spec.Volumes = append(spec.Volumes, v)
 }

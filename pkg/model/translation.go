@@ -9,7 +9,6 @@ import (
 type Translation struct {
 	Interactive bool               `json:"interactive"`
 	Name        string             `json:"name"`
-	Marker      string             `json:"marker"`
 	Version     string             `json:"version"`
 	Deployment  *appsv1.Deployment `json:"-"`
 	Replicas    int32              `json:"replicas"`
@@ -18,6 +17,7 @@ type Translation struct {
 
 //TranslationRule represents how to apply a container translation in a deployment
 type TranslationRule struct {
+	Marker          string               `json:"marker"`
 	Node            string               `json:"node,omitempty"`
 	Container       string               `json:"container,omitempty"`
 	Image           string               `json:"image,omitempty"`
