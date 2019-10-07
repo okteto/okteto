@@ -92,9 +92,10 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		TranslateDevContainer(devContainer, rule)
-		translateOktetoInitBinContainer(&t.Deployment.Spec.Template.Spec)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		translateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
+		translateOktetoInitBinContainer(&t.Deployment.Spec.Template.Spec)
+		translateOktetoBinVolumeMounts(devContainer)
 		if rule.SecurityContext != nil {
 			if t.Deployment.Spec.Template.Spec.SecurityContext == nil {
 				t.Deployment.Spec.Template.Spec.SecurityContext = &apiv1.PodSecurityContext{}
@@ -165,7 +166,6 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	translateEnvVars(c, rule.Environment)
 	translateVolumeMounts(c, rule)
 	translateSecurityContext(c, rule.SecurityContext)
-	translateOktetoBinVolumeMounts(c)
 }
 
 func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
