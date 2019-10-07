@@ -68,7 +68,7 @@ func getVersion() (string, error) {
 	}
 
 	for _, r := range releases {
-		if !r.GetPrerelease() {
+		if !r.GetPrerelease() && !r.GetDraft() {
 			return r.GetTagName(), nil
 		}
 	}
