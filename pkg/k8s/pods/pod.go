@@ -28,7 +28,7 @@ const (
 
 	syncImageTag = "okteto/syncthing:1.3.0"
 
-	maxRetries = 300
+	maxRetries = 600
 
 	failedCreateReason = "FailedCreate"
 )
@@ -40,7 +40,7 @@ var (
 // GetByLabel returns the dev pod for a deployment
 func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	tries := 0
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	selector := fmt.Sprintf("%s=%s", label, dev.Name)
 	for tries < maxRetries {
 		pods, err := c.CoreV1().Pods(dev.Namespace).List(
@@ -109,22 +109,6 @@ func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes
 
 	log.Debugf("dev pod wasn't running after %d seconds", maxRetries)
 	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
-}
-
-// GetSyncNode returns the sync pod node
-func GetSyncNode(dev *model.Dev, c *kubernetes.Clientset) string {
-	pods, err := c.CoreV1().Pods(dev.Namespace).List(
-		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", OktetoSyncLabel, dev.Name),
-		},
-	)
-	if err != nil {
-		return ""
-	}
-	if len(pods.Items) > 0 {
-		return pods.Items[0].Spec.NodeName
-	}
-	return ""
 }
 
 //Exists returns if the dev pod still exists
