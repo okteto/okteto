@@ -35,7 +35,6 @@ func IsOktetoNamespace(ns *apiv1.Namespace) bool {
 
 //IsOktetoAllowed checks if Okteto operationos are allowed in this namespace
 func IsOktetoAllowed(ns *apiv1.Namespace) bool {
-	log.Debug("labels: %v", ns.Labels)
 	if _, ok := ns.Labels[OktetoNotAllowedLabel]; ok {
 		return false
 	}
