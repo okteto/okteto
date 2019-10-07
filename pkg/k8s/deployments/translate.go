@@ -100,30 +100,14 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
-	TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
+
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		TranslateDevContainer(devContainer, rule)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
+		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
 		if t.Interactive {
 			TranslateOktetoBinVolumeMounts(devContainer)
-		}
-		if rule.SecurityContext != nil {
-			if t.Deployment.Spec.Template.Spec.SecurityContext == nil {
-				t.Deployment.Spec.Template.Spec.SecurityContext = &apiv1.PodSecurityContext{}
-			}
-
-			if rule.SecurityContext.RunAsUser != nil {
-				t.Deployment.Spec.Template.Spec.SecurityContext.RunAsUser = rule.SecurityContext.RunAsUser
-			}
-
-			if rule.SecurityContext.RunAsGroup != nil {
-				t.Deployment.Spec.Template.Spec.SecurityContext.RunAsGroup = rule.SecurityContext.RunAsGroup
-			}
-
-			if rule.SecurityContext.FSGroup != nil {
-				t.Deployment.Spec.Template.Spec.SecurityContext.FSGroup = rule.SecurityContext.FSGroup
-			}
 		}
 	}
 	if t.Interactive {
@@ -131,6 +115,8 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 		TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
 		TranslateOktetoSyncContainer(&t.Deployment.Spec.Template.Spec, t.Name, t.Marker)
 		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
+	} else {
+		TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)		
 	}
 	return nil
 }
@@ -206,7 +192,7 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	TranslateResources(c, rule.Resources)
 	TranslateEnvVars(c, rule.Environment)
 	TranslateVolumeMounts(c, rule)
-	TranslateSecurityContext(c, rule.SecurityContext)
+	TranslateContainerSecurityContext(c, rule.SecurityContext)
 }
 
 //TranslateResources translates the resources attached to a container
@@ -326,8 +312,31 @@ func TranslateOktetoBinVolume(spec *apiv1.PodSpec) {
 	spec.Volumes = append(spec.Volumes, v)
 }
 
-//TranslateSecurityContext translates the security context attached to a container
-func TranslateSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
+//TranslatePodSecurityContext translates the security context attached to a pod
+func TranslatePodSecurityContext(spec *apiv1.PodSpec, s *model.SecurityContext) {
+	if s == nil {
+		return
+	}
+
+	if spec.SecurityContext == nil {
+		spec.SecurityContext = &apiv1.PodSecurityContext{}
+	}
+
+	if s.RunAsUser != nil {
+		spec.SecurityContext.RunAsUser = s.RunAsUser
+	}
+
+	if s.RunAsGroup != nil {
+		spec.SecurityContext.RunAsGroup = s.RunAsGroup
+	}
+
+	if s.FSGroup != nil {
+		spec.SecurityContext.FSGroup = s.FSGroup
+	}
+}
+
+//TranslateContainerSecurityContext translates the security context attached to a container
+func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
 	if s == nil || s.Capabilities == nil {
 		return
 	}

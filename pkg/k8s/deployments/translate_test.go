@@ -56,21 +56,7 @@ services:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					Affinity: &apiv1.Affinity{
-						PodAffinity: &apiv1.PodAffinity{
-							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-								apiv1.PodAffinityTerm{
-									LabelSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											OktetoInteractiveDevLabel: "web",
-										},
-									},
-									TopologyKey: "kubernetes.io/hostname",
-								},
-							},
-						},
-					},
-					SecurityContext: &apiv1.PodSecurityContext{
+						SecurityContext: &apiv1.PodSecurityContext{
 						RunAsUser:  &runAsUser,
 						RunAsGroup: &runAsGroup,
 						FSGroup:    &fsGroup,
@@ -462,7 +448,7 @@ func Test_translateSecurityContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			TranslateSecurityContext(tt.c, tt.s)
+			TranslateContainerSecurityContext(tt.c, tt.s)
 			if tt.c.SecurityContext == nil {
 				t.Fatal("SecurityContext was nil")
 			}
