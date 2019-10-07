@@ -26,6 +26,8 @@ const (
 	// OktetoSyncLabel indicates a synthing pod
 	OktetoSyncLabel = "syncthing.okteto.com"
 
+	syncImageTag = "okteto/syncthing:1.3.0"
+
 	maxRetries = 300
 
 	failedCreateReason = "FailedCreate"
@@ -69,7 +71,9 @@ func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes
 		for _, pod := range pods.Items {
 			if pod.Status.Phase == apiv1.PodRunning {
 				if pod.GetObjectMeta().GetDeletionTimestamp() == nil {
-					runningPods = append(runningPods, pod)
+					if label != OktetoSyncLabel || pod.Spec.Containers[0].Image == syncImageTag {
+						runningPods = append(runningPods, pod)
+					}
 				}
 			} else {
 				log.Debugf("pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.Phase)
