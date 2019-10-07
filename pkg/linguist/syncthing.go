@@ -300,6 +300,12 @@ func init() {
 /.rvmrc
 `)
 
+	stignore[csharp] = []byte(`/.git
+/out
+/bin
+/obj/Debug
+`)
+
 }
 
 // GetSTIgnore returns a .stignore file for the specified language

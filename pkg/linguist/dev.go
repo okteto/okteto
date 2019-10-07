@@ -25,6 +25,7 @@ const (
 	maven      = "maven"
 	java       = "java"
 	ruby       = "ruby"
+	csharp     = "csharp"
 
 	// Unrecognized is the option returned when the linguist couldn't detect a language
 	Unrecognized = "other"
@@ -59,18 +60,18 @@ func init() {
 		image:   "okteto/gradle:latest",
 		command: []string{"bash"},
 		environment: []model.EnvVar{
-			model.EnvVar{
+			{
 				Name:  "JAVA_OPTS",
 				Value: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8088",
 			},
 		},
 		volumes: []string{"/home/gradle/.gradle"},
 		forward: []model.Forward{
-			model.Forward{
+			{
 				Local:  8080,
 				Remote: 8080,
 			},
-			model.Forward{
+			{
 				Local:  8088,
 				Remote: 8088,
 			},
@@ -86,18 +87,18 @@ func init() {
 		image:   "okteto/maven:latest",
 		command: []string{"bash"},
 		environment: []model.EnvVar{
-			model.EnvVar{
+			{
 				Name:  "JAVA_OPTS",
 				Value: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8088",
 			},
 		},
 		volumes: []string{"/root/.m2"},
 		forward: []model.Forward{
-			model.Forward{
+			{
 				Local:  8080,
 				Remote: 8080,
 			},
-			model.Forward{
+			{
 				Local:  8088,
 				Remote: 8088,
 			},
@@ -108,6 +109,24 @@ func init() {
 		image:   "okteto/ruby:2",
 		path:    "/usr/src/app",
 		command: []string{"bash"},
+	}
+
+	languageDefaults[csharp] = languageDefault{
+		image:   "mcr.microsoft.com/dotnet/core/sdk",
+		path:    "/usr/src/app",
+		command: []string{"bash"},
+		environment: []model.EnvVar{
+			{
+				Name:  "ASPNETCORE_ENVIRONMENT",
+				Value: "Development",
+			},
+		},
+		forward: []model.Forward{
+			{
+				Local:  5000,
+				Remote: 5000,
+			},
+		},
 	}
 
 	languageDefaults[Unrecognized] = languageDefault{
@@ -171,6 +190,10 @@ func normalizeLanguage(language string) string {
 		return ruby
 	case "go":
 		return golang
+	case "c#":
+		return csharp
+	case "csharp":
+		return csharp
 	default:
 		return Unrecognized
 	}
