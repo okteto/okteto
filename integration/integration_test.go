@@ -220,7 +220,7 @@ func waitForDeployment(name string, revision, timeout int) error {
 
 func getContent(name, namespace string) (string, error) {
 	endpoint := fmt.Sprintf("https://%s-%s.cloud.okteto.net/", name, namespace)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 60; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
 			return "", err
@@ -282,19 +282,6 @@ func waitForPod(name string, timeout int) error {
 
 }
 
-func checkPVCIsGone(name string) error {
-	pvc := fmt.Sprintf("pvc-0-okteto-%s-0", name)
-	args := []string{"get", "pvc", pvc}
-	cmd := exec.Command("kubectl", args...)
-	o, _ := cmd.CombinedOutput()
-	output := string(o)
-	if !strings.Contains(string(o), fmt.Sprintf(`persistentvolumeclaims "%s" not found`, pvc)) {
-		return fmt.Errorf("PVC wasn't deleted: %s", output)
-	}
-
-	return nil
-}
-
 func createNamespace(namespace, oktetoPath string) error {
 	log.Printf("creating namespace %s", namespace)
 	args := []string{"create", "namespace", namespace, "-l", "debug"}
@@ -327,8 +314,8 @@ func deleteNamespace(oktetoPath, namespace string) error {
 }
 
 func down(name, manifestPath, oktetoPath string) error {
-	log.Printf("okteto down -f %s -v", manifestPath)
-	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
+	log.Printf("okteto down -f %s", manifestPath)
+	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath)
 
 	o, err := downCMD.CombinedOutput()
 	log.Printf("okteto down output:\n%s", string(o))
@@ -338,11 +325,6 @@ func down(name, manifestPath, oktetoPath string) error {
 
 	log.Println("waiting for the deployment to be restored")
 	if err := waitForDeployment(name, 3, 30); err != nil {
-		return err
-	}
-
-	log.Printf("validate that the pvc was deleted")
-	if err := checkPVCIsGone(name); err != nil {
 		return err
 	}
 
@@ -362,11 +344,6 @@ func up(name, manifestPath, oktetoPath string) error {
 			log.Printf("okteto up exited: %s", err)
 		}
 	}()
-
-	log.Println("waiting for the statefulset to be running")
-	if err := waitForPod(fmt.Sprintf("okteto-%s-0", name), 100); err != nil {
-		return err
-	}
 
 	log.Println("waiting for the deployment to be running")
 	if err := waitForDeployment(name, 2, 120); err != nil {
