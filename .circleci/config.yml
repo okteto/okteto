@@ -39,6 +39,7 @@ jobs:
           command: |
             export OKTETO_USER=cindylopez
             export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
+            export OKTETO_CLIENTSIDE_TRANSLATION=true
             mkdir -p $HOME/.okteto
             touch $HOME/.okteto/.noanalytics
             echo $HOME
