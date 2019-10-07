@@ -116,7 +116,7 @@ jobs:
           name: "Publish Release on GitHub"
           command: |
             go get -u github.com/tcnksm/ghr
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
       - deploy:
           name: "Update brew formula"
           command: |
