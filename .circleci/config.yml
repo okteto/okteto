@@ -154,6 +154,7 @@ workflows:
             branches:
               only: 
                 - master
+                - fixci
       - release-master:
           requires:
             - integration
