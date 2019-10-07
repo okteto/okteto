@@ -53,27 +53,27 @@ const (
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
-	APIKey            string
-	GUIPassword       string
-	GUIPasswordHashed string
-	binPath           string
-	Client            *http.Client
-	cmd               *exec.Cmd
-	Dev               *model.Dev
-	DevPath           string
-	FileWatcherDelay  int
-	ForceSendOnly     bool
-	GUIAddress        string
-	Home              string
-	LogPath           string
-	ListenAddress     string
-	RemoteAddress     string
-	RemoteDeviceID    string
-	RemoteGUIAddress  string
-	RemoteGUIPort     int
-	RemotePort        int
-	Source            string
-	Type              string
+	APIKey           string
+	GUIPassword      string
+	GUIPasswordHash  string
+	binPath          string
+	Client           *http.Client
+	cmd              *exec.Cmd
+	Dev              *model.Dev
+	DevPath          string
+	FileWatcherDelay int
+	ForceSendOnly    bool
+	GUIAddress       string
+	Home             string
+	LogPath          string
+	ListenAddress    string
+	RemoteAddress    string
+	RemoteDeviceID   string
+	RemoteGUIAddress string
+	RemoteGUIPort    int
+	RemotePort       int
+	Source           string
+	Type             string
 }
 
 //Ignores represents the .stignore file
@@ -125,25 +125,25 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	}
 
 	s := &Syncthing{
-		APIKey:            "cnd",
-		GUIPassword:       pwd,
-		GUIPasswordHashed: string(hash),
-		binPath:           fullPath,
-		Client:            NewAPIClient(),
-		Dev:               dev,
-		DevPath:           dev.DevPath,
-		FileWatcherDelay:  DefaultFileWatcherDelay,
-		GUIAddress:        fmt.Sprintf("localhost:%d", guiPort),
-		Home:              config.GetDeploymentHome(dev.Namespace, dev.Name),
-		LogPath:           filepath.Join(config.GetDeploymentHome(dev.Namespace, dev.Name), logFile),
-		ListenAddress:     fmt.Sprintf("localhost:%d", listenPort),
-		RemoteAddress:     fmt.Sprintf("tcp://localhost:%d", remotePort),
-		RemoteDeviceID:    DefaultRemoteDeviceID,
-		RemoteGUIAddress:  fmt.Sprintf("localhost:%d", remoteGUIPort),
-		RemoteGUIPort:     remoteGUIPort,
-		RemotePort:        remotePort,
-		Source:            dev.DevDir,
-		Type:              "sendonly",
+		APIKey:           "cnd",
+		GUIPassword:      pwd,
+		GUIPasswordHash:  string(hash),
+		binPath:          fullPath,
+		Client:           NewAPIClient(),
+		Dev:              dev,
+		DevPath:          dev.DevPath,
+		FileWatcherDelay: DefaultFileWatcherDelay,
+		GUIAddress:       fmt.Sprintf("localhost:%d", guiPort),
+		Home:             config.GetDeploymentHome(dev.Namespace, dev.Name),
+		LogPath:          filepath.Join(config.GetDeploymentHome(dev.Namespace, dev.Name), logFile),
+		ListenAddress:    fmt.Sprintf("localhost:%d", listenPort),
+		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
+		RemoteDeviceID:   DefaultRemoteDeviceID,
+		RemoteGUIAddress: fmt.Sprintf("localhost:%d", remoteGUIPort),
+		RemoteGUIPort:    remoteGUIPort,
+		RemotePort:       remotePort,
+		Source:           dev.DevDir,
+		Type:             "sendonly",
 	}
 
 	return s, nil

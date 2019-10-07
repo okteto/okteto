@@ -316,8 +316,14 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 
 	defer spinner.stop()
 
+	var err error
+	up.Sy, err = syncthing.New(up.Dev)
+	if err != nil {
+		return err
+	}
+
 	log.Info("create deployment secrets")
-	if err := secrets.Create(up.Dev, up.Client); err != nil {
+	if err := secrets.Create(up.Dev, up.Client, up.Sy.GUIPasswordHash); err != nil {
 		return err
 	}
 
@@ -334,11 +340,6 @@ func (up *UpContext) startRemoteSyncthing(d *appsv1.Deployment, c *apiv1.Contain
 
 	up.SyncPod = p.Name
 	up.Node = p.Spec.NodeName
-
-	up.Sy, err = syncthing.New(up.Dev)
-	if err != nil {
-		return err
-	}
 
 	up.SyncForwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
 	if err := up.SyncForwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {

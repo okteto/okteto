@@ -40,7 +40,7 @@ const configXML = `<configuration version="29">
     <address>{{.GUIAddress}}</address>
     <apikey>{{.APIKey}}</apikey>
     <user>okteto</user>
-    <password>{{.GUIPasswordHashed}}</password>
+    <password>{{.GUIPasswordHash}}</password>
     <theme>default</theme>
 </gui>
 <ldap></ldap>
