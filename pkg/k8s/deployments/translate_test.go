@@ -44,7 +44,7 @@ services:
 		Deployment:  d1,
 		Rules:       []*model.TranslationRule{rule1},
 	}
-	err = translate(tr1, "", nil)
+	err = translate(tr1, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ services:
 		Deployment:  d2,
 		Rules:       []*model.TranslationRule{rule2},
 	}
-	err = translate(tr2, "", nil)
+	err = translate(tr2, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
