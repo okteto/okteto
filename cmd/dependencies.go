@@ -17,14 +17,14 @@ import (
 var (
 	// SyncthingURL is the path of the syncthing binary.
 	SyncthingURL = map[string]string{
-		"linux":   "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Linux-x86_64",
-		"arm":     "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Linux-arm",
-		"arm64":   "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Linux-arm64",
-		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Darwin-x86_64",
-		"windows": "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Windows-x86_64",
+		"linux":   "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Linux-x86_64",
+		"arm":     "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Linux-arm",
+		"arm64":   "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Linux-arm64",
+		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Darwin-x86_64",
+		"windows": "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Windows-x86_64",
 	}
 
-	syncthingVersion = semver.MustParse("1.2.2")
+	syncthingVersion = semver.MustParse("1.3.0")
 	versionRegex     = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
