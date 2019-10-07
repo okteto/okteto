@@ -19,7 +19,6 @@ type languageDefault struct {
 
 const (
 	javascript = "javascript"
-	node       = "node"
 	golang     = "go"
 	python     = "python"
 	gradle     = "gradle"
