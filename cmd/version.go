@@ -1,14 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
+	"github.com/google/go-github/v28/github"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
@@ -38,8 +38,10 @@ func upgradeAvailable() string {
 
 	v, err := getVersion()
 	if err != nil {
-		log.Infof("failed to get the latest version from https://downloads.okteto.com/cli/latest: %s", err)
+		log.Info(err)
 	}
+
+	log.Debugf("latest version: %s", v)
 
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
@@ -58,21 +60,20 @@ func upgradeAvailable() string {
 }
 
 func getVersion() (string, error) {
-	resp, err := netClient.Get("https://downloads.okteto.com/cli/latest")
+	client := github.NewClient(nil)
+	ctx := context.Background()
+	releases, _, err := client.Repositories.ListReleases(ctx, "okteto", "okteto", &github.ListOptions{PerPage: 5})
 	if err != nil {
-		log.Infof("failed to get latest version: %s", err)
-		return "", err
+		return "", fmt.Errorf("fail to get releases from github: %w", err)
 	}
 
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
+	for _, r := range releases {
+		if !r.GetPrerelease() && !r.GetDraft() {
+			return r.GetTagName(), nil
+		}
 	}
 
-	v := string(b)
-	v = strings.TrimSuffix(v, "\n")
-	return v, nil
+	return "", fmt.Errorf("failed to find latest release")
 }
 
 func shouldNotify(latest, current *semver.Version) bool {
