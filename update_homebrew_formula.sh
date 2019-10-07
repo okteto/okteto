@@ -30,7 +30,7 @@ cat << EOF > Formula/okteto.rb
 class Okteto < Formula
     desc "CLI for cloud native development"
     homepage "https://okteto.com"
-    url "https://downloads.okteto.com/cli/okteto-Darwin-x86_64"
+    url "https://github.com/okteto/okteto/releases/latest/download/okteto-Darwin-x86_64"
     sha256 "$SHA"
     version "$VERSION"
     
