@@ -49,7 +49,7 @@ jobs:
           paths:
             - ~/.cache/go-build
       - store_artifacts:
-          path: /root/.okteto/okteto.log
+          path: /root/.okteto
           
   mock-publish-github-release:
     docker:
@@ -154,7 +154,6 @@ workflows:
             branches:
               only: 
                 - master
-                - fixci
       - release-master:
           requires:
             - integration
