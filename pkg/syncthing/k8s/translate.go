@@ -2,6 +2,8 @@ package k8s
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -27,6 +29,8 @@ const (
 var (
 	devReplicas int32 = 1
 	//LimitsMemory used by syncthing
+
+	defaultDiskSize = resource.MustParse("10Gi")
 )
 
 func translate(dev *model.Dev, d *appsv1.Deployment, c *apiv1.Container) *appsv1.StatefulSet {
@@ -154,7 +158,16 @@ func translateInitContainer(dev *model.Dev) *apiv1.Container {
 }
 
 func translateVolumeClaimTemplates(dev *model.Dev) []apiv1.PersistentVolumeClaim {
-	quantDisk, _ := resource.ParseQuantity("10Gi")
+	quantDisk := defaultDiskSize
+	if size, ok := os.LookupEnv("OKTETO_VOLUME_SIZE"); ok {
+		q, err := resource.ParseQuantity(size)
+		if err != nil {
+			log.Fatalf("%s is not a valid quantity", err)
+		}
+
+		quantDisk = q
+	}
+
 	result := []apiv1.PersistentVolumeClaim{}
 	for i := 0; i <= len(dev.Volumes); i++ {
 		result = append(

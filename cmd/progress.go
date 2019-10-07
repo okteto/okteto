@@ -26,9 +26,8 @@ func (cpb *progressBar) TrackProgress(src string, currentSize, totalSize int64, 
 	defer cpb.lock.Unlock()
 
 	newPb := pb.New64(totalSize)
-	newPb.Set("prefix", filepath.Base(src))
+	newPb.Set("prefix", fmt.Sprintf("%s ", filepath.Base(src)))
 	newPb.SetCurrent(currentSize)
-	//bar.Prefix(prefix)
 	newPb.Start()
 	reader := newPb.NewProxyReader(stream)
 

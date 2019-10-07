@@ -50,7 +50,7 @@ type Dev struct {
 	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment     []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command         []string             `json:"command,omitempty" yaml:"command,omitempty"`
-	WorkDir         string               `json:"workdir" yaml:"workdir"`
+	WorkDir         string               `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath       string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath         string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
 	Volumes         []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`

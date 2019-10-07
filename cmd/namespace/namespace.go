@@ -1,6 +1,9 @@
 package namespace
 
 import (
+	"net/url"
+	"strings"
+
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
@@ -31,10 +34,20 @@ func Namespace() *cobra.Command {
 
 //RunNamespace starts the kubeconfig sequence
 func RunNamespace(namespace string) error {
-	kubeConfigFile := config.GetKubeConfigFile()
-	if err := okteto.SetKubeConfig(kubeConfigFile, namespace); err != nil {
+	cred, err := okteto.GetCredentials(namespace)
+	if err != nil {
 		return err
 	}
-	log.Success("Updated context '%s' in '%s'", okteto.GetURLWithUnderscore(), kubeConfigFile)
+
+	kubeConfigFile := config.GetKubeConfigFile()
+
+	u, _ := url.Parse(okteto.GetURL())
+	parsedHost := strings.ReplaceAll(u.Host, ".", "_")
+
+	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), parsedHost); err != nil {
+		return err
+	}
+
+	log.Success("Updated context '%s' in '%s'", parsedHost, kubeConfigFile)
 	return nil
 }

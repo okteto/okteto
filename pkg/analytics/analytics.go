@@ -148,6 +148,11 @@ func track(event, version, image string, success bool) {
 			mpOS = "Linux"
 		}
 
+		origin, ok := os.LookupEnv("OKTETO_ORIGIN")
+		if !ok {
+			origin = "cli"
+		}
+
 		e := &mixpanel.Event{
 			Properties: map[string]interface{}{
 				"$os":               mpOS,
@@ -155,7 +160,7 @@ func track(event, version, image string, success bool) {
 				"$referring_domain": okteto.GetURL(),
 				"image":             image,
 				"machine_id":        machineID,
-				"origin":            "cli",
+				"origin":            origin,
 				"success":           success,
 			},
 		}

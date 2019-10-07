@@ -26,7 +26,7 @@ var (
 // this is all based on enry's main command https://github.com/src-d/enry
 
 // ProcessDirectory walks a directory and returns a list of guess for the programming language
-func ProcessDirectory(root string) ([]string, error) {
+func ProcessDirectory(root string) (string, error) {
 	out := make(map[string][]string)
 	analysisTimeout := false
 
@@ -101,14 +101,23 @@ func ProcessDirectory(root string) ([]string, error) {
 	})
 
 	if err != nil && err != errAnalysisTimeOut {
-		return nil, err
+		return Unrecognized, err
 	}
 
 	if len(out) == 0 {
-		out[Unrecognized] = []string{}
+		return Unrecognized, nil
 	}
 
-	return sortLanguagesByUsage(out), nil
+	sorted := sortLanguagesByUsage(out)
+	if sorted[0] == java {
+		if _, err := os.Stat(filepath.Join(root, "pom.xml")); !os.IsNotExist(err) {
+			return maven, nil
+		}
+
+		return gradle, nil
+	}
+
+	return sorted[0], nil
 }
 
 func readFile(path string, limit int64) ([]byte, error) {

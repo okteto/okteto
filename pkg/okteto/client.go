@@ -68,20 +68,20 @@ func isConnectionError(s string) bool {
 	return strings.Contains(s, "decoding response") || strings.Contains(s, "reading body")
 }
 
-//SetKubeConfig update a kubeconfig file with okteto cluster credentials
-func SetKubeConfig(filename, namespace string) error {
-	oktetoURL := GetURLWithUnderscore()
-	clusterName := fmt.Sprintf("%s-cluster", oktetoURL)
-	userName := GetUserID()
-	contextName := fmt.Sprintf("%s-context", oktetoURL)
+//SetKubeConfig updates a kubeconfig file with okteto cluster credentials
+func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
 
-	var cfg *clientcmdapi.Config
-	cred, err := GetCredentials(namespace)
-	if err != nil {
-		return err
+	contextName := ""
+	if len(namespace) == 0 {
+		// don't include namespace for the personal namespace
+		contextName = clusterName
+		namespace = cred.Namespace
+	} else {
+		contextName = fmt.Sprintf("%s-%s", clusterName, namespace)
 	}
 
-	_, err = os.Stat(filename)
+	var cfg *clientcmdapi.Config
+	_, err := os.Stat(kubeConfigPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			cfg = clientcmdapi.NewConfig()
@@ -89,7 +89,7 @@ func SetKubeConfig(filename, namespace string) error {
 			return err
 		}
 	} else {
-		cfg, err = clientcmd.LoadFromFile(filename)
+		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
 		if err != nil {
 			return err
 		}
@@ -100,6 +100,7 @@ func SetKubeConfig(filename, namespace string) error {
 	if !ok {
 		cluster = clientcmdapi.NewCluster()
 	}
+
 	cluster.CertificateAuthorityData = []byte(cred.Certificate)
 	cluster.Server = cred.Server
 	cfg.Clusters[clusterName] = cluster
@@ -117,14 +118,15 @@ func SetKubeConfig(filename, namespace string) error {
 	if !ok {
 		context = clientcmdapi.NewContext()
 	}
+
 	context.Cluster = clusterName
 	context.AuthInfo = userName
-	context.Namespace = cred.Namespace
+	context.Namespace = namespace
 	cfg.Contexts[contextName] = context
 
 	cfg.CurrentContext = contextName
 
-	if err := clientcmd.WriteToFile(*cfg, filename); err != nil {
+	if err := clientcmd.WriteToFile(*cfg, kubeConfigPath); err != nil {
 		return err
 	}
 	return nil
