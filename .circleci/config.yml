@@ -154,6 +154,7 @@ workflows:
             branches:
               only: 
                 - master
+                - /.*(e2e)/
       - release-master:
           requires:
             - integration
