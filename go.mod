@@ -40,7 +40,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/syncthing/syncthing v0.0.0
+	github.com/syncthing/syncthing v1.3.0
 	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
 	golang.org/x/crypto v0.0.0-20190829043050-9756ffdc2472
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
@@ -62,7 +62,7 @@ require (
 )
 
 replace (
-	github.com/syncthing/syncthing => github.com/okteto/syncthing-generated v1.3.0-gen1
+	github.com/syncthing/syncthing => github.com/okteto/syncthing-generated v1.3.0-gen2
 	k8s.io/api => k8s.io/api v0.0.0-20190805141119-fdd30b57c827
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190805143126-cdb999c96590
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719
