@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -39,11 +38,11 @@ services:
 		t.Fatal(err)
 	}
 	d1 := dev.GevSandbox()
+	dev.DevPath = "okteto.yml"
 	rule1 := dev.ToTranslationRule(dev, d1)
 	tr1 := &model.Translation{
 		Interactive: true,
 		Name:        dev.Name,
-		Marker:      "okteto.yml",
 		Version:     model.TranslationVersion,
 		Deployment:  d1,
 		Rules:       []*model.TranslationRule{rule1},
@@ -64,6 +63,14 @@ services:
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						apiv1.Volume{
+							Name: oktetoSyncSecretVolume,
+							VolumeSource: apiv1.VolumeSource{
+								Secret: &apiv1.SecretVolumeSource{
+									SecretName: "okteto-web",
+								},
+							},
+						},
+						apiv1.Volume{
 							Name: oktetoVolumName,
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
@@ -78,19 +85,11 @@ services:
 								EmptyDir: &apiv1.EmptyDirVolumeSource{},
 							},
 						},
-						apiv1.Volume{
-							Name: oktetoSyncSecretVolume,
-							VolumeSource: apiv1.VolumeSource{
-								Secret: &apiv1.SecretVolumeSource{
-									SecretName: "okteto-web",
-								},
-							},
-						},
 					},
 					InitContainers: []apiv1.Container{
 						apiv1.Container{
 							Name:            oktetoBinName,
-							Image:           "okteto/bin",
+							Image:           oktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
@@ -106,9 +105,15 @@ services:
 							Name:            "dev",
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
-							Command:         []string{"tail"},
-							Args:            []string{"-f", "/dev/null"},
+							Command:         []string{"/var/okteto/bin/start.sh"},
+							Args:            []string{},
 							WorkingDir:      "/app",
+							Env: []apiv1.EnvVar{
+								apiv1.EnvVar{
+									Name:  "OKTETO_MARKER_PATH",
+									Value: "/app/okteto.yml",
+								},
+							},
 							VolumeMounts: []apiv1.VolumeMount{
 								apiv1.VolumeMount{
 									Name:      oktetoVolumName,
@@ -117,49 +122,14 @@ services:
 									SubPath:   "web/data-0",
 								},
 								apiv1.VolumeMount{
-									Name:      oktetoBinName,
-									ReadOnly:  false,
-									MountPath: "/var/okteto/bin",
-								},
-							},
-							LivenessProbe:  nil,
-							ReadinessProbe: nil,
-						},
-						apiv1.Container{
-							Name:            oktetoSyncContainer,
-							Image:           syncImageTag,
-							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Env: []apiv1.EnvVar{
-								apiv1.EnvVar{
-									Name:  "MARKER_PATH",
-									Value: "/var/okteto/okteto.yml",
-								},
-							},
-							Resources: apiv1.ResourceRequirements{
-								Limits: apiv1.ResourceList{
-									apiv1.ResourceMemory: namespaces.LimitsSyncthingMemory,
-									apiv1.ResourceCPU:    namespaces.LimitsSyncthingCPU,
-								},
-							},
-							Ports: []apiv1.ContainerPort{
-								apiv1.ContainerPort{
-									ContainerPort: syncGUIPort,
-								},
-								apiv1.ContainerPort{
-									ContainerPort: syncTCPPort,
-								},
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								apiv1.VolumeMount{
 									Name:      oktetoSyncSecretVolume,
 									ReadOnly:  false,
 									MountPath: "/var/syncthing/secret/",
 								},
 								apiv1.VolumeMount{
-									Name:      oktetoVolumName,
+									Name:      oktetoBinName,
 									ReadOnly:  false,
-									MountPath: "/var/okteto",
-									SubPath:   "web/data-0",
+									MountPath: "/var/okteto/bin",
 								},
 							},
 							LivenessProbe:  nil,

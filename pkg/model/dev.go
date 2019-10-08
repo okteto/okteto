@@ -17,6 +17,9 @@ import (
 )
 
 const (
+	oktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
+	oktetoRemotePortVariable = "OKTETO_REMOTE_PORT"
+
 	oktetoStatefulSetTemplate = "okteto-%s"
 	//OktetoVolumeName name of the okteto persistent volume
 	OktetoVolumeName = "okteto"
@@ -253,7 +256,14 @@ func (dev *Dev) LoadRemote(localPort int) {
 		dev.Forward,
 		Forward{
 			Local:  localPort,
-			Remote: 22000,
+			Remote: 22001,
+		},
+	)
+	dev.Environment = append(
+		dev.Environment,
+		EnvVar{
+			Name:  oktetoRemotePortVariable,
+			Value: "22001",
 		},
 	)
 
@@ -270,6 +280,11 @@ func (dev *Dev) LoadRemote(localPort int) {
 		dev.SecurityContext.Capabilities.Add = []apiv1.Capability{}
 	}
 
+	for _, cap := range dev.SecurityContext.Capabilities.Add {
+		if cap == "SYS_PTRACE" {
+			return
+		}
+	}
 	dev.SecurityContext.Capabilities.Add = append(dev.SecurityContext.Capabilities.Add, "SYS_PTRACE")
 	log.Infof("enabled remote mode")
 }
@@ -324,9 +339,17 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationR
 	}
 
 	if main == dev {
+		rule.Marker = dev.DevPath
+		rule.Environment = append(
+			rule.Environment,
+			EnvVar{
+				Name:  oktetoMarkerPathVariable,
+				Value: filepath.Join(dev.MountPath, dev.DevPath),
+			},
+		)
 		rule.Healthchecks = false
-		rule.Command = []string{"tail"}
-		rule.Args = []string{"-f", "/dev/null"}
+		rule.Command = []string{"/var/okteto/bin/start.sh"}
+		rule.Args = []string{}
 	} else {
 		rule.Healthchecks = true
 		if len(dev.Command) > 0 {

@@ -58,7 +58,6 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clients
 		result[d.Name] = &model.Translation{
 			Interactive: true,
 			Name:        dev.Name,
-			Marker:      dev.DevPath,
 			Version:     model.TranslationVersion,
 			Deployment:  d,
 			Replicas:    *d.Spec.Replicas,
