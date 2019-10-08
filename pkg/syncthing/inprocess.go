@@ -25,11 +25,7 @@ func (s *Syncthing) initSyncthingApp() error {
 		return fmt.Errorf("failed to load/generate certificate: %w", err)
 	}
 
-	evLogger := events.NewLogger()
-	go evLogger.Serve()
-	defer evLogger.Stop()
-
-	cfg, err := syncthing.LoadConfigAtStartup(locations.Get(locations.ConfigFile), cert, evLogger, false, true)
+	cfg, err := syncthing.LoadConfigAtStartup(locations.Get(locations.ConfigFile), cert, events.NoopLogger, false, true)
 	if err != nil {
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}
@@ -42,9 +38,9 @@ func (s *Syncthing) initSyncthingApp() error {
 
 	opt := syncthing.Options{
 		NoUpgrade: true,
-		Verbose:   false,
+		Verbose:   true,
 	}
-	s.app = syncthing.New(cfg, ldb, evLogger, cert, opt)
+	s.app = syncthing.New(cfg, ldb, events.NoopLogger, cert, opt)
 	return nil
 }
 
