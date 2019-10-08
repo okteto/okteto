@@ -45,7 +45,7 @@ const configXML = `<configuration version="29">
 </gui>
 <ldap></ldap>
 <options>
-    <listenAddress>tcp://{{.ListenAddress}}</listenAddress>
+    <listenAddress>{{.ListenAddress}}</listenAddress>
     <globalAnnounceServer>default</globalAnnounceServer>
     <globalAnnounceEnabled>false</globalAnnounceEnabled>
     <localAnnounceEnabled>false</localAnnounceEnabled>
