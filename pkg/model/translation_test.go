@@ -53,6 +53,11 @@ services:
 				MountPath: "/app",
 				SubPath:   "web/data-0",
 			},
+			{
+				Name:      OktetoVolumeName,
+				MountPath: oktetoSyncthingMountPath,
+				SubPath:   dev.SyncthingSubPath(),
+			},
 		},
 	}
 
@@ -78,7 +83,7 @@ services:
 			Requests: ResourceList{},
 		},
 		Volumes: []VolumeMount{
-			VolumeMount{
+			{
 				Name:      OktetoVolumeName,
 				MountPath: "/src",
 				SubPath:   "web/data-0",

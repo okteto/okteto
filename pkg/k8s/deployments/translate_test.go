@@ -55,7 +55,7 @@ services:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-						SecurityContext: &apiv1.PodSecurityContext{
+					SecurityContext: &apiv1.PodSecurityContext{
 						RunAsUser:  &runAsUser,
 						RunAsGroup: &runAsGroup,
 						FSGroup:    &fsGroup,
@@ -120,6 +120,12 @@ services:
 									ReadOnly:  false,
 									MountPath: "/app",
 									SubPath:   "web/data-0",
+								},
+								apiv1.VolumeMount{
+									Name:      oktetoVolumName,
+									ReadOnly:  false,
+									MountPath: "/var/syncthing",
+									SubPath:   "web/syncthing",
 								},
 								apiv1.VolumeMount{
 									Name:      oktetoSyncSecretVolume,
