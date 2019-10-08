@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Syncthing) initSyncthingApp() error {
-	log.Info("start syncthing in process")
+	log.Info("start syncthing inprocess")
 
 	if err := locations.SetBaseDir(locations.ConfigBaseDir, s.Home); err != nil {
 		return fmt.Errorf("failed to set the syncthing directory: %w", err)
@@ -40,7 +40,9 @@ func (s *Syncthing) initSyncthingApp() error {
 		NoUpgrade: true,
 		Verbose:   true,
 	}
+
 	s.app = syncthing.New(cfg, ldb, events.NoopLogger, cert, opt)
+	s.app.Start()
 	return nil
 }
 
@@ -53,7 +55,6 @@ func (s *Syncthing) inprocessStop() error {
 		return fmt.Errorf("unexpected status after wait: %v", e)
 	}
 
-	s.app.Start()
 	return nil
 }
 

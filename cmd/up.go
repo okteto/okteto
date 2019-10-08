@@ -395,7 +395,7 @@ func (up *UpContext) startLocalSyncthing() error {
 		return err
 	}
 
-	if err := up.Sy.WaitForPing(up.Context, up.WG, true); err != nil {
+	if err := up.Sy.WaitForPing(up.Context, up.WG); err != nil {
 		return err
 	}
 	up.Sy.SendStignoreFile(up.Context, up.WG, up.Dev)

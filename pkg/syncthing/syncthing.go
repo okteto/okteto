@@ -210,7 +210,7 @@ func (s *Syncthing) UpdateConfig() error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0600); err != nil {
 		return err
 	}
 	return nil
@@ -256,9 +256,9 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 			0600); err != nil {
 			return err
 		}
-
-		log.Infof("syncthing running on http://%s and tcp://%s with password '%s'", s.GUIAddress, s.ListenAddress, s.GUIPassword)
 	}
+
+	log.Infof("syncthing running on http://%s and tcp://%s with password '%s'", s.GUIAddress, s.ListenAddress, s.GUIPassword)
 
 	wg.Add(1)
 	go func() {
@@ -272,16 +272,16 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 	return nil
 }
 
-//WaitForPing waits for synthing to be ready
-func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup, local bool) error {
+//WaitForPing waits for local synthing to be ready
+func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
-	log.Infof("waiting for syncthing to be ready...")
+	log.Info("waiting for syncthing to be ready...")
 	for i := 0; i < 200; i++ {
-		_, err := s.APICall("rest/system/ping", "GET", 200, nil, local, nil)
+		_, err := s.APICall("rest/system/ping", "GET", 200, nil, true, nil)
 		if err == nil {
 			return nil
 		}
-		log.Debugf("error calling 'rest/system/ping' syncthing API: %s", err)
+		log.Debugf("error calling 'rest/system/ping' on syncthing API: %s", err)
 		select {
 		case <-ticker.C:
 			continue
@@ -290,6 +290,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup, local b
 			return ctx.Err()
 		}
 	}
+
 	return fmt.Errorf("Syncthing not responding after 50s")
 }
 
