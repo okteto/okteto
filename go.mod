@@ -4,7 +4,6 @@ require (
 	cloud.google.com/go v0.39.0 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.4.2
-	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/briandowns/spinner v1.7.0
 	github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
@@ -19,8 +18,6 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-openapi/spec v0.18.0 // indirect
-	github.com/gogo/protobuf v1.1.1 // indirect
-	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-github/v28 v28.1.1
 	github.com/googleapis/gnostic v0.2.0 // indirect
@@ -28,35 +25,27 @@ require (
 	github.com/hashicorp/go-getter v1.0.2
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
-	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/machinebox/graphql v0.2.2
 	github.com/manifoldco/promptui v0.3.2
 	github.com/matryer/is v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/mattn/psutil v0.0.0-20170126005127-e6c88f1e9be6
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/moovweb/rubex v0.0.0-20160224233712-cb849acea614 // indirect
 	github.com/nicksnyder/go-i18n v1.10.0 // indirect
-	github.com/onsi/ginkgo v1.8.0 // indirect
-	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
 	github.com/russross/blackfriday v1.5.2 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.1
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/stretchr/testify v1.3.0 // indirect
+	github.com/syncthing/syncthing v0.0.0
 	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
-	golang.org/x/crypto v0.0.0-20190530122614-20be4c3c3ed5
+	golang.org/x/crypto v0.0.0-20190829043050-9756ffdc2472
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
-	golang.org/x/net v0.0.0-20190603091049-60506f45cf65 // indirect
 	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0 // indirect
 	golang.org/x/sys v0.0.0-20190919044723-0c1ff786ef13 // indirect
-	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	golang.org/x/tools v0.0.0-20190603181926-178e83bc9d6a // indirect
 	google.golang.org/appengine v1.6.0 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
@@ -73,6 +62,7 @@ require (
 )
 
 replace (
+	github.com/syncthing/syncthing => github.com/okteto/syncthing-generated v1.3.0-gen1
 	k8s.io/api => k8s.io/api v0.0.0-20190805141119-fdd30b57c827
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190805143126-cdb999c96590
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719

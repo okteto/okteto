@@ -25,6 +25,7 @@ import (
 
 	ps "github.com/mitchellh/go-ps"
 	uuid "github.com/satori/go.uuid"
+	inprocess "github.com/syncthing/syncthing/lib/syncthing"
 )
 
 var (
@@ -74,6 +75,8 @@ type Syncthing struct {
 	RemotePort       int
 	Source           string
 	Type             string
+	app              *inprocess.App
+	inprocess        bool
 }
 
 //Ignores represents the .stignore file
@@ -146,10 +149,17 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		Type:             "sendonly",
 	}
 
+	_, s.inprocess = os.LookupEnv("OKTETO_SYNCTHING_INPROCESS")
+
 	return s, nil
 }
 
 func (s *Syncthing) cleanupDaemon(pidPath string) error {
+	if s.inprocess {
+		log.Info("syncthing running in process, ignoring cleanup")
+		return nil
+	}
+
 	pid, err := getPID(pidPath)
 	if os.IsNotExist(err) {
 		return nil
@@ -212,38 +222,43 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	pidPath := filepath.Join(s.Home, syncthingPidFile)
+	if s.inprocess {
+		if err := s.initSyncthingApp(); err != nil {
+			return err
+		}
+	} else {
+		pidPath := filepath.Join(s.Home, syncthingPidFile)
+		if err := s.cleanupDaemon(pidPath); err != nil {
+			return err
+		}
 
-	if err := s.cleanupDaemon(pidPath); err != nil {
-		return err
+		cmdArgs := []string{
+			"-home", s.Home,
+			"-no-browser",
+			"-verbose",
+			"-logfile", s.LogPath,
+		}
+
+		s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
+		s.cmd.Env = append(os.Environ(), "STNOUPGRADE=1")
+
+		if err := s.cmd.Start(); err != nil {
+			return err
+		}
+
+		if s.cmd.Process == nil {
+			return nil
+		}
+
+		if err := ioutil.WriteFile(
+			pidPath,
+			[]byte(strconv.Itoa(s.cmd.Process.Pid)),
+			0600); err != nil {
+			return err
+		}
+
+		log.Infof("syncthing running on http://%s and tcp://%s with password '%s'", s.GUIAddress, s.ListenAddress, s.GUIPassword)
 	}
-
-	cmdArgs := []string{
-		"-home", s.Home,
-		"-no-browser",
-		"-verbose",
-		"-logfile", s.LogPath,
-	}
-
-	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
-	s.cmd.Env = append(os.Environ(), "STNOUPGRADE=1")
-
-	if err := s.cmd.Start(); err != nil {
-		return err
-	}
-
-	if s.cmd.Process == nil {
-		return nil
-	}
-
-	if err := ioutil.WriteFile(
-		pidPath,
-		[]byte(strconv.Itoa(s.cmd.Process.Pid)),
-		0600); err != nil {
-		return err
-	}
-
-	log.Infof("syncthing running on http://%s and tcp://%s with password '%s'", s.GUIAddress, s.ListenAddress, s.GUIPassword)
 
 	wg.Add(1)
 	go func() {
@@ -411,6 +426,10 @@ func (s *Syncthing) Restart(ctx context.Context, wg *sync.WaitGroup) error {
 
 // Stop halts the background process and cleans up.
 func (s *Syncthing) Stop() error {
+	if s.inprocess {
+		return s.inprocessStop()
+	}
+
 	pidPath := filepath.Join(s.Home, syncthingPidFile)
 
 	if err := s.cleanupDaemon(pidPath); err != nil {
