@@ -27,15 +27,22 @@ services:
 	}
 
 	d1 := dev.GevSandbox()
+	dev.DevPath = "okteto.yml"
 	rule1 := dev.ToTranslationRule(dev, d1)
 	rule1OK := &TranslationRule{
+		Marker:          "okteto.yml",
 		Container:       "dev",
 		Image:           "web:latest",
 		ImagePullPolicy: apiv1.PullNever,
-		Command:         []string{"tail"},
-		Args:            []string{"-f", "/dev/null"},
+		Command:         []string{"/var/okteto/bin/start.sh"},
+		Args:            []string{},
 		Healthchecks:    false,
-		Environment:     make([]EnvVar, 0),
+		Environment: []EnvVar{
+			{
+				Name:  oktetoMarkerPathVariable,
+				Value: "/app/okteto.yml",
+			},
+		},
 		Resources: ResourceRequirements{
 			Limits:   ResourceList{},
 			Requests: ResourceList{},

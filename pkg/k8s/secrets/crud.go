@@ -34,7 +34,7 @@ func Create(dev *model.Dev, c *kubernetes.Clientset, guiPasswordHash string) err
 		return fmt.Errorf("error getting kubernetes secret: %s", err)
 	}
 
-	config, err := getConfigXML(dev.Name, dev.DevPath, guiPasswordHash)
+	config, err := getConfigXML(dev.Name, dev.MountPath, dev.DevPath, guiPasswordHash)
 	if err != nil {
 		return fmt.Errorf("error generating syncthing configuration: %s", err)
 	}
