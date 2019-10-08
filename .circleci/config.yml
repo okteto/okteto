@@ -154,6 +154,7 @@ workflows:
             branches:
               only: 
                 - master
+                - /.*(integration)/
       - release-master:
           requires:
             - integration
