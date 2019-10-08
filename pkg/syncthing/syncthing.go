@@ -203,7 +203,7 @@ func (s *Syncthing) initConfig() error {
 	return nil
 }
 
-// UpdateConfig updates the synchting config file
+// UpdateConfig updates the syncthing config file
 func (s *Syncthing) UpdateConfig() error {
 	buf := new(bytes.Buffer)
 	if err := configTemplate.Execute(buf, s); err != nil {
