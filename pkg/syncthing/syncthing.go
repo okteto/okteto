@@ -419,7 +419,11 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context, wg *sync.WaitGroup) error {
-	log.Infof("restarting synchting...")
+	if s.inprocess {
+		return s.inprocessRestart()
+	}
+
+	log.Infof("restarting syncthing...")
 	_, err := s.APICall("rest/system/restart", "POST", 200, nil, true, nil)
 	return err
 }
