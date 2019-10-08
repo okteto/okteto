@@ -398,6 +398,12 @@ func (up *UpContext) startLocalSyncthing() error {
 	if err := up.Sy.WaitForPing(up.Context, up.WG, true); err != nil {
 		return err
 	}
+	if err := up.Sy.WaitForPing(up.Context, up.WG, false); err != nil {
+		return errors.UserError{
+			E:    fmt.Errorf("Failed to connect to the synchonization service"),
+			Hint: fmt.Sprintf("This is probably because your development image is not root.\n    Please, add securityContext.runAsUser and securityContext.fsGroup to your okteto manifest.\n    Follow this link for an example: https://github.com/okteto/java-gradle-getting-started/blob/master/okteto.yml"),
+		}
+	}
 	up.Sy.SendStignoreFile(up.Context, up.WG, up.Dev)
 	if err := up.Sy.WaitForScanning(up.Context, up.WG, up.Dev, true); err != nil {
 		return err

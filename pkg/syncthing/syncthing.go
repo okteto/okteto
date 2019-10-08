@@ -261,7 +261,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup, local bool) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	log.Infof("waiting for syncthing to be ready...")
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 30; i++ {
 		_, err := s.APICall("rest/system/ping", "GET", 200, nil, local, nil)
 		if err == nil {
 			return nil
@@ -275,7 +275,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup, local b
 			return ctx.Err()
 		}
 	}
-	return fmt.Errorf("Syncthing not responding after 50s")
+	return fmt.Errorf("Syncthing not responding after 10s")
 }
 
 //SendStignoreFile sends .stignore from local to remote

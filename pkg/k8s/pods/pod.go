@@ -69,23 +69,17 @@ func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes
 
 		var runningPods []apiv1.Pod
 		for _, pod := range pods.Items {
+			if pod.GetObjectMeta().GetDeletionTimestamp() != nil {
+				continue
+			}
 			if pod.Status.Phase == apiv1.PodRunning {
-				if pod.GetObjectMeta().GetDeletionTimestamp() == nil {
-					if label != OktetoSyncLabel || pod.Spec.Containers[0].Image == syncImageTag {
-						runningPods = append(runningPods, pod)
-					}
-				}
+				runningPods = append(runningPods, pod)
 			} else {
 				log.Debugf("pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.Phase)
-				for _, status := range pod.Status.InitContainerStatuses {
-					if status.Name == model.OktetoInitContainer {
-						if status.State.Terminated != nil && status.State.Terminated.ExitCode != 0 {
-							return nil, fmt.Errorf("Error initializing okteto volume. This is probably because your development image is not root. Please, add securityContext.runAsUser and securityContext.fsGroup to your deployment manifest")
-						}
-						if status.State.Waiting != nil {
-							if status.State.Waiting.Reason == "ErrImagePull" || status.State.Waiting.Reason == "ImagePullBackOff" {
-								return nil, fmt.Errorf(status.State.Waiting.Message)
-							}
+				for _, status := range pod.Status.ContainerStatuses {
+					if status.State.Waiting != nil {
+						if status.State.Waiting.Reason == "ErrImagePull" || status.State.Waiting.Reason == "ImagePullBackOff" {
+							return nil, fmt.Errorf(status.State.Waiting.Message)
 						}
 					}
 				}
