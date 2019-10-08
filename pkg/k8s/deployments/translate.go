@@ -102,10 +102,10 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	} else {
 		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
 	}
-	TranslateOktetoVolume(&t.Deployment.Spec.Template.Spec)
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		TranslateDevContainer(devContainer, rule)
+		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
 		if rule.Marker != "" {
 			TranslateOktetoBinVolumeMounts(devContainer)
@@ -282,26 +282,33 @@ func TranslateOktetoBinVolumeMounts(c *apiv1.Container) {
 	c.VolumeMounts = append(c.VolumeMounts, vm)
 }
 
-//TranslateOktetoVolume translates the dev volume
-func TranslateOktetoVolume(spec *apiv1.PodSpec) {
+//TranslateOktetoVolumes translates the dev volumes
+func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
 	}
-	for _, v := range spec.Volumes {
-		if v.Name == oktetoVolumName {
-			return
+	for _, rV := range rule.Volumes {
+		found := false
+		for _, v := range spec.Volumes {
+			if v.Name == rV.Name {
+				found = true
+				break
+			}
 		}
-	}
-	v := apiv1.Volume{
-		Name: oktetoVolumName,
-		VolumeSource: apiv1.VolumeSource{
-			PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-				ClaimName: oktetoVolumName,
-				ReadOnly:  false,
+		if found {
+			continue
+		}
+		v := apiv1.Volume{
+			Name: rV.Name,
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: rV.Name,
+					ReadOnly:  false,
+				},
 			},
-		},
+		}
+		spec.Volumes = append(spec.Volumes, v)
 	}
-	spec.Volumes = append(spec.Volumes, v)
 }
 
 //TranslateOktetoBinVolume translates the binaries volume attached to a container
