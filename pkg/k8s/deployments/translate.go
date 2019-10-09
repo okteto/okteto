@@ -73,9 +73,6 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 		_, v := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
 		if !v {
 			commonTranslation(t)
-			if t.Interactive {
-				t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
-			}
 			return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 		}
 	}
@@ -94,7 +91,6 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoDetachedDevLabel, t.Name)
 	}
 
-	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
 	if !t.Interactive {

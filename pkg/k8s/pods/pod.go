@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	deploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
 	// OktetoInteractiveDevLabel indicates the interactive dev pod
 	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
 
@@ -26,83 +27,86 @@ const (
 	// OktetoSyncLabel indicates a synthing pod
 	OktetoSyncLabel = "syncthing.okteto.com"
 
-	syncImageTag = "okteto/syncthing:1.3.0"
-
-	maxRetries = 600
-
-	failedCreateReason = "FailedCreate"
+	maxRetriesPodRunning = 1500 //5min pod is running
 )
 
 var (
 	devTerminationGracePeriodSeconds int64
 )
 
-// GetByLabel returns the dev pod for a deployment
-func GetByLabel(ctx context.Context, dev *model.Dev, label string, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
+// GetDevPod returns the dev pod for a deployment
+func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	tries := 0
-	ticker := time.NewTicker(500 * time.Millisecond)
-	selector := fmt.Sprintf("%s=%s", label, dev.Name)
-	for tries < maxRetries {
-		pods, err := c.CoreV1().Pods(dev.Namespace).List(
-			metav1.ListOptions{
-				LabelSelector: selector,
-			},
-		)
+	ticker := time.NewTicker(200 * time.Millisecond)
+	for tries < maxRetriesPodRunning {
+		pod, err := loopGetDevPod(dev, c, waitUntilDeployed)
 		if err != nil {
-			log.Infof("error listing pods: %s", err)
-			return nil, fmt.Errorf("failed to retrieve dev environment information")
+			return nil, err
 		}
-
-		if tries%10 == 0 && len(pods.Items) == 0 {
-			log.Infof("Didn't find any pods for %s, checking if deployment is down", selector)
-			// every 30s check if the deployment failed
-			if err := isDeploymentFailed(dev, c); err != nil {
-				if !errors.IsNotFound(err) {
-					return nil, err
-				}
-
-				if !waitUntilDeployed {
-					return nil, err
-				}
-			}
+		if pod != nil {
+			return pod, nil
 		}
-
-		var runningPods []apiv1.Pod
-		for _, pod := range pods.Items {
-			if pod.GetObjectMeta().GetDeletionTimestamp() != nil {
-				continue
-			}
-			if pod.Status.Phase == apiv1.PodRunning {
-				runningPods = append(runningPods, pod)
-			} else {
-				log.Debugf("pod %s/%s is on %s, waiting for it to be running", pod.Namespace, pod.Name, pod.Status.Phase)
-				for _, status := range pod.Status.ContainerStatuses {
-					if status.State.Waiting != nil {
-						if status.State.Waiting.Reason == "ErrImagePull" || status.State.Waiting.Reason == "ImagePullBackOff" {
-							return nil, fmt.Errorf(status.State.Waiting.Message)
-						}
-					}
-				}
-			}
-		}
-
-		if len(runningPods) == 1 {
-			log.Debugf("%s/pod/%s is %s", runningPods[0].Namespace, runningPods[0].Name, runningPods[0].Status.Phase)
-			return &runningPods[0], nil
-		}
-
 		select {
 		case <-ticker.C:
 			tries++
 			continue
 		case <-ctx.Done():
-			log.Debug("cancelling call to get cnd pod")
+			log.Debug("cancelling call to get dev pod")
 			return nil, ctx.Err()
 		}
 	}
+	return nil, fmt.Errorf("kubernetes is taking too long to create the pod of your development environment. Please check for errors and try again")
+}
 
-	log.Debugf("dev pod wasn't running after %d seconds", maxRetries)
-	return nil, fmt.Errorf("kubernetes is taking too long to create the cloud native environment. Please check for errors and try again")
+func loopGetDevPod(dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
+	d, err := deployments.GetRevionAnnotatedDeploymentOrFailed(dev, c, waitUntilDeployed)
+	if d == nil {
+		return nil, err
+	}
+	log.Infof("deployment %s with revision %v is progressing", d.Name, d.Annotations[deploymentRevisionAnnotation])
+
+	rs, err := replicasets.GetReplicaSetByDeployment(dev, d, c)
+	if rs == nil {
+		return nil, err
+	}
+	log.Infof("replicaset %s with revison %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
+
+	pod, err := getPodByReplicaSet(dev, rs, c)
+	if pod == nil {
+		return nil, err
+	}
+
+	log.Infof("pod %s with revison %s is progressing", pod.Name, d.Annotations[deploymentRevisionAnnotation])
+	if pod.Status.Phase == apiv1.PodRunning {
+		log.Infof("pod %s with revison %s is running", pod.Name, d.Annotations[deploymentRevisionAnnotation])
+		return pod, nil
+	}
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.State.Waiting != nil {
+			if status.State.Waiting.Reason == "ErrImagePull" || status.State.Waiting.Reason == "ImagePullBackOff" {
+				return nil, fmt.Errorf(status.State.Waiting.Message)
+			}
+		}
+	}
+	return nil, nil
+}
+
+func getPodByReplicaSet(dev *model.Dev, rs *appsv1.ReplicaSet, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+	opts := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", OktetoInteractiveDevLabel, dev.Name),
+	}
+	podList, err := c.CoreV1().Pods(dev.Namespace).List(opts)
+	if err != nil {
+		return nil, err
+	}
+	for _, pod := range podList.Items {
+		for _, or := range pod.OwnerReferences {
+			if or.UID == rs.UID {
+				return &pod, nil
+			}
+		}
+	}
+	return nil, nil
 }
 
 //Exists returns if the dev pod still exists
@@ -112,28 +116,6 @@ func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
 		return false
 	}
 	return pod.GetObjectMeta().GetDeletionTimestamp() == nil
-}
-
-func isDeploymentFailed(dev *model.Dev, c *kubernetes.Clientset) error {
-	d, err := deployments.Get(dev, dev.Namespace, c)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return err
-		}
-
-		log.Infof("failed to get deployment information: %s", err)
-		return nil
-	}
-
-	for _, c := range d.Status.Conditions {
-		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == failedCreateReason && c.Status == apiv1.ConditionTrue {
-			if strings.Contains(c.Message, "exceeded quota") {
-				return errors.ErrQuota
-			}
-		}
-	}
-
-	return nil
 }
 
 // Restart restarts the pods of a deployment

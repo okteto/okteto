@@ -72,7 +72,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		dev.Namespace = namespace
 	}
 
-	p, err := pods.GetByLabel(ctx, dev, pods.OktetoInteractiveDevLabel, client, false)
+	p, err := pods.GetDevPod(ctx, dev, client, false)
 	if err != nil {
 		return err
 	}

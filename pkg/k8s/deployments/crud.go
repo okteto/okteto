@@ -50,6 +50,32 @@ func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Dep
 	return d, nil
 }
 
+//GetRevionAnnotatedDeploymentOrFailed returns a deployment object if it is healthy and annotated with its revision or an error
+func GetRevionAnnotatedDeploymentOrFailed(dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*appsv1.Deployment, error) {
+	d, err := Get(dev, dev.Namespace, c)
+	if err != nil {
+		if waitUntilDeployed && errors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	for _, c := range d.Status.Conditions {
+		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
+			if strings.Contains(c.Message, "exceeded quota") {
+				return nil, errors.ErrQuota
+			}
+			return nil, fmt.Errorf(c.Message)
+		}
+	}
+
+	if d.Annotations[revisionAnnotation] == "" {
+		return nil, nil
+	}
+
+	return d, nil
+}
+
 //GetTranslations fills all the deployments pointed by a dev environment
 func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
 	result := map[string]*model.Translation{}
