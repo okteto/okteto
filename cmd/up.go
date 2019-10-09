@@ -328,7 +328,7 @@ func (up *UpContext) devMode(isRetry bool, ns *apiv1.Namespace, d *appsv1.Deploy
 		return err
 	}
 
-	if err := deployments.TraslateDevMode(tr, ns, up.Client); err != nil {
+	if err := deployments.TranslateDevMode(tr, ns, up.Client); err != nil {
 		return err
 	}
 
@@ -397,6 +397,12 @@ func (up *UpContext) startLocalSyncthing() error {
 
 	if err := up.Sy.WaitForPing(up.Context, up.WG, true); err != nil {
 		return err
+	}
+	if err := up.Sy.WaitForPing(up.Context, up.WG, false); err != nil {
+		return errors.UserError{
+			E:    fmt.Errorf("Failed to connect to the synchronization service"),
+			Hint: fmt.Sprintf("If you are using a non-root container, you need to set the securityContext.runAsUser and securityContext.runAsGroup values in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional)."),
+		}
 	}
 	up.Sy.SendStignoreFile(up.Context, up.WG, up.Dev)
 	if err := up.Sy.WaitForScanning(up.Context, up.WG, up.Dev, true); err != nil {
