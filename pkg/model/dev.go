@@ -21,6 +21,8 @@ const (
 	oktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
 	oktetoRemotePortVariable = "OKTETO_REMOTE_PORT"
 
+	oktetoVolumeNameTemplate  = "pvc-%d"
+	oktetoPodNameTemplate     = "%s-0"
 	oktetoStatefulSetTemplate = "okteto-%s"
 	//OktetoVolumeName name of the okteto persistent volume
 	OktetoVolumeName = "okteto"
@@ -297,6 +299,24 @@ func (dev *Dev) GetStatefulSetName() string {
 		n = n[0:52]
 	}
 	return n
+}
+
+//GetPodName returns the syncthing statefulset pod name for a given dev environment
+func (dev *Dev) GetPodName() string {
+	n := dev.GetStatefulSetName()
+	return fmt.Sprintf(oktetoPodNameTemplate, n)
+}
+
+//GetVolumeTemplateName returns the data volume name for a given dev environment
+func (dev *Dev) GetVolumeTemplateName(i int) string {
+	return fmt.Sprintf(oktetoVolumeNameTemplate, i)
+}
+
+//GetVolumeName returns the data volume name for a given dev environment
+func (dev *Dev) GetVolumeName(i int) string {
+	volumeName := dev.GetVolumeTemplateName(i)
+	podName := dev.GetPodName()
+	return fmt.Sprintf("%s-%s", volumeName, podName)
 }
 
 // LabelsSelector returns the labels of a Deployment as a k8s selector
