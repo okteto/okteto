@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -30,17 +31,6 @@ const (
 	syncGUIPort              = 8384
 	oktetoSyncSecretVolume   = "okteto-sync-secret"
 	oktetoSyncSecretTemplate = "okteto-%s"
-
-	//OktetoVersion represents the current dev data version
-	OktetoVersion = "1.0"
-	// OktetoDevLabel indicates the dev pod
-	OktetoDevLabel = "dev.okteto.com"
-	// OktetoInteractiveDevLabel indicates the interactive dev pod
-	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
-	// OktetoDetachedDevLabel indicates the detached dev pods
-	OktetoDetachedDevLabel = "detached.dev.okteto.com"
-	// OktetoTranslationAnnotation sets the translation rules
-	OktetoTranslationAnnotation = "dev.okteto.com/translation"
 )
 
 var (
@@ -86,9 +76,9 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 
 	commonTranslation(t)
 	if t.Interactive {
-		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoInteractiveDevLabel, t.Name)
+		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.OktetoInteractiveDevLabel, t.Name)
 	} else {
-		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoDetachedDevLabel, t.Name)
+		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.OktetoDetachedDevLabel, t.Name)
 	}
 
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
@@ -114,8 +104,8 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 
 func commonTranslation(t *model.Translation) {
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
-	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.OktetoVersion)
+	setLabel(t.Deployment.GetObjectMeta(), okLabels.OktetoDevLabel, "true")
 	t.Deployment.Spec.Replicas = &devReplicas
 }
 
@@ -150,7 +140,7 @@ func TranslatePodAffinity(spec *apiv1.PodSpec, name string) {
 		apiv1.PodAffinityTerm{
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					OktetoInteractiveDevLabel: name,
+					okLabels.OktetoInteractiveDevLabel: name,
 				},
 			},
 			TopologyKey: "kubernetes.io/hostname",

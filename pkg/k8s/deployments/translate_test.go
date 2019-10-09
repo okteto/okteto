@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -176,7 +177,7 @@ services:
 								apiv1.PodAffinityTerm{
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											OktetoInteractiveDevLabel: "web",
+											okLabels.OktetoInteractiveDevLabel: "web",
 										},
 									},
 									TopologyKey: "kubernetes.io/hostname",
