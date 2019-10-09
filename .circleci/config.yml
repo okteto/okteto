@@ -46,13 +46,13 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
       - run: 
-          name: integration tests (clientside)
-          environment:
-            OKTETO_CLIENTSIDE_TRANSLATION: "true"
+          name: integration tests (serverside)
           command: |
             make integration
       - run: 
-          name: integration tests (serverside)
+          name: integration tests (clientside)
+          environment:
+            OKTETO_CLIENTSIDE_TRANSLATION: "true"
           command: |
             make integration
       - save_cache:
