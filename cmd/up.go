@@ -401,7 +401,7 @@ func (up *UpContext) startLocalSyncthing() error {
 	if err := up.Sy.WaitForPing(up.Context, up.WG, false); err != nil {
 		return errors.UserError{
 			E:    fmt.Errorf("Failed to connect to the synchronization service"),
-			Hint: fmt.Sprintf("If you are using a non-root container, and the runAsUser and runAsGroup values are not specified in your Kubernetes manifest, you need to set these values in your Okteto manifest.\n    Follow this link for more information on how to do it: https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional"),
+			Hint: fmt.Sprintf("If you are using a non-root container, you need to set the securityContext.runAsUser and securityContext.runAsGroup values in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional)."),
 		}
 	}
 	up.Sy.SendStignoreFile(up.Context, up.WG, up.Dev)
