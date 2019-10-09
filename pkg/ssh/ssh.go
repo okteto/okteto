@@ -36,6 +36,7 @@ func add(path string, name string, port int) error {
 		ssh_config.NewParam(ssh_config.HostNameKeyword, []string{"localhost"}, nil),
 		ssh_config.NewParam(ssh_config.PortKeyword, []string{strconv.Itoa(port)}, nil),
 		ssh_config.NewParam(ssh_config.StrictHostKeyCheckingKeyword, []string{"no"}, nil),
+		ssh_config.NewParam(ssh_config.UserKnownHostsFileKeyword, []string{"/dev/null"}, nil),
 	}
 
 	cfg.Hosts = append(cfg.Hosts, host)
