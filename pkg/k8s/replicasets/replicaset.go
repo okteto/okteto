@@ -28,9 +28,11 @@ func GetReplicaSetByDeployment(dev *model.Dev, d *appsv1.Deployment, c *kubernet
 	}
 	for _, rs := range rsList.Items {
 		for _, or := range rs.OwnerReferences {
-			if or.UID == d.UID && rs.Annotations[deploymentRevisionAnnotation] == d.Annotations[deploymentRevisionAnnotation] {
-				log.Infof("replicaset %s with revison %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
-				return &rs, nil
+			if or.UID == d.UID {
+				if v, ok := rs.Annotations[deploymentRevisionAnnotation]; ok && v == d.Annotations[deploymentRevisionAnnotation] {
+					log.Infof("replicaset %s with revison %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
+					return &rs, nil
+				}
 			}
 		}
 	}
