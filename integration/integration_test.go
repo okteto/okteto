@@ -339,14 +339,14 @@ func waitForReady(namespace, name string) error {
 			continue
 		}
 
+		if i%5 == 0 {
+			log.Printf("okteto up is: %s", c)
+		}
+
 		if string(c) == "ready" {
 			return nil
 		} else if string(c) == "failed" {
 			return fmt.Errorf("dev environment failed")
-		}
-
-		if i%5 == 0 {
-			log.Printf("okteto up is: %s", c)
 		}
 
 		<-t.C
