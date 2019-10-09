@@ -510,7 +510,7 @@ func (up *UpContext) shutdown() {
 		up.Cancel()
 	}
 
-	if up.RemotePort > -1 {
+	if up.RemotePort > 0 {
 		if err := ssh.RemoveEntry(up.Dev.Name); err != nil {
 			log.Infof("failed to remove ssh entry: %s", err)
 		}
