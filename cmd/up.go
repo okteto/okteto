@@ -30,7 +30,6 @@ import (
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -55,6 +54,7 @@ type UpContext struct {
 	Exit       chan error
 	Sy         *syncthing.Syncthing
 	ErrChan    chan error
+	cleaned    chan struct{}
 	success    bool
 }
 
@@ -164,102 +164,25 @@ func (up *UpContext) Activate() {
 		up.Dev.Namespace = namespace
 	}
 
-	ns, err := namespaces.Get(up.Dev.Namespace, up.Client)
-	if err != nil {
-		up.Exit <- err
-		return
-	}
-
-	if !namespaces.IsOktetoAllowed(ns) {
-		up.Exit <- fmt.Errorf("`okteto up` is not allowed in this namespace")
-		return
-	}
-
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		up.Disconnect = make(chan struct{}, 1)
 		up.Running = make(chan error, 1)
 		up.ErrChan = make(chan error, 1)
+		up.cleaned = make(chan struct{}, 1)
 
-		if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
-			up.Exit <- err
-			return
-		}
-
-		d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
-		create := false
-		if err != nil {
-			if !errors.IsNotFound(err) || retry {
-				up.Exit <- err
-				return
-			}
-
-			if len(up.Dev.Labels) == 0 {
-				_, deploy := os.LookupEnv("OKTETO_AUTODEPLOY")
-				if !deploy {
-					deploy = askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
-				}
-
-				if !deploy {
-					up.Exit <- errors.UserError{
-						E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", up.Dev.Name, up.Dev.Namespace),
-						Hint: "Deploy your application first or use `okteto namespace` to select a different namespace and try again"}
-					return
-				}
-			} else {
-				if err == errors.ErrNotFound {
-					err = errors.UserError{
-						E:    fmt.Errorf("Didn't find a deployment in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
-						Hint: "Update your labels or use `okteto namespace` to select a different namespace and try again"}
-				}
-				up.Exit <- err
-				return
-			}
-
-			d = up.Dev.GevSandbox()
-			create = true
-		}
-
-		if namespaces.IsOktetoNamespace(ns) {
-			if err := namespaces.CheckAvailableResources(up.Dev, create, d, up.Client); err != nil {
-				up.Exit <- err
-				return
-			}
-		}
-
-		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
-		if devContainer == nil {
-			up.Exit <- fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
-			return
-		}
-		up.Dev.Container = devContainer.Name
-		if up.Dev.Image == "" {
-			up.Dev.Image = devContainer.Image
-		}
-
-		if retry && !deployments.IsDevModeOn(d) {
-			log.Information("Okteto Environment has been deactivated")
-			up.Exit <- nil
-			return
-		}
-
-		up.updateStateFile(starting)
-
-		up.Sy, err = syncthing.New(up.Dev)
+		d, create, err := up.getCurrentDeployment(retry)
 		if err != nil {
 			up.Exit <- err
 			return
 		}
 
-		log.Info("create deployment secrets")
-		if err := secrets.Create(up.Dev, up.Client, up.Sy.GUIPasswordHash); err != nil {
+		activated, err := up.devMode(retry, d, create)
+		if err != nil {
 			up.Exit <- err
 			return
 		}
-
-		err = up.devMode(retry, ns, d, create)
-		if err != nil {
-			up.Exit <- err
+		if !activated {
 			return
 		}
 		log.Success("Okteto Environment activated")
@@ -276,6 +199,7 @@ func (up *UpContext) Activate() {
 		printDisplayContext("Files synchronized", up.Dev)
 
 		go func() {
+			<-up.cleaned
 			up.Running <- up.runCommand()
 		}()
 
@@ -302,6 +226,38 @@ func (up *UpContext) Activate() {
 	}
 }
 
+func (up *UpContext) getCurrentDeployment(retry bool) (*appsv1.Deployment, bool, error) {
+	d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
+	if err == nil {
+		return d, false, nil
+	}
+	if !errors.IsNotFound(err) || retry {
+		return nil, false, err
+	}
+
+	if len(up.Dev.Labels) > 0 {
+		if err == errors.ErrNotFound {
+			err = errors.UserError{
+				E:    fmt.Errorf("Didn't find a deployment in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
+				Hint: "Update your labels or use `okteto namespace` to select a different namespace and try again"}
+		}
+		return nil, false, err
+	}
+
+	_, deploy := os.LookupEnv("OKTETO_AUTODEPLOY")
+	if !deploy {
+		deploy = askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
+	}
+	if !deploy {
+		return nil, false, errors.UserError{
+			E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", up.Dev.Name, up.Dev.Namespace),
+			Hint: "Deploy your application first or use `okteto namespace` to select a different namespace and try again",
+		}
+	}
+
+	return up.Dev.GevSandbox(), true, nil
+}
+
 // WaitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
 func (up *UpContext) WaitUntilExitOrInterrupt() error {
 	for {
@@ -323,60 +279,106 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *UpContext) devMode(isRetry bool, ns *apiv1.Namespace, d *appsv1.Deployment, create bool) error {
+func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (bool, error) {
 	spinner := newSpinner("Activating your Okteto Environment...")
 	up.updateStateFile(activating)
 	spinner.start()
 	defer spinner.stop()
 
+	ns, err := namespaces.Get(up.Dev.Namespace, up.Client)
+	if err != nil {
+		return false, err
+	}
+
+	if !namespaces.IsOktetoAllowed(ns) {
+		return false, fmt.Errorf("`okteto up` is not allowed in this namespace")
+	}
+
+	if namespaces.IsOktetoNamespace(ns) {
+		if err := namespaces.CheckAvailableResources(up.Dev, create, d, up.Client); err != nil {
+			return false, err
+		}
+	}
+
+	if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
+		return false, err
+	}
+
+	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
+	if devContainer == nil {
+		return false, fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
+	}
+	up.Dev.Container = devContainer.Name
+	if up.Dev.Image == "" {
+		up.Dev.Image = devContainer.Image
+	}
+
+	if isRetry && !deployments.IsDevModeOn(d) {
+		log.Information("Okteto Environment has been deactivated")
+		return false, nil
+	}
+
+	up.updateStateFile(starting)
+
+	up.Sy, err = syncthing.New(up.Dev)
+	if err != nil {
+		return false, err
+	}
+
+	log.Info("create deployment secrets")
+	if err := secrets.Create(up.Dev, up.Client, up.Sy.GUIPasswordHash); err != nil {
+		return false, err
+	}
+
 	tr, err := deployments.GetTranslations(up.Dev, d, up.Client)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if err := deployments.TranslateDevMode(tr, ns, up.Client); err != nil {
-		return err
+		return false, err
 	}
 
 	for name := range tr {
 		if name == d.Name {
 			if err := deployments.Deploy(tr[name].Deployment, create, up.Client); err != nil {
-				return err
+				return false, err
 			}
 		} else {
 			if err := deployments.Deploy(tr[name].Deployment, false, up.Client); err != nil {
-				return err
+				return false, err
 			}
 		}
 	}
 	if create && len(up.Dev.Services) == 0 {
 		if err := services.Create(up.Dev, up.Client); err != nil {
-			return err
+			return false, err
 		}
 	}
 
 	p, err := pods.GetDevPod(up.Context, up.Dev, up.Client, create)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	up.Pod = p.Name
+	go up.cleanCommand()
 
 	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
 	for _, f := range up.Dev.Forward {
 		if err := up.Forwarder.Add(f.Local, f.Remote); err != nil {
-			return err
+			return false, err
 		}
 	}
 	if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
-		return err
+		return false, err
 	}
 	if err := up.Forwarder.Add(up.Sy.RemoteGUIPort, syncthing.GUIPort); err != nil {
-		return err
+		return false, err
 	}
 	up.Forwarder.Start(up.Pod, up.Dev.Namespace)
 
-	return nil
+	return true, nil
 }
 
 func (up *UpContext) sync() error {
@@ -465,7 +467,7 @@ func (up *UpContext) synchronizeFiles() error {
 	return up.Sy.Restart(up.Context, up.WG)
 }
 
-func (up *UpContext) runCommand() error {
+func (up *UpContext) cleanCommand() {
 	in := strings.NewReader("\n")
 	if err := exec.Exec(
 		up.Context,
@@ -482,10 +484,12 @@ func (up *UpContext) runCommand() error {
 	); err != nil {
 		log.Infof("first session to the remote container: %s", err)
 	}
+	up.cleaned <- struct{}{}
+}
 
+func (up *UpContext) runCommand() error {
 	log.Infof("starting remote command")
 	up.updateStateFile(ready)
-
 	return exec.Exec(
 		up.Context,
 		up.Client,
