@@ -10,10 +10,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 )
 
-const (
-	sshConfigFile = ".ssh/config"
-)
-
 func buildHostname(name string) string {
 	return fmt.Sprintf("%s.okteto", name)
 }
