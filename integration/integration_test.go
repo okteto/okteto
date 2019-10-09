@@ -155,7 +155,7 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := up(name, manifestPath, oktetoPath); err != nil {
+	if err := up(namespace, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -259,29 +259,6 @@ func writeManifest(path, name string) error {
 	return nil
 }
 
-func waitForPod(name string, timeout int) error {
-	for i := 0; i < timeout; i++ {
-		args := []string{"get", "pod", "-ojsonpath='{.status.phase}'", name}
-		cmd := exec.Command("kubectl", args...)
-		o, err := cmd.CombinedOutput()
-		output := string(o)
-		log.Printf("`kubectl %s` output: %s", strings.Join(args, " "), output)
-		if err != nil {
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		if strings.Contains(output, "Running") {
-			return nil
-		}
-
-		time.Sleep(5 * time.Second)
-	}
-
-	return fmt.Errorf("pod/%s wasn't ready after %d seconds", name, timeout)
-
-}
-
 func createNamespace(namespace, oktetoPath string) error {
 	log.Printf("creating namespace %s", namespace)
 	args := []string{"create", "namespace", namespace, "-l", "debug"}
@@ -331,7 +308,7 @@ func down(name, manifestPath, oktetoPath string) error {
 	return nil
 }
 
-func up(name, manifestPath, oktetoPath string) error {
+func up(namespace, name, manifestPath, oktetoPath string) error {
 	log.Println("starting okteto up")
 	upCMD := exec.Command(oktetoPath, "up", "-f", manifestPath)
 
@@ -345,12 +322,37 @@ func up(name, manifestPath, oktetoPath string) error {
 		}
 	}()
 
-	log.Println("waiting for the deployment to be running")
-	if err := waitForDeployment(name, 2, 120); err != nil {
-		return err
+	return waitForReady(namespace, name)
+}
+
+func waitForReady(namespace, name string) error {
+	state := fmt.Sprintf("%s/.okteto/%s/%s/okteto.state", os.Getenv("HOME"), namespace, name)
+	t := time.NewTicker(1 * time.Second)
+	for i := 0; i < 60; i++ {
+		c, err := ioutil.ReadFile(state)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+
+			<-t.C
+			continue
+		}
+
+		if i%5 == 0 {
+			log.Printf("okteto up is: %s", c)
+		}
+
+		if string(c) == "ready" {
+			return nil
+		} else if string(c) == "failed" {
+			return fmt.Errorf("dev environment failed")
+		}
+
+		<-t.C
 	}
 
-	return nil
+	return fmt.Errorf("dev environment was never ready")
 }
 
 func deploy(name, path string) error {
