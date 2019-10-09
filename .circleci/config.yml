@@ -48,12 +48,12 @@ jobs:
       - run: 
           name: integration tests (serverside)
           command: |
+            unset OKTETO_CLIENTSIDE_TRANSLATION
             make integration
       - run: 
           name: integration tests (clientside)
-          environment:
-            OKTETO_CLIENTSIDE_TRANSLATION: "true"
           command: |
+            export OKTETO_CLIENTSIDE_TRANSLATION=true
             make integration
       - save_cache:
           key: v2-pkg-cache
