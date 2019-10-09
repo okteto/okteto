@@ -51,6 +51,10 @@ jobs:
             OKTETO_CLIENTSIDE_TRANSLATION: "true"
           command: |
             make integration
+      - run: 
+          name: integration tests (serverside)
+          command: |
+            make integration
       - save_cache:
           key: v2-pkg-cache
           paths:
