@@ -111,19 +111,14 @@ func getConfig(path string) (*ssh_config.Config, error) {
 }
 
 func save(cfg *ssh_config.Config, path string) error {
-	if err := cfg.WriteToFilepath(path); err != nil {
-		if os.IsNotExist(err) {
-			_, err = os.Create(path)
-			if err != nil {
-				return fmt.Errorf("failed to create %s: %w", path, err)
-			}
+	opt := &ssh_config.SaveOptions{
+		FileHeader:                false,
+		GlobalConfigurationHeader: false,
+		HostConfigurationHeader:   false,
+	}
 
-			err = cfg.WriteToFilepath(path)
-		}
-
-		if err != nil {
-			return fmt.Errorf("fail to save %s: %w", path, err)
-		}
+	if err := cfg.WriteToFilepath(path, opt); err != nil {
+		return fmt.Errorf("fail to save %s: %w", path, err)
 	}
 
 	return nil

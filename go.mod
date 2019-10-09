@@ -74,7 +74,7 @@ require (
 )
 
 replace (
-	github.com/havoc-io/ssh_config => github.com/okteto/ssh_config v0.0.0-20191009181441-57101bbcf170
+	github.com/havoc-io/ssh_config => github.com/okteto/ssh_config v0.0.0-20191009184526-6b7ae65eb614
 	k8s.io/api => k8s.io/api v0.0.0-20190805141119-fdd30b57c827
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190805143126-cdb999c96590
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719

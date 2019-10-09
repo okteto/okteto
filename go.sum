@@ -230,8 +230,6 @@ github.com/hashicorp/go-version v1.2.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09
 github.com/hashicorp/golang-lru v0.5.0 h1:CL2msUPvZTLb5O648aiLNJw3hnBxN2+1Jq8rCOH9wdo=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/hcl v0.0.0-20160711231752-d8c773c4cba1/go.mod h1:oZtUIOe8dh44I2q6ScRibXws4Ajl+d+nod3AaR9vL5w=
-github.com/havoc-io/ssh_config v0.0.0-20150623171730-6438268c5089 h1:YmL4u5vd+v6ueOLf/Gzc5gw1P65mjCHFeX9SynrIXfU=
-github.com/havoc-io/ssh_config v0.0.0-20150623171730-6438268c5089/go.mod h1:WRlj+a0xoh9XT7vOFA0cSp63/QjbTvJPYJZ7FePUaRs=
 github.com/heketi/heketi v0.0.0-20181109135656-558b29266ce0/go.mod h1:bB9ly3RchcQqsQ9CpyaQwvva7RS5ytVoSoholZQON6o=
 github.com/heketi/rest v0.0.0-20180404230133-aa6a65207413/go.mod h1:BeS3M108VzVlmAue3lv2WcGuPAX94/KN63MUURzbYSI=
 github.com/heketi/tests v0.0.0-20151005000721-f3775cbcefd6/go.mod h1:xGMAM8JLi7UkZt1i4FQeQy0R2T8GLUwQhOP5M1gBhy4=
@@ -332,6 +330,10 @@ github.com/nicksnyder/go-i18n v1.10.0 h1:5AzlPKvXBH4qBzmZ09Ua9Gipyruv6uApMcrNZdo
 github.com/nicksnyder/go-i18n v1.10.0/go.mod h1:HrK7VCrbOvQoUAQ7Vpy7i87N7JZZZ7R2xBGjv0j365Q=
 github.com/okteto/ssh_config v0.0.0-20191009181441-57101bbcf170 h1:SR61lkUpZDA82+M3CG+40dkxhdOEPZacx+DsYBORfHE=
 github.com/okteto/ssh_config v0.0.0-20191009181441-57101bbcf170/go.mod h1:MfTBlgeCmw5V8UkQeWn++jiLy/k56lnOPa+t8efUg8M=
+github.com/okteto/ssh_config v0.0.0-20191009183640-c1e38e6b601d h1:reChyLN835vPH2n7Ar7VnWIqZ94YBAGwKLOGlFhqx/0=
+github.com/okteto/ssh_config v0.0.0-20191009183640-c1e38e6b601d/go.mod h1:MfTBlgeCmw5V8UkQeWn++jiLy/k56lnOPa+t8efUg8M=
+github.com/okteto/ssh_config v0.0.0-20191009184526-6b7ae65eb614 h1:VBS+AqeEPEL6RRfPPuIffkwJXXs2imcI26Qj0uVhwXY=
+github.com/okteto/ssh_config v0.0.0-20191009184526-6b7ae65eb614/go.mod h1:MfTBlgeCmw5V8UkQeWn++jiLy/k56lnOPa+t8efUg8M=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.8.0 h1:VkHVNpR4iVnU8XQR6DBm8BqYjN7CRzw+xKUbVVbbW9w=
 github.com/onsi/ginkgo v1.8.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
