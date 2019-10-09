@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/ssh"
 
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -49,6 +50,7 @@ type UpContext struct {
 	Pod        string
 	Forwarder  *forward.PortForwardManager
 	Disconnect chan struct{}
+	RemotePort int
 	Running    chan error
 	Exit       chan error
 	Sy         *syncthing.Syncthing
@@ -60,7 +62,7 @@ type UpContext struct {
 func Up() *cobra.Command {
 	var devPath string
 	var namespace string
-	var remote int32
+	var remote int
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your Okteto Environment",
@@ -90,30 +92,34 @@ func Up() *cobra.Command {
 				dev.Namespace = namespace
 			}
 
-			if remote > 0 {
-				dev.LoadRemote(int(remote))
-			}
-
-			err = RunUp(dev)
+			err = RunUp(dev, remote)
 			return err
 		},
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
-	cmd.Flags().Int32VarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
+	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
 	return cmd
 }
 
 //RunUp starts the up sequence
-func RunUp(dev *model.Dev) error {
+func RunUp(dev *model.Dev, remote int) error {
 	up := &UpContext{
-		WG:   &sync.WaitGroup{},
-		Dev:  dev,
-		Exit: make(chan error, 1),
+		WG:         &sync.WaitGroup{},
+		Dev:        dev,
+		Exit:       make(chan error, 1),
+		RemotePort: remote,
 	}
 
 	defer up.shutdown()
+
+	if up.RemotePort > 0 {
+		dev.LoadRemote(int(remote))
+		if err := ssh.AddEntry(dev.Name, up.RemotePort); err != nil {
+			return err
+		}
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -502,6 +508,12 @@ func (up *UpContext) shutdown() {
 
 	if up.Cancel != nil {
 		up.Cancel()
+	}
+
+	if up.RemotePort > 0 {
+		if err := ssh.RemoveEntry(up.Dev.Name); err != nil {
+			log.Infof("failed to remove ssh entry: %s", err)
+		}
 	}
 
 	log.Debugf("waiting for tasks for be done")

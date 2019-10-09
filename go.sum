@@ -328,6 +328,12 @@ github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+
 github.com/natefinch/lumberjack v2.0.0+incompatible/go.mod h1:Wi9p2TTF5DG5oU+6YfsmYQpsTIOm0B1VNzQg9Mw6nPk=
 github.com/nicksnyder/go-i18n v1.10.0 h1:5AzlPKvXBH4qBzmZ09Ua9Gipyruv6uApMcrNZdo96+Q=
 github.com/nicksnyder/go-i18n v1.10.0/go.mod h1:HrK7VCrbOvQoUAQ7Vpy7i87N7JZZZ7R2xBGjv0j365Q=
+github.com/okteto/ssh_config v0.0.0-20191009181441-57101bbcf170 h1:SR61lkUpZDA82+M3CG+40dkxhdOEPZacx+DsYBORfHE=
+github.com/okteto/ssh_config v0.0.0-20191009181441-57101bbcf170/go.mod h1:MfTBlgeCmw5V8UkQeWn++jiLy/k56lnOPa+t8efUg8M=
+github.com/okteto/ssh_config v0.0.0-20191009183640-c1e38e6b601d h1:reChyLN835vPH2n7Ar7VnWIqZ94YBAGwKLOGlFhqx/0=
+github.com/okteto/ssh_config v0.0.0-20191009183640-c1e38e6b601d/go.mod h1:MfTBlgeCmw5V8UkQeWn++jiLy/k56lnOPa+t8efUg8M=
+github.com/okteto/ssh_config v0.0.0-20191009184526-6b7ae65eb614 h1:VBS+AqeEPEL6RRfPPuIffkwJXXs2imcI26Qj0uVhwXY=
+github.com/okteto/ssh_config v0.0.0-20191009184526-6b7ae65eb614/go.mod h1:MfTBlgeCmw5V8UkQeWn++jiLy/k56lnOPa+t8efUg8M=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.8.0 h1:VkHVNpR4iVnU8XQR6DBm8BqYjN7CRzw+xKUbVVbbW9w=
 github.com/onsi/ginkgo v1.8.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
