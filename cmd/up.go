@@ -355,7 +355,7 @@ func (up *UpContext) devMode(isRetry bool, ns *apiv1.Namespace, d *appsv1.Deploy
 		}
 	}
 
-	p, err := pods.GetByLabel(up.Context, up.Dev, pods.OktetoInteractiveDevLabel, up.Client, true)
+	p, err := pods.GetDevPod(up.Context, up.Dev, up.Client, create)
 	if err != nil {
 		return err
 	}
