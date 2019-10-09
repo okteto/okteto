@@ -328,7 +328,7 @@ func (up *UpContext) devMode(isRetry bool, ns *apiv1.Namespace, d *appsv1.Deploy
 		return err
 	}
 
-	if err := deployments.TraslateDevMode(tr, ns, up.Client); err != nil {
+	if err := deployments.TranslateDevMode(tr, ns, up.Client); err != nil {
 		return err
 	}
 
@@ -400,8 +400,8 @@ func (up *UpContext) startLocalSyncthing() error {
 	}
 	if err := up.Sy.WaitForPing(up.Context, up.WG, false); err != nil {
 		return errors.UserError{
-			E:    fmt.Errorf("Failed to connect to the synchonization service"),
-			Hint: fmt.Sprintf("This is probably because your development image is not root.\n    Please, add securityContext.runAsUser and securityContext.fsGroup to your okteto manifest.\n    Follow this link for an example: https://github.com/okteto/java-gradle-getting-started/blob/master/okteto.yml"),
+			E:    fmt.Errorf("Failed to connect to the synchronization service"),
+			Hint: fmt.Sprintf("If you are using a non-root container, and the runAsUser and runAsGroup values are not specified in your Kubernetes manifest, you need to set these values in your Okteto manifest.\n    Follow this link for more information on how to do it: https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional"),
 		}
 	}
 	up.Sy.SendStignoreFile(up.Context, up.WG, up.Dev)
