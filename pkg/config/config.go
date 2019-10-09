@@ -35,7 +35,7 @@ func GetBinaryFullPath() string {
 
 // GetHome returns the path of the folder
 func GetHome() string {
-	home := getHomeDir()
+	home := GetHomeDir()
 	home = filepath.Join(home, folderName)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
@@ -47,7 +47,7 @@ func GetHome() string {
 
 // GetDeploymentHome returns the path of the folder
 func GetDeploymentHome(namespace, name string) string {
-	home := getHomeDir()
+	home := GetHomeDir()
 	home = filepath.Join(home, folderName, namespace, name)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
@@ -63,7 +63,7 @@ func GetStateFile(namespace, name string) string {
 }
 
 // GetHomeDir returns the OS home dir
-func getHomeDir() string {
+func GetHomeDir() string {
 	home := os.Getenv("HOME")
 	if runtime.GOOS == "windows" {
 		home = os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
@@ -77,7 +77,7 @@ func getHomeDir() string {
 
 // GetKubeConfigFile returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration
 func GetKubeConfigFile() string {
-	home := getHomeDir()
+	home := GetHomeDir()
 	kubeconfig := filepath.Join(home, ".kube", "config")
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
 	if len(kubeconfigEnv) > 0 {
