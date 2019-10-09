@@ -25,6 +25,8 @@ jobs:
           path: bin
           destination: binaries
   integration:
+    environment: 
+      OKTETO_USER: cindylopez
     docker:
       - image: okteto/desk:latest
     steps:
@@ -34,17 +36,20 @@ jobs:
             - v2-pkg-cache
       - attach_workspace:
           at: ./artifacts
-      - run: 
-          name: integration tests
+      - run:
+          name: prepare env
           command: |
-            export OKTETO_USER=cindylopez
-            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
-            export OKTETO_CLIENTSIDE_TRANSLATION=true
             mkdir -p $HOME/.okteto
             touch $HOME/.okteto/.noanalytics
             echo $HOME
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
+            cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
+      - run: 
+          name: integration tests (clientside)
+          environment:
+            OKTETO_CLIENTSIDE_TRANSLATION: "true"
+          command: |
             make integration
       - save_cache:
           key: v2-pkg-cache
