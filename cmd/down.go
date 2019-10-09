@@ -9,6 +9,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
+	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
@@ -97,6 +98,10 @@ func runDown(dev *model.Dev) error {
 		return err
 	}
 
+	if err := removeVolumes(dev); err != nil {
+		return err
+	}
+
 	if d == nil {
 		return nil
 	}
@@ -109,6 +114,26 @@ func runDown(dev *model.Dev) error {
 			if err := services.Destroy(dev, client); err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+func removeVolumes(dev *model.Dev) error {
+	log.Info("deleting old persistent volumes")
+
+	client, _, namespace, err := k8Client.GetLocal()
+	if err != nil {
+		return err
+	}
+	if dev.Namespace == "" {
+		dev.Namespace = namespace
+	}
+
+	for i := 0; i <= len(dev.Volumes); i++ {
+		if err := volumes.Destroy(dev.GetVolumeName(i), dev, client); err != nil {
+			return err
 		}
 	}
 
