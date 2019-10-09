@@ -116,6 +116,11 @@ func TestAll(t *testing.T) {
 		t.Fatalf("OKTETO_USER is not defined")
 	}
 
+	_, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
+	if ok {
+		log.Println("running in CLIENTSIDE mode")
+	}
+
 	oktetoPath, err := getOktetoPath()
 	if err != nil {
 		t.Fatal(err)
