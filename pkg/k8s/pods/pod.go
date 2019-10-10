@@ -88,7 +88,7 @@ func loopGetDevPod(dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bo
 
 func getPodByReplicaSet(dev *model.Dev, rs *appsv1.ReplicaSet, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	opts := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", okLabels.OktetoInteractiveDevLabel, dev.Name),
+		LabelSelector: fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name),
 	}
 	podList, err := c.CoreV1().Pods(dev.Namespace).List(opts)
 	if err != nil {
@@ -117,7 +117,7 @@ func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
 func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", okLabels.OktetoDetachedDevLabel, dev.Name),
+			LabelSelector: fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name),
 		},
 	)
 	if err != nil {
@@ -135,7 +135,7 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 		}
 	}
 
-	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", okLabels.OktetoDetachedDevLabel, dev.Name), c)
+	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
 }
 
 func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error {

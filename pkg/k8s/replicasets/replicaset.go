@@ -17,7 +17,7 @@ const (
 
 // GetReplicaSetByDeployment given a deployment, returns its current replica set or an error
 func GetReplicaSetByDeployment(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
-	ls := fmt.Sprintf("%s=%s", okLabels.OktetoInteractiveDevLabel, dev.Name)
+	ls := fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name)
 	rsList, err := c.AppsV1().ReplicaSets(d.Namespace).List(
 		metav1.ListOptions{
 			LabelSelector: ls,

@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -147,13 +147,13 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 	if labels == nil {
 		return false
 	}
-	_, ok := labels[okLabels.OktetoDevLabel]
+	_, ok := labels[okLabels.DevLabel]
 	return ok
 }
 
 // DevModeOff deactivates dev mode for d
 func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.OktetoTranslationAnnotation)
+	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.TranslationAnnotation)
 	if len(trRulesJSON) == 0 {
 		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 		if len(dManifest) == 0 {
@@ -176,10 +176,12 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 		delete(annotations, oktetoVersionAnnotation)
 		d.GetObjectMeta().SetAnnotations(annotations)
 		annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
-		delete(annotations, okLabels.OktetoTranslationAnnotation)
+		delete(annotations, okLabels.TranslationAnnotation)
 		d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
 		labels := d.GetObjectMeta().GetLabels()
-		delete(labels, okLabels.OktetoDevLabel)
+		delete(labels, okLabels.DevLabel)
+		delete(labels, okLabels.InteractiveDevLabel)
+		delete(labels, okLabels.DetachedDevLabel)
 		d.GetObjectMeta().SetLabels(labels)
 	}
 

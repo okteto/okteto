@@ -39,6 +39,6 @@ func setTranslationAsAnnotation(o metav1.Object, tr *model.Translation) error {
 	if err != nil {
 		return err
 	}
-	setAnnotation(o, okLabels.OktetoTranslationAnnotation, string(translationBytes))
+	setAnnotation(o, okLabels.TranslationAnnotation, string(translationBytes))
 	return nil
 }

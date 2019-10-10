@@ -1,21 +1,21 @@
 package labels
 
 const (
-	//OktetoVersion represents the current dev data version
-	OktetoVersion = "1.0"
+	//Version represents the current dev data version
+	Version = "1.0"
 
-	// OktetoDevLabel indicates the dev pod
-	OktetoDevLabel = "dev.okteto.com"
+	// DevLabel indicates the dev pod
+	DevLabel = "dev.okteto.com"
 
-	// OktetoInteractiveDevLabel indicates the interactive dev pod
-	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
+	// InteractiveDevLabel indicates the interactive dev pod
+	InteractiveDevLabel = "interactive.dev.okteto.com"
 
-	// OktetoDetachedDevLabel indicates the detached dev pods
-	OktetoDetachedDevLabel = "detached.dev.okteto.com"
+	// DetachedDevLabel indicates the detached dev pods
+	DetachedDevLabel = "detached.dev.okteto.com"
 
-	// OktetoTranslationAnnotation sets the translation rules
-	OktetoTranslationAnnotation = "dev.okteto.com/translation"
+	// TranslationAnnotation sets the translation rules
+	TranslationAnnotation = "dev.okteto.com/translation"
 
-	// OktetoSyncLabel indicates a synthing pod
-	OktetoSyncLabel = "syncthing.okteto.com"
+	// SyncLabel indicates a synthing pod
+	SyncLabel = "syncthing.okteto.com"
 )
