@@ -25,7 +25,7 @@ func Get(name, namespace string, c *kubernetes.Clientset) (*v1.Secret, error) {
 }
 
 //Create creates the syncthing config secret
-func Create(dev *model.Dev, c *kubernetes.Clientset) error {
+func Create(dev *model.Dev, c *kubernetes.Clientset, guiPasswordHash string) error {
 	secretName := GetSecretName(dev)
 	log.Debugf("creating configuration secret %s", secretName)
 
@@ -34,7 +34,7 @@ func Create(dev *model.Dev, c *kubernetes.Clientset) error {
 		return fmt.Errorf("error getting kubernetes secret: %s", err)
 	}
 
-	config, err := getConfigXML(dev)
+	config, err := getConfigXML(dev.Name, dev.MountPath, dev.DevPath, guiPasswordHash)
 	if err != nil {
 		return fmt.Errorf("error generating syncthing configuration: %s", err)
 	}

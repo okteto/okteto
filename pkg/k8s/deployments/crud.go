@@ -9,6 +9,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -49,14 +50,41 @@ func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Dep
 	return d, nil
 }
 
+//GetRevionAnnotatedDeploymentOrFailed returns a deployment object if it is healthy and annotated with its revision or an error
+func GetRevionAnnotatedDeploymentOrFailed(dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*appsv1.Deployment, error) {
+	d, err := Get(dev, dev.Namespace, c)
+	if err != nil {
+		if waitUntilDeployed && errors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	for _, c := range d.Status.Conditions {
+		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
+			if strings.Contains(c.Message, "exceeded quota") {
+				return nil, errors.ErrQuota
+			}
+			return nil, fmt.Errorf(c.Message)
+		}
+	}
+
+	if d.Annotations[revisionAnnotation] == "" {
+		return nil, nil
+	}
+
+	return d, nil
+}
+
 //GetTranslations fills all the deployments pointed by a dev environment
-func GetTranslations(dev *model.Dev, d *appsv1.Deployment, nodeName string, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
+func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
 	result := map[string]*model.Translation{}
 	if d != nil {
-		rule := dev.ToTranslationRule(dev, d, nodeName)
+		rule := dev.ToTranslationRule(dev, d)
 		result[d.Name] = &model.Translation{
 			Interactive: true,
 			Name:        dev.Name,
+			Version:     model.TranslationVersion,
 			Deployment:  d,
 			Replicas:    *d.Spec.Replicas,
 			Rules:       []*model.TranslationRule{rule},
@@ -70,13 +98,14 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, nodeName string, c *k
 			}
 			return nil, err
 		}
-		rule := s.ToTranslationRule(dev, d, nodeName)
+		rule := s.ToTranslationRule(dev, d)
 		if _, ok := result[d.Name]; ok {
 			result[d.Name].Rules = append(result[d.Name].Rules, rule)
 		} else {
 			result[d.Name] = &model.Translation{
 				Name:        dev.Name,
 				Interactive: false,
+				Version:     model.TranslationVersion,
 				Deployment:  d,
 				Replicas:    *d.Spec.Replicas,
 				Rules:       []*model.TranslationRule{rule},
@@ -100,8 +129,8 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 	return nil
 }
 
-//TraslateDevMode translates the deployment manifests to put them in dev mode
-func TraslateDevMode(tr map[string]*model.Translation, ns string, c *kubernetes.Clientset) error {
+//TranslateDevMode translates the deployment manifests to put them in dev mode
+func TranslateDevMode(tr map[string]*model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
 	for _, t := range tr {
 		err := translate(t, ns, c)
 		if err != nil {

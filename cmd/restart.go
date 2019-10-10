@@ -43,6 +43,7 @@ func Restart() *cobra.Command {
 }
 
 func executeRestart(dev *model.Dev) error {
+	log.Infof("restarting okteto environment")
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err
@@ -51,6 +52,10 @@ func executeRestart(dev *model.Dev) error {
 	if dev.Namespace == "" {
 		dev.Namespace = namespace
 	}
+
+	spinner := newSpinner("Restarting your Okteto environment...")
+	spinner.start()
+	defer spinner.stop()
 
 	if err := pods.Restart(dev, client); err != nil {
 		return err

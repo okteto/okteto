@@ -17,9 +17,15 @@ import (
 )
 
 const (
+	oktetoSyncthingMountPath = "/var/syncthing"
+	oktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
+	oktetoRemotePortVariable = "OKTETO_REMOTE_PORT"
+
+	oktetoVolumeNameTemplate  = "pvc-%d"
 	oktetoPodNameTemplate     = "%s-0"
 	oktetoStatefulSetTemplate = "okteto-%s"
-	oktetoVolumeNameTemplate  = "pvc-%d"
+	//OktetoVolumeName name of the okteto persistent volume
+	OktetoVolumeName = "okteto"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 
@@ -28,6 +34,9 @@ const (
 
 	//DefaultImage default image for sandboxes
 	DefaultImage = "okteto/desk:latest"
+
+	//TranslationVersion version of the translation schema
+	TranslationVersion = "1.0"
 )
 
 var (
@@ -50,7 +59,7 @@ type Dev struct {
 	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment     []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Command         []string             `json:"command,omitempty" yaml:"command,omitempty"`
-	WorkDir         string               `json:"workdir" yaml:"workdir"`
+	WorkDir         string               `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath       string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath         string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
 	Volumes         []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
@@ -250,7 +259,14 @@ func (dev *Dev) LoadRemote(localPort int) {
 		dev.Forward,
 		Forward{
 			Local:  localPort,
-			Remote: 22000,
+			Remote: 22001,
+		},
+	)
+	dev.Environment = append(
+		dev.Environment,
+		EnvVar{
+			Name:  oktetoRemotePortVariable,
+			Value: "22001",
 		},
 	)
 
@@ -267,6 +283,11 @@ func (dev *Dev) LoadRemote(localPort int) {
 		dev.SecurityContext.Capabilities.Add = []apiv1.Capability{}
 	}
 
+	for _, cap := range dev.SecurityContext.Capabilities.Add {
+		if cap == "SYS_PTRACE" {
+			return
+		}
+	}
 	dev.SecurityContext.Capabilities.Add = append(dev.SecurityContext.Capabilities.Add, "SYS_PTRACE")
 	log.Infof("enabled remote mode")
 }
@@ -311,20 +332,32 @@ func (dev *Dev) LabelsSelector() string {
 	return labels
 }
 
+//FullSubPath returns the full subpath in the okteto volume
+func (dev *Dev) FullSubPath(i int, subPath string) string {
+	if dev.SubPath == "" {
+		return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i))
+	}
+	return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i), dev.SubPath)
+}
+
+//SyncthingSubPath returns the full subpath for the var syncthing volume
+func (dev *Dev) SyncthingSubPath() string {
+	return filepath.Join(dev.Name, "syncthing")
+}
+
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName string) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationRule {
 	rule := &TranslationRule{
-		Node:            nodeName,
 		Container:       dev.Container,
 		Image:           dev.Image,
 		ImagePullPolicy: dev.ImagePullPolicy,
 		Environment:     dev.Environment,
 		WorkDir:         dev.WorkDir,
 		Volumes: []VolumeMount{
-			VolumeMount{
-				Name:      main.GetVolumeName(0),
+			{
+				Name:      OktetoVolumeName,
 				MountPath: dev.MountPath,
-				SubPath:   dev.SubPath,
+				SubPath:   main.FullSubPath(0, dev.SubPath),
 			},
 		},
 		SecurityContext: dev.SecurityContext,
@@ -332,9 +365,25 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName stri
 	}
 
 	if main == dev {
+		rule.Marker = dev.DevPath
+		rule.Environment = append(
+			rule.Environment,
+			EnvVar{
+				Name:  oktetoMarkerPathVariable,
+				Value: filepath.Join(dev.MountPath, dev.DevPath),
+			},
+		)
+		rule.Volumes = append(
+			rule.Volumes,
+			VolumeMount{
+				Name:      OktetoVolumeName,
+				MountPath: oktetoSyncthingMountPath,
+				SubPath:   dev.SyncthingSubPath(),
+			},
+		)
 		rule.Healthchecks = false
-		rule.Command = []string{"tail"}
-		rule.Args = []string{"-f", "/dev/null"}
+		rule.Command = []string{"/var/okteto/bin/start.sh"}
+		rule.Args = []string{}
 	} else {
 		rule.Healthchecks = true
 		if len(dev.Command) > 0 {
@@ -347,8 +396,9 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment, nodeName stri
 		rule.Volumes = append(
 			rule.Volumes,
 			VolumeMount{
-				Name:      main.GetVolumeName(i + 1),
+				Name:      OktetoVolumeName,
 				MountPath: v,
+				SubPath:   main.FullSubPath(i+1, main.SubPath),
 			},
 		)
 	}

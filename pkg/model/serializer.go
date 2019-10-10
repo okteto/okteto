@@ -39,7 +39,7 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (e *EnvVar) MarshalYAML() (interface{}, error) {
+func (e EnvVar) MarshalYAML() (interface{}, error) {
 	return e.Name + "=" + e.Value, nil
 }
 

@@ -9,7 +9,7 @@ jobs:
       - checkout
       - restore_cache: 
           keys:
-            - v1-pkg-cache
+            - v2-pkg-cache
       - run: make test
       - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
       - run: env VERSION_STRING=$CIRCLE_TAG make latest
@@ -18,37 +18,49 @@ jobs:
           paths:
             - bin
       - save_cache:
-          key: v1-pkg-cache
+          key: v2-pkg-cache
           paths:
             - ~/.cache/go-build
       - store_artifacts:
           path: bin
           destination: binaries
   integration:
+    environment: 
+      OKTETO_USER: cindylopez
     docker:
       - image: okteto/desk:latest
     steps:
       - checkout
       - restore_cache: 
           keys:
-            - v1-pkg-cache
+            - v2-pkg-cache
       - attach_workspace:
           at: ./artifacts
-      - run: 
-          name: integration tests
+      - run:
+          name: prepare env
           command: |
-            export OKTETO_USER=cindylopez
-            export OKTETO_PATH=$(pwd)/artifacts/bin/okteto-Linux-x86_64
             mkdir -p $HOME/.okteto
             touch $HOME/.okteto/.noanalytics
             echo $HOME
+            curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
+            chmod +x /usr/local/bin/kubectl
+            cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
+      - run: 
+          name: integration tests (serverside)
+          command: |
+            unset OKTETO_CLIENTSIDE_TRANSLATION
+            make integration
+      - run: 
+          name: integration tests (clientside)
+          command: |
+            export OKTETO_CLIENTSIDE_TRANSLATION=true
             make integration
       - save_cache:
-          key: v1-pkg-cache
+          key: v2-pkg-cache
           paths:
             - ~/.cache/go-build
       - store_artifacts:
-          path: /home/circleci/.okteto/okteto.log
+          path: /root/.okteto
           
   mock-publish-github-release:
     docker:
@@ -116,7 +128,7 @@ jobs:
           name: "Publish Release on GitHub"
           command: |
             go get -u github.com/tcnksm/ghr
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace -prerelease $CIRCLE_TAG  ./artifacts/bin/
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
       - deploy:
           name: "Update brew formula"
           command: |
@@ -153,7 +165,7 @@ workflows:
             branches:
               only: 
                 - master
-                - scope-integration
+                - /.*(e2e)/
       - release-master:
           requires:
             - integration

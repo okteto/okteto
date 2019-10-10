@@ -20,10 +20,12 @@ require (
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-openapi/spec v0.18.0 // indirect
 	github.com/google/btree v1.0.0 // indirect
+	github.com/google/go-github/v28 v28.1.1
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/hashicorp/go-getter v1.0.2
 	github.com/hashicorp/go-version v1.2.0 // indirect
+	github.com/havoc-io/ssh_config v0.0.0
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/machinebox/graphql v0.2.2
@@ -48,6 +50,7 @@ require (
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
 	go.undefinedlabs.com/scopeagent v0.0.0-20191002145441-61257ec139fb
+	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
 	golang.org/x/net v0.0.0-20191009170851-d66e71096ffb // indirect
 	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0 // indirect
@@ -68,6 +71,7 @@ require (
 )
 
 replace (
+	github.com/havoc-io/ssh_config => github.com/okteto/ssh_config v0.0.0-20191009184526-6b7ae65eb614
 	k8s.io/api => k8s.io/api v0.0.0-20190805141119-fdd30b57c827
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190805143126-cdb999c96590
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719

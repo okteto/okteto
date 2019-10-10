@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"regexp"
@@ -16,12 +17,13 @@ import (
 var (
 	// SyncthingURL is the path of the syncthing binary.
 	SyncthingURL = map[string]string{
-		"linux":   "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Linux-x86_64",
-		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Darwin-x86_64",
-		"windows": "https://downloads.okteto.com/cli/syncthing/1.2.2/syncthing-Windows-x86_64",
+		"linux":   "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Linux-x86_64",
+		"arm64":   "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Linux-arm64",
+		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Darwin-x86_64",
+		"windows": "https://downloads.okteto.com/cli/syncthing/1.3.0/syncthing-Windows-x86_64",
 	}
 
-	syncthingVersion = semver.MustParse("1.2.2")
+	syncthingVersion = semver.MustParse("1.3.0")
 	versionRegex     = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
@@ -62,11 +64,35 @@ func getCurrentSyncthingVersion() *semver.Version {
 	return s
 }
 
+func getSyncthingURL() (string, error) {
+	log.Debugf("downloading syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
+
+	src, ok := SyncthingURL[runtime.GOOS]
+	if !ok {
+		return "", fmt.Errorf("%s is not a supported platform", runtime.GOOS)
+	}
+
+	if runtime.GOOS == "linux" {
+		switch runtime.GOARCH {
+		case "arm":
+			src = SyncthingURL["arm"]
+		case "arm64":
+			src = SyncthingURL["arm64"]
+		}
+	}
+
+	return src, nil
+}
+
 func downloadSyncthing() error {
 	opts := []getter.ClientOption{getter.WithProgress(defaultProgressBar)}
+	src, err := getSyncthingURL()
+	if err != nil {
+		return err
+	}
 
 	client := &getter.Client{
-		Src:     SyncthingURL[runtime.GOOS],
+		Src:     src,
 		Dst:     syncthing.GetInstallPath(),
 		Mode:    getter.ClientModeFile,
 		Options: opts,

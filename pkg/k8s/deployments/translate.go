@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -21,6 +22,14 @@ const (
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
 	revisionAnnotation         = "deployment.kubernetes.io/revision"
 	oktetoBinName              = "okteto-bin"
+	oktetoVolumName            = "okteto"
+
+	//syncthing
+	oktetoBinImageTag        = "okteto/bin:1.0.0"
+	syncTCPPort              = 22000
+	syncGUIPort              = 8384
+	oktetoSyncSecretVolume   = "okteto-sync-secret"
+	oktetoSyncSecretTemplate = "okteto-%s"
 
 	//OktetoVersion represents the current dev data version
 	OktetoVersion = "1.0"
@@ -39,7 +48,7 @@ var (
 	devTerminationGracePeriodSeconds int64
 )
 
-func translate(t *model.Translation, ns string, c *kubernetes.Clientset) error {
+func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		if devContainer == nil {
@@ -60,13 +69,10 @@ func translate(t *model.Translation, ns string, c *kubernetes.Clientset) error {
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
 
-	if c != nil && namespaces.IsOktetoNamespace(ns, c) {
+	if c != nil && namespaces.IsOktetoNamespace(ns) {
 		_, v := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
 		if !v {
 			commonTranslation(t)
-			if t.Interactive {
-				t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
-			}
 			return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 		}
 	}
@@ -85,34 +91,23 @@ func translate(t *model.Translation, ns string, c *kubernetes.Clientset) error {
 		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoDetachedDevLabel, t.Name)
 	}
 
-	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
-	t.Deployment.Spec.Template.Spec.NodeName = t.Rules[0].Node
 
+	if !t.Interactive {
+		TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
+	} else {
+		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
+	}
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		TranslateDevContainer(devContainer, rule)
-		translateOktetoInitBinContainer(&t.Deployment.Spec.Template.Spec)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
-		translateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
-		if rule.SecurityContext != nil {
-			if t.Deployment.Spec.Template.Spec.SecurityContext == nil {
-				t.Deployment.Spec.Template.Spec.SecurityContext = &apiv1.PodSecurityContext{}
-			}
-
-			if rule.SecurityContext.RunAsUser != nil {
-				t.Deployment.Spec.Template.Spec.SecurityContext.RunAsUser = rule.SecurityContext.RunAsUser
-			}
-
-			if rule.SecurityContext.RunAsGroup != nil {
-				t.Deployment.Spec.Template.Spec.SecurityContext.RunAsGroup = rule.SecurityContext.RunAsGroup
-			}
-
-			if rule.SecurityContext.FSGroup != nil {
-				t.Deployment.Spec.Template.Spec.SecurityContext.FSGroup = rule.SecurityContext.FSGroup
-			}
+		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
+		if rule.Marker != "" {
+			TranslateOktetoBinVolumeMounts(devContainer)
+			TranslateOktetoInitBinContainer(&t.Deployment.Spec.Template.Spec)
+			TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
 		}
-
 	}
 	return nil
 }
@@ -139,6 +134,30 @@ func GetDevContainer(spec *apiv1.PodSpec, name string) *apiv1.Container {
 	return nil
 }
 
+//TranslatePodAffinity translates the affinity of pod to be all on the same node
+func TranslatePodAffinity(spec *apiv1.PodSpec, name string) {
+	if spec.Affinity == nil {
+		spec.Affinity = &apiv1.Affinity{}
+	}
+	if spec.Affinity.PodAffinity == nil {
+		spec.Affinity.PodAffinity = &apiv1.PodAffinity{}
+	}
+	if spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
+		spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = []apiv1.PodAffinityTerm{}
+	}
+	spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+		spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+		apiv1.PodAffinityTerm{
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					OktetoInteractiveDevLabel: name,
+				},
+			},
+			TopologyKey: "kubernetes.io/hostname",
+		},
+	)
+}
+
 //TranslateDevContainer translates a dev container
 func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	if len(rule.Image) == 0 {
@@ -161,14 +180,14 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 		c.LivenessProbe = nil
 	}
 
-	translateResources(c, rule.Resources)
-	translateEnvVars(c, rule.Environment)
-	translateVolumeMounts(c, rule)
-	translateSecurityContext(c, rule.SecurityContext)
-	translateOktetoBinVolumeMounts(c)
+	TranslateResources(c, rule.Resources)
+	TranslateEnvVars(c, rule)
+	TranslateVolumeMounts(c, rule)
+	TranslateContainerSecurityContext(c, rule.SecurityContext)
 }
 
-func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
+//TranslateResources translates the resources attached to a container
+func TranslateResources(c *apiv1.Container, r model.ResourceRequirements) {
 	if c.Resources.Requests == nil {
 		c.Resources.Requests = make(map[apiv1.ResourceName]resource.Quantity)
 	}
@@ -194,9 +213,10 @@ func translateResources(c *apiv1.Container, r model.ResourceRequirements) {
 	}
 }
 
-func translateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {
+//TranslateEnvVars translates the variables attached to a container
+func TranslateEnvVars(c *apiv1.Container, rule *model.TranslationRule) {
 	unusedDevEnv := map[string]string{}
-	for _, val := range devEnv {
+	for _, val := range rule.Environment {
 		unusedDevEnv[val.Name] = val.Value
 	}
 	for i, envvar := range c.Env {
@@ -205,31 +225,20 @@ func translateEnvVars(c *apiv1.Container, devEnv []model.EnvVar) {
 			delete(unusedDevEnv, envvar.Name)
 		}
 	}
-	for _, envvar := range devEnv {
+	for _, envvar := range rule.Environment {
 		if value, ok := unusedDevEnv[envvar.Name]; ok {
 			c.Env = append(c.Env, apiv1.EnvVar{Name: envvar.Name, Value: value})
 		}
 	}
 }
 
-func translateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
+//TranslateVolumeMounts translates the volumes attached to a container
+func TranslateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 	if c.VolumeMounts == nil {
 		c.VolumeMounts = []apiv1.VolumeMount{}
 	}
 
 	for _, v := range rule.Volumes {
-		found := false
-		for j, vm := range c.VolumeMounts {
-			if vm.Name == v.Name {
-				c.VolumeMounts[j].MountPath = v.MountPath
-				c.VolumeMounts[j].SubPath = v.SubPath
-				found = true
-				break
-			}
-		}
-		if found {
-			continue
-		}
 		c.VolumeMounts = append(
 			c.VolumeMounts,
 			apiv1.VolumeMount{
@@ -239,9 +248,21 @@ func translateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 			},
 		)
 	}
+
+	if rule.Marker == "" {
+		return
+	}
+	c.VolumeMounts = append(
+		c.VolumeMounts,
+		apiv1.VolumeMount{
+			Name:      oktetoSyncSecretVolume,
+			MountPath: "/var/syncthing/secret/",
+		},
+	)
 }
 
-func translateOktetoBinVolumeMounts(c *apiv1.Container) {
+//TranslateOktetoBinVolumeMounts translates the binaries mount attached to a container
+func TranslateOktetoBinVolumeMounts(c *apiv1.Container) {
 	if c.VolumeMounts == nil {
 		c.VolumeMounts = []apiv1.VolumeMount{}
 	}
@@ -262,10 +283,10 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
 	}
-	for _, v := range rule.Volumes {
+	for _, rV := range rule.Volumes {
 		found := false
-		for _, vm := range spec.Volumes {
-			if vm.Name == v.Name {
+		for _, v := range spec.Volumes {
+			if v.Name == rV.Name {
 				found = true
 				break
 			}
@@ -274,10 +295,10 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 			continue
 		}
 		v := apiv1.Volume{
-			Name: v.Name,
+			Name: rV.Name,
 			VolumeSource: apiv1.VolumeSource{
 				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: v.Name,
+					ClaimName: rV.Name,
 					ReadOnly:  false,
 				},
 			},
@@ -286,7 +307,8 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	}
 }
 
-func translateOktetoBinVolume(spec *apiv1.PodSpec) {
+//TranslateOktetoBinVolume translates the binaries volume attached to a container
+func TranslateOktetoBinVolume(spec *apiv1.PodSpec) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
 	}
@@ -304,7 +326,31 @@ func translateOktetoBinVolume(spec *apiv1.PodSpec) {
 	spec.Volumes = append(spec.Volumes, v)
 }
 
-func translateSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
+//TranslatePodSecurityContext translates the security context attached to a pod
+func TranslatePodSecurityContext(spec *apiv1.PodSpec, s *model.SecurityContext) {
+	if s == nil {
+		return
+	}
+
+	if spec.SecurityContext == nil {
+		spec.SecurityContext = &apiv1.PodSecurityContext{}
+	}
+
+	if s.RunAsUser != nil {
+		spec.SecurityContext.RunAsUser = s.RunAsUser
+	}
+
+	if s.RunAsGroup != nil {
+		spec.SecurityContext.RunAsGroup = s.RunAsGroup
+	}
+
+	if s.FSGroup != nil {
+		spec.SecurityContext.FSGroup = s.FSGroup
+	}
+}
+
+//TranslateContainerSecurityContext translates the security context attached to a container
+func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
 	if s == nil || s.Capabilities == nil {
 		return
 	}
@@ -321,11 +367,12 @@ func translateSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
 	c.SecurityContext.Capabilities.Drop = append(c.SecurityContext.Capabilities.Drop, s.Capabilities.Drop...)
 }
 
-func translateOktetoInitBinContainer(spec *apiv1.PodSpec) {
+//TranslateOktetoInitBinContainer translates the bin init container of a pod
+func TranslateOktetoInitBinContainer(spec *apiv1.PodSpec) {
 	c := apiv1.Container{
 		Name:            oktetoBinName,
-		Image:           "okteto/bin",
-		ImagePullPolicy: apiv1.PullAlways,
+		Image:           oktetoBinImageTag,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 		VolumeMounts: []apiv1.VolumeMount{
 			apiv1.VolumeMount{
@@ -339,4 +386,25 @@ func translateOktetoInitBinContainer(spec *apiv1.PodSpec) {
 		spec.InitContainers = []apiv1.Container{}
 	}
 	spec.InitContainers = append(spec.InitContainers, c)
+}
+
+//TranslateOktetoSyncSecret translates the syncthing secret container of a pod
+func TranslateOktetoSyncSecret(spec *apiv1.PodSpec, name string) {
+	if spec.Volumes == nil {
+		spec.Volumes = []apiv1.Volume{}
+	}
+	for _, s := range spec.Volumes {
+		if s.Name == oktetoSyncSecretVolume {
+			return
+		}
+	}
+	v := apiv1.Volume{
+		Name: oktetoSyncSecretVolume,
+		VolumeSource: apiv1.VolumeSource{
+			Secret: &apiv1.SecretVolumeSource{
+				SecretName: fmt.Sprintf(oktetoSyncSecretTemplate, name),
+			},
+		},
+	}
+	spec.Volumes = append(spec.Volumes, v)
 }

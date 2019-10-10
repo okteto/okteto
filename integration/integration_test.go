@@ -89,14 +89,14 @@ workdir: /usr/src/app
 )
 
 func TestMain(m *testing.M) {
-	os.Exit(scopeagent.GlobalAgent.Run(m))
+	os.Exit(scopeagent.Run(m))
 }
 
 func TestDownloadSyncthing(t *testing.T) {
 	var tests = []struct {
 		os string
 	}{
-		{os: "windows"}, {os: "darwin"}, {os: "linux"},
+		{os: "windows"}, {os: "darwin"}, {os: "linux"}, {os: "arm64"},
 	}
 
 	for _, tt := range tests {
@@ -123,8 +123,8 @@ func TestDownloadSyncthing(t *testing.T) {
 }
 func TestAll(t *testing.T) {
 	test := scopeagent.StartTest(t)
-	ctx := test.Context()
 	defer test.End()
+	ctx := test.Context()
 
 	token := os.Getenv("OKTETO_TOKEN")
 	if len(token) == 0 {
@@ -134,6 +134,11 @@ func TestAll(t *testing.T) {
 	user := os.Getenv("OKTETO_USER")
 	if len(user) == 0 {
 		t.Fatalf("OKTETO_USER is not defined")
+	}
+
+	_, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
+	if ok {
+		log.Println("running in CLIENTSIDE mode")
 	}
 
 	oktetoPath, err := getOktetoPath(ctx)
@@ -175,7 +180,7 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := up(ctx, name, manifestPath, oktetoPath); err != nil {
+	if err := up(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -246,7 +251,7 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 
 func getContent(name, namespace string) (string, error) {
 	endpoint := fmt.Sprintf("https://%s-%s.cloud.okteto.net/", name, namespace)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 60; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
 			return "", err
@@ -285,49 +290,6 @@ func writeManifest(path, name string) error {
 	return nil
 }
 
-func waitForPod(ctx context.Context, name string, timeout int) error {
-	for i := 0; i < timeout; i++ {
-		args := []string{"get", "pod", "-ojsonpath='{.status.phase}'", name}
-		cmd := exec.Command("kubectl", args...)
-		cmd.Env = os.Environ()
-
-		span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-		defer span.Finish()
-		o, err := cmd.CombinedOutput()
-		output := string(o)
-		log.Printf("`kubectl %s` output: %s", strings.Join(args, " "), output)
-		if err != nil {
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		if strings.Contains(output, "Running") {
-			return nil
-		}
-
-		time.Sleep(5 * time.Second)
-	}
-
-	return fmt.Errorf("pod/%s wasn't ready after %d seconds", name, timeout)
-
-}
-
-func checkPVCIsGone(ctx context.Context, name string) error {
-	pvc := fmt.Sprintf("pvc-0-okteto-%s-0", name)
-	args := []string{"get", "pvc", pvc}
-	cmd := exec.Command("kubectl", args...)
-	cmd.Env = os.Environ()
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-	defer span.Finish()
-	o, _ := cmd.CombinedOutput()
-	output := string(o)
-	if !strings.Contains(string(o), fmt.Sprintf(`persistentvolumeclaims "%s" not found`, pvc)) {
-		return fmt.Errorf("PVC wasn't deleted: %s", output)
-	}
-
-	return nil
-}
-
 func createNamespace(ctx context.Context, namespace, oktetoPath string) error {
 	log.Printf("creating namespace %s", namespace)
 	args := []string{"create", "namespace", namespace, "-l", "debug"}
@@ -353,11 +315,11 @@ func createNamespace(ctx context.Context, namespace, oktetoPath string) error {
 
 func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	log.Printf("okteto delete namespace %s", namespace)
-	cmd := exec.Command(oktetoPath, "delete", "namespace", namespace)
-	cmd.Env = os.Environ()
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	deleteCMD := exec.Command(oktetoPath, "delete", "namespace", namespace)
+	deleteCMD.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, deleteCMD)
 	defer span.Finish()
-	o, err := cmd.CombinedOutput()
+	o, err := deleteCMD.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
 	}
@@ -366,12 +328,15 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 }
 
 func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
-	log.Printf("okteto down -f %s -v", manifestPath)
-	cmd := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
-	cmd.Env = os.Environ()
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	log.Printf("okteto down -f %s", manifestPath)
+	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath)
+
+	downCMD.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, downCMD)
 	defer span.Finish()
-	o, err := cmd.CombinedOutput()
+
+	o, err := downCMD.CombinedOutput()
+
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {
 		return fmt.Errorf("okteto down failed: %s", err)
@@ -382,15 +347,10 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 		return err
 	}
 
-	log.Printf("validate that the pvc was deleted")
-	if err := checkPVCIsGone(ctx, name); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func up(ctx context.Context, name, manifestPath, oktetoPath string) error {
+func up(ctx context.Context, namespace, name, manifestPath, oktetoPath string) error {
 	log.Println("starting okteto up")
 	cmd := exec.Command(oktetoPath, "up", "-f", manifestPath)
 	cmd.Env = os.Environ()
@@ -408,17 +368,37 @@ func up(ctx context.Context, name, manifestPath, oktetoPath string) error {
 
 	}()
 
-	log.Println("waiting for the statefulset to be running")
-	if err := waitForPod(ctx, fmt.Sprintf("okteto-%s-0", name), 100); err != nil {
-		return err
+	return waitForReady(namespace, name)
+}
+
+func waitForReady(namespace, name string) error {
+	state := fmt.Sprintf("%s/.okteto/%s/%s/okteto.state", os.Getenv("HOME"), namespace, name)
+	t := time.NewTicker(1 * time.Second)
+	for i := 0; i < 60; i++ {
+		c, err := ioutil.ReadFile(state)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+
+			<-t.C
+			continue
+		}
+
+		if i%5 == 0 {
+			log.Printf("okteto up is: %s", c)
+		}
+
+		if string(c) == "ready" {
+			return nil
+		} else if string(c) == "failed" {
+			return fmt.Errorf("dev environment failed")
+		}
+
+		<-t.C
 	}
 
-	log.Println("waiting for the deployment to be running")
-	if err := waitForDeployment(ctx, name, 2, 120); err != nil {
-		return err
-	}
-
-	return nil
+	return fmt.Errorf("dev environment was never ready")
 }
 
 func deploy(ctx context.Context, name, path string) error {

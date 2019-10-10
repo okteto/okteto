@@ -15,5 +15,5 @@ $ brew install okteto
 
 ## Windows:
 ```console
-$ wget https://downloads.okteto.com/cli/okteto-Windows-x86_64 -OutFile c:\windows\system32\okteto.exe
+$ wget https://github.com/okteto/okteto/releases/latest/download/okteto-Windows-x86_64 -OutFile c:\windows\system32\okteto.exe
 ```

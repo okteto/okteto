@@ -40,3 +40,9 @@ func Test_renderProgressBar(t *testing.T) {
 	}
 
 }
+
+func Test_renderProgressBarFuzz(t *testing.T) {
+	for i := 0.0; i < 100.0; i = i + 0.01 {
+		renderProgressBar("", i, 0.35)
+	}
+}

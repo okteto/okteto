@@ -27,24 +27,36 @@ services:
 	}
 
 	d1 := dev.GevSandbox()
-	rule1 := dev.ToTranslationRule(dev, d1, "node")
+	dev.DevPath = "okteto.yml"
+	rule1 := dev.ToTranslationRule(dev, d1)
 	rule1OK := &TranslationRule{
-		Node:            "node",
+		Marker:          "okteto.yml",
 		Container:       "dev",
 		Image:           "web:latest",
 		ImagePullPolicy: apiv1.PullNever,
-		Command:         []string{"tail"},
-		Args:            []string{"-f", "/dev/null"},
+		Command:         []string{"/var/okteto/bin/start.sh"},
+		Args:            []string{},
 		Healthchecks:    false,
-		Environment:     make([]EnvVar, 0),
+		Environment: []EnvVar{
+			{
+				Name:  oktetoMarkerPathVariable,
+				Value: "/app/okteto.yml",
+			},
+		},
 		Resources: ResourceRequirements{
 			Limits:   ResourceList{},
 			Requests: ResourceList{},
 		},
 		Volumes: []VolumeMount{
 			VolumeMount{
-				Name:      "pvc-0-okteto-web-0",
+				Name:      OktetoVolumeName,
 				MountPath: "/app",
+				SubPath:   "web/data-0",
+			},
+			{
+				Name:      OktetoVolumeName,
+				MountPath: oktetoSyncthingMountPath,
+				SubPath:   dev.SyncthingSubPath(),
 			},
 		},
 	}
@@ -57,9 +69,8 @@ services:
 
 	dev2 := dev.Services[0]
 	d2 := dev2.GevSandbox()
-	rule2 := dev2.ToTranslationRule(dev, d2, "node")
+	rule2 := dev2.ToTranslationRule(dev, d2)
 	rule2OK := &TranslationRule{
-		Node:            "node",
 		Container:       "dev",
 		Image:           "worker:latest",
 		ImagePullPolicy: apiv1.PullIfNotPresent,
@@ -72,9 +83,10 @@ services:
 			Requests: ResourceList{},
 		},
 		Volumes: []VolumeMount{
-			VolumeMount{
-				Name:      "pvc-0-okteto-web-0",
+			{
+				Name:      OktetoVolumeName,
 				MountPath: "/src",
+				SubPath:   "web/data-0",
 			},
 		},
 	}

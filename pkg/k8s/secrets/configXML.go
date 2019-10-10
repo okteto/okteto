@@ -3,12 +3,10 @@ package secrets
 import (
 	"bytes"
 	"html/template"
-
-	"github.com/okteto/okteto/pkg/model"
 )
 
 const configXML = `<configuration version="29">
-<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="/var/okteto" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .SyncFolder }}" type="sendreceive" rescanIntervalS="3600" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
     <device id="ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU" introducedBy=""></device>
@@ -46,6 +44,8 @@ const configXML = `<configuration version="29">
 <gui enabled="true" tls="false" debugging="false">
     <address>127.0.0.1:8384</address>
     <apikey>cnd</apikey>
+    <user>okteto</user>
+    <password>{{ .PasswordHash }}</password>
     <theme>default</theme>
 </gui>
 <ldap></ldap>
@@ -91,10 +91,21 @@ const configXML = `<configuration version="29">
 </options>
 </configuration>`
 
-func getConfigXML(dev *model.Dev) ([]byte, error) {
+func getConfigXML(name, folder, devPath, guiPasswordHash string) ([]byte, error) {
 	configTemplate := template.Must(template.New("syncthingConfig").Parse(configXML))
 	buf := new(bytes.Buffer)
-	if err := configTemplate.Execute(buf, dev); err != nil {
+	v := struct {
+		Name         string
+		SyncFolder   string
+		DevPath      string
+		PasswordHash string
+	}{
+		Name:         name,
+		SyncFolder:   folder,
+		DevPath:      devPath,
+		PasswordHash: guiPasswordHash,
+	}
+	if err := configTemplate.Execute(buf, v); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

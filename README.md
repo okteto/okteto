@@ -10,18 +10,43 @@
 
 ## Overview
 
-**Cloud Native Development** is about moving your entire development workflow to your kubernetes cluster to:
+Kubernetes has made it very easy to deploy applications to the cloud at a higher scale than ever, but the development practices have not evolved at the same speed as application deployment patterns.
 
-1. Eliminate integration issues by developing the same way code runs in production.
-1. Write code as usual, from your favorite IDE.
-1. Forget about building, pushing or deploying containers. 
+Today, most developers try to either run parts of the infrastructure locally, or just test these integrations directly in the cluster via CI jobs or the "docker build, docker push, kubectl apply" cycle. It works, but this workflow is painful and incredibly slow.
 
-Okteto helps you achieve this with a mix of kubernetes automation, file synching between your local file system and kubernetes and hot reloading of containers.
+Okteto makes this cycle a lot faster by launching your development environment directly in your Kubernetes cluster.
 
-- Learn more details on [how it works](docs/how-does-it-work.md).
+## Features
+
+### Development environments on demand 
+Your development environment is defined in a [simple yaml manifest](https://okteto.com/docs/reference/manifest).
+- Run `okteto init` to inspect your project and generate your own config file.
+- Run `okteto up` to launch your development environment in seconds. 
+
+Add `okteto.yml` to your repo and make collaboration easier than ever. Clone the repository and simply run `okteto up` to launch a fully configured development environment.
+
+### Developer Mode 
+
+You can swap your development environment with an existing Kubernetes deployment, and develop directly in your cluster. This helps eliminate integration issues since you're developing the same way your application runs in production.
+
+Okteto supports applications with one or with multiple services.
+
+### Kubernetes Live Development
+
+Okteto detects your code changes, synchronizes your code to your development environment. Keep using your compilers and hot reloaders to see your changes in seconds. No commit, build, push or deploy required.
+
+Okteto is powered by [Syncthing](https://github.com/syncthing/syncthing). It will detect code changes instantly and automatically synchronize your files. Files are synchronized both ways. If you edit a file directly in your remote development environment, the changes will be reflected locally as well. Great for keeping your `package-lock.json` or `requirements.txt` up to date.
+
+### Keep Your Own Tools
+No need to change IDEs, tasks or deployment scripts. Okteto easily integrates and augments your existing tools.
+
+Okteto is compatible with any Kubernetes cluster, local or remote. If you can run `kubectl apply` you can use Okteto. Our community uses Okteto in all major Kubernetes distros, from Minikube and k3s all the way to GKE, Digital Ocean, AKS, EKS and Civio.
+
+## Learn More
+- [How does Okteto work?](docs/how-does-it-work.md)
 - Get started following our [installation guides](docs/installation.md).
 - Check the Okteto [CLI reference](https://okteto.com/docs/reference/cli) and the [okteto.yml reference](https://okteto.com/docs/reference/manifest).
-- Explore our [examples](https://github.com/okteto/samples) repository.
+- Explore our [samples] to learn more about the power of Okteto (https://github.com/okteto/samples).
 
 ## Stay in Touch
 Got questions? Have feedback? Join [the conversation in Slack](https://kubernetes.slack.com/messages/CM1QMQGS0/)! If you don't already have a Kubernetes slack account, [sign up here](http://slack.k8s.io/). 

@@ -8,17 +8,17 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	syncK8s "github.com/okteto/okteto/pkg/syncthing/k8s"
+	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/spf13/cobra"
 )
 
 //Down deactivates the development environment
 func Down() *cobra.Command {
 	var devPath string
-	var rm bool
 	var namespace string
 
 	cmd := &cobra.Command{
@@ -43,15 +43,6 @@ func Down() *cobra.Command {
 
 			log.Success("Okteto Environment deactivated")
 
-			if rm {
-				if err := removeVolumes(dev); err != nil {
-					analytics.TrackDown(config.VersionString, false)
-					return err
-				}
-
-				log.Success("Persistent volume deleted")
-			}
-
 			log.Println()
 
 			analytics.TrackDown(config.VersionString, true)
@@ -61,7 +52,6 @@ func Down() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
-	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd
 }
@@ -83,7 +73,7 @@ func runDown(dev *model.Dev) error {
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
-	tr, err := deployments.GetTranslations(dev, d, "", client)
+	tr, err := deployments.GetTranslations(dev, d, client)
 	if err != nil {
 		return err
 	}
@@ -101,6 +91,18 @@ func runDown(dev *model.Dev) error {
 		}
 	}
 
+	if err := secrets.Destroy(dev, client); err != nil {
+		return err
+	}
+
+	if err := statefulsets.Destroy(dev, client); err != nil {
+		return err
+	}
+
+	if err := removeVolumes(dev); err != nil {
+		return err
+	}
+
 	if d == nil {
 		return nil
 	}
@@ -116,14 +118,15 @@ func runDown(dev *model.Dev) error {
 		}
 	}
 
+	if err := ssh.RemoveEntry(dev.Name); err != nil {
+		log.Infof("failed to remove ssh entry: %s", err)
+	}
+
 	return nil
 }
 
 func removeVolumes(dev *model.Dev) error {
-	log.Info("deleting persistent volume")
-	progress := newSpinner("Deleting your persistent volume...")
-	progress.start()
-	defer progress.stop()
+	log.Info("deleting old persistent volumes")
 
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
@@ -131,14 +134,6 @@ func removeVolumes(dev *model.Dev) error {
 	}
 	if dev.Namespace == "" {
 		dev.Namespace = namespace
-	}
-
-	if err := secrets.Destroy(dev, client); err != nil {
-		return err
-	}
-
-	if err := syncK8s.Destroy(dev, client); err != nil {
-		return err
 	}
 
 	for i := 0; i <= len(dev.Volumes); i++ {
