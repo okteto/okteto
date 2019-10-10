@@ -14,7 +14,8 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"go.undefinedlabs.com/scopeagent"
+	"go.undefinedlabs.com/scopeagent/agent"
+	"go.undefinedlabs.com/scopeagent/instrumentation"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	"k8s.io/apimachinery/pkg/util/runtime"
 
@@ -38,14 +39,22 @@ func main() {
 	log.Init(logrus.WarnLevel)
 	var logLevel string
 
-	defer scopeagent.GlobalAgent.Stop()
+	ctx := context.Background()
 
-	// Start a span representing this process execution, following the trace found in the environment (if available)
-	span := process.StartSpan(filepath.Base(os.Args[0]))
-	defer span.Finish()
+	if apiKey, ok := os.LookupEnv("OKTETO_SCOPE_API"); ok {
+		// Make sure we stop the agent cleanly before exiting
+		scope, err := agent.NewAgent(agent.WithApiKey(apiKey))
+		if err != nil {
+			log.Fail("couldn't instantiate scope agent: %s", err)
+			os.Exit(1)
+		}
 
-	// Create a new context to be used in my application
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
+		defer scope.Stop()
+		instrumentation.SetTracer(scope.Tracer())
+		span := process.StartSpan(filepath.Base(os.Args[0]))
+		defer span.Finish()
+		ctx = opentracing.ContextWithSpan(ctx, span)
+	}
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
