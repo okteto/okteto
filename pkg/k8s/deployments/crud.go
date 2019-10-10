@@ -157,7 +157,7 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	if len(trRulesJSON) == 0 {
 		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 		if len(dManifest) == 0 {
-			log.Infof("%s/%s is not an okteto environment", d.Namespace, d.Name)
+			log.Infof("%s/%s is not a development environment", d.Namespace, d.Name)
 			return nil
 		}
 		dOrig := &appsv1.Deployment{}
