@@ -237,15 +237,6 @@ func (config *sshConfig) writeToFilepath(filePath string) error {
 
 }
 
-func (config *sshConfig) getParam(keyword string) *param {
-	for _, p := range config.globals {
-		if p.keyword == keyword {
-			return p
-		}
-	}
-	return nil
-}
-
 func (config *sshConfig) getHost(hostname string) *host {
 	for _, host := range config.hosts {
 		for _, hn := range host.hostnames {
