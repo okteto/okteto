@@ -190,7 +190,7 @@ func (config *sshConfig) writeTo(w io.Writer) error {
 	}
 
 	for _, host := range config.hosts {
-		fmt.Fprintln(w)
+		//fmt.Fprintln(w)
 		fmt.Fprint(w, host.String())
 	}
 
