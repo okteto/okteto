@@ -56,6 +56,20 @@ services:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								apiv1.PodAffinityTerm{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											okLabels.DevLabel: "true",
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
 					SecurityContext: &apiv1.PodSecurityContext{
 						RunAsUser:  &runAsUser,
 						RunAsGroup: &runAsGroup,
@@ -177,7 +191,7 @@ services:
 								apiv1.PodAffinityTerm{
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											okLabels.InteractiveDevLabel: "web",
+											okLabels.DevLabel: "true",
 										},
 									},
 									TopologyKey: "kubernetes.io/hostname",

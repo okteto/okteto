@@ -78,11 +78,10 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
-	if !t.Interactive {
-		TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
-	} else {
+	if t.Interactive {
 		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
 	}
+	TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		TranslateDevContainer(devContainer, rule)
@@ -101,6 +100,7 @@ func commonTranslation(t *model.Translation) {
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.Version)
 	setLabel(t.Deployment.GetObjectMeta(), okLabels.DevLabel, "true")
+	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
 
 	if t.Interactive {
 		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.InteractiveDevLabel, t.Name)
@@ -142,7 +142,7 @@ func TranslatePodAffinity(spec *apiv1.PodSpec, name string) {
 		apiv1.PodAffinityTerm{
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					okLabels.InteractiveDevLabel: name,
+					okLabels.DevLabel: "true",
 				},
 			},
 			TopologyKey: "kubernetes.io/hostname",
