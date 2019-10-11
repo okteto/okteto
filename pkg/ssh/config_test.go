@@ -57,12 +57,14 @@ func TestParseAndWriteTo(t *testing.T) {
 
 	config, err := parse(strings.NewReader(sshConfigExample))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	buf := &bytes.Buffer{}
 
-	config.writeTo(buf)
+	if err := config.writeTo(buf); err != nil {
+		t.Fatal(err)
+	}
 
 	if buf.String() != sshConfigExample {
 

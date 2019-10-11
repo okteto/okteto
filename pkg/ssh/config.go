@@ -265,21 +265,3 @@ func (h *host) getParam(keyword string) *param {
 	}
 	return nil
 }
-
-func (config *sshConfig) findByHostname(hostname string) *host {
-	for _, host := range config.hosts {
-		for _, hn := range host.hostnames {
-			if hn == hostname {
-				return host
-			}
-		}
-		if hns := host.getParam(hostNameKeyword); hns != nil {
-			for _, hn := range hns.args {
-				if hn == hostname {
-					return host
-				}
-			}
-		}
-	}
-	return nil
-}
