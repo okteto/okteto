@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -18,16 +19,7 @@ import (
 
 const (
 	deploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
-	// OktetoInteractiveDevLabel indicates the interactive dev pod
-	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
-
-	// OktetoDetachedDevLabel indicates the detached dev pods
-	OktetoDetachedDevLabel = "detached.dev.okteto.com"
-
-	// OktetoSyncLabel indicates a synthing pod
-	OktetoSyncLabel = "syncthing.okteto.com"
-
-	maxRetriesPodRunning = 1500 //5min pod is running
+	maxRetriesPodRunning         = 1500 //5min pod is running
 )
 
 var (
@@ -59,16 +51,19 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 }
 
 func loopGetDevPod(dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
-	d, err := deployments.GetRevionAnnotatedDeploymentOrFailed(dev, c, waitUntilDeployed)
+	d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(dev, c, waitUntilDeployed)
 	if d == nil {
 		return nil, err
 	}
+
 	log.Infof("deployment %s with revision %v is progressing", d.Name, d.Annotations[deploymentRevisionAnnotation])
 
 	rs, err := replicasets.GetReplicaSetByDeployment(dev, d, c)
 	if rs == nil {
+		log.Infof("failed to get replicaset with revision %v: %s ", d.Annotations[deploymentRevisionAnnotation], err)
 		return nil, err
 	}
+
 	log.Infof("replicaset %s with revison %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
 
 	pod, err := getPodByReplicaSet(dev, rs, c)
@@ -93,7 +88,7 @@ func loopGetDevPod(dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bo
 
 func getPodByReplicaSet(dev *model.Dev, rs *appsv1.ReplicaSet, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	opts := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", OktetoInteractiveDevLabel, dev.Name),
+		LabelSelector: fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name),
 	}
 	podList, err := c.CoreV1().Pods(dev.Namespace).List(opts)
 	if err != nil {
@@ -122,7 +117,7 @@ func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
 func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", OktetoDetachedDevLabel, dev.Name),
+			LabelSelector: fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name),
 		},
 	)
 	if err != nil {
@@ -140,7 +135,7 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 		}
 	}
 
-	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", OktetoDetachedDevLabel, dev.Name), c)
+	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
 }
 
 func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error {

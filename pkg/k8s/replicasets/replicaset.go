@@ -3,6 +3,7 @@ package replicasets
 import (
 	"fmt"
 
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,20 +13,22 @@ import (
 
 const (
 	deploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
-	// OktetoInteractiveDevLabel indicates the interactive dev pod
-	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
 )
 
 // GetReplicaSetByDeployment given a deployment, returns its current replica set or an error
 func GetReplicaSetByDeployment(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
+	ls := fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name)
 	rsList, err := c.AppsV1().ReplicaSets(d.Namespace).List(
 		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", OktetoInteractiveDevLabel, dev.Name),
+			LabelSelector: ls,
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get replicaset using %s: %w", ls, err)
 	}
+
+	log.Debugf("rs: %+v", rsList.Items)
+
 	for _, rs := range rsList.Items {
 		for _, or := range rs.OwnerReferences {
 			if or.UID == d.UID {
