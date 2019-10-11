@@ -26,7 +26,7 @@ const (
 	oktetoVolumName            = "okteto"
 
 	//syncthing
-	oktetoBinImageTag        = "okteto/bin:1.0.0"
+	oktetoBinImageTag        = "okteto/bin:1.0.1"
 	syncTCPPort              = 22000
 	syncGUIPort              = 8384
 	oktetoSyncSecretVolume   = "okteto-sync-secret"
