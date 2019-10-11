@@ -76,6 +76,7 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 
 	commonTranslation(t)
 
+	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
 	if t.Interactive {
@@ -100,7 +101,6 @@ func commonTranslation(t *model.Translation) {
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.Version)
 	setLabel(t.Deployment.GetObjectMeta(), okLabels.DevLabel, "true")
-	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
 
 	if t.Interactive {
 		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.InteractiveDevLabel, t.Name)
