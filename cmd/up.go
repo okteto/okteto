@@ -294,12 +294,6 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 		return false, fmt.Errorf("`okteto up` is not allowed in this namespace")
 	}
 
-	if namespaces.IsOktetoNamespace(ns) {
-		if err := namespaces.CheckAvailableResources(up.Dev, create, d, up.Client); err != nil {
-			return false, err
-		}
-	}
-
 	if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
 		return false, err
 	}
