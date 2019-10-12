@@ -86,10 +86,10 @@ services:
 							},
 						},
 						apiv1.Volume{
-							Name: oktetoVolumName,
+							Name: oktetoVolumeName,
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: oktetoVolumName,
+									ClaimName: oktetoVolumeName,
 									ReadOnly:  false,
 								},
 							},
@@ -131,13 +131,13 @@ services:
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								apiv1.VolumeMount{
-									Name:      oktetoVolumName,
+									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/app",
 									SubPath:   "web/data-0",
 								},
 								apiv1.VolumeMount{
-									Name:      oktetoVolumName,
+									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/var/syncthing",
 									SubPath:   "web/syncthing",
@@ -202,10 +202,10 @@ services:
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						apiv1.Volume{
-							Name: oktetoVolumName,
+							Name: oktetoVolumeName,
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: oktetoVolumName,
+									ClaimName: oktetoVolumeName,
 									ReadOnly:  false,
 								},
 							},
@@ -220,7 +220,7 @@ services:
 							Args:            []string{},
 							VolumeMounts: []apiv1.VolumeMount{
 								apiv1.VolumeMount{
-									Name:      oktetoVolumName,
+									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/src",
 									SubPath:   "web/data-0",

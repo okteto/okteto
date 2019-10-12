@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	oktetoVolumName = "okteto"
+	oktetoVolumeName = "okteto"
 )
 
 func translate() *apiv1.PersistentVolumeClaim {
 	quantDisk := getVolumeSize()
 	return &apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: oktetoVolumName,
+			Name: oktetoVolumeName,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},

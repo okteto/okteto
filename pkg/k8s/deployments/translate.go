@@ -23,12 +23,10 @@ const (
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
 	revisionAnnotation         = "deployment.kubernetes.io/revision"
 	oktetoBinName              = "okteto-bin"
-	oktetoVolumName            = "okteto"
+	oktetoVolumeName           = "okteto"
 
 	//syncthing
 	oktetoBinImageTag        = "okteto/bin:1.0.1"
-	syncTCPPort              = 22000
-	syncGUIPort              = 8384
 	oktetoSyncSecretVolume   = "okteto-sync-secret"
 	oktetoSyncSecretTemplate = "okteto-%s"
 )

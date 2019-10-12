@@ -3,9 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"runtime"
-	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/google/go-github/v28/github"
@@ -13,10 +11,6 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
-
-var netClient = &http.Client{
-	Timeout: time.Second * 3,
-}
 
 //Version returns information about the binary
 func Version() *cobra.Command {
