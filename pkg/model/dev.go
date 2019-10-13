@@ -334,10 +334,10 @@ func (dev *Dev) LabelsSelector() string {
 
 //FullSubPath returns the full subpath in the okteto volume
 func (dev *Dev) FullSubPath(i int, subPath string) string {
-	if dev.SubPath == "" {
+	if subPath == "" {
 		return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i))
 	}
-	return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i), dev.SubPath)
+	return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i), subPath)
 }
 
 //SyncthingSubPath returns the full subpath for the var syncthing volume
