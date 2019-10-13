@@ -223,7 +223,7 @@ services:
 									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/src",
-									SubPath:   "web/data-0",
+									SubPath:   "web/data-0/worker",
 								},
 							},
 							LivenessProbe:  nil,
