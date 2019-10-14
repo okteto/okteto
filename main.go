@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.undefinedlabs.com/scopeagent/agent"
 	"go.undefinedlabs.com/scopeagent/instrumentation"
+	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	"k8s.io/apimachinery/pkg/util/runtime"
 
@@ -54,6 +55,7 @@ func main() {
 		span := process.StartSpan(filepath.Base(os.Args[0]))
 		defer span.Finish()
 		ctx = opentracing.ContextWithSpan(ctx, span)
+		nethttp.PatchHttpDefaultClient()
 	}
 
 	root := &cobra.Command{

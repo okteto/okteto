@@ -127,16 +127,17 @@ func TestAll(t *testing.T) {
 	defer test.End()
 	ctx := test.Context()
 
-	token := os.Getenv("OKTETO_TOKEN")
-	if len(token) == 0 {
+	_, ok := os.LookupEnv("OKTETO_TOKEN")
+	if !ok {
 		log.Println("OKTETO_TOKEN is not defined, using logged in user")
 	}
 
-	u := os.Getenv("OKTETO_URL")
-	if len(token) == 0 {
-		log.Println("OKTETO_URL is not defined, using cloud.okteto.com")
+	url, ok := os.LookupEnv("OKTETO_URL")
+	if ok {
+		log.Printf("OKTETO_URL is defined, using %s\n", url)
 	} else {
-		log.Printf("OKTETO_URL is defined, using %s\n", u)
+		log.Println("OKTETO_URL is not defined, using cloud.okteto.com")
+		url = "cloud.okteto.com"
 	}
 
 	user := os.Getenv("OKTETO_USER")
@@ -144,7 +145,7 @@ func TestAll(t *testing.T) {
 		t.Fatalf("OKTETO_USER is not defined")
 	}
 
-	_, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
+	_, ok = os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
 	if ok {
 		log.Println("running in CLIENTSIDE mode")
 	}
@@ -193,7 +194,7 @@ func TestAll(t *testing.T) {
 	}
 
 	log.Println("getting synchronized content")
-	c, err := getContent(name, namespace)
+	c, err := getContent(name, namespace, url)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +209,7 @@ func TestAll(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	log.Println("getting updated content")
-	c, err = getContent(name, namespace)
+	c, err = getContent(name, namespace, url)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,8 +258,8 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 	return fmt.Errorf("%s didn't rollout after 30 seconds", name)
 }
 
-func getContent(name, namespace string) (string, error) {
-	endpoint := fmt.Sprintf("https://%s-%s.cloud.okteto.net/", name, namespace)
+func getContent(name, namespace, url string) (string, error) {
+	endpoint := fmt.Sprintf("https://%s-%s.%s/", name, namespace, url)
 	for i := 0; i < 60; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
@@ -267,7 +268,7 @@ func getContent(name, namespace string) (string, error) {
 
 		defer r.Body.Close()
 		if r.StatusCode != 200 {
-			log.Printf("Got status %d, retrying", r.StatusCode)
+			log.Printf("Called %s, got status %d, retrying", endpoint, r.StatusCode)
 			time.Sleep(1 * time.Second)
 			continue
 		}
