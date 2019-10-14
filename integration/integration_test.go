@@ -126,6 +126,7 @@ func TestDownloadSyncthing(t *testing.T) {
 func TestAll(t *testing.T) {
 	test := scopeagent.StartTest(t)
 	defer test.End()
+	nethttp.PatchHttpDefaultClient()
 	ctx := test.Context()
 
 	_, ok := os.LookupEnv("OKTETO_TOKEN")
@@ -158,10 +159,9 @@ func TestAll(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
-	
 	err = checkHealth(ctx, url)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("healtcheck failed: %s", err)
 	}
 
 	log.Printf("%s is healthy \n", url)
@@ -307,20 +307,24 @@ func writeManifest(path, name string) error {
 }
 
 func checkHealth(ctx context.Context, url string) error {
-	client := &http.Client{Transport: &nethttp.Transport{}}
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://%s/healthz", url), nil)
+	//client := &http.Client{Transport: &nethttp.Transport{}}
+	endpoint := fmt.Sprintf("https://%s/healthz", url)
+	if url == "cloud.okteto.com" {
+		endpoint = "https://cloud.okteto.net/healthz"
+	}
+
+	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return err
 	}
 
-	req = req.WithContext(ctx)
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 	if err != nil {
 		return err
 	}
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("bad status code from healthz: %d", resp.StatusCode)
+		return fmt.Errorf("bad status code from healthz %s: %d", endpoint, resp.StatusCode)
 	}
 
 	return nil
