@@ -49,20 +49,17 @@ func main() {
 		}
 
 		defer scope.Stop()
-		for _, v := range os.Environ() {
-			log.Error(v)
-		}
 
-		if process.SpanContext() != nil {
-			log.Errorf("didn't inherit span context from scope")
-			os.Exit(1)
+		if process.SpanContext() == nil {
+			log.Info("didn't inherit span context from scope")
 		}
 
 		span := process.StartSpan(filepath.Base(os.Args[0]))
 		defer span.Finish()
+
 		ctx = opentracing.ContextWithSpan(ctx, span)
 		nethttp.PatchHttpDefaultClient()
-		log.Error("scope agent configured")
+		log.Info("scope agent configured")
 	}
 
 	root := &cobra.Command{
