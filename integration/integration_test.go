@@ -132,12 +132,10 @@ func TestAll(t *testing.T) {
 		log.Println("OKTETO_TOKEN is not defined, using logged in user")
 	}
 
-	url, ok := os.LookupEnv("OKTETO_URL")
-	if ok {
-		log.Printf("OKTETO_URL is defined, using %s\n", url)
-	} else {
-		log.Println("OKTETO_URL is not defined, using cloud.okteto.com")
-		url = "cloud.okteto.com"
+	url := "cloud.okteto.net"
+	if u, ok := os.LookupEnv("OKTETO_URL"); ok {
+		log.Printf("OKTETO_URL is defined, using %s\n", u)
+		url = u
 	}
 
 	user := os.Getenv("OKTETO_USER")
