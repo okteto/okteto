@@ -19,7 +19,8 @@ services:
     container: dev
     image: worker:latest
     imagePullPolicy: IfNotPresent
-    mountpath: /src`)
+    mountpath: /src
+    subpath: /worker`)
 
 	dev, err := Read(manifest)
 	if err != nil {
@@ -86,7 +87,7 @@ services:
 			{
 				Name:      OktetoVolumeName,
 				MountPath: "/src",
-				SubPath:   "web/data-0",
+				SubPath:   "web/data-0/worker",
 			},
 		},
 	}

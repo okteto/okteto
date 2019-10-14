@@ -3,6 +3,7 @@ package deployments
 import (
 	"encoding/json"
 
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -38,6 +39,6 @@ func setTranslationAsAnnotation(o metav1.Object, tr *model.Translation) error {
 	if err != nil {
 		return err
 	}
-	setAnnotation(o, OktetoTranslationAnnotation, string(translationBytes))
+	setAnnotation(o, okLabels.TranslationAnnotation, string(translationBytes))
 	return nil
 }

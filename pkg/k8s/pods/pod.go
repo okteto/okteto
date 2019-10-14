@@ -7,27 +7,20 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
 	deploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
-	// OktetoInteractiveDevLabel indicates the interactive dev pod
-	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
-
-	// OktetoDetachedDevLabel indicates the detached dev pods
-	OktetoDetachedDevLabel = "detached.dev.okteto.com"
-
-	// OktetoSyncLabel indicates a synthing pod
-	OktetoSyncLabel = "syncthing.okteto.com"
-
-	maxRetriesPodRunning = 1500 //5min pod is running
+	maxRetriesPodRunning         = 300 //1min pod is created
 )
 
 var (
@@ -39,7 +32,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 	tries := 0
 	ticker := time.NewTicker(200 * time.Millisecond)
 	for tries < maxRetriesPodRunning {
-		pod, err := loopGetDevPod(dev, c, waitUntilDeployed)
+		pod, err := loopGetDevPod(ctx, dev, c, waitUntilDeployed)
 		if err != nil {
 			return nil, err
 		}
@@ -58,42 +51,28 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 	return nil, fmt.Errorf("kubernetes is taking too long to create the pod of your development environment. Please check for errors and try again")
 }
 
-func loopGetDevPod(dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
-	d, err := deployments.GetRevionAnnotatedDeploymentOrFailed(dev, c, waitUntilDeployed)
+func loopGetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
+	d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(dev, c, waitUntilDeployed)
 	if d == nil {
 		return nil, err
 	}
+
 	log.Infof("deployment %s with revision %v is progressing", d.Name, d.Annotations[deploymentRevisionAnnotation])
 
 	rs, err := replicasets.GetReplicaSetByDeployment(dev, d, c)
 	if rs == nil {
+		log.Infof("failed to get replicaset with revision %v: %s ", d.Annotations[deploymentRevisionAnnotation], err)
 		return nil, err
 	}
+
 	log.Infof("replicaset %s with revison %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
 
-	pod, err := getPodByReplicaSet(dev, rs, c)
-	if pod == nil {
-		return nil, err
-	}
-
-	log.Infof("pod %s with revison %s is progressing", pod.Name, d.Annotations[deploymentRevisionAnnotation])
-	if pod.Status.Phase == apiv1.PodRunning {
-		log.Infof("pod %s with revison %s is running", pod.Name, d.Annotations[deploymentRevisionAnnotation])
-		return pod, nil
-	}
-	for _, status := range pod.Status.ContainerStatuses {
-		if status.State.Waiting != nil {
-			if status.State.Waiting.Reason == "ErrImagePull" || status.State.Waiting.Reason == "ImagePullBackOff" {
-				return nil, fmt.Errorf(status.State.Waiting.Message)
-			}
-		}
-	}
-	return nil, nil
+	return getPodByReplicaSet(dev, rs, c)
 }
 
 func getPodByReplicaSet(dev *model.Dev, rs *appsv1.ReplicaSet, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	opts := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", OktetoInteractiveDevLabel, dev.Name),
+		LabelSelector: fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name),
 	}
 	podList, err := c.CoreV1().Pods(dev.Namespace).List(opts)
 	if err != nil {
@@ -109,6 +88,62 @@ func getPodByReplicaSet(dev *model.Dev, rs *appsv1.ReplicaSet, c *kubernetes.Cli
 	return nil, nil
 }
 
+//MonitorDevPod monitores the state of the pod
+func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kubernetes.Clientset, reporter chan string) (*apiv1.Pod, error) {
+	opts := metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("metadata.name=%s", pod.Name),
+	}
+
+	watchPod, err := c.CoreV1().Pods(dev.Namespace).Watch(opts)
+	if err != nil {
+		return nil, err
+	}
+	opts = metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("involvedObject.kind=Pod,involvedObject.name=%s", pod.Name),
+	}
+	watchPodEvents, err := c.CoreV1().Events(dev.Namespace).Watch(opts)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		select {
+		case event := <-watchPod.ResultChan():
+			pod, ok := event.Object.(*v1.Pod)
+			if !ok {
+				log.Errorf("type error getting pod event")
+				continue
+			}
+			log.Infof("pod %s updated", pod.Name)
+			if pod.Status.Phase == apiv1.PodRunning {
+				return pod, nil
+			}
+			if pod.DeletionTimestamp != nil {
+				return nil, fmt.Errorf("development environment has been removed")
+			}
+		case event := <-watchPodEvents.ResultChan():
+			e, ok := event.Object.(*v1.Event)
+			if !ok {
+				log.Errorf("type error getting pod event")
+				continue
+			}
+			log.Infof("pod %s event: %s", pod.Name, e.Message)
+			switch e.Reason {
+			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
+				return nil, fmt.Errorf(e.Message)
+			case "FailedAttachVolume", "FailedMount":
+				reporter <- fmt.Sprintf("%s: retrying", e.Message)
+			default:
+				if e.Reason == "Pulling" {
+					reporter <- strings.Replace(e.Message, "pulling", "Pulling", 1)
+				}
+			}
+		case <-ctx.Done():
+			log.Debug("cancelling call to monitor dev pod")
+			return nil, ctx.Err()
+		}
+	}
+}
+
 //Exists returns if the dev pod still exists
 func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
 	pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
@@ -122,7 +157,7 @@ func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
 func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", OktetoDetachedDevLabel, dev.Name),
+			LabelSelector: fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name),
 		},
 	)
 	if err != nil {
@@ -140,7 +175,7 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 		}
 	}
 
-	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", OktetoDetachedDevLabel, dev.Name), c)
+	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
 }
 
 func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error {

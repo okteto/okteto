@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -55,6 +56,20 @@ services:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								apiv1.PodAffinityTerm{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											okLabels.DevLabel: "true",
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
 					SecurityContext: &apiv1.PodSecurityContext{
 						RunAsUser:  &runAsUser,
 						RunAsGroup: &runAsGroup,
@@ -71,10 +86,10 @@ services:
 							},
 						},
 						apiv1.Volume{
-							Name: oktetoVolumName,
+							Name: oktetoVolumeName,
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: oktetoVolumName,
+									ClaimName: oktetoVolumeName,
 									ReadOnly:  false,
 								},
 							},
@@ -116,13 +131,13 @@ services:
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								apiv1.VolumeMount{
-									Name:      oktetoVolumName,
+									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/app",
 									SubPath:   "web/data-0",
 								},
 								apiv1.VolumeMount{
-									Name:      oktetoVolumName,
+									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/var/syncthing",
 									SubPath:   "web/syncthing",
@@ -176,7 +191,7 @@ services:
 								apiv1.PodAffinityTerm{
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											OktetoInteractiveDevLabel: "web",
+											okLabels.DevLabel: "true",
 										},
 									},
 									TopologyKey: "kubernetes.io/hostname",
@@ -187,10 +202,10 @@ services:
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						apiv1.Volume{
-							Name: oktetoVolumName,
+							Name: oktetoVolumeName,
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: oktetoVolumName,
+									ClaimName: oktetoVolumeName,
 									ReadOnly:  false,
 								},
 							},
@@ -205,10 +220,10 @@ services:
 							Args:            []string{},
 							VolumeMounts: []apiv1.VolumeMount{
 								apiv1.VolumeMount{
-									Name:      oktetoVolumName,
+									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/src",
-									SubPath:   "web/data-0",
+									SubPath:   "web/data-0/worker",
 								},
 							},
 							LivenessProbe:  nil,

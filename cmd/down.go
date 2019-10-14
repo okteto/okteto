@@ -23,7 +23,7 @@ func Down() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "down",
-		Short: "Deactivates your Okteto Environment",
+		Short: "Deactivates your development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting down command")
 
@@ -41,7 +41,7 @@ func Down() *cobra.Command {
 				return err
 			}
 
-			log.Success("Okteto Environment deactivated")
+			log.Success("Development environment deactivated")
 
 			log.Println()
 
@@ -57,7 +57,7 @@ func Down() *cobra.Command {
 }
 
 func runDown(dev *model.Dev) error {
-	spinner := newSpinner("Deactivating your Okteto Environment...")
+	spinner := newSpinner("Deactivating your development environment...")
 	spinner.start()
 	defer spinner.stop()
 

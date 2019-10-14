@@ -65,7 +65,7 @@ func Up() *cobra.Command {
 	var remote int
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Activates your Okteto Environment",
+		Short: "Activates your development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting up command")
 			u := upgradeAvailable()
@@ -185,7 +185,7 @@ func (up *UpContext) Activate() {
 		if !activated {
 			return
 		}
-		log.Success("Okteto Environment activated")
+		log.Success("Development environment activated")
 
 		err = up.sync()
 		if err != nil {
@@ -215,7 +215,7 @@ func (up *UpContext) Activate() {
 
 		if prevError != nil {
 			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !pods.Exists(up.Pod, up.Dev.Namespace, up.Client)) {
-				log.Yellow("\nConnection lost to your Okteto Environment, reconnecting...\n")
+				log.Yellow("\nConnection lost to your development environment, reconnecting...\n")
 				up.shutdown()
 				continue
 			}
@@ -280,7 +280,7 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 }
 
 func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (bool, error) {
-	spinner := newSpinner("Activating your Okteto Environment...")
+	spinner := newSpinner("Activating your development environment...")
 	up.updateStateFile(activating)
 	spinner.start()
 	defer spinner.stop()
@@ -292,12 +292,6 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 
 	if !namespaces.IsOktetoAllowed(ns) {
 		return false, fmt.Errorf("`okteto up` is not allowed in this namespace")
-	}
-
-	if namespaces.IsOktetoNamespace(ns) {
-		if err := namespaces.CheckAvailableResources(up.Dev, create, d, up.Client); err != nil {
-			return false, err
-		}
 	}
 
 	if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
@@ -314,7 +308,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 	}
 
 	if isRetry && !deployments.IsDevModeOn(d) {
-		log.Information("Okteto Environment has been deactivated")
+		log.Information("Development environment has been deactivated")
 		return false, nil
 	}
 
@@ -356,12 +350,29 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 		}
 	}
 
-	p, err := pods.GetDevPod(up.Context, up.Dev, up.Client, create)
+	pod, err := pods.GetDevPod(up.Context, up.Dev, up.Client, create)
 	if err != nil {
 		return false, err
 	}
 
-	up.Pod = p.Name
+	reporter := make(chan string)
+	defer close(reporter)
+	go func() {
+		message := "Attaching persistent volume"
+		for {
+			spinner.update(fmt.Sprintf("%s...", message))
+			message = <-reporter
+			if message == "" {
+				return
+			}
+		}
+	}()
+	pod, err = pods.MonitorDevPod(up.Context, up.Dev, pod, up.Client, reporter)
+	if err != nil {
+		return false, err
+	}
+
+	up.Pod = pod.Name
 	go up.cleanCommand()
 
 	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
