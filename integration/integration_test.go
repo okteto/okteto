@@ -19,6 +19,7 @@ import (
 	"github.com/okteto/okteto/cmd"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"go.undefinedlabs.com/scopeagent"
+	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 )
 
@@ -157,6 +158,14 @@ func TestAll(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
+	
+	err = checkHealth(ctx, url)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("%s is healthy \n", url)
+
 	name := strings.ToLower(fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
@@ -292,6 +301,26 @@ func writeManifest(path, name string) error {
 
 	if err := manifestTemplate.Execute(oFile, deployment{Name: name}); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func checkHealth(ctx context.Context, url string) error {
+	client := &http.Client{Transport: &nethttp.Transport{}}
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://%s/healthz", url), nil)
+	if err != nil {
+		return err
+	}
+
+	req = req.WithContext(ctx)
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("bad status code from healthz: %d", resp.StatusCode)
 	}
 
 	return nil
