@@ -32,6 +32,7 @@ type deployment struct {
 }
 
 const (
+	scopeAgent       = "OKTETO_SCOPE_APIKEY"
 	deploymentFormat = `
 apiVersion: apps/v1
 kind: Deployment
@@ -129,6 +130,13 @@ func TestAll(t *testing.T) {
 	token := os.Getenv("OKTETO_TOKEN")
 	if len(token) == 0 {
 		log.Println("OKTETO_TOKEN is not defined, using logged in user")
+	}
+
+	u := os.Getenv("OKTETO_URL")
+	if len(token) == 0 {
+		log.Println("OKTETO_URL is not defined, using cloud.okteto.com")
+	} else {
+		log.Printf("OKTETO_URL is defined, using %s\n", u)
 	}
 
 	user := os.Getenv("OKTETO_USER")
