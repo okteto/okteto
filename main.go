@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"go.undefinedlabs.com/scopeagent/agent"
-	"go.undefinedlabs.com/scopeagent/instrumentation"
 	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -41,21 +40,29 @@ func main() {
 	var logLevel string
 
 	ctx := context.Background()
-
-	if apiKey, ok := os.LookupEnv("OKTETO_SCOPE_API"); ok {
+	if apiKey, ok := os.LookupEnv("OKTETO_SCOPE_APIKEY"); ok {
 		// Make sure we stop the agent cleanly before exiting
 		scope, err := agent.NewAgent(agent.WithApiKey(apiKey))
 		if err != nil {
-			log.Fail("couldn't instantiate scope agent: %s", err)
+			log.Errorf("couldn't instantiate scope agent: %s", err)
 			os.Exit(1)
 		}
 
 		defer scope.Stop()
-		instrumentation.SetTracer(scope.Tracer())
+		for _, v := range os.Environ() {
+			log.Error(v)
+		}
+
+		if process.SpanContext() != nil {
+			log.Errorf("didn't inherit span context from scope")
+			os.Exit(1)
+		}
+
 		span := process.StartSpan(filepath.Base(os.Args[0]))
 		defer span.Finish()
 		ctx = opentracing.ContextWithSpan(ctx, span)
 		nethttp.PatchHttpDefaultClient()
+		log.Error("scope agent configured")
 	}
 
 	root := &cobra.Command{
