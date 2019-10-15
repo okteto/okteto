@@ -90,7 +90,38 @@ workdir: /usr/src/app
 `
 )
 
+var (
+	url  = "cloud.okteto.net"
+	user = ""
+)
+
 func TestMain(m *testing.M) {
+	if u, ok := os.LookupEnv("OKTETO_URL"); ok {
+		log.Printf("OKTETO_URL is defined, using %s\n", u)
+		url = u
+	}
+
+	_, ok := os.LookupEnv("OKTETO_TOKEN")
+	if !ok {
+		log.Println("OKTETO_TOKEN is not defined, using logged in user")
+	}
+
+	if u, ok := os.LookupEnv("OKTETO_USER"); !ok {
+		log.Println("OKTETO_USER is not defined")
+		os.Exit(1)
+	} else {
+		user = u
+	}
+
+	if _, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
+		log.Println("running in CLIENTSIDE mode")
+	}
+
+	if _, ok := os.LookupEnv("OKTETO_SCOPE_APIKEY"); ok {
+		log.Println("SCOPE is enabled")
+		nethttp.PatchHttpDefaultClient()
+	}
+
 	os.Exit(scopeagent.Run(m))
 }
 
@@ -123,32 +154,22 @@ func TestDownloadSyncthing(t *testing.T) {
 		})
 	}
 }
+
+func TestHealth(t *testing.T) {
+	test := scopeagent.StartTest(t)
+	defer test.End()
+
+	ctx := test.Context()
+
+	err := checkHealth(ctx, url)
+	if err != nil {
+		t.Fatalf("healtcheck failed: %s", err)
+	}
+}
 func TestAll(t *testing.T) {
 	test := scopeagent.StartTest(t)
 	defer test.End()
-	nethttp.PatchHttpDefaultClient()
 	ctx := test.Context()
-
-	_, ok := os.LookupEnv("OKTETO_TOKEN")
-	if !ok {
-		log.Println("OKTETO_TOKEN is not defined, using logged in user")
-	}
-
-	url := "cloud.okteto.net"
-	if u, ok := os.LookupEnv("OKTETO_URL"); ok {
-		log.Printf("OKTETO_URL is defined, using %s\n", u)
-		url = u
-	}
-
-	user := os.Getenv("OKTETO_USER")
-	if len(user) == 0 {
-		t.Fatalf("OKTETO_USER is not defined")
-	}
-
-	_, ok = os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
-	if ok {
-		log.Println("running in CLIENTSIDE mode")
-	}
 
 	oktetoPath, err := getOktetoPath(ctx)
 	if err != nil {
@@ -307,7 +328,6 @@ func writeManifest(path, name string) error {
 }
 
 func checkHealth(ctx context.Context, url string) error {
-	//client := &http.Client{Transport: &nethttp.Transport{}}
 	endpoint := fmt.Sprintf("https://%s/healthz", url)
 	if url == "cloud.okteto.com" {
 		endpoint = "https://cloud.okteto.net/healthz"
