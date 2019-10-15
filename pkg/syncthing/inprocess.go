@@ -4,8 +4,12 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/syncthing/syncthing/lib/api"
+	"github.com/syncthing/syncthing/lib/connections"
 	"github.com/syncthing/syncthing/lib/events"
 	"github.com/syncthing/syncthing/lib/locations"
+	"github.com/syncthing/syncthing/lib/model"
+	"github.com/syncthing/syncthing/lib/sha256"
 	"github.com/syncthing/syncthing/lib/syncthing"
 )
 
@@ -41,9 +45,19 @@ func (s *Syncthing) initSyncthingApp() error {
 		Verbose:   true,
 	}
 
+	overrideSyncthingLogging()
 	s.app = syncthing.New(cfg, ldb, events.NoopLogger, cert, opt)
 	s.app.Start()
 	return nil
+}
+
+func overrideSyncthingLogging() {
+	l := log.GetLog()
+	api.SetLogger(l)
+	connections.SetLogger(l)
+	model.SetLogger(l)
+	syncthing.SetLogger(l)
+	sha256.SetLogger(l)
 }
 
 func (s *Syncthing) inprocessStop() error {

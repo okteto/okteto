@@ -39,18 +39,16 @@ var log = &logger{
 	out: logrus.New(),
 }
 
-var ActionID string
-
 func init() {
 	if runtime.GOOS == "windows" {
 		successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" + ")
 	}
 
-	ActionID = uuid.NewV4().String()
 }
 
 // Init configures the logger for the package to use.
 func Init(level logrus.Level) {
+
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
 
@@ -64,7 +62,9 @@ func Init(level logrus.Level) {
 	rolling := getRollingLog(logPath)
 	fileLogger.SetOutput(rolling)
 	fileLogger.SetLevel(logrus.DebugLevel)
-	log.file = fileLogger.WithFields(logrus.Fields{"action": ActionID})
+
+	actionID := uuid.NewV4().String()
+	log.file = fileLogger.WithFields(logrus.Fields{"action": actionID})
 }
 
 func getRollingLog(path string) io.Writer {
@@ -130,6 +130,22 @@ func Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
 	if log.file != nil {
 		log.file.Errorf(format, args...)
+	}
+}
+
+// Warn writes a warn-level log
+func Warn(args ...interface{}) {
+	log.out.Warn(args...)
+	if log.file != nil {
+		log.file.Warn(args...)
+	}
+}
+
+// Warnf writes a warn	-level log with a format
+func Warnf(format string, args ...interface{}) {
+	log.out.Warnf(format, args...)
+	if log.file != nil {
+		log.file.Warnf(format, args...)
 	}
 }
 
