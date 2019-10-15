@@ -27,7 +27,7 @@ func GetReplicaSetByDeployment(dev *model.Dev, d *appsv1.Deployment, c *kubernet
 		return nil, fmt.Errorf("failed to get replicaset using %s: %w", ls, err)
 	}
 
-	log.Debugf("rs: %+v", rsList.Items)
+	//log.Debugf("rs: %+v", rsList.Items)
 
 	for _, rs := range rsList.Items {
 		for _, or := range rs.OwnerReferences {

@@ -121,6 +121,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	}
 
 	pwd := uuid.NewV4().String()
+	pwd = "okteto"
 	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), 0)
 	if err != nil {
 		log.Infof("couldn't hash the password %s", err)
@@ -223,7 +224,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 	}
 
 	if s.inprocess {
-		if err := s.initSyncthingApp(); err != nil {
+		if err := s.inprocessStart(); err != nil {
 			return err
 		}
 	} else {
@@ -420,12 +421,13 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context, wg *sync.WaitGroup) error {
+	log.Infof("restarting syncthing...")
+	_, err := s.APICall("rest/system/restart", "POST", 200, nil, true, nil)
+
 	if s.inprocess {
 		return s.inprocessRestart()
 	}
 
-	log.Infof("restarting syncthing...")
-	_, err := s.APICall("rest/system/restart", "POST", 200, nil, true, nil)
 	return err
 }
 

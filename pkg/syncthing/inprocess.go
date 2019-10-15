@@ -1,6 +1,7 @@
 package syncthing
 
 import (
+	"crypto/tls"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -13,23 +14,24 @@ import (
 	"github.com/syncthing/syncthing/lib/syncthing"
 )
 
-func (s *Syncthing) initSyncthingApp() error {
+func (s *Syncthing) inprocessStart() error {
 	log.Info("start syncthing inprocess")
 
 	if err := locations.SetBaseDir(locations.ConfigBaseDir, s.Home); err != nil {
 		return fmt.Errorf("failed to set the syncthing directory: %w", err)
 	}
 
-	cert, err := syncthing.LoadOrGenerateCertificate(
+	cert, err := tls.LoadX509KeyPair(
 		locations.Get(locations.CertFile),
 		locations.Get(locations.KeyFile),
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to load/generate certificate: %w", err)
+		return fmt.Errorf("failed to load certificate: %w", err)
 	}
 
-	cfg, err := syncthing.LoadConfigAtStartup(locations.Get(locations.ConfigFile), cert, events.NoopLogger, false, true)
+	cfgPath := locations.Get(locations.ConfigFile)
+	cfg, err := syncthing.LoadConfigAtStartup(cfgPath, cert, events.NoopLogger, false, true)
 	if err != nil {
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}
@@ -78,7 +80,7 @@ func (s *Syncthing) inprocessRestart() error {
 		return err
 	}
 
-	if err := s.initSyncthingApp(); err != nil {
+	if err := s.inprocessStart(); err != nil {
 		return err
 	}
 
