@@ -329,8 +329,8 @@ func writeManifest(path, name string) error {
 
 func checkHealth(ctx context.Context, url string) error {
 	endpoint := fmt.Sprintf("https://%s/healthz", url)
-	if url == "cloud.okteto.com" {
-		endpoint = "https://cloud.okteto.net/healthz"
+	if url == "cloud.okteto.net" {
+		endpoint = "https://cloud.okteto.com/healthz"
 	}
 
 	req, err := http.NewRequest("GET", endpoint, nil)
