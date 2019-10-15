@@ -17,9 +17,12 @@ import (
 )
 
 const (
+	oktetoSyncthingMountPath = "/var/syncthing"
 	oktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
 	oktetoRemotePortVariable = "OKTETO_REMOTE_PORT"
 
+	oktetoVolumeNameTemplate  = "pvc-%d"
+	oktetoPodNameTemplate     = "%s-0"
 	oktetoStatefulSetTemplate = "okteto-%s"
 	//OktetoVolumeName name of the okteto persistent volume
 	OktetoVolumeName = "okteto"
@@ -298,6 +301,24 @@ func (dev *Dev) GetStatefulSetName() string {
 	return n
 }
 
+//GetPodName returns the syncthing statefulset pod name for a given dev environment
+func (dev *Dev) GetPodName() string {
+	n := dev.GetStatefulSetName()
+	return fmt.Sprintf(oktetoPodNameTemplate, n)
+}
+
+//GetVolumeTemplateName returns the data volume name for a given dev environment
+func (dev *Dev) GetVolumeTemplateName(i int) string {
+	return fmt.Sprintf(oktetoVolumeNameTemplate, i)
+}
+
+//GetVolumeName returns the data volume name for a given dev environment
+func (dev *Dev) GetVolumeName(i int) string {
+	volumeName := dev.GetVolumeTemplateName(i)
+	podName := dev.GetPodName()
+	return fmt.Sprintf("%s-%s", volumeName, podName)
+}
+
 // LabelsSelector returns the labels of a Deployment as a k8s selector
 func (dev *Dev) LabelsSelector() string {
 	labels := ""
@@ -313,10 +334,15 @@ func (dev *Dev) LabelsSelector() string {
 
 //FullSubPath returns the full subpath in the okteto volume
 func (dev *Dev) FullSubPath(i int, subPath string) string {
-	if dev.SubPath == "" {
+	if subPath == "" {
 		return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i))
 	}
-	return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i), dev.SubPath)
+	return filepath.Join(dev.Name, fmt.Sprintf("data-%d", i), subPath)
+}
+
+//SyncthingSubPath returns the full subpath for the var syncthing volume
+func (dev *Dev) SyncthingSubPath() string {
+	return filepath.Join(dev.Name, "syncthing")
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
@@ -328,7 +354,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationR
 		Environment:     dev.Environment,
 		WorkDir:         dev.WorkDir,
 		Volumes: []VolumeMount{
-			VolumeMount{
+			{
 				Name:      OktetoVolumeName,
 				MountPath: dev.MountPath,
 				SubPath:   main.FullSubPath(0, dev.SubPath),
@@ -345,6 +371,14 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationR
 			EnvVar{
 				Name:  oktetoMarkerPathVariable,
 				Value: filepath.Join(dev.MountPath, dev.DevPath),
+			},
+		)
+		rule.Volumes = append(
+			rule.Volumes,
+			VolumeMount{
+				Name:      OktetoVolumeName,
+				MountPath: oktetoSyncthingMountPath,
+				SubPath:   dev.SyncthingSubPath(),
 			},
 		)
 		rule.Healthchecks = false

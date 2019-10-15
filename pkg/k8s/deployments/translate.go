@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -22,25 +23,12 @@ const (
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
 	revisionAnnotation         = "deployment.kubernetes.io/revision"
 	oktetoBinName              = "okteto-bin"
-	oktetoVolumName            = "okteto"
+	oktetoVolumeName           = "okteto"
 
 	//syncthing
-	oktetoBinImageTag        = "okteto/bin:1.0.0"
-	syncTCPPort              = 22000
-	syncGUIPort              = 8384
+	oktetoBinImageTag        = "okteto/bin:1.0.1"
 	oktetoSyncSecretVolume   = "okteto-sync-secret"
 	oktetoSyncSecretTemplate = "okteto-%s"
-
-	//OktetoVersion represents the current dev data version
-	OktetoVersion = "1.0"
-	// OktetoDevLabel indicates the dev pod
-	OktetoDevLabel = "dev.okteto.com"
-	// OktetoInteractiveDevLabel indicates the interactive dev pod
-	OktetoInteractiveDevLabel = "interactive.dev.okteto.com"
-	// OktetoDetachedDevLabel indicates the detached dev pods
-	OktetoDetachedDevLabel = "detached.dev.okteto.com"
-	// OktetoTranslationAnnotation sets the translation rules
-	OktetoTranslationAnnotation = "dev.okteto.com/translation"
 )
 
 var (
@@ -73,9 +61,6 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 		_, v := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
 		if !v {
 			commonTranslation(t)
-			if t.Interactive {
-				t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
-			}
 			return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 		}
 	}
@@ -88,20 +73,14 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 
 	commonTranslation(t)
-	if t.Interactive {
-		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoInteractiveDevLabel, t.Name)
-	} else {
-		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), OktetoDetachedDevLabel, t.Name)
-	}
 
-	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
-	if !t.Interactive {
-		TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
-	} else {
+	if t.Interactive {
 		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
 	}
+	TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		TranslateDevContainer(devContainer, rule)
@@ -118,8 +97,15 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 
 func commonTranslation(t *model.Translation) {
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, OktetoVersion)
-	setLabel(t.Deployment.GetObjectMeta(), OktetoDevLabel, "true")
+	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.Version)
+	setLabel(t.Deployment.GetObjectMeta(), okLabels.DevLabel, "true")
+
+	if t.Interactive {
+		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.InteractiveDevLabel, t.Name)
+	} else {
+		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DetachedDevLabel, t.Name)
+	}
+
 	t.Deployment.Spec.Replicas = &devReplicas
 }
 
@@ -154,7 +140,7 @@ func TranslatePodAffinity(spec *apiv1.PodSpec, name string) {
 		apiv1.PodAffinityTerm{
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					OktetoInteractiveDevLabel: name,
+					okLabels.DevLabel: "true",
 				},
 			},
 			TopologyKey: "kubernetes.io/hostname",

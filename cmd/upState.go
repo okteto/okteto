@@ -11,7 +11,6 @@ type upState string
 
 const (
 	starting      upState = "starting"
-	provisioning  upState = "provisioning"
 	startingSync  upState = "startingSync"
 	synchronizing upState = "synchronizing"
 	activating    upState = "activating"

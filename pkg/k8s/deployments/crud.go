@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,6 +46,32 @@ func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Dep
 			return nil, fmt.Errorf("Found '%d' deployments instead of 1", len(deploys.Items))
 		}
 		d = &deploys.Items[0]
+	}
+
+	return d, nil
+}
+
+//GetRevisionAnnotatedDeploymentOrFailed returns a deployment object if it is healthy and annotated with its revision or an error
+func GetRevisionAnnotatedDeploymentOrFailed(dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*appsv1.Deployment, error) {
+	d, err := Get(dev, dev.Namespace, c)
+	if err != nil {
+		if waitUntilDeployed && errors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	for _, c := range d.Status.Conditions {
+		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
+			if strings.Contains(c.Message, "exceeded quota") {
+				return nil, errors.ErrQuota
+			}
+			return nil, fmt.Errorf(c.Message)
+		}
+	}
+
+	if d.Annotations[revisionAnnotation] == "" {
+		return nil, nil
 	}
 
 	return d, nil
@@ -103,8 +130,8 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 	return nil
 }
 
-//TraslateDevMode translates the deployment manifests to put them in dev mode
-func TraslateDevMode(tr map[string]*model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
+//TranslateDevMode translates the deployment manifests to put them in dev mode
+func TranslateDevMode(tr map[string]*model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
 	for _, t := range tr {
 		err := translate(t, ns, c)
 		if err != nil {
@@ -120,17 +147,17 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 	if labels == nil {
 		return false
 	}
-	_, ok := labels[OktetoDevLabel]
+	_, ok := labels[okLabels.DevLabel]
 	return ok
 }
 
 // DevModeOff deactivates dev mode for d
 func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), OktetoTranslationAnnotation)
+	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.TranslationAnnotation)
 	if len(trRulesJSON) == 0 {
 		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 		if len(dManifest) == 0 {
-			log.Infof("%s/%s is not an okteto environment", d.Namespace, d.Name)
+			log.Infof("%s/%s is not a development environment", d.Namespace, d.Name)
 			return nil
 		}
 		dOrig := &appsv1.Deployment{}
@@ -149,10 +176,12 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 		delete(annotations, oktetoVersionAnnotation)
 		d.GetObjectMeta().SetAnnotations(annotations)
 		annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
-		delete(annotations, OktetoTranslationAnnotation)
+		delete(annotations, okLabels.TranslationAnnotation)
 		d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
 		labels := d.GetObjectMeta().GetLabels()
-		delete(labels, OktetoDevLabel)
+		delete(labels, okLabels.DevLabel)
+		delete(labels, okLabels.InteractiveDevLabel)
+		delete(labels, okLabels.DetachedDevLabel)
 		d.GetObjectMeta().SetLabels(labels)
 	}
 
