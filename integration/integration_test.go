@@ -512,9 +512,11 @@ func getOktetoPath(ctx context.Context) (string, error) {
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 	defer span.Finish()
 
-	if o, err := cmd.CombinedOutput(); err != nil {
+	o, err := cmd.CombinedOutput()
+	if err != nil {
 		return "", fmt.Errorf("okteto version failed: %s - %s", string(o), err)
 	}
 
+	log.Println(o)
 	return oktetoPath, nil
 }
