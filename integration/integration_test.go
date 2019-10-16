@@ -517,6 +517,6 @@ func getOktetoPath(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("okteto version failed: %s - %s", string(o), err)
 	}
 
-	log.Println(o)
+	log.Println(string(o))
 	return oktetoPath, nil
 }
