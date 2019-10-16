@@ -27,6 +27,7 @@ jobs:
   integration:
     environment: 
       OKTETO_USER: cindylopez
+      SCOPE_SERVICE: integration
     docker:
       - image: okteto/desk:latest
     steps:

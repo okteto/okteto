@@ -88,7 +88,7 @@ func getTracing() (*agent.Agent, opentracing.Span, context.Context) {
 
 	if apiKey, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
 		// Make sure we stop the agent cleanly before exiting
-		scope, err := agent.NewAgent(agent.WithApiKey(apiKey))
+		scope, err := agent.NewAgent(agent.WithApiKey(apiKey), agent.WithServiceName("okteto-cli"))
 		if err != nil {
 			log.Errorf("couldn't instantiate scope agent: %s", err)
 			os.Exit(1)
