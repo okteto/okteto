@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/cmd"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -94,7 +95,12 @@ func getTracing() (*agent.Agent, opentracing.Span, context.Context) {
 			os.Exit(1)
 		}
 
-		span := process.StartSpan(filepath.Base(os.Args[0]))
+		operationName := filepath.Base(os.Args[0])
+		if len(os.Args) > 1 {
+			operationName = fmt.Sprintf("%s %s", filepath.Base(os.Args[0]), strings.Join(os.Args[1:], " "))
+		}
+
+		span := process.StartSpan(operationName)
 		span.SetTag("okteto.version", config.VersionString)
 		ctx = opentracing.ContextWithSpan(ctx, span)
 		log.Info("scope agent configured")
