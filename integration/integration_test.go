@@ -163,7 +163,7 @@ func TestHealth(t *testing.T) {
 
 	err := checkHealth(ctx, url)
 	if err != nil {
-		t.Fatalf("healtcheck failed: %s", err)
+		t.Fatalf("healthcheck failed: %s", err)
 	}
 }
 func TestAll(t *testing.T) {
@@ -182,7 +182,7 @@ func TestAll(t *testing.T) {
 
 	err = checkHealth(ctx, url)
 	if err != nil {
-		t.Fatalf("healtcheck failed: %s", err)
+		t.Fatalf("healthcheck failed: %s", err)
 	}
 
 	log.Printf("%s is healthy \n", url)

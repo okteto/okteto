@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"go.undefinedlabs.com/scopeagent/agent"
-	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	"k8s.io/apimachinery/pkg/util/runtime"
 
@@ -48,6 +47,11 @@ func main() {
 			os.Exit(1)
 		}
 
+		log.Error("env")
+		for _, e := range os.Environ() {
+			log.Error(e)
+		}
+
 		defer scope.Stop()
 
 		if process.SpanContext() == nil {
@@ -58,7 +62,6 @@ func main() {
 		defer span.Finish()
 
 		ctx = opentracing.ContextWithSpan(ctx, span)
-		nethttp.PatchHttpDefaultClient()
 		log.Info("scope agent configured")
 	}
 

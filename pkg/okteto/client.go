@@ -3,6 +3,7 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -12,6 +13,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 
+	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -23,7 +25,8 @@ func getClient(oktetoURL string) (*graphql.Client, error) {
 	}
 
 	u.Path = path.Join(u.Path, "graphql")
-	graphqlClient := graphql.NewClient(u.String())
+	h := &http.Client{Transport: &nethttp.Transport{}}
+	graphqlClient := graphql.NewClient(u.String(), graphql.WithHTTPClient(h))
 	return graphqlClient, nil
 }
 
