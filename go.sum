@@ -439,6 +439,8 @@ go.undefinedlabs.com/scopeagent v0.0.0-20191016145518-eb0794995bac h1:cOU03g9WsL
 go.undefinedlabs.com/scopeagent v0.0.0-20191016145518-eb0794995bac/go.mod h1:YcbFwnQRGu+gkK38QXd3HtHy4pTPFUi3WodbsRazlR8=
 go.undefinedlabs.com/scopeagent v0.0.0-20191016172222-b1a7cde3531b h1:b8hBXfEYudEsx4un/U2lU1QjDvhZtTNZC7LSL9LUvZU=
 go.undefinedlabs.com/scopeagent v0.0.0-20191016172222-b1a7cde3531b/go.mod h1:YcbFwnQRGu+gkK38QXd3HtHy4pTPFUi3WodbsRazlR8=
+go.undefinedlabs.com/scopeagent v0.0.0-20191016204136-6268ca5079f6 h1:TgRI1F6h7UAdXc24xlSLwQN2ILjkz5lcH9iF/7iNFHg=
+go.undefinedlabs.com/scopeagent v0.0.0-20191016204136-6268ca5079f6/go.mod h1:YcbFwnQRGu+gkK38QXd3HtHy4pTPFUi3WodbsRazlR8=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20181025213731-e84da0312774/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2 h1:VklqNMn3ovrHsnt90PveolxSbWFaJdECFbxSq0Mqo2M=
