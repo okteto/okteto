@@ -38,8 +38,8 @@ func main() {
 	log.Init(logrus.WarnLevel)
 	var logLevel string
 	var scope *agent.Agent
+	var span opentracing.Span
 	ctx := context.Background()
-	span := opentracing.SpanFromContext(ctx)
 
 	if apiKey, ok := os.LookupEnv("OKTETO_SCOPE_APIKEY"); ok {
 		// Make sure we stop the agent cleanly before exiting
@@ -51,6 +51,7 @@ func main() {
 
 		scope = s
 		span = process.StartSpan(filepath.Base(os.Args[0]))
+		span.SetTag("okteto.version", config.VersionString)
 		ctx = opentracing.ContextWithSpan(ctx, span)
 		log.Info("scope agent configured")
 	}
