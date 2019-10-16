@@ -81,8 +81,8 @@ func main() {
 
 	err := root.Execute()
 
-	span.Finish()
 	if scope != nil {
+		span.Finish()
 		scope.Flush()
 	}
 
