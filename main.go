@@ -36,8 +36,6 @@ func init() {
 
 func main() {
 	log.Init(logrus.WarnLevel)
-	log.Infof("starting okteto version %s", config.VersionString)
-
 	var logLevel string
 	var scope *agent.Agent
 	var span opentracing.Span
