@@ -38,7 +38,7 @@ func executeCreateNamespace(ctx context.Context, namespace string) error {
 	}
 	log.Success("Namespace '%s' created", oktetoNS)
 
-	if err := RunNamespace(namespace); err != nil {
+	if err := RunNamespace(ctx, namespace); err != nil {
 		return err
 	}
 

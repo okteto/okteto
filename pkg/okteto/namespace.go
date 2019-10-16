@@ -37,7 +37,7 @@ func CreateNamespace(ctx context.Context, namespace string) (string, error) {
 }
 
 // DeleteNamespace deletes a namespace
-func DeleteNamespace(namespace string) error {
+func DeleteNamespace(ctx context.Context, namespace string) error {
 	q := fmt.Sprintf(`mutation{
 		deleteSpace(id: "%s"){
 			id
@@ -45,7 +45,7 @@ func DeleteNamespace(namespace string) error {
 	}`, namespace)
 
 	var body DeleteBody
-	if err := query(context.Background(), q, &body); err != nil {
+	if err := query(ctx, q, &body); err != nil {
 		return err
 	}
 
