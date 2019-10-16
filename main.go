@@ -37,30 +37,20 @@ func init() {
 func main() {
 	log.Init(logrus.WarnLevel)
 	var logLevel string
-
+	var scope *agent.Agent
 	ctx := context.Background()
+	span := opentracing.SpanFromContext(ctx)
+
 	if apiKey, ok := os.LookupEnv("OKTETO_SCOPE_APIKEY"); ok {
 		// Make sure we stop the agent cleanly before exiting
-		scope, err := agent.NewAgent(agent.WithApiKey(apiKey))
+		s, err := agent.NewAgent(agent.WithApiKey(apiKey))
 		if err != nil {
 			log.Errorf("couldn't instantiate scope agent: %s", err)
 			os.Exit(1)
 		}
 
-		log.Error("env")
-		for _, e := range os.Environ() {
-			log.Error(e)
-		}
-
-		defer scope.Stop()
-
-		if process.SpanContext() == nil {
-			log.Info("didn't inherit span context from scope")
-		}
-
-		span := process.StartSpan(filepath.Base(os.Args[0]))
-		defer span.Finish()
-
+		scope = s
+		span = process.StartSpan(filepath.Base(os.Args[0]))
 		ctx = opentracing.ContextWithSpan(ctx, span)
 		log.Info("scope agent configured")
 	}
@@ -88,7 +78,14 @@ func main() {
 	root.AddCommand(cmd.Exec())
 	root.AddCommand(cmd.Restart())
 
-	if err := root.Execute(); err != nil {
+	err := root.Execute()
+
+	span.Finish()
+	if scope != nil {
+		scope.Flush()
+	}
+
+	if err != nil {
 		log.Fail(err.Error())
 		if uErr, ok := err.(errors.UserError); ok {
 			if len(uErr.Hint) > 0 {

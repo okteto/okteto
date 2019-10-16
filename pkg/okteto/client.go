@@ -18,6 +18,9 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
+// httpClient this client will inject opentracing and scope spans if available
+var httpClient = &http.Client{Transport: &nethttp.Transport{}}
+
 func getClient(oktetoURL string) (*graphql.Client, error) {
 	u, err := url.Parse(oktetoURL)
 	if err != nil {
@@ -25,8 +28,7 @@ func getClient(oktetoURL string) (*graphql.Client, error) {
 	}
 
 	u.Path = path.Join(u.Path, "graphql")
-	h := &http.Client{Transport: &nethttp.Transport{}}
-	graphqlClient := graphql.NewClient(u.String(), graphql.WithHTTPClient(h))
+	graphqlClient := graphql.NewClient(u.String(), graphql.WithHTTPClient(httpClient))
 	return graphqlClient, nil
 }
 
