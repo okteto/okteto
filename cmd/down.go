@@ -13,6 +13,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
+	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 )
 
@@ -120,6 +121,11 @@ func runDown(dev *model.Dev) error {
 
 	if err := ssh.RemoveEntry(dev.Name); err != nil {
 		log.Infof("failed to remove ssh entry: %s", err)
+	}
+
+	sy, err := syncthing.New(dev)
+	if err := sy.Stop(); err != nil {
+		log.Infof("failed to stop existing syncthing")
 	}
 
 	return nil

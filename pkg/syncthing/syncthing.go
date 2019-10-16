@@ -411,10 +411,14 @@ func (s *Syncthing) Restart(ctx context.Context, wg *sync.WaitGroup) error {
 
 // Stop halts the background process and cleans up.
 func (s *Syncthing) Stop() error {
-	pidPath := filepath.Join(s.Home, syncthingPidFile)
 
+	pidPath := filepath.Join(s.Home, syncthingPidFile)
 	if err := s.cleanupDaemon(pidPath); err != nil {
 		return err
+	}
+
+	if err := os.Remove(pidPath); err != nil {
+		log.Infof("failed to delete %s: %s", pidPath, err)
 	}
 
 	return nil
