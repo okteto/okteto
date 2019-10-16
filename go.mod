@@ -19,7 +19,6 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-openapi/spec v0.18.0 // indirect
-	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-github/v28 v28.1.1
 	github.com/googleapis/gnostic v0.2.0 // indirect
@@ -49,10 +48,10 @@ require (
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
-	go.undefinedlabs.com/scopeagent v0.0.0-20191011151038-ec03865a053e
+	go.undefinedlabs.com/scopeagent v0.0.0-20191016145518-eb0794995bac
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
-	golang.org/x/net v0.0.0-20191014203426-2ba7206551d1 // indirect
+	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582 // indirect
 	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0 // indirect
 	golang.org/x/sys v0.0.0-20191010194322-b09406accb47 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect

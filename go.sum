@@ -435,6 +435,8 @@ go.uber.org/multierr v0.0.0-20180122172545-ddea229ff1df/go.mod h1:wR5kodmAFQ0UK8
 go.uber.org/zap v0.0.0-20180814183419-67bc79d13d15/go.mod h1:vwi/ZaCAaUcBkycHslxD9B2zi4UTXhF60s6SWpuDF0Q=
 go.undefinedlabs.com/scopeagent v0.0.0-20191011151038-ec03865a053e h1:gZgkP7zXXDNFQ5/OxdmXfZ4GohIRMKJNOLwpmI7ZHTs=
 go.undefinedlabs.com/scopeagent v0.0.0-20191011151038-ec03865a053e/go.mod h1:VcaAWlqmeq9a7uPc5w+S+jRKgbXb9YpdsEE8hmzIOG8=
+go.undefinedlabs.com/scopeagent v0.0.0-20191016145518-eb0794995bac h1:cOU03g9WsLhnaT8M4fmzd19UM3yzkHQWBMTrCFIl3S4=
+go.undefinedlabs.com/scopeagent v0.0.0-20191016145518-eb0794995bac/go.mod h1:YcbFwnQRGu+gkK38QXd3HtHy4pTPFUi3WodbsRazlR8=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20181025213731-e84da0312774/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2 h1:VklqNMn3ovrHsnt90PveolxSbWFaJdECFbxSq0Mqo2M=
@@ -477,6 +479,8 @@ golang.org/x/net v0.0.0-20191011234655-491137f69257 h1:ry8e2D+cwaV6hk7lb3aRTjjZo
 golang.org/x/net v0.0.0-20191011234655-491137f69257/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/net v0.0.0-20191014203426-2ba7206551d1 h1:2LU2RpeCpT84xF8RUKcFiFo/pA5M1niwrJrkWAn14R8=
 golang.org/x/net v0.0.0-20191014203426-2ba7206551d1/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582 h1:p9xBe/w/OzkeYVKm234g55gMdD1nSIooTir5kV11kfA=
+golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
 golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
