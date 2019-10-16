@@ -319,6 +319,10 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 		return false, err
 	}
 
+	if err := up.Sy.Stop(); err != nil {
+		log.Infof("failed to stop existing syncthing: %s", err)
+	}
+
 	log.Info("create deployment secrets")
 	if err := secrets.Create(up.Dev, up.Client, up.Sy.GUIPasswordHash); err != nil {
 		return false, err
