@@ -3,6 +3,7 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -12,9 +13,13 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 
+	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+// httpClient this client will inject opentracing and scope spans if available
+var httpClient = &http.Client{Transport: &nethttp.Transport{}}
 
 func getClient(oktetoURL string) (*graphql.Client, error) {
 	u, err := url.Parse(oktetoURL)
@@ -23,11 +28,11 @@ func getClient(oktetoURL string) (*graphql.Client, error) {
 	}
 
 	u.Path = path.Join(u.Path, "graphql")
-	graphqlClient := graphql.NewClient(u.String())
+	graphqlClient := graphql.NewClient(u.String(), graphql.WithHTTPClient(httpClient))
 	return graphqlClient, nil
 }
 
-func query(query string, result interface{}) error {
+func query(ctx context.Context, query string, result interface{}) error {
 	o, err := getToken()
 	if err != nil {
 		log.Infof("couldn't get token: %s", err)
@@ -42,7 +47,6 @@ func query(query string, result interface{}) error {
 
 	req := graphql.NewRequest(query)
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", o.Token))
-	ctx := context.Background()
 
 	if err := c.Run(ctx, req, result); err != nil {
 		e := strings.TrimPrefix(err.Error(), "graphql: ")

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/namespace"
@@ -8,11 +9,11 @@ import (
 )
 
 //Create creates resources
-func Create() *cobra.Command {
+func Create(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: fmt.Sprintf("Creates resources"),
 	}
-	cmd.AddCommand(namespace.Create())
+	cmd.AddCommand(namespace.Create(ctx))
 	return cmd
 }

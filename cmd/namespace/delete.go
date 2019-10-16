@@ -1,6 +1,7 @@
 package namespace
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -12,12 +13,12 @@ import (
 )
 
 //Delete deletes a namespace
-func Delete() *cobra.Command {
+func Delete(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
 		Use:   "namespace <name>",
 		Short: fmt.Sprintf("Deletes a namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := executeDeleteNamespace(args[0])
+			err := executeDeleteNamespace(ctx, args[0])
 			analytics.TrackDeleteNamespace(config.VersionString, err == nil)
 			return err
 		},
@@ -30,8 +31,8 @@ func Delete() *cobra.Command {
 	}
 }
 
-func executeDeleteNamespace(namespace string) error {
-	if err := okteto.DeleteNamespace(namespace); err != nil {
+func executeDeleteNamespace(ctx context.Context, namespace string) error {
+	if err := okteto.DeleteNamespace(ctx, namespace); err != nil {
 		return err
 	}
 	log.Success("Namespace '%s' deleted", namespace)
