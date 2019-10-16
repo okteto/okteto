@@ -36,25 +36,10 @@ func init() {
 
 func main() {
 	log.Init(logrus.WarnLevel)
+	log.Info("start")
 	var logLevel string
-	var scope *agent.Agent
-	var span opentracing.Span
-	ctx := context.Background()
 
-	if apiKey, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
-		// Make sure we stop the agent cleanly before exiting
-		s, err := agent.NewAgent(agent.WithApiKey(apiKey))
-		if err != nil {
-			log.Errorf("couldn't instantiate scope agent: %s", err)
-			os.Exit(1)
-		}
-
-		scope = s
-		span = process.StartSpan(filepath.Base(os.Args[0]))
-		span.SetTag("okteto.version", config.VersionString)
-		ctx = opentracing.ContextWithSpan(ctx, span)
-		log.Info("scope agent configured")
-	}
+	agent, span, ctx := getTracing()
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -81,9 +66,9 @@ func main() {
 
 	err := root.Execute()
 
-	if scope != nil {
+	if agent != nil {
 		span.Finish()
-		scope.Flush()
+		agent.Flush()
 	}
 
 	if err != nil {
@@ -96,4 +81,25 @@ func main() {
 
 		os.Exit(1)
 	}
+}
+
+func getTracing() (*agent.Agent, opentracing.Span, context.Context) {
+	ctx := context.Background()
+
+	if apiKey, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
+		// Make sure we stop the agent cleanly before exiting
+		scope, err := agent.NewAgent(agent.WithApiKey(apiKey))
+		if err != nil {
+			log.Errorf("couldn't instantiate scope agent: %s", err)
+			os.Exit(1)
+		}
+
+		span := process.StartSpan(filepath.Base(os.Args[0]))
+		span.SetTag("okteto.version", config.VersionString)
+		ctx = opentracing.ContextWithSpan(ctx, span)
+		log.Info("scope agent configured")
+		return scope, span, ctx
+	}
+
+	return nil, nil, ctx
 }
