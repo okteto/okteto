@@ -10,10 +10,12 @@ import (
 type upState string
 
 const (
+	activating    upState = "activating"
 	starting      upState = "starting"
+	attaching     upState = "attaching"
+	pulling       upState = "pulling"
 	startingSync  upState = "startingSync"
 	synchronizing upState = "synchronizing"
-	activating    upState = "activating"
 	ready         upState = "ready"
 	failed        upState = "failed"
 )

@@ -359,11 +359,15 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 	defer close(reporter)
 	go func() {
 		message := "Attaching persistent volume"
+		up.updateStateFile(attaching)
 		for {
 			spinner.update(fmt.Sprintf("%s...", message))
 			message = <-reporter
 			if message == "" {
 				return
+			}
+			if strings.HasPrefix(message, "Pulling") {
+				up.updateStateFile(pulling)
 			}
 		}
 	}()
