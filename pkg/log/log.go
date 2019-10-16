@@ -39,14 +39,10 @@ var log = &logger{
 	out: logrus.New(),
 }
 
-var ActionID string
-
 func init() {
 	if runtime.GOOS == "windows" {
 		successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" + ")
 	}
-
-	ActionID = uuid.NewV4().String()
 }
 
 // Init configures the logger for the package to use.
@@ -64,7 +60,9 @@ func Init(level logrus.Level) {
 	rolling := getRollingLog(logPath)
 	fileLogger.SetOutput(rolling)
 	fileLogger.SetLevel(logrus.DebugLevel)
-	log.file = fileLogger.WithFields(logrus.Fields{"action": ActionID})
+
+	actionID := uuid.NewV4().String()
+	log.file = fileLogger.WithFields(logrus.Fields{"action": actionID, "version": config.VersionString})
 }
 
 func getRollingLog(path string) io.Writer {

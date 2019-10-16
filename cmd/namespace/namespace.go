@@ -1,6 +1,7 @@
 package namespace
 
 import (
+	"context"
 	"net/url"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 )
 
 //Namespace fetch credentials for a cluster namespace
-func Namespace() *cobra.Command {
+func Namespace(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "namespace [name]",
 		Short: "Downloads k8s credentials for a namespace",
@@ -24,7 +25,7 @@ func Namespace() *cobra.Command {
 				namespace = args[0]
 			}
 
-			err := RunNamespace(namespace)
+			err := RunNamespace(ctx, namespace)
 			analytics.TrackNamespace(config.VersionString, err == nil)
 			return err
 		},
@@ -33,8 +34,8 @@ func Namespace() *cobra.Command {
 }
 
 //RunNamespace starts the kubeconfig sequence
-func RunNamespace(namespace string) error {
-	cred, err := okteto.GetCredentials(namespace)
+func RunNamespace(ctx context.Context, namespace string) error {
+	cred, err := okteto.GetCredentials(ctx, namespace)
 	if err != nil {
 		return err
 	}

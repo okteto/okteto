@@ -1,6 +1,7 @@
 package okteto
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -20,7 +21,7 @@ type Namespace struct {
 }
 
 // CreateNamespace creates a namespace
-func CreateNamespace(namespace string) (string, error) {
+func CreateNamespace(ctx context.Context, namespace string) (string, error) {
 	q := fmt.Sprintf(`mutation{
 		createSpace(name: "%s"){
 			id
@@ -28,7 +29,7 @@ func CreateNamespace(namespace string) (string, error) {
 	}`, namespace)
 
 	var body CreateBody
-	if err := query(q, &body); err != nil {
+	if err := query(ctx, q, &body); err != nil {
 		return "", err
 	}
 
@@ -36,7 +37,7 @@ func CreateNamespace(namespace string) (string, error) {
 }
 
 // DeleteNamespace deletes a namespace
-func DeleteNamespace(namespace string) error {
+func DeleteNamespace(ctx context.Context, namespace string) error {
 	q := fmt.Sprintf(`mutation{
 		deleteSpace(id: "%s"){
 			id
@@ -44,7 +45,7 @@ func DeleteNamespace(namespace string) error {
 	}`, namespace)
 
 	var body DeleteBody
-	if err := query(q, &body); err != nil {
+	if err := query(ctx, q, &body); err != nil {
 		return err
 	}
 
