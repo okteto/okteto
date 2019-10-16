@@ -116,7 +116,7 @@ func TestMain(m *testing.M) {
 		log.Println("running in CLIENTSIDE mode")
 	}
 
-	if _, ok := os.LookupEnv("OKTETO_SCOPE_APIKEY"); ok {
+	if _, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
 		log.Println("SCOPE is enabled")
 		nethttp.PatchHttpDefaultClient()
 	}
