@@ -33,7 +33,6 @@ type deployment struct {
 }
 
 const (
-	scopeAgent       = "OKTETO_SCOPE_APIKEY"
 	deploymentFormat = `
 apiVersion: apps/v1
 kind: Deployment

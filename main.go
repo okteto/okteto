@@ -41,7 +41,7 @@ func main() {
 	var span opentracing.Span
 	ctx := context.Background()
 
-	if apiKey, ok := os.LookupEnv("OKTETO_SCOPE_APIKEY"); ok {
+	if apiKey, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
 		// Make sure we stop the agent cleanly before exiting
 		s, err := agent.NewAgent(agent.WithApiKey(apiKey))
 		if err != nil {
