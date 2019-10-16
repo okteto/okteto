@@ -13,6 +13,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
+	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 )
 
@@ -122,6 +123,7 @@ func runDown(dev *model.Dev) error {
 		log.Infof("failed to remove ssh entry: %s", err)
 	}
 
+	stopSyncthing(dev)
 	return nil
 }
 
@@ -143,4 +145,16 @@ func removeVolumes(dev *model.Dev) error {
 	}
 
 	return nil
+}
+
+func stopSyncthing(dev *model.Dev) {
+	sy, err := syncthing.New(dev)
+	if err != nil {
+		log.Infof("failed to create syncthing")
+		return
+	}
+
+	if err := sy.Stop(); err != nil {
+		log.Infof("failed to stop existing syncthing")
+	}
 }
