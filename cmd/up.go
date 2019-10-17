@@ -177,14 +177,12 @@ func (up *UpContext) Activate() {
 			return
 		}
 
-		activated, err := up.devMode(retry, d, create)
+		err = up.devMode(retry, d, create)
 		if err != nil {
 			up.Exit <- err
 			return
 		}
-		if !activated {
-			return
-		}
+
 		log.Success("Development environment activated")
 
 		err = up.sync()
@@ -279,7 +277,7 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (bool, error) {
+func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) error {
 	spinner := newSpinner("Activating your development environment...")
 	up.updateStateFile(activating)
 	spinner.start()
@@ -287,20 +285,20 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 
 	ns, err := namespaces.Get(up.Dev.Namespace, up.Client)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	if !namespaces.IsOktetoAllowed(ns) {
-		return false, fmt.Errorf("`okteto up` is not allowed in this namespace")
+		return fmt.Errorf("`okteto up` is not allowed in this namespace")
 	}
 
 	if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
-		return false, err
+		return err
 	}
 
 	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
 	if devContainer == nil {
-		return false, fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
+		return fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 	}
 	up.Dev.Container = devContainer.Name
 	if up.Dev.Image == "" {
@@ -308,15 +306,14 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 	}
 
 	if isRetry && !deployments.IsDevModeOn(d) {
-		log.Information("Development environment has been deactivated")
-		return false, nil
+		return fmt.Errorf("Development environment has been deactivated")
 	}
 
 	up.updateStateFile(starting)
 
 	up.Sy, err = syncthing.New(up.Dev)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	if err := up.Sy.Stop(); err != nil {
@@ -325,38 +322,38 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 
 	log.Info("create deployment secrets")
 	if err := secrets.Create(up.Dev, up.Client, up.Sy.GUIPasswordHash); err != nil {
-		return false, err
+		return err
 	}
 
 	tr, err := deployments.GetTranslations(up.Dev, d, up.Client)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	if err := deployments.TranslateDevMode(tr, ns, up.Client); err != nil {
-		return false, err
+		return err
 	}
 
 	for name := range tr {
 		if name == d.Name {
 			if err := deployments.Deploy(tr[name].Deployment, create, up.Client); err != nil {
-				return false, err
+				return err
 			}
 		} else {
 			if err := deployments.Deploy(tr[name].Deployment, false, up.Client); err != nil {
-				return false, err
+				return err
 			}
 		}
 	}
 	if create && len(up.Dev.Services) == 0 {
 		if err := services.Create(up.Dev, up.Client); err != nil {
-			return false, err
+			return err
 		}
 	}
 
 	pod, err := pods.GetDevPod(up.Context, up.Dev, up.Client, create)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	reporter := make(chan string)
@@ -377,7 +374,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 	}()
 	pod, err = pods.MonitorDevPod(up.Context, up.Dev, pod, up.Client, reporter)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	up.Pod = pod.Name
@@ -386,18 +383,18 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) (b
 	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
 	for _, f := range up.Dev.Forward {
 		if err := up.Forwarder.Add(f.Local, f.Remote); err != nil {
-			return false, err
+			return err
 		}
 	}
 	if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
-		return false, err
+		return err
 	}
 	if err := up.Forwarder.Add(up.Sy.RemoteGUIPort, syncthing.GUIPort); err != nil {
-		return false, err
+		return err
 	}
 	up.Forwarder.Start(up.Pod, up.Dev.Namespace)
 
-	return true, nil
+	return nil
 }
 
 func (up *UpContext) sync() error {
