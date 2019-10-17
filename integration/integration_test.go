@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"text/template"
 	"time"
@@ -216,7 +217,9 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := up(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
+	var wg sync.WaitGroup
+	p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -243,6 +246,12 @@ func TestAll(t *testing.T) {
 
 	if c != updatedContent {
 		t.Fatalf("expected updated content to be %s, got %s", updatedContent, c)
+	}
+
+	log.Println("sent interrupt signal to up")
+	p.Signal(os.Interrupt)
+	if err := waitForUpExit(&wg); err != nil {
+		t.Error(err)
 	}
 
 	if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
@@ -411,25 +420,42 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 	return nil
 }
 
-func up(ctx context.Context, namespace, name, manifestPath, oktetoPath string) error {
+func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, oktetoPath string) (*os.Process, error) {
 	log.Println("starting okteto up")
 	cmd := exec.Command(oktetoPath, "up", "-f", manifestPath)
 	cmd.Env = os.Environ()
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("okteto up failed to start: %w", err)
+	}
+
+	wg.Add(1)
 
 	go func() {
+		defer wg.Done()
 		defer span.Finish()
-		if err := cmd.Start(); err != nil {
-			log.Fatalf("okteto up failed to start: %s", err)
-		}
-
 		if err := cmd.Wait(); err != nil {
 			log.Printf("okteto up exited: %s", err)
 		}
 
 	}()
 
-	return waitForReady(namespace, name)
+	return cmd.Process, waitForReady(namespace, name)
+}
+
+func waitForUpExit(wg *sync.WaitGroup) error {
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-time.After(10 * time.Second):
+		return fmt.Errorf("up didn't exit after 5 seconds")
+	}
 }
 
 func waitForReady(namespace, name string) error {
