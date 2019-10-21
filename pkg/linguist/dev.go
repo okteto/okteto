@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
+	apiv1 "k8s.io/api/core/v1"
 )
 
 type languageDefault struct {
@@ -45,8 +46,27 @@ func init() {
 
 	languageDefaults[golang] = languageDefault{
 		image:   "okteto/golang:1",
-		path:    "/go/src/app",
+		path:    "/okteto",
 		command: []string{"bash"},
+		volumes: []string{
+			"/go/pkg/",
+			"/root/.cache/go-build/",
+		},
+		securityContext: &model.SecurityContext{
+			Capabilities: &model.Capabilities{
+				Add: []apiv1.Capability{"SYS_PTRACE"},
+			},
+		},
+		forward: []model.Forward{
+			model.Forward{
+				Local:  8080,
+				Remote: 8080,
+			},
+			model.Forward{
+				Local:  2345,
+				Remote: 2345,
+			},
+		},
 	}
 
 	languageDefaults[python] = languageDefault{
@@ -57,13 +77,8 @@ func init() {
 
 	languageDefaults[gradle] = languageDefault{
 		image:   "okteto/gradle:latest",
+		path:    "/okteto",
 		command: []string{"bash"},
-		environment: []model.EnvVar{
-			model.EnvVar{
-				Name:  "JAVA_OPTS",
-				Value: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8088",
-			},
-		},
 		volumes: []string{"/home/gradle/.gradle"},
 		forward: []model.Forward{
 			model.Forward{
@@ -75,22 +90,12 @@ func init() {
 				Remote: 8088,
 			},
 		},
-		securityContext: &model.SecurityContext{
-			RunAsUser:  &user1000,
-			RunAsGroup: &user1000,
-			FSGroup:    &user1000,
-		},
 	}
 
 	languageDefaults[maven] = languageDefault{
 		image:   "okteto/maven:latest",
+		path:    "/okteto",
 		command: []string{"bash"},
-		environment: []model.EnvVar{
-			model.EnvVar{
-				Name:  "JAVA_OPTS",
-				Value: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8088",
-			},
-		},
 		volumes: []string{"/root/.m2"},
 		forward: []model.Forward{
 			model.Forward{
