@@ -104,6 +104,12 @@ func runDown(dev *model.Dev) error {
 		return err
 	}
 
+	stopSyncthing(dev)
+
+	if err := ssh.RemoveEntry(dev.Name); err != nil {
+		log.Infof("failed to remove ssh entry: %s", err)
+	}
+
 	if d == nil {
 		return nil
 	}
@@ -119,11 +125,6 @@ func runDown(dev *model.Dev) error {
 		}
 	}
 
-	if err := ssh.RemoveEntry(dev.Name); err != nil {
-		log.Infof("failed to remove ssh entry: %s", err)
-	}
-
-	stopSyncthing(dev)
 	return nil
 }
 
