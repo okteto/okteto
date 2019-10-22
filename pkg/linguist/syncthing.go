@@ -105,6 +105,9 @@ func init() {
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 /*.out
+
+# dlv binary
+/__debug_bin
 `)
 
 	stignore[python] = []byte(`/.git
