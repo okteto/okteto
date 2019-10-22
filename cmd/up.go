@@ -372,6 +372,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 			}
 		}
 	}()
+
 	pod, err = pods.MonitorDevPod(up.Context, up.Dev, pod, up.Client, reporter)
 	if err != nil {
 		return err
@@ -392,7 +393,10 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 	if err := up.Forwarder.Add(up.Sy.RemoteGUIPort, syncthing.GUIPort); err != nil {
 		return err
 	}
-	up.Forwarder.Start(up.Pod, up.Dev.Namespace)
+
+	if err := up.Forwarder.Start(up.Pod, up.Dev.Namespace); err != nil {
+		return err
+	}
 
 	return nil
 }

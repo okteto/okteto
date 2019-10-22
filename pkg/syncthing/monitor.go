@@ -27,7 +27,7 @@ func (s *Syncthing) Monitor(ctx context.Context, wg *sync.WaitGroup, disconnect 
 				connected = true
 			} else {
 				if !connected {
-					log.Debug("not connected to syncthing, sending disconnect signal")
+					log.Info("not connected to syncthing, sending disconnect signal")
 					disconnect <- struct{}{}
 					return
 				}
