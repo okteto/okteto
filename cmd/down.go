@@ -150,11 +150,15 @@ func removeVolumes(dev *model.Dev) error {
 func stopSyncthing(dev *model.Dev) {
 	sy, err := syncthing.New(dev)
 	if err != nil {
-		log.Infof("failed to create syncthing")
+		log.Infof("failed to create syncthing instance")
 		return
 	}
 
 	if err := sy.Stop(); err != nil {
 		log.Infof("failed to stop existing syncthing")
+	}
+
+	if err := sy.RemoveFolder(); err != nil {
+		log.Infof("failed to delete existing syncthing folder")
 	}
 }
