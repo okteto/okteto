@@ -19,6 +19,7 @@ type Translation struct {
 type TranslationRule struct {
 	Marker          string               `json:"marker"`
 	Node            string               `json:"node,omitempty"`
+	Annotations     map[string]string    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Container       string               `json:"container,omitempty"`
 	Image           string               `json:"image,omitempty"`
 	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`

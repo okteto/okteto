@@ -53,6 +53,7 @@ var (
 type Dev struct {
 	Name            string               `json:"name" yaml:"name"`
 	Labels          map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     map[string]string    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Namespace       string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container       string               `json:"container,omitempty" yaml:"container,omitempty"`
 	Image           string               `json:"image,omitempty" yaml:"image,omitempty"`
@@ -185,6 +186,9 @@ func (dev *Dev) setDefaults() error {
 	if dev.Labels == nil {
 		dev.Labels = map[string]string{}
 	}
+	if dev.Annotations == nil {
+		dev.Annotations = map[string]string{}
+	}
 	dev.Volumes = uniqueStrings(dev.Volumes)
 	for _, s := range dev.Services {
 		if s.MountPath == "" && s.WorkDir == "" {
@@ -199,6 +203,9 @@ func (dev *Dev) setDefaults() error {
 		}
 		if s.Labels == nil {
 			s.Labels = map[string]string{}
+		}
+		if s.Annotations == nil {
+			s.Annotations = map[string]string{}
 		}
 		if s.Name != "" && len(s.Labels) > 0 {
 			return fmt.Errorf("'name' and 'labels' cannot be defined at the same time for service '%s'", s.Name)
@@ -430,6 +437,7 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 					Labels: map[string]string{
 						"app": dev.Name,
 					},
+					Annotations: dev.Annotations,
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,

@@ -13,6 +13,9 @@ name: deployment
 container: core
 image: code/core:0.1.8
 command: ["uwsgi"]
+annotations:
+  key1: value1
+  key2: value2
 resources:
   requests:
     memory: "64Mi"
@@ -58,6 +61,10 @@ workdir: /app`)
 	cpu = d.Resources.Limits["cpu"]
 	if cpu.String() != "500m" {
 		t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
+	}
+
+	if d.Annotations["key1"] != "value1" && d.Annotations["key2"] != "value2" {
+		t.Errorf("Annotations were not parsed correctly")
 	}
 
 	if !reflect.DeepEqual(d.SecurityContext.Capabilities.Add, []apiv1.Capability{"SYS_TRACE"}) {
