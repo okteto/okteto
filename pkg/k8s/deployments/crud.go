@@ -178,6 +178,7 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 		delete(annotations, oktetoVersionAnnotation)
 		d.GetObjectMeta().SetAnnotations(annotations)
 		annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
+		deleteUserAnnotations(annotations)
 		delete(annotations, okLabels.TranslationAnnotation)
 		d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
 		labels := d.GetObjectMeta().GetLabels()
@@ -210,6 +211,18 @@ func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	_, err := c.AppsV1().Deployments(d.Namespace).Update(d)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func deleteUserAnnotations(annotations map[string]string) error {
+	tr, err := getTranslationFromAnnotation(annotations)
+	if err != nil {
+		return err
+	}
+	userAnnotations := tr.Annotations
+	for key := range userAnnotations {
+		delete(annotations, key)
 	}
 	return nil
 }
