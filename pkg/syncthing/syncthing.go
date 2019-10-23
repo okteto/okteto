@@ -412,7 +412,7 @@ func (s *Syncthing) Stop(force bool) error {
 
 	if !force {
 		if pid != s.pid {
-			log.Infof("syncthing pid-%d wasn't created by this command, not stopping", pid)
+			log.Infof("syncthing pid-%d wasn't created by this command, skipping", pid)
 			return nil
 		}
 	}
@@ -494,31 +494,6 @@ func getPID(pidPath string) (int, error) {
 	}
 
 	return strconv.Atoi(string(content))
-}
-
-// Exists returns true if the syncthing process exists
-func Exists(home string) bool {
-	pidPath := filepath.Join(home, syncthingPidFile)
-	pid, err := getPID(pidPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-
-	process, err := ps.FindProcess(pid)
-	if process == nil && err == nil {
-		return false
-	}
-
-	if err != nil {
-		log.Infof("error when looking up the process: %s", err)
-		return true
-	}
-
-	log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
-
-	return process.Executable() == getBinaryName()
 }
 
 // GetInstallPath returns the expected install path for syncthing
