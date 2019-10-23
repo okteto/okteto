@@ -42,3 +42,12 @@ func setTranslationAsAnnotation(o metav1.Object, tr *model.Translation) error {
 	setAnnotation(o, okLabels.TranslationAnnotation, string(translationBytes))
 	return nil
 }
+
+func getTranslationFromAnnotation(annotations map[string]string) (model.Translation, error) {
+	tr := model.Translation{}
+	err := json.Unmarshal([]byte(annotations[okLabels.TranslationAnnotation]), &tr)
+	if err != nil {
+		return model.Translation{}, err
+	}
+	return tr, nil
+}
