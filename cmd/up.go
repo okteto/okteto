@@ -540,9 +540,11 @@ func (up *UpContext) shutdown() {
 		}
 	}
 
-	log.Infof("stopping syncthing")
-	if err := up.Sy.Stop(false); err != nil {
-		log.Infof("failed to stop syncthing during shutdown: %s", err)
+	if up.Sy != nil {
+		log.Infof("stopping syncthing")
+		if err := up.Sy.Stop(false); err != nil {
+			log.Infof("failed to stop syncthing during shutdown: %s", err)
+		}
 	}
 
 	log.Infof("stopping the forwarder")
