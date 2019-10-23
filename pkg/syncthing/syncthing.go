@@ -409,8 +409,6 @@ func (s *Syncthing) Stop(force bool) error {
 		return nil
 	}
 
-	log.Infof("got pid")
-
 	if !force {
 		if pid != s.pid {
 			log.Infof("syncthing pid-%d wasn't created by this command, skipping", pid)
@@ -422,8 +420,6 @@ func (s *Syncthing) Stop(force bool) error {
 		return err
 	}
 
-	log.Infof("kill daemon")
-
 	if err := os.Remove(pidPath); err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -432,7 +428,6 @@ func (s *Syncthing) Stop(force bool) error {
 		log.Infof("failed to delete pidfile %s: %s", pidPath, err)
 	}
 
-	log.Infof("removed pidpath")
 	return nil
 }
 
