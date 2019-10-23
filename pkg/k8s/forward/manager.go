@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"sync"
 
 	"github.com/okteto/okteto/pkg/log"
 
@@ -52,16 +51,7 @@ func (p *PortForwardManager) Add(localPort, remotePort int) error {
 
 // Start starts all the port forwarders
 func (p *PortForwardManager) Start(pod, namespace string) error {
-	var wg sync.WaitGroup
-
 	ready := make(chan struct{}, 1)
-	wg.Add(1)
-	go func(r chan struct{}) {
-		defer wg.Done()
-		<-r
-		log.Debugf("port forwarding finished")
-	}(ready)
-
 	go func(r chan struct{}) {
 		if err := p.forward(namespace, pod, ready); err != nil {
 			log.Debugf("port forwarding goroutine finished with errors: %s", err)
@@ -72,12 +62,13 @@ func (p *PortForwardManager) Start(pod, namespace string) error {
 	}(ready)
 
 	log.Debugf("waiting port forwarding to be ready")
-	wg.Wait()
+	<-ready
+
 	if p.err != nil {
 		return p.err
 	}
 
-	log.Debugf("port forwarding set up")
+	log.Debugf("port forwarding finished")
 	return nil
 }
 
@@ -88,12 +79,12 @@ func (p *PortForwardManager) Stop() {
 	}
 
 	if p.stopChan == nil {
-		log.Debugf("stop channel was nil")
+		log.Debugf("forwarder stop channel was nil")
 		return
 	}
 
+	log.Debugf("stopping forwarder")
 	close(p.stopChan)
-	<-p.stopChan
 	p.portForwards = nil
 	log.Debugf("forwarder stopped")
 }
@@ -121,7 +112,7 @@ func (p *PortForwardManager) forward(namespace, pod string, ready chan struct{})
 	}
 
 	ports := []string{}
-	for local,remote := range p.portForwards {
+	for local, remote := range p.portForwards {
 		ports = append(ports, fmt.Sprintf("%d:%d", local, remote))
 	}
 

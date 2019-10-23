@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"sync"
 	"text/template"
 	"time"
 
@@ -208,7 +207,7 @@ func (s *Syncthing) UpdateConfig() error {
 }
 
 // Run starts up a local syncthing process to serve files from.
-func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
+func (s *Syncthing) Run(ctx context.Context) error {
 	if err := s.initConfig(); err != nil {
 		return err
 	}
@@ -247,7 +246,7 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 }
 
 //WaitForPing waits for synthing to be ready
-func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup, local bool) error {
+func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	name := "remote"
 	if local {
@@ -255,7 +254,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup, local b
 	}
 	log.Infof("waiting for syncthing to be ready...")
 	for i := 0; i < 30; i++ {
-		_, err := s.APICall("rest/system/ping", "GET", 200, nil, local, nil)
+		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil)
 		if err == nil {
 			return nil
 		}
@@ -272,12 +271,12 @@ func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup, local b
 }
 
 //SendStignoreFile sends .stignore from local to remote
-func (s *Syncthing) SendStignoreFile(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev) {
+func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 	log.Infof("Sending '.stignore' file to the remote container...")
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
 	ignores := &Ignores{}
-	body, err := s.APICall("rest/db/ignores", "GET", 200, params, true, nil)
+	body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil)
 	if err != nil {
 		log.Infof("error getting 'rest/db/ignores' syncthing API: %s", err)
 		return
@@ -291,7 +290,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, wg *sync.WaitGroup, de
 	if err != nil {
 		log.Infof("error marshaling 'rest/db/ignores': %s", err)
 	}
-	_, err = s.APICall("rest/db/ignores", "POST", 200, params, false, body)
+	_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body)
 	if err != nil {
 		log.Infof("error posting 'rest/db/ignores' syncthing API: %s", err)
 		return
@@ -299,7 +298,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, wg *sync.WaitGroup, de
 }
 
 //WaitForScanning waits for synthing to finish initial scanning
-func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, local bool) error {
+func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local bool) error {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
@@ -313,7 +312,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 			return ctx.Err()
 		}
 
-		body, err := s.APICall("rest/db/status", "GET", 200, params, local, nil)
+		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil)
 		if err != nil {
 			log.Infof("error calling 'rest/db/status' syncthing API: %s", err)
 			continue
@@ -333,7 +332,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, wg *sync.WaitGroup, dev
 }
 
 // WaitForCompletion waits for the remote to be totally synched
-func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, dev *model.Dev, reporter chan float64) error {
+func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
 	defer close(reporter)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
@@ -359,13 +358,13 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 			return ctx.Err()
 		}
 
-		if _, err := s.APICall("rest/db/override", "POST", 200, params, true, nil); err != nil {
+		if _, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil); err != nil {
 			//overwrite on each iteration to avoid sude effects of remote scannings
 			log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
 		}
 
 		prevNeedBytes = completion.NeedBytes
-		body, err := s.APICall("rest/db/completion", "GET", 200, params, true, nil)
+		body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, true, nil)
 		if err != nil {
 			log.Infof("error calling 'rest/db/completion' syncthing API: %s", err)
 			continue
@@ -396,9 +395,9 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, wg *sync.WaitGroup, d
 }
 
 // Restart restarts the syncthing process
-func (s *Syncthing) Restart(ctx context.Context, wg *sync.WaitGroup) error {
+func (s *Syncthing) Restart(ctx context.Context) error {
 	log.Infof("restarting synchting...")
-	_, err := s.APICall("rest/system/restart", "POST", 200, nil, true, nil)
+	_, err := s.APICall(ctx, "rest/system/restart", "POST", 200, nil, true, nil)
 	return err
 }
 
@@ -409,6 +408,8 @@ func (s *Syncthing) Stop(force bool) error {
 	if os.IsNotExist(err) {
 		return nil
 	}
+
+	log.Infof("got pid")
 
 	if !force {
 		if pid != s.pid {
@@ -421,6 +422,8 @@ func (s *Syncthing) Stop(force bool) error {
 		return err
 	}
 
+	log.Infof("kill daemon")
+
 	if err := os.Remove(pidPath); err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -429,6 +432,7 @@ func (s *Syncthing) Stop(force bool) error {
 		log.Infof("failed to delete pidfile %s: %s", pidPath, err)
 	}
 
+	log.Infof("removed pidpath")
 	return nil
 }
 
