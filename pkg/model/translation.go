@@ -11,6 +11,7 @@ type Translation struct {
 	Name        string             `json:"name"`
 	Version     string             `json:"version"`
 	Deployment  *appsv1.Deployment `json:"-"`
+	Annotations map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Replicas    int32              `json:"replicas"`
 	Rules       []*TranslationRule `json:"rules"`
 }
@@ -19,7 +20,6 @@ type Translation struct {
 type TranslationRule struct {
 	Marker          string               `json:"marker"`
 	Node            string               `json:"node,omitempty"`
-	Annotations     map[string]string    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Container       string               `json:"container,omitempty"`
 	Image           string               `json:"image,omitempty"`
 	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`

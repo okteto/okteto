@@ -72,6 +72,8 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	}
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 
+	TranslatePodAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
+
 	commonTranslation(t)
 
 	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
@@ -122,6 +124,13 @@ func GetDevContainer(spec *apiv1.PodSpec, name string) *apiv1.Container {
 	}
 
 	return nil
+}
+
+//TranslatePodAnnotations translates the annotations of pod
+func TranslatePodAnnotations(o metav1.Object, annotations map[string]string) {
+	for key, value := range annotations {
+		setAnnotation(o, key, value)
+	}
 }
 
 //TranslatePodAffinity translates the affinity of pod to be all on the same node
@@ -365,7 +374,7 @@ func TranslateOktetoInitBinContainer(spec *apiv1.PodSpec) {
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 		VolumeMounts: []apiv1.VolumeMount{
-			apiv1.VolumeMount{
+			{
 				Name:      oktetoBinName,
 				MountPath: "/okteto/bin",
 			},

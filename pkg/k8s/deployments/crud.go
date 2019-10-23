@@ -87,6 +87,7 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clients
 			Name:        dev.Name,
 			Version:     model.TranslationVersion,
 			Deployment:  d,
+			Annotations: dev.Annotations,
 			Replicas:    *d.Spec.Replicas,
 			Rules:       []*model.TranslationRule{rule},
 		}
@@ -108,6 +109,7 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clients
 				Interactive: false,
 				Version:     model.TranslationVersion,
 				Deployment:  d,
+				Annotations: dev.Annotations,
 				Replicas:    *d.Spec.Replicas,
 				Rules:       []*model.TranslationRule{rule},
 			}

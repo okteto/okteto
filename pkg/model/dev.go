@@ -437,12 +437,11 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 					Labels: map[string]string{
 						"app": dev.Name,
 					},
-					Annotations: dev.Annotations,
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Containers: []apiv1.Container{
-						apiv1.Container{
+						{
 							Name:            "dev",
 							Image:           dev.Image,
 							ImagePullPolicy: apiv1.PullAlways,
