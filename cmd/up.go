@@ -537,7 +537,7 @@ func (up *UpContext) shutdown() {
 	}
 
 	if err := up.Sy.Stop(false); err != nil {
-		log.Info("failed to stop syncthing during shutdown: %s", err)
+		log.Infof("failed to stop syncthing during shutdown: %s", err)
 	}
 
 	log.Debugf("waiting for tasks for be done")
