@@ -74,6 +74,7 @@ type Syncthing struct {
 	RemotePort       int
 	Source           string
 	Type             string
+	pid              int
 }
 
 //Ignores represents the .stignore file
@@ -149,12 +150,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	return s, nil
 }
 
-func (s *Syncthing) cleanupDaemon(pidPath string) error {
-	pid, err := getPID(pidPath)
-	if os.IsNotExist(err) {
-		return nil
-	}
-
+func (s *Syncthing) cleanupDaemon(pid int) error {
 	process, err := ps.FindProcess(pid)
 	if process == nil && err == nil {
 		return nil
@@ -170,7 +166,12 @@ func (s *Syncthing) cleanupDaemon(pidPath string) error {
 		return nil
 	}
 
-	return terminate(pid)
+	err = terminate(pid)
+	if err == nil {
+		log.Infof("terminated syncthing with pid %d", pid)
+	}
+
+	return err
 }
 
 func (s *Syncthing) initConfig() error {
@@ -214,10 +215,6 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 
 	pidPath := filepath.Join(s.Home, syncthingPidFile)
 
-	if err := s.cleanupDaemon(pidPath); err != nil {
-		return err
-	}
-
 	cmdArgs := []string{
 		"-home", s.Home,
 		"-no-browser",
@@ -243,17 +240,9 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	log.Infof("syncthing running on http://%s and tcp://%s with password '%s'", s.GUIAddress, s.ListenAddress, s.GUIPassword)
+	s.pid = s.cmd.Process.Pid
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-ctx.Done()
-		if err := s.Stop(); err != nil {
-			log.Info(err)
-		}
-		log.Debug("syncthing clean shutdown")
-	}()
+	log.Infof("syncthing pid-%d running on http://%s and tcp://%s with password '%s'", s.pid, s.GUIAddress, s.ListenAddress, s.GUIPassword)
 	return nil
 }
 
@@ -414,9 +403,21 @@ func (s *Syncthing) Restart(ctx context.Context, wg *sync.WaitGroup) error {
 }
 
 // Stop halts the background process and cleans up.
-func (s *Syncthing) Stop() error {
+func (s *Syncthing) Stop(force bool) error {
 	pidPath := filepath.Join(s.Home, syncthingPidFile)
-	if err := s.cleanupDaemon(pidPath); err != nil {
+	pid, err := getPID(pidPath)
+	if os.IsNotExist(err) {
+		return nil
+	}
+
+	if !force {
+		if pid != s.pid {
+			log.Infof("syncthing pid-%d wasn't created by this command, skipping", pid)
+			return nil
+		}
+	}
+
+	if err := s.cleanupDaemon(pid); err != nil {
 		return err
 	}
 
@@ -493,31 +494,6 @@ func getPID(pidPath string) (int, error) {
 	}
 
 	return strconv.Atoi(string(content))
-}
-
-// Exists returns true if the syncthing process exists
-func Exists(home string) bool {
-	pidPath := filepath.Join(home, syncthingPidFile)
-	pid, err := getPID(pidPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-
-	process, err := ps.FindProcess(pid)
-	if process == nil && err == nil {
-		return false
-	}
-
-	if err != nil {
-		log.Infof("error when looking up the process: %s", err)
-		return true
-	}
-
-	log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
-
-	return process.Executable() == getBinaryName()
 }
 
 // GetInstallPath returns the expected install path for syncthing
