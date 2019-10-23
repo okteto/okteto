@@ -178,7 +178,9 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 		delete(annotations, oktetoVersionAnnotation)
 		d.GetObjectMeta().SetAnnotations(annotations)
 		annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
-		deleteUserAnnotations(annotations)
+		if err := deleteUserAnnotations(annotations); err != nil {
+			return err
+		}
 		delete(annotations, okLabels.TranslationAnnotation)
 		d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
 		labels := d.GetObjectMeta().GetLabels()

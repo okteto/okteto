@@ -28,7 +28,9 @@ annotations:
 		t.Fatal(err)
 	}
 	tr1 := translations[d.Name]
-	setTranslationAsAnnotation(d.GetObjectMeta(), tr1)
+	if err := setTranslationAsAnnotation(d.GetObjectMeta(), tr1); err != nil {
+		t.Fatal(err)
+	}
 	translationString := d.GetObjectMeta().GetAnnotations()[okLabels.TranslationAnnotation]
 	if translationString == "" {
 		t.Fatal("Marshalled translation was not found in the deployment's annotations")
