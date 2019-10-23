@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/docker/docker/pkg/term"
@@ -42,7 +41,6 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 type UpContext struct {
 	Context    context.Context
 	Cancel     context.CancelFunc
-	WG         *sync.WaitGroup
 	Dev        *model.Dev
 	Client     *kubernetes.Clientset
 	RestConfig *rest.Config
@@ -106,7 +104,6 @@ func Up() *cobra.Command {
 //RunUp starts the up sequence
 func RunUp(dev *model.Dev, remote int) error {
 	up := &UpContext{
-		WG:         &sync.WaitGroup{},
 		Dev:        dev,
 		Exit:       make(chan error, 1),
 		RemotePort: remote,
@@ -130,7 +127,7 @@ func RunUp(dev *model.Dev, remote int) error {
 		fmt.Println()
 	case err := <-up.Exit:
 		if err == nil {
-			log.Debugf("finished channel received, starting shutdown sequence")
+			log.Debugf("exit signal received, starting shutdown sequence")
 		} else {
 			up.updateStateFile(failed)
 			return err
@@ -372,6 +369,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 			}
 		}
 	}()
+
 	pod, err = pods.MonitorDevPod(up.Context, up.Dev, pod, up.Client, reporter)
 	if err != nil {
 		return err
@@ -392,7 +390,10 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 	if err := up.Forwarder.Add(up.Sy.RemoteGUIPort, syncthing.GUIPort); err != nil {
 		return err
 	}
-	up.Forwarder.Start(up.Pod, up.Dev.Namespace)
+
+	if err := up.Forwarder.Start(up.Pod, up.Dev.Namespace); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -415,21 +416,23 @@ func (up *UpContext) startLocalSyncthing() error {
 	up.updateStateFile(startingSync)
 	defer spinner.stop()
 
-	if err := up.Sy.Run(up.Context, up.WG); err != nil {
+	if err := up.Sy.Run(up.Context); err != nil {
 		return err
 	}
 
-	if err := up.Sy.WaitForPing(up.Context, up.WG, true); err != nil {
+	if err := up.Sy.WaitForPing(up.Context, true); err != nil {
 		return err
 	}
-	if err := up.Sy.WaitForPing(up.Context, up.WG, false); err != nil {
+
+	if err := up.Sy.WaitForPing(up.Context, false); err != nil {
 		return errors.UserError{
 			E:    fmt.Errorf("Failed to connect to the synchronization service"),
 			Hint: fmt.Sprintf("If you are using a non-root container, you need to set the securityContext.runAsUser and securityContext.runAsGroup values in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional)."),
 		}
 	}
-	up.Sy.SendStignoreFile(up.Context, up.WG, up.Dev)
-	if err := up.Sy.WaitForScanning(up.Context, up.WG, up.Dev, true); err != nil {
+
+	up.Sy.SendStignoreFile(up.Context, up.Dev)
+	if err := up.Sy.WaitForScanning(up.Context, up.Dev, true); err != nil {
 		return err
 	}
 	return nil
@@ -458,7 +461,7 @@ func (up *UpContext) synchronizeFiles() error {
 		}
 	}()
 
-	err := up.Sy.WaitForCompletion(up.Context, up.WG, up.Dev, reporter)
+	err := up.Sy.WaitForCompletion(up.Context, up.Dev, reporter)
 	if err != nil {
 		if err == errors.ErrSyncFrozen {
 			return errors.UserError{
@@ -479,8 +482,8 @@ func (up *UpContext) synchronizeFiles() error {
 		return err
 	}
 
-	go up.Sy.Monitor(up.Context, up.WG, up.Disconnect)
-	return up.Sy.Restart(up.Context, up.WG)
+	go up.Sy.Monitor(up.Context, up.Disconnect)
+	return up.Sy.Restart(up.Context)
 }
 
 func (up *UpContext) cleanCommand() {
@@ -528,6 +531,7 @@ func (up *UpContext) shutdown() {
 
 	if up.Cancel != nil {
 		up.Cancel()
+		log.Info("sent cancellation signal")
 	}
 
 	if up.RemotePort > 0 {
@@ -536,33 +540,17 @@ func (up *UpContext) shutdown() {
 		}
 	}
 
+	log.Infof("stopping syncthing")
 	if err := up.Sy.Stop(false); err != nil {
 		log.Infof("failed to stop syncthing during shutdown: %s", err)
 	}
 
-	log.Debugf("waiting for tasks for be done")
-	done := make(chan struct{})
-	go func() {
-		if up.WG != nil {
-			up.WG.Wait()
-		}
-		close(done)
-	}()
-
-	go func() {
-		if up.Forwarder != nil {
-			up.Forwarder.Stop()
-		}
-	}()
-
-	select {
-	case <-done:
-		log.Debugf("completed shutdown sequence")
-		return
-	case <-time.After(1 * time.Second):
-		log.Debugf("tasks didn't finish, terminating")
-		return
+	log.Infof("stopping the forwarder")
+	if up.Forwarder != nil {
+		up.Forwarder.Stop()
 	}
+
+	log.Info("completed shutdown sequence")
 }
 
 func printDisplayContext(message string, dev *model.Dev) {

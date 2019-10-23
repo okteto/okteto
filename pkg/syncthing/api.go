@@ -2,6 +2,7 @@ package syncthing
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -27,7 +28,7 @@ func NewAPIClient() *http.Client {
 }
 
 // APICall calls the syncthing API and returns the parsed json or an error
-func (s *Syncthing) APICall(url, method string, code int, params map[string]string, local bool, body []byte) ([]byte, error) {
+func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte) ([]byte, error) {
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
@@ -38,6 +39,8 @@ func (s *Syncthing) APICall(url, method string, code int, params map[string]stri
 	if err != nil {
 		return nil, err
 	}
+
+	req = req.WithContext(ctx)
 
 	q := req.URL.Query()
 	q.Add("limit", "30")
