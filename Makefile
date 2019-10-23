@@ -23,7 +23,7 @@ endif
 build-all: $(PLATFORMS)
 
 $(PLATFORMS):
-	GOOS=$(os) GOARCH=$(arch) $(BUILDCOMMAND) -ldflags="-s -w" -o "bin/okteto-$(label)" 
+	GOOS=$(os) GOARCH=$(arch) $(BUILDCOMMAND) -o "bin/okteto-$(label)" 
 	$(SHACOMMAND) "bin/okteto-$(label)" > "bin/okteto-$(label).sha256" 
 
 .PHONY: latest
