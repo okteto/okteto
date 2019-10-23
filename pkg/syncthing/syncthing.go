@@ -249,18 +249,22 @@ func (s *Syncthing) Run(ctx context.Context, wg *sync.WaitGroup) error {
 //WaitForPing waits for synthing to be ready
 func (s *Syncthing) WaitForPing(ctx context.Context, wg *sync.WaitGroup, local bool) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
+	name := "remote"
+	if local {
+		name = "local"
+	}
 	log.Infof("waiting for syncthing to be ready...")
 	for i := 0; i < 30; i++ {
 		_, err := s.APICall("rest/system/ping", "GET", 200, nil, local, nil)
 		if err == nil {
 			return nil
 		}
-		log.Debugf("error calling 'rest/system/ping' syncthing API: %s", err)
+		log.Debugf("error calling 'rest/system/ping' %s syncthing API: %s", name, err)
 		select {
 		case <-ticker.C:
 			continue
 		case <-ctx.Done():
-			log.Debug("cancelling call to 'rest/system/ping'")
+			log.Debugf("cancelling call to 'rest/system/ping'  %s syncthing API", name)
 			return ctx.Err()
 		}
 	}
@@ -418,7 +422,11 @@ func (s *Syncthing) Stop(force bool) error {
 	}
 
 	if err := os.Remove(pidPath); err != nil {
-		log.Infof("failed to delete %s: %s", pidPath, err)
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		log.Infof("failed to delete pidfile %s: %s", pidPath, err)
 	}
 
 	return nil

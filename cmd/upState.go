@@ -30,7 +30,7 @@ func (up *UpContext) updateStateFile(state upState) {
 	}
 
 	s := config.GetStateFile(up.Dev.Namespace, up.Dev.Name)
-	log.Debugf("updating statefile %s with path %s", s, state)
+	log.Debugf("updating statefile %s: '%s'", s, state)
 	if err := ioutil.WriteFile(s, []byte(state), 0644); err != nil {
 		log.Infof("can't update state file, %s", err)
 	}

@@ -105,6 +105,9 @@ func init() {
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 /*.out
+
+# dlv binary
+/__debug_bin
 `)
 
 	stignore[python] = []byte(`/.git
@@ -247,7 +250,6 @@ func init() {
 	stignore[ruby] = []byte(`/.git
 /*.gem
 /*.rbc
-/.config
 /coverage
 /InstalledFiles
 /pkg
@@ -256,9 +258,6 @@ func init() {
 /test/tmp
 /test/version_tmp
 /tmp
-
-# Used by dotenv library to load environment variables.
-# .env
 
 # Ignore Byebug command history file.
 /.byebug_history
@@ -286,7 +285,6 @@ func init() {
 /rdoc
 
 ## Environment normalization:
-/.bundle
 /vendor/bundle
 /lib/bundler/man
 
