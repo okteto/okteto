@@ -114,5 +114,5 @@ func save(cfg *sshConfig, path string) error {
 }
 
 func getDefault() string {
-	return filepath.Join(config.GetHomeDir(), ".ssh", "config")
+	return filepath.Join(config.GetUserHomeDir(), ".ssh", "config")
 }

@@ -136,7 +136,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("localhost:%d", guiPort),
 		Home:             config.GetDeploymentHome(dev.Namespace, dev.Name),
-		LogPath:          filepath.Join(config.GetDeploymentHome(dev.Namespace, dev.Name), logFile),
+		LogPath:          filepath.Join(config.GetHome(), fmt.Sprintf("%s-%s-%s", dev.Namespace, dev.Name, logFile)),
 		ListenAddress:    fmt.Sprintf("localhost:%d", listenPort),
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,

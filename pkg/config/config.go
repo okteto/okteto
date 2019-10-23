@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	folderName = ".okteto"
+	oktetoFolderName = ".okteto"
 )
 
 // VersionString the version of the cli
@@ -35,8 +35,8 @@ func GetBinaryFullPath() string {
 
 // GetHome returns the path of the folder
 func GetHome() string {
-	home := GetHomeDir()
-	home = filepath.Join(home, folderName)
+	home := GetUserHomeDir()
+	home = filepath.Join(home, oktetoFolderName)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
 		panic("failed to create the okteto directory")
@@ -47,8 +47,8 @@ func GetHome() string {
 
 // GetDeploymentHome returns the path of the folder
 func GetDeploymentHome(namespace, name string) string {
-	home := GetHomeDir()
-	home = filepath.Join(home, folderName, namespace, name)
+	home := GetUserHomeDir()
+	home = filepath.Join(home, oktetoFolderName, namespace, name)
 
 	if err := os.MkdirAll(home, 0700); err != nil {
 		panic("failed to create the okteto deployment directory")
@@ -62,8 +62,8 @@ func GetStateFile(namespace, name string) string {
 	return filepath.Join(GetDeploymentHome(namespace, name), "okteto.state")
 }
 
-// GetHomeDir returns the OS home dir
-func GetHomeDir() string {
+// GetUserHomeDir returns the OS home dir
+func GetUserHomeDir() string {
 	home := os.Getenv("HOME")
 	if runtime.GOOS == "windows" {
 		home = os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
@@ -77,7 +77,7 @@ func GetHomeDir() string {
 
 // GetKubeConfigFile returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration
 func GetKubeConfigFile() string {
-	home := GetHomeDir()
+	home := GetUserHomeDir()
 	kubeconfig := filepath.Join(home, ".kube", "config")
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
 	if len(kubeconfigEnv) > 0 {
