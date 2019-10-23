@@ -263,7 +263,7 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 		case err := <-up.Running:
 			fmt.Println()
 			if err != nil {
-				log.Infof("Command execution error: %s\n", err)
+				log.Infof("Command execution error: %s", err)
 				return errors.ErrCommandFailed
 			}
 			return nil
@@ -316,7 +316,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		return err
 	}
 
-	if err := up.Sy.Stop(); err != nil {
+	if err := up.Sy.Stop(true); err != nil {
 		log.Infof("failed to stop existing syncthing: %s", err)
 	}
 
@@ -534,6 +534,10 @@ func (up *UpContext) shutdown() {
 		if err := ssh.RemoveEntry(up.Dev.Name); err != nil {
 			log.Infof("failed to remove ssh entry: %s", err)
 		}
+	}
+
+	if err := up.Sy.Stop(false); err != nil {
+		log.Info("failed to stop syncthing during shutdown: %s", err)
 	}
 
 	log.Debugf("waiting for tasks for be done")

@@ -154,7 +154,7 @@ func stopSyncthing(dev *model.Dev) {
 		return
 	}
 
-	if err := sy.Stop(); err != nil {
+	if err := sy.Stop(true); err != nil {
 		log.Infof("failed to stop existing syncthing")
 	}
 }
