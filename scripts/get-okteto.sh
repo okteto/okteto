@@ -62,6 +62,7 @@ if [ ! -w $install_path ]; then
 fi
 
 printf "> Installing $install_path\n"
+$sh_c "rm -f $install_path"
 $sh_c "curl -fSL $URL -o $install_path"
 $sh_c "chmod +x $install_path"
 
