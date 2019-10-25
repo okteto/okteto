@@ -7,3 +7,4 @@
 cli
 .syncthing*
 bin/*
+coverage.txt
