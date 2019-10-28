@@ -208,3 +208,59 @@ func TestDev_validate(t *testing.T) {
 		})
 	}
 }
+
+func Test_LoadRemote(t *testing.T) {
+	manifest := []byte(`
+  name: deployment
+  container: core
+  image: code/core:0.1.8
+  command: ["uwsgi"]
+  annotations:
+    key1: value1
+    key2: value2
+  forward:
+    - 8080:8080
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "250m"
+    limits:
+      memory: "128Mi"
+      cpu: "500m"
+  environment:
+    - env=development
+  securityContext:
+    capabilities:
+      add:
+      - SYS_TRACE
+      drop:
+      - SYS_NICE
+  workdir: /app`)
+	d, err := Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d.LoadRemote(22100)
+
+	if d.Command[0] != "/var/okteto/bin/remote" {
+		t.Errorf("remote command wasn't set: %s", d.Command)
+	}
+
+	if len(d.Forward) != 2 {
+		t.Errorf("forward wasn't injected")
+	}
+
+	if d.Forward[1].Local != 22100 {
+		t.Errorf("local forward wasn't 22100 it was %d", d.Forward[1].Local)
+	}
+
+	if len(d.Environment) != 2 {
+		t.Errorf("Environment value wasn't injected")
+	}
+
+	if d.Environment[1].Name != "OKTETO_REMOTE_PORT" {
+		t.Errorf("injected env var wasn't OKTETO_REMOTE_PORT it was %s", d.Environment[1].Name)
+	}
+
+}
