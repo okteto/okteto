@@ -27,7 +27,6 @@ const (
 	java       = "java"
 	ruby       = "ruby"
 	csharp     = "csharp"
-	vscode     = "vscode"
 
 	// Unrecognized is the option returned when the linguist couldn't detect a language
 	Unrecognized = "other"
@@ -129,21 +128,6 @@ func init() {
 			{
 				Local:  5000,
 				Remote: 5000,
-			},
-		},
-	}
-
-	languageDefaults[vscode] = languageDefault{
-		image:   model.DefaultImage,
-		command: []string{"bash"},
-		volumes: []string{
-			"/root/.vscode-server",
-		},
-		securityContext: &model.SecurityContext{
-			Capabilities: &model.Capabilities{
-				Add: []apiv1.Capability{
-					apiv1.Capability("SYS_PTRACE"),
-				},
 			},
 		},
 	}

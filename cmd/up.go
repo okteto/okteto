@@ -47,13 +47,17 @@ type UpContext struct {
 	Pod        string
 	Forwarder  *forward.PortForwardManager
 	Disconnect chan struct{}
-	RemotePort int
 	Running    chan error
 	Exit       chan error
 	Sy         *syncthing.Syncthing
 	ErrChan    chan error
 	cleaned    chan struct{}
+	remotePort int
 	success    bool
+}
+
+func (up *UpContext) remoteModeEnabled() bool {
+	return up.remotePort > 0
 }
 
 //Up starts a cloud dev environment
@@ -106,16 +110,13 @@ func RunUp(dev *model.Dev, remote int) error {
 	up := &UpContext{
 		Dev:        dev,
 		Exit:       make(chan error, 1),
-		RemotePort: remote,
+		remotePort: remote,
 	}
 
 	defer up.shutdown()
 
-	if up.RemotePort > 0 {
+	if up.remoteModeEnabled() {
 		dev.LoadRemote(int(remote))
-		if err := ssh.AddEntry(dev.Name, up.RemotePort); err != nil {
-			return err
-		}
 	}
 
 	stop := make(chan os.Signal, 1)
@@ -395,6 +396,12 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		return err
 	}
 
+	if up.remoteModeEnabled() {
+		if err := ssh.AddEntry(up.Dev.Name, up.remotePort); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -534,7 +541,7 @@ func (up *UpContext) shutdown() {
 		log.Info("sent cancellation signal")
 	}
 
-	if up.RemotePort > 0 {
+	if up.remoteModeEnabled() {
 		if err := ssh.RemoveEntry(up.Dev.Name); err != nil {
 			log.Infof("failed to remove ssh entry: %s", err)
 		}
