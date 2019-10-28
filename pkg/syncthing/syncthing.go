@@ -253,7 +253,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 		name = "local"
 	}
 	log.Infof("waiting for syncthing to be ready...")
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 150; i++ {
 		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil)
 		if err == nil {
 			return nil
@@ -267,7 +267,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 			return ctx.Err()
 		}
 	}
-	return fmt.Errorf("Syncthing not responding after 10s")
+	return fmt.Errorf("Syncthing not responding after 30s")
 }
 
 //SendStignoreFile sends .stignore from local to remote
