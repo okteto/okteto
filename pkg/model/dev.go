@@ -276,26 +276,6 @@ func (dev *Dev) LoadRemote(localPort int) {
 			Value: "22001",
 		},
 	)
-
-	dev.Volumes = append(dev.Volumes, "/root/.vscode-server")
-	dev.Volumes = uniqueStrings(dev.Volumes)
-
-	if dev.SecurityContext == nil {
-		dev.SecurityContext = &SecurityContext{}
-	}
-	if dev.SecurityContext.Capabilities == nil {
-		dev.SecurityContext.Capabilities = &Capabilities{}
-	}
-	if dev.SecurityContext.Capabilities.Add == nil {
-		dev.SecurityContext.Capabilities.Add = []apiv1.Capability{}
-	}
-
-	for _, cap := range dev.SecurityContext.Capabilities.Add {
-		if cap == "SYS_PTRACE" {
-			return
-		}
-	}
-	dev.SecurityContext.Capabilities.Add = append(dev.SecurityContext.Capabilities.Add, "SYS_PTRACE")
 	log.Infof("enabled remote mode")
 }
 
