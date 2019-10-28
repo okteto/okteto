@@ -461,7 +461,7 @@ func waitForUpExit(wg *sync.WaitGroup) error {
 func waitForReady(namespace, name string) error {
 	state := fmt.Sprintf("%s/.okteto/%s/%s/okteto.state", os.Getenv("HOME"), namespace, name)
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 120; i++ {
 		c, err := ioutil.ReadFile(state)
 		if err != nil {
 			if !os.IsNotExist(err) {
