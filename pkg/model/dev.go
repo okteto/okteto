@@ -266,14 +266,14 @@ func (dev *Dev) LoadRemote(localPort int) {
 		dev.Forward,
 		Forward{
 			Local:  localPort,
-			Remote: 22001,
+			Remote: 22100,
 		},
 	)
 	dev.Environment = append(
 		dev.Environment,
 		EnvVar{
 			Name:  oktetoRemotePortVariable,
-			Value: "22001",
+			Value: "22100",
 		},
 	)
 	log.Infof("enabled remote mode")
