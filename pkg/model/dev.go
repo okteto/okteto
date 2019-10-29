@@ -235,6 +235,10 @@ func (dev *Dev) validate() error {
 		return errBadName
 	}
 
+	if dev.SubPath != "" {
+		return fmt.Errorf("'subpath' is not supported in the main dev container")
+	}
+
 	if err := validatePullPolicy(dev.ImagePullPolicy); err != nil {
 		return err
 	}
