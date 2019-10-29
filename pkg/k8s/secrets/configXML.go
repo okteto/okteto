@@ -85,7 +85,7 @@ const configXML = `<configuration version="29">
     <tempIndexMinBlocks>10</tempIndexMinBlocks>
     <trafficClass>0</trafficClass>
     <defaultFolderPath>~</defaultFolderPath>
-    <setLowPriority>true</setLowPriority>
+    <setLowPriority>false</setLowPriority>
     <minHomeDiskFreePct>0</minHomeDiskFreePct>
     <crashReportingEnabled>false</crashReportingEnabled>
 </options>
