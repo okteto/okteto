@@ -23,9 +23,10 @@ const (
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	Token string
-	URL   string
-	ID    string
+	Token     string
+	URL       string
+	ID        string
+	MachineID string
 }
 
 // User contains the auth information of the logged in user
@@ -126,6 +127,16 @@ func GetUserID() string {
 	return t.ID
 }
 
+// GetMachineID returns the userID of the authenticated user
+func GetMachineID() string {
+	t, err := getToken()
+	if err != nil {
+		return ""
+	}
+
+	return t.MachineID
+}
+
 // GetURL returns the URL of the authenticated user
 func GetURL() string {
 	t, err := getToken()
@@ -137,7 +148,31 @@ func GetURL() string {
 }
 
 func saveToken(id, token, url string) error {
-	t := Token{Token: token, URL: url, ID: id}
+	t, err := getToken()
+	if err != nil {
+		log.Debugf("bad token, re-initializing: %s")
+		t = &Token{}
+	}
+
+	t.ID = id
+	t.Token = token
+	t.URL = url
+	return save(t)
+}
+
+// SaveMachineID updates the token file with the machineID value
+func SaveMachineID(machineID string) error {
+	t, err := getToken()
+	if err != nil {
+		log.Debugf("bad token, re-initializing: %s")
+		t = &Token{}
+	}
+
+	t.MachineID = machineID
+	return save(t)
+}
+
+func save(t *Token) error {
 	marshalled, err := json.Marshal(t)
 	if err != nil {
 		log.Infof("failed to marshal token: %s", err)

@@ -32,6 +32,7 @@ const (
 
 var (
 	mixpanelClient mixpanel.Mixpanel
+	trackID        string
 	machineID      string
 )
 
@@ -47,13 +48,6 @@ func init() {
 	}
 
 	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "")
-
-	var err error
-	machineID, err = machineid.ProtectedID("okteto")
-	if err != nil {
-		log.Debugf("failed to generate a machine id")
-		machineID = "na"
-	}
 }
 
 // TrackInit sends a tracking event to mixpanel when the user creates a manifest
@@ -96,13 +90,9 @@ func trackDisable(version string, success bool) {
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(name, email, oktetoID, githubID, version string, isNew bool, success bool) {
+func TrackLogin(name, email, oktetoID, githubID, version string, success bool) {
 	if !isEnabled() {
 		return
-	}
-
-	if isNew {
-		trackSignup(version, success)
 	}
 
 	track(loginEvent, version, "", success)
@@ -123,14 +113,10 @@ func TrackLogin(name, email, oktetoID, githubID, version string, isNew bool, suc
 	}
 }
 
-func trackSignup(version string, success bool) {
-	trackID := okteto.GetUserID()
-	if len(trackID) == 0 {
-		log.Errorf("userID wasn't set for a new user")
-	} else {
-		if err := mixpanelClient.Alias(machineID, trackID); err != nil {
-			log.Errorf("failed to alias %s to %s", machineID, trackID)
-		}
+// TrackSignup sends a tracking event to mixpanel when the user signs up
+func TrackSignup(userID, version string, success bool) {
+	if err := mixpanelClient.Alias(getMachineID(), userID); err != nil {
+		log.Errorf("failed to alias %s to %s", getMachineID(), userID)
 	}
 
 	track(signupEvent, version, "", success)
@@ -159,17 +145,13 @@ func track(event, version, image string, success bool) {
 				"version":           version,
 				"$referring_domain": okteto.GetURL(),
 				"image":             image,
-				"machine_id":        machineID,
+				"machine_id":        getMachineID(),
 				"origin":            origin,
 				"success":           success,
 			},
 		}
 
-		trackID := okteto.GetUserID()
-		if len(trackID) == 0 {
-			trackID = machineID
-		}
-
+		trackID := getTrackID()
 		if err := mixpanelClient.Track(trackID, event, e); err != nil {
 			log.Infof("Failed to send analytics: %s", err)
 		}
@@ -215,4 +197,45 @@ func isEnabled() bool {
 	}
 
 	return true
+}
+
+func getTrackID() string {
+	if len(trackID) == 0 {
+		uid := okteto.GetUserID()
+		if len(uid) > 0 {
+			trackID = uid
+		} else {
+			trackID = getMachineID()
+		}
+	}
+
+	return trackID
+}
+
+func getMachineID() string {
+	if len(machineID) > 0 {
+		return machineID
+	}
+
+	mid := okteto.GetMachineID()
+	if len(mid) == 0 {
+		mid = generateMachineID()
+		if err := okteto.SaveMachineID(mid); err != nil {
+			log.Debugf("failed to save the machine id")
+			mid = "na"
+		}
+	}
+
+	machineID = mid
+	return machineID
+}
+
+func generateMachineID() string {
+	mid, err := machineid.ProtectedID("okteto")
+	if err != nil {
+		log.Debugf("failed to generate a machine id")
+		mid = "na"
+	}
+
+	return mid
 }
