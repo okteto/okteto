@@ -150,7 +150,7 @@ func GetURL() string {
 func saveToken(id, token, url string) error {
 	t, err := getToken()
 	if err != nil {
-		log.Debugf("bad token, re-initializing: %s")
+		log.Debugf("bad token, re-initializing: %s", err)
 		t = &Token{}
 	}
 
@@ -164,7 +164,7 @@ func saveToken(id, token, url string) error {
 func SaveMachineID(machineID string) error {
 	t, err := getToken()
 	if err != nil {
-		log.Debugf("bad token, re-initializing: %s")
+		log.Debugf("bad token, re-initializing: %s", err)
 		t = &Token{}
 	}
 
