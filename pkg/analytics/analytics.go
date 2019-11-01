@@ -200,34 +200,27 @@ func isEnabled() bool {
 }
 
 func getTrackID() string {
-	if len(trackID) == 0 {
-		uid := okteto.GetUserID()
-		if len(uid) > 0 {
-			trackID = uid
-		} else {
-			trackID = getMachineID()
-		}
+	uid := okteto.GetUserID()
+	if len(uid) > 0 {
+		return uid
 	}
 
-	return trackID
+	return getMachineID()
 }
 
 func getMachineID() string {
-	if len(machineID) > 0 {
-		return machineID
-	}
-
 	mid := okteto.GetMachineID()
-	if len(mid) == 0 {
-		mid = generateMachineID()
-		if err := okteto.SaveMachineID(mid); err != nil {
-			log.Debugf("failed to save the machine id")
-			mid = "na"
-		}
+	if len(mid) > 0 {
+		return mid
 	}
 
-	machineID = mid
-	return machineID
+	mid = generateMachineID()
+	if err := okteto.SaveMachineID(mid); err != nil {
+		log.Debugf("failed to save the machine id")
+		mid = "na"
+	}
+
+	return mid
 }
 
 func generateMachineID() string {
