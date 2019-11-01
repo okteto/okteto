@@ -22,7 +22,6 @@ func Test_save(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			currentToken = nil
 			dir, err := ioutil.TempDir("", "")
 			if err != nil {
 				t.Fatal(err)
@@ -77,7 +76,6 @@ func TestSaveMachineID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			currentToken = nil
 			dir, err := ioutil.TempDir("", "")
 			if err != nil {
 				t.Fatal(err)
@@ -94,6 +92,60 @@ func TestSaveMachineID(t *testing.T) {
 			}
 
 			if err := SaveMachineID(tt.machineID); err != nil {
+				t.Fatal(err)
+			}
+
+			token, err := getToken()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(token, tt.expected) {
+				t.Fatalf("\ngot:\n%+v\nexpected:\n%+v", token, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSaveUserID(t *testing.T) {
+	var tests = []struct {
+		name     string
+		existing *Token
+		userID   string
+		expected *Token
+	}{
+		{
+			name:     "no-existing",
+			userID:   "user-1",
+			existing: nil,
+			expected: &Token{ID: "user-1", URL: "", Token: "", MachineID: ""},
+		},
+		{
+			name:     "existing",
+			userID:   "user-1",
+			existing: &Token{ID: "123", URL: "http://example.com", Token: "ABCDEFG"},
+			expected: &Token{ID: "user-1", URL: "http://example.com", Token: "ABCDEFG"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir, err := ioutil.TempDir("", "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(dir)
+
+			os.Setenv("HOME", dir)
+			os.Setenv("OKTETO_TOKEN", "")
+
+			if tt.existing != nil {
+				if err := save(tt.existing); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			if err := SaveID(tt.userID); err != nil {
 				t.Fatal(err)
 			}
 

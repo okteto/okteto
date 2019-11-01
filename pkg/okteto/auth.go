@@ -172,6 +172,18 @@ func SaveMachineID(machineID string) error {
 	return save(t)
 }
 
+// SaveID updates the token file with the userID value
+func SaveID(userID string) error {
+	t, err := getToken()
+	if err != nil {
+		log.Debugf("bad token, re-initializing: %s", err)
+		t = &Token{}
+	}
+
+	t.ID = userID
+	return save(t)
+}
+
 func save(t *Token) error {
 	marshalled, err := json.Marshal(t)
 	if err != nil {
