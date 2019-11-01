@@ -22,6 +22,7 @@ func Test_save(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			currentToken = nil
 			dir, err := ioutil.TempDir("", "")
 			if err != nil {
 				t.Fatal(err)
@@ -76,6 +77,7 @@ func TestSaveMachineID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			currentToken = nil
 			dir, err := ioutil.TempDir("", "")
 			if err != nil {
 				t.Fatal(err)
@@ -130,6 +132,7 @@ func TestSaveUserID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			currentToken = nil
 			dir, err := ioutil.TempDir("", "")
 			if err != nil {
 				t.Fatal(err)
