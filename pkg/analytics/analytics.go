@@ -32,8 +32,6 @@ const (
 
 var (
 	mixpanelClient mixpanel.Mixpanel
-	trackID        string
-	machineID      string
 )
 
 func init() {
