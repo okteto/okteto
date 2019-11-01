@@ -191,5 +191,6 @@ func save(t *Token) error {
 		return fmt.Errorf("couldn't save authentication token: %s", err)
 	}
 
+	currentToken = nil
 	return nil
 }
