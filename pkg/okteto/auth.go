@@ -23,10 +23,10 @@ const (
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	Token     string
-	URL       string
-	ID        string
-	MachineID string
+	Token     string `json:"Token"`
+	URL       string `json:"URL"`
+	ID        string `json:"ID"`
+	MachineID string `json:"MachineID"`
 }
 
 // User contains the auth information of the logged in user
@@ -39,7 +39,7 @@ type User struct {
 	New      bool
 }
 
-var token *Token
+var currentToken *Token
 
 // Auth authenticates in okteto with a github OAuth code
 func Auth(ctx context.Context, code, url string) (*User, error) {
@@ -96,7 +96,7 @@ func getTokenFromEnv() (*Token, error) {
 }
 
 func getToken() (*Token, error) {
-	if token == nil {
+	if currentToken == nil {
 		if len(os.Getenv("OKTETO_TOKEN")) > 0 {
 			return getTokenFromEnv()
 		}
@@ -108,13 +108,13 @@ func getToken() (*Token, error) {
 			return nil, err
 		}
 
-		token = &Token{}
-		if err := json.Unmarshal(b, token); err != nil {
+		currentToken = &Token{}
+		if err := json.Unmarshal(b, currentToken); err != nil {
 			return nil, err
 		}
 	}
 
-	return token, nil
+	return currentToken, nil
 }
 
 // GetUserID returns the userID of the authenticated user
