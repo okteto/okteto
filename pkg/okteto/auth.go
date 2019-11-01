@@ -23,9 +23,10 @@ const (
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	Token string
-	URL   string
-	ID    string
+	Token     string `json:"Token"`
+	URL       string `json:"URL"`
+	ID        string `json:"ID"`
+	MachineID string `json:"MachineID"`
 }
 
 // User contains the auth information of the logged in user
@@ -38,7 +39,7 @@ type User struct {
 	New      bool
 }
 
-var token *Token
+var currentToken *Token
 
 // Auth authenticates in okteto with a github OAuth code
 func Auth(ctx context.Context, code, url string) (*User, error) {
@@ -95,7 +96,7 @@ func getTokenFromEnv() (*Token, error) {
 }
 
 func getToken() (*Token, error) {
-	if token == nil {
+	if currentToken == nil {
 		if len(os.Getenv("OKTETO_TOKEN")) > 0 {
 			return getTokenFromEnv()
 		}
@@ -107,13 +108,13 @@ func getToken() (*Token, error) {
 			return nil, err
 		}
 
-		token = &Token{}
-		if err := json.Unmarshal(b, token); err != nil {
+		currentToken = &Token{}
+		if err := json.Unmarshal(b, currentToken); err != nil {
 			return nil, err
 		}
 	}
 
-	return token, nil
+	return currentToken, nil
 }
 
 // GetUserID returns the userID of the authenticated user
@@ -124,6 +125,16 @@ func GetUserID() string {
 	}
 
 	return t.ID
+}
+
+// GetMachineID returns the userID of the authenticated user
+func GetMachineID() string {
+	t, err := getToken()
+	if err != nil {
+		return ""
+	}
+
+	return t.MachineID
 }
 
 // GetURL returns the URL of the authenticated user
@@ -137,7 +148,43 @@ func GetURL() string {
 }
 
 func saveToken(id, token, url string) error {
-	t := Token{Token: token, URL: url, ID: id}
+	t, err := getToken()
+	if err != nil {
+		log.Debugf("bad token, re-initializing: %s", err)
+		t = &Token{}
+	}
+
+	t.ID = id
+	t.Token = token
+	t.URL = url
+	return save(t)
+}
+
+// SaveMachineID updates the token file with the machineID value
+func SaveMachineID(machineID string) error {
+	t, err := getToken()
+	if err != nil {
+		log.Debugf("bad token, re-initializing: %s", err)
+		t = &Token{}
+	}
+
+	t.MachineID = machineID
+	return save(t)
+}
+
+// SaveID updates the token file with the userID value
+func SaveID(userID string) error {
+	t, err := getToken()
+	if err != nil {
+		log.Debugf("bad token, re-initializing: %s", err)
+		t = &Token{}
+	}
+
+	t.ID = userID
+	return save(t)
+}
+
+func save(t *Token) error {
 	marshalled, err := json.Marshal(t)
 	if err != nil {
 		log.Infof("failed to marshal token: %s", err)
@@ -156,5 +203,6 @@ func saveToken(id, token, url string) error {
 		return fmt.Errorf("couldn't save authentication token: %s", err)
 	}
 
+	currentToken = nil
 	return nil
 }
