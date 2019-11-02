@@ -57,7 +57,7 @@ services:
 			{
 				Name:      OktetoVolumeName,
 				MountPath: oktetoSyncthingMountPath,
-				SubPath:   dev.SyncthingSubPath(),
+				SubPath:   dev.syncthingSubPath(),
 			},
 		},
 	}
