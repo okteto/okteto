@@ -24,7 +24,7 @@ func GetReplicaSetByDeployment(dev *model.Dev, d *appsv1.Deployment, c *kubernet
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get replicaset using %s: %w", ls, err)
+		return nil, fmt.Errorf("failed to get replicaset using %s: %s", ls, err)
 	}
 
 	for _, rs := range rsList.Items {

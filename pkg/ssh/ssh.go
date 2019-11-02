@@ -92,14 +92,14 @@ func getConfig(path string) (*sshConfig, error) {
 			}, nil
 		}
 
-		return nil, fmt.Errorf("can't open %s: %w", path, err)
+		return nil, fmt.Errorf("can't open %s: %s", path, err)
 	}
 
 	defer f.Close()
 
 	cfg, err := parse(f)
 	if err != nil {
-		return nil, fmt.Errorf("fail to decode %s: %w", path, err)
+		return nil, fmt.Errorf("fail to decode %s: %s", path, err)
 	}
 
 	return cfg, nil
@@ -107,7 +107,7 @@ func getConfig(path string) (*sshConfig, error) {
 
 func save(cfg *sshConfig, path string) error {
 	if err := cfg.writeToFilepath(path); err != nil {
-		return fmt.Errorf("fail to save %s: %w", path, err)
+		return fmt.Errorf("fail to save %s: %s", path, err)
 	}
 
 	return nil
