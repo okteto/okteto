@@ -86,7 +86,16 @@ jobs:
     executor: win/vs2019
     steps: 
       - checkout
+      - restore_cache: 
+          keys:
+            - v2-pkg-cache-windows-{{ checksum "go.sum" }}
       - run: go test ./...
+      - save_cache:
+          key: v2-pkg-cache-windows-{{ checksum "go.sum" }}
+          paths:
+            - ~/.cache/go-build
+            - C:\Go\pkg
+      
   release:
     docker:
       - image: circleci/golang:1.13
