@@ -1,7 +1,7 @@
 version: 2.1
 orbs:
   aws-s3: circleci/aws-s3@1.0.6
-  win: circleci/windows@1.0.0
+  win: circleci/windows@2.1.0
 jobs:
   build:
     docker:
@@ -90,10 +90,14 @@ jobs:
       - checkout
       - restore_cache: 
           keys:
-            - v2-pkg-cache-windows-{{ checksum "go.sum" }}
-      - run: go test ./...
+            - v3-pkg-cache-windows-{{ checksum "go.sum" }}
+      - run: 
+          name: test
+          command: |
+            go version
+            go test ./...
       - save_cache:
-          key: v2-pkg-cache-windows-{{ checksum "go.sum" }}
+          key: v3-pkg-cache-windows-{{ checksum "go.sum" }}
           paths:
             - C:\Users\circleci\.cache\go-build
             - C:\Users\circleci\go\pkg
