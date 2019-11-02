@@ -95,7 +95,8 @@ jobs:
       - save_cache:
           key: v2-pkg-cache-windows-{{ checksum "go.sum" }}
           paths:
-            - ~/.cache/go-build
+            - C:\Users\circleci\.cache\go-build
+            - C:\Users\circleci\go\pkg
             - C:\Go\pkg
       
   release:
