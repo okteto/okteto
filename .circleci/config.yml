@@ -85,7 +85,7 @@ jobs:
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             bash ./update_homebrew_formula.sh 0.0.1 $GITHUB_TOKEN $sha 1
   windows-unit:
-    executor: win/vs2019
+    executor: win/default
     steps: 
       - checkout
       - restore_cache: 
