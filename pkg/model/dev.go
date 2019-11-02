@@ -332,8 +332,8 @@ func (dev *Dev) fullSubPath(i int, subPath string) string {
 	return path.Join(dev.Name, fmt.Sprintf("data-%d", i), subPath)
 }
 
-//SyncthingSubPath returns the full subpath for the var syncthing volume
-func (dev *Dev) SyncthingSubPath() string {
+//syncthingSubPath returns the full subpath for the var syncthing volume
+func (dev *Dev) syncthingSubPath() string {
 	return path.Join(dev.Name, "syncthing")
 }
 
@@ -370,7 +370,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationR
 			VolumeMount{
 				Name:      OktetoVolumeName,
 				MountPath: oktetoSyncthingMountPath,
-				SubPath:   dev.SyncthingSubPath(),
+				SubPath:   dev.syncthingSubPath(),
 			},
 		)
 		rule.Healthchecks = false
