@@ -20,7 +20,7 @@ func (s *Syncthing) isConnected(ctx context.Context) bool {
 
 // Monitor will send a message to disconnected if remote syncthing is disconnected for more than 10 seconds.
 func (s *Syncthing) Monitor(ctx context.Context, disconnect chan struct{}) {
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	connected := true
 	for {
 		select {
