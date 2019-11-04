@@ -64,13 +64,19 @@ type Dev struct {
 	WorkDir         string               `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath       string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath         string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
-	Volumes         []string             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	Volumes         []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath         string               `json:"-" yaml:"-"`
 	DevDir          string               `json:"-" yaml:"-"`
 	Services        []*Dev               `json:"services,omitempty" yaml:"services,omitempty"`
+}
+
+// Volume represents a volume in the dev environment
+type Volume struct {
+	SubPath   string
+	MountPath string
 }
 
 // SecurityContext represents a pod security context
@@ -139,7 +145,7 @@ func Read(bytes []byte) (*Dev, error) {
 		Environment: make([]EnvVar, 0),
 		Command:     make([]string, 0),
 		Forward:     make([]Forward, 0),
-		Volumes:     make([]string, 0),
+		Volumes:     make([]Volume, 0),
 		Resources: ResourceRequirements{
 			Limits:   ResourceList{},
 			Requests: ResourceList{},
@@ -190,7 +196,6 @@ func (dev *Dev) setDefaults() error {
 	if dev.Annotations == nil {
 		dev.Annotations = map[string]string{}
 	}
-	dev.Volumes = uniqueStrings(dev.Volumes)
 	for _, s := range dev.Services {
 		if s.MountPath == "" && s.WorkDir == "" {
 			s.MountPath = "/okteto"
@@ -213,12 +218,8 @@ func (dev *Dev) setDefaults() error {
 		}
 		s.Namespace = ""
 		s.Forward = make([]Forward, 0)
-		s.Volumes = make([]string, 0)
+		s.Volumes = make([]Volume, 0)
 		s.Services = make([]*Dev, 0)
-		s.Resources = ResourceRequirements{
-			Limits:   ResourceList{},
-			Requests: ResourceList{},
-		}
 	}
 	return nil
 }
@@ -329,7 +330,7 @@ func (dev *Dev) fullSubPath(i int, subPath string) string {
 	if subPath == "" {
 		return path.Join(dev.Name, fmt.Sprintf("data-%d", i))
 	}
-	return path.Join(dev.Name, fmt.Sprintf("data-%d", i), subPath)
+	return path.Join(dev.Name, "data-0", subPath)
 }
 
 //syncthingSubPath returns the full subpath for the var syncthing volume
@@ -389,8 +390,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationR
 			rule.Volumes,
 			VolumeMount{
 				Name:      OktetoVolumeName,
-				MountPath: v,
-				SubPath:   main.fullSubPath(i+1, main.SubPath),
+				MountPath: v.MountPath,
+				SubPath:   main.fullSubPath(i+1, v.SubPath),
 			},
 		)
 	}

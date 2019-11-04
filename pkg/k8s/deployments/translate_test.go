@@ -26,6 +26,8 @@ securityContext:
   runAsUser: 100
   runAsGroup: 101
   fsGroup: 102
+volumes:
+  - sub:/path
 services:
   - name: worker
     container: dev
@@ -77,7 +79,7 @@ services:
 					},
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
-						apiv1.Volume{
+						{
 							Name: oktetoSyncSecretVolume,
 							VolumeSource: apiv1.VolumeSource{
 								Secret: &apiv1.SecretVolumeSource{
@@ -85,7 +87,7 @@ services:
 								},
 							},
 						},
-						apiv1.Volume{
+						{
 							Name: oktetoVolumeName,
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
@@ -94,7 +96,7 @@ services:
 								},
 							},
 						},
-						apiv1.Volume{
+						{
 							Name: oktetoBinName,
 							VolumeSource: apiv1.VolumeSource{
 								EmptyDir: &apiv1.EmptyDirVolumeSource{},
@@ -102,13 +104,13 @@ services:
 						},
 					},
 					InitContainers: []apiv1.Container{
-						apiv1.Container{
+						{
 							Name:            oktetoBinName,
 							Image:           oktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
-								apiv1.VolumeMount{
+								{
 									Name:      oktetoBinName,
 									MountPath: "/okteto/bin",
 								},
@@ -116,7 +118,7 @@ services:
 						},
 					},
 					Containers: []apiv1.Container{
-						apiv1.Container{
+						{
 							Name:            "dev",
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
@@ -124,30 +126,36 @@ services:
 							Args:            []string{},
 							WorkingDir:      "/app",
 							Env: []apiv1.EnvVar{
-								apiv1.EnvVar{
+								{
 									Name:  "OKTETO_MARKER_PATH",
 									Value: "/app/okteto.yml",
 								},
 							},
 							VolumeMounts: []apiv1.VolumeMount{
-								apiv1.VolumeMount{
+								{
 									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/app",
 									SubPath:   "web/data-0",
 								},
-								apiv1.VolumeMount{
+								{
 									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/var/syncthing",
 									SubPath:   "web/syncthing",
 								},
-								apiv1.VolumeMount{
+								{
+									Name:      oktetoVolumeName,
+									ReadOnly:  false,
+									MountPath: "/path",
+									SubPath:   "web/data-0/sub",
+								},
+								{
 									Name:      oktetoSyncSecretVolume,
 									ReadOnly:  false,
 									MountPath: "/var/syncthing/secret/",
 								},
-								apiv1.VolumeMount{
+								{
 									Name:      oktetoBinName,
 									ReadOnly:  false,
 									MountPath: "/var/okteto/bin",
@@ -201,7 +209,7 @@ services:
 					},
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
-						apiv1.Volume{
+						{
 							Name: oktetoVolumeName,
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
@@ -212,14 +220,14 @@ services:
 						},
 					},
 					Containers: []apiv1.Container{
-						apiv1.Container{
+						{
 							Name:            "dev",
 							Image:           "worker:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"./run_worker.sh"},
 							Args:            []string{},
 							VolumeMounts: []apiv1.VolumeMount{
-								apiv1.VolumeMount{
+								{
 									Name:      oktetoVolumeName,
 									ReadOnly:  false,
 									MountPath: "/src",

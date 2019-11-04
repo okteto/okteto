@@ -13,6 +13,8 @@ container: dev
 image: web:latest
 command: ["./run_web.sh"]
 imagePullPolicy: Never
+volumes:
+  - sub:/path
 mountpath: /app
 services:
   - name: worker
@@ -58,6 +60,11 @@ services:
 				Name:      OktetoVolumeName,
 				MountPath: oktetoSyncthingMountPath,
 				SubPath:   dev.syncthingSubPath(),
+			},
+			VolumeMount{
+				Name:      OktetoVolumeName,
+				MountPath: "/path",
+				SubPath:   "web/data-0/sub",
 			},
 		},
 	}

@@ -64,3 +64,40 @@ func TestEnvVarMashalling(t *testing.T) {
 		})
 	}
 }
+
+func TestVolumeMashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected Volume
+	}{
+		{
+			"global",
+			[]byte("/path"),
+			Volume{SubPath: "", MountPath: "/path"},
+		},
+		{
+			"relative",
+			[]byte("sub:/path"),
+			Volume{SubPath: "sub", MountPath: "/path"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v Volume
+			if err := yaml.Unmarshal(tt.data, &v); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(v, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %s, Expected %s", v, tt.expected)
+			}
+
+			_, err := yaml.Marshal(&v)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
