@@ -4,25 +4,27 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"path/filepath"
 )
 
 func Test_add(t *testing.T) {
-	f, err := ioutil.TempFile("", "")
+	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer os.Remove(f.Name())
+	defer os.RemoveAll(dir)
+	sshConfig := filepath.Join(dir, "config")
 
-	if err := add(f.Name(), "test.okteto", 8080); err != nil {
+	if err := add(sshConfig, "test.okteto", 8080); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := add(f.Name(), "test2.okteto", 8081); err != nil {
+	if err := add(sshConfig, "test2.okteto", 8081); err != nil {
 		t.Fatal(err)
 	}
 
-	cfg, err := getConfig(f.Name())
+	cfg, err := getConfig(sshConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,11 +38,11 @@ func Test_add(t *testing.T) {
 		t.Fatal("couldn't find test2.okteto")
 	}
 
-	if err := remove(f.Name(), "test.okteto"); err != nil {
+	if err := remove(sshConfig, "test.okteto"); err != nil {
 		t.Fatal(err)
 	}
 
-	cfg, err = getConfig(f.Name())
+	cfg, err = getConfig(sshConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

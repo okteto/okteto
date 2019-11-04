@@ -64,6 +64,10 @@ func GetStateFile(namespace, name string) string {
 
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
+	if v, ok := os.LookupEnv("OKTETO_HOME"); ok {
+		return v
+	}
+
 	home := os.Getenv("HOME")
 	if runtime.GOOS == "windows" {
 		home = os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")

@@ -1,6 +1,7 @@
 version: 2.1
 orbs:
   aws-s3: circleci/aws-s3@1.0.6
+  win: circleci/windows@2.1.0
 jobs:
   build:
     docker:
@@ -83,7 +84,25 @@ jobs:
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             bash ./update_homebrew_formula.sh 0.0.1 $GITHUB_TOKEN $sha 1
-
+  windows-unit:
+    executor: win/default
+    steps: 
+      - checkout
+      - restore_cache: 
+          keys:
+            - v4-pkg-cache-windows-{{ checksum "go.sum" }}
+      - run: 
+          name: test
+          command: |
+            go version
+            go test ./...
+      - save_cache:
+          key: v4-pkg-cache-windows-{{ checksum "go.sum" }}
+          paths:
+            - C:\Users\circleci\AppData\Local\go-build
+            - C:\Users\circleci\go\pkg
+            - C:\Go\pkg
+      
   release:
     docker:
       - image: circleci/golang:1.13
@@ -195,4 +214,9 @@ workflows:
               only: /^\d+\.\d+\.\d+$/
             branches:
               ignore: /.*/
-      
+      - windows-unit:
+          filters:
+            branches:
+              only: 
+                - master
+                - /.*(windows)/

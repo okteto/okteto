@@ -426,7 +426,7 @@ func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, 
 	cmd.Env = os.Environ()
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("okteto up failed to start: %w", err)
+		return nil, fmt.Errorf("okteto up failed to start: %s", err)
 	}
 
 	wg.Add(1)

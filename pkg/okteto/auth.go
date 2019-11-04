@@ -101,7 +101,7 @@ func getToken() (*Token, error) {
 			return getTokenFromEnv()
 		}
 
-		p := filepath.Join(config.GetHome(), tokenFile)
+		p := getTokenPath()
 
 		b, err := ioutil.ReadFile(p)
 		if err != nil {
@@ -164,7 +164,7 @@ func saveToken(id, token, url string) error {
 func SaveMachineID(machineID string) error {
 	t, err := getToken()
 	if err != nil {
-		log.Debugf("bad token, re-initializing: %s", err)
+		log.Infof("bad token, re-initializing: %s", err)
 		t = &Token{}
 	}
 
@@ -191,7 +191,7 @@ func save(t *Token) error {
 		return fmt.Errorf("Failed to generate your auth token")
 	}
 
-	p := filepath.Join(config.GetHome(), tokenFile)
+	p := getTokenPath()
 	log.Debugf("saving token at %s", p)
 	if _, err := os.Stat(p); err == nil {
 		err = os.Chmod(p, 0600)
@@ -199,10 +199,15 @@ func save(t *Token) error {
 			return fmt.Errorf("couldn't change token permissions: %s", err)
 		}
 	}
+
 	if err := ioutil.WriteFile(p, marshalled, 0600); err != nil {
 		return fmt.Errorf("couldn't save authentication token: %s", err)
 	}
 
 	currentToken = nil
 	return nil
+}
+
+func getTokenPath() string {
+	return filepath.Join(config.GetHome(), tokenFile)
 }

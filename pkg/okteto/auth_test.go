@@ -29,7 +29,7 @@ func Test_save(t *testing.T) {
 			}
 			defer os.RemoveAll(dir)
 
-			os.Setenv("HOME", dir)
+			os.Setenv("OKTETO_HOME", dir)
 			os.Setenv("OKTETO_TOKEN", "")
 
 			if err := save(tt.token); err != nil {
@@ -79,12 +79,19 @@ func TestSaveMachineID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			currentToken = nil
 			dir, err := ioutil.TempDir("", "")
+			t.Logf("using %s as home", dir)
+
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer os.RemoveAll(dir)
 
-			os.Setenv("HOME", dir)
+			defer func() {
+				if err := os.RemoveAll(dir); err != nil {
+					t.Logf("failed to remove %s: %s", dir, err)
+				}
+			}()
+
+			os.Setenv("OKTETO_HOME", dir)
 			os.Setenv("OKTETO_TOKEN", "")
 
 			if tt.existing != nil {
@@ -92,6 +99,8 @@ func TestSaveMachineID(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
+
+			t.Logf("saved token at %s", getTokenPath())
 
 			if err := SaveMachineID(tt.machineID); err != nil {
 				t.Fatal(err)
@@ -137,9 +146,14 @@ func TestSaveUserID(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer os.RemoveAll(dir)
 
-			os.Setenv("HOME", dir)
+			defer func() {
+				if err := os.RemoveAll(dir); err != nil {
+					t.Logf("failed to remove %s: %s", dir, err)
+				}
+			}()
+
+			os.Setenv("OKTETO_HOME", dir)
 			os.Setenv("OKTETO_TOKEN", "")
 
 			if tt.existing != nil {
@@ -151,6 +165,8 @@ func TestSaveUserID(t *testing.T) {
 			if err := SaveID(tt.userID); err != nil {
 				t.Fatal(err)
 			}
+
+			t.Logf("saved token at %s", getTokenPath())
 
 			token, err := getToken()
 			if err != nil {
