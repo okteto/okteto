@@ -13,7 +13,7 @@ type languageDefault struct {
 	path            string
 	command         []string
 	environment     []model.EnvVar
-	volumes         []string
+	volumes         []model.Volume
 	forward         []model.Forward
 	securityContext *model.SecurityContext
 }
@@ -48,9 +48,13 @@ func init() {
 		image:   "okteto/golang:1",
 		path:    "/okteto",
 		command: []string{"bash"},
-		volumes: []string{
-			"/go/pkg/",
-			"/root/.cache/go-build/",
+		volumes: []model.Volume{
+			{
+				MountPath: "/go/pkg/",
+			},
+			{
+				MountPath: "/root/.cache/go-build/",
+			},
 		},
 		securityContext: &model.SecurityContext{
 			Capabilities: &model.Capabilities{
@@ -79,7 +83,11 @@ func init() {
 		image:   "okteto/gradle:latest",
 		path:    "/okteto",
 		command: []string{"bash"},
-		volumes: []string{"/home/gradle/.gradle"},
+		volumes: []model.Volume{
+			{
+				MountPath: "/home/gradle/.gradle",
+			},
+		},
 		forward: []model.Forward{
 			{
 				Local:  8080,
@@ -96,7 +104,11 @@ func init() {
 		image:   "okteto/maven:latest",
 		path:    "/okteto",
 		command: []string{"bash"},
-		volumes: []string{"/root/.m2"},
+		volumes: []model.Volume{
+			{
+				MountPath: "/root/.m2",
+			},
+		},
 		forward: []model.Forward{
 			{
 				Local:  8080,
