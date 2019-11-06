@@ -6,6 +6,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -21,6 +22,7 @@ import (
 func Down() *cobra.Command {
 	var devPath string
 	var namespace string
+	var rm bool
 
 	cmd := &cobra.Command{
 		Use:   "down",
@@ -44,6 +46,14 @@ func Down() *cobra.Command {
 
 			log.Success("Development environment deactivated")
 
+			if rm {
+				if err := cleanVolume(dev); err != nil {
+					analytics.TrackDown(config.VersionString, false)
+					return err
+				}
+				log.Success("Persistent volume cleaned")
+			}
+
 			log.Println()
 
 			analytics.TrackDown(config.VersionString, true)
@@ -53,6 +63,7 @@ func Down() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
+	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd
 }
@@ -145,6 +156,34 @@ func removeVolumes(dev *model.Dev) error {
 		}
 	}
 
+	return nil
+}
+
+func cleanVolume(dev *model.Dev) error {
+	spinner := newSpinner("Cleaning volume...")
+	spinner.start()
+	defer spinner.stop()
+
+	client, _, namespace, err := k8Client.GetLocal()
+	if err != nil {
+		return err
+	}
+	if dev.Namespace == "" {
+		dev.Namespace = namespace
+	}
+
+	exists, err := volumes.Exists(dev.Namespace, client)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return nil
+	}
+
+	if err := pods.RunCleanerPod(dev, client); err != nil {
+		return err
+	}
 	return nil
 }
 

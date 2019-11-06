@@ -37,6 +37,19 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error 
 	return nil
 }
 
+//Exists check if the okteto volume exists
+func Exists(namespace string, c *kubernetes.Clientset) (bool, error) {
+	vClient := c.CoreV1().PersistentVolumeClaims(namespace)
+	k8Volume, err := vClient.Get(oktetoVolumeName, metav1.GetOptions{})
+	if err != nil && !strings.Contains(err.Error(), "not found") {
+		return false, fmt.Errorf("error getting kubernetes volume claim: %s", err)
+	}
+	if k8Volume.Name == "" {
+		return false, nil
+	}
+	return true, nil
+}
+
 //Destroy destroys the volume claim for a given dev environment
 func Destroy(name string, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
