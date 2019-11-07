@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	kexec "k8s.io/kubernetes/pkg/kubectl/cmd/exec"
+	"github.com/okteto/okteto/pkg/log"
 )
 
 // Exec executes the command in the dev environment container
@@ -68,6 +69,7 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 
 	if err := t.Safe(fn); err != nil {
 		if strings.Contains(err.Error(), "exit code 130") {
+			log.Debug("process terminated with a ctrl+C: %s", err)
 			return nil
 		}
 

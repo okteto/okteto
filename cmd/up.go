@@ -265,6 +265,8 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 				log.Infof("Command execution error: %s", err)
 				return errors.ErrCommandFailed
 			}
+
+			log.Info("Command finished execution without any errors")
 			return nil
 
 		case err := <-up.ErrChan:
