@@ -35,8 +35,8 @@ func Down() *cobra.Command {
 				return err
 			}
 
-			if namespace != "" {
-				dev.Namespace = namespace
+			if err := dev.UpdateNamespace(namespace); err != nil {
+				return err
 			}
 
 			if err := runDown(dev); err != nil {

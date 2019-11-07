@@ -90,8 +90,8 @@ func Up() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if namespace != "" {
-				dev.Namespace = namespace
+			if err := dev.UpdateNamespace(namespace); err != nil {
+				return err
 			}
 
 			err = RunUp(dev, remote)

@@ -33,8 +33,8 @@ func Exec() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if namespace != "" {
-				dev.Namespace = namespace
+			if err := dev.UpdateNamespace(namespace); err != nil {
+				return err
 			}
 			err = executeExec(ctx, dev, args)
 			analytics.TrackExec(dev.Image, config.VersionString, err == nil)

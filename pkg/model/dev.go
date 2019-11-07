@@ -398,6 +398,18 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationR
 	return rule
 }
 
+//UpdateNamespace updates the dev namespace
+func (dev *Dev) UpdateNamespace(namespace string) error {
+	if namespace == "" {
+		return nil
+	}
+	if dev.Namespace != "" && dev.Namespace != namespace {
+		return fmt.Errorf("the namespace in the okteto manifest '%s' does not match the namespace '%s'", dev.Namespace, namespace)
+	}
+	dev.Namespace = namespace
+	return nil
+}
+
 //GevSandbox returns a deployment sandbox
 func (dev *Dev) GevSandbox() *appsv1.Deployment {
 	if dev.Image == "" {
