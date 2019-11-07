@@ -159,6 +159,7 @@ func (up *UpContext) Activate() {
 		up.Exit <- err
 		return
 	}
+
 	if up.Dev.Namespace == "" {
 		up.Dev.Namespace = namespace
 	}
@@ -204,9 +205,7 @@ func (up *UpContext) Activate() {
 		if isTerm {
 			log.Debug("Restoring terminal")
 			if err := term.RestoreTerminal(inFd, state); err != nil {
-				log.Debugf("failed to restore terminal: %s", err)
-			} else {
-				log.Debug("Terminal restored")
+				log.Infof("failed to restore terminal: %s", err)
 			}
 		}
 
