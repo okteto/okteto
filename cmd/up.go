@@ -130,6 +130,7 @@ func RunUp(dev *model.Dev, remote int) error {
 		if err == nil {
 			log.Debugf("exit signal received, starting shutdown sequence")
 		} else {
+			log.Infof("operation failed: %s", err)
 			up.updateStateFile(failed)
 			return err
 		}
@@ -158,6 +159,7 @@ func (up *UpContext) Activate() {
 		up.Exit <- err
 		return
 	}
+
 	if up.Dev.Namespace == "" {
 		up.Dev.Namespace = namespace
 	}
@@ -203,9 +205,7 @@ func (up *UpContext) Activate() {
 		if isTerm {
 			log.Debug("Restoring terminal")
 			if err := term.RestoreTerminal(inFd, state); err != nil {
-				log.Debugf("failed to restore terminal: %s", err)
-			} else {
-				log.Debug("Terminal restored")
+				log.Infof("failed to restore terminal: %s", err)
 			}
 		}
 
@@ -264,6 +264,8 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 				log.Infof("Command execution error: %s", err)
 				return errors.ErrCommandFailed
 			}
+
+			log.Info("Command finished execution without any errors")
 			return nil
 
 		case err := <-up.ErrChan:
