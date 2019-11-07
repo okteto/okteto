@@ -434,7 +434,7 @@ func (up *UpContext) startLocalSyncthing() error {
 	if err := up.Sy.WaitForPing(up.Context, false); err != nil {
 		return errors.UserError{
 			E:    fmt.Errorf("Failed to connect to the synchronization service"),
-			Hint: fmt.Sprintf("If you are using a non-root container, run 'okteto down -v' and set the fields securityContext.runAsUser, securityContext.runAsGroup and securityContext.fsGroup in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional)."),
+			Hint: fmt.Sprintf("If you are using a non-root container, set the securityContext.runAsUser, securityContext.runAsGroup and securityContext.fsGroup fields in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional).\n    Run 'okteto down -v' to reset the synchronization service and try again."),
 		}
 	}
 

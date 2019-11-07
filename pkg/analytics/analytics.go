@@ -20,6 +20,7 @@ const (
 
 	upEvent              = "Up"
 	downEvent            = "Down"
+	downVolumesEvent     = "DownVolumes"
 	loginEvent           = "Login"
 	initEvent            = "Create Manifest"
 	namespaceEvent       = "Namespace"
@@ -81,6 +82,11 @@ func TrackExec(image, version string, success bool) {
 // TrackDown sends a tracking event to mixpanel when the user deactivates a development environment
 func TrackDown(version string, success bool) {
 	track(downEvent, version, "", success)
+}
+
+// TrackDownVolumes sends a tracking event to mixpanel when the user deactivates a development environment and its volumes
+func TrackDownVolumes(version string, success bool) {
+	track(downVolumesEvent, version, "", success)
 }
 
 func trackDisable(version string, success bool) {

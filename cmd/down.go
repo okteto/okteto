@@ -48,10 +48,11 @@ func Down() *cobra.Command {
 
 			if rm {
 				if err := cleanVolume(dev); err != nil {
-					analytics.TrackDown(config.VersionString, false)
+					analytics.TrackDownVolumes(config.VersionString, false)
 					return err
 				}
 				log.Success("Persistent volume cleaned")
+				analytics.TrackDownVolumes(config.VersionString, true)
 			}
 
 			log.Println()
@@ -160,7 +161,7 @@ func removeVolumes(dev *model.Dev) error {
 }
 
 func cleanVolume(dev *model.Dev) error {
-	spinner := newSpinner("Cleaning volume...")
+	spinner := newSpinner("Cleaning persistent volume...")
 	spinner.start()
 	defer spinner.stop()
 

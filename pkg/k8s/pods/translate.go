@@ -3,6 +3,7 @@ package pods
 import (
 	"fmt"
 
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -18,10 +19,27 @@ func translate(dev *model.Dev) *apiv1.Pod {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("volume-cleaner-%s", dev.Name),
 			Namespace: dev.Namespace,
+			Labels: map[string]string{
+				okLabels.DevLabel: "true",
+			},
 		},
 		Spec: apiv1.PodSpec{
 			TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 			RestartPolicy:                 apiv1.RestartPolicyNever,
+			Affinity: &apiv1.Affinity{
+				PodAffinity: &apiv1.PodAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+						{
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									okLabels.DevLabel: "true",
+								},
+							},
+							TopologyKey: "kubernetes.io/hostname",
+						},
+					},
+				},
+			},
 			Containers: []apiv1.Container{
 				{
 					Name:            "volume-cleaner",
