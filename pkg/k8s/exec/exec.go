@@ -69,7 +69,7 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 
 	if err := t.Safe(fn); err != nil {
 		if strings.Contains(err.Error(), "exit code 130") {
-			log.Debug("process terminated with a ctrl+C: %s", err)
+			log.Debugf("process terminated with a ctrl+C: %s", err)
 			return nil
 		}
 
