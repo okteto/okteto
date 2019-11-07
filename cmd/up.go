@@ -130,6 +130,7 @@ func RunUp(dev *model.Dev, remote int) error {
 		if err == nil {
 			log.Debugf("exit signal received, starting shutdown sequence")
 		} else {
+			log.Infof("operation failed: %s", err)
 			up.updateStateFile(failed)
 			return err
 		}
