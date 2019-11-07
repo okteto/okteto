@@ -129,7 +129,9 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 			log.Infof("pod %s event: %s", pod.Name, e.Message)
 			switch e.Reason {
 			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
-				return nil, fmt.Errorf(e.Message)
+				if !strings.HasPrefix(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
+					return nil, fmt.Errorf(e.Message)
+				}
 			case "FailedAttachVolume", "FailedMount":
 				reporter <- fmt.Sprintf("%s: retrying", e.Message)
 			default:
