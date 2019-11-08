@@ -56,6 +56,7 @@ func main() {
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
+	root.AddCommand(cmd.Build())
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.Delete(ctx))
 	root.AddCommand(namespace.Namespace(ctx))
