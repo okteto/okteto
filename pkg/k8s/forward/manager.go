@@ -28,7 +28,7 @@ type PortForwardManager struct {
 }
 
 // NewPortForwardManager initializes a new instance
-func NewPortForwardManager(ctx context.Context, restConfig *rest.Config, c *kubernetes.Clientset, errchan chan error) *PortForwardManager {
+func NewPortForwardManager(ctx context.Context, restConfig *rest.Config, c *kubernetes.Clientset) *PortForwardManager {
 	return &PortForwardManager{
 		ctx:          ctx,
 		portForwards: make(map[int]int),

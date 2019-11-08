@@ -381,7 +381,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 	up.Pod = pod.Name
 	go up.cleanCommand()
 
-	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client, up.ErrChan)
+	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
 	for _, f := range up.Dev.Forward {
 		if err := up.Forwarder.Add(f.Local, f.Remote); err != nil {
 			return err

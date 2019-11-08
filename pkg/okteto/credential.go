@@ -33,3 +33,13 @@ func GetCredentials(ctx context.Context, namespace string) (*Credential, error) 
 
 	return &cred.Credentials, nil
 }
+
+// GetOkteoInternalNamespace returns the okteto internal namepsace of the current user
+func GetOkteoInternalNamespace(ctx context.Context) (string, error) {
+	cred, err := GetCredentials(ctx, "")
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s-okteto", cred.Namespace), nil
+}

@@ -11,14 +11,21 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/forward"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/spf13/cobra"
 )
 
 const (
-	frontend = "dockerfile.v0"
+	frontend          = "dockerfile.v0"
+	buildKitContainer = "buildkit-0"
+	buildKitPort      = 1234
 )
 
 //Build build and optionally push a Docker image
@@ -55,9 +62,9 @@ func Build() *cobra.Command {
 func RunBuild(path, file, tag, target string, noCache bool) error {
 	ctx := context.Background()
 
-	buildKitHost := os.Getenv("BUILDKIT_HOST")
-	if buildKitHost == "" {
-		return fmt.Errorf("The variable 'BUILDKIT_HOST' is not defined")
+	buildKitHost, err := getBuildKitHost()
+	if err != nil {
+		return err
 	}
 
 	c, err := client.New(ctx, buildKitHost, client.WithFailFast())
@@ -93,6 +100,46 @@ func RunBuild(path, file, tag, target string, noCache bool) error {
 	}
 
 	return nil
+}
+
+func getBuildKitHost() (string, error) {
+	buildKitHost := os.Getenv("BUILDKIT_HOST")
+	if buildKitHost != "" {
+		return buildKitHost, nil
+	}
+
+	c, restConfig, namespace, err := k8Client.GetLocal()
+	if err != nil {
+		return "", fmt.Errorf("The variable 'BUILDKIT_HOST' is not defined and current namespace cannot be queried: %s", err)
+	}
+	ns, err := namespaces.Get(namespace, c)
+	if err != nil {
+		return "", fmt.Errorf("The variable 'BUILDKIT_HOST' is not defined and current namespace cannot be queried: %s", err)
+	}
+
+	if !namespaces.IsOktetoNamespace(ns) {
+		return "", fmt.Errorf("The variable 'BUILDKIT_HOST' is not defined")
+	}
+
+	ctx := context.Background()
+	internalNamespace, err := okteto.GetOkteoInternalNamespace(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	localPort, err := model.GetAvailablePort()
+	if err != nil {
+		return "", err
+	}
+
+	forwarder := forward.NewPortForwardManager(ctx, restConfig, c)
+	if err := forwarder.Add(localPort, buildKitPort); err != nil {
+		return "", err
+	}
+	if err := forwarder.Start(buildKitContainer, internalNamespace); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("tcp://localhost:%d", localPort), nil
 }
 
 func getSolveOpt(buildCtx, file, tag, target string, noCache bool) (*client.SolveOpt, error) {
