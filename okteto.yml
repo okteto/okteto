@@ -1,0 +1,6 @@
+name: cli
+image: okteto/golang:1
+command: [ "bash" ]
+volumes:
+  - /go/pkg/
+  - /root/.cache/go-build/
