@@ -59,5 +59,8 @@ func GetOktetoInternalNamespaceClient(ctx context.Context) (*kubernetes.Clientse
 	}
 	os.Setenv("KUBECONFIG", file.Name())
 	c, restConfig, _, err := client.GetLocal()
+	if err != nil {
+		return nil, nil, "", err
+	}
 	return c, restConfig, internalNamespace, nil
 }
