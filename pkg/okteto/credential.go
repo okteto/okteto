@@ -3,6 +3,12 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+
+	"github.com/okteto/okteto/pkg/k8s/client"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 // Credentials top body answer
@@ -34,12 +40,24 @@ func GetCredentials(ctx context.Context, namespace string) (*Credential, error) 
 	return &cred.Credentials, nil
 }
 
-// GetOkteoInternalNamespace returns the okteto internal namepsace of the current user
-func GetOkteoInternalNamespace(ctx context.Context) (string, error) {
+// GetOktetoInternalNamespaceClient returns a k8s client to the okteto internal namepsace
+func GetOktetoInternalNamespaceClient(ctx context.Context) (*kubernetes.Clientset, *rest.Config, string, error) {
 	cred, err := GetCredentials(ctx, "")
 	if err != nil {
-		return "", err
+		return nil, nil, "", err
 	}
+	internalNamespace := fmt.Sprintf("%s-okteto", cred.Namespace)
 
-	return fmt.Sprintf("%s-okteto", cred.Namespace), nil
+	file, err := ioutil.TempFile("", "okteto")
+	if err != nil {
+		return nil, nil, "", err
+	}
+	defer os.Remove(file.Name())
+
+	if err := SetKubeConfig(cred, file.Name(), internalNamespace, GetUserID(), "okteto"); err != nil {
+		return nil, nil, "", err
+	}
+	os.Setenv("KUBECONFIG", file.Name())
+	c, restConfig, _, err := client.GetLocal()
+	return c, restConfig, internalNamespace, nil
 }

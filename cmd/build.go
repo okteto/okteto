@@ -11,9 +11,9 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/forward"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -40,8 +40,12 @@ func Build() *cobra.Command {
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting build command")
-			err := RunBuild(args[0], file, tag, target, noCache)
-			return err
+			if err := RunBuild(args[0], file, tag, target, noCache); err != nil {
+				analytics.TrackBuild(config.VersionString, false)
+				return err
+			}
+			analytics.TrackBuild(config.VersionString, true)
+			return nil
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
@@ -52,7 +56,7 @@ func Build() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&file, "file", "f", "", "name of the Dockerfile (Default is 'PATH/Dockerfile')")
-	cmd.Flags().StringVarP(&tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically) pushed")
+	cmd.Flags().StringVarP(&tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
 	cmd.Flags().StringVarP(&target, "target", "", "", "set the target build stage to build")
 	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
 	return cmd
@@ -108,23 +112,10 @@ func getBuildKitHost() (string, error) {
 		return buildKitHost, nil
 	}
 
-	c, restConfig, namespace, err := k8Client.GetLocal()
-	if err != nil {
-		return "", fmt.Errorf("The variable 'BUILDKIT_HOST' is not defined and current namespace cannot be queried: %s", err)
-	}
-	ns, err := namespaces.Get(namespace, c)
-	if err != nil {
-		return "", fmt.Errorf("The variable 'BUILDKIT_HOST' is not defined and current namespace cannot be queried: %s", err)
-	}
-
-	if !namespaces.IsOktetoNamespace(ns) {
-		return "", fmt.Errorf("The variable 'BUILDKIT_HOST' is not defined")
-	}
-
 	ctx := context.Background()
-	internalNamespace, err := okteto.GetOkteoInternalNamespace(ctx)
+	c, restConfig, namespace, err := okteto.GetOktetoInternalNamespaceClient(ctx)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("The variable 'BUILDKIT_HOST' is not defined and Okteto cannot be queried: %s", err)
 	}
 
 	localPort, err := model.GetAvailablePort()
@@ -136,7 +127,7 @@ func getBuildKitHost() (string, error) {
 	if err := forwarder.Add(localPort, buildKitPort); err != nil {
 		return "", err
 	}
-	if err := forwarder.Start(buildKitContainer, internalNamespace); err != nil {
+	if err := forwarder.Start(buildKitContainer, namespace); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("tcp://localhost:%d", localPort), nil

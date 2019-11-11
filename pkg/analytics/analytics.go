@@ -21,6 +21,7 @@ const (
 	upEvent              = "Up"
 	downEvent            = "Down"
 	downVolumesEvent     = "DownVolumes"
+	buildEvent           = "Build"
 	loginEvent           = "Login"
 	initEvent            = "Create Manifest"
 	namespaceEvent       = "Namespace"
@@ -91,6 +92,11 @@ func TrackDownVolumes(version string, success bool) {
 
 func trackDisable(version string, success bool) {
 	track(disableEvent, version, "", success)
+}
+
+// TrackBuild sends a tracking event to mixpanel when the user builds on remote
+func TrackBuild(version string, success bool) {
+	track(buildEvent, version, "", success)
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
