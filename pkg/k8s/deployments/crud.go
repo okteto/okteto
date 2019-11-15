@@ -70,7 +70,7 @@ func GetRevisionAnnotatedDeploymentOrFailed(dev *model.Dev, c *kubernetes.Client
 		}
 	}
 
-	if d.Annotations[revisionAnnotation] == "" {
+	if d.Generation != d.Status.ObservedGeneration {
 		return nil, nil
 	}
 
