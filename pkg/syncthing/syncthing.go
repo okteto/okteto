@@ -345,7 +345,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 		select {
 		case <-ticker.C:
 			if prevNeedBytes == completion.NeedBytes {
-				if needZeroBytesIter >= 50 {
+				if needZeroBytesIter >= 120 {
 					return errors.ErrSyncFrozen
 				}
 
