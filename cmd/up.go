@@ -187,6 +187,11 @@ func (up *UpContext) Activate() {
 
 		err = up.sync()
 		if err != nil {
+			if !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
+				log.Yellow("\nConnection lost to your development environment, reconnecting...\n")
+				up.shutdown()
+				continue
+			}
 			up.Exit <- err
 			return
 		}
