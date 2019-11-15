@@ -304,7 +304,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 	params := map[string]string{"folder": folder}
 	status := &Status{}
 	log.Infof("waiting for initial scan to complete...")
-	for i := 0; i < 480; i++ {
+	for i := 0; i < 1200; i++ {
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -328,7 +328,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 			return nil
 		}
 	}
-	return fmt.Errorf("Syncthing not completed initial scan after 2min. Please, retry in a few minutes")
+	return fmt.Errorf("Syncthing not completed initial scan after 5min. Please, retry in a few minutes")
 }
 
 // WaitForCompletion waits for the remote to be totally synched
