@@ -174,8 +174,8 @@ func askForLanguage() (string, error) {
 	return supportedLanguages[i], nil
 }
 
-func getDeploymentName(name string) string {
-	deploymentName := filepath.Base(name)
+func getDeploymentName(workDir string) string {
+	deploymentName := filepath.Base(workDir)
 	deploymentName = strings.ToLower(deploymentName)
 	deploymentName = model.ValidKubeNameRegex.ReplaceAllString(deploymentName, "-")
 	log.Infof("deployment name: %s", deploymentName)
