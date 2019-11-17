@@ -98,7 +98,7 @@ func executeInit(devPath string, overwrite bool) error {
 		dev.Image = askForImage(language, dev.Image)
 	}
 
-	dev.Name = getDeploymentName(filepath.Base(workDir))
+	dev.Name = getDeploymentName(workDir)
 
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
