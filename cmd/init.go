@@ -66,7 +66,7 @@ func executeInit(devPath string, overwrite bool) error {
 		}
 	}
 
-	root, err := os.Getwd()
+	workDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func executeInit(devPath string, overwrite bool) error {
 		dev = linguist.GetDevConfig(l)
 		language = l
 	} else {
-		l, err := linguist.ProcessDirectory(root)
+		l, err := linguist.ProcessDirectory(workDir)
 		if err != nil {
 			log.Info(err)
 			return fmt.Errorf("Failed to determine the language of the current directory")
@@ -98,7 +98,7 @@ func executeInit(devPath string, overwrite bool) error {
 		dev.Image = askForImage(language, dev.Image)
 	}
 
-	dev.Name = getDeploymentName(filepath.Base(root))
+	dev.Name = getDeploymentName(filepath.Base(workDir))
 
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
