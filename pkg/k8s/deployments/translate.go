@@ -199,6 +199,14 @@ func TranslateResources(c *apiv1.Container, r model.ResourceRequirements) {
 		c.Resources.Requests[apiv1.ResourceCPU] = v
 	}
 
+	if v, ok := r.Requests[model.ResourceAMDGPU]; ok {
+		c.Resources.Requests[model.ResourceAMDGPU] = v
+	}
+
+	if v, ok := r.Requests[model.ResourceNVIDIAGPU]; ok {
+		c.Resources.Requests[model.ResourceNVIDIAGPU] = v
+	}
+
 	if c.Resources.Limits == nil {
 		c.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity)
 	}
@@ -209,6 +217,14 @@ func TranslateResources(c *apiv1.Container, r model.ResourceRequirements) {
 
 	if v, ok := r.Limits[apiv1.ResourceCPU]; ok {
 		c.Resources.Limits[apiv1.ResourceCPU] = v
+	}
+
+	if v, ok := r.Limits[model.ResourceAMDGPU]; ok {
+		c.Resources.Limits[model.ResourceAMDGPU] = v
+	}
+
+	if v, ok := r.Limits[model.ResourceNVIDIAGPU]; ok {
+		c.Resources.Limits[model.ResourceNVIDIAGPU] = v
 	}
 }
 
