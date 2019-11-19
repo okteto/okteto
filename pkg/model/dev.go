@@ -38,6 +38,11 @@ const (
 
 	//TranslationVersion version of the translation schema
 	TranslationVersion = "1.0"
+
+	//ResourceAMDGPU amd.com/gpu resource
+	ResourceAMDGPU apiv1.ResourceName = "amd.com/gpu"
+	//ResourceNVIDIAGPU nvidia.com/gpu resource
+	ResourceNVIDIAGPU apiv1.ResourceName = "nvidia.com/gpu"
 )
 
 var (

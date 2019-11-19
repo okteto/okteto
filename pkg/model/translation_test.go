@@ -5,6 +5,7 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
 func TestDevToTranslationRule(t *testing.T) {
@@ -16,6 +17,12 @@ imagePullPolicy: Never
 volumes:
   - sub:/path
 mountpath: /app
+resources:
+  limits:
+    cpu: 2
+    memory: 1Gi
+    nvidia.com/gpu: 1
+    amd.com/gpu: 1
 services:
   - name: worker
     container: dev
@@ -47,7 +54,12 @@ services:
 			},
 		},
 		Resources: ResourceRequirements{
-			Limits:   ResourceList{},
+			Limits: ResourceList{
+				"cpu":            resource.MustParse("2"),
+				"memory":         resource.MustParse("1Gi"),
+				"nvidia.com/gpu": resource.MustParse("1"),
+				"amd.com/gpu":    resource.MustParse("1"),
+			},
 			Requests: ResourceList{},
 		},
 		Volumes: []VolumeMount{

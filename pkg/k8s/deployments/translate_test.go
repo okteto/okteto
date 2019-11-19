@@ -28,6 +28,12 @@ securityContext:
   fsGroup: 102
 volumes:
   - sub:/path
+resources:
+  limits:
+    cpu: 2
+    memory: 1Gi
+    nvidia.com/gpu: 1
+    amd.com/gpu: 1
 services:
   - name: worker
     container: dev
@@ -129,6 +135,14 @@ services:
 								{
 									Name:  "OKTETO_MARKER_PATH",
 									Value: "/app/okteto.yml",
+								},
+							},
+							Resources: apiv1.ResourceRequirements{
+								Limits: apiv1.ResourceList{
+									"cpu":            resource.MustParse("2"),
+									"memory":         resource.MustParse("1Gi"),
+									"nvidia.com/gpu": resource.MustParse("1"),
+									"amd.com/gpu":    resource.MustParse("1"),
 								},
 							},
 							VolumeMounts: []apiv1.VolumeMount{
