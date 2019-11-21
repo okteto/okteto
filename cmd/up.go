@@ -65,6 +65,7 @@ func Up() *cobra.Command {
 	var devPath string
 	var namespace string
 	var remote int
+	var autoDeploy bool
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your development environment",
@@ -94,7 +95,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			err = RunUp(dev, remote)
+			err = RunUp(dev, remote, autoDeploy)
 			return err
 		},
 	}
@@ -102,11 +103,12 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
+	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
 	return cmd
 }
 
 //RunUp starts the up sequence
-func RunUp(dev *model.Dev, remote int) error {
+func RunUp(dev *model.Dev, remote int, autoDeploy bool) error {
 	up := &UpContext{
 		Dev:        dev,
 		Exit:       make(chan error, 1),
@@ -121,7 +123,7 @@ func RunUp(dev *model.Dev, remote int) error {
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	go up.Activate()
+	go up.Activate(autoDeploy)
 	select {
 	case <-stop:
 		log.Debugf("CTRL+C received, starting shutdown sequence")
@@ -139,7 +141,7 @@ func RunUp(dev *model.Dev, remote int) error {
 }
 
 // Activate activates the dev environment
-func (up *UpContext) Activate() {
+func (up *UpContext) Activate(autoDeploy bool) {
 	retry := false
 	var state *term.State
 	inFd, isTerm := term.GetFdInfo(os.Stdin)
@@ -171,7 +173,7 @@ func (up *UpContext) Activate() {
 		up.ErrChan = make(chan error, 1)
 		up.cleaned = make(chan struct{}, 1)
 
-		d, create, err := up.getCurrentDeployment(retry)
+		d, create, err := up.getCurrentDeployment(retry, autoDeploy)
 		if err != nil {
 			up.Exit <- err
 			return
@@ -227,7 +229,7 @@ func (up *UpContext) Activate() {
 	}
 }
 
-func (up *UpContext) getCurrentDeployment(retry bool) (*appsv1.Deployment, bool, error) {
+func (up *UpContext) getCurrentDeployment(retry bool, autoDeploy bool) (*appsv1.Deployment, bool, error) {
 	d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
 		return d, false, nil
@@ -246,6 +248,7 @@ func (up *UpContext) getCurrentDeployment(retry bool) (*appsv1.Deployment, bool,
 	}
 
 	_, deploy := os.LookupEnv("OKTETO_AUTODEPLOY")
+	deploy = deploy || autoDeploy
 	if !deploy {
 		deploy = askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
 	}
