@@ -21,20 +21,11 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", 2)
 	e.Name = parts[0]
 	if len(parts) == 2 {
-		if strings.HasPrefix(parts[1], "$") {
-			e.Value = os.ExpandEnv(parts[1])
-			return nil
-		}
-
-		e.Value = parts[1]
+		e.Value = os.ExpandEnv(parts[1])
 		return nil
 	}
 
-	val := os.ExpandEnv(parts[0])
-	if val != parts[0] {
-		e.Value = val
-	}
-
+	e.Name = os.ExpandEnv(parts[0])
 	return nil
 }
 

@@ -25,19 +25,39 @@ func TestEnvVarMashalling(t *testing.T) {
 			EnvVar{Name: "env", Value: "'production=11231231asa#$˜GADAFA'"},
 		},
 		{
-			"key-value-os",
+			"key-value-with-env-var",
 			[]byte(`env=$DEV_ENV`),
 			EnvVar{Name: "env", Value: "test_environment"},
 		},
 		{
-			"no-value-no-os",
+			"key-value-with-env-var-in-string",
+			[]byte(`env=my_env;$DEV_ENV;prod`),
+			EnvVar{Name: "env", Value: "my_env;test_environment;prod"},
+		},
+		{
+			"simple-key",
 			[]byte(`noenv`),
 			EnvVar{Name: "noenv", Value: ""},
 		},
 		{
-			"no-value-no-os-equal",
+			"key-with-no-value",
 			[]byte(`noenv=`),
 			EnvVar{Name: "noenv", Value: ""},
+		},
+		{
+			"key-with-env-var-not-defined",
+			[]byte(`noenv=$UNDEFINED`),
+			EnvVar{Name: "noenv", Value: ""},
+		},
+		{
+			"just-env-var",
+			[]byte(`$DEV_ENV`),
+			EnvVar{Name: "test_environment", Value: ""},
+		},
+		{
+			"just-env-var-undefined",
+			[]byte(`$UNDEFINED`),
+			EnvVar{Name: "", Value: ""},
 		},
 	}
 
