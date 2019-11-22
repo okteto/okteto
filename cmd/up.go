@@ -66,6 +66,7 @@ func Up() *cobra.Command {
 	var namespace string
 	var remote int
 	var autoDeploy bool
+	var forcePull bool
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your development environment",
@@ -95,7 +96,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			err = RunUp(dev, remote, autoDeploy)
+			err = RunUp(dev, remote, autoDeploy, forcePull)
 			return err
 		},
 	}
@@ -104,11 +105,12 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
+	cmd.Flags().BoolVarP(&forcePull, "pull", "", false, "force dev image pull")
 	return cmd
 }
 
 //RunUp starts the up sequence
-func RunUp(dev *model.Dev, remote int, autoDeploy bool) error {
+func RunUp(dev *model.Dev, remote int, autoDeploy bool, forcePull bool) error {
 	up := &UpContext{
 		Dev:        dev,
 		Exit:       make(chan error, 1),
@@ -119,6 +121,10 @@ func RunUp(dev *model.Dev, remote int, autoDeploy bool) error {
 
 	if up.remoteModeEnabled() {
 		dev.LoadRemote(int(remote))
+	}
+
+	if forcePull {
+		dev.LoadForcePull()
 	}
 
 	stop := make(chan os.Signal, 1)

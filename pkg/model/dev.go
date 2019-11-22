@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
+	uuid "github.com/satori/go.uuid"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -29,6 +30,8 @@ const (
 	OktetoVolumeName = "okteto"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
+	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
+	OktetoRestartAnnotation = "dev.okteto.com/restart"
 
 	//OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"
@@ -288,6 +291,18 @@ func (dev *Dev) LoadRemote(localPort int) {
 		},
 	)
 	log.Infof("enabled remote mode")
+}
+
+//LoadForcePull force the dev pods to be recreated and pull the latest version of their image
+func (dev *Dev) LoadForcePull() {
+	restartUUID := uuid.NewV4().String()
+	dev.ImagePullPolicy = apiv1.PullAlways
+	dev.Annotations[OktetoRestartAnnotation] = restartUUID
+	for _, s := range dev.Services {
+		s.ImagePullPolicy = apiv1.PullAlways
+		s.Annotations[OktetoRestartAnnotation] = restartUUID
+	}
+	log.Infof("enabled force pull")
 }
 
 //GetStatefulSetName returns the syncthing statefulset name for a given dev environment

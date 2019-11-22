@@ -236,31 +236,63 @@ func Test_LoadRemote(t *testing.T) {
       drop:
       - SYS_NICE
   workdir: /app`)
-	d, err := Read(manifest)
+	dev, err := Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	d.LoadRemote(22100)
+	dev.LoadRemote(22100)
 
-	if d.Command[0] != "/var/okteto/bin/remote" {
-		t.Errorf("remote command wasn't set: %s", d.Command)
+	if dev.Command[0] != "/var/okteto/bin/remote" {
+		t.Errorf("remote command wasn't set: %s", dev.Command)
 	}
 
-	if len(d.Forward) != 2 {
+	if len(dev.Forward) != 2 {
 		t.Errorf("forward wasn't injected")
 	}
 
-	if d.Forward[1].Local != 22100 {
-		t.Errorf("local forward wasn't 22100 it was %d", d.Forward[1].Local)
+	if dev.Forward[1].Local != 22100 {
+		t.Errorf("local forward wasn't 22100 it was %d", dev.Forward[1].Local)
 	}
 
-	if len(d.Environment) != 2 {
+	if len(dev.Environment) != 2 {
 		t.Errorf("Environment value wasn't injected")
 	}
 
-	if d.Environment[1].Name != "OKTETO_REMOTE_PORT" {
-		t.Errorf("injected env var wasn't OKTETO_REMOTE_PORT it was %s", d.Environment[1].Name)
+	if dev.Environment[1].Name != "OKTETO_REMOTE_PORT" {
+		t.Errorf("injected env var wasn't OKTETO_REMOTE_PORT it was %s", dev.Environment[1].Name)
+	}
+}
+
+func Test_LoadForcePull(t *testing.T) {
+	manifest := []byte(`
+  name: a
+  annotations:
+    key1: value1
+  services:
+    - name: b
+      imagePullPolicy: IfNotPresent`)
+	dev, err := Read(manifest)
+	if err != nil {
+		t.Fatal(err)
 	}
 
+	dev.LoadForcePull()
+
+	if dev.ImagePullPolicy != apiv1.PullAlways {
+		t.Errorf("wrong image pull policy for main container: %s", dev.ImagePullPolicy)
+	}
+
+	if dev.Annotations[OktetoRestartAnnotation] == "" {
+		t.Errorf("restart annotation not set for main container")
+	}
+
+	dev = dev.Services[0]
+	if dev.ImagePullPolicy != apiv1.PullAlways {
+		t.Errorf("wrong image pull policy for services: %s", dev.ImagePullPolicy)
+	}
+
+	if dev.Annotations[OktetoRestartAnnotation] == "" {
+		t.Errorf("restart annotation not set for services")
+	}
 }
