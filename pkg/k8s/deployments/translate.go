@@ -72,8 +72,6 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	}
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 
-	TranslatePodUserAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
-
 	commonTranslation(t)
 
 	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
@@ -98,6 +96,7 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 }
 
 func commonTranslation(t *model.Translation) {
+	TranslatePodUserAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.Version)
 	setLabel(t.Deployment.GetObjectMeta(), okLabels.DevLabel, "true")

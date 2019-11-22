@@ -182,12 +182,17 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 			return err
 		}
 		delete(annotations, okLabels.TranslationAnnotation)
+		delete(annotations, model.OktetoRestartAnnotation)
 		d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
 		labels := d.GetObjectMeta().GetLabels()
 		delete(labels, okLabels.DevLabel)
 		delete(labels, okLabels.InteractiveDevLabel)
 		delete(labels, okLabels.DetachedDevLabel)
 		d.GetObjectMeta().SetLabels(labels)
+		labels = d.Spec.Template.GetObjectMeta().GetLabels()
+		delete(labels, okLabels.InteractiveDevLabel)
+		delete(labels, okLabels.DetachedDevLabel)
+		d.Spec.Template.GetObjectMeta().SetLabels(labels)
 	}
 
 	if err := update(d, c); err != nil {

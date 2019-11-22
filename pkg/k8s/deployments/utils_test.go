@@ -1,7 +1,6 @@
 package deployments
 
 import (
-	"reflect"
 	"testing"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -50,8 +49,5 @@ annotations:
 	}
 	if tr1.Replicas != tr2.Replicas {
 		t.Fatal("Mismatching Replicas count between original and unmarshalled translation")
-	}
-	if !reflect.DeepEqual(tr1.Annotations, tr2.Annotations) {
-		t.Fatal("Mismatching Annotations between original and unmarshalled translation")
 	}
 }
