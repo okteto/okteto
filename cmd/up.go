@@ -33,7 +33,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// ReconnectingMessage is the messaged show when we are trying to reconnect
+// ReconnectingMessage is the message shown when we are trying to reconnect
 const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
 // UpContext is the common context of all operations performed during
