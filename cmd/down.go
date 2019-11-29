@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -40,7 +39,7 @@ func Down() *cobra.Command {
 			}
 
 			if err := runDown(dev); err != nil {
-				analytics.TrackDown(config.VersionString, false)
+				analytics.TrackDown(false)
 				return err
 			}
 
@@ -48,16 +47,16 @@ func Down() *cobra.Command {
 
 			if rm {
 				if err := cleanVolume(dev); err != nil {
-					analytics.TrackDownVolumes(config.VersionString, false)
+					analytics.TrackDownVolumes(false)
 					return err
 				}
 				log.Success("Persistent volume cleaned")
-				analytics.TrackDownVolumes(config.VersionString, true)
+				analytics.TrackDownVolumes(true)
 			}
 
 			log.Println()
 
-			analytics.TrackDown(config.VersionString, true)
+			analytics.TrackDown(true)
 			log.Info("completed down command")
 			return nil
 		},

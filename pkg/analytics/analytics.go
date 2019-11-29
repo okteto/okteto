@@ -19,6 +19,9 @@ const (
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
 	upEvent              = "Up"
+	upErrorEvent         = "Up Error"
+	reconnectEvent       = "Reconnect"
+	syncErrorEvent       = "Sync Error"
 	downEvent            = "Down"
 	downVolumesEvent     = "DownVolumes"
 	buildEvent           = "Build"
@@ -51,61 +54,90 @@ func init() {
 }
 
 // TrackInit sends a tracking event to mixpanel when the user creates a manifest
-func TrackInit(language, image, version string, success bool) {
-	track(initEvent, version, image, success)
+func TrackInit(success bool) {
+	track(initEvent, success, nil)
 }
 
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
-func TrackNamespace(version string, success bool) {
-	track(namespaceEvent, version, "", success)
+func TrackNamespace(success bool) {
+	track(namespaceEvent, success, nil)
 }
 
 // TrackCreateNamespace sends a tracking event to mixpanel when the creates a namespace
-func TrackCreateNamespace(version string, success bool) {
-	track(namespaceCreateEvent, version, "", success)
+func TrackCreateNamespace(success bool) {
+	track(namespaceCreateEvent, success, nil)
 }
 
 // TrackDeleteNamespace sends a tracking event to mixpanel when the user deletes a namespace
-func TrackDeleteNamespace(version string, success bool) {
-	track(namespaceDeleteEvent, version, "", success)
+func TrackDeleteNamespace(success bool) {
+	track(namespaceDeleteEvent, success, nil)
+}
+
+// TrackReconnect sends a tracking event to mixpanel when the dev environment reconnect
+func TrackReconnect(success bool, clusterType string, swap bool) {
+	props := map[string]interface{}{
+		"clusterType": clusterType,
+		"swap":        swap,
+	}
+	track(reconnectEvent, success, props)
+}
+
+// TrackSyncError sends a tracking event to mixpanel when the init sync fails
+func TrackSyncError() {
+	track(syncErrorEvent, false, nil)
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development environment
-func TrackUp(image, version string, success bool) {
-	track(upEvent, version, image, success)
+func TrackUp(success bool, dev, clusterType string, single, swap bool) {
+	props := map[string]interface{}{
+		"devEnvironmentName": dev,
+		"clusterType":        clusterType,
+		"singleService":      single,
+		"swap":               swap,
+	}
+	track(upEvent, success, props)
+}
+
+// TrackUpError sends a tracking event to mixpanel when the okteto up command fails
+func TrackUpError(success bool, clusterType string, swap bool) {
+	props := map[string]interface{}{
+		"clusterType": clusterType,
+		"swap":        swap,
+	}
+	track(upErrorEvent, success, props)
 }
 
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
-func TrackExec(image, version string, success bool) {
-	track(execEvent, version, image, success)
+func TrackExec(success bool) {
+	track(execEvent, success, nil)
 }
 
 // TrackDown sends a tracking event to mixpanel when the user deactivates a development environment
-func TrackDown(version string, success bool) {
-	track(downEvent, version, "", success)
+func TrackDown(success bool) {
+	track(downEvent, success, nil)
 }
 
 // TrackDownVolumes sends a tracking event to mixpanel when the user deactivates a development environment and its volumes
-func TrackDownVolumes(version string, success bool) {
-	track(downVolumesEvent, version, "", success)
+func TrackDownVolumes(success bool) {
+	track(downVolumesEvent, success, nil)
 }
 
-func trackDisable(version string, success bool) {
-	track(disableEvent, version, "", success)
+func trackDisable(success bool) {
+	track(disableEvent, success, nil)
 }
 
 // TrackBuild sends a tracking event to mixpanel when the user builds on remote
-func TrackBuild(version string, success bool) {
-	track(buildEvent, version, "", success)
+func TrackBuild(success bool) {
+	track(buildEvent, success, nil)
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(name, email, oktetoID, githubID, version string, success bool) {
+func TrackLogin(success bool, name, email, oktetoID, githubID string) {
 	if !isEnabled() {
 		return
 	}
 
-	track(loginEvent, version, "", success)
+	track(loginEvent, success, nil)
 	if len(name) == 0 {
 		name = githubID
 	}
@@ -124,15 +156,15 @@ func TrackLogin(name, email, oktetoID, githubID, version string, success bool) {
 }
 
 // TrackSignup sends a tracking event to mixpanel when the user signs up
-func TrackSignup(userID, version string, success bool) {
+func TrackSignup(success bool, userID string) {
 	if err := mixpanelClient.Alias(getMachineID(), userID); err != nil {
 		log.Errorf("failed to alias %s to %s", getMachineID(), userID)
 	}
 
-	track(signupEvent, version, "", success)
+	track(signupEvent, success, nil)
 }
 
-func track(event, version, image string, success bool) {
+func track(event string, success bool, props map[string]interface{}) {
 	if isEnabled() {
 		mpOS := ""
 		switch runtime.GOOS {
@@ -149,18 +181,17 @@ func track(event, version, image string, success bool) {
 			origin = "cli"
 		}
 
-		e := &mixpanel.Event{
-			Properties: map[string]interface{}{
-				"$os":               mpOS,
-				"version":           version,
-				"$referring_domain": okteto.GetURL(),
-				"image":             image,
-				"machine_id":        getMachineID(),
-				"origin":            origin,
-				"success":           success,
-			},
+		if props == nil {
+			props = map[string]interface{}{}
 		}
+		props["$os"] = mpOS
+		props["version"] = config.VersionString
+		props["$referring_domain"] = okteto.GetURL()
+		props["machine_id"] = getMachineID()
+		props["origin"] = origin
+		props["success"] = success
 
+		e := &mixpanel.Event{Properties: props}
 		trackID := getTrackID()
 		if err := mixpanelClient.Track(trackID, event, e); err != nil {
 			log.Infof("Failed to send analytics: %s", err)
@@ -177,17 +208,16 @@ func getFlagPath() string {
 // Disable disables analytics
 func Disable(version string) error {
 	var _, err = os.Stat(getFlagPath())
+	trackDisable(true)
 	if os.IsNotExist(err) {
 		var file, err = os.Create(getFlagPath())
 		if err != nil {
-			trackDisable(version, false)
+			trackDisable(false)
 			return err
 		}
 
 		defer file.Close()
 	}
-
-	trackDisable(version, true)
 	return nil
 }
 

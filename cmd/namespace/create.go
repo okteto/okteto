@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -19,7 +18,7 @@ func Create(ctx context.Context) *cobra.Command {
 		Short: fmt.Sprintf("Creates a namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := executeCreateNamespace(ctx, args[0])
-			analytics.TrackCreateNamespace(config.VersionString, err == nil)
+			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},
 		Args: func(cmd *cobra.Command, args []string) error {

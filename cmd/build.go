@@ -12,7 +12,6 @@ import (
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -41,10 +40,10 @@ func Build() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting build command")
 			if err := RunBuild(args[0], file, tag, target, noCache); err != nil {
-				analytics.TrackBuild(config.VersionString, false)
+				analytics.TrackBuild(false)
 				return err
 			}
-			analytics.TrackBuild(config.VersionString, true)
+			analytics.TrackBuild(true)
 			return nil
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
