@@ -38,7 +38,7 @@ import (
 const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
 var (
-	localClusters = []string{"127.", "10.", "172.", "192.", "169.", "localhost"}
+	localClusters = []string{"127.", "172.", "192.", "169.", "localhost", "::1", "fe80::", "fc00::"}
 )
 
 // UpContext is the common context of all operations performed during
@@ -48,7 +48,7 @@ type UpContext struct {
 	Cancel     context.CancelFunc
 	Dev        *model.Dev
 	Namespace  *apiv1.Namespace
-	isAttach   bool
+	isSwap     bool
 	retry      bool
 	Client     *kubernetes.Clientset
 	RestConfig *rest.Config
@@ -178,7 +178,7 @@ func (up *UpContext) Activate(autoDeploy bool) {
 		up.Exit <- err
 		return
 	}
-	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isAttach)
+	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap)
 
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
@@ -214,7 +214,7 @@ func (up *UpContext) Activate(autoDeploy bool) {
 
 		up.success = true
 		if up.retry {
-			analytics.TrackReconnect(true, up.getClusterType(), up.isAttach)
+			analytics.TrackReconnect(true, up.getClusterType(), up.isSwap)
 		}
 		up.retry = true
 
@@ -250,7 +250,7 @@ func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 	d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
 		if _, ok := d.Annotations[model.OktetoAutoCreateAnnotation]; !ok {
-			up.isAttach = true
+			up.isSwap = true
 		}
 		return d, false, nil
 	}
@@ -581,7 +581,7 @@ func (up *UpContext) getClusterType() string {
 func (up *UpContext) shutdown() {
 	log.Debugf("up shutdown")
 	if !up.success {
-		analytics.TrackUp(false, up.Dev.Name, up.getClusterType(), up.isAttach, len(up.Dev.Services) == 0)
+		analytics.TrackUpError(true, up.getClusterType(), up.isSwap)
 	}
 
 	if up.Cancel != nil {

@@ -19,6 +19,7 @@ const (
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
 	upEvent              = "Up"
+	upErrorEvent         = "Up Error"
 	reconnectEvent       = "Reconnect"
 	syncErrorEvent       = "Sync Error"
 	downEvent            = "Down"
@@ -89,12 +90,21 @@ func TrackSyncError() {
 // TrackUp sends a tracking event to mixpanel when the user activates a development environment
 func TrackUp(success bool, dev, clusterType string, single, swap bool) {
 	props := map[string]interface{}{
-		"dev":         dev,
-		"clusterType": clusterType,
-		"single":      single,
-		"swap":        swap,
+		"devEnvironmentName": dev,
+		"clusterType":        clusterType,
+		"singleService":      single,
+		"swap":               swap,
 	}
 	track(upEvent, success, props)
+}
+
+// TrackUpError sends a tracking event to mixpanel when the okteto up command fails
+func TrackUpError(success bool, clusterType string, swap bool) {
+	props := map[string]interface{}{
+		"clusterType": clusterType,
+		"swap":        swap,
+	}
+	track(upErrorEvent, success, props)
 }
 
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
