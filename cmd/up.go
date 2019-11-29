@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -29,6 +29,7 @@ import (
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -36,12 +37,19 @@ import (
 // ReconnectingMessage is the message shown when we are trying to reconnect
 const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
+var (
+	localClusters = []string{"127.", "10.", "172.", "192.", "169.", "localhost"}
+)
+
 // UpContext is the common context of all operations performed during
 // the up command
 type UpContext struct {
 	Context    context.Context
 	Cancel     context.CancelFunc
 	Dev        *model.Dev
+	Namespace  *apiv1.Namespace
+	isAttach   bool
+	retry      bool
 	Client     *kubernetes.Clientset
 	RestConfig *rest.Config
 	Pod        string
@@ -148,7 +156,6 @@ func RunUp(dev *model.Dev, remote int, autoDeploy bool, forcePull bool) error {
 
 // Activate activates the dev environment
 func (up *UpContext) Activate(autoDeploy bool) {
-	retry := false
 	var state *term.State
 	inFd, isTerm := term.GetFdInfo(os.Stdin)
 	if isTerm {
@@ -163,14 +170,15 @@ func (up *UpContext) Activate(autoDeploy bool) {
 	var namespace string
 	var err error
 	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal()
+	if up.Dev.Namespace == "" {
+		up.Dev.Namespace = namespace
+	}
+	up.Namespace, err = namespaces.Get(up.Dev.Namespace, up.Client)
 	if err != nil {
 		up.Exit <- err
 		return
 	}
-
-	if up.Dev.Namespace == "" {
-		up.Dev.Namespace = namespace
-	}
+	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isAttach)
 
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
@@ -179,13 +187,13 @@ func (up *UpContext) Activate(autoDeploy bool) {
 		up.ErrChan = make(chan error, 1)
 		up.cleaned = make(chan struct{}, 1)
 
-		d, create, err := up.getCurrentDeployment(retry, autoDeploy)
+		d, create, err := up.getCurrentDeployment(autoDeploy)
 		if err != nil {
 			up.Exit <- err
 			return
 		}
 
-		err = up.devMode(retry, d, create)
+		err = up.devMode(d, create)
 		if err != nil {
 			up.Exit <- err
 			return
@@ -205,7 +213,10 @@ func (up *UpContext) Activate(autoDeploy bool) {
 		}
 
 		up.success = true
-		retry = true
+		if up.retry {
+			analytics.TrackReconnect(true, up.getClusterType(), up.isAttach)
+		}
+		up.retry = true
 
 		printDisplayContext("Files synchronized", up.Dev)
 
@@ -235,12 +246,15 @@ func (up *UpContext) Activate(autoDeploy bool) {
 	}
 }
 
-func (up *UpContext) getCurrentDeployment(retry bool, autoDeploy bool) (*appsv1.Deployment, bool, error) {
+func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, bool, error) {
 	d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
+		if _, ok := d.Annotations[model.OktetoAutoCreateAnnotation]; !ok {
+			up.isAttach = true
+		}
 		return d, false, nil
 	}
-	if !errors.IsNotFound(err) || retry {
+	if !errors.IsNotFound(err) || up.retry {
 		return nil, false, err
 	}
 
@@ -291,18 +305,13 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) error {
+func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	spinner := newSpinner("Activating your development environment...")
 	up.updateStateFile(activating)
 	spinner.start()
 	defer spinner.stop()
 
-	ns, err := namespaces.Get(up.Dev.Namespace, up.Client)
-	if err != nil {
-		return err
-	}
-
-	if !namespaces.IsOktetoAllowed(ns) {
+	if !namespaces.IsOktetoAllowed(up.Namespace) {
 		return fmt.Errorf("`okteto up` is not allowed in this namespace")
 	}
 
@@ -319,12 +328,13 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		up.Dev.Image = devContainer.Image
 	}
 
-	if isRetry && !deployments.IsDevModeOn(d) {
+	if up.retry && !deployments.IsDevModeOn(d) {
 		return fmt.Errorf("Development environment has been deactivated")
 	}
 
 	up.updateStateFile(starting)
 
+	var err error
 	up.Sy, err = syncthing.New(up.Dev)
 	if err != nil {
 		return err
@@ -344,7 +354,7 @@ func (up *UpContext) devMode(isRetry bool, d *appsv1.Deployment, create bool) er
 		return err
 	}
 
-	if err := deployments.TranslateDevMode(tr, ns, up.Client); err != nil {
+	if err := deployments.TranslateDevMode(tr, up.Namespace, up.Client); err != nil {
 		return err
 	}
 
@@ -487,6 +497,7 @@ func (up *UpContext) synchronizeFiles() error {
 	err := up.Sy.WaitForCompletion(up.Context, up.Dev, reporter)
 	if err != nil {
 		if err == errors.ErrSyncFrozen {
+			analytics.TrackSyncError()
 			return errors.UserError{
 				E: err,
 				Hint: fmt.Sprintf(`Help us improve okteto by filing an issue in https://github.com/okteto/okteto/issues/new.
@@ -547,10 +558,31 @@ func (up *UpContext) runCommand() error {
 	)
 }
 
+func (up *UpContext) getClusterType() string {
+	if up.Namespace != nil && namespaces.IsOktetoNamespace(up.Namespace) {
+		return "okteto"
+	}
+	u, err := url.Parse(up.RestConfig.Host)
+	host := ""
+	if err == nil {
+		host = u.Hostname()
+	} else {
+		host = up.RestConfig.Host
+	}
+	for _, l := range localClusters {
+		if strings.HasPrefix(host, l) {
+			return "local"
+		}
+	}
+	return "remote"
+}
+
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
 func (up *UpContext) shutdown() {
 	log.Debugf("up shutdown")
-	analytics.TrackUp(up.Dev.Image, config.VersionString, up.success)
+	if !up.success {
+		analytics.TrackUp(false, up.Dev.Name, up.getClusterType(), up.isAttach, len(up.Dev.Services) == 0)
+	}
 
 	if up.Cancel != nil {
 		up.Cancel()

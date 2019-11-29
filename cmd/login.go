@@ -11,7 +11,6 @@ import (
 	"math/rand"
 
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -82,7 +81,7 @@ func Login() *cobra.Command {
 
 			u, err := okteto.Auth(handler.ctx, code, oktetoURL)
 			if err != nil {
-				analytics.TrackLogin("", "", "", "", config.VersionString, false)
+				analytics.TrackLogin(false, "", "", "", "")
 				return err
 			}
 
@@ -94,9 +93,9 @@ func Login() *cobra.Command {
 
 			log.Hint("    Run `okteto namespace` to switch your context and download your Kubernetes credentials.")
 			if u.New {
-				analytics.TrackSignup(u.ID, config.VersionString, true)
+				analytics.TrackSignup(true, u.ID)
 			}
-			analytics.TrackLogin(u.Name, u.Email, u.ID, u.GithubID, config.VersionString, true)
+			analytics.TrackLogin(true, u.Name, u.Email, u.ID, u.GithubID)
 			return nil
 		},
 	}

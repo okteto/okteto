@@ -26,7 +26,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 			}
 
 			err := RunNamespace(ctx, namespace)
-			analytics.TrackNamespace(config.VersionString, err == nil)
+			analytics.TrackNamespace(err == nil)
 			return err
 		},
 	}
