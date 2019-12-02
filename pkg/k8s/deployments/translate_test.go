@@ -409,6 +409,8 @@ func Test_translateResources(t *testing.T) {
 }
 
 func Test_translateSecurityContext(t *testing.T) {
+	var trueB = true
+
 	tests := []struct {
 		name         string
 		c            *apiv1.Container
@@ -457,6 +459,20 @@ func Test_translateSecurityContext(t *testing.T) {
 			expectedAdd:  []apiv1.Capability{"SYS_FOO", "SYS_TRACE"},
 			expectedDrop: []apiv1.Capability{"SYS_BAR", "SYS_NICE"},
 		},
+		{
+			name: "read-only",
+			c: &apiv1.Container{
+				SecurityContext: &apiv1.SecurityContext{
+					ReadOnlyRootFilesystem: &trueB,
+				},
+			},
+			s: &model.SecurityContext{
+				Capabilities: &model.Capabilities{
+					Add: []apiv1.Capability{"SYS_TRACE"},
+				},
+			},
+			expectedAdd: []apiv1.Capability{"SYS_TRACE"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -472,6 +488,10 @@ func Test_translateSecurityContext(t *testing.T) {
 
 			if !reflect.DeepEqual(tt.c.SecurityContext.Capabilities.Drop, tt.expectedDrop) {
 				t.Errorf("tt.c.SecurityContext.Capabilities.Drop != tt.expectedDrop. Expected: %s, Got; %s", tt.expectedDrop, tt.c.SecurityContext.Capabilities.Drop)
+			}
+
+			if tt.c.SecurityContext.ReadOnlyRootFilesystem != nil {
+				t.Errorf("ReadOnlyRootFilesystem was not removed")
 			}
 		})
 	}
