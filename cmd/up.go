@@ -178,7 +178,6 @@ func (up *UpContext) Activate(autoDeploy bool) {
 		up.Exit <- err
 		return
 	}
-	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap)
 
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
@@ -191,6 +190,9 @@ func (up *UpContext) Activate(autoDeploy bool) {
 		if err != nil {
 			up.Exit <- err
 			return
+		}
+		if !up.retry {
+			analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap)
 		}
 
 		err = up.devMode(d, create)
