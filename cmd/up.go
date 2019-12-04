@@ -170,6 +170,11 @@ func (up *UpContext) Activate(autoDeploy bool) {
 	var namespace string
 	var err error
 	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal()
+	if err != nil {
+		up.Exit <- err
+		return
+	}
+
 	if up.Dev.Namespace == "" {
 		up.Dev.Namespace = namespace
 	}
@@ -564,6 +569,7 @@ func (up *UpContext) getClusterType() string {
 	if up.Namespace != nil && namespaces.IsOktetoNamespace(up.Namespace) {
 		return "okteto"
 	}
+
 	u, err := url.Parse(up.RestConfig.Host)
 	host := ""
 	if err == nil {
@@ -583,7 +589,7 @@ func (up *UpContext) getClusterType() string {
 func (up *UpContext) shutdown() {
 	log.Debugf("up shutdown")
 	if !up.success {
-		analytics.TrackUpError(true, up.getClusterType(), up.isSwap)
+		analytics.TrackUpError(true, up.isSwap)
 	}
 
 	if up.Cancel != nil {

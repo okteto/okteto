@@ -99,10 +99,9 @@ func TrackUp(success bool, dev, clusterType string, single, swap bool) {
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
-func TrackUpError(success bool, clusterType string, swap bool) {
+func TrackUpError(success bool, swap bool) {
 	props := map[string]interface{}{
-		"clusterType": clusterType,
-		"swap":        swap,
+		"swap": swap,
 	}
 	track(upErrorEvent, success, props)
 }
