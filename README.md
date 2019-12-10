@@ -48,6 +48,18 @@ Okteto is compatible with any Kubernetes cluster, local or remote. If you can ru
 - Check the Okteto [CLI reference](https://okteto.com/docs/reference/cli) and the [okteto.yml reference](https://okteto.com/docs/reference/manifest).
 - [Explore our samples](https://github.com/okteto/samples) to learn more about the power of Okteto.
 
+## Roadmap and Contributions
+
+Okteto is written in Go under the [Apache 2.0 license](LICENSE) - contributions are welcomed whether that means providing feedback, testing existing and new feature or hacking on the source.
+
+## How do I become a contributor?
+
+Please see the guide on [contributing](contributing.md).
+
+## Roadmap
+
+We use GitHub [issues](https://github.com/okteto/okteto/issues) to track our roadmap. A [milestone](https://github.com/okteto/okteto/milestones) is created every month to track the work scheduled for that time period. Feedback and help are always appreciated!
+
 ## Stay in Touch
 Got questions? Have feedback? Join [the conversation in Slack](https://kubernetes.slack.com/messages/CM1QMQGS0/)! If you don't already have a Kubernetes slack account, [sign up here](http://slack.k8s.io/). 
 
