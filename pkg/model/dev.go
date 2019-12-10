@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -178,6 +179,11 @@ func Read(bytes []byte) (*Dev, error) {
 		msg = strings.TrimSuffix(msg, "in type model.Dev")
 		return nil, errors.New(msg)
 	}
+
+	if len(dev.Image) > 0 {
+		dev.Image = os.ExpandEnv(dev.Image)
+	}
+
 	if err := dev.setDefaults(); err != nil {
 		return nil, err
 	}

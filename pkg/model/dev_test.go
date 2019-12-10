@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
@@ -179,6 +181,58 @@ forward:
 				}
 			}
 
+		})
+	}
+}
+
+func Test_loadDevImage(t *testing.T) {
+	tests := []struct {
+		name     string
+		want     string
+		image    string
+		tagValue string
+	}{
+		{
+			name:     "tag",
+			want:     "code/core:dev",
+			image:    "code/core:${tag}",
+			tagValue: "dev",
+		},
+		{
+			name:     "registry",
+			want:     "dev/core:latest",
+			image:    "${tag}/core:latest",
+			tagValue: "dev",
+		},
+		{
+			name:     "full",
+			want:     "dev/core:latest",
+			image:    "${tag}",
+			tagValue: "dev/core:latest",
+		},
+		{
+			name:     "missing",
+			want:     "code/core:",
+			image:    "code/core:${image}",
+			tagValue: "tag",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifest := []byte(fmt.Sprintf(`
+name: deployment
+image: %s
+`, tt.image))
+			os.Setenv("tag", tt.tagValue)
+			d, err := Read(manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if d.Image != tt.want {
+				t.Errorf("got: %s, expected: %s", d.Image, tt.want)
+			}
 		})
 	}
 }
