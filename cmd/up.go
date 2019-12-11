@@ -60,7 +60,6 @@ type UpContext struct {
 	Sy         *syncthing.Syncthing
 	ErrChan    chan error
 	cleaned    chan struct{}
-	remotePort int
 	success    bool
 }
 
@@ -437,7 +436,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	}
 
 	if up.remoteModeEnabled() {
-		if err := ssh.AddEntry(up.Dev.Name, up.remotePort); err != nil {
+		if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
 			return err
 		}
 	}
