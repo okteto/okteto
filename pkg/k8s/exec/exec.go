@@ -11,7 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-	kexec "k8s.io/kubernetes/pkg/kubectl/cmd/exec"
+	kexec "k8s.io/kubectl/pkg/cmd/exec"
 	"github.com/okteto/okteto/pkg/log"
 )
 
