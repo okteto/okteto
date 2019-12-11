@@ -298,8 +298,8 @@ func Test_LoadRemote(t *testing.T) {
 
 	dev.LoadRemote()
 
-	if dev.Command[0] != "/var/okteto/bin/remote" {
-		t.Errorf("remote command wasn't set: %s", dev.Command)
+	if dev.Command[0] != "uwsgi" {
+		t.Errorf("command wasn't set: %s", dev.Command)
 	}
 
 	if len(dev.Forward) != 2 {
