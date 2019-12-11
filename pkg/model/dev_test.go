@@ -269,6 +269,7 @@ func Test_LoadRemote(t *testing.T) {
   container: core
   image: code/core:0.1.8
   command: ["uwsgi"]
+  remote: 22100
   annotations:
     key1: value1
     key2: value2
@@ -295,7 +296,7 @@ func Test_LoadRemote(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dev.LoadRemote(22100)
+	dev.LoadRemote()
 
 	if dev.Command[0] != "/var/okteto/bin/remote" {
 		t.Errorf("remote command wasn't set: %s", dev.Command)
@@ -307,14 +308,6 @@ func Test_LoadRemote(t *testing.T) {
 
 	if dev.Forward[1].Local != 22100 {
 		t.Errorf("local forward wasn't 22100 it was %d", dev.Forward[1].Local)
-	}
-
-	if len(dev.Environment) != 2 {
-		t.Errorf("Environment value wasn't injected")
-	}
-
-	if dev.Environment[1].Name != "OKTETO_REMOTE_PORT" {
-		t.Errorf("injected env var wasn't OKTETO_REMOTE_PORT it was %s", dev.Environment[1].Name)
 	}
 }
 

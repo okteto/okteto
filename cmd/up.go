@@ -60,12 +60,15 @@ type UpContext struct {
 	Sy         *syncthing.Syncthing
 	ErrChan    chan error
 	cleaned    chan struct{}
-	remotePort int
 	success    bool
 }
 
 func (up *UpContext) remoteModeEnabled() bool {
-	return up.remotePort > 0
+	if up.Dev == nil {
+		return false
+	}
+
+	return up.Dev.RemotePort > 0
 }
 
 //Up starts a cloud dev environment
@@ -104,7 +107,11 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			err = RunUp(dev, remote, autoDeploy, forcePull)
+			if remote > 0 {
+				dev.RemotePort = remote
+			}
+
+			err = RunUp(dev, autoDeploy, forcePull)
 			return err
 		},
 	}
@@ -118,17 +125,16 @@ func Up() *cobra.Command {
 }
 
 //RunUp starts the up sequence
-func RunUp(dev *model.Dev, remote int, autoDeploy bool, forcePull bool) error {
+func RunUp(dev *model.Dev, autoDeploy bool, forcePull bool) error {
 	up := &UpContext{
-		Dev:        dev,
-		Exit:       make(chan error, 1),
-		remotePort: remote,
+		Dev:  dev,
+		Exit: make(chan error, 1),
 	}
 
 	defer up.shutdown()
 
 	if up.remoteModeEnabled() {
-		dev.LoadRemote(int(remote))
+		dev.LoadRemote()
 	}
 
 	if forcePull {
@@ -430,7 +436,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	}
 
 	if up.remoteModeEnabled() {
-		if err := ssh.AddEntry(up.Dev.Name, up.remotePort); err != nil {
+		if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
 			return err
 		}
 	}
