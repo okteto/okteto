@@ -76,6 +76,7 @@ type Dev struct {
 	Volumes         []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
+	RemotePort      int                  `json:"remote,omitempty" yaml:"remote,omitempty"`
 	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath         string               `json:"-" yaml:"-"`
 	DevDir          string               `json:"-" yaml:"-"`
@@ -280,22 +281,16 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 }
 
 //LoadRemote configures remote execution
-func (dev *Dev) LoadRemote(localPort int) {
+func (dev *Dev) LoadRemote() {
 	dev.Command = []string{"/var/okteto/bin/remote"}
 	dev.Forward = append(
 		dev.Forward,
 		Forward{
-			Local:  localPort,
-			Remote: 22100,
+			Local:  dev.RemotePort,
+			Remote: 22,
 		},
 	)
-	dev.Environment = append(
-		dev.Environment,
-		EnvVar{
-			Name:  oktetoRemotePortVariable,
-			Value: "22100",
-		},
-	)
+
 	log.Infof("enabled remote mode")
 }
 
