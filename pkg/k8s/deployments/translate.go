@@ -7,6 +7,7 @@ import (
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 
@@ -26,7 +27,7 @@ const (
 	oktetoVolumeName           = "okteto"
 
 	//syncthing
-	oktetoBinImageTag        = "okteto/bin:1.0.8"
+	oktetoBinImageTag        = "okteto/bin:1.0.9"
 	oktetoSyncSecretVolume   = "okteto-sync-secret"
 	oktetoSyncSecretTemplate = "okteto-%s"
 )
@@ -63,6 +64,8 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 			commonTranslation(t)
 			return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 		}
+
+		log.Infof("using clientside translation")
 	}
 
 	t.Deployment.Status = appsv1.DeploymentStatus{}

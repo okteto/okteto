@@ -343,3 +343,17 @@ func Test_LoadForcePull(t *testing.T) {
 		t.Errorf("restart annotation not set for services")
 	}
 }
+
+func Test_remoteEnabled(t *testing.T) {
+	dev := &Dev{}
+
+	if dev.RemoteModeEnabled() {
+		t.Errorf("default should be remote disabled")
+	}
+
+	dev = &Dev{RemotePort: 22000}
+
+	if !dev.RemoteModeEnabled() {
+		t.Errorf("remote should be enabled after adding a port")
+	}
+}
