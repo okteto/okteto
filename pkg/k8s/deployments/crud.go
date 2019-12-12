@@ -81,7 +81,7 @@ func GetRevisionAnnotatedDeploymentOrFailed(dev *model.Dev, c *kubernetes.Client
 func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
 	result := map[string]*model.Translation{}
 	if d != nil {
-		rule := dev.ToTranslationRule(dev, d)
+		rule := dev.ToTranslationRule(dev)
 		result[d.Name] = &model.Translation{
 			Interactive: true,
 			Name:        dev.Name,
@@ -100,7 +100,7 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clients
 			}
 			return nil, err
 		}
-		rule := s.ToTranslationRule(dev, d)
+		rule := s.ToTranslationRule(dev)
 		if _, ok := result[d.Name]; ok {
 			result[d.Name].Rules = append(result[d.Name].Rules, rule)
 		} else {

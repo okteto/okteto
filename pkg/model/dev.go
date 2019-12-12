@@ -359,7 +359,7 @@ func (dev *Dev) syncthingSubPath() string {
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	rule := &TranslationRule{
 		Container:       dev.Container,
 		Image:           dev.Image,
