@@ -1,21 +1,11 @@
 ## How does Okteto work?
 
-This is how a standard dev environment looks like:
+Okteto swaps your applications pods by a development environment. Lets explain this process with a diagram:
 
-<img align="left" src="env.png">
+<img align="left" src="okteto-architecture.png">
 
-&nbsp;
+At a high level, Okteto works by swapping a pod in your application with a development environment. In the diagram above, you can see how Okteto replaced the **api** pod for the development environment **api-dev**. 
 
-And this how it looks after converting it into a cloud native environment:
+The development environment has a different container image (your development image, with all the tools you need pre-installed) but it keeps the rest of the configuration of the original pod (same identity, environment variables, start command, etc…). Although you can override pretty much every configuration of the pod via the Okteto yaml manifest.
 
-<img align="left" src="cnd.png">
-&nbsp;
-
-The **cnd** container duplicates the manifest of the **api** pod, so it is fully integrated with every Kubernetes feature.
-For example, the **cnd** container has access to the same envvars, secrets, volumes, ...
-
-Local changes are synched to the **cnd** container via [syncthing](https://github.com/syncthing/syncthing). As you save locally, it will be automatically synched in your **cnd** container in seconds. To this end, `okteto up` creates a **syncthing** sidecar. The **syncthing** sidecar and the **cnd** containers share a common volume where local changes are synched, making them available to the **cnd** container.
-
-This **syncthing** container is exposed locally using *port-forwarding* and it is connected by a local *syncthing* process responsible of sending local changes to the remote container. This way, the original **api** container is not polluted with syncthing dependencies.
-
-
+Local code changes are automatically synchronized to the development environment via [syncthing](https://github.com/syncthing/syncthing). To accomplish this, Okteto launches syncthing both locally and in the development environment pod.  Both processes are securely connected via Kubernetes' port forwarding capabilities. 
