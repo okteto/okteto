@@ -40,10 +40,10 @@ func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Dep
 			return nil, err
 		}
 		if len(deploys.Items) == 0 {
-			return nil, errors.ErrNotFound
+			return nil, fmt.Errorf("deployment for labels '%s' not found", dev.LabelsSelector())
 		}
 		if len(deploys.Items) > 1 {
-			return nil, fmt.Errorf("Found '%d' deployments instead of 1", len(deploys.Items))
+			return nil, fmt.Errorf("Found '%d' deployments for labels '%s' instead of 1", len(deploys.Items), dev.LabelsSelector())
 		}
 		d = &deploys.Items[0]
 	}
@@ -95,9 +95,6 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clients
 	for _, s := range dev.Services {
 		d, err := Get(s, dev.Namespace, c)
 		if err != nil {
-			if errors.IsNotFound(err) {
-				continue
-			}
 			return nil, err
 		}
 		rule := s.ToTranslationRule(dev, d)
