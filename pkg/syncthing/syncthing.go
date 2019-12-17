@@ -193,7 +193,7 @@ func (s *Syncthing) initConfig() error {
 	return nil
 }
 
-// UpdateConfig updates the synchting config file
+// UpdateConfig updates the syncthing config file
 func (s *Syncthing) UpdateConfig() error {
 	buf := new(bytes.Buffer)
 	if err := configTemplate.Execute(buf, s); err != nil {
@@ -396,7 +396,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context) error {
-	log.Infof("restarting synchting...")
+	log.Infof("restarting syncthing...")
 	_, err := s.APICall(ctx, "rest/system/restart", "POST", 200, nil, true, nil)
 	return err
 }
