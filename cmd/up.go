@@ -538,7 +538,7 @@ func (up *UpContext) cleanCommand() {
 		in,
 		os.Stdout,
 		os.Stderr,
-		[]string{"sh", "-c", "((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/start.sh|/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1"},
+		[]string{"sh", "-c", "((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1"},
 	); err != nil {
 		log.Infof("first session to the remote container: %s", err)
 	}
