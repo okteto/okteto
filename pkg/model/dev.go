@@ -76,7 +76,7 @@ type Dev struct {
 	Volumes         []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
-	Reverse   []Reverse      `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+	Reverse         []Reverse            `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	RemotePort      int                  `json:"remote,omitempty" yaml:"remote,omitempty"`
 	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath         string               `json:"-" yaml:"-"`
@@ -291,7 +291,13 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 //LoadRemote configures remote execution
 func (dev *Dev) LoadRemote() {
 	if dev.RemotePort == 0 {
-		dev.RemotePort = 2222
+		p, err := GetAvailablePort()
+		if err != nil {
+			log.Infof("failed to get random port for SSH connection: %s", err)
+			p = 2222
+		}
+
+		dev.RemotePort = p
 		log.Infof("remote port not set, using %d", dev.RemotePort)
 	}
 
