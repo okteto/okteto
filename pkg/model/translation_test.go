@@ -36,9 +36,8 @@ services:
 		t.Fatal(err)
 	}
 
-	d1 := dev.GevSandbox()
 	dev.DevPath = "okteto.yml"
-	rule1 := dev.ToTranslationRule(dev, d1)
+	rule1 := dev.ToTranslationRule(dev)
 	rule1OK := &TranslationRule{
 		Marker:          "okteto.yml",
 		Container:       "dev",
@@ -88,8 +87,7 @@ services:
 	}
 
 	dev2 := dev.Services[0]
-	d2 := dev2.GevSandbox()
-	rule2 := dev2.ToTranslationRule(dev, d2)
+	rule2 := dev2.ToTranslationRule(dev)
 	rule2OK := &TranslationRule{
 		Container:       "dev",
 		Image:           "worker:latest",

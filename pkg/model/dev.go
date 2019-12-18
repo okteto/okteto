@@ -282,7 +282,6 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 
 //LoadRemote configures remote execution
 func (dev *Dev) LoadRemote() {
-	dev.Command = []string{"/var/okteto/bin/remote"}
 	dev.Forward = append(
 		dev.Forward,
 		Forward{
@@ -360,7 +359,7 @@ func (dev *Dev) syncthingSubPath() string {
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
-func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationRule {
+func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	rule := &TranslationRule{
 		Container:       dev.Container,
 		Image:           dev.Image,
@@ -397,7 +396,11 @@ func (dev *Dev) ToTranslationRule(main *Dev, d *appsv1.Deployment) *TranslationR
 		)
 		rule.Healthchecks = false
 		rule.Command = []string{"/var/okteto/bin/start.sh"}
-		rule.Args = []string{}
+		if main.RemoteModeEnabled() {
+			rule.Args = []string{"-r"}
+		} else {
+			rule.Args = []string{}
+		}
 	} else {
 		rule.Healthchecks = true
 		if len(dev.Command) > 0 {
@@ -471,4 +474,13 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 			},
 		},
 	}
+}
+
+// RemoteModeEnabled returns true if remote is enabled
+func (dev *Dev) RemoteModeEnabled() bool {
+	if dev == nil {
+		return false
+	}
+
+	return dev.RemotePort > 0
 }
