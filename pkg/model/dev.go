@@ -76,6 +76,7 @@ type Dev struct {
 	Volumes         []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Reverse         []Reverse            `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	RemotePort      int                  `json:"remote,omitempty" yaml:"remote,omitempty"`
 	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath         string               `json:"-" yaml:"-"`
@@ -113,6 +114,12 @@ type EnvVar struct {
 type Forward struct {
 	Local  int
 	Remote int
+}
+
+// Reverse represents a remote forward port
+type Reverse struct {
+	Remote int
+	Local  int
 }
 
 // ResourceRequirements describes the compute resource requirements.
@@ -233,6 +240,7 @@ func (dev *Dev) setDefaults() error {
 		}
 		s.Namespace = ""
 		s.Forward = make([]Forward, 0)
+		s.Reverse = make([]Reverse, 0)
 		s.Volumes = make([]Volume, 0)
 		s.Services = make([]*Dev, 0)
 	}
@@ -282,6 +290,17 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 
 //LoadRemote configures remote execution
 func (dev *Dev) LoadRemote() {
+	if dev.RemotePort == 0 {
+		p, err := GetAvailablePort()
+		if err != nil {
+			log.Infof("failed to get random port for SSH connection: %s", err)
+			p = 2222
+		}
+
+		dev.RemotePort = p
+		log.Infof("remote port not set, using %d", dev.RemotePort)
+	}
+
 	dev.Forward = append(
 		dev.Forward,
 		Forward{
@@ -482,5 +501,9 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return false
 	}
 
-	return dev.RemotePort > 0
+	if dev.RemotePort > 0 {
+		return true
+	}
+
+	return len(dev.Reverse) > 0
 }

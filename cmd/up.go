@@ -431,6 +431,17 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
 			return err
 		}
+
+		reverseManager := ssh.NewReverseManager(up.Context, up.Dev.RemotePort)
+		for _, f := range up.Dev.Reverse {
+			if err := reverseManager.Add(&f); err != nil {
+				return err
+			}
+		}
+
+		if err := reverseManager.Start(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -624,6 +635,12 @@ func printDisplayContext(message string, dev *model.Dev) {
 		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
 		for i := 1; i < len(dev.Forward); i++ {
 			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
+		}
+	}
+	if len(dev.Reverse) > 0 {
+		log.Println(fmt.Sprintf("    %s   %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
+		for i := 1; i < len(dev.Reverse); i++ {
+			log.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
 		}
 	}
 	fmt.Println()

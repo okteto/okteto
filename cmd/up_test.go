@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 func TestWaitUntilExitOrInterrupt(t *testing.T) {
@@ -32,4 +33,58 @@ func TestWaitUntilExitOrInterrupt(t *testing.T) {
 	if err != errors.ErrLostConnection {
 		t.Errorf("exited with error %s instead of %s", err, errors.ErrLostConnection)
 	}
+}
+
+func Test_printDisplayContext(t *testing.T) {
+	var tests = []struct {
+		name string
+		dev  *model.Dev
+	}{
+		{
+			name: "basic",
+			dev: &model.Dev{
+				Name:      "dev",
+				Namespace: "namespace",
+			},
+		},
+		{
+			name: "single-forward",
+			dev: &model.Dev{
+				Name:      "dev",
+				Namespace: "namespace",
+				Forward:   []model.Forward{{Local: 1000, Remote: 1000}},
+			},
+		},
+		{
+			name: "multiple-forward",
+			dev: &model.Dev{
+				Name:      "dev",
+				Namespace: "namespace",
+				Forward:   []model.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+			},
+		},
+		{
+			name: "single-reverse",
+			dev: &model.Dev{
+				Name:      "dev",
+				Namespace: "namespace",
+				Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}},
+			},
+		},
+		{
+			name: "multiple-reverse",
+			dev: &model.Dev{
+				Name:      "dev",
+				Namespace: "namespace",
+				Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			printDisplayContext(tt.name, tt.dev)
+		})
+	}
+
 }
