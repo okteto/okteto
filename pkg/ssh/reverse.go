@@ -9,91 +9,123 @@ import (
 
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
-	gossh "golang.org/x/crypto/ssh"
 )
 
-// ReverseTunnel contains the information to connect and setup a reverse tunnel
-type ReverseTunnel struct {
-	SSHHost    string
-	SSHPort    int
-	LocalPort  int
-	RemotePort int
+type remoteForward struct {
+	localPort  int
+	remotePort int
 }
 
-// NewReverseTunnel returns a configured reverse tunnel endpoint
-func NewReverseTunnel(sshPort, localPort, remotePort int) *ReverseTunnel {
-	return &ReverseTunnel{
-		SSHHost:    "localhost",
-		SSHPort:    sshPort,
-		LocalPort:  localPort,
-		RemotePort: remotePort,
+// RemoteForwardManager handles the lifecycle of all the remote forwards
+type RemoteForwardManager struct {
+	remoteForwards map[int]*remoteForward
+	ctx            context.Context
+	sshUser        string
+	sshHost        string
+	sshPort        int
+}
+
+// NewRemoteForwardManager returns a newly initialized instance of RemoteRemoteForwardManager
+func NewRemoteForwardManager(ctx context.Context, sshPort int) *RemoteForwardManager {
+	return &RemoteForwardManager{
+		ctx:            ctx,
+		remoteForwards: make(map[int]*remoteForward),
+		sshUser:        "root",
+		sshHost:        "localhost",
+		sshPort:        sshPort,
 	}
 }
 
-// Start starts the reverse tunnel to the remote server. It will block until the connection sends an EOF
-func (r *ReverseTunnel) Start(ctx context.Context) error {
+// Add initializes a remote forward
+func (r *RemoteForwardManager) Add(localPort, remotePort int) error {
+	if _, ok := r.remoteForwards[localPort]; ok {
+		return fmt.Errorf("port %d is already taken, please check your remote forward configuration", localPort)
+	}
+
+	r.remoteForwards[localPort] = &remoteForward{localPort: localPort, remotePort: remotePort}
+	return nil
+}
+
+// Start starts all the remote forwards as goroutines
+func (r *RemoteForwardManager) Start() error {
+	log.Info("starting remote forward manager")
+
+	// Connect to SSH remote server using serverEndpoint
+	c := &ssh.ClientConfig{
+		User:            r.sshUser,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	sshAddr := fmt.Sprintf("%s:%d", r.sshHost, r.sshPort)
+
+	for _, rt := range r.remoteForwards {
+		go rt.startWithRetry(r.ctx, c, sshAddr)
+	}
+
+	return nil
+}
+
+func (r *remoteForward) startWithRetry(ctx context.Context, c *ssh.ClientConfig, sshAddr string) error {
+	log.Infof("starting remote forward tunnel %d->%d", r.remotePort, r.localPort)
+
 	for {
-		err := r.start(ctx)
+		err := r.start(ctx, c, sshAddr)
 		if err == nil {
-			log.Infof("connection closed cleanly")
+			log.Infof("remote forward tunnel %d->%d exited", r.remotePort, r.localPort)
 			return nil
 		}
 
-		log.Infof("reverse tunnel disconnected %d->%d, retrying: %s", r.RemotePort, r.LocalPort, err)
+		log.Infof("remote forward tunnel disconnected %d->%d, retrying: %s", r.remotePort, r.localPort, err)
 		t := time.NewTicker(3 * time.Second)
 		<-t.C
 	}
 }
 
-func (r *ReverseTunnel) start(ctx context.Context) error {
-	log.Infof("starting reverse tunnel %d->%d", r.RemotePort, r.LocalPort)
+func (r *remoteForward) start(ctx context.Context, c *ssh.ClientConfig, sshAddr string) error {
+	log.Infof("starting remote forward tunnel %d->%d", r.remotePort, r.localPort)
 
-	// Connect to SSH remote server using serverEndpoint
-	config := &ssh.ClientConfig{
-		User:            "root",
-		HostKeyCallback: gossh.InsecureIgnoreHostKey(),
-	}
-
-	serverConn, err := gossh.Dial("tcp", fmt.Sprintf("%s:%d", r.SSHHost, r.SSHPort), config)
+	serverConn, err := ssh.Dial("tcp", sshAddr, c)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to connect to SSH host: %s", err)
 	}
 
 	// Listen on remote server port
-	listener, err := serverConn.Listen("tcp", fmt.Sprintf("localhost:%d", r.RemotePort))
+	listener, err := serverConn.Listen("tcp", fmt.Sprintf("localhost:%d", r.remotePort))
 	if err != nil {
-		return fmt.Errorf("failed open remote port %d: %s", r.RemotePort, err)
+		return fmt.Errorf("failed open remote port %d: %s", r.remotePort, err)
 	}
 
 	defer listener.Close()
 
-	// handle incoming connections on reverse forwarded tunnel
+	// handle incoming connections on remote forward tunnel
 	for {
 		// listen on local port
-		local, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", r.LocalPort))
+		var d net.Dialer
+
+		local, err := d.DialContext(ctx, "tcp", fmt.Sprintf("localhost:%d", r.localPort))
 		if err != nil {
-			return fmt.Errorf("failed to open local port %d: %s", r.RemotePort, err)
+			return fmt.Errorf("failed to open local port %d: %s", r.remotePort, err)
 		}
 
 		client, err := listener.Accept()
 		if err != nil {
-			return fmt.Errorf("failed to accept traffic from remote port %d: %s", r.RemotePort, err)
+			return fmt.Errorf("failed to accept traffic from remote port %d: %s", r.remotePort, err)
 		}
 
 		r.handleClient(client, local)
 	}
 }
 
-func (r *ReverseTunnel) handleClient(client net.Conn, local net.Conn) {
+func (r *remoteForward) handleClient(client net.Conn, local net.Conn) {
 	defer client.Close()
 	chDone := make(chan error, 1)
-	log.Debug("starting reverse tunnel transfer ")
+	log.Debug("starting remote forward tunnel transfer ")
 
 	// Start remote -> local data transfer
 	go func() {
 		_, err := io.Copy(client, local)
 		if err != nil {
-			log.Infof("error while copying %s:%d->localhost:%d: %s", r.SSHHost, r.RemotePort, r.LocalPort, err)
+			log.Infof("error while copying %d->%d: %s", r.remotePort, r.localPort, err)
 		}
 
 		chDone <- nil
@@ -103,11 +135,11 @@ func (r *ReverseTunnel) handleClient(client net.Conn, local net.Conn) {
 	go func() {
 		_, err := io.Copy(local, client)
 		if err != nil {
-			log.Infof("error while copying localhost:%d->%s:%d: %s", r.LocalPort, r.SSHHost, r.RemotePort, err)
+			log.Infof("error while copying %d->%d: %s", r.localPort, r.remotePort, err)
 		}
 		chDone <- nil
 	}()
 
-	log.Infof("started reverse tunnel %d->%d successfully", r.RemotePort, r.LocalPort)
+	log.Infof("started remote forward tunnel %d->%d successfully", r.remotePort, r.localPort)
 	<-chDone
 }

@@ -68,7 +68,15 @@ func (up *UpContext) remoteModeEnabled() bool {
 		return false
 	}
 
-	return up.Dev.RemotePort > 0
+	if up.Dev.RemotePort > 0 {
+		return true
+	}
+
+	if up.Dev.RemoteForward != nil && len(up.Dev.RemoteForward) > 0 {
+		return true
+	}
+
+	return false
 }
 
 //Up starts a cloud dev environment
@@ -437,6 +445,17 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 
 	if up.remoteModeEnabled() {
 		if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
+			return err
+		}
+
+		remoteForwardManager := ssh.NewRemoteForwardManager(up.Context, up.Dev.RemotePort)
+		for _, f := range up.Dev.RemoteForward {
+			if err := remoteForwardManager.Add(f.Local, f.Remote); err != nil {
+				return err
+			}
+		}
+
+		if err := remoteForwardManager.Start(); err != nil {
 			return err
 		}
 	}

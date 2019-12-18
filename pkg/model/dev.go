@@ -76,6 +76,7 @@ type Dev struct {
 	Volumes         []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
+	RemoteForward   []Forward            `json:"remoteForward,omitempty" yaml:"remoteForward,omitempty"`
 	RemotePort      int                  `json:"remote,omitempty" yaml:"remote,omitempty"`
 	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath         string               `json:"-" yaml:"-"`
