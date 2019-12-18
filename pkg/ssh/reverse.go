@@ -20,20 +20,20 @@ type reverse struct {
 // ReverseManager handles the lifecycle of all the remote forwards
 type ReverseManager struct {
 	reverses map[int]*reverse
-	ctx            context.Context
-	sshUser        string
-	sshHost        string
-	sshPort        int
+	ctx      context.Context
+	sshUser  string
+	sshHost  string
+	sshPort  int
 }
 
 // NewReverseManager returns a newly initialized instance of RemoteReverseManager
 func NewReverseManager(ctx context.Context, sshPort int) *ReverseManager {
 	return &ReverseManager{
-		ctx:            ctx,
+		ctx:      ctx,
 		reverses: make(map[int]*reverse),
-		sshUser:        "root",
-		sshHost:        "localhost",
-		sshPort:        sshPort,
+		sshUser:  "root",
+		sshHost:  "localhost",
+		sshPort:  sshPort,
 	}
 }
 
@@ -95,7 +95,7 @@ func (r *reverse) start(ctx context.Context, c *ssh.ClientConfig, sshAddr string
 	}
 
 	// Listen on remote server port
-	listener, err := serverConn.Listen("tcp", fmt.Sprintf("localhost:%d", r.remotePort))
+	listener, err := serverConn.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", r.remotePort))
 	if err != nil {
 		return fmt.Errorf("failed open remote port %d: %s", r.remotePort, err)
 	}

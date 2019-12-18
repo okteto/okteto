@@ -638,7 +638,7 @@ func printDisplayContext(message string, dev *model.Dev) {
 		}
 	}
 	if len(dev.Reverse) > 0 {
-		log.Println(fmt.Sprintf("    %s    %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
+		log.Println(fmt.Sprintf("    %s   %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
 		for i := 1; i < len(dev.Reverse); i++ {
 			log.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
 		}
