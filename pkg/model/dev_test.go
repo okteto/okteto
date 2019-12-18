@@ -337,10 +337,6 @@ func Test_Reverse(t *testing.T) {
 		t.Errorf("forward wasn't injected")
 	}
 
-	if dev.Forward[0].Local != 2222 {
-		t.Errorf("local forward wasn't 22100 it was %d", dev.Forward[0].Local)
-	}
-
 	if dev.Reverse[0].Local != 8080 {
 		t.Errorf("remote forward local wasn't 8080 it was %d", dev.Reverse[0].Local)
 	}
