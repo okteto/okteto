@@ -9,22 +9,22 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func TestRemoteForwardMashalling(t *testing.T) {
+func TestReverseMashalling(t *testing.T) {
 	tests := []struct {
 		name      string
 		data      string
-		expected  RemoteForward
+		expected  Reverse
 		expectErr bool
 	}{
 		{
 			name:     "basic",
 			data:     "8080:9090",
-			expected: RemoteForward{Local: 9090, Remote: 8080},
+			expected: Reverse{Local: 9090, Remote: 8080},
 		},
 		{
 			name:     "equal",
 			data:     "8080:8080",
-			expected: RemoteForward{Local: 8080, Remote: 8080},
+			expected: Reverse{Local: 8080, Remote: 8080},
 		},
 		{
 			name:      "missing-part",
@@ -40,7 +40,7 @@ func TestRemoteForwardMashalling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result RemoteForward
+			var result Reverse
 			if err := yaml.Unmarshal([]byte(tt.data), &result); err != nil {
 				if tt.expectErr {
 					return
@@ -298,7 +298,7 @@ func TestForward_UnmarshalYAML(t *testing.T) {
 	}
 }
 
-func TestRemoteForward_UnmarshalYAML(t *testing.T) {
+func TestReverse_UnmarshalYAML(t *testing.T) {
 	type fields struct {
 		Remote int
 		Local  int
@@ -316,12 +316,12 @@ func TestRemoteForward_UnmarshalYAML(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := &RemoteForward{
+			f := &Reverse{
 				Remote: tt.fields.Remote,
 				Local:  tt.fields.Local,
 			}
 			if err := f.UnmarshalYAML(tt.args.unmarshal); (err != nil) != tt.wantErr {
-				t.Errorf("RemoteForward.UnmarshalYAML() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Reverse.UnmarshalYAML() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

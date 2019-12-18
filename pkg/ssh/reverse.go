@@ -12,25 +12,25 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type remoteForward struct {
+type reverse struct {
 	localPort  int
 	remotePort int
 }
 
-// RemoteForwardManager handles the lifecycle of all the remote forwards
-type RemoteForwardManager struct {
-	remoteForwards map[int]*remoteForward
+// ReverseManager handles the lifecycle of all the remote forwards
+type ReverseManager struct {
+	reverses map[int]*reverse
 	ctx            context.Context
 	sshUser        string
 	sshHost        string
 	sshPort        int
 }
 
-// NewRemoteForwardManager returns a newly initialized instance of RemoteRemoteForwardManager
-func NewRemoteForwardManager(ctx context.Context, sshPort int) *RemoteForwardManager {
-	return &RemoteForwardManager{
+// NewReverseManager returns a newly initialized instance of RemoteReverseManager
+func NewReverseManager(ctx context.Context, sshPort int) *ReverseManager {
+	return &ReverseManager{
 		ctx:            ctx,
-		remoteForwards: make(map[int]*remoteForward),
+		reverses: make(map[int]*reverse),
 		sshUser:        "root",
 		sshHost:        "localhost",
 		sshPort:        sshPort,
@@ -38,21 +38,21 @@ func NewRemoteForwardManager(ctx context.Context, sshPort int) *RemoteForwardMan
 }
 
 // Add initializes a remote forward
-func (r *RemoteForwardManager) Add(f *model.RemoteForward) error {
+func (r *ReverseManager) Add(f *model.Reverse) error {
 
 	localPort := f.Local
 	remotePort := f.Remote
 
-	if _, ok := r.remoteForwards[localPort]; ok {
+	if _, ok := r.reverses[localPort]; ok {
 		return fmt.Errorf("port %d is already taken, please check your remote forward configuration", localPort)
 	}
 
-	r.remoteForwards[localPort] = &remoteForward{localPort: localPort, remotePort: remotePort}
+	r.reverses[localPort] = &reverse{localPort: localPort, remotePort: remotePort}
 	return nil
 }
 
 // Start starts all the remote forwards as goroutines
-func (r *RemoteForwardManager) Start() error {
+func (r *ReverseManager) Start() error {
 	log.Info("starting remote forward manager")
 
 	// Connect to SSH remote server using serverEndpoint
@@ -63,14 +63,14 @@ func (r *RemoteForwardManager) Start() error {
 
 	sshAddr := fmt.Sprintf("%s:%d", r.sshHost, r.sshPort)
 
-	for _, rt := range r.remoteForwards {
+	for _, rt := range r.reverses {
 		go rt.startWithRetry(r.ctx, c, sshAddr)
 	}
 
 	return nil
 }
 
-func (r *remoteForward) startWithRetry(ctx context.Context, c *ssh.ClientConfig, sshAddr string) {
+func (r *reverse) startWithRetry(ctx context.Context, c *ssh.ClientConfig, sshAddr string) {
 	log.Infof("starting remote forward tunnel %d->%d", r.remotePort, r.localPort)
 
 	for {
@@ -86,7 +86,7 @@ func (r *remoteForward) startWithRetry(ctx context.Context, c *ssh.ClientConfig,
 	}
 }
 
-func (r *remoteForward) start(ctx context.Context, c *ssh.ClientConfig, sshAddr string) error {
+func (r *reverse) start(ctx context.Context, c *ssh.ClientConfig, sshAddr string) error {
 	log.Infof("starting remote forward tunnel %d->%d", r.remotePort, r.localPort)
 
 	serverConn, err := ssh.Dial("tcp", sshAddr, c)
@@ -121,9 +121,9 @@ func (r *remoteForward) start(ctx context.Context, c *ssh.ClientConfig, sshAddr 
 	}
 }
 
-func (r *remoteForward) handleClient(client net.Conn, local net.Conn) {
+func (r *reverse) handleClient(client net.Conn, local net.Conn) {
 	defer client.Close()
-	chDone := make(chan error, 1)
+	chDone := make(chan bool, 1)
 	log.Debug("starting remote forward tunnel transfer ")
 
 	// Start remote -> local data transfer
@@ -133,7 +133,7 @@ func (r *remoteForward) handleClient(client net.Conn, local net.Conn) {
 			log.Infof("error while copying %d->%d: %s", r.remotePort, r.localPort, err)
 		}
 
-		chDone <- nil
+		chDone <- true
 	}()
 
 	// Start local -> remote data transfer
@@ -142,7 +142,7 @@ func (r *remoteForward) handleClient(client net.Conn, local net.Conn) {
 		if err != nil {
 			log.Infof("error while copying %d->%d: %s", r.localPort, r.remotePort, err)
 		}
-		chDone <- nil
+		chDone <- true
 	}()
 
 	log.Infof("started remote forward tunnel %d->%d successfully", r.remotePort, r.localPort)

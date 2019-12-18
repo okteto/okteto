@@ -66,7 +66,7 @@ func (f Forward) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (f *RemoteForward) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (f *Reverse) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)
 	if err != nil {
@@ -79,12 +79,12 @@ func (f *RemoteForward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	remotePort, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return fmt.Errorf("Cannot convert remote port '%s' in remoteForward '%s'", parts[0], raw)
+		return fmt.Errorf("Cannot convert remote port '%s' in reverse '%s'", parts[0], raw)
 	}
 
 	localPort, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return fmt.Errorf("Cannot convert local port '%s' in remoteForward '%s'", parts[1], raw)
+		return fmt.Errorf("Cannot convert local port '%s' in reverse '%s'", parts[1], raw)
 	}
 
 	f.Local = localPort
@@ -93,7 +93,7 @@ func (f *RemoteForward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (f RemoteForward) MarshalYAML() (interface{}, error) {
+func (f Reverse) MarshalYAML() (interface{}, error) {
 	return fmt.Sprintf("%d:%d", f.Remote, f.Local), nil
 }
 

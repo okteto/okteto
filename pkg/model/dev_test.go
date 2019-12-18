@@ -311,7 +311,7 @@ func Test_LoadRemote(t *testing.T) {
 	}
 }
 
-func Test_RemoteForward(t *testing.T) {
+func Test_Reverse(t *testing.T) {
 	manifest := []byte(`
   name: deployment
   container: core
@@ -320,7 +320,7 @@ func Test_RemoteForward(t *testing.T) {
   annotations:
     key1: value1
     key2: value2
-  remoteForward:
+  reverse:
     - 8080:8080`)
 	dev, err := Read(manifest)
 	if err != nil {
@@ -341,12 +341,12 @@ func Test_RemoteForward(t *testing.T) {
 		t.Errorf("local forward wasn't 22100 it was %d", dev.Forward[0].Local)
 	}
 
-	if dev.RemoteForward[0].Local != 8080 {
-		t.Errorf("remote forward local wasn't 8080 it was %d", dev.RemoteForward[0].Local)
+	if dev.Reverse[0].Local != 8080 {
+		t.Errorf("remote forward local wasn't 8080 it was %d", dev.Reverse[0].Local)
 	}
 
-	if dev.RemoteForward[0].Remote != 8080 {
-		t.Errorf("remote forward remote wasn't 8080 it was %d", dev.RemoteForward[0].Remote)
+	if dev.Reverse[0].Remote != 8080 {
+		t.Errorf("remote forward remote wasn't 8080 it was %d", dev.Reverse[0].Remote)
 	}
 }
 
@@ -396,7 +396,7 @@ func Test_remoteEnabled(t *testing.T) {
 		t.Errorf("remote should be enabled after adding a port")
 	}
 
-	dev = &Dev{RemoteForward: []RemoteForward{{Local: 22000, Remote: 22000}}}
+	dev = &Dev{Reverse: []Reverse{{Local: 22000, Remote: 22000}}}
 
 	if !dev.RemoteModeEnabled() {
 		t.Errorf("remote should be enabled after adding a remote forward")

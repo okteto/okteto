@@ -76,7 +76,7 @@ type Dev struct {
 	Volumes         []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
-	RemoteForward   []RemoteForward      `json:"remoteForward,omitempty" yaml:"remoteForward,omitempty"`
+	Reverse   []Reverse      `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	RemotePort      int                  `json:"remote,omitempty" yaml:"remote,omitempty"`
 	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath         string               `json:"-" yaml:"-"`
@@ -116,8 +116,8 @@ type Forward struct {
 	Remote int
 }
 
-// RemoteForward represents a remote forward port
-type RemoteForward struct {
+// Reverse represents a remote forward port
+type Reverse struct {
 	Remote int
 	Local  int
 }
@@ -240,7 +240,7 @@ func (dev *Dev) setDefaults() error {
 		}
 		s.Namespace = ""
 		s.Forward = make([]Forward, 0)
-		s.RemoteForward = make([]RemoteForward, 0)
+		s.Reverse = make([]Reverse, 0)
 		s.Volumes = make([]Volume, 0)
 		s.Services = make([]*Dev, 0)
 	}
@@ -499,5 +499,5 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return true
 	}
 
-	return len(dev.RemoteForward) > 0
+	return len(dev.Reverse) > 0
 }

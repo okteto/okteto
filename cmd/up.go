@@ -432,14 +432,14 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 			return err
 		}
 
-		remoteForwardManager := ssh.NewRemoteForwardManager(up.Context, up.Dev.RemotePort)
-		for _, f := range up.Dev.RemoteForward {
-			if err := remoteForwardManager.Add(&f); err != nil {
+		reverseManager := ssh.NewReverseManager(up.Context, up.Dev.RemotePort)
+		for _, f := range up.Dev.Reverse {
+			if err := reverseManager.Add(&f); err != nil {
 				return err
 			}
 		}
 
-		if err := remoteForwardManager.Start(); err != nil {
+		if err := reverseManager.Start(); err != nil {
 			return err
 		}
 	}
@@ -637,10 +637,10 @@ func printDisplayContext(message string, dev *model.Dev) {
 			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
 		}
 	}
-	if len(dev.RemoteForward) > 0 {
-		log.Println(fmt.Sprintf("    %s    %d -> %d", log.BlueString("Remote:"), dev.RemoteForward[0].Remote, dev.RemoteForward[0].Local))
-		for i := 1; i < len(dev.RemoteForward); i++ {
-			log.Println(fmt.Sprintf("               %d -> %d", dev.RemoteForward[i].Remote, dev.RemoteForward[i].Local))
+	if len(dev.Reverse) > 0 {
+		log.Println(fmt.Sprintf("    %s    %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
+		for i := 1; i < len(dev.Reverse); i++ {
+			log.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
 		}
 	}
 	fmt.Println()
