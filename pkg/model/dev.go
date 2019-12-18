@@ -292,6 +292,7 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 func (dev *Dev) LoadRemote() {
 	if dev.RemotePort == 0 {
 		dev.RemotePort = 2222
+		log.Infof("remote port not set, using %d", dev.RemotePort)
 	}
 
 	dev.Forward = append(

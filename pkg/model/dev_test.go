@@ -311,6 +311,45 @@ func Test_LoadRemote(t *testing.T) {
 	}
 }
 
+func Test_RemoteForward(t *testing.T) {
+	manifest := []byte(`
+  name: deployment
+  container: core
+  image: code/core:0.1.8
+  command: ["uwsgi"]
+  annotations:
+    key1: value1
+    key2: value2
+  remoteForward:
+    - 8080:8080`)
+	dev, err := Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dev.LoadRemote()
+
+	if dev.RemotePort == 0 {
+		t.Error("remote port was not automatically enabled")
+	}
+
+	if len(dev.Forward) != 1 {
+		t.Errorf("forward wasn't injected")
+	}
+
+	if dev.Forward[0].Local != 2222 {
+		t.Errorf("local forward wasn't 22100 it was %d", dev.Forward[0].Local)
+	}
+
+	if dev.RemoteForward[0].Local != 8080 {
+		t.Errorf("remote forward local wasn't 8080 it was %d", dev.RemoteForward[0].Local)
+	}
+
+	if dev.RemoteForward[0].Remote != 8080 {
+		t.Errorf("remote forward remote wasn't 8080 it was %d", dev.RemoteForward[0].Remote)
+	}
+}
+
 func Test_LoadForcePull(t *testing.T) {
 	manifest := []byte(`
   name: a
@@ -355,5 +394,11 @@ func Test_remoteEnabled(t *testing.T) {
 
 	if !dev.RemoteModeEnabled() {
 		t.Errorf("remote should be enabled after adding a port")
+	}
+
+	dev = &Dev{RemoteForward: []RemoteForward{{Local: 22000, Remote: 22000}}}
+
+	if !dev.RemoteModeEnabled() {
+		t.Errorf("remote should be enabled after adding a remote forward")
 	}
 }

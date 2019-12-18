@@ -80,7 +80,7 @@ func (r *remoteForward) startWithRetry(ctx context.Context, c *ssh.ClientConfig,
 			return nil
 		}
 
-		log.Infof("remote forward tunnel disconnected %d->%d, retrying: %s", r.remotePort, r.localPort, err)
+		log.Infof("remote forward tunnel %d->%d not connected, retrying: %s", r.remotePort, r.localPort, err)
 		t := time.NewTicker(3 * time.Second)
 		<-t.C
 	}
