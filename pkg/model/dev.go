@@ -57,7 +57,6 @@ var (
 
 	devReplicas                      int32 = 1
 	devTerminationGracePeriodSeconds int64
-	persistentVolumeEnabled          bool = true
 )
 
 //Dev represents a cloud native development environment
