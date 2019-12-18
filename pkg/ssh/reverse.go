@@ -70,14 +70,14 @@ func (r *RemoteForwardManager) Start() error {
 	return nil
 }
 
-func (r *remoteForward) startWithRetry(ctx context.Context, c *ssh.ClientConfig, sshAddr string) error {
+func (r *remoteForward) startWithRetry(ctx context.Context, c *ssh.ClientConfig, sshAddr string) {
 	log.Infof("starting remote forward tunnel %d->%d", r.remotePort, r.localPort)
 
 	for {
 		err := r.start(ctx, c, sshAddr)
 		if err == nil {
 			log.Infof("remote forward tunnel %d->%d exited", r.remotePort, r.localPort)
-			return nil
+			return
 		}
 
 		log.Infof("remote forward tunnel %d->%d not connected, retrying: %s", r.remotePort, r.localPort, err)
