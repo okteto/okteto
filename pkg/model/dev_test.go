@@ -383,7 +383,12 @@ func Test_LoadForcePull(t *testing.T) {
 }
 
 func TestRemoteEnabled(t *testing.T) {
-	dev := &Dev{}
+	var dev *Dev
+	if dev.RemoteModeEnabled() {
+		t.Errorf("nil should be remote disabled")
+	}
+
+	dev = &Dev{}
 
 	if dev.RemoteModeEnabled() {
 		t.Errorf("default should be remote disabled")
@@ -431,18 +436,31 @@ func Test_validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "volumes-with-disabled-pvc",
+			name: "services-with-mountpath-pullpolicy",
 			manifest: []byte(`
       name: deployment
       container: core
       image: code/core:0.1.8
-      persistentVolume: false
-      volumes:
-        - docs:/docs`),
+      services:
+        - name: foo
+          mountpath: /app/bin
+          subpath: bin
+          imagePullPolicy: Always`),
+			expectErr: false,
+		},
+		{
+			name: "services-with-bad-pullpolicy",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      services:
+        - name: foo
+          imagePullPolicy: Sometimes`),
 			expectErr: true,
 		},
 		{
-			name: "volumes-with-default-pvc",
+			name: "volumes",
 			manifest: []byte(`
       name: deployment
       container: core
@@ -450,6 +468,40 @@ func Test_validate(t *testing.T) {
       volumes:
         - docs:/docs`),
 			expectErr: false,
+		},
+		{
+			name: "bad-pull-policy",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      imagePullPolicy: what
+      volumes:
+        - docs:/docs`),
+			expectErr: true,
+		},
+		{
+			name: "good-pull-policy",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      imagePullPolicy: IfNotPresent
+      volumes:
+        - docs:/docs`),
+			expectErr: false,
+		},
+		{
+			name: "subpath-on-main-dev",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      imagePullPolicy: IfNotPresent
+      subpath: /app/docs
+      volumes:
+        - docs:/docs`),
+			expectErr: true,
 		},
 	}
 
@@ -466,7 +518,7 @@ func Test_validate(t *testing.T) {
 			}
 
 			if !tt.expectErr && err != nil {
-				t.Error("got an unexpected error")
+				t.Errorf("got an unexpected error: %s", err)
 			}
 
 		})

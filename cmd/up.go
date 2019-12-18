@@ -393,7 +393,10 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		message := "Attaching persistent volume"
 		up.updateStateFile(attaching)
 		for {
-			spinner.update(fmt.Sprintf("%s...", message))
+			if up.Dev.PersistentVolumeEnabled() {
+				spinner.update(fmt.Sprintf("%s...", message))
+			}
+
 			message = <-reporter
 			if message == "" {
 				return

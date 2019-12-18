@@ -274,10 +274,6 @@ func (dev *Dev) validate() error {
 		if len(dev.Services) > 0 {
 			return fmt.Errorf("'persistentVolume' must be set to true to work with services")
 		}
-
-		if len(dev.Volumes) > 0 {
-			return fmt.Errorf("'persistentVolume' must be set to true to work with volumes")
-		}
 	}
 
 	for _, s := range dev.Services {
