@@ -48,7 +48,7 @@ services:
 	}
 	d1 := dev.GevSandbox()
 	dev.DevPath = "okteto.yml"
-	rule1 := dev.ToTranslationRule(dev, d1)
+	rule1 := dev.ToTranslationRule(dev)
 	tr1 := &model.Translation{
 		Interactive: true,
 		Name:        dev.Name,
@@ -191,7 +191,7 @@ services:
 
 	dev2 := dev.Services[0]
 	d2 := dev2.GevSandbox()
-	rule2 := dev2.ToTranslationRule(dev, d2)
+	rule2 := dev2.ToTranslationRule(dev)
 	tr2 := &model.Translation{
 		Interactive: false,
 		Name:        dev.Name,

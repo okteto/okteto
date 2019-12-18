@@ -298,8 +298,8 @@ func Test_LoadRemote(t *testing.T) {
 
 	dev.LoadRemote()
 
-	if dev.Command[0] != "/var/okteto/bin/remote" {
-		t.Errorf("remote command wasn't set: %s", dev.Command)
+	if dev.Command[0] != "uwsgi" {
+		t.Errorf("command wasn't set: %s", dev.Command)
 	}
 
 	if len(dev.Forward) != 2 {
@@ -341,5 +341,19 @@ func Test_LoadForcePull(t *testing.T) {
 
 	if dev.Annotations[OktetoRestartAnnotation] == "" {
 		t.Errorf("restart annotation not set for services")
+	}
+}
+
+func Test_remoteEnabled(t *testing.T) {
+	dev := &Dev{}
+
+	if dev.RemoteModeEnabled() {
+		t.Errorf("default should be remote disabled")
+	}
+
+	dev = &Dev{RemotePort: 22000}
+
+	if !dev.RemoteModeEnabled() {
+		t.Errorf("remote should be enabled after adding a port")
 	}
 }

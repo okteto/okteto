@@ -63,22 +63,6 @@ type UpContext struct {
 	success    bool
 }
 
-func (up *UpContext) remoteModeEnabled() bool {
-	if up.Dev == nil {
-		return false
-	}
-
-	if up.Dev.RemotePort > 0 {
-		return true
-	}
-
-	if up.Dev.RemoteForward != nil && len(up.Dev.RemoteForward) > 0 {
-		return true
-	}
-
-	return false
-}
-
 //Up starts a cloud dev environment
 func Up() *cobra.Command {
 	var devPath string
@@ -141,7 +125,7 @@ func RunUp(dev *model.Dev, autoDeploy bool, forcePull bool) error {
 
 	defer up.shutdown()
 
-	if up.remoteModeEnabled() {
+	if up.Dev.RemoteModeEnabled() {
 		dev.LoadRemote()
 	}
 
@@ -443,7 +427,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		return err
 	}
 
-	if up.remoteModeEnabled() {
+	if up.Dev.RemoteModeEnabled() {
 		if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
 			return err
 		}
@@ -565,7 +549,7 @@ func (up *UpContext) cleanCommand() {
 		in,
 		os.Stdout,
 		os.Stderr,
-		[]string{"sh", "-c", "((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/start.sh|/var/okteto/bin/syncthing|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1"},
+		[]string{"sh", "-c", "((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1"},
 	); err != nil {
 		log.Infof("first session to the remote container: %s", err)
 	}
@@ -622,7 +606,7 @@ func (up *UpContext) shutdown() {
 		log.Info("sent cancellation signal")
 	}
 
-	if up.remoteModeEnabled() {
+	if up.Dev.RemoteModeEnabled() {
 		if err := ssh.RemoveEntry(up.Dev.Name); err != nil {
 			log.Infof("failed to remove ssh entry: %s", err)
 		}

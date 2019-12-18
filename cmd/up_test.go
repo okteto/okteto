@@ -5,22 +5,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
 )
-
-func Test_remoteEnabled(t *testing.T) {
-	up := UpContext{}
-
-	if up.remoteModeEnabled() {
-		t.Errorf("default should be remote disabled")
-	}
-
-	up.Dev = &model.Dev{RemotePort: 22000}
-
-	if !up.remoteModeEnabled() {
-		t.Errorf("remote should be enabled after adding a port")
-	}
-}
 
 func TestWaitUntilExitOrInterrupt(t *testing.T) {
 	up := UpContext{}
