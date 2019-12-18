@@ -320,8 +320,10 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		return fmt.Errorf("`okteto up` is not allowed in this namespace")
 	}
 
-	if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
-		return err
+	if up.Dev.PersistentVolumeEnabled() {
+		if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
+			return err
+		}
 	}
 
 	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)

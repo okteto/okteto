@@ -393,11 +393,12 @@ func (dev *Dev) syncthingSubPath() string {
 // ToTranslationRule translates a dev struct into a translation rule
 func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	rule := &TranslationRule{
-		Container:       dev.Container,
-		Image:           dev.Image,
-		ImagePullPolicy: dev.ImagePullPolicy,
-		Environment:     dev.Environment,
-		WorkDir:         dev.WorkDir,
+		Container:        dev.Container,
+		Image:            dev.Image,
+		ImagePullPolicy:  dev.ImagePullPolicy,
+		Environment:      dev.Environment,
+		WorkDir:          dev.WorkDir,
+		PersistentVolume: dev.PersistentVolumeEnabled(),
 		Volumes: []VolumeMount{
 			{
 				Name:      OktetoVolumeName,

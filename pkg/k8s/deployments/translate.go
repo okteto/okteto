@@ -300,6 +300,7 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
 	}
+
 	for _, rV := range rule.Volumes {
 		found := false
 		for _, v := range spec.Volumes {
@@ -311,15 +312,21 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 		if found {
 			continue
 		}
+
 		v := apiv1.Volume{
-			Name: rV.Name,
-			VolumeSource: apiv1.VolumeSource{
-				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: rV.Name,
-					ReadOnly:  false,
-				},
-			},
+			Name:         rV.Name,
+			VolumeSource: apiv1.VolumeSource{},
 		}
+
+		if rule.PersistentVolume {
+			v.VolumeSource.PersistentVolumeClaim = &apiv1.PersistentVolumeClaimVolumeSource{
+				ClaimName: rV.Name,
+				ReadOnly:  false,
+			}
+		} else {
+			v.VolumeSource.EmptyDir = &apiv1.EmptyDirVolumeSource{}
+		}
+
 		spec.Volumes = append(spec.Volumes, v)
 	}
 }

@@ -18,19 +18,20 @@ type Translation struct {
 
 //TranslationRule represents how to apply a container translation in a deployment
 type TranslationRule struct {
-	Marker          string               `json:"marker"`
-	Node            string               `json:"node,omitempty"`
-	Container       string               `json:"container,omitempty"`
-	Image           string               `json:"image,omitempty"`
-	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment     []EnvVar             `json:"environment,omitempty"`
-	Command         []string             `json:"command,omitempty"`
-	Args            []string             `json:"args,omitempty"`
-	WorkDir         string               `json:"workdir"`
-	Healthchecks    bool                 `json:"healthchecks" yaml:"healthchecks"`
-	Volumes         []VolumeMount        `json:"volumes,omitempty"`
-	SecurityContext *SecurityContext     `json:"securityContext,omitempty"`
-	Resources       ResourceRequirements `json:"resources,omitempty"`
+	Marker           string               `json:"marker"`
+	Node             string               `json:"node,omitempty"`
+	Container        string               `json:"container,omitempty"`
+	Image            string               `json:"image,omitempty"`
+	ImagePullPolicy  apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	Environment      []EnvVar             `json:"environment,omitempty"`
+	Command          []string             `json:"command,omitempty"`
+	Args             []string             `json:"args,omitempty"`
+	WorkDir          string               `json:"workdir"`
+	Healthchecks     bool                 `json:"healthchecks" yaml:"healthchecks"`
+	PersistentVolume bool                 `json:"persistentVolume" yaml:"persistentVolume"`
+	Volumes          []VolumeMount        `json:"volumes,omitempty"`
+	SecurityContext  *SecurityContext     `json:"securityContext,omitempty"`
+	Resources        ResourceRequirements `json:"resources,omitempty"`
 }
 
 //VolumeMount represents a volume mount

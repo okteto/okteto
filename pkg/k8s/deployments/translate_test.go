@@ -496,3 +496,59 @@ func Test_translateSecurityContext(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslateOktetoVolumes(t *testing.T) {
+	var tests = []struct {
+		name     string
+		spec     *apiv1.PodSpec
+		rule     *model.TranslationRule
+		expected []apiv1.Volume
+	}{
+		{
+			name: "single-persistence-enabled",
+			spec: &apiv1.PodSpec{},
+			rule: &model.TranslationRule{
+				PersistentVolume: true,
+				Volumes: []model.VolumeMount{
+					{Name: "okteto"},
+				},
+			},
+			expected: []apiv1.Volume{
+				{
+					Name: "okteto",
+					VolumeSource: apiv1.VolumeSource{
+						PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+							ClaimName: "okteto",
+							ReadOnly:  false,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single-persistence-disabled",
+			spec: &apiv1.PodSpec{},
+			rule: &model.TranslationRule{
+				PersistentVolume: false,
+				Volumes: []model.VolumeMount{
+					{Name: "okteto"},
+				},
+			},
+			expected: []apiv1.Volume{
+				{
+					Name:         "okteto",
+					VolumeSource: apiv1.VolumeSource{EmptyDir: &apiv1.EmptyDirVolumeSource{}},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			TranslateOktetoVolumes(tt.spec, tt.rule)
+			if !reflect.DeepEqual(tt.expected, tt.spec.Volumes) {
+				t.Errorf("Expected \n%+v but got \n%+v", tt.expected, tt.spec.Volumes)
+			}
+		})
+	}
+}
