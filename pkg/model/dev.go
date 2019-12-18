@@ -57,31 +57,33 @@ var (
 
 	devReplicas                      int32 = 1
 	devTerminationGracePeriodSeconds int64
+	persistentVolumeEnabled          bool = true
 )
 
 //Dev represents a cloud native development environment
 type Dev struct {
-	Name            string               `json:"name" yaml:"name"`
-	Labels          map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     map[string]string    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Namespace       string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Container       string               `json:"container,omitempty" yaml:"container,omitempty"`
-	Image           string               `json:"image,omitempty" yaml:"image,omitempty"`
-	ImagePullPolicy apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment     []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Command         []string             `json:"command,omitempty" yaml:"command,omitempty"`
-	WorkDir         string               `json:"workdir,omitempty" yaml:"workdir,omitempty"`
-	MountPath       string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
-	SubPath         string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
-	Volumes         []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
-	Reverse         []Reverse            `json:"reverse,omitempty" yaml:"reverse,omitempty"`
-	RemotePort      int                  `json:"remote,omitempty" yaml:"remote,omitempty"`
-	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
-	DevPath         string               `json:"-" yaml:"-"`
-	DevDir          string               `json:"-" yaml:"-"`
-	Services        []*Dev               `json:"services,omitempty" yaml:"services,omitempty"`
+	Name             string               `json:"name" yaml:"name"`
+	Labels           map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations      map[string]string    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Namespace        string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Container        string               `json:"container,omitempty" yaml:"container,omitempty"`
+	Image            string               `json:"image,omitempty" yaml:"image,omitempty"`
+	ImagePullPolicy  apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	Environment      []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Command          []string             `json:"command,omitempty" yaml:"command,omitempty"`
+	WorkDir          string               `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+	MountPath        string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
+	SubPath          string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
+	PersistentVolume *bool                `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
+	Volumes          []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	SecurityContext  *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	Forward          []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Reverse          []Reverse            `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+	RemotePort       int                  `json:"remote,omitempty" yaml:"remote,omitempty"`
+	Resources        ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	DevPath          string               `json:"-" yaml:"-"`
+	DevDir           string               `json:"-" yaml:"-"`
+	Services         []*Dev               `json:"services,omitempty" yaml:"services,omitempty"`
 }
 
 // Volume represents a volume in the dev environment
@@ -169,6 +171,7 @@ func Read(bytes []byte) (*Dev, error) {
 		},
 		Services: make([]*Dev, 0),
 	}
+
 	if err := yaml.UnmarshalStrict(bytes, dev); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder
@@ -266,6 +269,16 @@ func (dev *Dev) validate() error {
 
 	if err := validatePullPolicy(dev.ImagePullPolicy); err != nil {
 		return err
+	}
+
+	if !dev.PersistentVolumeEnabled() {
+		if len(dev.Services) > 0 {
+			return fmt.Errorf("'persistentVolume' must be set to true to work with services")
+		}
+
+		if len(dev.Volumes) > 0 {
+			return fmt.Errorf("'persistentVolume' must be set to true to work with volumes")
+		}
 	}
 
 	for _, s := range dev.Services {
@@ -506,4 +519,13 @@ func (dev *Dev) RemoteModeEnabled() bool {
 	}
 
 	return len(dev.Reverse) > 0
+}
+
+// PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
+func (dev *Dev) PersistentVolumeEnabled() bool {
+	if dev.PersistentVolume == nil {
+		return true
+	}
+
+	return *dev.PersistentVolume
 }
