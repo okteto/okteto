@@ -76,7 +76,7 @@ type Dev struct {
 	Volumes         []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	SecurityContext *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	Forward         []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
-	RemoteForward   []Forward            `json:"remoteForward,omitempty" yaml:"remoteForward,omitempty"`
+	RemoteForward   []RemoteForward      `json:"remoteForward,omitempty" yaml:"remoteForward,omitempty"`
 	RemotePort      int                  `json:"remote,omitempty" yaml:"remote,omitempty"`
 	Resources       ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath         string               `json:"-" yaml:"-"`
@@ -114,6 +114,12 @@ type EnvVar struct {
 type Forward struct {
 	Local  int
 	Remote int
+}
+
+// RemoteForward represents a remote forward port
+type RemoteForward struct {
+	Remote int
+	Local  int
 }
 
 // ResourceRequirements describes the compute resource requirements.
@@ -234,6 +240,7 @@ func (dev *Dev) setDefaults() error {
 		}
 		s.Namespace = ""
 		s.Forward = make([]Forward, 0)
+		s.RemoteForward = make([]RemoteForward, 0)
 		s.Volumes = make([]Volume, 0)
 		s.Services = make([]*Dev, 0)
 	}
@@ -283,6 +290,10 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 
 //LoadRemote configures remote execution
 func (dev *Dev) LoadRemote() {
+	if dev.RemotePort == 0 {
+		dev.RemotePort = 2222
+	}
+
 	dev.Forward = append(
 		dev.Forward,
 		Forward{
@@ -483,5 +494,9 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return false
 	}
 
-	return dev.RemotePort > 0
+	if dev.RemotePort > 0 {
+		return true
+	}
+
+	return len(dev.RemoteForward) > 0
 }

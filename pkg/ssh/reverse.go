@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -37,7 +38,11 @@ func NewRemoteForwardManager(ctx context.Context, sshPort int) *RemoteForwardMan
 }
 
 // Add initializes a remote forward
-func (r *RemoteForwardManager) Add(localPort, remotePort int) error {
+func (r *RemoteForwardManager) Add(f *model.RemoteForward) error {
+
+	localPort := f.Local
+	remotePort := f.Remote
+
 	if _, ok := r.remoteForwards[localPort]; ok {
 		return fmt.Errorf("port %d is already taken, please check your remote forward configuration", localPort)
 	}
