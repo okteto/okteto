@@ -61,6 +61,7 @@ services:
 			},
 			Requests: ResourceList{},
 		},
+		PersistentVolume: true,
 		Volumes: []VolumeMount{
 			VolumeMount{
 				Name:      OktetoVolumeName,
@@ -100,6 +101,7 @@ services:
 			Limits:   ResourceList{},
 			Requests: ResourceList{},
 		},
+		PersistentVolume: true,
 		Volumes: []VolumeMount{
 			{
 				Name:      OktetoVolumeName,

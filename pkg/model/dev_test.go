@@ -181,6 +181,9 @@ forward:
 				}
 			}
 
+			if !d.PersistentVolumeEnabled() {
+				t.Errorf("peristent volume was not enabled by default")
+			}
 		})
 	}
 }
@@ -237,7 +240,7 @@ image: %s
 	}
 }
 
-func TestDev_validate(t *testing.T) {
+func TestDev_validateName(t *testing.T) {
 	tests := []struct {
 		name    string
 		devName string
@@ -379,8 +382,13 @@ func Test_LoadForcePull(t *testing.T) {
 	}
 }
 
-func Test_remoteEnabled(t *testing.T) {
-	dev := &Dev{}
+func TestRemoteEnabled(t *testing.T) {
+	var dev *Dev
+	if dev.RemoteModeEnabled() {
+		t.Errorf("nil should be remote disabled")
+	}
+
+	dev = &Dev{}
 
 	if dev.RemoteModeEnabled() {
 		t.Errorf("default should be remote disabled")
@@ -396,5 +404,170 @@ func Test_remoteEnabled(t *testing.T) {
 
 	if !dev.RemoteModeEnabled() {
 		t.Errorf("remote should be enabled after adding a remote forward")
+	}
+}
+
+func Test_validate(t *testing.T) {
+	var tests = []struct {
+		name      string
+		manifest  []byte
+		expectErr bool
+	}{
+		{
+			name: "services-with-disabled-pvc",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      persistentVolume: false
+      services:
+        - name: foo`),
+			expectErr: true,
+		},
+		{
+			name: "services-with-enabled-pvc",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      persistentVolume: true
+      services:
+        - name: foo`),
+			expectErr: false,
+		},
+		{
+			name: "services-with-mountpath-pullpolicy",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      services:
+        - name: foo
+          mountpath: /app/bin
+          subpath: bin
+          imagePullPolicy: Always`),
+			expectErr: false,
+		},
+		{
+			name: "services-with-bad-pullpolicy",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      services:
+        - name: foo
+          imagePullPolicy: Sometimes`),
+			expectErr: true,
+		},
+		{
+			name: "volumes",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      volumes:
+        - docs:/docs`),
+			expectErr: false,
+		},
+		{
+			name: "bad-pull-policy",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      imagePullPolicy: what
+      volumes:
+        - docs:/docs`),
+			expectErr: true,
+		},
+		{
+			name: "good-pull-policy",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      imagePullPolicy: IfNotPresent
+      volumes:
+        - docs:/docs`),
+			expectErr: false,
+		},
+		{
+			name: "subpath-on-main-dev",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      imagePullPolicy: IfNotPresent
+      subpath: /app/docs
+      volumes:
+        - docs:/docs`),
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev, err := Read(tt.manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = dev.validate()
+			if tt.expectErr && err == nil {
+				t.Error("didn't got the expected error")
+			}
+
+			if !tt.expectErr && err != nil {
+				t.Errorf("got an unexpected error: %s", err)
+			}
+
+		})
+	}
+}
+func TestPersistentVolumeEnabled(t *testing.T) {
+	var tests = []struct {
+		name     string
+		manifest []byte
+		expected bool
+	}{
+		{
+			name: "default",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8`),
+			expected: true,
+		},
+		{
+			name: "set",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      persistentVolume: true`),
+			expected: true,
+		},
+		{
+			name: "disabled",
+			manifest: []byte(`
+      name: deployment
+      container: core
+      image: code/core:0.1.8
+      persistentVolume: false`),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev, err := Read(tt.manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if dev.PersistentVolumeEnabled() != tt.expected {
+				t.Errorf("Expecting %t but got %t", tt.expected, dev.PersistentVolumeEnabled())
+			}
+		})
 	}
 }
