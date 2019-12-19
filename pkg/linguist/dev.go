@@ -15,6 +15,7 @@ type languageDefault struct {
 	environment     []model.EnvVar
 	volumes         []model.Volume
 	forward         []model.Forward
+	reverse         []model.Reverse
 	securityContext *model.SecurityContext
 }
 
@@ -27,6 +28,7 @@ const (
 	java       = "java"
 	ruby       = "ruby"
 	csharp     = "csharp"
+	php        = "php"
 
 	// Unrecognized is the option returned when the linguist couldn't detect a language
 	Unrecognized = "other"
@@ -144,6 +146,23 @@ func init() {
 		},
 	}
 
+	languageDefaults[php] = languageDefault{
+		image:   "okteto/php:7",
+		command: []string{"bash"},
+		forward: []model.Forward{
+			{
+				Local:  8080,
+				Remote: 8080,
+			},
+		},
+		reverse: []model.Reverse{
+			{
+				Local:  9000,
+				Remote: 9000,
+			},
+		},
+	}
+
 	languageDefaults[Unrecognized] = languageDefault{
 		image:   model.DefaultImage,
 		command: []string{"bash"},
@@ -176,6 +195,7 @@ func GetDevConfig(language string) *model.Dev {
 		Environment:     vals.environment,
 		Volumes:         vals.volumes,
 		Forward:         vals.forward,
+		Reverse:         vals.reverse,
 		SecurityContext: vals.securityContext,
 	}
 
@@ -209,6 +229,8 @@ func normalizeLanguage(language string) string {
 		return csharp
 	case "csharp":
 		return csharp
+	case "php":
+		return php
 	default:
 		return Unrecognized
 	}
