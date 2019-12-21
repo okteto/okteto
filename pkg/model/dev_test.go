@@ -215,7 +215,7 @@ func Test_loadDevImage(t *testing.T) {
 			tagValue: "dev/core:latest",
 		},
 		{
-			name:     "missing",
+			name:     "missing-tag",
 			want:     "code/core:",
 			image:    "code/core:${image}",
 			tagValue: "tag",
@@ -242,7 +242,7 @@ func Test_loadDevImage(t *testing.T) {
 			onService: true,
 		},
 		{
-			name:      "missing-svc",
+			name:      "missing-tag-svc",
 			want:      "code/core:",
 			image:     "code/core:${image}",
 			tagValue:  "tag",
@@ -279,7 +279,7 @@ services:
 			}
 
 			if img != tt.want {
-				t.Errorf("got: %s, expected: %s", img, tt.want)
+				t.Errorf("got: '%s', expected: '%s'", img, tt.want)
 			}
 		})
 	}
