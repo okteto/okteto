@@ -190,10 +190,11 @@ forward:
 
 func Test_loadDevImage(t *testing.T) {
 	tests := []struct {
-		name     string
-		want     string
-		image    string
-		tagValue string
+		name      string
+		want      string
+		image     string
+		tagValue  string
+		onService bool
 	}{
 		{
 			name:     "tag",
@@ -219,6 +220,34 @@ func Test_loadDevImage(t *testing.T) {
 			image:    "code/core:${image}",
 			tagValue: "tag",
 		},
+		{
+			name:      "tag-svc",
+			want:      "code/core:dev",
+			image:     "code/core:${tag}",
+			tagValue:  "dev",
+			onService: true,
+		},
+		{
+			name:      "registry-svc",
+			want:      "dev/core:latest",
+			image:     "${tag}/core:latest",
+			tagValue:  "dev",
+			onService: true,
+		},
+		{
+			name:      "full-svc",
+			want:      "dev/core:latest",
+			image:     "${tag}",
+			tagValue:  "dev/core:latest",
+			onService: true,
+		},
+		{
+			name:      "missing-svc",
+			want:      "code/core:",
+			image:     "code/core:${image}",
+			tagValue:  "tag",
+			onService: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -227,14 +256,30 @@ func Test_loadDevImage(t *testing.T) {
 name: deployment
 image: %s
 `, tt.image))
+
+			if tt.onService {
+				manifest = []byte(fmt.Sprintf(`
+name: deployment
+image: image
+services:
+  - name: svc
+    image: %s
+`, tt.image))
+			}
+
 			os.Setenv("tag", tt.tagValue)
 			d, err := Read(manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if d.Image != tt.want {
-				t.Errorf("got: %s, expected: %s", d.Image, tt.want)
+			img := d.Image
+			if tt.onService {
+				img = d.Services[0].Image
+			}
+
+			if img != tt.want {
+				t.Errorf("got: %s, expected: %s", img, tt.want)
 			}
 		})
 	}

@@ -190,14 +190,22 @@ func Read(bytes []byte) (*Dev, error) {
 		return nil, errors.New(msg)
 	}
 
-	if len(dev.Image) > 0 {
-		dev.Image = os.ExpandEnv(dev.Image)
+	dev.loadImage()
+
+	for _, s := range dev.Services {
+		s.loadImage()
 	}
 
 	if err := dev.setDefaults(); err != nil {
 		return nil, err
 	}
 	return dev, nil
+}
+
+func (dev *Dev) loadImage() {
+	if len(dev.Image) > 0 {
+		dev.Image = os.ExpandEnv(dev.Image)
+	}
 }
 
 func (dev *Dev) setDefaults() error {
