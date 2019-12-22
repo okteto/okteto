@@ -120,12 +120,13 @@ func ProcessDirectory(root string) (string, error) {
 }
 
 func refineJavaChoice(root string) string {
-	p := filepath.Join(root, "pom.xml")
-	if _, err := os.Stat(p); err != nil {
-		log.Infof("didn't found %s : %s", p, err)
+	p := filepath.Join(root, "build.gradle")
+	_, err := os.Stat(p)
+	if err == nil {
 		return gradle
 	}
 
+	log.Infof("didn't found %s : %s", p, err)
 	return maven
 }
 
