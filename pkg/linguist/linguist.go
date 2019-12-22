@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
-	enry "gopkg.in/src-d/enry.v1"
+	enry "github.com/src-d/enry/v2"
 )
 
 const (

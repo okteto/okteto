@@ -44,7 +44,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/cobra v0.0.5
-	github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 // indirect
+	github.com/src-d/enry/v2 v2.1.0
 	go.undefinedlabs.com/scopeagent v0.0.0-20191016204136-6268ca5079f6
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
@@ -55,8 +55,7 @@ require (
 	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-	gopkg.in/src-d/enry.v1 v1.6.7
-	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
+	gopkg.in/src-d/enry.v1 v1.7.3 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.0.0-20191206001707-7edad22604e1
 	k8s.io/apimachinery v0.0.0-20191203211716-adc6f4cd9e7d

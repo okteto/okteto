@@ -425,6 +425,12 @@ github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnIn
 github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spf13/viper v1.3.2/go.mod h1:ZiWeW+zYFKm7srdB9IoDzzZXaJaI5eL9QjNiN/DMA2s=
+github.com/src-d/enry v1.7.3 h1:jG2fmEaQaURh0qqU/sn82BRzVa6d4EVHJIw6gc98bak=
+github.com/src-d/enry v1.7.3/go.mod h1:rS65Jtgb3+BhbLv9ANl7G60QK2/ioztFTRBvjx4egQ0=
+github.com/src-d/enry/v2 v2.1.0 h1:z1L8t+B8bh3mmjPkJrgOTnVRpFGmTPJsplHX9wAn6BI=
+github.com/src-d/enry/v2 v2.1.0/go.mod h1:qQeCMRwzMF3ckeGr+h0tJLdxXnq+NVZsIDMELj0t028=
+github.com/src-d/go-oniguruma v1.1.0 h1:EG+Nm5n2JqWUaCjtM0NtutPxU7ZN5Tp50GWrrV8bTww=
+github.com/src-d/go-oniguruma v1.1.0/go.mod h1:chVbff8kcVtmrhxtZ3yBVLLquXbzCS6DrxQaAK/CeqM=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
@@ -445,6 +451,8 @@ github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305 h1:y/1cL5AL2oRcfz
 github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305/go.mod h1:gXOLibKqQTRAVuVZ9gX7G9Ykky8ll8yb4slxsEMoY0c=
 github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 h1:ej8ns+4aeQO+mm9VIzwnJElkqR0Vs6kTfIcvgyJFoMY=
 github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683/go.mod h1:Ywk48QhEqhU1+DwhMkJ2x7eeGxDHiGkAdc9+0DYcbsM=
+github.com/toqueteos/trie v1.0.0 h1:8i6pXxNUXNRAqP246iibb7w/pSFquNTQ+uNfriG7vlk=
+github.com/toqueteos/trie v1.0.0/go.mod h1:Ywk48QhEqhU1+DwhMkJ2x7eeGxDHiGkAdc9+0DYcbsM=
 github.com/tsenart/deadcode v0.0.0-20160724212837-210d2dc333e9 h1:vY5WqiEon0ZSTGM3ayVVi+twaHKHDFUVloaQ/wug9/c=
 github.com/tsenart/deadcode v0.0.0-20160724212837-210d2dc333e9/go.mod h1:q+QjxYvZ+fpjMXqs+XEriussHjSYqeXVnAdSV1tkMYk=
 github.com/uber/jaeger-client-go v0.0.0-20180103221425-e02c85f9069e/go.mod h1:WVhlPFC8FDjOFMMWRy2pZqQJSXxYSwNYOkTr/Z6d3Kk=
@@ -623,6 +631,8 @@ gopkg.in/natefinch/lumberjack.v2 v2.0.0 h1:1Lc07Kr7qY4U2YPouBjpCLxpiyxIVoxqXgkXL
 gopkg.in/natefinch/lumberjack.v2 v2.0.0/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24xpD6X8LsfU/+k=
 gopkg.in/src-d/enry.v1 v1.6.7 h1:9989t5TGSGWvtjzG9kPCQUNrZqj4ZkYnClqO5Yi80eE=
 gopkg.in/src-d/enry.v1 v1.6.7/go.mod h1:lDDelHa5/fOO+o8klI8JOOoMszXxhqCYOgqFS2mnxQA=
+gopkg.in/src-d/enry.v1 v1.7.3 h1:2J5bIFs6G61eVd31NxCZri9iYkPbQCgfQZR+9xDvCCU=
+gopkg.in/src-d/enry.v1 v1.7.3/go.mod h1:lDDelHa5/fOO+o8klI8JOOoMszXxhqCYOgqFS2mnxQA=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
 gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 h1:yiW+nvdHb9LVqSHQBXfZCieqV4fzYhNBql77zY0ykqs=
