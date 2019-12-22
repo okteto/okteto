@@ -7,26 +7,46 @@ import (
 	"testing"
 )
 
-func Test_refineJavaChoice(t *testing.T) {
+func TestProcessDirectory(t *testing.T) {
 	tests := []struct {
-		name      string
-		want      string
-		magicFile string
+		name  string
+		want  string
+		files []string
 	}{
 		{
-			name:      "gradle",
-			want:      gradle,
-			magicFile: "build.gradle",
+			name:  "gradle",
+			want:  gradle,
+			files: []string{"build.gradle", "main.java"},
 		},
 		{
-			name:      "maven",
-			want:      maven,
-			magicFile: "pom.xml",
+			name:  "maven",
+			want:  maven,
+			files: []string{"pom.xml", "main.java"},
 		},
 		{
-			name:      "none",
-			want:      maven,
-			magicFile: "test.java",
+			name:  "none",
+			want:  maven,
+			files: []string{"main.java"},
+		},
+		{
+			name:  "golang",
+			want:  golang,
+			files: []string{"main.go", "server.go"},
+		},
+		{
+			name:  "python",
+			want:  python,
+			files: []string{"api.py"},
+		},
+		{
+			name:  "javascript",
+			want:  javascript,
+			files: []string{"Package.json", "index.js"},
+		},
+		{
+			name:  "ruby",
+			want:  ruby,
+			files: []string{"Gemfile", "Rakefile", "application_controller.rb"},
 		},
 	}
 
@@ -39,16 +59,20 @@ func Test_refineJavaChoice(t *testing.T) {
 
 			defer os.RemoveAll(tmp)
 
-			if _, err := os.Create(filepath.Join(tmp, "main.java")); err != nil {
-				t.Error(err)
+			for _, f := range tt.files {
+				if _, err := os.Create(filepath.Join(tmp, f)); err != nil {
+					t.Fatal(err)
+				}
 			}
 
-			if _, err := os.Create(filepath.Join(tmp, tt.magicFile)); err != nil {
-				t.Error(err)
+			got, err := ProcessDirectory(tmp)
+
+			if err != nil {
+				t.Fatal(err)
 			}
 
-			if got := refineJavaChoice(tmp); got != tt.want {
-				t.Errorf("refineJavaChoice() = %v, want %v", got, tt.want)
+			if got != tt.want {
+				t.Errorf("ProcessDirectory() = %v, want %v", got, tt.want)
 			}
 		})
 	}
