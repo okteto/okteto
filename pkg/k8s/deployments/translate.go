@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -487,8 +486,8 @@ func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []mode
 		v.VolumeSource.Secret.Items = append(
 			v.VolumeSource.Secret.Items,
 			apiv1.KeyToPath{
-				Key:  filepath.Base(s.RemotePath),
-				Path: filepath.Base(s.RemotePath),
+				Key:  s.GetKeyName(),
+				Path: s.GetFileName(),
 				Mode: &secrets[i].Mode,
 			},
 		)

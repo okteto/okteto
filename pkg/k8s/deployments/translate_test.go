@@ -136,7 +136,7 @@ services:
 									SecretName: "okteto-web",
 									Items: []apiv1.KeyToPath{
 										{
-											Key:  "remote",
+											Key:  "dev-secret-remote",
 											Path: "remote",
 											Mode: &mode,
 										},

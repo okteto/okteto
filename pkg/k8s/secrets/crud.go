@@ -3,7 +3,6 @@ package secrets
 import (
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -54,7 +53,7 @@ func Create(dev *model.Dev, c *kubernetes.Clientset, guiPasswordHash string) err
 		if err != nil {
 			return fmt.Errorf("error reading secret '%s': %s", s.LocalPath, err)
 		}
-		data.Data[filepath.Base(s.RemotePath)] = content
+		data.Data[s.GetKeyName()] = content
 	}
 
 	if sct.Name == "" {

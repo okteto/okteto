@@ -288,6 +288,10 @@ func (dev *Dev) validate() error {
 		return err
 	}
 
+	if err := validateSecrets(dev.Secrets); err != nil {
+		return err
+	}
+
 	if !dev.PersistentVolumeEnabled() {
 		if len(dev.Services) > 0 {
 			return fmt.Errorf("'persistentVolume' must be set to true to work with services")
@@ -310,6 +314,17 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 	case apiv1.PullNever:
 	default:
 		return fmt.Errorf("supported values for 'imagePullPolicy' are: 'Always', 'IfNotPresent' or 'Never'")
+	}
+	return nil
+}
+
+func validateSecrets(secrets []Secret) error {
+	seen := map[string]bool{}
+	for _, s := range secrets {
+		if _, ok := seen[s.GetFileName()]; ok {
+			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
+		}
+		seen[s.GetFileName()] = true
 	}
 	return nil
 }
@@ -450,7 +465,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		}
 		for _, s := range rule.Secrets {
 			rule.Args = append(rule.Args, "-s")
-			rule.Args = append(rule.Args, fmt.Sprintf("%s:%s", filepath.Base(s.RemotePath), s.RemotePath))
+			rule.Args = append(rule.Args, fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
 		}
 	} else {
 		rule.Healthchecks = true
@@ -538,6 +553,16 @@ func (dev *Dev) RemoteModeEnabled() bool {
 	}
 
 	return len(dev.Reverse) > 0
+}
+
+// GetKeyName returns the secret key name
+func (s *Secret) GetKeyName() string {
+	return fmt.Sprintf("dev-secret-%s", filepath.Base(s.RemotePath))
+}
+
+// GetFileName returns the secret file name
+func (s *Secret) GetFileName() string {
+	return filepath.Base(s.RemotePath)
 }
 
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
