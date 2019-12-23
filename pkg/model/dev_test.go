@@ -2,6 +2,8 @@ package model
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -453,6 +455,12 @@ func TestRemoteEnabled(t *testing.T) {
 }
 
 func Test_validate(t *testing.T) {
+	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
 	var tests = []struct {
 		name      string
 		manifest  []byte
@@ -513,6 +521,16 @@ func Test_validate(t *testing.T) {
       volumes:
         - docs:/docs`),
 			expectErr: false,
+		},
+		{
+			name: "secrets",
+			manifest: []byte(fmt.Sprintf(`
+      name: deployment
+      image: code/core:0.1.8
+      secrets:
+        - %s:/remote
+        - %s:/remote`, file.Name(), file.Name())),
+			expectErr: true,
 		},
 		{
 			name: "bad-pull-policy",

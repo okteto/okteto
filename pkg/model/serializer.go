@@ -35,6 +35,47 @@ func (e EnvVar) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw string
+	err := unmarshal(&raw)
+	if err != nil {
+		return err
+	}
+
+	rawExpanded := os.ExpandEnv(raw)
+	parts := strings.Split(rawExpanded, ":")
+	if len(parts) < 2 || len(parts) > 3 {
+		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
+	}
+	s.LocalPath = parts[0]
+	if err := checkFileAndNotDirectory(s.LocalPath); err != nil {
+		return err
+	}
+	s.RemotePath = parts[1]
+	if !strings.HasPrefix(s.RemotePath, "/") {
+		return fmt.Errorf("Secret remote path '%s' must be an absolute path", s.RemotePath)
+	}
+	if len(parts) == 3 {
+		mode, err := strconv.ParseInt(parts[2], 8, 32)
+		if err != nil {
+			return fmt.Errorf("error parsing secret '%s' mode: %s", parts[0], err)
+		}
+		s.Mode = int32(mode)
+	} else {
+		s.Mode = 420
+	}
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (s Secret) MarshalYAML() (interface{}, error) {
+	if s.Mode == 420 {
+		return fmt.Sprintf("%s:%s:%s", s.LocalPath, s.RemotePath, strconv.FormatInt(int64(s.Mode), 8)), nil
+	}
+	return fmt.Sprintf("%s:%s", s.LocalPath, s.RemotePath), nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)
@@ -151,4 +192,15 @@ func (v Volume) MarshalYAML() (interface{}, error) {
 		return v.MountPath, nil
 	}
 	return v.SubPath + ":" + v.MountPath, nil
+}
+
+func checkFileAndNotDirectory(path string) error {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if fileInfo.Mode().IsRegular() {
+		return nil
+	}
+	return fmt.Errorf("Secret '%s' is not a regular file", path)
 }

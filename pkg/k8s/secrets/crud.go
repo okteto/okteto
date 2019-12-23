@@ -2,6 +2,7 @@ package secrets
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -47,6 +48,14 @@ func Create(dev *model.Dev, c *kubernetes.Clientset, guiPasswordHash string) err
 			"key.pem":    []byte(keyPEM),
 		},
 	}
+	for _, s := range dev.Secrets {
+		content, err := ioutil.ReadFile(s.LocalPath)
+		if err != nil {
+			return fmt.Errorf("error reading secret '%s': %s", s.LocalPath, err)
+		}
+		data.Data[s.GetKeyName()] = content
+	}
+
 	if sct.Name == "" {
 		_, err := c.CoreV1().Secrets(dev.Namespace).Create(data)
 		if err != nil {

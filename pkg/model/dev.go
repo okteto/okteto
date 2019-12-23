@@ -69,6 +69,7 @@ type Dev struct {
 	Image            string               `json:"image,omitempty" yaml:"image,omitempty"`
 	ImagePullPolicy  apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment      []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Secrets          []Secret             `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command          []string             `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir          string               `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath        string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
@@ -109,6 +110,13 @@ type Capabilities struct {
 type EnvVar struct {
 	Name  string
 	Value string
+}
+
+// Secret represents a development secret
+type Secret struct {
+	LocalPath  string
+	RemotePath string
+	Mode       int32
 }
 
 // Forward represents a port forwarding definition
@@ -161,6 +169,7 @@ func Get(devPath string) (*Dev, error) {
 func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		Environment: make([]EnvVar, 0),
+		Secrets:     make([]Secret, 0),
 		Command:     make([]string, 0),
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
@@ -251,6 +260,7 @@ func (dev *Dev) setDefaults() error {
 		s.Namespace = ""
 		s.Forward = make([]Forward, 0)
 		s.Reverse = make([]Reverse, 0)
+		s.Secrets = make([]Secret, 0)
 		s.Volumes = make([]Volume, 0)
 		s.Services = make([]*Dev, 0)
 	}
@@ -278,6 +288,10 @@ func (dev *Dev) validate() error {
 		return err
 	}
 
+	if err := validateSecrets(dev.Secrets); err != nil {
+		return err
+	}
+
 	if !dev.PersistentVolumeEnabled() {
 		if len(dev.Services) > 0 {
 			return fmt.Errorf("'persistentVolume' must be set to true to work with services")
@@ -300,6 +314,17 @@ func validatePullPolicy(pullPolicy apiv1.PullPolicy) error {
 	case apiv1.PullNever:
 	default:
 		return fmt.Errorf("supported values for 'imagePullPolicy' are: 'Always', 'IfNotPresent' or 'Never'")
+	}
+	return nil
+}
+
+func validateSecrets(secrets []Secret) error {
+	seen := map[string]bool{}
+	for _, s := range secrets {
+		if _, ok := seen[s.GetFileName()]; ok {
+			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
+		}
+		seen[s.GetFileName()] = true
 	}
 	return nil
 }
@@ -400,6 +425,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		Image:            dev.Image,
 		ImagePullPolicy:  dev.ImagePullPolicy,
 		Environment:      dev.Environment,
+		Secrets:          dev.Secrets,
 		WorkDir:          dev.WorkDir,
 		PersistentVolume: dev.PersistentVolumeEnabled(),
 		Volumes: []VolumeMount{
@@ -436,6 +462,10 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 			rule.Args = []string{"-r"}
 		} else {
 			rule.Args = []string{}
+		}
+		for _, s := range rule.Secrets {
+			rule.Args = append(rule.Args, "-s")
+			rule.Args = append(rule.Args, fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
 		}
 	} else {
 		rule.Healthchecks = true
@@ -523,6 +553,16 @@ func (dev *Dev) RemoteModeEnabled() bool {
 	}
 
 	return len(dev.Reverse) > 0
+}
+
+// GetKeyName returns the secret key name
+func (s *Secret) GetKeyName() string {
+	return fmt.Sprintf("dev-secret-%s", filepath.Base(s.RemotePath))
+}
+
+// GetFileName returns the secret file name
+func (s *Secret) GetFileName() string {
+	return filepath.Base(s.RemotePath)
 }
 
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev

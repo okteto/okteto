@@ -1,6 +1,10 @@
 package deployments
 
 import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
 	"reflect"
 	"testing"
 
@@ -14,10 +18,17 @@ import (
 )
 
 func Test_translate(t *testing.T) {
+	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
 	var runAsUser int64 = 100
 	var runAsGroup int64 = 101
 	var fsGroup int64 = 102
-	manifest := []byte(`name: web
+	var mode int32 = 420
+	manifest := []byte(fmt.Sprintf(`name: web
 container: dev
 image: web:latest
 command: ["./run_web.sh"]
@@ -28,6 +39,8 @@ securityContext:
   fsGroup: 102
 volumes:
   - sub:/path
+secrets:
+  - %s:/remote
 resources:
   limits:
     cpu: 2
@@ -40,7 +53,7 @@ services:
     image: worker:latest
     command: ["./run_worker.sh"]
     mountpath: /src
-    subpath: /worker`)
+    subpath: /worker`, file.Name()))
 
 	dev, err := model.Read(manifest)
 	if err != nil {
@@ -90,6 +103,20 @@ services:
 							VolumeSource: apiv1.VolumeSource{
 								Secret: &apiv1.SecretVolumeSource{
 									SecretName: "okteto-web",
+									Items: []apiv1.KeyToPath{
+										{
+											Key:  "config.xml",
+											Path: "config.xml",
+										},
+										{
+											Key:  "cert.pem",
+											Path: "cert.pem",
+										},
+										{
+											Key:  "key.pem",
+											Path: "key.pem",
+										},
+									},
 								},
 							},
 						},
@@ -99,6 +126,21 @@ services:
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
 									ClaimName: oktetoVolumeName,
 									ReadOnly:  false,
+								},
+							},
+						},
+						{
+							Name: oktetoDevSecretVolume,
+							VolumeSource: apiv1.VolumeSource{
+								Secret: &apiv1.SecretVolumeSource{
+									SecretName: "okteto-web",
+									Items: []apiv1.KeyToPath{
+										{
+											Key:  "dev-secret-remote",
+											Path: "remote",
+											Mode: &mode,
+										},
+									},
 								},
 							},
 						},
@@ -129,7 +171,7 @@ services:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{},
+							Args:            []string{"-s", "remote:/remote"},
 							WorkingDir:      "/app",
 							Env: []apiv1.EnvVar{
 								{
@@ -168,6 +210,11 @@ services:
 									Name:      oktetoSyncSecretVolume,
 									ReadOnly:  false,
 									MountPath: "/var/syncthing/secret/",
+								},
+								{
+									Name:      oktetoDevSecretVolume,
+									ReadOnly:  false,
+									MountPath: "/var/okteto/secret/",
 								},
 								{
 									Name:      oktetoBinName,
