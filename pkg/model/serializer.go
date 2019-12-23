@@ -42,7 +42,8 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	parts := strings.Split(raw, ":")
+	rawExpanded := os.ExpandEnv(raw)
+	parts := strings.Split(rawExpanded, ":")
 	if len(parts) < 2 || len(parts) > 3 {
 		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
 	}

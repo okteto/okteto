@@ -213,6 +213,10 @@ func TestSecretMashalling(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
+	if err := os.Setenv("TEST_HOME", file.Name()); err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name          string
 		data          string
@@ -229,6 +233,12 @@ func TestSecretMashalling(t *testing.T) {
 			"local:remote:mode",
 			fmt.Sprintf("%s:/remote:400", file.Name()),
 			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 256},
+			nil,
+		},
+		{
+			"variables",
+			"$TEST_HOME:/remote",
+			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
 			nil,
 		},
 		{

@@ -483,13 +483,13 @@ func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []mode
 			},
 		},
 	}
-	for _, s := range secrets {
+	for i, s := range secrets {
 		v.VolumeSource.Secret.Items = append(
 			v.VolumeSource.Secret.Items,
 			apiv1.KeyToPath{
 				Key:  filepath.Base(s.RemotePath),
 				Path: filepath.Base(s.RemotePath),
-				Mode: &s.Mode,
+				Mode: &secrets[i].Mode,
 			},
 		)
 	}
