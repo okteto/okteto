@@ -9,10 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
-	enry "gopkg.in/src-d/enry.v1"
+	enry "github.com/src-d/enry/v2"
 )
 
 const (
@@ -109,15 +110,24 @@ func ProcessDirectory(root string) (string, error) {
 	}
 
 	sorted := sortLanguagesByUsage(out)
-	if sorted[0] == java {
-		if _, err := os.Stat(filepath.Join(root, "pom.xml")); !os.IsNotExist(err) {
-			return maven, nil
-		}
+	chosen := strings.ToLower(sorted[0])
 
-		return gradle, nil
+	if chosen == java {
+		return refineJavaChoice(root), nil
 	}
 
-	return sorted[0], nil
+	return chosen, nil
+}
+
+func refineJavaChoice(root string) string {
+	p := filepath.Join(root, "build.gradle")
+	_, err := os.Stat(p)
+	if err == nil {
+		return gradle
+	}
+
+	log.Infof("didn't found %s : %s", p, err)
+	return maven
 }
 
 func readFile(path string, limit int64) ([]byte, error) {

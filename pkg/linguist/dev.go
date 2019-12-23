@@ -205,13 +205,7 @@ func GetDevConfig(language string) *model.Dev {
 func normalizeLanguage(language string) string {
 	lower := strings.ToLower(language)
 	switch lower {
-	case "typescript":
-		return javascript
-	case "javascript":
-		return javascript
-	case "jsx":
-		return javascript
-	case "node":
+	case "typescript", "javascript", "jsx", "node":
 		return javascript
 	case "python":
 		return python
