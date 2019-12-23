@@ -27,9 +27,10 @@ const (
 	oktetoVolumeName           = "okteto"
 
 	//syncthing
-	oktetoBinImageTag        = "okteto/bin:1.1.0"
-	oktetoSyncSecretVolume   = "okteto-sync-secret"
-	oktetoSyncSecretTemplate = "okteto-%s"
+	oktetoBinImageTag      = "okteto/bin:1.1.0"
+	oktetoSyncSecretVolume = "okteto-sync-secret"
+	oktetoDevSecretVolume  = "okteto-dev-secret"
+	oktetoSecretTemplate   = "okteto-%s"
 )
 
 var (
@@ -427,7 +428,21 @@ func TranslateOktetoSyncSecret(spec *apiv1.PodSpec, name string) {
 		Name: oktetoSyncSecretVolume,
 		VolumeSource: apiv1.VolumeSource{
 			Secret: &apiv1.SecretVolumeSource{
-				SecretName: fmt.Sprintf(oktetoSyncSecretTemplate, name),
+				SecretName: fmt.Sprintf(oktetoSecretTemplate, name),
+				Items: []apiv1.KeyToPath{
+					{
+						Key:  "config.xml",
+						Path: "config.xml",
+					},
+					{
+						Key:  "cert.pem",
+						Path: "cert.pem",
+					},
+					{
+						Key:  "key.pem",
+						Path: "key.pem",
+					},
+				},
 			},
 		},
 	}
