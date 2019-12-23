@@ -6,7 +6,6 @@ require (
 	github.com/Masterminds/semver v1.4.2
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/briandowns/spinner v1.7.0
-	github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50
@@ -35,7 +34,6 @@ require (
 	github.com/mattn/psutil v0.0.0-20170126005127-e6c88f1e9be6
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
 	github.com/moby/buildkit v0.6.2
-	github.com/moovweb/rubex v0.0.0-20160224233712-cb849acea614 // indirect
 	github.com/nicksnyder/go-i18n v1.10.0 // indirect
 	github.com/opencontainers/runtime-spec v1.0.1 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
@@ -55,7 +53,6 @@ require (
 	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-	gopkg.in/src-d/enry.v1 v1.7.3 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.0.0-20191206001707-7edad22604e1
 	k8s.io/apimachinery v0.0.0-20191203211716-adc6f4cd9e7d

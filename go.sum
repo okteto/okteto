@@ -55,8 +55,6 @@ github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d/go.mod h1:6QX/PXZ
 github.com/blang/semver v3.5.0+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
 github.com/briandowns/spinner v1.7.0 h1:aan1hBBOoscry2TXAkgtxkJiq7Se0+9pt+TUWaPrB4g=
 github.com/briandowns/spinner v1.7.0/go.mod h1://Zf9tMcxfRUA36V23M6YGEAv+kECGfvpnLTnb8n4XQ=
-github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9 h1:dumfMK24rLnvfJrI7VK9nUw+HntxzWpxf/6kST6tL2o=
-github.com/cespare/trie v0.0.0-20150610204604-3fe1a95cbba9/go.mod h1:MCsKum/O9rTzo1Z6ubBQJKJIm76t+3/4A/cD79RMN1Q=
 github.com/chai2010/gettext-go v0.0.0-20160711120539-c6fed771bfd5/go.mod h1:/iP1qXHoty45bqomnu2LM+VVyAEdWN+vtSHGlQgyxbw=
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 h1:HD4PLRzjuCVW79mQ0/pdsalOLHJ+FaEoqJLxfltpb2U=
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1qXHoty45bqomnu2LM+VVyAEdWN+vtSHGlQgyxbw=
@@ -342,8 +340,6 @@ github.com/modern-go/reflect2 v0.0.0-20180320133207-05fbef0ca5da/go.mod h1:bx2lN
 github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/modern-go/reflect2 v1.0.1 h1:9f412s+6RmYXLWZSEzVVgPGK7C2PphHj5RJrvfx9AWI=
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
-github.com/moovweb/rubex v0.0.0-20160224233712-cb849acea614 h1:EXmgokPeYa0kTlranVe/q7l9xJDYY/BhAz+0dpVimwc=
-github.com/moovweb/rubex v0.0.0-20160224233712-cb849acea614/go.mod h1:90aE2qyzrZcSjdtHLiLvKXwXepSU2Xov6T/3g/rTEt4=
 github.com/morikuni/aec v0.0.0-20170113033406-39771216ff4c h1:nXxl5PrvVm2L/wCy8dQu6DMTwH4oIuGN8GJDAlqDdVE=
 github.com/morikuni/aec v0.0.0-20170113033406-39771216ff4c/go.mod h1:BbKIizmSmc5MMPqRYbxO4ZU0S0+P200+tUnFx7PXmsc=
 github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
@@ -425,8 +421,6 @@ github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnIn
 github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spf13/viper v1.3.2/go.mod h1:ZiWeW+zYFKm7srdB9IoDzzZXaJaI5eL9QjNiN/DMA2s=
-github.com/src-d/enry v1.7.3 h1:jG2fmEaQaURh0qqU/sn82BRzVa6d4EVHJIw6gc98bak=
-github.com/src-d/enry v1.7.3/go.mod h1:rS65Jtgb3+BhbLv9ANl7G60QK2/ioztFTRBvjx4egQ0=
 github.com/src-d/enry/v2 v2.1.0 h1:z1L8t+B8bh3mmjPkJrgOTnVRpFGmTPJsplHX9wAn6BI=
 github.com/src-d/enry/v2 v2.1.0/go.mod h1:qQeCMRwzMF3ckeGr+h0tJLdxXnq+NVZsIDMELj0t028=
 github.com/src-d/go-oniguruma v1.1.0 h1:EG+Nm5n2JqWUaCjtM0NtutPxU7ZN5Tp50GWrrV8bTww=
@@ -449,8 +443,6 @@ github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea h1:SXhTLE6pb6eld/
 github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea/go.mod h1:WPnis/6cRcDZSUvVmezrxJPkiO87ThFYsoUiMwWNDJk=
 github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305 h1:y/1cL5AL2oRcfzz8CAHHhR6kDDfIOT0WEyH5k40sccM=
 github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305/go.mod h1:gXOLibKqQTRAVuVZ9gX7G9Ykky8ll8yb4slxsEMoY0c=
-github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683 h1:ej8ns+4aeQO+mm9VIzwnJElkqR0Vs6kTfIcvgyJFoMY=
-github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683/go.mod h1:Ywk48QhEqhU1+DwhMkJ2x7eeGxDHiGkAdc9+0DYcbsM=
 github.com/toqueteos/trie v1.0.0 h1:8i6pXxNUXNRAqP246iibb7w/pSFquNTQ+uNfriG7vlk=
 github.com/toqueteos/trie v1.0.0/go.mod h1:Ywk48QhEqhU1+DwhMkJ2x7eeGxDHiGkAdc9+0DYcbsM=
 github.com/tsenart/deadcode v0.0.0-20160724212837-210d2dc333e9 h1:vY5WqiEon0ZSTGM3ayVVi+twaHKHDFUVloaQ/wug9/c=
@@ -629,10 +621,6 @@ gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
 gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
 gopkg.in/natefinch/lumberjack.v2 v2.0.0 h1:1Lc07Kr7qY4U2YPouBjpCLxpiyxIVoxqXgkXLknAOE8=
 gopkg.in/natefinch/lumberjack.v2 v2.0.0/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24xpD6X8LsfU/+k=
-gopkg.in/src-d/enry.v1 v1.6.7 h1:9989t5TGSGWvtjzG9kPCQUNrZqj4ZkYnClqO5Yi80eE=
-gopkg.in/src-d/enry.v1 v1.6.7/go.mod h1:lDDelHa5/fOO+o8klI8JOOoMszXxhqCYOgqFS2mnxQA=
-gopkg.in/src-d/enry.v1 v1.7.3 h1:2J5bIFs6G61eVd31NxCZri9iYkPbQCgfQZR+9xDvCCU=
-gopkg.in/src-d/enry.v1 v1.7.3/go.mod h1:lDDelHa5/fOO+o8klI8JOOoMszXxhqCYOgqFS2mnxQA=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
 gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 h1:yiW+nvdHb9LVqSHQBXfZCieqV4fzYhNBql77zY0ykqs=
