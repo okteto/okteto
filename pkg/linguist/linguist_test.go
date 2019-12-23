@@ -14,6 +14,11 @@ func TestProcessDirectory(t *testing.T) {
 		files []string
 	}{
 		{
+			name:  "empty",
+			want:  Unrecognized,
+			files: []string{},
+		},
+		{
 			name:  "gradle",
 			want:  gradle,
 			files: []string{"build.gradle", "main.java"},
@@ -24,7 +29,7 @@ func TestProcessDirectory(t *testing.T) {
 			files: []string{"pom.xml", "main.java"},
 		},
 		{
-			name:  "none",
+			name:  "java-default",
 			want:  maven,
 			files: []string{"main.java"},
 		},
