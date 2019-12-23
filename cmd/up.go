@@ -533,6 +533,7 @@ func (up *UpContext) synchronizeFiles() error {
 	spinner.update(renderProgressBar(postfix, 100, pbScaling))
 
 	up.Sy.Type = "sendreceive"
+	up.Sy.IgnoreDelete = false
 	if err := up.Sy.UpdateConfig(); err != nil {
 		return err
 	}

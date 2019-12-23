@@ -11,7 +11,7 @@ const configXML = `<configuration version="29">
     <pullerMaxPendingKiB>0</pullerMaxPendingKiB>
     <hashers>0</hashers>
     <order>random</order>
-    <ignoreDelete>false</ignoreDelete>
+    <ignoreDelete>{{ .IgnoreDelete }}</ignoreDelete>
     <scanProgressIntervalS>0</scanProgressIntervalS>
     <pullerPauseS>0</pullerPauseS>
     <maxConflicts>0</maxConflicts>

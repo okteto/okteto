@@ -73,6 +73,7 @@ type Syncthing struct {
 	RemotePort       int
 	Source           string
 	Type             string
+	IgnoreDelete     bool
 	pid              int
 }
 
@@ -144,6 +145,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		RemotePort:       remotePort,
 		Source:           dev.DevDir,
 		Type:             "sendonly",
+		IgnoreDelete:     true,
 	}
 
 	return s, nil
