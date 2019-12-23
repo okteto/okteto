@@ -44,9 +44,10 @@ Okteto is compatible with any Kubernetes cluster, local or remote. If you can ru
 
 ## Learn More
 - [How does Okteto work?](docs/how-does-it-work.md)
-- Get started following our [installation guides](docs/installation.md).
-- Check the Okteto [CLI reference](https://okteto.com/docs/reference/cli) and the [okteto.yml reference](https://okteto.com/docs/reference/manifest).
-- [Explore our samples](https://github.com/okteto/samples) to learn more about the power of Okteto.
+- Get started following our [installation guides](https://okteto.com/docs/getting-started/installation/index.html).
+- Check the Okteto [CLI reference](https://okteto.com/docs/reference/cli) and the [okteto.yml reference](https://okteto.com/docs/reference/manifest/index.htlm)
+- [Explore our samples](https://github.com/okteto/samples) to learn more about the power of Okteto
+- Frequently asked questions ([FAQs](https://okteto.com/docs/reference/faqs/index.html))
 
 ## Roadmap and Contributions
 
