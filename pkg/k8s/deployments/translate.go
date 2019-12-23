@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -27,7 +28,7 @@ const (
 	oktetoVolumeName           = "okteto"
 
 	//syncthing
-	oktetoBinImageTag      = "okteto/bin:1.1.0"
+	oktetoBinImageTag      = "okteto/bin:1.1.1"
 	oktetoSyncSecretVolume = "okteto-sync-secret"
 	oktetoDevSecretVolume  = "okteto-dev-secret"
 	oktetoSecretTemplate   = "okteto-%s"
@@ -90,6 +91,7 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 		TranslateDevContainer(devContainer, rule)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
+		TranslateOktetoDevSecret(&t.Deployment.Spec.Template.Spec, t.Name, rule.Secrets)
 		if rule.Marker != "" {
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(&t.Deployment.Spec.Template.Spec)
@@ -277,6 +279,15 @@ func TranslateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 			MountPath: "/var/syncthing/secret/",
 		},
 	)
+	if len(rule.Secrets) > 0 {
+		c.VolumeMounts = append(
+			c.VolumeMounts,
+			apiv1.VolumeMount{
+				Name:      oktetoDevSecretVolume,
+				MountPath: "/var/okteto/secret/",
+			},
+		)
+	}
 }
 
 //TranslateOktetoBinVolumeMounts translates the binaries mount attached to a container
@@ -445,6 +456,42 @@ func TranslateOktetoSyncSecret(spec *apiv1.PodSpec, name string) {
 				},
 			},
 		},
+	}
+	spec.Volumes = append(spec.Volumes, v)
+}
+
+//TranslateOktetoDevSecret translates the devs secret of a pod
+func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []model.Secret) {
+	if len(secrets) == 0 {
+		return
+	}
+
+	if spec.Volumes == nil {
+		spec.Volumes = []apiv1.Volume{}
+	}
+	for _, s := range spec.Volumes {
+		if s.Name == oktetoDevSecretVolume {
+			return
+		}
+	}
+	v := apiv1.Volume{
+		Name: oktetoDevSecretVolume,
+		VolumeSource: apiv1.VolumeSource{
+			Secret: &apiv1.SecretVolumeSource{
+				SecretName: fmt.Sprintf(oktetoSecretTemplate, secret),
+				Items:      []apiv1.KeyToPath{},
+			},
+		},
+	}
+	for _, s := range secrets {
+		v.VolumeSource.Secret.Items = append(
+			v.VolumeSource.Secret.Items,
+			apiv1.KeyToPath{
+				Key:  filepath.Base(s.RemotePath),
+				Path: filepath.Base(s.RemotePath),
+				Mode: &s.Mode,
+			},
+		)
 	}
 	spec.Volumes = append(spec.Volumes, v)
 }

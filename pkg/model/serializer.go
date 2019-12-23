@@ -55,11 +55,11 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("Secret remote path '%s' must be an absolute path", s.RemotePath)
 	}
 	if len(parts) == 3 {
-		mode, err := strconv.ParseInt(parts[2], 8, 64)
+		mode, err := strconv.ParseInt(parts[2], 8, 32)
 		if err != nil {
 			return fmt.Errorf("error parsing secret '%s' mode: %s", parts[0], err)
 		}
-		s.Mode = mode
+		s.Mode = int32(mode)
 	} else {
 		s.Mode = 420
 	}
@@ -69,7 +69,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (s Secret) MarshalYAML() (interface{}, error) {
 	if s.Mode == 420 {
-		return fmt.Sprintf("%s:%s:%s", s.LocalPath, s.RemotePath, strconv.FormatInt(s.Mode, 8)), nil
+		return fmt.Sprintf("%s:%s:%s", s.LocalPath, s.RemotePath, strconv.FormatInt(int64(s.Mode), 8)), nil
 	}
 	return fmt.Sprintf("%s:%s", s.LocalPath, s.RemotePath), nil
 }

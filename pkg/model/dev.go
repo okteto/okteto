@@ -69,7 +69,7 @@ type Dev struct {
 	Image            string               `json:"image,omitempty" yaml:"image,omitempty"`
 	ImagePullPolicy  apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment      []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Secrets          []Secret             `json:"secret,omitempty" yaml:"secret,omitempty"`
+	Secrets          []Secret             `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command          []string             `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir          string               `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath        string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
@@ -116,7 +116,7 @@ type EnvVar struct {
 type Secret struct {
 	LocalPath  string
 	RemotePath string
-	Mode       int64
+	Mode       int32
 }
 
 // Forward represents a port forwarding definition
@@ -260,6 +260,7 @@ func (dev *Dev) setDefaults() error {
 		s.Namespace = ""
 		s.Forward = make([]Forward, 0)
 		s.Reverse = make([]Reverse, 0)
+		s.Secrets = make([]Secret, 0)
 		s.Volumes = make([]Volume, 0)
 		s.Services = make([]*Dev, 0)
 	}
@@ -409,6 +410,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		Image:            dev.Image,
 		ImagePullPolicy:  dev.ImagePullPolicy,
 		Environment:      dev.Environment,
+		Secrets:          dev.Secrets,
 		WorkDir:          dev.WorkDir,
 		PersistentVolume: dev.PersistentVolumeEnabled(),
 		Volumes: []VolumeMount{
@@ -445,6 +447,10 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 			rule.Args = []string{"-r"}
 		} else {
 			rule.Args = []string{}
+		}
+		for _, s := range rule.Secrets {
+			rule.Args = append(rule.Args, "-s")
+			rule.Args = append(rule.Args, fmt.Sprintf("%s:%s", filepath.Base(s.RemotePath), s.RemotePath))
 		}
 	} else {
 		rule.Healthchecks = true

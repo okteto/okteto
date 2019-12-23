@@ -24,6 +24,7 @@ type TranslationRule struct {
 	Image            string               `json:"image,omitempty"`
 	ImagePullPolicy  apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment      []EnvVar             `json:"environment,omitempty"`
+	Secrets          []Secret             `json:"secrets,omitempty"`
 	Command          []string             `json:"command,omitempty"`
 	Args             []string             `json:"args,omitempty"`
 	WorkDir          string               `json:"workdir"`
