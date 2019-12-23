@@ -481,7 +481,7 @@ func (up *UpContext) startLocalSyncthing() error {
 	if err := up.Sy.WaitForPing(up.Context, false); err != nil {
 		return errors.UserError{
 			E:    fmt.Errorf("Failed to connect to the synchronization service"),
-			Hint: fmt.Sprintf("Check your development environment logs for errors: 'kubectl logs %s'\n    If you are using a non-root container, set the securityContext.runAsUser, securityContext.runAsGroup and securityContext.fsGroup fields in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional).\n    If you are using secrets, check that your container can write to the destination path of your secrets.\n    Finally, run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
+			Hint: fmt.Sprintf("Check your development environment logs for errors: 'kubectl logs %s'.\n    If you are using a non-root container, set the securityContext.runAsUser, securityContext.runAsGroup and securityContext.fsGroup fields in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional).\n    If you are using secrets, check that your container can write to the destination path of your secrets.\n    Finally, run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
 		}
 	}
 

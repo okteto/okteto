@@ -221,55 +221,55 @@ func TestSecretMashalling(t *testing.T) {
 		name          string
 		data          string
 		expected      *Secret
-		expectedError error
+		expectedError bool
 	}{
 		{
 			"local:remote",
 			fmt.Sprintf("%s:/remote", file.Name()),
 			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
-			nil,
+			false,
 		},
 		{
 			"local:remote:mode",
 			fmt.Sprintf("%s:/remote:400", file.Name()),
 			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 256},
-			nil,
+			false,
 		},
 		{
 			"variables",
 			"$TEST_HOME:/remote",
 			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
-			nil,
+			false,
 		},
 		{
-			"too-sort",
+			"too-short",
 			"local",
 			nil,
-			fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+			true,
 		},
 		{
 			"too-long",
 			"local:remote:mode:other",
 			nil,
-			fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+			true,
 		},
 		{
 			"wrong-local",
 			"/local:/remote:400",
 			nil,
-			fmt.Errorf("stat /local: no such file or directory"),
+			true,
 		},
 		{
 			"wrong-remote",
 			fmt.Sprintf("%s:remote", file.Name()),
 			nil,
-			fmt.Errorf("Secret remote path 'remote' must be an absolute path"),
+			true,
 		},
 		{
 			"wrong-mode",
 			fmt.Sprintf("%s:/remote:aaa", file.Name()),
 			nil,
-			fmt.Errorf("error parsing secret '%s' mode: strconv.ParseInt: parsing \"aaa\": invalid syntax", file.Name()),
+			true,
 		},
 	}
 
@@ -277,10 +277,13 @@ func TestSecretMashalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var result Secret
 			if err := yaml.Unmarshal([]byte(tt.data), &result); err != nil {
-				if err.Error() != tt.expectedError.Error() {
+				if !tt.expectedError {
 					t.Fatalf("unexpected error unmarshaling %s: %s", tt.name, err.Error())
 				}
 				return
+			}
+			if tt.expectedError {
+				t.Fatalf("expected error unmarshaling %s not thrown", tt.name)
 			}
 			if result.LocalPath != tt.expected.LocalPath {
 				t.Errorf("didn't unmarshal correctly LocalPath. Actual %s, Expected %s", result.LocalPath, tt.expected.LocalPath)
