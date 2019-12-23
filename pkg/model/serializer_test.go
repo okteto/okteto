@@ -1,6 +1,9 @@
 package model
 
 import (
+	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -198,6 +201,90 @@ func TestEnvVarMashalling(t *testing.T) {
 			_, err := yaml.Marshal(&result)
 			if err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestSecretMashalling(t *testing.T) {
+	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	tests := []struct {
+		name          string
+		data          string
+		expected      *Secret
+		expectedError error
+	}{
+		{
+			"local:remote",
+			fmt.Sprintf("%s:/remote", file.Name()),
+			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 420},
+			nil,
+		},
+		{
+			"local:remote:mode",
+			fmt.Sprintf("%s:/remote:400", file.Name()),
+			&Secret{LocalPath: file.Name(), RemotePath: "/remote", Mode: 256},
+			nil,
+		},
+		{
+			"too-sort",
+			"local",
+			nil,
+			fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			"too-long",
+			"local:remote:mode:other",
+			nil,
+			fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'"),
+		},
+		{
+			"wrong-local",
+			"/local:/remote:400",
+			nil,
+			fmt.Errorf("stat /local: no such file or directory"),
+		},
+		{
+			"wrong-remote",
+			fmt.Sprintf("%s:remote", file.Name()),
+			nil,
+			fmt.Errorf("Secret remote path 'remote' must be an absolute path"),
+		},
+		{
+			"wrong-mode",
+			fmt.Sprintf("%s:/remote:aaa", file.Name()),
+			nil,
+			fmt.Errorf("error parsing secret '%s' mode: strconv.ParseInt: parsing \"aaa\": invalid syntax", file.Name()),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result Secret
+			if err := yaml.Unmarshal([]byte(tt.data), &result); err != nil {
+				if err.Error() != tt.expectedError.Error() {
+					t.Fatalf("unexpected error unmarshaling %s: %s", tt.name, err.Error())
+				}
+				return
+			}
+			if result.LocalPath != tt.expected.LocalPath {
+				t.Errorf("didn't unmarshal correctly LocalPath. Actual %s, Expected %s", result.LocalPath, tt.expected.LocalPath)
+			}
+			if result.RemotePath != tt.expected.RemotePath {
+				t.Errorf("didn't unmarshal correctly RemotePath. Actual %s, Expected %s", result.RemotePath, tt.expected.RemotePath)
+			}
+			if result.Mode != tt.expected.Mode {
+				t.Errorf("didn't unmarshal correctly Mode. Actual %d, Expected %d", result.Mode, tt.expected.Mode)
+			}
+
+			_, err := yaml.Marshal(&result)
+			if err != nil {
+				t.Fatalf("error marshaling %s: %s", tt.name, err)
 			}
 		})
 	}

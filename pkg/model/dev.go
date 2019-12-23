@@ -69,6 +69,7 @@ type Dev struct {
 	Image            string               `json:"image,omitempty" yaml:"image,omitempty"`
 	ImagePullPolicy  apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment      []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Secrets          []Secret             `json:"secret,omitempty" yaml:"secret,omitempty"`
 	Command          []string             `json:"command,omitempty" yaml:"command,omitempty"`
 	WorkDir          string               `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath        string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
@@ -109,6 +110,13 @@ type Capabilities struct {
 type EnvVar struct {
 	Name  string
 	Value string
+}
+
+// Secret represents a development secret
+type Secret struct {
+	LocalPath  string
+	RemotePath string
+	Mode       int64
 }
 
 // Forward represents a port forwarding definition
@@ -161,6 +169,7 @@ func Get(devPath string) (*Dev, error) {
 func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		Environment: make([]EnvVar, 0),
+		Secrets:     make([]Secret, 0),
 		Command:     make([]string, 0),
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
