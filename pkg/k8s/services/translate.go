@@ -12,13 +12,15 @@ const (
 )
 
 func translate(dev *model.Dev) *apiv1.Service {
+	annotations := map[string]string{}
+	if len(dev.Services) > 0 {
+		annotations[oktetoAutoIngressAnnotation] = "true"
+	}
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dev.Name,
-			Namespace: dev.Namespace,
-			Annotations: map[string]string{
-				oktetoAutoIngressAnnotation: "true",
-			},
+			Name:        dev.Name,
+			Namespace:   dev.Namespace,
+			Annotations: annotations,
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{"app": dev.Name},
