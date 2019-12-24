@@ -376,7 +376,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 			}
 		}
 	}
-	if create && len(up.Dev.Services) == 0 {
+	if create {
 		if err := services.Create(up.Dev, up.Client); err != nil {
 			return err
 		}
