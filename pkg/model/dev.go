@@ -119,12 +119,6 @@ type Secret struct {
 	Mode       int32
 }
 
-// Forward represents a port forwarding definition
-type Forward struct {
-	Local  int
-	Remote int
-}
-
 // Reverse represents a remote forward port
 type Reverse struct {
 	Remote int

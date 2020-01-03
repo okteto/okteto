@@ -417,14 +417,14 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 
 	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
 	for _, f := range up.Dev.Forward {
-		if err := up.Forwarder.Add(f.Local, f.Remote); err != nil {
+		if err := up.Forwarder.Add(f); err != nil {
 			return err
 		}
 	}
-	if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
+	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
 	}
-	if err := up.Forwarder.Add(up.Sy.RemoteGUIPort, syncthing.GUIPort); err != nil {
+	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemoteGUIPort, Remote: syncthing.GUIPort}); err != nil {
 		return err
 	}
 

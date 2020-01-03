@@ -9,7 +9,8 @@ import (
 	"os"
 
 	"github.com/okteto/okteto/pkg/log"
-
+	"github.com/okteto/okteto/pkg/model"
+	
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -40,12 +41,12 @@ func NewPortForwardManager(ctx context.Context, restConfig *rest.Config, c *kube
 }
 
 // Add initializes a port forward
-func (p *PortForwardManager) Add(localPort, remotePort int) error {
-	if _, ok := p.portForwards[localPort]; ok {
-		return fmt.Errorf("port %d is already taken, please check your configuration", localPort)
+func (p *PortForwardManager) Add(f model.Forward) error {
+	if _, ok := p.portForwards[f.Local]; ok {
+		return fmt.Errorf("port %d is already taken, please check your configuration", f.Local)
 	}
 
-	p.portForwards[localPort] = remotePort
+	p.portForwards[f.Local] = f.Remote
 	return nil
 }
 
@@ -90,18 +91,18 @@ func (p *PortForwardManager) Stop() {
 }
 
 func (p *PortForwardManager) forward(namespace, pod string, ready chan struct{}) error {
-	req := p.client.CoreV1().RESTClient().Post().
+	url := p.client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace(namespace).
 		Name(pod).
-		SubResource("portforward")
+		SubResource("portforward").URL()
 
 	transport, upgrader, err := spdy.RoundTripperFor(p.restConfig)
 	if err != nil {
 		return err
 	}
 
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", req.URL())
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", url)
 	p.stopChan = make(chan struct{}, 1)
 	p.out = new(bytes.Buffer)
 	addresses := []string{"localhost"}
