@@ -68,13 +68,17 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (f Forward) MarshalYAML() (interface{}, error) {
+	return f.String(), nil
+}
+
+func (f Forward) String() string {
 	if f.Service {
 		if f.Remote > 0 {
-			return fmt.Sprintf("%d:%s:%d", f.Local, f.ServiceName, f.Remote), nil
+			return fmt.Sprintf("%d:%s:%d", f.Local, f.ServiceName, f.Remote)
 		}
 
-		return fmt.Sprintf("%d:%s", f.Local, f.ServiceName), nil
+		return fmt.Sprintf("%d:%s", f.Local, f.ServiceName)
 	}
 
-	return fmt.Sprintf("%d:%d", f.Local, f.Remote), nil
+	return fmt.Sprintf("%d:%d", f.Local, f.Remote)
 }
