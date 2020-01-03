@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+const malformedPortForward = "Wrong port-forward syntax '%s', must be of the form 'localPort:remotePort', 'localPort:serviceName', or 'localPort:serviceName:remotePort'"
+
 // Forward represents a port forwarding definition
 type Forward struct {
 	Local       int
@@ -29,7 +31,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(raw, ":")
 	if len(parts) < 2 || len(parts) > 3 {
-		return fmt.Errorf("Wrong port-forward syntax '%s', must be of the form 'localPort:remotePort', 'localPort:serviceName', or 'localPort:serviceName:remotePort' ", raw)
+		return fmt.Errorf(malformedPortForward, raw)
 	}
 
 	localPort, err := strconv.Atoi(parts[0])
@@ -41,7 +43,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	remotePort, err := strconv.Atoi(parts[1])
 	if err == nil {
 		if len(parts) == 3 {
-			return fmt.Errorf("Wrong port-forward syntax '%s', must be of the form 'localPort:remotePort', 'localPort:serviceName', or 'localPort:serviceName:remotePort' ", raw)
+			return fmt.Errorf(malformedPortForward, raw)
 		}
 
 		f.Remote = remotePort
@@ -55,7 +57,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if len(parts) == 3 {
 		p, err := strconv.Atoi(parts[2])
 		if err != nil {
-			return fmt.Errorf("Wrong port-forward syntax '%s', must be of the form 'localPort:remotePort', 'localPort:serviceName', or 'localPort:serviceName:remotePort' ", raw)
+			return fmt.Errorf(malformedPortForward, raw)
 		}
 
 		f.Remote = p

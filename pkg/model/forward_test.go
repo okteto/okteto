@@ -77,13 +77,23 @@ func TestForward_UnmarshalYAML(t *testing.T) {
 			expected:  Forward{Local: 8080, Remote: 5214, Service: true, ServiceName: "svc"},
 		},
 		{
+			name:      "bad-local-port",
+			data:      "local:8080",
+			expectErr: true,
+		},
+		{
 			name:      "service-with-bad-port",
 			data:      "8080:svc:bar",
 			expectErr: true,
 		},
 		{
+			name:      "too-little-parts",
+			data:      "8080",
+			expectErr: true,
+		},
+		{
 			name:      "too-many-parts",
-			data:      "8080:8081:8082",
+			data:      "8080:svc:8082:8019",
 			expectErr: true,
 		},
 		{
