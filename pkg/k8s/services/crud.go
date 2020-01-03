@@ -6,12 +6,13 @@ import (
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-//Create deploys a k8s service
-func Create(dev *model.Dev, c *kubernetes.Clientset) error {
+//CreateDev deploys a default k8s service for a dev environment
+func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
 	s := translate(dev)
 	sClient := c.CoreV1().Services(dev.Namespace)
 	old, err := sClient.Get(dev.Name, metav1.GetOptions{})
@@ -37,8 +38,8 @@ func Create(dev *model.Dev, c *kubernetes.Clientset) error {
 	return nil
 }
 
-//Destroy destroys a k8s service
-func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
+//DestroyDev destroys the default service for a dev environment
+func DestroyDev(dev *model.Dev, c *kubernetes.Clientset) error {
 	log.Infof("deleting service '%s'...", dev.Name)
 	sClient := c.CoreV1().Services(dev.Namespace)
 	err := sClient.Delete(dev.Name, &metav1.DeleteOptions{})
@@ -51,4 +52,10 @@ func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
 	}
 	log.Infof("service '%s' deleted", dev.Name)
 	return nil
+}
+
+// Get returns a kubernetes service by the name, or an error if it doesn't exist
+func Get(serviceName, namespace string, c kubernetes.Interface) (*apiv1.Service, error) {
+	sClient := c.CoreV1().Services(namespace)
+	return sClient.Get(serviceName, metav1.GetOptions{})
 }
