@@ -96,7 +96,9 @@ func TestGetBySelector(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewSimpleClientset(ns)
 			for _, p := range tt.pods {
-				c.Tracker().Add(&p)
+				if err := c.Tracker().Add(&p); err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			r, err := GetBySelector("test", tt.selector, c)
