@@ -30,7 +30,7 @@ var (
 )
 
 // GetBySelector returns the first pod that matches the selector or error if not found
-func GetBySelector(selector map[string]string, namespace string, c kubernetes.Interface) (*apiv1.Pod, error) {
+func GetBySelector(namespace string, selector map[string]string, c kubernetes.Interface) (*apiv1.Pod, error) {
 	if len(selector) == 0 {
 		return nil, fmt.Errorf("empty selector")
 	}

@@ -99,7 +99,7 @@ func TestGetBySelector(t *testing.T) {
 				c.Tracker().Add(&p)
 			}
 
-			r, err := GetBySelector(tt.selector, "test", c)
+			r, err := GetBySelector("test", tt.selector, c)
 			if err != nil {
 				if !tt.expectError {
 					t.Fatal(err)

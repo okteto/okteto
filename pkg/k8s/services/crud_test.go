@@ -18,7 +18,7 @@ func TestGet(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset(svc)
-	s, err := Get("fake", "test", clientset)
+	s, err := Get(svc.GetNamespace(), svc.GetName(), clientset)
 	if err != nil {
 		t.Fatal(err)
 	}

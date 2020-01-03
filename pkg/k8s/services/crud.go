@@ -13,7 +13,7 @@ import (
 
 //CreateDev deploys a default k8s service for a dev environment
 func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
-	old, err := Get(dev.Name, dev.Namespace, c)
+	old, err := Get(dev.Namespace, dev.Name, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes service: %s", err)
 	}
@@ -57,6 +57,6 @@ func DestroyDev(dev *model.Dev, c *kubernetes.Clientset) error {
 }
 
 // Get returns a kubernetes service by the name, or an error if it doesn't exist
-func Get(serviceName, namespace string, c kubernetes.Interface) (*apiv1.Service, error) {
-	return c.CoreV1().Services(namespace).Get(serviceName, metav1.GetOptions{})
+func Get(namespace, name string, c kubernetes.Interface) (*apiv1.Service, error) {
+	return c.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
 }
