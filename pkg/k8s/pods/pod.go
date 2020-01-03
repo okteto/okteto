@@ -1,11 +1,13 @@
 package pods
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
@@ -26,6 +28,34 @@ const (
 var (
 	devTerminationGracePeriodSeconds int64
 )
+
+// GetBySelector returns the first pod that matches the selector or error if not found
+func GetBySelector(selector map[string]string, namespace string, c kubernetes.Interface) (*apiv1.Pod, error) {
+	if len(selector) == 0 {
+		return nil, fmt.Errorf("empty selector")
+	}
+	b := new(bytes.Buffer)
+	for key, value := range selector {
+		fmt.Fprintf(b, "%s=%s,", key, value)
+	}
+
+	s := strings.TrimRight(b.String(), ",")
+
+	p, err := c.CoreV1().Pods(namespace).List(metav1.ListOptions{
+		LabelSelector: s,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(p.Items) == 0 {
+		return nil, errors.ErrNotFound
+	}
+
+	r := p.Items[0]
+	return &r, nil
+}
 
 // GetDevPod returns the dev pod for a deployment
 func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
@@ -146,7 +176,7 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 	}
 }
 
-//Exists returns if the dev pod still exists
+//Exists returns true if pod still exists and is not being deleted
 func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
 	pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
@@ -180,7 +210,7 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
 }
 
-// RunCleanerPod runs a pod to clean the dev environmentt volume
+// RunCleanerPod runs a pod to clean the dev environment volume
 func RunCleanerPod(dev *model.Dev, c *kubernetes.Clientset) error {
 	pod := translate(dev)
 	if err := waitForDeleted(pod, c); err != nil {

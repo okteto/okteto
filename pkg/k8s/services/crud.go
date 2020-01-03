@@ -13,12 +13,14 @@ import (
 
 //CreateDev deploys a default k8s service for a dev environment
 func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
-	s := translate(dev)
-	sClient := c.CoreV1().Services(dev.Namespace)
-	old, err := sClient.Get(dev.Name, metav1.GetOptions{})
+	old, err := Get(dev.Name, dev.Namespace, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes service: %s", err)
 	}
+
+	s := translate(dev)
+	sClient := c.CoreV1().Services(dev.Namespace)
+
 	if old.Name == "" {
 		log.Infof("creating service '%s'...", s.Name)
 		_, err = sClient.Create(s)
@@ -56,6 +58,5 @@ func DestroyDev(dev *model.Dev, c *kubernetes.Clientset) error {
 
 // Get returns a kubernetes service by the name, or an error if it doesn't exist
 func Get(serviceName, namespace string, c kubernetes.Interface) (*apiv1.Service, error) {
-	sClient := c.CoreV1().Services(namespace)
-	return sClient.Get(serviceName, metav1.GetOptions{})
+	return c.CoreV1().Services(namespace).Get(serviceName, metav1.GetOptions{})
 }
