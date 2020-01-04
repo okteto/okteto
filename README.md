@@ -14,33 +14,37 @@ Kubernetes has made it very easy to deploy applications to the cloud at a higher
 
 Today, most developers try to either run parts of the infrastructure locally, or just test these integrations directly in the cluster via CI jobs or the "docker build, docker push, kubectl apply" cycle. It works, but this workflow is painful and incredibly slow.
 
-Okteto makes this cycle a lot faster by launching your development environment directly in your Kubernetes cluster.
+Okteto makes this cycle a lot faster by launching remote development environment in Kubernetes. You write your code locally using your favorite tools and Okteto detects the code changes and instantly synchronizes your code to your remote development environment. There you can use your compilers and hot reloaders to see your changes in seconds.
 
 ## Features
 
-### Development environments on demand 
-Your development environment is defined in a [simple yaml manifest](https://okteto.com/docs/reference/manifest).
-- Run `okteto init` to inspect your project and generate your own config file.
-- Run `okteto up` to launch your development environment in seconds. 
+### Remote development environments on demand 
 
-Add `okteto.yml` to your repo and make collaboration easier than ever. Clone the repository and simply run `okteto up` to launch a fully configured development environment.
+Your remote development environment is defined in a [simple yaml manifest](https://okteto.com/docs/reference/manifest).
+- Run `okteto init` to inspect your project and generate your own config file.
+- Run `okteto up` to launch your remote development environment in seconds. 
+
+Add `okteto.yml` to your repo and make collaboration easier than ever. Clone the repository and simply run `okteto up` to launch a fully configured remote development environment.
 
 ### Developer Mode 
 
-You can swap your development environment with an existing Kubernetes deployment, and develop directly in your cluster. This helps eliminate integration issues since you're developing the same way your application runs in production.
+You can swap your remote development environment with an existing Kubernetes deployment, and develop directly in your cluster. This helps eliminate integration issues since you're developing the same way your application runs in production.
 
 Okteto supports applications with one or with multiple services.
 
-### Kubernetes Live Development
+### Instant file synchronization
 
-Okteto detects your code changes, synchronizes your code to your development environment. Keep using your compilers and hot reloaders to see your changes in seconds. No commit, build, push or deploy required.
-
-Okteto is powered by [Syncthing](https://github.com/syncthing/syncthing). It will detect code changes instantly and automatically synchronize your files. Files are synchronized both ways. If you edit a file directly in your remote development environment, the changes will be reflected locally as well. Great for keeping your `package-lock.json` or `requirements.txt` up to date.
+Okteto detects your code changes and synchronizes your code to your remote development environment (powered by [Syncthing](https://github.com/syncthing/syncthing)). Files are synchronized both ways. If you edit a file directly in your remote development environment, the changes will be reflected locally as well. Great for keeping your `package-lock.json` or `requirements.txt` up to date.
 
 ### Keep Your Own Tools
-No need to change IDEs, tasks or deployment scripts. Okteto easily integrates and augments your existing tools.
 
-Okteto is compatible with any Kubernetes cluster, local or remote. If you can run `kubectl apply` you can use Okteto. Our community uses Okteto in all major Kubernetes distros, from Minikube and k3s all the way to GKE, Digital Ocean, AKS, EKS and Civio.
+Okteto easily integrates and augments your existing tools. You write code locally, which means Okteto is compatible with any IDE. And you can configure your own remote development runtime using a docker image, with your own compilers, linters, debuggers or hot reloaders.
+
+Okteto decouples deployment from development. Because of this, you can deploy your application with kubectl, Helm, a serverless framework or even a CI job and use Okteto later to develop any component of your application. No need to change your manifests or deployment scripts.
+
+### Compatible with any Kubernetes cluster
+
+Local or remote. If you can run `kubectl apply` you can use Okteto. Our community uses Okteto in all major Kubernetes distros, from Minikube and k3s all the way to GKE, Digital Ocean, AKS, EKS and Civio.
 
 ## Learn More
 - [How does Okteto work?](docs/how-does-it-work.md)
