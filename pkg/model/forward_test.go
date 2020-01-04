@@ -132,3 +132,50 @@ func TestForward_UnmarshalYAML(t *testing.T) {
 		})
 	}
 }
+
+func TestForward_less(t *testing.T) {
+	tests := []struct {
+		name string
+		f    *Forward
+		c    *Forward
+		want bool
+	}{
+		{
+			name: "ports-lesser",
+			f:    &Forward{Local: 80},
+			c:    &Forward{Local: 85},
+			want: true,
+		},
+		{
+			name: "ports-bigger",
+			f:    &Forward{Local: 8080},
+			c:    &Forward{Local: 85},
+			want: false,
+		},
+		{
+			name: "services",
+			f:    &Forward{Service: true, ServiceName: "db", Local: 80},
+			c:    &Forward{Service: true, ServiceName: "api", Local: 81},
+			want: true,
+		},
+		{
+			name: "port-lesser-than-service",
+			f:    &Forward{Local: 22000},
+			c:    &Forward{Service: true, ServiceName: "api", Local: 81},
+			want: true,
+		},
+		{
+			name: "service-lesser-than-port",
+			f:    &Forward{Service: true, ServiceName: "api", Local: 81},
+			c:    &Forward{Local: 22000},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.f.less(tt.c); got != tt.want {
+				t.Errorf("Forward.less() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

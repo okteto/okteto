@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -25,6 +26,7 @@ const devName = "okteto-development"
 
 // PortForwardManager keeps a list of all the active port forwards
 type PortForwardManager struct {
+	stopped        bool
 	ports          map[int]model.Forward
 	services       map[string]struct{}
 	activeDev      *active
@@ -44,6 +46,14 @@ type active struct {
 func (a *active) stop() {
 	if a != nil && a.stopChan != nil {
 		close(a.stopChan)
+		a.stopChan = nil
+	}
+}
+
+func (a *active) closeReady() {
+	if a != nil && a.readyChan != nil {
+		close(a.readyChan)
+		a.readyChan = nil
 	}
 }
 
@@ -56,7 +66,7 @@ func (a *active) error() error {
 }
 
 // NewPortForwardManager initializes a new instance
-func NewPortForwardManager(ctx context.Context, restConfig *rest.Config, c *kubernetes.Clientset) *PortForwardManager {
+func NewPortForwardManager(ctx context.Context, restConfig *rest.Config, c kubernetes.Interface) *PortForwardManager {
 	return &PortForwardManager{
 		ctx:        ctx,
 		ports:      make(map[int]model.Forward),
@@ -82,6 +92,7 @@ func (p *PortForwardManager) Add(f model.Forward) error {
 
 // Start starts all the port forwarders to the dev environment
 func (p *PortForwardManager) Start(devPod, namespace string) error {
+	p.stopped = false
 	a, pf, err := p.buildForwarderToDevPod(namespace, devPod)
 	if err != nil {
 		return fmt.Errorf("failed to forward ports to development environment: %w", err)
@@ -94,7 +105,8 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 			log.Debugf("port forwarding to dev pod finished with errors: %s", err)
 		}
 
-		close(p.activeDev.readyChan)
+		p.activeDev.closeReady()
+
 	}()
 
 	p.activeServices = map[string]*active{}
@@ -115,7 +127,7 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 
 // Stop stops all the port forwarders
 func (p *PortForwardManager) Stop() {
-	log.Debugf("stopping forwarder")
+	p.stopped = true
 	p.activeDev.stop()
 
 	for _, a := range p.activeServices {
@@ -183,9 +195,14 @@ func (p *PortForwardManager) buildForwarderToService(namespace, service string) 
 		return nil, nil, fmt.Errorf("failed to get pod mapped to service/%s: %w", svc.GetName(), err)
 	}
 
+	ports := getServicePorts(svc.GetName(), p.ports, svc, pod)
+	return p.buildForwarder(service, pod.GetNamespace(), pod.GetName(), ports)
+}
+
+func getServicePorts(service string, forwards map[int]model.Forward, svc *apiv1.Service, pod *apiv1.Pod) []string {
 	ports := []string{}
-	for _, f := range p.ports {
-		if f.Service && f.ServiceName == svc.GetName() {
+	for _, f := range forwards {
+		if f.Service && f.ServiceName == service {
 			remote := f.Remote
 			if remote == 0 {
 				remote = getDefaultPort(svc, pod)
@@ -197,7 +214,7 @@ func (p *PortForwardManager) buildForwarderToService(namespace, service string) 
 		}
 	}
 
-	return p.buildForwarder(service, pod.GetNamespace(), pod.GetName(), ports)
+	return ports
 }
 
 func getDefaultPort(svc *apiv1.Service, pod *apiv1.Pod) int {
@@ -224,6 +241,10 @@ func (p *PortForwardManager) buildDialer(namespace, pod string) (httpstream.Dial
 		Name(pod).
 		SubResource("portforward").URL()
 
+	if p.restConfig == nil {
+		return nil, fmt.Errorf("restConfig is nil")
+	}
+
 	transport, upgrader, err := spdy.RoundTripperFor(p.restConfig)
 	if err != nil {
 		return nil, err
@@ -233,25 +254,38 @@ func (p *PortForwardManager) buildDialer(namespace, pod string) (httpstream.Dial
 }
 
 func (p *PortForwardManager) forwardService(namespace, service string) {
-	a, pf, err := p.buildForwarderToService(namespace, service)
-	if err != nil {
-		log.Debugf("failed to forward ports to service/%s: %s", service, err)
-		return
-	}
+	t := time.NewTicker(3 * time.Second)
 
-	if err := pf.ForwardPorts(); err != nil {
-		log.Debugf("port forwarding to service/%s finished with errors: %s", service, err)
-	}
+	for {
+		if p.stopped {
+			return
+		}
 
-	a.stop()
+		log.Debugf("forwarding ports for service/%s", service)
+		a, pf, err := p.buildForwarderToService(namespace, service)
+		if err != nil {
+			log.Debugf("failed to forward ports to service/%s: %s", service, err)
+			<-t.C
+			continue
+		}
+
+		err = pf.ForwardPorts()
+		if err != nil {
+			log.Debugf("port forwarding to service/%s finished with errors: %s", service, err)
+			a.stop()
+		} else {
+			log.Debugf("port forwarding to service/%s finished", service)
+		}
+
+		<-t.C
+	}
 }
 
 func getListenAddresses() []string {
 	addresses := []string{"localhost"}
-
-	a := os.Getenv("OKTETO_ADDRESS")
-	if len(a) > 0 {
-		addresses = append(addresses, a)
+	extraAddress := os.Getenv("OKTETO_ADDRESS")
+	if len(extraAddress) > 0 {
+		addresses = append(addresses, extraAddress)
 	}
 
 	return addresses

@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -202,6 +203,15 @@ func Read(bytes []byte) (*Dev, error) {
 	if err := dev.setDefaults(); err != nil {
 		return nil, err
 	}
+
+	sort.SliceStable(dev.Forward, func(i, j int) bool {
+		return dev.Forward[i].less(&dev.Forward[j])
+	})
+
+	sort.SliceStable(dev.Reverse, func(i, j int) bool {
+		return dev.Reverse[i].Local < dev.Reverse[j].Local
+	})
+
 	return dev, nil
 }
 

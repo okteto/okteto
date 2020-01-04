@@ -82,3 +82,20 @@ func (f Forward) String() string {
 
 	return fmt.Sprintf("%d:%d", f.Local, f.Remote)
 }
+
+func (f *Forward) less(c *Forward) bool {
+	if !f.Service && !c.Service {
+		return f.Local < c.Local
+	}
+
+	// a non-service always goes first
+	if !f.Service && c.Service {
+		return true
+	}
+
+	if f.Service && !c.Service {
+		return false
+	}
+
+	return f.Local < c.Local
+}

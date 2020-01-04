@@ -625,7 +625,7 @@ func (up *UpContext) shutdown() {
 		}
 	}
 
-	log.Infof("stopping the forwarder")
+	log.Infof("stopping forwarder")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
 	}
@@ -640,9 +640,20 @@ func printDisplayContext(message string, dev *model.Dev) {
 	if len(dev.Forward) > 0 {
 		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
 		for i := 1; i < len(dev.Forward); i++ {
-			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
+			if !dev.Forward[i].Service {
+				log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
+				continue
+			}
+
+			if dev.Forward[i].Remote != 0 {
+				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
+				continue
+			}
+
+			log.Println(fmt.Sprintf("               %d -> %s", dev.Forward[i].Local, dev.Forward[i].ServiceName))
 		}
 	}
+
 	if len(dev.Reverse) > 0 {
 		log.Println(fmt.Sprintf("    %s   %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
 		for i := 1; i < len(dev.Reverse); i++ {
