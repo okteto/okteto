@@ -20,28 +20,22 @@ import (
 
 //Login starts the login handshake with github and okteto
 func Login() *cobra.Command {
-	showUrl := false
 	cmd := &cobra.Command{
 		Use:   "login [url]",
 		Short: "Login with Okteto",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoURL := okteto.CloudURL
 			if len(args) > 0 {
-				fmt.Printf("args0: " + args[0])
-				if (args[0] == "showUrl") {
-					showUrl = true
-				} else {
-					u, err := url.Parse(args[0])
-					if err != nil {
-						return fmt.Errorf("malformed login URL")
-					}
-	
-					if u.Scheme == "" {
-						u.Scheme = "https"
-					}
-	
-					oktetoURL = u.String()
+				u, err := url.Parse(args[0])
+				if err != nil {
+					return fmt.Errorf("malformed login URL")
 				}
+
+				if u.Scheme == "" {
+					u.Scheme = "https"
+				}
+
+				oktetoURL = u.String()
 			}
 
 			log.Debugf("authenticating with %s", oktetoURL)
@@ -67,11 +61,9 @@ func Login() *cobra.Command {
 
 			authorizationURL := buildAuthorizationURL(handler.baseURL, handler.state, port)
 			fmt.Println("Authentication will continue in your default browser")
-			if showUrl {
-				showAuthorizationURL(authorizationURL)
-			} else if err := open.Start(authorizationURL); err != nil {
-				showAuthorizationURL(authorizationURL)
-			}
+			open.Start(authorizationURL)
+			fmt.Printf("You can also open a browser and navigate to the following address: ")
+			fmt.Println(authorizationURL)
 
 			ticker := time.NewTicker(5 * time.Minute)
 			var code string
@@ -143,11 +135,6 @@ func randToken() string {
 	b := make([]byte, 32)
 	rand.Read(b)
 	return base64.StdEncoding.EncodeToString(b)
-}
-
-func showAuthorizationURL() {
-	fmt.Printf("Please open a browser and navigate to the following address:\n")
-	fmt.Println(authorizationURL)
 }
 
 func buildAuthorizationURL(baseURL, state string, port int) string {
