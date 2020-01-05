@@ -640,17 +640,12 @@ func printDisplayContext(message string, dev *model.Dev) {
 	if len(dev.Forward) > 0 {
 		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
 		for i := 1; i < len(dev.Forward); i++ {
-			if !dev.Forward[i].Service {
-				log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
-				continue
-			}
-
-			if dev.Forward[i].Remote != 0 {
+			if dev.Forward[i].Service {
 				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
 				continue
 			}
 
-			log.Println(fmt.Sprintf("               %d -> %s", dev.Forward[i].Local, dev.Forward[i].ServiceName))
+			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
 		}
 	}
 

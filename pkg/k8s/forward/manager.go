@@ -14,7 +14,6 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -195,43 +194,20 @@ func (p *PortForwardManager) buildForwarderToService(namespace, service string) 
 		return nil, nil, fmt.Errorf("failed to get pod mapped to service/%s: %w", svc.GetName(), err)
 	}
 
-	ports := getServicePorts(svc.GetName(), p.ports, svc, pod)
+	ports := getServicePorts(svc.GetName(), p.ports)
 	return p.buildForwarder(service, pod.GetNamespace(), pod.GetName(), ports)
 }
 
-func getServicePorts(service string, forwards map[int]model.Forward, svc *apiv1.Service, pod *apiv1.Pod) []string {
+func getServicePorts(service string, forwards map[int]model.Forward) []string {
 	ports := []string{}
 	for _, f := range forwards {
 		if f.Service && f.ServiceName == service {
 			remote := f.Remote
-			if remote == 0 {
-				remote = getDefaultPort(svc, pod)
-				log.Infof("mapping %s to %d", f, remote)
-				f.Remote = remote
-			}
-
 			ports = append(ports, fmt.Sprintf("%d:%d", f.Local, remote))
 		}
 	}
 
 	return ports
-}
-
-func getDefaultPort(svc *apiv1.Service, pod *apiv1.Pod) int {
-	port := svc.Spec.Ports[0].TargetPort.IntValue()
-	if port != 0 {
-		return port
-	}
-
-	for _, c := range pod.Spec.Containers {
-		for _, cport := range c.Ports {
-			if cport.Name == svc.Spec.Ports[0].TargetPort.StrVal {
-				return int(cport.ContainerPort)
-			}
-		}
-	}
-
-	return 8080
 }
 
 func (p *PortForwardManager) buildDialer(namespace, pod string) (httpstream.Dialer, error) {

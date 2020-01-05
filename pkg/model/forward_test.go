@@ -20,11 +20,6 @@ func TestForward_MarshalYAML(t *testing.T) {
 			data:     Forward{Local: 8080, Remote: 9090},
 		},
 		{
-			name:     "service",
-			expected: "8080:svc",
-			data:     Forward{Local: 8080, Remote: 0, Service: true, ServiceName: "svc"},
-		},
-		{
 			name:     "service-with-port",
 			expected: "8080:svc:5214",
 			data:     Forward{Local: 8080, Remote: 5214, Service: true, ServiceName: "svc"},
@@ -65,12 +60,6 @@ func TestForward_UnmarshalYAML(t *testing.T) {
 			expected: Forward{Local: 8080, Remote: 8080},
 		},
 		{
-			name:      "service",
-			data:      "8080:svc",
-			expectErr: false,
-			expected:  Forward{Local: 8080, Remote: 0, Service: true, ServiceName: "svc"},
-		},
-		{
 			name:      "service-with-port",
 			data:      "8080:svc:5214",
 			expectErr: false,
@@ -101,6 +90,11 @@ func TestForward_UnmarshalYAML(t *testing.T) {
 			data:      "8080:8081:svc",
 			expectErr: true,
 		},
+		{
+			name:      "just-service",
+			data:      "8080:svc",
+			expectErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -112,6 +106,10 @@ func TestForward_UnmarshalYAML(t *testing.T) {
 				}
 
 				t.Fatal(err)
+			}
+
+			if tt.expectErr {
+				t.Fatal("didn't got expected error")
 			}
 
 			if !reflect.DeepEqual(result, tt.expected) {
