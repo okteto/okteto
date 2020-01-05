@@ -8,7 +8,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func TestAdd(t *testing.T) {
@@ -183,40 +182,20 @@ func Test_getServicePorts(t *testing.T) {
 			expected: []string{"8080:8090"},
 		},
 		{
-			name: "services-with-name",
+			name: "services-with-multiple-ports",
 			forwards: map[int]model.Forward{
 				80:   model.Forward{Local: 80, Remote: 8090},
-				8080: model.Forward{Local: 8080, Remote: 0, ServiceName: "svc", Service: true},
+				8080: model.Forward{Local: 8080, Remote: 8090, ServiceName: "svc", Service: true},
 				22:   model.Forward{Local: 22000, Remote: 22},
+				8089: model.Forward{Local: 8089, Remote: 80890, ServiceName: "svc", Service: true},
 			},
-			expected: []string{"8080:33060"},
-			svc: &apiv1.Service{
-				Spec: apiv1.ServiceSpec{
-					Ports: []apiv1.ServicePort{
-						{
-							Name:       "mysql",
-							Port:       3306,
-							Protocol:   "TCP",
-							TargetPort: intstr.FromString("mysql"),
-						},
-					},
-				},
-			},
-			pod: &apiv1.Pod{
-				Spec: apiv1.PodSpec{
-					Containers: []apiv1.Container{
-						apiv1.Container{Ports: []apiv1.ContainerPort{
-							{Name: "mysql", ContainerPort: 33060},
-						}},
-					},
-				},
-			},
+			expected: []string{"8080:8090", "8089:80890"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ports := getServicePorts("svc", tt.forwards, tt.svc, tt.pod)
+			ports := getServicePorts("svc", tt.forwards)
 			if !reflect.DeepEqual(ports, tt.expected) {
 				t.Errorf("Expected: %+v, Got: %+v", tt.expected, ports)
 			}
