@@ -28,6 +28,7 @@ Please make sure to read and observe our [code of conduct](code-of-conduct.md).
 
 Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.13](https://golang.org/doc/go1.13). It uses go modules for dependency management. 
 
+## Build 
 To start working on Okteto, simply fork this repository, clone the okteto repository locally, and run the following command at the root of the project:
 
 ```
@@ -40,11 +41,34 @@ This will create the `okteto` binary in the `bin` folder. You can execute the bi
 bin/okteto
 ```
 
-After you make changes, simply run `make` again to recomplile your changes.
+After you make changes, simply run `make` again to recompile your changes.
+
+## Test 
 
 Unit tests for the project can be executed by running:
 
 ```
 make test
 ```
+
 This command will run all the unit tests, will try to detect race conditions, and will generate a test coverage report.
+
+Integration tests can be executed by running:
+
+```
+make integration
+```
+
+These tests will use your Kubernetes context to create a namespace and all the required k8s resources.
+
+## Lint
+
+Before submitting your changes, we recommend to lint the code by running:
+
+```
+make lint
+```
+
+The same command runs as part of CI on every PR.
+
+> This command requires that you have [golangci-lint](https://github.com/golangci/golangci-lint#install) available on your `$PATH`.
