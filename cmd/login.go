@@ -62,9 +62,10 @@ func Login() *cobra.Command {
 			authorizationURL := buildAuthorizationURL(handler.baseURL, handler.state, port)
 			fmt.Println("Authentication will continue in your default browser")
 			if err := open.Start(authorizationURL); err != nil {
-				fmt.Printf("Please open a browser and navigate to the following address:\n")
-				fmt.Println(authorizationURL)
+				log.Errorf("Something went wrong opening your browser: %s\n", err)
 			}
+			fmt.Printf("You can also open a browser and navigate to the following address:\n")
+			fmt.Println(authorizationURL)
 
 			ticker := time.NewTicker(5 * time.Minute)
 			var code string
