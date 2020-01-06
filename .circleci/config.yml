@@ -92,6 +92,9 @@ jobs:
           keys:
             - v4-pkg-cache-windows-{{ checksum "go.sum" }}
       - run: 
+          name: upgrade golang
+          command: choco upgrade golang
+      - run: 
           name: test
           command: |
             go version
