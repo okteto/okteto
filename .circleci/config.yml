@@ -94,6 +94,7 @@ jobs:
       - run: 
           name: test
           command: |
+            choco upgrade golang
             go version
             go test ./...
       - save_cache:
