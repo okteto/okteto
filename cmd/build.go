@@ -123,9 +123,10 @@ func getBuildKitHost() (string, error) {
 	}
 
 	forwarder := forward.NewPortForwardManager(ctx, restConfig, c)
-	if err := forwarder.Add(localPort, buildKitPort); err != nil {
+	if err := forwarder.Add(model.Forward{Local: localPort, Remote: buildKitPort}); err != nil {
 		return "", err
 	}
+
 	if err := forwarder.Start(buildKitContainer, namespace); err != nil {
 		return "", err
 	}

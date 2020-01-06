@@ -146,8 +146,8 @@ forward:
   - 9001:8001`),
 			[]EnvVar{},
 			[]Forward{
-				{Local: 9000, Remote: 8000},
-				{Local: 9001, Remote: 8001},
+				{Local: 9000, Remote: 8000, Service: false, ServiceName: ""},
+				{Local: 9001, Remote: 8001, Service: false, ServiceName: ""},
 			},
 		},
 	}

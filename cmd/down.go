@@ -129,7 +129,7 @@ func runDown(dev *model.Dev) error {
 		if err := deployments.Destroy(dev, client); err != nil {
 			return err
 		}
-		if err := services.Destroy(dev, client); err != nil {
+		if err := services.DestroyDev(dev, client); err != nil {
 			return err
 		}
 	}

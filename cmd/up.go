@@ -377,7 +377,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		}
 	}
 	if create {
-		if err := services.Create(up.Dev, up.Client); err != nil {
+		if err := services.CreateDev(up.Dev, up.Client); err != nil {
 			return err
 		}
 	}
@@ -417,14 +417,14 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 
 	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
 	for _, f := range up.Dev.Forward {
-		if err := up.Forwarder.Add(f.Local, f.Remote); err != nil {
+		if err := up.Forwarder.Add(f); err != nil {
 			return err
 		}
 	}
-	if err := up.Forwarder.Add(up.Sy.RemotePort, syncthing.ClusterPort); err != nil {
+	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
 	}
-	if err := up.Forwarder.Add(up.Sy.RemoteGUIPort, syncthing.GUIPort); err != nil {
+	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemoteGUIPort, Remote: syncthing.GUIPort}); err != nil {
 		return err
 	}
 
@@ -625,7 +625,7 @@ func (up *UpContext) shutdown() {
 		}
 	}
 
-	log.Infof("stopping the forwarder")
+	log.Infof("stopping forwarder")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
 	}
@@ -640,9 +640,15 @@ func printDisplayContext(message string, dev *model.Dev) {
 	if len(dev.Forward) > 0 {
 		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
 		for i := 1; i < len(dev.Forward); i++ {
+			if dev.Forward[i].Service {
+				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
+				continue
+			}
+
 			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
 		}
 	}
+
 	if len(dev.Reverse) > 0 {
 		log.Println(fmt.Sprintf("    %s   %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
 		for i := 1; i < len(dev.Reverse); i++ {

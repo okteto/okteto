@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -119,12 +120,6 @@ type Secret struct {
 	Mode       int32
 }
 
-// Forward represents a port forwarding definition
-type Forward struct {
-	Local  int
-	Remote int
-}
-
 // Reverse represents a remote forward port
 type Reverse struct {
 	Remote int
@@ -208,6 +203,15 @@ func Read(bytes []byte) (*Dev, error) {
 	if err := dev.setDefaults(); err != nil {
 		return nil, err
 	}
+
+	sort.SliceStable(dev.Forward, func(i, j int) bool {
+		return dev.Forward[i].less(&dev.Forward[j])
+	})
+
+	sort.SliceStable(dev.Reverse, func(i, j int) bool {
+		return dev.Reverse[i].Local < dev.Reverse[j].Local
+	})
+
 	return dev, nil
 }
 
