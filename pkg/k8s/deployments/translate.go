@@ -27,7 +27,7 @@ const (
 	oktetoVolumeName           = "okteto"
 
 	//syncthing
-	oktetoBinImageTag      = "okteto/bin:1.1.1"
+	oktetoBinImageTag      = "okteto/bin:1.1.2"
 	oktetoSyncSecretVolume = "okteto-sync-secret"
 	oktetoDevSecretVolume  = "okteto-dev-secret"
 	oktetoSecretTemplate   = "okteto-%s"
