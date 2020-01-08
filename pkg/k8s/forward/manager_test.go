@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
-	apiv1 "k8s.io/api/core/v1"
 )
 
 func TestAdd(t *testing.T) {
@@ -169,8 +168,6 @@ func Test_getServicePorts(t *testing.T) {
 		name     string
 		forwards map[int]model.Forward
 		expected []string
-		svc      *apiv1.Service
-		pod      *apiv1.Pod
 	}{
 		{
 			name: "services-with-port",
