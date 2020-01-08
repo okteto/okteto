@@ -92,20 +92,19 @@ func (p *PortForwardManager) Add(f model.Forward) error {
 // Start starts all the port forwarders to the dev environment
 func (p *PortForwardManager) Start(devPod, namespace string) error {
 	p.stopped = false
-	a, pf, err := p.buildForwarderToDevPod(namespace, devPod)
+	a, devPF, err := p.buildForwarderToDevPod(namespace, devPod)
 	if err != nil {
 		return fmt.Errorf("failed to forward ports to development environment: %w", err)
 	}
 
 	p.activeDev = a
 	go func() {
-		err := pf.ForwardPorts()
+		err := devPF.ForwardPorts()
 		if err != nil {
 			log.Debugf("port forwarding to dev pod finished with errors: %s", err)
+			p.activeDev.closeReady()
+			p.activeDev.err = err
 		}
-
-		p.activeDev.closeReady()
-
 	}()
 
 	p.activeServices = map[string]*active{}
