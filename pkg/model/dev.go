@@ -23,7 +23,6 @@ import (
 const (
 	oktetoSyncthingMountPath = "/var/syncthing"
 	oktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
-	oktetoRemotePortVariable = "OKTETO_REMOTE_PORT"
 
 	oktetoVolumeNameTemplate  = "pvc-%d"
 	oktetoPodNameTemplate     = "%s-0"
