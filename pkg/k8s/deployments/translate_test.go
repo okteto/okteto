@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"reflect"
 	"testing"
 
@@ -121,10 +122,10 @@ services:
 							},
 						},
 						{
-							Name: oktetoVolumeName,
+							Name: dev.GetVolumeName(),
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: oktetoVolumeName,
+									ClaimName: dev.GetVolumeName(),
 									ReadOnly:  false,
 								},
 							},
@@ -189,22 +190,22 @@ services:
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
-									Name:      oktetoVolumeName,
+									Name:      dev.GetVolumeName(),
 									ReadOnly:  false,
 									MountPath: "/app",
-									SubPath:   "web/data-0",
+									SubPath:   model.SourceCodeSubPath,
 								},
 								{
-									Name:      oktetoVolumeName,
+									Name:      dev.GetVolumeName(),
 									ReadOnly:  false,
 									MountPath: "/var/syncthing",
-									SubPath:   "web/syncthing",
+									SubPath:   model.SyncthingSubPath,
 								},
 								{
-									Name:      oktetoVolumeName,
+									Name:      dev.GetVolumeName(),
 									ReadOnly:  false,
 									MountPath: "/path",
-									SubPath:   "web/data-0/sub",
+									SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
 								},
 								{
 									Name:      oktetoSyncSecretVolume,
@@ -271,10 +272,10 @@ services:
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						{
-							Name: oktetoVolumeName,
+							Name: dev.GetVolumeName(),
 							VolumeSource: apiv1.VolumeSource{
 								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: oktetoVolumeName,
+									ClaimName: dev.GetVolumeName(),
 									ReadOnly:  false,
 								},
 							},
@@ -289,10 +290,10 @@ services:
 							Args:            []string{},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
-									Name:      oktetoVolumeName,
+									Name:      dev.GetVolumeName(),
 									ReadOnly:  false,
 									MountPath: "/src",
-									SubPath:   "web/data-0/worker",
+									SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
 								},
 							},
 							LivenessProbe:  nil,

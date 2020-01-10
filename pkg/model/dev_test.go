@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"reflect"
 	"testing"
 
@@ -630,6 +631,43 @@ func TestPersistentVolumeEnabled(t *testing.T) {
 
 			if dev.PersistentVolumeEnabled() != tt.expected {
 				t.Errorf("Expecting %t but got %t", tt.expected, dev.PersistentVolumeEnabled())
+			}
+		})
+	}
+}
+
+func Test_fullSubPath(t *testing.T) {
+	var tests = []struct {
+		name    string
+		i       int
+		subPath string
+		want    string
+	}{
+		{
+			name:    "source-code-without-subpath",
+			i:       0,
+			subPath: "",
+			want:    SourceCodeSubPath,
+		},
+		{
+			name:    "source-code-with-subpath",
+			i:       0,
+			subPath: "data",
+			want:    path.Join(SourceCodeSubPath, "data"),
+		},
+		{
+			name:    "data-without-subpath",
+			i:       2,
+			subPath: "",
+			want:    "volume-2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fullSubPath(tt.i, tt.subPath)
+			if result != tt.want {
+				t.Errorf("error in test '%s', expected '%s' vs '%s'", tt.name, tt.want, result)
 			}
 		})
 	}

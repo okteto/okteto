@@ -24,7 +24,6 @@ const (
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
 	revisionAnnotation         = "deployment.kubernetes.io/revision"
 	oktetoBinName              = "okteto-bin"
-	oktetoVolumeName           = "okteto"
 
 	//syncthing
 	oktetoBinImageTag      = "okteto/bin:1.1.2"
