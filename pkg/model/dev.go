@@ -24,11 +24,14 @@ const (
 	oktetoSyncthingMountPath = "/var/syncthing"
 	oktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
 
-	oktetoVolumeNameTemplate  = "pvc-%d"
-	oktetoPodNameTemplate     = "%s-0"
-	oktetoStatefulSetTemplate = "okteto-%s"
-	//OktetoVolumeName name of the okteto persistent volume
-	OktetoVolumeName = "okteto"
+	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
+	DeprecatedOktetoVolumeName = "okteto"
+	//OktetoVolumeNameTemplate name template of the dev environment persistent volume
+	OktetoVolumeNameTemplate = "okteto-%s"
+	//SourceCodeSubPath subpath in the dev environment persistent volume for the source code
+	SourceCodeSubPath = "src"
+	//SyncthingSubPath subpath in the dev environment persistent volume for the syncthing data
+	SyncthingSubPath = "syncthing"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
@@ -368,31 +371,9 @@ func (dev *Dev) LoadForcePull() {
 	log.Infof("enabled force pull")
 }
 
-//GetStatefulSetName returns the syncthing statefulset name for a given dev environment
-func (dev *Dev) GetStatefulSetName() string {
-	n := fmt.Sprintf(oktetoStatefulSetTemplate, dev.Name)
-	if len(n) > 52 {
-		n = n[0:52]
-	}
-	return n
-}
-
-//GetPodName returns the syncthing statefulset pod name for a given dev environment
-func (dev *Dev) GetPodName() string {
-	n := dev.GetStatefulSetName()
-	return fmt.Sprintf(oktetoPodNameTemplate, n)
-}
-
-//GetVolumeTemplateName returns the data volume name for a given dev environment
-func (dev *Dev) GetVolumeTemplateName(i int) string {
-	return fmt.Sprintf(oktetoVolumeNameTemplate, i)
-}
-
-//GetVolumeName returns the data volume name for a given dev environment
-func (dev *Dev) GetVolumeName(i int) string {
-	volumeName := dev.GetVolumeTemplateName(i)
-	podName := dev.GetPodName()
-	return fmt.Sprintf("%s-%s", volumeName, podName)
+//GetVolumeName returns the okteto volume name for a given dev environment
+func (dev *Dev) GetVolumeName() string {
+	return fmt.Sprintf(OktetoVolumeNameTemplate, dev.Name)
 }
 
 // LabelsSelector returns the labels of a Deployment as a k8s selector
@@ -408,17 +389,14 @@ func (dev *Dev) LabelsSelector() string {
 	return labels
 }
 
-//FullSubPath returns the full subpath in the okteto volume
-func (dev *Dev) fullSubPath(i int, subPath string) string {
+func fullSubPath(i int, subPath string) string {
 	if subPath == "" {
-		return path.Join(dev.Name, fmt.Sprintf("data-%d", i))
+		if i == 0 {
+			return SourceCodeSubPath
+		}
+		return fmt.Sprintf("volume-%d", i)
 	}
-	return path.Join(dev.Name, "data-0", subPath)
-}
-
-//syncthingSubPath returns the full subpath for the var syncthing volume
-func (dev *Dev) syncthingSubPath() string {
-	return path.Join(dev.Name, "syncthing")
+	return path.Join(SourceCodeSubPath, subPath)
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
@@ -433,9 +411,9 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		PersistentVolume: dev.PersistentVolumeEnabled(),
 		Volumes: []VolumeMount{
 			{
-				Name:      OktetoVolumeName,
+				Name:      main.GetVolumeName(),
 				MountPath: dev.MountPath,
-				SubPath:   main.fullSubPath(0, dev.SubPath),
+				SubPath:   fullSubPath(0, dev.SubPath),
 			},
 		},
 		SecurityContext: dev.SecurityContext,
@@ -454,9 +432,9 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		rule.Volumes = append(
 			rule.Volumes,
 			VolumeMount{
-				Name:      OktetoVolumeName,
+				Name:      main.GetVolumeName(),
 				MountPath: oktetoSyncthingMountPath,
-				SubPath:   dev.syncthingSubPath(),
+				SubPath:   SyncthingSubPath,
 			},
 		)
 		rule.Healthchecks = false
@@ -482,9 +460,9 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		rule.Volumes = append(
 			rule.Volumes,
 			VolumeMount{
-				Name:      OktetoVolumeName,
+				Name:      main.GetVolumeName(),
 				MountPath: v.MountPath,
-				SubPath:   main.fullSubPath(i+1, v.SubPath),
+				SubPath:   fullSubPath(i+1, v.SubPath),
 			},
 		)
 	}

@@ -210,54 +210,6 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
 }
 
-// RunCleanerPod runs a pod to clean the dev environment volume
-func RunCleanerPod(dev *model.Dev, c *kubernetes.Clientset) error {
-	pod := translate(dev)
-	if err := waitForDeleted(pod, c); err != nil {
-		return err
-	}
-	pod, err := c.CoreV1().Pods(dev.Namespace).Create(pod)
-	if err != nil {
-		return fmt.Errorf("failed to create cleaner volume pod: %s", err)
-	}
-	if err := waitForCompleted(pod, c); err != nil {
-		return err
-	}
-	if err := waitForDeleted(pod, c); err != nil {
-		return err
-	}
-	return nil
-}
-
-func waitForDeleted(pod *apiv1.Pod, c *kubernetes.Clientset) error {
-	for {
-		err := c.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
-		if err != nil {
-			if strings.Contains(err.Error(), "not found") {
-				return nil
-			}
-			return fmt.Errorf("error deleting kubernetes pod: %s", err)
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-}
-
-func waitForCompleted(pod *apiv1.Pod, c *kubernetes.Clientset) error {
-	for {
-		pod, err := c.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("error getting pod: %s", err)
-		}
-		if pod.Status.Phase == apiv1.PodSucceeded {
-			return nil
-		}
-		if pod.Status.Phase == apiv1.PodFailed {
-			return fmt.Errorf("clean operaation failed. Check the logs by running 'kubectl logs %s'", pod.Name)
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-}
-
 func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error {
 	t := time.NewTicker(1 * time.Second)
 	notready := map[string]bool{}

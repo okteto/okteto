@@ -1,6 +1,7 @@
 package model
 
 import (
+	"path"
 	"testing"
 
 	yaml "gopkg.in/yaml.v2"
@@ -64,19 +65,19 @@ services:
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
 			VolumeMount{
-				Name:      OktetoVolumeName,
+				Name:      dev.GetVolumeName(),
 				MountPath: "/app",
-				SubPath:   "web/data-0",
+				SubPath:   SourceCodeSubPath,
 			},
 			{
-				Name:      OktetoVolumeName,
+				Name:      dev.GetVolumeName(),
 				MountPath: oktetoSyncthingMountPath,
-				SubPath:   dev.syncthingSubPath(),
+				SubPath:   SyncthingSubPath,
 			},
 			VolumeMount{
-				Name:      OktetoVolumeName,
+				Name:      dev.GetVolumeName(),
 				MountPath: "/path",
-				SubPath:   "web/data-0/sub",
+				SubPath:   path.Join(SourceCodeSubPath, "sub"),
 			},
 		},
 	}
@@ -104,9 +105,9 @@ services:
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
 			{
-				Name:      OktetoVolumeName,
+				Name:      dev.GetVolumeName(),
 				MountPath: "/src",
-				SubPath:   "web/data-0/worker",
+				SubPath:   path.Join(SourceCodeSubPath, "worker"),
 			},
 		},
 	}

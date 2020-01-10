@@ -21,7 +21,7 @@ const (
 //Create deploys the volume claim for a given dev environment
 func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
-	pvc := translate()
+	pvc := translate(dev)
 	k8Volume, err := vClient.Get(pvc.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes volume claim: %s", err)
@@ -37,30 +37,17 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error 
 	return nil
 }
 
-//Exists check if the okteto volume exists
-func Exists(namespace string, c *kubernetes.Clientset) (bool, error) {
-	vClient := c.CoreV1().PersistentVolumeClaims(namespace)
-	k8Volume, err := vClient.Get(oktetoVolumeName, metav1.GetOptions{})
-	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return false, fmt.Errorf("error getting kubernetes volume claim: %s", err)
-	}
-	if k8Volume.Name == "" {
-		return false, nil
-	}
-	return true, nil
-}
-
 //Destroy destroys the volume claim for a given dev environment
-func Destroy(name string, dev *model.Dev, c *kubernetes.Clientset) error {
+func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
-	log.Infof("destroying volume claim '%s'...", name)
+	log.Infof("destroying volume claim '%s'...", dev.GetVolumeName())
 
 	ticker := time.NewTicker(1 * time.Second)
 	for i := 0; i < maxRetries; i++ {
-		err := vClient.Delete(name, &metav1.DeleteOptions{})
+		err := vClient.Delete(dev.GetVolumeName(), &metav1.DeleteOptions{})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
-				log.Infof("volume claim '%s' successfully destroyed", name)
+				log.Infof("volume claim '%s' successfully destroyed", dev.GetVolumeName())
 				return nil
 			}
 
@@ -69,16 +56,16 @@ func Destroy(name string, dev *model.Dev, c *kubernetes.Clientset) error {
 
 		<-ticker.C
 		if i%10 == 5 {
-			log.Infof("waiting for volume claim '%s' to be destroyed...", name)
+			log.Infof("waiting for volume claim '%s' to be destroyed...", dev.GetVolumeName())
 		}
 	}
-	if err := checkIfAttached(name, dev, c); err != nil {
+	if err := checkIfAttached(dev, c); err != nil {
 		return err
 	}
-	return fmt.Errorf("volume claim '%s' wasn't destroyed after 120s", name)
+	return fmt.Errorf("volume claim '%s' wasn't destroyed after 120s", dev.GetVolumeName())
 }
 
-func checkIfAttached(pvc string, dev *model.Dev, c *kubernetes.Clientset) error {
+func checkIfAttached(dev *model.Dev, c *kubernetes.Clientset) error {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		log.Infof("failed to get available pods: %s", err)
@@ -88,8 +75,8 @@ func checkIfAttached(pvc string, dev *model.Dev, c *kubernetes.Clientset) error 
 	for _, p := range pods.Items {
 		for _, v := range p.Spec.Volumes {
 			if v.PersistentVolumeClaim != nil {
-				if v.PersistentVolumeClaim.ClaimName == pvc {
-					log.Infof("pvc/%s is still attached to pod/%s", pvc, p.Name)
+				if v.PersistentVolumeClaim.ClaimName == dev.GetVolumeName() {
+					log.Infof("pvc/%s is still attached to pod/%s", dev.GetVolumeName(), p.Name)
 					return fmt.Errorf("can't delete your volume claim since it's still attached to 'pod/%s'", p.Name)
 				}
 			}

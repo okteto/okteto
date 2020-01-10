@@ -5,16 +5,16 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
-	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 )
 
 //Down deactivates the development environment
@@ -46,11 +46,11 @@ func Down() *cobra.Command {
 			log.Success("Development environment deactivated")
 
 			if rm {
-				if err := cleanVolume(dev); err != nil {
+				if err := removeVolume(dev); err != nil {
 					analytics.TrackDownVolumes(false)
 					return err
 				}
-				log.Success("Persistent volume cleaned")
+				log.Success("Persistent volume removed")
 				analytics.TrackDownVolumes(true)
 			}
 
@@ -63,7 +63,7 @@ func Down() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
-	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
+	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volume")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	return cmd
 }
@@ -107,12 +107,11 @@ func runDown(dev *model.Dev) error {
 		return err
 	}
 
-	if err := statefulsets.Destroy(dev, client); err != nil {
-		return err
-	}
-
-	if err := removeVolumes(dev); err != nil {
-		return err
+	//remove deprecated okteto volume
+	if err := client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(
+		model.DeprecatedOktetoVolumeName,
+		&metav1.DeleteOptions{}); err != nil && !strings.Contains(err.Error(), "not found") {
+		log.Debugf("failed to remove deprecated okteto persistent volume: %s", err)
 	}
 
 	stopSyncthing(dev)
@@ -137,28 +136,8 @@ func runDown(dev *model.Dev) error {
 	return nil
 }
 
-func removeVolumes(dev *model.Dev) error {
-	log.Info("deleting old persistent volumes")
-
-	client, _, namespace, err := k8Client.GetLocal()
-	if err != nil {
-		return err
-	}
-	if dev.Namespace == "" {
-		dev.Namespace = namespace
-	}
-
-	for i := 0; i <= len(dev.Volumes); i++ {
-		if err := volumes.Destroy(dev.GetVolumeName(i), dev, client); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func cleanVolume(dev *model.Dev) error {
-	spinner := newSpinner("Cleaning persistent volume...")
+func removeVolume(dev *model.Dev) error {
+	spinner := newSpinner("Removing persistent volume...")
 	spinner.start()
 	defer spinner.stop()
 
@@ -170,19 +149,7 @@ func cleanVolume(dev *model.Dev) error {
 		dev.Namespace = namespace
 	}
 
-	exists, err := volumes.Exists(dev.Namespace, client)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return nil
-	}
-
-	if err := pods.RunCleanerPod(dev, client); err != nil {
-		return err
-	}
-	return nil
+	return volumes.Destroy(dev, client)
 }
 
 func stopSyncthing(dev *model.Dev) {
