@@ -1,9 +1,6 @@
 package volumes
 
 import (
-	"log"
-	"os"
-
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -11,8 +8,7 @@ import (
 )
 
 func translate(dev *model.Dev) *apiv1.PersistentVolumeClaim {
-	quantDisk := getVolumeSize()
-	return &apiv1.PersistentVolumeClaim{
+	pvc := &apiv1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dev.GetVolumeName(),
 		},
@@ -20,21 +16,14 @@ func translate(dev *model.Dev) *apiv1.PersistentVolumeClaim {
 			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 			Resources: apiv1.ResourceRequirements{
 				Requests: apiv1.ResourceList{
-					"storage": quantDisk,
+					"storage": resource.MustParse(dev.PersistentVolumeSize()),
 				},
 			},
 		},
 	}
-}
-
-func getVolumeSize() resource.Quantity {
-	quantDisk, _ := resource.ParseQuantity("10Gi")
-	if size, ok := os.LookupEnv("OKTETO_VOLUME_SIZE"); ok {
-		q, err := resource.ParseQuantity(size)
-		if err != nil {
-			log.Fatalf("%s is not a valid quantity", err)
-		}
-		quantDisk = q
+	if dev.PersistentVolumeStorageClass() != "" {
+		storageClass := dev.PersistentVolumeStorageClass()
+		pvc.Spec.StorageClassName = &storageClass
 	}
-	return quantDisk
+	return pvc
 }

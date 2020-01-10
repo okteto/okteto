@@ -471,9 +471,8 @@ func Test_validate(t *testing.T) {
 			name: "services-with-disabled-pvc",
 			manifest: []byte(`
       name: deployment
-      container: core
-      image: code/core:0.1.8
-      persistentVolume: false
+      persistentVolume:
+        enabled: false
       services:
         - name: foo`),
 			expectErr: true,
@@ -482,23 +481,36 @@ func Test_validate(t *testing.T) {
 			name: "services-with-enabled-pvc",
 			manifest: []byte(`
       name: deployment
-      container: core
-      image: code/core:0.1.8
-      persistentVolume: true
+      persistentVolume:
+        enabled: true
       services:
         - name: foo`),
 			expectErr: false,
 		},
 		{
+			name: "pvc-size",
+			manifest: []byte(`
+      name: deployment
+      persistentVolume:
+        enabled: true
+        size: 10Gi`),
+			expectErr: false,
+		},
+		{
+			name: "wrong-pvc-size",
+			manifest: []byte(`
+      name: deployment
+      persistentVolume:
+        enabled: true
+        size: wrong`),
+			expectErr: true,
+		},
+		{
 			name: "services-with-mountpath-pullpolicy",
 			manifest: []byte(`
       name: deployment
-      container: core
-      image: code/core:0.1.8
       services:
         - name: foo
-          mountpath: /app/bin
-          subpath: bin
           imagePullPolicy: Always`),
 			expectErr: false,
 		},
@@ -506,8 +518,6 @@ func Test_validate(t *testing.T) {
 			name: "services-with-bad-pullpolicy",
 			manifest: []byte(`
       name: deployment
-      container: core
-      image: code/core:0.1.8
       services:
         - name: foo
           imagePullPolicy: Sometimes`),
@@ -517,8 +527,6 @@ func Test_validate(t *testing.T) {
 			name: "volumes",
 			manifest: []byte(`
       name: deployment
-      container: core
-      image: code/core:0.1.8
       volumes:
         - docs:/docs`),
 			expectErr: false,
@@ -527,7 +535,6 @@ func Test_validate(t *testing.T) {
 			name: "secrets",
 			manifest: []byte(fmt.Sprintf(`
       name: deployment
-      image: code/core:0.1.8
       secrets:
         - %s:/remote
         - %s:/remote`, file.Name(), file.Name())),
@@ -537,34 +544,21 @@ func Test_validate(t *testing.T) {
 			name: "bad-pull-policy",
 			manifest: []byte(`
       name: deployment
-      container: core
-      image: code/core:0.1.8
-      imagePullPolicy: what
-      volumes:
-        - docs:/docs`),
+      imagePullPolicy: what`),
 			expectErr: true,
 		},
 		{
 			name: "good-pull-policy",
 			manifest: []byte(`
       name: deployment
-      container: core
-      image: code/core:0.1.8
-      imagePullPolicy: IfNotPresent
-      volumes:
-        - docs:/docs`),
+      imagePullPolicy: IfNotPresent`),
 			expectErr: false,
 		},
 		{
 			name: "subpath-on-main-dev",
 			manifest: []byte(`
       name: deployment
-      container: core
-      image: code/core:0.1.8
-      imagePullPolicy: IfNotPresent
-      subpath: /app/docs
-      volumes:
-        - docs:/docs`),
+      subpath: /app/docs`),
 			expectErr: true,
 		},
 	}
@@ -608,7 +602,8 @@ func TestPersistentVolumeEnabled(t *testing.T) {
       name: deployment
       container: core
       image: code/core:0.1.8
-      persistentVolume: true`),
+      persistentVolume:
+        enabled: true`),
 			expected: true,
 		},
 		{
@@ -617,7 +612,8 @@ func TestPersistentVolumeEnabled(t *testing.T) {
       name: deployment
       container: core
       image: code/core:0.1.8
-      persistentVolume: false`),
+      persistentVolume:
+        enabled: false`),
 			expected: false,
 		},
 	}
