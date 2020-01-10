@@ -152,7 +152,7 @@ func TranslatePodAffinity(spec *apiv1.PodSpec, name string) {
 		apiv1.PodAffinityTerm{
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					okLabels.DevLabel: "true",
+					okLabels.InteractiveDevLabel: name,
 				},
 			},
 			TopologyKey: "kubernetes.io/hostname",

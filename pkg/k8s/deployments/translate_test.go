@@ -84,7 +84,7 @@ services:
 								apiv1.PodAffinityTerm{
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											okLabels.DevLabel: "true",
+											okLabels.InteractiveDevLabel: "web",
 										},
 									},
 									TopologyKey: "kubernetes.io/hostname",
@@ -261,7 +261,7 @@ services:
 								apiv1.PodAffinityTerm{
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											okLabels.DevLabel: "true",
+											okLabels.InteractiveDevLabel: "web",
 										},
 									},
 									TopologyKey: "kubernetes.io/hostname",
