@@ -5,7 +5,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
-	"github.com/okteto/okteto/pkg/log"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -32,7 +31,6 @@ func IsOktetoAllowed(ns *apiv1.Namespace) bool {
 func Get(ns string, c *kubernetes.Clientset) (*apiv1.Namespace, error) {
 	n, err := c.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
 	if err != nil {
-		log.Infof("error accessing namespace %s: %s", ns, err)
 		return nil, err
 	}
 
