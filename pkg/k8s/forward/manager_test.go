@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -193,6 +194,7 @@ func Test_getServicePorts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ports := getServicePorts("svc", tt.forwards)
+			sort.Strings(ports)
 			if !reflect.DeepEqual(ports, tt.expected) {
 				t.Errorf("Expected: %+v, Got: %+v", tt.expected, ports)
 			}
