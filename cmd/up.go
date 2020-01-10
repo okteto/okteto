@@ -176,9 +176,11 @@ func (up *UpContext) Activate(autoDeploy bool) {
 	if up.Dev.Namespace == "" {
 		up.Dev.Namespace = namespace
 	}
+
 	up.Namespace, err = namespaces.Get(up.Dev.Namespace, up.Client)
 	if err != nil {
-		up.Exit <- err
+		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
+		up.Exit <- fmt.Errorf("couldn't get namespace/%s, please try again: %s", up.Dev.Namespace, err)
 		return
 	}
 
@@ -191,7 +193,8 @@ func (up *UpContext) Activate(autoDeploy bool) {
 
 		d, create, err := up.getCurrentDeployment(autoDeploy)
 		if err != nil {
-			up.Exit <- err
+			log.Infof("failed to find deployment %s/%s: %s", up.Dev.Namespace, up.Dev.Name, err)
+			up.Exit <- fmt.Errorf("couldn't get deployment %s/%s, please try again: %s", up.Dev.Namespace, up.Dev.Name, err)
 			return
 		}
 		if !up.retry {
@@ -200,7 +203,7 @@ func (up *UpContext) Activate(autoDeploy bool) {
 
 		err = up.devMode(d, create)
 		if err != nil {
-			up.Exit <- err
+			up.Exit <- fmt.Errorf("couldn't activate your development environment: %s", err)
 			return
 		}
 
