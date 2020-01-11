@@ -64,35 +64,42 @@ var (
 
 //Dev represents a cloud native development environment
 type Dev struct {
-	Name             string               `json:"name" yaml:"name"`
-	Labels           map[string]string    `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations      map[string]string    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Namespace        string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Container        string               `json:"container,omitempty" yaml:"container,omitempty"`
-	Image            string               `json:"image,omitempty" yaml:"image,omitempty"`
-	ImagePullPolicy  apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment      []EnvVar             `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Secrets          []Secret             `json:"secrets,omitempty" yaml:"secrets,omitempty"`
-	Command          []string             `json:"command,omitempty" yaml:"command,omitempty"`
-	WorkDir          string               `json:"workdir,omitempty" yaml:"workdir,omitempty"`
-	MountPath        string               `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
-	SubPath          string               `json:"subpath,omitempty" yaml:"subpath,omitempty"`
-	PersistentVolume *bool                `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
-	Volumes          []Volume             `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	SecurityContext  *SecurityContext     `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	Forward          []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
-	Reverse          []Reverse            `json:"reverse,omitempty" yaml:"reverse,omitempty"`
-	RemotePort       int                  `json:"remote,omitempty" yaml:"remote,omitempty"`
-	Resources        ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
-	DevPath          string               `json:"-" yaml:"-"`
-	DevDir           string               `json:"-" yaml:"-"`
-	Services         []*Dev               `json:"services,omitempty" yaml:"services,omitempty"`
+	Name                 string                `json:"name" yaml:"name"`
+	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
+	Image                string                `json:"image,omitempty" yaml:"image,omitempty"`
+	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
+	Command              []string              `json:"command,omitempty" yaml:"command,omitempty"`
+	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
+	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
+	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
+	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
+	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
+	DevPath              string                `json:"-" yaml:"-"`
+	DevDir               string                `json:"-" yaml:"-"`
+	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 }
 
 // Volume represents a volume in the dev environment
 type Volume struct {
 	SubPath   string
 	MountPath string
+}
+
+// PersistentVolumeInfo info about the persistent volume
+type PersistentVolumeInfo struct {
+	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	StorageClass string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
+	Size         string `json:"size,omitempty" yaml:"size,omitempty"`
 }
 
 // SecurityContext represents a pod security context
@@ -300,8 +307,12 @@ func (dev *Dev) validate() error {
 
 	if !dev.PersistentVolumeEnabled() {
 		if len(dev.Services) > 0 {
-			return fmt.Errorf("'persistentVolume' must be set to true to work with services")
+			return fmt.Errorf("'persistentVolume.enabled' must be set to true to work with services")
 		}
+	}
+
+	if _, err := resource.ParseQuantity(dev.PersistentVolumeSize()); err != nil {
+		return fmt.Errorf("'persistentVolume.size' is not valid. A sample value would be '10Gi'")
 	}
 
 	for _, s := range dev.Services {
@@ -548,9 +559,27 @@ func (s *Secret) GetFileName() string {
 
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
 func (dev *Dev) PersistentVolumeEnabled() bool {
-	if dev.PersistentVolume == nil {
+	if dev.PersistentVolumeInfo == nil {
 		return true
 	}
+	return dev.PersistentVolumeInfo.Enabled
+}
 
-	return *dev.PersistentVolume
+// PersistentVolumeSize returns the persistent volume size
+func (dev *Dev) PersistentVolumeSize() string {
+	if dev.PersistentVolumeInfo == nil {
+		return "10Gi"
+	}
+	if dev.PersistentVolumeInfo.Size == "" {
+		return "10Gi"
+	}
+	return dev.PersistentVolumeInfo.Size
+}
+
+// PersistentVolumeStorageClass returns the persistent volume storage class
+func (dev *Dev) PersistentVolumeStorageClass() string {
+	if dev.PersistentVolumeInfo == nil {
+		return ""
+	}
+	return dev.PersistentVolumeInfo.StorageClass
 }
