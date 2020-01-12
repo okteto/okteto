@@ -115,6 +115,10 @@ func (r *ResourceList) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	if *r == nil {
+		*r = ResourceList{}
+	}
+
 	for k, v := range raw {
 		parsed, err := resource.ParseQuantity(v)
 		if err != nil {
