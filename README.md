@@ -46,6 +46,8 @@ Okteto decouples deployment from development. Because of this, you can deploy yo
 
 Local or remote. If you can run `kubectl apply` you can use Okteto. Our community uses Okteto in all major Kubernetes distros, from Minikube and k3s all the way to GKE, Digital Ocean, AKS, EKS and Civio.
 
+You can also use Okteto in [Okteto Cloud](https://okteto.com/), the remote development platform for Kubernetes applications.
+
 ## Learn More
 - [How does Okteto work?](docs/how-does-it-work.md)
 - Get started following our [installation guides](https://okteto.com/docs/getting-started/installation/index.html).
