@@ -34,50 +34,77 @@ securityContext:
     - SYS_TRACE
     drop:
     - SYS_NICE
-workdir: /app`)
-	d, err := Read(manifest)
+workdir: /app
+services:
+  - name: deployment
+    container: core
+    image: code/core:0.1.8
+    command: ["uwsgi"]
+    annotations:
+      key1: value1
+      key2: value2
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    securityContext:
+      capabilities:
+        add:
+          - SYS_TRACE
+        drop:
+          - SYS_NICE
+    workdir: /app`)
+	main, err := Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if d.Name != "deployment" {
-		t.Errorf("name was not parsed: %+v", d)
+	if len(main.Services) != 1 {
+		t.Errorf("'services' was not parsed: %+v", main)
 	}
+	for _, dev := range []*Dev{main, main.Services[0]} {
+		if dev.Name != "deployment" {
+			t.Errorf("'name' was not parsed: %+v", main)
+		}
 
-	if len(d.Command) != 1 || d.Command[0] != "uwsgi" {
-		t.Errorf("command was not parsed: %+v", d)
-	}
+		if len(dev.Command) != 1 || dev.Command[0] != "uwsgi" {
+			t.Errorf("command was not parsed: %+v", dev)
+		}
 
-	memory := d.Resources.Requests["memory"]
-	if memory.String() != "64Mi" {
-		t.Errorf("Resources.Requests.Memory was not parsed: %s", memory.String())
-	}
+		memory := dev.Resources.Requests["memory"]
+		if memory.String() != "64Mi" {
+			t.Errorf("Resources.Requests.Memory was not parsed: %s", memory.String())
+		}
 
-	cpu := d.Resources.Requests["cpu"]
-	if cpu.String() != "250m" {
-		t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '250M', got '%s'", cpu.String())
-	}
+		cpu := dev.Resources.Requests["cpu"]
+		if cpu.String() != "250m" {
+			t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '250M', got '%s'", cpu.String())
+		}
 
-	memory = d.Resources.Limits["memory"]
-	if memory.String() != "128Mi" {
-		t.Errorf("Resources.Requests.Memory was not parsed: %s", memory.String())
-	}
+		memory = dev.Resources.Limits["memory"]
+		if memory.String() != "128Mi" {
+			t.Errorf("Resources.Requests.Memory was not parsed: %s", memory.String())
+		}
 
-	cpu = d.Resources.Limits["cpu"]
-	if cpu.String() != "500m" {
-		t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
-	}
+		cpu = dev.Resources.Limits["cpu"]
+		if cpu.String() != "500m" {
+			t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
+		}
 
-	if d.Annotations["key1"] != "value1" && d.Annotations["key2"] != "value2" {
-		t.Errorf("Annotations were not parsed correctly")
-	}
+		if dev.Annotations["key1"] != "value1" && dev.Annotations["key2"] != "value2" {
+			t.Errorf("Annotations were not parsed correctly")
+		}
 
-	if !reflect.DeepEqual(d.SecurityContext.Capabilities.Add, []apiv1.Capability{"SYS_TRACE"}) {
-		t.Errorf("SecurityContext.Capabilities.Add was not parsed correctly. Expected [SYS_TRACE]")
-	}
+		if !reflect.DeepEqual(dev.SecurityContext.Capabilities.Add, []apiv1.Capability{"SYS_TRACE"}) {
+			t.Errorf("SecurityContext.Capabilities.Add was not parsed correctly. Expected [SYS_TRACE]")
+		}
 
-	if !reflect.DeepEqual(d.SecurityContext.Capabilities.Drop, []apiv1.Capability{"SYS_NICE"}) {
-		t.Errorf("SecurityContext.Capabilities.Drop was not parsed correctly. Expected [SYS_NICE]")
+		if !reflect.DeepEqual(dev.SecurityContext.Capabilities.Drop, []apiv1.Capability{"SYS_NICE"}) {
+			t.Errorf("SecurityContext.Capabilities.Drop was not parsed correctly. Expected [SYS_NICE]")
+		}
 	}
 }
 

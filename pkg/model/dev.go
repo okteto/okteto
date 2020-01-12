@@ -177,11 +177,7 @@ func Read(bytes []byte) (*Dev, error) {
 		Command:     make([]string, 0),
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
-		Resources: ResourceRequirements{
-			Limits:   ResourceList{},
-			Requests: ResourceList{},
-		},
-		Services: make([]*Dev, 0),
+		Services:    make([]*Dev, 0),
 	}
 
 	if err := yaml.UnmarshalStrict(bytes, dev); err != nil {
