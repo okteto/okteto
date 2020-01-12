@@ -507,6 +507,9 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &devReplicas,
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": dev.Name,
