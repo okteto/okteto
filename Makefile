@@ -3,7 +3,7 @@ VERSION_STRING := $(shell git rev-parse --short HEAD)
 endif
 
 BINDIR    := $(CURDIR)/bin
-PLATFORMS := linux/amd64/Linux-x86_64 darwin/amd64/Darwin-x86_64 windows/amd64/Windows-x86_64 linux/arm64/Linux-arm64
+PLATFORMS := linux/amd64/okteto-Linux-x86_64 darwin/amd64/okteto-Darwin-x86_64 windows/amd64/okteto.exe linux/arm64/okteto-Linux-arm64
 BUILDCOMMAND := go build -ldflags "-s -w -X github.com/okteto/okteto/pkg/config.VersionString=${VERSION_STRING}" -tags "osusergo netgo static_build"
 temp = $(subst /, ,$@)
 os = $(word 1, $(temp))
@@ -23,8 +23,8 @@ endif
 build-all: $(PLATFORMS)
 
 $(PLATFORMS):
-	GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 $(BUILDCOMMAND) -o "bin/okteto-$(label)" 
-	$(SHACOMMAND) "bin/okteto-$(label)" > "bin/okteto-$(label).sha256" 
+	GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 $(BUILDCOMMAND) -o "bin/$(label)" 
+	$(SHACOMMAND) "bin/$(label)" > "bin/$(label).sha256" 
 
 .PHONY: latest
 latest:

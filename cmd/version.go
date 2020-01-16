@@ -89,7 +89,7 @@ func shouldNotify(latest, current *semver.Version) bool {
 
 func getUpgradeCommand() string {
 	if runtime.GOOS == "windows" {
-		return `wget https://github.com/okteto/okteto/releases/latest/download/okteto-Windows-x86_64 -OutFile c:\windows\system32\okteto.exe`
+		return `https://github.com/okteto/okteto/releases/latest/download/okteto.exe`
 	}
 
 	return `curl https://get.okteto.com -sSfL | sh`
