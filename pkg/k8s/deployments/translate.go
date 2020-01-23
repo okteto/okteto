@@ -9,7 +9,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -20,7 +19,6 @@ import (
 
 const (
 	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
-	oktetoDeveloperAnnotation  = "dev.okteto.com/developer"
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
 	revisionAnnotation         = "deployment.kubernetes.io/revision"
 	oktetoBinName              = "okteto-bin"
@@ -101,7 +99,6 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 
 func commonTranslation(t *model.Translation) {
 	TranslatePodUserAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeveloperAnnotation, okteto.GetUserID())
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.Version)
 	setLabel(t.Deployment.GetObjectMeta(), okLabels.DevLabel, "true")
 
