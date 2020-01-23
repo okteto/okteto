@@ -68,7 +68,9 @@ func main() {
 
 	if agent != nil {
 		span.Finish()
-		agent.Flush()
+		if err := agent.Flush(); err != nil {
+			log.Infof("scopeagent failed to flush: %s", err)
+		}
 	}
 
 	if err != nil {

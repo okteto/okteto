@@ -179,7 +179,7 @@ func sortLanguagesByUsage(fSummary map[string][]string) []string {
 	for _, fType := range keys {
 		val := fileValues[fType]
 		percent := val / total * 100.0
-		buff.WriteString(fmt.Sprintf("%.2f%%\t%s\n", percent, fType))
+		_, _ = buff.WriteString(fmt.Sprintf("%.2f%%\t%s\n", percent, fType))
 	}
 
 	log.Debugf("Language guesses: \r\n %s", buff.String())

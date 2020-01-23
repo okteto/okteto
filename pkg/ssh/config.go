@@ -221,7 +221,7 @@ func (config *sshConfig) writeToFilepath(filePath string) error {
 	}
 
 	if err := config.writeTo(file); err != nil {
-		file.Close()
+		_ = file.Close()
 		return err
 	}
 

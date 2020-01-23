@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	"math/rand"
+	"crypto/rand"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/log"
@@ -46,10 +46,16 @@ func Login() *cobra.Command {
 				return fmt.Errorf("couldn't access the network")
 			}
 
+			state, err := randToken()
+			if err != nil {
+				log.Infof("couldn't generate random token: %s", err)
+				return fmt.Errorf("couldn't generate a random token, please try again")
+			}
+
 			handler := authHandler{
 				baseURL:  oktetoURL,
 				ctx:      context.Background(),
-				state:    randToken(),
+				state:    state,
 				errChan:  make(chan error, 2),
 				response: make(chan string, 2),
 			}
@@ -133,10 +139,13 @@ func (a *authHandler) handle() http.Handler {
 	return http.HandlerFunc(fn)
 }
 
-func randToken() string {
+func randToken() (string, error) {
 	b := make([]byte, 32)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(b), nil
 }
 
 func buildAuthorizationURL(baseURL, state string, port int) string {

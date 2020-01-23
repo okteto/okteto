@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	// skipcq GSC-G101
+	// This is mixpanel's public token, is needed to send analytics to the project
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
 	upEvent              = "Up"
