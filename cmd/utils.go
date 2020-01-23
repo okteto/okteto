@@ -26,11 +26,14 @@ func loadDev(devPath string) (*model.Dev, error) {
 	return model.Get(devPath)
 }
 
-func askYesNo(q string) bool {
+func askYesNo(q string) (bool, error) {
 	var answer string
 	for {
 		fmt.Print(q)
-		fmt.Scanln(&answer)
+		if _, err := fmt.Scanln(&answer); err != nil {
+			return false, err
+		}
+
 		if answer == "y" || answer == "n" {
 			break
 		}
@@ -38,7 +41,7 @@ func askYesNo(q string) bool {
 		log.Fail("input must be 'y' or 'n'")
 	}
 
-	return answer == "y"
+	return answer == "y", nil
 }
 
 func fileExists(name string) bool {

@@ -59,13 +59,13 @@ func renderProgressBar(prefix string, current float64, scalingFactor float64) st
 	scaledCurrent := int(current * scalingFactor)
 
 	if scaledCurrent == 0 {
-		sb.WriteString(strings.Repeat("_", scaledMax))
+		_, _ = sb.WriteString(strings.Repeat("_", scaledMax))
 	} else if scaledCurrent >= scaledMax {
-		sb.WriteString(strings.Repeat("-", scaledMax))
+		_, _ = sb.WriteString(strings.Repeat("-", scaledMax))
 	} else {
-		sb.WriteString(strings.Repeat("-", scaledCurrent-1))
-		sb.WriteString(">")
-		sb.WriteString(strings.Repeat("_", scaledMax-scaledCurrent))
+		_, _ = sb.WriteString(strings.Repeat("-", scaledCurrent-1))
+		_, _ = sb.WriteString(">")
+		_, _ = sb.WriteString(strings.Repeat("_", scaledMax-scaledCurrent))
 	}
 
 	_, _ = sb.WriteString("]")

@@ -99,7 +99,10 @@ func downloadSyncthing() error {
 	}
 
 	log.Infof("downloading syncthing %s from %s", syncthingVersion, client.Src)
-	os.Remove(client.Dst)
+	if err := os.Remove(client.Dst); err != nil {
+		log.Infof("failed to delete %s: %s", client.Dst, err)
+		return fmt.Errorf("couldn't delete %s", client.Dst)
+	}
 
 	if err := client.Get(); err != nil {
 		log.Infof("failed to download syncthing from %s: %s", client.Src, err)
@@ -110,6 +113,7 @@ func downloadSyncthing() error {
 		return err
 	}
 
+	// skipcq GSC-G302 syncthing is a binary so it needs exec permissions
 	if err := os.Chmod(client.Dst, 0700); err != nil {
 		return err
 	}

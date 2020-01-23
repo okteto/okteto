@@ -193,10 +193,11 @@ func (up *UpContext) Activate(autoDeploy bool) {
 
 		d, create, err := up.getCurrentDeployment(autoDeploy)
 		if err != nil {
-			log.Infof("failed to find deployment %s/%s: %s", up.Dev.Namespace, up.Dev.Name, err)
-			up.Exit <- fmt.Errorf("couldn't get deployment %s/%s, please try again: %s", up.Dev.Namespace, up.Dev.Name, err)
+			log.Infof("failed to get deployment %s/%s: %s", up.Dev.Namespace, up.Dev.Name, err)
+			up.Exit <- err
 			return
 		}
+
 		if !up.retry {
 			analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap)
 		}
@@ -262,8 +263,9 @@ func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 		}
 		return d, false, nil
 	}
+
 	if !errors.IsNotFound(err) || up.retry {
-		return nil, false, err
+		return nil, false, fmt.Errorf("couldn't get deployment %s/%s, please try again; %s", up.Dev.Namespace, up.Dev.Name, err)
 	}
 
 	if len(up.Dev.Labels) > 0 {
@@ -278,8 +280,12 @@ func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 	_, deploy := os.LookupEnv("OKTETO_AUTODEPLOY")
 	deploy = deploy || autoDeploy
 	if !deploy {
-		deploy = askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
+		deploy, err = askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
+		if err != nil {
+			return nil, false, fmt.Errorf("couldn't read your response")
+		}
 	}
+
 	if !deploy {
 		return nil, false, errors.UserError{
 			E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", up.Dev.Name, up.Dev.Namespace),
