@@ -171,7 +171,6 @@ func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 		}
 		d.Spec.Replicas = &trRules.Replicas
 		annotations := d.GetObjectMeta().GetAnnotations()
-		delete(annotations, oktetoDeveloperAnnotation)
 		delete(annotations, oktetoVersionAnnotation)
 		d.GetObjectMeta().SetAnnotations(annotations)
 		annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
