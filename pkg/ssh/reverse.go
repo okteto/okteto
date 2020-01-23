@@ -57,7 +57,10 @@ func (r *ReverseManager) Start() error {
 
 	// Connect to SSH remote server using serverEndpoint
 	c := &ssh.ClientConfig{
-		User:            r.sshUser,
+		User: r.sshUser,
+		// skipcq GSC-G106
+		// Ignoring this issue since the remote server doesn't have a set identity, and it's already secured by the
+		// port-forward tunnel to the kubernetes cluster.
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
