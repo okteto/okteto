@@ -43,13 +43,10 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/cobra v0.0.5
 	github.com/src-d/enry/v2 v2.1.0
-	go.undefinedlabs.com/scopeagent v0.0.0-20191016204136-6268ca5079f6
+	go.undefinedlabs.com/scopeagent v0.0.0-20200123164547-e307ed3a9216
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
-	golang.org/x/net v0.0.0-20191021144547-ec77196f6094 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/sys v0.0.0-20191025090151-53bf42e6b339 // indirect
-	google.golang.org/appengine v1.6.5 // indirect
 	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

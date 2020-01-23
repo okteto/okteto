@@ -132,11 +132,9 @@ func TestDownloadSyncthing(t *testing.T) {
 		{os: "windows"}, {os: "darwin"}, {os: "linux"}, {os: "arm64"},
 	}
 
+	test := scopeagent.GetTest(t)
 	for _, tt := range tests {
-		t.Run(tt.os, func(t *testing.T) {
-			test := scopeagent.StartTest(t)
-			defer test.End()
-
+		test.Run(tt.os, func(t *testing.T) {
 			req, err := http.NewRequest("HEAD", cmd.SyncthingURL[tt.os], nil)
 			if err != nil {
 				t.Fatal(err.Error())
@@ -156,10 +154,7 @@ func TestDownloadSyncthing(t *testing.T) {
 }
 
 func TestHealth(t *testing.T) {
-	test := scopeagent.StartTest(t)
-	defer test.End()
-
-	ctx := test.Context()
+	ctx := scopeagent.GetContextFromTest(t)
 
 	err := checkHealth(ctx, url)
 	if err != nil {
@@ -167,9 +162,7 @@ func TestHealth(t *testing.T) {
 	}
 }
 func TestAll(t *testing.T) {
-	test := scopeagent.StartTest(t)
-	defer test.End()
-	ctx := test.Context()
+	ctx := scopeagent.GetContextFromTest(t)
 
 	oktetoPath, err := getOktetoPath(ctx)
 	if err != nil {
@@ -269,7 +262,6 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 
 		cmd := exec.Command("kubectl", args...)
 		cmd.Env = os.Environ()
-
 		span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 		defer span.Finish()
 
