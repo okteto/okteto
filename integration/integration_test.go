@@ -19,9 +19,14 @@ import (
 
 	"github.com/okteto/okteto/cmd"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"go.undefinedlabs.com/scopeagent"
 	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 var (
@@ -210,6 +215,11 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	deployment, err := getDeployment(namespace, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	var wg sync.WaitGroup
 	p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
 	if err != nil {
@@ -219,11 +229,11 @@ func TestAll(t *testing.T) {
 	log.Println("getting synchronized content")
 	c, err := getContent(name, namespace, url)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to get content: %s", err)
 	}
 
 	if c != name {
-		t.Fatalf("expected content to be %s, got %s", name, c)
+		t.Errorf("expected content to be %s, got %s", name, c)
 	}
 
 	// Update content in token file
@@ -234,7 +244,7 @@ func TestAll(t *testing.T) {
 	log.Println("getting updated content")
 	c, err = getContent(name, namespace, url)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to get updated content: %s", err)
 	}
 
 	if c != updatedContent {
@@ -249,6 +259,10 @@ func TestAll(t *testing.T) {
 
 	if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
+	}
+
+	if err := compareDeployment(deployment); err != nil {
+		t.Error(err)
 	}
 
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
@@ -537,4 +551,36 @@ func getOktetoPath(ctx context.Context) (string, error) {
 
 	log.Println(string(o))
 	return oktetoPath, nil
+}
+
+func getDeployment(ns, name string) (*appsv1.Deployment, error) {
+	client, _, _, err := k8Client.GetLocal()
+	if err != nil {
+		return nil, err
+	}
+
+	return client.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+}
+
+func compareDeployment(deployment *appsv1.Deployment) error{
+	after, err := getDeployment(deployment.GetNamespace(), deployment.GetName())
+	if err != nil {
+		return err
+	}
+
+	b, err := yaml.Marshal(deployment.Spec)
+	if err != nil {
+		return err
+	}
+
+	a, err := yaml.Marshal(after.Spec)
+	if err != nil {
+		return err
+	}
+
+	if string(a) != string(b) {
+		return fmt.Errorf("got:\n%s\nexpected:\n%s", string(a), string(b))
+	}
+
+	return nil
 }
