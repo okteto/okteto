@@ -43,10 +43,6 @@ func Down() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting down command")
 
-			if k8Client.InCluster() {
-				return errors.ErrNotInCluster
-			}
-
 			dev, err := loadDev(devPath)
 			if err != nil {
 				return err

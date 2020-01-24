@@ -38,6 +38,10 @@ func Exec() *cobra.Command {
 		Use:   "exec <command>",
 		Short: "Execute a command in your development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if k8Client.InCluster() {
+				return errors.ErrNotInCluster
+			}
+			
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 

@@ -37,6 +37,11 @@ func Login() *cobra.Command {
 		Use:   "login [url]",
 		Short: "Login with Okteto",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			
+			if k8Client.InCluster() {
+				return errors.ErrNotInCluster
+			}
+
 			oktetoURL := okteto.CloudURL
 			if len(args) > 0 {
 				u, err := url.Parse(args[0])

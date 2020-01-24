@@ -33,6 +33,10 @@ func Namespace(ctx context.Context) *cobra.Command {
 		Short: "Downloads k8s credentials for a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting kubeconfig command")
+			if k8Client.InCluster() {
+				return errors.ErrNotInCluster
+			}
+			
 			namespace := ""
 			if len(args) > 0 {
 				namespace = args[0]
