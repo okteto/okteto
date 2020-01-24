@@ -244,24 +244,24 @@ func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error
 		}
 
 		allRunning := true
-		for _, pod := range pods.Items {
-			switch pod.Status.Phase {
+		for i := range pods.Items {
+			switch pods.Items[i].Status.Phase {
 			case apiv1.PodPending:
 				allRunning = false
-				notready[pod.GetName()] = true
+				notready[pods.Items[i].GetName()] = true
 			case apiv1.PodFailed:
-				return fmt.Errorf("Pod %s failed to start", pod.Name)
+				return fmt.Errorf("Pod %s failed to start", pods.Items[i].Name)
 			case apiv1.PodRunning:
-				if isRunning(&pod) {
-					if _, ok := notready[pod.GetName()]; ok {
-						log.Infof("pod/%s is ready", pod.GetName())
-						delete(notready, pod.GetName())
+				if isRunning(&pods.Items[i]) {
+					if _, ok := notready[pods.Items[i].GetName()]; ok {
+						log.Infof("pod/%s is ready", pods.Items[i].GetName())
+						delete(notready, pods.Items[i].GetName())
 					}
 				} else {
 					allRunning = false
-					notready[pod.GetName()] = true
+					notready[pods.Items[i].GetName()] = true
 					if i%5 == 0 {
-						log.Infof("pod/%s is not ready", pod.GetName())
+						log.Infof("pod/%s is not ready", pods.Items[i].GetName())
 					}
 				}
 			}
