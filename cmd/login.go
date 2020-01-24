@@ -25,10 +25,10 @@ import (
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +39,7 @@ func Login() *cobra.Command {
 		Use:   "login [url]",
 		Short: "Login with Okteto",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			
+
 			if k8Client.InCluster() {
 				return errors.ErrNotInCluster
 			}
@@ -174,7 +174,7 @@ func buildAuthorizationURL(baseURL, state string, port int) string {
 	params.Add("state", state)
 	params.Add("redirect", redirectURL)
 
-	authorizationURL, err := url.Parse(fmt.Sprintf("%s/github/authorization-code", baseURL))
+	authorizationURL, err := url.Parse(fmt.Sprintf("%s/auth/authorization-code", baseURL))
 	if err != nil {
 		panic(fmt.Sprintf("failed to build authorizationURL: %s", err))
 	}
