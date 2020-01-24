@@ -121,10 +121,10 @@ func getPodByReplicaSet(dev *model.Dev, rs *appsv1.ReplicaSet, c *kubernetes.Cli
 	if err != nil {
 		return nil, err
 	}
-	for _, pod := range podList.Items {
-		for _, or := range pod.OwnerReferences {
+	for i := range podList.Items {
+		for _, or := range podList.Items[i].OwnerReferences {
 			if or.UID == rs.UID {
-				return &pod, nil
+				return &podList.Items[1], nil
 			}
 		}
 	}
@@ -210,8 +210,8 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 		return fmt.Errorf("failed to retrieve dev environment information")
 	}
 
-	for _, pod := range pods.Items {
-		err := c.CoreV1().Pods(dev.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+	for i := range pods.Items {
+		err := c.CoreV1().Pods(dev.Namespace).Delete(pods.Items[i].Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil

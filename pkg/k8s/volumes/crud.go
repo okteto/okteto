@@ -112,12 +112,12 @@ func checkIfAttached(dev *model.Dev, c *kubernetes.Clientset) error {
 		return nil
 	}
 
-	for _, p := range pods.Items {
-		for _, v := range p.Spec.Volumes {
-			if v.PersistentVolumeClaim != nil {
-				if v.PersistentVolumeClaim.ClaimName == dev.GetVolumeName() {
-					log.Infof("pvc/%s is still attached to pod/%s", dev.GetVolumeName(), p.Name)
-					return fmt.Errorf("can't delete your volume claim since it's still attached to 'pod/%s'", p.Name)
+	for i := range pods.Items {
+		for j := range pods.Items[i].Spec.Volumes {
+			if pods.Items[i].Spec.Volumes[j].PersistentVolumeClaim != nil {
+				if pods.Items[i].Spec.Volumes[j].PersistentVolumeClaim.ClaimName == dev.GetVolumeName() {
+					log.Infof("pvc/%s is still attached to pod/%s", dev.GetVolumeName(), pods.Items[i].Name)
+					return fmt.Errorf("can't delete your volume claim since it's still attached to 'pod/%s'", pods.Items[i].Name)
 				}
 			}
 		}
