@@ -51,3 +51,13 @@ func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {
 	}
 	return client, config, namespace, nil
 }
+
+// InCluster returns true if Okteto is running on a Kubernetes cluster
+func InCluster() bool {
+	_, err := rest.InClusterConfig()
+	if err == nil {
+		return true
+	}
+
+	return false
+}

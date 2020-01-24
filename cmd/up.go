@@ -88,6 +88,11 @@ func Up() *cobra.Command {
 		Short: "Activates your development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting up command")
+			
+			if k8Client.InCluster() {
+				return errors.ErrNotInCluster
+			}
+
 			u := upgradeAvailable()
 			if len(u) > 0 {
 				log.Yellow("Okteto %s is available. To upgrade:", u)
