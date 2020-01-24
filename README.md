@@ -18,7 +18,7 @@ Okteto makes this cycle a lot faster by launching development environment in Kub
 
 ## Getting started
 
-All you need to get started is the [Okteto CLI](https://github.com/okteto/okteto/releases) and access to a Kubernetes cluster. 
+All you need to get started is the [Okteto CLI](https://okteto.com/docs/getting-started/installation/index.html) and access to a Kubernetes cluster. 
 
 We created a few guides to get you started with your favorite programming language:
 
