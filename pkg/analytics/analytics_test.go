@@ -75,11 +75,12 @@ func Test_getTrackID(t *testing.T) {
 			}
 
 			expected := ""
-			if len(tt.userID) > 0 {
+			switch {
+			case len(tt.userID) > 0:
 				expected = tt.userID
-			} else if len(tt.machineID) > 0 {
+			case len(tt.machineID) > 0:
 				expected = tt.machineID
-			} else {
+			default:
 				expected = getMachineID()
 			}
 
