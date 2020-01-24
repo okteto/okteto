@@ -16,6 +16,22 @@ Today, most developers try to either run parts of the infrastructure locally, or
 
 Okteto makes this cycle a lot faster by launching development environment in Kubernetes. You write your code locally using your favorite tools and Okteto detects the code changes and instantly synchronizes your code to your development environment. There you can use your compilers and hot reloaders to see your changes live in seconds.
 
+## Getting started
+
+All you need to get started is the [Okteto CLI](https://okteto.com/docs/getting-started/installation/index.html) and access to a Kubernetes cluster. 
+
+We created a few guides to get you started with your favorite programming language:
+
+1. [ASP.NET Core](https://github.com/okteto/aspnetcore-getting-started/)
+1. [Golang](https://github.com/okteto/go-getting-started)
+1. [Java Gradle](https://github.com/okteto/java-gradle-getting-started)
+1. [Java Maven](https://github.com/okteto/java-maven-getting-started)
+1. [Node](https://github.com/okteto/node-getting-started)
+1. [PHP](https://github.com/okteto/php-getting-started)
+1. [Python](https://github.com/okteto/samples/tree/master/python)
+
+More samples on how to use Okteto [are available here](https://github.com/okteto/samples).
+
 ## Features
 
 ### Development environments on demand 
