@@ -100,8 +100,7 @@ func downloadSyncthing() error {
 
 	log.Infof("downloading syncthing %s from %s", syncthingVersion, client.Src)
 	if err := os.Remove(client.Dst); err != nil {
-		log.Infof("failed to delete %s: %s", client.Dst, err)
-		return fmt.Errorf("couldn't delete %s", client.Dst)
+		log.Infof("failed to delete %s, will try to override: %s", client.Dst, err)
 	}
 
 	if err := client.Get(); err != nil {
