@@ -24,9 +24,11 @@ import (
 	"crypto/rand"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
