@@ -24,9 +24,11 @@ import (
 	"crypto/rand"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
@@ -37,6 +39,11 @@ func Login() *cobra.Command {
 		Use:   "login [url]",
 		Short: "Login with Okteto",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			
+			if k8Client.InCluster() {
+				return errors.ErrNotInCluster
+			}
+
 			oktetoURL := okteto.CloudURL
 			if len(args) > 0 {
 				u, err := url.Parse(args[0])

@@ -20,9 +20,10 @@ import (
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
-
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/spf13/cobra"
 )
 
@@ -33,6 +34,10 @@ func Namespace(ctx context.Context) *cobra.Command {
 		Short: "Downloads k8s credentials for a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting kubeconfig command")
+			if k8Client.InCluster() {
+				return errors.ErrNotInCluster
+			}
+
 			namespace := ""
 			if len(args) > 0 {
 				namespace = args[0]

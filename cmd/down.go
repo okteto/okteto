@@ -14,6 +14,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
@@ -27,7 +29,6 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
 )
 
 //Down deactivates the development environment
