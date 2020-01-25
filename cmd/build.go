@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/containerd/console"
 	"github.com/moby/buildkit/client"
@@ -146,7 +147,7 @@ func getBuildKitHost() (string, error) {
 	return fmt.Sprintf("tcp://localhost:%d", localPort), nil
 }
 
-func getSolveOpt(buildCtx, file, tag, target string, noCache bool) (*client.SolveOpt, error) {
+func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client.SolveOpt, error) {
 	if file == "" {
 		file = filepath.Join(buildCtx, "Dockerfile")
 	}
@@ -174,28 +175,49 @@ func getSolveOpt(buildCtx, file, tag, target string, noCache bool) (*client.Solv
 		Session:       attachable,
 	}
 
-	if tag != "" {
+	if imageTag != "" {
+		imageWithoutTag := getRepoNameWithoutTag(imageTag)
+		imageCacheTag := fmt.Sprintf("%s:okteto-cache", imageWithoutTag)
 		opt.Exports = []client.ExportEntry{
 			{
 				Type: "image",
 				Attrs: map[string]string{
-					"name": tag,
+					"name": imageTag,
 					"push": "true",
 				},
 			},
 		}
 		opt.CacheExports = []client.CacheOptionsEntry{
 			{
-				Type: "inline",
+				Type:  "registry",
+				Attrs: map[string]string{"ref": imageCacheTag},
 			},
 		}
 		opt.CacheImports = []client.CacheOptionsEntry{
 			{
 				Type:  "registry",
-				Attrs: map[string]string{"ref": tag},
+				Attrs: map[string]string{"ref": imageCacheTag},
 			},
 		}
 	}
 
 	return opt, nil
+}
+
+func getRepoNameWithoutTag(name string) string {
+	var domain, remainder string
+	i := strings.IndexRune(name, '/')
+	if i == -1 || (!strings.ContainsAny(name[:i], ".:") && name[:i] != "localhost") {
+		domain, remainder = "", name
+	} else {
+		domain, remainder = name[:i], name[i+1:]
+	}
+	i = strings.LastIndex(remainder, ":")
+	if i == -1 {
+		return name
+	}
+	if domain == "" {
+		return remainder[:i]
+	}
+	return fmt.Sprintf("%s/%s", domain, remainder[:i])
 }
