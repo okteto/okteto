@@ -130,8 +130,8 @@ func GetDevContainer(spec *apiv1.PodSpec, name string) *apiv1.Container {
 		return &spec.Containers[0]
 	}
 
-	for i, c := range spec.Containers {
-		if c.Name == name {
+	for i := range spec.Containers {
+		if spec.Containers[i].Name == name {
 			return &spec.Containers[i]
 		}
 	}
@@ -323,8 +323,8 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 
 	for _, rV := range rule.Volumes {
 		found := false
-		for _, v := range spec.Volumes {
-			if v.Name == rV.Name {
+		for i := range spec.Volumes {
+			if spec.Volumes[i].Name == rV.Name {
 				found = true
 				break
 			}
@@ -356,11 +356,12 @@ func TranslateOktetoBinVolume(spec *apiv1.PodSpec) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
 	}
-	for _, v := range spec.Volumes {
-		if v.Name == oktetoBinName {
+	for i := range spec.Volumes {
+		if spec.Volumes[i].Name == oktetoBinName {
 			return
 		}
 	}
+
 	v := apiv1.Volume{
 		Name: oktetoBinName,
 		VolumeSource: apiv1.VolumeSource{
@@ -438,11 +439,12 @@ func TranslateOktetoSyncSecret(spec *apiv1.PodSpec, name string) {
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
 	}
-	for _, s := range spec.Volumes {
-		if s.Name == oktetoSyncSecretVolume {
+	for i := range spec.Volumes {
+		if spec.Volumes[i].Name == oktetoSyncSecretVolume {
 			return
 		}
 	}
+
 	v := apiv1.Volume{
 		Name: oktetoSyncSecretVolume,
 		VolumeSource: apiv1.VolumeSource{
@@ -477,8 +479,8 @@ func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []mode
 	if spec.Volumes == nil {
 		spec.Volumes = []apiv1.Volume{}
 	}
-	for _, s := range spec.Volumes {
-		if s.Name == oktetoDevSecretVolume {
+	for i := range spec.Volumes {
+		if spec.Volumes[i].Name == oktetoDevSecretVolume {
 			return
 		}
 	}

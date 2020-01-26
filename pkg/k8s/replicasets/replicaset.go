@@ -40,12 +40,12 @@ func GetReplicaSetByDeployment(dev *model.Dev, d *appsv1.Deployment, c *kubernet
 		return nil, fmt.Errorf("failed to get replicaset using %s: %s", ls, err)
 	}
 
-	for _, rs := range rsList.Items {
-		for _, or := range rs.OwnerReferences {
+	for i := range rsList.Items {
+		for _, or := range rsList.Items[i].OwnerReferences {
 			if or.UID == d.UID {
-				if v, ok := rs.Annotations[deploymentRevisionAnnotation]; ok && v == d.Annotations[deploymentRevisionAnnotation] {
-					log.Infof("replicaset %s with revison %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
-					return &rs, nil
+				if v, ok := rsList.Items[i].Annotations[deploymentRevisionAnnotation]; ok && v == d.Annotations[deploymentRevisionAnnotation] {
+					log.Infof("replicaset %s with revison %s is progressing", rsList.Items[i].Name, d.Annotations[deploymentRevisionAnnotation])
+					return &rsList.Items[i], nil
 				}
 			}
 		}
