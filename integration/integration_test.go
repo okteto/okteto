@@ -322,7 +322,7 @@ func getContent(name, namespace, url string) (string, error) {
 		if err != nil {
 			retries++
 			if retries > 3 {
-				return "", fmt.Errorf("failed to get %s: %+w", url, err)
+				return "", fmt.Errorf("failed to get %s: %w", url, err)
 			}
 
 			log.Printf("Called %s, got %s, retrying", endpoint, err)
