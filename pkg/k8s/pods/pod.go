@@ -124,7 +124,7 @@ func getPodByReplicaSet(dev *model.Dev, rs *appsv1.ReplicaSet, c *kubernetes.Cli
 	for i := range podList.Items {
 		for _, or := range podList.Items[i].OwnerReferences {
 			if or.UID == rs.UID {
-				return &podList.Items[1], nil
+				return &podList.Items[i], nil
 			}
 		}
 	}
