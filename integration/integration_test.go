@@ -315,10 +315,19 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 
 func getContent(name, namespace, url string) (string, error) {
 	endpoint := fmt.Sprintf("https://%s-%s.%s/", name, namespace, url)
+	retries := 0
+	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < 60; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
-			return "", err
+			retries++
+			if retries > 3 {
+				return "", fmt.Errorf("failed to get %s: %+w", url, err)
+			}
+
+			log.Printf("Called %s, got %s, retrying", endpoint, err)
+			<-t.C
+			continue
 		}
 
 		defer r.Body.Close()
@@ -575,7 +584,7 @@ func getDeployment(ns, name string) (*appsv1.Deployment, error) {
 	return client.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 }
 
-func compareDeployment(deployment *appsv1.Deployment) error{
+func compareDeployment(deployment *appsv1.Deployment) error {
 	after, err := getDeployment(deployment.GetNamespace(), deployment.GetName())
 	if err != nil {
 		return err
