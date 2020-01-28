@@ -70,6 +70,7 @@ You can also use Okteto in [Okteto Cloud](https://okteto.com/), the best develop
 - Check the Okteto [CLI reference](https://okteto.com/docs/reference/cli) and the [okteto.yml reference](https://okteto.com/docs/reference/manifest/index.html)
 - [Explore our samples](https://github.com/okteto/samples) to learn more about the power of Okteto
 - Frequently asked questions ([FAQs](https://okteto.com/docs/reference/faqs/index.html))
+- [Known issues](https://okteto.com/docs/reference/known-issues/index.html)
 
 ## Roadmap and Contributions
 
