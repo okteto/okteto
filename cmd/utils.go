@@ -83,7 +83,7 @@ func checkLocalWatchesConfiguration() {
 		return
 	}
 
-	if isWatchesTooLow(string(f)) {
+	if isWatchesConfigurationTooLow(string(f)) {
 		log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low.")
 		log.Yellow("This can affect Okteto's file synchronization performance.")
 		log.Yellow("We recommend you to raise it to at least 524288 to ensure proper performance.")
@@ -91,7 +91,7 @@ func checkLocalWatchesConfiguration() {
 	}
 }
 
-func isWatchesTooLow(value string) bool {
+func isWatchesConfigurationTooLow(value string) bool {
 	value = strings.TrimSuffix(string(value), "\n")
 	c, err := strconv.Atoi(value)
 	if err != nil {

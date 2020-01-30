@@ -584,11 +584,11 @@ func (up *UpContext) cleanCommand() {
 		in,
 		&out,
 		os.Stderr,
-		[]string{"sh", "-c", "(((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1) || cat /proc/sys/fs/inotify/max_user_watches"},
+		[]string{"sh", "-c", "(((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1); cat /proc/sys/fs/inotify/max_user_watches"},
 	); err != nil {
 		log.Infof("first session to the remote container: %s", err)
 	}
-	if isWatchesTooLow(out.String()) {
+	if isWatchesConfigurationTooLow(out.String()) {
 		log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 		log.Yellow("This can affect Okteto's file synchronization performance.")
 		log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
@@ -678,7 +678,6 @@ func printDisplayContext(message string, dev *model.Dev) {
 				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
 				continue
 			}
-
 			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
 		}
 	}
