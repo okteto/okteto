@@ -176,8 +176,6 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client
 	}
 
 	if imageTag != "" {
-		imageWithoutTag := getRepoNameWithoutTag(imageTag)
-		imageCacheTag := fmt.Sprintf("%s:okteto-cache", imageWithoutTag)
 		opt.Exports = []client.ExportEntry{
 			{
 				Type: "image",
@@ -189,14 +187,13 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client
 		}
 		opt.CacheExports = []client.CacheOptionsEntry{
 			{
-				Type:  "registry",
-				Attrs: map[string]string{"ref": imageCacheTag},
+				Type: "inline",
 			},
 		}
 		opt.CacheImports = []client.CacheOptionsEntry{
 			{
 				Type:  "registry",
-				Attrs: map[string]string{"ref": imageCacheTag},
+				Attrs: map[string]string{"ref": imageTag},
 			},
 		}
 	}
