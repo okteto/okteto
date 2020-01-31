@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/url"
@@ -88,7 +89,7 @@ func Up() *cobra.Command {
 		Short: "Activates your development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting up command")
-			
+
 			if k8Client.InCluster() {
 				return errors.ErrNotInCluster
 			}
@@ -107,7 +108,7 @@ func Up() *cobra.Command {
 				}
 			}
 
-			checkWatchesConfiguration()
+			checkLocalWatchesConfiguration()
 
 			dev, err := loadDev(devPath)
 			if err != nil {
@@ -571,6 +572,7 @@ func (up *UpContext) synchronizeFiles() error {
 
 func (up *UpContext) cleanCommand() {
 	in := strings.NewReader("\n")
+	var out bytes.Buffer
 	if err := exec.Exec(
 		up.Context,
 		up.Client,
@@ -580,11 +582,16 @@ func (up *UpContext) cleanCommand() {
 		up.Dev.Container,
 		false,
 		in,
-		os.Stdout,
+		&out,
 		os.Stderr,
-		[]string{"sh", "-c", "((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1"},
+		[]string{"sh", "-c", "(((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1); cat /proc/sys/fs/inotify/max_user_watches"},
 	); err != nil {
 		log.Infof("first session to the remote container: %s", err)
+	}
+	if isWatchesConfigurationTooLow(out.String()) {
+		log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
+		log.Yellow("This can affect Okteto's file synchronization performance.")
+		log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
 	}
 	up.cleaned <- struct{}{}
 }
@@ -671,7 +678,6 @@ func printDisplayContext(message string, dev *model.Dev) {
 				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
 				continue
 			}
-
 			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
 		}
 	}

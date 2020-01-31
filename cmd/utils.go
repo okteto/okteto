@@ -71,7 +71,7 @@ func fileExists(name string) bool {
 	return true
 }
 
-func checkWatchesConfiguration() {
+func checkLocalWatchesConfiguration() {
 	if runtime.GOOS != "linux" {
 		return
 	}
@@ -83,18 +83,21 @@ func checkWatchesConfiguration() {
 		return
 	}
 
-	l := strings.TrimSuffix(string(f), "\n")
-	c, err := strconv.Atoi(l)
-	if err != nil {
-		log.Infof("Fail to parse the value of  max_user_watches: %s", err)
-		return
-	}
-
-	log.Debugf("max_user_watches = %d", c)
-
-	if c <= 8192 {
-		log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low. This can affect Okteto's file synchronization performance.")
+	if isWatchesConfigurationTooLow(string(f)) {
+		log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low.")
+		log.Yellow("This can affect Okteto's file synchronization performance.")
 		log.Yellow("We recommend you to raise it to at least 524288 to ensure proper performance.")
 		fmt.Println()
 	}
+}
+
+func isWatchesConfigurationTooLow(value string) bool {
+	value = strings.TrimSuffix(string(value), "\n")
+	c, err := strconv.Atoi(value)
+	if err != nil {
+		log.Infof("Fail to parse the value of max_user_watches: %s", err)
+		return false
+	}
+	log.Debugf("max_user_watches = %d", c)
+	return c <= 8192
 }
