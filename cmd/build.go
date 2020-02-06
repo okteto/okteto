@@ -26,6 +26,7 @@ import (
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/buildkit"
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -166,8 +167,18 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client
 		frontendAttrs["no-cache"] = ""
 	}
 
-	// read docker credentials from `.docker/config.json`
-	attachable := []session.Attachable{authprovider.NewDockerAuthProvider(os.Stderr)}
+	attachable := []session.Attachable{}
+	if strings.HasPrefix(imageTag, okteto.RegistryURL) && okteto.GetURL() == okteto.CloudURL {
+		// set Okteto Cloud credentials
+		token, err := okteto.GetToken()
+		if err != nil {
+			return nil, err
+		}
+		attachable = append(attachable, buildkit.NewRegistryAuthProvider(okteto.RegistryURL, okteto.GetUserID(), token.Token))
+	} else {
+		// read docker credentials from `.docker/config.json`
+		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))
+	}
 	opt := &client.SolveOpt{
 		LocalDirs:     localDirs,
 		Frontend:      frontend,
