@@ -49,7 +49,7 @@ func Test_save(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			token, err := getToken()
+			token, err := GetToken()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -119,7 +119,7 @@ func TestSaveMachineID(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			token, err := getToken()
+			token, err := GetToken()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -181,7 +181,7 @@ func TestSaveUserID(t *testing.T) {
 
 			t.Logf("saved token at %s", getTokenPath())
 
-			token, err := getToken()
+			token, err := GetToken()
 			if err != nil {
 				t.Fatal(err)
 			}
