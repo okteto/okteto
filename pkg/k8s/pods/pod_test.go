@@ -14,8 +14,11 @@
 package pods
 
 import (
+	"reflect"
 	"testing"
+	"time"
 
+	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -125,6 +128,110 @@ func TestGetBySelector(t *testing.T) {
 
 			if r.GetName() != tt.name {
 				t.Fatalf("expected %s but got %s", tt.name, r.GetName())
+			}
+		})
+	}
+}
+
+func Test_parseLogs(t *testing.T) {
+	t1, _ := time.Parse(time.RFC3339Nano, "2020-02-06T18:10:41.249942579Z")
+	t2, _ := time.Parse(time.RFC3339Nano, "2020-02-06T18:10:41.249942580Z")
+	t3, _ := time.Parse(time.RFC3339Nano, "2020-02-06T18:10:41.249942581Z")
+	var tests = []struct {
+		name     string
+		pName    string
+		cName    string
+		allLogs  string
+		expected []model.Log
+	}{
+		{
+			name:     "empty",
+			pName:    "pod",
+			cName:    "container",
+			allLogs:  "",
+			expected: []model.Log{},
+		},
+		{
+			name:    "ending-new-line",
+			pName:   "pod",
+			cName:   "container",
+			allLogs: "2020-02-06T18:10:41.249942579Z Hi!\n",
+			expected: []model.Log{
+				{
+					Pod:       "pod",
+					Container: "container",
+					Timestamp: t1,
+					Line:      "Hi!",
+				},
+			},
+		},
+		{
+			name:    "several-new-line",
+			pName:   "pod",
+			cName:   "container",
+			allLogs: "2020-02-06T18:10:41.249942579Z Hi!\n\n2020-02-06T18:10:41.249942580Z Bye!",
+			expected: []model.Log{
+				{
+					Pod:       "pod",
+					Container: "container",
+					Timestamp: t1,
+					Line:      "Hi!",
+				},
+				{
+					Pod:       "pod",
+					Container: "container",
+					Timestamp: t2,
+					Line:      "Bye!",
+				},
+			},
+		},
+		{
+			name:     "no-timestamps",
+			pName:    "pod",
+			cName:    "container",
+			allLogs:  "Hi!",
+			expected: []model.Log{},
+		},
+		{
+			name:     "wrong-timestamps",
+			pName:    "pod",
+			cName:    "container",
+			allLogs:  "2020-026T18:10:41.24959Z Hi!",
+			expected: []model.Log{},
+		},
+		{
+			name:    "ok",
+			pName:   "pod",
+			cName:   "container",
+			allLogs: "2020-02-06T18:10:41.249942579Z 1!\n2020-02-06T18:10:41.249942580Z 2!\n2020-02-06T18:10:41.249942581Z 3!",
+			expected: []model.Log{
+				{
+					Pod:       "pod",
+					Container: "container",
+					Timestamp: t1,
+					Line:      "1!",
+				},
+				{
+					Pod:       "pod",
+					Container: "container",
+					Timestamp: t2,
+					Line:      "2!",
+				},
+				{
+					Pod:       "pod",
+					Container: "container",
+					Timestamp: t3,
+					Line:      "3!",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseLogs(tt.pName, tt.cName, tt.allLogs)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("Wrong logs for test %s: %+v", tt.name, result)
 			}
 		})
 	}

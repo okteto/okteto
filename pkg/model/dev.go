@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 	uuid "github.com/satori/go.uuid"
@@ -156,6 +157,14 @@ type ResourceRequirements struct {
 
 // ResourceList is a set of (resource name, quantity) pairs.
 type ResourceList map[apiv1.ResourceName]resource.Quantity
+
+//Log represents a container log line
+type Log struct {
+	Pod       string    `json:"pod"`
+	Container string    `json:"container"`
+	Timestamp time.Time `json:"timestamp"`
+	Line      string    `json:"line"`
+}
 
 //Get returns a Dev object from a given file
 func Get(devPath string) (*Dev, error) {

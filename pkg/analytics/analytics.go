@@ -46,6 +46,7 @@ const (
 	namespaceCreateEvent = "CreateNamespace"
 	namespaceDeleteEvent = "DeleteNamespace"
 	execEvent            = "Exec"
+	logsEvent            = "Logs"
 	signupEvent          = "Signup"
 	disableEvent         = "Disable Analytics"
 )
@@ -124,6 +125,11 @@ func TrackUpError(success bool, swap bool) {
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
 func TrackExec(success bool) {
 	track(execEvent, success, nil)
+}
+
+// TrackLogs sends a tracking event to mixpanel when the user runs the logs command
+func TrackLogs(success bool) {
+	track(logsEvent, success, nil)
 }
 
 // TrackDown sends a tracking event to mixpanel when the user deactivates a development environment

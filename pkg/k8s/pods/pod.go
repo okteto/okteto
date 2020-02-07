@@ -17,10 +17,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
@@ -40,6 +44,7 @@ const (
 
 var (
 	devTerminationGracePeriodSeconds int64
+	tailLines                        int64 = 300
 )
 
 // GetBySelector returns the first pod that matches the selector or error if not found
@@ -301,4 +306,122 @@ func isRunning(p *apiv1.Pod) bool {
 	}
 
 	return false
+}
+
+//LogsFromServices returns the logs of pods running as okteto services
+func LogsFromServices(dev *model.Dev, c *kubernetes.Clientset) ([]model.Log, error) {
+	pods, err := c.CoreV1().Pods(dev.Namespace).List(
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name),
+		},
+	)
+	if err != nil {
+		log.Infof("error listing pods to get logs: %s", err)
+		return nil, fmt.Errorf("failed to retrieve dev environment logs")
+	}
+
+	result := []model.Log{}
+	var wg sync.WaitGroup
+	mutex := &sync.Mutex{}
+	for _, pod := range pods.Items {
+		wg.Add(1)
+		go func(pod apiv1.Pod, namespace string) {
+			defer wg.Done()
+			thisLines := PodLogs(&pod, namespace, c)
+			mutex.Lock()
+			result = append(result, thisLines...)
+			mutex.Unlock()
+		}(pod, dev.Namespace)
+	}
+	wg.Wait()
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Timestamp.Before(result[j].Timestamp)
+	})
+	return result, nil
+}
+
+//PodLogs returns the logs of a given pod
+func PodLogs(pod *apiv1.Pod, namespace string, c *kubernetes.Clientset) []model.Log {
+	statuses := pod.Status.ContainerStatuses
+	if pod.Status.InitContainerStatuses != nil {
+		statuses = append(pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses...)
+	}
+	var wg sync.WaitGroup
+	result := []model.Log{}
+	mutex := &sync.Mutex{}
+	for _, status := range statuses {
+		if !canHaveLogs(status) {
+			continue
+		}
+		wg.Add(1)
+		go func(status apiv1.ContainerStatus, pod *apiv1.Pod, namespace string) {
+			defer wg.Done()
+			thisLines := containerLogs(status, pod, namespace)
+			mutex.Lock()
+			result = append(result, thisLines...)
+			mutex.Unlock()
+		}(status, pod, namespace)
+	}
+	wg.Wait()
+	return result
+}
+
+func canHaveLogs(status apiv1.ContainerStatus) bool {
+	if status.State.Running != nil {
+		return true
+	}
+	if status.State.Waiting != nil && status.State.Waiting.Reason == "CrashLoopBackOff" {
+		return true
+	}
+	if status.State.Terminated != nil {
+		return true
+	}
+	return false
+}
+
+func containerLogs(status apiv1.ContainerStatus, pod *apiv1.Pod, namespace string) []model.Log {
+	c, _, _, err := k8Client.GetLocal()
+	if err != nil {
+		return []model.Log{}
+	}
+	podLogOpts := apiv1.PodLogOptions{
+		Container:  status.Name,
+		Timestamps: true,
+		TailLines:  &tailLines,
+	}
+	req := c.CoreV1().Pods(namespace).GetLogs(pod.Name, &podLogOpts)
+	logsStream, err := req.Stream()
+	if err != nil {
+		return []model.Log{}
+	}
+	defer logsStream.Close()
+
+	buf := new(bytes.Buffer)
+
+	_, err = io.Copy(buf, logsStream)
+	if err != nil {
+		return []model.Log{}
+	}
+	return parseLogs(pod.Name, status.Name, buf.String())
+}
+
+func parseLogs(pName, cName, allLogs string) []model.Log {
+	result := []model.Log{}
+	for _, logsLine := range strings.Split(allLogs, "\n") {
+		parts := strings.SplitN(logsLine, " ", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		timestampTime, err := time.Parse(time.RFC3339Nano, parts[0])
+		if err != nil {
+			continue
+		}
+		result = append(result, model.Log{
+			Pod:       pName,
+			Container: cName,
+			Timestamp: timestampTime,
+			Line:      parts[1],
+		})
+	}
+	return result
 }
