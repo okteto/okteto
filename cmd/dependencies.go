@@ -30,10 +30,10 @@ import (
 var (
 	// SyncthingURL is the path of the syncthing binary.
 	SyncthingURL = map[string]string{
-		"linux":   "https://downloads.okteto.com/cli/syncthing/1.3.4/syncthing-Linux-x86_64",
-		"arm64":   "https://downloads.okteto.com/cli/syncthing/1.3.4/syncthing-Linux-arm64",
-		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.3.4/syncthing-Darwin-x86_64",
-		"windows": "https://downloads.okteto.com/cli/syncthing/1.3.4/syncthing-Windows-x86_64",
+		"linux":   "https://downloads.okteto.com/cli/syncthing/1.3.4/syncthing-Linux-x86_64.tar.gz",
+		"arm64":   "https://downloads.okteto.com/cli/syncthing/1.3.4/syncthing-Linux-arm64.tar.gz",
+		"darwin":  "https://downloads.okteto.com/cli/syncthing/1.3.4/syncthing-Darwin-x86_64.tar.gz",
+		"windows": "https://downloads.okteto.com/cli/syncthing/1.3.4/syncthing-Windows-x86_64.tar.gz",
 	}
 
 	syncthingVersion = semver.MustParse("1.3.4")
