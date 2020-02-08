@@ -103,12 +103,13 @@ func TrackSyncError() {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development environment
-func TrackUp(success bool, dev, clusterType string, single, swap bool) {
+func TrackUp(success bool, dev, clusterType string, single, swap, remote bool) {
 	props := map[string]interface{}{
 		"devEnvironmentName": dev,
 		"clusterType":        clusterType,
 		"singleService":      single,
 		"swap":               swap,
+		"remote":             remote,
 	}
 	track(upEvent, success, props)
 }
