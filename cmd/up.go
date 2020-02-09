@@ -218,7 +218,7 @@ func (up *UpContext) Activate(autoDeploy bool) {
 		}
 
 		if !up.retry {
-			analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap)
+			analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
 		}
 
 		err = up.devMode(d, create)
