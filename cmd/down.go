@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"context"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -88,7 +87,6 @@ func runDown(dev *model.Dev) error {
 	spinner := newSpinner("Deactivating your development environment...")
 	spinner.start()
 	defer spinner.stop()
-	ctx := context.Background()
 
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
@@ -151,7 +149,7 @@ func runDown(dev *model.Dev) error {
 		}
 	}
 
-	down.WaitForDevPodsTermination(client, dev)
+	down.WaitForDevPodsTermination(client, dev, 30)
 	return nil
 }
 

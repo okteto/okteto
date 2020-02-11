@@ -68,7 +68,7 @@ func TestWaitForDevPodsTermination(t *testing.T) {
 			dPod.ObjectMeta.SetDeletionTimestamp(&metav1.Time{})
 
 			client := fake.NewSimpleClientset(pod, dPod)
-			WaitForDevPodsTermination(client, tt.dev)
+			WaitForDevPodsTermination(client, tt.dev, 5)
 		})
 	}
 

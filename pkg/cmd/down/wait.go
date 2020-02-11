@@ -42,7 +42,7 @@ func waitForDevPodsTermination(c kubernetes.Interface, namespace string, selecto
 	wg.Add(1)
 	defer wg.Done()
 
-	t := time.NewTicker(1 * time.Second)
+	tick := time.NewTicker(1 * time.Second)
 	for i := 0; i < t; i++ {
 		ps, err := pods.ListBySelector(namespace, selector, c)
 		if err != nil {
@@ -61,6 +61,6 @@ func waitForDevPodsTermination(c kubernetes.Interface, namespace string, selecto
 		if exit {
 			return
 		}
-		<-t.C
+		<-tick.C
 	}
 }
