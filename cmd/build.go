@@ -168,11 +168,11 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client
 	}
 
 	attachable := []session.Attachable{}
-	if strings.HasPrefix(imageTag, okteto.RegistryURL) && okteto.GetURL() == okteto.CloudURL {
+	if strings.HasPrefix(imageTag, okteto.RegistryURL) {
 		// set Okteto Cloud credentials
 		token, err := okteto.GetToken()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read okteto token: %s", err)
 		}
 		attachable = append(attachable, buildkit.NewRegistryAuthProvider(okteto.RegistryURL, okteto.GetUserID(), token.Token))
 	} else {
