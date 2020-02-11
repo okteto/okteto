@@ -14,12 +14,15 @@
 package cmd
 
 import (
+	"context"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
@@ -28,7 +31,9 @@ import (
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 //Down deactivates the development environment
@@ -86,6 +91,7 @@ func runDown(dev *model.Dev) error {
 	spinner := newSpinner("Deactivating your development environment...")
 	spinner.start()
 	defer spinner.stop()
+	ctx := context.Background()
 
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
@@ -99,6 +105,12 @@ func runDown(dev *model.Dev) error {
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
+
+	devPod, err := pods.GetDevPod(ctx, dev, client, false)
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
 	tr, err := deployments.GetTranslations(dev, d, client)
 	if err != nil {
 		return err
@@ -147,6 +159,7 @@ func runDown(dev *model.Dev) error {
 		}
 	}
 
+	waitForDevPodTermination(client, devPod)
 	return nil
 }
 
@@ -179,5 +192,16 @@ func stopSyncthing(dev *model.Dev) {
 
 	if err := sy.RemoveFolder(); err != nil {
 		log.Infof("failed to delete existing syncthing folder")
+	}
+}
+
+func waitForDevPodTermination(c kubernetes.Interface, p *v1.Pod) {
+	t := time.NewTicker(1 * time.Second)
+	for i := 0; i < 30; i++ {
+		log.Infof("waiting for %s/%s to terminate", p.GetNamespace(), p.GetName())
+		if !pods.Exists(p.GetName(), p.GetNamespace(), c) {
+			return
+		}
+		<-t.C
 	}
 }

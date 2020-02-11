@@ -190,7 +190,7 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 }
 
 //Exists returns true if pod still exists and is not being deleted
-func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
+func Exists(podName, namespace string, c kubernetes.Interface) bool {
 	pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return false
