@@ -234,6 +234,7 @@ func (s *Syncthing) Run(ctx context.Context) error {
 		"-no-browser",
 		"-verbose",
 		"-logfile", s.LogPath,
+		"-log-max-old-files=0",
 	}
 
 	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
@@ -262,32 +263,28 @@ func (s *Syncthing) Run(ctx context.Context) error {
 
 //WaitForPing waits for synthing to be ready
 func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
-	ticker := time.NewTicker(200 * time.Millisecond)
-	name := "remote"
-	if local {
-		name = "local"
-	}
-	log.Infof("waiting for syncthing to be ready...")
-	for i := 0; i < 150; i++ {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	log.Infof("waiting for syncthing local=%t to be ready...", local)
+	for i := 0; i < 300; i++ {
 		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil)
 		if err == nil {
 			return nil
 		}
-		log.Debugf("error calling 'rest/system/ping' %s syncthing API: %s", name, err)
+		log.Debugf("error calling 'rest/system/ping' local=%t syncthing API: %s", local, err)
 		select {
 		case <-ticker.C:
 			continue
 		case <-ctx.Done():
-			log.Debugf("cancelling call to 'rest/system/ping'  %s syncthing API", name)
+			log.Debugf("cancelling call to 'rest/system/ping' local=%t syncthing API", local)
 			return ctx.Err()
 		}
 	}
-	return fmt.Errorf("Syncthing not responding after 30s")
+	return fmt.Errorf("Syncthing local=%t not responding after 30s", local)
 }
 
 //SendStignoreFile sends .stignore from local to remote
 func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
-	log.Infof("Sending '.stignore' file to the remote container...")
+	log.Infof("sending '.stignore' file to the remote syncthing...")
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
 	ignores := &Ignores{}
@@ -312,14 +309,40 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 	}
 }
 
+//ResetDatabase resets the syncthing database
+func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev) error {
+	log.Infof("reseting database for remote syncthing...")
+	folder := fmt.Sprintf("okteto-%s", dev.Name)
+	params := map[string]string{"folder": folder}
+	_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, false, nil)
+	if err != nil {
+		log.Infof("error posting 'rest/system/reset' syncthing API: %s", err)
+		return err
+	}
+	return nil
+}
+
+//Overwrite overwrites local changes to the remote syncthing
+func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
+	log.Infof("overriding local changes to the remote syncthing...")
+	folder := fmt.Sprintf("okteto-%s", dev.Name)
+	params := map[string]string{"folder": folder}
+	_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil)
+	if err != nil {
+		log.Infof("error posting 'rest/db/override' syncthing API: %s", err)
+		return err
+	}
+	return nil
+}
+
 //WaitForScanning waits for synthing to finish initial scanning
 func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local bool) error {
-	ticker := time.NewTicker(250 * time.Millisecond)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
 	status := &Status{}
-	log.Infof("waiting for initial scan to complete...")
-	for i := 0; i < 1200; i++ {
+	log.Infof("waiting for initial scan to complete local=%t...", local)
+	for i := 0; i < 3000; i++ {
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -329,17 +352,17 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 
 		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil)
 		if err != nil {
-			log.Infof("error calling 'rest/db/status' syncthing API: %s", err)
+			log.Debugf("error calling 'rest/db/status' syncthing API: %s", err)
 			continue
 		}
 		err = json.Unmarshal(body, status)
 		if err != nil {
-			log.Infof("error unmarshaling 'rest/db/status': %s", err)
+			log.Debugf("error unmarshaling 'rest/db/status': %s", err)
 			continue
 		}
 
 		log.Debugf("syncthing folder is '%s'", status.State)
-		if status.State != "scanning" {
+		if status.State != "scanning" && status.State != "scan-waiting" {
 			return nil
 		}
 	}
@@ -360,7 +383,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 		select {
 		case <-ticker.C:
 			if prevNeedBytes == completion.NeedBytes {
-				if needZeroBytesIter >= 120 {
+				if needZeroBytesIter >= 600 {
 					return errors.ErrSyncFrozen
 				}
 
@@ -373,20 +396,20 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 			return ctx.Err()
 		}
 
-		if _, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil); err != nil {
-			//overwrite on each iteration to avoid sude effects of remote scannings
+		if err := s.Overwrite(ctx, dev); err != nil {
 			log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
+			continue
 		}
 
 		prevNeedBytes = completion.NeedBytes
 		body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, true, nil)
 		if err != nil {
-			log.Infof("error calling 'rest/db/completion' syncthing API: %s", err)
+			log.Debugf("error calling 'rest/db/completion' syncthing API: %s", err)
 			continue
 		}
 		err = json.Unmarshal(body, completion)
 		if err != nil {
-			log.Infof("error unmarshaling 'rest/db/completion': %s", err)
+			log.Debugf("error unmarshaling 'rest/db/completion': %s", err)
 			continue
 		}
 

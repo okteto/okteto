@@ -481,7 +481,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 }
 
 func (up *UpContext) sync() error {
-	if err := up.startLocalSyncthing(); err != nil {
+	if err := up.startSyncthing(); err != nil {
 		return err
 	}
 
@@ -492,7 +492,7 @@ func (up *UpContext) sync() error {
 	return nil
 }
 
-func (up *UpContext) startLocalSyncthing() error {
+func (up *UpContext) startSyncthing() error {
 	spinner := newSpinner("Starting the file synchronization service...")
 	spinner.start()
 	up.updateStateFile(startingSync)
@@ -514,7 +514,14 @@ func (up *UpContext) startLocalSyncthing() error {
 	}
 
 	up.Sy.SendStignoreFile(up.Context, up.Dev)
+
 	if err := up.Sy.WaitForScanning(up.Context, up.Dev, true); err != nil {
+		return err
+	}
+	if err := up.Sy.ResetDatabase(up.Context, up.Dev); err != nil {
+		return err
+	}
+	if err := up.Sy.WaitForScanning(up.Context, up.Dev, false); err != nil {
 		return err
 	}
 	return nil
