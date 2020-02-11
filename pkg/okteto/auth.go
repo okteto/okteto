@@ -32,6 +32,8 @@ const (
 
 	// CloudURL is the default URL of okteto
 	CloudURL = "https://cloud.okteto.com"
+	// RegistryURL is the default URL of the okteto registry
+	RegistryURL = "registry.okteto.net"
 )
 
 // Token contains the auth token and the URL it belongs to
@@ -108,7 +110,8 @@ func getTokenFromEnv() (*Token, error) {
 	return t, nil
 }
 
-func getToken() (*Token, error) {
+//GetToken returns the token of the authenticated user
+func GetToken() (*Token, error) {
 	if currentToken == nil {
 		if len(os.Getenv("OKTETO_TOKEN")) > 0 {
 			return getTokenFromEnv()
@@ -132,7 +135,7 @@ func getToken() (*Token, error) {
 
 // GetUserID returns the userID of the authenticated user
 func GetUserID() string {
-	t, err := getToken()
+	t, err := GetToken()
 	if err != nil {
 		return ""
 	}
@@ -142,7 +145,7 @@ func GetUserID() string {
 
 // GetMachineID returns the userID of the authenticated user
 func GetMachineID() string {
-	t, err := getToken()
+	t, err := GetToken()
 	if err != nil {
 		return ""
 	}
@@ -152,7 +155,7 @@ func GetMachineID() string {
 
 // GetURL returns the URL of the authenticated user
 func GetURL() string {
-	t, err := getToken()
+	t, err := GetToken()
 	if err != nil {
 		return "na"
 	}
@@ -161,7 +164,7 @@ func GetURL() string {
 }
 
 func saveToken(id, token, url string) error {
-	t, err := getToken()
+	t, err := GetToken()
 	if err != nil {
 		log.Debugf("bad token, re-initializing: %s", err)
 		t = &Token{}
@@ -175,7 +178,7 @@ func saveToken(id, token, url string) error {
 
 // SaveMachineID updates the token file with the machineID value
 func SaveMachineID(machineID string) error {
-	t, err := getToken()
+	t, err := GetToken()
 	if err != nil {
 		log.Infof("bad token, re-initializing: %s", err)
 		t = &Token{}
@@ -187,7 +190,7 @@ func SaveMachineID(machineID string) error {
 
 // SaveID updates the token file with the userID value
 func SaveID(userID string) error {
-	t, err := getToken()
+	t, err := GetToken()
 	if err != nil {
 		log.Debugf("bad token, re-initializing: %s", err)
 		t = &Token{}

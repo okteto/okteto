@@ -46,7 +46,7 @@ func getClient(oktetoURL string) (*graphql.Client, error) {
 }
 
 func query(ctx context.Context, query string, result interface{}) error {
-	o, err := getToken()
+	o, err := GetToken()
 	if err != nil {
 		log.Infof("couldn't get token: %s", err)
 		return errors.ErrNotLogged
