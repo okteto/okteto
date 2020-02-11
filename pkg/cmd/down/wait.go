@@ -46,7 +46,7 @@ func waitForDevPodsTermination(c kubernetes.Interface, namespace string, selecto
 	for i := 0; i < t; i++ {
 		ps, err := pods.ListBySelector(namespace, selector, c)
 		if err != nil {
-			log.Infof("failed to get dev pods with select %s, exiting: %s", selector, err)
+			log.Infof("failed to get dev pods with selector %s, exiting: %s", selector, err)
 			return
 		}
 
