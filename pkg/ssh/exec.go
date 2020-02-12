@@ -27,7 +27,7 @@ import (
 )
 
 // Exec executes the command over SSH
-func Exec(ctx context.Context, dev *model.Dev, inR io.Reader, outW, errW io.Writer) error {
+func Exec(ctx context.Context, dev *model.Dev, tty bool, inR io.Reader, outW, errW io.Writer) error {
 	sshConfig := &ssh.ClientConfig{
 		User:            "root",
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -57,16 +57,22 @@ func Exec(ctx context.Context, dev *model.Dev, inR io.Reader, outW, errW io.Writ
 		return fmt.Errorf("failed to create SSH session: %s", err)
 	}
 
-	modes := ssh.TerminalModes{
-		ssh.ECHO:  0, // Disable echoing
-		ssh.IGNCR: 1, // Ignore CR on input
-	}
+	defer session.Close()
 
-	width, height, err := terminal.GetSize(0)
+	if tty {
+		modes := ssh.TerminalModes{
+			ssh.ECHO:  0, // Disable echoing
+			ssh.IGNCR: 1, // Ignore CR on input
+		}
 
-	if err := session.RequestPty("xterm", height, width, modes); err != nil {
-		session.Close()
-		return fmt.Errorf("request for pseudo terminal failed: %s", err)
+		width, height, err := terminal.GetSize(0)
+		if err != nil {
+			return fmt.Errorf("request for terminal size failed: %s", err)
+		}
+
+		if err := session.RequestPty("xterm", height, width, modes); err != nil {
+			return fmt.Errorf("request for pseudo terminal failed: %s", err)
+		}
 	}
 
 	stdin, err := session.StdinPipe()

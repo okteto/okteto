@@ -573,24 +573,20 @@ func (up *UpContext) synchronizeFiles() error {
 func (up *UpContext) cleanCommand() {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
-	var err error
-	if up.Dev.ExecuteOverSSHEnabled() {
-		err = ssh.Exec(up.Context, up.Dev, in, &out, os.Stderr)
-	} else {
-		err = exec.Exec(
-			up.Context,
-			up.Client,
-			up.RestConfig,
-			up.Dev.Namespace,
-			up.Pod,
-			up.Dev.Container,
-			false,
-			in,
-			&out,
-			os.Stderr,
-			[]string{"sh", "-c", "(((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1); cat /proc/sys/fs/inotify/max_user_watches"},
-		)
-	}
+
+	err := exec.Exec(
+		up.Context,
+		up.Client,
+		up.RestConfig,
+		up.Dev.Namespace,
+		up.Pod,
+		up.Dev.Container,
+		false,
+		in,
+		&out,
+		os.Stderr,
+		[]string{"sh", "-c", "(((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1); cat /proc/sys/fs/inotify/max_user_watches"},
+	)
 
 	if err != nil {
 		log.Infof("first session to the remote container: %s", err)
@@ -609,7 +605,7 @@ func (up *UpContext) runCommand() error {
 	up.updateStateFile(ready)
 
 	if up.Dev.ExecuteOverSSHEnabled() {
-		return ssh.Exec(up.Context, up.Dev, os.Stdin, os.Stdout, os.Stderr)
+		return ssh.Exec(up.Context, up.Dev, true, os.Stdin, os.Stdout, os.Stderr)
 	}
 
 	return exec.Exec(

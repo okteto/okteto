@@ -80,7 +80,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 
 	if dev.ExecuteOverSSHEnabled() {
 		log.Infof("starting remote command over SSH")
-		return ssh.Exec(ctx, dev, os.Stdin, os.Stdout, os.Stderr)
+		return ssh.Exec(ctx, dev, true, os.Stdin, os.Stdout, os.Stderr)
 	}
 
 	client, cfg, namespace, err := k8Client.GetLocal()
