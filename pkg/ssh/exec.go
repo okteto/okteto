@@ -51,6 +51,8 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 		return fmt.Errorf("failed to connect to SSH server: %s", err)
 	}
 
+	defer connection.Close()
+
 	session, err := connection.NewSession()
 	if err != nil {
 		return fmt.Errorf("failed to create SSH session: %s", err)
@@ -63,6 +65,13 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 			ssh.ECHO:  0, // Disable echoing
 			ssh.IGNCR: 1, // Ignore CR on input
 		}
+
+		state, err := terminal.MakeRaw(0)
+		if err != nil {
+			return fmt.Errorf("request for raw terminal failed: %s", err)
+		}
+
+		defer terminal.Restore(0, state)
 
 		width, height, err := terminal.GetSize(0)
 		if err != nil {
