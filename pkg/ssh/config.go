@@ -46,6 +46,7 @@ type (
 )
 
 const (
+	forwardAgentKeyword          = "ForwardAgent"
 	hostKeyword                  = "Host"
 	hostNameKeyword              = "HostName"
 	portKeyword                  = "Port"
@@ -194,20 +195,21 @@ func parse(r io.Reader) (*sshConfig, error) {
 }
 
 func (config *sshConfig) writeTo(w io.Writer) error {
+	buf := bytes.NewBufferString("")
 	for _, param := range config.globals {
-		fmt.Fprint(w, param.String())
+		fmt.Fprint(buf, param.String())
 	}
 
 	if len(config.globals) > 0 {
-		fmt.Fprintln(w)
+		fmt.Fprintln(buf)
 	}
 
 	for _, host := range config.hosts {
-		//fmt.Fprintln(w)
-		fmt.Fprint(w, host.String())
+		fmt.Fprint(buf, host.String())
 	}
 
-	return nil
+	_, err := fmt.Fprint(w, buf.String())
+	return err
 }
 
 func (config *sshConfig) writeToFilepath(filePath string) error {
