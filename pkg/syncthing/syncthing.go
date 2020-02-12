@@ -285,8 +285,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 //SendStignoreFile sends .stignore from local to remote
 func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 	log.Infof("sending '.stignore' file to the remote syncthing...")
-	folder := fmt.Sprintf("okteto-%s", dev.Name)
-	params := map[string]string{"folder": folder}
+	params := getFolderParameter(dev)
 	ignores := &Ignores{}
 	body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil)
 	if err != nil {
@@ -312,8 +311,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 //ResetDatabase resets the syncthing database
 func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
 	log.Infof("reseting syncthing database local=%t...", local)
-	folder := fmt.Sprintf("okteto-%s", dev.Name)
-	params := map[string]string{"folder": folder}
+	params := getFolderParameter(dev)
 	_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil)
 	if err != nil {
 		log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
@@ -325,8 +323,7 @@ func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local boo
 //Overwrite overwrites local changes to the remote syncthing
 func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 	log.Infof("overriding local changes to the remote syncthing...")
-	folder := fmt.Sprintf("okteto-%s", dev.Name)
-	params := map[string]string{"folder": folder}
+	params := getFolderParameter(dev)
 	_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil)
 	if err != nil {
 		log.Infof("error posting 'rest/db/override' syncthing API: %s", err)
@@ -338,8 +335,7 @@ func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 //WaitForScanning waits for synthing to finish initial scanning
 func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local bool) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
-	folder := fmt.Sprintf("okteto-%s", dev.Name)
-	params := map[string]string{"folder": folder}
+	params := getFolderParameter(dev)
 	status := &Status{}
 	log.Infof("waiting for initial scan to complete local=%t...", local)
 	for i := 0; i < 3000; i++ {
@@ -373,8 +369,8 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
 	defer close(reporter)
 	ticker := time.NewTicker(500 * time.Millisecond)
-	folder := fmt.Sprintf("okteto-%s", dev.Name)
-	params := map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
+	params := getFolderParameter(dev)
+	params["device"] = DefaultRemoteDeviceID
 	completion := &Completion{}
 	var prevNeedBytes int64
 	needZeroBytesIter := 0
@@ -549,4 +545,9 @@ func getBinaryName() string {
 	}
 
 	return "syncthing"
+}
+
+func getFolderParameter(dev *model.Dev) map[string]string {
+	folder := fmt.Sprintf("okteto-%s", dev.Name)
+	return map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
 }
