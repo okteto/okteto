@@ -30,16 +30,18 @@ func WaitForDevPodsTermination(c kubernetes.Interface, d *model.Dev, t int) {
 
 	wg := &sync.WaitGroup{}
 
-	waitForDevPodsTermination(c, d.Namespace, interactive, wg, t)
+	wg.Add(1)
+	go waitForDevPodsTermination(c, d.Namespace, interactive, wg, t)
+
 	if len(d.Services) > 0 {
-		waitForDevPodsTermination(c, d.Namespace, detached, wg, t)
+		wg.Add(1)
+		go waitForDevPodsTermination(c, d.Namespace, detached, wg, t)
 	}
 
 	wg.Wait()
 }
 
 func waitForDevPodsTermination(c kubernetes.Interface, namespace string, selector map[string]string, wg *sync.WaitGroup, t int) {
-	wg.Add(1)
 	defer wg.Done()
 
 	tick := time.NewTicker(1 * time.Second)
