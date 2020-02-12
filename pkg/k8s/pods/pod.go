@@ -44,9 +44,25 @@ var (
 
 // GetBySelector returns the first pod that matches the selector or error if not found
 func GetBySelector(namespace string, selector map[string]string, c kubernetes.Interface) (*apiv1.Pod, error) {
+	ps, err := ListBySelector(namespace, selector, c)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ps) == 0 {
+		return nil, errors.ErrNotFound
+	}
+
+	r := ps[0]
+	return &r, nil
+}
+
+// ListBySelector returns all the pods that matches the selector or error if not found
+func ListBySelector(namespace string, selector map[string]string, c kubernetes.Interface) ([]apiv1.Pod, error) {
 	if len(selector) == 0 {
 		return nil, fmt.Errorf("empty selector")
 	}
+
 	b := new(bytes.Buffer)
 	for key, value := range selector {
 		fmt.Fprintf(b, "%s=%s,", key, value)
@@ -62,12 +78,7 @@ func GetBySelector(namespace string, selector map[string]string, c kubernetes.In
 		return nil, err
 	}
 
-	if len(p.Items) == 0 {
-		return nil, errors.ErrNotFound
-	}
-
-	r := p.Items[0]
-	return &r, nil
+	return p.Items, nil
 }
 
 // GetDevPod returns the dev pod for a deployment
@@ -190,7 +201,7 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 }
 
 //Exists returns true if pod still exists and is not being deleted
-func Exists(podName, namespace string, c *kubernetes.Clientset) bool {
+func Exists(podName, namespace string, c kubernetes.Interface) bool {
 	pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return false

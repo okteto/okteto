@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -99,6 +100,7 @@ func runDown(dev *model.Dev) error {
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
+
 	tr, err := deployments.GetTranslations(dev, d, client)
 	if err != nil {
 		return err
@@ -147,6 +149,7 @@ func runDown(dev *model.Dev) error {
 		}
 	}
 
+	down.WaitForDevPodsTermination(client, dev, 30)
 	return nil
 }
 
