@@ -605,7 +605,7 @@ func (up *UpContext) runCommand() error {
 	up.updateStateFile(ready)
 
 	if up.Dev.ExecuteOverSSHEnabled() {
-		return ssh.Exec(up.Context, up.Dev, true, os.Stdin, os.Stdout, os.Stderr)
+		return ssh.Exec(up.Context, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command)
 	}
 
 	return exec.Exec(

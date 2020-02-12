@@ -79,8 +79,8 @@ func Exec() *cobra.Command {
 func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 
 	if dev.ExecuteOverSSHEnabled() {
-		log.Infof("starting remote command over SSH")
-		return ssh.Exec(ctx, dev, true, os.Stdin, os.Stdout, os.Stderr)
+		log.Infof("executing remote command over SSH")
+		return ssh.Exec(ctx, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, args)
 	}
 
 	client, cfg, namespace, err := k8Client.GetLocal()

@@ -21,13 +21,12 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
 // Exec executes the command over SSH
-func Exec(ctx context.Context, dev *model.Dev, tty bool, inR io.Reader, outW, errW io.Writer) error {
+func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
 	sshConfig := &ssh.ClientConfig{
 		User:            "root",
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -39,7 +38,7 @@ func Exec(ctx context.Context, dev *model.Dev, tty bool, inR io.Reader, outW, er
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 100; i++ {
 		err = nil
-		connection, err = ssh.Dial("tcp", fmt.Sprintf("localhost:%d", dev.RemotePort), sshConfig)
+		connection, err = ssh.Dial("tcp", fmt.Sprintf("localhost:%d", remotePort), sshConfig)
 		if err == nil {
 			break
 		}
@@ -93,7 +92,7 @@ func Exec(ctx context.Context, dev *model.Dev, tty bool, inR io.Reader, outW, er
 	}
 	go io.Copy(errW, stderr)
 
-	cmd := strings.Join(dev.Command, " ")
+	cmd := strings.Join(command, " ")
 	log.Infof("executing command over SSH: '%s'", cmd)
 	return session.Run(cmd)
 }
