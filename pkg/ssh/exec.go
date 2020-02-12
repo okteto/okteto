@@ -28,7 +28,8 @@ import (
 // Exec executes the command over SSH
 func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
 	sshConfig := &ssh.ClientConfig{
-		User:            "root",
+		User: "root",
+		// GSC-G106 this only connects to the SSH launched by okteto, over a port-forward
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -37,7 +38,6 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 	var err error
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 100; i++ {
-		err = nil
 		connection, err = ssh.Dial("tcp", fmt.Sprintf("localhost:%d", remotePort), sshConfig)
 		if err == nil {
 			break
@@ -71,7 +71,11 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 			return fmt.Errorf("request for raw terminal failed: %s", err)
 		}
 
-		defer terminal.Restore(0, state)
+		defer func() {
+			if err := terminal.Restore(0, state); err != nil {
+				log.Infof("failed to restore terminal: %s", err)
+			}
+		}()
 
 		width, height, err := terminal.GetSize(0)
 		if err != nil {
@@ -85,21 +89,35 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 
 	stdin, err := session.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("Unable to setup stdin for session: %v", err)
+		return fmt.Errorf("unable to setup stdin for session: %v", err)
 	}
-	go io.Copy(stdin, inR)
+	go func() {
+		if _, err = io.Copy(stdin, inR); err != nil {
+			log.Infof("error while reading from stdIn: %s", err)
+		}
+	}()
 
 	stdout, err := session.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("Unable to setup stdout for session: %v", err)
+		return fmt.Errorf("unable to setup stdout for session: %v", err)
 	}
-	go io.Copy(outW, stdout)
+
+	go func() {
+		if _, err := io.Copy(outW, stdout); err != nil {
+			log.Infof("error while writing to stdOut: %s", err)
+		}
+	}()
 
 	stderr, err := session.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("Unable to setup stderr for session: %v", err)
+		return fmt.Errorf("unable to setup stderr for session: %v", err)
 	}
-	go io.Copy(errW, stderr)
+
+	go func() {
+		if _, err := io.Copy(errW, stderr); err != nil {
+			log.Infof("error while writing to stdOut: %s", err)
+		}
+	}()
 
 	cmd := strings.Join(command, " ")
 	log.Infof("executing command over SSH: '%s'", cmd)
