@@ -55,7 +55,7 @@ var (
 	ErrQuota = fmt.Errorf("Quota exceeded, please free some resources and try again")
 
 	// ErrSyncFrozen is returned when syncthing has been frozen on the same bytes for 30 seconds
-	ErrSyncFrozen = fmt.Errorf("The synchronization service hasn't made any progress in the last 2 minutes")
+	ErrSyncFrozen = fmt.Errorf("The synchronization service hasn't made any progress in the last 5 minutes")
 
 	// ErrNotInCluster is returned when an unsupported command is invoked from a dev environment (e.g. okteto up)
 	ErrNotInCluster = fmt.Errorf("this command is not supported from inside a development environment")

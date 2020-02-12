@@ -66,6 +66,9 @@ func Down() *cobra.Command {
 					return err
 				}
 				log.Success("Persistent volume removed")
+				if err := syncthing.RemoveFolder(dev); err != nil {
+					log.Infof("failed to delete existing syncthing folder")
+				}
 				analytics.TrackDownVolumes(true)
 			}
 
@@ -178,9 +181,5 @@ func stopSyncthing(dev *model.Dev) {
 
 	if err := sy.Stop(true); err != nil {
 		log.Infof("failed to stop existing syncthing")
-	}
-
-	if err := sy.RemoveFolder(); err != nil {
-		log.Infof("failed to delete existing syncthing folder")
 	}
 }
