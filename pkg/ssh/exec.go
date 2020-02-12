@@ -27,13 +27,9 @@ import (
 
 // Exec executes the command over SSH
 func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
-	sshConfig := &ssh.ClientConfig{
-		User: "root",
-		// GSC-G106 this only connects to the SSH launched by okteto, over a port-forward
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
 	log.Info("starting SSH connection")
+	sshConfig := getSSHClientConfig("root")
+
 	var connection *ssh.Client
 	var err error
 	t := time.NewTicker(100 * time.Millisecond)
