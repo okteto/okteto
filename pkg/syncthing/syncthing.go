@@ -310,13 +310,13 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 }
 
 //ResetDatabase resets the syncthing database
-func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev) error {
-	log.Infof("reseting database for remote syncthing...")
+func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
+	log.Infof("reseting syncthing database local=%t...", local)
 	folder := fmt.Sprintf("okteto-%s", dev.Name)
 	params := map[string]string{"folder": folder}
-	_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, false, nil)
+	_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil)
 	if err != nil {
-		log.Infof("error posting 'rest/system/reset' syncthing API: %s", err)
+		log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
 		return err
 	}
 	return nil
@@ -352,7 +352,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 
 		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil)
 		if err != nil {
-			log.Debugf("error calling 'rest/db/status' syncthing API: %s", err)
+			log.Debugf("error calling 'rest/db/status' local=%t syncthing API: %s", local, err)
 			continue
 		}
 		err = json.Unmarshal(body, status)
@@ -361,7 +361,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 			continue
 		}
 
-		log.Debugf("syncthing folder is '%s'", status.State)
+		log.Infof("syncthing folder local=%t is '%s'", local, status.State)
 		if status.State != "scanning" && status.State != "scan-waiting" {
 			return nil
 		}
@@ -470,7 +470,12 @@ func (s *Syncthing) Stop(force bool) error {
 }
 
 // RemoveFolder deletes all the files created by the syncthing instance
-func (s *Syncthing) RemoveFolder() error {
+func RemoveFolder(dev *model.Dev) error {
+	s, err := New(dev)
+	if err != nil {
+		return fmt.Errorf("failed to create syncthing instance")
+	}
+
 	if s.Home == "" {
 		log.Info("the home directory is not set when deleting")
 		return nil

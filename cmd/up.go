@@ -84,6 +84,7 @@ func Up() *cobra.Command {
 	var remote int
 	var autoDeploy bool
 	var forcePull bool
+	var resetSyncthing bool
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your development environment",
@@ -122,7 +123,7 @@ func Up() *cobra.Command {
 				dev.RemotePort = remote
 			}
 
-			err = RunUp(dev, autoDeploy, forcePull)
+			err = RunUp(dev, autoDeploy, forcePull, resetSyncthing)
 			return err
 		},
 	}
@@ -132,11 +133,12 @@ func Up() *cobra.Command {
 	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
 	cmd.Flags().BoolVarP(&forcePull, "pull", "", false, "force dev image pull")
+	cmd.Flags().BoolVarP(&resetSyncthing, "reset-syncthing", "", false, "reset the syncthing database")
 	return cmd
 }
 
 //RunUp starts the up sequence
-func RunUp(dev *model.Dev, autoDeploy bool, forcePull bool) error {
+func RunUp(dev *model.Dev, autoDeploy bool, forcePull, resetSyncthing bool) error {
 	up := &UpContext{
 		Dev:  dev,
 		Exit: make(chan error, 1),
@@ -154,7 +156,7 @@ func RunUp(dev *model.Dev, autoDeploy bool, forcePull bool) error {
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	go up.Activate(autoDeploy)
+	go up.Activate(autoDeploy, resetSyncthing)
 	select {
 	case <-stop:
 		log.Debugf("CTRL+C received, starting shutdown sequence")
@@ -172,7 +174,7 @@ func RunUp(dev *model.Dev, autoDeploy bool, forcePull bool) error {
 }
 
 // Activate activates the dev environment
-func (up *UpContext) Activate(autoDeploy bool) {
+func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 	var state *term.State
 	inFd, isTerm := term.GetFdInfo(os.Stdin)
 	if isTerm {
@@ -229,7 +231,7 @@ func (up *UpContext) Activate(autoDeploy bool) {
 
 		log.Success("Development environment activated")
 
-		err = up.sync()
+		err = up.sync(resetSyncthing && !up.retry)
 		if err != nil {
 			if !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
 				log.Yellow("\nConnection lost to your development environment, reconnecting...\n")
@@ -480,8 +482,8 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	return nil
 }
 
-func (up *UpContext) sync() error {
-	if err := up.startSyncthing(); err != nil {
+func (up *UpContext) sync(resetSyncthing bool) error {
+	if err := up.startSyncthing(resetSyncthing); err != nil {
 		return err
 	}
 
@@ -492,7 +494,7 @@ func (up *UpContext) sync() error {
 	return nil
 }
 
-func (up *UpContext) startSyncthing() error {
+func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 	spinner := newSpinner("Starting the file synchronization service...")
 	spinner.start()
 	up.updateStateFile(startingSync)
@@ -513,12 +515,19 @@ func (up *UpContext) startSyncthing() error {
 		}
 	}
 
+	if resetSyncthing {
+		spinner.update("Resetting synchronization service database...")
+		if err := up.Sy.ResetDatabase(up.Context, up.Dev, true); err != nil {
+			return err
+		}
+		if err := up.Sy.ResetDatabase(up.Context, up.Dev, false); err != nil {
+			return err
+		}
+	}
+
 	up.Sy.SendStignoreFile(up.Context, up.Dev)
 
 	if err := up.Sy.WaitForScanning(up.Context, up.Dev, true); err != nil {
-		return err
-	}
-	if err := up.Sy.ResetDatabase(up.Context, up.Dev); err != nil {
 		return err
 	}
 	if err := up.Sy.WaitForScanning(up.Context, up.Dev, false); err != nil {
