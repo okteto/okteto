@@ -63,9 +63,6 @@ func TestWriteToNewFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	t.Fail()
-
 }
 
 func TestParseAndWriteTo(t *testing.T) {
