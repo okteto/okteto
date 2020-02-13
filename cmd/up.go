@@ -589,7 +589,8 @@ func (up *UpContext) synchronizeFiles() error {
 func (up *UpContext) cleanCommand() {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
-	if err := exec.Exec(
+
+	err := exec.Exec(
 		up.Context,
 		up.Client,
 		up.RestConfig,
@@ -601,9 +602,12 @@ func (up *UpContext) cleanCommand() {
 		&out,
 		os.Stderr,
 		[]string{"sh", "-c", "(((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1); cat /proc/sys/fs/inotify/max_user_watches"},
-	); err != nil {
+	)
+
+	if err != nil {
 		log.Infof("first session to the remote container: %s", err)
 	}
+
 	if isWatchesConfigurationTooLow(out.String()) {
 		log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 		log.Yellow("This can affect Okteto's file synchronization performance.")
@@ -615,6 +619,11 @@ func (up *UpContext) cleanCommand() {
 func (up *UpContext) runCommand() error {
 	log.Infof("starting remote command")
 	up.updateStateFile(ready)
+
+	if up.Dev.ExecuteOverSSHEnabled() {
+		return ssh.Exec(up.Context, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command)
+	}
+
 	return exec.Exec(
 		up.Context,
 		up.Client,

@@ -559,6 +559,11 @@ func (dev *Dev) RemoteModeEnabled() bool {
 	return len(dev.Reverse) > 0
 }
 
+// ExecuteOverSSHEnabled returns true if execute over SSH is enabled
+func (dev *Dev) ExecuteOverSSHEnabled() bool {
+	return dev.RemoteModeEnabled() && len(os.Getenv("OKTETO_EXECUTE_SSH")) > 0
+}
+
 // GetKeyName returns the secret key name
 func (s *Secret) GetKeyName() string {
 	return fmt.Sprintf("dev-secret-%s", filepath.Base(s.RemotePath))
