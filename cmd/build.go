@@ -27,9 +27,7 @@ import (
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/buildkit"
-	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/errgroup"
 
@@ -125,27 +123,7 @@ func getBuildKitHost() (string, error) {
 	if buildKitHost != "" {
 		return buildKitHost, nil
 	}
-
-	ctx := context.Background()
-	c, restConfig, namespace, err := okteto.GetOktetoInternalNamespaceClient(ctx)
-	if err != nil {
-		return "", fmt.Errorf("The variable 'BUILDKIT_HOST' is not defined and Okteto cannot be queried: %s", err)
-	}
-
-	localPort, err := model.GetAvailablePort()
-	if err != nil {
-		return "", err
-	}
-
-	forwarder := forward.NewPortForwardManager(ctx, restConfig, c)
-	if err := forwarder.Add(model.Forward{Local: localPort, Remote: buildKitPort}); err != nil {
-		return "", err
-	}
-
-	if err := forwarder.Start(buildKitContainer, namespace); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("tcp://localhost:%d", localPort), nil
+	return okteto.GetBuildkit(), nil
 }
 
 func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client.SolveOpt, error) {
@@ -172,7 +150,7 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client
 		// set Okteto Cloud credentials
 		token, err := okteto.GetToken()
 		if err != nil {
-			return nil, fmt.Errorf("failed to read okteto token: %s", err)
+			return nil, fmt.Errorf("failed to read okteto token. Did you run 'okteto login'?")
 		}
 		attachable = append(attachable, buildkit.NewRegistryAuthProvider(okteto.GetRegistry(), okteto.GetUserID(), token.Token))
 	} else {

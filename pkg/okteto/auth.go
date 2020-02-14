@@ -32,6 +32,10 @@ const (
 
 	// CloudURL is the default URL of okteto
 	CloudURL = "https://cloud.okteto.com"
+	// CloudRegistryURL is the default URL of okteto registry
+	CloudRegistryURL = "registry.cloud.okteto.net"
+	// CloudBuildKitURL is the default URL of okteto buildkit
+	CloudBuildKitURL = "buildkit.cloud.okteto.net"
 )
 
 // Token contains the auth token and the URL it belongs to
@@ -169,9 +173,11 @@ func GetURL() string {
 func GetRegistry() string {
 	t, err := GetToken()
 	if err != nil {
-		return "registry.cloud.okteto.net"
+		return CloudRegistryURL
 	}
-
+	if t.Registry == "" {
+		return CloudRegistryURL
+	}
 	return t.Registry
 }
 
@@ -179,9 +185,11 @@ func GetRegistry() string {
 func GetBuildkit() string {
 	t, err := GetToken()
 	if err != nil {
-		return "registry.cloud.okteto.net"
+		return CloudBuildKitURL
 	}
-
+	if t.Buildkit == "" {
+		return CloudBuildKitURL
+	}
 	return t.Buildkit
 }
 
