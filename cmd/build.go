@@ -152,11 +152,12 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client
 		if err != nil {
 			return nil, fmt.Errorf("failed to read okteto token. Did you run 'okteto login'?")
 		}
-		attachable = append(attachable, buildkit.NewRegistryAuthProvider(okteto.GetRegistry(), okteto.GetUserID(), token.Token))
+		attachable = append(attachable, buildkit.NewDockerAndOktetoAuthProvider(okteto.GetUserID(), token.Token, os.Stderr))
 	} else {
 		// read docker credentials from `.docker/config.json`
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))
 	}
+
 	opt := &client.SolveOpt{
 		LocalDirs:     localDirs,
 		Frontend:      frontend,

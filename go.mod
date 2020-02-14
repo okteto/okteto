@@ -14,6 +14,7 @@ require (
 	github.com/containerd/ttrpc v0.0.0-20191025122922-cf7f4d5f2d61 // indirect
 	github.com/containerd/typeurl v0.0.0-20190911142611-5eb25027c9fd // indirect
 	github.com/denisbrodbeck/machineid v1.0.1
+	github.com/docker/cli v0.0.0-20190321234815-f40f9c240ab0
 	github.com/docker/docker v1.14.0-0.20190319215453-e7b5f7dbe98c
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
