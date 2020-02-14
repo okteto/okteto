@@ -232,7 +232,8 @@ func getFileWithCacheHandler(filename string) (string, error) {
 
 	scanner := bufio.NewScanner(file)
 
-	tmpFile, err := ioutil.TempFile(config.GetHome(), "okteto-build")
+	dockerfileTmpFolder := filepath.Join(config.GetHome(), ".dockerfile")
+	tmpFile, err := ioutil.TempFile(dockerfileTmpFolder, "buildkit-")
 	if err != nil {
 		return "", err
 	}
