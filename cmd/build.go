@@ -14,10 +14,13 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/containerd/console"
@@ -27,6 +30,7 @@ import (
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/buildkit"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/errgroup"
@@ -92,6 +96,19 @@ func RunBuild(path, file, tag, target string, noCache bool) error {
 
 	ch := make(chan *client.SolveStatus)
 	eg, ctx := errgroup.WithContext(ctx)
+
+	if file == "" {
+		file = filepath.Join(path, "Dockerfile")
+	}
+	if buildKitHost == okteto.GetBuildKit() {
+		fileWithCacheHandler, err := getFileWithCacheHandler(file)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(fileWithCacheHandler)
+		file = fileWithCacheHandler
+	}
+
 	solveOpt, err := getSolveOpt(path, file, tag, target, noCache)
 	if err != nil {
 		return err
@@ -127,9 +144,6 @@ func getBuildKitHost() (string, error) {
 }
 
 func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client.SolveOpt, error) {
-	if file == "" {
-		file = filepath.Join(buildCtx, "Dockerfile")
-	}
 	localDirs := map[string]string{
 		"context":    buildCtx,
 		"dockerfile": filepath.Dir(file),
@@ -207,4 +221,62 @@ func getRepoNameWithoutTag(name string) string {
 		return remainder[:i]
 	}
 	return fmt.Sprintf("%s/%s", domain, remainder[:i])
+}
+
+func getFileWithCacheHandler(filename string) (string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	tmpFile, err := ioutil.TempFile(config.GetHome(), "okteto-build")
+	if err != nil {
+		return "", err
+	}
+
+	datawriter := bufio.NewWriter(tmpFile)
+	defer datawriter.Flush()
+
+	userID := okteto.GetUserID()
+	if len(userID) == 0 {
+		userID = "anonymous"
+	}
+	for scanner.Scan() {
+		line := scanner.Text()
+		traslatedLine := translateCacheHandler(line, userID)
+		_, _ = datawriter.WriteString(traslatedLine + "\n")
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
+}
+
+func translateCacheHandler(input string, userID string) string {
+	matched, err := regexp.MatchString(`^RUN.*--mount=.*type=cache`, input)
+	if err != nil {
+		return input
+	}
+	if matched {
+		matched, err = regexp.MatchString(`^RUN.*--mount=id=`, input)
+		if err != nil {
+			return input
+		}
+		if matched {
+			return strings.Replace(input, "--mount=id=", fmt.Sprintf("--mount=id=%s-", userID), -1)
+		}
+		matched, err = regexp.MatchString(`^RUN.*--mount=[^ ]+,id=`, input)
+		if err != nil {
+			return input
+		}
+		if matched {
+			return strings.Replace(input, ",id=", fmt.Sprintf(",id=%s-", userID), -1)
+		}
+		return strings.Replace(input, "--mount=", fmt.Sprintf("--mount=id=%s,", userID), -1)
+	}
+	return input
 }
