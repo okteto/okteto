@@ -32,8 +32,10 @@ const (
 
 	// CloudURL is the default URL of okteto
 	CloudURL = "https://cloud.okteto.com"
-	// RegistryURL is the default URL of the okteto registry
-	RegistryURL = "registry.okteto.net"
+	// CloudRegistryURL is the default URL of okteto registry
+	CloudRegistryURL = "registry.cloud.okteto.net"
+	// CloudBuildKitURL is the default URL of okteto buildkit
+	CloudBuildKitURL = "buildkit.cloud.okteto.net"
 )
 
 // Token contains the auth token and the URL it belongs to
@@ -42,6 +44,8 @@ type Token struct {
 	URL       string `json:"URL"`
 	ID        string `json:"ID"`
 	MachineID string `json:"MachineID"`
+	Buildkit  string `json:"buildkit"`
+	Registry  string `json:"registry"`
 }
 
 // User contains the auth information of the logged in user
@@ -52,6 +56,8 @@ type User struct {
 	Token    string
 	ID       string
 	New      bool
+	Buildkit string
+	Registry string
 }
 
 var currentToken *Token
@@ -66,7 +72,7 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 	q := fmt.Sprintf(`
 				mutation {
 					auth(code: "%s", source: "cli") {
-					  id,name,email,githubID,token,new
+					  id,name,email,githubID,token,new,registry,buildkit
 					}
 				  }`, code)
 
@@ -85,7 +91,7 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 		return nil, fmt.Errorf("empty response")
 	}
 
-	if err := saveToken(user.Auth.ID, user.Auth.Token, url); err != nil {
+	if err := saveToken(user.Auth.ID, user.Auth.Token, url, user.Auth.Registry, user.Auth.Buildkit); err != nil {
 		return nil, err
 	}
 
@@ -163,7 +169,31 @@ func GetURL() string {
 	return t.URL
 }
 
-func saveToken(id, token, url string) error {
+// GetRegistry returns the URL of the registry
+func GetRegistry() string {
+	t, err := GetToken()
+	if err != nil {
+		return CloudRegistryURL
+	}
+	if t.Registry == "" {
+		return CloudRegistryURL
+	}
+	return t.Registry
+}
+
+// GetBuildkit returns the URL of the authenticated user
+func GetBuildkit() string {
+	t, err := GetToken()
+	if err != nil {
+		return CloudBuildKitURL
+	}
+	if t.Buildkit == "" {
+		return CloudBuildKitURL
+	}
+	return t.Buildkit
+}
+
+func saveToken(id, token, url, registry, buildkit string) error {
 	t, err := GetToken()
 	if err != nil {
 		log.Debugf("bad token, re-initializing: %s", err)
@@ -173,6 +203,8 @@ func saveToken(id, token, url string) error {
 	t.ID = id
 	t.Token = token
 	t.URL = url
+	t.Buildkit = buildkit
+	t.Registry = registry
 	return save(t)
 }
 
