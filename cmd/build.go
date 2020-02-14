@@ -123,7 +123,7 @@ func getBuildKitHost() (string, error) {
 	if buildKitHost != "" {
 		return buildKitHost, nil
 	}
-	return okteto.GetBuildkit(), nil
+	return okteto.GetBuildKit(), nil
 }
 
 func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client.SolveOpt, error) {
