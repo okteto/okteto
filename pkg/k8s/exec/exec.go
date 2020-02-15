@@ -52,8 +52,6 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 		p.ErrOut = nil
 	}
 
-	log.Debugf("executing: %s", p.Command)
-
 	fn := func() error {
 		req := c.CoreV1().RESTClient().Post().
 			Resource("pods").
