@@ -18,6 +18,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
@@ -25,13 +26,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	kexec "k8s.io/kubectl/pkg/cmd/exec"
-	"github.com/okteto/okteto/pkg/log"
 )
 
 // Exec executes the command in the dev environment container
 func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, podNamespace, podName, container string, tty bool, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
 
 	p := &kexec.ExecOptions{}
+
 	p.Config = config
 	p.Command = command
 	p.Executor = &kexec.DefaultRemoteExecutor{}
@@ -50,6 +51,8 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 		// true
 		p.ErrOut = nil
 	}
+
+	log.Debugf("executing: %s", p.Command)
 
 	fn := func() error {
 		req := c.CoreV1().RESTClient().Post().
