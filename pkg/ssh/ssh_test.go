@@ -16,10 +16,43 @@ package ssh
 import (
 	"io/ioutil"
 	"os"
-	"testing"
 	"path/filepath"
+	"strings"
+	"testing"
 )
 
+func Test_addOnEmpty(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.RemoveAll(dir); err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.RemoveAll(dir)
+
+	sshConfig := filepath.Join(dir, "config")
+
+	if err := add(sshConfig, "test.okteto", 8080); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := getConfig(sshConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := cfg.getHost("test.okteto")
+	if h == nil {
+		t.Fatal("couldn't find test.okteto")
+	}
+
+	if err := remove(sshConfig, "test.okteto"); err != nil {
+		t.Fatal(err)
+	}
+}
 func Test_add(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
@@ -187,5 +220,21 @@ func Test_removeHost(t *testing.T) {
 				t.Errorf("removeHost() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_getSSHConfigPath(t *testing.T) {
+	ssh := getSSHConfigPath()
+	parts := strings.Split(ssh, string(os.PathSeparator))
+	found := false
+	for _, p := range parts {
+		if p == ".ssh" {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf("didn't found the correct .ssh folder: %s", parts)
 	}
 }
