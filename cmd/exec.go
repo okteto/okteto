@@ -78,9 +78,12 @@ func Exec() *cobra.Command {
 
 func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 
+	wrapped := []string{"sh", "-c"}
+	wrapped = append(wrapped, args...)
+
 	if dev.ExecuteOverSSHEnabled() {
 		log.Infof("executing remote command over SSH")
-		return ssh.Exec(ctx, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, args)
+		return ssh.Exec(ctx, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
 
 	client, cfg, namespace, err := k8Client.GetLocal()
@@ -101,5 +104,5 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		dev.Container = p.Spec.Containers[0].Name
 	}
 
-	return exec.Exec(ctx, client, cfg, dev.Namespace, p.Name, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, args)
+	return exec.Exec(ctx, client, cfg, dev.Namespace, p.Name, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 }
