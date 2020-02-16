@@ -103,8 +103,9 @@ func RunBuild(path, file, tag, target string, noCache bool) error {
 	if buildKitHost == okteto.GetBuildKit() {
 		fileWithCacheHandler, err := getFileWithCacheHandler(file)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create temporary build folder: %s", err)
 		}
+
 		defer os.Remove(fileWithCacheHandler)
 		file = fileWithCacheHandler
 	}
@@ -233,6 +234,11 @@ func getFileWithCacheHandler(filename string) (string, error) {
 	scanner := bufio.NewScanner(file)
 
 	dockerfileTmpFolder := filepath.Join(config.GetHome(), ".dockerfile")
+
+	if err := os.MkdirAll(dockerfileTmpFolder, 0700); err != nil {
+		return "", fmt.Errorf("failed to create %s: %s", dockerfileTmpFolder, err)
+	}
+
 	tmpFile, err := ioutil.TempFile(dockerfileTmpFolder, "buildkit-")
 	if err != nil {
 		return "", err
