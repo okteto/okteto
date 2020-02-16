@@ -103,7 +103,7 @@ func RunBuild(path, file, tag, target string, noCache bool) error {
 	if buildKitHost == okteto.GetBuildKit() {
 		fileWithCacheHandler, err := getFileWithCacheHandler(file)
 		if err != nil {
-			return fmt.Errorf("failed to get build cache: %s", err)
+			return fmt.Errorf("failed to create temporary build folder: %s", err)
 		}
 
 		defer os.Remove(fileWithCacheHandler)
