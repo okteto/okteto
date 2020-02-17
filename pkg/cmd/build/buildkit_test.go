@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package build
 
 import "testing"
 
-func Test_getRepoNameWithoutTag(t *testing.T) {
+func Test_GetRepoNameWithoutTag(t *testing.T) {
 	var tests = []struct {
 		name     string
 		image    string
@@ -64,7 +64,7 @@ func Test_getRepoNameWithoutTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getRepoNameWithoutTag(tt.image)
+			result := GetRepoNameWithoutTag(tt.image)
 			if tt.expected != result {
 				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.name)
 			}

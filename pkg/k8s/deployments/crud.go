@@ -164,51 +164,63 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 }
 
 // DevModeOff deactivates dev mode for d
-func DevModeOff(d *appsv1.Deployment, c *kubernetes.Clientset) error {
+func DevModeOff(tr *model.Translation, image string, c *kubernetes.Clientset) error {
+	d, err := translateDevModeOff(tr.Deployment)
+	tr.Deployment = d
+	if err != nil {
+		return err
+	}
+	if image != "" {
+		for _, rule := range tr.Rules {
+			devContainer := GetDevContainer(&d.Spec.Template.Spec, rule.Container)
+			devContainer.Image = image
+		}
+	}
+	if err := update(d, c); err != nil {
+		return err
+	}
+	return nil
+}
+
+func translateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.TranslationAnnotation)
 	if len(trRulesJSON) == 0 {
 		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 		if len(dManifest) == 0 {
 			log.Infof("%s/%s is not a development environment", d.Namespace, d.Name)
-			return nil
+			return d, nil
 		}
 		dOrig := &appsv1.Deployment{}
 		if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
-			return fmt.Errorf("malformed manifest: %s", err)
+			return nil, fmt.Errorf("malformed manifest: %s", err)
 		}
-		d = dOrig
-	} else {
-		trRules := &model.Translation{}
-		if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
-			return fmt.Errorf("malformed tr rules: %s", err)
-		}
-		d.Spec.Replicas = &trRules.Replicas
-		annotations := d.GetObjectMeta().GetAnnotations()
-		delete(annotations, oktetoVersionAnnotation)
-		d.GetObjectMeta().SetAnnotations(annotations)
-		annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
-		if err := deleteUserAnnotations(annotations); err != nil {
-			return err
-		}
-		delete(annotations, okLabels.TranslationAnnotation)
-		delete(annotations, model.OktetoRestartAnnotation)
-		d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
-		labels := d.GetObjectMeta().GetLabels()
-		delete(labels, okLabels.DevLabel)
-		delete(labels, okLabels.InteractiveDevLabel)
-		delete(labels, okLabels.DetachedDevLabel)
-		d.GetObjectMeta().SetLabels(labels)
-		labels = d.Spec.Template.GetObjectMeta().GetLabels()
-		delete(labels, okLabels.InteractiveDevLabel)
-		delete(labels, okLabels.DetachedDevLabel)
-		d.Spec.Template.GetObjectMeta().SetLabels(labels)
+		return dOrig, nil
 	}
-
-	if err := update(d, c); err != nil {
-		return err
+	trRules := &model.Translation{}
+	if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
+		return nil, fmt.Errorf("malformed tr rules: %s", err)
 	}
-
-	return nil
+	d.Spec.Replicas = &trRules.Replicas
+	annotations := d.GetObjectMeta().GetAnnotations()
+	delete(annotations, oktetoVersionAnnotation)
+	d.GetObjectMeta().SetAnnotations(annotations)
+	annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
+	if err := deleteUserAnnotations(annotations); err != nil {
+		return nil, err
+	}
+	delete(annotations, okLabels.TranslationAnnotation)
+	delete(annotations, model.OktetoRestartAnnotation)
+	d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
+	labels := d.GetObjectMeta().GetLabels()
+	delete(labels, okLabels.DevLabel)
+	delete(labels, okLabels.InteractiveDevLabel)
+	delete(labels, okLabels.DetachedDevLabel)
+	d.GetObjectMeta().SetLabels(labels)
+	labels = d.Spec.Template.GetObjectMeta().GetLabels()
+	delete(labels, okLabels.InteractiveDevLabel)
+	delete(labels, okLabels.DetachedDevLabel)
+	d.Spec.Template.GetObjectMeta().SetLabels(labels)
+	return d, nil
 }
 
 func create(d *appsv1.Deployment, c *kubernetes.Clientset) error {

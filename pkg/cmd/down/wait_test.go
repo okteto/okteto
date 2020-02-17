@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func TestWaitForDevPodsTermination(t *testing.T) {
+func Test_waitForDevPodsTermination(t *testing.T) {
 	var tests = []struct {
 		name string
 		dev  *model.Dev
@@ -68,7 +68,7 @@ func TestWaitForDevPodsTermination(t *testing.T) {
 			dPod.ObjectMeta.SetDeletionTimestamp(&metav1.Time{})
 
 			client := fake.NewSimpleClientset(pod, dPod)
-			WaitForDevPodsTermination(client, tt.dev, 5)
+			waitForDevPodsTermination(client, tt.dev, 5)
 		})
 	}
 

@@ -39,6 +39,7 @@ const (
 	syncErrorEvent       = "Sync Error"
 	downEvent            = "Down"
 	downVolumesEvent     = "DownVolumes"
+	redeployEvent        = "Redeploy"
 	buildEvent           = "Build"
 	loginEvent           = "Login"
 	initEvent            = "Create Manifest"
@@ -135,6 +136,14 @@ func TrackDown(success bool) {
 // TrackDownVolumes sends a tracking event to mixpanel when the user deactivates a development environment and its volumes
 func TrackDownVolumes(success bool) {
 	track(downVolumesEvent, success, nil)
+}
+
+// TrackRedeploy sends a tracking event to mixpanel when the user redeploys a development environment
+func TrackRedeploy(success, isOktetoNamespace bool) {
+	props := map[string]interface{}{
+		"isOktetoNamespace": isOktetoNamespace,
+	}
+	track(redeployEvent, success, props)
 }
 
 func trackDisable(success bool) {
