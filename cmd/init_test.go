@@ -13,7 +13,14 @@
 
 package cmd
 
-import "testing"
+import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
+	"testing"
+
+	uuid "github.com/satori/go.uuid"
+)
 
 func Test_getDeploymentName(t *testing.T) {
 	var tests = []struct {
@@ -35,5 +42,25 @@ func Test_getDeploymentName(t *testing.T) {
 				t.Errorf("got: %s expected: %s", actual, tt.expected)
 			}
 		})
+	}
+}
+
+func Test_executeInit(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.NewV4().String()))
+	if err := executeInit(p, false, "golang", dir); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := executeInit(p, false, "java", dir); err == nil {
+		t.Fatalf("manifest was overwritten: %s", err)
+	}
+
+	if err := executeInit(p, true, "ruby", dir); err != nil {
+		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 }
