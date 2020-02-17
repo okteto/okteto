@@ -15,10 +15,12 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/okteto/okteto/pkg/log"
@@ -104,33 +106,57 @@ func downloadSyncthing() error {
 		return err
 	}
 
+	f, err := ioutil.TempFile("", "")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %s", f.Name())
+	}
+
+	_ = f.Close()
+
+	defer os.Remove(f.Name())
+
 	client := &getter.Client{
 		Src:     src,
-		Dst:     syncthing.GetInstallPath(),
+		Dst:     f.Name(),
 		Mode:    getter.ClientModeFile,
 		Options: opts,
 	}
 
 	log.Infof("downloading syncthing %s from %s", syncthingVersion, client.Src)
 	if err := os.Remove(client.Dst); err != nil {
-		log.Infof("failed to delete %s, will try to override: %s", client.Dst, err)
+		log.Infof("failed to delete %s, will try to overwrite: %s", client.Dst, err)
 	}
 
-	if err := client.Get(); err != nil {
+	t := time.NewTicker(1 * time.Second)
+	for i := 0; i < 3; i++ {
+		err := client.Get()
+		if err == nil {
+			break
+		}
+
 		log.Infof("failed to download syncthing from %s: %s", client.Src, err)
 		if e := os.Remove(client.Dst); e != nil {
 			log.Infof("failed to delete partially downloaded %s: %s", client.Dst, e.Error())
 		}
 
-		return err
+		if i == 3 {
+			return err
+		}
+
+		log.Infof("retrying syncthing download from %s: %s", client.Src, err)
+		<-t.C
 	}
 
+	i := syncthing.GetInstallPath()
 	// skipcq GSC-G302 syncthing is a binary so it needs exec permissions
 	if err := os.Chmod(client.Dst, 0700); err != nil {
-		return err
+		return fmt.Errorf("failed to set permissions to %s: %s", client.Dst, err)
+	}
+
+	if err := os.Rename(client.Dst, i); err != nil {
+		return fmt.Errorf("failed to move %s to %s: %s", client.Dst, i, err)
 	}
 
 	log.Infof("downloaded syncthing %s to %s", syncthingVersion, client.Dst)
-
 	return nil
 }
