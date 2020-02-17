@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/config"
@@ -60,6 +61,10 @@ type User struct {
 	Registry string
 }
 
+type u struct {
+	Auth User
+}
+
 var currentToken *Token
 
 // Auth authenticates in okteto with a github OAuth code
@@ -69,22 +74,9 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 		return nil, err
 	}
 
-	q := fmt.Sprintf(`
-				mutation {
-					auth(code: "%s", source: "cli") {
-					  id,name,email,githubID,token,new,registry,buildkit
-					}
-				  }`, code)
-
-	req := graphql.NewRequest(q)
-
-	type u struct {
-		Auth User
-	}
-
-	var user u
-	if err := client.Run(ctx, req, &user); err != nil {
-		return nil, fmt.Errorf("unauthorized request: %s", err)
+	user, err := queryUser(ctx, client, code)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(user.Auth.GithubID) == 0 || len(user.Auth.Token) == 0 {
@@ -114,6 +106,44 @@ func getTokenFromEnv() (*Token, error) {
 	t.URL = p.String()
 
 	return t, nil
+}
+
+func queryUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
+	var user u
+	q := fmt.Sprintf(`
+				mutation {
+					auth(code: "%s", source: "cli") {
+					  id,name,email,githubID,token,new,registry,buildkit
+					}
+				  }`, code)
+
+	req := graphql.NewRequest(q)
+	if err := client.Run(ctx, req, &user); err != nil {
+		if strings.Contains(err.Error(), "Cannot query field") {
+			log.Infof("query using the legacy parameters: %s", err)
+			return queryLegacyUser(ctx, client, code)
+		}
+		return nil, fmt.Errorf("unauthorized request: %w", err)
+	}
+
+	return &user, nil
+}
+
+func queryLegacyUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
+	var user u
+	q := fmt.Sprintf(`
+				mutation {
+					auth(code: "%s", source: "cli") {
+					  id,name,email,githubID,token,new
+					}
+				  }`, code)
+
+	req := graphql.NewRequest(q)
+	if err := client.Run(ctx, req, &user); err != nil {
+		return nil, fmt.Errorf("unauthorized request: %w", err)
+	}
+
+	return &user, nil
 }
 
 //GetToken returns the token of the authenticated user
