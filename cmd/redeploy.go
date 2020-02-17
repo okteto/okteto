@@ -56,7 +56,6 @@ func Redeploy() *cobra.Command {
 				dev.Namespace = configNamespace
 			}
 			isOktetoNamespace := false
-			//unify this with okteto build, where to build and push?
 			n, err := namespaces.Get(dev.Namespace, c)
 			if err == nil {
 				if namespaces.IsOktetoNamespace(n) {
@@ -64,7 +63,6 @@ func Redeploy() *cobra.Command {
 				}
 			}
 
-			//track build if build in clouds
 			if err := runRedeploy(dev, imageTag, isOktetoNamespace, c); err != nil {
 				analytics.TrackRedeploy(false, isOktetoNamespace)
 				return err

@@ -26,7 +26,7 @@ import (
 )
 
 //Run runs the "okteto down" sequence
-func Run(dev *model.Dev, imageToRedploy string, d *appsv1.Deployment, c *kubernetes.Clientset) error {
+func Run(dev *model.Dev, imageToRedeploy string, d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	trList, err := deployments.GetTranslations(dev, d, c)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func Run(dev *model.Dev, imageToRedploy string, d *appsv1.Deployment, c *kuberne
 		if tr.Deployment == nil {
 			continue
 		}
-		if err := deployments.DevModeOff(tr, imageToRedploy, c); err != nil {
+		if err := deployments.DevModeOff(tr, imageToRedeploy, c); err != nil {
 			return err
 		}
 	}
@@ -60,7 +60,7 @@ func Run(dev *model.Dev, imageToRedploy string, d *appsv1.Deployment, c *kuberne
 	}
 
 	if _, ok := d.Annotations[model.OktetoAutoCreateAnnotation]; ok {
-		if len(dev.Services) > 0 || imageToRedploy == "" {
+		if len(dev.Services) > 0 || imageToRedeploy == "" {
 			if err := deployments.Destroy(dev, c); err != nil {
 				return err
 			}

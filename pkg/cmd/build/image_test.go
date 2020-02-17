@@ -54,7 +54,7 @@ func Test_GetImageTag(t *testing.T) {
 			imageTag:          "",
 			d:                 &appsv1.Deployment{},
 			isOktetoNamespace: true,
-			expected:          "registry.okteto.net/ns/dev:okteto",
+			expected:          "registry.cloud.okteto.net/ns/dev:okteto",
 		},
 		{
 			name:     "not-in-okteto",

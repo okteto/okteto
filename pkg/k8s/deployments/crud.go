@@ -164,16 +164,16 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 }
 
 // DevModeOff deactivates dev mode for d
-func DevModeOff(tr *model.Translation, image string, c *kubernetes.Clientset) error {
+func DevModeOff(tr *model.Translation, imageToRedeploy string, c *kubernetes.Clientset) error {
 	d, err := translateDevModeOff(tr.Deployment)
 	tr.Deployment = d
 	if err != nil {
 		return err
 	}
-	if image != "" {
+	if imageToRedeploy != "" {
 		for _, rule := range tr.Rules {
 			devContainer := GetDevContainer(&d.Spec.Template.Spec, rule.Container)
-			devContainer.Image = image
+			devContainer.Image = imageToRedeploy
 		}
 	}
 	if err := update(d, c); err != nil {
