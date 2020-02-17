@@ -12,9 +12,17 @@
 // limitations under the License.
 package cmd
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
 func Test_downloadSyncthing(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		return
+	}
+
+	// we only test this on windows because linux is covered by CI/CD
 	if err := downloadSyncthing(); err != nil {
 		t.Fatal(err)
 	}
