@@ -16,6 +16,7 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -51,9 +52,20 @@ func Test_executeInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	defer os.RemoveAll(dir)
+
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.NewV4().String()))
 	if err := executeInit(p, false, "golang", dir); err != nil {
 		t.Fatal(err)
+	}
+
+	d, err := loadDev(p)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if d.Image != "okteto/golang:1" {
+		t.Errorf("got %s, expected %s", d.Image, "okteto/golang:1")
 	}
 
 	if err := executeInit(p, false, "java", dir); err == nil {
@@ -62,5 +74,14 @@ func Test_executeInit(t *testing.T) {
 
 	if err := executeInit(p, true, "ruby", dir); err != nil {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
+	}
+
+	d, err = loadDev(p)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if d.Image != "okteto/ruby:2" {
+		t.Errorf("got %s, expected %s", d.Image, "okteto/ruby:2")
 	}
 }
