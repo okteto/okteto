@@ -110,12 +110,10 @@ func getTokenFromEnv() (*Token, error) {
 
 func queryUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
 	var user u
-	q := fmt.Sprintf(`
-				mutation {
-					auth(code: "%s", source: "cli") {
-					  id,name,email,githubID,token,new,registry,buildkit
-					}
-				  }`, code)
+	q := fmt.Sprintf(`mutation {
+		auth(code: "%s", source: "cli") {
+			id,name,email,githubID,token,new
+		}}`, code)
 
 	req := graphql.NewRequest(q)
 	if err := client.Run(ctx, req, &user); err != nil {
@@ -131,12 +129,10 @@ func queryUser(ctx context.Context, client *graphql.Client, code string) (*u, er
 
 func queryLegacyUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
 	var user u
-	q := fmt.Sprintf(`
-				mutation {
-					auth(code: "%s", source: "cli") {
-					  id,name,email,githubID,token,new
-					}
-				  }`, code)
+	q := fmt.Sprintf(`mutation {
+	auth(code: "%s", source: "cli") {
+		id,name,email,githubID,token,new
+	}}`, code)
 
 	req := graphql.NewRequest(q)
 	if err := client.Run(ctx, req, &user); err != nil {
