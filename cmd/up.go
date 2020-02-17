@@ -105,7 +105,13 @@ func Up() *cobra.Command {
 			if syncthingUpgradeAvailable() {
 				fmt.Println("Installing dependencies...")
 				if err := downloadSyncthing(); err != nil {
-					log.Yellow("couldn't download syncthing, please try again later")
+					log.Infof("failed to upgrade syncthing: %s", err)
+
+					if !syncthingExists() {
+						return fmt.Errorf("couldn't download syncthing, please try again")
+					}
+
+					log.Yellow("couldn't download syncthing, will try again later")
 					fmt.Println()
 				}
 			}

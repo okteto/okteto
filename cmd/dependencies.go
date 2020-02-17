@@ -42,9 +42,17 @@ var (
 	versionRegex     = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
-func syncthingUpgradeAvailable() bool {
+func syncthingExists() bool {
 	_, err := os.Stat(syncthing.GetInstallPath())
 	if os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
+func syncthingUpgradeAvailable() bool {
+	if !syncthingExists() {
 		return true
 	}
 
