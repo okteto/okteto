@@ -19,10 +19,10 @@ import (
 
 func Test_downloadSyncthing(t *testing.T) {
 	if runtime.GOOS != "windows" {
-		return
+		// we only test this on windows because linux is already covered by CI/CD
+		t.Skip("this test is only required for windows")
 	}
 
-	// we only test this on windows because linux is covered by CI/CD
 	if err := downloadSyncthing(); err != nil {
 		t.Fatal(err)
 	}
