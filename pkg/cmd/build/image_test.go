@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,7 @@ func Test_GetImageTag(t *testing.T) {
 		dev               *model.Dev
 		imageTag          string
 		d                 *appsv1.Deployment
-		isOktetoNamespace bool
+		oktetoRegistryURL string
 		expected          string
 	}{
 		{
@@ -37,7 +38,7 @@ func Test_GetImageTag(t *testing.T) {
 			dev:               &model.Dev{Name: "dev", Namespace: "ns"},
 			imageTag:          "imageTag",
 			d:                 &appsv1.Deployment{},
-			isOktetoNamespace: false,
+			oktetoRegistryURL: "",
 			expected:          "imageTag",
 		},
 		{
@@ -45,7 +46,7 @@ func Test_GetImageTag(t *testing.T) {
 			dev:               &model.Dev{Name: "dev", Namespace: "ns"},
 			imageTag:          "imageTag",
 			d:                 &appsv1.Deployment{},
-			isOktetoNamespace: true,
+			oktetoRegistryURL: okteto.CloudRegistryURL,
 			expected:          "imageTag",
 		},
 		{
@@ -53,7 +54,7 @@ func Test_GetImageTag(t *testing.T) {
 			dev:               &model.Dev{Name: "dev", Namespace: "ns"},
 			imageTag:          "",
 			d:                 &appsv1.Deployment{},
-			isOktetoNamespace: true,
+			oktetoRegistryURL: okteto.CloudRegistryURL,
 			expected:          "registry.cloud.okteto.net/ns/dev:okteto",
 		},
 		{
@@ -76,13 +77,13 @@ func Test_GetImageTag(t *testing.T) {
 					},
 				},
 			},
-			isOktetoNamespace: false,
+			oktetoRegistryURL: "",
 			expected:          "okteto/test:uuid",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GetImageTag(tt.dev, tt.imageTag, tt.d, tt.isOktetoNamespace)
+			result := GetImageTag(tt.dev, tt.imageTag, tt.d, tt.oktetoRegistryURL)
 			if tt.expected != result {
 				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.name)
 			}

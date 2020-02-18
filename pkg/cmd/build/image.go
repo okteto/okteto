@@ -49,12 +49,12 @@ func GetRepoNameWithoutTag(name string) string {
 }
 
 //GetImageTag returns the image taag to build and push
-func GetImageTag(dev *model.Dev, imageTag string, d *appsv1.Deployment, isOktetoNamespace bool) string {
+func GetImageTag(dev *model.Dev, imageTag string, d *appsv1.Deployment, oktetoRegistryURL string) string {
 	if imageTag != "" {
 		return imageTag
 	}
-	if isOktetoNamespace {
-		return fmt.Sprintf("%s/%s/%s:okteto", okteto.GetRegistry(), dev.Namespace, dev.Name)
+	if oktetoRegistryURL != "" {
+		return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, dev.Namespace, dev.Name)
 	}
 	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, dev.Container)
 	imageWithoutTag := GetRepoNameWithoutTag(devContainer.Image)

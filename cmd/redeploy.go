@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
@@ -55,23 +56,26 @@ func Redeploy() *cobra.Command {
 			if dev.Namespace == "" {
 				dev.Namespace = configNamespace
 			}
-			isOktetoNamespace := false
+			oktetoRegistryURL := ""
 			n, err := namespaces.Get(dev.Namespace, c)
 			if err == nil {
 				if namespaces.IsOktetoNamespace(n) {
-					isOktetoNamespace = true
+					oktetoRegistryURL, err = okteto.GetRegistry()
+					if err != nil {
+						return err
+					}
 				}
 			}
 
-			if err := runRedeploy(dev, imageTag, isOktetoNamespace, c); err != nil {
-				analytics.TrackRedeploy(false, isOktetoNamespace)
+			if err := runRedeploy(dev, imageTag, oktetoRegistryURL, c); err != nil {
+				analytics.TrackRedeploy(false, oktetoRegistryURL)
 				return err
 			}
 
 			log.Success("Development environment '%s' redeployed", dev.Name)
 			log.Println()
 
-			analytics.TrackRedeploy(true, isOktetoNamespace)
+			analytics.TrackRedeploy(true, oktetoRegistryURL)
 			log.Info("completed redeploy command")
 			return nil
 		},
@@ -83,14 +87,20 @@ func Redeploy() *cobra.Command {
 	return cmd
 }
 
-func runRedeploy(dev *model.Dev, imageTag string, isOktetoNamespace bool, c *kubernetes.Clientset) error {
+func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernetes.Clientset) error {
 	d, err := deployments.Get(dev, dev.Namespace, c)
 	if err != nil {
 		return err
 	}
-	imageTag = build.GetImageTag(dev, imageTag, d, isOktetoNamespace)
+
+	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
+	if err != nil {
+		return err
+	}
+
+	imageTag = build.GetImageTag(dev, imageTag, d, oktetoRegistryURL)
 	var imageDigest string
-	imageDigest, err = RunBuild(".", "Dockerfile", imageTag, "", false)
+	imageDigest, err = RunBuild(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false)
 	if err != nil {
 		return fmt.Errorf("error building image '%s': %s", imageTag, err)
 	}

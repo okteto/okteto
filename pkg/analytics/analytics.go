@@ -139,9 +139,9 @@ func TrackDownVolumes(success bool) {
 }
 
 // TrackRedeploy sends a tracking event to mixpanel when the user redeploys a development environment
-func TrackRedeploy(success, isOktetoNamespace bool) {
+func TrackRedeploy(success bool, oktetoRegistryURL string) {
 	props := map[string]interface{}{
-		"isOktetoNamespace": isOktetoNamespace,
+		"oktetoRegistryURL": oktetoRegistryURL,
 	}
 	track(redeployEvent, success, props)
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/okteto/okteto/pkg/buildkit"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -33,9 +34,18 @@ const (
 func GetBuildKitHost() (string, bool, error) {
 	buildKitHost := os.Getenv("BUILDKIT_HOST")
 	if buildKitHost != "" {
+		log.Information("Running your build in %s...", buildKitHost)
 		return buildKitHost, false, nil
 	}
 	buildkitURL, err := okteto.GetBuildKit()
+	if err != nil {
+		return "", false, err
+	}
+	if buildkitURL == okteto.CloudBuildKitURL {
+		log.Information("Running your build in Okteto Cloud...")
+	} else {
+		log.Information("Running your build in Okteto Enterprise...")
+	}
 	return buildkitURL, true, err
 }
 

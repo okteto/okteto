@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/containerd/console"
 	"github.com/moby/buildkit/client"
@@ -26,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/spf13/cobra"
@@ -44,7 +42,11 @@ func Build() *cobra.Command {
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting build command")
-			if _, err := RunBuild(args[0], file, tag, target, noCache); err != nil {
+			buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
+			if err != nil {
+				return err
+			}
+			if _, err := RunBuild(buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
@@ -67,23 +69,8 @@ func Build() *cobra.Command {
 }
 
 //RunBuild starts the build sequence
-func RunBuild(path, file, tag, target string, noCache bool) (string, error) {
+func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target string, noCache bool) (string, error) {
 	ctx := context.Background()
-
-	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
-	if err != nil {
-		return "", fmt.Errorf("'BUILDKIT_HOST' not set. You can run 'okteto login' to run your builds in Okteto Cloud for free")
-	}
-	oktetoBuildKit, _ := okteto.GetBuildKit()
-	if oktetoBuildKit != buildKitHost {
-		log.Information("Running your build in %s...", buildKitHost)
-	} else {
-		if strings.Contains(buildKitHost, okteto.CloudBuildKitURL) {
-			log.Information("Running your build in Okteto Cloud...")
-		} else {
-			log.Information("Running your build in Okteto Enterprise...")
-		}
-	}
 
 	c, err := client.New(ctx, buildKitHost, client.WithFailFast())
 	if err != nil {
@@ -101,7 +88,6 @@ func RunBuild(path, file, tag, target string, noCache bool) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to create temporary build folder: %s", err)
 		}
-
 		defer os.Remove(fileWithCacheHandler)
 		file = fileWithCacheHandler
 	}
