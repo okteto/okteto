@@ -19,7 +19,7 @@ import (
 	"testing"
 )
 
-func Test_downloadSyncthing(t *testing.T) {
+func TestInstall(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		// we only test this on windows because linux is already covered by CI/CD in the integration test
 		t.Skip("this test is only required for windows")
