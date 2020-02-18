@@ -100,11 +100,7 @@ func Install(p getter.ProgressTracker) error {
 // IsInstalled returns true if syncthing is installed
 func IsInstalled() bool {
 	_, err := os.Stat(getInstallPath())
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	return true
+	return !os.IsNotExist(err)
 }
 
 // ShouldUpgrade returns true if syncthing should be upgraded
