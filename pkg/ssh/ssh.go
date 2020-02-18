@@ -28,7 +28,7 @@ func buildHostname(name string) string {
 
 // AddEntry adds an entry to the user's sshconfig
 func AddEntry(name string, port int) error {
-	return add(getDefault(), buildHostname(name), port)
+	return add(getSSHConfigPath(), buildHostname(name), port)
 }
 
 func add(path string, name string, port int) error {
@@ -54,7 +54,7 @@ func add(path string, name string, port int) error {
 
 // RemoveEntry removes the entry to the user's sshconfig if found
 func RemoveEntry(name string) error {
-	return remove(getDefault(), buildHostname(name))
+	return remove(getSSHConfigPath(), buildHostname(name))
 }
 
 func remove(path string, name string) error {
@@ -127,6 +127,6 @@ func save(cfg *sshConfig, path string) error {
 	return nil
 }
 
-func getDefault() string {
+func getSSHConfigPath() string {
 	return filepath.Join(config.GetUserHomeDir(), ".ssh", "config")
 }

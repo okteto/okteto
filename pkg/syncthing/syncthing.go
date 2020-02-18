@@ -110,7 +110,7 @@ type Completion struct {
 
 // New constructs a new Syncthing.
 func New(dev *model.Dev) (*Syncthing, error) {
-	fullPath := GetInstallPath()
+	fullPath := getInstallPath()
 	remotePort, err := model.GetAvailablePort()
 	if err != nil {
 		return nil, err
@@ -534,8 +534,7 @@ func getPID(pidPath string) (int, error) {
 	return strconv.Atoi(string(content))
 }
 
-// GetInstallPath returns the expected install path for syncthing
-func GetInstallPath() string {
+func getInstallPath() string {
 	return filepath.Join(config.GetHome(), getBinaryName())
 }
 

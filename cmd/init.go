@@ -56,13 +56,18 @@ func Init() *cobra.Command {
 		Use:   "init",
 		Short: "Automatically generates your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := executeInit(devPath, overwrite)
-			if err == nil {
-				log.Success(fmt.Sprintf("Okteto manifest (%s) created", devPath))
-				return nil
+			l := os.Getenv("OKTETO_LANGUAGE")
+			workDir, err := os.Getwd()
+			if err != nil {
+				return err
 			}
 
-			return err
+			if err := executeInit(devPath, overwrite, l, workDir); err != nil {
+				return err
+			}
+
+			log.Success(fmt.Sprintf("Okteto manifest (%s) created", devPath))
+			return nil
 		},
 	}
 
@@ -71,24 +76,17 @@ func Init() *cobra.Command {
 	return cmd
 }
 
-func executeInit(devPath string, overwrite bool) error {
+func executeInit(devPath string, overwrite bool, language string, workDir string) error {
 	if !overwrite {
 		if fileExists(devPath) {
 			return fmt.Errorf("%s already exists. Please delete it before running the command again", devPath)
 		}
 	}
 
-	workDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
 	var dev *model.Dev
-	var language string
-	if l, ok := os.LookupEnv("OKTETO_LANGUAGE"); ok {
-		log.Debugf("generating config for %s", l)
-		dev = linguist.GetDevConfig(l)
-		language = l
+	if len(language) > 0 {
+		log.Debugf("generating config for %s", language)
+		dev = linguist.GetDevConfig(language)
 	} else {
 		l, err := linguist.ProcessDirectory(workDir)
 		if err != nil {

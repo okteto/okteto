@@ -22,9 +22,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"strconv"
+	"path/filepath"
 	"strings"
-	"time"
+
+	"github.com/okteto/okteto/pkg/log"
 )
 
 type (
@@ -212,16 +213,19 @@ func (config *sshConfig) writeTo(w io.Writer) error {
 	return err
 }
 
-func (config *sshConfig) writeToFilepath(filePath string) error {
+func (config *sshConfig) writeToFilepath(p string) error {
+	temp, err := ioutil.TempFile("", "")
+	if err != nil {
+		return fmt.Errorf("failed to create tempfile: %s", err)
+	}
 
-	// create a tmp file in the same path with the same mode
-	tmpFilePath := filePath + "." + strconv.FormatInt(time.Now().UnixNano(), 10)
+	defer os.Remove(temp.Name())
 
-	stat, err := os.Stat(filePath)
+	stat, err := os.Stat(p)
 	var mode os.FileMode
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return err
+			return fmt.Errorf("failed to get info on %s: %s", p, err)
 		}
 
 		// default for ssh_config
@@ -230,22 +234,25 @@ func (config *sshConfig) writeToFilepath(filePath string) error {
 		mode = stat.Mode()
 	}
 
-	file, err := os.OpenFile(tmpFilePath, os.O_CREATE|os.O_WRONLY|os.O_EXCL|os.O_SYNC, mode)
-	if err != nil {
+	if err := config.writeTo(temp); err != nil {
 		return err
 	}
 
-	if err := config.writeTo(file); err != nil {
-		_ = file.Close()
+	if err := temp.Close(); err != nil {
 		return err
 	}
 
-	if err := file.Close(); err != nil {
-		return err
+	if err := os.Chmod(temp.Name(), mode); err != nil {
+		return fmt.Errorf("failed to set permissions to %s: %s", temp.Name(), err)
 	}
 
-	if err := os.Rename(tmpFilePath, filePath); err != nil {
-		return err
+	dir := filepath.Dir(p)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		log.Infof("failed to created %s: %s", dir, err)
+	}
+
+	if err := os.Rename(temp.Name(), p); err != nil {
+		return fmt.Errorf("failed to move %s to %s: %s", temp.Name(), p, err)
 	}
 
 	return nil

@@ -31,6 +31,9 @@ func Test_save(t *testing.T) {
 		{
 			name: "with-machineid", token: &Token{ID: "1234", Token: "ABCDEFG", URL: "http://example.com", MachineID: "machine-1"},
 		},
+		{
+			name: "with-url", token: &Token{ID: "1234", Token: "ABCDEFG", URL: "http://example.com", MachineID: "machine-1", Buildkit: "builkit.example.com", Registry: "registry.example.com"},
+		},
 	}
 
 	for _, tt := range tests {
