@@ -82,7 +82,7 @@ func Build() *cobra.Command {
 func RunBuild(path, file, tag, target string, noCache bool) error {
 	ctx := context.Background()
 
-	buildKitHost, err := getBuildKitHost()
+	buildKitHost, isOktetoCluster, err := getBuildKitHost()
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func RunBuild(path, file, tag, target string, noCache bool) error {
 	if file == "" {
 		file = filepath.Join(path, "Dockerfile")
 	}
-	if buildKitHost == okteto.GetBuildKit() {
+	if isOktetoCluster {
 		fileWithCacheHandler, err := getFileWithCacheHandler(file)
 		if err != nil {
 			return fmt.Errorf("failed to create temporary build folder: %s", err)
@@ -136,12 +136,13 @@ func RunBuild(path, file, tag, target string, noCache bool) error {
 	return nil
 }
 
-func getBuildKitHost() (string, error) {
+func getBuildKitHost() (string, bool, error) {
 	buildKitHost := os.Getenv("BUILDKIT_HOST")
 	if buildKitHost != "" {
-		return buildKitHost, nil
+		return buildKitHost, false, nil
 	}
-	return okteto.GetBuildKit(), nil
+	buildkitURL, err := okteto.GetBuildKit()
+	return buildkitURL, true, err
 }
 
 func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client.SolveOpt, error) {
@@ -161,15 +162,14 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client
 	}
 
 	attachable := []session.Attachable{}
-	if strings.HasPrefix(imageTag, okteto.GetRegistry()) {
-		// set Okteto Cloud credentials
-		token, err := okteto.GetToken()
+	token, err := okteto.GetToken()
+	if err == nil {
+		registryURL, err := okteto.GetRegistry()
 		if err != nil {
-			return nil, fmt.Errorf("failed to read okteto token. Did you run 'okteto login'?")
+			return nil, err
 		}
-		attachable = append(attachable, buildkit.NewDockerAndOktetoAuthProvider(okteto.GetUserID(), token.Token, os.Stderr))
+		attachable = append(attachable, buildkit.NewDockerAndOktetoAuthProvider(registryURL, okteto.GetUserID(), token.Token, os.Stderr))
 	} else {
-		// read docker credentials from `.docker/config.json`
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))
 	}
 

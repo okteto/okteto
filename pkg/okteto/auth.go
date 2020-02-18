@@ -21,9 +21,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 )
 
@@ -35,7 +37,7 @@ const (
 	// CloudRegistryURL is the default URL of okteto registry
 	CloudRegistryURL = "registry.cloud.okteto.net"
 	// CloudBuildKitURL is the default URL of okteto buildkit
-	CloudBuildKitURL = "buildkit.cloud.okteto.net"
+	CloudBuildKitURL = "tcp://buildkit.cloud.okteto.net:1234"
 )
 
 // Token contains the auth token and the URL it belongs to
@@ -44,8 +46,8 @@ type Token struct {
 	URL       string `json:"URL"`
 	ID        string `json:"ID"`
 	MachineID string `json:"MachineID"`
-	Buildkit  string `json:"buildkit"`
-	Registry  string `json:"registry"`
+	Buildkit  string `json:"Buildkit"`
+	Registry  string `json:"Registry"`
 }
 
 // User contains the auth information of the logged in user
@@ -60,6 +62,10 @@ type User struct {
 	Registry string
 }
 
+type u struct {
+	Auth User
+}
+
 var currentToken *Token
 
 // Auth authenticates in okteto with a github OAuth code
@@ -69,22 +75,9 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 		return nil, err
 	}
 
-	q := fmt.Sprintf(`
-				mutation {
-					auth(code: "%s", source: "cli") {
-					  id,name,email,githubID,token,new,registry,buildkit
-					}
-				  }`, code)
-
-	req := graphql.NewRequest(q)
-
-	type u struct {
-		Auth User
-	}
-
-	var user u
-	if err := client.Run(ctx, req, &user); err != nil {
-		return nil, fmt.Errorf("unauthorized request: %s", err)
+	user, err := queryUser(ctx, client, code)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(user.Auth.GithubID) == 0 || len(user.Auth.Token) == 0 {
@@ -114,6 +107,40 @@ func getTokenFromEnv() (*Token, error) {
 	t.URL = p.String()
 
 	return t, nil
+}
+
+func queryUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
+	var user u
+	q := fmt.Sprintf(`mutation {
+		auth(code: "%s", source: "cli") {
+			id,name,email,githubID,token,new,registry,buildkit
+		}}`, code)
+
+	req := graphql.NewRequest(q)
+	if err := client.Run(ctx, req, &user); err != nil {
+		if strings.Contains(err.Error(), "Cannot query field") {
+			log.Infof("query using the legacy parameters: %s", err)
+			return queryLegacyUser(ctx, client, code)
+		}
+		return nil, fmt.Errorf("unauthorized request: %w", err)
+	}
+
+	return &user, nil
+}
+
+func queryLegacyUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
+	var user u
+	q := fmt.Sprintf(`mutation {
+	auth(code: "%s", source: "cli") {
+		id,name,email,githubID,token,new
+	}}`, code)
+
+	req := graphql.NewRequest(q)
+	if err := client.Run(ctx, req, &user); err != nil {
+		return nil, fmt.Errorf("unauthorized request: %w", err)
+	}
+
+	return &user, nil
 }
 
 //GetToken returns the token of the authenticated user
@@ -170,27 +197,33 @@ func GetURL() string {
 }
 
 // GetRegistry returns the URL of the registry
-func GetRegistry() string {
+func GetRegistry() (string, error) {
 	t, err := GetToken()
 	if err != nil {
-		return CloudRegistryURL
+		return "", errors.ErrNotLogged
 	}
 	if t.Registry == "" {
-		return CloudRegistryURL
+		if GetURL() == CloudURL {
+			return CloudRegistryURL, nil
+		}
+		return "", errors.ErrNotLogged
 	}
-	return t.Registry
+	return t.Registry, nil
 }
 
 // GetBuildKit returns the URL of the okteto buildkit
-func GetBuildKit() string {
+func GetBuildKit() (string, error) {
 	t, err := GetToken()
 	if err != nil {
-		return fmt.Sprintf("tcp://%s", CloudBuildKitURL)
+		return "", errors.ErrNotLogged
 	}
 	if t.Buildkit == "" {
-		return fmt.Sprintf("tcp://%s", CloudBuildKitURL)
+		if GetURL() == CloudURL {
+			return CloudBuildKitURL, nil
+		}
+		return "", errors.ErrNotLogged
 	}
-	return fmt.Sprintf("tcp://%s", t.Buildkit)
+	return t.Buildkit, nil
 }
 
 func saveToken(id, token, url, registry, buildkit string) error {
