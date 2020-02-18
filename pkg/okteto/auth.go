@@ -25,6 +25,7 @@ import (
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 )
 
@@ -36,7 +37,7 @@ const (
 	// CloudRegistryURL is the default URL of okteto registry
 	CloudRegistryURL = "registry.cloud.okteto.net"
 	// CloudBuildKitURL is the default URL of okteto buildkit
-	CloudBuildKitURL = "buildkit.cloud.okteto.net"
+	CloudBuildKitURL = "tcp://buildkit.cloud.okteto.net:1234"
 )
 
 // Token contains the auth token and the URL it belongs to
@@ -45,8 +46,8 @@ type Token struct {
 	URL       string `json:"URL"`
 	ID        string `json:"ID"`
 	MachineID string `json:"MachineID"`
-	Buildkit  string `json:"buildkit"`
-	Registry  string `json:"registry"`
+	Buildkit  string `json:"Buildkit"`
+	Registry  string `json:"Registry"`
 }
 
 // User contains the auth information of the logged in user
@@ -112,7 +113,7 @@ func queryUser(ctx context.Context, client *graphql.Client, code string) (*u, er
 	var user u
 	q := fmt.Sprintf(`mutation {
 		auth(code: "%s", source: "cli") {
-			id,name,email,githubID,token,new
+			id,name,email,githubID,token,new,registry,buildkit
 		}}`, code)
 
 	req := graphql.NewRequest(q)
@@ -196,27 +197,33 @@ func GetURL() string {
 }
 
 // GetRegistry returns the URL of the registry
-func GetRegistry() string {
+func GetRegistry() (string, error) {
 	t, err := GetToken()
 	if err != nil {
-		return CloudRegistryURL
+		return "", errors.ErrNotLogged
 	}
 	if t.Registry == "" {
-		return CloudRegistryURL
+		if GetURL() == CloudURL {
+			return CloudRegistryURL, nil
+		}
+		return "", errors.ErrNotLogged
 	}
-	return t.Registry
+	return t.Registry, nil
 }
 
 // GetBuildKit returns the URL of the okteto buildkit
-func GetBuildKit() string {
+func GetBuildKit() (string, error) {
 	t, err := GetToken()
 	if err != nil {
-		return fmt.Sprintf("tcp://%s", CloudBuildKitURL)
+		return "", errors.ErrNotLogged
 	}
 	if t.Buildkit == "" {
-		return fmt.Sprintf("tcp://%s", CloudBuildKitURL)
+		if GetURL() == CloudURL {
+			return CloudBuildKitURL, nil
+		}
+		return "", errors.ErrNotLogged
 	}
-	return fmt.Sprintf("tcp://%s", t.Buildkit)
+	return t.Buildkit, nil
 }
 
 func saveToken(id, token, url, registry, buildkit string) error {
