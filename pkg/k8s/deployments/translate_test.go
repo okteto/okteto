@@ -250,6 +250,17 @@ services:
 		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
 	}
 
+	d1Down, err := translateDevModeOff(d1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d1Orig := dev.GevSandbox()
+	marshalled1Down, _ := yaml.Marshal(d1Down.Spec.Template.Spec)
+	marshalled1Orig, _ := yaml.Marshal(d1Orig.Spec.Template.Spec)
+	if string(marshalled1Down) != string(marshalled1Orig) {
+		t.Fatalf("Wrong d1 down.\nActual %+v, \nExpected %+v", string(marshalled1Down), string(marshalled1Orig))
+	}
+
 	dev2 := dev.Services[0]
 	d2 := dev2.GevSandbox()
 	rule2 := dev2.ToTranslationRule(dev)
@@ -321,6 +332,17 @@ services:
 	marshalled2OK, _ := yaml.Marshal(d2OK.Spec.Template.Spec)
 	if string(marshalled2) != string(marshalled2OK) {
 		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
+	}
+
+	d2Down, err := translateDevModeOff(d2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d2Orig := dev2.GevSandbox()
+	marshalled2Down, _ := yaml.Marshal(d2Down.Spec.Template.Spec)
+	marshalled2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	if string(marshalled2Down) != string(marshalled2Orig) {
+		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
 	}
 }
 

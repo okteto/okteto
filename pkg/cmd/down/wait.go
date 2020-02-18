@@ -23,25 +23,24 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// WaitForDevPodsTermination waits for up to t seconds for pods to be marked as terminated
-func WaitForDevPodsTermination(c kubernetes.Interface, d *model.Dev, t int) {
+func waitForDevPodsTermination(c kubernetes.Interface, d *model.Dev, t int) {
 	interactive := map[string]string{labels.InteractiveDevLabel: d.Name}
 	detached := map[string]string{labels.DetachedDevLabel: d.Name}
 
 	wg := &sync.WaitGroup{}
 
 	wg.Add(1)
-	go waitForDevPodsTermination(c, d.Namespace, interactive, wg, t)
+	go _waitForDevPodsTermination(c, d.Namespace, interactive, wg, t)
 
 	if len(d.Services) > 0 {
 		wg.Add(1)
-		go waitForDevPodsTermination(c, d.Namespace, detached, wg, t)
+		go _waitForDevPodsTermination(c, d.Namespace, detached, wg, t)
 	}
 
 	wg.Wait()
 }
 
-func waitForDevPodsTermination(c kubernetes.Interface, namespace string, selector map[string]string, wg *sync.WaitGroup, t int) {
+func _waitForDevPodsTermination(c kubernetes.Interface, namespace string, selector map[string]string, wg *sync.WaitGroup, t int) {
 	defer wg.Done()
 
 	tick := time.NewTicker(1 * time.Second)
