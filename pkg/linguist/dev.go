@@ -230,7 +230,7 @@ func normalizeLanguage(language string) string {
 		return maven
 	case "ruby":
 		return ruby
-	case "go":
+	case "go", "golang":
 		return golang
 	case "c#":
 		return csharp
