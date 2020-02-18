@@ -14,22 +14,16 @@
 package cmd
 
 import (
-	"strings"
-
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/secrets"
-	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //Down deactivates the development environment
@@ -104,55 +98,11 @@ func runDown(dev *model.Dev) error {
 		return err
 	}
 
-	tr, err := deployments.GetTranslations(dev, d, client)
+	err = down.Run(dev, "", d, client)
 	if err != nil {
 		return err
 	}
 
-	if len(tr) == 0 {
-		log.Info("no translations available in the deployment")
-	}
-
-	for _, t := range tr {
-		if t.Deployment == nil {
-			continue
-		}
-		if err := deployments.DevModeOff(t.Deployment, client); err != nil {
-			return err
-		}
-	}
-
-	if err := secrets.Destroy(dev, client); err != nil {
-		return err
-	}
-
-	//remove deprecated okteto volume
-	if err := client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(
-		model.DeprecatedOktetoVolumeName,
-		&metav1.DeleteOptions{}); err != nil && !strings.Contains(err.Error(), "not found") {
-		log.Debugf("failed to remove deprecated okteto persistent volume: %s", err)
-	}
-
-	stopSyncthing(dev)
-
-	if err := ssh.RemoveEntry(dev.Name); err != nil {
-		log.Infof("failed to remove ssh entry: %s", err)
-	}
-
-	if d == nil {
-		return nil
-	}
-
-	if _, ok := d.Annotations[model.OktetoAutoCreateAnnotation]; ok {
-		if err := deployments.Destroy(dev, client); err != nil {
-			return err
-		}
-		if err := services.DestroyDev(dev, client); err != nil {
-			return err
-		}
-	}
-
-	down.WaitForDevPodsTermination(client, dev, 30)
 	return nil
 }
 
@@ -170,16 +120,4 @@ func removeVolume(dev *model.Dev) error {
 	}
 
 	return volumes.Destroy(dev, client)
-}
-
-func stopSyncthing(dev *model.Dev) {
-	sy, err := syncthing.New(dev)
-	if err != nil {
-		log.Infof("failed to create syncthing instance")
-		return
-	}
-
-	if err := sy.Stop(true); err != nil {
-		log.Infof("failed to stop existing syncthing")
-	}
 }
