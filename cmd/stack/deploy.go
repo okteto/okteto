@@ -16,11 +16,11 @@ package stack
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/spf13/cobra"
-	"helm.sh/helm/pkg/kube"
+
+	// "helm.sh/helm/pkg/kube"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 )
@@ -47,18 +47,18 @@ func executeDeployStack(ctx context.Context) error {
 	chartPath := "/Users/pablo/github.com/okteto/stack/chart"
 	chart, err := loader.Load(chartPath)
 	if err != nil {
-		return fmt.Errorf"error loading chart: %s", err)
+		return fmt.Errorf("error loading chart: %s", err)
 	}
 
-	kubeconfigPath := "/Users/pablo/.kube/config"
+	// kubeconfigPath := "/Users/pablo/.kube/config"
 	releaseName := "test"
 	releaseNamespace := "pchico83"
 	actionConfig := new(action.Configuration)
-	if err := actionConfig.Init(kube.GetConfig(kubeconfigPath, "", releaseNamespace), releaseNamespace, os.Getenv("HELM_DRIVER"), func(format string, v ...interface{}) {
-		fmt.Sprintf(format, v)
-	}); err != nil {
-		panic(err)
-	}
+	// if err := actionConfig.Init(kube.GetConfig(kubeconfigPath, "", releaseNamespace), releaseNamespace, os.Getenv("HELM_DRIVER"), func(format string, v ...interface{}) {
+	// 	fmt.Sprintf(format, v)
+	// }); err != nil {
+	// 	panic(err)
+	// }
 
 	iCli := action.NewInstall(actionConfig)
 	iCli.Namespace = releaseNamespace
