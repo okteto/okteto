@@ -154,7 +154,7 @@ func TestDownloadSyncthing(t *testing.T) {
 	for _, tt := range tests {
 		test.Run(tt.os, func(t *testing.T) {
 			u, err := syncthing.GetDownloadURL(tt.os, "amd64")
-			req, err := http.NewRequest("HEAD", u, nil)
+			req, err := http.NewRequest("GET", u, nil)
 			if err != nil {
 				t.Fatal(err.Error())
 			}
