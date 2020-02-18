@@ -5,7 +5,6 @@ require (
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.4.2
 	github.com/Microsoft/go-winio v0.4.14 // indirect
-	github.com/Venafi/vcert v3.18.4+incompatible
 	github.com/briandowns/spinner v1.7.0
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
