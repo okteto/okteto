@@ -30,8 +30,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/okteto/okteto/cmd"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/syncthing"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -153,7 +153,8 @@ func TestDownloadSyncthing(t *testing.T) {
 	test := scopeagent.GetTest(t)
 	for _, tt := range tests {
 		test.Run(tt.os, func(t *testing.T) {
-			req, err := http.NewRequest("HEAD", cmd.SyncthingURL[tt.os], nil)
+			u, err := syncthing.GetDownloadURL(tt.os, "amd64")
+			req, err := http.NewRequest("HEAD", u, nil)
 			if err != nil {
 				t.Fatal(err.Error())
 			}
