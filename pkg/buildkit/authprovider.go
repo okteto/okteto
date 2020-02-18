@@ -23,17 +23,19 @@ import (
 	"github.com/docker/cli/cli/config/types"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth"
-	"github.com/okteto/okteto/pkg/okteto"
 	"google.golang.org/grpc"
 )
 
+var oktetoRegistry = ""
+
 //NewDockerAndOktetoAuthProvider reads local docker credentials and auto-injects okteto registry credentials
-func NewDockerAndOktetoAuthProvider(username, password string, stderr io.Writer) session.Attachable {
+func NewDockerAndOktetoAuthProvider(registryURL, username, password string, stderr io.Writer) session.Attachable {
 	result := &authProvider{
 		config: config.LoadDefaultConfigFile(stderr),
 	}
-	result.config.AuthConfigs[okteto.GetRegistry()] = types.AuthConfig{
-		ServerAddress: okteto.GetRegistry(),
+	oktetoRegistry = registryURL
+	result.config.AuthConfigs[registryURL] = types.AuthConfig{
+		ServerAddress: registryURL,
 		Username:      username,
 		Password:      password,
 	}
@@ -56,9 +58,9 @@ func (ap *authProvider) Register(server *grpc.Server) {
 
 func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
 	res := &auth.CredentialsResponse{}
-	if req.Host == okteto.GetRegistry() {
-		res.Username = ap.config.AuthConfigs[okteto.GetRegistry()].Username
-		res.Secret = ap.config.AuthConfigs[okteto.GetRegistry()].Password
+	if req.Host == oktetoRegistry {
+		res.Username = ap.config.AuthConfigs[oktetoRegistry].Username
+		res.Secret = ap.config.AuthConfigs[oktetoRegistry].Password
 		return res, nil
 	}
 
