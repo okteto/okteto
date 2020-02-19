@@ -81,12 +81,12 @@ func RunBuild(ctx context.Context, buildKitHost string, isOktetoCluster bool, pa
 		return "", errors.Wrapf(err, "invalid buildkit host %s", buildKitHost)
 	}
 
-	creds := client.WithCredentials(b.Hostname(), "/Users/ramiro/okteto/okteto/ca.cert", "", "")
-
 	okToken, err := okteto.GetToken()
 	if err != nil {
 		return "", errors.Wrapf(err, "invalid okteto token, please run `okteto login` again")
 	}
+
+	creds := client.WithCredentials(b.Hostname(), okteto.GetCertificatePath(), "", "")
 
 	oauthToken := &oauth2.Token{
 		AccessToken: okToken.Token,

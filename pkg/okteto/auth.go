@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -31,13 +32,6 @@ import (
 
 const (
 	tokenFile = ".token.json"
-
-	// CloudURL is the default URL of okteto
-	CloudURL = "https://cloud.okteto.com"
-	// CloudRegistryURL is the default URL of okteto registry
-	CloudRegistryURL = "registry.cloud.okteto.net"
-	// CloudBuildKitURL is the default URL of okteto buildkit
-	CloudBuildKitURL = "tcp://buildkit.cloud.okteto.net:1234"
 )
 
 // Token contains the auth token and the URL it belongs to
@@ -52,14 +46,15 @@ type Token struct {
 
 // User contains the auth information of the logged in user
 type User struct {
-	Name     string
-	Email    string
-	GithubID string
-	Token    string
-	ID       string
-	New      bool
-	Buildkit string
-	Registry string
+	Name        string
+	Email       string
+	GithubID    string
+	Token       string
+	ID          string
+	New         bool
+	Buildkit    string
+	Registry    string
+	Certificate string
 }
 
 type u struct {
@@ -84,7 +79,16 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 		return nil, fmt.Errorf("empty response")
 	}
 
-	if err := saveToken(user.Auth.ID, user.Auth.Token, url, user.Auth.Registry, user.Auth.Buildkit); err != nil {
+	if err := saveToken(user.Auth.ID, user.Auth.Token, url, user.Auth.Registry, user.Auth.Buildkit, user.Auth.Certificate); err != nil {
+		return nil, err
+	}
+
+	d, err := base64.StdEncoding.DecodeString(user.Auth.Certificate)
+	if err != nil {
+		return nil, fmt.Errorf("bad response: %w", err)
+	}
+
+	if err := ioutil.WriteFile(GetCertificatePath(), d, 0600); err != nil {
 		return nil, err
 	}
 
@@ -113,7 +117,7 @@ func queryUser(ctx context.Context, client *graphql.Client, code string) (*u, er
 	var user u
 	q := fmt.Sprintf(`mutation {
 		auth(code: "%s", source: "cli") {
-			id,name,email,githubID,token,new,registry,buildkit
+			id,name,email,githubID,token,new,registry,buildkit,certificate
 		}}`, code)
 
 	req := graphql.NewRequest(q)
@@ -226,7 +230,12 @@ func GetBuildKit() (string, error) {
 	return t.Buildkit, nil
 }
 
-func saveToken(id, token, url, registry, buildkit string) error {
+// GetCertificatePath returns the path  to the certificate of the okteto buildkit
+func GetCertificatePath() string {
+	return filepath.Join(config.GetHome(), ".ca.crt")
+}
+
+func saveToken(id, token, url, registry, buildkit, cert string) error {
 	t, err := GetToken()
 	if err != nil {
 		log.Debugf("bad token, re-initializing: %s", err)
