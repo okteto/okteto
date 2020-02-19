@@ -20,6 +20,7 @@ require (
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
 	github.com/fatih/color v1.7.0
+	github.com/gofrs/flock v0.7.1
 	github.com/gogo/googleapis v1.3.0 // indirect
 	github.com/google/go-github/v28 v28.1.1
 	github.com/googleapis/gnostic v0.2.0 // indirect
@@ -38,6 +39,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.1 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/rubenv/sql-migrate v0.0.0-20200212082348-64f95ea68aa3 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2

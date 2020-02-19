@@ -20,6 +20,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	//HelmRepoURL link to okteto stack helm repo
+	HelmRepoURL = "https://okteto.github.io/stack/"
+	//HelmRepoName repo name for local link to okteto stack helm repo
+	HelmRepoName = "okteto-stack"
+	//HelmChartName chart name for okteto stack
+	HelmChartName = "stack"
+	//HelmChartVersion chart version for okteto stack chart
+	HelmChartVersion = "0.1.0"
+)
+
 //Stack stack management commands
 func Stack(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{

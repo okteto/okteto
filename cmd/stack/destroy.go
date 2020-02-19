@@ -19,7 +19,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/stack"
+	"github.com/okteto/okteto/pkg/helm"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
@@ -54,7 +54,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&stackPath, "file", "f", "okteto-stack.yml", "path to the stack manifest file")
+	cmd.Flags().StringVarP(&stackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is destroyed")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
 	return cmd
@@ -71,13 +71,13 @@ func executeDestroyStack(ctx context.Context, s *model.Stack, removeVolumes bool
 		s.Namespace = settings.Namespace()
 	}
 
-	if err := actionConfig.Init(settings.RESTClientGetter(), s.Namespace, stack.HelmDriver, func(format string, v ...interface{}) {
+	if err := actionConfig.Init(settings.RESTClientGetter(), s.Namespace, helm.HelmDriver, func(format string, v ...interface{}) {
 		log.Infof(fmt.Sprintf(format, v...))
 	}); err != nil {
 		return fmt.Errorf("error initializing stack client: %s", err)
 	}
 
-	exists, err := stack.ExistRelease(actionConfig, s.Name)
+	exists, err := helm.ExistRelease(action.NewList(actionConfig), s.Name)
 	if err != nil {
 		return fmt.Errorf("error listing stacks: %s", err)
 	}

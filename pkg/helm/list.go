@@ -11,30 +11,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package helm
 
 import (
-	"fmt"
-
-	"github.com/okteto/okteto/pkg/model"
+	"helm.sh/helm/v3/pkg/action"
 )
 
-const (
-	//DefaultStackManifest default okteto stack manifest file
-	DefaultStackManifest   = "okteto-stack.yml"
-	secondaryStackManifest = "okteto-stack.yaml"
-)
-
-//LoadStack loads an okteto stack manifet checking "yml" and "yaml"
-func LoadStack(stackPath string) (*model.Stack, error) {
-	if !FileExists(stackPath) {
-		if stackPath == DefaultStackManifest {
-			if FileExists(secondaryStackManifest) {
-				return LoadStack(secondaryStackManifest)
-			}
-		}
-		return nil, fmt.Errorf("'%s' does not exist", stackPath)
+//ExistRelease returns if a release exists
+func ExistRelease(c *action.List, name string) (bool, error) {
+	c.AllNamespaces = false
+	results, err := c.Run()
+	if err != nil {
+		return false, err
 	}
-
-	return model.GetStack(stackPath)
+	for _, release := range results {
+		if release.Name == name {
+			return true, nil
+		}
+	}
+	return false, nil
 }

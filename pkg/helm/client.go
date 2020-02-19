@@ -11,29 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
-
-import (
-	"helm.sh/helm/v3/pkg/action"
-)
+package helm
 
 const (
 	// HelmDriver default helm driver
 	HelmDriver = "secrets"
 )
-
-//ExistRelease returns if a release exists
-func ExistRelease(actionConfig *action.Configuration, name string) (bool, error) {
-	c := action.NewList(actionConfig)
-	c.AllNamespaces = false
-	results, err := c.Run()
-	if err != nil {
-		return false, err
-	}
-	for _, release := range results {
-		if release.Name == name {
-			return true, nil
-		}
-	}
-	return false, nil
-}
