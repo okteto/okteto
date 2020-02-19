@@ -34,7 +34,7 @@ require (
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/mattn/psutil v0.0.0-20170126005127-e6c88f1e9be6
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
-	github.com/moby/buildkit v0.6.2
+	github.com/moby/buildkit v0.6.3
 	github.com/nicksnyder/go-i18n v1.10.0 // indirect
 	github.com/opencontainers/runtime-spec v1.0.1 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
@@ -67,7 +67,7 @@ replace (
 	github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309
 	github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
 	github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
-	github.com/moby/buildkit => github.com/okteto/buildkit v0.6.2-0.20200219081023-c9a118e2a574
+	github.com/moby/buildkit => github.com/okteto/buildkit v0.6.4-0.20200219082809-f36ac58edca6
 	golang.org/x/crypto v0.0.0-20190129210102-0709b304e793 => golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
 )
 
