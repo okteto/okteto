@@ -67,8 +67,8 @@ replace (
 	github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309
 	github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
 	github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
+	github.com/moby/buildkit => github.com/okteto/buildkit v0.6.2-0.20200219081023-c9a118e2a574
 	golang.org/x/crypto v0.0.0-20190129210102-0709b304e793 => golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
-	github.com/moby/buildkit v0.6.2 => github.com/okteto/buildkit v0.6.2
 )
 
 go 1.13
