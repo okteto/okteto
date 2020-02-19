@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -40,7 +41,7 @@ func Redeploy() *cobra.Command {
 		Short: "Builds, pushes and redeploys the target deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting redeploy command")
-
+			ctx := context.Background()
 			dev, err := loadDev(devPath)
 			if err != nil {
 				return err
@@ -67,7 +68,7 @@ func Redeploy() *cobra.Command {
 				}
 			}
 
-			if err := runRedeploy(dev, imageTag, oktetoRegistryURL, c); err != nil {
+			if err := runRedeploy(ctx, dev, imageTag, oktetoRegistryURL, c); err != nil {
 				analytics.TrackRedeploy(false, oktetoRegistryURL)
 				return err
 			}
@@ -87,7 +88,7 @@ func Redeploy() *cobra.Command {
 	return cmd
 }
 
-func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernetes.Clientset) error {
+func runRedeploy(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernetes.Clientset) error {
 	d, err := deployments.Get(dev, dev.Namespace, c)
 	if err != nil {
 		return err
@@ -99,8 +100,10 @@ func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernet
 	}
 
 	imageTag = build.GetImageTag(dev, imageTag, d, oktetoRegistryURL)
+	log.Infof("redeploying with image tag %s", imageTag)
+
 	var imageDigest string
-	imageDigest, err = RunBuild(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false)
+	imageDigest, err = RunBuild(ctx, buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false)
 	if err != nil {
 		return fmt.Errorf("error building image '%s': %s", imageTag, err)
 	}

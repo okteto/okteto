@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -25,9 +26,12 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/log"
-	"golang.org/x/sync/errgroup"
-
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/oauth2"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
 //Build build and optionally push a Docker image
@@ -42,11 +46,12 @@ func Build() *cobra.Command {
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting build command")
+			ctx := context.Background()
 			buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 			if err != nil {
 				return err
 			}
-			if _, err := RunBuild(buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache); err != nil {
+			if _, err := RunBuild(ctx, buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
@@ -69,12 +74,28 @@ func Build() *cobra.Command {
 }
 
 //RunBuild starts the build sequence
-func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target string, noCache bool) (string, error) {
-	ctx := context.Background()
+func RunBuild(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, file, tag, target string, noCache bool) (string, error) {
 
-	c, err := client.New(ctx, buildKitHost, client.WithFailFast())
+	b, err := url.Parse(buildKitHost)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "invalid buildkit host %s", buildKitHost)
+	}
+
+	creds := client.WithCredentials(b.Hostname(), "/Users/ramiro/okteto/okteto/ca.cert", "", "")
+
+	okToken, err := okteto.GetToken()
+	if err != nil {
+		return "", errors.Wrapf(err, "invalid okteto token, please run `okteto login` again")
+	}
+
+	oauthToken := &oauth2.Token{
+		AccessToken: okToken.Token,
+	}
+
+	rpc := client.WithRPCCreds(oauth.NewOauthAccess(oauthToken))
+	c, err := client.New(ctx, buildKitHost, client.WithFailFast(), creds, rpc)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create build client")
 	}
 
 	ch := make(chan *client.SolveStatus)
@@ -86,7 +107,7 @@ func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target
 	if isOktetoCluster {
 		fileWithCacheHandler, err := build.GetDockerfileWithCacheHandler(file)
 		if err != nil {
-			return "", fmt.Errorf("failed to create temporary build folder: %s", err)
+			return "", errors.Wrap(err, "failed to create temporary build folder")
 		}
 		defer os.Remove(fileWithCacheHandler)
 		file = fileWithCacheHandler
@@ -94,7 +115,7 @@ func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target
 
 	solveOpt, err := build.GetSolveOpt(path, file, tag, target, noCache)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to create build solver")
 	}
 
 	if tag == "" {
@@ -105,7 +126,7 @@ func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target
 	eg.Go(func() error {
 		var err error
 		solveResp, err = c.Solve(ctx, nil, *solveOpt, ch)
-		return err
+		return errors.Wrap(err, "build failed")
 	})
 
 	eg.Go(func() error {
