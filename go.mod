@@ -4,6 +4,7 @@ require (
 	cloud.google.com/go v0.39.0 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.4.2
+	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/briandowns/spinner v1.7.0
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
@@ -24,7 +25,8 @@ require (
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/hashicorp/go-getter v1.0.2
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/jmoiron/sqlx v1.2.0 // indirect
+	github.com/lib/pq v1.3.0 // indirect
 	github.com/machinebox/graphql v0.2.2
 	github.com/manifoldco/promptui v0.3.2
 	github.com/matryer/is v1.2.0 // indirect
@@ -36,6 +38,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.1 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/rubenv/sql-migrate v0.0.0-20200212082348-64f95ea68aa3 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
@@ -49,12 +52,15 @@ require (
 	google.golang.org/grpc v1.27.0
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0
+	gopkg.in/yaml.v2 v2.2.5
+	helm.sh/helm v2.16.3+incompatible
 	helm.sh/helm/v3 v3.1.0
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2
 	k8s.io/cli-runtime v0.17.2
 	k8s.io/client-go v0.17.2
+	k8s.io/helm v2.16.3+incompatible
 	k8s.io/kubectl v0.17.2
 	rsc.io/letsencrypt v0.0.3 // indirect
 )

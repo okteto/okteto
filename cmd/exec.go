@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/exec"
@@ -43,7 +44,7 @@ func Exec() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			dev, err := loadDev(devPath)
+			dev, err := utils.LoadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -70,7 +71,7 @@ func Exec() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the exec command is executed")
 
 	return cmd

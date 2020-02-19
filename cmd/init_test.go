@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/okteto/okteto/cmd/utils"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -59,7 +60,7 @@ func Test_executeInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d, err := loadDev(p)
+	d, err := utils.LoadDev(p)
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,7 +77,7 @@ func Test_executeInit(t *testing.T) {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
-	d, err = loadDev(p)
+	d, err = utils.LoadDev(p)
 	if err != nil {
 		t.Error(err)
 	}

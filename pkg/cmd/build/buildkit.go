@@ -33,6 +33,7 @@ const (
 //GetBuildKitHost returns thee buildkit url
 func GetBuildKitHost() (string, bool, error) {
 	buildKitHost := os.Getenv("BUILDKIT_HOST")
+	//TODO dont support this use case
 	if buildKitHost != "" {
 		log.Information("Running your build in %s...", buildKitHost)
 		return buildKitHost, false, nil
@@ -41,6 +42,7 @@ func GetBuildKitHost() (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
+	//TODO print info out of this function
 	if buildkitURL == okteto.CloudBuildKitURL {
 		log.Information("Running your build in Okteto Cloud...")
 	} else {

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
@@ -32,9 +33,7 @@ import (
 )
 
 const (
-	stignore          = ".stignore"
-	defaultManifest   = "okteto.yml"
-	secondaryManifest = "okteto.yaml"
+	stignore = ".stignore"
 )
 
 var wrongImageNames = map[string]bool{
@@ -71,14 +70,14 @@ func Init() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "overwrite existing manifest file")
 	return cmd
 }
 
 func executeInit(devPath string, overwrite bool, language string, workDir string) error {
 	if !overwrite {
-		if fileExists(devPath) {
+		if utils.FileExists(devPath) {
 			return fmt.Errorf("%s already exists. Please delete it before running the command again", devPath)
 		}
 	}
@@ -121,7 +120,7 @@ func executeInit(devPath string, overwrite bool, language string, workDir string
 		return fmt.Errorf("Failed to write your manifest")
 	}
 
-	if !fileExists(stignore) {
+	if !utils.FileExists(stignore) {
 		log.Debugf("getting stignore for %s", language)
 		c := linguist.GetSTIgnore(language)
 		if err := ioutil.WriteFile(stignore, c, 0600); err != nil {

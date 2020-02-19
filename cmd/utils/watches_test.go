@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package utils
 
 import "testing"
 
-func Test_isWatchesConfigurationTooLow(t *testing.T) {
+func Test_IsWatchesConfigurationTooLow(t *testing.T) {
 	var tests = []struct {
 		name     string
 		value    string
@@ -49,7 +49,7 @@ func Test_isWatchesConfigurationTooLow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := isWatchesConfigurationTooLow(tt.value)
+			result := IsWatchesConfigurationTooLow(tt.value)
 			if tt.expected != result {
 				t.Errorf("expected %t got %t in test %s", tt.expected, result, tt.name)
 			}

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package utils
 
 import (
 	"fmt"
@@ -22,42 +22,10 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 )
 
-func loadDev(devPath string) (*model.Dev, error) {
-	if !fileExists(devPath) {
-		if devPath == defaultManifest {
-			if fileExists(secondaryManifest) {
-				return loadDev(secondaryManifest)
-			}
-		}
-
-		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
-	}
-
-	return model.Get(devPath)
-}
-
-func askYesNo(q string) (bool, error) {
-	var answer string
-	for {
-		fmt.Print(q)
-		if _, err := fmt.Scanln(&answer); err != nil {
-			return false, err
-		}
-
-		if answer == "y" || answer == "n" {
-			break
-		}
-
-		log.Fail("input must be 'y' or 'n'")
-	}
-
-	return answer == "y", nil
-}
-
-func fileExists(name string) bool {
+//FileExists checks if a file exists
+func FileExists(name string) bool {
 
 	_, err := os.Stat(name)
 	if os.IsNotExist(err) {
@@ -71,7 +39,8 @@ func fileExists(name string) bool {
 	return true
 }
 
-func checkLocalWatchesConfiguration() {
+//CheckLocalWatchesConfiguration shows a warning if local watcches are too low
+func CheckLocalWatchesConfiguration() {
 	if runtime.GOOS != "linux" {
 		return
 	}
@@ -83,7 +52,7 @@ func checkLocalWatchesConfiguration() {
 		return
 	}
 
-	if isWatchesConfigurationTooLow(string(f)) {
+	if IsWatchesConfigurationTooLow(string(f)) {
 		log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low.")
 		log.Yellow("This can affect Okteto's file synchronization performance.")
 		log.Yellow("We recommend you to raise it to at least 524288 to ensure proper performance.")
@@ -91,7 +60,8 @@ func checkLocalWatchesConfiguration() {
 	}
 }
 
-func isWatchesConfigurationTooLow(value string) bool {
+//IsWatchesConfigurationTooLow returns if watches configuration is too low
+func IsWatchesConfigurationTooLow(value string) bool {
 	value = strings.TrimSuffix(string(value), "\n")
 	c, err := strconv.Atoi(value)
 	if err != nil {

@@ -18,16 +18,20 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 
-	// "helm.sh/helm/pkg/kube"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/cli/values"
+	"helm.sh/helm/v3/pkg/kube"
 )
 
 //Deploy deploys a stack
 func Deploy(ctx context.Context) *cobra.Command {
 	var stackPath string
+	var name string
 	var namespace string
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -38,35 +42,87 @@ func Deploy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&stackPath, "file", "f", "okteto-stack.yaml", "path to the stack manifest file")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the deploy command is executed")
+	cmd.Flags().StringVarP(&stackPath, "file", "f", "okteto-stack.yml", "path to the stack manifest file")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
+	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the stack name")
 	return cmd
 }
 
 func executeDeployStack(ctx context.Context) error {
-	chartPath := "/Users/pablo/github.com/okteto/stack/chart"
-	chart, err := loader.Load(chartPath)
-	if err != nil {
-		return fmt.Errorf("error loading chart: %s", err)
-	}
-
-	// kubeconfigPath := "/Users/pablo/.kube/config"
+	kubeconfigPath := "/Users/pablo/.kube/config"
 	releaseName := "test"
 	releaseNamespace := "pchico83"
 	actionConfig := new(action.Configuration)
-	// if err := actionConfig.Init(kube.GetConfig(kubeconfigPath, "", releaseNamespace), releaseNamespace, os.Getenv("HELM_DRIVER"), func(format string, v ...interface{}) {
-	// 	fmt.Sprintf(format, v)
-	// }); err != nil {
-	// 	panic(err)
-	// }
-
-	iCli := action.NewInstall(actionConfig)
-	iCli.Namespace = releaseNamespace
-	iCli.ReleaseName = releaseName
-	rel, err := iCli.Run(chart, nil)
-	if err != nil {
+	if err := actionConfig.Init(kube.GetConfig(kubeconfigPath, "", releaseNamespace), releaseNamespace, "secrets", func(format string, v ...interface{}) {
+		log.Infof(fmt.Sprintf(format, v...))
+	}); err != nil {
 		panic(err)
 	}
-	fmt.Println("Successfully installed release: ", rel.Name)
+
+	valueOpts := &values.Options{}
+	valueOpts.ValueFiles = []string{"/Users/pablo/github.com/okteto/stack/okteto-stack.yaml"}
+	vals, err := valueOpts.MergeValues(nil)
+	if err != nil {
+		return err
+	}
+
+	lClient := action.NewList(actionConfig)
+	lClient.AllNamespaces = false
+	results, err := lClient.Run()
+	if err != nil {
+		return err
+	}
+	install := true
+	for _, release := range results {
+		if release.Name == releaseName {
+			install = false
+			break
+		}
+
+	}
+
+	//TODO: download chart and update and check given version is available
+
+	if install {
+		iCli := action.NewInstall(actionConfig)
+		iCli.Namespace = releaseNamespace
+		iCli.ReleaseName = releaseName
+		settings := cli.New()
+		chartPath, err := iCli.ChartPathOptions.LocateChart("okteto-stack/stack", settings)
+		if err != nil {
+			return err
+		}
+
+		chart, err := loader.Load(chartPath)
+		if err != nil {
+			return fmt.Errorf("error loading chart: %s", err)
+		}
+
+		rel, err := iCli.Run(chart, vals)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Successfully installed release: ", rel.Name)
+	} else {
+		uCli := action.NewUpgrade(actionConfig)
+		uCli.Namespace = releaseNamespace
+		settings := cli.New()
+		chartPath, err := uCli.ChartPathOptions.LocateChart("okteto-stack/stack", settings)
+		if err != nil {
+			return err
+		}
+
+		chart, err := loader.Load(chartPath)
+		if err != nil {
+			return fmt.Errorf("error loading chart: %s", err)
+		}
+
+		rel, err := uCli.Run(releaseName, chart, vals)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Successfully upgraded release: ", rel.Name)
+	}
+
 	return nil
 }

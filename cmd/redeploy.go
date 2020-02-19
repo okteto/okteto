@@ -16,6 +16,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
@@ -41,7 +42,7 @@ func Redeploy() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting redeploy command")
 
-			dev, err := loadDev(devPath)
+			dev, err := utils.LoadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -81,7 +82,7 @@ func Redeploy() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the redeploy command is executed")
 	cmd.Flags().StringVarP(&imageTag, "image", "i", "", "image to build and push")
 	return cmd
@@ -109,9 +110,9 @@ func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernet
 		imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 
-	spinner := newSpinner(fmt.Sprintf("Redeploying development environment '%s'...", dev.Name))
-	spinner.start()
-	defer spinner.stop()
+	spinner := utils.NewSpinner(fmt.Sprintf("Redeploying development environment '%s'...", dev.Name))
+	spinner.Start()
+	defer spinner.Stop()
 	err = down.Run(dev, imageTag, d, c)
 	if err != nil {
 		return err
