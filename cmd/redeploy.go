@@ -100,7 +100,7 @@ func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernet
 
 	imageTag = build.GetImageTag(dev, imageTag, d, oktetoRegistryURL)
 	var imageDigest string
-	imageDigest, err = RunBuild(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false)
+	imageDigest, err = RunBuild(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false, nil)
 	if err != nil {
 		return fmt.Errorf("error building image '%s': %s", imageTag, err)
 	}
