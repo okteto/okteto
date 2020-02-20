@@ -72,7 +72,9 @@ func executeDeployStack(ctx context.Context, s *model.Stack, stackPath string) e
 		s.Namespace = settings.Namespace()
 	}
 
-	s.Okteto = true
+	if err := helm.Translate(s); err != nil {
+		return err
+	}
 
 	dynamicStackFilename, err := saveStackFile(s)
 	if err != nil {

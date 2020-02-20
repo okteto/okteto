@@ -13,7 +13,33 @@
 
 package helm
 
+import (
+	"fmt"
+	"os"
+
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
+	"github.com/okteto/okteto/pkg/model"
+)
+
 const (
 	// HelmDriver default helm driver
 	HelmDriver = "secrets"
 )
+
+//Translate translates the original stack based on the cluster type and built image sha256's
+func Translate(s *model.Stack) error {
+	c, _, _, err := k8Client.GetLocal()
+	if err != nil {
+		return fmt.Errorf("error creating kubernetes client: %s", err)
+	}
+	n, err := namespaces.Get(s.Namespace, c)
+	if err == nil {
+		s.Okteto = namespaces.IsOktetoNamespace(n)
+	}
+	for i, svc := range s.Services {
+		svc.Image = os.ExpandEnv(svc.Image)
+		s.Services[i] = svc
+	}
+	return err
+}
