@@ -16,15 +16,19 @@ package stack
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/helm"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v1"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -64,19 +68,20 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 func executeDeployStack(ctx context.Context, s *model.Stack, stackPath string) error {
 	settings := cli.New()
-	actionConfig := new(action.Configuration)
 	if s.Namespace == "" {
 		s.Namespace = settings.Namespace()
 	}
 
-	if err := actionConfig.Init(settings.RESTClientGetter(), s.Namespace, helm.HelmDriver, func(format string, v ...interface{}) {
-		log.Infof(fmt.Sprintf(format, v...))
-	}); err != nil {
-		return fmt.Errorf("error initializing stack client: %s", err)
+	s.Okteto = true
+
+	dynamicStackFilename, err := saveStackFile(s)
+	if err != nil {
+		return err
 	}
+	defer os.Remove(dynamicStackFilename)
 
 	valueOpts := &values.Options{}
-	valueOpts.ValueFiles = []string{stackPath}
+	valueOpts.ValueFiles = []string{dynamicStackFilename}
 	vals, err := valueOpts.MergeValues(nil)
 	if err != nil {
 		return fmt.Errorf("error initializing stack values: %s", err)
@@ -108,6 +113,13 @@ func executeDeployStack(ctx context.Context, s *model.Stack, stackPath string) e
 	spinner.Start()
 	defer spinner.Stop()
 
+	actionConfig := new(action.Configuration)
+	if err := actionConfig.Init(settings.RESTClientGetter(), s.Namespace, helm.HelmDriver, func(format string, v ...interface{}) {
+		log.Infof(fmt.Sprintf(format, v...))
+	}); err != nil {
+		return fmt.Errorf("error initializing stack client: %s", err)
+	}
+
 	exists, err := helm.ExistRelease(action.NewList(actionConfig), s.Name)
 	if err != nil {
 		return fmt.Errorf("error listing stacks: %s", err)
@@ -120,4 +132,26 @@ func executeDeployStack(ctx context.Context, s *model.Stack, stackPath string) e
 
 func isNotExist(err error) bool {
 	return os.IsNotExist(errors.Cause(err))
+}
+
+func saveStackFile(s *model.Stack) (string, error) {
+	stackTmpFolder := filepath.Join(config.GetHome(), ".stack")
+	if err := os.MkdirAll(stackTmpFolder, 0700); err != nil {
+		return "", fmt.Errorf("failed to create %s: %s", stackTmpFolder, err)
+	}
+
+	tmpFile, err := ioutil.TempFile(stackTmpFolder, "stack-")
+	if err != nil {
+		return "", fmt.Errorf("failed to create dynamic stack manifest file: %s", err)
+	}
+
+	marshalled, err := yaml.Marshal(s)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshall dynamic stack manifest: %s", err)
+	}
+
+	if err := ioutil.WriteFile(tmpFile.Name(), marshalled, 0600); err != nil {
+		return "", fmt.Errorf("failed to save dynaamic stack manifest: %s", err)
+	}
+	return tmpFile.Name(), nil
 }
