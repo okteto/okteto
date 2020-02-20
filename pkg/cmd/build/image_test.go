@@ -16,76 +16,61 @@ package build
 import (
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 func Test_GetImageTag(t *testing.T) {
 	var tests = []struct {
-		name              string
-		dev               *model.Dev
-		imageTag          string
-		d                 *appsv1.Deployment
-		oktetoRegistryURL string
-		expected          string
+		tname              string
+		name               string
+		namespace          string
+		imageTag           string
+		deploymentImageTag string
+		oktetoRegistryURL  string
+		expected           string
 	}{
 		{
-			name:              "imageTag-not-in-okteto",
-			dev:               &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:          "imageTag",
-			d:                 &appsv1.Deployment{},
-			oktetoRegistryURL: "",
-			expected:          "imageTag",
+			tname:              "imageTag-not-in-okteto",
+			name:               "dev",
+			namespace:          "ns",
+			imageTag:           "imageTag",
+			deploymentImageTag: "",
+			oktetoRegistryURL:  "",
+			expected:           "imageTag",
 		},
 		{
-			name:              "imageTag-in-okteto",
-			dev:               &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:          "imageTag",
-			d:                 &appsv1.Deployment{},
-			oktetoRegistryURL: okteto.CloudRegistryURL,
-			expected:          "imageTag",
+			tname:              "imageTag-in-okteto",
+			name:               "dev",
+			namespace:          "ns",
+			imageTag:           "imageTag",
+			deploymentImageTag: "",
+			oktetoRegistryURL:  okteto.CloudRegistryURL,
+			expected:           "imageTag",
 		},
 		{
-			name:              "okteto",
-			dev:               &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:          "",
-			d:                 &appsv1.Deployment{},
-			oktetoRegistryURL: okteto.CloudRegistryURL,
-			expected:          "registry.cloud.okteto.net/ns/dev:okteto",
+			tname:              "okteto",
+			name:               "dev",
+			namespace:          "ns",
+			imageTag:           "",
+			deploymentImageTag: "",
+			oktetoRegistryURL:  okteto.CloudRegistryURL,
+			expected:           "registry.cloud.okteto.net/ns/dev:okteto-cache",
 		},
 		{
-			name:     "not-in-okteto",
-			dev:      &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag: "",
-			d: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("uuid"),
-				},
-				Spec: appsv1.DeploymentSpec{
-					Template: apiv1.PodTemplateSpec{
-						Spec: apiv1.PodSpec{
-							Containers: []apiv1.Container{
-								{
-									Image: "okteto/test:2",
-								},
-							},
-						},
-					},
-				},
-			},
-			oktetoRegistryURL: "",
-			expected:          "okteto/test:uuid",
+			tname:              "not-in-okteto",
+			name:               "dev",
+			namespace:          "ns",
+			imageTag:           "",
+			deploymentImageTag: "okteto/test:2",
+			oktetoRegistryURL:  "",
+			expected:           "okteto/test:okteto-cache",
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := GetImageTag(tt.dev, tt.imageTag, tt.d, tt.oktetoRegistryURL)
+		t.Run(tt.tname, func(t *testing.T) {
+			result := GetImageTag(tt.name, tt.namespace, tt.imageTag, tt.deploymentImageTag, tt.oktetoRegistryURL)
 			if tt.expected != result {
-				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.name)
+				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.tname)
 			}
 		})
 	}
