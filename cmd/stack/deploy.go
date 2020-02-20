@@ -28,7 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v1"
+	yaml "gopkg.in/yaml.v2"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
