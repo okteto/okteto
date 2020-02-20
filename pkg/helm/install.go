@@ -24,8 +24,9 @@ import (
 )
 
 //Install installs an okteto stack
-func Install(c *action.Install, settings *cli.EnvSettings, s *model.Stack, repoName, chartName, chartVersion string, vals map[string]interface{}) error {
+func Install(c *action.Install, settings *cli.EnvSettings, s *model.Stack, repoName, chartName, chartVersion string, vals map[string]interface{}, wait bool) error {
 	c.Namespace = s.Namespace
+	c.Atomic = wait
 	c.ReleaseName = s.Name
 	c.Version = chartVersion
 	chartPath, err := c.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", repoName, chartName), settings)

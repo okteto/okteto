@@ -40,6 +40,7 @@ import (
 func Deploy(ctx context.Context) *cobra.Command {
 	var stackPath string
 	var namespace string
+	var wait bool
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: fmt.Sprintf("Deploys a stack"),
@@ -53,7 +54,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err := s.UpdateNamespace(namespace); err != nil {
 				return err
 			}
-			err = executeDeployStack(ctx, s, stackPath)
+			err = executeDeployStack(ctx, s, wait)
 			analytics.TrackDeployStack(err == nil)
 			if err == nil {
 				log.Success("Successfully deployed stack '%s'", s.Name)
@@ -63,10 +64,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&stackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
+	cmd.Flags().BoolVarP(&wait, "wait", "", false, "wait until a minimum number of Pods of a Deployment, StatefulSet are in a ready state")
 	return cmd
 }
 
-func executeDeployStack(ctx context.Context, s *model.Stack, stackPath string) error {
+func executeDeployStack(ctx context.Context, s *model.Stack, wait bool) error {
 	settings := cli.New()
 	if s.Namespace == "" {
 		s.Namespace = settings.Namespace()
@@ -127,9 +129,9 @@ func executeDeployStack(ctx context.Context, s *model.Stack, stackPath string) e
 		return fmt.Errorf("error listing stacks: %s", err)
 	}
 	if exists {
-		return helm.Upgrade(action.NewUpgrade(actionConfig), settings, s, HelmRepoName, HelmChartName, HelmChartVersion, vals)
+		return helm.Upgrade(action.NewUpgrade(actionConfig), settings, s, HelmRepoName, HelmChartName, HelmChartVersion, vals, wait)
 	}
-	return helm.Install(action.NewInstall(actionConfig), settings, s, HelmRepoName, HelmChartName, HelmChartVersion, vals)
+	return helm.Install(action.NewInstall(actionConfig), settings, s, HelmRepoName, HelmChartName, HelmChartVersion, vals, wait)
 }
 
 func isNotExist(err error) bool {

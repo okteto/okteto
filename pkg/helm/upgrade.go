@@ -24,8 +24,10 @@ import (
 )
 
 //Upgrade upgrades an okteto stack
-func Upgrade(c *action.Upgrade, settings *cli.EnvSettings, s *model.Stack, repoName, chartName, chartVersion string, vals map[string]interface{}) error {
+func Upgrade(c *action.Upgrade, settings *cli.EnvSettings, s *model.Stack, repoName, chartName, chartVersion string, vals map[string]interface{}, wait bool) error {
 	c.Namespace = s.Namespace
+	c.Atomic = wait
+	c.MaxHistory = 2
 	c.Version = chartVersion
 	chartPath, err := c.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", repoName, chartName), settings)
 	if err != nil {
