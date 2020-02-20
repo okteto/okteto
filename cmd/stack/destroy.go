@@ -31,7 +31,6 @@ import (
 func Destroy(ctx context.Context) *cobra.Command {
 	var stackPath string
 	var namespace string
-	var rm bool
 	cmd := &cobra.Command{
 		Use:   "destroy",
 		Short: fmt.Sprintf("Destroys a stack"),
@@ -46,7 +45,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err = executeDestroyStack(ctx, s, rm)
+			err = executeDestroyStack(ctx, s)
 			analytics.TrackDestroyStack(err == nil)
 			if err == nil {
 				log.Success("Successfully destroyed stack '%s'", s.Name)
@@ -56,11 +55,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&stackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is destroyed")
-	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
 	return cmd
 }
 
-func executeDestroyStack(ctx context.Context, s *model.Stack, removeVolumes bool) error {
+func executeDestroyStack(ctx context.Context, s *model.Stack) error {
 	spinner := utils.NewSpinner(fmt.Sprintf("Destroying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
