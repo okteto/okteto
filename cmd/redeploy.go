@@ -89,19 +89,20 @@ func Redeploy() *cobra.Command {
 }
 
 func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernetes.Clientset) error {
-	d, err := deployments.Get(dev, dev.Namespace, c)
-	if err != nil {
-		return err
-	}
-
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return err
 	}
 
-	imageTag = build.GetImageTag(dev, imageTag, d, oktetoRegistryURL)
+	d, err := deployments.Get(dev, dev.Namespace, c)
+	if err != nil {
+		return err
+	}
+	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, dev.Container)
+
+	imageTag = build.GetImageTag(dev.Name, dev.Namespace, imageTag, devContainer.Image, oktetoRegistryURL)
 	var imageDigest string
-	imageDigest, err = RunBuild(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false)
+	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false)
 	if err != nil {
 		return fmt.Errorf("error building image '%s': %s", imageTag, err)
 	}

@@ -14,45 +14,102 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/containerd/console"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
+	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/buildkit"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
 	frontend = "dockerfile.v0"
 )
 
+//Run starts the build sequence
+func Run(buildKitHost string, isOktetoCluster bool, path, file, tag, target string, noCache bool) (string, error) {
+	ctx := context.Background()
+
+	c, err := client.New(ctx, buildKitHost, client.WithFailFast())
+	if err != nil {
+		return "", err
+	}
+
+	ch := make(chan *client.SolveStatus)
+	eg, ctx := errgroup.WithContext(ctx)
+
+	if file == "" {
+		file = filepath.Join(path, "Dockerfile")
+	}
+	if isOktetoCluster {
+		fileWithCacheHandler, err := getDockerfileWithCacheHandler(file)
+		if err != nil {
+			return "", fmt.Errorf("failed to create temporary build folder: %s", err)
+		}
+		defer os.Remove(fileWithCacheHandler)
+		file = fileWithCacheHandler
+	}
+
+	solveOpt, err := getSolveOpt(path, file, tag, target, noCache)
+	if err != nil {
+		return "", err
+	}
+
+	if tag == "" {
+		log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
+	}
+
+	var solveResp *client.SolveResponse
+	eg.Go(func() error {
+		var err error
+		solveResp, err = c.Solve(ctx, nil, *solveOpt, ch)
+		return err
+	})
+
+	eg.Go(func() error {
+		var c console.Console
+		if cn, err := console.ConsoleFromFile(os.Stderr); err == nil {
+			c = cn
+		}
+		// not using shared context to not disrupt display but let it finish reporting errors
+		return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stdout, ch)
+	})
+
+	if err := eg.Wait(); err != nil {
+		return "", err
+	}
+
+	return solveResp.ExporterResponse["containerimage.digest"], nil
+}
+
 //GetBuildKitHost returns thee buildkit url
 func GetBuildKitHost() (string, bool, error) {
 	buildKitHost := os.Getenv("BUILDKIT_HOST")
-	//TODO dont support this use case
 	if buildKitHost != "" {
-		log.Information("Running your build in %s...", buildKitHost)
+		log.Information("Running your build in %s", buildKitHost)
 		return buildKitHost, false, nil
 	}
 	buildkitURL, err := okteto.GetBuildKit()
 	if err != nil {
 		return "", false, err
 	}
-	//TODO print info out of this function
 	if buildkitURL == okteto.CloudBuildKitURL {
-		log.Information("Running your build in Okteto Cloud...")
+		log.Information("Running your build in Okteto Cloud")
 	} else {
-		log.Information("Running your build in Okteto Enterprise...")
+		log.Information("Running your build in Okteto Enterprise")
 	}
 	return buildkitURL, true, err
 }
 
-//GetSolveOpt returns the buildkit solve options
-func GetSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client.SolveOpt, error) {
+func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client.SolveOpt, error) {
 	if file == "" {
 		file = filepath.Join(buildCtx, "Dockerfile")
 	}

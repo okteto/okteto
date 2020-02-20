@@ -23,10 +23,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	appsv1 "k8s.io/api/apps/v1"
 )
 
 //GetRepoNameWithoutTag returns the image name without the tag
@@ -49,20 +46,18 @@ func GetRepoNameWithoutTag(name string) string {
 }
 
 //GetImageTag returns the image taag to build and push
-func GetImageTag(dev *model.Dev, imageTag string, d *appsv1.Deployment, oktetoRegistryURL string) string {
+func GetImageTag(name, namespace, imageTag, deploymentImageTag, oktetoRegistryURL string) string {
 	if imageTag != "" {
 		return imageTag
 	}
 	if oktetoRegistryURL != "" {
-		return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, dev.Namespace, dev.Name)
+		return fmt.Sprintf("%s/%s/%s:okteto-cache", oktetoRegistryURL, namespace, name)
 	}
-	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, dev.Container)
-	imageWithoutTag := GetRepoNameWithoutTag(devContainer.Image)
-	return fmt.Sprintf("%s:%s", imageWithoutTag, string(d.UID))
+	imageWithoutTag := GetRepoNameWithoutTag(deploymentImageTag)
+	return fmt.Sprintf("%s:okteto-cache", imageWithoutTag)
 }
 
-//GetDockerfileWithCacheHandler add multitenancy to the remote builds using cache mount ids
-func GetDockerfileWithCacheHandler(filename string) (string, error) {
+func getDockerfileWithCacheHandler(filename string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return "", err

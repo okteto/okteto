@@ -15,29 +15,14 @@ package helm
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/helmpath"
 	"helm.sh/helm/v3/pkg/repo"
 )
 
 //RepoUpdate updates a local helm repo
-func RepoUpdate(re *repo.Entry, settings *cli.EnvSettings, repoName, chartName, chartVersion string) error {
-	f := filepath.Join(settings.RepositoryCache, helmpath.CacheIndexFile(repoName))
-	ind, err := repo.LoadIndexFile(f)
-	if err == nil {
-		chartVersions, ok := ind.Entries[chartName]
-		if ok {
-			for _, cv := range chartVersions {
-				if cv.Version == chartVersion {
-					return nil
-				}
-			}
-		}
-	}
-
+func RepoUpdate(re *repo.Entry, settings *cli.EnvSettings, chartName string) error {
 	r, err := repo.NewChartRepository(re, getter.All(settings))
 	if err != nil {
 		return fmt.Errorf("error updating versions from the %s chart repository: %s", chartName, err)

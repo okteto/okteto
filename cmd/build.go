@@ -14,18 +14,11 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
-	"github.com/containerd/console"
-	"github.com/moby/buildkit/client"
-	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/log"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/spf13/cobra"
 )
@@ -46,7 +39,7 @@ func Build() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if _, err := RunBuild(buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache); err != nil {
+			if _, err := build.Run(buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
@@ -66,60 +59,4 @@ func Build() *cobra.Command {
 	cmd.Flags().StringVarP(&target, "target", "", "", "set the target build stage to build")
 	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
 	return cmd
-}
-
-//RunBuild starts the build sequence
-func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target string, noCache bool) (string, error) {
-	ctx := context.Background()
-
-	c, err := client.New(ctx, buildKitHost, client.WithFailFast())
-	if err != nil {
-		return "", err
-	}
-
-	ch := make(chan *client.SolveStatus)
-	eg, ctx := errgroup.WithContext(ctx)
-
-	if file == "" {
-		file = filepath.Join(path, "Dockerfile")
-	}
-	if isOktetoCluster {
-		fileWithCacheHandler, err := build.GetDockerfileWithCacheHandler(file)
-		if err != nil {
-			return "", fmt.Errorf("failed to create temporary build folder: %s", err)
-		}
-		defer os.Remove(fileWithCacheHandler)
-		file = fileWithCacheHandler
-	}
-
-	solveOpt, err := build.GetSolveOpt(path, file, tag, target, noCache)
-	if err != nil {
-		return "", err
-	}
-
-	if tag == "" {
-		log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
-	}
-
-	var solveResp *client.SolveResponse
-	eg.Go(func() error {
-		var err error
-		solveResp, err = c.Solve(ctx, nil, *solveOpt, ch)
-		return err
-	})
-
-	eg.Go(func() error {
-		var c console.Console
-		if cn, err := console.ConsoleFromFile(os.Stderr); err == nil {
-			c = cn
-		}
-		// not using shared context to not disrupt display but let it finish reporting errors
-		return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stdout, ch)
-	})
-
-	if err := eg.Wait(); err != nil {
-		return "", err
-	}
-
-	return solveResp.ExporterResponse["containerimage.digest"], nil
 }

@@ -40,6 +40,7 @@ import (
 func Deploy(ctx context.Context) *cobra.Command {
 	var stackPath string
 	var namespace string
+	var forceBuild bool
 	var wait bool
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -54,7 +55,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err := s.UpdateNamespace(namespace); err != nil {
 				return err
 			}
-			err = executeDeployStack(ctx, s, wait)
+			err = executeDeployStack(ctx, s, forceBuild, wait)
 			analytics.TrackDeployStack(err == nil)
 			if err == nil {
 				log.Success("Successfully deployed stack '%s'", s.Name)
@@ -64,17 +65,18 @@ func Deploy(ctx context.Context) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&stackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
+	cmd.Flags().BoolVarP(&forceBuild, "build", "", false, "build images before starting containers")
 	cmd.Flags().BoolVarP(&wait, "wait", "", false, "wait until a minimum number of Pods of a Deployment, StatefulSet are in a ready state")
 	return cmd
 }
 
-func executeDeployStack(ctx context.Context, s *model.Stack, wait bool) error {
+func executeDeployStack(ctx context.Context, s *model.Stack, forceBuild, wait bool) error {
 	settings := cli.New()
 	if s.Namespace == "" {
 		s.Namespace = settings.Namespace()
 	}
 
-	if err := helm.Translate(s); err != nil {
+	if err := helm.Translate(s, forceBuild); err != nil {
 		return err
 	}
 
@@ -108,7 +110,7 @@ func executeDeployStack(ctx context.Context, s *model.Stack, wait bool) error {
 		}
 		log.Information("'%s' has been added to your helm repositories.", HelmRepoName)
 	} else {
-		if err := helm.RepoUpdate(re, settings, HelmRepoName, HelmChartName, HelmChartVersion); err != nil {
+		if err := helm.RepoUpdate(re, settings, HelmChartName); err != nil {
 			return err
 		}
 	}
