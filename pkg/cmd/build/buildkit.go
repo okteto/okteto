@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/session"
@@ -50,7 +51,7 @@ func GetBuildKitHost() (string, bool, error) {
 }
 
 //GetSolveOpt returns the buildkit solve options
-func GetSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client.SolveOpt, error) {
+func GetSolveOpt(buildCtx, file, imageTag, target string, noCache bool, buildArgs []string) (*client.SolveOpt, error) {
 	if file == "" {
 		file = filepath.Join(buildCtx, "Dockerfile")
 	}
@@ -71,7 +72,13 @@ func GetSolveOpt(buildCtx, file, imageTag, target string, noCache bool) (*client
 	if noCache {
 		frontendAttrs["no-cache"] = ""
 	}
-
+	for _, buildArg := range buildArgs {
+		kv := strings.SplitN(buildArg, "=", 2)
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("invalid build-arg value %s", buildArg)
+		}
+		frontendAttrs["build-arg:"+kv[0]] = kv[1]
+	}
 	attachable := []session.Attachable{}
 	token, err := okteto.GetToken()
 	if err == nil {
