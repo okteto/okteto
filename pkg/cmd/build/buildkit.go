@@ -25,6 +25,7 @@ import (
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/buildkit"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/errgroup"
@@ -99,6 +100,9 @@ func GetBuildKitHost() (string, bool, error) {
 	}
 	buildkitURL, err := okteto.GetBuildKit()
 	if err != nil {
+		if err == errors.ErrNotLogged {
+			return "", false, fmt.Errorf("please run 'okteto login [URL]' to build your images in Okteto Cloud for free or set the variable 'BUILDKIT_HOST' to point to your own BuildKit instance")
+		}
 		return "", false, err
 	}
 	if buildkitURL == okteto.CloudBuildKitURL {
