@@ -150,7 +150,8 @@ func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*clien
 
 	okToken, err := okteto.GetToken()
 	if err != nil {
-		return nil, errors.Wrapf(err, okErrors.ErrNotLogged)
+		log.Infof("failed to get the token: %s", err.Error())
+		return nil, okErrors.ErrNotLogged
 	}
 
 	creds := client.WithCredentials(b.Hostname(), okteto.GetCertificatePath(), "", "")
