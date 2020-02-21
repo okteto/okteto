@@ -36,8 +36,9 @@ func Redeploy() *cobra.Command {
 	var imageTag string
 
 	cmd := &cobra.Command{
-		Use:   "redeploy",
-		Short: "Builds, pushes and redeploys the target deployment",
+		Use:    "redeploy",
+		Short:  "Builds, pushes and redeploys the target deployment",
+		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting redeploy command")
 			dev, err := loadDev(devPath)
