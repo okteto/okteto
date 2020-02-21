@@ -34,11 +34,12 @@ require (
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/mattn/psutil v0.0.0-20170126005127-e6c88f1e9be6
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
-	github.com/moby/buildkit v0.6.2
+	github.com/moby/buildkit v0.6.3
 	github.com/nicksnyder/go-i18n v1.10.0 // indirect
 	github.com/opencontainers/runtime-spec v1.0.1 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
@@ -47,6 +48,7 @@ require (
 	go.undefinedlabs.com/scopeagent v0.0.0-20200123164547-e307ed3a9216
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03 // indirect
 	google.golang.org/grpc v1.26.0
@@ -65,6 +67,7 @@ replace (
 	github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309
 	github.com/hashicorp/go-immutable-radix => github.com/tonistiigi/go-immutable-radix v0.0.0-20170803185627-826af9ccf0fe
 	github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
+	github.com/moby/buildkit => github.com/okteto/buildkit v0.6.4-0.20200219101554-ef122c20337f
 	golang.org/x/crypto v0.0.0-20190129210102-0709b304e793 => golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
 )
 

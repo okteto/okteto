@@ -40,7 +40,6 @@ func Redeploy() *cobra.Command {
 		Short: "Builds, pushes and redeploys the target deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting redeploy command")
-
 			dev, err := loadDev(devPath)
 			if err != nil {
 				return err
@@ -99,6 +98,8 @@ func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernet
 	}
 
 	imageTag = build.GetImageTag(dev, imageTag, d, oktetoRegistryURL)
+	log.Infof("redeploying with image tag %s", imageTag)
+
 	var imageDigest string
 	imageDigest, err = RunBuild(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false, nil)
 	if err != nil {
