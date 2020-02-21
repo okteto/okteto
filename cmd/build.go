@@ -25,6 +25,7 @@ import (
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/pkg/errors"
@@ -149,7 +150,7 @@ func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*clien
 
 	okToken, err := okteto.GetToken()
 	if err != nil {
-		return nil, errors.Wrapf(err, "invalid okteto token, please run `okteto login` again")
+		return nil, errors.Wrapf(err, okErrors.ErrNotLogged)
 	}
 
 	creds := client.WithCredentials(b.Hostname(), okteto.GetCertificatePath(), "", "")
