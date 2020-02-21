@@ -47,7 +47,7 @@ func Build() *cobra.Command {
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting build command")
-			ctx := context.Background()
+
 			buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 			if err != nil {
 				return err
@@ -78,29 +78,6 @@ func Build() *cobra.Command {
 //RunBuild starts the build sequence
 func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target string, noCache bool, buildArgs []string) (string, error) {
 	ctx := context.Background()
-
-	b, err := url.Parse(buildKitHost)
-	if err != nil {
-		return "", errors.Wrapf(err, "invalid buildkit host %s", buildKitHost)
-	}
-
-	okToken, err := okteto.GetToken()
-	if err != nil {
-		return "", errors.Wrapf(err, "invalid okteto token, please run `okteto login` again")
-	}
-
-	creds := client.WithCredentials(b.Hostname(), okteto.GetCertificatePath(), "", "")
-
-	oauthToken := &oauth2.Token{
-		AccessToken: okToken.Token,
-	}
-
-	rpc := client.WithRPCCreds(oauth.NewOauthAccess(oauthToken))
-	c, err := client.New(ctx, buildKitHost, client.WithFailFast(), creds, rpc)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to create build client")
-	}
-
 	ch := make(chan *client.SolveStatus)
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -125,10 +102,26 @@ func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target
 		log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 	}
 
+	var buildkitClient *client.Client
+	if isOktetoCluster {
+		c, err := getClientForOktetoCluster(ctx, buildKitHost)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to create okteto build client")
+		}
+		buildkitClient = c
+	} else {
+		c, err := client.New(ctx, buildKitHost, client.WithFailFast())
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to create build client for %s", buildKitHost)
+		}
+
+		buildkitClient = c
+	}
+
 	var solveResp *client.SolveResponse
 	eg.Go(func() error {
 		var err error
-		solveResp, err = c.Solve(ctx, nil, *solveOpt, ch)
+		solveResp, err = buildkitClient.Solve(ctx, nil, *solveOpt, ch)
 		return errors.Wrap(err, "build failed")
 	})
 
@@ -146,4 +139,30 @@ func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target
 	}
 
 	return solveResp.ExporterResponse["containerimage.digest"], nil
+}
+
+func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*client.Client, error) {
+	b, err := url.Parse(buildKitHost)
+	if err != nil {
+		return nil, errors.Wrapf(err, "invalid buildkit host %s", buildKitHost)
+	}
+
+	okToken, err := okteto.GetToken()
+	if err != nil {
+		return nil, errors.Wrapf(err, "invalid okteto token, please run `okteto login` again")
+	}
+
+	creds := client.WithCredentials(b.Hostname(), okteto.GetCertificatePath(), "", "")
+
+	oauthToken := &oauth2.Token{
+		AccessToken: okToken.Token,
+	}
+
+	rpc := client.WithRPCCreds(oauth.NewOauthAccess(oauthToken))
+	c, err := client.New(ctx, buildKitHost, client.WithFailFast(), creds, rpc)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
