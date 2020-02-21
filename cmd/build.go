@@ -40,6 +40,7 @@ func Build() *cobra.Command {
 	var tag string
 	var target string
 	var noCache bool
+	var buildArgs []string
 
 	cmd := &cobra.Command{
 		Use:   "build",
@@ -51,7 +52,7 @@ func Build() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if _, err := RunBuild(ctx, buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache); err != nil {
+			if _, err := RunBuild(buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache, buildArgs); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
@@ -70,11 +71,13 @@ func Build() *cobra.Command {
 	cmd.Flags().StringVarP(&tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
 	cmd.Flags().StringVarP(&target, "target", "", "", "set the target build stage to build")
 	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
+	cmd.Flags().StringArrayVar(&buildArgs, "build-arg", nil, "set build-time variables")
 	return cmd
 }
 
 //RunBuild starts the build sequence
-func RunBuild(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, file, tag, target string, noCache bool) (string, error) {
+func RunBuild(buildKitHost string, isOktetoCluster bool, path, file, tag, target string, noCache bool, buildArgs []string) (string, error) {
+	ctx := context.Background()
 
 	b, err := url.Parse(buildKitHost)
 	if err != nil {
@@ -113,7 +116,7 @@ func RunBuild(ctx context.Context, buildKitHost string, isOktetoCluster bool, pa
 		file = fileWithCacheHandler
 	}
 
-	solveOpt, err := build.GetSolveOpt(path, file, tag, target, noCache)
+	solveOpt, err := build.GetSolveOpt(path, file, tag, target, noCache, buildArgs)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create build solver")
 	}

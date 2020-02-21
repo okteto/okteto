@@ -678,12 +678,6 @@ func (up *UpContext) shutdown() {
 		log.Info("sent cancellation signal")
 	}
 
-	if up.Dev.RemoteModeEnabled() {
-		if err := ssh.RemoveEntry(up.Dev.Name); err != nil {
-			log.Infof("failed to remove ssh entry: %s", err)
-		}
-	}
-
 	if up.Sy != nil {
 		log.Infof("stopping syncthing")
 		if err := up.Sy.Stop(false); err != nil {
