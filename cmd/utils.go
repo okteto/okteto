@@ -16,7 +16,6 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -26,9 +25,9 @@ import (
 )
 
 func loadDev(devPath string) (*model.Dev, error) {
-	if !fileExists(devPath) {
+	if !model.FileExists(devPath) {
 		if devPath == defaultManifest {
-			if fileExists(secondaryManifest) {
+			if model.FileExists(secondaryManifest) {
 				return loadDev(secondaryManifest)
 			}
 		}
@@ -55,20 +54,6 @@ func askYesNo(q string) (bool, error) {
 	}
 
 	return answer == "y", nil
-}
-
-func fileExists(name string) bool {
-
-	_, err := os.Stat(name)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	if err != nil {
-		log.Infof("Failed to check if %s exists: %s", name, err)
-	}
-
-	return true
 }
 
 func checkLocalWatchesConfiguration() {
