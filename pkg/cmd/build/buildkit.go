@@ -14,24 +14,32 @@
 package build
 
 import (
+	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/containerd/console"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
-	"github.com/okteto/okteto/pkg/buildkit"
+	"github.com/moby/buildkit/util/progress/progressui"
+	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/pkg/errors"
+	"golang.org/x/oauth2"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
 const (
 	frontend = "dockerfile.v0"
 )
 
-//GetBuildKitHost returns thee buildkit url
+//GetBuildKitHost returns the buildkit url and if Okteto Build Service is configured, or an error
 func GetBuildKitHost() (string, bool, error) {
 	buildKitHost := os.Getenv("BUILDKIT_HOST")
 	if buildKitHost != "" {
@@ -50,8 +58,8 @@ func GetBuildKitHost() (string, bool, error) {
 	return buildkitURL, true, err
 }
 
-//GetSolveOpt returns the buildkit solve options
-func GetSolveOpt(buildCtx, file, imageTag, target string, noCache bool, buildArgs []string) (*client.SolveOpt, error) {
+//getSolveOpt returns the buildkit solve options
+func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, buildArgs []string) (*client.SolveOpt, error) {
 	if file == "" {
 		file = filepath.Join(buildCtx, "Dockerfile")
 	}
@@ -86,7 +94,7 @@ func GetSolveOpt(buildCtx, file, imageTag, target string, noCache bool, buildArg
 		if err != nil {
 			return nil, err
 		}
-		attachable = append(attachable, buildkit.NewDockerAndOktetoAuthProvider(registryURL, okteto.GetUserID(), token.Token, os.Stderr))
+		attachable = append(attachable, newDockerAndOktetoAuthProvider(registryURL, okteto.GetUserID(), token.Token, os.Stderr))
 	} else {
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))
 	}
@@ -121,4 +129,91 @@ func GetSolveOpt(buildCtx, file, imageTag, target string, noCache bool, buildArg
 	}
 
 	return opt, nil
+}
+
+func getDockerFile(path, dockerFile string, isOktetoCluster bool) (string, error) {
+	if dockerFile == "" {
+		dockerFile = filepath.Join(path, "Dockerfile")
+	}
+
+	if !isOktetoCluster {
+		return dockerFile, nil
+	}
+
+	fileWithCacheHandler, err := getDockerfileWithCacheHandler(dockerFile)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create temporary build folder")
+	}
+
+	return fileWithCacheHandler, nil
+}
+
+func getBuildkitClient(ctx context.Context, isOktetoCluster bool, buildKitHost string) (*client.Client, error) {
+	if isOktetoCluster {
+		c, err := getClientForOktetoCluster(ctx, buildKitHost)
+		if err != nil {
+			log.Infof("failed to create okteto build client: %s", err)
+			return nil, okErrors.UserError{E: fmt.Errorf("failed to create okteto build client"), Hint: okErrors.ErrNotLogged.Error()}
+		}
+		return c, nil
+	}
+
+	c, err := client.New(ctx, buildKitHost, client.WithFailFast())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create build client for %s", buildKitHost)
+	}
+	return c, nil
+}
+
+func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*client.Client, error) {
+
+	b, err := url.Parse(buildKitHost)
+	if err != nil {
+		return nil, errors.Wrapf(err, "invalid buildkit host %s", buildKitHost)
+	}
+
+	okToken, err := okteto.GetToken()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get the token")
+	}
+
+	creds := client.WithCredentials(b.Hostname(), okteto.GetCertificatePath(), "", "")
+
+	oauthToken := &oauth2.Token{
+		AccessToken: okToken.Token,
+	}
+
+	rpc := client.WithRPCCreds(oauth.NewOauthAccess(oauthToken))
+	c, err := client.New(ctx, buildKitHost, client.WithFailFast(), creds, rpc)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt) (string, error) {
+	var solveResp *client.SolveResponse
+	ch := make(chan *client.SolveStatus)
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		var err error
+		solveResp, err = c.Solve(ctx, nil, *opt, ch)
+		return errors.Wrap(err, "build failed")
+	})
+
+	eg.Go(func() error {
+		var c console.Console
+		if cn, err := console.ConsoleFromFile(os.Stderr); err == nil {
+			c = cn
+		}
+		// not using shared context to not disrupt display but let it finish reporting errors
+		return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stdout, ch)
+	})
+
+	if err := eg.Wait(); err != nil {
+		return "", err
+	}
+
+	return solveResp.ExporterResponse["containerimage.digest"], nil
 }

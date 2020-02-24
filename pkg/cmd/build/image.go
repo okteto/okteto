@@ -61,8 +61,7 @@ func GetImageTag(dev *model.Dev, imageTag string, d *appsv1.Deployment, oktetoRe
 	return fmt.Sprintf("%s:%s", imageWithoutTag, string(d.UID))
 }
 
-//GetDockerfileWithCacheHandler add multitenancy to the remote builds using cache mount ids
-func GetDockerfileWithCacheHandler(filename string) (string, error) {
+func getDockerfileWithCacheHandler(filename string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return "", err
