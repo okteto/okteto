@@ -39,7 +39,7 @@ const (
 	syncErrorEvent       = "Sync Error"
 	downEvent            = "Down"
 	downVolumesEvent     = "DownVolumes"
-	redeployEvent        = "Redeploy"
+	pushEvent            = "Push"
 	buildEvent           = "Build"
 	loginEvent           = "Login"
 	initEvent            = "Create Manifest"
@@ -138,12 +138,12 @@ func TrackDownVolumes(success bool) {
 	track(downVolumesEvent, success, nil)
 }
 
-// TrackRedeploy sends a tracking event to mixpanel when the user redeploys a development environment
-func TrackRedeploy(success bool, oktetoRegistryURL string) {
+// TrackPush sends a tracking event to mixpanel when the user pushes a development environment
+func TrackPush(success bool, oktetoRegistryURL string) {
 	props := map[string]interface{}{
 		"oktetoRegistryURL": oktetoRegistryURL,
 	}
-	track(redeployEvent, success, props)
+	track(pushEvent, success, props)
 }
 
 func trackDisable(success bool) {
