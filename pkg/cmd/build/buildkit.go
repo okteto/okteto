@@ -155,6 +155,7 @@ func getBuildkitClient(ctx context.Context, isOktetoCluster bool, buildKitHost s
 			log.Infof("failed to create okteto build client: %s", err)
 			return nil, okErrors.UserError{E: fmt.Errorf("failed to create okteto build client"), Hint: okErrors.ErrNotLogged.Error()}
 		}
+
 		return c, nil
 	}
 
@@ -175,6 +176,10 @@ func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*clien
 	okToken, err := okteto.GetToken()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get the token")
+	}
+
+	if len(okToken.Token) == 0 {
+		return nil, fmt.Errorf("auth token missing from token file")
 	}
 
 	creds := client.WithCredentials(b.Hostname(), okteto.GetCertificatePath(), "", "")
