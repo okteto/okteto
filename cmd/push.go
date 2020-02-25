@@ -36,11 +36,10 @@ func Redeploy() *cobra.Command {
 	var imageTag string
 
 	cmd := &cobra.Command{
-		Use:    "redeploy",
-		Short:  "Builds, pushes and redeploys the target deployment",
-		Hidden: true,
+		Use:   "push",
+		Short: "Builds, pushes and redeploys source code to the target deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Info("starting redeploy command")
+			log.Info("starting push command")
 			dev, err := loadDev(devPath)
 			if err != nil {
 				return err
@@ -67,27 +66,27 @@ func Redeploy() *cobra.Command {
 				}
 			}
 
-			if err := runRedeploy(dev, imageTag, oktetoRegistryURL, c); err != nil {
-				analytics.TrackRedeploy(false, oktetoRegistryURL)
+			if err := runPush(dev, imageTag, oktetoRegistryURL, c); err != nil {
+				analytics.TrackPush(false, oktetoRegistryURL)
 				return err
 			}
 
-			log.Success("Development environment '%s' redeployed", dev.Name)
+			log.Success("Source code pushed to the development environment '%s'", dev.Name)
 			log.Println()
 
-			analytics.TrackRedeploy(true, oktetoRegistryURL)
-			log.Info("completed redeploy command")
+			analytics.TrackPush(true, oktetoRegistryURL)
+			log.Info("completed push command")
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the redeploy command is executed")
-	cmd.Flags().StringVarP(&imageTag, "image", "i", "", "image to build and push")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the push command is executed")
+	cmd.Flags().StringVarP(&imageTag, "tag", "t", "", "image tag to build, push and redeploy")
 	return cmd
 }
 
-func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernetes.Clientset) error {
+func runPush(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernetes.Clientset) error {
 	d, err := deployments.Get(dev, dev.Namespace, c)
 	if err != nil {
 		return err
@@ -99,7 +98,7 @@ func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernet
 	}
 
 	imageTag = build.GetImageTag(dev, imageTag, d, oktetoRegistryURL)
-	log.Infof("redeploying with image tag %s", imageTag)
+	log.Infof("pushing with image tag %s", imageTag)
 
 	var imageDigest string
 	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false, nil)
@@ -111,7 +110,7 @@ func runRedeploy(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernet
 		imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 
-	spinner := newSpinner(fmt.Sprintf("Redeploying development environment '%s'...", dev.Name))
+	spinner := newSpinner(fmt.Sprintf("Pushing source code to the development environment '%s'...", dev.Name))
 	spinner.start()
 	defer spinner.stop()
 	err = down.Run(dev, imageTag, d, c)
