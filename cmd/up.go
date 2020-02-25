@@ -308,16 +308,8 @@ func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 	_, deploy := os.LookupEnv("OKTETO_AUTODEPLOY")
 	deploy = deploy || autoDeploy
 	if !deploy {
-		deploy, err = askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", up.Dev.Name, up.Dev.Namespace))
-		if err != nil {
-			return nil, false, fmt.Errorf("couldn't read your response")
-		}
-	}
-
-	if !deploy {
-		return nil, false, errors.UserError{
-			E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", up.Dev.Name, up.Dev.Namespace),
-			Hint: "Deploy your application first or use `okteto namespace` to select a different namespace and try again",
+		if err := askIfDeploy(up.Dev.Name, up.Dev.Namespace); err != nil {
+			return nil, false, err
 		}
 	}
 
