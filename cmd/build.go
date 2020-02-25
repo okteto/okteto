@@ -31,7 +31,7 @@ func Build() *cobra.Command {
 	var buildArgs []string
 
 	cmd := &cobra.Command{
-		Use:   "build",
+		Use:   "build [PATH]",
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting build command")
