@@ -34,7 +34,20 @@ func Login() *cobra.Command {
 	token := ""
 	cmd := &cobra.Command{
 		Use:   "login [url]",
-		Short: "Login with Okteto",
+		Short: "Log into Okteto Cloud",
+		Long: `Log into Okteto Cloud
+
+Run
+    $ okteto login
+
+and this command will open your browser to ask your authentication details and retreive your API token. You can script it by using the --token parameter.
+
+By default, this will log into cloud.okteto.com. If you want to log into your Okteto Enterprise instance, specify a URL. For example, run
+
+    $ okteto login https://okteto.example.com
+
+to log in to a Okteto Enterprise instance running at okteto.example.com.
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if k8Client.InCluster() {
@@ -88,7 +101,7 @@ func Login() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&token, "token", "t", "", "API token for authentication")
+	cmd.Flags().StringVarP(&token, "token", "t", "", "API token for authentication.  (optional)")
 	return cmd
 }
 
