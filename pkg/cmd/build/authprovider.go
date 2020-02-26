@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package buildkit
+package build
 
 import (
 	"context"
@@ -28,8 +28,7 @@ import (
 
 var oktetoRegistry = ""
 
-//NewDockerAndOktetoAuthProvider reads local docker credentials and auto-injects okteto registry credentials
-func NewDockerAndOktetoAuthProvider(registryURL, username, password string, stderr io.Writer) session.Attachable {
+func newDockerAndOktetoAuthProvider(registryURL, username, password string, stderr io.Writer) session.Attachable {
 	result := &authProvider{
 		config: config.LoadDefaultConfigFile(stderr),
 	}

@@ -293,7 +293,7 @@ func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 	}
 
 	if !errors.IsNotFound(err) || up.retry {
-		return nil, false, fmt.Errorf("couldn't get deployment %s/%s, please try again; %s", up.Dev.Namespace, up.Dev.Name, err)
+		return nil, false, fmt.Errorf("couldn't get deployment %s/%s, please try again: %s", up.Dev.Namespace, up.Dev.Name, err)
 	}
 
 	if len(up.Dev.Labels) > 0 {

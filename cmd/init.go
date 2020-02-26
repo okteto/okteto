@@ -78,7 +78,7 @@ func Init() *cobra.Command {
 
 func executeInit(devPath string, overwrite bool, language string, workDir string) error {
 	if !overwrite {
-		if fileExists(devPath) {
+		if model.FileExists(devPath) {
 			return fmt.Errorf("%s already exists. Please delete it before running the command again", devPath)
 		}
 	}
@@ -121,7 +121,7 @@ func executeInit(devPath string, overwrite bool, language string, workDir string
 		return fmt.Errorf("Failed to write your manifest")
 	}
 
-	if !fileExists(stignore) {
+	if !model.FileExists(stignore) {
 		log.Debugf("getting stignore for %s", language)
 		c := linguist.GetSTIgnore(language)
 		if err := ioutil.WriteFile(stignore, c, 0600); err != nil {

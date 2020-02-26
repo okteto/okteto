@@ -101,7 +101,7 @@ func runPush(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernetes.C
 	log.Infof("pushing with image tag %s", imageTag)
 
 	var imageDigest string
-	imageDigest, err = RunBuild(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false, nil)
+	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false, nil)
 	if err != nil {
 		return fmt.Errorf("error building image '%s': %s", imageTag, err)
 	}
