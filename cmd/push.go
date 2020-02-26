@@ -19,13 +19,16 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
+	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
+	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -34,6 +37,7 @@ func Redeploy() *cobra.Command {
 	var devPath string
 	var namespace string
 	var imageTag string
+	var autoDeploy bool
 
 	cmd := &cobra.Command{
 		Use:   "push",
@@ -66,7 +70,7 @@ func Redeploy() *cobra.Command {
 				}
 			}
 
-			if err := runPush(dev, imageTag, oktetoRegistryURL, c); err != nil {
+			if err := runPush(dev, autoDeploy, imageTag, oktetoRegistryURL, c); err != nil {
 				analytics.TrackPush(false, oktetoRegistryURL)
 				return err
 			}
@@ -83,18 +87,34 @@ func Redeploy() *cobra.Command {
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the push command is executed")
 	cmd.Flags().StringVarP(&imageTag, "tag", "t", "", "image tag to build, push and redeploy")
+	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
 	return cmd
 }
 
-func runPush(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernetes.Clientset) error {
+func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL string, c *kubernetes.Clientset) error {
+	create := false
 	d, err := deployments.Get(dev, dev.Namespace, c)
 	if err != nil {
-		return err
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		if !autoDeploy {
+			if err := askIfDeploy(dev.Name, dev.Namespace); err != nil {
+				return err
+			}
+		}
+		d = dev.GevSandbox()
+		create = true
 	}
 
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return err
+	}
+	if create {
+		if imageTag == "" && !isOktetoCluster {
+			return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
+		}
 	}
 
 	imageTag = build.GetImageTag(dev, imageTag, d, oktetoRegistryURL)
@@ -113,10 +133,27 @@ func runPush(dev *model.Dev, imageTag, oktetoRegistryURL string, c *kubernetes.C
 	spinner := newSpinner(fmt.Sprintf("Pushing source code to the development environment '%s'...", dev.Name))
 	spinner.start()
 	defer spinner.stop()
-	err = down.Run(dev, imageTag, d, c)
-	if err != nil {
-		return err
+	if create {
+		if err := createServiceAndDeployment(dev, d, imageTag, c); err != nil {
+			return err
+		}
+	} else {
+		err = down.Run(dev, imageTag, d, c)
+		if err != nil {
+			return err
+		}
 	}
 
+	return nil
+}
+
+func createServiceAndDeployment(dev *model.Dev, d *appsv1.Deployment, imageTag string, c *kubernetes.Clientset) error {
+	d.Spec.Template.Spec.Containers[0].Image = imageTag
+	if err := deployments.Deploy(d, true, c); err != nil {
+		return err
+	}
+	if err := services.CreateDev(dev, c); err != nil {
+		return err
+	}
 	return nil
 }

@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -54,6 +55,20 @@ func askYesNo(q string) (bool, error) {
 	}
 
 	return answer == "y", nil
+}
+
+func askIfDeploy(name, namespace string) error {
+	deploy, err := askYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", name, namespace))
+	if err != nil {
+		return fmt.Errorf("couldn't read your response")
+	}
+	if !deploy {
+		return errors.UserError{
+			E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", name, namespace),
+			Hint: "Deploy your application first or use `okteto namespace` to select a different namespace and try again",
+		}
+	}
+	return nil
 }
 
 func checkLocalWatchesConfiguration() {
