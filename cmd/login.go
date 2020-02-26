@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
@@ -69,6 +68,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 			}
 
 			log.Debugf("authenticating with %s", oktetoURL)
+
 			var u *okteto.User
 			var err error
 
@@ -85,7 +85,8 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 				return err
 			}
 
-			log.Info("authenticated user %s", u.ID)
+			log.Infof("authenticated user %s", u.ID)
+
 			if oktetoURL == okteto.CloudURL {
 				log.Success("Logged in as %s", u.GithubID)
 			} else {
@@ -106,14 +107,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 }
 
 func withBrowser(ctx context.Context, oktetoURL string) (*okteto.User, error) {
-	port, err := model.GetAvailablePort()
-
-	if err != nil {
-		log.Infof("couldn't access the network: %s", err)
-		return nil, fmt.Errorf("couldn't access the network")
-	}
-
-	h, err := login.StartWithBrowser(ctx, oktetoURL, port)
+	h, err := login.StartWithBrowser(ctx, oktetoURL)
 	if err != nil {
 		log.Infof("couldn't start the login process: %s", err)
 		return nil, fmt.Errorf("couldn't start the login process, please try again")
@@ -124,6 +118,7 @@ func withBrowser(ctx context.Context, oktetoURL string) (*okteto.User, error) {
 	if err := open.Start(authorizationURL); err != nil {
 		log.Errorf("Something went wrong opening your browser: %s\n", err)
 	}
+
 	fmt.Printf("You can also open a browser and navigate to the following address:\n")
 	fmt.Println(authorizationURL)
 

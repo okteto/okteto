@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -29,11 +30,18 @@ func WithToken(ctx context.Context, url, token string) (*okteto.User, error) {
 }
 
 // StartWithBrowser starts the authentication of the user with the IDP via a browser
-func StartWithBrowser(ctx context.Context, url string, port int) (*Handler, error) {
+func StartWithBrowser(ctx context.Context, url string) (*Handler, error) {
 	state, err := randToken()
 	if err != nil {
 		log.Infof("couldn't generate random token: %s", err)
 		return nil, fmt.Errorf("couldn't generate a random token, please try again")
+	}
+
+	port, err := model.GetAvailablePort()
+
+	if err != nil {
+		log.Infof("couldn't access the network: %s", err)
+		return nil, fmt.Errorf("couldn't access the network")
 	}
 
 	handler := &Handler{
