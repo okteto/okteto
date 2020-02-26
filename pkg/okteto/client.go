@@ -45,22 +45,26 @@ func getClient(oktetoURL string) (*graphql.Client, error) {
 	return graphqlClient, nil
 }
 
+func getRequest(q, token string) *graphql.Request {
+	req := graphql.NewRequest(q)
+	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", token))
+	return req
+}
+
 func query(ctx context.Context, query string, result interface{}) error {
-	o, err := GetToken()
+	t, err := GetToken()
 	if err != nil {
 		log.Infof("couldn't get token: %s", err)
 		return errors.ErrNotLogged
 	}
 
-	c, err := getClient(o.URL)
+	c, err := getClient(t.URL)
 	if err != nil {
 		log.Infof("error getting the graphql client: %s", err)
 		return fmt.Errorf("internal server error")
 	}
 
-	req := graphql.NewRequest(query)
-	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", o.Token))
-
+	req := getRequest(query, t.Token)
 	if err := c.Run(ctx, req, result); err != nil {
 		e := strings.TrimPrefix(err.Error(), "graphql: ")
 		if isNotAuthorized(e) {
