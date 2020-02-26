@@ -15,20 +15,39 @@ package syncthing
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 )
 
+// ConnectionStatus represents the status of a syncthing connections
+type ConnectionStatus struct {
+	Connections map[string]Connection `json:"connections"`
+}
+
+// Connection represents the status of a syncthing connection
+type Connection struct {
+	Connected bool `json:"connected"`
+}
+
 // isConnected returns true if it can ping the remote syncthing
 func (s *Syncthing) isConnected(ctx context.Context) bool {
-	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, false, nil)
+	var status ConnectionStatus
+	body, err := s.APICall(ctx, "rest/system/connections", "GET", 200, nil, false, nil)
 	if err != nil {
-		log.Infof("syncthing ping failed: %s", err)
+		log.Infof("syncthing 'rest/system/connections' failed: %s", err)
 		return false
 	}
-
-	return true
+	err = json.Unmarshal(body, &status)
+	if err != nil {
+		log.Infof("syncthing connections unmarshalling failed: %s", err)
+		return false
+	}
+	if status.Connections == nil {
+		return false
+	}
+	return status.Connections[localDeviceID].Connected
 }
 
 // Monitor will send a message to disconnected if remote syncthing is disconnected for more than 10 seconds.

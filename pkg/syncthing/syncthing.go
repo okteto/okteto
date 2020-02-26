@@ -52,6 +52,7 @@ const (
 
 	// DefaultRemoteDeviceID remote syncthing ID
 	DefaultRemoteDeviceID = "ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU"
+	localDeviceID         = "ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR"
 
 	// DefaultFileWatcherDelay how much to wait before starting a sync after a file change
 	DefaultFileWatcherDelay = 5
