@@ -16,10 +16,12 @@ package secrets
 import (
 	"bytes"
 	"html/template"
+
+	"github.com/okteto/okteto/pkg/syncthing"
 )
 
 const configXML = `<configuration version="29">
-<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .SyncFolder }}" type="sendreceive" rescanIntervalS="300" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+<folder id="okteto-{{ .Dev.Name }}" label="{{ .Dev.Name }}" path="{{ .Dev.MountPath }}" type="sendreceive" rescanIntervalS="300" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
     <device id="ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU" introducedBy=""></device>
@@ -37,7 +39,7 @@ const configXML = `<configuration version="29">
     <disableTempIndexes>false</disableTempIndexes>
     <paused>false</paused>
     <weakHashThresholdPct>25</weakHashThresholdPct>
-    <markerName>{{ .DevPath }}</markerName>
+    <markerName>{{ .Dev.DevPath }}</markerName>
     <useLargeBlocks>false</useLargeBlocks>
 </folder>
 <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
@@ -55,10 +57,10 @@ const configXML = `<configuration version="29">
     <maxRecvKbps>0</maxRecvKbps>
 </device>
 <gui enabled="true" tls="false" debugging="false">
-    <address>127.0.0.1:8384</address>
-    <apikey>cnd</apikey>
+    <address>{{ .RemoteGUIAddress }}</address>
+    <apikey>{{.APIKey}}</apikey>
     <user>okteto</user>
-    <password>{{ .PasswordHash }}</password>
+    <password>{{.GUIPasswordHash}}</password>
     <theme>default</theme>
 </gui>
 <ldap></ldap>
@@ -104,21 +106,10 @@ const configXML = `<configuration version="29">
 </options>
 </configuration>`
 
-func getConfigXML(name, folder, devPath, guiPasswordHash string) ([]byte, error) {
+func getConfigXML(s *syncthing.Syncthing) ([]byte, error) {
 	configTemplate := template.Must(template.New("syncthingConfig").Parse(configXML))
 	buf := new(bytes.Buffer)
-	v := struct {
-		Name         string
-		SyncFolder   string
-		DevPath      string
-		PasswordHash string
-	}{
-		Name:         name,
-		SyncFolder:   folder,
-		DevPath:      devPath,
-		PasswordHash: guiPasswordHash,
-	}
-	if err := configTemplate.Execute(buf, v); err != nil {
+	if err := configTemplate.Execute(buf, s); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

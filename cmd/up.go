@@ -381,7 +381,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	}
 
 	log.Info("create deployment secrets")
-	if err := secrets.Create(up.Dev, up.Client, up.Sy.GUIPasswordHash); err != nil {
+	if err := secrets.Create(up.Dev, up.Client, up.Sy); err != nil {
 		return err
 	}
 
