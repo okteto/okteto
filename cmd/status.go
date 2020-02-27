@@ -14,13 +14,17 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 )
 
@@ -29,6 +33,7 @@ func Status() *cobra.Command {
 	var devPath string
 	var namespace string
 	var showInfo bool
+	var watch bool
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: fmt.Sprintf("Status of the synchronization process"),
@@ -57,7 +62,24 @@ func Status() *cobra.Command {
 				dev.Namespace = namespace
 			}
 
-			err = status.Run(dev, showInfo)
+			sy, err := syncthing.Load(dev)
+			if err != nil {
+				return fmt.Errorf("error accessing to syncthing info file: %s", err)
+			}
+			if showInfo {
+				log.Information("Local syncthing url: http://%s", sy.GUIAddress)
+				log.Information("Remote syncthing url: http://%s", sy.RemoteGUIAddress)
+				log.Information("Syncthing username: okteto")
+				log.Information("Syncthing password: %s", sy.GUIPassword)
+			}
+
+			ctx := context.Background()
+			if watch {
+				err = runWithWatch(ctx, dev, sy)
+			} else {
+				err = runWithoutWatch(ctx, dev, sy)
+			}
+
 			analytics.TrackStatus(err == nil, showInfo)
 			return err
 		},
@@ -65,5 +87,41 @@ func Status() *cobra.Command {
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executing")
 	cmd.Flags().BoolVarP(&showInfo, "info", "i", false, "show syncthing links for troubleshooting the synchronization service")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "watch for changes")
 	return cmd
+}
+
+func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {
+	postfix := "Synchronizing your files..."
+	spinner := newSpinner(postfix)
+	pbScaling := 0.30
+	spinner.start()
+	defer spinner.stop()
+	for {
+		message := ""
+		progress, err := status.Run(ctx, dev, sy)
+		if err != nil {
+			return err
+		}
+		if progress == 100 {
+			message = "Files synchronized"
+		} else {
+			message = renderProgressBar(postfix, progress, pbScaling)
+		}
+		spinner.update(message)
+		time.Sleep(2 * time.Second)
+	}
+}
+
+func runWithoutWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {
+	progress, err := status.Run(ctx, dev, sy)
+	if err != nil {
+		return err
+	}
+	if progress == 100 {
+		log.Success("Synchronization status: %.2f%%", progress)
+	} else {
+		log.Yellow("Synchronization status: %.2f%%", progress)
+	}
+	return nil
 }

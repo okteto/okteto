@@ -45,12 +45,11 @@ var (
 )
 
 const (
-	certFile          = "cert.pem"
-	keyFile           = "key.pem"
-	configFile        = "config.xml"
-	logFile           = "syncthing.log"
-	syncthingPidFile  = "syncthing.pid"
-	syncthingInfoFile = "syncthing.info"
+	certFile         = "cert.pem"
+	keyFile          = "key.pem"
+	configFile       = "config.xml"
+	logFile          = "syncthing.log"
+	syncthingPidFile = "syncthing.pid"
 
 	// DefaultRemoteDeviceID remote syncthing ID
 	DefaultRemoteDeviceID = "ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU"
@@ -436,11 +435,15 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 }
 
 // GetCompletion returns the syncthing status
-func (s *Syncthing) GetCompletion(ctx context.Context, dev *model.Dev) (float64, error) {
+func (s *Syncthing) GetCompletion(ctx context.Context, dev *model.Dev, local bool) (float64, error) {
 	params := getFolderParameter(dev)
-	params["device"] = DefaultRemoteDeviceID
+	if local {
+		params["device"] = DefaultRemoteDeviceID
+	} else {
+		params["device"] = localDeviceID
+	}
 	completion := &Completion{}
-	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, true, nil)
+	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil)
 	if err != nil {
 		return 0, err
 	}

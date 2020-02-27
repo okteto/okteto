@@ -17,33 +17,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
 //Run runs the "okteto status" sequence
-func Run(dev *model.Dev, showInfo bool) error {
-	sy, err := syncthing.Load(dev)
+func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64, error) {
+	progressLocal, err := sy.GetCompletion(ctx, dev, true)
 	if err != nil {
-		return fmt.Errorf("error accessing to syncthing info file: %s", err)
+		return 0, fmt.Errorf("error accessing local syncthing status: %s", err)
 	}
-	if showInfo {
-		log.Information("Local syncthing url: http://%s", sy.GUIAddress)
-		log.Information("Remote syncthing url: http://%s", sy.RemoteGUIAddress)
-		log.Information("Syncthing username: okteto")
-		log.Information("Syncthing password: %s", sy.GUIPassword)
-	}
-	ctx := context.Background()
-	status, err := sy.GetCompletion(ctx, dev)
+	progressRemote, err := sy.GetCompletion(ctx, dev, false)
 	if err != nil {
-		return fmt.Errorf("error accessing syncthing status: %s", err)
+		return 0, fmt.Errorf("error accessing remote syncthing status: %s", err)
 	}
-	status = 99
-	if status == 100 {
-		log.Success("Synchronization status: %.2f%%", status)
-	} else {
-		log.Yellow("Synchronization status: %.2f%%", status)
-	}
-	return nil
+	progress := (progressLocal + progressRemote) / 2
+	return progress, nil
 }
