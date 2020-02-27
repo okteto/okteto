@@ -103,9 +103,9 @@ command:
   - "python"
   - "-m"
   - "http.server"
-	- "8080"
+  - "8080"
 forward:
-	- 8080
+  - 8080:8080
 workdir: /usr/src/app
 `
 )
