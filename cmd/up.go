@@ -29,6 +29,7 @@ import (
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/exec"
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
@@ -226,6 +227,20 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 			return
 		}
 
+		if up.retry && !deployments.IsDevModeOn(d) {
+			log.Information("Development environment has been deactivated")
+			up.Exit <- nil
+			return
+		}
+
+		if deployments.IsDevModeOn(d) && deployments.HasBeenChanged(d) {
+			up.Exit <- errors.UserError{
+				E:    fmt.Errorf("Deployment '%s' has been modified while your development environment was active", d.Name),
+				Hint: "Follow these steps:\n      1. Execute 'okteto down'\n      2. Apply your manifest changes again: 'kubectl apply'\n      3. Execute 'okteto up' again\n    More information here: https://okteto.com/docs/reference/known-issues/index.html#kubectl-apply-changes-are-undone-by-okteto-up",
+			}
+			return
+		}
+
 		if !up.retry {
 			analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
 		}
@@ -404,6 +419,14 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 				return err
 			}
 		}
+		if tr[name].Deployment.Annotations[okLabels.DeploymentAnnotation] == "" {
+			continue
+		}
+
+		if err := deployments.UpdateOktetoRevision(up.Context, tr[name].Deployment, up.Client); err != nil {
+			return err
+		}
+
 	}
 	if create {
 		if err := services.CreateDev(up.Dev, up.Client); err != nil {
