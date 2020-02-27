@@ -104,6 +104,8 @@ command:
   - "-m"
   - "http.server"
   - "8080"
+forward:
+  - 8080:8080
 workdir: /usr/src/app
 `
 )
@@ -241,7 +243,7 @@ func TestAll(t *testing.T) {
 	}
 
 	log.Println("getting synchronized content")
-	c, err := getContent(name, namespace, url)
+	c, err := getContent()
 	if err != nil {
 		t.Fatalf("failed to get content: %s", err)
 	}
@@ -256,7 +258,7 @@ func TestAll(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	log.Println("getting updated content")
-	c, err = getContent(name, namespace, url)
+	c, err = getContent()
 	if err != nil {
 		t.Fatalf("failed to get updated content: %s", err)
 	}
@@ -314,8 +316,8 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 	return fmt.Errorf("%s didn't rollout after 30 seconds", name)
 }
 
-func getContent(name, namespace, url string) (string, error) {
-	endpoint := fmt.Sprintf("https://%s-%s.%s/", name, namespace, url)
+func getContent() (string, error) {
+	endpoint := "http://localhost:8080"
 	retries := 0
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < 60; i++ {
