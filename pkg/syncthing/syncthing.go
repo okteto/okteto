@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/bcrypt"
+	yaml "gopkg.in/yaml.v2"
 
 	ps "github.com/mitchellh/go-ps"
 	uuid "github.com/satori/go.uuid"
@@ -66,29 +67,29 @@ const (
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
-	APIKey           string
-	GUIPassword      string
-	GUIPasswordHash  string
-	binPath          string
-	Client           *http.Client
-	cmd              *exec.Cmd
-	Dev              *model.Dev
-	DevPath          string
-	FileWatcherDelay int
-	ForceSendOnly    bool
-	GUIAddress       string
-	Home             string
-	LogPath          string
-	ListenAddress    string
-	RemoteAddress    string
-	RemoteDeviceID   string
-	RemoteGUIAddress string
-	RemoteGUIPort    int
-	RemotePort       int
-	Source           string
-	Type             string
-	IgnoreDelete     bool
-	pid              int
+	APIKey           string       `yaml:"apikey"`
+	GUIPassword      string       `yaml:"password"`
+	GUIPasswordHash  string       `yaml:"-"`
+	binPath          string       `yaml:"-"`
+	Client           *http.Client `yaml:"-"`
+	cmd              *exec.Cmd    `yaml:"-"`
+	Dev              *model.Dev   `yaml:"-"`
+	DevPath          string       `yaml:"-"`
+	FileWatcherDelay int          `yaml:"-"`
+	ForceSendOnly    bool         `yaml:"-"`
+	GUIAddress       string       `yaml:"local"`
+	Home             string       `yaml:"-"`
+	LogPath          string       `yaml:"-"`
+	ListenAddress    string       `yaml:"-"`
+	RemoteAddress    string       `yaml:"-"`
+	RemoteDeviceID   string       `yaml:"-"`
+	RemoteGUIAddress string       `yaml:"remote"`
+	RemoteGUIPort    int          `yaml:"-"`
+	RemotePort       int          `yaml:"-"`
+	Source           string       `yaml:"-"`
+	Type             string       `yaml:"-"`
+	IgnoreDelete     bool         `yaml:"-"`
+	pid              int          `yaml:"-"`
 }
 
 //Ignores represents the .stignore file
@@ -160,6 +161,10 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		Source:           dev.DevDir,
 		Type:             "sendonly",
 		IgnoreDelete:     true,
+	}
+
+	if err := s.Save(dev); err != nil {
+		log.Infof("error saving syncthing object: %s", err)
 	}
 
 	return s, nil
@@ -429,6 +434,32 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 	}
 }
 
+// GetCompletion returns the syncthing status
+func (s *Syncthing) GetCompletion(ctx context.Context, dev *model.Dev, local bool) (float64, error) {
+	params := getFolderParameter(dev)
+	if local {
+		params["device"] = DefaultRemoteDeviceID
+	} else {
+		params["device"] = localDeviceID
+	}
+	completion := &Completion{}
+	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil)
+	if err != nil {
+		return 0, err
+	}
+	err = json.Unmarshal(body, completion)
+	if err != nil {
+		return 0, err
+	}
+
+	if completion.GlobalBytes == 0 {
+		return 100, nil
+	}
+
+	progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
+	return progress, nil
+}
+
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context) error {
 	log.Infof("restarting syncthing...")
@@ -464,6 +495,39 @@ func (s *Syncthing) Stop(force bool) error {
 	}
 
 	return nil
+}
+
+// Save saves the syncthing object in the dev home folder
+func (s *Syncthing) Save(dev *model.Dev) error {
+	marshalled, err := yaml.Marshal(s)
+	if err != nil {
+		return err
+	}
+
+	syncthingInfoFile := config.GetSyncthingInfoFile(dev.Namespace, dev.Name)
+	if err := ioutil.WriteFile(syncthingInfoFile, marshalled, 0600); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Load loads the syncthing object from the dev home folder
+func Load(dev *model.Dev) (*Syncthing, error) {
+	syncthingInfoFile := config.GetSyncthingInfoFile(dev.Namespace, dev.Name)
+	b, err := ioutil.ReadFile(syncthingInfoFile)
+	if err != nil {
+		return nil, err
+	}
+
+	s := &Syncthing{
+		Client: NewAPIClient(),
+	}
+	if err := yaml.Unmarshal(b, s); err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }
 
 // RemoveFolder deletes all the files created by the syncthing instance
