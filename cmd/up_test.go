@@ -48,7 +48,7 @@ func TestWaitUntilExitOrInterrupt(t *testing.T) {
 	}
 }
 
-func Test_printDisplayContext(t *testing.T) {
+func Test_printDevEnvInfo(t *testing.T) {
 	var tests = []struct {
 		name string
 		dev  *model.Dev
@@ -96,7 +96,8 @@ func Test_printDisplayContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			printDisplayContext(tt.name, tt.dev)
+			up := UpContext{Dev: tt.dev}
+			up.printDevEnvInfo()
 		})
 	}
 
