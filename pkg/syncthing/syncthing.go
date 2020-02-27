@@ -99,15 +99,10 @@ type Ignores struct {
 
 // Status represents the status of a syncthing folder.
 type Status struct {
-	State string `json:"state"`
-}
-
-// Completion represents the completion status of a syncthing folder.
-type Completion struct {
-	Completion  float64 `json:"completion"`
-	GlobalBytes int64   `json:"globalBytes"`
-	NeedBytes   int64   `json:"needBytes"`
-	NeedDeletes int64   `json:"needDeletes"`
+	State       string `json:"state"`
+	GlobalBytes int64  `json:"globalBytes"`
+	NeedBytes   int64  `json:"needBytes"`
+	NeedDeletes int64  `json:"needDeletes"`
 }
 
 // New constructs a new Syncthing.
@@ -377,14 +372,14 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 	ticker := time.NewTicker(500 * time.Millisecond)
 	params := getFolderParameter(dev)
 	params["device"] = DefaultRemoteDeviceID
-	completion := &Completion{}
+	status := &Status{}
 	var prevNeedBytes int64
 	needZeroBytesIter := 0
 	log.Infof("waiting for synchronization to complete...")
 	for {
 		select {
 		case <-ticker.C:
-			if prevNeedBytes == completion.NeedBytes {
+			if prevNeedBytes == status.NeedBytes {
 				if needZeroBytesIter >= 600 {
 					return errors.ErrSyncFrozen
 				}
@@ -394,7 +389,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				needZeroBytesIter = 0
 			}
 		case <-ctx.Done():
-			log.Debug("cancelling call to 'rest/db/completion'")
+			log.Debug("cancelling call to 'rest/db/status'")
 			return ctx.Err()
 		}
 
@@ -403,60 +398,55 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 			continue
 		}
 
-		prevNeedBytes = completion.NeedBytes
-		body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, true, nil)
+		prevNeedBytes = status.NeedBytes
+		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, false, nil)
 		if err != nil {
-			log.Debugf("error calling 'rest/db/completion' syncthing API: %s", err)
+			log.Debugf("error calling 'rest/db/status' syncthing API: %s", err)
 			continue
 		}
-		err = json.Unmarshal(body, completion)
+		err = json.Unmarshal(body, status)
 		if err != nil {
-			log.Debugf("error unmarshaling 'rest/db/completion': %s", err)
+			log.Debugf("error unmarshaling 'rest/db/status': %s", err)
 			continue
 		}
 
-		if completion.GlobalBytes == 0 {
+		if status.GlobalBytes == 0 {
 			return nil
 		}
 
-		progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
+		progress := (float64(status.GlobalBytes-status.NeedBytes) / float64(status.GlobalBytes)) * 100
 		log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
 			progress,
-			completion.NeedBytes,
-			completion.NeedDeletes,
+			status.NeedBytes,
+			status.NeedDeletes,
 		)
 
 		reporter <- progress
 
-		if completion.NeedBytes == 0 {
+		if status.NeedBytes == 0 {
 			return nil
 		}
 	}
 }
 
-// GetCompletion returns the syncthing status
-func (s *Syncthing) GetCompletion(ctx context.Context, dev *model.Dev, local bool) (float64, error) {
+// GetStatus returns the syncthing status
+func (s *Syncthing) GetStatus(ctx context.Context, dev *model.Dev, local bool) (float64, error) {
 	params := getFolderParameter(dev)
-	if local {
-		params["device"] = DefaultRemoteDeviceID
-	} else {
-		params["device"] = localDeviceID
-	}
-	completion := &Completion{}
-	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil)
+	status := &Status{}
+	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil)
 	if err != nil {
 		return 0, err
 	}
-	err = json.Unmarshal(body, completion)
+	err = json.Unmarshal(body, status)
 	if err != nil {
 		return 0, err
 	}
 
-	if completion.GlobalBytes == 0 {
+	if status.GlobalBytes == 0 {
 		return 100, nil
 	}
 
-	progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
+	progress := (float64(status.GlobalBytes-status.NeedBytes) / float64(status.GlobalBytes)) * 100
 	return progress, nil
 }
 
