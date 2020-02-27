@@ -61,7 +61,32 @@ type u struct {
 	Auth User
 }
 
+type q struct {
+	User User
+}
+
 var currentToken *Token
+
+// AuthWithToken authenticates in okteto with the provided token
+func AuthWithToken(ctx context.Context, url, token string) (*User, error) {
+	client, err := getClient(url)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := queryUser(ctx, client, token)
+	if err != nil {
+		log.Infof("failed to login the user: %s", err)
+		return nil, fmt.Errorf("invalid API token")
+	}
+
+	if err := saveAuthData(&user.User, url); err != nil {
+		log.Infof("failed to save the login data: %s", err)
+		return nil, fmt.Errorf("failed to save the login data locally")
+	}
+
+	return &user.User, nil
+}
 
 // Auth authenticates in okteto with a github OAuth code
 func Auth(ctx context.Context, code, url string) (*User, error) {
@@ -70,29 +95,38 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 		return nil, err
 	}
 
-	user, err := queryUser(ctx, client, code)
+	user, err := authUser(ctx, client, code)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(user.Auth.GithubID) == 0 || len(user.Auth.Token) == 0 {
-		return nil, fmt.Errorf("empty response")
-	}
-
-	if err := saveToken(user.Auth.ID, user.Auth.Token, url, user.Auth.Registry, user.Auth.Buildkit, user.Auth.Certificate); err != nil {
-		return nil, err
-	}
-
-	d, err := base64.StdEncoding.DecodeString(user.Auth.Certificate)
-	if err != nil {
-		return nil, fmt.Errorf("bad response: %w", err)
-	}
-
-	if err := ioutil.WriteFile(GetCertificatePath(), d, 0600); err != nil {
+	if err := saveAuthData(&user.Auth, url); err != nil {
 		return nil, err
 	}
 
 	return &user.Auth, nil
+
+}
+
+func saveAuthData(user *User, url string) error {
+	if len(user.GithubID) == 0 || len(user.Token) == 0 {
+		return fmt.Errorf("empty response")
+	}
+
+	if err := saveToken(user.ID, user.Token, url, user.Registry, user.Buildkit); err != nil {
+		return err
+	}
+
+	d, err := base64.StdEncoding.DecodeString(user.Certificate)
+	if err != nil {
+		return fmt.Errorf("bad response: %w", err)
+	}
+
+	if err := ioutil.WriteFile(GetCertificatePath(), d, 0600); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getTokenFromEnv() (*Token, error) {
@@ -113,7 +147,47 @@ func getTokenFromEnv() (*Token, error) {
 	return t, nil
 }
 
-func queryUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
+func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
+	var user q
+	q := fmt.Sprintf(`query {
+		user {
+			id,name,email,githubID,token,new,registry,buildkit,certificate
+		}}`)
+
+	req := getRequest(q, token)
+
+	if err := client.Run(ctx, req, &user); err != nil {
+		if err := client.Run(ctx, req, &user); err != nil {
+			if strings.Contains(err.Error(), "Cannot query field") {
+				log.Infof("query using the legacy parameters: %s", err)
+				return queryUserLegacy(ctx, client, token)
+			}
+			return nil, fmt.Errorf("unauthorized request: %w", err)
+		}
+	}
+
+	return &user, nil
+}
+
+func queryUserLegacy(ctx context.Context, client *graphql.Client, token string) (*q, error) {
+	var user q
+	q := fmt.Sprintf(`query {
+		user {
+			id,name,email,githubID,token,new
+		}}`)
+
+	req := getRequest(q, token)
+
+	if err := client.Run(ctx, req, &user); err != nil {
+		if err := client.Run(ctx, req, &user); err != nil {
+			return nil, fmt.Errorf("unauthorized request: %w", err)
+		}
+	}
+
+	return &user, nil
+}
+
+func authUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
 	var user u
 	q := fmt.Sprintf(`mutation {
 		auth(code: "%s", source: "cli") {
@@ -124,7 +198,7 @@ func queryUser(ctx context.Context, client *graphql.Client, code string) (*u, er
 	if err := client.Run(ctx, req, &user); err != nil {
 		if strings.Contains(err.Error(), "Cannot query field") {
 			log.Infof("query using the legacy parameters: %s", err)
-			return queryLegacyUser(ctx, client, code)
+			return authUserLegacy(ctx, client, code)
 		}
 		return nil, fmt.Errorf("unauthorized request: %w", err)
 	}
@@ -132,7 +206,7 @@ func queryUser(ctx context.Context, client *graphql.Client, code string) (*u, er
 	return &user, nil
 }
 
-func queryLegacyUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
+func authUserLegacy(ctx context.Context, client *graphql.Client, code string) (*u, error) {
 	var user u
 	q := fmt.Sprintf(`mutation {
 	auth(code: "%s", source: "cli") {
@@ -235,7 +309,7 @@ func GetCertificatePath() string {
 	return filepath.Join(config.GetHome(), ".ca.crt")
 }
 
-func saveToken(id, token, url, registry, buildkit, cert string) error {
+func saveToken(id, token, url, registry, buildkit string) error {
 	t, err := GetToken()
 	if err != nil {
 		log.Debugf("bad token, re-initializing: %s", err)
