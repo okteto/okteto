@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -40,6 +41,7 @@ const (
 
 var (
 	devTerminationGracePeriodSeconds int64
+	tailLines                        int64 = 1200
 )
 
 // GetBySelector returns the first pod that matches the selector or error if not found
@@ -207,6 +209,29 @@ func Exists(podName, namespace string, c kubernetes.Interface) bool {
 		return false
 	}
 	return pod.GetObjectMeta().GetDeletionTimestamp() == nil
+}
+
+//ContainerLogs returns the logs of a given container in a given pod
+func ContainerLogs(container string, pod *apiv1.Pod, namespace string, c kubernetes.Interface) (string, error) {
+	podLogOpts := apiv1.PodLogOptions{
+		Container:  container,
+		Timestamps: true,
+		TailLines:  &tailLines,
+	}
+	req := c.CoreV1().Pods(namespace).GetLogs(pod.Name, &podLogOpts)
+	logsStream, err := req.Stream()
+	if err != nil {
+		return "", err
+	}
+	defer logsStream.Close()
+
+	buf := new(bytes.Buffer)
+
+	_, err = io.Copy(buf, logsStream)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 // Restart restarts the pods of a deployment

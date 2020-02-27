@@ -41,6 +41,7 @@ const (
 	downVolumesEvent     = "DownVolumes"
 	pushEvent            = "Push"
 	statusEvent          = "Status"
+	doctorEvent          = "Doctor"
 	buildEvent           = "Build"
 	loginEvent           = "Login"
 	initEvent            = "Create Manifest"
@@ -153,6 +154,11 @@ func TrackStatus(success, showInfo bool) {
 		"showInfo": showInfo,
 	}
 	track(statusEvent, success, props)
+}
+
+// TrackDoctor sends a tracking event to mixpanel when the user uses the doctor command
+func TrackDoctor(success bool) {
+	track(doctorEvent, success, nil)
 }
 
 func trackDisable(success bool) {

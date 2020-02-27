@@ -18,10 +18,13 @@ require (
 	github.com/docker/docker v1.14.0-0.20190319215453-e7b5f7dbe98c
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
+	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
 	github.com/fatih/color v1.7.0
+	github.com/frankban/quicktest v1.7.3 // indirect
 	github.com/gogo/googleapis v1.3.0 // indirect
+	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/go-github/v28 v28.1.1
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/hashicorp/go-getter v1.0.2
@@ -33,18 +36,22 @@ require (
 	github.com/matryer/is v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/mattn/psutil v0.0.0-20170126005127-e6c88f1e9be6
+	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
 	github.com/moby/buildkit v0.6.3
 	github.com/nicksnyder/go-i18n v1.10.0 // indirect
+	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/opencontainers/runtime-spec v1.0.1 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/pierrec/lz4 v2.4.1+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/cobra v0.0.5
 	github.com/src-d/enry/v2 v2.1.0
+	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.undefinedlabs.com/scopeagent v0.0.0-20200123164547-e307ed3a9216
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
