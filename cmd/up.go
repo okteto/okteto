@@ -173,13 +173,6 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 			up.Exit <- err
 			return
 		}
-
-		defer func() {
-			log.Debug("Restoring terminal")
-			if err := term.RestoreTerminal(inFd, state); err != nil {
-				log.Infof("failed to restore terminal: %s", err)
-			}
-		}()
 	}
 
 	var namespace string
@@ -269,6 +262,14 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 		}()
 
 		prevError := up.WaitUntilExitOrInterrupt()
+
+		if isTerm {
+			log.Debug("Restoring terminal")
+			if err := term.RestoreTerminal(inFd, state); err != nil {
+				log.Infof("failed to restore terminal: %s", err)
+			}
+		}
+
 		if prevError != nil {
 			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !pods.Exists(up.Pod, up.Dev.Namespace, up.Client)) {
 				log.Yellow("\nConnection lost to your development environment, reconnecting...\n")
@@ -384,7 +385,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	reporter := make(chan string)
 	defer close(reporter)
 
-	go up.monitorAttachVolume(spinner, reporter)
+	go up.monitorUpSequence(spinner, reporter)
 
 	log.Info("waiting for dev pod to be running")
 	pod, err = pods.MonitorDevPod(up.Context, up.Dev, pod, up.Client, reporter)
@@ -477,7 +478,7 @@ func (up *UpContext) reverse() error {
 	return nil
 }
 
-func (up *UpContext) monitorAttachVolume(spinner *spinner, reporter chan string) {
+func (up *UpContext) monitorUpSequence(spinner *spinner, reporter chan string) {
 	message := "Attaching persistent volume"
 	up.updateStateFile(attaching)
 	for {
