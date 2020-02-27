@@ -40,6 +40,7 @@ const (
 	downEvent            = "Down"
 	downVolumesEvent     = "DownVolumes"
 	pushEvent            = "Push"
+	statusEvent          = "Status"
 	buildEvent           = "Build"
 	loginEvent           = "Login"
 	initEvent            = "Create Manifest"
@@ -144,6 +145,14 @@ func TrackPush(success bool, oktetoRegistryURL string) {
 		"oktetoRegistryURL": oktetoRegistryURL,
 	}
 	track(pushEvent, success, props)
+}
+
+// TrackStatus sends a tracking event to mixpanel when the user uses the status command
+func TrackStatus(success, showInfo bool) {
+	props := map[string]interface{}{
+		"showInfo": showInfo,
+	}
+	track(statusEvent, success, props)
 }
 
 func trackDisable(success bool) {

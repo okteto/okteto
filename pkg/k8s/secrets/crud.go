@@ -20,6 +20,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/syncthing"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -39,7 +40,7 @@ func Get(name, namespace string, c *kubernetes.Clientset) (*v1.Secret, error) {
 }
 
 //Create creates the syncthing config secret
-func Create(dev *model.Dev, c *kubernetes.Clientset, guiPasswordHash string) error {
+func Create(dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) error {
 	secretName := GetSecretName(dev)
 	log.Debugf("creating configuration secret %s", secretName)
 
@@ -48,7 +49,7 @@ func Create(dev *model.Dev, c *kubernetes.Clientset, guiPasswordHash string) err
 		return fmt.Errorf("error getting kubernetes secret: %s", err)
 	}
 
-	config, err := getConfigXML(dev.Name, dev.MountPath, dev.DevPath, guiPasswordHash)
+	config, err := getConfigXML(s)
 	if err != nil {
 		return fmt.Errorf("error generating syncthing configuration: %s", err)
 	}

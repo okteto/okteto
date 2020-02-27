@@ -75,6 +75,11 @@ func GetStateFile(namespace, name string) string {
 	return filepath.Join(GetDeploymentHome(namespace, name), "okteto.state")
 }
 
+// GetSyncthingInfoFile returns the path to the syncthing info file
+func GetSyncthingInfoFile(namespace, name string) string {
+	return filepath.Join(GetDeploymentHome(namespace, name), "syncthing.info")
+}
+
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
 	if v, ok := os.LookupEnv("OKTETO_HOME"); ok {
