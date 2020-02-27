@@ -32,8 +32,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//Redeploy builds, pushes and redeploys the target deployment
-func Redeploy() *cobra.Command {
+//Push builds, pushes and redeploys the target deployment
+func Push() *cobra.Command {
 	var devPath string
 	var namespace string
 	var imageTag string
@@ -44,6 +44,11 @@ func Redeploy() *cobra.Command {
 		Short: "Builds, pushes and redeploys source code to the target deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting push command")
+
+			if k8Client.InCluster() {
+				return errors.ErrNotInCluster
+			}
+
 			dev, err := loadDev(devPath)
 			if err != nil {
 				return err

@@ -25,7 +25,7 @@ const configXML = `<configuration version="29">
     <hashers>0</hashers>
     <order>random</order>
     <ignoreDelete>{{ .IgnoreDelete }}</ignoreDelete>
-    <scanProgressIntervalS>0</scanProgressIntervalS>
+    <scanProgressIntervalS>2</scanProgressIntervalS>
     <pullerPauseS>0</pullerPauseS>
     <maxConflicts>0</maxConflicts>
     <disableSparseFiles>false</disableSparseFiles>
@@ -82,7 +82,7 @@ const configXML = `<configuration version="29">
     <upgradeToPreReleases>false</upgradeToPreReleases>
     <keepTemporariesH>24</keepTemporariesH>
     <cacheIgnoredFiles>false</cacheIgnoredFiles>
-    <progressUpdateIntervalS>5</progressUpdateIntervalS>
+    <progressUpdateIntervalS>2</progressUpdateIntervalS>
     <limitBandwidthInLan>false</limitBandwidthInLan>
     <minHomeDiskFree unit="%">1</minHomeDiskFree>
     <releasesURL></releasesURL>
