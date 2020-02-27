@@ -40,8 +40,8 @@ func TestWaitUntilExitOrInterrupt(t *testing.T) {
 		t.Errorf("didn't translate the error: %s", err)
 	}
 
-	up.Disconnect = make(chan struct{}, 1)
-	up.Disconnect <- struct{}{}
+	up.Disconnect = make(chan error, 1)
+	up.Disconnect <- errors.ErrLostConnection
 	err = up.WaitUntilExitOrInterrupt()
 	if err != errors.ErrLostConnection {
 		t.Errorf("exited with error %s instead of %s", err, errors.ErrLostConnection)
