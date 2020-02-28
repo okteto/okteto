@@ -15,58 +15,47 @@ package syncthing
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 )
 
-// ConnectionStatus represents the status of a syncthing connections
-type ConnectionStatus struct {
-	Connections map[string]Connection `json:"connections"`
+func (s *Syncthing) checkLocalAndRemoteStatus(ctx context.Context) error {
+	if err := s.checkStatus(ctx, true); err != nil {
+		return err
+	}
+	return s.checkStatus(ctx, false)
 }
 
-// Connection represents the status of a syncthing connection
-type Connection struct {
-	Connected bool `json:"connected"`
-}
-
-// isConnected returns true if it can ping the remote syncthing
-func (s *Syncthing) isConnected(ctx context.Context) bool {
-	var status ConnectionStatus
-	body, err := s.APICall(ctx, "rest/system/connections", "GET", 200, nil, false, nil)
+func (s *Syncthing) checkStatus(ctx context.Context, local bool) error {
+	status, err := s.GetStatus(ctx, s.Dev, local)
 	if err != nil {
-		log.Infof("syncthing 'rest/system/connections' failed: %s", err)
-		return false
+		return err
 	}
-	err = json.Unmarshal(body, &status)
-	if err != nil {
-		log.Infof("syncthing connections unmarshalling failed: %s", err)
-		return false
+	if status.PullErrors == 0 {
+		return nil
 	}
-	if status.Connections == nil {
-		return false
-	}
-	return status.Connections[localDeviceID].Connected
+	return s.GetFolderErrors(ctx, s.Dev, local)
 }
 
 // Monitor will send a message to disconnected if remote syncthing is disconnected for more than 10 seconds.
-func (s *Syncthing) Monitor(ctx context.Context, disconnect chan struct{}) {
+func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 	ticker := time.NewTicker(5 * time.Second)
 	connected := true
 	for {
 		select {
 		case <-ticker.C:
-			if s.isConnected(ctx) {
+			err := s.checkLocalAndRemoteStatus(ctx)
+			if err == nil {
 				connected = true
-			} else {
-				if !connected {
-					log.Info("not connected to syncthing, sending disconnect signal")
-					disconnect <- struct{}{}
-					return
-				}
-				connected = false
+				continue
 			}
+			if !connected {
+				log.Info("syncthing not connected, sending disconnect signal")
+				disconnect <- err
+				return
+			}
+			connected = false
 		case <-ctx.Done():
 			return
 		}

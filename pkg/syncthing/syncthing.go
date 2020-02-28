@@ -103,6 +103,23 @@ type Status struct {
 	GlobalBytes int64  `json:"globalBytes"`
 	NeedBytes   int64  `json:"needBytes"`
 	NeedDeletes int64  `json:"needDeletes"`
+	PullErrors  int64  `json:"pullErrors"`
+}
+
+// FolderErrors represents folder errors in syncthing.
+type FolderErrors struct {
+	Data DataFolderErrors `json:"data"`
+}
+
+// DataFolderErrors represents data folder errors in syncthing.
+type DataFolderErrors struct {
+	Errors []FolderError `json:"errors"`
+}
+
+// FolderError represents a folder error in syncthing.
+type FolderError struct {
+	Error string `json:"error"`
+	Path  string `json:"path"`
 }
 
 // New constructs a new Syncthing.
@@ -426,28 +443,67 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 		if status.NeedBytes == 0 {
 			return nil
 		}
+
+		if status.PullErrors > 0 {
+			return s.GetFolderErrors(ctx, dev, false)
+		}
 	}
 }
 
 // GetStatus returns the syncthing status
-func (s *Syncthing) GetStatus(ctx context.Context, dev *model.Dev, local bool) (float64, error) {
+func (s *Syncthing) GetStatus(ctx context.Context, dev *model.Dev, local bool) (*Status, error) {
 	params := getFolderParameter(dev)
 	status := &Status{}
 	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	err = json.Unmarshal(body, status)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
+	return status, nil
+}
+
+// GetStatusProgress returns the syncthing status progress
+func (s *Syncthing) GetStatusProgress(ctx context.Context, dev *model.Dev, local bool) (float64, error) {
+	status, err := s.GetStatus(ctx, dev, local)
+	if err != nil {
+		return 0, err
+	}
 	if status.GlobalBytes == 0 {
 		return 100, nil
 	}
-
 	progress := (float64(status.GlobalBytes-status.NeedBytes) / float64(status.GlobalBytes)) * 100
 	return progress, nil
+}
+
+// GetFolderErrors returns the last folder errors
+func (s *Syncthing) GetFolderErrors(ctx context.Context, dev *model.Dev, local bool) error {
+	params := getFolderParameter(dev)
+	params["since"] = "0"
+	params["limit"] = "1"
+	params["timeout"] = "15"
+	params["events"] = "FolderErrors"
+	folderErrorsList := []FolderErrors{}
+	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(body, &folderErrorsList)
+	if err != nil {
+		return err
+	}
+	if len(folderErrorsList) == 0 {
+		return errors.ErrUnknownSyncError
+	}
+	folderErrors := folderErrorsList[len(folderErrorsList)-1]
+	if len(folderErrors.Data.Errors) == 0 {
+		return errors.ErrUnknownSyncError
+	}
+
+	return fmt.Errorf("%s: %s", folderErrors.Data.Errors[0].Path, folderErrors.Data.Errors[0].Error)
 }
 
 // Restart restarts the syncthing process
