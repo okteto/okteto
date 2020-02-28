@@ -38,9 +38,12 @@ func GetRepoNameWithoutTag(name string) string {
 	} else {
 		domain, remainder = name[:i], name[i+1:]
 	}
-	i = strings.LastIndex(remainder, ":")
+	i = strings.LastIndex(remainder, "@")
 	if i == -1 {
-		return name
+		i = strings.LastIndex(remainder, ":")
+		if i == -1 {
+			return name
+		}
 	}
 	if domain == "" {
 		return remainder[:i]

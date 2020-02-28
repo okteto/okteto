@@ -24,6 +24,69 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+func Test_GetRepoNameWithoutTag(t *testing.T) {
+	var tests = []struct {
+		name     string
+		image    string
+		expected string
+	}{
+		{
+			name:     "official-with-tag",
+			image:    "ubuntu:2",
+			expected: "ubuntu",
+		},
+		{
+			name:     "official-without-tag",
+			image:    "ubuntu",
+			expected: "ubuntu",
+		},
+		{
+			name:     "repo-with-sha",
+			image:    "test/ubuntu@sha256:06d4361e-4ea9-11ea-a0a6-42010aac0fe7",
+			expected: "test/ubuntu",
+		},
+		{
+			name:     "repo-with-tag",
+			image:    "test/ubuntu:2",
+			expected: "test/ubuntu",
+		},
+		{
+			name:     "repo-without-tag",
+			image:    "test/ubuntu",
+			expected: "test/ubuntu",
+		},
+		{
+			name:     "registry-with-tag",
+			image:    "registry/gitlab.com/test/ubuntu:2",
+			expected: "registry/gitlab.com/test/ubuntu",
+		},
+		{
+			name:     "registry-without-tag",
+			image:    "registry/gitlab.com/test/ubuntu",
+			expected: "registry/gitlab.com/test/ubuntu",
+		},
+		{
+			name:     "localhost-with-tag",
+			image:    "localhost:5000/test/ubuntu:2",
+			expected: "localhost:5000/test/ubuntu",
+		},
+		{
+			name:     "registry-without-tag",
+			image:    "localhost:5000/test/ubuntu",
+			expected: "localhost:5000/test/ubuntu",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetRepoNameWithoutTag(tt.image)
+			if tt.expected != result {
+				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.name)
+			}
+		})
+	}
+
+}
+
 func Test_GetImageTag(t *testing.T) {
 	var tests = []struct {
 		name              string
