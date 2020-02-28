@@ -76,6 +76,7 @@ func main() {
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Push())
 	root.AddCommand(cmd.Status())
+	root.AddCommand(cmd.Doctor())
 	root.AddCommand(cmd.Exec())
 	root.AddCommand(cmd.Restart())
 
