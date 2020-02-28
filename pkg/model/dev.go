@@ -38,6 +38,7 @@ const (
 	oktetoSyncthingMountPath    = "/var/syncthing"
 	oktetoMarkerPathVariable    = "OKTETO_MARKER_PATH"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
+	oktetoDefaultSSHServerPort  = 22
 
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
@@ -264,7 +265,7 @@ func (dev *Dev) setDefaults() error {
 		dev.Annotations = map[string]string{}
 	}
 	if dev.SSHServerPort == 0 {
-		dev.SSHServerPort = 22
+		dev.SSHServerPort = oktetoDefaultSSHServerPort
 	}
 	for _, s := range dev.Services {
 		if s.MountPath == "" && s.WorkDir == "" {
@@ -459,11 +460,18 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				Name:  oktetoMarkerPathVariable,
 				Value: path.Join(dev.MountPath, dev.DevPath),
 			},
-			EnvVar{
-				Name:  oktetoSSHServerPortVariable,
-				Value: strconv.Itoa(dev.SSHServerPort),
-			},
 		)
+		// We want to minimize environment mutations, so only reconfigure the SSH
+		// server port if a non-default is specified.
+		if dev.SSHServerPort != oktetoDefaultSSHServerPort {
+			rule.Environment = append(
+				rule.Environment,
+				EnvVar{
+					Name:  oktetoSSHServerPortVariable,
+					Value: strconv.Itoa(dev.SSHServerPort),
+				},
+			)
+		}
 		rule.Volumes = append(
 			rule.Volumes,
 			VolumeMount{
