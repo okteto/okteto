@@ -51,7 +51,7 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 				continue
 			}
 			if !connected {
-				log.Info("syncthing not working, sending disconnect signal")
+				log.Info("syncthing not connected, sending disconnect signal")
 				disconnect <- err
 				return
 			}
