@@ -54,7 +54,7 @@ func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 		log.Yellow("Failed to query remote syncthing logs: %s", err)
 	}
 	if remoteLogsPath != "" {
-		defer os.Remove(remoteLogsPath)
+		defer os.RemoveAll(remoteLogsPath)
 	}
 
 	now := time.Now()
