@@ -68,7 +68,7 @@ func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 		return fmt.Errorf("couldn't create archive, please try again")
 	}
 
-	log.Information("Your doctor file was generated at %s", archiveName)
+	log.Information("Your doctor file is available at %s", archiveName)
 	return nil
 }
 
