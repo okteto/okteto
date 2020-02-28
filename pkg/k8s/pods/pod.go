@@ -83,12 +83,12 @@ func ListBySelector(namespace string, selector map[string]string, c kubernetes.I
 	return p.Items, nil
 }
 
-// GetDevPod returns the dev pod for a deployment
-func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
+// GetDevPodInLoop returns the dev pod for a deployment and loops until it success
+func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	tries := 0
 	ticker := time.NewTicker(200 * time.Millisecond)
 	for tries < maxRetriesPodRunning {
-		pod, err := loopGetDevPod(ctx, dev, c, waitUntilDeployed)
+		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +107,8 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 	return nil, fmt.Errorf("kubernetes is taking too long to create the pod of your development environment. Please check for errors and try again")
 }
 
-func loopGetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
+// GetDevPod returns the dev pod for a deployment
+func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(dev, c, waitUntilDeployed)
 	if d == nil {
 		return nil, err

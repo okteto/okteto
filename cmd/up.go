@@ -434,7 +434,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		}
 	}
 
-	pod, err := pods.GetDevPod(up.Context, up.Dev, up.Client, create)
+	pod, err := pods.GetDevPodInLoop(up.Context, up.Dev, up.Client, create)
 	if err != nil {
 		return err
 	}

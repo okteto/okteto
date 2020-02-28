@@ -26,6 +26,7 @@ import (
 
 	"github.com/mholt/archiver"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -33,7 +34,7 @@ import (
 )
 
 //Run runs the "okteto status" sequence
-func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
 	z := archiver.Zip{
 		CompressionLevel:       flate.DefaultCompression,
 		MkdirAll:               true,
@@ -45,7 +46,7 @@ func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 
 	summaryFilename, err := generateSummaryFile()
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer os.Remove(summaryFilename)
 
@@ -53,23 +54,26 @@ func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	if err != nil {
 		log.Yellow("Failed to query remote syncthing logs: %s", err)
 	}
-	if remoteLogsPath != "" {
-		defer os.RemoveAll(remoteLogsPath)
-	}
+	defer os.RemoveAll(remoteLogsPath)
 
 	now := time.Now()
 	archiveName := fmt.Sprintf("okteto-doctor-%s.zip", now.Format("20060102150405"))
-	files := []string{summaryFilename, filepath.Join(config.GetHome(), "okteto.log"), config.GetSyncthingLogFile(dev.Namespace, dev.Name)}
+	files := []string{summaryFilename}
+	if model.FileExists(filepath.Join(config.GetHome(), "okteto.log")) {
+		files = append(files, filepath.Join(config.GetHome(), "okteto.log"))
+	}
+	if model.FileExists(config.GetSyncthingLogFile(dev.Namespace, dev.Name)) {
+		files = append(files, config.GetSyncthingLogFile(dev.Namespace, dev.Name))
+	}
 	if remoteLogsPath != "" {
 		files = append(files, remoteLogsPath)
 	}
 	if err := z.Archive(files, archiveName); err != nil {
 		log.Infof("error while archiving: %s", err)
-		return fmt.Errorf("couldn't create archive, please try again")
+		return "", fmt.Errorf("couldn't create archive '%s', please try again: %s", archiveName, err)
 	}
 
-	log.Information("Your doctor file is available at %s", archiveName)
-	return nil
+	return archiveName, nil
 }
 
 func generateSummaryFile() (string, error) {
@@ -79,12 +83,11 @@ func generateSummaryFile() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Fprintf(fileSummary, "version=%s\n", config.VersionString)
-	fmt.Fprintf(fileSummary, "os=%s\n", runtime.GOOS)
+	defer fileSummary.Close()
+	fmt.Fprintf(fileSummary, "version=%s\nos=%s\narch=%s\n", config.VersionString, runtime.GOOS, runtime.GOARCH)
 	if err := fileSummary.Sync(); err != nil {
 		return "", err
 	}
-	fileSummary.Close()
 	return summaryPath, nil
 }
 
@@ -100,11 +103,11 @@ func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kub
 	if err != nil {
 		return "", err
 	}
+	defer fileRemoteLog.Close()
 	fmt.Fprint(fileRemoteLog, remoteLogs)
 	if err := fileRemoteLog.Sync(); err != nil {
 		return "", err
 	}
-	fileRemoteLog.Close()
 	return remoteLogsPath, nil
 }
 
@@ -112,6 +115,9 @@ func getDevPodLogs(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset)
 	p, err := pods.GetDevPod(ctx, dev, c, false)
 	if err != nil {
 		return "", err
+	}
+	if p == nil {
+		return "", errors.ErrNotFound
 	}
 	if len(dev.Container) == 0 {
 		dev.Container = p.Spec.Containers[0].Name
