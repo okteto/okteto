@@ -236,7 +236,7 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 		if deployments.IsDevModeOn(d) && deployments.HasBeenChanged(d) {
 			up.Exit <- errors.UserError{
 				E:    fmt.Errorf("Deployment '%s' has been modified while your development environment was active", d.Name),
-				Hint: "Follow these steps:\n      1. Execute 'okteto down'\n      2. Apply your manifest changes again: 'kubectl apply'\n      3. Execute 'okteto up' again\n    More information here: https://okteto.com/docs/reference/known-issues/index.html#kubectl-apply-changes-are-undone-by-okteto-up",
+				Hint: "Follow these steps:\n      1. Execute 'okteto down'\n      2. Apply your manifest changes again: 'kubectl apply'\n      3. Execute 'okteto up' again\n    More information is available here: https://okteto.com/docs/reference/known-issues/index.html#kubectl-apply-changes-are-undone-by-okteto-up",
 			}
 			return
 		}
