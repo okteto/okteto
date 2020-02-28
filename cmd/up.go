@@ -380,7 +380,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	}
 
 	if up.retry && !deployments.IsDevModeOn(d) {
-		return fmt.Errorf("Development environment has been deactivated")
+		return fmt.Errorf("Development environment has been deactivated by an external command")
 	}
 
 	up.updateStateFile(starting)
