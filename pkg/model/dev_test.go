@@ -347,6 +347,11 @@ func TestDev_validateName(t *testing.T) {
 				Name:            tt.devName,
 				ImagePullPolicy: apiv1.PullAlways,
 			}
+			// Since dev isn't being unmarshalled through Read, apply defaults
+			// before validating.
+			if err := dev.setDefaults(); err != nil {
+				t.Fatalf("error applying defaults: %v", err)
+			}
 			if err := dev.validate(); (err != nil) != tt.wantErr {
 				t.Errorf("Dev.validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -366,6 +371,7 @@ func Test_LoadRemote(t *testing.T) {
     key2: value2
   forward:
     - 8080:8080
+  sshServerPort: 2222
   resources:
     requests:
       memory: "64Mi"
@@ -399,6 +405,9 @@ func Test_LoadRemote(t *testing.T) {
 
 	if dev.Forward[1].Local != 22100 {
 		t.Errorf("local forward wasn't 22100 it was %d", dev.Forward[1].Local)
+	}
+	if e, a := 2222, dev.Forward[1].Remote; e != a {
+		t.Errorf("expected local forward remote %d, got %d", e, a)
 	}
 }
 
@@ -599,6 +608,20 @@ func Test_validate(t *testing.T) {
 			manifest: []byte(`
       name: deployment
       subpath: /app/docs`),
+			expectErr: true,
+		},
+		{
+			name: "valid-ssh-server-port",
+			manifest: []byte(`
+      name: deployment
+      sshServerPort: 2222`),
+			expectErr: false,
+		},
+		{
+			name: "invalid-ssh-server-port",
+			manifest: []byte(`
+      name: deployment
+      sshServerPort: -1`),
 			expectErr: true,
 		},
 	}

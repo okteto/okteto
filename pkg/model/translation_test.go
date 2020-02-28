@@ -15,6 +15,7 @@ package model
 
 import (
 	"path"
+	"reflect"
 	"testing"
 
 	yaml "gopkg.in/yaml.v2"
@@ -77,7 +78,7 @@ services:
 		},
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
-			VolumeMount{
+			{
 				Name:      dev.GetVolumeName(),
 				MountPath: "/app",
 				SubPath:   SourceCodeSubPath,
@@ -87,7 +88,7 @@ services:
 				MountPath: oktetoSyncthingMountPath,
 				SubPath:   SyncthingSubPath,
 			},
-			VolumeMount{
+			{
 				Name:      dev.GetVolumeName(),
 				MountPath: "/path",
 				SubPath:   path.Join(SourceCodeSubPath, "sub"),
@@ -129,5 +130,40 @@ services:
 	marshalled2OK, _ := yaml.Marshal(rule2OK)
 	if string(marshalled2) != string(marshalled2OK) {
 		t.Fatalf("Wrong rule2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
+	}
+}
+
+func TestSSHServerPortTranslationRule(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest *Dev
+		expected []EnvVar
+	}{
+		{
+			name: "default",
+			manifest: &Dev{
+				SSHServerPort: oktetoDefaultSSHServerPort,
+			},
+			expected: []EnvVar{
+				{Name: oktetoMarkerPathVariable, Value: ""},
+			},
+		},
+		{
+			name: "custom port",
+			manifest: &Dev{
+				SSHServerPort: 2222,
+			},
+			expected: []EnvVar{
+				{Name: oktetoMarkerPathVariable, Value: ""},
+				{Name: oktetoSSHServerPortVariable, Value: "2222"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Logf("test: %s", test.name)
+		rule := test.manifest.ToTranslationRule(test.manifest)
+		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
+			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
+		}
 	}
 }

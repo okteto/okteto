@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -34,8 +35,10 @@ import (
 )
 
 const (
-	oktetoSyncthingMountPath = "/var/syncthing"
-	oktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
+	oktetoSyncthingMountPath    = "/var/syncthing"
+	oktetoMarkerPathVariable    = "OKTETO_MARKER_PATH"
+	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
+	oktetoDefaultSSHServerPort  = 22
 
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
@@ -100,6 +103,7 @@ type Dev struct {
 	DevPath              string                `json:"-" yaml:"-"`
 	DevDir               string                `json:"-" yaml:"-"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
+	SSHServerPort        int                   `json:"sshServerPort" yaml:"sshServerPort"`
 }
 
 // Volume represents a volume in the dev environment
@@ -260,6 +264,9 @@ func (dev *Dev) setDefaults() error {
 	if dev.Annotations == nil {
 		dev.Annotations = map[string]string{}
 	}
+	if dev.SSHServerPort == 0 {
+		dev.SSHServerPort = oktetoDefaultSSHServerPort
+	}
 	for _, s := range dev.Services {
 		if s.MountPath == "" && s.WorkDir == "" {
 			s.MountPath = "/okteto"
@@ -331,6 +338,10 @@ func (dev *Dev) validate() error {
 		}
 	}
 
+	if dev.SSHServerPort <= 0 {
+		return fmt.Errorf("'sshServerPort' must be > 0")
+	}
+
 	return nil
 }
 
@@ -373,7 +384,7 @@ func (dev *Dev) LoadRemote() {
 		dev.Forward,
 		Forward{
 			Local:  dev.RemotePort,
-			Remote: 22,
+			Remote: dev.SSHServerPort,
 		},
 	)
 
@@ -450,6 +461,17 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				Value: path.Join(dev.MountPath, dev.DevPath),
 			},
 		)
+		// We want to minimize environment mutations, so only reconfigure the SSH
+		// server port if a non-default is specified.
+		if dev.SSHServerPort != oktetoDefaultSSHServerPort {
+			rule.Environment = append(
+				rule.Environment,
+				EnvVar{
+					Name:  oktetoSSHServerPortVariable,
+					Value: strconv.Itoa(dev.SSHServerPort),
+				},
+			)
+		}
 		rule.Volumes = append(
 			rule.Volumes,
 			VolumeMount{
