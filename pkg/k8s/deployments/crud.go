@@ -14,9 +14,11 @@
 package deployments
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -142,6 +144,36 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 	return nil
 }
 
+//UpdateOktetoRevision updates the okteto version annotation
+func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kubernetes.Clientset) error {
+	tries := 0
+	ticker := time.NewTicker(200 * time.Millisecond)
+	for tries < maxRetriesUpdateRevision {
+		updated, err := client.AppsV1().Deployments(d.Namespace).Get(d.Name, metav1.GetOptions{})
+		if err != nil {
+			log.Debugf("error while retrieving deployment %s/%s: %s", d.Namespace, d.Name, err)
+			return err
+		}
+		revision := updated.Annotations[revisionAnnotation]
+		if revision != "" {
+			d.Annotations[okLabels.RevisionAnnotation] = revision
+			if err := update(d, client); err != nil {
+				return err
+			}
+			return nil
+		}
+		select {
+		case <-ticker.C:
+			tries++
+			continue
+		case <-ctx.Done():
+			log.Debug("cancelling call to update okteto revision")
+			return ctx.Err()
+		}
+	}
+	return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", revisionAnnotation, d.Name)
+}
+
 //TranslateDevMode translates the deployment manifests to put them in dev mode
 func TranslateDevMode(tr map[string]*model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
 	for _, t := range tr {
@@ -161,6 +193,15 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 	}
 	_, ok := labels[okLabels.DevLabel]
 	return ok
+}
+
+//HasBeenChanged returns if a deployment has been updated since the development environment was activated
+func HasBeenChanged(d *appsv1.Deployment) bool {
+	oktetoRevision := d.Annotations[okLabels.RevisionAnnotation]
+	if oktetoRevision == "" {
+		return false
+	}
+	return oktetoRevision != d.Annotations[revisionAnnotation]
 }
 
 // DevModeOff deactivates dev mode for d

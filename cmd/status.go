@@ -39,7 +39,6 @@ func Status() *cobra.Command {
 		Short: fmt.Sprintf("Status of the synchronization process"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting status command")
-			analytics.TrackStatus(true, showInfo)
 
 			if k8Client.InCluster() {
 				return errors.ErrNotInCluster

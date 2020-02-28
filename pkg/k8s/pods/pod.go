@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -40,6 +41,7 @@ const (
 
 var (
 	devTerminationGracePeriodSeconds int64
+	tailLines                        int64 = 1200
 )
 
 // GetBySelector returns the first pod that matches the selector or error if not found
@@ -81,12 +83,12 @@ func ListBySelector(namespace string, selector map[string]string, c kubernetes.I
 	return p.Items, nil
 }
 
-// GetDevPod returns the dev pod for a deployment
-func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
+// GetDevPodInLoop returns the dev pod for a deployment and loops until it success
+func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	tries := 0
 	ticker := time.NewTicker(200 * time.Millisecond)
 	for tries < maxRetriesPodRunning {
-		pod, err := loopGetDevPod(ctx, dev, c, waitUntilDeployed)
+		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +107,8 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 	return nil, fmt.Errorf("kubernetes is taking too long to create the pod of your development environment. Please check for errors and try again")
 }
 
-func loopGetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
+// GetDevPod returns the dev pod for a deployment
+func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(dev, c, waitUntilDeployed)
 	if d == nil {
 		return nil, err
@@ -207,6 +210,29 @@ func Exists(podName, namespace string, c kubernetes.Interface) bool {
 		return false
 	}
 	return pod.GetObjectMeta().GetDeletionTimestamp() == nil
+}
+
+//ContainerLogs returns the logs of a given container in a given pod
+func ContainerLogs(container string, pod *apiv1.Pod, namespace string, c kubernetes.Interface) (string, error) {
+	podLogOpts := apiv1.PodLogOptions{
+		Container:  container,
+		Timestamps: true,
+		TailLines:  &tailLines,
+	}
+	req := c.CoreV1().Pods(namespace).GetLogs(pod.Name, &podLogOpts)
+	logsStream, err := req.Stream()
+	if err != nil {
+		return "", err
+	}
+	defer logsStream.Close()
+
+	buf := new(bytes.Buffer)
+
+	_, err = io.Copy(buf, logsStream)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 // Restart restarts the pods of a deployment

@@ -41,6 +41,8 @@ const (
 	oktetoSyncSecretVolume = "okteto-sync-secret"
 	oktetoDevSecretVolume  = "okteto-dev-secret"
 	oktetoSecretTemplate   = "okteto-%s"
+
+	maxRetriesUpdateRevision = 150
 )
 
 var (
