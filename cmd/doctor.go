@@ -31,7 +31,7 @@ func Doctor() *cobra.Command {
 	var namespace string
 	cmd := &cobra.Command{
 		Use:   "doctor",
-		Short: fmt.Sprintf("Generates a zip file with all okteto-related log files"),
+		Short: fmt.Sprintf("Generates a zip file with the okteto logs"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting doctor command")
 
