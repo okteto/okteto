@@ -21,10 +21,7 @@ import (
 	"sync"
 
 	"github.com/cheggaaa/pb/v3"
-	getter "github.com/hashicorp/go-getter"
 )
-
-var defaultProgressBar getter.ProgressTracker = &progressBar{}
 
 type progressBar struct {
 	// lock everything below

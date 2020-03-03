@@ -112,9 +112,11 @@ func Up() *cobra.Command {
 						return fmt.Errorf("couldn't download syncthing, please try again")
 					}
 
-					log.Yellow("couldn't download syncthing, will try again later")
+					log.Yellow("couldn't upgrade syncthing, will try again later")
 					fmt.Println()
 				}
+
+				log.Success("Dependencies successfully installed")
 			}
 
 			checkLocalWatchesConfiguration()
@@ -209,7 +211,7 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 	up.Namespace, err = namespaces.Get(up.Dev.Namespace, up.Client)
 	if err != nil {
 		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
-		up.Exit <- fmt.Errorf("couldn't get namespace/%s, please try again: %s", up.Dev.Namespace, err)
+		up.Exit <- fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
 		return
 	}
 
