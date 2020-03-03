@@ -223,7 +223,7 @@ func TestAll(t *testing.T) {
 	log.Println("got synchronized content")
 
 	if c != name {
-		t.Errorf("expected synchronized content to be %s, got %s", name, c)
+		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
 	}
 
 	// Update content in token file
@@ -258,7 +258,7 @@ func TestAll(t *testing.T) {
 	}
 
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
-		t.Fatal(err)
+		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 	}
 }
 
@@ -295,6 +295,7 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 func getContent() (string, error) {
 	endpoint := "http://localhost:8080/index.html"
 	retries := 0
+
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < 60; i++ {
 		r, err := http.Get(endpoint)
@@ -312,7 +313,7 @@ func getContent() (string, error) {
 		defer r.Body.Close()
 		if r.StatusCode != 200 {
 			log.Printf("Called %s, got status %d, retrying", endpoint, r.StatusCode)
-			time.Sleep(1 * time.Second)
+			<-t.C
 			continue
 		}
 
