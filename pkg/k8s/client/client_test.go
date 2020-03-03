@@ -12,14 +12,15 @@
 // limitations under the License.
 
 package client
+
 import (
 	"os"
 	"testing"
 )
 
 func TestInCluster(t *testing.T) {
-	inCluster := len(os.Getenv("KUBERNETES_SERVICE_PORT"))  > 0 
-	
+	inCluster := len(os.Getenv("KUBERNETES_SERVICE_PORT")) > 0
+
 	if InCluster() != inCluster {
 		t.Fail()
 	}
