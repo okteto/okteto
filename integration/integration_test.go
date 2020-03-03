@@ -57,8 +57,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Name }}
-  annotations:
-    dev.okteto.com/auto-ingress: "true"
 spec:
   replicas: 1
   selector:
@@ -111,21 +109,10 @@ workdir: /usr/src/app
 )
 
 var (
-	url  = "cloud.okteto.net"
 	user = ""
 )
 
 func TestMain(m *testing.M) {
-	if u, ok := os.LookupEnv("OKTETO_URL"); ok {
-		log.Printf("OKTETO_URL is defined, using %s\n", u)
-		url = u
-	}
-
-	_, ok := os.LookupEnv("OKTETO_TOKEN")
-	if !ok {
-		log.Println("OKTETO_TOKEN is not defined, using logged in user")
-	}
-
 	if u, ok := os.LookupEnv("OKTETO_USER"); !ok {
 		log.Println("OKTETO_USER is not defined")
 		os.Exit(1)
@@ -174,14 +161,6 @@ func TestDownloadSyncthing(t *testing.T) {
 	}
 }
 
-func TestHealth(t *testing.T) {
-	ctx := scopeagent.GetContextFromTest(t)
-
-	err := checkHealth(ctx, url)
-	if err != nil {
-		t.Fatalf("healthcheck failed: %s", err)
-	}
-}
 func TestAll(t *testing.T) {
 	ctx := scopeagent.GetContextFromTest(t)
 
@@ -193,13 +172,6 @@ func TestAll(t *testing.T) {
 	if _, err := exec.LookPath("kubectl"); err != nil {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
-
-	err = checkHealth(ctx, url)
-	if err != nil {
-		t.Fatalf("healthcheck failed: %s", err)
-	}
-
-	log.Printf("%s is healthy \n", url)
 
 	name := strings.ToLower(fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
@@ -325,7 +297,7 @@ func getContent() (string, error) {
 		if err != nil {
 			retries++
 			if retries > 3 {
-				return "", fmt.Errorf("failed to get %s: %w", url, err)
+				return "", fmt.Errorf("failed to get %s: %w", endpoint, err)
 			}
 
 			log.Printf("Called %s, got %s, retrying", endpoint, err)
@@ -361,31 +333,6 @@ func writeManifest(path, name string) error {
 
 	if err := manifestTemplate.Execute(oFile, deployment{Name: name}); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func checkHealth(ctx context.Context, url string) error {
-	endpoint := fmt.Sprintf("https://okteto.%s/healthz", url)
-	if url == "cloud.okteto.net" {
-		endpoint = "https://cloud.okteto.com/healthz"
-	}
-
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("bad status code from healthz %s: %d", endpoint, resp.StatusCode)
 	}
 
 	return nil
