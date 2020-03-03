@@ -391,6 +391,8 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {
+		m, _ := ioutil.ReadFile(manifestPath)
+		log.Printf("manifest: \n%s\n", string(m))
 		return fmt.Errorf("okteto down failed: %s", err)
 	}
 
@@ -459,6 +461,7 @@ func waitForReady(namespace, name string) error {
 		}
 
 		if string(c) == "ready" {
+			log.Printf("okteto up is: %s", c)
 			return nil
 		} else if string(c) == "failed" {
 			return fmt.Errorf("dev environment failed")
