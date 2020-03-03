@@ -5,7 +5,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.14
     steps:
       - checkout
       - restore_cache: 
@@ -75,7 +75,7 @@ jobs:
           
   mock-publish-github-release:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.14
     steps:
       - checkout
       - attach_workspace:
@@ -109,7 +109,7 @@ jobs:
       
   release:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.14
     steps:
       - checkout
       - attach_workspace:
@@ -148,7 +148,7 @@ jobs:
             bash ./update_homebrew_formula.sh $CIRCLE_TAG $GITHUB_TOKEN $sha 0
   release-master:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.14
     steps:
       - checkout
       - attach_workspace:
