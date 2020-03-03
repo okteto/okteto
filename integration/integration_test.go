@@ -430,7 +430,7 @@ func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, 
 		defer span.Finish()
 		if err := cmd.Wait(); err != nil {
 			if err != nil {
-				log.Printf("okteto up exited: %s. \n Output: \n %s", err, out.String())
+				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
 			}
 		}
 	}()
