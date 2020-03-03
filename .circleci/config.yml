@@ -113,9 +113,16 @@ jobs:
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
             & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_TOKEN
       - run: 
-          name: test
+          name: integration tests (serverside)
           environment: 
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+          command: |
+            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
+      - run: 
+          name: integration tests (clientside)
+          environment: 
+            OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            OKTETO_CLIENTSIDE_TRANSLATION: 'true'
           command: |
             go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
       - save_cache:
