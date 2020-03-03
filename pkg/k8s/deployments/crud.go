@@ -215,7 +215,7 @@ func DevModeOff(tr *model.Translation, imageToRedeploy string, c *kubernetes.Cli
 		for _, rule := range tr.Rules {
 			devContainer := GetDevContainer(&d.Spec.Template.Spec, rule.Container)
 			if devContainer == nil {
-				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.Deployment.Name)
+				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
 			}
 
 			devContainer.Image = imageToRedeploy
