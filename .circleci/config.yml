@@ -102,7 +102,7 @@ jobs:
           name: test
           command: |
             go version
-            unset OKTETO_TOKEN
+            set OKTETO_TOKEN=
             go test ./...
       - save_cache:
           key: v4-pkg-cache-windows-{{ checksum "go.sum" }}
