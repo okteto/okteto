@@ -112,6 +112,7 @@ workdir: /usr/src/app
 var (
 	user          = ""
 	kubectlBinary = "kubectl"
+	inWindows     = false
 )
 
 func TestMain(m *testing.M) {
@@ -133,6 +134,7 @@ func TestMain(m *testing.M) {
 
 	if runtime.GOOS == "windows" {
 		kubectlBinary = "kubectl.exe"
+		inWindows = true
 	}
 
 	os.Exit(scopeagent.Run(m))
@@ -250,9 +252,12 @@ func TestAll(t *testing.T) {
 	log.Println("got updated content")
 
 	log.Println("sent interrupt signal to up")
-	p.Signal(os.Interrupt)
-	if err := waitForUpExit(&wg); err != nil {
-		t.Error(err)
+
+	if !inWindows {
+		p.Signal(os.Interrupt)
+		if err := waitForUpExit(&wg); err != nil {
+			t.Error(err)
+		}
 	}
 
 	if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
