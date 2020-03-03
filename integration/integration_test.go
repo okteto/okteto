@@ -133,7 +133,6 @@ func TestMain(m *testing.M) {
 
 	if runtime.GOOS == "windows" {
 		kubectlBinary = "kubectl.exe"
-		oktetoBinary = "okteto.exe"
 	}
 
 	os.Exit(scopeagent.Run(m))
