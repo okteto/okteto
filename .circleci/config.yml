@@ -14,6 +14,7 @@ jobs:
       - run: 
           name: test
           command: |
+            unset OKTETO_TOKEN
             make test
             bash <(curl -s https://codecov.io/bash)
       - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
@@ -54,15 +55,18 @@ jobs:
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
+            /usr/local/bin/okteto login --token ${OKTETO_TOKEN}
       - run: 
           name: integration tests (serverside)
           command: |
             unset OKTETO_CLIENTSIDE_TRANSLATION
+            unset OKTETO_TOKEN
             make integration
       - run: 
           name: integration tests (clientside)
           command: |
             export OKTETO_CLIENTSIDE_TRANSLATION=true
+            unset OKTETO_TOKEN
             make integration
       - save_cache:
           key: v2-pkg-cache-{{ checksum "go.sum" }}

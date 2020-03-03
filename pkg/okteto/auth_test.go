@@ -46,7 +46,6 @@ func Test_save(t *testing.T) {
 			defer os.RemoveAll(dir)
 
 			os.Setenv("OKTETO_HOME", dir)
-			os.Setenv("OKTETO_TOKEN", "")
 
 			if err := save(tt.token); err != nil {
 				t.Fatal(err)
@@ -108,7 +107,6 @@ func TestSaveMachineID(t *testing.T) {
 			}()
 
 			os.Setenv("OKTETO_HOME", dir)
-			os.Setenv("OKTETO_TOKEN", "")
 
 			if tt.existing != nil {
 				if err := save(tt.existing); err != nil {
@@ -170,7 +168,6 @@ func TestSaveUserID(t *testing.T) {
 			}()
 
 			os.Setenv("OKTETO_HOME", dir)
-			os.Setenv("OKTETO_TOKEN", "")
 
 			if tt.existing != nil {
 				if err := save(tt.existing); err != nil {

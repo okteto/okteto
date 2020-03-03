@@ -57,8 +57,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Name }}
-  annotations:
-    dev.okteto.com/auto-ingress: "true"
 spec:
   replicas: 1
   selector:
@@ -111,21 +109,10 @@ workdir: /usr/src/app
 )
 
 var (
-	url  = "cloud.okteto.net"
 	user = ""
 )
 
 func TestMain(m *testing.M) {
-	if u, ok := os.LookupEnv("OKTETO_URL"); ok {
-		log.Printf("OKTETO_URL is defined, using %s\n", u)
-		url = u
-	}
-
-	_, ok := os.LookupEnv("OKTETO_TOKEN")
-	if !ok {
-		log.Println("OKTETO_TOKEN is not defined, using logged in user")
-	}
-
 	if u, ok := os.LookupEnv("OKTETO_USER"); !ok {
 		log.Println("OKTETO_USER is not defined")
 		os.Exit(1)
@@ -174,14 +161,6 @@ func TestDownloadSyncthing(t *testing.T) {
 	}
 }
 
-func TestHealth(t *testing.T) {
-	ctx := scopeagent.GetContextFromTest(t)
-
-	err := checkHealth(ctx, url)
-	if err != nil {
-		t.Fatalf("healthcheck failed: %s", err)
-	}
-}
 func TestAll(t *testing.T) {
 	ctx := scopeagent.GetContextFromTest(t)
 
@@ -193,13 +172,6 @@ func TestAll(t *testing.T) {
 	if _, err := exec.LookPath("kubectl"); err != nil {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
-
-	err = checkHealth(ctx, url)
-	if err != nil {
-		t.Fatalf("healthcheck failed: %s", err)
-	}
-
-	log.Printf("%s is healthy \n", url)
 
 	name := strings.ToLower(fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
@@ -248,8 +220,10 @@ func TestAll(t *testing.T) {
 		t.Fatalf("failed to get content: %s", err)
 	}
 
+	log.Println("got synchronized content")
+
 	if c != name {
-		t.Errorf("expected content to be %s, got %s", name, c)
+		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
 	}
 
 	// Update content in token file
@@ -267,6 +241,8 @@ func TestAll(t *testing.T) {
 		t.Fatalf("expected updated content to be %s, got %s", updatedContent, c)
 	}
 
+	log.Println("got updated content")
+
 	log.Println("sent interrupt signal to up")
 	p.Signal(os.Interrupt)
 	if err := waitForUpExit(&wg); err != nil {
@@ -282,7 +258,7 @@ func TestAll(t *testing.T) {
 	}
 
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
-		t.Fatal(err)
+		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 	}
 }
 
@@ -317,15 +293,16 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 }
 
 func getContent() (string, error) {
-	endpoint := "http://localhost:8080"
+	endpoint := "http://localhost:8080/index.html"
 	retries := 0
+
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < 60; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
 			retries++
 			if retries > 3 {
-				return "", fmt.Errorf("failed to get %s: %w", url, err)
+				return "", fmt.Errorf("failed to get %s: %w", endpoint, err)
 			}
 
 			log.Printf("Called %s, got %s, retrying", endpoint, err)
@@ -336,7 +313,7 @@ func getContent() (string, error) {
 		defer r.Body.Close()
 		if r.StatusCode != 200 {
 			log.Printf("Called %s, got status %d, retrying", endpoint, r.StatusCode)
-			time.Sleep(1 * time.Second)
+			<-t.C
 			continue
 		}
 
@@ -361,31 +338,6 @@ func writeManifest(path, name string) error {
 
 	if err := manifestTemplate.Execute(oFile, deployment{Name: name}); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func checkHealth(ctx context.Context, url string) error {
-	endpoint := fmt.Sprintf("https://okteto.%s/healthz", url)
-	if url == "cloud.okteto.net" {
-		endpoint = "https://cloud.okteto.com/healthz"
-	}
-
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("bad status code from healthz %s: %d", endpoint, resp.StatusCode)
 	}
 
 	return nil
@@ -440,6 +392,8 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {
+		m, _ := ioutil.ReadFile(manifestPath)
+		log.Printf("manifest: \n%s\n", string(m))
 		return fmt.Errorf("okteto down failed: %s", err)
 	}
 
@@ -508,6 +462,7 @@ func waitForReady(namespace, name string) error {
 		}
 
 		if string(c) == "ready" {
+			log.Printf("okteto up is: %s", c)
 			return nil
 		} else if string(c) == "failed" {
 			return fmt.Errorf("dev environment failed")
