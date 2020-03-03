@@ -103,7 +103,7 @@ type Dev struct {
 	DevPath              string                `json:"-" yaml:"-"`
 	DevDir               string                `json:"-" yaml:"-"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
-	SSHServerPort        int                   `json:"sshServerPort" yaml:"sshServerPort"`
+	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 }
 
 // Volume represents a volume in the dev environment
