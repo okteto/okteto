@@ -109,14 +109,13 @@ jobs:
       - run:
           name: prepare env
           command: |
-            new-item $HOME\.okteto -itemtype "directory"
-            new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics"
-            copy-item ".\artifacts\bin\okteto.exe" -Destination "C:\Windows\system32\okteto.exe"
-            & "C:\Windows\system32\okteto.exe" login --token ${API_TOKEN}
+            new-item $HOME\.okteto -itemtype "directory" -force
+            new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
+            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token ${API_TOKEN}
       - run: 
           name: test
           environment: 
-            OKTETO_PATH: 'C:\Windows\system32\okteto.exe'
+            OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
           command: |
             go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
       - save_cache:
@@ -217,6 +216,8 @@ workflows:
             branches:
               ignore: /.*/
       - windows-unit:
+          requires:
+            - build
           filters:
             branches:
               only: 
