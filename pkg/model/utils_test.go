@@ -72,7 +72,7 @@ func TestFileExists(t *testing.T) {
 		t.Errorf("fail to detect non-existing file")
 	}
 
-	if err := ioutil.WriteFile(p, []byte("hello-world"), 600); err != nil {
+	if err := ioutil.WriteFile(p, []byte("hello-world"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
