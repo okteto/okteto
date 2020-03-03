@@ -99,6 +99,10 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
+		if devContainer == nil {
+			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.Deployment.Name)
+		}
+
 		TranslateDevContainer(devContainer, rule)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
