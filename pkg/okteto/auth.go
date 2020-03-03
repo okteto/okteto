@@ -225,7 +225,7 @@ func authUserLegacy(ctx context.Context, client *graphql.Client, code string) (*
 func GetToken() (*Token, error) {
 	if currentToken == nil {
 		if len(os.Getenv("OKTETO_TOKEN")) > 0 {
-			return getTokenFromEnv()
+			return nil, fmt.Errorf("OKTETO_TOKEN is now deprecated, use the `okteto login --token` command instead")
 		}
 
 		p := getTokenPath()

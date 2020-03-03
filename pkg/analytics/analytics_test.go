@@ -55,7 +55,6 @@ func Test_getTrackID(t *testing.T) {
 			defer os.RemoveAll(dir)
 
 			os.Setenv("OKTETO_HOME", dir)
-			os.Setenv("OKTETO_TOKEN", "")
 
 			if len(tt.machineID) > 0 {
 				if err := okteto.SaveMachineID(tt.machineID); err != nil {
