@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -23,19 +22,19 @@ import (
 
 func downloadSyncthing() error {
 	t := time.NewTicker(1 * time.Second)
+	var err error
 	for i := 0; i < 3; i++ {
-		err := syncthing.Install(defaultProgressBar)
+		p := &progressBar{}
+		err = syncthing.Install(p)
 		if err == nil {
 			return nil
 		}
 
-		if i == 2 {
-			return err
+		if i < 2 {
+			log.Infof("failed to download syncthing, retrying: %s", err)
+			<-t.C
 		}
-
-		log.Infof("failed to download syncthing, retrying: %s", err)
-		<-t.C
 	}
 
-	return fmt.Errorf("failed to download syncthing")
+	return err
 }

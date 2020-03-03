@@ -14,6 +14,7 @@
 package model
 
 import (
+	"io"
 	"os"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -31,4 +32,27 @@ func FileExists(name string) bool {
 	}
 
 	return true
+}
+
+// CopyFile copies a binary between from and to
+func CopyFile(from, to string) error {
+	fromFile, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+
+	// skipcq GSC-G302 syncthing is a binary so it needs exec permissions
+	toFile, err := os.OpenFile(to, os.O_RDWR|os.O_CREATE, 0700)
+	if err != nil {
+		return err
+	}
+
+	defer toFile.Close()
+
+	_, err = io.Copy(toFile, fromFile)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
