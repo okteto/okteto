@@ -14,6 +14,7 @@ jobs:
       - run: 
           name: test
           command: |
+            unset OKTETO_TOKEN
             make test
             bash <(curl -s https://codecov.io/bash)
       - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
