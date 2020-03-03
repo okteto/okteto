@@ -223,7 +223,7 @@ func TestAll(t *testing.T) {
 	log.Println("got synchronized content")
 
 	if c != name {
-		t.Errorf("expected content to be %s, got %s", name, c)
+		t.Errorf("expected synchronized content to be %s, got %s", name, c)
 	}
 
 	// Update content in token file
@@ -293,7 +293,7 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 }
 
 func getContent() (string, error) {
-	endpoint := "http://localhost:8080"
+	endpoint := "http://localhost:8080/index.html"
 	retries := 0
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < 60; i++ {
