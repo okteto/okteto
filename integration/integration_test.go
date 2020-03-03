@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -109,7 +110,8 @@ workdir: /usr/src/app
 )
 
 var (
-	user = ""
+	user          = ""
+	kubectlBinary = "kubectl"
 )
 
 func TestMain(m *testing.M) {
@@ -127,6 +129,11 @@ func TestMain(m *testing.M) {
 	if _, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
 		log.Println("SCOPE is enabled")
 		nethttp.PatchHttpDefaultClient()
+	}
+
+	if runtime.GOOS == "windows" {
+		kubectlBinary = "kubectl.exe"
+		oktetoBinary = "okteto.exe"
 	}
 
 	os.Exit(scopeagent.Run(m))
@@ -169,7 +176,7 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := exec.LookPath("kubectl"); err != nil {
+	if _, err := exec.LookPath(kubectlBinary); err != nil {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
@@ -266,13 +273,13 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 	for i := 0; i < timeout; i++ {
 		args := []string{"rollout", "status", "deployment", name, "--revision", fmt.Sprintf("%d", revision)}
 
-		cmd := exec.Command("kubectl", args...)
+		cmd := exec.Command(kubectlBinary, args...)
 		cmd.Env = os.Environ()
 		span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 		defer span.Finish()
 
 		o, _ := cmd.CombinedOutput()
-		log.Printf("kubectl %s", strings.Join(args, " "))
+		log.Printf("%s %s", kubectlBinary, strings.Join(args, " "))
 		output := string(o)
 		log.Println(output)
 
@@ -476,7 +483,7 @@ func waitForReady(namespace, name string) error {
 
 func deploy(ctx context.Context, name, path string) error {
 	log.Printf("deploying kubernetes manifest %s", path)
-	cmd := exec.Command("kubectl", "apply", "-f", path)
+	cmd := exec.Command(kubectlBinary, "apply", "-f", path)
 	cmd.Env = os.Environ()
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 	defer span.Finish()
