@@ -101,22 +101,6 @@ jobs:
           command: |
             go version
             go test ./...
-      - save_cache:
-          key: v4-pkg-cache-windows-{{ checksum "go.sum" }}
-          paths:
-            - C:\Users\circleci\AppData\Local\go-build
-            - C:\Users\circleci\go\pkg
-            - C:\Go\pkg
-  windows-integration:
-    executor: win/default
-    steps: 
-      - checkout
-      - restore_cache: 
-          keys:
-            - v4-pkg-cache-windows-{{ checksum "go.sum" }}
-      - run: 
-          name: upgrade golang
-          command: choco upgrade golang
       - run: 
           name: upgrade kubectl
           command: choco install kubernetes-cli
@@ -128,7 +112,7 @@ jobs:
             new-item $HOME\.okteto -itemtype "directory"
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics"
             copy-item ".\artifacts\bin\okteto.exe" -Destination "C:\Windows\system32\okteto.exe"
-            C:\Windows\system32\okteto.exe login --token ${API_TOKEN}
+            & "C:\Windows\system32\okteto.exe" login --token ${API_TOKEN}
       - run: 
           name: test
           environment: 
@@ -141,7 +125,6 @@ jobs:
             - C:\Users\circleci\AppData\Local\go-build
             - C:\Users\circleci\go\pkg
             - C:\Go\pkg
-      
   release:
     docker:
       - image: circleci/golang:1.13
@@ -239,9 +222,3 @@ workflows:
               only: 
                 - master
                 - /.*(windows)/
-      - windows-integration:
-          filters:
-            branches:
-              only: 
-                - master
-                - /.*(windows).*(e2e)/
