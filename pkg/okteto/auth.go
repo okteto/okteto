@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,24 +126,6 @@ func saveAuthData(user *User, url string) error {
 	}
 
 	return nil
-}
-
-func getTokenFromEnv() (*Token, error) {
-	log.Info("using token from environment")
-	t := &Token{Token: os.Getenv("OKTETO_TOKEN")}
-	u := os.Getenv("OKTETO_URL")
-	if len(u) == 0 {
-		u = CloudURL
-	}
-
-	p, err := url.Parse(u)
-	if err != nil {
-		return t, err
-	}
-
-	t.URL = p.String()
-
-	return t, nil
 }
 
 func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
