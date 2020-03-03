@@ -111,7 +111,7 @@ jobs:
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
-            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token ${API_TOKEN}
+            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_TOKEN
       - run: 
           name: test
           environment: 
