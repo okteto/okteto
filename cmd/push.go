@@ -40,9 +40,8 @@ func Push() *cobra.Command {
 	var autoDeploy bool
 
 	cmd := &cobra.Command{
-		Use:    "push",
-		Hidden: true,
-		Short:  "Builds, pushes and redeploys source code to the target deployment",
+		Use:   "push",
+		Short: "Builds, pushes and redeploys source code to the target deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting push command")
 
