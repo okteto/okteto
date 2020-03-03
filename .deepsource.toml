@@ -10,3 +10,5 @@ enabled = true
 
   [analyzers.meta]
   import_path = "github.com/okteto/okteto"
+  
+  
