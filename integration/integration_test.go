@@ -220,6 +220,8 @@ func TestAll(t *testing.T) {
 		t.Fatalf("failed to get content: %s", err)
 	}
 
+	log.Println("got synchronized content")
+
 	if c != name {
 		t.Errorf("expected content to be %s, got %s", name, c)
 	}
@@ -238,6 +240,8 @@ func TestAll(t *testing.T) {
 	if c != updatedContent {
 		t.Fatalf("expected updated content to be %s, got %s", updatedContent, c)
 	}
+
+	log.Println("got updated content")
 
 	log.Println("sent interrupt signal to up")
 	p.Signal(os.Interrupt)
