@@ -86,8 +86,10 @@ func Install(p getter.ProgressTracker) error {
 		return fmt.Errorf("failed to set permissions to %s: %s", b, err)
 	}
 
-	if err := os.Remove(i); err != nil {
-		log.Infof("failed to delete %s, will try to overwrite: %s", i, err)
+	if model.FileExists(i) {
+		if err := os.Remove(i); err != nil {
+			log.Infof("failed to delete %s, will try to overwrite: %s", i, err)
+		}
 	}
 
 	if err := model.CopyFile(b, i); err != nil {
