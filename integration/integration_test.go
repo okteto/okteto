@@ -36,6 +36,7 @@ import (
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"go.undefinedlabs.com/scopeagent"
+	"go.undefinedlabs.com/scopeagent/agent"
 	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	appsv1 "k8s.io/api/apps/v1"
@@ -120,8 +121,10 @@ func TestMain(m *testing.M) {
 		user = u
 	}
 
+	mode := "server"
 	if _, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
 		log.Println("running in CLIENTSIDE mode")
+		mode = "client"
 	}
 
 	if _, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
@@ -133,7 +136,9 @@ func TestMain(m *testing.M) {
 		kubectlBinary = "kubectl.exe"
 	}
 
-	os.Exit(scopeagent.Run(m))
+	os.Exit(scopeagent.Run(m, agent.WithMetadata(map[string]interface{}{
+		"mode": mode,
+	})))
 }
 
 func TestDownloadSyncthing(t *testing.T) {
