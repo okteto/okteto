@@ -16,6 +16,7 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -24,20 +25,22 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
 	"text/template"
 	"time"
 
+	ps "github.com/mitchellh/go-ps"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/syncthing"
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"go.undefinedlabs.com/scopeagent"
+	"go.undefinedlabs.com/scopeagent/agent"
 	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -45,6 +48,8 @@ import (
 var (
 	deploymentTemplate = template.Must(template.New("deployment").Parse(deploymentFormat))
 	manifestTemplate   = template.Must(template.New("manifest").Parse(manifestFormat))
+	user               = ""
+	kubectlBinary      = "kubectl"
 )
 
 type deployment struct {
@@ -108,10 +113,6 @@ workdir: /usr/src/app
 `
 )
 
-var (
-	user = ""
-)
-
 func TestMain(m *testing.M) {
 	if u, ok := os.LookupEnv("OKTETO_USER"); !ok {
 		log.Println("OKTETO_USER is not defined")
@@ -120,8 +121,10 @@ func TestMain(m *testing.M) {
 		user = u
 	}
 
+	mode := "server"
 	if _, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
 		log.Println("running in CLIENTSIDE mode")
+		mode = "client"
 	}
 
 	if _, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
@@ -129,7 +132,13 @@ func TestMain(m *testing.M) {
 		nethttp.PatchHttpDefaultClient()
 	}
 
-	os.Exit(scopeagent.Run(m))
+	if runtime.GOOS == "windows" {
+		kubectlBinary = "kubectl.exe"
+	}
+
+	os.Exit(scopeagent.Run(m, agent.WithMetadata(map[string]interface{}{
+		"mode": mode,
+	})))
 }
 
 func TestDownloadSyncthing(t *testing.T) {
@@ -169,7 +178,7 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := exec.LookPath("kubectl"); err != nil {
+	if _, err := exec.LookPath(kubectlBinary); err != nil {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
@@ -243,14 +252,12 @@ func TestAll(t *testing.T) {
 
 	log.Println("got updated content")
 
-	log.Println("sent interrupt signal to up")
-	p.Signal(os.Interrupt)
-	if err := waitForUpExit(&wg); err != nil {
-		t.Error(err)
-	}
-
 	if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
+	}
+
+	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
+		t.Error(err)
 	}
 
 	if err := compareDeployment(deployment); err != nil {
@@ -266,13 +273,13 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 	for i := 0; i < timeout; i++ {
 		args := []string{"rollout", "status", "deployment", name, "--revision", fmt.Sprintf("%d", revision)}
 
-		cmd := exec.Command("kubectl", args...)
+		cmd := exec.Command(kubectlBinary, args...)
 		cmd.Env = os.Environ()
 		span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 		defer span.Finish()
 
 		o, _ := cmd.CombinedOutput()
-		log.Printf("kubectl %s", strings.Join(args, " "))
+		log.Printf("%s %s", kubectlBinary, strings.Join(args, " "))
 		output := string(o)
 		log.Println(output)
 
@@ -407,8 +414,10 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 
 func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, oktetoPath string) (*os.Process, error) {
 	log.Println("starting okteto up")
+	var out bytes.Buffer
 	cmd := exec.Command(oktetoPath, "up", "-f", manifestPath)
 	cmd.Env = os.Environ()
+	cmd.Stdout = &out
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("okteto up failed to start: %s", err)
@@ -420,9 +429,10 @@ func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, 
 		defer wg.Done()
 		defer span.Finish()
 		if err := cmd.Wait(); err != nil {
-			log.Printf("okteto up exited: %s", err)
+			if err != nil {
+				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
+			}
 		}
-
 	}()
 
 	return cmd.Process, waitForReady(namespace, name)
@@ -476,7 +486,7 @@ func waitForReady(namespace, name string) error {
 
 func deploy(ctx context.Context, name, path string) error {
 	log.Printf("deploying kubernetes manifest %s", path)
-	cmd := exec.Command("kubectl", "apply", "-f", path)
+	cmd := exec.Command(kubectlBinary, "apply", "-f", path)
 	cmd.Env = os.Environ()
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 	defer span.Finish()
@@ -563,4 +573,26 @@ func compareDeployment(deployment *appsv1.Deployment) error {
 	}
 
 	return nil
+}
+
+func checkIfUpFinished(ctx context.Context, pid int) error {
+	var err error
+	t := time.NewTicker(1 * time.Second)
+	for i := 0; i < 5; i++ {
+		var found ps.Process
+		found, err = ps.FindProcess(pid)
+		if err == nil && found == nil {
+			return nil
+		}
+
+		if err != nil {
+			err = fmt.Errorf("error when finding process: %s", err)
+		} else if found != nil {
+			err = fmt.Errorf("okteto up didn't exit after down")
+		}
+
+		<-t.C
+	}
+
+	return err
 }
