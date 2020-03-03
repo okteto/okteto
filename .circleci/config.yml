@@ -71,8 +71,7 @@ jobs:
             - ~/.cache/go-build
             - /go/pkg
       - store_artifacts:
-          path: /root/.okteto
-          
+          path: /root/.okteto        
   mock-publish-github-release:
     docker:
       - image: circleci/golang:1.14
@@ -86,6 +85,8 @@ jobs:
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             bash ./update_homebrew_formula.sh 0.0.1 $GITHUB_TOKEN $sha 1
   windows-unit:
+    environment: 
+      OKTETO_USER: cindylopez
     executor: win/default
     steps: 
       - checkout
@@ -100,13 +101,36 @@ jobs:
           command: |
             go version
             go test ./...
+      - run: 
+          name: upgrade kubectl
+          command: choco install kubernetes-cli
+      - attach_workspace:
+          at: .\artifacts
+      - run:
+          name: prepare env
+          command: |
+            new-item $HOME\.okteto -itemtype "directory" -force
+            new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
+            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_TOKEN
+      - run: 
+          name: integration tests (serverside)
+          environment: 
+            OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+          command: |
+            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
+      - run: 
+          name: integration tests (clientside)
+          environment: 
+            OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            OKTETO_CLIENTSIDE_TRANSLATION: 'true'
+          command: |
+            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
       - save_cache:
           key: v4-pkg-cache-windows-{{ checksum "go.sum" }}
           paths:
             - C:\Users\circleci\AppData\Local\go-build
             - C:\Users\circleci\go\pkg
             - C:\Go\pkg
-      
   release:
     docker:
       - image: circleci/golang:1.14
@@ -199,6 +223,8 @@ workflows:
             branches:
               ignore: /.*/
       - windows-unit:
+          requires:
+            - build
           filters:
             branches:
               only: 
