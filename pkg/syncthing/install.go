@@ -26,6 +26,7 @@ import (
 	"github.com/Masterminds/semver"
 	getter "github.com/hashicorp/go-getter"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 var (
@@ -89,8 +90,8 @@ func Install(p getter.ProgressTracker) error {
 		log.Infof("failed to delete %s, will try to overwrite: %s", i, err)
 	}
 
-	if err := os.Rename(b, i); err != nil {
-		return fmt.Errorf("failed to move %s to %s: %s", b, i, err)
+	if err := model.CopyFile(b, i); err != nil {
+		return fmt.Errorf("failed to write %s: %s", i, err)
 	}
 
 	log.Infof("downloaded syncthing %s to %s", versionRegex, i)

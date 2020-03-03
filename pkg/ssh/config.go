@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 type (
@@ -251,7 +252,7 @@ func (config *sshConfig) writeToFilepath(p string) error {
 		log.Infof("failed to created %s: %s", dir, err)
 	}
 
-	if err := os.Rename(temp.Name(), p); err != nil {
+	if err := model.CopyFile(temp.Name(), p); err != nil {
 		return fmt.Errorf("failed to move %s to %s: %s", temp.Name(), p, err)
 	}
 
