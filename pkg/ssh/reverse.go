@@ -34,7 +34,6 @@ type reverse struct {
 type ReverseManager struct {
 	reverses map[int]*reverse
 	ctx      context.Context
-	sshUser  string
 	sshHost  string
 	sshPort  int
 }
