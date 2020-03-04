@@ -167,7 +167,7 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 		case event := <-watchPod.ResultChan():
 			pod, ok := event.Object.(*v1.Pod)
 			if !ok {
-				log.Errorf("type error getting pod event")
+				log.Errorf("type error getting pod: %s", event)
 				continue
 			}
 			log.Infof("pod %s updated", pod.Name)
@@ -180,7 +180,7 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 		case event := <-watchPodEvents.ResultChan():
 			e, ok := event.Object.(*v1.Event)
 			if !ok {
-				log.Errorf("type error getting pod event")
+				log.Errorf("type error getting event: %s", event)
 				continue
 			}
 			log.Infof("pod %s event: %s", pod.Name, e.Message)
