@@ -38,7 +38,7 @@ const (
 	oktetoSyncthingMountPath    = "/var/syncthing"
 	oktetoMarkerPathVariable    = "OKTETO_MARKER_PATH"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
-	oktetoDefaultSSHServerPort  = 22
+	oktetoDefaultSSHServerPort  = 2222
 
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"

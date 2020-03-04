@@ -18,6 +18,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 )
@@ -63,8 +64,9 @@ func (h *Handler) AuthorizationURL() string {
 
 	authorizationURL, err := url.Parse(fmt.Sprintf("%s/auth/authorization-code", h.baseURL))
 	if err != nil {
-		panic(fmt.Sprintf("failed to build authorizationURL: %s", err))
+		log.Fatalf("failed to build authorizationURL: %s", err)
 	}
+
 	authorizationURL.RawQuery = params.Encode()
 	return authorizationURL.String()
 }

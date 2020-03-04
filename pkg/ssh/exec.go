@@ -28,7 +28,7 @@ import (
 // Exec executes the command over SSH
 func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
 	log.Info("starting SSH connection")
-	sshConfig := getSSHClientConfig("root")
+	sshConfig := getSSHClientConfig()
 
 	var connection *ssh.Client
 	var err error
