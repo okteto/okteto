@@ -17,6 +17,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 )
 
@@ -51,8 +52,8 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 				continue
 			}
 			if !connected {
-				log.Info("syncthing not connected, sending disconnect signal")
-				disconnect <- err
+				log.Info("syncthing not connected, sending disconnect signal: %s", err)
+				disconnect <- errors.ErrLostSyncthing
 				return
 			}
 			connected = false
