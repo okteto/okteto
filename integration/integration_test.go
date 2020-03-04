@@ -227,7 +227,7 @@ func TestAll(t *testing.T) {
 	var wg sync.WaitGroup
 	p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("up failed to run: %s", err.Error())
 	}
 
 	log.Println("getting synchronized content")
