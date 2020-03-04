@@ -136,7 +136,7 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 		return err
 	}
 
-	log.Debugf("port forwarding finished")
+	log.Debugf("all portforwards are connected")
 	return nil
 }
 

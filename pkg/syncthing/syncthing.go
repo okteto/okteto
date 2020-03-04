@@ -179,6 +179,10 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		log.Infof("error saving syncthing object: %s", err)
 	}
 
+	log.Infof("local syncthing intialized: gui -> %d, sync -> %d", guiPort, listenPort)
+	log.Infof("remote syncthing intialized: gui -> %d, sync -> %d", remoteGUIPort, remotePort)
+	log.Infof("syncthing gui password: '%s'", pwd)
+
 	return s, nil
 }
 
@@ -275,7 +279,7 @@ func (s *Syncthing) Run(ctx context.Context) error {
 
 	s.pid = s.cmd.Process.Pid
 
-	log.Infof("syncthing pid-%d running on http://%s and tcp://%s with password '%s'", s.pid, s.GUIAddress, s.ListenAddress, s.GUIPassword)
+	log.Infof("local syncthing pid-%d running", s.pid)
 	return nil
 }
 
