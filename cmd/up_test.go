@@ -41,10 +41,10 @@ func TestWaitUntilExitOrInterrupt(t *testing.T) {
 	}
 
 	up.Disconnect = make(chan error, 1)
-	up.Disconnect <- errors.ErrLostConnection
+	up.Disconnect <- errors.ErrLostSyncthing
 	err = up.WaitUntilExitOrInterrupt()
-	if err != errors.ErrLostConnection {
-		t.Errorf("exited with error %s instead of %s", err, errors.ErrLostConnection)
+	if err != errors.ErrLostSyncthing {
+		t.Errorf("exited with error %s instead of %s", err, errors.ErrLostSyncthing)
 	}
 }
 
@@ -96,7 +96,7 @@ func Test_printDisplayContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			printDisplayContext(tt.name, tt.dev)
+			printDisplayContext(tt.dev)
 		})
 	}
 

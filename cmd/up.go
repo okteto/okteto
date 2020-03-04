@@ -272,7 +272,8 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 		}
 		up.retry = true
 
-		printDisplayContext("Files synchronized", up.Dev)
+		log.Success("Files synchronized")
+		printDisplayContext(up.Dev)
 
 		go func() {
 			<-up.cleaned
@@ -288,8 +289,7 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 		}
 
 		if prevError != nil {
-			if prevError == errors.ErrLostConnection || (prevError == errors.ErrCommandFailed && !pods.Exists(up.Pod, up.Dev.Namespace, up.Client)) {
-				log.Yellow("\nConnection lost to your development environment, reconnecting...\n")
+			if up.shouldRetry(prevError) {
 				up.shutdown()
 				continue
 			}
@@ -298,6 +298,22 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 		up.Exit <- prevError
 		return
 	}
+}
+
+func (up *UpContext) shouldRetry(err error) bool {
+	switch err {
+	case errors.ErrLostSyncthing:
+		return true
+	case errors.ErrCommandFailed:
+		if pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
+			return false
+		}
+
+		log.Infof("pod/%s was terminated, will try to reconnect", up.Pod)
+		return true
+	}
+
+	return false
 }
 
 func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, bool, error) {
@@ -709,8 +725,7 @@ func (up *UpContext) shutdown() {
 	log.Info("completed shutdown sequence")
 }
 
-func printDisplayContext(message string, dev *model.Dev) {
-	log.Success(message)
+func printDisplayContext(dev *model.Dev) {
 	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 	if len(dev.Forward) > 0 {
