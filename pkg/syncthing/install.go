@@ -96,7 +96,7 @@ func Install(p getter.ProgressTracker) error {
 		return fmt.Errorf("failed to write %s: %s", i, err)
 	}
 
-	log.Infof("downloaded syncthing %s to %s", versionRegex, i)
+	log.Infof("installed syncthing %s to %s", minimumVersion.String(), i)
 	return nil
 }
 

@@ -293,7 +293,10 @@ func GetCertificatePath() string {
 func saveToken(id, token, url, registry, buildkit string) error {
 	t, err := GetToken()
 	if err != nil {
-		log.Debugf("bad token, re-initializing: %s", err)
+		if !strings.Contains(err.Error(), "no such file or directory") {
+			log.Infof("bad token, re-initializing: %s", err)
+		}
+
 		t = &Token{}
 	}
 

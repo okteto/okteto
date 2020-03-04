@@ -129,14 +129,14 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 		go p.forwardService(namespace, svc)
 	}
 
-	log.Debugf("waiting port forwarding to finish")
+	log.Debugf("waiting port-forwards to be ready")
 	<-p.activeDev.readyChan
 
 	if err := p.activeDev.error(); err != nil {
 		return err
 	}
 
-	log.Debugf("all port-forwards are connected")
+	log.Debugf("all port-forwards are ready")
 	return nil
 }
 

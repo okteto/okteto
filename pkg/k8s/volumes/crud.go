@@ -44,7 +44,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error 
 	if k8Volume.Name != "" {
 		return checkPVCValues(k8Volume, dev)
 	}
-	log.Infof("creating volume claim '%s'...", pvc.Name)
+	log.Infof("creating volume claim '%s'", pvc.Name)
 	_, err = vClient.Create(pvc)
 	if err != nil {
 		return fmt.Errorf("error creating kubernetes volume claim: %s", err)

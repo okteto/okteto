@@ -204,6 +204,13 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	m, err := ioutil.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("fail to read manifest: %s", err)
+	}
+
+	log.Printf("using manifest: \n%s\n", string(m))
+
 	if err := createNamespace(ctx, namespace, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +260,7 @@ func TestAll(t *testing.T) {
 	log.Println("got updated content")
 
 	if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 
 	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
@@ -399,8 +406,6 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {
-		m, _ := ioutil.ReadFile(manifestPath)
-		log.Printf("manifest: \n%s\n", string(m))
 		return fmt.Errorf("okteto down failed: %s", err)
 	}
 
@@ -463,6 +468,7 @@ func waitForReady(namespace, name string) error {
 				return err
 			}
 
+			log.Printf("state file error: %s", err)
 			<-t.C
 			continue
 		}

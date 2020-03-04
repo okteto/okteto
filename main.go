@@ -48,7 +48,6 @@ func init() {
 
 func main() {
 	log.Init(logrus.WarnLevel)
-	log.Info("start")
 	var logLevel string
 
 	agent, span, ctx := getTracing()
