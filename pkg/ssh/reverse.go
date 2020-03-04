@@ -34,7 +34,6 @@ type reverse struct {
 type ReverseManager struct {
 	reverses map[int]*reverse
 	ctx      context.Context
-	sshUser  string
 	sshHost  string
 	sshPort  int
 }
@@ -44,7 +43,6 @@ func NewReverseManager(ctx context.Context, sshPort int) *ReverseManager {
 	return &ReverseManager{
 		ctx:      ctx,
 		reverses: make(map[int]*reverse),
-		sshUser:  "root",
 		sshHost:  "localhost",
 		sshPort:  sshPort,
 	}
@@ -69,7 +67,7 @@ func (r *ReverseManager) Start() error {
 	log.Info("starting remote forward manager")
 
 	// Connect to SSH remote server using serverEndpoint
-	c := getSSHClientConfig(r.sshUser)
+	c := getSSHClientConfig()
 	sshAddr := fmt.Sprintf("%s:%d", r.sshHost, r.sshPort)
 
 	for _, rt := range r.reverses {

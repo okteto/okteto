@@ -151,11 +151,11 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 		{
 			name: "custom port",
 			manifest: &Dev{
-				SSHServerPort: 2222,
+				SSHServerPort: 22220,
 			},
 			expected: []EnvVar{
 				{Name: oktetoMarkerPathVariable, Value: ""},
-				{Name: oktetoSSHServerPortVariable, Value: "2222"},
+				{Name: oktetoSSHServerPortVariable, Value: "22220"},
 			},
 		},
 	}

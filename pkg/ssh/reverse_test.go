@@ -45,7 +45,6 @@ func TestReverseManager_Add(t *testing.T) {
 			r := &ReverseManager{
 				reverses: tt.reverses,
 				ctx:      context.TODO(),
-				sshUser:  "root",
 				sshHost:  "localhost",
 				sshPort:  22,
 			}
