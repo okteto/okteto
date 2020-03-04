@@ -17,9 +17,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func getSSHClientConfig(user string) *ssh.ClientConfig {
+func getSSHClientConfig() *ssh.ClientConfig {
 	sshConfig := &ssh.ClientConfig{
-		User: user,
 		// skipcq GSC-G106
 		// Ignoring this issue since the remote server doesn't have a set identity, and it's already secured by the
 		// port-forward tunnel to the kubernetes cluster.
