@@ -289,8 +289,7 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 		}
 
 		if prevError != nil {
-			if prevError == errors.ErrLostConnection || prevError == errors.ErrLostSyncthing || (prevError == errors.ErrCommandFailed && !pods.Exists(up.Pod, up.Dev.Namespace, up.Client)) {
-				log.Yellow("\nConnection lost to your development environment, reconnecting...\n")
+			if up.shouldRetry(prevError) {
 				up.shutdown()
 				continue
 			}
@@ -299,6 +298,22 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 		up.Exit <- prevError
 		return
 	}
+}
+
+func (up *UpContext) shouldRetry(err error) bool {
+	switch err {
+	case errors.ErrLostSyncthing:
+		return true
+	case errors.ErrCommandFailed:
+		if pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
+			return false
+		}
+
+		log.Infof("pod/%s was terminated, will try to reconnect", up.Pod)
+		return true
+	}
+
+	return false
 }
 
 func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, bool, error) {
