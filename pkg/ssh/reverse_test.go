@@ -36,7 +36,7 @@ func TestReverseManager_Add(t *testing.T) {
 		{
 			name:     "existing",
 			add:      &model.Reverse{Local: 8080, Remote: 8081},
-			reverses: map[int]*reverse{8080: &reverse{forward{localPort: 8080, remotePort: 8081}}},
+			reverses: map[int]*reverse{8080: &reverse{forward{localAddress: ":8080", remoteAddress: ":8081"}}},
 			wantErr:  true,
 		},
 	}
@@ -53,12 +53,12 @@ func TestReverseManager_Add(t *testing.T) {
 			}
 
 			f := r.reverses[8080]
-			if f.localPort != 8080 {
-				t.Errorf("local port is not 8080, it is: %d", f.localPort)
+			if f.localAddress != ":8080" {
+				t.Errorf("local address is not :8080, it is: %s", f.localAddress)
 			}
 
-			if f.remotePort != 8081 {
-				t.Errorf("remote port is not 8081, it is: %d", f.remotePort)
+			if f.remoteAddress != ":8081" {
+				t.Errorf("remote address is not :8081, it is: %s", f.remoteAddress)
 			}
 		})
 	}

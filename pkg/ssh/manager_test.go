@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +19,7 @@ type testHTTPHandler struct {
 type testSSHHandler struct{}
 
 func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Println(fmt.Sprintf("message %s", t.message))
 	w.Write([]byte(t.message))
 }
 
@@ -45,14 +48,11 @@ func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	return ssh.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }*/
 
-func TestForwardManager(t *testing.T) {
+func TestForward(t *testing.T) {
 	ctx := context.Background()
-	fm := NewForwardManager(ctx, ":2222")
-	if err := connectForwards(fm); err != nil {
-		t.Fatal(err)
-	}
+	fm := NewForwardManager(ctx, "localhost:2222")
 
-	if err := connectReverseForwards(fm); err != nil {
+	if err := connectForwards(fm); err != nil {
 		t.Fatal(err)
 	}
 
@@ -69,12 +69,30 @@ func TestForwardManager(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := checkReverseForwardsConnected(fm); err != nil {
+	if err := callForwards(fm); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestReverse(t *testing.T) {
+	ctx := context.Background()
+	fm := NewForwardManager(ctx, "localhost:2222")
+
+	if err := connectReverseForwards(fm); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := callForwards(fm); err != nil {
-		t.Error(err)
+	/*go func() {
+		//s := &testSSHHandler{}
+		//s.ListenAndServe(22000)
+	}()*/
+
+	if err := fm.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := checkReverseForwardsConnected(fm); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := callReverseForwards(fm); err != nil {
@@ -84,7 +102,7 @@ func TestForwardManager(t *testing.T) {
 }
 
 func connectForwards(fm *ForwardManager) error {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 1; i++ {
 		local, err := model.GetAvailablePort()
 		if err != nil {
 			return err
@@ -100,7 +118,8 @@ func connectForwards(fm *ForwardManager) error {
 		}
 
 		go func() {
-			http.ListenAndServe(fmt.Sprintf(":%d", remote), &testHTTPHandler{message: string(remote)})
+			handler := &testHTTPHandler{message: fmt.Sprintf("%d", remote)}
+			http.ListenAndServe(fmt.Sprintf(":%d", remote), handler)
 		}()
 	}
 
@@ -108,7 +127,7 @@ func connectForwards(fm *ForwardManager) error {
 }
 
 func connectReverseForwards(fm *ForwardManager) error {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 1; i++ {
 		local, err := model.GetAvailablePort()
 		if err != nil {
 			return err
@@ -124,7 +143,8 @@ func connectReverseForwards(fm *ForwardManager) error {
 		}
 
 		go func() {
-			http.ListenAndServe(fmt.Sprintf(":%d", local), &testHTTPHandler{message: string(local)})
+			handler := &testHTTPHandler{message: fmt.Sprintf("%d", local)}
+			http.ListenAndServe(fmt.Sprintf(":%d", local), handler)
 		}()
 	}
 
@@ -177,7 +197,8 @@ func checkReverseForwardsConnected(fm *ForwardManager) error {
 
 func callForwards(fm *ForwardManager) error {
 	for _, f := range fm.forwards {
-		r, err := http.Get(fmt.Sprintf("http://localhost:%d", f.localPort))
+		localPort := getPort(f.localAddress)
+		r, err := http.Get(fmt.Sprintf("http://localhost:%s", localPort))
 		if err != nil {
 			return fmt.Errorf("%s failed: %w", f.String(), err)
 		}
@@ -193,8 +214,9 @@ func callForwards(fm *ForwardManager) error {
 		}
 
 		got := string(body)
-		if got != string(f.remotePort) {
-			return fmt.Errorf("%s got: %s, expected: %d", f.String(), got, f.remotePort)
+		remotePort := getPort(f.remoteAddress)
+		if got != remotePort {
+			return fmt.Errorf("%s got: %s, expected: %s", f.String(), got, remotePort)
 		}
 	}
 
@@ -203,7 +225,8 @@ func callForwards(fm *ForwardManager) error {
 
 func callReverseForwards(fm *ForwardManager) error {
 	for _, r := range fm.reverses {
-		resp, err := http.Get(fmt.Sprintf("http://localhost:%d", r.remotePort))
+		remotePort := getPort(r.remoteAddress)
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%s", remotePort))
 		if err != nil {
 			return fmt.Errorf("%s failed: %w", r.String(), err)
 		}
@@ -219,11 +242,17 @@ func callReverseForwards(fm *ForwardManager) error {
 		}
 
 		got := string(body)
-		expected := string(r.localPort)
-		if got !=  expected {
+		localPort := getPort(r.localAddress)
+		expected := localPort
+		if got != expected {
 			return fmt.Errorf("%s got: %s, expected: %s", r.String(), got, expected)
 		}
 	}
 
 	return nil
+}
+
+func getPort(address string) string {
+	parts := strings.Split(address, ":")
+	return parts[1]
 }

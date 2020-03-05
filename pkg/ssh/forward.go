@@ -26,34 +26,34 @@ import (
 )
 
 type forward struct {
-	ctx        context.Context
-	localPort  int
-	remotePort int
-	ready      sync.Once
-	connected  bool
+	ctx           context.Context
+	localAddress  string
+	remoteAddress string
+	ready         sync.Once
+	connected     bool
 }
 
 func (f *forward) startWithRetry(c *ssh.ClientConfig, conn *ssh.Client) {
 	for {
 		err := f.start(c, conn)
 		if err == nil {
-			log.Infof("forward tunnel %d->%d exited", f.localPort, f.remotePort)
+			log.Infof("%s exited", f.String())
 			return
 		}
 
-		log.Infof("forward tunnel %d->%d not connected, retrying: %s", f.localPort, f.remotePort, err)
+		log.Infof("%s not connected, retrying: %s", f.String(), err)
 		t := time.NewTicker(1 * time.Second)
 		<-t.C
 	}
 }
 
 func (f *forward) start(c *ssh.ClientConfig, conn *ssh.Client) error {
-	log.Infof("starting forward tunnel %d->%d", f.localPort, f.remotePort)
+	log.Infof("starting %s", f.String())
 
 	// Listen on local port
-	listener, err := conn.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", f.localPort))
+	listener, err := conn.Listen("tcp", f.localAddress)
 	if err != nil {
-		return fmt.Errorf("failed open local port %d: %s", f.localPort, err)
+		return fmt.Errorf("failed open %s: %w", f.localAddress, err)
 	}
 
 	defer listener.Close()
@@ -63,9 +63,9 @@ func (f *forward) start(c *ssh.ClientConfig, conn *ssh.Client) error {
 		// listen on local port
 		var d net.Dialer
 
-		remote, err := d.DialContext(f.ctx, "tcp", fmt.Sprintf("localhost:%d", f.remotePort))
+		remote, err := d.DialContext(f.ctx, "tcp", f.remoteAddress)
 		if err != nil {
-			return fmt.Errorf("failed to open remote port %d: %s", f.remotePort, err)
+			return fmt.Errorf("failed to open remote address %s: %w", f.remoteAddress, err)
 		}
 
 		f.ready.Do(func() {
@@ -75,7 +75,7 @@ func (f *forward) start(c *ssh.ClientConfig, conn *ssh.Client) error {
 
 		client, err := listener.Accept()
 		if err != nil {
-			return fmt.Errorf("failed to accept traffic from remote port %d: %s", f.remotePort, err)
+			return fmt.Errorf("failed to accept traffic from remote address %s: %w", f.remoteAddress, err)
 		}
 
 		f.handleClient(client, remote)
@@ -91,7 +91,7 @@ func (f *forward) handleClient(client net.Conn, remote net.Conn) {
 	go func() {
 		_, err := io.Copy(client, remote)
 		if err != nil {
-			log.Infof("error while copying %d->%d: %s", f.localPort, f.remotePort, err)
+			log.Infof("error while copying %s->%s: %s", f.localAddress, f.remoteAddress, err)
 		}
 
 		chDone <- true
@@ -101,15 +101,15 @@ func (f *forward) handleClient(client net.Conn, remote net.Conn) {
 	go func() {
 		_, err := io.Copy(remote, client)
 		if err != nil {
-			log.Infof("error while copying %d->%d: %s", f.remotePort, f.localPort, err)
+			log.Infof("error while copying %s->%s: %s", f.remoteAddress, f.localAddress, err)
 		}
 		chDone <- true
 	}()
 
-	log.Infof("started forward tunnel %d->%d successfully", f.localPort, f.remotePort)
+	log.Infof("started %s successfully", f.String())
 	<-chDone
 }
 
 func (f *forward) String() string {
-	return fmt.Sprintf("forward %d->%d", f.localPort, f.remotePort)
+	return fmt.Sprintf("forward %s->%s", f.localAddress, f.remoteAddress)
 }

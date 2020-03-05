@@ -61,10 +61,10 @@ func (fm *ForwardManager) Add(f *model.Forward) error {
 	}
 
 	fm.forwards[f.Local] = &forward{
-		localPort:  f.Local,
-		remotePort: f.Remote,
-		ready:      sync.Once{},
-		ctx:        fm.ctx,
+		localAddress:  fmt.Sprintf("localhost:%d", f.Local),
+		remoteAddress: fmt.Sprintf("0.0.0.0:%d", f.Remote),
+		ready:         sync.Once{},
+		ctx:           fm.ctx,
 	}
 	return nil
 }

@@ -23,7 +23,6 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
 	github.com/fatih/color v1.7.0
 	github.com/frankban/quicktest v1.7.3 // indirect
-	github.com/gliderlabs/ssh v0.2.2
 	github.com/gogo/googleapis v1.3.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/go-github/v28 v28.1.1
