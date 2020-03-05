@@ -507,9 +507,9 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 			return err
 		}
 
-		reverseManager := ssh.NewReverseManager(up.Context, up.Dev.RemotePort)
+		reverseManager := ssh.NewForwardManager(up.Context, fmt.Sprintf(":%d", up.Dev.RemotePort))
 		for _, f := range up.Dev.Reverse {
-			if err := reverseManager.Add(&f); err != nil {
+			if err := reverseManager.AddReverse(&f); err != nil {
 				return err
 			}
 		}

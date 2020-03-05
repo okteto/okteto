@@ -420,6 +420,8 @@ github.com/prometheus/procfs v0.0.0-20190522114515-bc1a522cf7b1 h1:Lo6mRUjdS99f3
 github.com/prometheus/procfs v0.0.0-20190522114515-bc1a522cf7b1/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
 github.com/prometheus/procfs v0.0.2 h1:6LJUbpNm42llc4HRCuvApCSWB/WfhuNo9K98Q9sNGfs=
 github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
+github.com/rberrelleza/ssh v0.2.3-0.20191129151128-337be1657602 h1:9tsMHlmqQnHcQGMxs44dh2prV2WkX0s/QmaSVFeSfvs=
+github.com/rberrelleza/ssh v0.2.3-0.20191129151128-337be1657602/go.mod h1:tfHQw+B2gAi+CuaPnjEoTQfoKEMobJVF6DKG337yI2U=
 github.com/remyoudompheng/bigfft v0.0.0-20170806203942-52369c62f446/go.mod h1:uYEyJGbgTkfkS4+E/PavXkNJcbFIpEtjt2B0KDQ5+9M=
 github.com/russross/blackfriday v1.5.2 h1:HyvC0ARfnZBqnXwABFeSZHpKvJHJJfPz81GNueLj0oo=
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
