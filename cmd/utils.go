@@ -99,5 +99,5 @@ func isWatchesConfigurationTooLow(value string) bool {
 		return false
 	}
 	log.Debugf("max_user_watches = %d", c)
-	return c <= 8192
+	return c <= 65536
 }

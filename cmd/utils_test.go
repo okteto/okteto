@@ -33,12 +33,12 @@ func Test_isWatchesConfigurationTooLow(t *testing.T) {
 		},
 		{
 			name:     "ok",
-			value:    "20000",
+			value:    "80000",
 			expected: false,
 		},
 		{
 			name:     "ok-trim",
-			value:    "20000\n",
+			value:    "80000\n",
 			expected: false,
 		},
 		{
