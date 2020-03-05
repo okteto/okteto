@@ -38,8 +38,8 @@ func (fm *ForwardManager) AddReverse(f *model.Reverse) error {
 
 	fm.reverses[f.Local] = &reverse{
 		forward: forward{
-			localAddress:  fmt.Sprintf("localhost:%d", f.Local),
-			remoteAddress: fmt.Sprintf("0.0.0.0:%d", f.Remote),
+			localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
+			remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
 			ready:         sync.Once{},
 			ctx:           fm.ctx,
 		},

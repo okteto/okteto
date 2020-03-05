@@ -25,19 +25,23 @@ import (
 
 // ForwardManager handles the lifecycle of all the forwards
 type ForwardManager struct {
-	forwards map[int]*forward
-	reverses map[int]*reverse
-	ctx      context.Context
-	sshAddr  string
+	localInterface  string
+	remoteInterface string
+	forwards        map[int]*forward
+	reverses        map[int]*reverse
+	ctx             context.Context
+	sshAddr         string
 }
 
 // NewForwardManager returns a newly initialized instance of ForwardManager
-func NewForwardManager(ctx context.Context, sshAddr string) *ForwardManager {
+func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string) *ForwardManager {
 	return &ForwardManager{
-		ctx:      ctx,
-		forwards: make(map[int]*forward),
-		reverses: make(map[int]*reverse),
-		sshAddr:  sshAddr,
+		ctx:             ctx,
+		localInterface:  localInterface,
+		remoteInterface: remoteInterface,
+		forwards:        make(map[int]*forward),
+		reverses:        make(map[int]*reverse),
+		sshAddr:         sshAddr,
 	}
 }
 
@@ -61,8 +65,8 @@ func (fm *ForwardManager) Add(f *model.Forward) error {
 	}
 
 	fm.forwards[f.Local] = &forward{
-		localAddress:  fmt.Sprintf("localhost:%d", f.Local),
-		remoteAddress: fmt.Sprintf("0.0.0.0:%d", f.Remote),
+		localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
+		remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
 		ready:         sync.Once{},
 		ctx:           fm.ctx,
 	}

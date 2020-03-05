@@ -50,7 +50,7 @@ func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func TestForward(t *testing.T) {
 	ctx := context.Background()
-	fm := NewForwardManager(ctx, "localhost:2222")
+	fm := NewForwardManager(ctx, "localhost:2222", "localhost", "0.0.0.0")
 
 	if err := connectForwards(fm); err != nil {
 		t.Fatal(err)
@@ -76,7 +76,7 @@ func TestForward(t *testing.T) {
 
 func TestReverse(t *testing.T) {
 	ctx := context.Background()
-	fm := NewForwardManager(ctx, "localhost:2222")
+	fm := NewForwardManager(ctx, "localhost:2222", "localhost", "0.0.0.0")
 
 	if err := connectReverseForwards(fm); err != nil {
 		t.Fatal(err)
