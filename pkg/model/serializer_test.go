@@ -162,7 +162,7 @@ func TestEnvVarMashalling(t *testing.T) {
 }
 
 func TestSecretMashalling(t *testing.T) {
-	file, err := ioutil.TempFile("", "okteto-secret-test")
+	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {
 		log.Fatal(err)
 	}
