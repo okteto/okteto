@@ -601,7 +601,7 @@ func (up *UpContext) synchronizeFiles() error {
 
 	err := up.Sy.WaitForCompletion(up.Context, up.Dev, reporter)
 	if err != nil {
-		if err == errors.ErrSyncFrozen || err == errors.ErrUnknownSyncError {
+		if err == errors.ErrUnknownSyncError {
 			analytics.TrackSyncError()
 			return errors.UserError{
 				E: err,
