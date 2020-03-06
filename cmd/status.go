@@ -63,7 +63,8 @@ func Status() *cobra.Command {
 
 			sy, err := syncthing.Load(dev)
 			if err != nil {
-				return fmt.Errorf("error accessing to syncthing info file: %s", err)
+				log.Debugf("error accessing to syncthing info file: %s", err)
+				return errors.ErrNotInDevMode
 			}
 			if showInfo {
 				log.Information("Local syncthing url: http://%s", sy.GUIAddress)
