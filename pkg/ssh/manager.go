@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"sync"
 
+	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
@@ -31,10 +32,11 @@ type ForwardManager struct {
 	reverses        map[int]*reverse
 	ctx             context.Context
 	sshAddr         string
+	pf              *k8sforward.PortForwardManager
 }
 
 // NewForwardManager returns a newly initialized instance of ForwardManager
-func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string) *ForwardManager {
+func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string, pf *k8sforward.PortForwardManager) *ForwardManager {
 	return &ForwardManager{
 		ctx:             ctx,
 		localInterface:  localInterface,
@@ -42,6 +44,7 @@ func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInter
 		forwards:        make(map[int]*forward),
 		reverses:        make(map[int]*reverse),
 		sshAddr:         sshAddr,
+		pf:              pf,
 	}
 }
 
@@ -58,10 +61,11 @@ func (fm *ForwardManager) canAdd(localPort int) error {
 }
 
 // Add initializes a remote forward
-func (fm *ForwardManager) Add(f *model.Forward) error {
+func (fm *ForwardManager) Add(f model.Forward) error {
 
 	if err := fm.canAdd(f.Local); err != nil {
-		return err
+		return nil
+
 	}
 
 	fm.forwards[f.Local] = &forward{
@@ -73,15 +77,17 @@ func (fm *ForwardManager) Add(f *model.Forward) error {
 	return nil
 }
 
-// Start starts all the remote forwards and reverse forwards as goroutines
-func (fm *ForwardManager) Start() error {
+// Start starts a port-forward to the remote port and then starts forwards and reverse forwards as goroutines
+func (fm *ForwardManager) Start(devPod, namespace string) error {
 	log.Info("starting forward manager")
-
+	if err := fm.pf.Start(devPod, namespace); err != nil {
+		return fmt.Errorf("failed to start SSH port-forward: %w", err)
+	}
 	// Connect to SSH remote server using serverEndpoint
 	c := getSSHClientConfig()
 	conn, err := ssh.Dial("tcp", fm.sshAddr, c)
 	if err != nil {
-		return fmt.Errorf("failed to connect to SSH host: %s", err)
+		return fmt.Errorf("failed to connect to SSH host: %w", err)
 	}
 
 	for _, ff := range fm.forwards {
@@ -91,10 +97,15 @@ func (fm *ForwardManager) Start() error {
 	for _, rt := range fm.reverses {
 		go rt.startWithRetry(c, conn)
 		if err != nil {
-			return fmt.Errorf("failed to connect to SSH host: %s", err)
+			return fmt.Errorf("failed to connect to SSH host: %w", err)
 		}
 
 	}
 
 	return nil
+}
+
+// Stop sends a stop signal to all the connections
+func (fm *ForwardManager) Stop() {
+	fm.pf.Stop()
 }

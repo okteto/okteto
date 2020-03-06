@@ -30,7 +30,7 @@ type reverse struct {
 }
 
 // AddReverse adds a reverse forward
-func (fm *ForwardManager) AddReverse(f *model.Reverse) error {
+func (fm *ForwardManager) AddReverse(f model.Reverse) error {
 
 	if err := fm.canAdd(f.Local); err != nil {
 		return err

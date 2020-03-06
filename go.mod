@@ -5,6 +5,7 @@ require (
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.4.2
 	github.com/Microsoft/go-winio v0.4.14 // indirect
+	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
 	github.com/briandowns/spinner v1.7.0
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
@@ -23,6 +24,7 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
 	github.com/fatih/color v1.7.0
 	github.com/frankban/quicktest v1.7.3 // indirect
+	github.com/gliderlabs/ssh v0.2.2
 	github.com/gogo/googleapis v1.3.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/go-github/v28 v28.1.1

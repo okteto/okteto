@@ -6,10 +6,12 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/gliderlabs/ssh"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -23,7 +25,7 @@ func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(t.message))
 }
 
-/*func (t *testSSHHandler) ListenAndServe(port int) error {
+func (t *testSSHHandler) listenAndServe(port int) error {
 	ssh.Handle(func(s ssh.Session) {
 		cmd := exec.Command("ssh-add", "-l")
 		if ssh.AgentRequested(s) {
@@ -46,22 +48,19 @@ func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	return ssh.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-}*/
+}
 
 func TestForward(t *testing.T) {
 	ctx := context.Background()
+	ssh := testSSHHandler{}
+	go ssh.listenAndServe(2222)
 	fm := NewForwardManager(ctx, "localhost:2222", "localhost", "0.0.0.0")
 
 	if err := connectForwards(fm); err != nil {
 		t.Fatal(err)
 	}
 
-	/*go func() {
-		//s := &testSSHHandler{}
-		//s.ListenAndServe(22000)
-	}()*/
-
-	if err := fm.Start(); err != nil {
+	if err := fm.Start("", ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -82,12 +81,7 @@ func TestReverse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	/*go func() {
-		//s := &testSSHHandler{}
-		//s.ListenAndServe(22000)
-	}()*/
-
-	if err := fm.Start(); err != nil {
+	if err := fm.Start("", ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -113,7 +107,7 @@ func connectForwards(fm *ForwardManager) error {
 			return err
 		}
 
-		if err := fm.Add(&model.Forward{Local: local, Remote: remote}); err != nil {
+		if err := fm.Add(model.Forward{Local: local, Remote: remote}); err != nil {
 			return err
 		}
 

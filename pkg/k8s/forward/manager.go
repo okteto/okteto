@@ -102,6 +102,11 @@ func (p *PortForwardManager) Add(f model.Forward) error {
 	return nil
 }
 
+// AddReverse is not implemented
+func (p *PortForwardManager) AddReverse(_ model.Reverse) error {
+	return fmt.Errorf("not implemented")
+}
+
 // Start starts all the port forwarders to the dev environment
 func (p *PortForwardManager) Start(devPod, namespace string) error {
 	p.stopped = false

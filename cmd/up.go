@@ -68,7 +68,7 @@ type UpContext struct {
 	Client     *kubernetes.Clientset
 	RestConfig *rest.Config
 	Pod        string
-	Forwarder  *forward.PortForwardManager
+	Forwarder  forwarder
 	Disconnect chan error
 	Running    chan error
 	Exit       chan error
@@ -76,6 +76,14 @@ type UpContext struct {
 	ErrChan    chan error
 	cleaned    chan struct{}
 	success    bool
+}
+
+// Forwarder is an interface for the port-forwarding features
+type forwarder interface {
+	Add(model.Forward) error
+	AddReverse(model.Reverse) error
+	Start(string, string) error
+	Stop()
 }
 
 //Up starts a cloud dev environment
@@ -485,7 +493,18 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	up.Pod = pod.Name
 	go up.cleanCommand()
 
+	return up.forwards()
+
+}
+
+func (up *UpContext) forwards() error {
+	log.Infof("starting port forwards")
+	if up.Dev.ExecuteOverSSHEnabled() {
+		return up.sshForwards()
+	}
+
 	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
+
 	for _, f := range up.Dev.Forward {
 		if err := up.Forwarder.Add(f); err != nil {
 			return err
@@ -507,19 +526,57 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 			return err
 		}
 
-		reverseManager := ssh.NewForwardManager(up.Context, fmt.Sprintf(":%d", up.Dev.RemotePort), "localhost", "0.0.0.0")
+		reverseManager := ssh.NewForwardManager(up.Context, fmt.Sprintf(":%d", up.Dev.RemotePort), "localhost", "0.0.0.0", nil)
 		for _, f := range up.Dev.Reverse {
-			if err := reverseManager.AddReverse(&f); err != nil {
+			if err := reverseManager.AddReverse(f); err != nil {
 				return err
 			}
 		}
 
-		if err := reverseManager.Start(); err != nil {
+		if err := reverseManager.Start("", ""); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (up *UpContext) sshForwards() error {
+	log.Infof("starting SSH port forwards")
+	f := forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
+	f.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort})
+
+	up.Forwarder = ssh.NewForwardManager(up.Context, fmt.Sprintf("localhost:%d", up.Dev.RemotePort), "localhost", "0.0.0.0", f)
+
+	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
+		return err
+	}
+
+	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemoteGUIPort, Remote: syncthing.GUIPort}); err != nil {
+		return err
+	}
+
+	for _, f := range up.Dev.Forward {
+		if f.Local == up.Dev.RemotePort {
+			continue
+		}
+
+		if err := up.Forwarder.Add(f); err != nil {
+			return err
+		}
+	}
+
+	for _, r := range up.Dev.Reverse {
+		if err := up.Forwarder.AddReverse(r); err != nil {
+			return err
+		}
+	}
+
+	if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
+		return err
+	}
+
+	return up.Forwarder.Start(up.Pod, up.Dev.Namespace)
 }
 
 func (up *UpContext) sync(resetSyncthing bool) error {
