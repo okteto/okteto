@@ -57,6 +57,9 @@ var (
 
 	// ErrLostSyncthing is raised when we lose connectivity with syncthing
 	ErrLostSyncthing = fmt.Errorf("synchronization service unresponsive")
+
+	// ErrNotInDevMode is raised when the eployment is not in dev mode
+	ErrNotInDevMode = fmt.Errorf("Deployment is not in development mode anymore")
 )
 
 // IsNotFound returns true if err is of the type not found

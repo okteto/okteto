@@ -53,7 +53,7 @@ func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, 
 	remoteLogsPath, err := generateRemoteSyncthingLogsFile(ctx, dev, c)
 	if err != nil {
 		log.Debugf("error getting remote syncthing logs: %s", err)
-		log.Yellow("Deployment is not in development mode anymore")
+		log.Yellow(errors.ErrNotInDevMode.Error())
 	}
 	defer os.RemoveAll(remoteLogsPath)
 
