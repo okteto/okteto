@@ -68,7 +68,7 @@ func GetDeploymentHome(namespace, name string) string {
 		log.Fatalf("failed to create %s: %s", d, err)
 	}
 
-	return home
+	return d
 }
 
 // GetStateFile returns the path to the state file

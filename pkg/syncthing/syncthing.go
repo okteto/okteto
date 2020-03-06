@@ -99,11 +99,16 @@ type Ignores struct {
 
 // Status represents the status of a syncthing folder.
 type Status struct {
-	State       string `json:"state"`
-	GlobalBytes int64  `json:"globalBytes"`
-	NeedBytes   int64  `json:"needBytes"`
-	NeedDeletes int64  `json:"needDeletes"`
-	PullErrors  int64  `json:"pullErrors"`
+	State      string `json:"state"`
+	PullErrors int64  `json:"pullErrors"`
+}
+
+// Completion represents the completion of a syncthing folder.
+type Completion struct {
+	Completion  float64 `json:"completion"`
+	GlobalBytes int64   `json:"globalBytes"`
+	NeedBytes   int64   `json:"needBytes"`
+	NeedDeletes int64   `json:"needDeletes"`
 }
 
 // FolderErrors represents folder errors in syncthing.
@@ -391,65 +396,50 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
 	defer close(reporter)
 	ticker := time.NewTicker(500 * time.Millisecond)
-	params := getFolderParameter(dev)
-	params["device"] = DefaultRemoteDeviceID
-	status := &Status{}
-	var prevNeedBytes int64
-	needZeroBytesIter := 0
 	log.Infof("waiting for synchronization to complete...")
 	for {
 		select {
 		case <-ticker.C:
-			if prevNeedBytes == status.NeedBytes {
-				if needZeroBytesIter >= 600 {
-					return errors.ErrSyncFrozen
-				}
+			if err := s.Overwrite(ctx, dev); err != nil {
+				log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
+				continue
+			}
 
-				needZeroBytesIter++
-			} else {
-				needZeroBytesIter = 0
+			completion, err := s.GetCompletion(ctx, dev, true)
+			if err != nil {
+				log.Debugf("error calling getting completion: %s", err)
+				continue
+			}
+
+			if completion.GlobalBytes == 0 {
+				return nil
+			}
+
+			progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
+			log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
+				progress,
+				completion.NeedBytes,
+				completion.NeedDeletes,
+			)
+
+			reporter <- progress
+
+			if completion.NeedBytes == 0 {
+				return nil
+			}
+
+			status, err := s.GetStatus(ctx, dev, false)
+			if err != nil {
+				log.Debugf("error getting status: %s", err)
+				continue
+
+			}
+			if status.PullErrors > 0 {
+				return s.GetFolderErrors(ctx, dev, false)
 			}
 		case <-ctx.Done():
-			log.Debug("cancelling call to 'rest/db/status'")
+			log.Debug("cancelling call to 'rest/db/completion'")
 			return ctx.Err()
-		}
-
-		if err := s.Overwrite(ctx, dev); err != nil {
-			log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
-			continue
-		}
-
-		prevNeedBytes = status.NeedBytes
-		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, false, nil)
-		if err != nil {
-			log.Debugf("error calling 'rest/db/status' syncthing API: %s", err)
-			continue
-		}
-		err = json.Unmarshal(body, status)
-		if err != nil {
-			log.Debugf("error unmarshaling 'rest/db/status': %s", err)
-			continue
-		}
-
-		if status.GlobalBytes == 0 {
-			return nil
-		}
-
-		progress := (float64(status.GlobalBytes-status.NeedBytes) / float64(status.GlobalBytes)) * 100
-		log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
-			progress,
-			status.NeedBytes,
-			status.NeedDeletes,
-		)
-
-		reporter <- progress
-
-		if status.NeedBytes == 0 {
-			return nil
-		}
-
-		if status.PullErrors > 0 {
-			return s.GetFolderErrors(ctx, dev, false)
 		}
 	}
 }
@@ -470,16 +460,37 @@ func (s *Syncthing) GetStatus(ctx context.Context, dev *model.Dev, local bool) (
 	return status, nil
 }
 
-// GetStatusProgress returns the syncthing status progress
-func (s *Syncthing) GetStatusProgress(ctx context.Context, dev *model.Dev, local bool) (float64, error) {
-	status, err := s.GetStatus(ctx, dev, local)
+// GetCompletion returns the syncthing completion
+func (s *Syncthing) GetCompletion(ctx context.Context, dev *model.Dev, local bool) (*Completion, error) {
+	params := getFolderParameter(dev)
+	if local {
+		params["device"] = DefaultRemoteDeviceID
+	} else {
+		params["device"] = localDeviceID
+	}
+	completion := &Completion{}
+	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(body, completion)
+	if err != nil {
+		return nil, err
+	}
+
+	return completion, nil
+}
+
+// GetCompletionProgress returns the syncthing completion progress
+func (s *Syncthing) GetCompletionProgress(ctx context.Context, dev *model.Dev, local bool) (float64, error) {
+	completion, err := s.GetCompletion(ctx, dev, local)
 	if err != nil {
 		return 0, err
 	}
-	if status.GlobalBytes == 0 {
+	if completion.GlobalBytes == 0 {
 		return 100, nil
 	}
-	progress := (float64(status.GlobalBytes-status.NeedBytes) / float64(status.GlobalBytes)) * 100
+	progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
 	return progress, nil
 }
 
@@ -592,8 +603,8 @@ func RemoveFolder(dev *model.Dev) error {
 		return nil
 	}
 
-	if _, err := filepath.Rel(config.GetHome(), s.Home); err != nil {
-		log.Debugf("%s is not inside %s, ignoring", s.Home, config.GetHome())
+	if _, err := filepath.Rel(config.GetHome(), s.Home); err != nil || config.GetHome() == s.Home {
+		log.Errorf("%s is not inside %s, ignoring", s.Home, config.GetHome())
 		return nil
 	}
 

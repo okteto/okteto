@@ -505,7 +505,7 @@ func TestRemoteEnabled(t *testing.T) {
 }
 
 func Test_validate(t *testing.T) {
-	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	file, err := ioutil.TempFile("", "okteto-secret-test")
 	if err != nil {
 		log.Fatal(err)
 	}
