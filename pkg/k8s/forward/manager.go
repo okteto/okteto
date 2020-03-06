@@ -90,10 +90,6 @@ func NewPortForwardManager(ctx context.Context, restConfig *rest.Config, c kuber
 
 // Add initializes a port forward
 func (p *PortForwardManager) Add(f model.Forward) error {
-	if f.Local < 1024 {
-		return fmt.Errorf("port %d is reserved, please select a port above 1024", f.Local)
-	}
-
 	if _, ok := p.ports[f.Local]; ok {
 		return fmt.Errorf("port %d is already taken, please check your configuration", f.Local)
 	}
