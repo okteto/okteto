@@ -56,8 +56,7 @@ func (r *reverse) startWithRetry(c *ssh.ClientConfig, conn *ssh.Client) {
 			return
 		}
 
-		log.Infof("%s not connected, retrying: %s", r.String(), err)
-		t := time.NewTicker(1 * time.Second)
+		t := time.NewTicker(200 * time.Millisecond)
 		<-t.C
 	}
 }
@@ -123,8 +122,9 @@ func (r *reverse) handleClient(client net.Conn, local net.Conn) {
 
 	log.Infof("started %s successfully", r.String())
 	<-chDone
+	log.Infof("%s finished", r.String())
 }
 
 func (r *reverse) String() string {
-	return fmt.Sprintf("reverse forward %s<-%s", r.localAddress, r.remoteAddress)
+	return fmt.Sprintf("ssh reverse forward %s<-%s", r.localAddress, r.remoteAddress)
 }

@@ -23,19 +23,19 @@ import (
 func TestReverseManager_Add(t *testing.T) {
 	tests := []struct {
 		name     string
-		add      *model.Reverse
+		add      model.Reverse
 		reverses map[int]*reverse
 		wantErr  bool
 	}{
 		{
 			name:     "single",
-			add:      &model.Reverse{Local: 8080, Remote: 8081},
+			add:      model.Reverse{Local: 8080, Remote: 8081},
 			reverses: map[int]*reverse{},
 			wantErr:  false,
 		},
 		{
 			name:     "existing",
-			add:      &model.Reverse{Local: 8080, Remote: 8081},
+			add:      model.Reverse{Local: 8080, Remote: 8081},
 			reverses: map[int]*reverse{8080: &reverse{forward{localAddress: ":8080", remoteAddress: ":8081"}}},
 			wantErr:  true,
 		},

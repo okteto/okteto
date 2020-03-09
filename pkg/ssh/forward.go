@@ -41,39 +41,29 @@ func (f *forward) startWithRetry(c *ssh.ClientConfig, conn *ssh.Client) {
 			return
 		}
 
-		log.Infof("%s not connected, retrying: %s", f.String(), err)
-		t := time.NewTicker(1 * time.Second)
+		t := time.NewTicker(200 * time.Millisecond)
 		<-t.C
 	}
 }
 
 func (f *forward) start(c *ssh.ClientConfig, conn *ssh.Client) error {
-	log.Infof("starting %s", f.String())
-
-	// Listen on local port
-	listener, err := conn.Listen("tcp", f.localAddress)
+	// Establish connection with remote server
+	remote, err := conn.Dial("tcp", f.remoteAddress)
 	if err != nil {
-		return fmt.Errorf("failed open %s: %w", f.localAddress, err)
+		return fmt.Errorf("failed to connect %s: %w", f.remoteAddress, err)
 	}
 
-	defer listener.Close()
+	// Start local server to forward traffic to remote connection
+	local, err := net.Listen("tcp", f.localAddress)
+	if err != nil {
+		return fmt.Errorf("failed to listen to local traffic %s: %w", f.localAddress, err)
+	}
+	defer local.Close()
 
 	// handle incoming connections on forward tunnel
 	for {
-		// listen on local port
-		var d net.Dialer
 
-		remote, err := d.DialContext(f.ctx, "tcp", f.remoteAddress)
-		if err != nil {
-			return fmt.Errorf("failed to open remote address %s: %w", f.remoteAddress, err)
-		}
-
-		f.ready.Do(func() {
-			log.Infof("%s connected and ready", f.String())
-			f.connected = true
-		})
-
-		client, err := listener.Accept()
+		client, err := local.Accept()
 		if err != nil {
 			return fmt.Errorf("failed to accept traffic from remote address %s: %w", f.remoteAddress, err)
 		}
@@ -85,7 +75,7 @@ func (f *forward) start(c *ssh.ClientConfig, conn *ssh.Client) error {
 func (f *forward) handleClient(client net.Conn, remote net.Conn) {
 	defer client.Close()
 	chDone := make(chan bool, 1)
-	log.Debug("starting forward tunnel transfer ")
+	log.Debugf("starting %s transfer ", f.String())
 
 	// Start local -> remote data transfer
 	go func() {
@@ -108,8 +98,9 @@ func (f *forward) handleClient(client net.Conn, remote net.Conn) {
 
 	log.Infof("started %s successfully", f.String())
 	<-chDone
+	log.Infof("%s finished", f.String())
 }
 
 func (f *forward) String() string {
-	return fmt.Sprintf("forward %s->%s", f.localAddress, f.remoteAddress)
+	return fmt.Sprintf("ssh forward %s->%s", f.localAddress, f.remoteAddress)
 }

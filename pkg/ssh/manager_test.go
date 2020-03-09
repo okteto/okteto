@@ -54,7 +54,7 @@ func TestForward(t *testing.T) {
 	ctx := context.Background()
 	ssh := testSSHHandler{}
 	go ssh.listenAndServe(2222)
-	fm := NewForwardManager(ctx, "localhost:2222", "localhost", "0.0.0.0")
+	fm := NewForwardManager(ctx, "localhost:2222", "localhost", "0.0.0.0", nil)
 
 	if err := connectForwards(fm); err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestForward(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := checkForwardsConnected(fm); err != nil {
+	if err := fm.waitForwardsConnected(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,7 +75,7 @@ func TestForward(t *testing.T) {
 
 func TestReverse(t *testing.T) {
 	ctx := context.Background()
-	fm := NewForwardManager(ctx, "localhost:2222", "localhost", "0.0.0.0")
+	fm := NewForwardManager(ctx, "localhost:2222", "localhost", "0.0.0.0", nil)
 
 	if err := connectReverseForwards(fm); err != nil {
 		t.Fatal(err)
@@ -132,7 +132,7 @@ func connectReverseForwards(fm *ForwardManager) error {
 			return err
 		}
 
-		if err := fm.AddReverse(&model.Reverse{Local: local, Remote: remote}); err != nil {
+		if err := fm.AddReverse(model.Reverse{Local: local, Remote: remote}); err != nil {
 			return err
 		}
 
@@ -140,28 +140,6 @@ func connectReverseForwards(fm *ForwardManager) error {
 			handler := &testHTTPHandler{message: fmt.Sprintf("%d", local)}
 			http.ListenAndServe(fmt.Sprintf(":%d", local), handler)
 		}()
-	}
-
-	return nil
-}
-
-func checkForwardsConnected(fm *ForwardManager) error {
-	tk := time.NewTicker(10 * time.Millisecond)
-	connected := true
-	for i := 0; i < 100; i++ {
-		connected = true
-		for _, f := range fm.forwards {
-			connected = connected && f.connected
-		}
-
-		if connected {
-			break
-		}
-		<-tk.C
-	}
-
-	if !connected {
-		return fmt.Errorf("forwards not connected")
 	}
 
 	return nil

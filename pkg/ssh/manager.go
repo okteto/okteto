@@ -17,12 +17,15 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
 )
+
+const connectTimeout = 120 * time.Second
 
 // ForwardManager handles the lifecycle of all the forwards
 type ForwardManager struct {
@@ -80,8 +83,10 @@ func (fm *ForwardManager) Add(f model.Forward) error {
 // Start starts a port-forward to the remote port and then starts forwards and reverse forwards as goroutines
 func (fm *ForwardManager) Start(devPod, namespace string) error {
 	log.Info("starting forward manager")
-	if err := fm.pf.Start(devPod, namespace); err != nil {
-		return fmt.Errorf("failed to start SSH port-forward: %w", err)
+	if fm.pf != nil {
+		if err := fm.pf.Start(devPod, namespace); err != nil {
+			return fmt.Errorf("failed to start SSH port-forward: %w", err)
+		}
 	}
 	// Connect to SSH remote server using serverEndpoint
 	c := getSSHClientConfig()
@@ -102,10 +107,38 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 
 	}
 
+	//return fm.waitForwardsConnected()
 	return nil
+}
+
+func (fm *ForwardManager) waitForwardsConnected() error {
+	tk := time.NewTicker(500 * time.Millisecond)
+	start := time.Now()
+	connected := true
+
+	for {
+		elapsed := time.Now().Sub(start)
+		if elapsed > connectTimeout {
+			return fmt.Errorf("forwards not connected after %s", connectTimeout)
+		}
+
+		connected = true
+		for _, f := range fm.forwards {
+			connected = connected && f.connected
+		}
+
+		if connected {
+			return nil
+		}
+		<-tk.C
+	}
 }
 
 // Stop sends a stop signal to all the connections
 func (fm *ForwardManager) Stop() {
-	fm.pf.Stop()
+	// TODO stop forwards and reverses
+
+	if fm.pf != nil {
+		fm.pf.Stop()
+	}
 }
