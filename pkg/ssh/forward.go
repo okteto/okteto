@@ -41,6 +41,7 @@ func (f *forward) startWithRetry(c *ssh.ClientConfig, conn *ssh.Client) {
 			return
 		}
 
+		log.Debugf("%s exited with error: %s", f.String(), err)
 		t := time.NewTicker(200 * time.Millisecond)
 		<-t.C
 	}
@@ -52,6 +53,7 @@ func (f *forward) start(c *ssh.ClientConfig, conn *ssh.Client) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect %s: %w", f.remoteAddress, err)
 	}
+	defer remote.Close()
 
 	// Start local server to forward traffic to remote connection
 	local, err := net.Listen("tcp", f.localAddress)
@@ -81,7 +83,9 @@ func (f *forward) handleClient(client net.Conn, remote net.Conn) {
 	go func() {
 		_, err := io.Copy(client, remote)
 		if err != nil {
-			log.Infof("error while copying %s->%s: %s", f.localAddress, f.remoteAddress, err)
+			if err != io.EOF {
+				log.Infof("error while copying %s->%s: %s", f.localAddress, f.remoteAddress, err)
+			}
 		}
 
 		chDone <- true
@@ -91,7 +95,9 @@ func (f *forward) handleClient(client net.Conn, remote net.Conn) {
 	go func() {
 		_, err := io.Copy(remote, client)
 		if err != nil {
-			log.Infof("error while copying %s->%s: %s", f.remoteAddress, f.localAddress, err)
+			if err != io.EOF {
+				log.Infof("error while copying %s->%s: %s", f.remoteAddress, f.localAddress, err)
+			}
 		}
 		chDone <- true
 	}()

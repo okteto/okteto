@@ -62,7 +62,6 @@ func (r *reverse) startWithRetry(c *ssh.ClientConfig, conn *ssh.Client) {
 }
 
 func (r *reverse) start(c *ssh.ClientConfig, conn *ssh.Client) error {
-	log.Infof("starting %s", r.String())
 
 	// Listen on remote server port
 	listener, err := conn.Listen("tcp", r.remoteAddress)
