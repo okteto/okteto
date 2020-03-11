@@ -82,7 +82,7 @@ func (fm *ForwardManager) Add(f model.Forward) error {
 
 // Start starts a port-forward to the remote port and then starts forwards and reverse forwards as goroutines
 func (fm *ForwardManager) Start(devPod, namespace string) error {
-	log.Info("starting forward manager")
+	log.Info("starting SSH forward manager")
 	if fm.pf != nil {
 		if err := fm.pf.Start(devPod, namespace); err != nil {
 			return fmt.Errorf("failed to start SSH port-forward: %w", err)
@@ -107,7 +107,6 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 
 	}
 
-	//return fm.waitForwardsConnected()
 	return nil
 }
 
