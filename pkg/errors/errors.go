@@ -53,7 +53,7 @@ var (
 	ErrUnknownSyncError = fmt.Errorf("Unknown syncthing error")
 
 	// ErrNotInCluster is returned when an unsupported command is invoked from a dev environment (e.g. okteto up)
-	ErrNotInCluster = fmt.Errorf("this command is not supported from inside a development environment")
+	ErrNotInCluster = fmt.Errorf("this command is not supported from inside a pod")
 
 	// ErrLostSyncthing is raised when we lose connectivity with syncthing
 	ErrLostSyncthing = fmt.Errorf("synchronization service unresponsive")
