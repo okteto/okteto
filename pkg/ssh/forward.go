@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,7 +42,10 @@ func (f *forward) startWithRetry(c *ssh.ClientConfig, conn *ssh.Client) {
 			return
 		}
 
-		log.Debugf("%s exited with error: %s", f.String(), err)
+		if !strings.Contains(err.Error(), "connection refused") {
+			log.Debugf("%s exited with error: %s", f.String(), err)
+		}
+
 		t := time.NewTicker(200 * time.Millisecond)
 		<-t.C
 	}

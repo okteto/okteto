@@ -162,6 +162,10 @@ func RunUp(dev *model.Dev, autoDeploy bool, forcePull, resetSyncthing bool) erro
 		Exit: make(chan error, 1),
 	}
 
+	if up.Dev.ExecuteOverSSHEnabled() {
+		log.Success("Enabled experimental SSH mode")
+	}
+
 	defer up.shutdown()
 
 	if up.Dev.RemoteModeEnabled() {
