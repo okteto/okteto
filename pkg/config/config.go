@@ -47,8 +47,8 @@ func GetBinaryFullPath() string {
 	return os.Args[0]
 }
 
-// GetHome returns the path of the folder
-func GetHome() string {
+// GetOktetoHome returns the path of the okteto folder
+func GetOktetoHome() string {
 	home := GetUserHomeDir()
 	d := filepath.Join(home, oktetoFolderName)
 
@@ -56,13 +56,13 @@ func GetHome() string {
 		log.Fatalf("failed to create %s: %s", d, err)
 	}
 
-	return home
+	return d
 }
 
 // GetDeploymentHome returns the path of the folder
 func GetDeploymentHome(namespace, name string) string {
-	home := GetUserHomeDir()
-	d := filepath.Join(home, oktetoFolderName, namespace, name)
+	okHome := GetOktetoHome()
+	d := filepath.Join(okHome, namespace, name)
 
 	if err := os.MkdirAll(d, 0700); err != nil {
 		log.Fatalf("failed to create %s: %s", d, err)
