@@ -113,6 +113,8 @@ workdir: /usr/src/app
 `
 )
 
+var mode string
+
 func TestMain(m *testing.M) {
 	if u, ok := os.LookupEnv("OKTETO_USER"); !ok {
 		log.Println("OKTETO_USER is not defined")
@@ -121,7 +123,7 @@ func TestMain(m *testing.M) {
 		user = u
 	}
 
-	mode := "server"
+	mode = "server"
 	if _, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
 		log.Println("running in CLIENTSIDE mode")
 		mode = "client"
@@ -171,13 +173,8 @@ func TestDownloadSyncthing(t *testing.T) {
 }
 
 func TestAll(t *testing.T) {
-	variant := "server"
-	if _, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
-		variant = "client"
-	}
-
 	ctx := scopeagent.GetContextFromTest(t)
-	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, variant)
+	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
 	test := scopeagent.GetTest(t)
 	test.Run(tName, func(t *testing.T) {
 		oktetoPath, err := getOktetoPath(ctx)

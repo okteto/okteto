@@ -60,8 +60,8 @@ func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, 
 	now := time.Now()
 	archiveName := fmt.Sprintf("okteto-doctor-%s.zip", now.Format("20060102150405"))
 	files := []string{summaryFilename}
-	if model.FileExists(filepath.Join(config.GetHome(), "okteto.log")) {
-		files = append(files, filepath.Join(config.GetHome(), "okteto.log"))
+	if model.FileExists(filepath.Join(config.GetOktetoHome(), "okteto.log")) {
+		files = append(files, filepath.Join(config.GetOktetoHome(), "okteto.log"))
 	}
 	if model.FileExists(config.GetSyncthingLogFile(dev.Namespace, dev.Name)) {
 		files = append(files, config.GetSyncthingLogFile(dev.Namespace, dev.Name))

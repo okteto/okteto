@@ -70,7 +70,7 @@ func getDockerfileWithCacheHandler(filename string) (string, error) {
 
 	scanner := bufio.NewScanner(file)
 
-	dockerfileTmpFolder := filepath.Join(config.GetHome(), ".dockerfile")
+	dockerfileTmpFolder := filepath.Join(config.GetOktetoHome(), ".dockerfile")
 	if err := os.MkdirAll(dockerfileTmpFolder, 0700); err != nil {
 		return "", fmt.Errorf("failed to create %s: %s", dockerfileTmpFolder, err)
 	}

@@ -16,11 +16,11 @@ package config
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestGetUserHomeDir(t *testing.T) {
-
 	home := GetUserHomeDir()
 	if len(home) == 0 {
 		t.Fatal("got an empty home value")
@@ -38,4 +38,36 @@ func TestGetUserHomeDir(t *testing.T) {
 		t.Fatalf("OKTETO_HOME override failed, got %s instead of %s", home, dir)
 	}
 
+}
+
+func TestGetOktetoHome(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	os.Setenv("OKTETO_HOME", dir)
+
+	got := GetOktetoHome()
+	expected := filepath.Join(dir, ".okteto")
+	if got != expected {
+		t.Errorf("expected %s, got %s", expected, got)
+	}
+}
+
+func TestGetDeploymentHome(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	os.Setenv("OKTETO_HOME", dir)
+
+	got := GetDeploymentHome("ns", "dp")
+	expected := filepath.Join(dir, ".okteto", "ns", "dp")
+	if got != expected {
+		t.Errorf("expected %s, got %s", expected, got)
+	}
 }

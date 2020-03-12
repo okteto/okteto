@@ -287,7 +287,7 @@ func GetBuildKit() (string, error) {
 
 // GetCertificatePath returns the path  to the certificate of the okteto buildkit
 func GetCertificatePath() string {
-	return filepath.Join(config.GetHome(), ".ca.crt")
+	return filepath.Join(config.GetOktetoHome(), ".ca.crt")
 }
 
 func saveToken(id, token, url, registry, buildkit string) error {
@@ -354,5 +354,5 @@ func save(t *Token) error {
 }
 
 func getTokenPath() string {
-	return filepath.Join(config.GetHome(), tokenFile)
+	return filepath.Join(config.GetOktetoHome(), tokenFile)
 }
