@@ -603,8 +603,8 @@ func RemoveFolder(dev *model.Dev) error {
 		return nil
 	}
 
-	if _, err := filepath.Rel(config.GetHome(), s.Home); err != nil || config.GetHome() == s.Home {
-		log.Errorf("%s is not inside %s, ignoring", s.Home, config.GetHome())
+	if _, err := filepath.Rel(config.GetOktetoHome(), s.Home); err != nil || config.GetOktetoHome() == s.Home {
+		log.Errorf("%s is not inside %s, ignoring", s.Home, config.GetOktetoHome())
 		return nil
 	}
 
@@ -661,7 +661,7 @@ func getPID(pidPath string) (int, error) {
 }
 
 func getInstallPath() string {
-	return filepath.Join(config.GetHome(), getBinaryName())
+	return filepath.Join(config.GetOktetoHome(), getBinaryName())
 }
 
 func getBinaryName() string {
