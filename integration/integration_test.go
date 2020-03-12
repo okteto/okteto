@@ -171,102 +171,110 @@ func TestDownloadSyncthing(t *testing.T) {
 }
 
 func TestAll(t *testing.T) {
+	variant := "server"
+	if _, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
+		variant = "client"
+	}
+
 	ctx := scopeagent.GetContextFromTest(t)
+	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, variant)
+	test := scopeagent.GetTest(t)
+	test.Run(tName, func(t *testing.T) {
+		oktetoPath, err := getOktetoPath(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	oktetoPath, err := getOktetoPath(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+		if _, err := exec.LookPath(kubectlBinary); err != nil {
+			t.Fatalf("kubectl is not in the path: %s", err)
+		}
 
-	if _, err := exec.LookPath(kubectlBinary); err != nil {
-		t.Fatalf("kubectl is not in the path: %s", err)
-	}
+		name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+		namespace := fmt.Sprintf("%s-%s", name, user)
 
-	name := strings.ToLower(fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()))
-	namespace := fmt.Sprintf("%s-%s", name, user)
+		dir, err := ioutil.TempDir("", tName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		log.Printf("created tempdir: %s", dir)
 
-	dir, err := ioutil.TempDir("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	log.Printf("created tempdir: %s", dir)
+		dPath := filepath.Join(dir, "deployment.yaml")
+		if err := writeDeployment(name, dPath); err != nil {
+			t.Fatal(err)
+		}
 
-	dPath := filepath.Join(dir, "deployment.yaml")
-	if err := writeDeployment(name, dPath); err != nil {
-		t.Fatal(err)
-	}
+		contentPath := filepath.Join(dir, "index.html")
+		ioutil.WriteFile(contentPath, []byte(name), 0644)
 
-	contentPath := filepath.Join(dir, "index.html")
-	ioutil.WriteFile(contentPath, []byte(name), 0644)
+		manifestPath := filepath.Join(dir, "okteto.yml")
+		if err := writeManifest(manifestPath, name); err != nil {
+			t.Fatal(err)
+		}
 
-	manifestPath := filepath.Join(dir, "okteto.yml")
-	if err := writeManifest(manifestPath, name); err != nil {
-		t.Fatal(err)
-	}
+		if err := createNamespace(ctx, namespace, oktetoPath); err != nil {
+			t.Fatal(err)
+		}
 
-	if err := createNamespace(ctx, namespace, oktetoPath); err != nil {
-		t.Fatal(err)
-	}
+		if err := deploy(ctx, name, dPath); err != nil {
+			t.Fatal(err)
+		}
 
-	if err := deploy(ctx, name, dPath); err != nil {
-		t.Fatal(err)
-	}
+		deployment, err := getDeployment(namespace, name)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	deployment, err := getDeployment(namespace, name)
-	if err != nil {
-		t.Fatal(err)
-	}
+		var wg sync.WaitGroup
+		p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	var wg sync.WaitGroup
-	p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+		log.Println("getting synchronized content")
+		c, err := getContent()
+		if err != nil {
+			t.Fatalf("failed to get content: %s", err)
+		}
 
-	log.Println("getting synchronized content")
-	c, err := getContent()
-	if err != nil {
-		t.Fatalf("failed to get content: %s", err)
-	}
+		log.Println("got synchronized content")
 
-	log.Println("got synchronized content")
+		if c != name {
+			t.Fatalf("expected synchronized content to be %s, got %s", name, c)
+		}
 
-	if c != name {
-		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
-	}
+		// Update content in token file
+		updatedContent := fmt.Sprintf("%d", time.Now().Unix())
+		ioutil.WriteFile(contentPath, []byte(updatedContent), 0644)
+		time.Sleep(3 * time.Second)
 
-	// Update content in token file
-	updatedContent := fmt.Sprintf("%d", time.Now().Unix())
-	ioutil.WriteFile(contentPath, []byte(updatedContent), 0644)
-	time.Sleep(3 * time.Second)
+		log.Println("getting updated content")
+		c, err = getContent()
+		if err != nil {
+			t.Fatalf("failed to get updated content: %s", err)
+		}
 
-	log.Println("getting updated content")
-	c, err = getContent()
-	if err != nil {
-		t.Fatalf("failed to get updated content: %s", err)
-	}
+		if c != updatedContent {
+			t.Fatalf("expected updated content to be %s, got %s", updatedContent, c)
+		}
 
-	if c != updatedContent {
-		t.Fatalf("expected updated content to be %s, got %s", updatedContent, c)
-	}
+		log.Println("got updated content")
 
-	log.Println("got updated content")
+		if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
+			t.Fatal(err)
+		}
 
-	if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
-		t.Fatal(err)
-	}
+		if err := checkIfUpFinished(ctx, p.Pid); err != nil {
+			t.Error(err)
+		}
 
-	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
-		t.Error(err)
-	}
+		if err := compareDeployment(deployment); err != nil {
+			t.Error(err)
+		}
 
-	if err := compareDeployment(deployment); err != nil {
-		t.Error(err)
-	}
-
-	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
-		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
-	}
+		if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
+			log.Printf("failed to delete namespace %s: %s\n", namespace, err)
+		}
+	})
 }
 
 func waitForDeployment(ctx context.Context, name string, revision, timeout int) error {
@@ -388,8 +396,8 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 }
 
 func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
-	log.Printf("okteto down -f %s", manifestPath)
-	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath)
+	log.Printf("okteto down -f %s -v", manifestPath)
+	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
 
 	downCMD.Env = os.Environ()
 	span, _ := process.InjectToCmdWithSpan(ctx, downCMD)
