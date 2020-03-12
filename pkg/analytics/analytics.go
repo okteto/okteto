@@ -241,7 +241,7 @@ func track(event string, success bool, props map[string]interface{}) {
 }
 
 func getFlagPath() string {
-	return filepath.Join(config.GetHome(), ".noanalytics")
+	return filepath.Join(config.GetOktetoHome(), ".noanalytics")
 }
 
 // Disable disables analytics

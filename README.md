@@ -17,6 +17,20 @@ Today, most developers try to either run parts of the infrastructure locally, or
 
 Okteto makes this cycle a lot faster by launching development environment in Kubernetes. You write your code locally using your favorite tools and Okteto detects the code changes and instantly synchronizes your code to your development environment. There you can use your compilers and hot reloaders to see your changes live in seconds.
 
+## Install
+
+MacOS / Linux
+```
+curl https://get.okteto.com -sSfL | sh
+```
+
+Windows
+```
+Download https://downloads.okteto.com/cli/okteto.exe and add it to your $PATH.
+```
+
+You can also directly download the precompiled binary from [the releases page](https://github.com/okteto/okteto/releases).
+
 ## Getting started
 
 All you need to get started is the [Okteto CLI](https://okteto.com/docs/getting-started/installation/index.html) and access to a Kubernetes cluster. 
