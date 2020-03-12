@@ -1,0 +1,5 @@
+package linguist
+
+import (
+	_ "go.undefinedlabs.com/scopeagent/autoinstrument"
+)
