@@ -67,7 +67,7 @@ func IsNotFound(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "not found")
 }
 
-// IsNotExists returns true if err is of the type does not exist
-func IsNotExists(err error) bool {
+// IsNotExist returns true if err is of the type does not exist
+func IsNotExist(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "does not exist")
 }

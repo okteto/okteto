@@ -46,7 +46,7 @@ func loadDevOrDefault(devPath, name string) (*model.Dev, error) {
 		return dev, nil
 	}
 
-	if errors.IsNotExists(err) && len(name) > 0 {
+	if errors.IsNotExist(err) && len(name) > 0 {
 		return &model.Dev{
 			Name:   name,
 			Labels: map[string]string{},
