@@ -2,6 +2,7 @@
 
 [![GitHub release](http://img.shields.io/github/release/okteto/okteto.svg?style=flat-square)][release]
 [![CircleCI](https://circleci.com/gh/okteto/okteto.svg?style=svg)](https://circleci.com/gh/okteto/okteto)
+[![Scope](https://app.scope.dev/api/badge/1fb9ca0d-7612-4ae9-b9c6-b901c39e8f7b/default)](https://app.scope.dev/external/v1/explore/57ca820b-5f4b-472c-a90c-b99f61c0f120/1fb9ca0d-7612-4ae9-b9c6-b901c39e8f7b/default?branch=master)
 [![Apache License 2.0](https://img.shields.io/github/license/okteto/okteto.svg?style=flat-square)][license]
 
 [release]: https://github.com/okteto/okteto/releases
