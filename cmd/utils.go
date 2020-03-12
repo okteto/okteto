@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func loadDev(devPath string) (*model.Dev, error) {
@@ -37,6 +38,22 @@ func loadDev(devPath string) (*model.Dev, error) {
 	}
 
 	return model.Get(devPath)
+}
+
+func loadDevOrDefault(devPath, name string) (*model.Dev, error) {
+	dev, err := loadDev(devPath)
+	if err == nil {
+		return dev, nil
+	}
+
+	if errors.IsNotExists(err) && len(name) > 0 {
+		return &model.Dev{
+			Name:   name,
+			Labels: map[string]string{},
+		}, nil
+	}
+
+	return nil, err
 }
 
 func askYesNo(q string) (bool, error) {
@@ -100,4 +117,19 @@ func isWatchesConfigurationTooLow(value string) bool {
 	}
 	log.Debugf("max_user_watches = %d", c)
 	return c <= 8192
+}
+
+func saveManifest(dev *model.Dev, path string) error {
+	marshalled, err := yaml.Marshal(dev)
+	if err != nil {
+		log.Infof("failed to marshall dev environment: %s", err)
+		return fmt.Errorf("Failed to generate your manifest")
+	}
+
+	if err := ioutil.WriteFile(path, marshalled, 0600); err != nil {
+		log.Info(err)
+		return fmt.Errorf("Failed to write your manifest")
+	}
+
+	return nil
 }

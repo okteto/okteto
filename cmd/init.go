@@ -25,8 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
-	yaml "gopkg.in/yaml.v2"
-
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
@@ -110,15 +108,8 @@ func executeInit(devPath string, overwrite bool, language string, workDir string
 
 	dev.Name = getDeploymentName(workDir)
 
-	marshalled, err := yaml.Marshal(dev)
-	if err != nil {
-		log.Infof("failed to marshall dev environment: %s", err)
-		return fmt.Errorf("Failed to generate your manifest")
-	}
-
-	if err := ioutil.WriteFile(devPath, marshalled, 0600); err != nil {
-		log.Info(err)
-		return fmt.Errorf("Failed to write your manifest")
+	if err := saveManifest(dev, devPath); err != nil {
+		return err
 	}
 
 	if !model.FileExists(stignore) {

@@ -13,7 +13,13 @@
 
 package cmd
 
-import "testing"
+import (
+	"io/ioutil"
+	"os"
+	"testing"
+
+	"github.com/okteto/okteto/pkg/model"
+)
 
 func Test_isWatchesConfigurationTooLow(t *testing.T) {
 	var tests = []struct {
@@ -54,5 +60,48 @@ func Test_isWatchesConfigurationTooLow(t *testing.T) {
 				t.Errorf("expected %t got %t in test %s", tt.expected, result, tt.name)
 			}
 		})
+	}
+}
+
+func Test_loadDevOrDefault(t *testing.T) {
+	name := "demo-deployment"
+	d, err := loadDevOrDefault("/tmp/bad-path", name)
+	if err != nil {
+		t.Fatal("default dev was not returned")
+	}
+
+	if d.Name != name {
+		t.Errorf("expected %s, got %s", name, d.Name)
+	}
+
+	d, err = loadDevOrDefault("/tmp/bad-path", "")
+	if err == nil {
+		t.Error("expected error with empty deployment name")
+	}
+
+	f, err := ioutil.TempFile("", "")
+	f.Close()
+	defer os.Remove(f.Name())
+
+	existing := &model.Dev{
+		Name:  name,
+		Image: "okteto/test:1.0",
+	}
+
+	if err := saveManifest(existing, f.Name()); err != nil {
+		t.Fatal(err)
+	}
+
+	d, err = loadDevOrDefault(f.Name(), "foo")
+	if err != nil {
+		t.Fatal("expected error with empty deployment name")
+	}
+
+	if existing.Image != d.Image {
+		t.Fatalf("expected %s got %s", existing.Image, d.Image)
+	}
+
+	if existing.Name != d.Name {
+		t.Fatalf("expected %s got %s", existing.Name, d.Name)
 	}
 }

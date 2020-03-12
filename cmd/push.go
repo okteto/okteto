@@ -50,16 +50,9 @@ func Push() *cobra.Command {
 				return errors.ErrNotInCluster
 			}
 
-			dev, err := loadDev(devPath)
+			dev, err := loadDevOrDefault(devPath, deploymentName)
 			if err != nil {
-				if errors.IsNotExists(err) && len(deploymentName) > 0 {
-					dev = &model.Dev{
-						Name:   deploymentName,
-						Labels: map[string]string{},
-					}
-				} else {
-					return err
-				}
+				return err
 			}
 
 			if len(deploymentName) > 0 && deploymentName != dev.Name {
