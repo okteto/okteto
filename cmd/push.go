@@ -38,6 +38,7 @@ func Push() *cobra.Command {
 	var namespace string
 	var imageTag string
 	var autoDeploy bool
+	var deploymentName string
 
 	cmd := &cobra.Command{
 		Use:   "push",
@@ -49,9 +50,13 @@ func Push() *cobra.Command {
 				return errors.ErrNotInCluster
 			}
 
-			dev, err := loadDev(devPath)
+			dev, err := loadDevOrDefault(devPath, deploymentName)
 			if err != nil {
 				return err
+			}
+
+			if len(deploymentName) > 0 && deploymentName != dev.Name {
+				return fmt.Errorf("deployment name provided does not match the name field in your okteto manifest")
 			}
 
 			if err := dev.UpdateNamespace(namespace); err != nil {
@@ -93,6 +98,7 @@ func Push() *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the push command is executed")
 	cmd.Flags().StringVarP(&imageTag, "tag", "t", "", "image tag to build, push and redeploy")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
+	cmd.Flags().StringVar(&deploymentName, "name", "", "name of the deployment to push to")
 	return cmd
 }
 

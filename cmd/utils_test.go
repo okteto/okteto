@@ -13,7 +13,15 @@
 
 package cmd
 
-import "testing"
+import (
+	"io/ioutil"
+	"os"
+	"testing"
+
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/model"
+	"go.undefinedlabs.com/scopeagent"
+)
 
 func Test_isWatchesConfigurationTooLow(t *testing.T) {
 	var tests = []struct {
@@ -55,4 +63,103 @@ func Test_isWatchesConfigurationTooLow(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_loadDevOrDefault(t *testing.T) {
+	var tests = []struct {
+		name       string
+		deployment string
+		expectErr  bool
+		dev        *model.Dev
+	}{
+		{
+			name:       "default",
+			deployment: "default-deployment",
+			expectErr:  false,
+		},
+		{
+			name:       "default-no-name",
+			deployment: "",
+			expectErr:  true,
+		},
+		{
+			name:       "load-dev",
+			deployment: "test-deployment",
+			expectErr:  false,
+			dev: &model.Dev{
+				Name:  "loaded",
+				Image: "okteto/test:1.0",
+			},
+		},
+	}
+
+	test := scopeagent.GetTest(t)
+	for _, tt := range tests {
+		test.Run(tt.name, func(t *testing.T) {
+			def, err := loadDevOrDefault("/tmp/a-path", tt.deployment)
+			if tt.expectErr {
+				if err == nil {
+					t.Fatal("expected error when loading")
+				}
+
+				if !errors.IsNotExist(err) {
+					t.Fatalf("expected not found got: %s", err)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			if def.Name != tt.deployment {
+				t.Errorf("expected default name, got %s", def.Name)
+			}
+
+			if tt.dev == nil {
+				return
+			}
+
+			f, err := ioutil.TempFile("", "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			f.Close()
+			defer os.Remove(f.Name())
+
+			if err := saveManifest(tt.dev, f.Name()); err != nil {
+				t.Fatal(err)
+			}
+
+			loaded, err := loadDevOrDefault(f.Name(), "foo")
+			if err != nil {
+				t.Fatal("expected error when loading existing manifest")
+			}
+
+			if tt.dev.Image != loaded.Image {
+				t.Fatalf("expected %s got %s", tt.dev.Image, loaded.Image)
+			}
+
+			if tt.dev.Name != loaded.Name {
+				t.Fatalf("expected %s got %s", tt.dev.Name, loaded.Name)
+			}
+
+		})
+	}
+	name := "demo-deployment"
+	def, err := loadDevOrDefault("/tmp/bad-path", name)
+	if err != nil {
+		t.Fatal("default dev was not returned")
+	}
+
+	if def.Name != name {
+		t.Errorf("expected %s, got %s", name, def.Name)
+	}
+
+	_, err = loadDevOrDefault("/tmp/bad-path", "")
+	if err == nil {
+		t.Error("expected error with empty deployment name")
+	}
+
 }
