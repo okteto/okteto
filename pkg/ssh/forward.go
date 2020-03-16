@@ -41,6 +41,10 @@ func (f *forward) start(config *ssh.ClientConfig, serverAddr string) {
 
 	defer localListener.Close()
 
+	f.ready.Do(func() {
+		f.connected = true
+	})
+
 	for {
 		log.Infof("%s -> waiting for a connection", f.String())
 		localConn, err := localListener.Accept()

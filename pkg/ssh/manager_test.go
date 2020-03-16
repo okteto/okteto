@@ -3,10 +3,10 @@ package ssh
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -22,41 +22,50 @@ type testSSHHandler struct{}
 
 func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println(fmt.Sprintf("message %s", t.message))
-	w.Write([]byte(t.message))
+	_, _ = w.Write([]byte(t.message))
 }
 
-func (t *testSSHHandler) listenAndServe(port int) error {
-	ssh.Handle(func(s ssh.Session) {
-		cmd := exec.Command("ssh-add", "-l")
-		if ssh.AgentRequested(s) {
-			l, err := ssh.NewAgentListener()
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer l.Close()
-			go ssh.ForwardAgentConnections(l, s)
-			cmd.Env = append(s.Environ(), fmt.Sprintf("%s=%s", "SSH_AUTH_SOCK", l.Addr().String()))
-		} else {
-			cmd.Env = s.Environ()
-		}
-		cmd.Stdout = s
-		cmd.Stderr = s.Stderr()
-		if err := cmd.Run(); err != nil {
-			log.Println(err)
-			return
-		}
-	})
+func (t *testSSHHandler) listenAndServe(address string) {
+	forwardHandler := &ssh.ForwardedTCPHandler{}
+	server := ssh.Server{
+		LocalPortForwardingCallback: ssh.LocalPortForwardingCallback(func(ctx ssh.Context, dhost string, dport uint32) bool {
+			log.Println("Accepted forward", dhost, dport)
+			return true
+		}),
+		Addr: address,
+		Handler: ssh.Handler(func(s ssh.Session) {
+			io.WriteString(s, "Remote forwarding available...\n")
+			select {}
+		}),
+		ReversePortForwardingCallback: ssh.ReversePortForwardingCallback(func(ctx ssh.Context, host string, port uint32) bool {
+			log.Println("attempt to bind", host, port, "granted")
+			return true
+		}),
+		RequestHandlers: map[string]ssh.RequestHandler{
+			"tcpip-forward":        forwardHandler.HandleSSHRequest,
+			"cancel-tcpip-forward": forwardHandler.HandleSSHRequest,
+		},
+	}
 
-	return ssh.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func TestForward(t *testing.T) {
 	ctx := context.Background()
 	ssh := testSSHHandler{}
-	go ssh.listenAndServe(2222)
-	fm := NewForwardManager(ctx, "localhost:2222", "localhost", "0.0.0.0", nil)
 
-	if err := connectForwards(fm); err != nil {
+	sshPort, err := model.GetAvailablePort()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sshAddr := fmt.Sprintf("localhost:%d", sshPort)
+	go ssh.listenAndServe(sshAddr)
+	fm := NewForwardManager(ctx, sshAddr, "localhost", "0.0.0.0", nil)
+
+	if err := startServers(fm); err != nil {
 		t.Fatal(err)
 	}
 
@@ -67,6 +76,9 @@ func TestForward(t *testing.T) {
 	if err := fm.waitForwardsConnected(); err != nil {
 		t.Fatal(err)
 	}
+
+	log.Print("forwards connected")
+	//time.Sleep(1 * time.Second)
 
 	if err := callForwards(fm); err != nil {
 		t.Error(err)
@@ -95,7 +107,7 @@ func TestReverse(t *testing.T) {
 
 }
 
-func connectForwards(fm *ForwardManager) error {
+func startServers(fm *ForwardManager) error {
 	for i := 0; i < 1; i++ {
 		local, err := model.GetAvailablePort()
 		if err != nil {
@@ -113,7 +125,7 @@ func connectForwards(fm *ForwardManager) error {
 
 		go func() {
 			handler := &testHTTPHandler{message: fmt.Sprintf("%d", remote)}
-			http.ListenAndServe(fmt.Sprintf(":%d", remote), handler)
+			_ = http.ListenAndServe(fmt.Sprintf(":%d", remote), handler)
 		}()
 	}
 
@@ -138,7 +150,7 @@ func connectReverseForwards(fm *ForwardManager) error {
 
 		go func() {
 			handler := &testHTTPHandler{message: fmt.Sprintf("%d", local)}
-			http.ListenAndServe(fmt.Sprintf(":%d", local), handler)
+			_ = http.ListenAndServe(fmt.Sprintf(":%d", local), handler)
 		}()
 	}
 
@@ -147,7 +159,7 @@ func connectReverseForwards(fm *ForwardManager) error {
 
 func checkReverseForwardsConnected(fm *ForwardManager) error {
 	tk := time.NewTicker(10 * time.Millisecond)
-	connected := true
+	var connected bool
 	for i := 0; i < 100; i++ {
 		connected = true
 		for _, r := range fm.reverses {
@@ -232,10 +244,10 @@ func getPort(address string) string {
 func (fm *ForwardManager) waitForwardsConnected() error {
 	tk := time.NewTicker(500 * time.Millisecond)
 	start := time.Now()
-	connected := true
+	var connected bool
 
 	for {
-		elapsed := time.Now().Sub(start)
+		elapsed := time.Since(start)
 		if elapsed > connectTimeout {
 			return fmt.Errorf("forwards not connected after %s", connectTimeout)
 		}

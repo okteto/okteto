@@ -558,7 +558,9 @@ func (up *UpContext) forwards() error {
 func (up *UpContext) sshForwards() error {
 	log.Infof("starting SSH port forwards")
 	f := forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
-	f.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort})
+	if err := f.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
+		return err
+	}
 
 	up.Forwarder = ssh.NewForwardManager(up.Context, fmt.Sprintf(":%d", up.Dev.RemotePort), "localhost", "0.0.0.0", f)
 

@@ -67,7 +67,6 @@ func (r *reverse) start(config *ssh.ClientConfig, serverAddr string) {
 
 	for {
 		r.ready.Do(func() {
-			log.Infof("%s connected and ready", r.String())
 			r.connected = true
 		})
 
