@@ -228,3 +228,26 @@ func getPort(address string) string {
 	parts := strings.Split(address, ":")
 	return parts[1]
 }
+
+func (fm *ForwardManager) waitForwardsConnected() error {
+	tk := time.NewTicker(500 * time.Millisecond)
+	start := time.Now()
+	connected := true
+
+	for {
+		elapsed := time.Now().Sub(start)
+		if elapsed > connectTimeout {
+			return fmt.Errorf("forwards not connected after %s", connectTimeout)
+		}
+
+		connected = true
+		for _, f := range fm.forwards {
+			connected = connected && f.connected
+		}
+
+		if connected {
+			return nil
+		}
+		<-tk.C
+	}
+}

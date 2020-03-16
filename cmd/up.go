@@ -259,11 +259,17 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 			analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
 		}
 
-		err = up.devMode(d, create)
-		if err != nil {
+		if err := up.devMode(d, create); err != nil {
 			up.Exit <- fmt.Errorf("couldn't activate your development environment: %s", err)
 			return
 		}
+
+		if err := up.forwards(); err != nil {
+			up.Exit <- fmt.Errorf("couldn't forward traffic to your development environment: %s", err)
+			return
+		}
+
+		go up.cleanCommand()
 
 		log.Success("Development environment activated")
 
@@ -277,7 +283,6 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 			up.Exit <- err
 			return
 		}
-
 		up.success = true
 		if up.retry {
 			analytics.TrackReconnect(true, up.getClusterType(), up.isSwap)
@@ -368,11 +373,11 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 		case err := <-up.Running:
 			fmt.Println()
 			if err != nil {
-				log.Infof("Command execution error: %s", err)
+				log.Infof("command failed: %s", err)
 				return errors.ErrCommandFailed
 			}
 
-			log.Info("Command finished execution without any errors")
+			log.Info("command completed")
 			return nil
 
 		case err := <-up.ErrChan:
@@ -495,18 +500,15 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	}
 
 	up.Pod = pod.Name
-	go up.cleanCommand()
-
-	return up.forwards()
-
+	return nil
 }
 
 func (up *UpContext) forwards() error {
-	log.Infof("starting port forwards")
 	if up.Dev.ExecuteOverSSHEnabled() {
 		return up.sshForwards()
 	}
 
+	log.Infof("starting port forwards")
 	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
 
 	for _, f := range up.Dev.Forward {
@@ -550,7 +552,7 @@ func (up *UpContext) sshForwards() error {
 	f := forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
 	f.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort})
 
-	up.Forwarder = ssh.NewForwardManager(up.Context, fmt.Sprintf("localhost:%d", up.Dev.RemotePort), "localhost", "0.0.0.0", f)
+	up.Forwarder = ssh.NewForwardManager(up.Context, fmt.Sprintf(":%d", up.Dev.RemotePort), "localhost", "0.0.0.0", f)
 
 	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err

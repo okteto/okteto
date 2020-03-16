@@ -22,7 +22,6 @@ import (
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"golang.org/x/crypto/ssh"
 )
 
 const connectTimeout = 120 * time.Second
@@ -88,49 +87,21 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 			return fmt.Errorf("failed to start SSH port-forward: %w", err)
 		}
 	}
+
+	log.Info("port forward to dev pod connected")
+
 	// Connect to SSH remote server using serverEndpoint
 	c := getSSHClientConfig()
-	conn, err := ssh.Dial("tcp", fm.sshAddr, c)
-	if err != nil {
-		return fmt.Errorf("failed to connect to SSH host: %w", err)
-	}
 
 	for _, ff := range fm.forwards {
-		go ff.startWithRetry(c, conn)
+		go ff.start(c, fm.sshAddr)
 	}
 
 	for _, rt := range fm.reverses {
-		go rt.startWithRetry(c, conn)
-		if err != nil {
-			return fmt.Errorf("failed to connect to SSH host: %w", err)
-		}
-
+		go rt.start(c, fm.sshAddr)
 	}
 
 	return nil
-}
-
-func (fm *ForwardManager) waitForwardsConnected() error {
-	tk := time.NewTicker(500 * time.Millisecond)
-	start := time.Now()
-	connected := true
-
-	for {
-		elapsed := time.Now().Sub(start)
-		if elapsed > connectTimeout {
-			return fmt.Errorf("forwards not connected after %s", connectTimeout)
-		}
-
-		connected = true
-		for _, f := range fm.forwards {
-			connected = connected && f.connected
-		}
-
-		if connected {
-			return nil
-		}
-		<-tk.C
-	}
 }
 
 // Stop sends a stop signal to all the connections
