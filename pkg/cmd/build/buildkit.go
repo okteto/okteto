@@ -197,7 +197,7 @@ func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*clien
 	return c, nil
 }
 
-func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, plain bool) (string, error) {
+func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string) (string, error) {
 	var solveResp *client.SolveResponse
 	ch := make(chan *client.SolveStatus)
 	eg, ctx := errgroup.WithContext(ctx)
@@ -209,7 +209,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pla
 
 	eg.Go(func() error {
 		var c console.Console
-		if !plain {
+		if progress == "tty" {
 			if cn, err := console.ConsoleFromFile(os.Stderr); err == nil {
 				c = cn
 			}
