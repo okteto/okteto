@@ -92,13 +92,19 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 
 	// Connect to SSH remote server using serverEndpoint
 	c := getSSHClientConfig()
+	pool, err := startPool(fm.ctx, fm.sshAddr, c)
+	if err != nil {
+		return err
+	}
 
 	for _, ff := range fm.forwards {
-		go ff.start(c, fm.sshAddr)
+		ff.pool = pool
+		go ff.start()
 	}
 
 	for _, rt := range fm.reverses {
-		go rt.start(c, fm.sshAddr)
+		rt.pool = pool
+		go rt.start()
 	}
 
 	return nil

@@ -21,7 +21,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"golang.org/x/crypto/ssh"
 )
 
 type reverse struct {
@@ -47,17 +46,8 @@ func (fm *ForwardManager) AddReverse(f model.Reverse) error {
 	return nil
 }
 
-func (r *reverse) start(config *ssh.ClientConfig, serverAddr string) {
-	sshConn, err := ssh.Dial("tcp", serverAddr, config)
-	if err != nil {
-		log.Infof("%s -> ssh connection failed: %s", r.String(), err)
-		return
-	}
-
-	defer sshConn.Close()
-	log.Infof("%s -> started SSH connection", r.String())
-
-	remoteListener, err := sshConn.Listen("tcp", r.remoteAddress)
+func (r *reverse) start() {
+	remoteListener, err := r.pool.getListener(r.remoteAddress)
 	if err != nil {
 		log.Infof("%s -> failed to listen on remote address: %v", r.String(), err)
 		return

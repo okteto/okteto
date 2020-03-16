@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/okteto/okteto/pkg/log"
-	"golang.org/x/crypto/ssh"
 )
 
 type forward struct {
@@ -30,9 +29,10 @@ type forward struct {
 	remoteAddress string
 	ready         sync.Once
 	connected     bool
+	pool          *pool
 }
 
-func (f *forward) start(config *ssh.ClientConfig, serverAddr string) {
+func (f *forward) start() {
 	localListener, err := net.Listen("tcp", f.localAddress)
 	if err != nil {
 		log.Infof("%s -> failed to listen on local address: %v", f.String(), err)
@@ -54,24 +54,14 @@ func (f *forward) start(config *ssh.ClientConfig, serverAddr string) {
 		}
 
 		log.Infof("%s -> accepted connection: %v", f.String(), localConn)
-		go f.handle(localConn, config, serverAddr)
+		go f.handle(localConn)
 	}
 }
 
-func (f *forward) handle(local net.Conn, config *ssh.ClientConfig, serverAddr string) {
+func (f *forward) handle(local net.Conn) {
 	defer local.Close()
 
-	sshConn, err := ssh.Dial("tcp", serverAddr, config)
-	if err != nil {
-		log.Infof("%s -> ssh connection failed: %s", f.String(), err)
-		return
-	}
-
-	defer sshConn.Close()
-
-	log.Infof("%s -> started SSH connection", f.String())
-
-	remote, err := sshConn.Dial("tcp", f.remoteAddress)
+	remote, err := f.pool.get(f.remoteAddress)
 	if err != nil {
 		log.Infof("%s -> forwarding failed: %s", f.String(), err)
 		return

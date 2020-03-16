@@ -163,7 +163,7 @@ func RunUp(dev *model.Dev, autoDeploy bool, forcePull, resetSyncthing bool) erro
 	}
 
 	if up.Dev.ExecuteOverSSHEnabled() {
-		log.Success("Enabled experimental SSH mode")
+		log.Success("Experimental SSH mode enabled")
 	}
 
 	defer up.shutdown()
