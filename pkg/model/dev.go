@@ -380,14 +380,6 @@ func (dev *Dev) LoadRemote() {
 		log.Infof("remote port not set, using %d", dev.RemotePort)
 	}
 
-	dev.Forward = append(
-		dev.Forward,
-		Forward{
-			Local:  dev.RemotePort,
-			Remote: dev.SSHServerPort,
-		},
-	)
-
 	log.Infof("enabled remote mode")
 }
 

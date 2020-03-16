@@ -516,11 +516,19 @@ func (up *UpContext) forwards() error {
 			return err
 		}
 	}
+
 	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
 	}
+
 	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemoteGUIPort, Remote: syncthing.GUIPort}); err != nil {
 		return err
+	}
+
+	if up.Dev.RemoteModeEnabled() {
+		if err := up.Forwarder.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
+			return err
+		}
 	}
 
 	if err := up.Forwarder.Start(up.Pod, up.Dev.Namespace); err != nil {
@@ -563,10 +571,6 @@ func (up *UpContext) sshForwards() error {
 	}
 
 	for _, f := range up.Dev.Forward {
-		if f.Local == up.Dev.RemotePort {
-			continue
-		}
-
 		if err := up.Forwarder.Add(f); err != nil {
 			return err
 		}
@@ -791,6 +795,10 @@ func (up *UpContext) shutdown() {
 func printDisplayContext(dev *model.Dev) {
 	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
+	if dev.RemoteModeEnabled() {
+		log.Println(fmt.Sprintf("    %s       %d -> %d", log.BlueString("SSH:"), dev.RemotePort, dev.SSHServerPort))
+	}
+
 	if len(dev.Forward) > 0 {
 		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
 		for i := 1; i < len(dev.Forward); i++ {
