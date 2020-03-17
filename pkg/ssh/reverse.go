@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sync"
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -38,7 +37,6 @@ func (fm *ForwardManager) AddReverse(f model.Reverse) error {
 		forward: forward{
 			localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
 			remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
-			ready:         sync.Once{},
 			ctx:           fm.ctx,
 		},
 	}
@@ -56,9 +54,8 @@ func (r *reverse) start() {
 	defer remoteListener.Close()
 
 	for {
-		r.ready.Do(func() {
-			r.connected = true
-		})
+
+		r.setConnected()
 
 		log.Infof("%s -> waiting for a connection", r.String())
 		remoteConn, err := remoteListener.Accept()

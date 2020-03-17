@@ -16,7 +16,6 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
@@ -73,7 +72,6 @@ func (fm *ForwardManager) Add(f model.Forward) error {
 	fm.forwards[f.Local] = &forward{
 		localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
 		remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
-		ready:         sync.Once{},
 		ctx:           fm.ctx,
 	}
 	return nil

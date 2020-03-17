@@ -27,9 +27,22 @@ type forward struct {
 	ctx           context.Context
 	localAddress  string
 	remoteAddress string
-	ready         sync.Once
-	connected     bool
+	c             bool
+	lock          sync.Mutex
 	pool          *pool
+}
+
+func (f *forward) connected() bool {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	return f.c
+}
+
+func (f *forward) setConnected() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.c = true
+
 }
 
 func (f *forward) start() {
@@ -41,9 +54,7 @@ func (f *forward) start() {
 
 	defer localListener.Close()
 
-	f.ready.Do(func() {
-		f.connected = true
-	})
+	f.setConnected()
 
 	for {
 		log.Infof("%s -> waiting for a connection", f.String())

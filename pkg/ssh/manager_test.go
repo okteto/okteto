@@ -168,7 +168,7 @@ func checkReverseForwardsConnected(fm *ForwardManager) error {
 	for i := 0; i < 100; i++ {
 		connected = true
 		for _, r := range fm.reverses {
-			connected = connected && r.connected
+			connected = connected && r.connected()
 		}
 
 		if connected {
@@ -259,7 +259,7 @@ func (fm *ForwardManager) waitForwardsConnected() error {
 
 		connected = true
 		for _, f := range fm.forwards {
-			connected = connected && f.connected
+			connected = connected && f.connected()
 		}
 
 		if connected {
