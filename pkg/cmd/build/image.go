@@ -23,16 +23,18 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	appsv1 "k8s.io/api/apps/v1"
 )
 
 //GetRepoNameWithoutTag returns the image name without the tag
 func GetRepoNameWithoutTag(name string) string {
 	var domain, remainder string
-	i := strings.IndexRune(name, '/')
+	i := strings.IndexRune(name, '@')
+	if i != -1 {
+		return name[:i]
+	}
+	i = strings.IndexRune(name, '/')
 	if i == -1 || (!strings.ContainsAny(name[:i], ".:") && name[:i] != "localhost") {
 		domain, remainder = "", name
 	} else {
@@ -49,16 +51,15 @@ func GetRepoNameWithoutTag(name string) string {
 }
 
 //GetImageTag returns the image taag to build and push
-func GetImageTag(dev *model.Dev, imageTag string, d *appsv1.Deployment, oktetoRegistryURL string) string {
+func GetImageTag(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string) string {
 	if imageTag != "" {
 		return imageTag
 	}
 	if oktetoRegistryURL != "" {
 		return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, dev.Namespace, dev.Name)
 	}
-	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, dev.Container)
-	imageWithoutTag := GetRepoNameWithoutTag(devContainer.Image)
-	return fmt.Sprintf("%s:%s", imageWithoutTag, string(d.UID))
+	imageWithoutTag := GetRepoNameWithoutTag(imageFromDeployment)
+	return fmt.Sprintf("%s:okteto", imageWithoutTag)
 }
 
 func getDockerfileWithCacheHandler(filename string) (string, error) {

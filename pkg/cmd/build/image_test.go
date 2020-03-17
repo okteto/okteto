@@ -18,72 +18,115 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
-func Test_GetImageTag(t *testing.T) {
+func Test_GetRepoNameWithoutTag(t *testing.T) {
 	var tests = []struct {
-		name              string
-		dev               *model.Dev
-		imageTag          string
-		d                 *appsv1.Deployment
-		oktetoRegistryURL string
-		expected          string
+		name     string
+		image    string
+		expected string
 	}{
 		{
-			name:              "imageTag-not-in-okteto",
-			dev:               &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:          "imageTag",
-			d:                 &appsv1.Deployment{},
-			oktetoRegistryURL: "",
-			expected:          "imageTag",
+			name:     "official-with-tag",
+			image:    "ubuntu:2",
+			expected: "ubuntu",
 		},
 		{
-			name:              "imageTag-in-okteto",
-			dev:               &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:          "imageTag",
-			d:                 &appsv1.Deployment{},
-			oktetoRegistryURL: okteto.CloudRegistryURL,
-			expected:          "imageTag",
+			name:     "official-without-tag",
+			image:    "ubuntu",
+			expected: "ubuntu",
 		},
 		{
-			name:              "okteto",
-			dev:               &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:          "",
-			d:                 &appsv1.Deployment{},
-			oktetoRegistryURL: okteto.CloudRegistryURL,
-			expected:          "registry.cloud.okteto.net/ns/dev:okteto",
+			name:     "repo-with-tag",
+			image:    "test/ubuntu:2",
+			expected: "test/ubuntu",
 		},
 		{
-			name:     "not-in-okteto",
-			dev:      &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag: "",
-			d: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("uuid"),
-				},
-				Spec: appsv1.DeploymentSpec{
-					Template: apiv1.PodTemplateSpec{
-						Spec: apiv1.PodSpec{
-							Containers: []apiv1.Container{
-								{
-									Image: "okteto/test:2",
-								},
-							},
-						},
-					},
-				},
-			},
-			oktetoRegistryURL: "",
-			expected:          "okteto/test:uuid",
+			name:     "repo-without-tag",
+			image:    "test/ubuntu",
+			expected: "test/ubuntu",
+		},
+		{
+			name:     "registry-with-tag",
+			image:    "registry/gitlab.com/test/ubuntu:2",
+			expected: "registry/gitlab.com/test/ubuntu",
+		},
+		{
+			name:     "registry-without-tag",
+			image:    "registry/gitlab.com/test/ubuntu",
+			expected: "registry/gitlab.com/test/ubuntu",
+		},
+		{
+			name:     "localhost-with-tag",
+			image:    "localhost:5000/test/ubuntu:2",
+			expected: "localhost:5000/test/ubuntu",
+		},
+		{
+			name:     "registry-without-tag",
+			image:    "localhost:5000/test/ubuntu",
+			expected: "localhost:5000/test/ubuntu",
+		},
+		{
+			name:     "sha256",
+			image:    "pchico83/test@sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: "pchico83/test",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GetImageTag(tt.dev, tt.imageTag, tt.d, tt.oktetoRegistryURL)
+			result := GetRepoNameWithoutTag(tt.image)
+			if tt.expected != result {
+				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.name)
+			}
+		})
+	}
+}
+
+func Test_GetImageTag(t *testing.T) {
+	var tests = []struct {
+		name                string
+		dev                 *model.Dev
+		imageTag            string
+		imageFromDeployment string
+		oktetoRegistryURL   string
+		expected            string
+	}{
+		{
+			name:                "imageTag-not-in-okteto",
+			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
+			imageTag:            "imageTag",
+			imageFromDeployment: "",
+			oktetoRegistryURL:   "",
+			expected:            "imageTag",
+		},
+		{
+			name:                "imageTag-in-okteto",
+			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
+			imageTag:            "imageTag",
+			imageFromDeployment: "",
+			oktetoRegistryURL:   okteto.CloudRegistryURL,
+			expected:            "imageTag",
+		},
+		{
+			name:                "okteto",
+			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
+			imageTag:            "",
+			imageFromDeployment: "",
+			oktetoRegistryURL:   okteto.CloudRegistryURL,
+			expected:            "registry.cloud.okteto.net/ns/dev:okteto",
+		},
+		{
+			name:                "not-in-okteto",
+			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
+			imageTag:            "",
+			imageFromDeployment: "okteto/test:2",
+			oktetoRegistryURL:   "",
+			expected:            "okteto/test:okteto",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetImageTag(tt.dev, tt.imageTag, tt.imageFromDeployment, tt.oktetoRegistryURL)
 			if tt.expected != result {
 				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.name)
 			}
