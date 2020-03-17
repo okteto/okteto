@@ -14,144 +14,90 @@
 package ssh
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net"
-	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"golang.org/x/crypto/ssh"
 )
 
 type reverse struct {
-	localPort  int
-	remotePort int
+	forward
 }
 
-// ReverseManager handles the lifecycle of all the remote forwards
-type ReverseManager struct {
-	reverses map[int]*reverse
-	ctx      context.Context
-	sshHost  string
-	sshPort  int
-}
+// AddReverse adds a reverse forward
+func (fm *ForwardManager) AddReverse(f model.Reverse) error {
 
-// NewReverseManager returns a newly initialized instance of RemoteReverseManager
-func NewReverseManager(ctx context.Context, sshPort int) *ReverseManager {
-	return &ReverseManager{
-		ctx:      ctx,
-		reverses: make(map[int]*reverse),
-		sshHost:  "localhost",
-		sshPort:  sshPort,
-	}
-}
-
-// Add initializes a remote forward
-func (r *ReverseManager) Add(f *model.Reverse) error {
-
-	localPort := f.Local
-	remotePort := f.Remote
-
-	if _, ok := r.reverses[localPort]; ok {
-		return fmt.Errorf("port %d is already taken, please check your remote forward configuration", localPort)
+	if err := fm.canAdd(f.Local); err != nil {
+		return err
 	}
 
-	r.reverses[localPort] = &reverse{localPort: localPort, remotePort: remotePort}
-	return nil
-}
-
-// Start starts all the remote forwards as goroutines
-func (r *ReverseManager) Start() error {
-	log.Info("starting remote forward manager")
-
-	// Connect to SSH remote server using serverEndpoint
-	c := getSSHClientConfig()
-	sshAddr := fmt.Sprintf("%s:%d", r.sshHost, r.sshPort)
-
-	for _, rt := range r.reverses {
-		go rt.startWithRetry(r.ctx, c, sshAddr)
+	fm.reverses[f.Local] = &reverse{
+		forward: forward{
+			localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
+			remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
+			ctx:           fm.ctx,
+		},
 	}
 
 	return nil
 }
 
-func (r *reverse) startWithRetry(ctx context.Context, c *ssh.ClientConfig, sshAddr string) {
-	log.Infof("starting remote forward tunnel %d->%d", r.remotePort, r.localPort)
+func (r *reverse) start() {
+	remoteListener, err := r.pool.getListener(r.remoteAddress)
+	if err != nil {
+		log.Infof("%s -> failed to listen on remote address: %v", r.String(), err)
+		return
+	}
+
+	defer remoteListener.Close()
 
 	for {
-		err := r.start(ctx, c, sshAddr)
-		if err == nil {
-			log.Infof("remote forward tunnel %d->%d exited", r.remotePort, r.localPort)
-			return
+
+		r.setConnected()
+
+		log.Infof("%s -> waiting for a connection", r.String())
+		remoteConn, err := remoteListener.Accept()
+		if err != nil {
+			log.Infof("%s -> failed to accept connection: %v", r.String(), err)
+			continue
 		}
 
-		log.Infof("remote forward tunnel %d->%d not connected, retrying: %s", r.remotePort, r.localPort, err)
-		t := time.NewTicker(3 * time.Second)
-		<-t.C
+		log.Infof("%s -> accepted connection: %v", r.String(), remoteConn)
+		go r.handle(remoteConn)
+
 	}
 }
 
-func (r *reverse) start(ctx context.Context, c *ssh.ClientConfig, sshAddr string) error {
-	log.Infof("starting remote forward tunnel %d->%d", r.remotePort, r.localPort)
+func (r *reverse) handle(remote net.Conn) {
+	defer remote.Close()
 
-	serverConn, err := ssh.Dial("tcp", sshAddr, c)
+	quit := make(chan struct{}, 1)
+	local, err := net.Dial("tcp", r.localAddress)
 	if err != nil {
-		return fmt.Errorf("failed to connect to SSH host: %s", err)
+		log.Infof("%s -> failed to listen on local address: %v", r.String(), err)
+		return
 	}
 
-	// Listen on remote server port
-	listener, err := serverConn.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", r.remotePort))
-	if err != nil {
-		return fmt.Errorf("failed open remote port %d: %s", r.remotePort, err)
-	}
+	defer local.Close()
 
-	defer listener.Close()
+	go r.transfer(remote, local, quit)
+	go r.transfer(local, remote, quit)
 
-	// handle incoming connections on remote forward tunnel
-	for {
-		// listen on local port
-		var d net.Dialer
-
-		local, err := d.DialContext(ctx, "tcp", fmt.Sprintf("localhost:%d", r.localPort))
-		if err != nil {
-			return fmt.Errorf("failed to open local port %d: %s", r.remotePort, err)
-		}
-
-		client, err := listener.Accept()
-		if err != nil {
-			return fmt.Errorf("failed to accept traffic from remote port %d: %s", r.remotePort, err)
-		}
-
-		r.handleClient(client, local)
-	}
+	<-quit
+	log.Infof("%s -> stopped", r.String())
 }
 
-func (r *reverse) handleClient(client net.Conn, local net.Conn) {
-	defer client.Close()
-	chDone := make(chan bool, 1)
-	log.Debug("starting remote forward tunnel transfer ")
+func (r *reverse) String() string {
+	return fmt.Sprintf("ssh reverse forward %s<-%s", r.localAddress, r.remoteAddress)
+}
 
-	// Start remote -> local data transfer
-	go func() {
-		_, err := io.Copy(client, local)
-		if err != nil {
-			log.Infof("error while copying %d->%d: %s", r.remotePort, r.localPort, err)
-		}
+func (r *reverse) transfer(from io.Writer, to io.Reader, quit chan struct{}) {
+	_, err := io.Copy(from, to)
+	if err != nil {
+		log.Infof("%s -> data transfer failed: %v", r.String(), err)
+	}
 
-		chDone <- true
-	}()
-
-	// Start local -> remote data transfer
-	go func() {
-		_, err := io.Copy(local, client)
-		if err != nil {
-			log.Infof("error while copying %d->%d: %s", r.localPort, r.remotePort, err)
-		}
-		chDone <- true
-	}()
-
-	log.Infof("started remote forward tunnel %d->%d successfully", r.remotePort, r.localPort)
-	<-chDone
+	quit <- struct{}{}
 }

@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
@@ -25,11 +26,13 @@ import (
 func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64, error) {
 	progressLocal, err := sy.GetCompletionProgress(ctx, dev, true)
 	if err != nil {
-		return 0, fmt.Errorf("error accessing local syncthing status: %s", err)
+		log.Infof("error accessing local syncthing status: %s", err)
+		return 0, fmt.Errorf("error accessing local syncthing status")
 	}
 	progressRemote, err := sy.GetCompletionProgress(ctx, dev, false)
 	if err != nil {
-		return 0, fmt.Errorf("error accessing remote syncthing status: %s", err)
+		log.Infof("error accessing remote syncthing status: %s", err)
+		return 0, fmt.Errorf("error accessing remote syncthing status")
 	}
 	progress := (progressLocal + progressRemote) / 2
 	return progress, nil

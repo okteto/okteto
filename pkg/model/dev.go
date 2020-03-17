@@ -380,14 +380,6 @@ func (dev *Dev) LoadRemote() {
 		log.Infof("remote port not set, using %d", dev.RemotePort)
 	}
 
-	dev.Forward = append(
-		dev.Forward,
-		Forward{
-			Local:  dev.RemotePort,
-			Remote: dev.SSHServerPort,
-		},
-	)
-
 	log.Infof("enabled remote mode")
 }
 
@@ -573,6 +565,10 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return false
 	}
 
+	if dev.ExecuteOverSSHEnabled() {
+		return true
+	}
+
 	if dev.RemotePort > 0 {
 		return true
 	}
@@ -582,7 +578,11 @@ func (dev *Dev) RemoteModeEnabled() bool {
 
 // ExecuteOverSSHEnabled returns true if execute over SSH is enabled
 func (dev *Dev) ExecuteOverSSHEnabled() bool {
-	return dev.RemoteModeEnabled() && len(os.Getenv("OKTETO_EXECUTE_SSH")) > 0
+	if _, ok := os.LookupEnv("OKTETO_EXECUTE_SSH"); ok {
+		return true
+	}
+
+	return false
 }
 
 // GetKeyName returns the secret key name

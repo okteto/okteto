@@ -399,15 +399,16 @@ func Test_LoadRemote(t *testing.T) {
 		t.Errorf("command wasn't set: %s", dev.Command)
 	}
 
-	if len(dev.Forward) != 2 {
-		t.Errorf("forward wasn't injected")
+	if len(dev.Forward) != 1 {
+		t.Errorf("forward was injected")
 	}
 
-	if dev.Forward[1].Local != 22100 {
-		t.Errorf("local forward wasn't 22100 it was %d", dev.Forward[1].Local)
+	if dev.RemotePort != 22100 {
+		t.Errorf("local remote port wasn't 22100 it was %d", dev.RemotePort)
 	}
-	if e, a := 2222, dev.Forward[1].Remote; e != a {
-		t.Errorf("expected local forward remote %d, got %d", e, a)
+
+	if dev.SSHServerPort != 2222 {
+		t.Errorf("server remote port wasn't 2222 it was %d", dev.SSHServerPort)
 	}
 }
 
@@ -431,10 +432,6 @@ func Test_Reverse(t *testing.T) {
 
 	if dev.RemotePort == 0 {
 		t.Error("remote port was not automatically enabled")
-	}
-
-	if len(dev.Forward) != 1 {
-		t.Errorf("forward wasn't injected")
 	}
 
 	if dev.Reverse[0].Local != 8080 {

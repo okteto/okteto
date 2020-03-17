@@ -186,8 +186,6 @@ func New(dev *model.Dev) (*Syncthing, error) {
 
 	log.Infof("local syncthing intialized: gui -> %d, sync -> %d", guiPort, listenPort)
 	log.Infof("remote syncthing intialized: gui -> %d, sync -> %d", remoteGUIPort, remotePort)
-	log.Infof("syncthing gui password: '%s'", pwd)
-
 	return s, nil
 }
 

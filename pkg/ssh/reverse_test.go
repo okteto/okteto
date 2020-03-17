@@ -23,43 +23,42 @@ import (
 func TestReverseManager_Add(t *testing.T) {
 	tests := []struct {
 		name     string
-		add      *model.Reverse
+		add      model.Reverse
 		reverses map[int]*reverse
 		wantErr  bool
 	}{
 		{
 			name:     "single",
-			add:      &model.Reverse{Local: 8080, Remote: 8081},
+			add:      model.Reverse{Local: 8080, Remote: 8081},
 			reverses: map[int]*reverse{},
 			wantErr:  false,
 		},
 		{
 			name:     "existing",
-			add:      &model.Reverse{Local: 8080, Remote: 8081},
-			reverses: map[int]*reverse{8080: &reverse{localPort: 8080, remotePort: 8081}},
+			add:      model.Reverse{Local: 8080, Remote: 8081},
+			reverses: map[int]*reverse{8080: &reverse{forward{localAddress: ":8080", remoteAddress: ":8081"}}},
 			wantErr:  true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &ReverseManager{
+			r := &ForwardManager{
 				reverses: tt.reverses,
 				ctx:      context.TODO(),
-				sshHost:  "localhost",
-				sshPort:  22,
+				sshAddr:  "localhost:22",
 			}
 
-			if err := r.Add(tt.add); (err != nil) != tt.wantErr {
+			if err := r.AddReverse(tt.add); (err != nil) != tt.wantErr {
 				t.Errorf("ReverseManager.Add() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			f := r.reverses[8080]
-			if f.localPort != 8080 {
-				t.Errorf("local port is not 8080, it is: %d", f.localPort)
+			if f.localAddress != ":8080" {
+				t.Errorf("local address is not :8080, it is: %s", f.localAddress)
 			}
 
-			if f.remotePort != 8081 {
-				t.Errorf("remote port is not 8081, it is: %d", f.remotePort)
+			if f.remoteAddress != ":8081" {
+				t.Errorf("remote address is not :8081, it is: %s", f.remoteAddress)
 			}
 		})
 	}
