@@ -37,9 +37,9 @@ const (
 	oktetoBinName              = "okteto-bin"
 
 	//syncthing
-	oktetoBinImageTag      = "okteto/bin:1.1.7"
-	oktetoSyncSecretVolume = "okteto-sync-secret"
-	oktetoDevSecretVolume  = "okteto-dev-secret"
+	oktetoBinImageTag      = "okteto/bin:1.1.10"
+	oktetoSyncSecretVolume = "okteto-sync-secret" // skipcq GSC-G101  not a secret
+	oktetoDevSecretVolume  = "okteto-dev-secret"  // skipcq GSC-G101  not a secret
 	oktetoSecretTemplate   = "okteto-%s"
 
 	maxRetriesUpdateRevision = 150
