@@ -16,6 +16,7 @@ package replicasets
 import (
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/errors"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -50,5 +51,6 @@ func GetReplicaSetByDeployment(dev *model.Dev, d *appsv1.Deployment, c *kubernet
 			}
 		}
 	}
-	return nil, nil
+
+	return nil, errors.ErrNotFound
 }
