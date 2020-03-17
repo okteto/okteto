@@ -38,6 +38,7 @@ func Push() *cobra.Command {
 	var namespace string
 	var imageTag string
 	var autoDeploy bool
+	var progress string
 	var deploymentName string
 
 	cmd := &cobra.Command{
@@ -80,7 +81,7 @@ func Push() *cobra.Command {
 				}
 			}
 
-			if err := runPush(dev, autoDeploy, imageTag, oktetoRegistryURL, c); err != nil {
+			if err := runPush(dev, autoDeploy, imageTag, oktetoRegistryURL, progress, c); err != nil {
 				analytics.TrackPush(false, oktetoRegistryURL)
 				return err
 			}
@@ -98,11 +99,12 @@ func Push() *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the push command is executed")
 	cmd.Flags().StringVarP(&imageTag, "tag", "t", "", "image tag to build, push and redeploy")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
+	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringVar(&deploymentName, "name", "", "name of the deployment to push to")
 	return cmd
 }
 
-func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL string, c *kubernetes.Clientset) error {
+func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, c *kubernetes.Clientset) error {
 	create := false
 	d, err := deployments.Get(dev, dev.Namespace, c)
 	if err != nil {
@@ -132,7 +134,7 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL string
 	log.Infof("pushing with image tag %s", imageTag)
 
 	var imageDigest string
-	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false, nil)
+	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false, nil, progress)
 	if err != nil {
 		return fmt.Errorf("error building image '%s': %s", imageTag, err)
 	}

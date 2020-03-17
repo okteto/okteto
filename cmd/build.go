@@ -28,6 +28,7 @@ func Build() *cobra.Command {
 	var tag string
 	var target string
 	var noCache bool
+	var progress string
 	var buildArgs []string
 
 	cmd := &cobra.Command{
@@ -45,10 +46,11 @@ func Build() *cobra.Command {
 				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 			}
 
-			if _, err := build.Run(buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache, buildArgs); err != nil {
+			if _, err := build.Run(buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache, buildArgs, progress); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
+			log.Success("Build succeeded")
 			analytics.TrackBuild(true)
 			return nil
 		},
@@ -64,6 +66,7 @@ func Build() *cobra.Command {
 	cmd.Flags().StringVarP(&tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
 	cmd.Flags().StringVarP(&target, "target", "", "", "set the target build stage to build")
 	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
+	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&buildArgs, "build-arg", nil, "set build-time variables")
 	return cmd
 }

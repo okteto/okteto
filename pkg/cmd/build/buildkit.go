@@ -197,7 +197,7 @@ func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*clien
 	return c, nil
 }
 
-func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt) (string, error) {
+func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string) (string, error) {
 	var solveResp *client.SolveResponse
 	ch := make(chan *client.SolveStatus)
 	eg, ctx := errgroup.WithContext(ctx)
@@ -209,8 +209,10 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt) (st
 
 	eg.Go(func() error {
 		var c console.Console
-		if cn, err := console.ConsoleFromFile(os.Stderr); err == nil {
-			c = cn
+		if progress == "tty" {
+			if cn, err := console.ConsoleFromFile(os.Stderr); err == nil {
+				c = cn
+			}
 		}
 		// not using shared context to not disrupt display but let it finish reporting errors
 		return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stdout, ch)
