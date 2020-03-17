@@ -98,7 +98,12 @@ func runDown(dev *model.Dev) error {
 		return err
 	}
 
-	err = down.Run(dev, "", d, client)
+	trList, err := deployments.GetTranslations(dev, d, client)
+	if err != nil {
+		return err
+	}
+
+	err = down.Run(dev, "", d, trList, client)
 	if err != nil {
 		return err
 	}

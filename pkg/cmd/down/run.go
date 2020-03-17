@@ -26,12 +26,7 @@ import (
 )
 
 //Run runs the "okteto down" sequence
-func Run(dev *model.Dev, imageToRedeploy string, d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	trList, err := deployments.GetTranslations(dev, d, c)
-	if err != nil {
-		return err
-	}
-
+func Run(dev *model.Dev, imageToRedeploy string, d *appsv1.Deployment, trList map[string]*model.Translation, c *kubernetes.Clientset) error {
 	if len(trList) == 0 {
 		log.Info("no translations available in the deployment")
 	}
@@ -39,6 +34,11 @@ func Run(dev *model.Dev, imageToRedeploy string, d *appsv1.Deployment, c *kubern
 	for _, tr := range trList {
 		if tr.Deployment == nil {
 			continue
+		}
+		if imageToRedeploy != "" {
+			if tr.Deployment.Annotations != nil {
+				delete(tr.Deployment.Annotations, model.OktetoAutoCreateAnnotation)
+			}
 		}
 		if err := deployments.DevModeOff(tr, imageToRedeploy, c); err != nil {
 			return err

@@ -111,26 +111,37 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		if !errors.IsNotFound(err) {
 			return err
 		}
-		if !autoDeploy {
-			if err := askIfDeploy(dev.Name, dev.Namespace); err != nil {
-				return err
+		if len(dev.Services) == 0 {
+			if !autoDeploy {
+				if err := askIfDeploy(dev.Name, dev.Namespace); err != nil {
+					return err
+				}
 			}
+			d = dev.GevSandbox()
+			create = true
 		}
-		d = dev.GevSandbox()
-		create = true
+	}
+	if create {
+		if imageTag == "" && oktetoRegistryURL == "" {
+			return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
+		}
+	}
+
+	trList, err := deployments.GetTranslations(dev, d, c)
+	if err != nil {
+		return err
+	}
+	imageFromDeployment, err := getImageFromDeployment(trList)
+	if err != nil {
+		return err
 	}
 
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return err
 	}
-	if create {
-		if imageTag == "" && !isOktetoCluster {
-			return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
-		}
-	}
 
-	imageTag = build.GetImageTag(dev, imageTag, d, oktetoRegistryURL)
+	imageTag = build.GetImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
 	log.Infof("pushing with image tag %s", imageTag)
 
 	var imageDigest string
@@ -147,17 +158,40 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 	spinner.start()
 	defer spinner.stop()
 	if create {
+		delete(d.Annotations, model.OktetoAutoCreateAnnotation)
 		if err := createServiceAndDeployment(dev, d, imageTag, c); err != nil {
 			return err
 		}
 	} else {
-		err = down.Run(dev, imageTag, d, c)
+		err = down.Run(dev, imageTag, d, trList, c)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func getImageFromDeployment(trList map[string]*model.Translation) (string, error) {
+	imageFromDeployment := ""
+	for _, tr := range trList {
+		if tr.Deployment == nil {
+			continue
+		}
+		for _, rule := range tr.Rules {
+			devContainer := deployments.GetDevContainer(&tr.Deployment.Spec.Template.Spec, rule.Container)
+			if devContainer == nil {
+				return "", fmt.Errorf("container '%s' not found in deployment '%s'", rule.Container, tr.Deployment.Name)
+			}
+			if imageFromDeployment == "" {
+				imageFromDeployment = devContainer.Image
+			}
+			if devContainer.Image != imageFromDeployment {
+				return "", fmt.Errorf("cannot push code: deployments referenced by okteto manifest use different images")
+			}
+		}
+	}
+	return imageFromDeployment, nil
 }
 
 func createServiceAndDeployment(dev *model.Dev, d *appsv1.Deployment, imageTag string, c *kubernetes.Clientset) error {
