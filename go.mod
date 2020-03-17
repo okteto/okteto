@@ -69,7 +69,6 @@ require (
 	k8s.io/cli-runtime v0.0.0-20191204091246-2f9002c43394
 	k8s.io/client-go v0.0.0-20191209161527-3922ef290939
 	k8s.io/kubectl v0.0.0-20191210004632-846b394714fe
-
 )
 
 replace (

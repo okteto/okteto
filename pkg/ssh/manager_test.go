@@ -3,7 +3,6 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -27,15 +26,15 @@ func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (t *testSSHHandler) listenAndServe(address string) {
 	forwardHandler := &ssh.ForwardedTCPHandler{}
-	server := ssh.Server{
+	server := &ssh.Server{
+		Addr: address,
+		ChannelHandlers: map[string]ssh.ChannelHandler{
+			"direct-tcpip": ssh.DirectTCPIPHandler,
+			"session":      ssh.DefaultSessionHandler,
+		},
 		LocalPortForwardingCallback: ssh.LocalPortForwardingCallback(func(ctx ssh.Context, dhost string, dport uint32) bool {
 			log.Println("Accepted forward", dhost, dport)
 			return true
-		}),
-		Addr: address,
-		Handler: ssh.Handler(func(s ssh.Session) {
-			io.WriteString(s, "Remote forwarding available...\n")
-			select {}
 		}),
 		ReversePortForwardingCallback: ssh.ReversePortForwardingCallback(func(ctx ssh.Context, host string, port uint32) bool {
 			log.Println("attempt to bind", host, port, "granted")
@@ -54,14 +53,13 @@ func (t *testSSHHandler) listenAndServe(address string) {
 
 func TestForward(t *testing.T) {
 	ctx := context.Background()
-	ssh := testSSHHandler{}
-
 	sshPort, err := model.GetAvailablePort()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	sshAddr := fmt.Sprintf("localhost:%d", sshPort)
+	ssh := testSSHHandler{}
 	go ssh.listenAndServe(sshAddr)
 	fm := NewForwardManager(ctx, sshAddr, "localhost", "0.0.0.0", nil)
 
@@ -78,7 +76,6 @@ func TestForward(t *testing.T) {
 	}
 
 	log.Print("forwards connected")
-	//time.Sleep(1 * time.Second)
 
 	if err := callForwards(fm); err != nil {
 		t.Error(err)
@@ -87,7 +84,15 @@ func TestForward(t *testing.T) {
 
 func TestReverse(t *testing.T) {
 	ctx := context.Background()
-	fm := NewForwardManager(ctx, "localhost:2222", "localhost", "0.0.0.0", nil)
+	sshPort, err := model.GetAvailablePort()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sshAddr := fmt.Sprintf("localhost:%d", sshPort)
+	ssh := testSSHHandler{}
+	go ssh.listenAndServe(sshAddr)
+	fm := NewForwardManager(ctx, sshAddr, "localhost", "0.0.0.0", nil)
 
 	if err := connectReverseForwards(fm); err != nil {
 		t.Fatal(err)
