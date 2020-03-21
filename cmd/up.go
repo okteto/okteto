@@ -170,6 +170,9 @@ func RunUp(dev *model.Dev, autoDeploy bool, forcePull, resetSyncthing bool) erro
 
 	if up.Dev.RemoteModeEnabled() {
 		dev.LoadRemote()
+		if err := sshKeys(); err != nil {
+			return err
+		}
 	}
 
 	if forcePull {
