@@ -382,7 +382,11 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 			continue
 		}
 
-		log.Infof("syncthing folder local=%t is '%s'", local, status.State)
+		if i%100 == 0 {
+			// one log every 10 seconds
+			log.Infof("syncthing folder local=%t is '%s'", local, status.State)
+		}
+
 		if status.State != "scanning" && status.State != "scan-waiting" {
 			return nil
 		}
