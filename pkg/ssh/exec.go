@@ -28,10 +28,12 @@ import (
 // Exec executes the command over SSH
 func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
 	log.Info("starting SSH connection")
-	sshConfig := getSSHClientConfig()
+	sshConfig, err := getSSHClientConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get SSH configuration: %s", err)
+	}
 
 	var connection *ssh.Client
-	var err error
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 100; i++ {
 		connection, err = ssh.Dial("tcp", fmt.Sprintf("localhost:%d", remotePort), sshConfig)

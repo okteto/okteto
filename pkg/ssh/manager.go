@@ -88,8 +88,11 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 
 	log.Info("port forward to dev pod connected")
 
-	// Connect to SSH remote server using serverEndpoint
-	c := getSSHClientConfig()
+	c, err := getSSHClientConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get SSH configuration: %s", err)
+	}
+
 	pool, err := startPool(fm.ctx, fm.sshAddr, c)
 	if err != nil {
 		return err

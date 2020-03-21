@@ -45,7 +45,7 @@ func sshKeys() error {
 		spinner := newSpinner("Generating your SSH key pair...")
 		spinner.start()
 
-		if err := ssh.GenerateKey(); err != nil {
+		if err := ssh.GenerateKeys(); err != nil {
 			spinner.stop()
 			return err
 		}

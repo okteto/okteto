@@ -14,16 +14,48 @@
 package ssh
 
 import (
+	"fmt"
+	"io/ioutil"
+
 	"golang.org/x/crypto/ssh"
 )
 
-func getSSHClientConfig() *ssh.ClientConfig {
-	sshConfig := &ssh.ClientConfig{
+var clientConfig *ssh.ClientConfig
+
+func getPrivateKey() (ssh.Signer, error) {
+	_, private := getKeyPaths()
+	buf, err := ioutil.ReadFile(private)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load private key: %s", err)
+	}
+
+	key, err := ssh.ParsePrivateKey(buf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key: %s", err)
+	}
+
+	return key, nil
+}
+
+func getSSHClientConfig() (*ssh.ClientConfig, error) {
+	if clientConfig != nil {
+		return clientConfig, nil
+	}
+
+	keys, err := getPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	clientConfig = &ssh.ClientConfig{
 		// skipcq GSC-G106
 		// Ignoring this issue since the remote server doesn't have a set identity, and it's already secured by the
 		// port-forward tunnel to the kubernetes cluster.
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(keys),
+		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	return sshConfig
+	return clientConfig, nil
 }

@@ -69,4 +69,8 @@ func TestGenerateKeys(t *testing.T) {
 	if !KeyExists() {
 		t.Error("keys don't exist after creation")
 	}
+
+	if _, err := getSSHClientConfig(); err != nil {
+		t.Errorf("failed to get ssh client configuration: %s", err)
+	}
 }
