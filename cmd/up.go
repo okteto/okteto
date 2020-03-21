@@ -537,7 +537,8 @@ func (up *UpContext) forwards() error {
 
 	if up.Dev.RemoteModeEnabled() {
 		if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
-			return err
+			log.Infof("failed to add entry to your SSH config file: %s", err)
+			return fmt.Errorf("failed to add entry to your SSH config file")
 		}
 
 		reverseManager := ssh.NewForwardManager(up.Context, fmt.Sprintf(":%d", up.Dev.RemotePort), "localhost", "0.0.0.0", nil)
@@ -585,7 +586,8 @@ func (up *UpContext) sshForwards() error {
 	}
 
 	if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
-		return err
+		log.Infof("failed to add entry to your SSH config file: %s", err)
+		return fmt.Errorf("failed to add entry to your SSH config file")
 	}
 
 	return up.Forwarder.Start(up.Pod, up.Dev.Namespace)

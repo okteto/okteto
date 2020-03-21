@@ -26,7 +26,6 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 )
 
 type (
@@ -199,15 +198,21 @@ func parse(r io.Reader) (*sshConfig, error) {
 func (config *sshConfig) writeTo(w io.Writer) error {
 	buf := bytes.NewBufferString("")
 	for _, param := range config.globals {
-		fmt.Fprint(buf, param.String())
+		if _, err := fmt.Fprint(buf, param.String()); err != nil {
+			return err
+		}
 	}
 
 	if len(config.globals) > 0 {
-		fmt.Fprintln(buf)
+		if _, err := fmt.Fprintln(buf); err != nil {
+			return err
+		}
 	}
 
 	for _, host := range config.hosts {
-		fmt.Fprint(buf, host.String())
+		if _, err := fmt.Fprint(buf, host.String()); err != nil {
+			return err
+		}
 	}
 
 	_, err := fmt.Fprint(w, buf.String())
@@ -215,12 +220,10 @@ func (config *sshConfig) writeTo(w io.Writer) error {
 }
 
 func (config *sshConfig) writeToFilepath(p string) error {
-	temp, err := ioutil.TempFile("", "")
-	if err != nil {
-		return fmt.Errorf("failed to create tempfile: %s", err)
+	sshDir := filepath.Dir(p)
+	if err := os.MkdirAll(sshDir, 0700); err != nil {
+		log.Infof("failed to create SSH directory %s: %s", sshDir, err)
 	}
-
-	defer os.Remove(temp.Name())
 
 	stat, err := os.Stat(p)
 	var mode os.FileMode
@@ -235,6 +238,14 @@ func (config *sshConfig) writeToFilepath(p string) error {
 		mode = stat.Mode()
 	}
 
+	dir := filepath.Dir(p)
+	temp, err := ioutil.TempFile(dir, "")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary config file: %s", err)
+	}
+
+	defer os.Remove(temp.Name())
+
 	if err := config.writeTo(temp); err != nil {
 		return err
 	}
@@ -247,12 +258,11 @@ func (config *sshConfig) writeToFilepath(p string) error {
 		return fmt.Errorf("failed to set permissions to %s: %s", temp.Name(), err)
 	}
 
-	dir := filepath.Dir(p)
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		log.Infof("failed to created %s: %s", dir, err)
+	if _, err := getConfig(temp.Name()); err != nil {
+		return fmt.Errorf("new config is not valid: %s", err)
 	}
 
-	if err := model.CopyFile(temp.Name(), p); err != nil {
+	if err := os.Rename(temp.Name(), p); err != nil {
 		return fmt.Errorf("failed to move %s to %s: %s", temp.Name(), p, err)
 	}
 
