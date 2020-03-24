@@ -131,3 +131,9 @@ func getKeyPaths() (string, string) {
 	private := filepath.Join(dir, privateKeyFile)
 	return public, private
 }
+
+// GetPublicKey returns the path to the public key
+func GetPublicKey() string {
+	pub, _ := getKeyPaths()
+	return pub
+}
