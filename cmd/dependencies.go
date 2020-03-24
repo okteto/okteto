@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
@@ -37,4 +38,21 @@ func downloadSyncthing() error {
 	}
 
 	return err
+}
+
+func sshKeys() error {
+	if !ssh.KeyExists() {
+		spinner := newSpinner("Generating your client certificates...")
+		spinner.start()
+
+		if err := ssh.GenerateKeys(); err != nil {
+			spinner.stop()
+			return err
+		}
+
+		spinner.stop()
+		log.Success("Client certificates generated")
+	}
+
+	return nil
 }

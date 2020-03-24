@@ -66,6 +66,9 @@ const (
 	ResourceAMDGPU apiv1.ResourceName = "amd.com/gpu"
 	//ResourceNVIDIAGPU nvidia.com/gpu resource
 	ResourceNVIDIAGPU apiv1.ResourceName = "nvidia.com/gpu"
+
+	// this path is expected by remote
+	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 )
 
 var (
@@ -368,7 +371,7 @@ func validateSecrets(secrets []Secret) error {
 }
 
 //LoadRemote configures remote execution
-func (dev *Dev) LoadRemote() {
+func (dev *Dev) LoadRemote(pubKeyPath string) {
 	if dev.RemotePort == 0 {
 		p, err := GetAvailablePort()
 		if err != nil {
@@ -380,7 +383,21 @@ func (dev *Dev) LoadRemote() {
 		log.Infof("remote port not set, using %d", dev.RemotePort)
 	}
 
+	p := Secret{
+		LocalPath:  pubKeyPath,
+		RemotePath: authorizedKeysPath,
+		Mode:       0600,
+	}
+
 	log.Infof("enabled remote mode")
+
+	for i := range dev.Secrets {
+		if dev.Secrets[i].LocalPath == p.LocalPath {
+			return
+		}
+	}
+
+	dev.Secrets = append(dev.Secrets, p)
 }
 
 //LoadForcePull force the dev pods to be recreated and pull the latest version of their image
@@ -578,11 +595,8 @@ func (dev *Dev) RemoteModeEnabled() bool {
 
 // ExecuteOverSSHEnabled returns true if execute over SSH is enabled
 func (dev *Dev) ExecuteOverSSHEnabled() bool {
-	if _, ok := os.LookupEnv("OKTETO_EXECUTE_SSH"); ok {
-		return true
-	}
-
-	return false
+	_, ok := os.LookupEnv("OKTETO_EXECUTE_SSH")
+	return ok
 }
 
 // GetKeyName returns the secret key name

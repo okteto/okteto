@@ -62,11 +62,13 @@ func Create(dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) err
 			"key.pem":    []byte(keyPEM),
 		},
 	}
+
 	for _, s := range dev.Secrets {
 		content, err := ioutil.ReadFile(s.LocalPath)
 		if err != nil {
 			return fmt.Errorf("error reading secret '%s': %s", s.LocalPath, err)
 		}
+		log.Debugf("added configuration secret %s", s.GetKeyName())
 		data.Data[s.GetKeyName()] = content
 	}
 

@@ -169,7 +169,11 @@ func RunUp(dev *model.Dev, autoDeploy bool, forcePull, resetSyncthing bool) erro
 	defer up.shutdown()
 
 	if up.Dev.RemoteModeEnabled() {
-		dev.LoadRemote()
+		if err := sshKeys(); err != nil {
+			return err
+		}
+
+		dev.LoadRemote(ssh.GetPublicKey())
 	}
 
 	if forcePull {

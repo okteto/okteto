@@ -53,6 +53,7 @@ const (
 	portKeyword                  = "Port"
 	strictHostKeyCheckingKeyword = "StrictHostKeyChecking"
 	userKnownHostsFileKeyword    = "UserKnownHostsFile"
+	identityFile                 = "IdentityFile"
 )
 
 func newHost(hostnames []string, comments []string) *host {
