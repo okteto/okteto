@@ -204,30 +204,21 @@ func HasBeenChanged(d *appsv1.Deployment) bool {
 	return oktetoRevision != d.Annotations[revisionAnnotation]
 }
 
-// DevModeOff deactivates dev mode for d
-func DevModeOff(tr *model.Translation, imageToRedeploy string, c *kubernetes.Clientset) error {
-	d, err := translateDevModeOff(tr.Deployment)
-	tr.Deployment = d
-	if err != nil {
-		return err
-	}
-	if imageToRedeploy != "" {
-		for _, rule := range tr.Rules {
-			devContainer := GetDevContainer(&d.Spec.Template.Spec, rule.Container)
-			if devContainer == nil {
-				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
-			}
-
-			devContainer.Image = imageToRedeploy
+// UpdateDeployments update all deployments in the given translaation list
+func UpdateDeployments(trList map[string]*model.Translation, c *kubernetes.Clientset) error {
+	for _, tr := range trList {
+		if tr.Deployment == nil {
+			continue
 		}
-	}
-	if err := update(d, c); err != nil {
-		return err
+		if err := update(tr.Deployment, c); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func translateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
+//TranslateDevModeOff reverse the dev mode translation
+func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.TranslationAnnotation)
 	if len(trRulesJSON) == 0 {
 		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)

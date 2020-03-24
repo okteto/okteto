@@ -131,6 +131,22 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 	if err != nil {
 		return err
 	}
+	for _, tr := range trList {
+		if tr.Deployment == nil {
+			continue
+		}
+		if len(dev.Services) == 0 {
+			delete(tr.Deployment.Annotations, model.OktetoAutoCreateAnnotation)
+		}
+	}
+
+	if d != nil && deployments.IsDevModeOn(d) {
+		if err := down.Run(dev, d, trList, false, c); err != nil {
+			return err
+		}
+		log.Information("Development environment deactivated")
+	}
+
 	imageFromDeployment, err := getImageFromDeployment(trList)
 	if err != nil {
 		return err
@@ -163,8 +179,19 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 			return err
 		}
 	} else {
-		err = down.Run(dev, imageTag, d, trList, c)
-		if err != nil {
+		for _, tr := range trList {
+			if tr.Deployment == nil {
+				continue
+			}
+			for _, rule := range tr.Rules {
+				devContainer := deployments.GetDevContainer(&tr.Deployment.Spec.Template.Spec, rule.Container)
+				if devContainer == nil {
+					return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
+				}
+				devContainer.Image = imageTag
+			}
+		}
+		if err := deployments.UpdateDeployments(trList, c); err != nil {
 			return err
 		}
 	}
@@ -176,6 +203,9 @@ func getImageFromDeployment(trList map[string]*model.Translation) (string, error
 	imageFromDeployment := ""
 	for _, tr := range trList {
 		if tr.Deployment == nil {
+			continue
+		}
+		if tr.Deployment.Annotations[model.OktetoAutoCreateAnnotation] != "" && len(trList) > 1 {
 			continue
 		}
 		for _, rule := range tr.Rules {

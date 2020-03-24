@@ -26,7 +26,7 @@ import (
 )
 
 //Run runs the "okteto down" sequence
-func Run(dev *model.Dev, imageToRedeploy string, d *appsv1.Deployment, trList map[string]*model.Translation, c *kubernetes.Clientset) error {
+func Run(dev *model.Dev, d *appsv1.Deployment, trList map[string]*model.Translation, wait bool, c *kubernetes.Clientset) error {
 	if len(trList) == 0 {
 		log.Info("no translations available in the deployment")
 	}
@@ -35,14 +35,14 @@ func Run(dev *model.Dev, imageToRedeploy string, d *appsv1.Deployment, trList ma
 		if tr.Deployment == nil {
 			continue
 		}
-		if imageToRedeploy != "" {
-			if tr.Deployment.Annotations != nil {
-				delete(tr.Deployment.Annotations, model.OktetoAutoCreateAnnotation)
-			}
-		}
-		if err := deployments.DevModeOff(tr, imageToRedeploy, c); err != nil {
+		dTmp, err := deployments.TranslateDevModeOff(tr.Deployment)
+		if err != nil {
 			return err
 		}
+		tr.Deployment = dTmp
+	}
+	if err := deployments.UpdateDeployments(trList, c); err != nil {
+		return err
 	}
 
 	if err := secrets.Destroy(dev, c); err != nil {
@@ -60,14 +60,16 @@ func Run(dev *model.Dev, imageToRedeploy string, d *appsv1.Deployment, trList ma
 	}
 
 	if _, ok := d.Annotations[model.OktetoAutoCreateAnnotation]; ok {
-		if len(dev.Services) > 0 || imageToRedeploy == "" {
-			if err := deployments.Destroy(dev, c); err != nil {
-				return err
-			}
-			if err := services.DestroyDev(dev, c); err != nil {
-				return err
-			}
+		if err := deployments.Destroy(dev, c); err != nil {
+			return err
 		}
+		if err := services.DestroyDev(dev, c); err != nil {
+			return err
+		}
+	}
+
+	if !wait {
+		return nil
 	}
 
 	waitForDevPodsTermination(c, dev, 30)
