@@ -42,7 +42,7 @@ func downloadSyncthing() error {
 
 func sshKeys() error {
 	if !ssh.KeyExists() {
-		spinner := newSpinner("Generating your SSH key pair...")
+		spinner := newSpinner("Generating your client certificates...")
 		spinner.start()
 
 		if err := ssh.GenerateKeys(); err != nil {
@@ -51,7 +51,7 @@ func sshKeys() error {
 		}
 
 		spinner.stop()
-		log.Success("SSH key pair generated")
+		log.Success("Client certificates generated")
 	}
 
 	return nil
