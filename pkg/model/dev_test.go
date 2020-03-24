@@ -415,8 +415,8 @@ func Test_LoadRemote(t *testing.T) {
 		t.Errorf("local key was not set correctly: %s", dev.Secrets[0].LocalPath)
 	}
 
-	if dev.Secrets[0].RemotePath != "/var/okteto/remote/id_rsa" {
-		t.Errorf("remote key was not set at /var/okteto/remote/id_rsa")
+	if dev.Secrets[0].RemotePath != "/var/okteto/remote/authorized_keys" {
+		t.Errorf("remote key was not set at /var/okteto/remote/authorized_keys")
 	}
 }
 

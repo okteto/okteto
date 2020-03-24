@@ -66,6 +66,9 @@ const (
 	ResourceAMDGPU apiv1.ResourceName = "amd.com/gpu"
 	//ResourceNVIDIAGPU nvidia.com/gpu resource
 	ResourceNVIDIAGPU apiv1.ResourceName = "nvidia.com/gpu"
+
+	// this path is expected by remote
+	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 )
 
 var (
@@ -382,14 +385,14 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 
 	p := Secret{
 		LocalPath:  pubKeyPath,
-		RemotePath: "/var/okteto/remote/id_rsa.pub",
+		RemotePath: authorizedKeysPath,
 		Mode:       0600,
 	}
 
 	log.Infof("enabled remote mode")
 
 	for i := range dev.Secrets {
-		if dev.Secrets[i].LocalPath == p.LocalPath && dev.Secrets[i].RemotePath == p.RemotePath {
+		if dev.Secrets[i].LocalPath == p.LocalPath {
 			return
 		}
 	}
