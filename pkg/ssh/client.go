@@ -51,10 +51,10 @@ func getSSHClientConfig() (*ssh.ClientConfig, error) {
 		// skipcq GSC-G106
 		// Ignoring this issue since the remote server doesn't have a set identity, and it's already secured by the
 		// port-forward tunnel to the kubernetes cluster.
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(keys),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	return clientConfig, nil
