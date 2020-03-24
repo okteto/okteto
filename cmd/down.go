@@ -53,6 +53,7 @@ func Down() *cobra.Command {
 			}
 
 			log.Success("Development environment deactivated")
+			log.Information("Run 'okteto push' to deploy your code changes to the cluster")
 
 			if rm {
 				if err := removeVolume(dev); err != nil {

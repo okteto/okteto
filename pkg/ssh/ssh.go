@@ -124,7 +124,7 @@ func getConfig(path string) (*sshConfig, error) {
 
 func save(cfg *sshConfig, path string) error {
 	if err := cfg.writeToFilepath(path); err != nil {
-		return fmt.Errorf("fail to save %s: %s", path, err)
+		return fmt.Errorf("fail to update SSH config file %s: %w", path, err)
 	}
 
 	return nil
