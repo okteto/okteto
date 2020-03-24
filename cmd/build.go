@@ -42,15 +42,16 @@ func Build() *cobra.Command {
 				return err
 			}
 
-			if tag == "" {
-				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
-			}
-
 			if _, err := build.Run(buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache, buildArgs, progress); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
-			log.Success("Build succeeded")
+			if tag == "" {
+				log.Success("Build succeeded")
+				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
+			} else {
+				log.Success(fmt.Sprintf("Image '%s' successfully pushed", tag))
+			}
 			analytics.TrackBuild(true)
 			return nil
 		},
