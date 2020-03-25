@@ -2,9 +2,7 @@
 set -e
 
 VERSION=$1
-GITHUB_TOKEN=$2
-SHA=$3
-DRYRUN=$4
+SHA=$2
 
 if [ -z "$VERSION" ]; then
   echo "missing version"
@@ -16,14 +14,8 @@ if [ -z "$SHA" ]; then
   exit 1
 fi
 
-if [ -z "$GITHUB_TOKEN" ]; then
-  echo "missing github token"
-  exit 1
-fi
-
-pushd $(mktemp -d)
-
-git clone --depth 1 https://${GITHUB_TOKEN}@github.com/okteto/homebrew-cli.git
+rm -rf homebrew-cli
+git clone --depth 1 https://github.com/okteto/homebrew-cli.git
 pushd homebrew-cli
 
 cat << EOF > Formula/okteto.rb
@@ -56,10 +48,4 @@ git config user.name "okteto"
 git config user.email "ci@okteto.com"
 git commit -m "$VERSION release"
 git --no-pager log -1
-
-if [ "$DRYRUN" -eq "1" ]; then
-  echo "dry run: git push origin master"
-else
-  git push https://${GITHUB_TOKEN}@github.com/okteto/homebrew-okteto.git master
-fi
 
