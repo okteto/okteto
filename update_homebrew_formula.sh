@@ -2,8 +2,7 @@
 set -e
 
 VERSION=$1
-GITHUB_TOKEN=$2
-SHA=$3
+SHA=$2
 
 if [ -z "$VERSION" ]; then
   echo "missing version"
@@ -12,11 +11,6 @@ fi
 
 if [ -z "$SHA" ]; then
   echo "missing sha"
-  exit 1
-fi
-
-if [ -z "$GITHUB_TOKEN" ]; then
-  echo "missing github token"
   exit 1
 fi
 
