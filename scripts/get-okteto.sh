@@ -7,6 +7,7 @@ set -e
 green="\033[32m"
 red="\033[31m"
 reset="\033[0m"
+install_dir='/usr/local/bin'
 install_path='/usr/local/bin/okteto'
 OS=$(uname | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m | tr '[:upper:]' '[:lower:]')
@@ -47,7 +48,7 @@ case "$OS" in
 esac
 
 sh_c='sh -c'
-if [ ! -w $install_path ]; then
+if [ ! -w "$install_dir" ]; then
     # use sudo if $user doesn't have write access to the path
     if [ "$user" != 'root' ]; then
         if cmd_exists sudo; then
