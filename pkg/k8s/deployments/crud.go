@@ -204,7 +204,7 @@ func HasBeenChanged(d *appsv1.Deployment) bool {
 	return oktetoRevision != d.Annotations[revisionAnnotation]
 }
 
-// UpdateDeployments update all deployments in the given translaation list
+// UpdateDeployments update all deployments in the given translation list
 func UpdateDeployments(trList map[string]*model.Translation, c *kubernetes.Clientset) error {
 	for _, tr := range trList {
 		if tr.Deployment == nil {
@@ -217,7 +217,7 @@ func UpdateDeployments(trList map[string]*model.Translation, c *kubernetes.Clien
 	return nil
 }
 
-//TranslateDevModeOff reverse the dev mode translation
+//TranslateDevModeOff reverses the dev mode translation
 func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.TranslationAnnotation)
 	if len(trRulesJSON) == 0 {
