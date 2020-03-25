@@ -104,7 +104,7 @@ func runDown(dev *model.Dev) error {
 		return err
 	}
 
-	err = down.Run(dev, "", d, trList, client)
+	err = down.Run(dev, d, trList, true, client)
 	if err != nil {
 		return err
 	}

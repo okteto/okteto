@@ -250,7 +250,7 @@ services:
 		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
 	}
 
-	d1Down, err := translateDevModeOff(d1)
+	d1Down, err := TranslateDevModeOff(d1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +334,7 @@ services:
 		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
 	}
 
-	d2Down, err := translateDevModeOff(d2)
+	d2Down, err := TranslateDevModeOff(d2)
 	if err != nil {
 		t.Fatal(err)
 	}
