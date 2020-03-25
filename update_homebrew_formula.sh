@@ -23,8 +23,8 @@ fi
 pushd $(mktemp -d)
 
 git clone --depth 1 https://github.com/okteto/homebrew-cli.git
-
-cat << EOF > homebrew-cli/Formula/okteto.rb
+pushd homebrew-cli
+cat << EOF > Formula/okteto.rb
 class Okteto < Formula
     desc "CLI for cloud native development"
     homepage "https://okteto.com"
