@@ -481,13 +481,13 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	reporter := make(chan string)
 	defer close(reporter)
 	go func() {
-		message := "Attaching persistent volume"
-		up.updateStateFile(attaching)
+		message := "Activating your development environment"
+		if up.Dev.PersistentVolumeEnabled() {
+			message = "Attaching persistent volume"
+			up.updateStateFile(attaching)
+		}
 		for {
-			if up.Dev.PersistentVolumeEnabled() {
-				spinner.update(fmt.Sprintf("%s...", message))
-			}
-
+			spinner.update(fmt.Sprintf("%s...", message))
 			message = <-reporter
 			if message == "" {
 				return
