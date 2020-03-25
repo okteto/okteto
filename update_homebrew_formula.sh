@@ -20,10 +20,10 @@ if [ -z "$GITHUB_TOKEN" ]; then
   exit 1
 fi
 
-pushd $(mktemp -d)
-
+rm -rf homebrew-cli
 git clone --depth 1 https://github.com/okteto/homebrew-cli.git
 pushd homebrew-cli
+
 cat << EOF > Formula/okteto.rb
 class Okteto < Formula
     desc "CLI for cloud native development"
