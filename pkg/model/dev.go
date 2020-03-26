@@ -329,6 +329,9 @@ func (dev *Dev) validate() error {
 		if len(dev.Services) > 0 {
 			return fmt.Errorf("'persistentVolume.enabled' must be set to true to work with services")
 		}
+		if len(dev.Volumes) > 0 {
+			return fmt.Errorf("'persistentVolume.enabled' must be set to true to use volumes")
+		}
 	}
 
 	if _, err := resource.ParseQuantity(dev.PersistentVolumeSize()); err != nil {
@@ -450,15 +453,20 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		Secrets:          dev.Secrets,
 		WorkDir:          dev.WorkDir,
 		PersistentVolume: dev.PersistentVolumeEnabled(),
-		Volumes: []VolumeMount{
-			{
+		Volumes:          []VolumeMount{},
+		SecurityContext:  dev.SecurityContext,
+		Resources:        dev.Resources,
+	}
+
+	if dev.PersistentVolumeEnabled() {
+		rule.Volumes = append(
+			rule.Volumes,
+			VolumeMount{
 				Name:      main.GetVolumeName(),
 				MountPath: dev.MountPath,
 				SubPath:   fullSubPath(0, dev.SubPath),
 			},
-		},
-		SecurityContext: dev.SecurityContext,
-		Resources:       dev.Resources,
+		)
 	}
 
 	if main == dev {
