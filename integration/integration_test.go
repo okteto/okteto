@@ -32,7 +32,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Masterminds/semver"
 	ps "github.com/mitchellh/go-ps"
+	okCmd "github.com/okteto/okteto/cmd"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"go.undefinedlabs.com/scopeagent"
@@ -141,6 +143,18 @@ func TestMain(m *testing.M) {
 	os.Exit(scopeagent.Run(m, agent.WithMetadata(map[string]interface{}{
 		"mode": mode,
 	})))
+}
+
+func TestGetVersion(t *testing.T) {
+	v, err := okCmd.GetLatestVersionFromGithub()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = semver.NewVersion(v)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestDownloadSyncthing(t *testing.T) {

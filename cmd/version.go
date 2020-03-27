@@ -43,9 +43,9 @@ func upgradeAvailable() string {
 		return ""
 	}
 
-	v, err := getVersion()
+	v, err := GetLatestVersionFromGithub()
 	if err != nil {
-		log.Infof("failed to get latest version: %s", err)
+		log.Errorf("failed to get latest version from github: %s", err)
 		return ""
 	}
 
@@ -67,7 +67,8 @@ func upgradeAvailable() string {
 	return ""
 }
 
-func getVersion() (string, error) {
+// GetLatestVersionFromGithub returns the latest okteto version from Github
+func GetLatestVersionFromGithub() (string, error) {
 	client := github.NewClient(nil)
 	ctx := context.Background()
 	releases, _, err := client.Repositories.ListReleases(ctx, "okteto", "okteto", &github.ListOptions{PerPage: 5})

@@ -47,15 +47,3 @@ func Test_shouldNotify(t *testing.T) {
 		})
 	}
 }
-
-func TestGetVersion(t *testing.T) {
-	v, err := getVersion()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = semver.NewVersion(v)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
