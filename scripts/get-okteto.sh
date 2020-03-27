@@ -62,10 +62,13 @@ if [ ! -w "$install_dir" ]; then
     fi
 fi
 
+printf "> Downloading $URL\n"
+download_path=$(mktemp)
+curl -fSL "$URL" -o "$download_path"
+chmod +x "$download_path"
+
 printf "> Installing $install_path\n"
-$sh_c "rm -f $install_path"
-$sh_c "curl -fSL $URL -o $install_path"
-$sh_c "chmod +x $install_path"
+$sh_c "mv -f $download_path $install_path"
 
 printf "$green> Okteto successfully installed!\n$reset"
 
