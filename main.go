@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 
 	// Load the different library for authentication
+	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
