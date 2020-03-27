@@ -36,7 +36,7 @@ lint:
 
 .PHONY: test
 test:
-	 go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+	 go test -coverprofile=coverage.txt -covermode=atomic ./...
 
 .PHONY: integration
 integration:
@@ -48,4 +48,4 @@ build:
 
 .PHONY: dep
 dep:
-	GO111MODULE=on go mod tidy
+	go mod tidy
