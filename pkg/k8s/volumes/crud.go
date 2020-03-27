@@ -65,7 +65,12 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 		)
 	}
 	if dev.PersistentVolumeStorageClass() != "" {
-		if dev.PersistentVolumeStorageClass() != *pvc.Spec.StorageClassName {
+		if pvc.Spec.StorageClassName == nil {
+			return fmt.Errorf(
+				"current okteto volume storageclass is '' instead of '%s'. Run 'okteto down -v' and try again",
+				dev.PersistentVolumeStorageClass(),
+			)
+		} else if dev.PersistentVolumeStorageClass() != *pvc.Spec.StorageClassName {
 			return fmt.Errorf(
 				"current okteto volume storageclass is '%s' instead of '%s'. Run 'okteto down -v' and try again",
 				*pvc.Spec.StorageClassName,
