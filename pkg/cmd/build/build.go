@@ -17,6 +17,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/pkg/errors"
 )
 
@@ -24,6 +25,7 @@ import (
 func Run(buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, buildArgs []string, progress string) (string, error) {
 	ctx := context.Background()
 
+	log.Infof("building your image on %s", buildKitHost)
 	buildkitClient, err := getBuildkitClient(ctx, isOktetoCluster, buildKitHost)
 	if err != nil {
 		return "", err
