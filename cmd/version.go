@@ -45,7 +45,7 @@ func upgradeAvailable() string {
 
 	v, err := GetLatestVersionFromGithub()
 	if err != nil {
-		log.Errorf("failed to get latest version from github: %s", err)
+		log.Infof("failed to get latest version from github: %s", err)
 		return ""
 	}
 
