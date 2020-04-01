@@ -7,7 +7,7 @@ require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
 	github.com/beevik/ntp v0.3.0 // indirect
-	github.com/briandowns/spinner v1.7.0
+	github.com/briandowns/spinner v1.10.0
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50
