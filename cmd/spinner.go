@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"fmt"
-	"runtime"
 	"time"
 
 	sp "github.com/briandowns/spinner"
@@ -35,19 +34,10 @@ func newSpinner(suffix string) *spinner {
 }
 
 func (p *spinner) start() {
-	if runtime.GOOS == "windows" {
-		fmt.Printf(" %s\n", p.sp.Suffix)
-		return
-	}
-
 	p.sp.Start()
 }
 
 func (p *spinner) stop() {
-	if runtime.GOOS == "windows" {
-		return
-	}
-
 	p.sp.Stop()
 }
 
