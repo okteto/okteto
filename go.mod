@@ -69,11 +69,11 @@ require (
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.2.4
-	k8s.io/api v0.0.0-20191206001707-7edad22604e1
-	k8s.io/apimachinery v0.0.0-20191203211716-adc6f4cd9e7d
-	k8s.io/cli-runtime v0.0.0-20191204091246-2f9002c43394
-	k8s.io/client-go v0.0.0-20191209161527-3922ef290939
-	k8s.io/kubectl v0.0.0-20191210004632-846b394714fe
+	k8s.io/api v0.17.2
+	k8s.io/apimachinery v0.17.2
+	k8s.io/cli-runtime v0.17.2
+	k8s.io/client-go v0.17.2
+	k8s.io/kubectl v0.17.2
 )
 
 replace (
