@@ -34,8 +34,9 @@ const (
 //Stack stack management commands
 func Stack(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "stack",
-		Short: fmt.Sprintf("Stack management commands"),
+		Use:    "stack",
+		Short:  fmt.Sprintf("Stack management commands"),
+		Hidden: true,
 	}
 	cmd.AddCommand(Deploy(ctx))
 	cmd.AddCommand(Destroy(ctx))
