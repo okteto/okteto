@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 func Test_getDeploymentName(t *testing.T) {
@@ -59,9 +60,9 @@ func Test_executeInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d, err := loadDev(p)
+	d, err := utils.LoadDev(p)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if d.Image != "okteto/golang:1" {
@@ -76,9 +77,9 @@ func Test_executeInit(t *testing.T) {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
-	d, err = loadDev(p)
+	d, err = utils.LoadDev(p)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if d.Image != "okteto/ruby:2" {

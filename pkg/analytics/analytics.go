@@ -43,6 +43,8 @@ const (
 	statusEvent          = "Status"
 	doctorEvent          = "Doctor"
 	buildEvent           = "Build"
+	deployStackEvent     = "DeployStack"
+	destroyStackEvent    = "DestroyStack"
 	loginEvent           = "Login"
 	initEvent            = "Create Manifest"
 	namespaceEvent       = "Namespace"
@@ -168,6 +170,16 @@ func trackDisable(success bool) {
 // TrackBuild sends a tracking event to mixpanel when the user builds on remote
 func TrackBuild(success bool) {
 	track(buildEvent, success, nil)
+}
+
+// TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack
+func TrackDeployStack(success bool) {
+	track(deployStackEvent, success, nil)
+}
+
+// TrackDestroyStack sends a tracking event to mixpanel when the user destroys a stack
+func TrackDestroyStack(success bool) {
+	track(destroyStackEvent, success, nil)
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in

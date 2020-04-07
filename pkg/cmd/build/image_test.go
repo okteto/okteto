@@ -82,7 +82,7 @@ func Test_GetRepoNameWithoutTag(t *testing.T) {
 	}
 }
 
-func Test_GetImageTag(t *testing.T) {
+func Test_GetDevImageTag(t *testing.T) {
 	var tests = []struct {
 		name                string
 		dev                 *model.Dev
@@ -126,7 +126,7 @@ func Test_GetImageTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GetImageTag(tt.dev, tt.imageTag, tt.imageFromDeployment, tt.oktetoRegistryURL)
+			result := GetDevImageTag(tt.dev, tt.imageTag, tt.imageFromDeployment, tt.oktetoRegistryURL)
 			if tt.expected != result {
 				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.name)
 			}

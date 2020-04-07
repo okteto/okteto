@@ -16,6 +16,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
@@ -51,7 +52,7 @@ func Push() *cobra.Command {
 				return errors.ErrNotInCluster
 			}
 
-			dev, err := loadDevOrDefault(devPath, deploymentName)
+			dev, err := utils.LoadDevOrDefault(devPath, deploymentName)
 			if err != nil {
 				return err
 			}
@@ -113,7 +114,7 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		}
 		if len(dev.Services) == 0 {
 			if !autoDeploy {
-				if err := askIfDeploy(dev.Name, dev.Namespace); err != nil {
+				if err := utils.AskIfDeploy(dev.Name, dev.Namespace); err != nil {
 					return err
 				}
 			}
@@ -157,7 +158,7 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		return err
 	}
 
-	imageTag = build.GetImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
+	imageTag = build.GetDevImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
 	log.Infof("pushing with image tag %s", imageTag)
 
 	var imageDigest string
@@ -170,9 +171,9 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 
-	spinner := newSpinner(fmt.Sprintf("Pushing source code to the development environment '%s'...", dev.Name))
-	spinner.start()
-	defer spinner.stop()
+	spinner := utils.NewSpinner(fmt.Sprintf("Pushing source code to the development environment '%s'...", dev.Name))
+	spinner.Start()
+	defer spinner.Stop()
 	if create {
 		delete(d.Annotations, model.OktetoAutoCreateAnnotation)
 		if err := createServiceAndDeployment(dev, d, imageTag, c); err != nil {

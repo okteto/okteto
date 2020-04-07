@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/errors"
@@ -44,7 +45,7 @@ func Status() *cobra.Command {
 				return errors.ErrNotInCluster
 			}
 
-			dev, err := loadDev(devPath)
+			dev, err := utils.LoadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -93,10 +94,10 @@ func Status() *cobra.Command {
 
 func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {
 	postfix := "Synchronizing your files..."
-	spinner := newSpinner(postfix)
+	spinner := utils.NewSpinner(postfix)
 	pbScaling := 0.30
-	spinner.start()
-	defer spinner.stop()
+	spinner.Start()
+	defer spinner.Stop()
 	for {
 		message := ""
 		progress, err := status.Run(ctx, dev, sy)
@@ -108,7 +109,7 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 		} else {
 			message = renderProgressBar(postfix, progress, pbScaling)
 		}
-		spinner.update(message)
+		spinner.Update(message)
 		time.Sleep(2 * time.Second)
 	}
 }

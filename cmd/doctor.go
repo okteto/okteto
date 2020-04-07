@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/doctor"
 	"github.com/okteto/okteto/pkg/errors"
@@ -39,7 +40,7 @@ func Doctor() *cobra.Command {
 				return errors.ErrNotInCluster
 			}
 
-			dev, err := loadDev(devPath)
+			dev, err := utils.LoadDev(devPath)
 			if err != nil {
 				return err
 			}
