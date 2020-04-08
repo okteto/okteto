@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 )
 
 func Test_getDeploymentName(t *testing.T) {
@@ -54,7 +54,7 @@ func Test_executeInit(t *testing.T) {
 
 	defer os.RemoveAll(dir)
 
-	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.NewV4().String()))
+	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
 	if err := executeInit(p, false, "golang", dir); err != nil {
 		t.Fatal(err)
 	}
