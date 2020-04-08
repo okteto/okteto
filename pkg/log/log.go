@@ -21,8 +21,8 @@ import (
 	"runtime"
 
 	"github.com/fatih/color"
+	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/config"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
@@ -74,7 +74,7 @@ func Init(level logrus.Level) {
 	fileLogger.SetOutput(rolling)
 	fileLogger.SetLevel(logrus.DebugLevel)
 
-	actionID := uuid.NewV4().String()
+	actionID := uuid.New().String()
 	log.file = fileLogger.WithFields(logrus.Fields{"action": actionID, "version": config.VersionString})
 }
 

@@ -25,8 +25,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/log"
-	uuid "github.com/satori/go.uuid"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -405,7 +405,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 
 //LoadForcePull force the dev pods to be recreated and pull the latest version of their image
 func (dev *Dev) LoadForcePull() {
-	restartUUID := uuid.NewV4().String()
+	restartUUID := uuid.New().String()
 	dev.ImagePullPolicy = apiv1.PullAlways
 	dev.Annotations[OktetoRestartAnnotation] = restartUUID
 	for _, s := range dev.Services {
