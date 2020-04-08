@@ -36,8 +36,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	yaml "gopkg.in/yaml.v2"
 
+	"github.com/google/uuid"
 	ps "github.com/mitchellh/go-ps"
-	uuid "github.com/satori/go.uuid"
 )
 
 var (
@@ -150,7 +150,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		return nil, err
 	}
 
-	pwd := uuid.NewV4().String()
+	pwd := uuid.New().String()
 	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), 0)
 	if err != nil {
 		log.Infof("couldn't hash the password %s", err)

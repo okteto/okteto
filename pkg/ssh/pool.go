@@ -50,9 +50,6 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 	}
 
 	client := ssh.NewClient(clientConn, chans, reqs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start ssh client: %w", err)
-	}
 
 	p.client = client
 	go p.keepAlive()
