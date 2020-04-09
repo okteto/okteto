@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 
@@ -32,7 +33,7 @@ func Restart() *cobra.Command {
 		Use:   "restart",
 		Short: "Restarts the pods of your development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dev, err := loadDev(devPath)
+			dev, err := utils.LoadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -66,9 +67,9 @@ func executeRestart(dev *model.Dev) error {
 		dev.Namespace = namespace
 	}
 
-	spinner := newSpinner("Restarting your development environment...")
-	spinner.start()
-	defer spinner.stop()
+	spinner := utils.NewSpinner("Restarting your development environment...")
+	spinner.Start()
+	defer spinner.Stop()
 
 	if err := pods.Restart(dev, client); err != nil {
 		return err

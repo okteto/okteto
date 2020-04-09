@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/term"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
@@ -127,9 +128,9 @@ func Up() *cobra.Command {
 				log.Success("Dependencies successfully installed")
 			}
 
-			checkLocalWatchesConfiguration()
+			utils.CheckLocalWatchesConfiguration()
 
-			dev, err := loadDev(devPath)
+			dev, err := utils.LoadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -362,7 +363,7 @@ func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 	_, deploy := os.LookupEnv("OKTETO_AUTODEPLOY")
 	deploy = deploy || autoDeploy
 	if !deploy {
-		if err := askIfDeploy(up.Dev.Name, up.Dev.Namespace); err != nil {
+		if err := utils.AskIfDeploy(up.Dev.Name, up.Dev.Namespace); err != nil {
 			return nil, false, err
 		}
 	}
@@ -394,10 +395,10 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 }
 
 func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
-	spinner := newSpinner("Activating your development environment...")
+	spinner := utils.NewSpinner("Activating your development environment...")
 	up.updateStateFile(activating)
-	spinner.start()
-	defer spinner.stop()
+	spinner.Start()
+	defer spinner.Stop()
 
 	if !namespaces.IsOktetoAllowed(up.Namespace) {
 		return fmt.Errorf("`okteto up` is not allowed in this namespace")
@@ -487,7 +488,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 			up.updateStateFile(attaching)
 		}
 		for {
-			spinner.update(fmt.Sprintf("%s...", message))
+			spinner.Update(fmt.Sprintf("%s...", message))
 			message = <-reporter
 			if message == "" {
 				return
@@ -610,10 +611,10 @@ func (up *UpContext) sync(resetSyncthing bool) error {
 }
 
 func (up *UpContext) startSyncthing(resetSyncthing bool) error {
-	spinner := newSpinner("Starting the file synchronization service...")
-	spinner.start()
+	spinner := utils.NewSpinner("Starting the file synchronization service...")
+	spinner.Start()
 	up.updateStateFile(startingSync)
-	defer spinner.stop()
+	defer spinner.Stop()
 
 	if err := up.Sy.Run(up.Context); err != nil {
 		return err
@@ -631,7 +632,7 @@ func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 	}
 
 	if resetSyncthing {
-		spinner.update("Resetting synchronization service database...")
+		spinner.Update("Resetting synchronization service database...")
 		if err := up.Sy.ResetDatabase(up.Context, up.Dev, true); err != nil {
 			return err
 		}
@@ -653,12 +654,12 @@ func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 
 func (up *UpContext) synchronizeFiles() error {
 	postfix := "Synchronizing your files..."
-	spinner := newSpinner(postfix)
+	spinner := utils.NewSpinner(postfix)
 	pbScaling := 0.30
 
 	up.updateStateFile(synchronizing)
-	spinner.start()
-	defer spinner.stop()
+	spinner.Start()
+	defer spinner.Stop()
 	reporter := make(chan float64)
 	go func() {
 		<-time.NewTicker(2 * time.Second).C
@@ -668,7 +669,7 @@ func (up *UpContext) synchronizeFiles() error {
 			if c > previous {
 				// todo: how to calculate how many characters can the line fit?
 				pb := renderProgressBar(postfix, c, pbScaling)
-				spinner.update(pb)
+				spinner.Update(pb)
 				previous = c
 			}
 		}
@@ -688,7 +689,7 @@ func (up *UpContext) synchronizeFiles() error {
 	}
 
 	// render to 100
-	spinner.update(renderProgressBar(postfix, 100, pbScaling))
+	spinner.Update(renderProgressBar(postfix, 100, pbScaling))
 
 	up.Sy.Type = "sendreceive"
 	up.Sy.IgnoreDelete = false
@@ -722,7 +723,7 @@ func (up *UpContext) cleanCommand() {
 		log.Infof("first session to the remote container: %s", err)
 	}
 
-	if isWatchesConfigurationTooLow(out.String()) {
+	if utils.IsWatchesConfigurationTooLow(out.String()) {
 		log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 		log.Yellow("This can affect Okteto's file synchronization performance.")
 		log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")

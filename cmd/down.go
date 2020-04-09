@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/errors"
@@ -38,7 +39,7 @@ func Down() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting down command")
 
-			dev, err := loadDev(devPath)
+			dev, err := utils.LoadDev(devPath)
 			if err != nil {
 				return err
 			}
@@ -82,9 +83,9 @@ func Down() *cobra.Command {
 }
 
 func runDown(dev *model.Dev) error {
-	spinner := newSpinner("Deactivating your development environment...")
-	spinner.start()
-	defer spinner.stop()
+	spinner := utils.NewSpinner("Deactivating your development environment...")
+	spinner.Start()
+	defer spinner.Stop()
 
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
@@ -113,9 +114,9 @@ func runDown(dev *model.Dev) error {
 }
 
 func removeVolume(dev *model.Dev) error {
-	spinner := newSpinner("Removing persistent volume...")
-	spinner.start()
-	defer spinner.stop()
+	spinner := utils.NewSpinner("Removing persistent volume...")
+	spinner.Start()
+	defer spinner.Stop()
 
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {

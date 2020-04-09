@@ -11,36 +11,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package utils
 
 import (
 	"fmt"
 	"time"
+	"unicode"
 
 	sp "github.com/briandowns/spinner"
 )
 
-type spinner struct {
+//Spinner represents an okteto spinner
+type Spinner struct {
 	sp *sp.Spinner
 }
 
-func newSpinner(suffix string) *spinner {
+//NewSpinner returns a new Spinner
+func NewSpinner(suffix string) *Spinner {
 	s := sp.New(sp.CharSets[14], 100*time.Millisecond)
 	s.HideCursor = true
 	s.Suffix = fmt.Sprintf(" %s", suffix)
-	return &spinner{
+	return &Spinner{
 		sp: s,
 	}
 }
 
-func (p *spinner) start() {
+//Start starts the spinner
+func (p *Spinner) Start() {
 	p.sp.Start()
 }
 
-func (p *spinner) stop() {
+//Stop stops the spinner
+func (p *Spinner) Stop() {
 	p.sp.Stop()
 }
 
-func (p *spinner) update(text string) {
-	p.sp.Suffix = fmt.Sprintf(" %s", text)
+//Update updates the spinner message
+func (p *Spinner) Update(text string) {
+	p.sp.Suffix = fmt.Sprintf(" %s", ucFirst(text))
+}
+
+func ucFirst(str string) string {
+	for i, v := range str {
+		return string(unicode.ToUpper(v)) + str[i+1:]
+	}
+	return ""
 }

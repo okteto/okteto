@@ -138,8 +138,8 @@ type Capabilities struct {
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
 type EnvVar struct {
-	Name  string
-	Value string
+	Name  string `yaml:"name,omitempty"`
+	Value string `yaml:"value,omitempty"`
 }
 
 // Secret represents a development secret
@@ -413,6 +413,22 @@ func (dev *Dev) LoadForcePull() {
 		s.Annotations[OktetoRestartAnnotation] = restartUUID
 	}
 	log.Infof("enabled force pull")
+}
+
+//Save saves the okteto manifest in a given path
+func (dev *Dev) Save(path string) error {
+	marshalled, err := yaml.Marshal(dev)
+	if err != nil {
+		log.Infof("failed to marshall dev environment: %s", err)
+		return fmt.Errorf("Failed to generate your manifest")
+	}
+
+	if err := ioutil.WriteFile(path, marshalled, 0600); err != nil {
+		log.Info(err)
+		return fmt.Errorf("Failed to write your manifest")
+	}
+
+	return nil
 }
 
 //GetVolumeName returns the okteto volume name for a given dev environment

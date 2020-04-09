@@ -108,7 +108,7 @@ func executeInit(devPath string, overwrite bool, language string, workDir string
 
 	dev.Name = getDeploymentName(workDir)
 
-	if err := saveManifest(dev, devPath); err != nil {
+	if err := dev.Save(devPath); err != nil {
 		return err
 	}
 

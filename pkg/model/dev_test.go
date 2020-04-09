@@ -25,7 +25,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-func Test_loadDev(t *testing.T) {
+func Test_LoadDev(t *testing.T) {
 	manifest := []byte(`
 name: deployment
 container: core
@@ -140,7 +140,7 @@ workdir: /app`)
 	}
 }
 
-func Test_loadDevDefaults(t *testing.T) {
+func Test_LoadDevDefaults(t *testing.T) {
 	var tests = []struct {
 		name                string
 		manifest            []byte

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package utils
 
 import (
 	"io/ioutil"
@@ -22,48 +22,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"go.undefinedlabs.com/scopeagent"
 )
-
-func Test_isWatchesConfigurationTooLow(t *testing.T) {
-	var tests = []struct {
-		name     string
-		value    string
-		expected bool
-	}{
-		{
-			name:     "too-low",
-			value:    "2",
-			expected: true,
-		},
-		{
-			name:     "too-low-trim",
-			value:    "2\n",
-			expected: true,
-		},
-		{
-			name:     "ok",
-			value:    "20000",
-			expected: false,
-		},
-		{
-			name:     "ok-trim",
-			value:    "20000\n",
-			expected: false,
-		},
-		{
-			name:     "wrong",
-			value:    "2a4d",
-			expected: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isWatchesConfigurationTooLow(tt.value)
-			if tt.expected != result {
-				t.Errorf("expected %t got %t in test %s", tt.expected, result, tt.name)
-			}
-		})
-	}
-}
 
 func Test_loadDevOrDefault(t *testing.T) {
 	var tests = []struct {
@@ -96,7 +54,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 	test := scopeagent.GetTest(t)
 	for _, tt := range tests {
 		test.Run(tt.name, func(t *testing.T) {
-			def, err := loadDevOrDefault("/tmp/a-path", tt.deployment)
+			def, err := LoadDevOrDefault("/tmp/a-path", tt.deployment)
 			if tt.expectErr {
 				if err == nil {
 					t.Fatal("expected error when loading")
@@ -128,11 +86,11 @@ func Test_loadDevOrDefault(t *testing.T) {
 			f.Close()
 			defer os.Remove(f.Name())
 
-			if err := saveManifest(tt.dev, f.Name()); err != nil {
+			if err := tt.dev.Save(f.Name()); err != nil {
 				t.Fatal(err)
 			}
 
-			loaded, err := loadDevOrDefault(f.Name(), "foo")
+			loaded, err := LoadDevOrDefault(f.Name(), "foo")
 			if err != nil {
 				t.Fatal("expected error when loading existing manifest")
 			}
@@ -148,7 +106,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 		})
 	}
 	name := "demo-deployment"
-	def, err := loadDevOrDefault("/tmp/bad-path", name)
+	def, err := LoadDevOrDefault("/tmp/bad-path", name)
 	if err != nil {
 		t.Fatal("default dev was not returned")
 	}
@@ -157,9 +115,8 @@ func Test_loadDevOrDefault(t *testing.T) {
 		t.Errorf("expected %s, got %s", name, def.Name)
 	}
 
-	_, err = loadDevOrDefault("/tmp/bad-path", "")
+	_, err = LoadDevOrDefault("/tmp/bad-path", "")
 	if err == nil {
 		t.Error("expected error with empty deployment name")
 	}
-
 }

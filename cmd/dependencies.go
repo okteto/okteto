@@ -16,6 +16,7 @@ package cmd
 import (
 	"time"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -42,15 +43,15 @@ func downloadSyncthing() error {
 
 func sshKeys() error {
 	if !ssh.KeyExists() {
-		spinner := newSpinner("Generating your client certificates...")
-		spinner.start()
+		spinner := utils.NewSpinner("Generating your client certificates...")
+		spinner.Start()
 
 		if err := ssh.GenerateKeys(); err != nil {
-			spinner.stop()
+			spinner.Stop()
 			return err
 		}
 
-		spinner.stop()
+		spinner.Stop()
 		log.Success("Client certificates generated")
 	}
 
