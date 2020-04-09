@@ -21,8 +21,8 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 )
 
-//RepoUpdate updates a local helm repo
-func RepoUpdate(re *repo.Entry, settings *cli.EnvSettings, chartName string) error {
+//UpdateRepo updates a local helm repo
+func UpdateRepo(re *repo.Entry, settings *cli.EnvSettings, chartName string) error {
 	r, err := repo.NewChartRepository(re, getter.All(settings))
 	if err != nil {
 		return fmt.Errorf("error updating versions from the %s chart repository: %s", chartName, err)

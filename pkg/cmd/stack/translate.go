@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helm
+package stack
 
 import (
 	"fmt"
@@ -26,12 +26,14 @@ import (
 )
 
 const (
-	// HelmDriver default helm driver
-	HelmDriver = "secrets"
+	stackHelmRepoURL      = "https://apps.okteto.com"
+	stackHelmRepoName     = "okteto-charts"
+	stackHelmChartName    = "stacks"
+	stackHelmChartVersion = "0.1.0"
+	helmDriver            = "secrets"
 )
 
-//Translate translates the original stack and build images
-func Translate(s *model.Stack, forceBuild bool) error {
+func translate(s *model.Stack, forceBuild bool) error {
 	for i, svc := range s.Services {
 		svc.Image = os.ExpandEnv(svc.Image)
 		s.Services[i] = svc
@@ -71,7 +73,7 @@ func Translate(s *model.Stack, forceBuild bool) error {
 			continue
 		}
 		oneBuild = true
-		imageTag := build.GetServiceImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
+		imageTag := build.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
 		log.Information("Building image for service '%s'...", name)
 		var imageDigest string
 		imageDigest, err = build.Run(buildKitHost, isOktetoCluster, svc.Build, "", imageTag, "", false, []string{}, "tty")

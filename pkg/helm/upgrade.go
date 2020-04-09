@@ -36,7 +36,7 @@ func Upgrade(c *action.Upgrade, settings *cli.EnvSettings, s *model.Stack, repoN
 
 	chart, err := loader.Load(chartPath)
 	if err != nil {
-		return fmt.Errorf("error loading stack helm chart: %s", err)
+		return fmt.Errorf("error loading stack repositoryt: %s", err)
 	}
 
 	_, err = c.Run(s.Name, chart, vals)

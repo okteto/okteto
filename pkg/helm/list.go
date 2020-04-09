@@ -17,8 +17,8 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 )
 
-//ExistRelease returns if a release exists
-func ExistRelease(c *action.List, name string) (bool, error) {
+//ReleaseExist returns if a release exists
+func ReleaseExist(c *action.List, name string) (bool, error) {
 	c.AllNamespaces = false
 	results, err := c.Run()
 	if err != nil {

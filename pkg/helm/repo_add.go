@@ -30,8 +30,8 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 )
 
-//RepoAdd adds a local helm repo
-func RepoAdd(settings *cli.EnvSettings, repoName, repoURL, chartName, chartVersion string) error {
+//AddRepo adds a local helm repo
+func AddRepo(settings *cli.EnvSettings, repoName, repoURL, chartName, chartVersion string) error {
 	err := os.MkdirAll(filepath.Dir(settings.RepositoryConfig), os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		return fmt.Errorf("error creating helm repository folder: %s", err)

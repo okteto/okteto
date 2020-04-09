@@ -31,12 +31,12 @@ func Install(c *action.Install, settings *cli.EnvSettings, s *model.Stack, repoN
 	c.Version = chartVersion
 	chartPath, err := c.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", repoName, chartName), settings)
 	if err != nil {
-		return fmt.Errorf("error accessing stack helm chart: %s", err)
+		return fmt.Errorf("error accessing stack repository: %s", err)
 	}
 
 	chart, err := loader.Load(chartPath)
 	if err != nil {
-		return fmt.Errorf("error loading stack helm chart: %s", err)
+		return fmt.Errorf("error loading stack repository: %s", err)
 	}
 
 	_, err = c.Run(chart, vals)

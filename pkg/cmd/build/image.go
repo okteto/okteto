@@ -50,25 +50,21 @@ func GetRepoNameWithoutTag(name string) string {
 	return fmt.Sprintf("%s/%s", domain, remainder[:i])
 }
 
-//GetDevImageTag returns the image taag to build and push
-func GetDevImageTag(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string) string {
-	if imageTag != "" {
-		return imageTag
-	}
-	if oktetoRegistryURL != "" {
-		return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, dev.Namespace, dev.Name)
-	}
-	imageWithoutTag := GetRepoNameWithoutTag(imageFromDeployment)
-	return fmt.Sprintf("%s:okteto", imageWithoutTag)
-}
-
-//GetServiceImageTag returns the image tag to build for a given servicecs
-func GetServiceImageTag(image, service, namespace, oktetoRegistryURL string) string {
+//GetImageTag returns the image tag to build for a given servicecs
+func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
 	if oktetoRegistryURL != "" {
 		return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, namespace, service)
 	}
 	imageWithoutTag := GetRepoNameWithoutTag(image)
 	return fmt.Sprintf("%s:okteto", imageWithoutTag)
+}
+
+//GetDevImageTag returns the image tag to build and push
+func GetDevImageTag(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string) string {
+	if imageTag != "" {
+		return imageTag
+	}
+	return GetImageTag(imageFromDeployment, dev.Name, dev.Namespace, oktetoRegistryURL)
 }
 
 func getDockerfileWithCacheHandler(filename string) (string, error) {

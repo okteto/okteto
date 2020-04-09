@@ -59,7 +59,9 @@ func GetStack(name, stackPath string) (*Stack, error) {
 		return nil, err
 	}
 
-	s.Name = name
+	if name != "" {
+		s.Name = name
+	}
 	if err := s.validate(); err != nil {
 		return nil, err
 	}
