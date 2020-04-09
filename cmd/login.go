@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -54,16 +55,12 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 
 			oktetoURL := okteto.CloudURL
 			if len(args) > 0 {
-				u, err := url.Parse(args[0])
+				u, err := parseURL(args[0])
 				if err != nil {
 					return fmt.Errorf("malformed login URL")
 				}
 
-				if u.Scheme == "" {
-					u.Scheme = "https"
-				}
-
-				oktetoURL = u.String()
+				oktetoURL = u
 			}
 
 			log.Debugf("authenticating with %s", oktetoURL)
@@ -122,4 +119,17 @@ func withBrowser(ctx context.Context, oktetoURL string) (*okteto.User, error) {
 	fmt.Println(authorizationURL)
 
 	return login.EndWithBrowser(ctx, h)
+}
+
+func parseURL(u string) (string, error) {
+	url, err := url.Parse(u)
+	if err != nil {
+		return "", fmt.Errorf("%s is not a valid URL", u)
+	}
+
+	if url.Scheme == "" {
+		url.Scheme = "https"
+	}
+
+	return strings.TrimRight(url.String(), "/"), nil
 }

@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/machinebox/graphql"
@@ -40,7 +39,7 @@ func getClient(oktetoURL string) (*graphql.Client, error) {
 		return nil, err
 	}
 
-	u.Path = path.Join(u.Path, "graphql")
+	u.Path = "graphql"
 	graphqlClient := graphql.NewClient(u.String(), graphql.WithHTTPClient(httpClient))
 	return graphqlClient, nil
 }
