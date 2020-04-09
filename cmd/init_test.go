@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	uuid "github.com/satori/go.uuid"
+	"github.com/okteto/okteto/cmd/utils"
 )
 
 func Test_getDeploymentName(t *testing.T) {
