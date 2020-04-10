@@ -10,7 +10,7 @@ jobs:
       - checkout
       - restore_cache: 
           keys:
-            - v2-pkg-cache-{{ checksum "go.sum" }}
+            - v3-pkg-cache-{{ checksum "go.sum" }}
       - run: 
           name: test
           environment:
@@ -25,7 +25,7 @@ jobs:
           paths:
             - bin
       - save_cache:
-          key: v2-pkg-cache-{{ checksum "go.sum" }}
+          key: v3-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
             - /go/pkg
@@ -44,7 +44,7 @@ jobs:
       - checkout
       - restore_cache: 
           keys:
-            - v2-pkg-cache-{{ checksum "go.sum" }}
+            - v3-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./artifacts
       - run:
@@ -68,7 +68,7 @@ jobs:
             export OKTETO_CLIENTSIDE_TRANSLATION=true
             make integration
       - save_cache:
-          key: v2-pkg-cache-{{ checksum "go.sum" }}
+          key: v3-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
             - /go/pkg
