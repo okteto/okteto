@@ -59,6 +59,10 @@ type deployment struct {
 }
 
 const (
+	stackGitRepo     = "git@github.com:okteto/stacks-getting-started.git"
+	stackGitFolder   = "stacks-getting-started"
+	stackManifest    = "okteto-stack.yml"
+	stackName        = "voting-app"
 	deploymentFormat = `
 apiVersion: apps/v1
 kind: Deployment
@@ -186,6 +190,106 @@ func TestDownloadSyncthing(t *testing.T) {
 	}
 }
 
+func TestStacks(t *testing.T) {
+	if mode == "client" {
+		return
+	}
+
+	ctx := scopeagent.GetContextFromTest(t)
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tName := fmt.Sprintf("TestStacks-%s", runtime.GOOS)
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	namespace := fmt.Sprintf("%s-%s", name, user)
+
+	test := scopeagent.GetTest(t)
+	test.Run(tName, func(t *testing.T) {
+		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
+			t.Fatal(err)
+		}
+
+		defer deleteNamespace(ctx, oktetoPath, namespace)
+
+		if err := cloneGitRepo(ctx, stackGitRepo); err != nil {
+			t.Fatal(err)
+		}
+		defer deleteGitRepo(ctx, stackGitFolder)
+		if err := deployStack(ctx, oktetoPath, stackManifest); err != nil {
+			t.Fatal(err)
+		}
+		endpoint := fmt.Sprintf("https://vote-%s.cloud.okteto.net", namespace)
+		content, err := getContent(endpoint)
+		if err != nil {
+			t.Fatalf("failed to get stack content: %s", err)
+		}
+		if !strings.Contains(content, "Cats vs Dogs!") {
+			t.Fatalf("wrong stack content: %s", content)
+		}
+		if err := destroyStack(ctx, oktetoPath, stackName); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func cloneGitRepo(ctx context.Context, name string) error {
+	log.Printf("cloning git repo %s", name)
+	cmd := exec.Command("git", "clone", name)
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("cloning git repo %s failed: %s - %s", name, string(o), err)
+	}
+	log.Printf("clone git repo %s success", name)
+	return nil
+}
+
+func deleteGitRepo(ctx context.Context, path string) error {
+	log.Printf("delete git repo %s", path)
+	cmd := exec.Command("rm", "-Rf", path)
+	cmd.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("delete git repo %s failed: %s - %s", path, string(o), err)
+	}
+	log.Printf("delete git repo %s success", path)
+	return nil
+}
+
+func deployStack(ctx context.Context, oktetoPath, stackPath string) error {
+	log.Printf("okteto stack deploy %s", stackPath)
+	cmd := exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait")
+	cmd.Env = os.Environ()
+	cmd.Dir = stackGitFolder
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("okteto stack deploy failed: %s - %s", string(o), err)
+	}
+	log.Printf("okteto stack deploy %s success", stackPath)
+	return nil
+}
+
+func destroyStack(ctx context.Context, oktetoPath, name string) error {
+	log.Printf("okteto stack destroy %s", name)
+	cmd := exec.Command(oktetoPath, "stack", "destroy", name)
+	cmd.Env = os.Environ()
+	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
+	defer span.Finish()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("okteto stack destroy failed: %s - %s", string(o), err)
+	}
+	log.Printf("okteto stack destroy %s success", name)
+	return nil
+}
+
 func TestAll(t *testing.T) {
 	ctx := scopeagent.GetContextFromTest(t)
 	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
@@ -222,9 +326,11 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := createNamespace(ctx, namespace, oktetoPath); err != nil {
+		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}
+
+		defer deleteNamespace(ctx, oktetoPath, namespace)
 
 		if err := deploy(ctx, name, dPath); err != nil {
 			t.Fatal(err)
@@ -242,7 +348,8 @@ func TestAll(t *testing.T) {
 		}
 
 		log.Println("getting synchronized content")
-		c, err := getContent()
+		endpoint := "http://localhost:8080/index.html"
+		c, err := getContent(endpoint)
 		if err != nil {
 			t.Fatalf("failed to get content: %s", err)
 		}
@@ -259,7 +366,7 @@ func TestAll(t *testing.T) {
 		time.Sleep(3 * time.Second)
 
 		log.Println("getting updated content")
-		c, err = getContent()
+		c, err = getContent(endpoint)
 		if err != nil {
 			t.Fatalf("failed to get updated content: %s", err)
 		}
@@ -318,12 +425,10 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 	return fmt.Errorf("%s didn't rollout after 30 seconds", name)
 }
 
-func getContent() (string, error) {
-	endpoint := "http://localhost:8080/index.html"
+func getContent(endpoint string) (string, error) {
 	retries := 0
-
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 120; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
 			retries++
@@ -369,7 +474,7 @@ func writeManifest(path, name string) error {
 	return nil
 }
 
-func createNamespace(ctx context.Context, namespace, oktetoPath string) error {
+func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	log.Printf("creating namespace %s", namespace)
 	args := []string{"create", "namespace", namespace, "-l", "debug"}
 	cmd := exec.Command(oktetoPath, args...)
