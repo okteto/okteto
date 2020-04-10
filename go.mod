@@ -55,7 +55,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/src-d/enry/v2 v2.1.0
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	go.undefinedlabs.com/scopeagent v0.1.15
+	go.undefinedlabs.com/scopeagent v0.1.16-0.20200410154513-aabd524b2bfc
 	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
