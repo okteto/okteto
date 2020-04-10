@@ -58,11 +58,13 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 		return fmt.Errorf("current okteto volume size is wrong. Run 'okteto down -v' and try again")
 	}
 	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) != 0 {
-		return fmt.Errorf(
-			"current okteto volume size is '%s' instead of '%s'. Run 'okteto down -v' and try again",
-			currentSize.String(),
-			dev.PersistentVolumeSize(),
-		)
+		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.PersistentVolumeSize() != model.OktetoDefaultPVSize {
+			return fmt.Errorf(
+				"current okteto volume size is '%s' instead of '%s'. Run 'okteto down -v' and try again",
+				currentSize.String(),
+				dev.PersistentVolumeSize(),
+			)
+		}
 	}
 	if dev.PersistentVolumeStorageClass() != "" {
 		if pvc.Spec.StorageClassName == nil {

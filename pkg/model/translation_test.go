@@ -38,6 +38,8 @@ resources:
     memory: 1Gi
     nvidia.com/gpu: 1
     amd.com/gpu: 1
+persistentVolume:
+  enabled: true
 services:
   - name: worker
     container: dev

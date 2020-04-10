@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Test_translate(t *testing.T) {
+func Test_translateWithVolumes(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {
 		log.Fatal(err)
@@ -55,6 +55,8 @@ volumes:
   - sub:/path
 secrets:
   - %s:/remote
+persistentVolume:
+  enabled: true
 resources:
   limits:
     cpu: 2
@@ -343,6 +345,144 @@ services:
 	marshalled2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
 	if string(marshalled2Down) != string(marshalled2Orig) {
 		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
+	}
+}
+
+func Test_translateWithoutVolumes(t *testing.T) {
+	manifest := []byte(`name: web
+image: web:latest`)
+
+	dev, err := model.Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d1 := dev.GevSandbox()
+	dev.DevPath = "okteto.yml"
+	rule1 := dev.ToTranslationRule(dev)
+	tr1 := &model.Translation{
+		Interactive: true,
+		Name:        dev.Name,
+		Version:     model.TranslationVersion,
+		Deployment:  d1,
+		Rules:       []*model.TranslationRule{rule1},
+	}
+	err = translate(tr1, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d1OK := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: apiv1.PodTemplateSpec{
+				Spec: apiv1.PodSpec{
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								apiv1.PodAffinityTerm{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											okLabels.InteractiveDevLabel: "web",
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
+					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					Volumes: []apiv1.Volume{
+						{
+							Name: oktetoSyncSecretVolume,
+							VolumeSource: apiv1.VolumeSource{
+								Secret: &apiv1.SecretVolumeSource{
+									SecretName: "okteto-web",
+									Items: []apiv1.KeyToPath{
+										{
+											Key:  "config.xml",
+											Path: "config.xml",
+										},
+										{
+											Key:  "cert.pem",
+											Path: "cert.pem",
+										},
+										{
+											Key:  "key.pem",
+											Path: "key.pem",
+										},
+									},
+								},
+							},
+						},
+						{
+							Name: dev.GetVolumeName(),
+							VolumeSource: apiv1.VolumeSource{
+								EmptyDir: &apiv1.EmptyDirVolumeSource{},
+							},
+						},
+						{
+							Name: oktetoBinName,
+							VolumeSource: apiv1.VolumeSource{
+								EmptyDir: &apiv1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+					InitContainers: []apiv1.Container{
+						{
+							Name:            oktetoBinName,
+							Image:           oktetoBinImageTag,
+							ImagePullPolicy: apiv1.PullIfNotPresent,
+							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      oktetoBinName,
+									MountPath: "/okteto/bin",
+								},
+							},
+						},
+					},
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           "web:latest",
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"/var/okteto/bin/start.sh"},
+							WorkingDir:      "/okteto",
+							Env: []apiv1.EnvVar{
+								{
+									Name:  "OKTETO_MARKER_PATH",
+									Value: "/okteto/okteto.yml",
+								},
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/var/syncthing",
+									SubPath:   model.SyncthingSubPath,
+								},
+								{
+									Name:      oktetoSyncSecretVolume,
+									ReadOnly:  false,
+									MountPath: "/var/syncthing/secret/",
+								},
+								{
+									Name:      oktetoBinName,
+									ReadOnly:  false,
+									MountPath: "/var/okteto/bin",
+								},
+							},
+							LivenessProbe:  nil,
+							ReadinessProbe: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
+	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
+
+	if string(marshalled1) != string(marshalled1OK) {
+		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
 	}
 }
 

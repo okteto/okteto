@@ -48,6 +48,8 @@ securityContext:
     drop:
     - SYS_NICE
 workdir: /app
+persistentVolume:
+  enabled: true
 services:
   - name: deployment
     container: core
@@ -224,8 +226,8 @@ forward:
 				}
 			}
 
-			if !d.PersistentVolumeEnabled() {
-				t.Errorf("peristent volume was not enabled by default")
+			if d.PersistentVolumeEnabled() {
+				t.Errorf("peristent volume was enabled by default")
 			}
 		})
 	}
@@ -563,6 +565,8 @@ func Test_validate(t *testing.T) {
 			name: "services-with-mountpath-pullpolicy",
 			manifest: []byte(`
       name: deployment
+      persistentVolume:
+        enabled: true
       services:
         - name: foo
           imagePullPolicy: Always`),
@@ -581,6 +585,8 @@ func Test_validate(t *testing.T) {
 			name: "volumes",
 			manifest: []byte(`
       name: deployment
+      persistentVolume:
+        enabled: true
       volumes:
         - docs:/docs`),
 			expectErr: false,
@@ -662,7 +668,7 @@ func TestPersistentVolumeEnabled(t *testing.T) {
       name: deployment
       container: core
       image: code/core:0.1.8`),
-			expected: true,
+			expected: false,
 		},
 		{
 			name: "set",
