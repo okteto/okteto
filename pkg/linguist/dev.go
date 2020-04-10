@@ -63,14 +63,6 @@ func init() {
 		image:   "okteto/golang:1",
 		path:    "/okteto",
 		command: []string{"bash"},
-		volumes: []model.Volume{
-			{
-				MountPath: "/go/pkg/",
-			},
-			{
-				MountPath: "/root/.cache/go-build/",
-			},
-		},
 		securityContext: &model.SecurityContext{
 			Capabilities: &model.Capabilities{
 				Add: []apiv1.Capability{"SYS_PTRACE"},
@@ -98,19 +90,14 @@ func init() {
 		image:   "okteto/gradle:latest",
 		path:    "/okteto",
 		command: []string{"bash"},
-		volumes: []model.Volume{
-			{
-				MountPath: "/home/gradle/.gradle",
-			},
-		},
 		forward: []model.Forward{
 			{
 				Local:  8080,
 				Remote: 8080,
 			},
 			{
-				Local:  8088,
-				Remote: 8088,
+				Local:  5005,
+				Remote: 5005,
 			},
 		},
 	}
@@ -119,19 +106,14 @@ func init() {
 		image:   "okteto/maven:latest",
 		path:    "/okteto",
 		command: []string{"bash"},
-		volumes: []model.Volume{
-			{
-				MountPath: "/root/.m2",
-			},
-		},
 		forward: []model.Forward{
 			{
 				Local:  8080,
 				Remote: 8080,
 			},
 			{
-				Local:  8088,
-				Remote: 8088,
+				Local:  5005,
+				Remote: 5005,
 			},
 		},
 	}

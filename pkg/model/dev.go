@@ -468,13 +468,13 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		Environment:      dev.Environment,
 		Secrets:          dev.Secrets,
 		WorkDir:          dev.WorkDir,
-		PersistentVolume: dev.PersistentVolumeEnabled(),
+		PersistentVolume: main.PersistentVolumeEnabled(),
 		Volumes:          []VolumeMount{},
 		SecurityContext:  dev.SecurityContext,
 		Resources:        dev.Resources,
 	}
 
-	if dev.PersistentVolumeEnabled() {
+	if main.PersistentVolumeEnabled() {
 		rule.Volumes = append(
 			rule.Volumes,
 			VolumeMount{
@@ -636,7 +636,7 @@ func (s *Secret) GetFileName() string {
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
 func (dev *Dev) PersistentVolumeEnabled() bool {
 	if dev.PersistentVolumeInfo == nil {
-		return true
+		return false
 	}
 	return dev.PersistentVolumeInfo.Enabled
 }
@@ -644,10 +644,10 @@ func (dev *Dev) PersistentVolumeEnabled() bool {
 // PersistentVolumeSize returns the persistent volume size
 func (dev *Dev) PersistentVolumeSize() string {
 	if dev.PersistentVolumeInfo == nil {
-		return "10Gi"
+		return "2Gi"
 	}
 	if dev.PersistentVolumeInfo.Size == "" {
-		return "10Gi"
+		return "2Gi"
 	}
 	return dev.PersistentVolumeInfo.Size
 }
