@@ -39,6 +39,8 @@ const (
 	oktetoMarkerPathVariable    = "OKTETO_MARKER_PATH"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
+	//OktetoDefaultPVSize default volume size
+	OktetoDefaultPVSize = "2Gi"
 
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
@@ -644,10 +646,10 @@ func (dev *Dev) PersistentVolumeEnabled() bool {
 // PersistentVolumeSize returns the persistent volume size
 func (dev *Dev) PersistentVolumeSize() string {
 	if dev.PersistentVolumeInfo == nil {
-		return "2Gi"
+		return OktetoDefaultPVSize
 	}
 	if dev.PersistentVolumeInfo.Size == "" {
-		return "2Gi"
+		return OktetoDefaultPVSize
 	}
 	return dev.PersistentVolumeInfo.Size
 }
