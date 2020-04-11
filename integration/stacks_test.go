@@ -34,7 +34,6 @@ const (
 	stackGitRepo   = "git@github.com:okteto/stacks-getting-started.git"
 	stackGitFolder = "stacks-getting-started"
 	stackManifest  = "okteto-stack.yml"
-	stackName      = "voting-app"
 )
 
 func TestStacks(t *testing.T) {
@@ -74,7 +73,7 @@ func TestStacks(t *testing.T) {
 		if !strings.Contains(content, "Cats vs Dogs!") {
 			t.Fatalf("wrong stack content: %s", content)
 		}
-		if err := destroyStack(ctx, oktetoPath, stackName); err != nil {
+		if err := destroyStack(ctx, oktetoPath, stackManifest); err != nil {
 			t.Fatal(err)
 		}
 		time.Sleep(5 * time.Second)
@@ -134,16 +133,17 @@ func deployStack(ctx context.Context, oktetoPath, stackPath string) error {
 	return nil
 }
 
-func destroyStack(ctx context.Context, oktetoPath, name string) error {
-	log.Printf("okteto stack destroy %s", name)
-	cmd := exec.Command(oktetoPath, "stack", "destroy", name)
+func destroyStack(ctx context.Context, oktetoPath, stackManifest string) error {
+	log.Printf("okteto stack destroy")
+	cmd := exec.Command(oktetoPath, "stack", "destroy", "-f", stackManifest)
 	cmd.Env = os.Environ()
+	cmd.Dir = stackGitFolder
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 	defer span.Finish()
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto stack destroy failed: %s - %s", string(o), err)
 	}
-	log.Printf("okteto stack destroy %s success", name)
+	log.Printf("okteto stack destroy success")
 	return nil
 }
