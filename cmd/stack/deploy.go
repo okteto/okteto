@@ -54,7 +54,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&stackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
 	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the stack name")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
-	cmd.Flags().BoolVarP(&forceBuild, "build", "", false, "build images before starting containers")
-	cmd.Flags().BoolVarP(&wait, "wait", "", false, "wait until a minimum number of Pods of a Deployment, StatefulSet are in a ready state")
+	cmd.Flags().BoolVarP(&forceBuild, "build", "", false, "build images before starting any Stack service")
+	cmd.Flags().BoolVarP(&wait, "wait", "", false, "wait until a minimum number of containers are in a ready state for every service")
 	return cmd
 }
