@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
@@ -25,26 +26,31 @@ import (
 
 //Destroy destroys a stack
 func Destroy(ctx context.Context) *cobra.Command {
+	var stackPath string
+	var name string
 	var namespace string
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
 		Short: fmt.Sprintf("Destroys a stack"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			name := args[0]
-			err := stack.Destroy(ctx, name, namespace)
+			s, err := utils.LoadStack(name, stackPath)
+			if err != nil {
+				return err
+			}
+
+			if err := s.UpdateNamespace(namespace); err != nil {
+				return err
+			}
+			err = stack.Destroy(ctx, s)
 			analytics.TrackDestroyStack(err == nil)
 			if err == nil {
-				log.Success("Successfully destroyed stack '%s'", name)
+				log.Success("Successfully destroyed stack '%s'", s.Name)
 			}
 			return err
 		},
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 1 {
-				return fmt.Errorf("destroy requires the stack NAME argument")
-			}
-			return nil
-		},
 	}
+	cmd.Flags().StringVarP(&stackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
+	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the stack name")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is destroyed")
 	return cmd
 }
