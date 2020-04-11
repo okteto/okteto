@@ -44,11 +44,10 @@ func TestStacks(t *testing.T) {
 	}
 
 	ctx := scopeagent.GetContextFromTest(t)
-	// oktetoPath, err := getOktetoPath(ctx)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	oktetoPath := "/Users/pablo/github.com/okteto/okteto/bin/okteto"
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tName := fmt.Sprintf("TestStacks-%s", runtime.GOOS)
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
