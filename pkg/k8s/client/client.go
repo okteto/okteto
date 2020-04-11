@@ -52,6 +52,13 @@ func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {
 	return client, config, namespace, nil
 }
 
+//Reset cleans the cached client
+func Reset() {
+	client = nil
+	config = nil
+	namespace = ""
+}
+
 // InCluster returns true if Okteto is running on a Kubernetes cluster
 func InCluster() bool {
 	_, err := rest.InClusterConfig()

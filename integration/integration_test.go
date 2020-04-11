@@ -222,7 +222,7 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := createNamespace(ctx, namespace, oktetoPath); err != nil {
+		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}
 
@@ -242,7 +242,8 @@ func TestAll(t *testing.T) {
 		}
 
 		log.Println("getting synchronized content")
-		c, err := getContent()
+		endpoint := "http://localhost:8080/index.html"
+		c, err := getContent(endpoint, 60)
 		if err != nil {
 			t.Fatalf("failed to get content: %s", err)
 		}
@@ -259,7 +260,7 @@ func TestAll(t *testing.T) {
 		time.Sleep(3 * time.Second)
 
 		log.Println("getting updated content")
-		c, err = getContent()
+		c, err = getContent(endpoint, 60)
 		if err != nil {
 			t.Fatalf("failed to get updated content: %s", err)
 		}
@@ -318,12 +319,10 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 	return fmt.Errorf("%s didn't rollout after 30 seconds", name)
 }
 
-func getContent() (string, error) {
-	endpoint := "http://localhost:8080/index.html"
+func getContent(endpoint string, totRetries int) (string, error) {
 	retries := 0
-
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < 60; i++ {
+	for i := 0; i < totRetries; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
 			retries++
@@ -369,7 +368,7 @@ func writeManifest(path, name string) error {
 	return nil
 }
 
-func createNamespace(ctx context.Context, namespace, oktetoPath string) error {
+func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	log.Printf("creating namespace %s", namespace)
 	args := []string{"create", "namespace", namespace, "-l", "debug"}
 	cmd := exec.Command(oktetoPath, args...)
@@ -402,7 +401,7 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
 	}
-
+	k8Client.Reset()
 	return nil
 }
 
