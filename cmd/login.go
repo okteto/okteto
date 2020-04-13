@@ -92,10 +92,11 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 
 			err = namespace.RunNamespace(ctx, "")
 			if err != nil {
-				return err
+				log.Infof("error fetching your Kubernetes credentials: %s", err)
+				log.Hint("    Run `okteto namespace` to switch your context and download your Kubernetes credentials.")
+			} else {
+				log.Hint("    Run 'okteto namespace' every time you need to activate your Okteto context again.")
 			}
-
-			log.Hint("    Run 'okteto namespace' everytime you need to switch your context again.")
 			if u.New {
 				analytics.TrackSignup(true, u.ID)
 			}
