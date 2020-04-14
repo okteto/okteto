@@ -15,6 +15,7 @@ package syncthing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
@@ -31,32 +32,37 @@ func (s *Syncthing) checkLocalAndRemoteStatus(ctx context.Context) error {
 func (s *Syncthing) checkStatus(ctx context.Context, local bool) error {
 	status, err := s.GetStatus(ctx, s.Dev, local)
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting status from local=%t: %s", local, err)
 	}
 	if status.PullErrors == 0 {
 		return nil
 	}
-	return s.GetFolderErrors(ctx, s.Dev, local)
+
+	err = s.GetFolderErrors(ctx, s.Dev, local)
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("error getting folder errors from local=%t: %s", local, err)
 }
 
 // Monitor will send a message to disconnected if remote syncthing is disconnected for more than 10 seconds.
 func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
-	ticker := time.NewTicker(5 * time.Second)
-	connected := true
+	ticker := time.NewTicker(20 * time.Second)
+	retries := 0
 	for {
 		select {
 		case <-ticker.C:
 			err := s.checkLocalAndRemoteStatus(ctx)
 			if err == nil {
-				connected = true
+				retries = 0
 				continue
 			}
-			if !connected {
+			if retries >= 3 {
 				log.Infof("syncthing not connected, sending disconnect signal: %s", err)
 				disconnect <- errors.ErrLostSyncthing
 				return
 			}
-			connected = false
+			retries++
 		case <-ctx.Done():
 			return
 		}
