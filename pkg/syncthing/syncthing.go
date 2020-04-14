@@ -323,6 +323,16 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 		log.Infof("error unmarshaling 'rest/db/ignores': %s", err)
 		return
 	}
+	for i, line := range ignores.Ignore {
+		line := strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "/") || strings.Contains(line, "(?d)") {
+			continue
+		}
+		ignores.Ignore[i] = fmt.Sprintf("(?d)%s", line)
+	}
 	body, err = json.Marshal(ignores)
 	if err != nil {
 		log.Infof("error marshaling 'rest/db/ignores': %s", err)
