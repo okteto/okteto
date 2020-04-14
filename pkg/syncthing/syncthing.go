@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -399,6 +400,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 	defer close(reporter)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	log.Infof("waiting for synchronization to complete...")
+	retries := 0
 	for {
 		select {
 		case <-ticker.C:
@@ -437,8 +439,16 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 
 			}
 			if status.PullErrors > 0 {
-				return s.GetFolderErrors(ctx, dev, false)
+				if err := s.GetFolderErrors(ctx, dev, false); err != nil {
+					return err
+				}
+				retries++
+				if retries >= 60 {
+					return errors.ErrUnknownSyncError
+				}
+				continue
 			}
+			retries = 0
 		case <-ctx.Done():
 			log.Debug("cancelling call to 'rest/db/completion'")
 			return ctx.Err()
@@ -512,15 +522,24 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, dev *model.Dev, local b
 	if err != nil {
 		return err
 	}
+
 	if len(folderErrorsList) == 0 {
-		return errors.ErrUnknownSyncError
+		log.Infof("ignoring syncthing unknown error local=%t: empty folderErrorsList", local)
+		return nil
 	}
 	folderErrors := folderErrorsList[len(folderErrorsList)-1]
 	if len(folderErrors.Data.Errors) == 0 {
-		return errors.ErrUnknownSyncError
+		log.Infof("ignoring syncthing unknown error local=%t: empty folderErrors.Data.Errors", local)
+		return nil
 	}
 
-	return fmt.Errorf("%s: %s", folderErrors.Data.Errors[0].Path, folderErrors.Data.Errors[0].Error)
+	errMsg := folderErrors.Data.Errors[0].Error
+	if strings.Contains(errMsg, "too many open files") {
+		log.Infof("ignoring syncthing 'too many open files' error local=%t: %s", local, errMsg)
+		return nil
+	}
+
+	return fmt.Errorf("%s: %s", folderErrors.Data.Errors[0].Path, errMsg)
 }
 
 // Restart restarts the syncthing process
