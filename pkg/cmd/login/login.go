@@ -17,12 +17,32 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
+
+// WithEnvVar authenticates the user with OKTETO_TOKEN value
+func WithEnvVar(ctx context.Context) error {
+	if _, err := okteto.GetToken(); err == nil {
+		return nil
+	}
+	oktetoToken := os.Getenv("OKTETO_TOKEN")
+	if oktetoToken == "" {
+		return nil
+	}
+	oktetoURL := os.Getenv("OKTETO_URL")
+	if oktetoURL == "" {
+		oktetoURL = okteto.CloudURL
+	}
+	if _, err := WithToken(ctx, oktetoURL, oktetoToken); err != nil {
+		return err
+	}
+	return nil
+}
 
 // WithToken authenticates the user with an API token
 func WithToken(ctx context.Context, url, token string) (*okteto.User, error) {

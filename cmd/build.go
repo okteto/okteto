@@ -14,16 +14,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 
 //Build build and optionally push a Docker image
-func Build() *cobra.Command {
+func Build(ctx context.Context) *cobra.Command {
 	var file string
 	var tag string
 	var target string
@@ -36,6 +38,10 @@ func Build() *cobra.Command {
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting build command")
+
+			if err := login.WithEnvVar(ctx); err != nil {
+				return err
+			}
 
 			buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 			if err != nil {
