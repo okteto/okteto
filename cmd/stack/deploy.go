@@ -19,6 +19,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
@@ -43,6 +44,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err := s.UpdateNamespace(namespace); err != nil {
 				return err
 			}
+
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+				return err
+			}
+
 			err = stack.Deploy(ctx, s, forceBuild, wait)
 			analytics.TrackDeployStack(err == nil)
 			if err == nil {

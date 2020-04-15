@@ -14,12 +14,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
+	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -34,7 +36,7 @@ import (
 )
 
 //Push builds, pushes and redeploys the target deployment
-func Push() *cobra.Command {
+func Push(ctx context.Context) *cobra.Command {
 	var devPath string
 	var namespace string
 	var imageTag string
@@ -71,6 +73,11 @@ func Push() *cobra.Command {
 			if dev.Namespace == "" {
 				dev.Namespace = configNamespace
 			}
+
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+				return err
+			}
+
 			oktetoRegistryURL := ""
 			n, err := namespaces.Get(dev.Namespace, c)
 			if err == nil {
