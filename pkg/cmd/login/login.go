@@ -25,21 +25,23 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-// WithEnvVar authenticates the user with OKTETO_TOKEN value
-func WithEnvVar(ctx context.Context) error {
-	if _, err := okteto.GetToken(); err == nil {
-		return nil
-	}
+// WithEnvVarIfAvailable authenticates the user with OKTETO_TOKEN value
+func WithEnvVarIfAvailable(ctx context.Context) error {
 	oktetoToken := os.Getenv("OKTETO_TOKEN")
 	if oktetoToken == "" {
 		return nil
+	}
+	if u, err := okteto.GetToken(); err == nil {
+		if u.Token == oktetoToken {
+			return nil
+		}
 	}
 	oktetoURL := os.Getenv("OKTETO_URL")
 	if oktetoURL == "" {
 		oktetoURL = okteto.CloudURL
 	}
 	if _, err := WithToken(ctx, oktetoURL, oktetoToken); err != nil {
-		return err
+		return fmt.Errorf("error executing auto-login with 'OKTETO_TOKEN': %s", err)
 	}
 	return nil
 }

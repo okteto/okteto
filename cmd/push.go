@@ -74,7 +74,7 @@ func Push(ctx context.Context) *cobra.Command {
 				dev.Namespace = configNamespace
 			}
 
-			if err := login.WithEnvVar(ctx); err != nil {
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
 			}
 

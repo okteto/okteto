@@ -39,7 +39,7 @@ func Build(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting build command")
 
-			if err := login.WithEnvVar(ctx); err != nil {
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
 			}
 
