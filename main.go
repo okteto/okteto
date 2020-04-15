@@ -87,12 +87,12 @@ func main() {
 
 	err := root.Execute()
 
-	if agent != nil {
-		agent.Stop()
-	}
-
 	if span != nil {
 		span.Finish()
+	}
+
+	if agent != nil {
+		agent.Stop()
 	}
 
 	if err != nil {
