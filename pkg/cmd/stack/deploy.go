@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/helm"
@@ -84,7 +85,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait bool) error {
 
 	actionConfig := new(action.Configuration)
 	if err := actionConfig.Init(settings.RESTClientGetter(), s.Namespace, helmDriver, func(format string, v ...interface{}) {
-		message := fmt.Sprintf(format, v...)
+		message := strings.TrimSuffix(fmt.Sprintf(format, v...), "\n")
 		spinner.Update(fmt.Sprintf("%s...", message))
 	}); err != nil {
 		return fmt.Errorf("error initializing stack client: %s", err)
