@@ -115,6 +115,14 @@ func (s *Stack) validate() error {
 		if svc.Image == "" {
 			return fmt.Errorf(fmt.Sprintf("Invalid service '%s': image cannot be empty", name))
 		}
+		for _, v := range svc.Volumes {
+			if !strings.HasPrefix(v, "/") {
+				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
+			}
+			if !strings.Contains(v, ":") {
+				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': volume bind mounts are not supported", v, name))
+			}
+		}
 	}
 
 	return nil

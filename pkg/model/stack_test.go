@@ -146,7 +146,7 @@ func TestStack_validate(t *testing.T) {
 			stack: &Stack{
 				Name: "name",
 				Services: map[string]Service{
-					"": Service{},
+					"": {},
 				},
 			},
 		},
@@ -155,7 +155,7 @@ func TestStack_validate(t *testing.T) {
 			stack: &Stack{
 				Name: "name",
 				Services: map[string]Service{
-					"-bad-name": Service{},
+					"-bad-name": {},
 				},
 			},
 		},
@@ -164,7 +164,29 @@ func TestStack_validate(t *testing.T) {
 			stack: &Stack{
 				Name: "name",
 				Services: map[string]Service{
-					"name": Service{},
+					"name": {},
+				},
+			},
+		},
+		{
+			name: "relative-volume-path",
+			stack: &Stack{
+				Name: "name",
+				Services: map[string]Service{
+					"name": {
+						Volumes: []string{"relative"},
+					},
+				},
+			},
+		},
+		{
+			name: "volume-bind-mount",
+			stack: &Stack{
+				Name: "name",
+				Services: map[string]Service{
+					"name": {
+						Volumes: []string{"/source:/dest"},
+					},
 				},
 			},
 		},
