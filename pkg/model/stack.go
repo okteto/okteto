@@ -119,7 +119,7 @@ func (s *Stack) validate() error {
 			if !strings.HasPrefix(v, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
 			}
-			if !strings.Contains(v, ":") {
+			if strings.Contains(v, ":") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': volume bind mounts are not supported", v, name))
 			}
 		}
