@@ -80,3 +80,31 @@ func TestFileExists(t *testing.T) {
 		t.Errorf("fail to detect existing file")
 	}
 }
+
+func Test_GetValidNameFromFolder(t *testing.T) {
+	var tests = []struct {
+		name     string
+		folder   string
+		expected string
+	}{
+		{name: "all lower case", folder: "lowercase", expected: "lowercase"},
+		{name: "with some lower case", folder: "lowerCase", expected: "lowercase"},
+		{name: "upper case", folder: "UpperCase", expected: "uppercase"},
+		{name: "valid symbols", folder: "getting-started.test", expected: "getting-started-test"},
+		{name: "invalid symbols", folder: "getting_$#started", expected: "getting-started"},
+		{name: "current folder", folder: ".", expected: "model"},
+		{name: "parent folder", folder: "..", expected: "pkg"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := GetValidNameFromFolder(tt.folder)
+			if err != nil {
+				t.Errorf("got an error in '%s': %s", tt.name, err)
+			}
+			if actual != tt.expected {
+				t.Errorf("'%s' got '%s' expected '%s'", tt.name, actual, tt.expected)
+			}
+		})
+	}
+}

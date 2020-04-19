@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	yaml "gopkg.in/yaml.v2"
@@ -61,6 +62,12 @@ func GetStack(name, stackPath string) (*Stack, error) {
 
 	if name != "" {
 		s.Name = name
+	}
+	if s.Name == "" {
+		s.Name, err = GetValidNameFromFolder(filepath.Dir(stackPath))
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err := s.validate(); err != nil {
 		return nil, err

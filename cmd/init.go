@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -105,8 +104,11 @@ func executeInit(devPath string, overwrite bool, language string, workDir string
 		dev = linguist.GetDevConfig(language)
 		dev.Image = askForImage(language, dev.Image)
 	}
-
-	dev.Name = getDeploymentName(workDir)
+	var err error
+	dev.Name, err = model.GetValidNameFromFolder(workDir)
+	if err != nil {
+		return err
+	}
 
 	if err := dev.Save(devPath); err != nil {
 		return err
@@ -173,12 +175,4 @@ func askForLanguage() (string, error) {
 	}
 
 	return supportedLanguages[i], nil
-}
-
-func getDeploymentName(workDir string) string {
-	deploymentName := filepath.Base(workDir)
-	deploymentName = strings.ToLower(deploymentName)
-	deploymentName = model.ValidKubeNameRegex.ReplaceAllString(deploymentName, "-")
-	log.Infof("deployment name: %s", deploymentName)
-	return deploymentName
 }
