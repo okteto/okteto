@@ -16,6 +16,7 @@ package stack
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -30,6 +31,10 @@ func Destroy(ctx context.Context, s *model.Stack) error {
 	spinner := utils.NewSpinner(fmt.Sprintf("Destroying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
+
+	if s.Namespace != "" {
+		os.Setenv("HELM_NAMESPACE", s.Namespace)
+	}
 
 	settings := cli.New()
 	actionConfig := new(action.Configuration)

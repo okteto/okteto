@@ -35,6 +35,9 @@ import (
 
 //Deploy deploys a stack
 func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait bool) error {
+	if s.Namespace != "" {
+		os.Setenv("HELM_NAMESPACE", s.Namespace)
+	}
 	settings := cli.New()
 	if s.Namespace == "" {
 		s.Namespace = settings.Namespace()
