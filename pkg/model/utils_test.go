@@ -92,6 +92,8 @@ func Test_GetValidNameFromFolder(t *testing.T) {
 		{name: "upper case", folder: "UpperCase", expected: "uppercase"},
 		{name: "valid symbols", folder: "getting-started.test", expected: "getting-started-test"},
 		{name: "invalid symbols", folder: "getting_$#started", expected: "getting-started"},
+		{name: "current folder", folder: ".", expected: "model"},
+		{name: "parent folder", folder: "..", expected: "pkg"},
 	}
 
 	for _, tt := range tests {
