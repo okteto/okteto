@@ -167,7 +167,7 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 	log.Infof("pushing with image tag %s", imageTag)
 
 	var imageDigest string
-	buildArgs := model.SerializeBuildArgs(dev.Push.BuildArgs)
+	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
 	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, imageTag, dev.Push.Target, noCache, buildArgs, progress)
 	if err != nil {
 		return fmt.Errorf("error building image '%s': %s", imageTag, err)

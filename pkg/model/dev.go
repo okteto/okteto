@@ -117,7 +117,7 @@ type BuildInfo struct {
 	Context    string   `yaml:"context,omitempty"`
 	Dockerfile string   `yaml:"dockerfile,omitempty"`
 	Target     string   `yaml:"target,omitempty"`
-	BuildArgs  []EnvVar `yaml:"buildArgs,omitempty"`
+	Args       []EnvVar `yaml:"args,omitempty"`
 }
 
 // Volume represents a volume in the dev environment
