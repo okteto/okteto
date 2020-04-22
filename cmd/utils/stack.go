@@ -19,22 +19,26 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-const (
+var (
 	//DefaultStackManifest default okteto stack manifest file
-	DefaultStackManifest   = "okteto-stack.yml"
-	secondaryStackManifest = "okteto-stack.yaml"
+	DefaultStackManifest    = "stack.yml"
+	secondaryStackManifests = []string{"stack.yaml", "okteto-stack.yml", "okteto-stack.yaml"}
 )
 
 //LoadStack loads an okteto stack manifet checking "yml" and "yaml"
 func LoadStack(name, stackPath string) (*model.Stack, error) {
-	if !model.FileExists(stackPath) {
-		if stackPath == DefaultStackManifest {
-			if model.FileExists(secondaryStackManifest) {
-				return LoadStack(name, secondaryStackManifest)
-			}
-		}
-		return nil, fmt.Errorf("'%s' does not exist", stackPath)
+	if model.FileExists(stackPath) {
+		return model.GetStack(name, stackPath)
 	}
 
-	return model.GetStack(name, stackPath)
+	if stackPath == DefaultStackManifest {
+		for _, secondaryStackManifest := range secondaryStackManifests {
+			if model.FileExists(secondaryStackManifest) {
+				return model.GetStack(name, secondaryStackManifest)
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("'%s' does not exist", stackPath)
+
 }
