@@ -96,7 +96,7 @@ services:
 					Affinity: &apiv1.Affinity{
 						PodAffinity: &apiv1.PodAffinity{
 							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-								apiv1.PodAffinityTerm{
+								{
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											okLabels.InteractiveDevLabel: "web",
@@ -284,7 +284,7 @@ services:
 					Affinity: &apiv1.Affinity{
 						PodAffinity: &apiv1.PodAffinity{
 							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-								apiv1.PodAffinityTerm{
+								{
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											okLabels.InteractiveDevLabel: "web",
@@ -377,7 +377,7 @@ image: web:latest`)
 					Affinity: &apiv1.Affinity{
 						PodAffinity: &apiv1.PodAffinity{
 							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-								apiv1.PodAffinityTerm{
+								{
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											okLabels.InteractiveDevLabel: "web",

@@ -317,7 +317,6 @@ func (dev *Dev) setDefaults() error {
 		s.Forward = make([]Forward, 0)
 		s.Reverse = make([]Reverse, 0)
 		s.Secrets = make([]Secret, 0)
-		s.Volumes = make([]Volume, 0)
 		s.Services = make([]*Dev, 0)
 	}
 	return nil
@@ -357,6 +356,10 @@ func (dev *Dev) validate() error {
 		}
 	}
 
+	if err := validateVolumes(dev.Volumes); err != nil {
+		return err
+	}
+
 	if _, err := resource.ParseQuantity(dev.PersistentVolumeSize()); err != nil {
 		return fmt.Errorf("'persistentVolume.size' is not valid. A sample value would be '10Gi'")
 	}
@@ -392,6 +395,18 @@ func validateSecrets(secrets []Secret) error {
 			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
 		}
 		seen[s.GetFileName()] = true
+	}
+	return nil
+}
+
+func validateVolumes(vList []Volume) error {
+	for _, v := range vList {
+		if !strings.HasPrefix(v.MountPath, "/") {
+			return fmt.Errorf("volume relative paths are not supported")
+		}
+		if v.MountPath == "/" {
+			return fmt.Errorf("mount path '/'is not supported")
+		}
 	}
 	return nil
 }
@@ -484,14 +499,17 @@ func (dev *Dev) LabelsSelector() string {
 	return labels
 }
 
-func fullSubPath(i int, subPath string) string {
+func fullDevSubPath(subPath string) string {
 	if subPath == "" {
-		if i == 0 {
-			return SourceCodeSubPath
-		}
-		return fmt.Sprintf("volume-%d", i)
+		return SourceCodeSubPath
 	}
 	return path.Join(SourceCodeSubPath, subPath)
+}
+
+func fullGlobalSubPath(mountPath string) string {
+	mountPath = strings.TrimSuffix(mountPath, "/")
+	mountPath = ValidKubeNameRegex.ReplaceAllString(mountPath, "-")
+	return fmt.Sprintf("volume%s", mountPath)
 }
 
 // ToTranslationRule translates a dev struct into a translation rule
@@ -515,7 +533,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 			VolumeMount{
 				Name:      main.GetVolumeName(),
 				MountPath: dev.MountPath,
-				SubPath:   fullSubPath(0, dev.SubPath),
+				SubPath:   fullDevSubPath(dev.SubPath),
 			},
 		)
 	}
@@ -566,13 +584,19 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		}
 	}
 
-	for i, v := range dev.Volumes {
+	for _, v := range dev.Volumes {
+		var devSubPath string
+		if v.SubPath == "" {
+			devSubPath = fullGlobalSubPath(v.MountPath)
+		} else {
+			devSubPath = fullDevSubPath(v.SubPath)
+		}
 		rule.Volumes = append(
 			rule.Volumes,
 			VolumeMount{
 				Name:      main.GetVolumeName(),
 				MountPath: v.MountPath,
-				SubPath:   fullSubPath(i+1, v.SubPath),
+				SubPath:   devSubPath,
 			},
 		)
 	}

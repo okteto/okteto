@@ -554,6 +554,26 @@ func Test_validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "pvc-mount-path-/",
+			manifest: []byte(`
+      name: deployment
+      volumes:
+        - /
+      persistentVolume:
+        enabled: true`),
+			expectErr: true,
+		},
+		{
+			name: "pvc-relative-mount-path",
+			manifest: []byte(`
+      name: deployment
+      volumes:
+        - path
+      persistentVolume:
+        enabled: true`),
+			expectErr: true,
+		},
+		{
 			name: "wrong-pvc-size",
 			manifest: []byte(`
       name: deployment
@@ -707,36 +727,60 @@ func TestPersistentVolumeEnabled(t *testing.T) {
 	}
 }
 
-func Test_fullSubPath(t *testing.T) {
+func Test_fullDevSubPath(t *testing.T) {
 	var tests = []struct {
 		name    string
-		i       int
 		subPath string
 		want    string
 	}{
 		{
 			name:    "source-code-without-subpath",
-			i:       0,
 			subPath: "",
 			want:    SourceCodeSubPath,
 		},
 		{
 			name:    "source-code-with-subpath",
-			i:       0,
 			subPath: "data",
 			want:    path.Join(SourceCodeSubPath, "data"),
-		},
-		{
-			name:    "data-without-subpath",
-			i:       2,
-			subPath: "",
-			want:    "volume-2",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := fullSubPath(tt.i, tt.subPath)
+			result := fullDevSubPath(tt.subPath)
+			if result != tt.want {
+				t.Errorf("error in test '%s', expected '%s' vs '%s'", tt.name, tt.want, result)
+			}
+		})
+	}
+}
+
+func Test_fullGlobalSubPath(t *testing.T) {
+	var tests = []struct {
+		name      string
+		mountPath string
+		want      string
+	}{
+		{
+			name:      "single-path",
+			mountPath: "/app",
+			want:      "volume-app",
+		},
+		{
+			name:      "double-path",
+			mountPath: "/app/app",
+			want:      "volume-app-app",
+		},
+		{
+			name:      "trailing-slash",
+			mountPath: "/app/app/",
+			want:      "volume-app-app",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fullGlobalSubPath(tt.mountPath)
 			if result != tt.want {
 				t.Errorf("error in test '%s', expected '%s' vs '%s'", tt.name, tt.want, result)
 			}
