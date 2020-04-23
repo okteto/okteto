@@ -48,6 +48,28 @@ func (e EnvVar) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		buildInfo.Context = rawString
+		return nil
+	}
+
+	var rawBuildInfo BuildInfoRaw
+	err = unmarshal(&rawBuildInfo)
+	if err != nil {
+		return err
+	}
+
+	buildInfo.Context = rawBuildInfo.Context
+	buildInfo.Dockerfile = rawBuildInfo.Dockerfile
+	buildInfo.Target = rawBuildInfo.Target
+	buildInfo.Args = rawBuildInfo.Args
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)

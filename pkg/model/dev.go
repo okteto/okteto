@@ -91,6 +91,7 @@ type Dev struct {
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	Image                string                `json:"image,omitempty" yaml:"image,omitempty"`
+	Push                 *BuildInfo            `json:"-,omitempty" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
@@ -109,6 +110,19 @@ type Dev struct {
 	DevDir               string                `json:"-" yaml:"-"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
+}
+
+// BuildInfo represents the build info to generate an image
+type BuildInfo struct {
+	BuildInfoRaw
+}
+
+// BuildInfoRaw represents the build info for serialization
+type BuildInfoRaw struct {
+	Context    string   `yaml:"context,omitempty"`
+	Dockerfile string   `yaml:"dockerfile,omitempty"`
+	Target     string   `yaml:"target,omitempty"`
+	Args       []EnvVar `yaml:"args,omitempty"`
 }
 
 // Volume represents a volume in the dev environment
@@ -194,6 +208,7 @@ func Get(devPath string) (*Dev, error) {
 //Read reads an okteto manifests
 func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
+		Push:        &BuildInfo{},
 		Environment: make([]EnvVar, 0),
 		Secrets:     make([]Secret, 0),
 		Command:     make([]string, 0),
@@ -252,6 +267,12 @@ func (dev *Dev) loadImage() {
 func (dev *Dev) setDefaults() error {
 	if len(dev.Command) == 0 {
 		dev.Command = []string{"sh"}
+	}
+	if dev.Push.Context == "" {
+		dev.Push.Context = "."
+	}
+	if dev.Push.Dockerfile == "" {
+		dev.Push.Dockerfile = filepath.Join(dev.Push.Context, "Dockerfile")
 	}
 	if dev.MountPath == "" && dev.WorkDir == "" {
 		dev.MountPath = "/okteto"
@@ -431,6 +452,18 @@ func (dev *Dev) Save(path string) error {
 	}
 
 	return nil
+}
+
+//SerializeBuildArgs returns build  aaargs as a llist of strings
+func SerializeBuildArgs(buildArgs []EnvVar) []string {
+	result := []string{}
+	for _, e := range buildArgs {
+		result = append(
+			result,
+			fmt.Sprintf("%s=%s", e.Name, e.Value),
+		)
+	}
+	return result
 }
 
 //GetVolumeName returns the okteto volume name for a given dev environment

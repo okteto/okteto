@@ -34,13 +34,13 @@ import (
 )
 
 //Deploy deploys a stack
-func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait bool) error {
+func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool) error {
 	settings := cli.New()
 	if s.Namespace == "" {
 		s.Namespace = settings.Namespace()
 	}
 
-	if err := translate(s, forceBuild); err != nil {
+	if err := translate(s, forceBuild, noCache); err != nil {
 		return err
 	}
 

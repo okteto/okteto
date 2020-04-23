@@ -32,6 +32,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 	var namespace string
 	var forceBuild bool
 	var wait bool
+	var noCache bool
+
 	cmd := &cobra.Command{
 		Use:   "deploy <name>",
 		Short: fmt.Sprintf("Deploys a stack"),
@@ -49,7 +51,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err = stack.Deploy(ctx, s, forceBuild, wait)
+			err = stack.Deploy(ctx, s, forceBuild, wait, noCache)
 			analytics.TrackDeployStack(err == nil)
 			if err == nil {
 				log.Success("Successfully deployed stack '%s'", s.Name)
@@ -62,5 +64,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
 	cmd.Flags().BoolVarP(&forceBuild, "build", "", false, "build images before starting any Stack service")
 	cmd.Flags().BoolVarP(&wait, "wait", "", false, "wait until a minimum number of containers are in a ready state for every service")
+	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
 	return cmd
 }

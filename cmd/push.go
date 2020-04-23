@@ -43,6 +43,7 @@ func Push(ctx context.Context) *cobra.Command {
 	var autoDeploy bool
 	var progress string
 	var deploymentName string
+	var noCache bool
 
 	cmd := &cobra.Command{
 		Use:   "push",
@@ -85,7 +86,7 @@ func Push(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if err := runPush(dev, autoDeploy, imageTag, oktetoRegistryURL, progress, c); err != nil {
+			if err := runPush(dev, autoDeploy, imageTag, oktetoRegistryURL, progress, noCache, c); err != nil {
 				analytics.TrackPush(false, oktetoRegistryURL)
 				return err
 			}
@@ -105,10 +106,11 @@ func Push(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
 	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringVar(&deploymentName, "name", "", "name of the deployment to push to")
+	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
 	return cmd
 }
 
-func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, c *kubernetes.Clientset) error {
+func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
 	create := false
 	d, err := deployments.Get(dev, dev.Namespace, c)
 	if err != nil {
@@ -165,7 +167,8 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 	log.Infof("pushing with image tag %s", imageTag)
 
 	var imageDigest string
-	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, ".", "Dockerfile", imageTag, "", false, nil, progress)
+	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
+	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, imageTag, dev.Push.Target, noCache, buildArgs, progress)
 	if err != nil {
 		return fmt.Errorf("error building image '%s': %s", imageTag, err)
 	}
