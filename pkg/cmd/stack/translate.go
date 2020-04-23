@@ -33,7 +33,7 @@ const (
 	helmDriver            = "secrets"
 )
 
-func translate(s *model.Stack, forceBuild bool) error {
+func translate(s *model.Stack, forceBuild, noCache bool) error {
 	for i, svc := range s.Services {
 		svc.Image = os.ExpandEnv(svc.Image)
 		s.Services[i] = svc
@@ -69,14 +69,15 @@ func translate(s *model.Stack, forceBuild bool) error {
 
 	oneBuild := false
 	for name, svc := range s.Services {
-		if svc.Build == "" {
+		if svc.Build == nil {
 			continue
 		}
 		oneBuild = true
 		imageTag := build.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
 		log.Information("Building image for service '%s'...", name)
 		var imageDigest string
-		imageDigest, err = build.Run(buildKitHost, isOktetoCluster, svc.Build, "", imageTag, "", false, []string{}, "tty")
+		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
+		imageDigest, err = build.Run(buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, buildArgs, "tty")
 		if err != nil {
 			return fmt.Errorf("error building image for '%s': %s", name, err)
 		}

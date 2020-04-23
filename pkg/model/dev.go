@@ -114,6 +114,11 @@ type Dev struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
+	BuildInfoRaw
+}
+
+// BuildInfoRaw represents the build info for serialization
+type BuildInfoRaw struct {
 	Context    string   `yaml:"context,omitempty"`
 	Dockerfile string   `yaml:"dockerfile,omitempty"`
 	Target     string   `yaml:"target,omitempty"`

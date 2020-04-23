@@ -64,7 +64,7 @@ services:
 	if s.Services["vote"].Image != "okteto/vote:1" {
 		t.Errorf("'vote.image' was not parsed: %+v", s)
 	}
-	if s.Services["vote"].Build != "vote" {
+	if s.Services["vote"].Build.Context != "vote" {
 		t.Errorf("'vote.build' was not parsed: %+v", s)
 	}
 	if s.Services["vote"].Command != "python app.py" {

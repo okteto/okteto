@@ -38,7 +38,7 @@ type Stack struct {
 type Service struct {
 	Public          bool         `yaml:"public,omitempty"`
 	Image           string       `yaml:"image"`
-	Build           string       `yaml:"build,omitempty"`
+	Build           *BuildInfo   `yaml:"build,omitempty"`
 	Replicas        int          `yaml:"replicas"`
 	Command         string       `yaml:"command,omitempty"`
 	Environment     []EnvVar     `yaml:"environment,omitempty"`
