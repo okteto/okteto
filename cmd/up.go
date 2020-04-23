@@ -725,7 +725,7 @@ func (up *UpContext) cleanCommand() {
 		in,
 		&out,
 		os.Stderr,
-		[]string{"sh", "-c", "(((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1); cat /proc/sys/fs/inotify/max_user_watches"},
+		[]string{"sh", "-c", "(((cp /var/okteto/bin/* /usr/local/bin); (/var/okteto/bin/clean)) >/dev/null 2>&1); cat /proc/sys/fs/inotify/max_user_watches"},
 	)
 
 	if err != nil {
