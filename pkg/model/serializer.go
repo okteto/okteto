@@ -202,6 +202,37 @@ func (v Volume) MarshalYAML() (interface{}, error) {
 	return v.SubPath + ":" + v.MountPath, nil
 }
 
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (v *ExternalVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw string
+	err := unmarshal(&raw)
+	if err != nil {
+		return err
+	}
+
+	parts := strings.SplitN(raw, ":", 3)
+	switch len(parts) {
+	case 2:
+		v.Name = parts[0]
+		v.MountPath = parts[1]
+	case 3:
+		v.Name = parts[0]
+		v.SubPath = parts[1]
+		v.MountPath = parts[2]
+	default:
+		return fmt.Errorf("external volume must follow the syntax 'name:subpath:mountpath', where subpath is optional")
+	}
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (v ExternalVolume) MarshalYAML() (interface{}, error) {
+	if v.SubPath == "" {
+		return v.Name + ":" + v.MountPath, nil
+	}
+	return v.Name + ":" + v.SubPath + ":" + v.MountPath, nil
+}
+
 func checkFileAndNotDirectory(path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil {

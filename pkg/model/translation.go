@@ -54,3 +54,8 @@ type VolumeMount struct {
 	MountPath string `json:"mountpath,omitempty"`
 	SubPath   string `json:"subpath,omitempty"`
 }
+
+//IsSyncthing returns the volume mount is for syncthing
+func (v *VolumeMount) IsSyncthing() bool {
+	return v.SubPath == SyncthingSubPath && v.MountPath == OktetoSyncthingMountPath
+}

@@ -87,7 +87,7 @@ services:
 			},
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: oktetoSyncthingMountPath,
+				MountPath: OktetoSyncthingMountPath,
 				SubPath:   SyncthingSubPath,
 			},
 			{

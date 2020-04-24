@@ -554,7 +554,7 @@ func Test_validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "pvc-mount-path-/",
+			name: "volumes-mount-path-/",
 			manifest: []byte(`
       name: deployment
       volumes:
@@ -564,13 +564,29 @@ func Test_validate(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name: "pvc-relative-mount-path",
+			name: "volumes-relative-mount-path",
 			manifest: []byte(`
       name: deployment
       volumes:
         - path
       persistentVolume:
         enabled: true`),
+			expectErr: true,
+		},
+		{
+			name: "external-volumes-mount-path-/",
+			manifest: []byte(`
+      name: deployment
+      externalVolumes:
+        - name:/`),
+			expectErr: true,
+		},
+		{
+			name: "external-volumes-relative-mount-path",
+			manifest: []byte(`
+      name: deployment
+      externalVolumes:
+        - name:path`),
 			expectErr: true,
 		},
 		{
@@ -610,6 +626,15 @@ func Test_validate(t *testing.T) {
         enabled: true
       volumes:
         - docs:/docs`),
+			expectErr: false,
+		},
+		{
+			name: "external-volumes",
+			manifest: []byte(`
+      name: deployment
+      externalVolumes:
+        - pvc1:path:/path
+        - pvc2:/path`),
 			expectErr: false,
 		},
 		{

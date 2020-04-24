@@ -344,13 +344,13 @@ func TranslateOktetoVolumes(spec *apiv1.PodSpec, rule *model.TranslationRule) {
 			VolumeSource: apiv1.VolumeSource{},
 		}
 
-		if rule.PersistentVolume {
+		if !rule.PersistentVolume && rV.IsSyncthing() {
+			v.VolumeSource.EmptyDir = &apiv1.EmptyDirVolumeSource{}
+		} else {
 			v.VolumeSource.PersistentVolumeClaim = &apiv1.PersistentVolumeClaimVolumeSource{
 				ClaimName: rV.Name,
 				ReadOnly:  false,
 			}
-		} else {
-			v.VolumeSource.EmptyDir = &apiv1.EmptyDirVolumeSource{}
 		}
 
 		spec.Volumes = append(spec.Volumes, v)
