@@ -35,7 +35,6 @@ import (
 )
 
 const (
-	oktetoSyncthingMountPath    = "/var/syncthing"
 	oktetoMarkerPathVariable    = "OKTETO_MARKER_PATH"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
@@ -48,6 +47,8 @@ const (
 	OktetoVolumeNameTemplate = "okteto-%s"
 	//SourceCodeSubPath subpath in the dev environment persistent volume for the source code
 	SourceCodeSubPath = "src"
+	//OktetoSyncthingMountPath syncthing volume mount path
+	OktetoSyncthingMountPath = "/var/syncthing"
 	//SyncthingSubPath subpath in the dev environment persistent volume for the syncthing data
 	SyncthingSubPath = "syncthing"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
@@ -101,6 +102,7 @@ type Dev struct {
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
 	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
@@ -127,6 +129,13 @@ type BuildInfoRaw struct {
 
 // Volume represents a volume in the dev environment
 type Volume struct {
+	SubPath   string
+	MountPath string
+}
+
+// ExternalVolume represents a external volume in the dev environment
+type ExternalVolume struct {
+	Name      string
 	SubPath   string
 	MountPath string
 }
@@ -360,6 +369,10 @@ func (dev *Dev) validate() error {
 		return err
 	}
 
+	if err := validateExternalVolumes(dev.ExternalVolumes); err != nil {
+		return err
+	}
+
 	if _, err := resource.ParseQuantity(dev.PersistentVolumeSize()); err != nil {
 		return fmt.Errorf("'persistentVolume.size' is not valid. A sample value would be '10Gi'")
 	}
@@ -405,7 +418,19 @@ func validateVolumes(vList []Volume) error {
 			return fmt.Errorf("volume relative paths are not supported")
 		}
 		if v.MountPath == "/" {
-			return fmt.Errorf("mount path '/'is not supported")
+			return fmt.Errorf("mount path '/' is not supported")
+		}
+	}
+	return nil
+}
+
+func validateExternalVolumes(vList []ExternalVolume) error {
+	for _, v := range vList {
+		if !strings.HasPrefix(v.MountPath, "/") {
+			return fmt.Errorf("external volume '%s' mount path must be absolute", v.Name)
+		}
+		if v.MountPath == "/" {
+			return fmt.Errorf("external volume '%s' mount path '/' is not supported", v.Name)
 		}
 	}
 	return nil
@@ -562,7 +587,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 			rule.Volumes,
 			VolumeMount{
 				Name:      main.GetVolumeName(),
-				MountPath: oktetoSyncthingMountPath,
+				MountPath: OktetoSyncthingMountPath,
 				SubPath:   SyncthingSubPath,
 			},
 		)
@@ -600,6 +625,18 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 			},
 		)
 	}
+
+	for _, v := range dev.ExternalVolumes {
+		rule.Volumes = append(
+			rule.Volumes,
+			VolumeMount{
+				Name:      v.Name,
+				MountPath: v.MountPath,
+				SubPath:   v.SubPath,
+			},
+		)
+	}
+
 	return rule
 }
 

@@ -754,13 +754,40 @@ func TestTranslateOktetoVolumes(t *testing.T) {
 			rule: &model.TranslationRule{
 				PersistentVolume: false,
 				Volumes: []model.VolumeMount{
-					{Name: "okteto"},
+					{
+						Name:      "okteto",
+						SubPath:   model.SyncthingSubPath,
+						MountPath: model.OktetoSyncthingMountPath,
+					},
 				},
 			},
 			expected: []apiv1.Volume{
 				{
 					Name:         "okteto",
 					VolumeSource: apiv1.VolumeSource{EmptyDir: &apiv1.EmptyDirVolumeSource{}},
+				},
+			},
+		},
+		{
+			name: "external-volume",
+			spec: &apiv1.PodSpec{},
+			rule: &model.TranslationRule{
+				PersistentVolume: false,
+				Volumes: []model.VolumeMount{
+					{
+						Name: "okteto",
+					},
+				},
+			},
+			expected: []apiv1.Volume{
+				{
+					Name: "okteto",
+					VolumeSource: apiv1.VolumeSource{
+						PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+							ClaimName: "okteto",
+							ReadOnly:  false,
+						},
+					},
 				},
 			},
 		},
