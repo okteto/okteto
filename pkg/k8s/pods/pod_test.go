@@ -129,3 +129,51 @@ func TestGetBySelector(t *testing.T) {
 		})
 	}
 }
+
+func Test_parseUserID(t *testing.T) {
+	var tests = []struct {
+		name   string
+		output string
+		result int64
+	}{
+		{
+			name:   "single-line-ok",
+			output: "USER:300",
+			result: 300,
+		},
+		{
+			name:   "double-line-ok",
+			output: "USER:300\nline2",
+			result: 300,
+		},
+		{
+			name:   "no-lines-ko",
+			output: "",
+			result: -1,
+		},
+		{
+			name:   "no-user-ko",
+			output: "other",
+			result: -1,
+		},
+		{
+			name:   "no-parts-ko",
+			output: "USER:100:100",
+			result: -1,
+		},
+		{
+			name:   "no-integer-ko",
+			output: "USER:no",
+			result: -1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseUserID(tt.output)
+			if result != tt.result {
+				t.Fatalf("error in test '%s': expected %d but got %d", tt.name, tt.result, result)
+			}
+		})
+	}
+}
