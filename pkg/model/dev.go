@@ -80,6 +80,7 @@ var (
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
 	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
 
+	rootUser                         int64 = 0
 	devReplicas                      int32 = 1
 	devTerminationGracePeriodSeconds int64
 )
@@ -302,6 +303,7 @@ func (dev *Dev) setDefaults() error {
 	if dev.SSHServerPort == 0 {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
 	}
+	dev.setRunAsUserDefaults(dev)
 	for _, s := range dev.Services {
 		if s.MountPath == "" && s.WorkDir == "" {
 			s.MountPath = "/okteto"
@@ -323,12 +325,31 @@ func (dev *Dev) setDefaults() error {
 			return fmt.Errorf("'name' and 'labels' cannot be defined at the same time for service '%s'", s.Name)
 		}
 		s.Namespace = ""
+		s.setRunAsUserDefaults(dev)
 		s.Forward = make([]Forward, 0)
 		s.Reverse = make([]Reverse, 0)
 		s.Secrets = make([]Secret, 0)
 		s.Services = make([]*Dev, 0)
 	}
 	return nil
+}
+
+func (dev *Dev) setRunAsUserDefaults(main *Dev) {
+	if !main.PersistentVolumeEnabled() {
+		return
+	}
+	if dev.SecurityContext == nil {
+		dev.SecurityContext = &SecurityContext{}
+	}
+	if dev.SecurityContext.RunAsUser == nil {
+		dev.SecurityContext.RunAsUser = &rootUser
+	}
+	if dev.SecurityContext.RunAsGroup == nil {
+		dev.SecurityContext.RunAsGroup = dev.SecurityContext.RunAsUser
+	}
+	if dev.SecurityContext.FSGroup == nil {
+		dev.SecurityContext.FSGroup = dev.SecurityContext.RunAsUser
+	}
 }
 
 func (dev *Dev) validate() error {

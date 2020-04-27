@@ -69,6 +69,11 @@ services:
 				Value: "/app/okteto.yml",
 			},
 		},
+		SecurityContext: &SecurityContext{
+			RunAsUser:  &rootUser,
+			RunAsGroup: &rootUser,
+			FSGroup:    &rootUser,
+		},
 		Resources: ResourceRequirements{
 			Limits: ResourceList{
 				"cpu":            resource.MustParse("2"),
@@ -114,6 +119,11 @@ services:
 		Args:            nil,
 		Healthchecks:    true,
 		Environment:     make([]EnvVar, 0),
+		SecurityContext: &SecurityContext{
+			RunAsUser:  &rootUser,
+			RunAsGroup: &rootUser,
+			FSGroup:    &rootUser,
+		},
 		Resources: ResourceRequirements{
 			Limits:   ResourceList{},
 			Requests: ResourceList{},
