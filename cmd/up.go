@@ -635,7 +635,7 @@ func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 			}
 		}
 		return errors.UserError{
-			E:    fmt.Errorf("Failed to connect to the synchronization service"),
+			E:    fmt.Errorf("Failed to connect to the synchronization service - test"),
 			Hint: fmt.Sprintf("Check your development environment logs for errors: 'kubectl logs %s'.\n    If you are using secrets, check that your container can write to the destination path of your secrets.\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
 		}
 	}
