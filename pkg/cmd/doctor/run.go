@@ -93,7 +93,7 @@ func generateSummaryFile() (string, error) {
 }
 
 func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
-	remoteLogs, err := pods.GetDevPodLogs(ctx, dev, true, c)
+	remoteLogs, err := getDevPodLogs(ctx, dev, c)
 	if err != nil {
 		return "", err
 	}
@@ -110,4 +110,18 @@ func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kub
 		return "", err
 	}
 	return remoteLogsPath, nil
+}
+
+func getDevPodLogs(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
+	p, err := pods.GetDevPod(ctx, dev, c, false)
+	if err != nil {
+		return "", err
+	}
+	if p == nil {
+		return "", errors.ErrNotFound
+	}
+	if len(dev.Container) == 0 {
+		dev.Container = p.Spec.Containers[0].Name
+	}
+	return pods.ContainerLogs(dev.Container, p, dev.Namespace, c)
 }

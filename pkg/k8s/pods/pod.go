@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 	"time"
 
@@ -213,58 +212,11 @@ func Exists(podName, namespace string, c kubernetes.Interface) bool {
 	return pod.GetObjectMeta().GetDeletionTimestamp() == nil
 }
 
-//GetDevPodUserID returns the user id running the dev pod
-func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) int64 {
-	devPodLogs, err := GetDevPodLogs(ctx, dev, false, c)
-	if err != nil {
-		log.Errorf("failed to access development environment logs: %s", err)
-		return -1
-	}
-	return parseUserID(devPodLogs)
-}
-
-func parseUserID(output string) int64 {
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		if !strings.HasPrefix(line, "USER:") {
-			log.Infof("USER entry not not found in first development environment log line: %s", line)
-			return -1
-		}
-		parts := strings.Split(line, ":")
-		if len(parts) != 2 {
-			log.Infof("failed to parse USER entry: %s", line)
-			return -1
-		}
-		result, err := strconv.ParseInt(parts[1], 10, 64)
-		if err != nil {
-			log.Infof("failed to parse USER entry: %s", line)
-			return -1
-		}
-		return result
-	}
-	log.Info("development environment logs not generated. USER cannot be inferred")
-	return -1
-}
-
-//GetDevPodLogs returns the logs of the dev pod
-func GetDevPodLogs(ctx context.Context, dev *model.Dev, timestamps bool, c *kubernetes.Clientset) (string, error) {
-	p, err := GetDevPod(ctx, dev, c, false)
-	if err != nil {
-		return "", err
-	}
-	if p == nil {
-		return "", errors.ErrNotFound
-	}
-	if len(dev.Container) == 0 {
-		dev.Container = p.Spec.Containers[0].Name
-	}
-	return containerLogs(dev.Container, p, dev.Namespace, timestamps, c)
-}
-
-func containerLogs(container string, pod *apiv1.Pod, namespace string, timestamps bool, c kubernetes.Interface) (string, error) {
+//ContainerLogs returns the logs of a given container in a given pod
+func ContainerLogs(container string, pod *apiv1.Pod, namespace string, c kubernetes.Interface) (string, error) {
 	podLogOpts := apiv1.PodLogOptions{
 		Container:  container,
-		Timestamps: timestamps,
+		Timestamps: true,
 		TailLines:  &tailLines,
 	}
 	req := c.CoreV1().Pods(namespace).GetLogs(pod.Name, &podLogOpts)

@@ -31,10 +31,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var (
-	rootUser int64
-)
-
 func Test_translateWithVolumes(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {
@@ -298,11 +294,6 @@ services:
 								},
 							},
 						},
-					},
-					SecurityContext: &apiv1.PodSecurityContext{
-						RunAsUser:  &rootUser,
-						RunAsGroup: &rootUser,
-						FSGroup:    &rootUser,
 					},
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
