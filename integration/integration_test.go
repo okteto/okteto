@@ -243,7 +243,7 @@ func TestAll(t *testing.T) {
 
 		log.Println("getting synchronized content")
 		endpoint := "http://localhost:8080/index.html"
-		c, err := getContent(endpoint, 60)
+		c, err := getContent(endpoint, 120)
 		if err != nil {
 			t.Fatalf("failed to get content: %s", err)
 		}
