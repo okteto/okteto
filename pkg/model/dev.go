@@ -93,6 +93,7 @@ type Dev struct {
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	Image                string                `json:"image,omitempty" yaml:"image,omitempty"`
+	Build                *BuildInfo            `json:"-,omitempty" yaml:"build,omitempty"`
 	Push                 *BuildInfo            `json:"-,omitempty" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
@@ -218,6 +219,7 @@ func Get(devPath string) (*Dev, error) {
 //Read reads an okteto manifests
 func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
+		Build:       &BuildInfo{},
 		Push:        &BuildInfo{},
 		Environment: make([]EnvVar, 0),
 		Secrets:     make([]Secret, 0),
@@ -278,12 +280,8 @@ func (dev *Dev) setDefaults() error {
 	if len(dev.Command) == 0 {
 		dev.Command = []string{"sh"}
 	}
-	if dev.Push.Context == "" {
-		dev.Push.Context = "."
-	}
-	if dev.Push.Dockerfile == "" {
-		dev.Push.Dockerfile = filepath.Join(dev.Push.Context, "Dockerfile")
-	}
+	setBuildDefaults(dev.Build)
+	setBuildDefaults(dev.Push)
 	if dev.MountPath == "" && dev.WorkDir == "" {
 		dev.MountPath = "/okteto"
 		dev.WorkDir = "/okteto"
@@ -332,6 +330,15 @@ func (dev *Dev) setDefaults() error {
 		s.Services = make([]*Dev, 0)
 	}
 	return nil
+}
+
+func setBuildDefaults(build *BuildInfo) {
+	if build.Context == "" {
+		build.Context = "."
+	}
+	if build.Dockerfile == "" {
+		build.Dockerfile = filepath.Join(build.Context, "Dockerfile")
+	}
 }
 
 func (dev *Dev) setRunAsUserDefaults(main *Dev) {
@@ -675,8 +682,9 @@ func (dev *Dev) UpdateNamespace(namespace string) error {
 
 //GevSandbox returns a deployment sandbox
 func (dev *Dev) GevSandbox() *appsv1.Deployment {
-	if dev.Image == "" {
-		dev.Image = DefaultImage
+	image := dev.Image
+	if image == "" {
+		image = DefaultImage
 	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -707,7 +715,7 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:            "dev",
-							Image:           dev.Image,
+							Image:           image,
 							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},

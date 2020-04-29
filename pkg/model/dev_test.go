@@ -348,6 +348,7 @@ func TestDev_validateName(t *testing.T) {
 			dev := &Dev{
 				Name:            tt.devName,
 				ImagePullPolicy: apiv1.PullAlways,
+				Build:           &BuildInfo{},
 				Push:            &BuildInfo{},
 			}
 			// Since dev isn't being unmarshalled through Read, apply defaults
