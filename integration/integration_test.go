@@ -260,7 +260,7 @@ func TestAll(t *testing.T) {
 		time.Sleep(3 * time.Second)
 
 		log.Println("getting updated content")
-		c, err = getContent(endpoint, 60)
+		c, err = getContent(endpoint, 120)
 		if err != nil {
 			t.Fatalf("failed to get updated content: %s", err)
 		}
@@ -423,7 +423,7 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 	}
 
 	log.Println("waiting for the deployment to be restored")
-	if err := waitForDeployment(ctx, name, 3, 30); err != nil {
+	if err := waitForDeployment(ctx, name, 3, 60); err != nil {
 		return err
 	}
 
@@ -466,15 +466,15 @@ func waitForUpExit(wg *sync.WaitGroup) error {
 	select {
 	case <-done:
 		return nil
-	case <-time.After(10 * time.Second):
-		return fmt.Errorf("up didn't exit after 5 seconds")
+	case <-time.After(30 * time.Second):
+		return fmt.Errorf("up didn't exit after 30 seconds")
 	}
 }
 
 func waitForReady(namespace, name string) error {
 	state := fmt.Sprintf("%s/.okteto/%s/%s/okteto.state", os.Getenv("HOME"), namespace, name)
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < 120; i++ {
+	for i := 0; i < 180; i++ {
 		c, err := ioutil.ReadFile(state)
 		if err != nil {
 			if !os.IsNotExist(err) {
@@ -513,7 +513,7 @@ func deploy(ctx context.Context, name, path string) error {
 		return fmt.Errorf("kubectl apply failed: %s", string(o))
 	}
 
-	if err := waitForDeployment(ctx, name, 1, 30); err != nil {
+	if err := waitForDeployment(ctx, name, 1, 60); err != nil {
 		return err
 	}
 
@@ -596,7 +596,7 @@ func compareDeployment(deployment *appsv1.Deployment) error {
 func checkIfUpFinished(ctx context.Context, pid int) error {
 	var err error
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 30; i++ {
 		var found ps.Process
 		found, err = ps.FindProcess(pid)
 		if err == nil && found == nil {
