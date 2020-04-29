@@ -26,6 +26,7 @@ import (
 	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -38,6 +39,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 
 	"github.com/okteto/okteto/pkg/k8s/forward"
@@ -93,6 +95,7 @@ func Up() *cobra.Command {
 	var namespace string
 	var remote int
 	var autoDeploy bool
+	var build bool
 	var forcePull bool
 	var resetSyncthing bool
 	cmd := &cobra.Command{
@@ -142,7 +145,7 @@ func Up() *cobra.Command {
 				dev.RemotePort = remote
 			}
 
-			err = RunUp(dev, autoDeploy, forcePull, resetSyncthing)
+			err = RunUp(dev, autoDeploy, build, forcePull, resetSyncthing)
 			return err
 		},
 	}
@@ -151,13 +154,14 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
+	cmd.Flags().BoolVarP(&build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
 	cmd.Flags().BoolVarP(&forcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().BoolVarP(&resetSyncthing, "reset", "", false, "reset the file synchronization database")
 	return cmd
 }
 
 //RunUp starts the up sequence
-func RunUp(dev *model.Dev, autoDeploy bool, forcePull, resetSyncthing bool) error {
+func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) error {
 	up := &UpContext{
 		Dev:  dev,
 		Exit: make(chan error, 1),
@@ -183,7 +187,7 @@ func RunUp(dev *model.Dev, autoDeploy bool, forcePull, resetSyncthing bool) erro
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	go up.Activate(autoDeploy, resetSyncthing)
+	go up.Activate(autoDeploy, build, resetSyncthing)
 	select {
 	case <-stop:
 		log.Debugf("CTRL+C received, starting shutdown sequence")
@@ -201,7 +205,7 @@ func RunUp(dev *model.Dev, autoDeploy bool, forcePull, resetSyncthing bool) erro
 }
 
 // Activate activates the dev environment
-func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
+func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
 	var state *term.State
 	inFd, isTerm := term.GetFdInfo(os.Stdin)
 	if isTerm {
@@ -229,6 +233,11 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 	if err != nil {
 		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
 		up.Exit <- fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
+		return
+	}
+
+	if !namespaces.IsOktetoAllowed(up.Namespace) {
+		up.Exit <- fmt.Errorf("'okteto up' is not allowed in this namespace")
 		return
 	}
 
@@ -262,6 +271,15 @@ func (up *UpContext) Activate(autoDeploy, resetSyncthing bool) {
 
 		if !up.retry {
 			analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
+			if build {
+				if err := up.buildDevImage(d, create); err != nil {
+					up.Exit <- fmt.Errorf("error building dev image: %s", err)
+					return
+				}
+			}
+		} else if !deployments.IsDevModeOn(d) {
+			up.Exit <- fmt.Errorf("Development environment has been deactivated by an external command")
+			return
 		}
 
 		if err := up.devMode(d, create); err != nil {
@@ -394,15 +412,60 @@ func (up *UpContext) WaitUntilExitOrInterrupt() error {
 	}
 }
 
+func (up *UpContext) buildDevImage(d *appsv1.Deployment, create bool) error {
+	oktetoRegistryURL := ""
+	if namespaces.IsOktetoNamespace(up.Namespace) {
+		var err error
+		oktetoRegistryURL, err = okteto.GetRegistry()
+		if err != nil {
+			return err
+		}
+	}
+
+	if oktetoRegistryURL == "" && create && up.Dev.Image == "" {
+		return fmt.Errorf("no value for 'Image' has been provided in your okteto manifest")
+	}
+
+	if up.Dev.Image == "" {
+		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
+		if devContainer == nil {
+			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
+		}
+		up.Dev.Image = devContainer.Image
+	}
+
+	buildKitHost, isOktetoCluster, err := buildCMD.GetBuildKitHost()
+	if err != nil {
+		return err
+	}
+
+	imageTag := buildCMD.GetImageTag(up.Dev.Image, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
+	log.Infof("building dev image tag %s", imageTag)
+
+	var imageDigest string
+	buildArgs := model.SerializeBuildArgs(up.Dev.Build.Args)
+	imageDigest, err = buildCMD.Run(buildKitHost, isOktetoCluster, up.Dev.Build.Context, up.Dev.Build.Dockerfile, imageTag, up.Dev.Build.Target, false, buildArgs, "tty")
+	if err != nil {
+		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
+	}
+	if imageDigest != "" {
+		imageWithoutTag := buildCMD.GetRepoNameWithoutTag(imageTag)
+		imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
+	}
+	for _, s := range up.Dev.Services {
+		if s.Image == up.Dev.Image {
+			s.Image = imageTag
+		}
+	}
+	up.Dev.Image = imageTag
+	return nil
+}
+
 func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	spinner := utils.NewSpinner("Activating your development environment...")
 	up.updateStateFile(activating)
 	spinner.Start()
 	defer spinner.Stop()
-
-	if !namespaces.IsOktetoAllowed(up.Namespace) {
-		return fmt.Errorf("`okteto up` is not allowed in this namespace")
-	}
 
 	if up.Dev.PersistentVolumeEnabled() {
 		if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
@@ -417,10 +480,6 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	up.Dev.Container = devContainer.Name
 	if up.Dev.Image == "" {
 		up.Dev.Image = devContainer.Image
-	}
-
-	if up.retry && !deployments.IsDevModeOn(d) {
-		return fmt.Errorf("Development environment has been deactivated by an external command")
 	}
 
 	up.updateStateFile(starting)
@@ -440,30 +499,30 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		return err
 	}
 
-	tr, err := deployments.GetTranslations(up.Dev, d, up.Client)
+	trList, err := deployments.GetTranslations(up.Dev, d, up.Client)
 	if err != nil {
 		return err
 	}
 
-	if err := deployments.TranslateDevMode(tr, up.Namespace, up.Client); err != nil {
+	if err := deployments.TranslateDevMode(trList, up.Namespace, up.Client); err != nil {
 		return err
 	}
 
-	for name := range tr {
+	for name := range trList {
 		if name == d.Name {
-			if err := deployments.Deploy(tr[name].Deployment, create, up.Client); err != nil {
+			if err := deployments.Deploy(trList[name].Deployment, create, up.Client); err != nil {
 				return err
 			}
 		} else {
-			if err := deployments.Deploy(tr[name].Deployment, false, up.Client); err != nil {
+			if err := deployments.Deploy(trList[name].Deployment, false, up.Client); err != nil {
 				return err
 			}
 		}
-		if tr[name].Deployment.Annotations[okLabels.DeploymentAnnotation] == "" {
+		if trList[name].Deployment.Annotations[okLabels.DeploymentAnnotation] == "" {
 			continue
 		}
 
-		if err := deployments.UpdateOktetoRevision(up.Context, tr[name].Deployment, up.Client); err != nil {
+		if err := deployments.UpdateOktetoRevision(up.Context, trList[name].Deployment, up.Client); err != nil {
 			return err
 		}
 
