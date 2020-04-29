@@ -43,7 +43,7 @@ We created a few guides to get you started with your favorite programming langua
 1. [Java Maven](https://github.com/okteto/java-maven-getting-started)
 1. [Node](https://github.com/okteto/node-getting-started)
 1. [PHP](https://github.com/okteto/php-getting-started)
-1. [Python](https://github.com/okteto/samples/tree/master/python)
+1. [Python](https://github.com/okteto/samples/tree/master/django)
 
 More samples on how to use Okteto [are available here](https://github.com/okteto/samples).
 
