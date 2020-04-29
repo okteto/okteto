@@ -714,6 +714,8 @@ func (up *UpContext) cleanCommand() {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
 
+	cmd := "([ -f '/var/okteto/bin/clean' ] && /var/okteto/bin/clean || (cp /var/okteto/bin/* /usr/local/bin; ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1; cat /proc/sys/fs/inotify/max_user_watches"
+
 	err := exec.Exec(
 		up.Context,
 		up.Client,
@@ -725,11 +727,11 @@ func (up *UpContext) cleanCommand() {
 		in,
 		&out,
 		os.Stderr,
-		[]string{"sh", "-c", "(((cp /var/okteto/bin/* /usr/local/bin); (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1); cat /proc/sys/fs/inotify/max_user_watches"},
+		[]string{"sh", "-c", cmd},
 	)
 
 	if err != nil {
-		log.Infof("first session to the remote container: %s", err)
+		log.Infof("failed to clean session: %s", err)
 	}
 
 	if utils.IsWatchesConfigurationTooLow(out.String()) {
