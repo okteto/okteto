@@ -17,11 +17,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -82,6 +84,18 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 
 		if err := session.RequestPty("xterm", height, width, modes); err != nil {
 			return fmt.Errorf("request for pseudo terminal failed: %s", err)
+		}
+	}
+
+	sockEnvVar, ok := os.LookupEnv("SSH_AUTH_SOCK")
+	if !ok {
+		log.Info("SSH_AUTH_SOCK is not set, not forwarding socket")
+	} else {
+		if err := agent.ForwardToRemote(connection, sockEnvVar); err != nil {
+			log.Infof("failed to existing SSH_AUTH_SOCK('%s'): %s", sockEnvVar, err)
+		}
+		if err := agent.RequestAgentForwarding(session); err != nil {
+			log.Infof("failed to forward ssh agent to remote: %s", err)
 		}
 	}
 
