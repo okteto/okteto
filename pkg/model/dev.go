@@ -99,6 +99,7 @@ type Dev struct {
 	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              []string              `json:"command,omitempty" yaml:"command,omitempty"`
+	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
@@ -578,6 +579,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		Volumes:          []VolumeMount{},
 		SecurityContext:  dev.SecurityContext,
 		Resources:        dev.Resources,
+		Healthchecks:     dev.Healthchecks,
 	}
 
 	if main.PersistentVolumeEnabled() {
@@ -633,7 +635,6 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				SubPath:   SyncthingSubPath,
 			},
 		)
-		rule.Healthchecks = false
 		rule.Command = []string{"/var/okteto/bin/start.sh"}
 		if main.RemoteModeEnabled() {
 			rule.Args = []string{"-r"}
@@ -644,7 +645,6 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
 		}
 	} else {
-		rule.Healthchecks = true
 		if len(dev.Command) > 0 {
 			rule.Command = dev.Command
 			rule.Args = []string{}
