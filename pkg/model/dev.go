@@ -600,6 +600,20 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				Value: path.Join(dev.MountPath, dev.DevPath),
 			},
 		)
+		rule.Environment = append(
+			rule.Environment,
+			EnvVar{
+				Name:  "OKTETO_NAMESPACE",
+				Value: dev.Namespace,
+			},
+		)
+		rule.Environment = append(
+			rule.Environment,
+			EnvVar{
+				Name:  "OKTETO_NAME",
+				Value: dev.Name,
+			},
+		)
 		// We want to minimize environment mutations, so only reconfigure the SSH
 		// server port if a non-default is specified.
 		if dev.SSHServerPort != oktetoDefaultSSHServerPort {

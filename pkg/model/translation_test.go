@@ -25,6 +25,7 @@ import (
 
 func TestDevToTranslationRule(t *testing.T) {
 	manifest := []byte(`name: web
+namespace: n
 container: dev
 image: web:latest
 command: ["./run_web.sh"]
@@ -67,6 +68,14 @@ services:
 			{
 				Name:  oktetoMarkerPathVariable,
 				Value: "/app/okteto.yml",
+			},
+			{
+				Name:  "OKTETO_NAMESPACE",
+				Value: "n",
+			},
+			{
+				Name:  "OKTETO_NAME",
+				Value: "web",
 			},
 		},
 		SecurityContext: &SecurityContext{
@@ -158,6 +167,8 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			},
 			expected: []EnvVar{
 				{Name: oktetoMarkerPathVariable, Value: ""},
+				{Name: "OKTETO_NAMESPACE", Value: ""},
+				{Name: "OKTETO_NAME", Value: ""},
 			},
 		},
 		{
@@ -167,6 +178,8 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			},
 			expected: []EnvVar{
 				{Name: oktetoMarkerPathVariable, Value: ""},
+				{Name: "OKTETO_NAMESPACE", Value: ""},
+				{Name: "OKTETO_NAME", Value: ""},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},
 			},
 		},

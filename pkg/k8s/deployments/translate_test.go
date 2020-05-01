@@ -47,6 +47,7 @@ func Test_translateWithVolumes(t *testing.T) {
 	var fsGroup int64 = 102
 	var mode int32 = 420
 	manifest := []byte(fmt.Sprintf(`name: web
+namespace: n
 container: dev
 image: web:latest
 command: ["./run_web.sh"]
@@ -197,6 +198,14 @@ services:
 								{
 									Name:  "OKTETO_MARKER_PATH",
 									Value: "/app/okteto.yml",
+								},
+								{
+									Name:  "OKTETO_NAMESPACE",
+									Value: "n",
+								},
+								{
+									Name:  "OKTETO_NAME",
+									Value: "web",
 								},
 							},
 							Resources: apiv1.ResourceRequirements{
@@ -359,6 +368,7 @@ services:
 
 func Test_translateWithoutVolumes(t *testing.T) {
 	manifest := []byte(`name: web
+namespace: n
 image: web:latest`)
 
 	dev, err := model.Read(manifest)
@@ -459,6 +469,14 @@ image: web:latest`)
 								{
 									Name:  "OKTETO_MARKER_PATH",
 									Value: "/okteto/okteto.yml",
+								},
+								{
+									Name:  "OKTETO_NAMESPACE",
+									Value: "n",
+								},
+								{
+									Name:  "OKTETO_NAME",
+									Value: "web",
 								},
 							},
 							VolumeMounts: []apiv1.VolumeMount{
