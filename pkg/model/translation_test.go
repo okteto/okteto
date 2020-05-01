@@ -46,7 +46,8 @@ services:
     image: worker:latest
     imagePullPolicy: IfNotPresent
     mountpath: /src
-    subpath: /worker`)
+    subpath: /worker
+    healthchecks: true`)
 
 	dev, err := Read(manifest)
 	if err != nil {
