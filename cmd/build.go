@@ -17,10 +17,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
 
@@ -43,28 +45,42 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			dev, err := utils.LoadDevOrDefault(utils.DefaultDevManifest, "build")
+			if err != nil {
+				return err
+			}
+			if len(args) == 1 {
+				dev.Build.Context = args[0]
+			}
+			if file != "" {
+				dev.Build.Context = file
+			}
+			if tag != "" {
+				dev.Image = tag
+			}
+			if target != "" {
+				dev.Build.Target = target
+			}
+			if len(buildArgs) == 0 {
+				buildArgs = model.SerializeBuildArgs(dev.Build.Args)
+			}
+
 			buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 			if err != nil {
 				return err
 			}
 
-			if _, err := build.Run(buildKitHost, isOktetoCluster, args[0], file, tag, target, noCache, buildArgs, progress); err != nil {
+			if _, err := build.Run(buildKitHost, isOktetoCluster, dev.Build.Context, dev.Build.Dockerfile, dev.Image, dev.Build.Target, noCache, buildArgs, progress); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
-			if tag == "" {
+			if dev.Image == "" {
 				log.Success("Build succeeded")
 				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 			} else {
-				log.Success(fmt.Sprintf("Image '%s' successfully pushed", tag))
+				log.Success(fmt.Sprintf("Image '%s' successfully pushed", dev.Image))
 			}
 			analytics.TrackBuild(true)
-			return nil
-		},
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 1 {
-				return fmt.Errorf("build requires the PATH context argument (e.g. '.' for the current directory)")
-			}
 			return nil
 		},
 	}
