@@ -284,7 +284,7 @@ func containerLogs(container string, pod *apiv1.Pod, namespace string, timestamp
 }
 
 // Restart restarts the pods of a deployment
-func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
+func Restart(dev *model.Dev, c *kubernetes.Clientset, sn string) error {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name),
@@ -295,7 +295,14 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 		return fmt.Errorf("failed to retrieve dev environment information")
 	}
 
+	found := false
+	prefix := fmt.Sprintf("%s-", sn)
 	for i := range pods.Items {
+
+		if sn != "" && !strings.HasPrefix(pods.Items[i].Name, prefix) {
+			continue
+		}
+		found = true
 		err := c.CoreV1().Pods(dev.Namespace).Delete(pods.Items[i].Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
@@ -305,6 +312,9 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset) error {
 		}
 	}
 
+	if !found {
+		return fmt.Errorf("Unable to find any service with the provided name")
+	}
 	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
 }
 

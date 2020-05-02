@@ -40,8 +40,11 @@ func Restart() *cobra.Command {
 			if err := dev.UpdateNamespace(namespace); err != nil {
 				return err
 			}
-
-			if err := executeRestart(dev); err != nil {
+			serviceName := ""
+			if len(args) > 0 {
+				serviceName = args[0]
+			}
+			if err := executeRestart(dev, serviceName); err != nil {
 				return err
 			}
 			log.Success("Development environment restarted")
@@ -56,7 +59,7 @@ func Restart() *cobra.Command {
 	return cmd
 }
 
-func executeRestart(dev *model.Dev) error {
+func executeRestart(dev *model.Dev, sn string) error {
 	log.Infof("restarting development environment")
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
@@ -71,7 +74,7 @@ func executeRestart(dev *model.Dev) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	if err := pods.Restart(dev, client); err != nil {
+	if err := pods.Restart(dev, client, sn); err != nil {
 		return err
 	}
 
