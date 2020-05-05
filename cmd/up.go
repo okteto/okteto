@@ -673,11 +673,7 @@ func (up *UpContext) sync(resetSyncthing bool) error {
 		return err
 	}
 
-	if err := up.synchronizeFiles(); err != nil {
-		return err
-	}
-
-	return nil
+	return up.synchronizeFiles()
 }
 
 func (up *UpContext) startSyncthing(resetSyncthing bool) error {
@@ -725,10 +721,9 @@ func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 	if err := up.Sy.WaitForScanning(up.Context, up.Dev, true); err != nil {
 		return err
 	}
-	if err := up.Sy.WaitForScanning(up.Context, up.Dev, false); err != nil {
-		return err
-	}
-	return nil
+
+	return up.Sy.WaitForScanning(up.Context, up.Dev, false);
+
 }
 
 func (up *UpContext) synchronizeFiles() error {
