@@ -84,15 +84,16 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 		if err := fm.pf.Start(devPod, namespace); err != nil {
 			return fmt.Errorf("failed to start SSH port-forward: %w", err)
 		}
-	}
 
-	log.Info("port forward to dev pod connected")
+		log.Info("port forward to dev pod connected")
+	}
 
 	c, err := getSSHClientConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get SSH configuration: %s", err)
 	}
 
+	log.Infof("starting SSH connection pool on %s", fm.sshAddr)
 	pool, err := startPool(fm.ctx, fm.sshAddr, c)
 	if err != nil {
 		return err
