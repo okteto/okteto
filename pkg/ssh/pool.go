@@ -41,12 +41,12 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 
 	conn, err := getTCPConnection(serverAddr, p.ka)
 	if err != nil {
-		return nil, fmt.Errorf("failed to establish a tcp connection: %s", err)
+		return nil, fmt.Errorf("failed to establish a tcp connection for %s: %s", serverAddr, err)
 	}
 
 	clientConn, chans, reqs, err := ssh.NewClientConn(conn, serverAddr, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ssh connection: %w", err)
+		return nil, fmt.Errorf("failed to create ssh connection for %s: %w", serverAddr, err)
 	}
 
 	client := ssh.NewClient(clientConn, chans, reqs)
@@ -92,7 +92,7 @@ func (p *pool) getListener(address string) (net.Listener, error) {
 }
 
 func getTCPConnection(serverAddr string, keepAlive time.Duration) (net.Conn, error) {
-	c, err := net.Dial("tcp", serverAddr)
+	c, err := getConn(serverAddr, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -106,4 +106,20 @@ func getTCPConnection(serverAddr string, keepAlive time.Duration) (net.Conn, err
 	}
 
 	return c, nil
+}
+
+func getConn(serverAddr string, maxRetries int) (net.Conn, error) {
+	var lastErr error
+	t := time.NewTicker(100 * time.Millisecond)
+	for i := 0; i < 3; i++ {
+		c, err := net.Dial("tcp", serverAddr)
+		if err == nil {
+			return c, nil
+		}
+
+		lastErr = err
+		<-t.C
+	}
+
+	return nil, lastErr
 }
