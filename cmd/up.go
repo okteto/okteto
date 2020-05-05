@@ -925,7 +925,7 @@ func createPIDFile(ns, dpName string) error {
 
 // cleanPIDFile deletes PID file after Up finishes
 func cleanPIDFile(ns, dpName string) {
-	filePath := filepath.Join(config.GetDeploymentHome(), "okteto.pid")
+	filePath := filepath.Join(config.GetDeploymentHome(ns, dpName), "okteto.pid")
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
 		log.Infof("Unable to delete PID file at %s", filePath)
 	}
