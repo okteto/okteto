@@ -50,7 +50,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if len(token) == 0 && k8Client.InCluster() {
+			if token == "" && k8Client.InCluster() {
 				return fmt.Errorf("this command is not supported without the '--token' flag from inside a pod")
 			}
 

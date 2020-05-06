@@ -157,11 +157,9 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 		revision := updated.Annotations[revisionAnnotation]
 		if revision != "" {
 			d.Annotations[okLabels.RevisionAnnotation] = revision
-			if err := update(d, client); err != nil {
-				return err
-			}
-			return nil
+			return update(d, client)
 		}
+
 		select {
 		case <-ticker.C:
 			tries++
@@ -220,9 +218,9 @@ func UpdateDeployments(trList map[string]*model.Translation, c *kubernetes.Clien
 //TranslateDevModeOff reverses the dev mode translation
 func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.TranslationAnnotation)
-	if len(trRulesJSON) == 0 {
+	if trRulesJSON == "" {
 		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
-		if len(dManifest) == 0 {
+		if dManifest == "" {
 			log.Infof("%s/%s is not a development environment", d.Namespace, d.Name)
 			return d, nil
 		}

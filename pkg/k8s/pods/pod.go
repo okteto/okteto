@@ -225,25 +225,29 @@ func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 
 func parseUserID(output string) int64 {
 	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		if !strings.HasPrefix(line, "USER:") {
-			log.Infof("USER entry not not found in first development environment log line: %s", line)
-			return -1
-		}
-		parts := strings.Split(line, ":")
-		if len(parts) != 2 {
-			log.Infof("failed to parse USER entry: %s", line)
-			return -1
-		}
-		result, err := strconv.ParseInt(parts[1], 10, 64)
-		if err != nil {
-			log.Infof("failed to parse USER entry: %s", line)
-			return -1
-		}
-		return result
+	if len(lines) == 0 {
+		log.Info("development environment logs not generated. USER cannot be inferred")
+		return -1
 	}
-	log.Info("development environment logs not generated. USER cannot be inferred")
-	return -1
+
+	if !strings.HasPrefix(lines[0], "USER:") {
+		log.Infof("USER entry not not found in first development environment log line: %s", lines[0])
+		return -1
+	}
+
+	parts := strings.Split(lines[0], ":")
+	if len(parts) != 2 {
+		log.Infof("failed to parse USER entry: %s", lines[0])
+		return -1
+	}
+
+	result, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		log.Infof("failed to parse USER entry: %s", lines[0])
+		return -1
+	}
+
+	return result
 }
 
 //GetDevPodLogs returns the logs of the dev pod
@@ -255,7 +259,7 @@ func GetDevPodLogs(ctx context.Context, dev *model.Dev, timestamps bool, c *kube
 	if p == nil {
 		return "", errors.ErrNotFound
 	}
-	if len(dev.Container) == 0 {
+	if dev.Container == "" {
 		dev.Container = p.Spec.Containers[0].Name
 	}
 	return containerLogs(dev.Container, p, dev.Namespace, timestamps, c)

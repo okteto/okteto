@@ -93,8 +93,8 @@ type Dev struct {
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	Image                string                `json:"image,omitempty" yaml:"image,omitempty"`
-	Build                *BuildInfo            `json:"-,omitempty" yaml:"build,omitempty"`
-	Push                 *BuildInfo            `json:"-,omitempty" yaml:"push,omitempty"`
+	Build                *BuildInfo            `json:"-" yaml:"build,omitempty"`
+	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
@@ -644,11 +644,9 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		for _, s := range rule.Secrets {
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
 		}
-	} else {
-		if len(dev.Command) > 0 {
-			rule.Command = dev.Command
-			rule.Args = []string{}
-		}
+	} else if len(dev.Command) > 0 {
+		rule.Command = dev.Command
+		rule.Args = []string{}
 	}
 
 	for _, v := range dev.Volumes {

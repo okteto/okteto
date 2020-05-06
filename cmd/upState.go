@@ -34,11 +34,11 @@ const (
 )
 
 func (up *UpContext) updateStateFile(state upState) {
-	if len(up.Dev.Namespace) == 0 {
+	if up.Dev.Namespace == "" {
 		log.Info("can't update state file, namespace is empty")
 	}
 
-	if len(up.Dev.Name) == 0 {
+	if up.Dev.Name == "" {
 		log.Info("can't update state file, name is empty")
 	}
 

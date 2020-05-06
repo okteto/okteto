@@ -108,7 +108,7 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 }
 
 func saveAuthData(user *User, url string) error {
-	if len(user.GithubID) == 0 || len(user.Token) == 0 {
+	if user.GithubID == "" || user.Token == "" {
 		return fmt.Errorf("empty response")
 	}
 
@@ -121,11 +121,7 @@ func saveAuthData(user *User, url string) error {
 		return fmt.Errorf("bad response: %w", err)
 	}
 
-	if err := ioutil.WriteFile(GetCertificatePath(), d, 0600); err != nil {
-		return err
-	}
-
-	return nil
+	return ioutil.WriteFile(GetCertificatePath(), d, 0600)
 }
 
 func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {

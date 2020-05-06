@@ -50,7 +50,7 @@ func GetRepoNameWithoutTag(name string) string {
 	return fmt.Sprintf("%s/%s", domain, remainder[:i])
 }
 
-//GetImageTag returns the image tag to build for a given servicecs
+//GetImageTag returns the image tag to build for a given services
 func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
 	if oktetoRegistryURL != "" {
 		return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, namespace, service)
@@ -90,13 +90,13 @@ func getDockerfileWithCacheHandler(filename string) (string, error) {
 	defer datawriter.Flush()
 
 	userID := okteto.GetUserID()
-	if len(userID) == 0 {
+	if userID == "" {
 		userID = "anonymous"
 	}
 	for scanner.Scan() {
 		line := scanner.Text()
-		traslatedLine := translateCacheHandler(line, userID)
-		_, _ = datawriter.WriteString(traslatedLine + "\n")
+		translatedLine := translateCacheHandler(line, userID)
+		_, _ = datawriter.WriteString(translatedLine + "\n")
 	}
 	if err := scanner.Err(); err != nil {
 		return "", err
@@ -105,27 +105,29 @@ func getDockerfileWithCacheHandler(filename string) (string, error) {
 	return tmpFile.Name(), nil
 }
 
-func translateCacheHandler(input string, userID string) string {
+func translateCacheHandler(input, userID string) string {
 	matched, err := regexp.MatchString(`^RUN.*--mount=.*type=cache`, input)
 	if err != nil {
 		return input
 	}
+
 	if matched {
 		matched, err = regexp.MatchString(`^RUN.*--mount=id=`, input)
 		if err != nil {
 			return input
 		}
 		if matched {
-			return strings.Replace(input, "--mount=id=", fmt.Sprintf("--mount=id=%s-", userID), -1)
+			return strings.ReplaceAll(input, "--mount=id=", fmt.Sprintf("--mount=id=%s-", userID))
 		}
 		matched, err = regexp.MatchString(`^RUN.*--mount=[^ ]+,id=`, input)
 		if err != nil {
 			return input
 		}
 		if matched {
-			return strings.Replace(input, ",id=", fmt.Sprintf(",id=%s-", userID), -1)
+			return strings.ReplaceAll(input, ",id=", fmt.Sprintf(",id=%s-", userID))
 		}
-		return strings.Replace(input, "--mount=", fmt.Sprintf("--mount=id=%s,", userID), -1)
+		return strings.ReplaceAll(input, "--mount=", fmt.Sprintf("--mount=id=%s,", userID))
 	}
+
 	return input
 }
