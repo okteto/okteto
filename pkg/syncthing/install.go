@@ -31,13 +31,13 @@ import (
 
 var (
 	downloadURLs = map[string]string{
-		"linux":   "https://github.com/syncthing/syncthing/releases/download/v1.4.2/syncthing-linux-amd64-v1.4.2.tar.gz",
-		"arm64":   "https://github.com/syncthing/syncthing/releases/download/v1.4.2/syncthing-linux-arm64-v1.4.2.tar.gz",
-		"darwin":  "https://github.com/syncthing/syncthing/releases/download/v1.4.2/syncthing-macos-amd64-v1.4.2.tar.gz",
-		"windows": "https://github.com/syncthing/syncthing/releases/download/v1.4.2/syncthing-windows-amd64-v1.4.2.zip",
+		"linux":   "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-linux-amd64-v1.5.0.tar.gz",
+		"arm64":   "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-linux-arm64-v1.5.0.tar.gz",
+		"darwin":  "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-macos-amd64-v1.5.0.tar.gz",
+		"windows": "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-windows-amd64-v1.5.0.zip",
 	}
 
-	minimumVersion = semver.MustParse("1.4.2")
+	minimumVersion = semver.MustParse("1.5.0")
 	versionRegex   = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
