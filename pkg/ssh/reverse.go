@@ -74,7 +74,7 @@ func (r *reverse) handle(remote net.Conn) {
 	defer remote.Close()
 
 	quit := make(chan struct{}, 1)
-	local, err := net.Dial("tcp", r.localAddress)
+	local, err := getConn(r.localAddress, 3)
 	if err != nil {
 		log.Infof("%s -> failed to listen on local address: %v", r.String(), err)
 		return

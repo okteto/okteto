@@ -120,7 +120,7 @@ func TrackUp(success bool, dev, clusterType string, single, swap, remote bool) {
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
-func TrackUpError(success bool, swap bool) {
+func TrackUpError(success, swap bool) {
 	props := map[string]interface{}{
 		"swap": swap,
 	}
@@ -189,7 +189,7 @@ func TrackLogin(success bool, name, email, oktetoID, githubID string) {
 	}
 
 	track(loginEvent, success, nil)
-	if len(name) == 0 {
+	if name == "" {
 		name = githubID
 	}
 
@@ -307,7 +307,7 @@ func getMachineID() string {
 
 	mid = generateMachineID()
 	if err := okteto.SaveMachineID(mid); err != nil {
-		log.Debugf("failed to save the machine id")
+		log.Info("failed to save the machine id")
 		mid = "na"
 	}
 
