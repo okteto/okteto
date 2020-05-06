@@ -82,7 +82,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
 
-	if dev.ExecuteOverSSHEnabled() {
+	if dev.ExecuteOverSSHEnabled() || dev.RemoteModeEnabled() {
 		log.Infof("executing remote command over SSH")
 		return ssh.Exec(ctx, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}

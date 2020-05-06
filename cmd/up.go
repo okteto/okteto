@@ -234,7 +234,7 @@ func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
 	}
 
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
-		log.Infof("failed to create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
+		log.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
 		up.Exit <- fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
 		return
 	}
@@ -579,7 +579,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 }
 
 func (up *UpContext) forwards() error {
-	if up.Dev.ExecuteOverSSHEnabled() {
+	if up.Dev.ExecuteOverSSHEnabled() || up.Dev.RemoteModeEnabled() {
 		return up.sshForwards()
 	}
 
@@ -722,7 +722,7 @@ func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 		return err
 	}
 
-	return up.Sy.WaitForScanning(up.Context, up.Dev, false);
+	return up.Sy.WaitForScanning(up.Context, up.Dev, false)
 
 }
 
@@ -811,7 +811,7 @@ func (up *UpContext) runCommand() error {
 	log.Infof("starting remote command")
 	up.updateStateFile(ready)
 
-	if up.Dev.ExecuteOverSSHEnabled() {
+	if up.Dev.ExecuteOverSSHEnabled() || up.Dev.RemoteModeEnabled() {
 		return ssh.Exec(up.Context, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command)
 	}
 
