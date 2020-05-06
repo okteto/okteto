@@ -121,11 +121,7 @@ func saveAuthData(user *User, url string) error {
 		return fmt.Errorf("bad response: %w", err)
 	}
 
-	if err := ioutil.WriteFile(GetCertificatePath(), d, 0600); err != nil {
-		return err
-	}
-
-	return nil
+	return ioutil.WriteFile(GetCertificatePath(), d, 0600)
 }
 
 func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {

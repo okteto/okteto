@@ -157,11 +157,9 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 		revision := updated.Annotations[revisionAnnotation]
 		if revision != "" {
 			d.Annotations[okLabels.RevisionAnnotation] = revision
-			if err := update(d, client); err != nil {
-				return err
-			}
-			return nil
+			return update(d, client)
 		}
+
 		select {
 		case <-ticker.C:
 			tries++

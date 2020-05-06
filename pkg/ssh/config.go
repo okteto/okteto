@@ -56,7 +56,7 @@ const (
 	identityFile                 = "IdentityFile"
 )
 
-func newHost(hostnames []string, comments []string) *host {
+func newHost(hostnames, comments []string) *host {
 	return &host{
 		comments:  comments,
 		hostnames: hostnames,
@@ -85,7 +85,7 @@ func (h *host) String() string {
 
 }
 
-func newParam(keyword string, args []string, comments []string) *param {
+func newParam(keyword string, args, comments []string) *param {
 	return &param{
 		comments: comments,
 		keyword:  keyword,

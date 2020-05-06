@@ -145,8 +145,5 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 
 	cfg.CurrentContext = contextName
 
-	if err := clientcmd.WriteToFile(*cfg, kubeConfigPath); err != nil {
-		return err
-	}
-	return nil
+	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }

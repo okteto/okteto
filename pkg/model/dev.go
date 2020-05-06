@@ -644,11 +644,9 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		for _, s := range rule.Secrets {
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
 		}
-	} else {
-		if len(dev.Command) > 0 {
-			rule.Command = dev.Command
-			rule.Args = []string{}
-		}
+	} else if len(dev.Command) > 0 {
+		rule.Command = dev.Command
+		rule.Args = []string{}
 	}
 
 	for _, v := range dev.Volumes {
