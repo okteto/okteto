@@ -90,7 +90,7 @@ func getDockerfileWithCacheHandler(filename string) (string, error) {
 	defer datawriter.Flush()
 
 	userID := okteto.GetUserID()
-	if len(userID) == 0 {
+	if userID == "" {
 		userID = "anonymous"
 	}
 	for scanner.Scan() {

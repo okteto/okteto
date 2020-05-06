@@ -23,7 +23,7 @@ import (
 
 func Test_generatedMachineID(t *testing.T) {
 	m := generateMachineID()
-	if len(m) == 0 || m == "na" {
+	if m == "" || m == "na" {
 		t.Fatalf("bad machineID: %s", m)
 	}
 
@@ -69,7 +69,7 @@ func Test_getTrackID(t *testing.T) {
 			}
 
 			trackID := getTrackID()
-			if len(trackID) == 0 || trackID == "na" {
+			if trackID == "" || trackID == "na" {
 				t.Fatalf("failed to get trackID: %s", trackID)
 			}
 

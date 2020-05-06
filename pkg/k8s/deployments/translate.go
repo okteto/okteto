@@ -132,7 +132,7 @@ func commonTranslation(t *model.Translation) {
 
 //GetDevContainer returns the dev container of a given deployment
 func GetDevContainer(spec *apiv1.PodSpec, name string) *apiv1.Container {
-	if len(name) == 0 {
+	if name == "" {
 		return &spec.Containers[0]
 	}
 
@@ -178,7 +178,7 @@ func TranslatePodAffinity(spec *apiv1.PodSpec, name string) {
 
 //TranslateDevContainer translates a dev container
 func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
-	if len(rule.Image) == 0 {
+	if rule.Image == "" {
 		rule.Image = c.Image
 	}
 	c.Image = rule.Image

@@ -143,7 +143,7 @@ func parse(r io.Reader) (*sshConfig, error) {
 	for sc.Scan() {
 
 		line := strings.TrimSpace(sc.Text())
-		if len(line) == 0 {
+		if line == "" {
 			continue
 		}
 

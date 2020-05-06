@@ -108,7 +108,7 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 }
 
 func saveAuthData(user *User, url string) error {
-	if len(user.GithubID) == 0 || len(user.Token) == 0 {
+	if user.GithubID == "" || user.Token == "" {
 		return fmt.Errorf("empty response")
 	}
 

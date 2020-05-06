@@ -255,7 +255,7 @@ func GetDevPodLogs(ctx context.Context, dev *model.Dev, timestamps bool, c *kube
 	if p == nil {
 		return "", errors.ErrNotFound
 	}
-	if len(dev.Container) == 0 {
+	if dev.Container == "" {
 		dev.Container = p.Spec.Containers[0].Name
 	}
 	return containerLogs(dev.Container, p, dev.Namespace, timestamps, c)

@@ -178,7 +178,7 @@ func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*clien
 		return nil, errors.Wrapf(err, "failed to get the token")
 	}
 
-	if len(okToken.Token) == 0 {
+	if okToken.Token == "" {
 		return nil, fmt.Errorf("auth token missing from token file")
 	}
 

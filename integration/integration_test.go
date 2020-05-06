@@ -534,8 +534,8 @@ func writeDeployment(name, path string) error {
 }
 
 func getOktetoPath(ctx context.Context) (string, error) {
-	oktetoPath := os.Getenv("OKTETO_PATH")
-	if len(oktetoPath) == 0 {
+	oktetoPath, ok := os.LookupEnv("OKTETO_PATH")
+	if !ok {
 		oktetoPath = "/usr/local/bin/okteto"
 	}
 

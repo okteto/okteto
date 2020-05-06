@@ -101,7 +101,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	if len(dev.Container) == 0 {
+	if dev.Container == "" {
 		dev.Container = p.Spec.Containers[0].Name
 	}
 

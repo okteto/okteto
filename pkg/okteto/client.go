@@ -91,7 +91,7 @@ func isConnectionError(s string) bool {
 //SetKubeConfig updates a kubeconfig file with okteto cluster credentials
 func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
 	contextName := ""
-	if len(namespace) == 0 {
+	if namespace == "" {
 		// don't include namespace for the personal namespace
 		contextName = clusterName
 		namespace = cred.Namespace

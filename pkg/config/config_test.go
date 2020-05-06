@@ -22,7 +22,7 @@ import (
 
 func TestGetUserHomeDir(t *testing.T) {
 	home := GetUserHomeDir()
-	if len(home) == 0 {
+	if home == "" {
 		t.Fatal("got an empty home value")
 	}
 
