@@ -36,7 +36,7 @@ func TestReverseManager_Add(t *testing.T) {
 		{
 			name:     "existing",
 			add:      model.Reverse{Local: 8080, Remote: 8081},
-			reverses: map[int]*reverse{8080: &reverse{forward{localAddress: ":8080", remoteAddress: ":8081"}}},
+			reverses: map[int]*reverse{8080: {forward{localAddress: ":8080", remoteAddress: ":8081"}}},
 			wantErr:  true,
 		},
 	}

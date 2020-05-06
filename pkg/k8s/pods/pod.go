@@ -231,7 +231,7 @@ func parseUserID(output string) int64 {
 	}
 
 	if !strings.HasPrefix(lines[0], "USER:") {
-		log.Infof("USER entry not not found in first development environment log line: %s", line)
+		log.Infof("USER entry not not found in first development environment log line: %s", lines[0])
 		return -1
 	}
 
