@@ -50,10 +50,12 @@ func LoadDevOrDefault(devPath, name string) (*model.Dev, error) {
 	}
 
 	if errors.IsNotExist(err) && len(name) > 0 {
-		return &model.Dev{
-			Name:   name,
-			Labels: map[string]string{},
-		}, nil
+		dev, err := model.Read(nil)
+		if err != nil {
+			return nil, err
+		}
+		dev.Name = name
+		return dev, nil
 	}
 
 	return nil, err
