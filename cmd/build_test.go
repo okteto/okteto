@@ -61,7 +61,7 @@ func Test_overwriteFieldsWithArgs(t *testing.T) {
 			target:     "",
 			want: &model.BuildInfoRaw{
 				Context:    "context",
-				Dockerfile: "context/Dockerfile",
+				Dockerfile: filepath.Join("context", "Dockerfile"),
 			},
 		},
 		{
