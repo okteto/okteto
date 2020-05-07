@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -49,18 +50,11 @@ func Build(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			path := ""
 			if len(args) == 1 {
-				dev.Build.Context = args[0]
+				path = args[0]
 			}
-			if file != "" {
-				dev.Build.Context = file
-			}
-			if tag != "" {
-				dev.Image = tag
-			}
-			if target != "" {
-				dev.Build.Target = target
-			}
+			overwriteFieldsWithArgs(dev, path, file, tag, target)
 			if len(buildArgs) == 0 {
 				buildArgs = model.SerializeBuildArgs(dev.Build.Args)
 			}
@@ -92,4 +86,21 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&buildArgs, "build-arg", nil, "set build-time variables")
 	return cmd
+}
+
+func overwriteFieldsWithArgs(dev *model.Dev, path, file, tag, target string) {
+	if path != "" {
+		dev.Build.Context = path
+	}
+	if file != "" {
+		dev.Build.Dockerfile = file
+	} else {
+		dev.Build.Dockerfile = filepath.Join(dev.Build.Context, "Dockerfile")
+	}
+	if tag != "" {
+		dev.Image = tag
+	}
+	if target != "" {
+		dev.Build.Target = target
+	}
 }
