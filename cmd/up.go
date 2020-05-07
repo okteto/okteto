@@ -779,7 +779,7 @@ func (up *UpContext) cleanCommand() {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
 
-	cmd := "([ -f '/var/okteto/bin/clean' ] && /var/okteto/bin/clean || (cp /var/okteto/bin/* /usr/local/bin; ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1; cat /proc/sys/fs/inotify/max_user_watches"
+	cmd := "cat /proc/sys/fs/inotify/max_user_watches; ([ -f '/var/okteto/bin/clean' ] && /var/okteto/bin/clean || (cp /var/okteto/bin/* /usr/local/bin; ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9)) >/dev/null 2>&1;"
 
 	err := exec.Exec(
 		up.Context,
@@ -799,6 +799,7 @@ func (up *UpContext) cleanCommand() {
 		log.Infof("failed to clean session: %s", err)
 	}
 
+	log.Infof("watches: %s", out.String())
 	if utils.IsWatchesConfigurationTooLow(out.String()) {
 		log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 		log.Yellow("This can affect Okteto's file synchronization performance.")
