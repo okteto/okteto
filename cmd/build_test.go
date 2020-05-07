@@ -32,7 +32,7 @@ func Test_overwriteFieldsWithArgs(t *testing.T) {
 			name: "empty",
 			dev: &model.Dev{
 				Build: &model.BuildInfo{
-					model.BuildInfoRaw{
+					BuildInfoRaw: model.BuildInfoRaw{
 						Context:    ".",
 						Dockerfile: filepath.Join(".", "Dockerfile"),
 					},
@@ -50,7 +50,7 @@ func Test_overwriteFieldsWithArgs(t *testing.T) {
 			name: "context",
 			dev: &model.Dev{
 				Build: &model.BuildInfo{
-					model.BuildInfoRaw{
+					BuildInfoRaw: model.BuildInfoRaw{
 						Context:    ".",
 						Dockerfile: filepath.Join(".", "Dockerfile"),
 					},
@@ -68,7 +68,7 @@ func Test_overwriteFieldsWithArgs(t *testing.T) {
 			name: "dockerfile",
 			dev: &model.Dev{
 				Build: &model.BuildInfo{
-					model.BuildInfoRaw{
+					BuildInfoRaw: model.BuildInfoRaw{
 						Context:    ".",
 						Dockerfile: filepath.Join(".", "Dockerfile"),
 					},
@@ -86,7 +86,7 @@ func Test_overwriteFieldsWithArgs(t *testing.T) {
 			name: "target",
 			dev: &model.Dev{
 				Build: &model.BuildInfo{
-					model.BuildInfoRaw{
+					BuildInfoRaw: model.BuildInfoRaw{
 						Context:    ".",
 						Dockerfile: filepath.Join(".", "Dockerfile"),
 					},
@@ -105,7 +105,7 @@ func Test_overwriteFieldsWithArgs(t *testing.T) {
 			name: "args",
 			dev: &model.Dev{
 				Build: &model.BuildInfo{
-					model.BuildInfoRaw{
+					BuildInfoRaw: model.BuildInfoRaw{
 						Context:    ".",
 						Dockerfile: filepath.Join(".", "Dockerfile"),
 					},
