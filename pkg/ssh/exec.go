@@ -62,27 +62,39 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 
 	if tty {
 		modes := ssh.TerminalModes{
-			ssh.ECHO:  0, // Disable echoing
-			ssh.IGNCR: 1, // Ignore CR on input
+			ssh.ECHO:          0,      // Disable echoing
+			ssh.ECHOCTL:       0,      // Don't print control chars
+			ssh.IGNCR:         1,      // Ignore CR on input
+			ssh.TTY_OP_ISPEED: 115200, // baud in
+			ssh.TTY_OP_OSPEED: 115200, // baud out
 		}
 
-		state, err := terminal.MakeRaw(0)
+		height, width := 80, 40
+		var termFD int
+		var ok bool
+		if termFD, ok = isTerminal(inR); ok {
+			width, height, err = terminal.GetSize(termFD)
+			if err != nil {
+				log.Infof("request for terminal size failed: %s", err)
+			}
+		}
+
+		state, err := terminal.MakeRaw(termFD)
 		if err != nil {
-			return fmt.Errorf("request for raw terminal failed: %s", err)
+			log.Infof("request for raw terminal failed: %s", err)
 		}
 
 		defer func() {
-			if err := terminal.Restore(0, state); err != nil {
+			if state == nil {
+				return
+			}
+
+			if err := terminal.Restore(termFD, state); err != nil {
 				log.Infof("failed to restore terminal: %s", err)
 			}
 		}()
 
-		width, height, err := terminal.GetSize(0)
-		if err != nil {
-			return fmt.Errorf("request for terminal size failed: %s", err)
-		}
-
-		if err := session.RequestPty("xterm", height, width, modes); err != nil {
+		if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
 			return fmt.Errorf("request for pseudo terminal failed: %s", err)
 		}
 	}
@@ -134,4 +146,13 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 	cmd := strings.Join(command, " ")
 	log.Infof("executing command over SSH: '%s'", cmd)
 	return session.Run(cmd)
+}
+
+func isTerminal(r io.Reader) (int, bool) {
+	switch v := r.(type) {
+	case *os.File:
+		return int(v.Fd()), terminal.IsTerminal(int(v.Fd()))
+	default:
+		return 0, false
+	}
 }
