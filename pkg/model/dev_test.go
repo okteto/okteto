@@ -233,7 +233,86 @@ forward:
 	}
 }
 
-func Test_loadDevImage(t *testing.T) {
+func Test_loadName(t *testing.T) {
+	tests := []struct {
+		name      string
+		devName   string
+		value     string
+		onService bool
+		want      string
+	}{
+		{
+			name:    "no-var",
+			devName: "code",
+			value:   "1",
+			want:    "code",
+		},
+		{
+			name:    "var",
+			devName: "code-${value}",
+			value:   "1",
+			want:    "code-1",
+		},
+		{
+			name:    "mising",
+			devName: "code-${valueX}",
+			value:   "1",
+			want:    "code-",
+		},
+		{
+			name:      "no-var-vc",
+			devName:   "code",
+			value:     "1",
+			onService: true,
+			want:      "code",
+		},
+		{
+			name:      "var-svc",
+			devName:   "code-${value}",
+			value:     "1",
+			onService: true,
+			want:      "code-1",
+		},
+		{
+			name:      "mising-svc",
+			devName:   "code-${valueX}",
+			value:     "1",
+			onService: true,
+			want:      "code-",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifest := []byte(fmt.Sprintf(`
+name: %s`, tt.devName))
+
+			if tt.onService {
+				manifest = []byte(fmt.Sprintf(`
+name: n1
+services:
+  - name: %s`, tt.devName))
+			}
+
+			os.Setenv("value", tt.value)
+			d, err := Read(manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			name := d.Name
+			if tt.onService {
+				name = d.Services[0].Name
+			}
+
+			if name != tt.want {
+				t.Errorf("got: '%s', expected: '%s'", name, tt.want)
+			}
+		})
+	}
+}
+
+func Test_loadImage(t *testing.T) {
 	tests := []struct {
 		name      string
 		want      string
