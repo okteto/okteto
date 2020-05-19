@@ -252,8 +252,12 @@ func Read(bytes []byte) (*Dev, error) {
 		}
 	}
 
-	dev.loadImage()
+	dev.loadName()
+	for _, s := range dev.Services {
+		s.loadName()
+	}
 
+	dev.loadImage()
 	for _, s := range dev.Services {
 		s.loadImage()
 	}
@@ -271,6 +275,12 @@ func Read(bytes []byte) (*Dev, error) {
 	})
 
 	return dev, nil
+}
+
+func (dev *Dev) loadName() {
+	if len(dev.Name) > 0 {
+		dev.Name = os.ExpandEnv(dev.Name)
+	}
 }
 
 func (dev *Dev) loadImage() {
