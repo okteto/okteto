@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -148,16 +149,34 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kubernetes.Clientset) error {
 	tries := 0
 	ticker := time.NewTicker(200 * time.Millisecond)
-	for tries < maxRetriesUpdateRevision {
+
+	du := (30 * time.Second)
+	if t, ok := os.LookupEnv("OKTETO_REVISION_TIMEOUT"); ok {
+		parsed, err := time.ParseDuration(t)
+		if err != nil {
+			return fmt.Errorf("'%s' is not a valid duration", t)
+		}
+
+		du = parsed
+	}
+
+	timeout := time.Now().Add(du)
+
+	for {
 		updated, err := client.AppsV1().Deployments(d.Namespace).Get(d.Name, metav1.GetOptions{})
 		if err != nil {
 			log.Debugf("error while retrieving deployment %s/%s: %s", d.Namespace, d.Name, err)
 			return err
 		}
+
 		revision := updated.Annotations[revisionAnnotation]
 		if revision != "" {
 			d.Annotations[okLabels.RevisionAnnotation] = revision
 			return update(d, client)
+		}
+
+		if time.Now().After(timeout) {
+			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", revisionAnnotation, d.Name)
 		}
 
 		select {
@@ -169,7 +188,6 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 			return ctx.Err()
 		}
 	}
-	return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", revisionAnnotation, d.Name)
 }
 
 //TranslateDevMode translates the deployment manifests to put them in dev mode
