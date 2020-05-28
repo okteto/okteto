@@ -157,6 +157,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 			return fmt.Errorf("'%s' is not a valid duration", t)
 		}
 
+		log.Infof("OKTETO_REVISION_TIMEOUT applied: '%s'", parsed.String())
 		du = parsed
 	}
 

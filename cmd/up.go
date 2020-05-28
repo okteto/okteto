@@ -529,6 +529,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 				return err
 			}
 		}
+
 		if trList[name].Deployment.Annotations[okLabels.DeploymentAnnotation] == "" {
 			continue
 		}
