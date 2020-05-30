@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	okerr "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/bcrypt"
@@ -292,7 +292,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	log.Infof("waiting for syncthing local=%t to be ready...", local)
 	for i := 0; i < 150; i++ {
-		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil)
+		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false)
 		if err == nil {
 			return nil
 		}
@@ -313,7 +313,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 	log.Infof("sending '.stignore' file to the remote syncthing...")
 	params := getFolderParameter(dev)
 	ignores := &Ignores{}
-	body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil)
+	body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true)
 	if err != nil {
 		log.Infof("error getting 'rest/db/ignores' syncthing API: %s", err)
 		return
@@ -337,7 +337,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 	if err != nil {
 		log.Infof("error marshaling 'rest/db/ignores': %s", err)
 	}
-	_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body)
+	_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false)
 	if err != nil {
 		log.Infof("error posting 'rest/db/ignores' syncthing API: %s", err)
 		return
@@ -348,7 +348,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
 	log.Infof("reseting syncthing database local=%t...", local)
 	params := getFolderParameter(dev)
-	_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil)
+	_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil, false)
 	if err != nil {
 		log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
 		return err
@@ -360,7 +360,7 @@ func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local boo
 func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 	log.Infof("overriding local changes to the remote syncthing...")
 	params := getFolderParameter(dev)
-	_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil)
+	_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false)
 	if err != nil {
 		log.Infof("error posting 'rest/db/override' syncthing API: %s", err)
 		return err
@@ -382,7 +382,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 			return ctx.Err()
 		}
 
-		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil)
+		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
 		if err != nil {
 			log.Debugf("error calling 'rest/db/status' local=%t syncthing API: %s", local, err)
 			continue
@@ -454,7 +454,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				}
 				retries++
 				if retries >= 60 {
-					return errors.ErrUnknownSyncError
+					return okerr.ErrUnknownSyncError
 				}
 				continue
 			}
@@ -470,7 +470,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 func (s *Syncthing) GetStatus(ctx context.Context, dev *model.Dev, local bool) (*Status, error) {
 	params := getFolderParameter(dev)
 	status := &Status{}
-	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil)
+	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +491,7 @@ func (s *Syncthing) GetCompletion(ctx context.Context, dev *model.Dev, local boo
 		params["device"] = localDeviceID
 	}
 	completion := &Completion{}
-	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil)
+	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -524,7 +524,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, dev *model.Dev, local b
 	params["timeout"] = "15"
 	params["events"] = "FolderErrors"
 	folderErrorsList := []FolderErrors{}
-	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil)
+	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true)
 	if err != nil {
 		return err
 	}
@@ -555,7 +555,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, dev *model.Dev, local b
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context) error {
 	log.Infof("restarting syncthing...")
-	_, err := s.APICall(ctx, "rest/system/restart", "POST", 200, nil, true, nil)
+	_, err := s.APICall(ctx, "rest/system/restart", "POST", 200, nil, true, nil, false)
 	return err
 }
 
