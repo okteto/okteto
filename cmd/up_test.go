@@ -26,7 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-func TestwaitUntilExitOrInterrupt(t *testing.T) {
+func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	up := UpContext{}
 	up.Running = make(chan error, 1)
 	up.Running <- nil
