@@ -129,9 +129,9 @@ func Up() *cobra.Command {
 
 					log.Yellow("couldn't upgrade syncthing, will try again later")
 					fmt.Println()
+				} else {
+					log.Success("Dependencies successfully installed")
 				}
-
-				log.Success("Dependencies successfully installed")
 			}
 
 			utils.CheckLocalWatchesConfiguration()
@@ -140,6 +140,7 @@ func Up() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			if err := dev.UpdateNamespace(namespace); err != nil {
 				return err
 			}
@@ -172,7 +173,7 @@ func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) er
 	}
 
 	if up.Dev.ExecuteOverSSHEnabled() {
-		log.Success("Experimental SSH mode enabled")
+		log.Info("execute over SSH mode enabled")
 	}
 
 	defer up.shutdown()
@@ -307,20 +308,23 @@ func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
 
 		log.Success("Development environment activated")
 
-		err = up.sync(resetSyncthing && !up.retry)
-		if err != nil {
+		if err := up.sync(resetSyncthing && !up.retry); err != nil {
 			if !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
 				log.Yellow("\nConnection lost to your development environment, reconnecting...\n")
 				up.shutdown()
 				continue
 			}
+
 			up.Exit <- err
 			return
 		}
+
 		up.success = true
+
 		if up.retry {
 			analytics.TrackReconnect(true, up.getClusterType(), up.isSwap)
 		}
+
 		up.retry = true
 
 		log.Success("Files synchronized")
@@ -331,7 +335,8 @@ func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
 			up.Running <- up.runCommand()
 		}()
 
-		prevError := up.WaitUntilExitOrInterrupt()
+		prevError := up.waitUntilExitOrInterrupt()
+
 		if isTerm {
 			log.Debug("Restoring terminal")
 			if err := term.RestoreTerminal(inFd, state); err != nil {
@@ -400,8 +405,8 @@ func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 	return up.Dev.GevSandbox(), true, nil
 }
 
-// WaitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
-func (up *UpContext) WaitUntilExitOrInterrupt() error {
+// waitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
+func (up *UpContext) waitUntilExitOrInterrupt() error {
 	for {
 		select {
 		case err := <-up.Running:
@@ -749,8 +754,7 @@ func (up *UpContext) synchronizeFiles() error {
 		}
 	}()
 
-	err := up.Sy.WaitForCompletion(up.Context, up.Dev, reporter)
-	if err != nil {
+	if err := up.Sy.WaitForCompletion(up.Context, up.Dev, reporter); err != nil {
 		if err == errors.ErrUnknownSyncError {
 			analytics.TrackSyncError()
 			return errors.UserError{

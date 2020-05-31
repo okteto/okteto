@@ -224,11 +224,11 @@ func (s *Syncthing) initConfig() error {
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(s.Home, certFile), cert, 0700); err != nil {
-		return err
+		return fmt.Errorf("failed to write syncthing certificate: %w", err)
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(s.Home, keyFile), key, 0700); err != nil {
-		return err
+		return fmt.Errorf("failed to write syncthing key: %w", err)
 	}
 
 	return nil
@@ -238,12 +238,13 @@ func (s *Syncthing) initConfig() error {
 func (s *Syncthing) UpdateConfig() error {
 	buf := new(bytes.Buffer)
 	if err := configTemplate.Execute(buf, s); err != nil {
-		return err
+		return fmt.Errorf("failed to write syncthing configuration template: %w", err)
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
-		return err
+		return fmt.Errorf("failed to write syncthing configuration file: %w", err)
 	}
+
 	return nil
 }
 
@@ -267,18 +268,15 @@ func (s *Syncthing) Run(ctx context.Context) error {
 	s.cmd.Env = append(os.Environ(), "STNOUPGRADE=1")
 
 	if err := s.cmd.Start(); err != nil {
-		return err
+		return fmt.Errorf("failed to start syncthing: %w", err)
 	}
 
 	if s.cmd.Process == nil {
 		return nil
 	}
 
-	if err := ioutil.WriteFile(
-		pidPath,
-		[]byte(strconv.Itoa(s.cmd.Process.Pid)),
-		0600); err != nil {
-		return err
+	if err := ioutil.WriteFile(pidPath, []byte(strconv.Itoa(s.cmd.Process.Pid)), 0600); err != nil {
+		return fmt.Errorf("failed to write syncthing pid file: %w", err)
 	}
 
 	s.pid = s.cmd.Process.Pid
@@ -598,7 +596,7 @@ func (s *Syncthing) Save(dev *model.Dev) error {
 
 	syncthingInfoFile := config.GetSyncthingInfoFile(dev.Namespace, dev.Name)
 	if err := ioutil.WriteFile(syncthingInfoFile, marshalled, 0600); err != nil {
-		return err
+		return fmt.Errorf("failed to write syncthing info file: %w", err)
 	}
 
 	return nil
