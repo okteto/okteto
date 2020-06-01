@@ -26,17 +26,17 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-func TestWaitUntilExitOrInterrupt(t *testing.T) {
+func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	up := UpContext{}
 	up.Running = make(chan error, 1)
 	up.Running <- nil
-	err := up.WaitUntilExitOrInterrupt()
+	err := up.waitUntilExitOrInterrupt()
 	if err != nil {
 		t.Errorf("exited with error instead of nil: %s", err)
 	}
 
 	up.Running <- fmt.Errorf("custom-error")
-	err = up.WaitUntilExitOrInterrupt()
+	err = up.waitUntilExitOrInterrupt()
 	if err == nil {
 		t.Errorf("didn't report proper error")
 	}
@@ -47,7 +47,7 @@ func TestWaitUntilExitOrInterrupt(t *testing.T) {
 
 	up.Disconnect = make(chan error, 1)
 	up.Disconnect <- errors.ErrLostSyncthing
-	err = up.WaitUntilExitOrInterrupt()
+	err = up.waitUntilExitOrInterrupt()
 	if err != errors.ErrLostSyncthing {
 		t.Errorf("exited with error %s instead of %s", err, errors.ErrLostSyncthing)
 	}
