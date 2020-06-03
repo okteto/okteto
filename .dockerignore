@@ -1,0 +1,6 @@
+/bin
+/docs
+/integration
+/.circleci
+/.github
+/.vscode
