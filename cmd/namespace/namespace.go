@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -36,6 +37,10 @@ func Namespace(ctx context.Context) *cobra.Command {
 			namespace := ""
 			if len(args) > 0 {
 				namespace = args[0]
+			}
+
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+				return err
 			}
 
 			err := RunNamespace(ctx, namespace)

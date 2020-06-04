@@ -65,27 +65,30 @@ func query(ctx context.Context, query string, result interface{}) error {
 
 	req := getRequest(query, t.Token)
 	if err := c.Run(ctx, req, result); err != nil {
-		e := strings.TrimPrefix(err.Error(), "graphql: ")
-		if isNotAuthorized(e) {
-			return errors.ErrNotLogged
-		}
-
-		if isConnectionError(e) {
-			return errors.ErrInternalServerError
-		}
-
-		return fmt.Errorf(e)
+		return translateAPIErr(err)
 	}
 
 	return nil
 }
 
-func isNotAuthorized(s string) bool {
-	return strings.Contains(s, "not-authorized")
-}
+func translateAPIErr(err error) error {
+	e := strings.TrimPrefix(err.Error(), "graphql: ")
+	switch e {
+	case "not-authorized":
+		return errors.ErrNotLogged
+	case "namespace-quota-exceeded":
+		return fmt.Errorf("you have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
+	case "namespace-quota-exceeded-onpremises":
+		return fmt.Errorf("you have exceeded your namespace quota, please contact your administrator to increase it")
+	case "users-limit-exceeded":
+		return fmt.Errorf("license limit exceeded. Contact your administrator to update your license and try again")
+	case "internal-server-error":
+		return fmt.Errorf("server temporarily unavailable, please try again")
+	default:
+		log.Infof("unrecognized API error: %s", err)
+		return err
+	}
 
-func isConnectionError(s string) bool {
-	return strings.Contains(s, "decoding response") || strings.Contains(s, "reading body")
 }
 
 //SetKubeConfig updates a kubeconfig file with okteto cluster credentials
