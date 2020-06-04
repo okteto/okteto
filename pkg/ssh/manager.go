@@ -16,14 +16,11 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"time"
 
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
-
-const connectTimeout = 120 * time.Second
 
 // ForwardManager handles the lifecycle of all the forwards
 type ForwardManager struct {

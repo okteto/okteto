@@ -247,6 +247,7 @@ func getPort(address string) string {
 }
 
 func (fm *ForwardManager) waitForwardsConnected() error {
+	connectTimeout := 120 * time.Second
 	tk := time.NewTicker(500 * time.Millisecond)
 	start := time.Now()
 	var connected bool
