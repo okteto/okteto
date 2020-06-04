@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -30,6 +31,10 @@ func Delete(ctx context.Context) *cobra.Command {
 		Use:   "namespace <name>",
 		Short: fmt.Sprintf("Deletes a namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+				return err
+			}
+
 			err := executeDeleteNamespace(ctx, args[0])
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
@@ -45,8 +50,9 @@ func Delete(ctx context.Context) *cobra.Command {
 
 func executeDeleteNamespace(ctx context.Context, namespace string) error {
 	if err := okteto.DeleteNamespace(ctx, namespace); err != nil {
-		return err
+		return fmt.Errorf("failed to delete namespace: %s", err)
 	}
+
 	log.Success("Namespace '%s' deleted", namespace)
 	return nil
 }

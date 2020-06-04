@@ -90,6 +90,7 @@ type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
 	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	Image                string                `json:"image,omitempty" yaml:"image,omitempty"`
