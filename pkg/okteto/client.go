@@ -147,3 +147,12 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 
 	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }
+
+// InDevEnv returns true if running in an Okteto dev pod
+func InDevEnv() bool {
+	if v, ok := os.LookupEnv("OKTETO_MARKER_PATH"); ok && v != "" {
+		return true
+	}
+
+	return false
+}
