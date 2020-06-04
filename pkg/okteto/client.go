@@ -86,7 +86,7 @@ func translateAPIErr(err error) error {
 		return fmt.Errorf("server temporarily unavailable, please try again")
 	default:
 		log.Infof("unrecognized API error: %s", err)
-		return errors.ErrInternalServerError
+		return err
 	}
 
 }
