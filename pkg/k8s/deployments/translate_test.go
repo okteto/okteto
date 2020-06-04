@@ -62,6 +62,8 @@ secrets:
   - %s:/remote
 persistentVolume:
   enabled: true
+annotations:
+  key: value
 resources:
   limits:
     cpu: 2
@@ -70,6 +72,8 @@ resources:
     amd.com/gpu: 1
 services:
   - name: worker
+    annotations:
+      key: value
     container: dev
     image: worker:latest
     command: ["./run_worker.sh"]
@@ -89,6 +93,7 @@ services:
 		Version:     model.TranslationVersion,
 		Deployment:  d1,
 		Rules:       []*model.TranslationRule{rule1},
+		Annotations: map[string]string{"key": "value"},
 	}
 	err = translate(tr1, nil, nil)
 	if err != nil {
@@ -264,6 +269,12 @@ services:
 	if string(marshalled1) != string(marshalled1OK) {
 		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
 	}
+	if d1.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d1 annotations: '%s'", d1.Annotations["key"])
+	}
+	if d1.Spec.Template.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.Spec.Template.Annotations["key"])
+	}
 
 	d1Down, err := TranslateDevModeOff(d1)
 	if err != nil {
@@ -275,6 +286,12 @@ services:
 	if string(marshalled1Down) != string(marshalled1Orig) {
 		t.Fatalf("Wrong d1 down.\nActual %+v, \nExpected %+v", string(marshalled1Down), string(marshalled1Orig))
 	}
+	if d1Down.Annotations["key"] != "" {
+		t.Fatalf("Wrong d1 annotations after down: '%s'", d1.Annotations["key"])
+	}
+	if d1Down.Spec.Template.Annotations["key"] != "" {
+		t.Fatalf("Wrong d1 pod annotations after down: '%s'", d1.Spec.Template.Annotations["key"])
+	}
 
 	dev2 := dev.Services[0]
 	d2 := dev2.GevSandbox()
@@ -285,6 +302,7 @@ services:
 		Version:     model.TranslationVersion,
 		Deployment:  d2,
 		Rules:       []*model.TranslationRule{rule2},
+		Annotations: map[string]string{"key": "value"},
 	}
 	err = translate(tr2, nil, nil)
 	if err != nil {
@@ -353,6 +371,12 @@ services:
 	if string(marshalled2) != string(marshalled2OK) {
 		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
 	}
+	if d2.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d2 annotations: '%s'", d2.Annotations["key"])
+	}
+	if d2.Spec.Template.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d2 pod annotations: '%s'", d2.Spec.Template.Annotations["key"])
+	}
 
 	d2Down, err := TranslateDevModeOff(d2)
 	if err != nil {
@@ -363,6 +387,12 @@ services:
 	marshalled2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
 	if string(marshalled2Down) != string(marshalled2Orig) {
 		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
+	}
+	if d2Down.Annotations["key"] != "" {
+		t.Fatalf("Wrong d2 annotations after down: '%s'", d2.Annotations["key"])
+	}
+	if d2Down.Spec.Template.Annotations["key"] != "" {
+		t.Fatalf("Wrong d2 pod annotations after down: '%s'", d2.Spec.Template.Annotations["key"])
 	}
 }
 

@@ -242,6 +242,10 @@ func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	if err := deleteUserAnnotations(annotations); err != nil {
 		return nil, err
 	}
+	annotations = d.GetObjectMeta().GetAnnotations()
+	if err := deleteUserAnnotations(annotations); err != nil {
+		return nil, err
+	}
 	delete(annotations, okLabels.TranslationAnnotation)
 	delete(annotations, model.OktetoRestartAnnotation)
 	d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)

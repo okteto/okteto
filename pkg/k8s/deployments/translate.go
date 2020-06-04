@@ -117,7 +117,8 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 }
 
 func commonTranslation(t *model.Translation) {
-	TranslatePodUserAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
+	TranslateUserAnnotations(t.Deployment.GetObjectMeta(), t.Annotations)
+	TranslateUserAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.Version)
 	setLabel(t.Deployment.GetObjectMeta(), okLabels.DevLabel, "true")
 
@@ -145,8 +146,8 @@ func GetDevContainer(spec *apiv1.PodSpec, name string) *apiv1.Container {
 	return nil
 }
 
-//TranslatePodUserAnnotations translates the user provided annotations of pod
-func TranslatePodUserAnnotations(o metav1.Object, annotations map[string]string) {
+//TranslateUserAnnotations sets the user provided annotations
+func TranslateUserAnnotations(o metav1.Object, annotations map[string]string) {
 	for key, value := range annotations {
 		setAnnotation(o, key, value)
 	}
