@@ -60,11 +60,7 @@ func AddNamespaceMembers(ctx context.Context, namespace string, members []string
 	}`, namespace, m)
 
 	var body CreateBody
-	if err := query(ctx, q, &body); err != nil {
-		return err
-	}
-
-	return nil
+	return query(ctx, q, &body)
 }
 
 func membersToString(members []string) string {
@@ -89,9 +85,5 @@ func DeleteNamespace(ctx context.Context, namespace string) error {
 	}`, namespace)
 
 	var body DeleteBody
-	if err := query(ctx, q, &body); err != nil {
-		return err
-	}
-
-	return nil
+	return query(ctx, q, &body)
 }
