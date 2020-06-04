@@ -49,6 +49,33 @@ func CreateNamespace(ctx context.Context, namespace string) (string, error) {
 	return body.Namespace.ID, nil
 }
 
+// AddNamespaceMembers adds members to a namespace
+func AddNamespaceMembers(ctx context.Context, namespace string, members []string) error {
+	m := membersToString(members)
+
+	q := fmt.Sprintf(`mutation{
+		updateSpace(id: "%s", members: [%s]){
+			id
+		},
+	}`, namespace, m)
+
+	var body CreateBody
+	return query(ctx, q, &body)
+}
+
+func membersToString(members []string) string {
+	m := ""
+	for _, mm := range members {
+		if len(m) > 0 {
+			m += ","
+		}
+
+		m += fmt.Sprintf(`"%s"`, mm)
+	}
+
+	return m
+}
+
 // DeleteNamespace deletes a namespace
 func DeleteNamespace(ctx context.Context, namespace string) error {
 	q := fmt.Sprintf(`mutation{
@@ -58,9 +85,5 @@ func DeleteNamespace(ctx context.Context, namespace string) error {
 	}`, namespace)
 
 	var body DeleteBody
-	if err := query(ctx, q, &body); err != nil {
-		return err
-	}
-
-	return nil
+	return query(ctx, q, &body)
 }
