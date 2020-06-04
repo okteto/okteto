@@ -51,14 +51,7 @@ func CreateNamespace(ctx context.Context, namespace string) (string, error) {
 
 // AddNamespaceMembers adds members to a namespace
 func AddNamespaceMembers(ctx context.Context, namespace string, members []string) error {
-	m := ""
-	for _, mm := range members {
-		if len(m) > 0 {
-			m += ","
-		}
-
-		m += fmt.Sprintf(`"%s"`, mm)
-	}
+	m := membersToString(members)
 
 	q := fmt.Sprintf(`mutation{
 		updateSpace(id: "%s", members: [%s]){
@@ -72,6 +65,19 @@ func AddNamespaceMembers(ctx context.Context, namespace string, members []string
 	}
 
 	return nil
+}
+
+func membersToString(members []string) string {
+	m := ""
+	for _, mm := range members {
+		if len(m) > 0 {
+			m += ","
+		}
+
+		m += fmt.Sprintf(`"%s"`, mm)
+	}
+
+	return m
 }
 
 // DeleteNamespace deletes a namespace
