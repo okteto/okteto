@@ -89,14 +89,15 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 
 	commonTranslation(t)
-
 	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
+	TranslateDevAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
+	TranslateDevTolerations(&t.Deployment.Spec.Template.Spec, t.Tolerations)
+	TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
 	if t.Interactive {
 		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
 	}
-	TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		if devContainer == nil {
@@ -117,8 +118,7 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 }
 
 func commonTranslation(t *model.Translation) {
-	TranslateUserAnnotations(t.Deployment.GetObjectMeta(), t.Annotations)
-	TranslateUserAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
+	TranslateDevAnnotations(t.Deployment.GetObjectMeta(), t.Annotations)
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.Version)
 	setLabel(t.Deployment.GetObjectMeta(), okLabels.DevLabel, "true")
 
@@ -146,11 +146,16 @@ func GetDevContainer(spec *apiv1.PodSpec, name string) *apiv1.Container {
 	return nil
 }
 
-//TranslateUserAnnotations sets the user provided annotations
-func TranslateUserAnnotations(o metav1.Object, annotations map[string]string) {
+//TranslateDevAnnotations sets the user provided annotations
+func TranslateDevAnnotations(o metav1.Object, annotations map[string]string) {
 	for key, value := range annotations {
 		setAnnotation(o, key, value)
 	}
+}
+
+//TranslateDevTolerations sets the user provided toleretions
+func TranslateDevTolerations(spec *apiv1.PodSpec, tolerations []apiv1.Toleration) {
+	spec.Tolerations = append(spec.Tolerations, tolerations...)
 }
 
 //TranslatePodAffinity translates the affinity of pod to be all on the same node

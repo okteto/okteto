@@ -62,8 +62,6 @@ secrets:
   - %s:/remote
 persistentVolume:
   enabled: true
-annotations:
-  key: value
 resources:
   limits:
     cpu: 2
@@ -72,8 +70,6 @@ resources:
     amd.com/gpu: 1
 services:
   - name: worker
-    annotations:
-      key: value
     container: dev
     image: worker:latest
     command: ["./run_worker.sh"]
@@ -94,6 +90,12 @@ services:
 		Deployment:  d1,
 		Rules:       []*model.TranslationRule{rule1},
 		Annotations: map[string]string{"key": "value"},
+		Tolerations: []apiv1.Toleration{
+			{
+				Key:      "nvidia/cpu",
+				Operator: apiv1.TolerationOpExists,
+			},
+		},
 	}
 	err = translate(tr1, nil, nil)
 	if err != nil {
@@ -115,6 +117,12 @@ services:
 									TopologyKey: "kubernetes.io/hostname",
 								},
 							},
+						},
+					},
+					Tolerations: []apiv1.Toleration{
+						{
+							Key:      "nvidia/cpu",
+							Operator: apiv1.TolerationOpExists,
 						},
 					},
 					SecurityContext: &apiv1.PodSecurityContext{
@@ -303,6 +311,12 @@ services:
 		Deployment:  d2,
 		Rules:       []*model.TranslationRule{rule2},
 		Annotations: map[string]string{"key": "value"},
+		Tolerations: []apiv1.Toleration{
+			{
+				Key:      "nvidia/cpu",
+				Operator: apiv1.TolerationOpExists,
+			},
+		},
 	}
 	err = translate(tr2, nil, nil)
 	if err != nil {
@@ -324,6 +338,12 @@ services:
 									TopologyKey: "kubernetes.io/hostname",
 								},
 							},
+						},
+					},
+					Tolerations: []apiv1.Toleration{
+						{
+							Key:      "nvidia/cpu",
+							Operator: apiv1.TolerationOpExists,
 						},
 					},
 					SecurityContext: &apiv1.PodSecurityContext{
