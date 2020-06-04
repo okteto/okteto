@@ -107,8 +107,8 @@ func Up() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting up command")
 
-			if k8Client.InCluster() {
-				return errors.ErrNotInCluster
+			if okteto.InDevEnv() {
+				return errors.ErrNotInDevEnv
 			}
 
 			u := upgradeAvailable()

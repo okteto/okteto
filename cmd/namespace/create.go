@@ -17,8 +17,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -26,11 +28,17 @@ import (
 
 //Create creates a namespace
 func Create(ctx context.Context) *cobra.Command {
-	return &cobra.Command{
+	var members *[]string
+
+	cmd := &cobra.Command{
 		Use:   "namespace <name>",
 		Short: fmt.Sprintf("Creates a namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := executeCreateNamespace(ctx, args[0])
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+				return err
+			}
+
+			err := executeCreateNamespace(ctx, args[0], members)
 			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},
@@ -41,17 +49,28 @@ func Create(ctx context.Context) *cobra.Command {
 			return nil
 		},
 	}
+
+	members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the namespace, it can the username or email")
+	return cmd
 }
 
-func executeCreateNamespace(ctx context.Context, namespace string) error {
+func executeCreateNamespace(ctx context.Context, namespace string, members *[]string) error {
 	oktetoNS, err := okteto.CreateNamespace(ctx, namespace)
 	if err != nil {
 		return err
 	}
+
 	log.Success("Namespace '%s' created", oktetoNS)
 
+	if members != nil {
+		if err := okteto.AddNamespaceMembers(ctx, namespace, *members); err != nil {
+			log.Infof("failed to invite %s to the namespace: %s", strings.Join(*members, ", "), err)
+			return fmt.Errorf("failed to invite %s to the namespace", strings.Join(*members, ", "))
+		}
+	}
+
 	if err := RunNamespace(ctx, namespace); err != nil {
-		return err
+		return fmt.Errorf("failed to activate your new namespace: %s", err)
 	}
 
 	return nil

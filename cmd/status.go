@@ -25,6 +25,7 @@ import (
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 )
@@ -41,8 +42,8 @@ func Status() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting status command")
 
-			if k8Client.InCluster() {
-				return errors.ErrNotInCluster
+			if okteto.InDevEnv() {
+				return errors.ErrNotInDevEnv
 			}
 
 			dev, err := utils.LoadDev(devPath)
