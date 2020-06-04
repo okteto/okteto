@@ -64,7 +64,7 @@ func executeCreateNamespace(ctx context.Context, namespace string, members *[]st
 
 	if members != nil {
 		if err := okteto.AddNamespaceMembers(ctx, namespace, *members); err != nil {
-			log.Infof("failed to invite %s to the namespace", strings.Join(*members, ", "), err)
+			log.Infof("failed to invite %s to the namespace: %s", strings.Join(*members, ", "), err)
 			return fmt.Errorf("failed to invite %s to the namespace", strings.Join(*members, ", "))
 		}
 	}
