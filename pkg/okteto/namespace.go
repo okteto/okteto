@@ -18,18 +18,15 @@ import (
 	"fmt"
 )
 
-// CreateBody top body answer
-type CreateBody struct {
-	Namespace Namespace `json:"createSpace" yaml:"createSpace"`
+type createBody struct {
+	Namespace namespace `json:"createSpace" yaml:"createSpace"`
 }
 
-// DeleteBody top body answer
-type DeleteBody struct {
-	Namespace Namespace `json:"deleteSpace" yaml:"deleteSpace"`
+type deleteBody struct {
+	Namespace namespace `json:"deleteSpace" yaml:"deleteSpace"`
 }
 
-//Namespace represents an Okteto k8s namespace
-type Namespace struct {
+type namespace struct {
 	ID string `json:"id" yaml:"id"`
 }
 
@@ -41,7 +38,7 @@ func CreateNamespace(ctx context.Context, namespace string) (string, error) {
 		},
 	}`, namespace)
 
-	var body CreateBody
+	var body createBody
 	if err := query(ctx, q, &body); err != nil {
 		return "", err
 	}
@@ -59,7 +56,7 @@ func AddNamespaceMembers(ctx context.Context, namespace string, members []string
 		},
 	}`, namespace, m)
 
-	var body CreateBody
+	var body createBody
 	return query(ctx, q, &body)
 }
 
@@ -84,6 +81,6 @@ func DeleteNamespace(ctx context.Context, namespace string) error {
 		},
 	}`, namespace)
 
-	var body DeleteBody
+	var body deleteBody
 	return query(ctx, q, &body)
 }
