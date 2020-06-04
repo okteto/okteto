@@ -75,7 +75,7 @@ func AuthWithToken(ctx context.Context, url, token string) (*User, error) {
 
 	user, err := queryUser(ctx, client, token)
 	if err != nil {
-		log.Infof("failed to login the user: %s", err)
+		log.Infof("failed to query the user with the existing token: %s", err)
 		return nil, fmt.Errorf("invalid API token")
 	}
 
@@ -96,11 +96,13 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 
 	user, err := authUser(ctx, client, code)
 	if err != nil {
-		return nil, err
+		log.Infof("authentication error: %s", err)
+		return nil, fmt.Errorf("authentication error, please try again")
 	}
 
 	if err := saveAuthData(&user.Auth, url); err != nil {
-		return nil, err
+		log.Infof("failed to save the auth data: %s", err)
+		return nil, fmt.Errorf("failed to save your auth info locally, please try again")
 	}
 
 	return &user.Auth, nil
@@ -118,7 +120,7 @@ func saveAuthData(user *User, url string) error {
 
 	d, err := base64.StdEncoding.DecodeString(user.Certificate)
 	if err != nil {
-		return fmt.Errorf("bad response: %w", err)
+		return fmt.Errorf("certificate decoding error: %w", err)
 	}
 
 	return ioutil.WriteFile(GetCertificatePath(), d, 0600)
@@ -139,7 +141,8 @@ func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, e
 				log.Infof("query using the legacy parameters: %s", err)
 				return queryUserLegacy(ctx, client, token)
 			}
-			return nil, fmt.Errorf("unauthorized request: %w", err)
+
+			return nil, err
 		}
 	}
 
@@ -156,9 +159,7 @@ func queryUserLegacy(ctx context.Context, client *graphql.Client, token string) 
 	req := getRequest(q, token)
 
 	if err := client.Run(ctx, req, &user); err != nil {
-		if err := client.Run(ctx, req, &user); err != nil {
-			return nil, fmt.Errorf("unauthorized request: %w", err)
-		}
+		return nil, err
 	}
 
 	return &user, nil
@@ -177,7 +178,8 @@ func authUser(ctx context.Context, client *graphql.Client, code string) (*u, err
 			log.Infof("query using the legacy parameters: %s", err)
 			return authUserLegacy(ctx, client, code)
 		}
-		return nil, fmt.Errorf("unauthorized request: %w", err)
+
+		return nil, err
 	}
 
 	return &user, nil
@@ -192,7 +194,7 @@ func authUserLegacy(ctx context.Context, client *graphql.Client, code string) (*
 
 	req := graphql.NewRequest(q)
 	if err := client.Run(ctx, req, &user); err != nil {
-		return nil, fmt.Errorf("unauthorized request: %w", err)
+		return nil, err
 	}
 
 	return &user, nil
