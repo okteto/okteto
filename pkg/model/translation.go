@@ -24,7 +24,8 @@ type Translation struct {
 	Name        string             `json:"name"`
 	Version     string             `json:"version"`
 	Deployment  *appsv1.Deployment `json:"-"`
-	Annotations map[string]string  `json:"-"`
+	Annotations map[string]string  `json:"annotations,omitempty"`
+	Tolerations []apiv1.Toleration `json:"tolerations,omitempty"`
 	Replicas    int32              `json:"replicas"`
 	Rules       []*TranslationRule `json:"rules"`
 }

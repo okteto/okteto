@@ -21,6 +21,8 @@ import (
 	"net/http"
 	"path"
 	"time"
+
+	"github.com/okteto/okteto/pkg/log"
 )
 
 type addAPIKeyTransport struct {
@@ -41,16 +43,17 @@ func NewAPIClient() *http.Client {
 }
 
 // APICall calls the syncthing API and returns the parsed json or an error
-func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte) ([]byte, error) {
+func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte, readBody bool) ([]byte, error) {
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
 	} else {
 		urlPath = path.Join(s.RemoteGUIAddress, url)
 	}
+
 	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), bytes.NewBuffer(body))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize syncthing API request: %w", err)
 	}
 
 	req = req.WithContext(ctx)
@@ -66,17 +69,25 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 
 	resp, err := s.Client.Do(req)
 	if err != nil {
-		return nil, err
+		log.Infof("fail to call syncthing API at %s: %s", url, err)
+		return nil, fmt.Errorf("failed to call syncthing API: %w", err)
 	}
 
 	defer resp.Body.Close()
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
 
 	if resp.StatusCode != code {
-		return nil, fmt.Errorf("bad response from syncthing api %s %d: %s", req.URL.String(), resp.StatusCode, string(body))
+		log.Infof("unexpected response from syncthing API %s %d: %s", req.URL.String(), resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected response from syncthing API %s %d: %s", req.URL.String(), resp.StatusCode, string(body))
+	}
+
+	if !readBody {
+		return nil, nil
+	}
+
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Infof("failed to read response from syncthing API at %s: %s", url, err)
+		return nil, fmt.Errorf("failed to read response from syncthing API")
 	}
 
 	return body, nil

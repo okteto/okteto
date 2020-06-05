@@ -104,6 +104,7 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clients
 			Version:     model.TranslationVersion,
 			Deployment:  d,
 			Annotations: dev.Annotations,
+			Tolerations: dev.Tolerations,
 			Replicas:    *d.Spec.Replicas,
 			Rules:       []*model.TranslationRule{rule},
 		}
@@ -123,6 +124,7 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clients
 				Version:     model.TranslationVersion,
 				Deployment:  d,
 				Annotations: dev.Annotations,
+				Tolerations: dev.Tolerations,
 				Replicas:    *d.Spec.Replicas,
 				Rules:       []*model.TranslationRule{rule},
 			}
@@ -256,11 +258,11 @@ func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	d.Spec.Replicas = &trRules.Replicas
 	annotations := d.GetObjectMeta().GetAnnotations()
 	delete(annotations, oktetoVersionAnnotation)
-	d.GetObjectMeta().SetAnnotations(annotations)
-	annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
-	if err := deleteUserAnnotations(annotations); err != nil {
+	if err := deleteUserAnnotations(annotations, trRules); err != nil {
 		return nil, err
 	}
+	d.GetObjectMeta().SetAnnotations(annotations)
+	annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
 	delete(annotations, okLabels.TranslationAnnotation)
 	delete(annotations, model.OktetoRestartAnnotation)
 	d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
@@ -296,13 +298,11 @@ func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	return nil
 }
 
-func deleteUserAnnotations(annotations map[string]string) error {
-	tr, err := getTranslationFromAnnotation(annotations)
-	if err != nil {
-		return err
+func deleteUserAnnotations(annotations map[string]string, tr *model.Translation) error {
+	if tr.Annotations == nil {
+		return nil
 	}
-	userAnnotations := tr.Annotations
-	for key := range userAnnotations {
+	for key := range tr.Annotations {
 		delete(annotations, key)
 	}
 	return nil
