@@ -149,6 +149,10 @@ func Up() *cobra.Command {
 				dev.RemotePort = remote
 			}
 
+			if _, ok := os.LookupEnv("OKTETO_AUTODEPLOY"); ok {
+				autoDeploy = true
+			}
+
 			err = RunUp(dev, autoDeploy, build, forcePull, resetSyncthing)
 			return err
 		},
@@ -190,6 +194,36 @@ func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) er
 		dev.LoadForcePull()
 	}
 
+	var namespace string
+	var err error
+	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal()
+	if err != nil {
+		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+	}
+
+	if up.Dev.Namespace == "" {
+		up.Dev.Namespace = namespace
+	}
+
+	ns, err := namespaces.Get(up.Dev.Namespace, up.Client)
+	if err != nil {
+		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
+		return fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
+	}
+
+	up.Namespace = ns
+
+	if !namespaces.IsOktetoAllowed(up.Namespace) {
+		return fmt.Errorf("'okteto up' is not allowed in the current namespace")
+	}
+
+	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
+		log.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
+		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
+	}
+
+	defer cleanPIDFile(up.Dev.Namespace, up.Dev.Name)
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	go up.Activate(autoDeploy, build, resetSyncthing)
@@ -211,46 +245,17 @@ func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) er
 
 // Activate activates the dev environment
 func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
+
 	var state *term.State
 	inFd, isTerm := term.GetFdInfo(os.Stdin)
 	if isTerm {
 		var err error
 		state, err = term.SaveState(inFd)
 		if err != nil {
-			up.Exit <- err
+			log.Infof("failed to save the state of the terminal: %s", err)
+			up.Exit <- fmt.Errorf("failed to save the state of the terminal")
 			return
 		}
-	}
-
-	var namespace string
-	var err error
-	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal()
-	if err != nil {
-		up.Exit <- err
-		return
-	}
-
-	if up.Dev.Namespace == "" {
-		up.Dev.Namespace = namespace
-	}
-
-	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
-		log.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
-		up.Exit <- fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
-		return
-	}
-	defer cleanPIDFile(up.Dev.Namespace, up.Dev.Name)
-
-	up.Namespace, err = namespaces.Get(up.Dev.Namespace, up.Client)
-	if err != nil {
-		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
-		up.Exit <- fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
-		return
-	}
-
-	if !namespaces.IsOktetoAllowed(up.Namespace) {
-		up.Exit <- fmt.Errorf("'okteto up' is not allowed in this namespace")
-		return
 	}
 
 	for {
@@ -394,9 +399,7 @@ func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 		return nil, false, err
 	}
 
-	_, deploy := os.LookupEnv("OKTETO_AUTODEPLOY")
-	deploy = deploy || autoDeploy
-	if !deploy {
+	if !autoDeploy {
 		if err := utils.AskIfDeploy(up.Dev.Name, up.Dev.Namespace); err != nil {
 			return nil, false, err
 		}
