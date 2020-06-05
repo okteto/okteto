@@ -14,6 +14,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
@@ -38,7 +40,7 @@ func Down() *cobra.Command {
 		Short: "Deactivates your development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting down command")
-
+			ctx := context.Background()
 			dev, err := utils.LoadDev(devPath)
 			if err != nil {
 				return err
@@ -57,7 +59,7 @@ func Down() *cobra.Command {
 			log.Information("Run 'okteto push' to deploy your code changes to the cluster")
 
 			if rm {
-				if err := removeVolume(dev); err != nil {
+				if err := removeVolume(ctx, dev); err != nil {
 					analytics.TrackDownVolumes(false)
 					return err
 				}
@@ -113,7 +115,7 @@ func runDown(dev *model.Dev) error {
 	return nil
 }
 
-func removeVolume(dev *model.Dev) error {
+func removeVolume(ctx context.Context, dev *model.Dev) error {
 	spinner := utils.NewSpinner("Removing persistent volume...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -126,5 +128,5 @@ func removeVolume(dev *model.Dev) error {
 		dev.Namespace = namespace
 	}
 
-	return volumes.Destroy(dev, client)
+	return volumes.Destroy(ctx, dev, client)
 }

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -86,9 +87,11 @@ func ListBySelector(namespace string, selector map[string]string, c kubernetes.I
 
 // GetDevPodInLoop returns the dev pod for a deployment and loops until it success
 func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
-	tries := 0
 	ticker := time.NewTicker(200 * time.Millisecond)
-	for tries < maxRetriesPodRunning {
+	to := 2 * config.GetTimeout() // 60 seconds
+	timeout := time.Now().Add(to)
+
+	for i := 0; ; i++ {
 		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)
 		if err != nil {
 			return nil, err
@@ -96,16 +99,20 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 		if pod != nil {
 			return pod, nil
 		}
+
+		if time.Now().After(timeout) {
+			return nil, fmt.Errorf("kubernetes is taking too long to create the pod of your development environment. Please check for errors and try again")
+		}
+
 		select {
 		case <-ticker.C:
-			tries++
 			continue
 		case <-ctx.Done():
 			log.Debug("cancelling call to get dev pod")
 			return nil, ctx.Err()
 		}
 	}
-	return nil, fmt.Errorf("kubernetes is taking too long to create the pod of your development environment. Please check for errors and try again")
+
 }
 
 // GetDevPod returns the dev pod for a deployment
@@ -181,9 +188,10 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 		case event := <-watchPodEvents.ResultChan():
 			e, ok := event.Object.(*v1.Event)
 			if !ok {
-				log.Errorf("type error getting event: %s", event)
+				log.Infof("unknown event type: %s", event)
 				continue
 			}
+
 			log.Infof("pod %s event: %s", pod.Name, e.Message)
 			switch e.Reason {
 			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":

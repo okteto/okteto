@@ -35,7 +35,9 @@ import (
 )
 
 const (
-	oktetoMarkerPathVariable    = "OKTETO_MARKER_PATH"
+	// OktetoMarkerPathVariable is the marker used for syncthing
+	OktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
+
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
 	//OktetoDefaultPVSize default volume size
@@ -617,7 +619,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		rule.Environment = append(
 			rule.Environment,
 			EnvVar{
-				Name:  oktetoMarkerPathVariable,
+				Name:  OktetoMarkerPathVariable,
 				Value: path.Join(dev.MountPath, dev.DevPath),
 			},
 		)

@@ -288,13 +288,21 @@ func (s *Syncthing) Run(ctx context.Context) error {
 //WaitForPing waits for synthing to be ready
 func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
+	to := config.GetTimeout() // 30 seconds
+	timeout := time.Now().Add(to)
+
 	log.Infof("waiting for syncthing local=%t to be ready...", local)
-	for i := 0; i < 150; i++ {
+	for i := 0; ; i++ {
 		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false)
 		if err == nil {
 			return nil
 		}
-		log.Debugf("error calling 'rest/system/ping' local=%t syncthing API: %s", local, err)
+
+		log.Debugf("error calling 'rest/system/ping' syncthing local=%t API: %s", local, err)
+
+		if time.Now().After(timeout) {
+			return fmt.Errorf("syncthing local=%t not responding after 15s", local)
+		}
 		select {
 		case <-ticker.C:
 			continue
@@ -303,7 +311,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 			return ctx.Err()
 		}
 	}
-	return fmt.Errorf("Syncthing local=%t not responding after 15s", local)
+
 }
 
 //SendStignoreFile sends .stignore from local to remote
@@ -372,14 +380,11 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 	params := getFolderParameter(dev)
 	status := &Status{}
 	log.Infof("waiting for initial scan to complete local=%t...", local)
-	for i := 0; i < 3000; i++ {
-		select {
-		case <-ticker.C:
-		case <-ctx.Done():
-			log.Debug("cancelling call to 'rest/db/status'")
-			return ctx.Err()
-		}
 
+	to := config.GetTimeout() * 10 // 5 minutes
+	timeout := time.Now().Add(to)
+
+	for i := 0; ; i++ {
 		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
 		if err != nil {
 			log.Debugf("error calling 'rest/db/status' local=%t syncthing API: %s", local, err)
@@ -399,8 +404,20 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 		if status.State != "scanning" && status.State != "scan-waiting" {
 			return nil
 		}
+
+		if time.Now().After(timeout) {
+			return fmt.Errorf("initial file scan not completed after %s, please try again", to.String())
+		}
+
+		select {
+		case <-ticker.C:
+			continue
+		case <-ctx.Done():
+			log.Debug("cancelling call to 'rest/db/status'")
+			return ctx.Err()
+		}
 	}
-	return fmt.Errorf("Syncthing not completed initial scan after 5min. Please, retry in a few minutes")
+
 }
 
 // WaitForCompletion waits for the remote to be totally synched
