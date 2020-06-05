@@ -14,6 +14,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -33,15 +34,6 @@ var VersionString string
 
 var timeout time.Duration
 var tOnce sync.Once
-
-// Config holds all the configuration values.
-type Config struct {
-	// HomePath is the path of the base folder for all the Okteto files
-	HomePath string
-
-	// ManifestFileName is the name of the manifest file
-	ManifestFileName string
-}
 
 //GetBinaryName returns the name of the binary
 func GetBinaryName() string {
@@ -98,15 +90,36 @@ func GetUserHomeDir() string {
 		return v
 	}
 
-	home := os.Getenv("HOME")
 	if runtime.GOOS == "windows" {
-		home = os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
-		if home == "" {
-			home = os.Getenv("USERPROFILE")
+		home, err := homedirWindows()
+		if err != nil {
+			log.Fatalf("couldn't determine your home directory: %s", err)
 		}
+
+		return home
 	}
 
-	return home
+	return os.Getenv("HOME")
+
+}
+
+func homedirWindows() (string, error) {
+	if home := os.Getenv("HOME"); home != "" {
+		return home, nil
+	}
+
+	if home := os.Getenv("USERPROFILE"); home != "" {
+		return home, nil
+	}
+
+	drive := os.Getenv("HOMEDRIVE")
+	path := os.Getenv("HOMEPATH")
+	home := drive + path
+	if drive == "" || path == "" {
+		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_HOME to set your home directory")
+	}
+
+	return home, nil
 }
 
 // GetKubeConfigFile returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration

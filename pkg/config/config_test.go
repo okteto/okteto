@@ -40,6 +40,71 @@ func TestGetUserHomeDir(t *testing.T) {
 
 }
 
+func Test_homedirWindows(t *testing.T) {
+	var tests = []struct {
+		name     string
+		expected string
+		env      map[string]string
+	}{
+		{
+			name:     "home",
+			expected: `c:/users/okteto`,
+			env: map[string]string{
+				"HOME": `c:/users/okteto`,
+			},
+		},
+		{
+			name:     "USERPROFILE",
+			expected: `c:\users\okteto`,
+			env: map[string]string{
+				"HOME": `c:\users\okteto`,
+			},
+		},
+		{
+			name:     "homepath",
+			expected: `H:\okteto`,
+			env: map[string]string{
+				"HOMEDRIVE": `H:`,
+				"HOMEPATH":  `\okteto`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := os.Getenv("HOME")
+			up := os.Getenv("USERPROFILE")
+			hp := os.Getenv("HOMEPATH")
+			hd := os.Getenv("HOMEDRIVE")
+
+			os.Unsetenv("HOME")
+			os.Unsetenv("USERPROFILE")
+			os.Unsetenv("HOMEPATH")
+			os.Unsetenv("HOMEDRIVE")
+
+			defer func() {
+				os.Setenv("HOME", home)
+				os.Setenv("USERPROFILE", up)
+				os.Setenv("HOMEPATH", hp)
+				os.Setenv("HOMEDRIVE", hd)
+			}()
+
+			for k, v := range tt.env {
+				os.Setenv(k, v)
+			}
+
+			got, err := homedirWindows()
+			if err != nil {
+				t.Error(err)
+			}
+
+			if got != tt.expected {
+				t.Errorf("got %s, expected %s", got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestGetOktetoHome(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
