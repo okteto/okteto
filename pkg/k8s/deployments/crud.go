@@ -17,10 +17,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
@@ -149,23 +149,10 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 
 //UpdateOktetoRevision updates the okteto version annotation
 func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kubernetes.Clientset) error {
-	tries := 0
 	ticker := time.NewTicker(200 * time.Millisecond)
+	timeout := time.Now().Add(config.GetTimeout())
 
-	du := (30 * time.Second)
-	if t, ok := os.LookupEnv("OKTETO_REVISION_TIMEOUT"); ok {
-		parsed, err := time.ParseDuration(t)
-		if err != nil {
-			return fmt.Errorf("'%s' is not a valid duration", t)
-		}
-
-		log.Infof("OKTETO_REVISION_TIMEOUT applied: '%s'", parsed.String())
-		du = parsed
-	}
-
-	timeout := time.Now().Add(du)
-
-	for {
+	for i := 0; ; i++ {
 		updated, err := client.AppsV1().Deployments(d.Namespace).Get(d.Name, metav1.GetOptions{})
 		if err != nil {
 			log.Debugf("error while retrieving deployment %s/%s: %s", d.Namespace, d.Name, err)
@@ -184,7 +171,6 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 
 		select {
 		case <-ticker.C:
-			tries++
 			continue
 		case <-ctx.Done():
 			log.Debug("cancelling call to update okteto revision")
