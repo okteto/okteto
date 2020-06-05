@@ -380,7 +380,7 @@ func (up *UpContext) shouldRetry(err error) bool {
 func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, bool, error) {
 	d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
-		if _, ok := d.Annotations[model.OktetoAutoCreateAnnotation]; !ok {
+		if d.Annotations[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
 			up.isSwap = true
 		}
 		return d, false, nil
