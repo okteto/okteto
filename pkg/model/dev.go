@@ -40,6 +40,10 @@ const (
 	oktetoDefaultSSHServerPort  = 2222
 	//OktetoDefaultPVSize default volume size
 	OktetoDefaultPVSize = "2Gi"
+	//OktetoUpCmd up command
+	OktetoUpCmd = "up"
+	//OktetoPushCmd push command
+	OktetoPushCmd = "push"
 
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
@@ -80,8 +84,10 @@ var (
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
 	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
 
-	rootUser                         int64 = 0
-	devReplicas                      int32 = 1
+	rootUser int64 = 0
+	// DevReplicas is the number of dev replicas
+	DevReplicas int32 = 1
+
 	devTerminationGracePeriodSeconds int64
 )
 
@@ -716,11 +722,11 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
 			Annotations: map[string]string{
-				OktetoAutoCreateAnnotation: "true",
+				OktetoAutoCreateAnnotation: OktetoUpCmd,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &devReplicas,
+			Replicas: &DevReplicas,
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RecreateDeploymentStrategyType,
 			},

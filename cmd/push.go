@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
-	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -63,10 +62,12 @@ func Push(ctx context.Context) *cobra.Command {
 			if err := dev.UpdateNamespace(namespace); err != nil {
 				return err
 			}
+
 			c, _, configNamespace, err := k8Client.GetLocal()
 			if err != nil {
 				return err
 			}
+
 			if dev.Namespace == "" {
 				dev.Namespace = configNamespace
 			}
@@ -111,25 +112,28 @@ func Push(ctx context.Context) *cobra.Command {
 }
 
 func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
-	create := false
+	exists := true
 	d, err := deployments.Get(dev, dev.Namespace, c)
+
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		}
+
 		if len(dev.Services) == 0 {
 			if !autoDeploy {
 				if err := utils.AskIfDeploy(dev.Name, dev.Namespace); err != nil {
 					return err
 				}
 			}
+
 			d = dev.GevSandbox()
-			create = true
-		}
-	}
-	if create {
-		if imageTag == "" && oktetoRegistryURL == "" {
-			return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
+			d.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+			exists = false
+
+			if imageTag == "" && oktetoRegistryURL == "" {
+				return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
+			}
 		}
 	}
 
@@ -137,12 +141,19 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 	if err != nil {
 		return err
 	}
+
 	for _, tr := range trList {
 		if tr.Deployment == nil {
 			continue
 		}
+
 		if len(dev.Services) == 0 {
-			delete(tr.Deployment.Annotations, model.OktetoAutoCreateAnnotation)
+			if tr.Deployment.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || tr.Deployment.Spec.Template.Spec.Containers[0].Name == "dev" {
+				tr.Deployment.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+			}
+		}
+		if *tr.Deployment.Spec.Replicas == 0 {
+			tr.Deployment.Spec.Replicas = &model.DevReplicas
 		}
 	}
 
@@ -150,6 +161,7 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		if err := down.Run(dev, d, trList, false, c); err != nil {
 			return err
 		}
+
 		log.Information("Development environment deactivated")
 	}
 
@@ -158,52 +170,64 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		return err
 	}
 
-	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
+	imageTag, err = buildImage(dev, imageTag, imageFromDeployment, oktetoRegistryURL, noCache, progress)
 	if err != nil {
 		return err
-	}
-
-	imageTag = build.GetDevImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
-	log.Infof("pushing with image tag %s", imageTag)
-
-	var imageDigest string
-	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, imageTag, dev.Push.Target, noCache, buildArgs, progress)
-	if err != nil {
-		return fmt.Errorf("error building image '%s': %s", imageTag, err)
-	}
-	if imageDigest != "" {
-		imageWithoutTag := build.GetRepoNameWithoutTag(imageTag)
-		imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 
 	spinner := utils.NewSpinner(fmt.Sprintf("Pushing source code to the development environment '%s'...", dev.Name))
 	spinner.Start()
 	defer spinner.Stop()
-	if create {
-		delete(d.Annotations, model.OktetoAutoCreateAnnotation)
-		if err := createServiceAndDeployment(dev, d, imageTag, c); err != nil {
-			return err
-		}
-	} else {
-		for _, tr := range trList {
-			if tr.Deployment == nil {
-				continue
-			}
-			for _, rule := range tr.Rules {
-				devContainer := deployments.GetDevContainer(&tr.Deployment.Spec.Template.Spec, rule.Container)
-				if devContainer == nil {
-					return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
-				}
-				devContainer.Image = imageTag
-			}
-		}
-		if err := deployments.UpdateDeployments(trList, c); err != nil {
+
+	if d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
+		if err := services.CreateDev(dev, c); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	if !exists {
+		d.Spec.Template.Spec.Containers[0].Image = imageTag
+		return deployments.Deploy(d, true, c)
+	}
+
+	for _, tr := range trList {
+		if tr.Deployment == nil {
+			continue
+		}
+		for _, rule := range tr.Rules {
+			devContainer := deployments.GetDevContainer(&tr.Deployment.Spec.Template.Spec, rule.Container)
+			if devContainer == nil {
+				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
+			}
+			devContainer.Image = imageTag
+		}
+	}
+
+	return deployments.UpdateDeployments(trList, c)
+}
+
+func buildImage(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
+	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
+	if err != nil {
+		return "", err
+	}
+
+	buildTag := build.GetDevImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
+	log.Infof("pushing with image tag %s", buildTag)
+
+	var imageDigest string
+	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
+	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, buildArgs, progress)
+	if err != nil {
+		return "", fmt.Errorf("error building image '%s': %s", buildTag, err)
+	}
+
+	if imageDigest != "" {
+		imageWithoutTag := build.GetRepoNameWithoutTag(buildTag)
+		buildTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
+	}
+
+	return buildTag, nil
 }
 
 func getImageFromDeployment(trList map[string]*model.Translation) (string, error) {
@@ -229,15 +253,4 @@ func getImageFromDeployment(trList map[string]*model.Translation) (string, error
 		}
 	}
 	return imageFromDeployment, nil
-}
-
-func createServiceAndDeployment(dev *model.Dev, d *appsv1.Deployment, imageTag string, c *kubernetes.Clientset) error {
-	d.Spec.Template.Spec.Containers[0].Image = imageTag
-	if err := deployments.Deploy(d, true, c); err != nil {
-		return err
-	}
-	if err := services.CreateDev(dev, c); err != nil {
-		return err
-	}
-	return nil
 }

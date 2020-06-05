@@ -59,7 +59,7 @@ func Run(dev *model.Dev, d *appsv1.Deployment, trList map[string]*model.Translat
 		return nil
 	}
 
-	if _, ok := d.Annotations[model.OktetoAutoCreateAnnotation]; ok {
+	if d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
 		if err := deployments.Destroy(dev, c); err != nil {
 			return err
 		}

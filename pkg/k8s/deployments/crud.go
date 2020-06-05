@@ -31,7 +31,7 @@ import (
 )
 
 //Get returns a deployment object given its name and namespace
-func Get(dev *model.Dev, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+func Get(dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	if namespace == "" {
 		return nil, fmt.Errorf("empty namespace")
 	}
@@ -108,28 +108,42 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clients
 			Rules:       []*model.TranslationRule{rule},
 		}
 	}
+
+	if err := loadServiceTranslations(dev, result, c); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func loadServiceTranslations(dev *model.Dev, result map[string]*model.Translation, c kubernetes.Interface) error {
 	for _, s := range dev.Services {
 		d, err := Get(s, dev.Namespace, c)
 		if err != nil {
-			return nil, err
+			return err
 		}
+
 		rule := s.ToTranslationRule(dev)
+
 		if _, ok := result[d.Name]; ok {
 			result[d.Name].Rules = append(result[d.Name].Rules, rule)
-		} else {
-			result[d.Name] = &model.Translation{
-				Name:        dev.Name,
-				Interactive: false,
-				Version:     model.TranslationVersion,
-				Deployment:  d,
-				Annotations: dev.Annotations,
-				Tolerations: dev.Tolerations,
-				Replicas:    *d.Spec.Replicas,
-				Rules:       []*model.TranslationRule{rule},
-			}
+			continue
 		}
+
+		result[d.Name] = &model.Translation{
+			Name:        dev.Name,
+			Interactive: false,
+			Version:     model.TranslationVersion,
+			Deployment:  d,
+			Annotations: dev.Annotations,
+			Tolerations: dev.Tolerations,
+			Replicas:    *d.Spec.Replicas,
+			Rules:       []*model.TranslationRule{rule},
+		}
+
 	}
-	return result, nil
+
+	return nil
 }
 
 //Deploy creates or updates a deployment

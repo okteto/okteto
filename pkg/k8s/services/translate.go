@@ -39,7 +39,7 @@ func translate(dev *model.Dev) *apiv1.Service {
 			Selector: map[string]string{"app": dev.Name},
 			Type:     apiv1.ServiceTypeClusterIP,
 			Ports: []apiv1.ServicePort{
-				apiv1.ServicePort{
+				{
 					Name:       dev.Name,
 					Port:       8080,
 					TargetPort: intstr.IntOrString{StrVal: "8080"},
