@@ -87,7 +87,7 @@ func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error
 	log.Infof("destroying volume claim '%s'...", dev.GetVolumeName())
 
 	ticker := time.NewTicker(1 * time.Second)
-	to := 3 * config.GetTimeout()
+	to := 3 * config.GetTimeout() // 90 seconds
 	timeout := time.Now().Add(to)
 
 	for i := 0; ; i++ {

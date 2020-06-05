@@ -88,7 +88,8 @@ func ListBySelector(namespace string, selector map[string]string, c kubernetes.I
 // GetDevPodInLoop returns the dev pod for a deployment and loops until it success
 func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	ticker := time.NewTicker(200 * time.Millisecond)
-	timeout := time.Now().Add(2 * config.GetTimeout())
+	to := 2 * config.GetTimeout() // 60 seconds
+	timeout := time.Now().Add(to)
 
 	for i := 0; ; i++ {
 		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)
@@ -187,9 +188,10 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 		case event := <-watchPodEvents.ResultChan():
 			e, ok := event.Object.(*v1.Event)
 			if !ok {
-				log.Infof("type error getting event: %s", event)
+				log.Infof("unknown event type: %s", event)
 				continue
 			}
+
 			log.Infof("pod %s event: %s", pod.Name, e.Message)
 			switch e.Reason {
 			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
