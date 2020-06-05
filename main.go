@@ -51,7 +51,7 @@ func init() {
 }
 
 func main() {
-	log.Init(logrus.WarnLevel)
+	log.Init(logrus.WarnLevel, config.GetOktetoHome(), config.VersionString)
 	log.Info("start")
 	var logLevel string
 

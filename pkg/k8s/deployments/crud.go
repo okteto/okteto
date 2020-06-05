@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
@@ -148,30 +149,34 @@ func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset
 
 //UpdateOktetoRevision updates the okteto version annotation
 func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kubernetes.Clientset) error {
-	tries := 0
 	ticker := time.NewTicker(200 * time.Millisecond)
-	for tries < maxRetriesUpdateRevision {
+	timeout := time.Now().Add(2 * config.GetTimeout()) // 60 seconds
+
+	for i := 0; ; i++ {
 		updated, err := client.AppsV1().Deployments(d.Namespace).Get(d.Name, metav1.GetOptions{})
 		if err != nil {
 			log.Debugf("error while retrieving deployment %s/%s: %s", d.Namespace, d.Name, err)
 			return err
 		}
+
 		revision := updated.Annotations[revisionAnnotation]
 		if revision != "" {
 			d.Annotations[okLabels.RevisionAnnotation] = revision
 			return update(d, client)
 		}
 
+		if time.Now().After(timeout) {
+			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", revisionAnnotation, d.Name)
+		}
+
 		select {
 		case <-ticker.C:
-			tries++
 			continue
 		case <-ctx.Done():
 			log.Debug("cancelling call to update okteto revision")
 			return ctx.Err()
 		}
 	}
-	return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", revisionAnnotation, d.Name)
 }
 
 //TranslateDevMode translates the deployment manifests to put them in dev mode

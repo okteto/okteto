@@ -22,7 +22,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
@@ -59,7 +58,7 @@ func init() {
 }
 
 // Init configures the logger for the package to use.
-func Init(level logrus.Level) {
+func Init(level logrus.Level, dir, version string) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
 
@@ -69,13 +68,13 @@ func Init(level logrus.Level) {
 		FullTimestamp: true,
 	})
 
-	logPath := filepath.Join(config.GetOktetoHome(), "okteto.log")
+	logPath := filepath.Join(dir, "okteto.log")
 	rolling := getRollingLog(logPath)
 	fileLogger.SetOutput(rolling)
 	fileLogger.SetLevel(logrus.DebugLevel)
 
 	actionID := uuid.New().String()
-	log.file = fileLogger.WithFields(logrus.Fields{"action": actionID, "version": config.VersionString})
+	log.file = fileLogger.WithFields(logrus.Fields{"action": actionID, "version": version})
 }
 
 func getRollingLog(path string) io.Writer {
@@ -142,6 +141,15 @@ func Errorf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
 	}
+}
+
+// Fatalf writes a error-level log with a format
+func Fatalf(format string, args ...interface{}) {
+	if log.file != nil {
+		log.file.Errorf(format, args...)
+	}
+
+	log.out.Fatalf(format, args...)
 }
 
 // Yellow writes a line in yellow
