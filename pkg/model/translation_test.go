@@ -67,7 +67,7 @@ services:
 		Healthchecks:    false,
 		Environment: []EnvVar{
 			{
-				Name:  oktetoMarkerPathVariable,
+				Name:  OktetoMarkerPathVariable,
 				Value: "/app/okteto.yml",
 			},
 			{
@@ -167,7 +167,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				SSHServerPort: oktetoDefaultSSHServerPort,
 			},
 			expected: []EnvVar{
-				{Name: oktetoMarkerPathVariable, Value: ""},
+				{Name: OktetoMarkerPathVariable, Value: ""},
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 			},
@@ -178,7 +178,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				SSHServerPort: 22220,
 			},
 			expected: []EnvVar{
-				{Name: oktetoMarkerPathVariable, Value: ""},
+				{Name: OktetoMarkerPathVariable, Value: ""},
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},

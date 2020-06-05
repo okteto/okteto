@@ -24,6 +24,7 @@ import (
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 
 	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"k8s.io/client-go/tools/clientcmd"
@@ -153,7 +154,7 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 
 // InDevEnv returns true if running in an Okteto dev pod
 func InDevEnv() bool {
-	if v, ok := os.LookupEnv("OKTETO_MARKER_PATH"); ok && v != "" {
+	if v, ok := os.LookupEnv(model.OktetoMarkerPathVariable); ok && v != "" {
 		return true
 	}
 
