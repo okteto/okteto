@@ -38,7 +38,7 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	e.Name = ExpandEnvWithDefaults(parts[0])
+	e.Value = ExpandEnvWithDefaults(fmt.Sprintf("$%s", parts[0]))
 	return nil
 }
 

@@ -127,13 +127,13 @@ func TestEnvVarMashalling(t *testing.T) {
 		},
 		{
 			"just-env-var",
-			[]byte(`$DEV_ENV`),
-			EnvVar{Name: "test_environment", Value: ""},
+			[]byte(`DEV_ENV`),
+			EnvVar{Name: "DEV_ENV", Value: "test_environment"},
 		},
 		{
 			"just-env-var-undefined",
-			[]byte(`$UNDEFINED`),
-			EnvVar{Name: "", Value: ""},
+			[]byte(`UNDEFINED`),
+			EnvVar{Name: "UNDEFINED", Value: ""},
 		},
 	}
 
