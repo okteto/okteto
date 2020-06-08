@@ -108,3 +108,30 @@ func Test_GetValidNameFromFolder(t *testing.T) {
 		})
 	}
 }
+
+func TestExpandEnvWithDefaults(t *testing.T) {
+	os.Setenv("AAA", "aaa")
+	os.Setenv("BBB", "bbb")
+	var tests = []struct {
+		name     string
+		value    string
+		expected string
+	}{
+		{name: "empty", value: "", expected: ""},
+		{name: "$AAA", value: "$AAA", expected: "aaa"},
+		{name: "${AAA}", value: "${AAA}", expected: "aaa"},
+		{name: "1${AAA}1", value: "1${AAA}1", expected: "1aaa1"},
+		{name: "1${AAA}1${BBB}1", value: "1${AAA}1${BBB}1", expected: "1aaa1bbb1"},
+		{name: "1${AAA}1${BBB}1${CCC}1", value: "1${AAA}1${BBB}1${CCC}1", expected: "1aaa1bbb11"},
+		{name: "1${AAA}1${BBB}1${CCC:-ccc}1", value: "1${AAA}1${BBB}1${CCC:-ccc}1", expected: "1aaa1bbb1ccc1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ExpandEnvWithDefaults(tt.value)
+			if result != tt.expected {
+				t.Errorf("'%s' got '%s' expected '%s'", tt.name, result, tt.expected)
+			}
+		})
+	}
+}

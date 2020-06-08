@@ -15,7 +15,6 @@ package stack
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
@@ -35,7 +34,7 @@ const (
 
 func translate(s *model.Stack, forceBuild, noCache bool) error {
 	for i, svc := range s.Services {
-		svc.Image = os.ExpandEnv(svc.Image)
+		svc.Image = model.ExpandEnvWithDefaults(svc.Image)
 		s.Services[i] = svc
 	}
 

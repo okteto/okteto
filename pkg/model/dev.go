@@ -288,13 +288,13 @@ func Read(bytes []byte) (*Dev, error) {
 
 func (dev *Dev) loadName() {
 	if len(dev.Name) > 0 {
-		dev.Name = os.ExpandEnv(dev.Name)
+		dev.Name = ExpandEnvWithDefaults(dev.Name)
 	}
 }
 
 func (dev *Dev) loadImage() {
 	if len(dev.Image) > 0 {
-		dev.Image = os.ExpandEnv(dev.Image)
+		dev.Image = ExpandEnvWithDefaults(dev.Image)
 	}
 }
 
