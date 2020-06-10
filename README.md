@@ -13,78 +13,43 @@
 
 Kubernetes has made it very easy to deploy applications to the cloud at a higher scale than ever, but the development practices have not evolved at the same speed as application deployment patterns.
 
-Today, most developers try to either run parts of the infrastructure locally, or just test these integrations directly in the cluster via CI jobs or the "docker build, docker push, kubectl apply" cycle. It works, but this workflow is painful and incredibly slow.
+Today, most developers try to either run parts of the infrastructure locally, or just test these integrations directly in the cluster via CI jobs or the *docker build/redeploy* cycle. It works, but this workflow is painful and incredibly slow.
 
-Okteto makes this cycle a lot faster by launching development environment in Kubernetes. You write your code locally using your favorite tools and Okteto detects the code changes and instantly synchronizes your code to your development environment. There you can use your compilers and hot reloaders to see your changes live in seconds.
+Okteto makes this cycle a lot faster. You write your code locally from your favorite IDE and Okteto detects the code changes and instantly updates your Kubernetes applications. **It works on any cluster, local or remote**.
 
-## Install
+## How it works
 
-MacOS / Linux
-```
-curl https://get.okteto.com -sSfL | sh
-```
+Okteto decouples deployment from development. You can deploy your application with kubectl, Helm, a serverless framework or even a CI pipeline and use Okteto to develop it. This is specially useful for cloud-native applications where deployment pipelines are not trivial.
 
-Windows
-```
-Download https://downloads.okteto.com/cli/okteto.exe and add it to your $PATH.
-```
+Okteto replaces a running deployment by a development container. You write code from your local IDE and Okteto instantly synchronizes your code changes to your development container. The development container can be any docker image, where you install all the dev tools needed by your application: compilers, debuggers, hot reloaders... Okteto gives you a terminal to your development container to build, test and run your application as you would from a local terminal. Files are synchronized both ways.
 
-You can also directly download the precompiled binary from [the releases page](https://github.com/okteto/okteto/releases).
+![Okteto](docs/okteto-architecture.png)
+
+## Why Okteto
+
+Okteto has several advantages versus traditional development:
+- **Fast inner loop development**: build and run with your favorite tools from your development container. Native builds are always faster than the *docker build/redeploy* cycle.
+- **Production-like environment**: your development container reuses the same variables, secrets, sidecards, volumes... than your original Kubernetes deployment. Realistic environments eliminate integration issues.
+- **Unlimited resources**: get access to the hardware and network of your cluster from development.
 
 ## Getting started
 
-All you need to get started is the [Okteto CLI](https://okteto.com/docs/getting-started/installation/index.html) and access to a Kubernetes cluster. 
+All you need to get started is to [install the Okteto CLI](https://okteto.com/docs/getting-started/installation/index.html) and have access to a Kubernetes cluster. You can also use Okteto in [Okteto Cloud](https://okteto.com/), the best development platform for Kubernetes applications.
 
-We created a few guides to get you started with your favorite programming language:
+To start using Okteto to develop your own applications:
 
-1. [ASP.NET Core](https://github.com/okteto/aspnetcore-getting-started/)
-1. [Golang](https://github.com/okteto/go-getting-started)
-1. [Java Gradle](https://github.com/okteto/java-gradle-getting-started)
-1. [Java Maven](https://github.com/okteto/java-maven-getting-started)
-1. [Node](https://github.com/okteto/node-getting-started)
-1. [PHP](https://github.com/okteto/php-getting-started)
-1. [Python](https://github.com/okteto/python-getting-started)
-1. [Ruby](https://github.com/okteto/ruby-getting-started)
+- Deploy your application on Kubernetes.
+- Run `okteto init` from the root of your git repository to inspect your code and generate your [Okteto manifest](https://okteto.com/docs/reference/manifest). The Okteto manifest defines your development container.
+- Run `okteto up` to put your application in developer mode. 
 
-More samples on how to use Okteto [are available here](https://github.com/okteto/samples).
+We also created a [few guides to get you started](https://github.com/okteto/samples) with your favorite programming language.
 
-## Features
+## Useful links
 
-### Development environments on demand 
-
-Your development environment is defined in a [simple yaml manifest](https://okteto.com/docs/reference/manifest).
-- Run `okteto init` to inspect your project and generate your own config file.
-- Run `okteto up` to launch your development environment in seconds. 
-
-Add `okteto.yml` to your repo and make collaboration easier than ever. Clone the repository and simply run `okteto up` to launch a fully configured development environment.
-
-### Developer Mode 
-
-You can swap your development environment with an existing Kubernetes deployment, and develop directly in your cluster. This helps eliminate integration issues since you're developing the same way your application runs in production.
-
-Okteto supports applications with one or with multiple services.
-
-### Instant file synchronization
-
-Okteto detects your code changes and synchronizes your code to your development environment (powered by [Syncthing](https://github.com/syncthing/syncthing)). Files are synchronized both ways. If you edit a file directly in your development environment, the changes will be reflected locally as well. Great for keeping your `package-lock.json` or `requirements.txt` up to date.
-
-### Keep Your Own Tools
-
-Okteto easily integrates and augments your existing tools. You write code locally, which means Okteto is compatible with any IDE. And you can configure your own development environment runtime using a docker image, with your own compilers, linters, debuggers or hot reloaders.
-
-Okteto decouples deployment from development. Because of this, you can deploy your application with kubectl, Helm, a serverless framework or even a CI job and use Okteto later to develop any component of your application. No need to change your manifests or deployment scripts.
-
-### Compatible with any Kubernetes cluster
-
-Local or remote. If you can run `kubectl apply` you can use Okteto. Our community uses Okteto in all major Kubernetes distros, from Minikube and k3s all the way to GKE, Digital Ocean, AKS, EKS and Civio.
-
-You can also use Okteto in [Okteto Cloud](https://okteto.com/), the best development platform for Kubernetes applications.
-
-## Learn More
-- [How does Okteto work?](docs/how-does-it-work.md)
-- Get started following our [installation guides](https://okteto.com/docs/getting-started/installation/index.html).
-- Check the Okteto [CLI reference](https://okteto.com/docs/reference/cli) and the [okteto.yml reference](https://okteto.com/docs/reference/manifest/index.html)
-- [Explore our samples](https://github.com/okteto/samples) to learn more about the power of Okteto
+- [Intallation guides](https://okteto.com/docs/getting-started/installation/index.html)
+- [CLI reference](https://okteto.com/docs/reference/cli)
+- [Okteto manifest reference](https://okteto.com/docs/reference/manifest/index.html)
+- [Samples](https://github.com/okteto/samples)
 - Frequently asked questions ([FAQs](https://okteto.com/docs/reference/faqs/index.html))
 - [Known issues](https://okteto.com/docs/reference/known-issues/index.html)
 
@@ -92,16 +57,16 @@ You can also use Okteto in [Okteto Cloud](https://okteto.com/), the best develop
 
 Okteto is written in Go under the [Apache 2.0 license](LICENSE) - contributions are welcomed whether that means providing feedback, testing existing and new feature or hacking on the source.
 
-## How do I become a contributor?
+### How do I become a contributor?
 
 Please see the guide on [contributing](contributing.md).
 
-## Roadmap
+### Roadmap
 
 We use GitHub [issues](https://github.com/okteto/okteto/issues) to track our roadmap. A [milestone](https://github.com/okteto/okteto/milestones) is created every month to track the work scheduled for that time period. Feedback and help are always appreciated!
 
 ## Stay in Touch
-Got questions? Have feedback? Join [the conversation in Slack](https://kubernetes.slack.com/messages/CM1QMQGS0/)! If you don't already have a Kubernetes slack account, [sign up here](http://slack.k8s.io/). 
+Got questions? Have feedback? Join the conversation in our [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) Slack chaannel! If you don't already have a Kubernetes slack account, [sign up here](http://slack.k8s.io/). 
 
 Follow [@OktetoHQ](https://twitter.com/oktetohq) on Twitter for important announcements.
 
@@ -112,6 +77,7 @@ Or get in touch with the maintainers:
 - [Ramon Lamana](https://twitter.com/monchocromo)
 
 ## About Okteto
-[Okteto](https://okteto.com) is licensed under the Apache 2.0 License.
+
+Okteto is licensed under the Apache 2.0 License.
 
 This project adheres to the Contributor Covenant [code of conduct](code-of-conduct.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to hello@okteto.com.
