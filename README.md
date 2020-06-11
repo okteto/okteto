@@ -13,15 +13,15 @@
 
 Kubernetes has made it very easy to deploy applications to the cloud at a higher scale than ever, but the development practices have not evolved at the same speed as application deployment patterns.
 
-Today, most developers try to either run parts of the infrastructure locally, or just test these integrations directly in the cluster via CI jobs or the *docker build/redeploy* cycle. It works, but this workflow is painful and incredibly slow.
+Today, most developers try to either run parts of the infrastructure locally or just test these integrations directly in the cluster via CI jobs or the *docker build/redeploy* cycle. It works, but this workflow is painful and incredibly slow.
 
 Okteto makes this cycle a lot faster. You write your code locally from your favorite IDE and Okteto detects the code changes and instantly updates your Kubernetes applications. **It works on any cluster, local or remote**.
 
 ## How it works
 
-Okteto decouples deployment from development. You can deploy your application with kubectl, Helm, a serverless framework or even a CI pipeline and use Okteto to develop it. This is specially useful for cloud-native applications where deployment pipelines are not trivial.
+Okteto decouples deployment from development. You can deploy your application with kubectl, Helm, a serverless framework, or even a CI pipeline and use Okteto to develop it. This is especially useful for cloud-native applications where deployment pipelines are not trivial.
 
-Okteto replaces a running deployment by a development container. You write code from your local IDE and Okteto instantly synchronizes your code changes to your development container. The development container can be any docker image, where you install all the dev tools needed by your application: compilers, debuggers, hot reloaders... Okteto gives you a terminal to your development container to build, test and run your application as you would from a local terminal. Files are synchronized both ways.
+Okteto replaces a running deployment by a development container. You write code from your local IDE and Okteto instantly synchronizes your code changes to your development container. The development container can be any docker image, where you install all the dev tools needed by your application: compilers, debuggers, hot reloaders... Okteto gives you a terminal to your development container to build, test, and run your application as you would from a local terminal. Files are synchronized both ways.
 
 ![Okteto](docs/okteto-architecture.png)
 
@@ -29,7 +29,7 @@ Okteto replaces a running deployment by a development container. You write code 
 
 Okteto has several advantages versus traditional development:
 - **Fast inner loop development**: build and run with your favorite tools from your development container. Native builds are always faster than the *docker build/redeploy* cycle.
-- **Production-like environment**: your development container reuses the same variables, secrets, sidecards, volumes... than your original Kubernetes deployment. Realistic environments eliminate integration issues.
+- **Production-like environment**: your development container reuses the same variables, secrets, sidecars, volumes... than your original Kubernetes deployment. Realistic environments eliminate integration issues.
 - **Unlimited resources**: get access to the hardware and network of your cluster from development.
 
 ## Getting started
@@ -46,7 +46,7 @@ We also created a [few guides to get you started](https://github.com/okteto/samp
 
 ## Useful links
 
-- [Intallation guides](https://okteto.com/docs/getting-started/installation/index.html)
+- [Installation guides](https://okteto.com/docs/getting-started/installation/index.html)
 - [CLI reference](https://okteto.com/docs/reference/cli)
 - [Okteto manifest reference](https://okteto.com/docs/reference/manifest/index.html)
 - [Samples](https://github.com/okteto/samples)
@@ -55,7 +55,7 @@ We also created a [few guides to get you started](https://github.com/okteto/samp
 
 ## Roadmap and Contributions
 
-Okteto is written in Go under the [Apache 2.0 license](LICENSE) - contributions are welcomed whether that means providing feedback, testing existing and new feature or hacking on the source.
+Okteto is written in Go under the [Apache 2.0 license](LICENSE) - contributions are welcomed whether that means providing feedback, testing a new feature, or hacking on the source.
 
 ### How do I become a contributor?
 
@@ -66,7 +66,7 @@ Please see the guide on [contributing](contributing.md).
 We use GitHub [issues](https://github.com/okteto/okteto/issues) to track our roadmap. A [milestone](https://github.com/okteto/okteto/milestones) is created every month to track the work scheduled for that time period. Feedback and help are always appreciated!
 
 ## Stay in Touch
-Got questions? Have feedback? Join the conversation in our [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) Slack chaannel! If you don't already have a Kubernetes slack account, [sign up here](http://slack.k8s.io/). 
+Got questions? Have feedback? Join the conversation in our [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) Slack channel! If you don't already have a Kubernetes slack account, [sign up here](http://slack.k8s.io/). 
 
 Follow [@OktetoHQ](https://twitter.com/oktetohq) on Twitter for important announcements.
 
