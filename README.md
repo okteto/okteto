@@ -15,21 +15,21 @@ Kubernetes has made it very easy to deploy applications to the cloud at a higher
 
 Today, most developers try to either run parts of the infrastructure locally or just test these integrations directly in the cluster via CI jobs or the *docker build/redeploy* cycle. It works, but this workflow is painful and incredibly slow.
 
-`okteto` accelerates the development workflow of Kubernetes applications. You write your code locally, using your favorite IDE, and `okteto` will automatically detect the changes and instantly update your Kubernetes applications.
+`okteto` accelerates the development workflow of Kubernetes applications. You write your code locally and `okteto` detects the changes and instantly update your Kubernetes applications.
 
 ## How it works
 
-When you run `okteto up`, `okteto` goes to the deployment that has your application and replaces the container in it with a different one that contains your development environment (e.g. maven and jdk, or npm, python, ruby, etc) along with all your test tools. This development container can be any docker image.
+When you run `okteto up` the container running your application is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can be any docker image.
 
-In addition to that, `okteto` will:
+In addition to that, `okteto up` will:
 
-1. Keep your local file system and the development environment synchronized. 
-1. Automatically start port forwards into your development container, so you can access your services via `localhost` or even connect a remote debugger.
+1. Keep your local code changes synchronized with the development container. 
+1. Start port forwards, so you can access your cluster services via `localhost` or connect a remote debugger.
 1. Give you a remote terminal to your development container, so you can build, test, and run your application as you would from a local terminal.
 
-The end result is that the remote cluster is seen by your IDE and tools as a local filesystem/environment. You keep writing your code on your local IDE and as soon as you save a file, the change goes to the remote cluster and your application instantly updates (taking advantage of any hot-reload mechanism you already have). This whole process happens in an instant. No docker images need to be created and no Kubernetes manifests need to be applied to the cluster.
-
 All of this (and more) can be configured via a [simple yaml manifest](https://okteto.com/docs/reference/manifest).
+
+The end result is that the remote cluster is seen by your IDE and tools as a local filesystem/environment. You keep writing your code on your local IDE and as soon as you save a file, the change goes to the development continer and your application instantly updates (taking advantage of any hot-reload mechanism you already have). This whole process happens in an instant. No docker images need to be created and no Kubernetes manifests need to be applied to the cluster.
 
 ![Okteto](docs/okteto-architecture.png)
 
@@ -40,13 +40,13 @@ All of this (and more) can be configured via a [simple yaml manifest](https://ok
 - **Production-like development environment**: your development container reuses the same variables, secrets, sidecars, volumes, etc... than your original Kubernetes deployment. Realistic environments eliminate integration issues.
 - **Unlimited resources**: get access to the hardware and network of your cluster when developing your application.
 - **Deployment independent**: `okteto` decouples deployment from development. You can deploy your application with kubectl, Helm, a serverless framework, or even a CI pipeline and use `okteto up` to develop it. This is especially useful for cloud-native applications where deployment pipelines are not trivial. 
-- **Works anywhere**: `okteto` works with any Kubernetes cluster, local or remote.
+- **Works anywhere**: `okteto` works with any Kubernetes cluster, local or remote. `okteto` is also available for macOS, Linux, and Windows.
 
 ## Getting started
 
 All you need to get started is to [install the Okteto CLI](https://okteto.com/docs/getting-started/installation/index.html) and have access to a Kubernetes cluster. 
 
-You can also use `okteto` with [Okteto Cloud](https://okteto.com/).
+You can also use `okteto` with [Okteto Cloud](https://okteto.com/), a **Kubernetes Namespace as a Service** platform where you can deploy your Kubernetes applications and development containers for free.
 
 ### Super Quick Start
 
