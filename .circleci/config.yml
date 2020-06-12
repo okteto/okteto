@@ -169,11 +169,6 @@ jobs:
             echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
             docker build -t okteto/okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_TAG .
             docker push okteto/okteto:${CIRCLE_TAG}
-      - run:
-          name: "Publish Release on GitHub"
-          command: |
-            go get -u github.com/tcnksm/ghr
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
       - deploy:
           name: "Update brew formula"
           command: |
@@ -197,6 +192,15 @@ jobs:
           arguments: |
             --acl public-read \
             --metadata version=${CIRCLE_SHA1}
+      - setup_remote_docker
+      - run:  
+          name: "Publish Docker container"
+          command: |
+            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+            docker build -t okteto/okteto:latest --build-arg VERSION_STRING=latest .
+            docker push okteto/okteto:latest
+      
+      
 workflows:
   version: 2
   build-release:
