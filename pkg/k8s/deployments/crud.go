@@ -310,7 +310,7 @@ func deleteUserAnnotations(annotations map[string]string, tr *model.Translation)
 
 //Destroy destroys a k8s service
 func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
-	log.Infof("deleting deployment '%s'...", dev.Name)
+	log.Infof("deleting deployment '%s'", dev.Name)
 	dClient := c.AppsV1().Deployments(dev.Namespace)
 	err := dClient.Delete(dev.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 	if err != nil {

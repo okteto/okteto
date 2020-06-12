@@ -291,7 +291,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	to := config.GetTimeout() // 30 seconds
 	timeout := time.Now().Add(to)
 
-	log.Infof("waiting for syncthing local=%t to be ready...", local)
+	log.Infof("waiting for syncthing local=%t to be ready", local)
 	for i := 0; ; i++ {
 		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false)
 		if err == nil {
@@ -316,7 +316,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 
 //SendStignoreFile sends .stignore from local to remote
 func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
-	log.Infof("sending '.stignore' file to the remote syncthing...")
+	log.Infof("sending '.stignore' file to the remote syncthing")
 	params := getFolderParameter(dev)
 	ignores := &Ignores{}
 	body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true)
@@ -352,7 +352,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 
 //ResetDatabase resets the syncthing database
 func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
-	log.Infof("reseting syncthing database local=%t...", local)
+	log.Infof("reseting syncthing database local=%t", local)
 	params := getFolderParameter(dev)
 	_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil, false)
 	if err != nil {
@@ -364,7 +364,7 @@ func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local boo
 
 //Overwrite overwrites local changes to the remote syncthing
 func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
-	log.Infof("overriding local changes to the remote syncthing...")
+	log.Infof("overriding local changes to the remote syncthing")
 	params := getFolderParameter(dev)
 	_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false)
 	if err != nil {
@@ -379,7 +379,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 	ticker := time.NewTicker(100 * time.Millisecond)
 	params := getFolderParameter(dev)
 	status := &Status{}
-	log.Infof("waiting for initial scan to complete local=%t...", local)
+	log.Infof("waiting for initial scan to complete local=%t", local)
 
 	to := config.GetTimeout() * 10 // 5 minutes
 	timeout := time.Now().Add(to)
@@ -424,7 +424,7 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
 	defer close(reporter)
 	ticker := time.NewTicker(500 * time.Millisecond)
-	log.Infof("waiting for synchronization to complete...")
+	log.Infof("waiting for synchronization to complete")
 	retries := 0
 	for {
 		select {
@@ -569,7 +569,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, dev *model.Dev, local b
 
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context) error {
-	log.Infof("restarting syncthing...")
+	log.Infof("restarting syncthing")
 	_, err := s.APICall(ctx, "rest/system/restart", "POST", 200, nil, true, nil, false)
 	return err
 }
