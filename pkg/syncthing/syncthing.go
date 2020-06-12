@@ -287,7 +287,7 @@ func (s *Syncthing) Run(ctx context.Context) error {
 
 //WaitForPing waits for synthing to be ready
 func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(300 * time.Millisecond)
 	to := config.GetTimeout() // 30 seconds
 	timeout := time.Now().Add(to)
 
@@ -298,7 +298,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 			return nil
 		}
 
-		log.Debugf("error calling 'rest/system/ping' syncthing local=%t API: %s", local, err)
+		log.Debugf("syncthing local=%t is not ready yet: %s", local, err)
 
 		if time.Now().After(timeout) {
 			return fmt.Errorf("syncthing local=%t not responding after 15s", local)
@@ -569,7 +569,6 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, dev *model.Dev, local b
 
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context) error {
-	log.Infof("restarting syncthing")
 	_, err := s.APICall(ctx, "rest/system/restart", "POST", 200, nil, true, nil, false)
 	return err
 }

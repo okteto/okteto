@@ -780,6 +780,7 @@ func (up *UpContext) synchronizeFiles() error {
 	}
 
 	go up.Sy.Monitor(up.Context, up.Disconnect)
+	log.Infof("restarting syncthing to update sync mode to sendreceive")
 	return up.Sy.Restart(up.Context)
 }
 
