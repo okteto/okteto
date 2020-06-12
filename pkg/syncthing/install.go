@@ -75,7 +75,6 @@ func Install(p getter.ProgressTracker) error {
 		return fmt.Errorf("failed to download syncthing from %s: %s", client.Src, err)
 	}
 
-	log.Infof("downloaded syncthing")
 	i := getInstallPath()
 	b := getBinaryPathInDownload(dir, downloadURL)
 
