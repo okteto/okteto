@@ -162,7 +162,8 @@ jobs:
             --metadata version=${CIRCLE_TAG} \
             --cache-control "max-age=86400" \
           overwrite: false
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: "19.03.8"
       - run:  
           name: "Publish Docker container"
           command: |
@@ -187,7 +188,8 @@ jobs:
       - image: circleci/golang:1.14
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: "19.03.8"
       - run:  
           name: "Publish Docker container"
           command: |
