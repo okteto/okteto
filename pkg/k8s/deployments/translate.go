@@ -41,8 +41,6 @@ const (
 	oktetoSyncSecretVolume = "okteto-sync-secret" // skipcq GSC-G101  not a secret
 	oktetoDevSecretVolume  = "okteto-dev-secret"  // skipcq GSC-G101  not a secret
 	oktetoSecretTemplate   = "okteto-%s"
-
-	maxRetriesUpdateRevision = 150
 )
 
 var (
