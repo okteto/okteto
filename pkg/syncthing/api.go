@@ -21,8 +21,6 @@ import (
 	"net/http"
 	"path"
 	"time"
-
-	"github.com/okteto/okteto/pkg/log"
 )
 
 type addAPIKeyTransport struct {
@@ -69,15 +67,13 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 
 	resp, err := s.Client.Do(req)
 	if err != nil {
-		log.Infof("fail to call syncthing API at %s: %s", url, err)
-		return nil, fmt.Errorf("failed to call syncthing API: %w", err)
+		return nil, fmt.Errorf("failed to call syncthing [%s]: %w", url, err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != code {
-		log.Infof("unexpected response from syncthing API %s %d: %s", req.URL.String(), resp.StatusCode, string(body))
-		return nil, fmt.Errorf("unexpected response from syncthing API %s %d: %s", req.URL.String(), resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected response from syncthing [%s | %d]: %s", req.URL.String(), resp.StatusCode, string(body))
 	}
 
 	if !readBody {
@@ -86,8 +82,7 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 
 	body, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Infof("failed to read response from syncthing API at %s: %s", url, err)
-		return nil, fmt.Errorf("failed to read response from syncthing API")
+		return nil, fmt.Errorf("failed to read response from syncthing [%s]: %w", url, err)
 	}
 
 	return body, nil

@@ -35,14 +35,14 @@ func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
 	sClient := c.CoreV1().Services(dev.Namespace)
 
 	if old.Name == "" {
-		log.Infof("creating service '%s'...", s.Name)
+		log.Infof("creating service '%s'", s.Name)
 		_, err = sClient.Create(s)
 		if err != nil {
 			return fmt.Errorf("error creating kubernetes service: %s", err)
 		}
-		log.Infof("created service '%s'.", s.Name)
+		log.Infof("created service '%s'", s.Name)
 	} else {
-		log.Infof("updating service '%s'...", s.Name)
+		log.Infof("updating service '%s'", s.Name)
 		old.Spec.Ports = s.Spec.Ports
 		_, err = sClient.Update(old)
 		if err != nil {
@@ -55,7 +55,7 @@ func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
 
 //DestroyDev destroys the default service for a dev environment
 func DestroyDev(dev *model.Dev, c *kubernetes.Clientset) error {
-	log.Infof("deleting service '%s'...", dev.Name)
+	log.Infof("deleting service '%s'", dev.Name)
 	sClient := c.CoreV1().Services(dev.Namespace)
 	err := sClient.Delete(dev.Name, &metav1.DeleteOptions{})
 	if err != nil {

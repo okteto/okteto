@@ -126,7 +126,11 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 
 	rs, err := replicasets.GetReplicaSetByDeployment(dev, d, c)
 	if rs == nil {
-		log.Infof("failed to get replicaset with revision %v: %s ", d.Annotations[deploymentRevisionAnnotation], err)
+		if err == nil {
+			log.Infof("didn't find replicaset with revision %v", d.Annotations[deploymentRevisionAnnotation])
+		} else {
+			log.Infof("failed to get replicaset with revision %v: %s ", d.Annotations[deploymentRevisionAnnotation], err)
+		}
 		return nil, err
 	}
 
@@ -198,7 +202,7 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
 					continue
 				}
-				
+
 				return nil, fmt.Errorf(e.Message)
 			case "FailedAttachVolume", "FailedMount":
 				reporter <- fmt.Sprintf("%s: retrying", e.Message)
