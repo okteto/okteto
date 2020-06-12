@@ -49,13 +49,13 @@ const (
 
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
-	//OktetoVolumeNameTemplate name template of the dev environment persistent volume
+	//OktetoVolumeNameTemplate name template of the development container persistent volume
 	OktetoVolumeNameTemplate = "okteto-%s"
-	//SourceCodeSubPath subpath in the dev environment persistent volume for the source code
+	//SourceCodeSubPath subpath in the development container persistent volume for the source code
 	SourceCodeSubPath = "src"
 	//OktetoSyncthingMountPath syncthing volume mount path
 	OktetoSyncthingMountPath = "/var/syncthing"
-	//SyncthingSubPath subpath in the dev environment persistent volume for the syncthing data
+	//SyncthingSubPath subpath in the development container persistent volume for the syncthing data
 	SyncthingSubPath = "syncthing"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
@@ -93,7 +93,7 @@ var (
 	devTerminationGracePeriodSeconds int64
 )
 
-//Dev represents a cloud native development environment
+//Dev represents a development container
 type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
 	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
@@ -139,13 +139,13 @@ type BuildInfoRaw struct {
 	Args       []EnvVar `yaml:"args,omitempty"`
 }
 
-// Volume represents a volume in the dev environment
+// Volume represents a volume in the development container
 type Volume struct {
 	SubPath   string
 	MountPath string
 }
 
-// ExternalVolume represents a external volume in the dev environment
+// ExternalVolume represents a external volume in the development container
 type ExternalVolume struct {
 	Name      string
 	SubPath   string
@@ -532,7 +532,7 @@ func (dev *Dev) LoadForcePull() {
 func (dev *Dev) Save(path string) error {
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
-		log.Infof("failed to marshall dev environment: %s", err)
+		log.Infof("failed to marshall development container: %s", err)
 		return fmt.Errorf("Failed to generate your manifest")
 	}
 
@@ -556,7 +556,7 @@ func SerializeBuildArgs(buildArgs []EnvVar) []string {
 	return result
 }
 
-//GetVolumeName returns the okteto volume name for a given dev environment
+//GetVolumeName returns the okteto volume name for a given development container
 func (dev *Dev) GetVolumeName() string {
 	return fmt.Sprintf(OktetoVolumeNameTemplate, dev.Name)
 }

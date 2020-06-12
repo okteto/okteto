@@ -31,7 +31,7 @@ func Restart() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "restart",
-		Short: "Restarts the pods of your development environment",
+		Short: "Restarts the deployment listed in the services field of the okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dev, err := utils.LoadDev(devPath)
 			if err != nil {
@@ -47,20 +47,20 @@ func Restart() *cobra.Command {
 			if err := executeRestart(dev, serviceName); err != nil {
 				return err
 			}
-			log.Success("Development environment restarted")
+			log.Success("Deployments restarted")
 
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the exec command is executed")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the restart command is executed")
 
 	return cmd
 }
 
 func executeRestart(dev *model.Dev, sn string) error {
-	log.Infof("restarting development environment")
+	log.Infof("restarting services")
 	client, _, namespace, err := k8Client.GetLocal()
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func executeRestart(dev *model.Dev, sn string) error {
 		dev.Namespace = namespace
 	}
 
-	spinner := utils.NewSpinner("Restarting your development environment...")
+	spinner := utils.NewSpinner("Restarting deployments...")
 	spinner.Start()
 	defer spinner.Stop()
 

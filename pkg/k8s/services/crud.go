@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//CreateDev deploys a default k8s service for a dev environment
+//CreateDev deploys a default k8s service for a development container
 func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
 	old, err := Get(dev.Namespace, dev.Name, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
@@ -53,7 +53,7 @@ func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
 	return nil
 }
 
-//DestroyDev destroys the default service for a dev environment
+//DestroyDev destroys the default service for a development container
 func DestroyDev(dev *model.Dev, c *kubernetes.Clientset) error {
 	log.Infof("deleting service '%s'", dev.Name)
 	sClient := c.CoreV1().Services(dev.Namespace)

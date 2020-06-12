@@ -42,8 +42,8 @@ func Status() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting status command")
 
-			if okteto.InDevEnv() {
-				return errors.ErrNotInDevEnv
+			if okteto.InDevContainer() {
+				return errors.ErrNotInDevContainer
 			}
 
 			dev, err := utils.LoadDev(devPath)

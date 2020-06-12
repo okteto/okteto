@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Down deactivates the development environment
+//Down deactivates the development container
 func Down() *cobra.Command {
 	var devPath string
 	var namespace string
@@ -37,7 +37,7 @@ func Down() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "down",
-		Short: "Deactivates your development environment",
+		Short: "Deactivates your development container",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting down command")
 			ctx := context.Background()
@@ -55,7 +55,7 @@ func Down() *cobra.Command {
 				return err
 			}
 
-			log.Success("Development environment deactivated")
+			log.Success("Development container deactivated")
 			log.Information("Run 'okteto push' to deploy your code changes to the cluster")
 
 			if rm {
@@ -85,7 +85,7 @@ func Down() *cobra.Command {
 }
 
 func runDown(dev *model.Dev) error {
-	spinner := utils.NewSpinner("Deactivating your development environment...")
+	spinner := utils.NewSpinner("Deactivating your development container...")
 	spinner.Start()
 	defer spinner.Stop()
 

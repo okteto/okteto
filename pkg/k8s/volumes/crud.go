@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//Create deploys the volume claim for a given dev environment
+//Create deploys the volume claim for a given development container
 func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvc := translate(dev)
@@ -81,7 +81,7 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 
 }
 
-//Destroy destroys the volume claim for a given dev environment
+//Destroy destroys the volume claim for a given development container
 func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	log.Infof("destroying volume claim '%s'", dev.GetVolumeName())

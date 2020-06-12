@@ -129,12 +129,12 @@ func executeInit(devPath string, overwrite bool, language string, workDir string
 func askForImage(language, defaultImage string) string {
 	var image string
 	fmt.Printf("Recommended image for development with %s: %s\n", language, log.BlueString(defaultImage))
-	fmt.Printf("Which docker image do you want to use for your development environment? [%s]: ", defaultImage)
+	fmt.Printf("Which docker image do you want to use for your development container? [%s]: ", defaultImage)
 	_, err := fmt.Scanln(&image)
 	fmt.Println()
 
 	if err != nil {
-		log.Debugf("Scanln failed to read dev environment image: %s", err)
+		log.Debugf("Scanln failed to read development container image: %s", err)
 		image = ""
 	}
 

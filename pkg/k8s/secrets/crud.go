@@ -102,7 +102,7 @@ func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
 	return nil
 }
 
-//GetSecretName returns the okteto secret name for a given dev environment
+//GetSecretName returns the okteto secret name for a given development container
 func GetSecretName(dev *model.Dev) string {
 	return fmt.Sprintf(oktetoSecretTemplate, dev.Name)
 }

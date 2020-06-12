@@ -92,7 +92,7 @@ type forwarder interface {
 	Stop()
 }
 
-//Up starts a cloud dev environment
+//Up starts a development container
 func Up() *cobra.Command {
 	var devPath string
 	var namespace string
@@ -103,12 +103,12 @@ func Up() *cobra.Command {
 	var resetSyncthing bool
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Activates your development environment",
+		Short: "Activates your development container",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Debug("starting up command")
 
-			if okteto.InDevEnv() {
-				return errors.ErrNotInDevEnv
+			if okteto.InDevContainer() {
+				return errors.ErrNotInDevContainer
 			}
 
 			u := upgradeAvailable()
@@ -243,7 +243,7 @@ func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) er
 	return nil
 }
 
-// Activate activates the dev environment
+// Activate activates the development container
 func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
 
 	var state *term.State
@@ -273,14 +273,14 @@ func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
 		}
 
 		if up.retry && !deployments.IsDevModeOn(d) {
-			log.Information("Development environment has been deactivated")
+			log.Information("Development container has been deactivated")
 			up.Exit <- nil
 			return
 		}
 
 		if deployments.IsDevModeOn(d) && deployments.HasBeenChanged(d) {
 			up.Exit <- errors.UserError{
-				E:    fmt.Errorf("Deployment '%s' has been modified while your development environment was active", d.Name),
+				E:    fmt.Errorf("Deployment '%s' has been modified while your development container was active", d.Name),
 				Hint: "Follow these steps:\n      1. Execute 'okteto down'\n      2. Apply your manifest changes again: 'kubectl apply'\n      3. Execute 'okteto up' again\n    More information is available here: https://okteto.com/docs/reference/known-issues/index.html#kubectl-apply-changes-are-undone-by-okteto-up",
 			}
 			return
@@ -295,27 +295,27 @@ func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
 				}
 			}
 		} else if !deployments.IsDevModeOn(d) {
-			up.Exit <- fmt.Errorf("Development environment has been deactivated by an external command")
+			up.Exit <- fmt.Errorf("Development container has been deactivated by an external command")
 			return
 		}
 
 		if err := up.devMode(d, create); err != nil {
-			up.Exit <- fmt.Errorf("couldn't activate your development environment: %s", err)
+			up.Exit <- fmt.Errorf("couldn't activate your development container: %s", err)
 			return
 		}
 
 		if err := up.forwards(); err != nil {
-			up.Exit <- fmt.Errorf("couldn't forward traffic to your development environment: %s", err)
+			up.Exit <- fmt.Errorf("couldn't forward traffic to your development container: %s", err)
 			return
 		}
 
 		go up.cleanCommand()
 
-		log.Success("Development environment activated")
+		log.Success("Development container activated")
 
 		if err := up.sync(resetSyncthing && !up.retry); err != nil {
 			if !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
-				log.Yellow("\nConnection lost to your development environment, reconnecting...\n")
+				log.Yellow("\nConnection lost to your development container, reconnecting...\n")
 				up.shutdown()
 				continue
 			}
@@ -481,7 +481,7 @@ func (up *UpContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 }
 
 func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
-	spinner := utils.NewSpinner("Activating your development environment...")
+	spinner := utils.NewSpinner("Activating your development container...")
 	up.updateStateFile(activating)
 	spinner.Start()
 	defer spinner.Stop()
@@ -561,7 +561,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	reporter := make(chan string)
 	defer close(reporter)
 	go func() {
-		message := "Activating your development environment"
+		message := "Activating your development container"
 		if up.Dev.PersistentVolumeEnabled() {
 			message = "Attaching persistent volume"
 			up.updateStateFile(attaching)
@@ -711,7 +711,7 @@ func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 		}
 		return errors.UserError{
 			E:    fmt.Errorf("Failed to connect to the synchronization service"),
-			Hint: fmt.Sprintf("Check your development environment logs for errors: 'kubectl logs %s'.\n    If you are using secrets, check that your container can write to the destination path of your secrets.\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
+			Hint: fmt.Sprintf("Check your development container logs for errors: 'kubectl logs %s'.\n    If you are using secrets, check that your container can write to the destination path of your secrets.\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
 		}
 	}
 

@@ -493,13 +493,13 @@ func waitForReady(namespace, name string) error {
 			log.Printf("okteto up is: %s", c)
 			return nil
 		} else if string(c) == "failed" {
-			return fmt.Errorf("dev environment failed")
+			return fmt.Errorf("development container failed")
 		}
 
 		<-t.C
 	}
 
-	return fmt.Errorf("dev environment was never ready")
+	return fmt.Errorf("development container was never ready")
 }
 
 func deploy(ctx context.Context, name, path string) error {

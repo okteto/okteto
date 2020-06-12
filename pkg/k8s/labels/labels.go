@@ -26,10 +26,10 @@ const (
 	// DetachedDevLabel indicates the detached dev pods
 	DetachedDevLabel = "detached.dev.okteto.com"
 
-	// RevisionAnnotation indicates the revision when the development environment was activated
+	// RevisionAnnotation indicates the revision when the development container was activated
 	RevisionAnnotation = "dev.okteto.com/revision"
 
-	// DeploymentAnnotation indicates the original deployment manifest  when the development environment was activated
+	// DeploymentAnnotation indicates the original deployment manifest  when the development container was activated
 	DeploymentAnnotation = "dev.okteto.com/deployment"
 
 	// TranslationAnnotation sets the translation rules
