@@ -29,15 +29,17 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
+const syncthingVersion = "1.6.1"
+
 var (
 	downloadURLs = map[string]string{
-		"linux":   "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-linux-amd64-v1.5.0.tar.gz",
-		"arm64":   "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-linux-arm64-v1.5.0.tar.gz",
-		"darwin":  "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-macos-amd64-v1.5.0.tar.gz",
-		"windows": "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-windows-amd64-v1.5.0.zip",
+		"linux":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-amd64-v%[1]s.tar.gz", syncthingVersion),
+		"arm64":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm64-v%[1]s.tar.gz", syncthingVersion),
+		"darwin":  fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.tar.gz", syncthingVersion),
+		"windows": fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-windows-amd64-v%[1]s.zip", syncthingVersion),
 	}
 
-	minimumVersion = semver.MustParse("1.6.1")
+	minimumVersion = semver.MustParse(syncthingVersion)
 	versionRegex   = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
