@@ -29,15 +29,17 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
+const syncthingVersion = "1.6.1"
+
 var (
 	downloadURLs = map[string]string{
-		"linux":   "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-linux-amd64-v1.5.0.tar.gz",
-		"arm64":   "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-linux-arm64-v1.5.0.tar.gz",
-		"darwin":  "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-macos-amd64-v1.5.0.tar.gz",
-		"windows": "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-windows-amd64-v1.5.0.zip",
+		"linux":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-amd64-v%[1]s.tar.gz", syncthingVersion),
+		"arm64":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm64-v%[1]s.tar.gz", syncthingVersion),
+		"darwin":  fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.zip", syncthingVersion),
+		"windows": fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-windows-amd64-v%[1]s.zip", syncthingVersion),
 	}
 
-	minimumVersion = semver.MustParse("1.5.0")
+	minimumVersion = semver.MustParse(syncthingVersion)
 	versionRegex   = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
@@ -73,7 +75,6 @@ func Install(p getter.ProgressTracker) error {
 		return fmt.Errorf("failed to download syncthing from %s: %s", client.Src, err)
 	}
 
-	log.Infof("downloaded syncthing from %s to %s", client.Src, dir)
 	i := getInstallPath()
 	b := getBinaryPathInDownload(dir, downloadURL)
 
@@ -96,7 +97,7 @@ func Install(p getter.ProgressTracker) error {
 		return fmt.Errorf("failed to write %s: %s", i, err)
 	}
 
-	log.Infof("downloaded syncthing %s to %s", versionRegex, i)
+	log.Infof("downloaded syncthing %s to %s", syncthingVersion, i)
 	return nil
 }
 

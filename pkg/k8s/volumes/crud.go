@@ -41,7 +41,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error 
 	if k8Volume.Name != "" {
 		return checkPVCValues(k8Volume, dev)
 	}
-	log.Infof("creating volume claim '%s'...", pvc.Name)
+	log.Infof("creating volume claim '%s'", pvc.Name)
 	_, err = vClient.Create(pvc)
 	if err != nil {
 		return fmt.Errorf("error creating kubernetes volume claim: %s", err)
@@ -84,7 +84,7 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 //Destroy destroys the volume claim for a given dev environment
 func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
-	log.Infof("destroying volume claim '%s'...", dev.GetVolumeName())
+	log.Infof("destroying volume claim '%s'", dev.GetVolumeName())
 
 	ticker := time.NewTicker(1 * time.Second)
 	to := 3 * config.GetTimeout() // 90 seconds
@@ -110,7 +110,7 @@ func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error
 		}
 
 		if i%10 == 5 {
-			log.Infof("waiting for volume claim '%s' to be destroyed...", dev.GetVolumeName())
+			log.Infof("waiting for volume claim '%s' to be destroyed", dev.GetVolumeName())
 		}
 
 		select {

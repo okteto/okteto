@@ -20,7 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
-const configXML = `<configuration version="29">
+const configXML = `<configuration version="30">
 <folder id="okteto-{{ .Dev.Name }}" label="{{ .Dev.Name }}" path="{{ .Dev.MountPath }}" type="sendreceive" rescanIntervalS="300" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
@@ -48,6 +48,7 @@ const configXML = `<configuration version="29">
     <autoAcceptFolders>false</autoAcceptFolders>
     <maxSendKbps>0</maxSendKbps>
     <maxRecvKbps>0</maxRecvKbps>
+    <maxRequestKiB>0</maxRequestKiB>
 </device>
 <device id="ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU" name="remote" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
     <address>dynamic</address>
@@ -55,6 +56,7 @@ const configXML = `<configuration version="29">
     <autoAcceptFolders>false</autoAcceptFolders>
     <maxSendKbps>0</maxSendKbps>
     <maxRecvKbps>0</maxRecvKbps>
+    <maxRequestKiB>0</maxRequestKiB>
 </device>
 <gui enabled="true" tls="false" debugging="false">
     <address>{{ .RemoteGUIAddress }}</address>

@@ -780,6 +780,7 @@ func (up *UpContext) synchronizeFiles() error {
 	}
 
 	go up.Sy.Monitor(up.Context, up.Disconnect)
+	log.Infof("restarting syncthing to update sync mode to sendreceive")
 	return up.Sy.Restart(up.Context)
 }
 
@@ -807,7 +808,6 @@ func (up *UpContext) cleanCommand() {
 		log.Infof("failed to clean session: %s", err)
 	}
 
-	log.Infof("watches: %s", out.String())
 	if utils.IsWatchesConfigurationTooLow(out.String()) {
 		log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 		log.Yellow("This can affect Okteto's file synchronization performance.")
