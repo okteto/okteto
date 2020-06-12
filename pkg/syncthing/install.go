@@ -37,7 +37,7 @@ var (
 		"windows": "https://github.com/syncthing/syncthing/releases/download/v1.5.0/syncthing-windows-amd64-v1.5.0.zip",
 	}
 
-	minimumVersion = semver.MustParse("1.5.0")
+	minimumVersion = semver.MustParse("1.6.1")
 	versionRegex   = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
