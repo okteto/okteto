@@ -60,7 +60,7 @@ const configXML = `<configuration version="30">
 </gui>
 <ldap></ldap>
 <options>
-    <listenAddress>{{.ListenAddress}}</listenAddress>
+    <listenAddress>tcp://{{.ListenAddress}}</listenAddress>
     <globalAnnounceServer>default</globalAnnounceServer>
     <globalAnnounceEnabled>false</globalAnnounceEnabled>
     <localAnnounceEnabled>false</localAnnounceEnabled>
