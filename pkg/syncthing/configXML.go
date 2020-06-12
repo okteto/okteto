@@ -13,7 +13,7 @@
 
 package syncthing
 
-const configXML = `<configuration version="29">
+const configXML = `<configuration version="30">
 <folder id="okteto-{{ .Dev.Name }}" label="{{ .Dev.Name }}" path="{{ .Source }}" type="{{ .Type }}" rescanIntervalS="300" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
@@ -41,6 +41,7 @@ const configXML = `<configuration version="29">
     <autoAcceptFolders>false</autoAcceptFolders>
     <maxSendKbps>0</maxSendKbps>
     <maxRecvKbps>0</maxRecvKbps>
+    <maxRequestKiB>0</maxRequestKiB>
 </device>
 <device id="{{.RemoteDeviceID}}" name="remote" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
     <address>{{.RemoteAddress}}</address>
@@ -48,6 +49,7 @@ const configXML = `<configuration version="29">
     <autoAcceptFolders>false</autoAcceptFolders>
     <maxSendKbps>0</maxSendKbps>
     <maxRecvKbps>0</maxRecvKbps>
+    <maxRequestKiB>0</maxRequestKiB>
 </device>
 <gui enabled="true" tls="false" debugging="false">
     <address>{{.GUIAddress}}</address>
