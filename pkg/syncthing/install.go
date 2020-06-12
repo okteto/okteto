@@ -35,7 +35,7 @@ var (
 	downloadURLs = map[string]string{
 		"linux":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-amd64-v%[1]s.tar.gz", syncthingVersion),
 		"arm64":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm64-v%[1]s.tar.gz", syncthingVersion),
-		"darwin":  fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.tar.gz", syncthingVersion),
+		"darwin":  fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.zip", syncthingVersion),
 		"windows": fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-windows-amd64-v%[1]s.zip", syncthingVersion),
 	}
 
