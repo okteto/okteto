@@ -162,6 +162,13 @@ jobs:
             --metadata version=${CIRCLE_TAG} \
             --cache-control "max-age=86400" \
           overwrite: false
+      - setup_remote_docker
+      - run:  
+          name: "Publish Docker container"
+          command: |
+            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+            docker build -t okteto/okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_TAG .
+            docker push okteto/okteto:${CIRCLE_TAG}
       - run:
           name: "Publish Release on GitHub"
           command: |

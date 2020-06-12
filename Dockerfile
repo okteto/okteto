@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:experimental
 
 FROM bitnami/kubectl:1.17.4 as kubectl
-FROM alpine/helm:3.2.1 as helm
+FROM alpine/helm:3.2.3 as helm
 
 FROM okteto/golang:1 as builder
 WORKDIR /okteto
@@ -23,4 +23,5 @@ RUN apk add --no-cache bash ca-certificates
 COPY --from=kubectl /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl
 COPY --from=helm /usr/bin/helm /usr/local/bin/helm
 COPY --from=builder /okteto/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
+
 ENV PS1="\[\e[36m\]\${OKTETO_NAMESPACE:-okteto}:\e[32m\]\${OKTETO_NAME:-dev} \[\e[m\]\W> "
