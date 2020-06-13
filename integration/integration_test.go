@@ -257,7 +257,7 @@ func TestAll(t *testing.T) {
 		// Update content in token file
 		updatedContent := fmt.Sprintf("%d", time.Now().Unix())
 		ioutil.WriteFile(contentPath, []byte(updatedContent), 0644)
-		time.Sleep(3 * time.Second)
+		time.Sleep(6 * time.Second)
 
 		log.Println("getting updated content")
 		c, err = getContent(endpoint, 120)
