@@ -93,7 +93,7 @@ func GetRevisionAnnotatedDeploymentOrFailed(dev *model.Dev, c *kubernetes.Client
 	return d, nil
 }
 
-//GetTranslations fills all the deployments pointed by a dev environment
+//GetTranslations fills all the deployments pointed by a development container
 func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
 	result := map[string]*model.Translation{}
 	if d != nil {
@@ -214,7 +214,7 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 	return ok
 }
 
-//HasBeenChanged returns if a deployment has been updated since the development environment was activated
+//HasBeenChanged returns if a deployment has been updated since the development container was activated
 func HasBeenChanged(d *appsv1.Deployment) bool {
 	oktetoRevision := d.Annotations[okLabels.RevisionAnnotation]
 	if oktetoRevision == "" {
@@ -242,7 +242,7 @@ func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	if trRulesJSON == "" {
 		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 		if dManifest == "" {
-			log.Infof("%s/%s is not a development environment", d.Namespace, d.Name)
+			log.Infof("%s/%s is not a development container", d.Namespace, d.Name)
 			return d, nil
 		}
 		dOrig := &appsv1.Deployment{}

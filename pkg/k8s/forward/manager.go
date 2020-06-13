@@ -107,12 +107,12 @@ func (p *PortForwardManager) AddReverse(_ model.Reverse) error {
 	return fmt.Errorf("not implemented")
 }
 
-// Start starts all the port forwarders to the dev environment
+// Start starts all the port forwarders to the development container
 func (p *PortForwardManager) Start(devPod, namespace string) error {
 	p.stopped = false
 	a, devPF, err := p.buildForwarderToDevPod(namespace, devPod)
 	if err != nil {
-		return fmt.Errorf("failed to forward ports to development environment: %w", err)
+		return fmt.Errorf("failed to forward ports to development container: %w", err)
 	}
 
 	p.activeDev = a

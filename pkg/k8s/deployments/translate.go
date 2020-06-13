@@ -253,18 +253,18 @@ func TranslateResources(c *apiv1.Container, r model.ResourceRequirements) {
 
 //TranslateEnvVars translates the variables attached to a container
 func TranslateEnvVars(c *apiv1.Container, rule *model.TranslationRule) {
-	unusedDevEnv := map[string]string{}
+	unusedDevEnvVar := map[string]string{}
 	for _, val := range rule.Environment {
-		unusedDevEnv[val.Name] = val.Value
+		unusedDevEnvVar[val.Name] = val.Value
 	}
 	for i, envvar := range c.Env {
-		if value, ok := unusedDevEnv[envvar.Name]; ok {
+		if value, ok := unusedDevEnvVar[envvar.Name]; ok {
 			c.Env[i] = apiv1.EnvVar{Name: envvar.Name, Value: value}
-			delete(unusedDevEnv, envvar.Name)
+			delete(unusedDevEnvVar, envvar.Name)
 		}
 	}
 	for _, envvar := range rule.Environment {
-		if value, ok := unusedDevEnv[envvar.Name]; ok {
+		if value, ok := unusedDevEnvVar[envvar.Name]; ok {
 			c.Env = append(c.Env, apiv1.EnvVar{Name: envvar.Name, Value: value})
 		}
 	}

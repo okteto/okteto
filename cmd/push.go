@@ -92,7 +92,7 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			log.Success("Source code pushed to the development environment '%s'", dev.Name)
+			log.Success("Source code pushed to '%s'", dev.Name)
 			log.Println()
 
 			analytics.TrackPush(true, oktetoRegistryURL)
@@ -162,7 +162,7 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 			return err
 		}
 
-		log.Information("Development environment deactivated")
+		log.Information("Development container deactivated")
 	}
 
 	imageFromDeployment, err := getImageFromDeployment(trList)
@@ -175,7 +175,7 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		return err
 	}
 
-	spinner := utils.NewSpinner(fmt.Sprintf("Pushing source code to the development environment '%s'...", dev.Name))
+	spinner := utils.NewSpinner(fmt.Sprintf("Pushing source code to '%s'...", dev.Name))
 	spinner.Start()
 	defer spinner.Stop()
 

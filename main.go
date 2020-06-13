@@ -59,7 +59,7 @@ func main() {
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
-		Short:         "Manage cloud dev environments",
+		Short:         "Manage development containers",
 		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			log.SetLevel(logLevel)

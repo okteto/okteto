@@ -39,7 +39,7 @@ func Exec() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "exec <command>",
-		Short: "Execute a command in your development environment",
+		Short: "Execute a command in your development container",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -56,7 +56,7 @@ func Exec() *cobra.Command {
 
 			if errors.IsNotFound(err) {
 				return errors.UserError{
-					E:    fmt.Errorf("Development environment not found in namespace %s", dev.Namespace),
+					E:    fmt.Errorf("Development container not found in namespace %s", dev.Namespace),
 					Hint: "Run `okteto up` to launch it or use `okteto namespace` to select the correct namespace and try again",
 				}
 			}

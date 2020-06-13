@@ -52,8 +52,8 @@ var (
 	// ErrUnknownSyncError is returned when syncthing reports an unknown sync error
 	ErrUnknownSyncError = fmt.Errorf("Unknown syncthing error")
 
-	// ErrNotInDevEnv is returned when an unsupported command is invoked from a dev environment (e.g. okteto up)
-	ErrNotInDevEnv = fmt.Errorf("this command is not supported from inside an okteto development environment")
+	// ErrNotInDevContainer is returned when an unsupported command is invoked from a dev container (e.g. okteto up)
+	ErrNotInDevContainer = fmt.Errorf("this command is not supported from inside an development container")
 
 	// ErrLostSyncthing is raised when we lose connectivity with syncthing
 	ErrLostSyncthing = fmt.Errorf("synchronization service unresponsive")

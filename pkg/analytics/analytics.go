@@ -93,7 +93,7 @@ func TrackDeleteNamespace(success bool) {
 	track(namespaceDeleteEvent, success, nil)
 }
 
-// TrackReconnect sends a tracking event to mixpanel when the dev environment reconnect
+// TrackReconnect sends a tracking event to mixpanel when the development container reconnect
 func TrackReconnect(success bool, clusterType string, swap bool) {
 	props := map[string]interface{}{
 		"clusterType": clusterType,
@@ -107,14 +107,14 @@ func TrackSyncError() {
 	track(syncErrorEvent, false, nil)
 }
 
-// TrackUp sends a tracking event to mixpanel when the user activates a development environment
+// TrackUp sends a tracking event to mixpanel when the user activates a development container
 func TrackUp(success bool, dev, clusterType string, single, swap, remote bool) {
 	props := map[string]interface{}{
-		"devEnvironmentName": dev,
-		"clusterType":        clusterType,
-		"singleService":      single,
-		"swap":               swap,
-		"remote":             remote,
+		"name":          dev,
+		"clusterType":   clusterType,
+		"singleService": single,
+		"swap":          swap,
+		"remote":        remote,
 	}
 	track(upEvent, success, props)
 }
@@ -132,17 +132,17 @@ func TrackExec(success bool) {
 	track(execEvent, success, nil)
 }
 
-// TrackDown sends a tracking event to mixpanel when the user deactivates a development environment
+// TrackDown sends a tracking event to mixpanel when the user deactivates a development container
 func TrackDown(success bool) {
 	track(downEvent, success, nil)
 }
 
-// TrackDownVolumes sends a tracking event to mixpanel when the user deactivates a development environment and its volumes
+// TrackDownVolumes sends a tracking event to mixpanel when the user deactivates a development container and its volumes
 func TrackDownVolumes(success bool) {
 	track(downVolumesEvent, success, nil)
 }
 
-// TrackPush sends a tracking event to mixpanel when the user pushes a development environment
+// TrackPush sends a tracking event to mixpanel when the user pushes a development container
 func TrackPush(success bool, oktetoRegistryURL string) {
 	props := map[string]interface{}{
 		"oktetoRegistryURL": oktetoRegistryURL,

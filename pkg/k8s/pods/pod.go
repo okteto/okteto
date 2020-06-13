@@ -101,7 +101,7 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 		}
 
 		if time.Now().After(timeout) {
-			return nil, fmt.Errorf("kubernetes is taking too long to create the pod of your development environment. Please check for errors and try again")
+			return nil, fmt.Errorf("kubernetes is taking too long to create your development container. Please check for errors and try again")
 		}
 
 		select {
@@ -187,7 +187,7 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 				return pod, nil
 			}
 			if pod.DeletionTimestamp != nil {
-				return nil, fmt.Errorf("development environment has been removed")
+				return nil, fmt.Errorf("development container has been removed")
 			}
 		case event := <-watchPodEvents.ResultChan():
 			e, ok := event.Object.(*v1.Event)
@@ -231,7 +231,7 @@ func Exists(podName, namespace string, c kubernetes.Interface) bool {
 func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) int64 {
 	devPodLogs, err := GetDevPodLogs(ctx, dev, false, c)
 	if err != nil {
-		log.Errorf("failed to access development environment logs: %s", err)
+		log.Errorf("failed to access development container logs: %s", err)
 		return -1
 	}
 	return parseUserID(devPodLogs)
@@ -240,12 +240,12 @@ func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 func parseUserID(output string) int64 {
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {
-		log.Info("development environment logs not generated. USER cannot be inferred")
+		log.Info("development container logs not generated. USER cannot be inferred")
 		return -1
 	}
 
 	if !strings.HasPrefix(lines[0], "USER:") {
-		log.Infof("USER entry not not found in first development environment log line: %s", lines[0])
+		log.Infof("USER entry not not found in first development container log line: %s", lines[0])
 		return -1
 	}
 
@@ -310,7 +310,7 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset, sn string) error {
 	)
 	if err != nil {
 		log.Infof("error listing pods to restart: %s", err)
-		return fmt.Errorf("failed to retrieve dev environment information")
+		return fmt.Errorf("failed to retrieve development container information")
 	}
 
 	found := false
@@ -353,7 +353,7 @@ func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error
 
 		if err != nil {
 			log.Infof("error listing pods to check status after restart: %s", err)
-			return fmt.Errorf("failed to retrieve dev environment information")
+			return fmt.Errorf("failed to retrieve development container information")
 		}
 
 		allRunning := true
