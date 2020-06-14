@@ -67,7 +67,10 @@ services:
 	if s.Services["vote"].Build.Context != "vote" {
 		t.Errorf("'vote.build' was not parsed: %+v", s)
 	}
-	if s.Services["vote"].Command != "python app.py" {
+	if len(s.Services["vote"].Command.Values) != 3 {
+		t.Errorf("'vote.command' was not parsed: %+v", s)
+	}
+	if s.Services["vote"].Command.Values[0] != "sh" || s.Services["vote"].Command.Values[1] != "-c" || s.Services["vote"].Command.Values[2] != "python app.py" {
 		t.Errorf("'vote.command' was not parsed: %+v", s)
 	}
 	if s.Services["vote"].Replicas != 2 {

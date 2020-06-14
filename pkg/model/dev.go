@@ -107,7 +107,7 @@ type Dev struct {
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
-	Command              []string              `json:"command,omitempty" yaml:"command,omitempty"`
+	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
 	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
@@ -124,6 +124,11 @@ type Dev struct {
 	DevDir               string                `json:"-" yaml:"-"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
+}
+
+//Command represents the staart commaand of a development contaianer
+type Command struct {
+	Values []string
 }
 
 // BuildInfo represents the build info to generate an image
@@ -233,7 +238,6 @@ func Read(bytes []byte) (*Dev, error) {
 		Push:        &BuildInfo{},
 		Environment: make([]EnvVar, 0),
 		Secrets:     make([]Secret, 0),
-		Command:     make([]string, 0),
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
 		Services:    make([]*Dev, 0),
@@ -299,8 +303,8 @@ func (dev *Dev) loadImage() {
 }
 
 func (dev *Dev) setDefaults() error {
-	if len(dev.Command) == 0 {
-		dev.Command = []string{"sh"}
+	if dev.Command.Values == nil {
+		dev.Command.Values = []string{"sh"}
 	}
 	setBuildDefaults(dev.Build)
 	setBuildDefaults(dev.Push)
@@ -665,8 +669,8 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		for _, s := range rule.Secrets {
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
 		}
-	} else if len(dev.Command) > 0 {
-		rule.Command = dev.Command
+	} else if len(dev.Command.Values) > 0 {
+		rule.Command = dev.Command.Values
 		rule.Args = []string{}
 	}
 

@@ -184,9 +184,11 @@ func GetDevConfig(language string) *model.Dev {
 	n := normalizeLanguage(language)
 	vals := languageDefaults[n]
 	dev := &model.Dev{
-		Image:           vals.image,
-		WorkDir:         vals.path,
-		Command:         vals.command,
+		Image:   vals.image,
+		WorkDir: vals.path,
+		Command: model.Command{
+			Values: vals.command,
+		},
 		Environment:     vals.environment,
 		Volumes:         vals.volumes,
 		Forward:         vals.forward,

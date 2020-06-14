@@ -161,6 +161,44 @@ func TestEnvVarMashalling(t *testing.T) {
 	}
 }
 
+func TestCommandMashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected Command
+	}{
+		{
+			"single-no-space",
+			[]byte("start.sh"),
+			Command{Values: []string{"start.sh"}},
+		},
+		{
+			"single-space",
+			[]byte("start.sh arg"),
+			Command{Values: []string{"sh", "-c", "start.sh arg"}},
+		},
+		{
+			"multiple",
+			[]byte("['yarn', 'install']"),
+			Command{Values: []string{"yarn", "install"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			var result Command
+			if err := yaml.Unmarshal(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestSecretMashalling(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {

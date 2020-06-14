@@ -40,7 +40,7 @@ type Service struct {
 	Image           string       `yaml:"image"`
 	Build           *BuildInfo   `yaml:"build,omitempty"`
 	Replicas        int          `yaml:"replicas"`
-	Command         string       `yaml:"command,omitempty"`
+	Command         Command      `yaml:"command,omitempty"`
 	Environment     []EnvVar     `yaml:"environment,omitempty"`
 	Ports           []int        `yaml:"ports,omitempty"`
 	Volumes         []string     `yaml:"volumes,omitempty"`
