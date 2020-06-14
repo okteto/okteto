@@ -48,6 +48,35 @@ func (e EnvVar) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (c *Command) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var multi []string
+	err := unmarshal(&multi)
+	if err != nil {
+		var single string
+		err := unmarshal(&single)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(single, " ") {
+			c.Values = []string{"sh", "-c", single}
+		} else {
+			c.Values = []string{single}
+		}
+	} else {
+		c.Values = multi
+	}
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (c Command) MarshalYAML() (interface{}, error) {
+	if len(c.Values) == 1 && !strings.Contains(c.Values[0], " ") {
+		return c.Values[0], nil
+	}
+	return c.Values, nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)

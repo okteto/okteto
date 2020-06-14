@@ -85,7 +85,7 @@ services:
 			t.Errorf("'name' was not parsed: %+v", main)
 		}
 
-		if len(dev.Command) != 1 || dev.Command[0] != "uwsgi" {
+		if len(dev.Command.Values) != 1 || dev.Command.Values[0] != "uwsgi" {
 			t.Errorf("command was not parsed: %+v", dev)
 		}
 
@@ -202,7 +202,7 @@ forward:
 				t.Fatal(err)
 			}
 
-			if len(d.Command) != 1 || d.Command[0] != "sh" {
+			if len(d.Command.Values) != 1 || d.Command.Values[0] != "sh" {
 				t.Errorf("command was parsed: %+v", d)
 			}
 
@@ -478,8 +478,8 @@ func Test_LoadRemote(t *testing.T) {
 
 	dev.LoadRemote("/tmp/key.pub")
 
-	if dev.Command[0] != "uwsgi" {
-		t.Errorf("command wasn't set: %s", dev.Command)
+	if dev.Command.Values[0] != "uwsgi" {
+		t.Errorf("command wasn't set: %s", dev.Command.Values)
 	}
 
 	if len(dev.Forward) != 1 {
