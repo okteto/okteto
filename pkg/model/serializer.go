@@ -73,9 +73,6 @@ func (c Command) MarshalYAML() (interface{}, error) {
 	if len(c.Values) == 1 && !strings.Contains(c.Values[0], " ") {
 		return c.Values[0], nil
 	}
-	if len(c.Values) == 3 && c.Values[0] == "sh" && c.Values[1] == "-c" && !strings.Contains(c.Values[2], " ") {
-		return c.Values[2], nil
-	}
 	return c.Values, nil
 }
 
