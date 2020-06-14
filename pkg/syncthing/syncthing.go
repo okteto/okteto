@@ -334,7 +334,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
 		if line == "" {
 			continue
 		}
-		if strings.HasPrefix(line, "/") || strings.Contains(line, "(?d)") {
+		if strings.Contains(line, "(?d)") {
 			continue
 		}
 		ignores.Ignore[i] = fmt.Sprintf("(?d)%s", line)
