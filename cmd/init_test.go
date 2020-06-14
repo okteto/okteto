@@ -33,7 +33,7 @@ func Test_executeInit(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
-	if err := executeInit(p, false, "golang", dir); err != nil {
+	if err := executeInit("", p, "golang", dir, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -46,11 +46,11 @@ func Test_executeInit(t *testing.T) {
 		t.Errorf("got %s, expected %s", d.Image, "okteto/golang:1")
 	}
 
-	if err := executeInit(p, false, "java", dir); err == nil {
+	if err := executeInit("", p, "java", dir, false); err == nil {
 		t.Fatalf("manifest was overwritten: %s", err)
 	}
 
-	if err := executeInit(p, true, "ruby", dir); err != nil {
+	if err := executeInit("", p, "ruby", dir, true); err != nil {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
