@@ -28,6 +28,7 @@ import (
 
 //Namespace fetch credentials for a cluster namespace
 func Namespace(ctx context.Context) *cobra.Command {
+	var oktetoURL string
 	cmd := &cobra.Command{
 		Use:   "namespace [name]",
 		Short: "Downloads k8s credentials for a namespace",
@@ -43,16 +44,31 @@ func Namespace(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err := RunNamespace(ctx, namespace)
+			err := RunNamespace(ctx, namespace, oktetoURL)
 			analytics.TrackNamespace(err == nil)
 			return err
 		},
 	}
+	cmd.Flags().StringVarP(&oktetoURL, "url", "u", "", "Okteto URL (optional)")
 	return cmd
 }
 
 //RunNamespace starts the kubeconfig sequence
-func RunNamespace(ctx context.Context, namespace string) error {
+func RunNamespace(ctx context.Context, namespace, oktetoURL string) error {
+	if oktetoURL != "" && okteto.GetURL() != oktetoURL {
+		u, err := login.WithBrowser(ctx, oktetoURL)
+		if err != nil {
+			return err
+		}
+		log.Infof("authenticated user %s", u.ID)
+
+		if oktetoURL == okteto.CloudURL {
+			log.Success("Logged in as %s", u.GithubID)
+		} else {
+			log.Success("Logged in as %s @ %s", u.GithubID, oktetoURL)
+		}
+	}
+
 	cred, err := okteto.GetCredentials(ctx, namespace)
 	if err != nil {
 		return err
