@@ -54,33 +54,48 @@ func TestStacks(t *testing.T) {
 
 	test := scopeagent.GetTest(t)
 	test.Run(tName, func(t *testing.T) {
+		log.Printf("running %s \n", tName)
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}
 
+		log.Printf("created namespace %s \n", namespace)
+
 		if err := cloneGitRepo(ctx, stackGitRepo); err != nil {
 			t.Fatal(err)
 		}
+
+		log.Printf("cloned repo %s \n", stackGitRepo)
+
 		defer deleteGitRepo(ctx, stackGitFolder)
+
 		if err := deployStack(ctx, oktetoPath, stackManifest); err != nil {
 			t.Fatal(err)
 		}
+
+		log.Printf("deployed stack using %s \n", stackManifest)
+
 		endpoint := fmt.Sprintf("https://vote-%s.cloud.okteto.net", namespace)
 		content, err := getContent(endpoint, 150)
 		if err != nil {
 			t.Fatalf("failed to get stack content: %s", err)
 		}
+
 		if !strings.Contains(content, "Cats vs Dogs!") {
 			t.Fatalf("wrong stack content: %s", content)
 		}
 		if err := destroyStack(ctx, oktetoPath, stackManifest); err != nil {
 			t.Fatal(err)
 		}
+
+		log.Println("destroyed stack")
+
 		time.Sleep(5 * time.Second)
 		_, err = getDeployment(namespace, "vote")
 		if err == nil {
 			t.Fatalf("'vote' deployment not deleted after 'okteto stack destroy'")
 		}
+
 		if !strings.Contains(err.Error(), "not found") {
 			t.Fatalf("error getting deployment 'vote': %s", err.Error())
 		}
@@ -106,15 +121,12 @@ func cloneGitRepo(ctx context.Context, name string) error {
 
 func deleteGitRepo(ctx context.Context, path string) error {
 	log.Printf("delete git repo %s", path)
-	cmd := exec.Command("rm", "-Rf", path)
-	cmd.Env = os.Environ()
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-	defer span.Finish()
-	o, err := cmd.CombinedOutput()
+	err := os.RemoveAll(path)
 	if err != nil {
-		return fmt.Errorf("delete git repo %s failed: %s - %s", path, string(o), err)
+		return fmt.Errorf("delete git repo %s failed: %w", path, err)
 	}
-	log.Printf("delete git repo %s success", path)
+
+	log.Printf("deleted git repo %s", path)
 	return nil
 }
 
