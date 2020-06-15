@@ -806,6 +806,8 @@ func (up *UpContext) cleanCommand() {
 
 	if err != nil {
 		log.Infof("failed to clean session: %s", err)
+		up.cleaned <- struct{}{}
+		return
 	}
 
 	if utils.IsWatchesConfigurationTooLow(out.String()) {
