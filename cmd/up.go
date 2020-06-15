@@ -822,7 +822,7 @@ func (up *UpContext) runCommand() error {
 	log.Infof("starting remote command")
 	up.updateStateFile(ready)
 
-	if up.Dev.ExecuteOverSSHEnabled() || up.Dev.RemoteModeEnabled() {
+	if up.Dev.RemoteModeEnabled() {
 		return ssh.Exec(up.Context, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command.Values)
 	}
 

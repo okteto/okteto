@@ -182,7 +182,7 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 				log.Errorf("type error getting pod: %s", event)
 				continue
 			}
-			log.Infof("pod %s updated", pod.Name)
+			log.Infof("dev pod %s updated to %s", pod.Name, pod.Status.Phase)
 			if pod.Status.Phase == apiv1.PodRunning {
 				return pod, nil
 			}
