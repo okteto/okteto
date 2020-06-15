@@ -66,7 +66,7 @@ const (
 	OktetoInitContainer = "okteto-init"
 
 	//DefaultImage default image for sandboxes
-	DefaultImage = "okteto/desk:latest"
+	DefaultImage = "okteto/dev:latest"
 
 	//TranslationVersion version of the translation schema
 	TranslationVersion = "1.0"

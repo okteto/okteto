@@ -39,7 +39,7 @@ jobs:
     environment: 
       OKTETO_USER: cindylopez
     docker:
-      - image: okteto/desk:latest
+      - image: okteto/dev:latest
     steps:
       - checkout
       - restore_cache: 
