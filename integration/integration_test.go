@@ -259,7 +259,8 @@ func TestAll(t *testing.T) {
 		ioutil.WriteFile(contentPath, []byte(updatedContent), 0644)
 		time.Sleep(6 * time.Second)
 
-		log.Println("getting updated content")
+		log.Printf("getting updated content from %s\n", endpoint)
+
 		c, err = getContent(endpoint, 120)
 		if err != nil {
 			t.Fatalf("failed to get updated content: %s", err)
@@ -330,14 +331,14 @@ func getContent(endpoint string, totRetries int) (string, error) {
 				return "", fmt.Errorf("failed to get %s: %w", endpoint, err)
 			}
 
-			log.Printf("Called %s, got %s, retrying", endpoint, err)
+			log.Printf("called %s, got %s, retrying", endpoint, err)
 			<-t.C
 			continue
 		}
 
 		defer r.Body.Close()
 		if r.StatusCode != 200 {
-			log.Printf("Called %s, got status %d, retrying", endpoint, r.StatusCode)
+			log.Printf("called %s, got status %d, retrying", endpoint, r.StatusCode)
 			<-t.C
 			continue
 		}
@@ -375,9 +376,12 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	cmd.Env = os.Environ()
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 	defer span.Finish()
-	if o, err := cmd.CombinedOutput(); err != nil {
+	o, err := cmd.CombinedOutput()
+	if err != nil {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
 	}
+
+	log.Printf("create namespace output: \n%s\n", string(o))
 
 	_, _, n, err := k8Client.GetLocal()
 	if err != nil {
