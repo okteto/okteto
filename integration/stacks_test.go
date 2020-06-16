@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"go.undefinedlabs.com/scopeagent"
 	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 )
@@ -55,6 +56,7 @@ func TestStacks(t *testing.T) {
 	test := scopeagent.GetTest(t)
 	test.Run(tName, func(t *testing.T) {
 		log.Printf("running %s \n", tName)
+		k8Client.Reset()
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}

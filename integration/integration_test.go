@@ -202,6 +202,8 @@ func TestAll(t *testing.T) {
 			t.Fatalf("kubectl is not in the path: %s", err)
 		}
 
+		k8Client.Reset()
+
 		name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 		namespace := fmt.Sprintf("%s-%s", name, user)
 
@@ -390,7 +392,6 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 
 	log.Printf("create namespace output: \n%s\n", string(o))
 
-	k8Client.Reset()
 	_, _, n, err := k8Client.GetLocal()
 	if err != nil {
 		return err
@@ -413,7 +414,7 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
 	}
-	k8Client.Reset()
+
 	return nil
 }
 
