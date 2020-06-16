@@ -217,6 +217,8 @@ func TestAll(t *testing.T) {
 		contentPath := filepath.Join(dir, "index.html")
 		ioutil.WriteFile(contentPath, []byte(name), 0644)
 
+		log.Printf("original content: %s", name)
+
 		manifestPath := filepath.Join(dir, "okteto.yml")
 		if err := writeManifest(manifestPath, name); err != nil {
 			t.Fatal(err)
@@ -255,7 +257,7 @@ func TestAll(t *testing.T) {
 		}
 
 		// Update content in token file
-		updatedContent := fmt.Sprintf("%d", time.Now().Unix())
+		updatedContent := fmt.Sprintf("%s-%d", name, time.Now().Unix())
 		ioutil.WriteFile(contentPath, []byte(updatedContent), 0644)
 		time.Sleep(6 * time.Second)
 
@@ -476,6 +478,7 @@ func waitForUpExit(wg *sync.WaitGroup) error {
 }
 
 func waitForReady(namespace, name string) error {
+	log.Println("waiting for okteto up to be ready")
 	state := fmt.Sprintf("%s/.okteto/%s/%s/okteto.state", os.Getenv("HOME"), namespace, name)
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < 180; i++ {
