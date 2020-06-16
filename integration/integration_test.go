@@ -278,10 +278,10 @@ func TestAll(t *testing.T) {
 		}
 
 		log.Printf("getting updated content from %s\n", endpoint)
-		t := time.NewTicker(1 * time.Second)
+		tick := time.NewTicker(1 * time.Second)
 		gotUpdated := false
 		for i := 0; i < 10; i++ {
-			<-t.C
+			<-tick.C
 			c, err = getContent(endpoint, 120)
 			if err != nil {
 				t.Fatalf("failed to get updated content: %s", err)
