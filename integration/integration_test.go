@@ -234,6 +234,12 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		defer func() {
+			if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
+				log.Printf("failed to delete namespace %s: %s\n", namespace, err)
+			}
+		}()
+
 		if err := deploy(ctx, name, dPath); err != nil {
 			t.Fatal(err)
 		}
@@ -265,6 +271,8 @@ func TestAll(t *testing.T) {
 
 		// Update content in token file
 		updatedContent := fmt.Sprintf("%s-%d", name, time.Now().Unix())
+		start := time.Now()
+
 		if err := ioutil.WriteFile(contentPath, []byte(updatedContent), 0644); err != nil {
 			t.Fatalf("failed to update %s: %s", contentPath, err)
 		}
@@ -282,11 +290,11 @@ func TestAll(t *testing.T) {
 
 			if c != updatedContent {
 				log.Printf("expected updated content to be %s, got %s\n", updatedContent, c)
-				time.Sleep(3 * time.Second)
+				time.Sleep(1 * time.Second)
 				continue
 			}
 
-			log.Println("got updated content")
+			log.Println("got updated content after %v", time.Now().Sub(start))
 			gotUpdated = true
 			break
 		}
@@ -305,10 +313,6 @@ func TestAll(t *testing.T) {
 
 		if err := compareDeployment(deployment); err != nil {
 			t.Error(err)
-		}
-
-		if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
-			log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 		}
 	})
 }
