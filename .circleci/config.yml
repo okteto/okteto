@@ -92,12 +92,12 @@ jobs:
     executor: win/default
     steps: 
       - checkout
-      - restore_cache: 
-          keys:
-            - v4-pkg-cache-windows-{{ checksum "go.sum" }}
       - run: 
           name: upgrade golang
           command: choco upgrade golang
+      - restore_cache: 
+          keys:
+            - v4-pkg-cache-windows-{{ checksum "go.sum" }}
       - run: 
           name: test
           command: |
