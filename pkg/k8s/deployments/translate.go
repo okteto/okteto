@@ -70,8 +70,8 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
 
 	if c != nil && namespaces.IsOktetoNamespace(ns) {
-		_, v := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION")
-		if !v {
+		c := os.Getenv("OKTETO_CLIENTSIDE_TRANSLATION")
+		if c == "" {
 			commonTranslation(t)
 			return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 		}

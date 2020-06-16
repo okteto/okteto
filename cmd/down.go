@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"os"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -64,9 +65,13 @@ func Down() *cobra.Command {
 					return err
 				}
 				log.Success("Persistent volume removed")
-				if err := syncthing.RemoveFolder(dev); err != nil {
-					log.Infof("failed to delete existing syncthing folder")
+
+				if os.Getenv("OKTETO_SKIP_CLEANUP") == "" {
+					if err := syncthing.RemoveFolder(dev); err != nil {
+						log.Infof("failed to delete existing syncthing folder")
+					}
 				}
+
 				analytics.TrackDownVolumes(true)
 			}
 

@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -35,6 +36,7 @@ import (
 	"github.com/Masterminds/semver"
 	ps "github.com/mitchellh/go-ps"
 	okCmd "github.com/okteto/okteto/cmd"
+	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"go.undefinedlabs.com/scopeagent"
@@ -188,8 +190,9 @@ func TestDownloadSyncthing(t *testing.T) {
 
 func TestAll(t *testing.T) {
 	ctx := scopeagent.GetContextFromTest(t)
-	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
 	test := scopeagent.GetTest(t)
+	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
+
 	test.Run(tName, func(t *testing.T) {
 		oktetoPath, err := getOktetoPath(ctx)
 		if err != nil {
@@ -199,6 +202,8 @@ func TestAll(t *testing.T) {
 		if _, err := exec.LookPath(kubectlBinary); err != nil {
 			t.Fatalf("kubectl is not in the path: %s", err)
 		}
+
+		k8Client.Reset()
 
 		name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 		namespace := fmt.Sprintf("%s-%s", name, user)
@@ -215,7 +220,11 @@ func TestAll(t *testing.T) {
 		}
 
 		contentPath := filepath.Join(dir, "index.html")
-		ioutil.WriteFile(contentPath, []byte(name), 0644)
+		if err := ioutil.WriteFile(contentPath, []byte(name), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		log.Printf("original content: %s", name)
 
 		manifestPath := filepath.Join(dir, "okteto.yml")
 		if err := writeManifest(manifestPath, name); err != nil {
@@ -243,6 +252,7 @@ func TestAll(t *testing.T) {
 
 		log.Println("getting synchronized content")
 		endpoint := "http://localhost:8080/index.html"
+
 		c, err := getContent(endpoint, 120)
 		if err != nil {
 			t.Fatalf("failed to get content: %s", err)
@@ -255,21 +265,37 @@ func TestAll(t *testing.T) {
 		}
 
 		// Update content in token file
-		updatedContent := fmt.Sprintf("%d", time.Now().Unix())
+		updatedContent := fmt.Sprintf("%s-updated", name)
+		start := time.Now()
 		ioutil.WriteFile(contentPath, []byte(updatedContent), 0644)
-		time.Sleep(20 * time.Second)
 
-		log.Println("getting updated content")
-		c, err = getContent(endpoint, 120)
-		if err != nil {
-			t.Fatalf("failed to get updated content: %s", err)
+		if err := ioutil.WriteFile(contentPath, []byte(updatedContent), 0644); err != nil {
+			t.Fatalf("failed to update %s: %s", contentPath, err)
 		}
 
-		if c != updatedContent {
-			t.Fatalf("expected updated content to be %s, got %s", updatedContent, c)
+		log.Printf("getting updated content from %s\n", endpoint)
+		tick := time.NewTicker(1 * time.Second)
+		gotUpdated := false
+		for i := 0; i < 10; i++ {
+			<-tick.C
+			c, err = getContent(endpoint, 120)
+			if err != nil {
+				t.Fatalf("failed to get updated content: %s", err)
+			}
+
+			if c != updatedContent {
+				log.Printf("expected updated content to be %s, got %s\n", updatedContent, c)
+				continue
+			}
+
+			log.Printf("got updated content after %v\n", time.Now().Sub(start))
+			gotUpdated = true
+			break
 		}
 
-		log.Println("got updated content")
+		if !gotUpdated {
+			t.Fatal("never got the updated content")
+		}
 
 		if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
 			t.Fatal(err)
@@ -330,14 +356,14 @@ func getContent(endpoint string, totRetries int) (string, error) {
 				return "", fmt.Errorf("failed to get %s: %w", endpoint, err)
 			}
 
-			log.Printf("Called %s, got %s, retrying", endpoint, err)
+			log.Printf("called %s, got %s, retrying", endpoint, err)
 			<-t.C
 			continue
 		}
 
 		defer r.Body.Close()
 		if r.StatusCode != 200 {
-			log.Printf("Called %s, got status %d, retrying", endpoint, r.StatusCode)
+			log.Printf("called %s, got status %d, retrying", endpoint, r.StatusCode)
 			<-t.C
 			continue
 		}
@@ -375,9 +401,12 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	cmd.Env = os.Environ()
 	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 	defer span.Finish()
-	if o, err := cmd.CombinedOutput(); err != nil {
+	o, err := cmd.CombinedOutput()
+	if err != nil {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
 	}
+
+	log.Printf("create namespace output: \n%s\n", string(o))
 
 	_, _, n, err := k8Client.GetLocal()
 	if err != nil {
@@ -401,7 +430,7 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
 	}
-	k8Client.Reset()
+
 	return nil
 }
 
@@ -472,11 +501,15 @@ func waitForUpExit(wg *sync.WaitGroup) error {
 }
 
 func waitForReady(namespace, name string) error {
-	state := fmt.Sprintf("%s/.okteto/%s/%s/okteto.state", os.Getenv("HOME"), namespace, name)
+	log.Println("waiting for okteto up to be ready")
+
+	state := path.Join(config.GetOktetoHome(), namespace, name, "okteto.state")
+
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < 180; i++ {
 		c, err := ioutil.ReadFile(state)
 		if err != nil {
+			log.Printf("failed to read state file %s: %s", state, err)
 			if !os.IsNotExist(err) {
 				return err
 			}
