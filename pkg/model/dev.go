@@ -66,7 +66,7 @@ const (
 	OktetoInitContainer = "okteto-init"
 
 	//DefaultImage default image for sandboxes
-	DefaultImage = "okteto/desk:latest"
+	DefaultImage = "okteto/dev:latest"
 
 	//TranslationVersion version of the translation schema
 	TranslationVersion = "1.0"
@@ -112,17 +112,17 @@ type Dev struct {
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
-	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
-	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
-	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
+	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
 	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	DevPath              string                `json:"-" yaml:"-"`
 	DevDir               string                `json:"-" yaml:"-"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
+	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 }
 
@@ -199,8 +199,8 @@ type Reverse struct {
 
 // ResourceRequirements describes the compute resource requirements.
 type ResourceRequirements struct {
-	Limits   ResourceList
-	Requests ResourceList
+	Limits   ResourceList `json:"limits,omitempty" yaml:"limits,omitempty"`
+	Requests ResourceList `json:"requests,omitempty" yaml:"requests,omitempty"`
 }
 
 // ResourceList is a set of (resource name, quantity) pairs.

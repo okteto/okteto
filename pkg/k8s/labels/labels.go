@@ -37,4 +37,13 @@ const (
 
 	// SyncLabel indicates a synthing pod
 	SyncLabel = "syncthing.okteto.com"
+
+	//OktetoRepositoryAnnotation indicates the git repo url with the source code of this component
+	OktetoRepositoryAnnotation = "dev.okteto.com/repository"
+
+	//OktetoPathAnnotation indicates the okteto manifest path of this component
+	OktetoPathAnnotation = "dev.okteto.com/path"
+
+	//FluxAnnotation indicates if the deployment ha been deployed by Flux
+	FluxAnnotation = "helm.fluxcd.io/antecedent"
 )

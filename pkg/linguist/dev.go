@@ -29,6 +29,7 @@ type languageDefault struct {
 	volumes         []model.Volume
 	forward         []model.Forward
 	reverse         []model.Reverse
+	remote          int
 	securityContext *model.SecurityContext
 }
 
@@ -48,15 +49,35 @@ const (
 )
 
 var (
-	languageDefaults map[string]languageDefault
+	languageDefaults               map[string]languageDefault
+	languageDefaultsWithDeployment map[string]languageDefault
 )
 
 func init() {
 	languageDefaults = make(map[string]languageDefault)
+	languageDefaultsWithDeployment = make(map[string]languageDefault)
 	languageDefaults[javascript] = languageDefault{
 		image:   "okteto/node:10",
 		path:    "/usr/src/app",
 		command: []string{"bash"},
+		forward: []model.Forward{
+			{
+				Local:  3000,
+				Remote: 3000,
+			},
+			{
+				Local:  9229,
+				Remote: 9229,
+			},
+		},
+	}
+	languageDefaultsWithDeployment[javascript] = languageDefault{
+		forward: []model.Forward{
+			{
+				Local:  9229,
+				Remote: 9229,
+			},
+		},
 	}
 
 	languageDefaults[golang] = languageDefault{
@@ -69,13 +90,45 @@ func init() {
 			},
 		},
 		forward: []model.Forward{
-			model.Forward{
+			{
 				Local:  8080,
 				Remote: 8080,
 			},
-			model.Forward{
+			{
 				Local:  2345,
 				Remote: 2345,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/go/pkg/",
+			},
+			{
+				MountPath: "/root/.cache/go-build/",
+			},
+		},
+	}
+	languageDefaultsWithDeployment[golang] = languageDefault{
+		image:   "okteto/golang:1",
+		path:    "/okteto",
+		command: []string{"bash"},
+		securityContext: &model.SecurityContext{
+			Capabilities: &model.Capabilities{
+				Add: []apiv1.Capability{"SYS_PTRACE"},
+			},
+		},
+		forward: []model.Forward{
+			{
+				Local:  2345,
+				Remote: 2345,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/go/pkg/",
+			},
+			{
+				MountPath: "/root/.cache/go-build/",
 			},
 		},
 	}
@@ -84,6 +137,27 @@ func init() {
 		image:   "okteto/python:3",
 		path:    "/usr/src/app",
 		command: []string{"bash"},
+		forward: []model.Forward{
+			{
+				Local:  8080,
+				Remote: 8080,
+			},
+		},
+		reverse: []model.Reverse{
+			{
+				Local:  9000,
+				Remote: 9000,
+			},
+		},
+	}
+	languageDefaultsWithDeployment[python] = languageDefault{
+		forward: []model.Forward{},
+		reverse: []model.Reverse{
+			{
+				Local:  9000,
+				Remote: 9000,
+			},
+		},
 	}
 
 	languageDefaults[gradle] = languageDefault{
@@ -98,6 +172,27 @@ func init() {
 			{
 				Local:  5005,
 				Remote: 5005,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/home/gradle/.gradle",
+			},
+		},
+	}
+	languageDefaultsWithDeployment[gradle] = languageDefault{
+		image:   "okteto/gradle:latest",
+		path:    "/okteto",
+		command: []string{"bash"},
+		forward: []model.Forward{
+			{
+				Local:  5005,
+				Remote: 5005,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/home/gradle/.gradle",
 			},
 		},
 	}
@@ -116,12 +211,51 @@ func init() {
 				Remote: 5005,
 			},
 		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/root/.m2",
+			},
+		},
+	}
+	languageDefaultsWithDeployment[maven] = languageDefault{
+		image:   "okteto/maven:latest",
+		path:    "/okteto",
+		command: []string{"bash"},
+		forward: []model.Forward{
+			{
+				Local:  5005,
+				Remote: 5005,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/root/.m2",
+			},
+		},
 	}
 
 	languageDefaults[ruby] = languageDefault{
 		image:   "okteto/ruby:2",
 		path:    "/usr/src/app",
 		command: []string{"bash"},
+		forward: []model.Forward{
+			{
+				Local:  8080,
+				Remote: 8080,
+			},
+			{
+				Local:  1234,
+				Remote: 1234,
+			},
+		},
+	}
+	languageDefaultsWithDeployment[ruby] = languageDefault{
+		forward: []model.Forward{
+			{
+				Local:  1234,
+				Remote: 1234,
+			},
+		},
 	}
 
 	languageDefaults[csharp] = languageDefault{
@@ -133,6 +267,7 @@ func init() {
 				Value: "Development",
 			},
 		},
+		remote: 22000,
 		forward: []model.Forward{
 			{
 				Local:  5000,
@@ -140,9 +275,22 @@ func init() {
 			},
 		},
 	}
+	languageDefaultsWithDeployment[csharp] = languageDefault{
+		image:   "mcr.microsoft.com/dotnet/core/sdk",
+		command: []string{"bash"},
+		environment: []model.EnvVar{
+			{
+				Name:  "ASPNETCORE_ENVIRONMENT",
+				Value: "Development",
+			},
+		},
+		remote:  2222,
+		forward: []model.Forward{},
+	}
 
 	languageDefaults[php] = languageDefault{
 		image:   "okteto/php:7",
+		path:    "/usr/src/app",
 		command: []string{"bash"},
 		forward: []model.Forward{
 			{
@@ -157,10 +305,32 @@ func init() {
 			},
 		},
 	}
+	languageDefaultsWithDeployment[php] = languageDefault{
+		forward: []model.Forward{},
+		reverse: []model.Reverse{
+			{
+				Local:  9000,
+				Remote: 9000,
+			},
+		},
+	}
 
 	languageDefaults[Unrecognized] = languageDefault{
 		image:   model.DefaultImage,
+		path:    "/okteto",
 		command: []string{"bash"},
+		forward: []model.Forward{
+			{
+				Local:  8080,
+				Remote: 8080,
+			},
+		},
+	}
+	languageDefaultsWithDeployment[Unrecognized] = languageDefault{
+		image:   model.DefaultImage,
+		path:    "/okteto",
+		command: []string{"bash"},
+		forward: []model.Forward{},
 	}
 }
 
@@ -179,10 +349,14 @@ func GetSupportedLanguages() []string {
 	return l
 }
 
-// GetDevConfig returns the default dev for the specified language
-func GetDevConfig(language string) *model.Dev {
-	n := normalizeLanguage(language)
-	vals := languageDefaults[n]
+// GetDevDefaults gets default values for the specified language
+func GetDevDefaults(language, workdir string, iAskingForDeployment bool) (*model.Dev, error) {
+	language = normalizeLanguage(language)
+	vals := languageDefaults[language]
+	if iAskingForDeployment {
+		vals = languageDefaultsWithDeployment[language]
+	}
+
 	dev := &model.Dev{
 		Image:   vals.image,
 		WorkDir: vals.path,
@@ -193,10 +367,21 @@ func GetDevConfig(language string) *model.Dev {
 		Volumes:         vals.volumes,
 		Forward:         vals.forward,
 		Reverse:         vals.reverse,
+		RemotePort:      vals.remote,
 		SecurityContext: vals.securityContext,
 	}
+	if len(dev.Volumes) > 0 {
+		dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
+			Enabled: true,
+		}
+	}
 
-	return dev
+	name, err := model.GetValidNameFromFolder(workdir)
+	if err != nil {
+		return nil, err
+	}
+	dev.Name = name
+	return dev, nil
 }
 
 func normalizeLanguage(language string) string {
