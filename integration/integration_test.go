@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -35,6 +36,7 @@ import (
 	"github.com/Masterminds/semver"
 	ps "github.com/mitchellh/go-ps"
 	okCmd "github.com/okteto/okteto/cmd"
+	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"go.undefinedlabs.com/scopeagent"
@@ -479,7 +481,9 @@ func waitForUpExit(wg *sync.WaitGroup) error {
 
 func waitForReady(namespace, name string) error {
 	log.Println("waiting for okteto up to be ready")
-	state := fmt.Sprintf("%s/.okteto/%s/%s/okteto.state", os.Getenv("HOME"), namespace, name)
+
+	state := path.Join(config.GetOktetoHome(), namespace, name, "okteto.state")
+
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < 180; i++ {
 		c, err := ioutil.ReadFile(state)
