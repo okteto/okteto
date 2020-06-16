@@ -260,7 +260,10 @@ func TestAll(t *testing.T) {
 
 		// Update content in token file
 		updatedContent := fmt.Sprintf("%s-%d", name, time.Now().Unix())
-		ioutil.WriteFile(contentPath, []byte(updatedContent), 0644)
+		if err := ioutil.WriteFile(contentPath, []byte(updatedContent), 0644); err != nil {
+			t.Fatalf("failed to update %s: %s", contentPath, err)
+		}
+
 		time.Sleep(6 * time.Second)
 
 		log.Printf("getting updated content from %s\n", endpoint)
