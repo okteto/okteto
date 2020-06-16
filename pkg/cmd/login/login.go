@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/skratchdot/open-golang/open"
 )
 
 // WithEnvVarIfAvailable authenticates the user with OKTETO_TOKEN value
@@ -49,6 +50,26 @@ func WithEnvVarIfAvailable(ctx context.Context) error {
 // WithToken authenticates the user with an API token
 func WithToken(ctx context.Context, url, token string) (*okteto.User, error) {
 	return okteto.AuthWithToken(ctx, url, token)
+}
+
+//WithBrowser authenticates the user with the brower
+func WithBrowser(ctx context.Context, oktetoURL string) (*okteto.User, error) {
+	h, err := StartWithBrowser(ctx, oktetoURL)
+	if err != nil {
+		log.Infof("couldn't start the login process: %s", err)
+		return nil, fmt.Errorf("couldn't start the login process, please try again")
+	}
+
+	authorizationURL := h.AuthorizationURL()
+	fmt.Println("Authentication will continue in your default browser")
+	if err := open.Start(authorizationURL); err != nil {
+		log.Errorf("Something went wrong opening your browser: %s\n", err)
+	}
+
+	fmt.Printf("You can also open a browser and navigate to the following address:\n")
+	fmt.Println(authorizationURL)
+
+	return EndWithBrowser(ctx, h)
 }
 
 // StartWithBrowser starts the authentication of the user with the IDP via a browser

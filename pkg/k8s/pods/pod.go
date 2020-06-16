@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/exec"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
@@ -34,6 +36,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const (
@@ -124,7 +127,8 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 
 	log.Infof("deployment %s with revision %v is progressing", d.Name, d.Annotations[deploymentRevisionAnnotation])
 
-	rs, err := replicasets.GetReplicaSetByDeployment(dev, d, c)
+	labels := fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name)
+	rs, err := replicasets.GetReplicaSetByDeployment(d, labels, c)
 	if rs == nil {
 		if err == nil {
 			log.Infof("didn't find replicaset with revision %v", d.Annotations[deploymentRevisionAnnotation])
@@ -136,25 +140,64 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 
 	log.Infof("replicaset %s with revison %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
 
-	return getPodByReplicaSet(dev, rs, c)
+	return GetPodByReplicaSet(rs, labels, false, c)
 }
 
-func getPodByReplicaSet(dev *model.Dev, rs *appsv1.ReplicaSet, c *kubernetes.Clientset) (*apiv1.Pod, error) {
-	opts := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name),
-	}
-	podList, err := c.CoreV1().Pods(dev.Namespace).List(opts)
+//GetPodByReplicaSet returns a pod of a given replicaset
+func GetPodByReplicaSet(rs *appsv1.ReplicaSet, labels string, mustBeRunning bool, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+	podList, err := c.CoreV1().Pods(rs.Namespace).List(metav1.ListOptions{LabelSelector: labels})
 	if err != nil {
 		return nil, err
 	}
 	for i := range podList.Items {
 		for _, or := range podList.Items[i].OwnerReferences {
 			if or.UID == rs.UID {
-				return &podList.Items[i], nil
+				if !mustBeRunning || podList.Items[i].Status.Phase == apiv1.PodRunning {
+					return &podList.Items[i], nil
+				}
 			}
 		}
 	}
 	return nil, nil
+}
+
+//GetWorkdirByPod returns the workdir of a running pod
+func GetWorkdirByPod(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) (string, error) {
+	cmd := []string{"sh", "-c", "echo $PWD"}
+	return execCommandInPod(ctx, p, container, cmd, config, c)
+}
+
+//CheckIfBashIsAvailable returns if bash is available in the given container
+func CheckIfBashIsAvailable(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) bool {
+	cmd := []string{"bash", "--version"}
+	_, err := execCommandInPod(ctx, p, container, cmd, config, c)
+	return err == nil
+}
+
+func execCommandInPod(ctx context.Context, p *apiv1.Pod, container string, cmd []string, config *rest.Config, c *kubernetes.Clientset) (string, error) {
+	in := strings.NewReader("\n")
+	var out bytes.Buffer
+
+	err := exec.Exec(
+		ctx,
+		c,
+		config,
+		p.Namespace,
+		p.Name,
+		container,
+		false,
+		in,
+		&out,
+		os.Stderr,
+		cmd,
+	)
+
+	if err != nil {
+		log.Infof("failed to execute command: %s - %s", err, out.String())
+		return "", err
+	}
+	result := strings.TrimSuffix(out.String(), "\n")
+	return result, nil
 }
 
 //MonitorDevPod monitores the state of the pod

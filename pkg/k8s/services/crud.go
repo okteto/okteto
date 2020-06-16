@@ -73,3 +73,25 @@ func DestroyDev(dev *model.Dev, c *kubernetes.Clientset) error {
 func Get(namespace, name string, c kubernetes.Interface) (*apiv1.Service, error) {
 	return c.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
 }
+
+//GetPortsByPod returns the ports exposed via endpoint of a given pod
+func GetPortsByPod(p *apiv1.Pod, c *kubernetes.Clientset) ([]int, error) {
+	eList, err := c.CoreV1().Endpoints(p.Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	result := []int{}
+	for _, e := range eList.Items {
+		for _, s := range e.Subsets {
+			for _, a := range append(s.Addresses, s.NotReadyAddresses...) {
+				if a.TargetRef.UID == p.UID {
+					for _, p := range s.Ports {
+						result = append(result, int(p.Port))
+					}
+					break
+				}
+			}
+		}
+	}
+	return result, nil
+}

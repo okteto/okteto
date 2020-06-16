@@ -16,9 +16,7 @@ package replicasets
 import (
 	"fmt"
 
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -29,15 +27,14 @@ const (
 )
 
 // GetReplicaSetByDeployment given a deployment, returns its current replica set or an error
-func GetReplicaSetByDeployment(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
-	ls := fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name)
+func GetReplicaSetByDeployment(d *appsv1.Deployment, labels string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
 	rsList, err := c.AppsV1().ReplicaSets(d.Namespace).List(
 		metav1.ListOptions{
-			LabelSelector: ls,
+			LabelSelector: labels,
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get replicaset using %s: %s", ls, err)
+		return nil, fmt.Errorf("failed to get replicaset using %s: %s", labels, err)
 	}
 
 	for i := range rsList.Items {

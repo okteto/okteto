@@ -31,6 +31,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+//List returns the list of deployments
+func List(namespace string, c kubernetes.Interface) ([]appsv1.Deployment, error) {
+	dList, err := c.AppsV1().Deployments(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return dList.Items, nil
+}
+
 //Get returns a deployment object given its name and namespace
 func Get(dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	if namespace == "" {

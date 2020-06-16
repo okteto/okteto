@@ -123,13 +123,16 @@ func ProcessDirectory(root string) (string, error) {
 	}
 
 	sorted := sortLanguagesByUsage(out)
+	if len(sorted) == 0 {
+		return Unrecognized, nil
+	}
 	chosen := strings.ToLower(sorted[0])
 
 	if chosen == java {
 		return refineJavaChoice(root), nil
 	}
 
-	return chosen, nil
+	return normalizeLanguage(chosen), nil
 }
 
 func refineJavaChoice(root string) string {
@@ -177,6 +180,9 @@ func sortLanguagesByUsage(fSummary map[string][]string) []string {
 	fileValues := make(map[string]float64)
 
 	for fType, files := range fSummary {
+		if normalizeLanguage(fType) == Unrecognized {
+			continue
+		}
 		val := float64(len(files))
 		fileValues[fType] = val
 		keys = append(keys, fType)

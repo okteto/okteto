@@ -74,8 +74,11 @@ func init() {
 }
 
 // TrackInit sends a tracking event to mixpanel when the user creates a manifest
-func TrackInit(success bool) {
-	track(initEvent, success, nil)
+func TrackInit(success bool, language string) {
+	props := map[string]interface{}{
+		"language": language,
+	}
+	track(initEvent, success, props)
 }
 
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
