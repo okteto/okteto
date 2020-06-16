@@ -31,7 +31,7 @@ func Restart() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "restart",
-		Short: "Restarts the deployment listed in the services field of the okteto manifest",
+		Short: "Restarts the deployments listed in the services field of the okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dev, err := utils.LoadDev(devPath)
 			if err != nil {

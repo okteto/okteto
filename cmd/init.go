@@ -17,12 +17,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	initCMD "github.com/okteto/okteto/pkg/cmd/init"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
@@ -32,6 +37,7 @@ const (
 	stignore          = ".stignore"
 	defaultManifest   = "okteto.yml"
 	secondaryManifest = "okteto.yaml"
+	createDeployment  = "new deployment"
 )
 
 var wrongImageNames = map[string]bool{
@@ -47,6 +53,7 @@ var wrongImageNames = map[string]bool{
 
 //Init automatically generates the manifest
 func Init() *cobra.Command {
+	var namespace string
 	var devPath string
 	var overwrite bool
 	cmd := &cobra.Command{
@@ -59,55 +66,69 @@ func Init() *cobra.Command {
 				return err
 			}
 
-			if err := executeInit(devPath, overwrite, l, workDir); err != nil {
+			if err := executeInit(namespace, devPath, l, workDir, overwrite); err != nil {
 				return err
 			}
 
 			log.Success(fmt.Sprintf("Okteto manifest (%s) created", devPath))
+			if devPath == defaultManifest {
+				log.Information("Run 'okteto up' to activate your development container")
+			} else {
+				log.Information("Run 'okteto up -f %s' to activate your development container", devPath)
+			}
 			return nil
 		},
 	}
 
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "overwrite existing manifest file")
 	return cmd
 }
 
-func executeInit(devPath string, overwrite bool, language string, workDir string) error {
-	if !overwrite {
-		if model.FileExists(devPath) {
-			return fmt.Errorf("%s already exists. Please delete it before running the command again", devPath)
-		}
-	}
-
-	var dev *model.Dev
-	if len(language) > 0 {
-		log.Debugf("generating config for %s", language)
-		dev = linguist.GetDevConfig(language)
-	} else {
-		l, err := linguist.ProcessDirectory(workDir)
-		if err != nil {
-			log.Info(err)
-			return fmt.Errorf("Failed to determine the language of the current directory")
-		}
-
-		language = l
-		if language == linguist.Unrecognized {
-			l, err := askForLanguage()
-			if err != nil {
-				return err
-			}
-
-			language = l
-		}
-
-		dev = linguist.GetDevConfig(language)
-		dev.Image = askForImage(language, dev.Image)
-	}
-	var err error
-	dev.Name, err = model.GetValidNameFromFolder(workDir)
+func executeInit(namespace, devPath, language, workDir string, overwrite bool) error {
+	devPath, err := validateDevPath(devPath, overwrite)
 	if err != nil {
 		return err
+	}
+
+	checkForDeployment := false
+	if language == "" {
+		checkForDeployment = true
+	}
+
+	language, err = getLanguage(language, workDir)
+	if err != nil {
+		return err
+	}
+
+	dev, err := linguist.GetDevDefaults(language, workDir, checkForDeployment)
+	if err != nil {
+		return err
+	}
+
+	if checkForDeployment {
+		log.Information("This command walks you through creating an okteto manifest.")
+		log.Information("It only covers the most common items, and tries to guess sensible defaults.")
+		log.Information("See https://okteto.com/docs/reference/manifest for the official documentation about the okteto manifest.")
+		d, container, err := getDeployment(namespace)
+		if err != nil {
+			return err
+		}
+		dev.Container = container
+		if container == "" {
+			container = d.Spec.Template.Spec.Containers[0].Name
+		}
+
+		postfix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
+		spinner := utils.NewSpinner(postfix)
+		spinner.Start()
+		dev, err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
+		spinner.Stop()
+		if err != nil {
+			return err
+		}
+		log.Success(fmt.Sprintf("Deployment '%s' successfully analized", d.Name))
 	}
 
 	if err := dev.Save(devPath); err != nil {
@@ -122,41 +143,122 @@ func executeInit(devPath string, overwrite bool, language string, workDir string
 		}
 	}
 
-	analytics.TrackInit(true)
+	analytics.TrackInit(true, language)
 	return nil
 }
 
-func askForImage(language, defaultImage string) string {
-	var image string
-	fmt.Printf("Recommended image for development with %s: %s\n", language, log.BlueString(defaultImage))
-	fmt.Printf("Which docker image do you want to use for your development container? [%s]: ", defaultImage)
-	_, err := fmt.Scanln(&image)
-	fmt.Println()
-
+func getDeployment(namespace string) (*appsv1.Deployment, string, error) {
+	c, _, currentNamespace, err := k8Client.GetLocal()
 	if err != nil {
-		log.Debugf("Scanln failed to read development container image: %s", err)
-		image = ""
+		return nil, "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+	}
+	if namespace == "" {
+		namespace = currentNamespace
 	}
 
-	if image == "" {
-		return defaultImage
+	d, err := askForDeployment(namespace, c)
+	if err != nil {
+		return nil, "", err
+	}
+	if d == nil {
+		return nil, "", nil
 	}
 
-	if _, ok := wrongImageNames[strings.ToUpper(image)]; ok {
-		log.Yellow("Ignoring docker image name: '%s', will use '%s' instead", image, defaultImage)
-		image = defaultImage
+	if deployments.IsDevModeOn(d) {
+		return nil, "", fmt.Errorf("the deployment '%s' is in development mode", d.Name)
 	}
 
-	return image
+	container := ""
+	if len(d.Spec.Template.Spec.Containers) > 1 {
+		container, err = askForContainer(d)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
+	return d, container, nil
+}
+
+func validateDevPath(devPath string, overwrite bool) (string, error) {
+	if !overwrite {
+		if model.FileExists(devPath) {
+			return "", fmt.Errorf("%s already exists. Run this command again with the '-o' flag to overwrite it", devPath)
+		}
+	}
+
+	return devPath, nil
+}
+
+func getLanguage(language, workDir string) (string, error) {
+	if language != "" {
+		return language, nil
+	}
+	l, err := linguist.ProcessDirectory(workDir)
+	if err != nil {
+		log.Info(err)
+		return "", fmt.Errorf("Failed to determine the language of the current directory")
+	}
+	log.Infof("language '%s' inferred for your current directory", l)
+	if l == linguist.Unrecognized {
+		l, err = askForLanguage()
+		if err != nil {
+			return "", err
+		}
+	}
+	return l, nil
 }
 
 func askForLanguage() (string, error) {
 	supportedLanguages := linguist.GetSupportedLanguages()
+	return askForOptions(
+		supportedLanguages,
+		"Couldn't detect any language in current folder. Pick your project's main language from the list below:",
+	)
+}
 
+func askForDeployment(namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+	dList, err := deployments.List(namespace, c)
+	if err != nil {
+		return nil, err
+	}
+	options := []string{createDeployment}
+	for i := range dList {
+		options = append(options, dList[i].Name)
+	}
+	option, err := askForOptions(
+		options,
+		"Pick the deployment target for your okteto manifest from the list below:",
+	)
+	if err != nil {
+		return nil, err
+	}
+	if option == createDeployment {
+		return nil, nil
+	}
+	for i := range dList {
+		if dList[i].Name == option {
+			return &dList[i], nil
+		}
+	}
+	return nil, nil
+}
+
+func askForContainer(d *appsv1.Deployment) (string, error) {
+	options := []string{}
+	for i := range d.Spec.Template.Spec.Containers {
+		options = append(options, d.Spec.Template.Spec.Containers[i].Name)
+	}
+	return askForOptions(
+		options,
+		fmt.Sprintf("The deployment '%s' has %d containers. Pick the container target for your okteto manifest from the list below:", d.Name, len(d.Spec.Template.Spec.Containers)),
+	)
+}
+
+func askForOptions(options []string, label string) (string, error) {
 	prompt := promptui.Select{
-		Label: "Couldn't detect any language in current folder. Pick your project's main language from the list below",
-		Items: supportedLanguages,
-		Size:  len(supportedLanguages),
+		Label: label,
+		Items: options,
+		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    fmt.Sprintf("%s {{ . }}", log.BlueString("?")),
 			Selected: " ✓  {{ . | oktetoblue }}",
@@ -174,5 +276,5 @@ func askForLanguage() (string, error) {
 		return "", fmt.Errorf("invalid option")
 	}
 
-	return supportedLanguages[i], nil
+	return options[i], nil
 }
