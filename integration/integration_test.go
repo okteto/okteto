@@ -251,6 +251,7 @@ func TestAll(t *testing.T) {
 
 		log.Println("getting synchronized content")
 		endpoint := "http://localhost:8080/index.html"
+
 		c, err := getContent(endpoint, 120)
 		if err != nil {
 			t.Fatalf("failed to get content: %s", err)
@@ -268,20 +269,25 @@ func TestAll(t *testing.T) {
 			t.Fatalf("failed to update %s: %s", contentPath, err)
 		}
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Second)
 
 		log.Printf("getting updated content from %s\n", endpoint)
 
-		c, err = getContent(endpoint, 120)
-		if err != nil {
-			t.Fatalf("failed to get updated content: %s", err)
-		}
+		for i := 0; i < 20; i++ {
+			c, err = getContent(endpoint, 120)
+			if err != nil {
+				t.Fatalf("failed to get updated content: %s", err)
+			}
 
-		if c != updatedContent {
-			t.Fatalf("expected updated content to be %s, got %s", updatedContent, c)
-		}
+			if c != updatedContent {
+				t.Failf("expected updated content to be %s, got %s", updatedContent, c)
+				time.Sleep(1 * time.Second)
+				continue
+			}
 
-		log.Println("got updated content")
+			log.Println("got updated content")
+			break
+		}
 
 		if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
 			t.Fatal(err)
