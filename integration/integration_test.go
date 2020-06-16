@@ -235,12 +235,6 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		defer func() {
-			if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
-				log.Printf("failed to delete namespace %s: %s\n", namespace, err)
-			}
-		}()
-
 		if err := deploy(ctx, name, dPath); err != nil {
 			t.Fatal(err)
 		}
@@ -312,6 +306,10 @@ func TestAll(t *testing.T) {
 
 		if err := compareDeployment(deployment); err != nil {
 			t.Error(err)
+		}
+
+		if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
+			log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 		}
 	})
 }
