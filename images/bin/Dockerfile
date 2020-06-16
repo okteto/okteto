@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:experimental
 
-FROM syncthing/syncthing:1.6.1 AS syncthing
+FROM syncthing/syncthing:1.5.0 AS syncthing
 FROM okteto/remote:0.2.5 AS remote
 FROM okteto/supervisor:0.1.0 AS supervisor
 FROM okteto/clean:0.1.0 AS clean
