@@ -280,7 +280,7 @@ func TestAll(t *testing.T) {
 			}
 
 			if c != updatedContent {
-				t.Fail(fmt.Sprintf("expected updated content to be %s, got %s", updatedContent, c))
+				t.Errorf("expected updated content to be %s, got %s", updatedContent, c)
 				time.Sleep(1 * time.Second)
 				continue
 			}
