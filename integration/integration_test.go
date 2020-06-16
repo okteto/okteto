@@ -79,15 +79,9 @@ spec:
       terminationGracePeriodSeconds: 1
       containers:
       - name: test
-        image: python:alpine
+        image: bitnami/nginx
         ports:
         - containerPort: 8080
-        workingDir: /usr/src/app
-        command:
-            - "python"
-            - "-m"
-            - "http.server"
-            - "8080"
 ---
 apiVersion: v1
 kind: Service
@@ -105,15 +99,10 @@ spec:
 `
 	manifestFormat = `
 name: {{ .Name }}
-image: python:alpine
-command:
-  - "python"
-  - "-m"
-  - "http.server"
-  - "8080"
+image: bitnami/nginx
 forward:
   - 8080:8080
-workdir: /usr/src/app
+workdir: /app
 `
 )
 
@@ -219,7 +208,9 @@ func TestAll(t *testing.T) {
 		}
 
 		contentPath := filepath.Join(dir, "index.html")
-		ioutil.WriteFile(contentPath, []byte(name), 0644)
+		if err := ioutil.WriteFile(contentPath, []byte(name), 0644); err != nil {
+			t.Fatal(err)
+		}
 
 		log.Printf("original content: %s", name)
 
@@ -266,7 +257,7 @@ func TestAll(t *testing.T) {
 			t.Fatalf("failed to update %s: %s", contentPath, err)
 		}
 
-		time.Sleep(6 * time.Second)
+		time.Sleep(10 * time.Second)
 
 		log.Printf("getting updated content from %s\n", endpoint)
 
