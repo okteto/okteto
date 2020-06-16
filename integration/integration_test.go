@@ -79,9 +79,15 @@ spec:
       terminationGracePeriodSeconds: 1
       containers:
       - name: test
-        image: bitnami/nginx
+        image: python:alpine
         ports:
         - containerPort: 8080
+        workingDir: /usr/src/app
+        command:
+            - "python"
+            - "-m"
+            - "http.server"
+            - "8080"
 ---
 apiVersion: v1
 kind: Service
@@ -99,10 +105,15 @@ spec:
 `
 	manifestFormat = `
 name: {{ .Name }}
-image: bitnami/nginx
+image: python:alpine
+command:
+  - "python"
+  - "-m"
+  - "http.server"
+  - "8080"
 forward:
   - 8080:8080
-workdir: /app
+workdir: /usr/src/app
 `
 )
 
