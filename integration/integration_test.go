@@ -273,20 +273,26 @@ func TestAll(t *testing.T) {
 
 		log.Printf("getting updated content from %s\n", endpoint)
 
-		for i := 0; i < 20; i++ {
+		gotUpdated := false
+		for i := 0; i < 10; i++ {
 			c, err = getContent(endpoint, 120)
 			if err != nil {
 				t.Fatalf("failed to get updated content: %s", err)
 			}
 
 			if c != updatedContent {
-				t.Errorf("expected updated content to be %s, got %s", updatedContent, c)
-				time.Sleep(1 * time.Second)
+				log.Printf("expected updated content to be %s, got %s\n", updatedContent, c)
+				time.Sleep(3 * time.Second)
 				continue
 			}
 
 			log.Println("got updated content")
+			gotUpdated = true
 			break
+		}
+
+		if !gotUpdated {
+			t.Fatal("never got the updated content")
 		}
 
 		if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
