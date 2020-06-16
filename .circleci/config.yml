@@ -125,6 +125,7 @@ jobs:
           environment: 
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
+            OKTETO_SKIP_CLEANUP: 'true'
           command: |
             go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
       - save_cache:
