@@ -59,14 +59,16 @@ jobs:
             /usr/local/bin/okteto login --token ${API_TOKEN}
       - run: 
           name: integration tests (serverside)
-          command: |
-            unset OKTETO_CLIENTSIDE_TRANSLATION
-            make integration
+          environment: 
+            OKTETO_CLIENTSIDE_TRANSLATION: ''
+            OKTETO_SKIP_CLEANUP: 'true'
+          command: make integration
       - run: 
           name: integration tests (clientside)
-          command: |
-            export OKTETO_CLIENTSIDE_TRANSLATION=true
-            make integration
+          environment: 
+            OKTETO_SKIP_CLEANUP: 'true'
+            OKTETO_CLIENTSIDE_TRANSLATION: 'true'
+          command: make integration
       - save_cache:
           key: v3-pkg-cache-{{ checksum "go.sum" }}
           paths:
@@ -118,6 +120,7 @@ jobs:
           name: integration tests (serverside)
           environment: 
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            OKTETO_SKIP_CLEANUP: 'true'
           command: |
             go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
       - run: 
