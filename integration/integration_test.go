@@ -190,9 +190,10 @@ func TestDownloadSyncthing(t *testing.T) {
 
 func TestAll(t *testing.T) {
 	ctx := scopeagent.GetContextFromTest(t)
+	test := scopeagent.GetTest(t)
 	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
 
-	t.Run(tName, func(t *testing.T) {
+	test.Run(tName, func(t *testing.T) {
 		oktetoPath, err := getOktetoPath(ctx)
 		if err != nil {
 			t.Fatal(err)
