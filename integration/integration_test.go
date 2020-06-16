@@ -277,12 +277,11 @@ func TestAll(t *testing.T) {
 			t.Fatalf("failed to update %s: %s", contentPath, err)
 		}
 
-		time.Sleep(1 * time.Second)
-
 		log.Printf("getting updated content from %s\n", endpoint)
-
+		t := time.NewTicker(1 * time.Second)
 		gotUpdated := false
 		for i := 0; i < 10; i++ {
+			<-t.C
 			c, err = getContent(endpoint, 120)
 			if err != nil {
 				t.Fatalf("failed to get updated content: %s", err)
@@ -290,11 +289,10 @@ func TestAll(t *testing.T) {
 
 			if c != updatedContent {
 				log.Printf("expected updated content to be %s, got %s\n", updatedContent, c)
-				time.Sleep(1 * time.Second)
 				continue
 			}
 
-			log.Println("got updated content after %v", time.Now().Sub(start))
+			log.Printf("got updated content after %v\n", time.Now().Sub(start))
 			gotUpdated = true
 			break
 		}
