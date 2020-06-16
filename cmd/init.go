@@ -70,8 +70,12 @@ func Init() *cobra.Command {
 				return err
 			}
 
-			log.Success(fmt.Sprintf("Okteto manifest (%s) created. Check its content in case you need to adapt it", devPath))
-			log.Information("Run 'okteto up' to activate your development container")
+			log.Success(fmt.Sprintf("Okteto manifest (%s) created", devPath))
+			if devPath == defaultManifest {
+				log.Information("Run 'okteto up' to activate your development container")
+			} else {
+				log.Information("Run 'okteto up -f %s' to activate your development container", devPath)
+			}
 			return nil
 		},
 	}
@@ -88,19 +92,25 @@ func executeInit(namespace, devPath, language, workDir string, overwrite bool) e
 		return err
 	}
 
-	ifAskingForDeployment := language == ""
+	checkForDeployment := false
+	if language == "" {
+		checkForDeployment = true
+	}
 
 	language, err = getLanguage(language, workDir)
 	if err != nil {
 		return err
 	}
 
-	dev, err := linguist.GetDevDefaults(language, workDir, ifAskingForDeployment)
+	dev, err := linguist.GetDevDefaults(language, workDir, checkForDeployment)
 	if err != nil {
 		return err
 	}
 
-	if ifAskingForDeployment {
+	if checkForDeployment {
+		log.Information("This command walks you through creating an okteto manifest.")
+		log.Information("It only covers the most common items, and tries to guess sensible defaults.")
+		log.Information("See https://okteto.com/docs/reference/manifest for the official documentation about the okteto manifest.")
 		d, container, err := getDeployment(namespace)
 		if err != nil {
 			return err
@@ -113,12 +123,11 @@ func executeInit(namespace, devPath, language, workDir string, overwrite bool) e
 		postfix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
 		spinner := utils.NewSpinner(postfix)
 		spinner.Start()
-		defer spinner.Stop()
 		dev, err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
+		spinner.Stop()
 		if err != nil {
 			return err
 		}
-		spinner.Stop()
 		log.Success(fmt.Sprintf("Deployment '%s' successfully analized", d.Name))
 	}
 
@@ -218,7 +227,7 @@ func askForDeployment(namespace string, c *kubernetes.Clientset) (*appsv1.Deploy
 	}
 	option, err := askForOptions(
 		options,
-		"Pick the deployment target for your development container from the list below:",
+		"Pick the deployment target for your okteto manifest from the list below:",
 	)
 	if err != nil {
 		return nil, err
@@ -241,7 +250,7 @@ func askForContainer(d *appsv1.Deployment) (string, error) {
 	}
 	return askForOptions(
 		options,
-		fmt.Sprintf("The deployment '%s' has %d containers. Pick the container target for your development container from the list below:", d.Name, len(d.Spec.Template.Spec.Containers)),
+		fmt.Sprintf("The deployment '%s' has %d containers. Pick the container target for your okteto manifest from the list below:", d.Name, len(d.Spec.Template.Spec.Containers)),
 	)
 }
 

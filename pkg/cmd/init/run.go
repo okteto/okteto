@@ -101,12 +101,19 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 	if err != nil {
 		return nil, err
 	}
+	seenPorts := map[int]bool{}
+	for _, f := range dev.Forward {
+		seenPorts[f.Local] = true
+	}
 	for _, port := range ports {
 		localPort := port
 		if port <= 1024 {
 			localPort = port + 8000
 		}
-
+		for seenPorts[localPort] {
+			localPort++
+		}
+		seenPorts[localPort] = true
 		dev.Forward = append(
 			dev.Forward,
 			model.Forward{
