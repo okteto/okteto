@@ -47,9 +47,14 @@ func CheckLocalWatchesConfiguration() {
 //IsWatchesConfigurationTooLow returns if watches configuration is too low
 func IsWatchesConfigurationTooLow(value string) bool {
 	value = strings.TrimSuffix(string(value), "\n")
+	if value == "" {
+		log.Infof("max_user_watches is empty '%s'", value)
+		return false
+	}
+
 	c, err := strconv.Atoi(value)
 	if err != nil {
-		log.Infof("Fail to parse the value of max_user_watches: %s", err)
+		log.Infof("failed to parse the value of max_user_watches: %s", err)
 		return false
 	}
 	log.Debugf("max_user_watches = %d", c)

@@ -295,6 +295,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	for i := 0; ; i++ {
 		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false)
 		if err == nil {
+			log.Debugf("syncthing local=%t responded to the ping", local)
 			return nil
 		}
 
