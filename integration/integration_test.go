@@ -189,8 +189,8 @@ func TestDownloadSyncthing(t *testing.T) {
 func TestAll(t *testing.T) {
 	ctx := scopeagent.GetContextFromTest(t)
 	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
-	test := scopeagent.GetTest(t)
-	test.Run(tName, func(t *testing.T) {
+
+	t.Run(tName, func(t *testing.T) {
 		oktetoPath, err := getOktetoPath(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -484,6 +484,7 @@ func waitForReady(namespace, name string) error {
 	for i := 0; i < 180; i++ {
 		c, err := ioutil.ReadFile(state)
 		if err != nil {
+			log.Printf("failed to read state file %s: %s", state, err)
 			if !os.IsNotExist(err) {
 				return err
 			}
