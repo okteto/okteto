@@ -493,14 +493,6 @@ func Test_LoadRemote(t *testing.T) {
 	if dev.SSHServerPort != 2222 {
 		t.Errorf("server remote port wasn't 2222 it was %d", dev.SSHServerPort)
 	}
-
-	if dev.Secrets[0].LocalPath != "/tmp/key.pub" {
-		t.Errorf("local key was not set correctly: %s", dev.Secrets[0].LocalPath)
-	}
-
-	if dev.Secrets[0].RemotePath != "/var/okteto/secret/authorized_keys" {
-		t.Errorf("remote key was not set at /var/okteto/secret/authorized_keys")
-	}
 }
 
 func Test_Reverse(t *testing.T) {
