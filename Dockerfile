@@ -3,7 +3,7 @@
 FROM bitnami/kubectl:1.17.4 as kubectl
 FROM alpine/helm:3.2.3 as helm
 
-FROM okteto/golang:1 as builder
+FROM okteto/golang:1.14-buster as builder
 WORKDIR /okteto
 
 ARG VERSION_STRING=docker
