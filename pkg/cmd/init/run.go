@@ -43,32 +43,60 @@ func SetDevDefaultsFromDeployment(dev *model.Dev, d *appsv1.Deployment, containe
 		return nil, err
 	}
 
-	pod, err := getRunningPod(d, c)
+	pod, err := getRunningPod(d, container, c)
 	if err != nil {
 		return nil, err
-	}
-	if pod == nil {
-		return nil, fmt.Errorf("no pod is running for deployment '%s'", d.Name)
 	}
 
-	dev, err = setForwardsFromPod(ctx, dev, pod, c)
-	if err != nil {
-		return nil, err
-	}
+	dev = setUserFromPod(ctx, dev, pod, container, config, c)
 	dev = setWorkDirFromPod(ctx, dev, pod, container, config, c)
 	dev = setCommandFromPod(ctx, dev, pod, container, config, c)
 	dev = setNameAndLabelsFromDeployment(ctx, dev, d)
 	dev = setAnnotationsFromDeployment(dev, d)
 	dev = setResourcesFromPod(dev, pod, container)
+
+	dev, err = setForwardsFromPod(ctx, dev, pod, c)
+	if err != nil {
+		return nil, err
+	}
+
 	return dev, nil
 }
 
-func getRunningPod(d *appsv1.Deployment, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+func getRunningPod(d *appsv1.Deployment, container string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	rs, err := replicasets.GetReplicaSetByDeployment(d, "", c)
 	if err != nil {
 		return nil, err
 	}
-	return pods.GetPodByReplicaSet(rs, "", true, c)
+	pod, err := pods.GetPodByReplicaSet(rs, "", c)
+	if err != nil {
+		return nil, err
+	}
+	if pod.Status.Phase != apiv1.PodRunning {
+		return nil, fmt.Errorf("no pod is running for deployment '%s'", d.Name)
+	}
+	for _, containerstatus := range pod.Status.ContainerStatuses {
+		if containerstatus.Name == container && containerstatus.State.Running == nil {
+			return nil, fmt.Errorf("no pod is running for deployment '%s'", d.Name)
+		}
+	}
+	return pod, nil
+}
+
+func setUserFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) *model.Dev {
+	if dev.WorkDir != "" {
+		return dev
+	}
+	userID, err := pods.GetUserByPod(ctx, pod, container, config, c)
+	if err != nil {
+		log.Infof("error getting user of the deployment: %s", err)
+	}
+	if userID != 0 {
+		dev.SecurityContext = &model.SecurityContext{
+			RunAsUser: &userID,
+		}
+	}
+	return dev
 }
 
 func setWorkDirFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) *model.Dev {

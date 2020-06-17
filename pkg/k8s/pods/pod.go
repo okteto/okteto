@@ -140,11 +140,11 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 
 	log.Infof("replicaset %s with revison %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
 
-	return GetPodByReplicaSet(rs, labels, false, c)
+	return GetPodByReplicaSet(rs, labels, c)
 }
 
 //GetPodByReplicaSet returns a pod of a given replicaset
-func GetPodByReplicaSet(rs *appsv1.ReplicaSet, labels string, mustBeRunning bool, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+func GetPodByReplicaSet(rs *appsv1.ReplicaSet, labels string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
 	podList, err := c.CoreV1().Pods(rs.Namespace).List(metav1.ListOptions{LabelSelector: labels})
 	if err != nil {
 		return nil, err
@@ -152,13 +152,27 @@ func GetPodByReplicaSet(rs *appsv1.ReplicaSet, labels string, mustBeRunning bool
 	for i := range podList.Items {
 		for _, or := range podList.Items[i].OwnerReferences {
 			if or.UID == rs.UID {
-				if !mustBeRunning || podList.Items[i].Status.Phase == apiv1.PodRunning {
+				if podList.Items[i].Status.Phase == apiv1.PodRunning {
 					return &podList.Items[i], nil
 				}
 			}
 		}
 	}
 	return nil, nil
+}
+
+//GetUserByPod returns the current user of a running pod
+func GetUserByPod(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) (int64, error) {
+	cmd := []string{"sh", "-c", "id -u"}
+	userIDString, err := execCommandInPod(ctx, p, container, cmd, config, c)
+	if err != nil {
+		return 0, err
+	}
+	userID, err := strconv.ParseInt(userIDString, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return userID, nil
 }
 
 //GetWorkdirByPod returns the workdir of a running pod

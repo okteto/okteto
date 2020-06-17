@@ -37,7 +37,7 @@ const (
 	stignore          = ".stignore"
 	defaultManifest   = "okteto.yml"
 	secondaryManifest = "okteto.yaml"
-	createDeployment  = "new deployment"
+	createDeployment  = "create new deployment"
 )
 
 var wrongImageNames = map[string]bool{
@@ -87,6 +87,9 @@ func Init() *cobra.Command {
 }
 
 func executeInit(namespace, devPath, language, workDir string, overwrite bool) error {
+	fmt.Println("This command walks you through creating an okteto manifest.")
+	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
+	fmt.Println("See https://okteto.com/docs/reference/manifest for the official documentation about the okteto manifest.")
 	devPath, err := validateDevPath(devPath, overwrite)
 	if err != nil {
 		return err
@@ -108,27 +111,27 @@ func executeInit(namespace, devPath, language, workDir string, overwrite bool) e
 	}
 
 	if checkForDeployment {
-		log.Information("This command walks you through creating an okteto manifest.")
-		log.Information("It only covers the most common items, and tries to guess sensible defaults.")
-		log.Information("See https://okteto.com/docs/reference/manifest for the official documentation about the okteto manifest.")
 		d, container, err := getDeployment(namespace)
 		if err != nil {
 			return err
 		}
-		dev.Container = container
-		if container == "" {
-			container = d.Spec.Template.Spec.Containers[0].Name
-		}
+		if d != nil {
+			dev.Container = container
+			if container == "" {
+				container = d.Spec.Template.Spec.Containers[0].Name
+			}
 
-		postfix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
-		spinner := utils.NewSpinner(postfix)
-		spinner.Start()
-		dev, err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
-		spinner.Stop()
-		if err != nil {
-			return err
+			postfix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
+			spinner := utils.NewSpinner(postfix)
+			spinner.Start()
+			dev, err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
+			spinner.Stop()
+			if err == nil {
+				log.Success(fmt.Sprintf("Deployment '%s' successfully analized", d.Name))
+			} else {
+				log.Yellow(fmt.Sprintf("Analysis for deployment '%s' failed: %s", d.Name, err))
+			}
 		}
-		log.Success(fmt.Sprintf("Deployment '%s' successfully analized", d.Name))
 	}
 
 	if err := dev.Save(devPath); err != nil {
@@ -150,7 +153,8 @@ func executeInit(namespace, devPath, language, workDir string, overwrite bool) e
 func getDeployment(namespace string) (*appsv1.Deployment, string, error) {
 	c, _, currentNamespace, err := k8Client.GetLocal()
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+		log.Yellow("Failed to load your local Kubeconfig: %s", err)
+		return nil, "", nil
 	}
 	if namespace == "" {
 		namespace = currentNamespace
@@ -219,15 +223,17 @@ func askForLanguage() (string, error) {
 func askForDeployment(namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
 	dList, err := deployments.List(namespace, c)
 	if err != nil {
-		return nil, err
+		log.Yellow("Failed to list deployments: %s", err)
+		return nil, nil
 	}
-	options := []string{createDeployment}
+	options := []string{}
 	for i := range dList {
 		options = append(options, dList[i].Name)
 	}
+	options = append(options, createDeployment)
 	option, err := askForOptions(
 		options,
-		"Pick the deployment target for your okteto manifest from the list below:",
+		"Select the deployment you want to replace with your development container:",
 	)
 	if err != nil {
 		return nil, err
@@ -250,7 +256,7 @@ func askForContainer(d *appsv1.Deployment) (string, error) {
 	}
 	return askForOptions(
 		options,
-		fmt.Sprintf("The deployment '%s' has %d containers. Pick the container target for your okteto manifest from the list below:", d.Name, len(d.Spec.Template.Spec.Containers)),
+		fmt.Sprintf("The deployment '%s' has %d containers. Select the container you want to replace with your development container?", d.Name, len(d.Spec.Template.Spec.Containers)),
 	)
 }
 
@@ -260,7 +266,7 @@ func askForOptions(options []string, label string) (string, error) {
 		Items: options,
 		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
-			Label:    fmt.Sprintf("%s {{ . }}", log.BlueString("?")),
+			Label:    fmt.Sprintf("{{ . }}"),
 			Selected: " ✓  {{ . | oktetoblue }}",
 			Active:   fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect),
 			Inactive: "  {{ . | oktetoblue }}",
