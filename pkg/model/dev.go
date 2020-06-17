@@ -55,8 +55,10 @@ const (
 	SourceCodeSubPath = "src"
 	//OktetoSyncthingMountPath syncthing volume mount path
 	OktetoSyncthingMountPath = "/var/syncthing"
+	remoteMountPath          = "/var/okteto/remote"
 	//SyncthingSubPath subpath in the development container persistent volume for the syncthing data
 	SyncthingSubPath = "syncthing"
+	remoteSubPath    = "okteto-remote"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
@@ -506,7 +508,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	p := Secret{
 		LocalPath:  pubKeyPath,
 		RemotePath: authorizedKeysPath,
-		Mode:       0600,
+		Mode:       0444,
 	}
 
 	log.Infof("enabled remote mode")
@@ -660,6 +662,16 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				SubPath:   SyncthingSubPath,
 			},
 		)
+		if main.RemoteModeEnabled() {
+			rule.Volumes = append(
+				rule.Volumes,
+				VolumeMount{
+					Name:      main.GetVolumeName(),
+					MountPath: remoteMountPath,
+					SubPath:   remoteSubPath,
+				},
+			)
+		}
 		rule.Command = []string{"/var/okteto/bin/start.sh"}
 		if main.RemoteModeEnabled() {
 			rule.Args = []string{"-r"}
