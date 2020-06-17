@@ -3,7 +3,11 @@
 userID="$(id -u)"
 echo "USER:$userID"
 if [ -d "/var/okteto/bin" ]; then
-  cp /var/okteto/bin/* /usr/local/bin
+  if [ -w "/usr/local/bin" ]; then
+    cp /var/okteto/bin/* /usr/local/bin
+  else
+    echo /usr/local/bin is not writeable by $userID
+  fi
 fi
 
 set -e
@@ -17,7 +21,11 @@ while getopts ":s:r" opt; do
       sourceFILE="$(echo $OPTARG | cut -d':' -f1)"
       destFILE="$(echo $OPTARG | cut -d':' -f2)"
       dirName="$(dirname $destFILE)"
-      mkdir -p $dirName
+      
+      if [ ! -d "$dirName" ]; then
+        mkdir -p $dirName
+      fi
+      
       echo "Copying secret $sourceFILE to $destFILE"
       cp -p /var/okteto/secret/$sourceFILE $destFILE
       ;;
