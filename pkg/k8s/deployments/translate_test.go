@@ -20,6 +20,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -275,7 +276,420 @@ services:
 	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
 	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
 	if string(marshalled1) != string(marshalled1OK) {
-		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
+		t.Fatalf("Wrong d1 generation.\nActual\n%+v\nExpected\n%+v", string(marshalled1), string(marshalled1OK))
+	}
+	if d1.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d1 annotations: '%s'", d1.Annotations["key"])
+	}
+	if d1.Spec.Template.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.Spec.Template.Annotations["key"])
+	}
+
+	d1Down, err := TranslateDevModeOff(d1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d1Orig := dev.GevSandbox()
+	marshalled1Down, _ := yaml.Marshal(d1Down.Spec.Template.Spec)
+	marshalled1Orig, _ := yaml.Marshal(d1Orig.Spec.Template.Spec)
+	if string(marshalled1Down) != string(marshalled1Orig) {
+		t.Fatalf("Wrong d1 down.\nActual %+v, \nExpected %+v", string(marshalled1Down), string(marshalled1Orig))
+	}
+	if d1Down.Annotations["key"] != "" {
+		t.Fatalf("Wrong d1 annotations after down: '%s'", d1.Annotations["key"])
+	}
+	if d1Down.Spec.Template.Annotations["key"] != "" {
+		t.Fatalf("Wrong d1 pod annotations after down: '%s'", d1.Spec.Template.Annotations["key"])
+	}
+
+	dev2 := dev.Services[0]
+	d2 := dev2.GevSandbox()
+	rule2 := dev2.ToTranslationRule(dev)
+	tr2 := &model.Translation{
+		Interactive: false,
+		Name:        dev.Name,
+		Version:     model.TranslationVersion,
+		Deployment:  d2,
+		Rules:       []*model.TranslationRule{rule2},
+		Annotations: map[string]string{"key": "value"},
+		Tolerations: []apiv1.Toleration{
+			{
+				Key:      "nvidia/cpu",
+				Operator: apiv1.TolerationOpExists,
+			},
+		},
+	}
+	err = translate(tr2, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d2OK := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: apiv1.PodTemplateSpec{
+				Spec: apiv1.PodSpec{
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											okLabels.InteractiveDevLabel: "web",
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
+					Tolerations: []apiv1.Toleration{
+						{
+							Key:      "nvidia/cpu",
+							Operator: apiv1.TolerationOpExists,
+						},
+					},
+					SecurityContext: &apiv1.PodSecurityContext{
+						RunAsUser:  &rootUser,
+						RunAsGroup: &rootUser,
+						FSGroup:    &rootUser,
+					},
+					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					Volumes: []apiv1.Volume{
+						{
+							Name: dev.GetVolumeName(),
+							VolumeSource: apiv1.VolumeSource{
+								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+									ClaimName: dev.GetVolumeName(),
+									ReadOnly:  false,
+								},
+							},
+						},
+					},
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           "worker:latest",
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"./run_worker.sh"},
+							Args:            []string{},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/src",
+									SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+								},
+							},
+							LivenessProbe:  nil,
+							ReadinessProbe: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+	marshalled2, _ := yaml.Marshal(d2.Spec.Template.Spec)
+	marshalled2OK, _ := yaml.Marshal(d2OK.Spec.Template.Spec)
+	if string(marshalled2) != string(marshalled2OK) {
+		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
+	}
+	if d2.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d2 annotations: '%s'", d2.Annotations["key"])
+	}
+	if d2.Spec.Template.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d2 pod annotations: '%s'", d2.Spec.Template.Annotations["key"])
+	}
+
+	d2Down, err := TranslateDevModeOff(d2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d2Orig := dev2.GevSandbox()
+	marshalled2Down, _ := yaml.Marshal(d2Down.Spec.Template.Spec)
+	marshalled2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	if string(marshalled2Down) != string(marshalled2Orig) {
+		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
+	}
+	if d2Down.Annotations["key"] != "" {
+		t.Fatalf("Wrong d2 annotations after down: '%s'", d2.Annotations["key"])
+	}
+	if d2Down.Spec.Template.Annotations["key"] != "" {
+		t.Fatalf("Wrong d2 pod annotations after down: '%s'", d2.Spec.Template.Annotations["key"])
+	}
+}
+
+func Test_translateWithVolumesAndRemote(t *testing.T) {
+	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	var runAsUser int64 = 100
+	var runAsGroup int64 = 101
+	var fsGroup int64 = 102
+	var mode int32 = 420
+	manifest := []byte(fmt.Sprintf(`name: web
+namespace: n
+container: dev
+image: web:latest
+command: ["./run_web.sh"]
+workdir: /app
+securityContext:
+  runAsUser: 100
+  runAsGroup: 101
+  fsGroup: 102
+volumes:
+  - sub:/path
+secrets:
+  - %s:/remote
+persistentVolume:
+  enabled: true
+resources:
+  limits:
+    cpu: 2
+    memory: 1Gi
+    nvidia.com/gpu: 1
+    amd.com/gpu: 1
+remote: 22000
+services:
+  - name: worker
+    container: dev
+    image: worker:latest
+    command: ["./run_worker.sh"]
+    mountpath: /src
+    subpath: /worker`, file.Name()))
+
+	dev, err := model.Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d1 := dev.GevSandbox()
+	dev.DevPath = "okteto.yml"
+	rule1 := dev.ToTranslationRule(dev)
+	tr1 := &model.Translation{
+		Interactive: true,
+		Name:        dev.Name,
+		Version:     model.TranslationVersion,
+		Deployment:  d1,
+		Rules:       []*model.TranslationRule{rule1},
+		Annotations: map[string]string{"key": "value"},
+		Tolerations: []apiv1.Toleration{
+			{
+				Key:      "nvidia/cpu",
+				Operator: apiv1.TolerationOpExists,
+			},
+		},
+	}
+	err = translate(tr1, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d1Expected := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: apiv1.PodTemplateSpec{
+				Spec: apiv1.PodSpec{
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											okLabels.InteractiveDevLabel: "web",
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
+					Tolerations: []apiv1.Toleration{
+						{
+							Key:      "nvidia/cpu",
+							Operator: apiv1.TolerationOpExists,
+						},
+					},
+					SecurityContext: &apiv1.PodSecurityContext{
+						RunAsUser:  &runAsUser,
+						RunAsGroup: &runAsGroup,
+						FSGroup:    &fsGroup,
+					},
+					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					Volumes: []apiv1.Volume{
+						{
+							Name: oktetoSyncSecretVolume,
+							VolumeSource: apiv1.VolumeSource{
+								Secret: &apiv1.SecretVolumeSource{
+									SecretName: "okteto-web",
+									Items: []apiv1.KeyToPath{
+										{
+											Key:  "config.xml",
+											Path: "config.xml",
+										},
+										{
+											Key:  "cert.pem",
+											Path: "cert.pem",
+										},
+										{
+											Key:  "key.pem",
+											Path: "key.pem",
+										},
+									},
+								},
+							},
+						},
+						{
+							Name: dev.GetVolumeName(),
+							VolumeSource: apiv1.VolumeSource{
+								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+									ClaimName: dev.GetVolumeName(),
+									ReadOnly:  false,
+								},
+							},
+						},
+						{
+							Name: oktetoDevSecretVolume,
+							VolumeSource: apiv1.VolumeSource{
+								Secret: &apiv1.SecretVolumeSource{
+									SecretName: "okteto-web",
+									Items: []apiv1.KeyToPath{
+										{
+											Key:  "dev-secret-remote",
+											Path: "remote",
+											Mode: &mode,
+										},
+									},
+								},
+							},
+						},
+						{
+							Name: oktetoBinName,
+							VolumeSource: apiv1.VolumeSource{
+								EmptyDir: &apiv1.EmptyDirVolumeSource{},
+							},
+						},
+						{
+							Name: oktetoAuthorizedKeysVolume,
+							VolumeSource: apiv1.VolumeSource{
+								Secret: &apiv1.SecretVolumeSource{
+									SecretName: "okteto-web",
+									Items: []apiv1.KeyToPath{
+										{
+											Key:  "authorized_keys",
+											Path: "authorized_keys",
+										},
+									},
+								},
+							},
+						},
+					},
+					InitContainers: []apiv1.Container{
+						{
+							Name:            oktetoBinName,
+							Image:           oktetoBinImageTag,
+							ImagePullPolicy: apiv1.PullIfNotPresent,
+							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      oktetoBinName,
+									MountPath: "/okteto/bin",
+								},
+							},
+						},
+					},
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           "web:latest",
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"/var/okteto/bin/start.sh"},
+							Args:            []string{"-r", "-s", "remote:/remote"},
+							WorkingDir:      "/app",
+							Env: []apiv1.EnvVar{
+								{
+									Name:  "OKTETO_MARKER_PATH",
+									Value: "/app/okteto.yml",
+								},
+								{
+									Name:  "OKTETO_NAMESPACE",
+									Value: "n",
+								},
+								{
+									Name:  "OKTETO_NAME",
+									Value: "web",
+								},
+							},
+							Resources: apiv1.ResourceRequirements{
+								Limits: apiv1.ResourceList{
+									"cpu":            resource.MustParse("2"),
+									"memory":         resource.MustParse("1Gi"),
+									"nvidia.com/gpu": resource.MustParse("1"),
+									"amd.com/gpu":    resource.MustParse("1"),
+								},
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/app",
+									SubPath:   model.SourceCodeSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/var/syncthing",
+									SubPath:   model.SyncthingSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/path",
+									SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+								},
+								{
+									Name:      oktetoSyncSecretVolume,
+									ReadOnly:  false,
+									MountPath: "/var/syncthing/secret/",
+								},
+								{
+									Name:      oktetoAuthorizedKeysVolume,
+									ReadOnly:  false,
+									MountPath: "/var/okteto/remote/",
+								},
+								{
+									Name:      oktetoDevSecretVolume,
+									ReadOnly:  false,
+									MountPath: "/var/okteto/secret/",
+								},
+								{
+									Name:      oktetoBinName,
+									ReadOnly:  false,
+									MountPath: "/var/okteto/bin",
+								},
+							},
+							LivenessProbe:  nil,
+							ReadinessProbe: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
+	marshalled1OK, _ := yaml.Marshal(d1Expected.Spec.Template.Spec)
+
+	marshalled1Lines := strings.Split(string(marshalled1), "\n")
+	marshalled1OKLines := strings.Split(string(marshalled1OK), "\n")
+
+	for i := range marshalled1Lines {
+		if marshalled1Lines[i] != marshalled1OKLines[i] {
+			t.Errorf("Wrong d1 generation.\nActual\n%+v\nExpected\n%+v", marshalled1Lines[i], marshalled1OKLines[i])
+			break
+		}
+	}
+
+	if string(marshalled1) != string(marshalled1OK) {
+		t.Fatalf("Wrong d1 generation.\nActual\n%+v\nExpected\n%+v", string(marshalled1), string(marshalled1OK))
 	}
 	if d1.Annotations["key"] != "value" {
 		t.Fatalf("Wrong d1 annotations: '%s'", d1.Annotations["key"])

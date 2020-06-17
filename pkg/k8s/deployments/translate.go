@@ -321,7 +321,7 @@ func TranslateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 			c.VolumeMounts,
 			apiv1.VolumeMount{
 				Name:      oktetoAuthorizedKeysVolume,
-				MountPath: "/var/okteto/remote",
+				MountPath: "/var/okteto/remote/",
 			},
 		)
 	}
