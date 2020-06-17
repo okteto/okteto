@@ -27,7 +27,9 @@ while getopts ":s:r" opt; do
       fi
       
       echo "Copying secret $sourceFILE to $destFILE"
-      cp -p /var/okteto/secret/$sourceFILE $destFILE
+      if [ "/var/okteto/secret/$sourceFILE" != "$destFILE" ]; then
+        cp -p /var/okteto/secret/$sourceFILE $destFILE
+      fi
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
