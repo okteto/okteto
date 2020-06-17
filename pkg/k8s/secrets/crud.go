@@ -40,7 +40,7 @@ func Get(name, namespace string, c *kubernetes.Clientset) (*v1.Secret, error) {
 }
 
 //Create creates the syncthing config secret
-func Create(dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) error {
+func Create(dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing, authorizedKeys string) error {
 	secretName := GetSecretName(dev)
 	log.Debugf("creating configuration secret %s", secretName)
 
@@ -63,13 +63,16 @@ func Create(dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) err
 		},
 	}
 
+	if err := loadFile("authorized_keys", authorizedKeys, data); err != nil {
+		return err
+	}
+
 	for _, s := range dev.Secrets {
-		content, err := ioutil.ReadFile(s.LocalPath)
-		if err != nil {
-			return fmt.Errorf("error reading secret '%s': %s", s.LocalPath, err)
+		if err := loadFile(s.GetKeyName(), s.LocalPath, data); err != nil {
+			return err
 		}
+
 		log.Debugf("added configuration secret %s", s.GetKeyName())
-		data.Data[s.GetKeyName()] = content
 	}
 
 	if sct.Name == "" {
@@ -86,6 +89,20 @@ func Create(dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) err
 		}
 		log.Infof("okteto secret '%s' was updated.", secretName)
 	}
+	return nil
+}
+
+func loadFile(key, path string, s *v1.Secret) error {
+	if path == "" {
+		return nil
+	}
+
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("error reading secret '%s': %s", path, err)
+	}
+
+	s.Data[key] = content
 	return nil
 }
 

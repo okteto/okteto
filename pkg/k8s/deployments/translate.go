@@ -37,10 +37,11 @@ const (
 	oktetoBinName              = "okteto-bin"
 
 	//syncthing
-	oktetoBinImageTag      = "okteto/bin:1.1.19"
-	oktetoSyncSecretVolume = "okteto-sync-secret" // skipcq GSC-G101  not a secret
-	oktetoDevSecretVolume  = "okteto-dev-secret"  // skipcq GSC-G101  not a secret
-	oktetoSecretTemplate   = "okteto-%s"
+	oktetoBinImageTag          = "okteto/bin:1.1.19"
+	oktetoSyncSecretVolume     = "okteto-sync-secret" // skipcq GSC-G101  not a secret
+	oktetoAuthorizedKeysVolume = "okteto-authorized-keys"
+	oktetoDevSecretVolume      = "okteto-dev-secret" // skipcq GSC-G101  not a secret
+	oktetoSecretTemplate       = "okteto-%s"
 )
 
 var (
@@ -75,15 +76,19 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 			commonTranslation(t)
 			return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 		}
-
-		log.Infof("using clientside translation")
 	}
 
+	return clientsideTranslation(t, ns, c)
+}
+
+func clientsideTranslation(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
+	log.Infof("using clientside translation")
 	t.Deployment.Status = appsv1.DeploymentStatus{}
 	manifestBytes, err := json.Marshal(t.Deployment)
 	if err != nil {
 		return err
 	}
+
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 
 	commonTranslation(t)
@@ -96,6 +101,9 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	if t.Interactive {
 		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
 	}
+
+	mountRemote := false
+
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		if devContainer == nil {
@@ -103,6 +111,11 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 		}
 
 		TranslateDevContainer(devContainer, rule)
+
+		if rule.RemoteEnabled {
+			mountRemote = true
+		}
+
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
 		TranslateOktetoDevSecret(&t.Deployment.Spec.Template.Spec, t.Name, rule.Secrets)
@@ -112,6 +125,11 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 			TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
 		}
 	}
+
+	if mountRemote {
+		TranslateOktetoAuthorizedKeysSecret(&t.Deployment.Spec.Template.Spec, t.Name)
+	}
+
 	return nil
 }
 
@@ -297,6 +315,17 @@ func TranslateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 			MountPath: "/var/syncthing/secret/",
 		},
 	)
+
+	if rule.RemoteEnabled {
+		c.VolumeMounts = append(
+			c.VolumeMounts,
+			apiv1.VolumeMount{
+				Name:      oktetoAuthorizedKeysVolume,
+				MountPath: "/var/okteto/remote",
+			},
+		)
+	}
+
 	if len(rule.Secrets) > 0 {
 		c.VolumeMounts = append(
 			c.VolumeMounts,
@@ -472,6 +501,34 @@ func TranslateOktetoSyncSecret(spec *apiv1.PodSpec, name string) {
 					{
 						Key:  "key.pem",
 						Path: "key.pem",
+					},
+				},
+			},
+		},
+	}
+	spec.Volumes = append(spec.Volumes, v)
+}
+
+//TranslateOktetoAuthorizedKeysSecret translates the authorized_keys secret container of a pod
+func TranslateOktetoAuthorizedKeysSecret(spec *apiv1.PodSpec, name string) {
+	if spec.Volumes == nil {
+		spec.Volumes = []apiv1.Volume{}
+	}
+	for i := range spec.Volumes {
+		if spec.Volumes[i].Name == oktetoAuthorizedKeysVolume {
+			return
+		}
+	}
+
+	v := apiv1.Volume{
+		Name: oktetoAuthorizedKeysVolume,
+		VolumeSource: apiv1.VolumeSource{
+			Secret: &apiv1.SecretVolumeSource{
+				SecretName: fmt.Sprintf(oktetoSecretTemplate, name),
+				Items: []apiv1.KeyToPath{
+					{
+						Key:  "authorized_keys",
+						Path: "authorized_keys",
 					},
 				},
 			},

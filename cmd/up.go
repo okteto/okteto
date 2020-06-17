@@ -514,7 +514,13 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	}
 
 	log.Info("create deployment secrets")
-	if err := secrets.Create(up.Dev, up.Client, up.Sy); err != nil {
+	pub := ""
+
+	if up.Dev.RemoteModeEnabled() {
+		pub = ssh.GetPublicKey()
+	}
+
+	if err := secrets.Create(up.Dev, up.Client, up.Sy, pub); err != nil {
 		return err
 	}
 

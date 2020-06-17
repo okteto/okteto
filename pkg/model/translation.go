@@ -47,6 +47,7 @@ type TranslationRule struct {
 	Volumes          []VolumeMount        `json:"volumes,omitempty"`
 	SecurityContext  *SecurityContext     `json:"securityContext,omitempty"`
 	Resources        ResourceRequirements `json:"resources,omitempty"`
+	RemoteEnabled    bool                 `json:"remoteEnabled,omitempty"`
 }
 
 //VolumeMount represents a volume mount

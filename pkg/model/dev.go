@@ -77,7 +77,7 @@ const (
 	ResourceNVIDIAGPU apiv1.ResourceName = "nvidia.com/gpu"
 
 	// this path is expected by remote
-	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
+	authorizedKeysPath = "/var/okteto/secret/authorized_keys"
 )
 
 var (
@@ -502,22 +502,6 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 		dev.RemotePort = p
 		log.Infof("remote port not set, using %d", dev.RemotePort)
 	}
-
-	p := Secret{
-		LocalPath:  pubKeyPath,
-		RemotePath: authorizedKeysPath,
-		Mode:       0600,
-	}
-
-	log.Infof("enabled remote mode")
-
-	for i := range dev.Secrets {
-		if dev.Secrets[i].LocalPath == p.LocalPath {
-			return
-		}
-	}
-
-	dev.Secrets = append(dev.Secrets, p)
 }
 
 //LoadForcePull force the dev pods to be recreated and pull the latest version of their image
@@ -663,9 +647,11 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		rule.Command = []string{"/var/okteto/bin/start.sh"}
 		if main.RemoteModeEnabled() {
 			rule.Args = []string{"-r"}
+			rule.RemoteEnabled = true
 		} else {
 			rule.Args = []string{}
 		}
+
 		for _, s := range rule.Secrets {
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
 		}
