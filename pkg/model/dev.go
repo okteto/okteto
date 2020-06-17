@@ -75,9 +75,6 @@ const (
 	ResourceAMDGPU apiv1.ResourceName = "amd.com/gpu"
 	//ResourceNVIDIAGPU nvidia.com/gpu resource
 	ResourceNVIDIAGPU apiv1.ResourceName = "nvidia.com/gpu"
-
-	// this path is expected by remote
-	authorizedKeysPath = "/var/okteto/secret/authorized_keys"
 )
 
 var (
