@@ -246,7 +246,7 @@ func askForContainer(d *appsv1.Deployment) (string, error) {
 	}
 	return askForOptions(
 		options,
-		fmt.Sprintf("The deployment '%s' has %d containers. Select the container you want to replace with your development container?", d.Name, len(d.Spec.Template.Spec.Containers)),
+		fmt.Sprintf("The deployment '%s' has %d containers. Select the container you want to replace with your development container:", d.Name, len(d.Spec.Template.Spec.Containers)),
 	)
 }
 

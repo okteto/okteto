@@ -90,7 +90,7 @@ func ListBySelector(namespace string, selector map[string]string, c kubernetes.I
 
 // GetDevPodInLoop returns the dev pod for a deployment and loops until it success
 func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
-	ticker := time.NewTicker(200 * time.Millisecond)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	to := 2 * config.GetTimeout() // 60 seconds
 	timeout := time.Now().Add(to)
 
@@ -124,8 +124,6 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 	if d == nil {
 		return nil, err
 	}
-
-	log.Infof("deployment %s with revision %v is progressing", d.Name, d.Annotations[deploymentRevisionAnnotation])
 
 	labels := fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name)
 	rs, err := replicasets.GetReplicaSetByDeployment(d, labels, c)
