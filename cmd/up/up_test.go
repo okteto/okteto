@@ -27,7 +27,7 @@ import (
 )
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
-	up := UpContext{}
+	up := upContext{}
 	up.Running = make(chan error, 1)
 	up.Running <- nil
 	err := up.waitUntilExitOrInterrupt()

@@ -50,9 +50,6 @@ import (
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 // ReconnectingMessage is the message shown when we are trying to reconnect
@@ -61,36 +58,6 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 var (
 	localClusters = []string{"127.", "172.", "192.", "169.", "localhost", "::1", "fe80::", "fc00::"}
 )
-
-// UpContext is the common context of all operations performed during
-// the up command
-type UpContext struct {
-	Context    context.Context
-	Cancel     context.CancelFunc
-	Dev        *model.Dev
-	Namespace  *apiv1.Namespace
-	isSwap     bool
-	retry      bool
-	Client     *kubernetes.Clientset
-	RestConfig *rest.Config
-	Pod        string
-	Forwarder  forwarder
-	Disconnect chan error
-	Running    chan error
-	Exit       chan error
-	Sy         *syncthing.Syncthing
-	ErrChan    chan error
-	cleaned    chan struct{}
-	success    bool
-}
-
-// Forwarder is an interface for the port-forwarding features
-type forwarder interface {
-	Add(model.Forward) error
-	AddReverse(model.Reverse) error
-	Start(string, string) error
-	Stop()
-}
 
 //Up starts a development container
 func Up() *cobra.Command {
@@ -171,7 +138,7 @@ func Up() *cobra.Command {
 //RunUp starts the up sequence
 func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) error {
 
-	up := &UpContext{
+	up := &upContext{
 		Dev:  dev,
 		Exit: make(chan error, 1),
 	}
@@ -246,7 +213,7 @@ func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) er
 }
 
 // Activate activates the development container
-func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
+func (up *upContext) Activate(autoDeploy, build, resetSyncthing bool) {
 
 	var state *term.State
 	inFd, isTerm := term.GetFdInfo(os.Stdin)
@@ -368,7 +335,7 @@ func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
 	}
 }
 
-func (up *UpContext) shouldRetry(err error) bool {
+func (up *upContext) shouldRetry(err error) bool {
 	switch err {
 	case errors.ErrLostSyncthing:
 		return true
@@ -384,7 +351,7 @@ func (up *UpContext) shouldRetry(err error) bool {
 	return false
 }
 
-func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, bool, error) {
+func (up *upContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, bool, error) {
 	d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
 		if d.Annotations[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
@@ -416,7 +383,7 @@ func (up *UpContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 }
 
 // waitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
-func (up *UpContext) waitUntilExitOrInterrupt() error {
+func (up *upContext) waitUntilExitOrInterrupt() error {
 	for {
 		select {
 		case err := <-up.Running:
@@ -438,7 +405,7 @@ func (up *UpContext) waitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *UpContext) buildDevImage(d *appsv1.Deployment, create bool) error {
+func (up *upContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 	oktetoRegistryURL := ""
 	if namespaces.IsOktetoNamespace(up.Namespace) {
 		var err error
@@ -487,7 +454,7 @@ func (up *UpContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 	return nil
 }
 
-func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
+func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	up.updateStateFile(activating)
 	spinner.Start()
@@ -586,7 +553,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 	return nil
 }
 
-func (up *UpContext) forwards() error {
+func (up *upContext) forwards() error {
 	if up.Dev.ExecuteOverSSHEnabled() || up.Dev.RemoteModeEnabled() {
 		return up.sshForwards()
 	}
@@ -639,7 +606,7 @@ func (up *UpContext) forwards() error {
 	return nil
 }
 
-func (up *UpContext) sshForwards() error {
+func (up *upContext) sshForwards() error {
 	log.Infof("starting SSH port forwards")
 	f := forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
 	if err := f.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
@@ -676,7 +643,7 @@ func (up *UpContext) sshForwards() error {
 	return up.Forwarder.Start(up.Pod, up.Dev.Namespace)
 }
 
-func (up *UpContext) initializeSyncthing() error {
+func (up *upContext) initializeSyncthing() error {
 	sy, err := syncthing.New(up.Dev)
 	if err != nil {
 		return err
@@ -698,7 +665,7 @@ func (up *UpContext) initializeSyncthing() error {
 	return nil
 }
 
-func (up *UpContext) sync(resetSyncthing bool) error {
+func (up *upContext) sync(resetSyncthing bool) error {
 	if err := up.startSyncthing(resetSyncthing); err != nil {
 		return err
 	}
@@ -706,7 +673,7 @@ func (up *UpContext) sync(resetSyncthing bool) error {
 	return up.synchronizeFiles()
 }
 
-func (up *UpContext) startSyncthing(resetSyncthing bool) error {
+func (up *upContext) startSyncthing(resetSyncthing bool) error {
 	spinner := utils.NewSpinner("Starting the file synchronization service...")
 	spinner.Start()
 	up.updateStateFile(startingSync)
@@ -758,7 +725,7 @@ func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 
 }
 
-func (up *UpContext) synchronizeFiles() error {
+func (up *upContext) synchronizeFiles() error {
 	postfix := "Synchronizing your files..."
 	spinner := utils.NewSpinner(postfix)
 	pbScaling := 0.30
@@ -807,7 +774,7 @@ func (up *UpContext) synchronizeFiles() error {
 	return up.Sy.Restart(up.Context)
 }
 
-func (up *UpContext) cleanCommand() {
+func (up *upContext) cleanCommand() {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
 
@@ -841,7 +808,7 @@ func (up *UpContext) cleanCommand() {
 	up.cleaned <- struct{}{}
 }
 
-func (up *UpContext) runCommand() error {
+func (up *upContext) runCommand() error {
 	log.Infof("starting remote command")
 	up.updateStateFile(ready)
 
@@ -864,7 +831,7 @@ func (up *UpContext) runCommand() error {
 	)
 }
 
-func (up *UpContext) getClusterType() string {
+func (up *upContext) getClusterType() string {
 	if up.Namespace != nil && namespaces.IsOktetoNamespace(up.Namespace) {
 		return "okteto"
 	}
@@ -885,7 +852,7 @@ func (up *UpContext) getClusterType() string {
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
-func (up *UpContext) shutdown() {
+func (up *upContext) shutdown() {
 	log.Debugf("up shutdown")
 	if !up.success {
 		analytics.TrackUpError(true, up.isSwap)

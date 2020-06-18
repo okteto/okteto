@@ -33,7 +33,7 @@ const (
 	failed        upState = "failed"
 )
 
-func (up *UpContext) updateStateFile(state upState) {
+func (up *upContext) updateStateFile(state upState) {
 	if up.Dev.Namespace == "" {
 		log.Info("can't update state file, namespace is empty")
 	}
