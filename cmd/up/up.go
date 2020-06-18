@@ -114,11 +114,7 @@ func Up() *cobra.Command {
 				Exit: make(chan error, 1),
 			}
 
-			if err := up.start(autoDeploy, build, resetSyncthing); err != nil {
-				return err
-			}
-
-			return nil
+			return up.start(autoDeploy, build, resetSyncthing)
 		},
 	}
 
@@ -234,7 +230,7 @@ func (up *upContext) Activate(autoDeploy, build, resetSyncthing bool) {
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		up.Disconnect = make(chan error, 1)
-		up.Running = make(chan error, 1)
+		up.CommandResult = make(chan error, 1)
 		up.cleaned = make(chan struct{}, 1)
 
 		d, create, err := up.getCurrentDeployment(autoDeploy)
@@ -315,7 +311,7 @@ func (up *upContext) Activate(autoDeploy, build, resetSyncthing bool) {
 
 		go func() {
 			<-up.cleaned
-			up.Running <- up.runCommand()
+			up.CommandResult <- up.runCommand()
 		}()
 
 		prevError := up.waitUntilExitOrInterrupt()
@@ -390,7 +386,7 @@ func (up *upContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 func (up *upContext) waitUntilExitOrInterrupt() error {
 	for {
 		select {
-		case err := <-up.Running:
+		case err := <-up.CommandResult:
 			fmt.Println()
 			if err != nil {
 				log.Infof("command failed: %s", err)

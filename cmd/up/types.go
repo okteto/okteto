@@ -25,22 +25,22 @@ import (
 
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
-	Context    context.Context
-	Cancel     context.CancelFunc
-	Dev        *model.Dev
-	Namespace  *apiv1.Namespace
-	isSwap     bool
-	retry      bool
-	Client     *kubernetes.Clientset
-	RestConfig *rest.Config
-	Pod        string
-	Forwarder  forwarder
-	Disconnect chan error
-	Running    chan error
-	Exit       chan error
-	Sy         *syncthing.Syncthing
-	cleaned    chan struct{}
-	success    bool
+	Context       context.Context
+	Cancel        context.CancelFunc
+	Dev           *model.Dev
+	Namespace     *apiv1.Namespace
+	isSwap        bool
+	retry         bool
+	Client        *kubernetes.Clientset
+	RestConfig    *rest.Config
+	Pod           string
+	Forwarder     forwarder
+	Disconnect    chan error
+	CommandResult chan error
+	Exit          chan error
+	Sy            *syncthing.Syncthing
+	cleaned       chan struct{}
+	success       bool
 }
 
 // Forwarder is an interface for the port-forwarding features

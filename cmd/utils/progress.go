@@ -62,7 +62,7 @@ type readCloser struct {
 func (c *readCloser) Close() error { return c.close() }
 
 // RenderProgressBar displays a progress bar
-func RenderProgressBar(prefix string, current float64, scalingFactor float64) string {
+func RenderProgressBar(prefix string, current, scalingFactor float64) string {
 	var sb strings.Builder
 	_, _ = sb.WriteString(prefix)
 	_, _ = sb.WriteString("[")
