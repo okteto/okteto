@@ -233,7 +233,7 @@ func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 			log.Debugf("exit signal received, starting shutdown sequence")
 		} else {
 			log.Infof("okteto up failed: %s", err)
-			up.updateStateFile(failed)
+			up.updateStateFileWithMessage(failed, err.Error())
 			return err
 		}
 	}
