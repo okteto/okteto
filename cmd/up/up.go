@@ -194,6 +194,8 @@ func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
+	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
+
 	go up.activate(autoDeploy, build, resetSyncthing)
 
 	select {
@@ -227,20 +229,22 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 		}
 	}
 
+	isRetry := false
+
 	for {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		up.Disconnect = make(chan error, 1)
 		up.CommandResult = make(chan error, 1)
 		up.cleaned = make(chan string, 1)
 
-		d, create, err := up.getCurrentDeployment(autoDeploy)
+		d, create, err := up.getCurrentDeployment(autoDeploy, isRetry)
 		if err != nil {
 			log.Infof("failed to get deployment %s/%s: %s", up.Dev.Namespace, up.Dev.Name, err)
 			up.Exit <- err
 			return
 		}
 
-		if up.retry && !deployments.IsDevModeOn(d) {
+		if isRetry && !deployments.IsDevModeOn(d) {
 			log.Information("Development container has been deactivated")
 			up.Exit <- nil
 			return
@@ -254,17 +258,13 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 			return
 		}
 
-		if !up.retry {
-			analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
+		if !isRetry {
 			if build {
 				if err := up.buildDevImage(d, create); err != nil {
 					up.Exit <- fmt.Errorf("error building dev image: %s", err)
 					return
 				}
 			}
-		} else if !deployments.IsDevModeOn(d) {
-			up.Exit <- fmt.Errorf("Development container has been deactivated by an external command")
-			return
 		}
 
 		if err := up.devMode(d, create); err != nil {
@@ -286,7 +286,7 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
 		log.Success("Development container activated")
 
-		if err := up.sync(resetSyncthing && !up.retry); err != nil {
+		if err := up.sync(resetSyncthing && !isRetry); err != nil {
 
 			if !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
 				log.Yellow("\nConnection lost to your development container, reconnecting...\n")
@@ -300,11 +300,11 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
 		up.success = true
 
-		if up.retry {
+		if isRetry {
 			analytics.TrackReconnect(true, up.getClusterType(), up.isSwap)
 		}
 
-		up.retry = true
+		isRetry = true
 
 		log.Success("Files synchronized")
 
@@ -358,7 +358,7 @@ func (up *upContext) shouldRetry(err error) bool {
 	return false
 }
 
-func (up *upContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, bool, error) {
+func (up *upContext) getCurrentDeployment(autoDeploy, isRetry bool) (*appsv1.Deployment, bool, error) {
 	d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
 		if d.Annotations[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
@@ -367,7 +367,7 @@ func (up *upContext) getCurrentDeployment(autoDeploy bool) (*appsv1.Deployment, 
 		return d, false, nil
 	}
 
-	if !errors.IsNotFound(err) || up.retry {
+	if !errors.IsNotFound(err) || isRetry {
 		return nil, false, fmt.Errorf("couldn't get deployment %s/%s, please try again: %s", up.Dev.Namespace, up.Dev.Name, err)
 	}
 

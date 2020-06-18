@@ -30,7 +30,6 @@ type upContext struct {
 	Dev           *model.Dev
 	Namespace     *apiv1.Namespace
 	isSwap        bool
-	retry         bool
 	Client        *kubernetes.Clientset
 	RestConfig    *rest.Config
 	Pod           string
