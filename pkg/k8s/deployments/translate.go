@@ -455,6 +455,7 @@ func TranslateOktetoSyncSecret(spec *apiv1.PodSpec, name string) {
 		}
 	}
 
+	var mode int32 = 0444
 	v := apiv1.Volume{
 		Name: oktetoSyncSecretVolume,
 		VolumeSource: apiv1.VolumeSource{
@@ -464,14 +465,17 @@ func TranslateOktetoSyncSecret(spec *apiv1.PodSpec, name string) {
 					{
 						Key:  "config.xml",
 						Path: "config.xml",
+						Mode: &mode,
 					},
 					{
 						Key:  "cert.pem",
 						Path: "cert.pem",
+						Mode: &mode,
 					},
 					{
 						Key:  "key.pem",
 						Path: "key.pem",
+						Mode: &mode,
 					},
 				},
 			},
