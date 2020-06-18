@@ -219,6 +219,16 @@ func GetToken() (*Token, error) {
 	return currentToken, nil
 }
 
+//IsAuthenticated returns if the user is authenticated
+func IsAuthenticated() bool {
+	t, err := GetToken()
+	if err != nil {
+		log.Infof("error getting okteto token: %s", err)
+		return false
+	}
+	return t.Token != ""
+}
+
 // GetUserID returns the userID of the authenticated user
 func GetUserID() string {
 	t, err := GetToken()
