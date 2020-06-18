@@ -59,6 +59,7 @@ func Init() *cobra.Command {
 			}
 
 			log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
+
 			if devPath == utils.DefaultDevManifest {
 				log.Information("Run 'okteto up' to activate your development container")
 			} else {
