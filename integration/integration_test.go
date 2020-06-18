@@ -35,6 +35,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	ps "github.com/mitchellh/go-ps"
+	upCmd "github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/syncthing"
