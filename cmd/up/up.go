@@ -723,15 +723,15 @@ func (up *upContext) startSyncthing(resetSyncthing bool) error {
 		if up.Dev.PersistentVolumeEnabled() {
 			if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
 				return errors.UserError{
-					E:    fmt.Errorf("Folder '%s' is not writable by user %d", up.Dev.MountPath, userID),
-					Hint: fmt.Sprintf("Set 'securityContext.runAsUser: %d' in your okteto manifest\n    After that, run 'okteto down -v' to reset the synchronization service and try 'okteto up' again", userID),
+					E:    fmt.Errorf("User %d doesn't have write permissions for the %s directory", userID, up.Dev.MountPath),
+					Hint: fmt.Sprintf("Set 'securityContext.runAsUser: %d' in your okteto manifest\n    After that, run 'okteto down -v' to reset the synchronization service and run 'okteto up' again", userID),
 				}
 			}
 		} else {
 			if pods.OktetoFolderINotWritable(up.Context, up.Dev, up.Client) {
 				return errors.UserError{
-					E:    fmt.Errorf("Folder '%s' is not writable by user %d", up.Dev.MountPath, userID),
-					Hint: fmt.Sprintf("Give the user %d write privileges to '%s' in your development image\n    Alternatively, enable 'persistentVolume.enabled: true' in your okteto manifest\n    After that, try 'okteto up' again", userID, up.Dev.MountPath),
+					E:    fmt.Errorf("User %d doesn't have write permissions for the %s directory", userID, up.Dev.MountPath),
+					Hint: fmt.Sprintf("Update your development image to grant user %d write permissions to %s\n    Alternatively, enable 'persistentVolume.enabled: true' in your okteto manifest\n    After that, run 'okteto up' again", userID, up.Dev.MountPath),
 				}
 			}
 		}
