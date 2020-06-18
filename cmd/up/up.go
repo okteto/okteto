@@ -20,8 +20,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -29,7 +27,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -172,13 +169,11 @@ func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) er
 		up.Dev.Namespace = namespace
 	}
 
-	ns, err := namespaces.Get(up.Dev.Namespace, up.Client)
+	up.Namespace, err = namespaces.Get(up.Dev.Namespace, up.Client)
 	if err != nil {
 		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
 		return fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
 	}
-
-	up.Namespace = ns
 
 	if !namespaces.IsOktetoAllowed(up.Namespace) {
 		return fmt.Errorf("'okteto up' is not allowed in the current namespace")
@@ -903,26 +898,4 @@ func printDisplayContext(dev *model.Dev) {
 		}
 	}
 	fmt.Println()
-}
-
-// createPIDFile creates a PID file to track Up state and existence
-func createPIDFile(ns, dpName string) error {
-	filePath := filepath.Join(config.GetDeploymentHome(ns, dpName), "okteto.pid")
-	file, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("Unable to create PID file at %s", filePath)
-	}
-	defer file.Close()
-	if _, err := file.WriteString(strconv.Itoa(os.Getpid())); err != nil {
-		return fmt.Errorf("Unable to write to PID file at %s", filePath)
-	}
-	return nil
-}
-
-// cleanPIDFile deletes PID file after Up finishes
-func cleanPIDFile(ns, dpName string) {
-	filePath := filepath.Join(config.GetDeploymentHome(ns, dpName), "okteto.pid")
-	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
-		log.Infof("Unable to delete PID file at %s", filePath)
-	}
 }
