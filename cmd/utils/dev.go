@@ -80,6 +80,15 @@ func AskYesNo(q string) (bool, error) {
 	return answer == "y", nil
 }
 
+//AskIfOktetoInit asks if okteto init should be executed
+func AskIfOktetoInit(devPath string) bool {
+	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it? [y/n] ", devPath))
+	if err != nil {
+		return false
+	}
+	return result
+}
+
 //AskIfDeploy asks if a new deployment must be created
 func AskIfDeploy(name, namespace string) error {
 	deploy, err := AskYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", name, namespace))

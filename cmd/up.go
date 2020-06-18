@@ -136,7 +136,7 @@ func Up() *cobra.Command {
 
 			utils.CheckLocalWatchesConfiguration()
 
-			dev, err := utils.LoadDev(devPath)
+			dev, err := loadDevOrInit(namespace, devPath)
 			if err != nil {
 				return err
 			}
@@ -166,6 +166,29 @@ func Up() *cobra.Command {
 	cmd.Flags().BoolVarP(&forcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().BoolVarP(&resetSyncthing, "reset", "", false, "reset the file synchronization database")
 	return cmd
+}
+
+func loadDevOrInit(namespace, devPath string) (*model.Dev, error) {
+	dev, err := utils.LoadDev(devPath)
+	if err == nil {
+		return dev, nil
+	}
+	if !strings.Contains(err.Error(), "okteto init") {
+		return nil, err
+	}
+	if !utils.AskIfOktetoInit(devPath) {
+		return nil, err
+	}
+
+	workDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("unkown current folder: %s", err)
+	}
+	if err := executeInit(namespace, devPath, "", workDir, false); err != nil {
+		return nil, err
+	}
+	log.Success(fmt.Sprintf("Okteto manifest (%s) created", devPath))
+	return utils.LoadDev(devPath)
 }
 
 //RunUp starts the up sequence
