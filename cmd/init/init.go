@@ -117,7 +117,7 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 			dev, err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("Deployment '%s' successfully analized", d.Name))
+				log.Success(fmt.Sprintf("Deployment '%s' successfully analyzed", d.Name))
 			} else {
 				log.Yellow(fmt.Sprintf("Analysis for deployment '%s' failed: %s", d.Name, err))
 			}
@@ -246,7 +246,7 @@ func askForContainer(d *appsv1.Deployment) (string, error) {
 	}
 	return askForOptions(
 		options,
-		fmt.Sprintf("The deployment '%s' has %d containers. Select the container you want to replace with your development container?", d.Name, len(d.Spec.Template.Spec.Containers)),
+		fmt.Sprintf("The deployment '%s' has %d containers. Select the container you want to replace with your development container:", d.Name, len(d.Spec.Template.Spec.Containers)),
 	)
 }
 
