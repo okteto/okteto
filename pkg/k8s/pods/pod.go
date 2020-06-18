@@ -294,6 +294,16 @@ func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	return parseUserID(devPodLogs)
 }
 
+//OktetoFolderINotWritable returns tru if there is an error due to writable permissions
+func OktetoFolderINotWritable(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) bool {
+	devPodLogs, err := GetDevPodLogs(ctx, dev, false, c)
+	if err != nil {
+		log.Errorf("failed to access development container logs: %s", err)
+		return false
+	}
+	return strings.Contains(devPodLogs, fmt.Sprintf("\"%s\" is not writeable by", dev.MountPath))
+}
+
 func parseUserID(output string) int64 {
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {

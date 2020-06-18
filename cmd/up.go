@@ -734,14 +734,22 @@ func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 			userID := pods.GetDevPodUserID(up.Context, up.Dev, up.Client)
 			if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
 				return errors.UserError{
-					E:    fmt.Errorf("Failed to connect to the synchronization service"),
-					Hint: fmt.Sprintf("You are using a non-root container. Set the securityContext.runAsUser field to the user '%d' in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional).\n    After that, run 'okteto down -v' to reset the synchronization service and try again.", userID),
+					E:    fmt.Errorf("Folder '%s' is not writable by user %d", up.Dev.MountPath, userID),
+					Hint: fmt.Sprintf("Set 'securityContext.runAsUser: %d' in your Okteto manifest\n    After that, run 'okteto down -v' to reset the synchronization service and try 'okteto up' again", userID),
+				}
+			}
+		} else {
+			userID := pods.GetDevPodUserID(up.Context, up.Dev, up.Client)
+			if pods.OktetoFolderINotWritable(up.Context, up.Dev, up.Client) {
+				return errors.UserError{
+					E:    fmt.Errorf("Folder '%s' is not writable by user %d", up.Dev.MountPath, userID),
+					Hint: fmt.Sprintf("Give the user %d write privileges to '%s' in your development image\n    Alternatively, enable 'persitentVolume.enabled: true' in your Okteto manifest\n    After that, try 'okteto up' again", userID, up.Dev.MountPath),
 				}
 			}
 		}
 		return errors.UserError{
 			E:    fmt.Errorf("Failed to connect to the synchronization service"),
-			Hint: fmt.Sprintf("Check your development container logs for errors: 'kubectl logs %s'.\n    If you are using secrets, check that your container can write to the destination path of your secrets.\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
+			Hint: fmt.Sprintf("Check your development container logs for errors: 'kubectl logs %s'\n    If you are using secrets, check that your container can write to the destination path of your secrets\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
 		}
 	}
 
