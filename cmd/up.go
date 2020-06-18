@@ -509,6 +509,14 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		return err
 	}
 
+	log.Infof("local syncthing intialized: gui -> %d, sync -> %d", up.Sy.GUIAddress, up.Sy.ListenAddress)
+
+	log.Infof("remote syncthing intialized: gui -> %d, sync -> %d", up.Sy.RemoteGUIPort, up.Sy.RemotePort)
+
+	if err := up.Sy.SaveConfig(up.Dev); err != nil {
+		log.Infof("error saving syncthing object: %s", err)
+	}
+
 	if err := up.Sy.Stop(true); err != nil {
 		log.Infof("failed to stop existing syncthing: %s", err)
 	}

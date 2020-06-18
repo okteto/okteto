@@ -87,6 +87,8 @@ type Syncthing struct {
 	RemoteGUIAddress string       `yaml:"remote"`
 	RemoteGUIPort    int          `yaml:"-"`
 	RemotePort       int          `yaml:"-"`
+	LocalGUIPort     int          `yaml:"-"`
+	LocalPort        int          `yaml:"-"`
 	Source           string       `yaml:"-"`
 	Type             string       `yaml:"-"`
 	IgnoreDelete     bool         `yaml:"-"`
@@ -174,6 +176,8 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
 		RemoteGUIAddress: fmt.Sprintf("localhost:%d", remoteGUIPort),
+		LocalGUIPort:     guiPort,
+		LocalPort:        listenPort,
 		RemoteGUIPort:    remoteGUIPort,
 		RemotePort:       remotePort,
 		Source:           dev.DevDir,
@@ -181,12 +185,6 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		IgnoreDelete:     true,
 	}
 
-	if err := s.Save(dev); err != nil {
-		log.Infof("error saving syncthing object: %s", err)
-	}
-
-	log.Infof("local syncthing intialized: gui -> %d, sync -> %d", guiPort, listenPort)
-	log.Infof("remote syncthing intialized: gui -> %d, sync -> %d", remoteGUIPort, remotePort)
 	return s, nil
 }
 
@@ -295,15 +293,18 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	for i := 0; ; i++ {
 		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false)
 		if err == nil {
-			log.Debugf("syncthing local=%t responded to the ping", local)
+			log.Infof("syncthing local=%t is ready", local)
 			return nil
 		}
 
-		log.Debugf("syncthing local=%t is not ready yet: %s", local, err)
+		if i%5 == 0 {
+			log.Debugf("syncthing local=%t is not ready yet: %s", local, err)
+		}
 
 		if time.Now().After(timeout) {
-			return fmt.Errorf("syncthing local=%t not responding after 15s", local)
+			return fmt.Errorf("syncthing local=%t not responding after %s", local, to.String())
 		}
+
 		select {
 		case <-ticker.C:
 			continue
@@ -604,8 +605,8 @@ func (s *Syncthing) Stop(force bool) error {
 	return nil
 }
 
-// Save saves the syncthing object in the dev home folder
-func (s *Syncthing) Save(dev *model.Dev) error {
+// SaveConfig saves the syncthing object in the dev home folder
+func (s *Syncthing) SaveConfig(dev *model.Dev) error {
 	marshalled, err := yaml.Marshal(s)
 	if err != nil {
 		return err

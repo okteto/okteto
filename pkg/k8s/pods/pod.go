@@ -287,6 +287,11 @@ func parseUserID(output string) int64 {
 		return -1
 	}
 
+	if lines[0] == "" {
+		log.Info("development container logs are empty. USER cannot be inferred")
+		return -1
+	}
+
 	if !strings.HasPrefix(lines[0], "USER:") {
 		log.Infof("USER entry not not found in first development container log line: %s", lines[0])
 		return -1
