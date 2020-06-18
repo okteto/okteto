@@ -194,7 +194,7 @@ func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	go up.Activate(autoDeploy, build, resetSyncthing)
+	go up.activate(autoDeploy, build, resetSyncthing)
 
 	select {
 	case <-stop:
@@ -212,8 +212,8 @@ func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 	return nil
 }
 
-// Activate activates the development container
-func (up *upContext) Activate(autoDeploy, build, resetSyncthing bool) {
+// activate activates the development container
+func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
 	var state *term.State
 	inFd, isTerm := term.GetFdInfo(os.Stdin)
