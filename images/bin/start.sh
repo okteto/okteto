@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 userID="$(id -u)"
 echo "USER:$userID"
 if [ -d "/var/okteto/bin" ]; then
@@ -10,7 +12,17 @@ if [ -d "/var/okteto/bin" ]; then
   fi
 fi
 
-set -e
+echo "Creating marker file $OKTETO_MARKER_PATH ..."
+oktetoFolder=$(dirname "$OKTETO_MARKER_PATH")
+
+if [ ! -w "${oktetoFolder}" ]; then
+    echo \"${oktetoFolder}\" is not writeable by $userID
+    exit 1
+fi
+
+mkdir -p "${oktetoFolder}"
+touch $OKTETO_MARKER_PATH
+
 remote=0
 while getopts ":s:r" opt; do
   case $opt in
@@ -37,10 +49,6 @@ while getopts ":s:r" opt; do
       ;;
   esac
 done
-
-echo "Creating marker file $OKTETO_MARKER_PATH ..."
-mkdir -p "$(dirname "$OKTETO_MARKER_PATH")"
-touch $OKTETO_MARKER_PATH
 
 syncthingHome=/var/syncthing
 echo "Copying configuration files to $syncthingHome ..."

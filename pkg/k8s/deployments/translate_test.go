@@ -33,6 +33,8 @@ import (
 
 var (
 	rootUser int64
+	mode444  int32 = 0444
+	mode420  int32 = 420
 )
 
 func Test_translateWithVolumes(t *testing.T) {
@@ -45,7 +47,6 @@ func Test_translateWithVolumes(t *testing.T) {
 	var runAsUser int64 = 100
 	var runAsGroup int64 = 101
 	var fsGroup int64 = 102
-	var mode int32 = 420
 	manifest := []byte(fmt.Sprintf(`name: web
 namespace: n
 container: dev
@@ -141,14 +142,17 @@ services:
 										{
 											Key:  "config.xml",
 											Path: "config.xml",
+											Mode: &mode444,
 										},
 										{
 											Key:  "cert.pem",
 											Path: "cert.pem",
+											Mode: &mode444,
 										},
 										{
 											Key:  "key.pem",
 											Path: "key.pem",
+											Mode: &mode444,
 										},
 									},
 								},
@@ -172,7 +176,7 @@ services:
 										{
 											Key:  "dev-secret-remote",
 											Path: "remote",
-											Mode: &mode,
+											Mode: &mode420,
 										},
 									},
 								},
@@ -468,14 +472,17 @@ image: web:latest`)
 										{
 											Key:  "config.xml",
 											Path: "config.xml",
+											Mode: &mode444,
 										},
 										{
 											Key:  "cert.pem",
 											Path: "cert.pem",
+											Mode: &mode444,
 										},
 										{
 											Key:  "key.pem",
 											Path: "key.pem",
+											Mode: &mode444,
 										},
 									},
 								},
