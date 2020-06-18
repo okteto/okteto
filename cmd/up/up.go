@@ -293,13 +293,13 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 			}
 		}
 
-		if err := up.devMode(d, create); err != nil {
-			up.Exit <- fmt.Errorf("couldn't activate your development container: %s", err)
+		if err := up.initializeSyncthing(); err != nil {
+			up.Exit <- err
 			return
 		}
 
-		if err := up.initializeSyncthing(); err != nil {
-			up.Exit <- err
+		if err := up.devMode(d, create); err != nil {
+			up.Exit <- fmt.Errorf("couldn't activate your development container: %s", err)
 			return
 		}
 
