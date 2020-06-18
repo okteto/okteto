@@ -100,25 +100,25 @@ func Up() *cobra.Command {
 
 			utils.CheckLocalWatchesConfiguration()
 
-			dev, err := utils.LoadDev(devPath)
+			dev, err := loadDev(devPath, namespace, remote, forcePull)
 			if err != nil {
 				return err
-			}
-
-			if err := dev.UpdateNamespace(namespace); err != nil {
-				return err
-			}
-
-			if remote > 0 {
-				dev.RemotePort = remote
 			}
 
 			if _, ok := os.LookupEnv("OKTETO_AUTODEPLOY"); ok {
 				autoDeploy = true
 			}
 
-			err = RunUp(dev, autoDeploy, build, forcePull, resetSyncthing)
-			return err
+			up := &upContext{
+				Dev:  dev,
+				Exit: make(chan error, 1),
+			}
+
+			if err := up.start(autoDeploy, build, resetSyncthing); err != nil {
+				return err
+			}
+
+			return nil
 		},
 	}
 
@@ -132,23 +132,27 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-//RunUp starts the up sequence
-func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) error {
-
-	up := &upContext{
-		Dev:  dev,
-		Exit: make(chan error, 1),
+func loadDev(devPath, namespace string, remote int, forcePull bool) (*model.Dev, error) {
+	dev, err := utils.LoadDev(devPath)
+	if err != nil {
+		return nil, err
 	}
 
-	if up.Dev.ExecuteOverSSHEnabled() {
+	if err := dev.UpdateNamespace(namespace); err != nil {
+		return nil, err
+	}
+
+	if remote > 0 {
+		dev.RemotePort = remote
+	}
+
+	if dev.ExecuteOverSSHEnabled() {
 		log.Info("execute over SSH mode enabled")
 	}
 
-	defer up.shutdown()
-
-	if up.Dev.RemoteModeEnabled() {
+	if dev.RemoteModeEnabled() {
 		if err := sshKeys(); err != nil {
-			return err
+			return nil, err
 		}
 
 		dev.LoadRemote(ssh.GetPublicKey())
@@ -157,6 +161,11 @@ func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) er
 	if forcePull {
 		dev.LoadForcePull()
 	}
+
+	return dev, nil
+}
+
+func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 
 	var namespace string
 	var err error
@@ -226,7 +235,6 @@ func (up *upContext) Activate(autoDeploy, build, resetSyncthing bool) {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		up.Disconnect = make(chan error, 1)
 		up.Running = make(chan error, 1)
-		up.ErrChan = make(chan error, 1)
 		up.cleaned = make(chan struct{}, 1)
 
 		d, create, err := up.getCurrentDeployment(autoDeploy)
@@ -283,6 +291,7 @@ func (up *upContext) Activate(autoDeploy, build, resetSyncthing bool) {
 		log.Success("Development container activated")
 
 		if err := up.sync(resetSyncthing && !up.retry); err != nil {
+
 			if !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
 				log.Yellow("\nConnection lost to your development container, reconnecting...\n")
 				up.shutdown()
@@ -390,9 +399,6 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 
 			log.Info("command completed")
 			return nil
-
-		case err := <-up.ErrChan:
-			log.Yellow(err.Error())
 
 		case err := <-up.Disconnect:
 			return err
