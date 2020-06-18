@@ -16,10 +16,9 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
 
 	"github.com/okteto/okteto/cmd/namespace"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
@@ -33,8 +32,8 @@ func Login() *cobra.Command {
 	token := ""
 	cmd := &cobra.Command{
 		Use:   "login [url]",
-		Short: "Log into Okteto Cloud",
-		Long: `Log into Okteto Cloud
+		Short: "Log into Okteto",
+		Long: `Log into Okteto
 
 Run
     $ okteto login
@@ -55,7 +54,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 
 			oktetoURL := okteto.CloudURL
 			if len(args) > 0 {
-				u, err := parseURL(args[0])
+				u, err := utils.ParseURL(args[0])
 				if err != nil {
 					return fmt.Errorf("malformed login URL")
 				}
@@ -89,7 +88,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 				log.Success("Logged in as %s @ %s", u.GithubID, oktetoURL)
 			}
 
-			err = namespace.RunNamespace(ctx, "", "")
+			err = namespace.RunNamespace(ctx, "")
 			if err != nil {
 				log.Infof("error fetching your Kubernetes credentials: %s", err)
 				log.Hint("    Run `okteto namespace` to switch your context and download your Kubernetes credentials.")
@@ -106,17 +105,4 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 
 	cmd.Flags().StringVarP(&token, "token", "t", "", "API token for authentication.  (optional)")
 	return cmd
-}
-
-func parseURL(u string) (string, error) {
-	url, err := url.Parse(u)
-	if err != nil {
-		return "", fmt.Errorf("%s is not a valid URL", u)
-	}
-
-	if url.Scheme == "" {
-		url.Scheme = "https"
-	}
-
-	return strings.TrimRight(url.String(), "/"), nil
 }

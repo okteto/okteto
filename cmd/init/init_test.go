@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package init
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 )
 
-func Test_executeInit(t *testing.T) {
+func TestRun(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
@@ -33,7 +33,7 @@ func Test_executeInit(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
-	if err := executeInit("", p, "golang", dir, false); err != nil {
+	if err := Run("", p, "golang", dir, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -46,11 +46,11 @@ func Test_executeInit(t *testing.T) {
 		t.Errorf("got %s, expected %s", d.Image, "okteto/golang:1")
 	}
 
-	if err := executeInit("", p, "java", dir, false); err == nil {
+	if err := Run("", p, "java", dir, false); err == nil {
 		t.Fatalf("manifest was overwritten: %s", err)
 	}
 
-	if err := executeInit("", p, "ruby", dir, true); err != nil {
+	if err := Run("", p, "ruby", dir, true); err != nil {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 

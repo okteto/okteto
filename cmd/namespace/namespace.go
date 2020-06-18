@@ -15,12 +15,15 @@ package namespace
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -28,7 +31,6 @@ import (
 
 //Namespace fetch credentials for a cluster namespace
 func Namespace(ctx context.Context) *cobra.Command {
-	var oktetoURL string
 	cmd := &cobra.Command{
 		Use:   "namespace [name]",
 		Short: "Downloads k8s credentials for a namespace",
@@ -44,18 +46,26 @@ func Namespace(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err := RunNamespace(ctx, namespace, oktetoURL)
+			err := RunNamespace(ctx, namespace)
 			analytics.TrackNamespace(err == nil)
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&oktetoURL, "url", "u", "", "Okteto URL (optional)")
 	return cmd
 }
 
 //RunNamespace starts the kubeconfig sequence
-func RunNamespace(ctx context.Context, namespace, oktetoURL string) error {
-	if oktetoURL != "" && okteto.GetURL() != oktetoURL {
+func RunNamespace(ctx context.Context, namespace string) error {
+	if !okteto.IsAuthenticated() {
+		if !askIfLogin() {
+			return errors.ErrNotLogged
+		}
+
+		oktetoURL, err := askOktetoURL()
+		if err != nil {
+			return err
+		}
+
 		u, err := login.WithBrowser(ctx, oktetoURL)
 		if err != nil {
 			return err
@@ -85,4 +95,30 @@ func RunNamespace(ctx context.Context, namespace, oktetoURL string) error {
 
 	log.Success("Updated context '%s' in '%s'", parsedHost, kubeConfigFile)
 	return nil
+}
+
+func askIfLogin() bool {
+	result, err := utils.AskYesNo("Authentication required. Do you want to log into Okteto? [y/n]: ")
+	if err != nil {
+		return false
+	}
+	return result
+}
+
+//askOktetoURL prompts for okteto URL
+func askOktetoURL() (string, error) {
+	var oktetoURL string
+
+	fmt.Print(fmt.Sprintf("What is the URL of your Okteto instance? [%s]: ", okteto.CloudURL))
+	if _, err := fmt.Scanln(&oktetoURL); err != nil {
+		oktetoURL = okteto.CloudURL
+	}
+
+	u, err := utils.ParseURL(oktetoURL)
+	if err != nil {
+		return "", fmt.Errorf("malformed login URL")
+	}
+	oktetoURL = u
+
+	return oktetoURL, nil
 }

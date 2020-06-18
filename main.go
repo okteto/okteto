@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/okteto/okteto/cmd"
+	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
@@ -77,7 +78,7 @@ func main() {
 	root.AddCommand(cmd.Delete(ctx))
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(stack.Stack(ctx))
-	root.AddCommand(cmd.Init())
+	root.AddCommand(initCMD.Init())
 	root.AddCommand(up.Up())
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Push(ctx))

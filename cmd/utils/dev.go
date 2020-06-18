@@ -15,6 +15,8 @@ package utils
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -80,6 +82,15 @@ func AskYesNo(q string) (bool, error) {
 	return answer == "y", nil
 }
 
+//AskIfOktetoInit asks if okteto init should be executed
+func AskIfOktetoInit(devPath string) bool {
+	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it? [y/n] ", devPath))
+	if err != nil {
+		return false
+	}
+	return result
+}
+
 //AskIfDeploy asks if a new deployment must be created
 func AskIfDeploy(name, namespace string) error {
 	deploy, err := AskYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", name, namespace))
@@ -93,4 +104,18 @@ func AskIfDeploy(name, namespace string) error {
 		}
 	}
 	return nil
+}
+
+//ParseURL validates a URL
+func ParseURL(u string) (string, error) {
+	url, err := url.Parse(u)
+	if err != nil {
+		return "", fmt.Errorf("%s is not a valid URL", u)
+	}
+
+	if url.Scheme == "" {
+		url.Scheme = "https"
+	}
+
+	return strings.TrimRight(url.String(), "/"), nil
 }

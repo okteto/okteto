@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/term"
+	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
@@ -100,10 +101,12 @@ func Up() *cobra.Command {
 
 			checkLocalWatchesConfiguration()
 
-			dev, err := loadDev(devPath, namespace, remote, forcePull)
+			dev, err := loadDevOrInit(namespace, devPath)
 			if err != nil {
 				return err
 			}
+
+			loadDevOverrides(dev, namespace, forcePull, remote)
 
 			if _, ok := os.LookupEnv("OKTETO_AUTODEPLOY"); ok {
 				autoDeploy = true
@@ -128,14 +131,35 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-func loadDev(devPath, namespace string, remote int, forcePull bool) (*model.Dev, error) {
+func loadDevOrInit(namespace, devPath string) (*model.Dev, error) {
 	dev, err := utils.LoadDev(devPath)
-	if err != nil {
+
+	if err == nil {
+		return dev, nil
+	}
+	if !strings.Contains(err.Error(), "okteto init") {
+		return nil, err
+	}
+	if !utils.AskIfOktetoInit(devPath) {
 		return nil, err
 	}
 
-	if err := dev.UpdateNamespace(namespace); err != nil {
+	workDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("unknown current folder: %s", err)
+	}
+	if err := initCMD.Run(namespace, devPath, "", workDir, false); err != nil {
 		return nil, err
+	}
+
+	log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
+	return utils.LoadDev(devPath)
+}
+
+func loadDevOverrides(dev *model.Dev, namespace string, forcePull bool, remote int) error {
+
+	if err := dev.UpdateNamespace(namespace); err != nil {
+		return err
 	}
 
 	if remote > 0 {
@@ -148,7 +172,7 @@ func loadDev(devPath, namespace string, remote int, forcePull bool) (*model.Dev,
 
 	if dev.RemoteModeEnabled() {
 		if err := sshKeys(); err != nil {
-			return nil, err
+			return err
 		}
 
 		dev.LoadRemote(ssh.GetPublicKey())
@@ -158,7 +182,7 @@ func loadDev(devPath, namespace string, remote int, forcePull bool) (*model.Dev,
 		dev.LoadForcePull()
 	}
 
-	return dev, nil
+	return nil
 }
 
 func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
@@ -697,15 +721,23 @@ func (up *upContext) startSyncthing(resetSyncthing bool) error {
 			userID := pods.GetDevPodUserID(up.Context, up.Dev, up.Client)
 			if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
 				return errors.UserError{
-					E:    fmt.Errorf("failed to connect to the synchronization service"),
-					Hint: fmt.Sprintf("You are using a non-root container. Set the securityContext.runAsUser field to the user '%d' in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional).\n    After that, run 'okteto down -v' to reset the synchronization service and try again.", userID),
+					E:    fmt.Errorf("Folder '%s' is not writable by user %d", up.Dev.MountPath, userID),
+					Hint: fmt.Sprintf("Set 'securityContext.runAsUser: %d' in your Okteto manifest\n    After that, run 'okteto down -v' to reset the synchronization service and try 'okteto up' again", userID),
 				}
 			}
 		}
 
+		userID := pods.GetDevPodUserID(up.Context, up.Dev, up.Client)
+		if pods.OktetoFolderINotWritable(up.Context, up.Dev, up.Client) {
+			return errors.UserError{
+				E:    fmt.Errorf("Folder '%s' is not writable by user %d", up.Dev.MountPath, userID),
+				Hint: fmt.Sprintf("Give the user %d write privileges to '%s' in your development image\n    Alternatively, enable 'persistentVolume.enabled: true' in your Okteto manifest\n    After that, try 'okteto up' again", userID, up.Dev.MountPath),
+			}
+		}
+
 		return errors.UserError{
-			E:    fmt.Errorf("failed to connect to the synchronization service"),
-			Hint: fmt.Sprintf("Check your development container logs for errors: 'kubectl logs %s'.\n    If you are using secrets, check that your container can write to the destination path of your secrets.\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
+			E:    fmt.Errorf("Failed to connect to the synchronization service"),
+			Hint: fmt.Sprintf("Check your development container logs for errors: 'kubectl logs %s'\n    If you are using secrets, check that your container can write to the destination path of your secrets\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
 		}
 	}
 
