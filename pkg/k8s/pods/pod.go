@@ -288,7 +288,7 @@ func parseUserID(output string) int64 {
 	}
 
 	if !strings.HasPrefix(lines[0], "USER:") {
-		log.Infof("USER entry not not found in first development container log line: %s", lines[0])
+		log.Infof("USER is not the first log line: %s", lines[0])
 		return -1
 	}
 
