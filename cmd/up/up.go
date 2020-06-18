@@ -106,7 +106,9 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			loadDevOverrides(dev, namespace, forcePull, remote)
+			if err := loadDevOverrides(dev, namespace, forcePull, remote); err != nil {
+				return err
+			}
 
 			if _, ok := os.LookupEnv("OKTETO_AUTODEPLOY"); ok {
 				autoDeploy = true

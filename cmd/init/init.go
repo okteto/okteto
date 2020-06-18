@@ -39,17 +39,6 @@ const (
 	createDeployment  = "create new deployment"
 )
 
-var wrongImageNames = map[string]bool{
-	"T":     true,
-	"TRUE":  true,
-	"Y":     true,
-	"YES":   true,
-	"F":     true,
-	"FALSE": true,
-	"N":     true,
-	"NO":    true,
-}
-
 //Init automatically generates the manifest
 func Init() *cobra.Command {
 	var namespace string
@@ -233,7 +222,7 @@ func askForDeployment(namespace string, c *kubernetes.Clientset) (*appsv1.Deploy
 	options = append(options, createDeployment)
 	option, err := askForOptions(
 		options,
-		"Select the deployment you want to replace with your development container:",
+		"Select the deployment you want to develop:",
 	)
 	if err != nil {
 		return nil, err
