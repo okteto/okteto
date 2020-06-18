@@ -117,7 +117,7 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 			dev, err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("Deployment '%s' successfully analized", d.Name))
+				log.Success(fmt.Sprintf("Deployment '%s' successfully analyzed", d.Name))
 			} else {
 				log.Yellow(fmt.Sprintf("Analysis for deployment '%s' failed: %s", d.Name, err))
 			}

@@ -138,7 +138,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 		return nil, err
 	}
 
-	log.Infof("replicaset %s with revison %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
+	log.Infof("replicaset %s with revision %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
 
 	return GetPodByReplicaSet(rs, labels, c)
 }
