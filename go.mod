@@ -28,7 +28,8 @@ require (
 	github.com/gofrs/flock v0.7.1
 	github.com/gogo/googleapis v1.3.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
-	github.com/google/go-github/v28 v28.1.1
+	github.com/google/go-github v17.0.0+incompatible
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/hashicorp/go-getter v1.0.2

@@ -86,7 +86,7 @@ func Status() *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executing")
 	cmd.Flags().BoolVarP(&showInfo, "info", "i", false, "show syncthing links for troubleshooting the synchronization service")
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "watch for changes")
@@ -108,7 +108,7 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 		if progress == 100 {
 			message = "Files synchronized"
 		} else {
-			message = renderProgressBar(postfix, progress, pbScaling)
+			message = utils.RenderProgressBar(postfix, progress, pbScaling)
 		}
 		spinner.Update(message)
 		time.Sleep(2 * time.Second)

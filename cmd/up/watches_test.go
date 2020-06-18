@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package up
 
 import (
 	"testing"
@@ -51,7 +51,7 @@ func Test_IsWatchesConfigurationTooLow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsWatchesConfigurationTooLow(tt.value)
+			result := isWatchesConfigurationTooLow(tt.value)
 			if tt.expected != result {
 				t.Errorf("expected %t got %t in test %s", tt.expected, result, tt.name)
 			}

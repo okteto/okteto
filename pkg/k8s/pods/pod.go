@@ -214,23 +214,26 @@ func execCommandInPod(ctx context.Context, p *apiv1.Pod, container string, cmd [
 	return result, nil
 }
 
-//MonitorDevPod monitores the state of the pod
-func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kubernetes.Clientset, reporter chan string) (*apiv1.Pod, error) {
+//WaitUntilRunning waits for the pod to get to running state, sending updates via reporter
+func WaitUntilRunning(ctx context.Context, dev *model.Dev, podName string, c *kubernetes.Clientset, reporter chan string) error {
 	opts := metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("metadata.name=%s", pod.Name),
+		FieldSelector: fmt.Sprintf("metadata.name=%s", podName),
 	}
 
 	watchPod, err := c.CoreV1().Pods(dev.Namespace).Watch(opts)
 	if err != nil {
-		return nil, err
+		return err
 	}
+
 	opts = metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("involvedObject.kind=Pod,involvedObject.name=%s", pod.Name),
+		FieldSelector: fmt.Sprintf("involvedObject.kind=Pod,involvedObject.name=%s", podName),
 	}
+
 	watchPodEvents, err := c.CoreV1().Events(dev.Namespace).Watch(opts)
 	if err != nil {
-		return nil, err
+		return err
 	}
+
 	for {
 		select {
 		case event := <-watchPod.ResultChan():
@@ -241,10 +244,10 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 			}
 			log.Infof("dev pod %s updated to %s", pod.Name, pod.Status.Phase)
 			if pod.Status.Phase == apiv1.PodRunning {
-				return pod, nil
+				return nil
 			}
 			if pod.DeletionTimestamp != nil {
-				return nil, fmt.Errorf("development container has been removed")
+				return fmt.Errorf("development container has been removed")
 			}
 		case event := <-watchPodEvents.ResultChan():
 			e, ok := event.Object.(*v1.Event)
@@ -253,14 +256,14 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 				continue
 			}
 
-			log.Infof("pod %s event: %s", pod.Name, e.Message)
+			log.Infof("pod %s event: %s", podName, e.Message)
 			switch e.Reason {
 			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
 				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
 					continue
 				}
 
-				return nil, fmt.Errorf(e.Message)
+				return fmt.Errorf(e.Message)
 			case "FailedAttachVolume", "FailedMount":
 				reporter <- fmt.Sprintf("%s: retrying", e.Message)
 			default:
@@ -270,7 +273,7 @@ func MonitorDevPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kuber
 			}
 		case <-ctx.Done():
 			log.Debug("cancelling call to monitor dev pod")
-			return nil, ctx.Err()
+			return ctx.Err()
 		}
 	}
 }
@@ -308,6 +311,11 @@ func parseUserID(output string) int64 {
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {
 		log.Info("development container logs not generated. USER cannot be inferred")
+		return -1
+	}
+
+	if lines[0] == "" {
+		log.Info("development container logs are empty. USER cannot be inferred")
 		return -1
 	}
 

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package init
 
 import (
 	"fmt"
@@ -35,21 +35,9 @@ import (
 
 const (
 	stignore          = ".stignore"
-	defaultManifest   = "okteto.yml"
 	secondaryManifest = "okteto.yaml"
 	createDeployment  = "create new deployment"
 )
-
-var wrongImageNames = map[string]bool{
-	"T":     true,
-	"TRUE":  true,
-	"Y":     true,
-	"YES":   true,
-	"F":     true,
-	"FALSE": true,
-	"N":     true,
-	"NO":    true,
-}
 
 //Init automatically generates the manifest
 func Init() *cobra.Command {
@@ -66,12 +54,13 @@ func Init() *cobra.Command {
 				return err
 			}
 
-			if err := executeInit(namespace, devPath, l, workDir, overwrite); err != nil {
+			if err := Run(namespace, devPath, l, workDir, overwrite); err != nil {
 				return err
 			}
 
-			log.Success(fmt.Sprintf("Okteto manifest (%s) created", devPath))
-			if devPath == defaultManifest {
+			log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
+
+			if devPath == utils.DefaultDevManifest {
 				log.Information("Run 'okteto up' to activate your development container")
 			} else {
 				log.Information("Run 'okteto up -f %s' to activate your development container", devPath)
@@ -81,12 +70,13 @@ func Init() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace target for generating the okteto manifest")
-	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "overwrite existing manifest file")
 	return cmd
 }
 
-func executeInit(namespace, devPath, language, workDir string, overwrite bool) error {
+// Run runs the sequence to generate okteto.yml
+func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 	fmt.Println("This command walks you through creating an okteto manifest.")
 	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	fmt.Println("See https://okteto.com/docs/reference/manifest for the official documentation about the okteto manifest.")
@@ -233,7 +223,7 @@ func askForDeployment(namespace string, c *kubernetes.Clientset) (*appsv1.Deploy
 	options = append(options, createDeployment)
 	option, err := askForOptions(
 		options,
-		"Select the deployment you want to replace with your development container:",
+		"Select the deployment you want to develop:",
 	)
 	if err != nil {
 		return nil, err

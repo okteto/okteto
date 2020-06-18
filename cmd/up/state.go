@@ -11,9 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package up
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -33,7 +34,11 @@ const (
 	failed        upState = "failed"
 )
 
-func (up *UpContext) updateStateFile(state upState) {
+func (up *upContext) updateStateFile(state upState) {
+	up.updateStateFileWithMessage(state, "")
+}
+
+func (up *upContext) updateStateFileWithMessage(state upState, message string) {
 	if up.Dev.Namespace == "" {
 		log.Info("can't update state file, namespace is empty")
 	}
@@ -44,7 +49,13 @@ func (up *UpContext) updateStateFile(state upState) {
 
 	s := config.GetStateFile(up.Dev.Namespace, up.Dev.Name)
 	log.Debugf("updating statefile %s: '%s'", s, state)
-	if err := ioutil.WriteFile(s, []byte(state), 0644); err != nil {
+
+	m := string(state)
+	if message != "" {
+		m = fmt.Sprintf("%s:%s", m, message)
+	}
+
+	if err := ioutil.WriteFile(s, []byte(m), 0644); err != nil {
 		log.Infof("can't update state file, %s", err)
 	}
 }

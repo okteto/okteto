@@ -11,31 +11,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package up
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 )
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
-	up := UpContext{}
-	up.Running = make(chan error, 1)
-	up.Running <- nil
+	up := upContext{}
+	up.CommandResult = make(chan error, 1)
+	up.CommandResult <- nil
 	err := up.waitUntilExitOrInterrupt()
 	if err != nil {
 		t.Errorf("exited with error instead of nil: %s", err)
 	}
 
-	up.Running <- fmt.Errorf("custom-error")
+	up.CommandResult <- fmt.Errorf("custom-error")
 	err = up.waitUntilExitOrInterrupt()
 	if err == nil {
 		t.Errorf("didn't report proper error")
@@ -103,33 +98,6 @@ func Test_printDisplayContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			printDisplayContext(tt.dev)
 		})
-	}
-
-}
-
-func TestCreatePIDFile(t *testing.T) {
-	deploymentName := "deployment"
-	namespace := "namespace"
-	if err := createPIDFile(namespace, deploymentName); err != nil {
-		t.Fatal("unable to create pid file")
-	}
-
-	filePath := filepath.Join(config.GetDeploymentHome(namespace, deploymentName), "okteto.pid")
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		t.Fatal("didn't create pid file")
-	}
-
-	filePID, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		t.Fatal("pid file is corrupted")
-	}
-	if string(filePID) != strconv.Itoa(os.Getpid()) {
-		t.Fatal("pid file content is invalid")
-	}
-
-	cleanPIDFile(namespace, deploymentName)
-	if _, err := os.Create(filePath); os.IsExist(err) {
-		t.Fatal("didn't delete pid file")
 	}
 
 }

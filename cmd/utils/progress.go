@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package utils
 
 import (
 	"fmt"
@@ -23,7 +23,8 @@ import (
 	"github.com/cheggaaa/pb/v3"
 )
 
-type progressBar struct {
+// ProgressBar tracks progress of the download
+type ProgressBar struct {
 	// lock everything below
 	lock sync.Mutex
 }
@@ -31,7 +32,7 @@ type progressBar struct {
 // TrackProgress instantiates a new progress bar that will
 // display the progress of stream until closed.
 // total can be 0.
-func (cpb *progressBar) TrackProgress(src string, currentSize, totalSize int64, stream io.ReadCloser) io.ReadCloser {
+func (cpb *ProgressBar) TrackProgress(src string, currentSize, totalSize int64, stream io.ReadCloser) io.ReadCloser {
 	cpb.lock.Lock()
 	defer cpb.lock.Unlock()
 
@@ -60,7 +61,8 @@ type readCloser struct {
 
 func (c *readCloser) Close() error { return c.close() }
 
-func renderProgressBar(prefix string, current float64, scalingFactor float64) string {
+// RenderProgressBar displays a progress bar
+func RenderProgressBar(prefix string, current, scalingFactor float64) string {
 	var sb strings.Builder
 	_, _ = sb.WriteString(prefix)
 	_, _ = sb.WriteString("[")

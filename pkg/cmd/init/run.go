@@ -69,9 +69,15 @@ func getRunningPod(d *appsv1.Deployment, container string, c *kubernetes.Clients
 		return nil, err
 	}
 	pod, err := pods.GetPodByReplicaSet(rs, "", c)
+
 	if err != nil {
 		return nil, err
 	}
+
+	if pod == nil {
+		return nil, fmt.Errorf("no pod is running for deployment '%s'", d.Name)
+	}
+
 	if pod.Status.Phase != apiv1.PodRunning {
 		return nil, fmt.Errorf("no pod is running for deployment '%s'", d.Name)
 	}
