@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package up
 
 import (
 	"fmt"
@@ -23,8 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 )
 
-//CheckLocalWatchesConfiguration shows a warning if local watcches are too low
-func CheckLocalWatchesConfiguration() {
+func checkLocalWatchesConfiguration() {
 	if runtime.GOOS != "linux" {
 		return
 	}
@@ -36,7 +35,7 @@ func CheckLocalWatchesConfiguration() {
 		return
 	}
 
-	if IsWatchesConfigurationTooLow(string(f)) {
+	if isWatchesConfigurationTooLow(string(f)) {
 		log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low.")
 		log.Yellow("This can affect Okteto's file synchronization performance.")
 		log.Yellow("We recommend you to raise it to at least 524288 to ensure proper performance.")
@@ -44,8 +43,7 @@ func CheckLocalWatchesConfiguration() {
 	}
 }
 
-//IsWatchesConfigurationTooLow returns if watches configuration is too low
-func IsWatchesConfigurationTooLow(value string) bool {
+func isWatchesConfigurationTooLow(value string) bool {
 	value = strings.TrimSuffix(string(value), "\n")
 	if value == "" {
 		log.Infof("max_user_watches is empty '%s'", value)

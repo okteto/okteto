@@ -98,7 +98,7 @@ func Up() *cobra.Command {
 				}
 			}
 
-			utils.CheckLocalWatchesConfiguration()
+			checkLocalWatchesConfiguration()
 
 			dev, err := loadDev(devPath, namespace, remote, forcePull)
 			if err != nil {
@@ -311,7 +311,7 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 		go func() {
 			output := <-up.cleaned
 
-			if utils.IsWatchesConfigurationTooLow(output) {
+			if isWatchesConfigurationTooLow(output) {
 				log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 				log.Yellow("This can affect okteto's file synchronization performance.")
 				log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
