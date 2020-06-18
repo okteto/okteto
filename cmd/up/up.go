@@ -231,7 +231,7 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 		up.Context, up.Cancel = context.WithCancel(context.Background())
 		up.Disconnect = make(chan error, 1)
 		up.CommandResult = make(chan error, 1)
-		up.cleaned = make(chan struct{}, 1)
+		up.cleaned = make(chan string, 1)
 
 		d, create, err := up.getCurrentDeployment(autoDeploy)
 		if err != nil {
@@ -307,10 +307,17 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 		up.retry = true
 
 		log.Success("Files synchronized")
-		printDisplayContext(up.Dev)
 
 		go func() {
-			<-up.cleaned
+			output := <-up.cleaned
+
+			if utils.IsWatchesConfigurationTooLow(output) {
+				log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
+				log.Yellow("This can affect okteto's file synchronization performance.")
+				log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
+			}
+
+			printDisplayContext(up.Dev)
 			up.CommandResult <- up.runCommand()
 		}()
 
@@ -793,16 +800,11 @@ func (up *upContext) cleanCommand() {
 
 	if err != nil {
 		log.Infof("failed to clean session: %s", err)
-		up.cleaned <- struct{}{}
+		up.cleaned <- ""
 		return
 	}
 
-	if utils.IsWatchesConfigurationTooLow(out.String()) {
-		log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
-		log.Yellow("This can affect Okteto's file synchronization performance.")
-		log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
-	}
-	up.cleaned <- struct{}{}
+	up.cleaned <- out.String()
 }
 
 func (up *upContext) runCommand() error {

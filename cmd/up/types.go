@@ -39,7 +39,7 @@ type upContext struct {
 	CommandResult chan error
 	Exit          chan error
 	Sy            *syncthing.Syncthing
-	cleaned       chan struct{}
+	cleaned       chan string
 	success       bool
 }
 
