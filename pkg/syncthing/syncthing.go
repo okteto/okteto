@@ -302,14 +302,14 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 		}
 
 		if time.Now().After(timeout) {
-			return fmt.Errorf("syncthing local=%t not responding after %s", local, to.String())
+			return fmt.Errorf("syncthing local=%t didn't respond after %s", local, to.String())
 		}
 
 		select {
 		case <-ticker.C:
 			continue
 		case <-ctx.Done():
-			log.Debugf("cancelling call to 'rest/system/ping' local=%t syncthing API", local)
+			log.Debugf("cancelling syncthing.WaitForPing local=%t", local)
 			return ctx.Err()
 		}
 	}

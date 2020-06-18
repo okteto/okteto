@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/stack"
+	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -77,7 +78,7 @@ func main() {
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(stack.Stack(ctx))
 	root.AddCommand(cmd.Init())
-	root.AddCommand(cmd.Up())
+	root.AddCommand(up.Up())
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Push(ctx))
 	root.AddCommand(cmd.Status())

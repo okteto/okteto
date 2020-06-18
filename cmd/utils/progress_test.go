@@ -11,9 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package utils
 
-import "testing"
+import (
+	"testing"
+)
 
 func Test_renderProgressBar(t *testing.T) {
 	var tests = []struct {
@@ -45,7 +47,7 @@ func Test_renderProgressBar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := renderProgressBar("", tt.progress, 0.5)
+			actual := RenderProgressBar("", tt.progress, 0.5)
 			if tt.expected != actual {
 				t.Errorf("\nexpected:\n%s\ngot:\n%s", tt.expected, actual)
 			}
@@ -56,6 +58,6 @@ func Test_renderProgressBar(t *testing.T) {
 
 func Test_renderProgressBarFuzz(t *testing.T) {
 	for i := 0.0; i < 100.0; i = i + 0.01 {
-		renderProgressBar("", i, 0.35)
+		RenderProgressBar("", i, 0.35)
 	}
 }

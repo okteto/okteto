@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package up
 
 import (
 	"time"
@@ -26,7 +26,7 @@ func downloadSyncthing() error {
 	t := time.NewTicker(1 * time.Second)
 	var err error
 	for i := 0; i < 3; i++ {
-		p := &progressBar{}
+		p := &utils.ProgressBar{}
 		err = syncthing.Install(p)
 		if err == nil {
 			return nil

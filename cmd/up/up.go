@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package up
 
 import (
 	"bytes"
@@ -158,7 +158,7 @@ func Up() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", defaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
@@ -226,7 +226,9 @@ func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) er
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+
 	go up.Activate(autoDeploy, build, resetSyncthing)
+
 	select {
 	case <-stop:
 		log.Debugf("CTRL+C received, starting shutdown sequence")
@@ -235,7 +237,7 @@ func RunUp(dev *model.Dev, autoDeploy, build, forcePull, resetSyncthing bool) er
 		if err == nil {
 			log.Debugf("exit signal received, starting shutdown sequence")
 		} else {
-			log.Infof("operation failed: %s", err)
+			log.Infof("okteto up failed: %s", err)
 			up.updateStateFile(failed)
 			return err
 		}
@@ -301,6 +303,11 @@ func (up *UpContext) Activate(autoDeploy, build, resetSyncthing bool) {
 
 		if err := up.devMode(d, create); err != nil {
 			up.Exit <- fmt.Errorf("couldn't activate your development container: %s", err)
+			return
+		}
+
+		if err := up.initializeSyncthing(); err != nil {
+			up.Exit <- err
 			return
 		}
 
@@ -494,32 +501,16 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 
 	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
 	if devContainer == nil {
-		return fmt.Errorf("Container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
+		return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 	}
+
 	up.Dev.Container = devContainer.Name
+
 	if up.Dev.Image == "" {
 		up.Dev.Image = devContainer.Image
 	}
 
 	up.updateStateFile(starting)
-
-	var err error
-	up.Sy, err = syncthing.New(up.Dev)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("local syncthing intialized: gui -> %d, sync -> %d", up.Sy.GUIAddress, up.Sy.ListenAddress)
-
-	log.Infof("remote syncthing intialized: gui -> %d, sync -> %d", up.Sy.RemoteGUIPort, up.Sy.RemotePort)
-
-	if err := up.Sy.SaveConfig(up.Dev); err != nil {
-		log.Infof("error saving syncthing object: %s", err)
-	}
-
-	if err := up.Sy.Stop(true); err != nil {
-		log.Infof("failed to stop existing syncthing: %s", err)
-	}
 
 	log.Info("create deployment secrets")
 	if err := secrets.Create(up.Dev, up.Client, up.Sy); err != nil {
@@ -555,6 +546,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		}
 
 	}
+
 	if create {
 		if err := services.CreateDev(up.Dev, up.Client); err != nil {
 			return err
@@ -586,8 +578,7 @@ func (up *UpContext) devMode(d *appsv1.Deployment, create bool) error {
 		}
 	}()
 
-	pod, err = pods.MonitorDevPod(up.Context, up.Dev, pod, up.Client, reporter)
-	if err != nil {
+	if err := pods.WaitUntilRunning(up.Context, up.Dev, pod.Name, up.Client, reporter); err != nil {
 		return err
 	}
 
@@ -685,6 +676,28 @@ func (up *UpContext) sshForwards() error {
 	return up.Forwarder.Start(up.Pod, up.Dev.Namespace)
 }
 
+func (up *UpContext) initializeSyncthing() error {
+	sy, err := syncthing.New(up.Dev)
+	if err != nil {
+		return err
+	}
+
+	up.Sy = sy
+
+	log.Infof("local syncthing intialized: gui -> %d, sync -> %d", up.Sy.GUIAddress, up.Sy.ListenAddress)
+	log.Infof("remote syncthing intialized: gui -> %d, sync -> %d", up.Sy.RemoteGUIPort, up.Sy.RemotePort)
+
+	if err := up.Sy.SaveConfig(up.Dev); err != nil {
+		log.Infof("error saving syncthing object: %s", err)
+	}
+
+	if err := up.Sy.Stop(true); err != nil {
+		log.Infof("failed to stop existing syncthing processes: %s", err)
+	}
+
+	return nil
+}
+
 func (up *UpContext) sync(resetSyncthing bool) error {
 	if err := up.startSyncthing(resetSyncthing); err != nil {
 		return err
@@ -708,17 +721,19 @@ func (up *UpContext) startSyncthing(resetSyncthing bool) error {
 	}
 
 	if err := up.Sy.WaitForPing(up.Context, false); err != nil {
+
 		if up.Dev.PersistentVolumeEnabled() {
 			userID := pods.GetDevPodUserID(up.Context, up.Dev, up.Client)
 			if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
 				return errors.UserError{
-					E:    fmt.Errorf("Failed to connect to the synchronization service"),
+					E:    fmt.Errorf("failed to connect to the synchronization service"),
 					Hint: fmt.Sprintf("You are using a non-root container. Set the securityContext.runAsUser field to the user '%d' in your Okteto manifest (https://okteto.com/docs/reference/manifest/index.html#securityContext-object-optional).\n    After that, run 'okteto down -v' to reset the synchronization service and try again.", userID),
 				}
 			}
 		}
+
 		return errors.UserError{
-			E:    fmt.Errorf("Failed to connect to the synchronization service"),
+			E:    fmt.Errorf("failed to connect to the synchronization service"),
 			Hint: fmt.Sprintf("Check your development container logs for errors: 'kubectl logs %s'.\n    If you are using secrets, check that your container can write to the destination path of your secrets.\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
 		}
 	}
@@ -759,7 +774,7 @@ func (up *UpContext) synchronizeFiles() error {
 		for c := range reporter {
 			if c > previous {
 				// todo: how to calculate how many characters can the line fit?
-				pb := renderProgressBar(postfix, c, pbScaling)
+				pb := utils.RenderProgressBar(postfix, c, pbScaling)
 				spinner.Update(pb)
 				previous = c
 			}
@@ -779,7 +794,7 @@ func (up *UpContext) synchronizeFiles() error {
 	}
 
 	// render to 100
-	spinner.Update(renderProgressBar(postfix, 100, pbScaling))
+	spinner.Update(utils.RenderProgressBar(postfix, 100, pbScaling))
 
 	up.Sy.Type = "sendreceive"
 	up.Sy.IgnoreDelete = false

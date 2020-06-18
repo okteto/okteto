@@ -14,14 +14,9 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"runtime"
 
-	"github.com/Masterminds/semver"
-	"github.com/google/go-github/v28/github"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -35,77 +30,4 @@ func Version() *cobra.Command {
 			return nil
 		},
 	}
-}
-
-func upgradeAvailable() string {
-	current, err := semver.NewVersion(config.VersionString)
-	if err != nil {
-		return ""
-	}
-
-	v, err := GetLatestVersionFromGithub()
-	if err != nil {
-		log.Infof("failed to get latest version from github: %s", err)
-		return ""
-	}
-
-	log.Debugf("latest version: %s", v)
-
-	if len(v) > 0 {
-		latest, err := semver.NewVersion(v)
-		if err != nil {
-			log.Infof("failed to parse latest version '%s': %s", v, err)
-			return ""
-		}
-
-		// check if it's a minor or major change, we don't notify on revision
-		if shouldNotify(latest, current) {
-			return v
-		}
-	}
-
-	return ""
-}
-
-// GetLatestVersionFromGithub returns the latest okteto version from Github
-func GetLatestVersionFromGithub() (string, error) {
-	client := github.NewClient(nil)
-	ctx := context.Background()
-	releases, _, err := client.Repositories.ListReleases(ctx, "okteto", "okteto", &github.ListOptions{PerPage: 5})
-	if err != nil {
-		return "", fmt.Errorf("fail to get releases from github: %s", err)
-	}
-
-	for _, r := range releases {
-		if !r.GetPrerelease() && !r.GetDraft() {
-			return r.GetTagName(), nil
-		}
-	}
-
-	return "", fmt.Errorf("failed to find latest release")
-}
-
-func shouldNotify(latest, current *semver.Version) bool {
-	if current.GreaterThan(latest) {
-		return false
-	}
-
-	// check if it's a minor or major change, we don't notify on patch
-	if latest.Major() > current.Major() {
-		return true
-	}
-
-	if latest.Minor() > current.Minor() {
-		return true
-	}
-
-	return false
-}
-
-func getUpgradeCommand() string {
-	if runtime.GOOS == "windows" {
-		return `https://github.com/okteto/okteto/releases/latest/download/okteto.exe`
-	}
-
-	return `curl https://get.okteto.com -sSfL | sh`
 }
