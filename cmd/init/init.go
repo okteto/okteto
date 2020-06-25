@@ -36,7 +36,7 @@ import (
 const (
 	stignore          = ".stignore"
 	secondaryManifest = "okteto.yaml"
-	createDeployment  = "create new deployment"
+	defaultInitValues = "Use default values"
 )
 
 //Init automatically generates the manifest
@@ -105,7 +105,12 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 		if err != nil {
 			return err
 		}
-		if d != nil {
+		if d == nil {
+			dev, err = linguist.GetDevDefaults(language, workDir, false)
+			if err != nil {
+				return err
+			}
+		} else {
 			dev.Container = container
 			if container == "" {
 				container = d.Spec.Template.Spec.Containers[0].Name
@@ -220,7 +225,7 @@ func askForDeployment(namespace string, c *kubernetes.Clientset) (*appsv1.Deploy
 	for i := range dList {
 		options = append(options, dList[i].Name)
 	}
-	options = append(options, createDeployment)
+	options = append(options, defaultInitValues)
 	option, err := askForOptions(
 		options,
 		"Select the deployment you want to develop:",
@@ -228,7 +233,7 @@ func askForDeployment(namespace string, c *kubernetes.Clientset) (*appsv1.Deploy
 	if err != nil {
 		return nil, err
 	}
-	if option == createDeployment {
+	if option == defaultInitValues {
 		return nil, nil
 	}
 	for i := range dList {
