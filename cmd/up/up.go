@@ -223,6 +223,7 @@ func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
 
 	go up.activate(autoDeploy, build, resetSyncthing)
+	defer up.shutdown()
 
 	select {
 	case <-stop:
