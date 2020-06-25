@@ -188,7 +188,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	return s, nil
 }
 
-func (s *Syncthing) cleanupDaemon(pid int) error {
+func (s *Syncthing) cleanupDaemon(pid int, wait bool) error {
 	process, err := ps.FindProcess(pid)
 	if process == nil && err == nil {
 		return nil
@@ -204,7 +204,7 @@ func (s *Syncthing) cleanupDaemon(pid int) error {
 		return nil
 	}
 
-	err = terminate(pid)
+	err = terminate(pid, wait)
 	if err == nil {
 		log.Infof("terminated syncthing with pid %d", pid)
 	}
@@ -590,7 +590,7 @@ func (s *Syncthing) Stop(force bool) error {
 		}
 	}
 
-	if err := s.cleanupDaemon(pid); err != nil {
+	if err := s.cleanupDaemon(pid, force); err != nil {
 		return err
 	}
 

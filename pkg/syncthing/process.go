@@ -20,7 +20,7 @@ import (
 	"strings"
 )
 
-func terminate(pid int) error {
+func terminate(pid int, wait bool) error {
 	proc := os.Process{Pid: pid}
 	if err := proc.Signal(os.Interrupt); err != nil {
 		if strings.Contains(err.Error(), "process already finished") {
@@ -30,7 +30,9 @@ func terminate(pid int) error {
 		return err
 	}
 
-	defer proc.Wait() // nolint: errcheck
+	if wait {
+		defer proc.Wait() // nolint: errcheck
+	}
 
 	return nil
 }
