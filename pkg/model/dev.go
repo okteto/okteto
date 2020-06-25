@@ -88,7 +88,8 @@ var (
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
 	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
 
-	rootUser int64 = 0
+	rootUser int64
+
 	// DevReplicas is the number of dev replicas
 	DevReplicas int32 = 1
 
