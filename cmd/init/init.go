@@ -188,6 +188,7 @@ func getDeployment(namespace string) (*appsv1.Deployment, string, error) {
 func supportsPersistentVolumes(namespace string) bool {
 	c, _, currentNamespace, err := k8Client.GetLocal()
 	if err != nil {
+		log.Debugf("deactivating persistent volumes: %s", err.Error())
 		return false
 	}
 	if namespace == "" {
@@ -196,6 +197,7 @@ func supportsPersistentVolumes(namespace string) bool {
 
 	ns, err := namespaces.Get(namespace, c)
 	if err != nil {
+		log.Debugf("deactivating persistent volumes: %s", err.Error())
 		return false
 	}
 
@@ -205,6 +207,7 @@ func supportsPersistentVolumes(namespace string) bool {
 
 	stClassList, err := c.StorageV1().StorageClasses().List(metav1.ListOptions{})
 	if err != nil {
+		log.Debugf("deactivating persistent volumes: %s", err.Error())
 		return false
 	}
 
