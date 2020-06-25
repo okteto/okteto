@@ -16,6 +16,7 @@ package up
 import (
 	"context"
 
+	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 	apiv1 "k8s.io/api/core/v1"
@@ -40,6 +41,9 @@ type upContext struct {
 	Sy            *syncthing.Syncthing
 	cleaned       chan string
 	success       bool
+	inFd          uintptr
+	isTerm        bool
+	stateTerm     *term.State
 }
 
 // Forwarder is an interface for the port-forwarding features

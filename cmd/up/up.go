@@ -244,11 +244,10 @@ func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 // activate activates the development container
 func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
-	var state *term.State
-	inFd, isTerm := term.GetFdInfo(os.Stdin)
-	if isTerm {
+	up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
+	if up.isTerm {
 		var err error
-		state, err = term.SaveState(inFd)
+		up.stateTerm, err = term.SaveState(up.inFd)
 		if err != nil {
 			log.Infof("failed to save the state of the terminal: %s", err)
 			up.Exit <- fmt.Errorf("failed to save the state of the terminal")
@@ -349,13 +348,6 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 		}()
 
 		prevError := up.waitUntilExitOrInterrupt()
-
-		if isTerm {
-			log.Debug("Restoring terminal")
-			if err := term.RestoreTerminal(inFd, state); err != nil {
-				log.Infof("failed to restore terminal: %s", err)
-			}
-		}
 
 		if prevError != nil {
 			if up.shouldRetry(prevError) {
@@ -906,6 +898,13 @@ func (up *upContext) shutdown() {
 	log.Infof("stopping forwarder")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
+	}
+
+	if up.isTerm {
+		log.Debug("Restoring terminal")
+		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
+			log.Infof("failed to restore terminal: %s", err)
+		}
 	}
 
 	log.Info("completed shutdown sequence")
