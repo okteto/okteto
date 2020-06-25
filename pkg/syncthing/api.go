@@ -45,8 +45,13 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
+		s.Client.Timeout = 2 * time.Second
 	} else {
 		urlPath = path.Join(s.RemoteGUIAddress, url)
+		s.Client.Timeout = 5 * time.Second
+	}
+	if url == "rest/events" || url == "rest/db/completion" {
+		s.Client.Timeout = 20 * time.Second
 	}
 
 	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), bytes.NewBuffer(body))
