@@ -149,6 +149,11 @@ func init() {
 				Remote: 9000,
 			},
 		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/root/.cache/pip",
+			},
+		},
 	}
 	languageDefaultsWithDeployment[python] = languageDefault{
 		forward: []model.Forward{},
@@ -156,6 +161,11 @@ func init() {
 			{
 				Local:  9000,
 				Remote: 9000,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/root/.cache/pip",
 			},
 		},
 	}
@@ -248,12 +258,22 @@ func init() {
 				Remote: 1234,
 			},
 		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/usr/local/bundle/cache",
+			},
+		},
 	}
 	languageDefaultsWithDeployment[ruby] = languageDefault{
 		forward: []model.Forward{
 			{
 				Local:  1234,
 				Remote: 1234,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/usr/local/bundle/cache",
 			},
 		},
 	}
@@ -304,6 +324,11 @@ func init() {
 				Remote: 9000,
 			},
 		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/root/.composer/cache",
+			},
+		},
 	}
 	languageDefaultsWithDeployment[php] = languageDefault{
 		forward: []model.Forward{},
@@ -311,6 +336,11 @@ func init() {
 			{
 				Local:  9000,
 				Remote: 9000,
+			},
+		},
+		volumes: []model.Volume{
+			{
+				MountPath: "/root/.composer/cache",
 			},
 		},
 	}
