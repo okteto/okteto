@@ -38,7 +38,7 @@ func Login() *cobra.Command {
 Run
     $ okteto login
 
-and this command will open your browser to ask your authentication details and retreive your API token. You can script it by using the --token parameter.
+and this command will open your browser to ask your authentication details and retrieve your API token. You can script it by using the --token parameter.
 
 By default, this will log into cloud.okteto.com. If you want to log into your Okteto Enterprise instance, specify a URL. For example, run
 

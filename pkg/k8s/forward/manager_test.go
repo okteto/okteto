@@ -59,7 +59,7 @@ func TestStop(t *testing.T) {
 	}
 
 	pf.activeServices = map[string]*active{
-		"svc": &active{
+		"svc": {
 			readyChan: make(chan struct{}, 1),
 			stopChan:  make(chan struct{}, 1),
 		},
@@ -186,19 +186,19 @@ func Test_getServicePorts(t *testing.T) {
 		{
 			name: "services-with-port",
 			forwards: map[int]model.Forward{
-				80:   model.Forward{Local: 80, Remote: 8090},
-				8080: model.Forward{Local: 8080, Remote: 8090, ServiceName: "svc", Service: true},
-				22:   model.Forward{Local: 22000, Remote: 22},
+				80:   {Local: 80, Remote: 8090},
+				8080: {Local: 8080, Remote: 8090, ServiceName: "svc", Service: true},
+				22:   {Local: 22000, Remote: 22},
 			},
 			expected: []string{"8080:8090"},
 		},
 		{
 			name: "services-with-multiple-ports",
 			forwards: map[int]model.Forward{
-				80:   model.Forward{Local: 80, Remote: 8090},
-				8080: model.Forward{Local: 8080, Remote: 8090, ServiceName: "svc", Service: true},
-				22:   model.Forward{Local: 22000, Remote: 22},
-				8089: model.Forward{Local: 8089, Remote: 80890, ServiceName: "svc", Service: true},
+				80:   {Local: 80, Remote: 8090},
+				8080: {Local: 8080, Remote: 8090, ServiceName: "svc", Service: true},
+				22:   {Local: 22000, Remote: 22},
+				8089: {Local: 8089, Remote: 80890, ServiceName: "svc", Service: true},
 			},
 			expected: []string{"8080:8090", "8089:80890"},
 		},
