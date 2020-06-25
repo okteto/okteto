@@ -227,7 +227,7 @@ forward:
 			}
 
 			if d.PersistentVolumeEnabled() {
-				t.Errorf("peristent volume was enabled by default")
+				t.Errorf("persistent volume was enabled by default")
 			}
 		})
 	}
