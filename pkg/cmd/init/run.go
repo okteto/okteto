@@ -114,6 +114,7 @@ func setWorkDirFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, cont
 		log.Infof("error getting workdir of the deployment: %s", err)
 		workdir = "/okteto"
 	}
+
 	dev.WorkDir = workdir
 	return dev
 }

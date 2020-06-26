@@ -94,8 +94,8 @@ func Status() *cobra.Command {
 }
 
 func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {
-	postfix := "Synchronizing your files..."
-	spinner := utils.NewSpinner(postfix)
+	suffix := "Synchronizing your files..."
+	spinner := utils.NewSpinner(suffix)
 	pbScaling := 0.30
 	spinner.Start()
 	defer spinner.Stop()
@@ -108,7 +108,7 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 		if progress == 100 {
 			message = "Files synchronized"
 		} else {
-			message = utils.RenderProgressBar(postfix, progress, pbScaling)
+			message = utils.RenderProgressBar(suffix, progress, pbScaling)
 		}
 		spinner.Update(message)
 		time.Sleep(2 * time.Second)

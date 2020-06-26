@@ -119,8 +119,8 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 				container = d.Spec.Template.Spec.Containers[0].Name
 			}
 
-			postfix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
-			spinner := utils.NewSpinner(postfix)
+			suffix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
+			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
 			dev, err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
 			spinner.Stop()
@@ -257,7 +257,7 @@ func askForLanguage() (string, error) {
 	supportedLanguages := linguist.GetSupportedLanguages()
 	return askForOptions(
 		supportedLanguages,
-		"Couldn't detect any language in current folder. Pick your project's main language from the list below:",
+		"Couldn't detect any language in the current folder. Pick your project's main language from the list below:",
 	)
 }
 
