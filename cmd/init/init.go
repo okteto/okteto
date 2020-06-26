@@ -23,6 +23,7 @@ import (
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
@@ -131,6 +132,7 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 		}
 
 		if !supportsPersistentVolumes(namespace) {
+			log.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
 			dev.Volumes = nil
 			dev.PersistentVolumeInfo = nil
 		}
@@ -186,6 +188,7 @@ func getDeployment(namespace string) (*appsv1.Deployment, string, error) {
 }
 
 func supportsPersistentVolumes(namespace string) bool {
+	log.Debugf("checking persistent volumes support in your cluster...")
 	c, _, currentNamespace, err := k8Client.GetLocal()
 	if err != nil {
 		log.Debugf("couldn't get kubernetes local client: %s", err.Error())
@@ -207,11 +210,18 @@ func supportsPersistentVolumes(namespace string) bool {
 
 	stClassList, err := c.StorageV1().StorageClasses().List(metav1.ListOptions{})
 	if err != nil {
-		log.Debugf("deactivating persistent volumes: %s", err.Error())
+		log.Debugf("error getting storage classes: %s", err.Error())
 		return false
 	}
 
-	return len(stClassList.Items) > 0
+	for i := range stClassList.Items {
+		if stClassList.Items[i].Annotations[okLabels.DefaultStorageClassAnnotation] == "true" {
+			log.Debugf("found default storage class '%s'", stClassList.Items[i].Name)
+			return true
+		}
+	}
+	log.Debugf("default storage class not found")
+	return false
 }
 
 func validateDevPath(devPath string, overwrite bool) (string, error) {
