@@ -23,10 +23,13 @@ import (
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/manifoldco/promptui"
@@ -127,6 +130,12 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 				log.Yellow(fmt.Sprintf("Analysis for deployment '%s' failed: %s", d.Name, err))
 			}
 		}
+
+		if !supportsPersistentVolumes(namespace) {
+			log.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
+			dev.Volumes = nil
+			dev.PersistentVolumeInfo = nil
+		}
 	}
 
 	if err := dev.Save(devPath); err != nil {
@@ -176,6 +185,43 @@ func getDeployment(namespace string) (*appsv1.Deployment, string, error) {
 	}
 
 	return d, container, nil
+}
+
+func supportsPersistentVolumes(namespace string) bool {
+	log.Debugf("checking persistent volumes support in your cluster...")
+	c, _, currentNamespace, err := k8Client.GetLocal()
+	if err != nil {
+		log.Debugf("couldn't get kubernetes local client: %s", err.Error())
+		return false
+	}
+	if namespace == "" {
+		namespace = currentNamespace
+	}
+
+	ns, err := namespaces.Get(namespace, c)
+	if err != nil {
+		log.Debugf("failed to get the current namespace: %s", err.Error())
+		return false
+	}
+
+	if namespaces.IsOktetoNamespace(ns) {
+		return true
+	}
+
+	stClassList, err := c.StorageV1().StorageClasses().List(metav1.ListOptions{})
+	if err != nil {
+		log.Debugf("error getting storage classes: %s", err.Error())
+		return false
+	}
+
+	for i := range stClassList.Items {
+		if stClassList.Items[i].Annotations[okLabels.DefaultStorageClassAnnotation] == "true" {
+			log.Debugf("found default storage class '%s'", stClassList.Items[i].Name)
+			return true
+		}
+	}
+	log.Debugf("default storage class not found")
+	return false
 }
 
 func validateDevPath(devPath string, overwrite bool) (string, error) {

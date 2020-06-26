@@ -46,4 +46,7 @@ const (
 
 	//FluxAnnotation indicates if the deployment ha been deployed by Flux
 	FluxAnnotation = "helm.fluxcd.io/antecedent"
+
+	//DefaultStorageClassAnnotation indicates the defaault storage class
+	DefaultStorageClassAnnotation = "storageclass.kubernetes.io/is-default-class"
 )
