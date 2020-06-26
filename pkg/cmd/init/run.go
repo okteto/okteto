@@ -115,10 +115,6 @@ func setWorkDirFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, cont
 		workdir = "/okteto"
 	}
 
-	if workdir == "/" {
-		workdir = "okteto"
-	}
-
 	dev.WorkDir = workdir
 	return dev
 }
