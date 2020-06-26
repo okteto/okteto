@@ -23,8 +23,6 @@ import (
 
 type languageDefault struct {
 	image           string
-	path            string
-	command         []string
 	environment     []model.EnvVar
 	volumes         []model.Volume
 	forward         []model.Forward
@@ -49,51 +47,37 @@ const (
 )
 
 var (
-	languageDefaults               map[string]languageDefault
-	languageDefaultsWithDeployment map[string]languageDefault
+	languageDefaults map[string]languageDefault
+	forwardDefaults  map[string][]model.Forward
 )
 
 func init() {
 	languageDefaults = make(map[string]languageDefault)
-	languageDefaultsWithDeployment = make(map[string]languageDefault)
+	forwardDefaults = make(map[string][]model.Forward)
 	languageDefaults[javascript] = languageDefault{
-		image:   "okteto/node:10",
-		path:    "/usr/src/app",
-		command: []string{"bash"},
+		image: "okteto/node:10",
 		forward: []model.Forward{
-			{
-				Local:  3000,
-				Remote: 3000,
-			},
 			{
 				Local:  9229,
 				Remote: 9229,
 			},
 		},
 	}
-	languageDefaultsWithDeployment[javascript] = languageDefault{
-		forward: []model.Forward{
-			{
-				Local:  9229,
-				Remote: 9229,
-			},
+	forwardDefaults[javascript] = []model.Forward{
+		{
+			Local:  3000,
+			Remote: 3000,
 		},
 	}
 
 	languageDefaults[golang] = languageDefault{
-		image:   "okteto/golang:1",
-		path:    "/okteto",
-		command: []string{"bash"},
+		image: "okteto/golang:1",
 		securityContext: &model.SecurityContext{
 			Capabilities: &model.Capabilities{
 				Add: []apiv1.Capability{"SYS_PTRACE"},
 			},
 		},
 		forward: []model.Forward{
-			{
-				Local:  8080,
-				Remote: 8080,
-			},
 			{
 				Local:  2345,
 				Remote: 2345,
@@ -108,41 +92,15 @@ func init() {
 			},
 		},
 	}
-	languageDefaultsWithDeployment[golang] = languageDefault{
-		image:   "okteto/golang:1",
-		path:    "/okteto",
-		command: []string{"bash"},
-		securityContext: &model.SecurityContext{
-			Capabilities: &model.Capabilities{
-				Add: []apiv1.Capability{"SYS_PTRACE"},
-			},
-		},
-		forward: []model.Forward{
-			{
-				Local:  2345,
-				Remote: 2345,
-			},
-		},
-		volumes: []model.Volume{
-			{
-				MountPath: "/go/pkg/",
-			},
-			{
-				MountPath: "/root/.cache/go-build/",
-			},
+	forwardDefaults[golang] = []model.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
 		},
 	}
 
 	languageDefaults[python] = languageDefault{
-		image:   "okteto/python:3",
-		path:    "/usr/src/app",
-		command: []string{"bash"},
-		forward: []model.Forward{
-			{
-				Local:  8080,
-				Remote: 8080,
-			},
-		},
+		image: "okteto/python:3",
 		reverse: []model.Reverse{
 			{
 				Local:  9000,
@@ -155,30 +113,16 @@ func init() {
 			},
 		},
 	}
-	languageDefaultsWithDeployment[python] = languageDefault{
-		forward: []model.Forward{},
-		reverse: []model.Reverse{
-			{
-				Local:  9000,
-				Remote: 9000,
-			},
-		},
-		volumes: []model.Volume{
-			{
-				MountPath: "/root/.cache/pip",
-			},
+	forwardDefaults[python] = []model.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
 		},
 	}
 
 	languageDefaults[gradle] = languageDefault{
-		image:   "okteto/gradle:latest",
-		path:    "/okteto",
-		command: []string{"bash"},
+		image: "okteto/gradle:latest",
 		forward: []model.Forward{
-			{
-				Local:  8080,
-				Remote: 8080,
-			},
 			{
 				Local:  5005,
 				Remote: 5005,
@@ -190,32 +134,16 @@ func init() {
 			},
 		},
 	}
-	languageDefaultsWithDeployment[gradle] = languageDefault{
-		image:   "okteto/gradle:latest",
-		path:    "/okteto",
-		command: []string{"bash"},
-		forward: []model.Forward{
-			{
-				Local:  5005,
-				Remote: 5005,
-			},
-		},
-		volumes: []model.Volume{
-			{
-				MountPath: "/home/gradle/.gradle",
-			},
+	forwardDefaults[gradle] = []model.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
 		},
 	}
 
 	languageDefaults[maven] = languageDefault{
-		image:   "okteto/maven:latest",
-		path:    "/okteto",
-		command: []string{"bash"},
+		image: "okteto/maven:latest",
 		forward: []model.Forward{
-			{
-				Local:  8080,
-				Remote: 8080,
-			},
 			{
 				Local:  5005,
 				Remote: 5005,
@@ -227,32 +155,16 @@ func init() {
 			},
 		},
 	}
-	languageDefaultsWithDeployment[maven] = languageDefault{
-		image:   "okteto/maven:latest",
-		path:    "/okteto",
-		command: []string{"bash"},
-		forward: []model.Forward{
-			{
-				Local:  5005,
-				Remote: 5005,
-			},
-		},
-		volumes: []model.Volume{
-			{
-				MountPath: "/root/.m2",
-			},
+	forwardDefaults[maven] = []model.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
 		},
 	}
 
 	languageDefaults[ruby] = languageDefault{
-		image:   "okteto/ruby:2",
-		path:    "/usr/src/app",
-		command: []string{"bash"},
+		image: "okteto/ruby:2",
 		forward: []model.Forward{
-			{
-				Local:  8080,
-				Remote: 8080,
-			},
 			{
 				Local:  1234,
 				Remote: 1234,
@@ -264,60 +176,33 @@ func init() {
 			},
 		},
 	}
-	languageDefaultsWithDeployment[ruby] = languageDefault{
-		forward: []model.Forward{
-			{
-				Local:  1234,
-				Remote: 1234,
-			},
-		},
-		volumes: []model.Volume{
-			{
-				MountPath: "/usr/local/bundle/cache",
-			},
+	forwardDefaults[ruby] = []model.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
 		},
 	}
 
 	languageDefaults[csharp] = languageDefault{
-		image:   "mcr.microsoft.com/dotnet/core/sdk",
-		command: []string{"bash"},
+		image: "mcr.microsoft.com/dotnet/core/sdk",
 		environment: []model.EnvVar{
 			{
 				Name:  "ASPNETCORE_ENVIRONMENT",
 				Value: "Development",
 			},
 		},
-		remote: 22000,
-		forward: []model.Forward{
-			{
-				Local:  5000,
-				Remote: 5000,
-			},
-		},
-	}
-	languageDefaultsWithDeployment[csharp] = languageDefault{
-		image:   "mcr.microsoft.com/dotnet/core/sdk",
-		command: []string{"bash"},
-		environment: []model.EnvVar{
-			{
-				Name:  "ASPNETCORE_ENVIRONMENT",
-				Value: "Development",
-			},
-		},
-		remote:  2222,
 		forward: []model.Forward{},
+		remote:  22000,
+	}
+	forwardDefaults[csharp] = []model.Forward{
+		{
+			Local:  5000,
+			Remote: 5000,
+		},
 	}
 
 	languageDefaults[php] = languageDefault{
-		image:   "okteto/php:7",
-		path:    "/usr/src/app",
-		command: []string{"bash"},
-		forward: []model.Forward{
-			{
-				Local:  8080,
-				Remote: 8080,
-			},
-		},
+		image: "okteto/php:7",
 		reverse: []model.Reverse{
 			{
 				Local:  9000,
@@ -330,37 +215,22 @@ func init() {
 			},
 		},
 	}
-	languageDefaultsWithDeployment[php] = languageDefault{
-		forward: []model.Forward{},
-		reverse: []model.Reverse{
-			{
-				Local:  9000,
-				Remote: 9000,
-			},
-		},
-		volumes: []model.Volume{
-			{
-				MountPath: "/root/.composer/cache",
-			},
+	forwardDefaults[php] = []model.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
 		},
 	}
 
 	languageDefaults[Unrecognized] = languageDefault{
 		image:   model.DefaultImage,
-		path:    "/okteto",
-		command: []string{"bash"},
-		forward: []model.Forward{
-			{
-				Local:  8080,
-				Remote: 8080,
-			},
-		},
-	}
-	languageDefaultsWithDeployment[Unrecognized] = languageDefault{
-		image:   model.DefaultImage,
-		path:    "/okteto",
-		command: []string{"bash"},
 		forward: []model.Forward{},
+	}
+	forwardDefaults[Unrecognized] = []model.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
 	}
 }
 
@@ -383,15 +253,12 @@ func GetSupportedLanguages() []string {
 func GetDevDefaults(language, workdir string, iAskingForDeployment bool) (*model.Dev, error) {
 	language = normalizeLanguage(language)
 	vals := languageDefaults[language]
-	if iAskingForDeployment {
-		vals = languageDefaultsWithDeployment[language]
-	}
 
 	dev := &model.Dev{
 		Image:   vals.image,
-		WorkDir: vals.path,
+		WorkDir: "/okteto",
 		Command: model.Command{
-			Values: vals.command,
+			Values: []string{"bash"},
 		},
 		Environment:     vals.environment,
 		Volumes:         vals.volumes,
@@ -400,11 +267,6 @@ func GetDevDefaults(language, workdir string, iAskingForDeployment bool) (*model
 		RemotePort:      vals.remote,
 		SecurityContext: vals.securityContext,
 	}
-	if len(dev.Volumes) > 0 {
-		dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
-			Enabled: true,
-		}
-	}
 
 	name, err := model.GetValidNameFromFolder(workdir)
 	if err != nil {
@@ -412,6 +274,16 @@ func GetDevDefaults(language, workdir string, iAskingForDeployment bool) (*model
 	}
 	dev.Name = name
 	return dev, nil
+}
+
+// SetForwardDefaults set port forward default values for the specified language
+func SetForwardDefaults(dev *model.Dev, language string) {
+	language = normalizeLanguage(language)
+	vals := forwardDefaults[language]
+	if dev.Forward == nil {
+		dev.Forward = []model.Forward{}
+	}
+	dev.Forward = append(dev.Forward, vals...)
 }
 
 func normalizeLanguage(language string) string {
