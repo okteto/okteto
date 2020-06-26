@@ -336,6 +336,7 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
 		go func() {
 			output := <-up.cleaned
+			log.Debugf("Clean command output: %s", output)
 
 			if isWatchesConfigurationTooLow(output) {
 				log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
@@ -826,7 +827,7 @@ func (up *upContext) cleanCommand() {
 
 	if err != nil {
 		log.Infof("failed to clean session: %s", err)
-		up.cleaned <- ""
+		up.cleaned <- out.String()
 		return
 	}
 
