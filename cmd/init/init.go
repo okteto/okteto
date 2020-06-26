@@ -119,8 +119,8 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 				container = d.Spec.Template.Spec.Containers[0].Name
 			}
 
-			postfix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
-			spinner := utils.NewSpinner(postfix)
+			suffix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
+			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
 			dev, err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
 			spinner.Stop()

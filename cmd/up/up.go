@@ -756,8 +756,8 @@ func (up *upContext) startSyncthing(resetSyncthing bool) error {
 }
 
 func (up *upContext) synchronizeFiles() error {
-	postfix := "Synchronizing your files..."
-	spinner := utils.NewSpinner(postfix)
+	suffix := "Synchronizing your files..."
+	spinner := utils.NewSpinner(suffix)
 	pbScaling := 0.30
 
 	up.updateStateFile(synchronizing)
@@ -771,7 +771,7 @@ func (up *upContext) synchronizeFiles() error {
 		for c := range reporter {
 			if c > previous {
 				// todo: how to calculate how many characters can the line fit?
-				pb := utils.RenderProgressBar(postfix, c, pbScaling)
+				pb := utils.RenderProgressBar(suffix, c, pbScaling)
 				spinner.Update(pb)
 				previous = c
 			}
@@ -791,7 +791,7 @@ func (up *upContext) synchronizeFiles() error {
 	}
 
 	// render to 100
-	spinner.Update(utils.RenderProgressBar(postfix, 100, pbScaling))
+	spinner.Update(utils.RenderProgressBar(suffix, 100, pbScaling))
 
 	up.Sy.Type = "sendreceive"
 	up.Sy.IgnoreDelete = false
