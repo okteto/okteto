@@ -257,7 +257,7 @@ func askForLanguage() (string, error) {
 	supportedLanguages := linguist.GetSupportedLanguages()
 	return askForOptions(
 		supportedLanguages,
-		"Couldn't detect any language in current folder. Pick your project's main language from the list below:",
+		"Couldn't detect any language in the current folder. Pick your project's main language from the list below:",
 	)
 }
 
