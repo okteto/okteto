@@ -285,6 +285,20 @@ func Exists(podName, namespace string, c kubernetes.Interface) bool {
 	return pod.GetObjectMeta().GetDeletionTimestamp() == nil
 }
 
+//Destroy destroys a pod by name
+func Destroy(podName, namespace string, c kubernetes.Interface) error {
+	err := c.CoreV1().Pods(namespace).Delete(
+		podName,
+		&metav1.DeleteOptions{
+			GracePeriodSeconds: &devTerminationGracePeriodSeconds,
+		},
+	)
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
 //GetDevPodUserID returns the user id running the dev pod
 func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) int64 {
 	devPodLogs, err := GetDevPodLogs(ctx, dev, false, c)

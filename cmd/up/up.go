@@ -352,6 +352,12 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
 		if prevError != nil {
 			if up.shouldRetry(prevError) {
+				if !up.Dev.PersistentVolumeEnabled() {
+					if err := pods.Destroy(up.Pod, up.Dev.Namespace, up.Client); err != nil {
+						up.Exit <- err
+						return
+					}
+				}
 				up.shutdown()
 				continue
 			}
