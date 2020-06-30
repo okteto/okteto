@@ -309,6 +309,16 @@ func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	return parseUserID(devPodLogs)
 }
 
+//OktetoDevPodMustBeRecreated returns true if the dev pod must be recreated
+func OktetoDevPodMustBeRecreated(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) bool {
+	devPodLogs, err := GetDevPodLogs(ctx, dev, false, c)
+	if err != nil {
+		log.Errorf("failed to access development container logs: %s", err)
+		return false
+	}
+	return strings.Contains(devPodLogs, "failing: syncthing restarted and persistent volumes are not enabled")
+}
+
 //OktetoFolderINotWritable returns tru if there is an error due to writable permissions
 func OktetoFolderINotWritable(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) bool {
 	devPodLogs, err := GetDevPodLogs(ctx, dev, false, c)

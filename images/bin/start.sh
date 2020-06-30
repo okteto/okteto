@@ -56,7 +56,7 @@ done
 
 syncthingHome=/var/syncthing
 if [ $ephemeral -eq 1 ] && [ -f ${syncthingHome}/executed ]; then
-    echo "fialing: syncthing restarted and persistent volumes are not enabled in the okteto manifest. Run 'okteto down' and try again"
+    echo "failing: syncthing restarted and persistent volumes are not enabled in the okteto manifest. Run 'okteto down' and try again"
     exit 1
 fi
 touch ${syncthingHome}/executed
