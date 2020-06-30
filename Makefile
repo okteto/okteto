@@ -46,6 +46,10 @@ integration:
 build:
 	 $(BUILDCOMMAND) -o ${BINDIR}/okteto
 
+.PHONY: build-bin-image
+build-bin-image:
+	 okteto build -t okteto/bin:1.1.21 -f images/bin/Dockerfile images/bin
+
 .PHONY: dep
 dep:
 	go mod tidy

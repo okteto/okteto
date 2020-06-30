@@ -314,7 +314,7 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
 		if err := up.sync(resetSyncthing && !isRetry); err != nil {
 
-			if !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
+			if err == errors.ErrLostSyncthing || !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
 				log.Yellow("\nConnection lost to your development container, reconnecting...\n")
 				up.shutdown()
 				continue
@@ -350,11 +350,15 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
 		prevError := up.waitUntilExitOrInterrupt()
 
-		if prevError != nil {
-			if up.shouldRetry(prevError) {
-				up.shutdown()
-				continue
+		if up.shouldRetry(prevError) {
+			if !up.Dev.PersistentVolumeEnabled() {
+				if err := pods.Destroy(up.Pod, up.Dev.Namespace, up.Client); err != nil {
+					up.Exit <- err
+					return
+				}
 			}
+			up.shutdown()
+			continue
 		}
 
 		up.Exit <- prevError
@@ -364,6 +368,8 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
 func (up *upContext) shouldRetry(err error) bool {
 	switch err {
+	case nil:
+		return false
 	case errors.ErrLostSyncthing:
 		return true
 	case errors.ErrCommandFailed:
@@ -722,6 +728,11 @@ func (up *upContext) startSyncthing(resetSyncthing bool) error {
 				}
 			}
 		} else {
+			if pods.OktetoDevPodMustBeRecreated(up.Context, up.Dev, up.Client) {
+				if err := pods.Destroy(up.Pod, up.Dev.Namespace, up.Client); err == nil {
+					return errors.ErrLostSyncthing
+				}
+			}
 			if pods.OktetoFolderINotWritable(up.Context, up.Dev, up.Client) {
 				return errors.UserError{
 					E:    fmt.Errorf("User %d doesn't have write permissions for the %s directory", userID, up.Dev.MountPath),

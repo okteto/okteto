@@ -24,8 +24,12 @@ mkdir -p "${oktetoFolder}"
 touch $OKTETO_MARKER_PATH
 
 remote=0
-while getopts ":s:r" opt; do
+ephemeral=0
+while getopts ":s:re" opt; do
   case $opt in
+    e)
+      ephemeral=1
+      ;;
     r)
       remote=1
       ;;
@@ -51,12 +55,17 @@ while getopts ":s:r" opt; do
 done
 
 syncthingHome=/var/syncthing
+if [ $ephemeral -eq 1 ] && [ -f ${syncthingHome}/executed ]; then
+    echo "failing: syncthing restarted and persistent volumes are not enabled in the okteto manifest. Run 'okteto down' and try again"
+    exit 1
+fi
+touch ${syncthingHome}/executed
 echo "Copying configuration files to $syncthingHome ..."
 cp /var/syncthing/secret/* $syncthingHome
 
 params=""
 if [ $remote -eq 1 ]; then
-params="--remote"
+    params="--remote"
 fi
 
 echo "Executing supervisor..." 

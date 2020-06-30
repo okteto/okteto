@@ -521,6 +521,7 @@ image: web:latest`)
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
+							Args:            []string{"-e"},
 							WorkingDir:      "/okteto",
 							Env: []apiv1.EnvVar{
 								{
