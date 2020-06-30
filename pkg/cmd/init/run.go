@@ -34,28 +34,22 @@ var (
 )
 
 //SetDevDefaultsFromDeployment sets dev defaults from a running deployment
-func SetDevDefaultsFromDeployment(dev *model.Dev, d *appsv1.Deployment, container string) (*model.Dev, error) {
+func SetDevDefaultsFromDeployment(dev *model.Dev, d *appsv1.Deployment, container string) error {
 	ctx := context.Background()
 	c, _, _, err := k8Client.GetLocal()
 	if err != nil {
-		return nil, err
+		return err
 	}
+
+	setAnnotationsFromDeployment(dev, d)
+	setNameAndLabelsFromDeployment(ctx, dev, d)
 
 	pod, err := getRunningPod(d, container, c)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	dev = setNameAndLabelsFromDeployment(ctx, dev, d)
-	dev = setAnnotationsFromDeployment(dev, d)
-	dev = setResourcesFromPod(dev, pod, container)
-
-	dev, err = setForwardsFromPod(ctx, dev, pod, c)
-	if err != nil {
-		return nil, err
-	}
-
-	return dev, nil
+	setResourcesFromPod(dev, pod, container)
+	return setForwardsFromPod(ctx, dev, pod, c)
 }
 
 func getRunningPod(d *appsv1.Deployment, container string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
@@ -84,10 +78,10 @@ func getRunningPod(d *appsv1.Deployment, container string, c *kubernetes.Clients
 	return pod, nil
 }
 
-func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kubernetes.Clientset) (*model.Dev, error) {
+func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kubernetes.Clientset) error {
 	ports, err := services.GetPortsByPod(pod, c)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	seenPorts := map[int]bool{}
 	for _, f := range dev.Forward {
@@ -110,10 +104,10 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 			},
 		)
 	}
-	return dev, nil
+	return nil
 }
 
-func setNameAndLabelsFromDeployment(ctx context.Context, dev *model.Dev, d *appsv1.Deployment) *model.Dev {
+func setNameAndLabelsFromDeployment(ctx context.Context, dev *model.Dev, d *appsv1.Deployment) {
 	for _, l := range componentLabels {
 		component := d.Labels[l]
 		if component == "" {
@@ -121,21 +115,18 @@ func setNameAndLabelsFromDeployment(ctx context.Context, dev *model.Dev, d *apps
 		}
 		dev.Name = component
 		dev.Labels = map[string]string{l: component}
-		return dev
+		return
 	}
 	dev.Name = d.Name
-	return dev
-
 }
 
-func setAnnotationsFromDeployment(dev *model.Dev, d *appsv1.Deployment) *model.Dev {
+func setAnnotationsFromDeployment(dev *model.Dev, d *appsv1.Deployment) {
 	if v := d.Annotations[okLabels.FluxAnnotation]; v != "" {
 		dev.Annotations = map[string]string{"fluxcd.io/ignore": "true"}
 	}
-	return dev
 }
 
-func setResourcesFromPod(dev *model.Dev, pod *apiv1.Pod, container string) *model.Dev {
+func setResourcesFromPod(dev *model.Dev, pod *apiv1.Pod, container string) {
 	for i := range pod.Spec.Containers {
 		if pod.Spec.Containers[i].Name != container {
 			continue
@@ -148,7 +139,6 @@ func setResourcesFromPod(dev *model.Dev, pod *apiv1.Pod, container string) *mode
 				},
 			}
 		}
-		break
+		return
 	}
-	return dev
 }

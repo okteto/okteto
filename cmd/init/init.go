@@ -119,12 +119,13 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 			suffix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
-			dev, err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
+			err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
 			spinner.Stop()
 			if err == nil {
 				log.Success(fmt.Sprintf("Deployment '%s' successfully analyzed", d.Name))
 			} else {
 				log.Yellow(fmt.Sprintf("Analysis for deployment '%s' failed: %s", d.Name, err))
+				linguist.SetForwardDefaults(dev, language)
 			}
 		}
 
