@@ -155,6 +155,12 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		if *tr.Deployment.Spec.Replicas == 0 {
 			tr.Deployment.Spec.Replicas = &model.DevReplicas
 		}
+
+		if tr.Deployment.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
+			for k, v := range tr.Annotations {
+				tr.Deployment.Annotations[k] = v
+			}
+		}
 	}
 
 	if d != nil && deployments.IsDevModeOn(d) {
