@@ -44,6 +44,7 @@ func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
 	} else {
 		log.Infof("updating service '%s'", s.Name)
 		old.Spec.Ports = s.Spec.Ports
+		old.Annotations = s.Annotations
 		_, err = sClient.Update(old)
 		if err != nil {
 			return fmt.Errorf("error updating kubernetes service: %s", err)
