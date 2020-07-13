@@ -230,6 +230,10 @@ func Get(devPath string) (*Dev, error) {
 		return nil, err
 	}
 	dev.DevPath = filepath.Base(devPath)
+	dev.Build.Context = filepath.Join(dev.DevDir, dev.Build.Context)
+	dev.Build.Dockerfile = filepath.Join(dev.DevDir, dev.Build.Dockerfile)
+	dev.Push.Context = filepath.Join(dev.DevDir, dev.Push.Context)
+	dev.Push.Dockerfile = filepath.Join(dev.DevDir, dev.Push.Dockerfile)
 
 	return dev, nil
 }
