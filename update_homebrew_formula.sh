@@ -26,7 +26,7 @@ class Okteto < Formula
     sha256 "$SHA"
     version "$VERSION"
     
-    devel do
+    head do
         url "https://downloads.okteto.com/cli/master/okteto-Darwin-x86_64"
     end
     
