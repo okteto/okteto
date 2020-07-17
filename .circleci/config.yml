@@ -99,10 +99,11 @@ jobs:
           command: choco upgrade golang
       - restore_cache: 
           keys:
-            - v4-pkg-cache-windows-{{ checksum "go.sum" }}
+            - v4-pkg-cache-windows-1-14-6-{{ checksum "go.sum" }}
       - run: 
           name: test
           command: |
+            go mod download
             go version
             go test ./...
       - run: 
@@ -133,7 +134,7 @@ jobs:
           command: |
             go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
       - save_cache:
-          key: v4-pkg-cache-windows-{{ checksum "go.sum" }}
+          key: v4-pkg-cache-windows-1-14-6-{{ checksum "go.sum" }}
           paths:
             - C:\Users\circleci\AppData\Local\go-build
             - C:\Users\circleci\go\pkg
