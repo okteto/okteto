@@ -103,6 +103,7 @@ jobs:
       - run: 
           name: test
           command: |
+            go mod download
             go version
             go test ./...
       - run: 
