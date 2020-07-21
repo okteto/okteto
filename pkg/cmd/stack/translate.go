@@ -77,7 +77,7 @@ func translate(s *model.Stack, forceBuild, noCache bool) error {
 		log.Information("Building image for service '%s'...", name)
 		var imageDigest string
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-		imageDigest, err = build.Run(buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, buildArgs, "tty")
+		imageDigest, err = build.Run(buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, imageTag, buildArgs, "tty")
 		if err != nil {
 			return fmt.Errorf("error building image for '%s': %s", name, err)
 		}

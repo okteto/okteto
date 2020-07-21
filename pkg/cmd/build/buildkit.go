@@ -59,7 +59,7 @@ func GetBuildKitHost() (string, bool, error) {
 }
 
 //getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, buildArgs []string) (*client.SolveOpt, error) {
+func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFrom string, buildArgs []string) (*client.SolveOpt, error) {
 	if file == "" {
 		file = filepath.Join(buildCtx, "Dockerfile")
 	}
@@ -120,11 +120,13 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, buildArg
 				Type: "inline",
 			},
 		}
-		opt.CacheImports = []client.CacheOptionsEntry{
-			{
-				Type:  "registry",
-				Attrs: map[string]string{"ref": imageTag},
-			},
+		if cacheFrom != "" {
+			opt.CacheImports = []client.CacheOptionsEntry{
+				{
+					Type:  "registry",
+					Attrs: map[string]string{"ref": cacheFrom},
+				},
+			}
 		}
 	}
 
