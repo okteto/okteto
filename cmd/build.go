@@ -58,26 +58,9 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if strings.HasPrefix(tag, okteto.DevRegistry) {
-				c, _, namespace, err := k8Client.GetLocal()
-				if err != nil {
-					return fmt.Errorf("cannot use 'okteto.dev' registry, failed to load your local Kubeconfig: %s", err)
-				}
-				n, err := namespaces.Get(namespace, c)
-				if err != nil {
-					return fmt.Errorf("cannot use 'okteto.dev' registry: not able to get namespace '%s'", namespace)
-				}
-				if !namespaces.IsOktetoNamespace(n) {
-					return fmt.Errorf("cannot use 'okteto.dev' registry: current namespace '%s' is not managed by okteto", namespace)
-				}
-
-				oktetoRegistryURL, err := okteto.GetRegistry()
-				if err != nil {
-					return fmt.Errorf("cannot use 'okteto.dev' registry: not able to get okteto registry url: %s", err)
-				}
-				oldTag := tag
-				tag = strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, namespace), 1)
-				log.Information("'%s' resolved to '%s'.", oldTag, tag)
+			tag, err = expandOktetoDevRegistry(tag)
+			if err != nil {
+				return err
 			}
 
 			if _, err := build.Run(buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
@@ -105,4 +88,33 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&buildArgs, "build-arg", nil, "set build-time variables")
 	return cmd
+}
+
+func expandOktetoDevRegistry(tag string) (string, error) {
+	if !strings.HasPrefix(tag, okteto.DevRegistry) {
+		return tag, nil
+	}
+
+	c, _, namespace, err := k8Client.GetLocal()
+	if err != nil {
+		return "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+	}
+	n, err := namespaces.Get(namespace, c)
+	if err != nil {
+		return "", fmt.Errorf("failed to get your current namespace '%s': %s", namespace, err.Error())
+	}
+	if !namespaces.IsOktetoNamespace(n) {
+		return "", fmt.Errorf("cannot use the okteto.dev container registry: your current namespace '%s' is not managed by okteto", namespace)
+	}
+
+	oktetoRegistryURL, err := okteto.GetRegistry()
+	if err != nil {
+		return "", fmt.Errorf("cannot use the okteto.dev container registry: unable to get okteto registry url: %s", err)
+	}
+
+	oldTag := tag
+	tag = strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, namespace), 1)
+
+	log.Information("'%s' expanded to '%s'.", oldTag, tag)
+	return tag, nil
 }
