@@ -16,11 +16,15 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/login"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -54,16 +58,23 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			tag, err = expandOktetoDevRegistry(tag)
+			if err != nil {
+				return err
+			}
+
 			if _, err := build.Run(buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
+
 			if tag == "" {
 				log.Success("Build succeeded")
 				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 			} else {
 				log.Success(fmt.Sprintf("Image '%s' successfully pushed", tag))
 			}
+
 			analytics.TrackBuild(true)
 			return nil
 		},
@@ -77,4 +88,33 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&buildArgs, "build-arg", nil, "set build-time variables")
 	return cmd
+}
+
+func expandOktetoDevRegistry(tag string) (string, error) {
+	if !strings.HasPrefix(tag, okteto.DevRegistry) {
+		return tag, nil
+	}
+
+	c, _, namespace, err := k8Client.GetLocal()
+	if err != nil {
+		return "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+	}
+	n, err := namespaces.Get(namespace, c)
+	if err != nil {
+		return "", fmt.Errorf("failed to get your current namespace '%s': %s", namespace, err.Error())
+	}
+	if !namespaces.IsOktetoNamespace(n) {
+		return "", fmt.Errorf("cannot use the okteto.dev container registry: your current namespace '%s' is not managed by okteto", namespace)
+	}
+
+	oktetoRegistryURL, err := okteto.GetRegistry()
+	if err != nil {
+		return "", fmt.Errorf("cannot use the okteto.dev container registry: unable to get okteto registry url: %s", err)
+	}
+
+	oldTag := tag
+	tag = strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, namespace), 1)
+
+	log.Information("'%s' expanded to '%s'.", oldTag, tag)
+	return tag, nil
 }
