@@ -295,14 +295,14 @@ services:
 			}
 
 			os.Setenv("value", tt.value)
-			d, err := Read(manifest)
+			dev, err := Read(manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			name := d.Name
+			name := dev.Name
 			if tt.onService {
-				name = d.Services[0].Name
+				name = dev.Services[0].Name
 			}
 
 			if name != tt.want {
@@ -392,17 +392,17 @@ services:
 			}
 
 			os.Setenv("tag", tt.tagValue)
-			d, err := Read(manifest)
+			dev, err := Read(manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			img := d.Image
+			img := dev.Image
 			if tt.onService {
-				img = d.Services[0].Image
+				img = dev.Services[0].Image
 			}
 
-			if img != tt.want {
+			if img.Name != tt.want {
 				t.Errorf("got: '%s', expected: '%s'", img, tt.want)
 			}
 		})
@@ -427,7 +427,7 @@ func TestDev_validateName(t *testing.T) {
 			dev := &Dev{
 				Name:            tt.devName,
 				ImagePullPolicy: apiv1.PullAlways,
-				Build:           &BuildInfo{},
+				Image:           &BuildInfo{},
 				Push:            &BuildInfo{},
 			}
 			// Since dev isn't being unmarshalled through Read, apply defaults

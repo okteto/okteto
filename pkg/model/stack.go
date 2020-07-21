@@ -99,6 +99,10 @@ func ReadStack(bytes []byte) (*Stack, error) {
 		return nil, errors.New(msg)
 	}
 	for i, svc := range s.Services {
+		if svc.Build != nil {
+			svc.Build.Context = svc.Build.Name
+			svc.Build.Name = ""
+		}
 		if svc.Replicas == 0 {
 			svc.Replicas = 1
 			s.Services[i] = svc
