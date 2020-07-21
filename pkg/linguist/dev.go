@@ -255,7 +255,11 @@ func GetDevDefaults(language, workdir string, iAskingForDeployment bool) (*model
 	vals := languageDefaults[language]
 
 	dev := &model.Dev{
-		Image:   vals.image,
+		Image: &model.BuildInfo{
+			BuildInfoRaw: model.BuildInfoRaw{
+				Name: vals.image,
+			},
+		},
 		WorkDir: "/okteto",
 		Command: model.Command{
 			Values: []string{"bash"},

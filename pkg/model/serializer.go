@@ -81,7 +81,7 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	var rawString string
 	err := unmarshal(&rawString)
 	if err == nil {
-		buildInfo.Context = rawString
+		buildInfo.Name = rawString
 		return nil
 	}
 
@@ -91,11 +91,29 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return err
 	}
 
+	buildInfo.Name = rawBuildInfo.Name
 	buildInfo.Context = rawBuildInfo.Context
 	buildInfo.Dockerfile = rawBuildInfo.Dockerfile
 	buildInfo.Target = rawBuildInfo.Target
 	buildInfo.Args = rawBuildInfo.Args
 	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (buildInfo BuildInfo) MarshalYAML() (interface{}, error) {
+	if buildInfo.Context != "" && buildInfo.Context != "." {
+		return buildInfo.BuildInfoRaw, nil
+	}
+	if buildInfo.Dockerfile != "" && buildInfo.Dockerfile != "./Dockerfile" {
+		return buildInfo.BuildInfoRaw, nil
+	}
+	if buildInfo.Target != "" {
+		return buildInfo.BuildInfoRaw, nil
+	}
+	if buildInfo.Args != nil && len(buildInfo.Args) != 0 {
+		return buildInfo.BuildInfoRaw, nil
+	}
+	return buildInfo.Name, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

@@ -37,13 +37,13 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d, err := utils.LoadDev(p)
+	dev, err := utils.LoadDev(p)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if d.Image != "okteto/golang:1" {
-		t.Errorf("got %s, expected %s", d.Image, "okteto/golang:1")
+	if dev.Image.Name != "okteto/golang:1" {
+		t.Errorf("got %s, expected %s", dev.Image, "okteto/golang:1")
 	}
 
 	if err := Run("", p, "java", dir, false); err == nil {
@@ -54,12 +54,12 @@ func TestRun(t *testing.T) {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
-	d, err = utils.LoadDev(p)
+	dev, err = utils.LoadDev(p)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if d.Image != "okteto/ruby:2" {
-		t.Errorf("got %s, expected %s", d.Image, "okteto/ruby:2")
+	if dev.Image.Name != "okteto/ruby:2" {
+		t.Errorf("got %s, expected %s", dev.Image, "okteto/ruby:2")
 	}
 }

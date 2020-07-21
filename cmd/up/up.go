@@ -445,16 +445,16 @@ func (up *upContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 		}
 	}
 
-	if oktetoRegistryURL == "" && create && up.Dev.Image == "" {
+	if oktetoRegistryURL == "" && create && up.Dev.Image.Name == "" {
 		return fmt.Errorf("no value for 'Image' has been provided in your okteto manifest")
 	}
 
-	if up.Dev.Image == "" {
+	if up.Dev.Image.Name == "" {
 		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
 		if devContainer == nil {
 			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 		}
-		up.Dev.Image = devContainer.Image
+		up.Dev.Image.Name = devContainer.Image
 	}
 
 	buildKitHost, isOktetoCluster, err := buildCMD.GetBuildKitHost()
@@ -462,12 +462,12 @@ func (up *upContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 		return err
 	}
 
-	imageTag := buildCMD.GetImageTag(up.Dev.Image, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
+	imageTag := buildCMD.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
 	log.Infof("building dev image tag %s", imageTag)
 
 	var imageDigest string
-	buildArgs := model.SerializeBuildArgs(up.Dev.Build.Args)
-	imageDigest, err = buildCMD.Run(buildKitHost, isOktetoCluster, up.Dev.Build.Context, up.Dev.Build.Dockerfile, imageTag, up.Dev.Build.Target, false, imageTag, buildArgs, "tty")
+	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
+	imageDigest, err = buildCMD.Run(buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, imageTag, buildArgs, "tty")
 	if err != nil {
 		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
 	}
@@ -476,11 +476,11 @@ func (up *upContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 		imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 	for _, s := range up.Dev.Services {
-		if s.Image == up.Dev.Image {
-			s.Image = imageTag
+		if s.Image.Name == up.Dev.Image.Name {
+			s.Image.Name = imageTag
 		}
 	}
-	up.Dev.Image = imageTag
+	up.Dev.Image.Name = imageTag
 	return nil
 }
 
@@ -503,8 +503,8 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 
 	up.Dev.Container = devContainer.Name
 
-	if up.Dev.Image == "" {
-		up.Dev.Image = devContainer.Image
+	if up.Dev.Image.Name == "" {
+		up.Dev.Image.Name = devContainer.Image
 	}
 
 	up.updateStateFile(starting)

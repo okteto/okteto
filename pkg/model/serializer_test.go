@@ -199,6 +199,43 @@ func TestCommandMashalling(t *testing.T) {
 	}
 }
 
+func TestImageMashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		image    BuildInfo
+		expected string
+	}{
+		{
+			name:     "single-name",
+			image:    BuildInfo{BuildInfoRaw{Name: "image-name"}},
+			expected: "image-name\n",
+		},
+		{
+			name:     "single-name-and-defaults",
+			image:    BuildInfo{BuildInfoRaw{Name: "image-name", Context: "."}},
+			expected: "image-name\n",
+		},
+		{
+			name:     "build",
+			image:    BuildInfo{BuildInfoRaw{Name: "image-name", Context: "path"}},
+			expected: "name: image-name\ncontext: path\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.image)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
+			}
+		})
+	}
+}
+
 func TestSecretMashalling(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {

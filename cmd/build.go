@@ -16,14 +16,11 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
 
@@ -47,17 +44,9 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			dev, err := utils.LoadDevOrDefault(utils.DefaultDevManifest, "build")
-			if err != nil {
-				return err
-			}
-			path := ""
+			path := "."
 			if len(args) == 1 {
 				path = args[0]
-			}
-			overwriteFieldsWithArgs(dev, path, file, tag, target)
-			if len(buildArgs) == 0 {
-				buildArgs = model.SerializeBuildArgs(dev.Build.Args)
 			}
 
 			buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
@@ -65,15 +54,15 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if _, err := build.Run(buildKitHost, isOktetoCluster, dev.Build.Context, dev.Build.Dockerfile, dev.Image, dev.Build.Target, noCache, cacheFrom, buildArgs, progress); err != nil {
+			if _, err := build.Run(buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
-			if dev.Image == "" {
+			if tag == "" {
 				log.Success("Build succeeded")
 				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 			} else {
-				log.Success(fmt.Sprintf("Image '%s' successfully pushed", dev.Image))
+				log.Success(fmt.Sprintf("Image '%s' successfully pushed", tag))
 			}
 			analytics.TrackBuild(true)
 			return nil
@@ -88,21 +77,4 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&buildArgs, "build-arg", nil, "set build-time variables")
 	return cmd
-}
-
-func overwriteFieldsWithArgs(dev *model.Dev, path, file, tag, target string) {
-	if path != "" {
-		dev.Build.Context = path
-	}
-	if file != "" {
-		dev.Build.Dockerfile = file
-	} else {
-		dev.Build.Dockerfile = filepath.Join(dev.Build.Context, "Dockerfile")
-	}
-	if tag != "" {
-		dev.Image = tag
-	}
-	if target != "" {
-		dev.Build.Target = target
-	}
 }

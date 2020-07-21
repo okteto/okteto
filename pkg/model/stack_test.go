@@ -65,7 +65,7 @@ services:
 		t.Errorf("'vote.image' was not parsed: %+v", s)
 	}
 	if s.Services["vote"].Build.Context != "vote" {
-		t.Errorf("'vote.build' was not parsed: %+v", s)
+		t.Errorf("'vote.build' was not parsed: %+v", s.Services["vote"].Build)
 	}
 	if len(s.Services["vote"].Command.Values) != 3 {
 		t.Errorf("'vote.command' was not parsed: %+v", s)

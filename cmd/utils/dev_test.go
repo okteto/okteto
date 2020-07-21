@@ -45,8 +45,12 @@ func Test_loadDevOrDefault(t *testing.T) {
 			deployment: "test-deployment",
 			expectErr:  false,
 			dev: &model.Dev{
-				Name:  "loaded",
-				Image: "okteto/test:1.0",
+				Name: "loaded",
+				Image: &model.BuildInfo{
+					BuildInfoRaw: model.BuildInfoRaw{
+						Name: "okteto/test:1.0",
+					},
+				},
 			},
 		},
 	}
@@ -95,8 +99,8 @@ func Test_loadDevOrDefault(t *testing.T) {
 				t.Fatal("expected error when loading existing manifest")
 			}
 
-			if tt.dev.Image != loaded.Image {
-				t.Fatalf("expected %s got %s", tt.dev.Image, loaded.Image)
+			if tt.dev.Image.Name != loaded.Image.Name {
+				t.Fatalf("expected %s got %s", tt.dev.Image.Name, loaded.Image.Name)
 			}
 
 			if tt.dev.Name != loaded.Name {

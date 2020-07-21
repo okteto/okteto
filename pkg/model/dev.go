@@ -104,8 +104,7 @@ type Dev struct {
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
-	Image                string                `json:"image,omitempty" yaml:"image,omitempty"`
-	Build                *BuildInfo            `json:"-" yaml:"build,omitempty"`
+	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
@@ -129,7 +128,7 @@ type Dev struct {
 	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 }
 
-//Command represents the staart commaand of a development contaianer
+//Command represents the start command of a development contaianer
 type Command struct {
 	Values []string
 }
@@ -141,6 +140,7 @@ type BuildInfo struct {
 
 // BuildInfoRaw represents the build info for serialization
 type BuildInfoRaw struct {
+	Name       string   `yaml:"name,omitempty"`
 	Context    string   `yaml:"context,omitempty"`
 	Dockerfile string   `yaml:"dockerfile,omitempty"`
 	Target     string   `yaml:"target,omitempty"`
@@ -230,8 +230,8 @@ func Get(devPath string) (*Dev, error) {
 		return nil, err
 	}
 	dev.DevPath = filepath.Base(devPath)
-	dev.Build.Context = filepath.Join(dev.DevDir, dev.Build.Context)
-	dev.Build.Dockerfile = filepath.Join(dev.DevDir, dev.Build.Dockerfile)
+	dev.Image.Context = filepath.Join(dev.DevDir, dev.Image.Context)
+	dev.Image.Dockerfile = filepath.Join(dev.DevDir, dev.Image.Dockerfile)
 	dev.Push.Context = filepath.Join(dev.DevDir, dev.Push.Context)
 	dev.Push.Dockerfile = filepath.Join(dev.DevDir, dev.Push.Dockerfile)
 
@@ -241,7 +241,7 @@ func Get(devPath string) (*Dev, error) {
 //Read reads an okteto manifests
 func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
-		Build:       &BuildInfo{},
+		Image:       &BuildInfo{},
 		Push:        &BuildInfo{},
 		Environment: make([]EnvVar, 0),
 		Secrets:     make([]Secret, 0),
@@ -304,8 +304,11 @@ func (dev *Dev) loadName() {
 }
 
 func (dev *Dev) loadImage() {
-	if len(dev.Image) > 0 {
-		dev.Image = os.ExpandEnv(dev.Image)
+	if dev.Image == nil {
+		dev.Image = &BuildInfo{}
+	}
+	if len(dev.Image.Name) > 0 {
+		dev.Image.Name = os.ExpandEnv(dev.Image.Name)
 	}
 }
 
@@ -313,7 +316,7 @@ func (dev *Dev) setDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
 	}
-	setBuildDefaults(dev.Build)
+	setBuildDefaults(dev.Image)
 	setBuildDefaults(dev.Push)
 	if dev.MountPath == "" && dev.WorkDir == "" {
 		dev.MountPath = "/okteto"
@@ -602,7 +605,7 @@ func fullGlobalSubPath(mountPath string) string {
 func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	rule := &TranslationRule{
 		Container:        dev.Container,
-		Image:            dev.Image,
+		Image:            dev.Image.Name,
 		ImagePullPolicy:  dev.ImagePullPolicy,
 		Environment:      dev.Environment,
 		Secrets:          dev.Secrets,
@@ -739,7 +742,7 @@ func (dev *Dev) UpdateNamespace(namespace string) error {
 
 //GevSandbox returns a deployment sandbox
 func (dev *Dev) GevSandbox() *appsv1.Deployment {
-	image := dev.Image
+	image := dev.Image.Name
 	if image == "" {
 		image = DefaultImage
 	}

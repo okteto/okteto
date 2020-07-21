@@ -218,6 +218,9 @@ func buildImage(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL
 		return "", err
 	}
 
+	if imageTag == "" {
+		imageTag = dev.Push.Name
+	}
 	buildTag := build.GetDevImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
 	log.Infof("pushing with image tag %s", buildTag)
 
