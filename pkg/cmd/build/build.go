@@ -22,7 +22,7 @@ import (
 )
 
 // Run runs the build sequence
-func Run(buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, buildArgs []string, progress string) (string, error) {
+func Run(buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, cacheFrom string, buildArgs []string, progress string) (string, error) {
 	ctx := context.Background()
 
 	log.Infof("building your image on %s", buildKitHost)
@@ -40,7 +40,7 @@ func Run(buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, targe
 		defer os.Remove(processedDockerfile)
 	}
 
-	opt, err := getSolveOpt(path, processedDockerfile, tag, target, noCache, buildArgs)
+	opt, err := getSolveOpt(path, processedDockerfile, tag, target, noCache, cacheFrom, buildArgs)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create build solver")
 	}
