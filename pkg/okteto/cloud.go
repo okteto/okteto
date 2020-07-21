@@ -14,6 +14,9 @@
 package okteto
 
 const (
+	// DevRegistry fake url for okteto registry
+	DevRegistry = "okteto.dev"
+
 	// CloudURL is the default URL of okteto
 	CloudURL = "https://cloud.okteto.com"
 

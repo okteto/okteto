@@ -16,11 +16,15 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/login"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -54,16 +58,40 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if strings.HasPrefix(tag, okteto.DevRegistry) {
+				c, _, namespace, err := k8Client.GetLocal()
+				if err != nil {
+					return fmt.Errorf("cannot use 'okteto.dev' registry, failed to load your local Kubeconfig: %s", err)
+				}
+				n, err := namespaces.Get(namespace, c)
+				if err != nil {
+					return fmt.Errorf("cannot use 'okteto.dev' registry: not able to get namespace '%s'", namespace)
+				}
+				if !namespaces.IsOktetoNamespace(n) {
+					return fmt.Errorf("cannot use 'okteto.dev' registry: current namespace '%s' is not managed by okteto", namespace)
+				}
+
+				oktetoRegistryURL, err := okteto.GetRegistry()
+				if err != nil {
+					return fmt.Errorf("cannot use 'okteto.dev' registry: not able to get okteto registry url: %s", err)
+				}
+				oldTag := tag
+				tag = strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, namespace), 1)
+				log.Information("'%s' resolved to '%s'.", oldTag, tag)
+			}
+
 			if _, err := build.Run(buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
+
 			if tag == "" {
 				log.Success("Build succeeded")
 				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 			} else {
 				log.Success(fmt.Sprintf("Image '%s' successfully pushed", tag))
 			}
+
 			analytics.TrackBuild(true)
 			return nil
 		},
