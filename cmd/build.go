@@ -63,6 +63,11 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			cacheFrom, err = expandOktetoDevRegistry(cacheFrom)
+			if err != nil {
+				return err
+			}
+
 			if _, err := build.Run(buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
 				analytics.TrackBuild(false)
 				return err
