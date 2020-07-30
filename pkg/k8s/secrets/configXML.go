@@ -39,7 +39,7 @@ const configXML = `<configuration version="30">
     <disableTempIndexes>false</disableTempIndexes>
     <paused>false</paused>
     <weakHashThresholdPct>25</weakHashThresholdPct>
-    <markerName>{{ .Dev.DevPath }}</markerName>
+    <markerName>.</markerName>
     <useLargeBlocks>false</useLargeBlocks>
 </folder>
 <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
