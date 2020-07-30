@@ -36,7 +36,7 @@ lint:
 
 .PHONY: test
 test:
-	 go test -coverprofile=coverage.txt -covermode=atomic ./...
+	 go test -p 4 -coverprofile=coverage.txt -covermode=atomic ./...
 
 .PHONY: integration
 integration:

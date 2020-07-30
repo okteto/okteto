@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -87,14 +86,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 			} else {
 				log.Success("Logged in as %s @ %s", u.GithubID, oktetoURL)
 			}
-
-			err = namespace.RunNamespace(ctx, "")
-			if err != nil {
-				log.Infof("error fetching your Kubernetes credentials: %s", err)
-				log.Hint("    Run `okteto namespace` to switch your context and download your Kubernetes credentials.")
-			} else {
-				log.Hint("    Run 'okteto namespace' every time you need to activate your Okteto context again.")
-			}
+			log.Hint("    Run `okteto namespace` to switch your context and download your Kubernetes credentials.")
 			if u.New {
 				analytics.TrackSignup(true, u.ID)
 			}

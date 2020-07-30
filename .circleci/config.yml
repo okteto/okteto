@@ -13,8 +13,6 @@ jobs:
             - v3-pkg-cache-{{ checksum "go.sum" }}
       - run: 
           name: test
-          environment:
-            SCOPE_DSN: "https://fb562aaa137b41e69058a1b1774ae63e@app.scope.dev/"
           command: |
             make test
             bash <(curl -s https://codecov.io/bash)
