@@ -12,16 +12,12 @@ if [ -d "/var/okteto/bin" ]; then
   fi
 fi
 
-echo "Creating marker file $OKTETO_MARKER_PATH ..."
 oktetoFolder=$(dirname "$OKTETO_MARKER_PATH")
-
 if [ ! -w "${oktetoFolder}" ]; then
     echo \"${oktetoFolder}\" is not writeable by $userID
     exit 1
 fi
-
 mkdir -p "${oktetoFolder}"
-touch $OKTETO_MARKER_PATH
 
 remote=0
 ephemeral=0
