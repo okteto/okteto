@@ -40,6 +40,10 @@ func getClient(oktetoURL string) (*graphql.Client, error) {
 		return nil, err
 	}
 
+	if u.Scheme == "" {
+		u.Scheme = "https"
+	}
+
 	u.Path = "graphql"
 	graphqlClient := graphql.NewClient(u.String(), graphql.WithHTTPClient(httpClient))
 	return graphqlClient, nil
