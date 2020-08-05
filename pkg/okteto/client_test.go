@@ -115,3 +115,40 @@ func TestInDevContainer(t *testing.T) {
 		t.Errorf("not in dev container when there was a marker env var")
 	}
 }
+
+func Test_parseOktetoURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		u       string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "basic",
+			u:    "https://cloud.okteto.com",
+			want: "https://cloud.okteto.com/graphql",
+		},
+		{
+			name: "no-schema",
+			u:    "cloud.okteto.com",
+			want: "https://cloud.okteto.com/graphql",
+		},
+		{
+			name:    "empty",
+			u:       "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseOktetoURL(tt.u)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseOktetoURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("parseOktetoURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
