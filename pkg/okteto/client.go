@@ -35,14 +35,33 @@ import (
 var httpClient = &http.Client{Transport: &nethttp.Transport{}}
 
 func getClient(oktetoURL string) (*graphql.Client, error) {
-	u, err := url.Parse(oktetoURL)
+
+	u, err := parseOktetoURL(oktetoURL)
 	if err != nil {
 		return nil, err
 	}
 
-	u.Path = "graphql"
-	graphqlClient := graphql.NewClient(u.String(), graphql.WithHTTPClient(httpClient))
+	graphqlClient := graphql.NewClient(u, graphql.WithHTTPClient(httpClient))
 	return graphqlClient, nil
+}
+
+func parseOktetoURL(u string) (string, error) {
+	if u == "" {
+		return "", fmt.Errorf("the okteto URL is not set")
+	}
+
+	parsed, err := url.Parse(u)
+	if err != nil {
+		return "", err
+	}
+
+	if parsed.Scheme == "" {
+		parsed.Scheme = "https"
+		parsed.Host = parsed.Path
+	}
+
+	parsed.Path = "graphql"
+	return parsed.String(), nil
 }
 
 func getRequest(q, token string) *graphql.Request {
