@@ -26,11 +26,8 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"go.undefinedlabs.com/scopeagent/agent"
-	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	"k8s.io/apimachinery/pkg/util/runtime"
 
 	// Load the different library for authentication
@@ -53,11 +50,10 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
 	log.Init(logrus.WarnLevel, config.GetOktetoHome(), config.VersionString)
 	log.Info("start")
 	var logLevel string
-
-	agent, span, ctx := getTracing()
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -89,14 +85,6 @@ func main() {
 
 	err := root.Execute()
 
-	if span != nil {
-		span.Finish()
-	}
-
-	if agent != nil {
-		agent.Stop()
-	}
-
 	if err != nil {
 		log.Fail(err.Error())
 		if uErr, ok := err.(errors.UserError); ok {
@@ -107,24 +95,4 @@ func main() {
 
 		os.Exit(1)
 	}
-}
-
-func getTracing() (*agent.Agent, opentracing.Span, context.Context) {
-	ctx := context.Background()
-
-	if apiKey, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
-		scope, err := agent.NewAgent(agent.WithApiKey(apiKey))
-		if err != nil {
-			log.Errorf("couldn't instantiate scope agent: %s", err)
-			os.Exit(1)
-		}
-
-		span := process.StartSpan()
-		span.SetTag("okteto.version", config.VersionString)
-		ctx = opentracing.ContextWithSpan(ctx, span)
-		log.Info("scope agent configured")
-		return scope, span, ctx
-	}
-
-	return nil, nil, ctx
 }

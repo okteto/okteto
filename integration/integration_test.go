@@ -34,15 +34,12 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	"github.com/Venafi/vcert/test"
 	ps "github.com/mitchellh/go-ps"
 	upCmd "github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/syncthing"
-	"go.undefinedlabs.com/scopeagent"
-	"go.undefinedlabs.com/scopeagent/agent"
-	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
-	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -133,18 +130,11 @@ func TestMain(m *testing.M) {
 		mode = "client"
 	}
 
-	if _, ok := os.LookupEnv("SCOPE_APIKEY"); ok {
-		log.Println("SCOPE is enabled")
-		nethttp.PatchHttpDefaultClient()
-	}
-
 	if runtime.GOOS == "windows" {
 		kubectlBinary = "kubectl.exe"
 	}
 
-	os.Exit(scopeagent.Run(m, agent.WithMetadata(map[string]interface{}{
-		"mode": mode,
-	})))
+	os.Exit(m.Run())
 }
 
 func TestGetVersion(t *testing.T) {
@@ -166,9 +156,8 @@ func TestDownloadSyncthing(t *testing.T) {
 		{os: "windows"}, {os: "darwin"}, {os: "linux"}, {os: "arm64"},
 	}
 
-	test := scopeagent.GetTest(t)
 	for _, tt := range tests {
-		test.Run(tt.os, func(t *testing.T) {
+		t.Run(tt.os, func(t *testing.T) {
 			u, err := syncthing.GetDownloadURL(tt.os, "amd64")
 			req, err := http.NewRequest("GET", u, nil)
 			if err != nil {
@@ -189,11 +178,9 @@ func TestDownloadSyncthing(t *testing.T) {
 }
 
 func TestAll(t *testing.T) {
-	ctx := scopeagent.GetContextFromTest(t)
-	test := scopeagent.GetTest(t)
 	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
 
-	test.Run(tName, func(t *testing.T) {
+	t.Run(tName, func(t *testing.T) {
 		oktetoPath, err := getOktetoPath(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -321,9 +308,6 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 
 		cmd := exec.Command(kubectlBinary, args...)
 		cmd.Env = os.Environ()
-		span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-		defer span.Finish()
-
 		o, _ := cmd.CombinedOutput()
 		log.Printf("%s %s", kubectlBinary, strings.Join(args, " "))
 		output := string(o)
@@ -399,8 +383,6 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	args := []string{"create", "namespace", namespace, "-l", "debug"}
 	cmd := exec.Command(oktetoPath, args...)
 	cmd.Env = os.Environ()
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-	defer span.Finish()
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
@@ -424,8 +406,6 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	log.Printf("okteto delete namespace %s", namespace)
 	deleteCMD := exec.Command(oktetoPath, "delete", "namespace", namespace)
 	deleteCMD.Env = os.Environ()
-	span, _ := process.InjectToCmdWithSpan(ctx, deleteCMD)
-	defer span.Finish()
 	o, err := deleteCMD.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
@@ -439,9 +419,6 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
 
 	downCMD.Env = os.Environ()
-	span, _ := process.InjectToCmdWithSpan(ctx, downCMD)
-	defer span.Finish()
-
 	o, err := downCMD.CombinedOutput()
 
 	log.Printf("okteto down output:\n%s", string(o))
@@ -465,7 +442,6 @@ func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, 
 	cmd := exec.Command(oktetoPath, "up", "-f", manifestPath)
 	cmd.Env = os.Environ()
 	cmd.Stdout = &out
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("okteto up failed to start: %s", err)
 	}
@@ -474,7 +450,6 @@ func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, 
 
 	go func() {
 		defer wg.Done()
-		defer span.Finish()
 		if err := cmd.Wait(); err != nil {
 			if err != nil {
 				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
@@ -539,8 +514,6 @@ func deploy(ctx context.Context, name, path string) error {
 	log.Printf("deploying kubernetes manifest %s", path)
 	cmd := exec.Command(kubectlBinary, "apply", "-f", path)
 	cmd.Env = os.Environ()
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-	defer span.Finish()
 
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("kubectl apply failed: %s", string(o))
@@ -582,8 +555,6 @@ func getOktetoPath(ctx context.Context) (string, error) {
 
 	cmd := exec.Command(oktetoPath, "version")
 	cmd.Env = os.Environ()
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-	defer span.Finish()
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {

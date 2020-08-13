@@ -20,7 +20,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
-	"go.undefinedlabs.com/scopeagent"
 )
 
 func Test_loadDevOrDefault(t *testing.T) {
@@ -55,9 +54,8 @@ func Test_loadDevOrDefault(t *testing.T) {
 		},
 	}
 
-	test := scopeagent.GetTest(t)
 	for _, tt := range tests {
-		test.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			def, err := LoadDevOrDefault("/tmp/a-path", tt.deployment)
 			if tt.expectErr {
 				if err == nil {

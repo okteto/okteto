@@ -26,13 +26,12 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
-	"go.undefinedlabs.com/scopeagent/instrumentation/nethttp"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // httpClient this client will inject opentracing and scope spans if available
-var httpClient = &http.Client{Transport: &nethttp.Transport{}}
+var httpClient = &http.Client{}
 
 func getClient(oktetoURL string) (*graphql.Client, error) {
 
@@ -41,7 +40,7 @@ func getClient(oktetoURL string) (*graphql.Client, error) {
 		return nil, err
 	}
 
-	graphqlClient := graphql.NewClient(u, graphql.WithHTTPClient(httpClient))
+	graphqlClient := graphql.NewClient(u)
 	return graphqlClient, nil
 }
 

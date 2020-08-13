@@ -27,8 +27,6 @@ import (
 	"time"
 
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	"go.undefinedlabs.com/scopeagent"
-	"go.undefinedlabs.com/scopeagent/instrumentation/process"
 )
 
 const (
@@ -43,7 +41,7 @@ func TestStacks(t *testing.T) {
 		return
 	}
 
-	ctx := scopeagent.GetContextFromTest(t)
+	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -53,8 +51,7 @@ func TestStacks(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
-	test := scopeagent.GetTest(t)
-	test.Run(tName, func(t *testing.T) {
+	t.Run(tName, func(t *testing.T) {
 		log.Printf("running %s \n", tName)
 		k8Client.Reset()
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
@@ -111,8 +108,6 @@ func TestStacks(t *testing.T) {
 func cloneGitRepo(ctx context.Context, name string) error {
 	log.Printf("cloning git repo %s", name)
 	cmd := exec.Command("git", "clone", name)
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-	defer span.Finish()
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("cloning git repo %s failed: %s - %s", name, string(o), err)
@@ -137,8 +132,6 @@ func deployStack(ctx context.Context, oktetoPath, stackPath string) error {
 	cmd := exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait")
 	cmd.Env = os.Environ()
 	cmd.Dir = stackGitFolder
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-	defer span.Finish()
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto stack deploy failed: %s - %s", string(o), err)
@@ -152,8 +145,6 @@ func destroyStack(ctx context.Context, oktetoPath, stackManifest string) error {
 	cmd := exec.Command(oktetoPath, "stack", "destroy", "-f", stackManifest)
 	cmd.Env = os.Environ()
 	cmd.Dir = stackGitFolder
-	span, _ := process.InjectToCmdWithSpan(ctx, cmd)
-	defer span.Finish()
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto stack destroy failed: %s - %s", string(o), err)
