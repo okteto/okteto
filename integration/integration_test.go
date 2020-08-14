@@ -34,7 +34,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/Venafi/vcert/test"
 	ps "github.com/mitchellh/go-ps"
 	upCmd "github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/config"
@@ -156,6 +155,8 @@ func TestDownloadSyncthing(t *testing.T) {
 		{os: "windows"}, {os: "darwin"}, {os: "linux"}, {os: "arm64"},
 	}
 
+	ctx := context.Background()
+
 	for _, tt := range tests {
 		t.Run(tt.os, func(t *testing.T) {
 			u, err := syncthing.GetDownloadURL(tt.os, "amd64")
@@ -164,7 +165,7 @@ func TestDownloadSyncthing(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 
-			req = req.WithContext(test.Context())
+			req = req.WithContext(ctx)
 			res, err := http.DefaultClient.Do(req)
 			if err != nil {
 				t.Fatalf("Failed to download syncthing: %s", err)
@@ -179,7 +180,7 @@ func TestDownloadSyncthing(t *testing.T) {
 
 func TestAll(t *testing.T) {
 	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
-
+	ctx := context.Background()
 	t.Run(tName, func(t *testing.T) {
 		oktetoPath, err := getOktetoPath(ctx)
 		if err != nil {
