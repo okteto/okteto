@@ -122,7 +122,7 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 }
 
 // CommonTranslation are the translations applied to any podspec, both client or serverside
-func CommonTranslation(t *model.Translation, o metav1.Object, podSpec metav1.Object) {
+func CommonTranslation(t *model.Translation, o, podSpec metav1.Object) {
 	TranslateDevAnnotations(o, t.Annotations)
 	setAnnotation(o, oktetoVersionAnnotation, okLabels.Version)
 	setLabel(o, okLabels.DevLabel, "true")

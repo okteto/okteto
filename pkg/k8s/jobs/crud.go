@@ -54,8 +54,8 @@ func get(dev *model.Dev, namespace string, c kubernetes.Interface) (*batchv1.Job
 }
 
 //CreateDevJob applies the translations in your okteto manifest to the job
-func CreateDevJob(job *model.Dev, main *model.Dev, c kubernetes.Interface) (string, error) {
-	log.Info()
+func CreateDevJob(job, main *model.Dev, c kubernetes.Interface) (string, error) {
+	log.Infof("creating job from %s", job.Name)
 	j, err := get(job, main.Namespace, c)
 	if err != nil {
 		return "", err
@@ -73,8 +73,16 @@ func CreateDevJob(job *model.Dev, main *model.Dev, c kubernetes.Interface) (stri
 	}
 
 	newJob, err := translate(j, t)
+	if err != nil {
+		return "", err
+	}
+
 	created, err := c.BatchV1().Jobs(main.Namespace).Create(newJob)
-	return created.Name, err
+	if err != nil {
+		return "", fmt.Errorf("failed to create job: %w", err)
+	}
+
+	return created.Name, nil
 }
 
 func translate(old *batchv1.Job, t *model.Translation) (*batchv1.Job, error) {
@@ -82,7 +90,7 @@ func translate(old *batchv1.Job, t *model.Translation) (*batchv1.Job, error) {
 	job.Name = fmt.Sprintf("okteto-%s-%d", job.Name, time.Now().Unix())
 
 	// initialize unique values
-	job.Status = *&batchv1.JobStatus{}
+	job.Status = batchv1.JobStatus{}
 	job.ResourceVersion = ""
 	job.GetLabels()["job-name"] = job.Name
 	delete(job.GetLabels(), "controller-uid")
