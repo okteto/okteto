@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:experimental
 
 FROM bitnami/kubectl:1.17.4 as kubectl
-FROM alpine/helm:3.2.4 as helm
+FROM alpine/helm:3.3.0 as helm
 
 FROM golang:1.14-buster as builder
 WORKDIR /okteto
