@@ -20,11 +20,14 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes"
 )
 
 //Create creates a job
@@ -83,6 +86,18 @@ func executeCreateJob(ctx context.Context, dev *model.Dev, job string) error {
 		dev.Namespace = namespace
 	}
 
+	isDevMode, err := isDevModeOn(ctx, dev, client)
+	if err != nil {
+		return err
+	}
+
+	if !isDevMode {
+		return errors.UserError{
+			E:    fmt.Errorf("Development environment is not active in namespace %s", dev.Namespace),
+			Hint: "Run `okteto up` to launch it or use `okteto namespace` to select the correct namespace and try again",
+		}
+	}
+
 	for _, j := range dev.Jobs {
 		if j.Name == job {
 			n, err := jobs.CreateDevJob(j, dev, client)
@@ -96,4 +111,18 @@ func executeCreateJob(ctx context.Context, dev *model.Dev, job string) error {
 	}
 
 	return fmt.Errorf("Unable to find any job with the provided name")
+}
+
+func isDevModeOn(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (bool, error) {
+	d, err := deployments.Get(dev, dev.Namespace, c)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return deployments.IsDevModeOn(d), nil
+
 }
