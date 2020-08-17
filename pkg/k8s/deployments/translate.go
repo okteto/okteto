@@ -49,6 +49,10 @@ var (
 )
 
 func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
+	if t.Deployment == nil {
+		return nil
+	}
+
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		if devContainer == nil {
@@ -65,6 +69,7 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 		}
 		t.Deployment = dOrig
 	}
+	
 	annotations := t.Deployment.GetObjectMeta().GetAnnotations()
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)

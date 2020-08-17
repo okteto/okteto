@@ -15,22 +15,24 @@ package model
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
 
-//Translation represents the information for translating a deployment
+//Translation represents the information for translating a resource
 type Translation struct {
 	Interactive bool               `json:"interactive"`
 	Name        string             `json:"name"`
 	Version     string             `json:"version"`
 	Deployment  *appsv1.Deployment `json:"-"`
+	Job         *batchv1.Job       `json:"-"`
 	Annotations map[string]string  `json:"annotations,omitempty"`
 	Tolerations []apiv1.Toleration `json:"tolerations,omitempty"`
 	Replicas    int32              `json:"replicas"`
 	Rules       []*TranslationRule `json:"rules"`
 }
 
-//TranslationRule represents how to apply a container translation in a deployment
+//TranslationRule represents how to apply a container translation in a resource
 type TranslationRule struct {
 	Marker           string               `json:"marker"`
 	Node             string               `json:"node,omitempty"`

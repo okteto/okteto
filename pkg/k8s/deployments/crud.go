@@ -238,6 +238,7 @@ func UpdateDeployments(trList map[string]*model.Translation, c *kubernetes.Clien
 		if tr.Deployment == nil {
 			continue
 		}
+
 		if err := update(tr.Deployment, c); err != nil {
 			return err
 		}

@@ -50,6 +50,7 @@ const (
 	namespaceEvent       = "Namespace"
 	namespaceCreateEvent = "CreateNamespace"
 	namespaceDeleteEvent = "DeleteNamespace"
+	jobCreateEvent       = "CreateJob"
 	execEvent            = "Exec"
 	signupEvent          = "Signup"
 	disableEvent         = "Disable Analytics"
@@ -94,6 +95,11 @@ func TrackCreateNamespace(success bool) {
 // TrackDeleteNamespace sends a tracking event to mixpanel when the user deletes a namespace
 func TrackDeleteNamespace(success bool) {
 	track(namespaceDeleteEvent, success, nil)
+}
+
+// TrackCreateJob sends a tracking event to mixpanel when the user creates a job
+func TrackCreateJob(success bool) {
+	track(jobCreateEvent, success, nil)
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect

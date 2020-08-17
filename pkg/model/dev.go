@@ -124,6 +124,7 @@ type Dev struct {
 	DevPath              string                `json:"-" yaml:"-"`
 	DevDir               string                `json:"-" yaml:"-"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
+	Jobs                 []*Dev                `json:"jobs,omitempty" yaml:"jobs,omitempty"`
 	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 }
@@ -248,6 +249,7 @@ func Read(bytes []byte) (*Dev, error) {
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
 		Services:    make([]*Dev, 0),
+		Jobs:        make([]*Dev, 0),
 	}
 
 	if bytes != nil {
@@ -277,9 +279,17 @@ func Read(bytes []byte) (*Dev, error) {
 		s.loadName()
 	}
 
+	for _, j := range dev.Jobs {
+		j.loadName()
+	}
+
 	dev.loadImage()
 	for _, s := range dev.Services {
 		s.loadImage()
+	}
+
+	for _, j := range dev.Jobs {
+		j.loadImage()
 	}
 
 	if err := dev.setDefaults(); err != nil {
@@ -338,33 +348,50 @@ func (dev *Dev) setDefaults() error {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
 	}
 	dev.setRunAsUserDefaults(dev)
+
 	for _, s := range dev.Services {
-		if s.MountPath == "" && s.WorkDir == "" {
-			s.MountPath = "/okteto"
-			s.WorkDir = "/okteto"
+		if err := dev.setSubresourceDefaults(s); err != nil {
+			return err
 		}
-		if s.ImagePullPolicy == "" {
-			s.ImagePullPolicy = apiv1.PullAlways
-		}
-		if s.WorkDir != "" && s.MountPath == "" {
-			s.MountPath = s.WorkDir
-		}
-		if s.Labels == nil {
-			s.Labels = map[string]string{}
-		}
-		if s.Annotations == nil {
-			s.Annotations = map[string]string{}
-		}
-		if s.Name != "" && len(s.Labels) > 0 {
-			return fmt.Errorf("'name' and 'labels' cannot be defined at the same time for service '%s'", s.Name)
-		}
-		s.Namespace = ""
-		s.setRunAsUserDefaults(dev)
-		s.Forward = make([]Forward, 0)
-		s.Reverse = make([]Reverse, 0)
-		s.Secrets = make([]Secret, 0)
-		s.Services = make([]*Dev, 0)
 	}
+
+	for _, s := range dev.Jobs {
+		if err := dev.setSubresourceDefaults(s); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (dev *Dev) setSubresourceDefaults(s *Dev) error {
+	if s.MountPath == "" && s.WorkDir == "" {
+		s.MountPath = "/okteto"
+		s.WorkDir = "/okteto"
+	}
+	if s.ImagePullPolicy == "" {
+		s.ImagePullPolicy = apiv1.PullAlways
+	}
+	if s.WorkDir != "" && s.MountPath == "" {
+		s.MountPath = s.WorkDir
+	}
+	if s.Labels == nil {
+		s.Labels = map[string]string{}
+	}
+	if s.Annotations == nil {
+		s.Annotations = map[string]string{}
+	}
+	if s.Name != "" && len(s.Labels) > 0 {
+		return fmt.Errorf("'name' and 'labels' cannot be defined at the same time for service '%s'", s.Name)
+	}
+	s.Namespace = ""
+	s.setRunAsUserDefaults(dev)
+	s.Forward = make([]Forward, 0)
+	s.Reverse = make([]Reverse, 0)
+	s.Secrets = make([]Secret, 0)
+	s.Services = make([]*Dev, 0)
+	s.Jobs = make([]*Dev, 0)
+
 	return nil
 }
 
@@ -424,6 +451,11 @@ func (dev *Dev) validate() error {
 		if len(dev.Services) > 0 {
 			return fmt.Errorf("'persistentVolume.enabled' must be set to true to work with services")
 		}
+
+		if len(dev.Jobs) > 0 {
+			return fmt.Errorf("'persistentVolume.enabled' must be set to true to work with jobs")
+		}
+
 		if len(dev.Volumes) > 0 {
 			return fmt.Errorf("'persistentVolume.enabled' must be set to true to use volumes")
 		}
@@ -442,6 +474,12 @@ func (dev *Dev) validate() error {
 	}
 
 	for _, s := range dev.Services {
+		if err := validatePullPolicy(s.ImagePullPolicy); err != nil {
+			return err
+		}
+	}
+
+	for _, s := range dev.Jobs {
 		if err := validatePullPolicy(s.ImagePullPolicy); err != nil {
 			return err
 		}
@@ -539,6 +577,11 @@ func (dev *Dev) LoadForcePull() {
 		s.ImagePullPolicy = apiv1.PullAlways
 		s.Annotations[OktetoRestartAnnotation] = restartUUID
 	}
+
+	for _, s := range dev.Jobs {
+		s.ImagePullPolicy = apiv1.PullAlways
+	}
+
 	log.Infof("enabled force pull")
 }
 

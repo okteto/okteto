@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/cmd/job"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/spf13/cobra"
 )
@@ -28,5 +29,6 @@ func Create(ctx context.Context) *cobra.Command {
 		Short: fmt.Sprintf("Creates resources"),
 	}
 	cmd.AddCommand(namespace.Create(ctx))
+	cmd.AddCommand(job.Create(ctx))
 	return cmd
 }
