@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	batchv1 "k8s.io/api/batch/v1"
@@ -92,16 +91,14 @@ func translate(old *batchv1.Job, t *model.Translation) (*batchv1.Job, error) {
 	delete(job.Spec.Template.GetLabels(), "controller-uid")
 	delete(job.GetObjectMeta().GetAnnotations(), revisionAnnotation)
 
+	deployments.CommonTranslation(t, job.GetObjectMeta(), job.Spec.Template.GetObjectMeta())
+
 	// apply okteto manifest overrides
 	deployments.TranslateDevAnnotations(job.Spec.Template.GetObjectMeta(), t.Annotations)
 	deployments.TranslateDevTolerations(&job.Spec.Template.Spec, t.Tolerations)
 	deployments.TranslatePodAffinity(&job.Spec.Template.Spec, t.Name)
 
 	job.Spec.Template.Spec.Tolerations = append(job.Spec.Template.Spec.Tolerations, t.Tolerations...)
-
-	job.GetObjectMeta().GetAnnotations()[oktetoVersionAnnotation] = okLabels.Version
-	job.GetObjectMeta().GetLabels()[okLabels.DevLabel] = "true"
-	job.Spec.Template.GetObjectMeta().GetLabels()[okLabels.DetachedDevLabel] = t.Name
 
 	for _, rule := range t.Rules {
 		devContainer := deployments.GetDevContainer(&job.Spec.Template.Spec, rule.Container)

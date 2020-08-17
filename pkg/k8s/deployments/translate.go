@@ -69,15 +69,16 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 		}
 		t.Deployment = dOrig
 	}
-	
+
 	annotations := t.Deployment.GetObjectMeta().GetAnnotations()
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
+	t.Deployment.Spec.Replicas = &devReplicas
 
 	if c != nil && namespaces.IsOktetoNamespace(ns) {
 		c := os.Getenv("OKTETO_CLIENTSIDE_TRANSLATION")
 		if c == "" {
-			commonTranslation(t)
+			CommonTranslation(t, t.Deployment.GetObjectMeta(), t.Deployment.Spec.Template.GetObjectMeta())
 			return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
 		}
 
@@ -91,7 +92,7 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	}
 	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 
-	commonTranslation(t)
+	CommonTranslation(t, t.Deployment.GetObjectMeta(), t.Deployment.Spec.Template.GetObjectMeta())
 	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
 	TranslateDevAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
 	TranslateDevTolerations(&t.Deployment.Spec.Template.Spec, t.Tolerations)
@@ -120,18 +121,17 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	return nil
 }
 
-func commonTranslation(t *model.Translation) {
-	TranslateDevAnnotations(t.Deployment.GetObjectMeta(), t.Annotations)
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.Version)
-	setLabel(t.Deployment.GetObjectMeta(), okLabels.DevLabel, "true")
+// CommonTranslation are the translations applied to any podspec, both client or serverside
+func CommonTranslation(t *model.Translation, o metav1.Object, podSpec metav1.Object) {
+	TranslateDevAnnotations(o, t.Annotations)
+	setAnnotation(o, oktetoVersionAnnotation, okLabels.Version)
+	setLabel(o, okLabels.DevLabel, "true")
 
 	if t.Interactive {
-		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.InteractiveDevLabel, t.Name)
+		setLabel(podSpec, okLabels.InteractiveDevLabel, t.Name)
 	} else {
-		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DetachedDevLabel, t.Name)
+		setLabel(podSpec, okLabels.DetachedDevLabel, t.Name)
 	}
-
-	t.Deployment.Spec.Replicas = &devReplicas
 }
 
 //GetDevContainer returns the dev container of a given deployment
