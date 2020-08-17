@@ -16,7 +16,6 @@ package okteto
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -29,9 +28,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-// httpClient this client will inject opentracing and scope spans if available
-var httpClient = &http.Client{}
 
 func getClient(oktetoURL string) (*graphql.Client, error) {
 
