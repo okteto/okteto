@@ -15,7 +15,6 @@ package job
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -32,7 +31,7 @@ import (
 func Create(ctx context.Context) *cobra.Command {
 	var namespace string
 	var devPath string
-
+	var job string
 	cmd := &cobra.Command{
 		Use:   "job <name>",
 		Short: fmt.Sprintf("Creates a dev version of the job [beta]"),
@@ -50,13 +49,13 @@ func Create(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err = executeCreateJob(ctx, dev, args[0])
+			err = executeCreateJob(ctx, dev, job)
 			analytics.TrackCreateJob(err == nil)
 			return err
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return errors.New("create job requires one argument")
+			if len(args) != 0 {
+				job = args[0]
 			}
 			return nil
 		},
