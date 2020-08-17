@@ -37,7 +37,7 @@ func Create(ctx context.Context) *cobra.Command {
 	var job string
 	cmd := &cobra.Command{
 		Use:   "job <name>",
-		Short: fmt.Sprintf("Creates a dev version of the job [beta]"),
+		Short: "Creates a dev version of the job [beta]",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
