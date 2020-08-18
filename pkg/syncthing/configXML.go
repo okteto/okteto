@@ -13,7 +13,7 @@
 
 package syncthing
 
-const configXML = `<configuration version="30">
+const configXML = `<configuration version="31">
 <folder id="okteto-{{ .Dev.Name }}" label="{{ .Dev.Name }}" path="{{ .Source }}" type="{{ .Type }}" rescanIntervalS="300" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
