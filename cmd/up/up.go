@@ -820,7 +820,7 @@ func (up *upContext) cleanCommand() {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
 
-	cmd := "cat /proc/sys/fs/inotify/max_user_watches; (cp /var/okteto/bin/* /usr/local/bin; cp /var/okteto/cloudbin/* /usr/local/bin; ([ -f '/var/okteto/bin/clean' ] && /var/okteto/bin/clean || (ps -ef | grep -v -E '/var/okteto/bin/syncthing|/var/okteto/bin/remote|PPID' | awk '{print $2}' | xargs -r kill -9))) >/dev/null 2>&1;"
+	cmd := "cat /proc/sys/fs/inotify/max_user_watches; (cp /var/okteto/bin/* /usr/local/bin; cp /var/okteto/cloudbin/* /usr/local/bin; /var/okteto/bin/clean) >/dev/null 2>&1"
 
 	err := exec.Exec(
 		up.Context,
