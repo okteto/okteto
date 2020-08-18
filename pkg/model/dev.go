@@ -35,6 +35,8 @@ import (
 )
 
 const (
+	//OktetoBinImageTag image tag with okteto binaries
+	OktetoBinImageTag = "okteto/bin:1.1.21"
 	// OktetoMarkerPathVariable is the marker used for syncthing
 	OktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
 
@@ -630,6 +632,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 
 	if main == dev {
 		rule.Marker = dev.DevPath
+		rule.OktetoBinImageTag = OktetoBinImageTag
 		rule.Environment = append(
 			rule.Environment,
 			EnvVar{
