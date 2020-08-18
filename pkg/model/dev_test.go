@@ -226,8 +226,8 @@ forward:
 				}
 			}
 
-			if d.PersistentVolumeEnabled() {
-				t.Errorf("persistent volume was enabled by default")
+			if !d.PersistentVolumeEnabled() {
+				t.Errorf("persistent volume was not enabled by default")
 			}
 		})
 	}
@@ -794,7 +794,7 @@ func TestPersistentVolumeEnabled(t *testing.T) {
       name: deployment
       container: core
       image: code/core:0.1.8`),
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "set",

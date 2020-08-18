@@ -129,14 +129,12 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 			}
 		}
 
-		if supportsPersistentVolumes(namespace) {
-			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
-				Enabled: true,
-			}
-		} else {
+		if !supportsPersistentVolumes(namespace) {
 			log.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
 			dev.Volumes = nil
-			dev.PersistentVolumeInfo = nil
+			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
+				Enabled: false,
+			}
 		}
 	} else {
 		linguist.SetForwardDefaults(dev, language)
