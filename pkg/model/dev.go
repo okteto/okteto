@@ -35,8 +35,8 @@ import (
 )
 
 const (
-	//OktetoBinImageTag image tag with okteto binaries
-	OktetoBinImageTag = "okteto/bin:1.1.21"
+	//OktetoBinImageTag image tag with okteto internal binaries
+	OktetoBinImageTag = "okteto/bin:1.2.1"
 	// OktetoMarkerPathVariable is the marker used for syncthing
 	OktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
 
