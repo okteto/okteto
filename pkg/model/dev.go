@@ -390,16 +390,16 @@ func (dev *Dev) setDefaults() error {
 
 func (dev *Dev) translateDeprecatedFields() error {
 
-	showWarning := func(field string) {
+	showWarning := func() {
 		if warningHasBeenShown {
 			return
 		}
-		log.Yellow("'%s' is deprecated to define your synched folders. Use the field 'volumes' instead. More info at https://okteto.com/docs/reference/manifest#volumes-string-optional", field)
+		log.Yellow("'mounthpath' is deprecated to define your synched folders. Use the field 'volumes' instead. More info at https://okteto.com/docs/reference/manifest#volumes-string-optional")
 		warningHasBeenShown = true
 	}
 
 	if dev.MountPath != "" {
-		showWarning("mounthpath")
+		showWarning()
 		dev.Volumes = append(
 			dev.Volumes,
 			Volume{
@@ -409,7 +409,6 @@ func (dev *Dev) translateDeprecatedFields() error {
 		)
 	} else if dev.WorkDir != "" && !dev.HasLocalVolumes() {
 		dev.MountPath = dev.WorkDir
-		showWarning("workdir")
 		dev.Volumes = append(
 			dev.Volumes,
 			Volume{
@@ -424,7 +423,7 @@ func (dev *Dev) translateDeprecatedFields() error {
 			if dev.MountPath == "" {
 				return fmt.Errorf("'mountpath' is not supported. Use 'volumes' instead to specify your synched folders (https://okteto.com/docs/reference/manifest#volumes-string-optional)")
 			}
-			showWarning("mounthpath")
+			showWarning()
 			s.Volumes = append(
 				s.Volumes,
 				Volume{
@@ -436,7 +435,6 @@ func (dev *Dev) translateDeprecatedFields() error {
 			if dev.MountPath == "" {
 				return fmt.Errorf("'mountpath' is not supported. Use 'volumes' instead to specify your synched folders (https://okteto.com/docs/reference/manifest#volumes-string-optional)")
 			}
-			showWarning("workdir")
 			s.Volumes = append(
 				s.Volumes,
 				Volume{
