@@ -58,13 +58,14 @@ services:
 	dev.DevPath = "okteto.yml"
 	rule1 := dev.ToTranslationRule(dev)
 	rule1OK := &TranslationRule{
-		Marker:          "okteto.yml",
-		Container:       "dev",
-		Image:           "web:latest",
-		ImagePullPolicy: apiv1.PullNever,
-		Command:         []string{"/var/okteto/bin/start.sh"},
-		Args:            []string{},
-		Healthchecks:    false,
+		Marker:            "okteto.yml",
+		OktetoBinImageTag: OktetoBinImageTag,
+		Container:         "dev",
+		Image:             "web:latest",
+		ImagePullPolicy:   apiv1.PullNever,
+		Command:           []string{"/var/okteto/bin/start.sh"},
+		Args:              []string{},
+		Healthchecks:      false,
 		Environment: []EnvVar{
 			{
 				Name:  OktetoMarkerPathVariable,

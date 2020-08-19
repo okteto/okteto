@@ -37,7 +37,6 @@ const (
 	oktetoBinName              = "okteto-bin"
 
 	//syncthing
-	oktetoBinImageTag      = "okteto/bin:1.1.21"
 	oktetoSyncSecretVolume = "okteto-sync-secret" // skipcq GSC-G101  not a secret
 	oktetoDevSecretVolume  = "okteto-dev-secret"  // skipcq GSC-G101  not a secret
 	oktetoSecretTemplate   = "okteto-%s"
@@ -106,9 +105,9 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
 		TranslateOktetoDevSecret(&t.Deployment.Spec.Template.Spec, t.Name, rule.Secrets)
-		if rule.Marker != "" {
+		if rule.OktetoBinImageTag != "" {
 			TranslateOktetoBinVolumeMounts(devContainer)
-			TranslateOktetoInitBinContainer(&t.Deployment.Spec.Template.Spec)
+			TranslateOktetoInitBinContainer(rule.OktetoBinImageTag, &t.Deployment.Spec.Template.Spec)
 			TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
 		}
 	}
@@ -424,7 +423,7 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 }
 
 //TranslateOktetoInitBinContainer translates the bin init container of a pod
-func TranslateOktetoInitBinContainer(spec *apiv1.PodSpec) {
+func TranslateOktetoInitBinContainer(oktetoBinImageTag string, spec *apiv1.PodSpec) {
 	c := apiv1.Container{
 		Name:            oktetoBinName,
 		Image:           oktetoBinImageTag,

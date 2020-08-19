@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -37,7 +38,7 @@ import (
 )
 
 const (
-	stignore          = ".stignore"
+	stignoreFile      = ".stignore"
 	secondaryManifest = "okteto.yaml"
 	defaultInitValues = "Use default values"
 )
@@ -146,6 +147,12 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 	if err := dev.Save(devPath); err != nil {
 		return err
 	}
+
+	devDir, err := filepath.Abs(filepath.Dir(devPath))
+	if err != nil {
+		return err
+	}
+	stignore := filepath.Join(devDir, stignoreFile)
 
 	if !model.FileExists(stignore) {
 		log.Debugf("getting stignore for %s", language)
