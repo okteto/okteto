@@ -61,8 +61,6 @@ volumes:
   - sub:/path
 secrets:
   - %s:/remote
-persistentVolume:
-  enabled: true
 resources:
   limits:
     cpu: 2
@@ -423,7 +421,9 @@ services:
 func Test_translateWithoutVolumes(t *testing.T) {
 	manifest := []byte(`name: web
 namespace: n
-image: web:latest`)
+image: web:latest
+persistentVolume:
+  enabled: false`)
 
 	dev, err := model.Read(manifest)
 	if err != nil {

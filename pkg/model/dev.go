@@ -824,7 +824,7 @@ func (s *Secret) GetFileName() string {
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
 func (dev *Dev) PersistentVolumeEnabled() bool {
 	if dev.PersistentVolumeInfo == nil {
-		return false
+		return true
 	}
 	return dev.PersistentVolumeInfo.Enabled
 }
