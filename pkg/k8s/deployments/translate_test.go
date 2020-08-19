@@ -192,7 +192,7 @@ services:
 					InitContainers: []apiv1.Container{
 						{
 							Name:            oktetoBinName,
-							Image:           oktetoBinImageTag,
+							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
@@ -504,7 +504,7 @@ image: web:latest`)
 					InitContainers: []apiv1.Container{
 						{
 							Name:            oktetoBinName,
-							Image:           oktetoBinImageTag,
+							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{

@@ -1,10 +1,9 @@
-# syntax = docker/dockerfile:experimental
-
 FROM syncthing/syncthing:1.6.1 AS syncthing
 FROM okteto/remote:0.3.1 AS remote
 FROM okteto/supervisor:0.1.2 AS supervisor
 FROM okteto/clean:0.1.2 AS clean
-FROM busybox as bin
+
+FROM busybox
 
 COPY --from=remote /usr/local/bin/remote /usr/local/bin/remote
 COPY --from=supervisor /usr/local/bin/supervisor /usr/local/bin/supervisor
