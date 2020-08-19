@@ -233,20 +233,20 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		v.SubPath = parts[0]
-		v.MountPath = parts[1]
+		v.LocalPath = parts[0]
+		v.RemotePath = parts[1]
 	} else {
-		v.MountPath = parts[0]
+		v.RemotePath = parts[0]
 	}
 	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (v Volume) MarshalYAML() (interface{}, error) {
-	if v.SubPath == "" {
-		return v.MountPath, nil
+	if v.LocalPath == "" {
+		return v.RemotePath, nil
 	}
-	return v.SubPath + ":" + v.MountPath, nil
+	return v.LocalPath + ":" + v.RemotePath, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

@@ -50,6 +50,12 @@ func Test_loadDevOrDefault(t *testing.T) {
 						Name: "okteto/test:1.0",
 					},
 				},
+				Volumes: []model.Volume{
+					{
+						LocalPath:  ".",
+						RemotePath: "/path",
+					},
+				},
 			},
 		},
 	}
@@ -94,7 +100,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 
 			loaded, err := LoadDevOrDefault(f.Name(), "foo")
 			if err != nil {
-				t.Fatal("expected error when loading existing manifest")
+				t.Fatalf("unexpected error when loading existing manifest: %s", err.Error())
 			}
 
 			if tt.dev.Image.Name != loaded.Image.Name {

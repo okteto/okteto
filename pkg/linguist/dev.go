@@ -62,6 +62,12 @@ func init() {
 				Remote: 9229,
 			},
 		},
+		volumes: []model.Volume{
+			{
+				LocalPath:  ".",
+				RemotePath: "/okteto",
+			},
+		},
 	}
 	forwardDefaults[javascript] = []model.Forward{
 		{
@@ -85,10 +91,14 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
-				MountPath: "/go/pkg/",
+				LocalPath:  ".",
+				RemotePath: "/okteto",
 			},
 			{
-				MountPath: "/root/.cache/go-build/",
+				RemotePath: "/go/pkg/",
+			},
+			{
+				RemotePath: "/root/.cache/go-build/",
 			},
 		},
 	}
@@ -109,7 +119,11 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
-				MountPath: "/root/.cache/pip",
+				LocalPath:  ".",
+				RemotePath: "/okteto",
+			},
+			{
+				RemotePath: "/root/.cache/pip",
 			},
 		},
 	}
@@ -130,7 +144,11 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
-				MountPath: "/home/gradle/.gradle",
+				LocalPath:  ".",
+				RemotePath: "/okteto",
+			},
+			{
+				RemotePath: "/home/gradle/.gradle",
 			},
 		},
 	}
@@ -151,7 +169,11 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
-				MountPath: "/root/.m2",
+				LocalPath:  ".",
+				RemotePath: "/okteto",
+			},
+			{
+				RemotePath: "/root/.m2",
 			},
 		},
 	}
@@ -172,7 +194,11 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
-				MountPath: "/usr/local/bundle/cache",
+				LocalPath:  ".",
+				RemotePath: "/okteto",
+			},
+			{
+				RemotePath: "/usr/local/bundle/cache",
 			},
 		},
 	}
@@ -189,6 +215,12 @@ func init() {
 			{
 				Name:  "ASPNETCORE_ENVIRONMENT",
 				Value: "Development",
+			},
+		},
+		volumes: []model.Volume{
+			{
+				LocalPath:  ".",
+				RemotePath: "/okteto",
 			},
 		},
 		forward: []model.Forward{},
@@ -211,7 +243,11 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
-				MountPath: "/root/.composer/cache",
+				LocalPath:  ".",
+				RemotePath: "/okteto",
+			},
+			{
+				RemotePath: "/root/.composer/cache",
 			},
 		},
 	}
@@ -225,6 +261,12 @@ func init() {
 	languageDefaults[Unrecognized] = languageDefault{
 		image:   model.DefaultImage,
 		forward: []model.Forward{},
+		volumes: []model.Volume{
+			{
+				LocalPath:  ".",
+				RemotePath: "/okteto",
+			},
+		},
 	}
 	forwardDefaults[Unrecognized] = []model.Forward{
 		{

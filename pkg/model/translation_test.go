@@ -31,8 +31,8 @@ image: web:latest
 command: ["./run_web.sh"]
 imagePullPolicy: Never
 volumes:
+  - .:/app
   - sub:/path
-mountpath: /app
 resources:
   limits:
     cpu: 2
@@ -46,8 +46,8 @@ services:
     container: dev
     image: worker:latest
     imagePullPolicy: IfNotPresent
-    mountpath: /src
-    subpath: /worker
+    volumes:
+      - worker:/src
     healthchecks: true`)
 
 	dev, err := Read(manifest)
@@ -55,10 +55,9 @@ services:
 		t.Fatal(err)
 	}
 
-	dev.DevPath = "okteto.yml"
 	rule1 := dev.ToTranslationRule(dev)
 	rule1OK := &TranslationRule{
-		Marker:            "okteto.yml",
+		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,
 		Container:         "dev",
 		Image:             "web:latest",
@@ -67,10 +66,6 @@ services:
 		Args:              []string{},
 		Healthchecks:      false,
 		Environment: []EnvVar{
-			{
-				Name:  OktetoMarkerPathVariable,
-				Value: "/app/okteto.yml",
-			},
 			{
 				Name:  "OKTETO_NAMESPACE",
 				Value: "n",
@@ -98,13 +93,13 @@ services:
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: "/app",
-				SubPath:   SourceCodeSubPath,
+				MountPath: OktetoSyncthingMountPath,
+				SubPath:   SyncthingSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: OktetoSyncthingMountPath,
-				SubPath:   SyncthingSubPath,
+				MountPath: "/app",
+				SubPath:   SourceCodeSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
@@ -169,7 +164,6 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				SSHServerPort: oktetoDefaultSSHServerPort,
 			},
 			expected: []EnvVar{
-				{Name: OktetoMarkerPathVariable, Value: ""},
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 			},
@@ -181,7 +175,6 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				SSHServerPort: 22220,
 			},
 			expected: []EnvVar{
-				{Name: OktetoMarkerPathVariable, Value: ""},
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},

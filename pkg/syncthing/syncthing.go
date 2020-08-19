@@ -74,8 +74,7 @@ type Syncthing struct {
 	binPath          string       `yaml:"-"`
 	Client           *http.Client `yaml:"-"`
 	cmd              *exec.Cmd    `yaml:"-"`
-	Dev              *model.Dev   `yaml:"-"`
-	DevPath          string       `yaml:"-"`
+	Folders          []Folder     `yaml:"folders"`
 	FileWatcherDelay int          `yaml:"-"`
 	ForceSendOnly    bool         `yaml:"-"`
 	GUIAddress       string       `yaml:"local"`
@@ -89,10 +88,16 @@ type Syncthing struct {
 	RemotePort       int          `yaml:"-"`
 	LocalGUIPort     int          `yaml:"-"`
 	LocalPort        int          `yaml:"-"`
-	Source           string       `yaml:"-"`
 	Type             string       `yaml:"-"`
 	IgnoreDelete     bool         `yaml:"-"`
 	pid              int          `yaml:"-"`
+}
+
+//Folder represents a sync folder
+type Folder struct {
+	Name       string `yaml:"name"`
+	LocalPath  string `yaml:"localPath"`
+	RemotePath string `yaml:"remotePath"`
 }
 
 //Ignores represents the .stignore file
@@ -166,8 +171,6 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		GUIPasswordHash:  string(hash),
 		binPath:          fullPath,
 		Client:           NewAPIClient(),
-		Dev:              dev,
-		DevPath:          dev.DevPath,
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("localhost:%d", guiPort),
 		Home:             config.GetDeploymentHome(dev.Namespace, dev.Name),
@@ -180,9 +183,27 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		LocalPort:        listenPort,
 		RemoteGUIPort:    remoteGUIPort,
 		RemotePort:       remotePort,
-		Source:           dev.DevDir,
 		Type:             "sendonly",
 		IgnoreDelete:     true,
+		Folders:          []Folder{},
+	}
+	index := 1
+	for _, v := range dev.Volumes {
+		result, err := dev.IsSyncFolder(v.LocalPath)
+		if err != nil {
+			return nil, err
+		}
+		if result {
+			s.Folders = append(
+				s.Folders,
+				Folder{
+					Name:       strconv.Itoa(index),
+					LocalPath:  v.LocalPath,
+					RemotePath: v.RemotePath,
+				},
+			)
+			index++
+		}
 	}
 
 	return s, nil
@@ -317,71 +338,84 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 }
 
 //SendStignoreFile sends .stignore from local to remote
-func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) {
-	log.Infof("sending '.stignore' file to the remote syncthing")
-	params := getFolderParameter(dev)
-	ignores := &Ignores{}
-	body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true)
-	if err != nil {
-		log.Infof("error getting 'rest/db/ignores' syncthing API: %s", err)
-		return
-	}
-	err = json.Unmarshal(body, ignores)
-	if err != nil {
-		log.Infof("error unmarshaling 'rest/db/ignores': %s", err)
-		return
-	}
-	for i, line := range ignores.Ignore {
-		line := strings.TrimSpace(line)
-		if line == "" {
-			continue
+func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error {
+	for _, folder := range s.Folders {
+		log.Infof("sending '.stignore' file %s to the remote syncthing", folder.Name)
+		params := getFolderParameter(&folder)
+		ignores := &Ignores{}
+		body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true)
+		if err != nil {
+			return fmt.Errorf("error getting ignore files: %s", err.Error())
 		}
-		if strings.Contains(line, "(?d)") {
-			continue
+		err = json.Unmarshal(body, ignores)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling ignore files: %s", err.Error())
 		}
-		ignores.Ignore[i] = fmt.Sprintf("(?d)%s", line)
+		for i, line := range ignores.Ignore {
+			line := strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			if strings.Contains(line, "(?d)") {
+				continue
+			}
+			ignores.Ignore[i] = fmt.Sprintf("(?d)%s", line)
+		}
+		body, err = json.Marshal(ignores)
+		if err != nil {
+			return fmt.Errorf("error marshalling ignore files: %s", err.Error())
+		}
+		_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false)
+		if err != nil {
+			return fmt.Errorf("error posting ignore files: %s", err.Error())
+		}
 	}
-	body, err = json.Marshal(ignores)
-	if err != nil {
-		log.Infof("error marshaling 'rest/db/ignores': %s", err)
-	}
-	_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false)
-	if err != nil {
-		log.Infof("error posting 'rest/db/ignores' syncthing API: %s", err)
-		return
-	}
+	return nil
 }
 
 //ResetDatabase resets the syncthing database
 func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
-	log.Infof("reseting syncthing database local=%t", local)
-	params := getFolderParameter(dev)
-	_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil, false)
-	if err != nil {
-		log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
-		return err
+	for _, folder := range s.Folders {
+		log.Infof("reseting syncthing database path=%s local=%t", folder.LocalPath, local)
+		params := getFolderParameter(&folder)
+		_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil, false)
+		if err != nil {
+			log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
+			return err
+		}
 	}
 	return nil
 }
 
 //Overwrite overwrites local changes to the remote syncthing
 func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
-	log.Infof("overriding local changes to the remote syncthing")
-	params := getFolderParameter(dev)
-	_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false)
-	if err != nil {
-		log.Infof("error posting 'rest/db/override' syncthing API: %s", err)
-		return err
+	for _, folder := range s.Folders {
+		log.Infof("overriding local changes to the remote syncthing path=%s", folder.LocalPath)
+		params := getFolderParameter(&folder)
+		_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false)
+		if err != nil {
+			log.Infof("error posting 'rest/db/override' syncthing API: %s", err)
+			return err
+		}
 	}
 	return nil
 }
 
 //WaitForScanning waits for synthing to finish initial scanning
 func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local bool) error {
+	for _, folder := range s.Folders {
+		if err := s.waitForFolderScanning(ctx, &folder, local); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, local bool) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
-	params := getFolderParameter(dev)
+	params := getFolderParameter(folder)
 	status := &Status{}
-	log.Infof("waiting for initial scan to complete local=%t", local)
+	log.Infof("waiting for initial scan to complete path=%s local=%t", folder.LocalPath, local)
 
 	to := config.GetTimeout() * 10 // 5 minutes
 	timeout := time.Now().Add(to)
@@ -419,73 +453,77 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 			return ctx.Err()
 		}
 	}
-
 }
 
 // WaitForCompletion waits for the remote to be totally synched
 func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
 	defer close(reporter)
 	ticker := time.NewTicker(500 * time.Millisecond)
-	log.Infof("waiting for synchronization to complete")
-	retries := 0
-	for {
-		select {
-		case <-ticker.C:
-			if err := s.Overwrite(ctx, dev); err != nil {
-				log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
-				continue
-			}
-
-			completion, err := s.GetCompletion(ctx, dev, true)
-			if err != nil {
-				log.Debugf("error calling getting completion: %s", err)
-				continue
-			}
-
-			if completion.GlobalBytes == 0 {
-				return nil
-			}
-
-			progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
-			log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
-				progress,
-				completion.NeedBytes,
-				completion.NeedDeletes,
-			)
-
-			reporter <- progress
-
-			if completion.NeedBytes == 0 {
-				return nil
-			}
-
-			status, err := s.GetStatus(ctx, dev, false)
-			if err != nil {
-				log.Debugf("error getting status: %s", err)
-				continue
-
-			}
-			if status.PullErrors > 0 {
-				if err := s.GetFolderErrors(ctx, dev, false); err != nil {
-					return err
+	for _, folder := range s.Folders {
+		log.Infof("waiting for synchronization to complete path=%s", folder.LocalPath)
+		retries := 0
+		for {
+			select {
+			case <-ticker.C:
+				if err := s.Overwrite(ctx, dev); err != nil {
+					log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
+					continue
 				}
-				retries++
-				if retries >= 60 {
-					return okerr.ErrUnknownSyncError
+
+				completion, err := s.GetCompletion(ctx, true)
+				if err != nil {
+					log.Debugf("error calling getting completion: %s", err)
+					continue
 				}
-				continue
+
+				if completion.GlobalBytes == 0 {
+					return nil
+				}
+
+				progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
+				log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
+					progress,
+					completion.NeedBytes,
+					completion.NeedDeletes,
+				)
+
+				reporter <- progress
+
+				if completion.NeedBytes == 0 {
+					return nil
+				}
+
+				for _, folder := range s.Folders {
+					status, err := s.GetStatus(ctx, &folder, false)
+					if err != nil {
+						log.Debugf("error getting status: %s", err)
+						continue
+					}
+					if status.PullErrors > 0 {
+						if err := s.GetFolderErrors(ctx, &folder, false); err != nil {
+							return err
+						}
+						retries++
+						if retries >= 60 {
+							return okerr.ErrUnknownSyncError
+						}
+						continue
+					}
+					retries = 0
+				}
+
+			case <-ctx.Done():
+				log.Debug("cancelling call to 'rest/db/completion'")
+				return ctx.Err()
 			}
-			retries = 0
-		case <-ctx.Done():
-			log.Debug("cancelling call to 'rest/db/completion'")
-			return ctx.Err()
 		}
 	}
+	return nil
 }
 
 // GetStatus returns the syncthing status
-func (s *Syncthing) GetStatus(ctx context.Context, dev *model.Dev, local bool) (*Status, error) {
-	params := getFolderParameter(dev)
+func (s *Syncthing) GetStatus(ctx context.Context, folder *Folder, local bool) (*Status, error) {
+	params := getFolderParameter(folder)
 	status := &Status{}
 	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
 	if err != nil {
@@ -500,29 +538,36 @@ func (s *Syncthing) GetStatus(ctx context.Context, dev *model.Dev, local bool) (
 }
 
 // GetCompletion returns the syncthing completion
-func (s *Syncthing) GetCompletion(ctx context.Context, dev *model.Dev, local bool) (*Completion, error) {
-	params := getFolderParameter(dev)
-	if local {
-		params["device"] = DefaultRemoteDeviceID
-	} else {
-		params["device"] = localDeviceID
-	}
-	completion := &Completion{}
-	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(body, completion)
-	if err != nil {
-		return nil, err
+func (s *Syncthing) GetCompletion(ctx context.Context, local bool) (*Completion, error) {
+	result := &Completion{}
+	for _, folder := range s.Folders {
+		params := getFolderParameter(&folder)
+		if local {
+			params["device"] = DefaultRemoteDeviceID
+		} else {
+			params["device"] = localDeviceID
+		}
+		completion := &Completion{}
+		body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(body, completion)
+		if err != nil {
+			return nil, err
+		}
+		result.Completion += completion.Completion
+		result.GlobalBytes += completion.GlobalBytes
+		result.NeedBytes += completion.NeedBytes
+		result.NeedDeletes += completion.NeedDeletes
 	}
 
-	return completion, nil
+	return result, nil
 }
 
 // GetCompletionProgress returns the syncthing completion progress
-func (s *Syncthing) GetCompletionProgress(ctx context.Context, dev *model.Dev, local bool) (float64, error) {
-	completion, err := s.GetCompletion(ctx, dev, local)
+func (s *Syncthing) GetCompletionProgress(ctx context.Context, local bool) (float64, error) {
+	completion, err := s.GetCompletion(ctx, local)
 	if err != nil {
 		return 0, err
 	}
@@ -534,8 +579,8 @@ func (s *Syncthing) GetCompletionProgress(ctx context.Context, dev *model.Dev, l
 }
 
 // GetFolderErrors returns the last folder errors
-func (s *Syncthing) GetFolderErrors(ctx context.Context, dev *model.Dev, local bool) error {
-	params := getFolderParameter(dev)
+func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local bool) error {
+	params := getFolderParameter(folder)
 	params["since"] = "0"
 	params["limit"] = "1"
 	params["timeout"] = "15"
@@ -719,7 +764,7 @@ func getBinaryName() string {
 	return "syncthing"
 }
 
-func getFolderParameter(dev *model.Dev) map[string]string {
-	folder := fmt.Sprintf("okteto-%s", dev.Name)
-	return map[string]string{"folder": folder, "device": DefaultRemoteDeviceID}
+func getFolderParameter(folder *Folder) map[string]string {
+	folderName := fmt.Sprintf("okteto-%s", folder.Name)
+	return map[string]string{"folder": folderName, "device": DefaultRemoteDeviceID}
 }
