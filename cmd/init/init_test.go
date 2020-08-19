@@ -37,6 +37,11 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	stignorePath := filepath.Join(dir, ".stignore")
+	if _, err := os.Stat(stignorePath); os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+
 	dev, err := utils.LoadDev(p)
 	if err != nil {
 		t.Fatal(err)
