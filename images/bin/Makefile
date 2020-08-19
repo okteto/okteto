@@ -1,4 +1,4 @@
-tag = 1.2.1
+tag = 1.2.2
 
 .PHONY: push
 push:
