@@ -394,7 +394,7 @@ func (dev *Dev) translateDeprecatedFields() error {
 		if warningHasBeenShown {
 			return
 		}
-		log.Yellow("'mounthpath' is deprecated to define your synched folders. Use the field 'volumes' instead. More info at https://okteto.com/docs/reference/manifest#volumes-string-optional")
+		log.Yellow("'mounthpath' is deprecated to define your synchronized folders. Use the field 'volumes' instead. More info at https://okteto.com/docs/reference/manifest#volumes-string-optional")
 		warningHasBeenShown = true
 	}
 
@@ -421,7 +421,7 @@ func (dev *Dev) translateDeprecatedFields() error {
 	for _, s := range dev.Services {
 		if s.MountPath != "" {
 			if dev.MountPath == "" {
-				return fmt.Errorf("'mountpath' is not supported. Use 'volumes' instead to specify your synched folders (https://okteto.com/docs/reference/manifest#volumes-string-optional)")
+				return fmt.Errorf("'mountpath' is not supported. Use 'volumes' instead to specify your synchronized folders (https://okteto.com/docs/reference/manifest#volumes-string-optional)")
 			}
 			showWarning()
 			s.Volumes = append(
