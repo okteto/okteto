@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -39,7 +38,7 @@ func Status() *cobra.Command {
 	var watch bool
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: fmt.Sprintf("Status of the synchronization process"),
+		Short: "Status of the synchronization process",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting status command")
 

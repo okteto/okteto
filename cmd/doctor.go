@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -34,7 +33,7 @@ func Doctor() *cobra.Command {
 	var k8sContext string
 	cmd := &cobra.Command{
 		Use:   "doctor",
-		Short: fmt.Sprintf("Generates a zip file with the okteto logs"),
+		Short: "Generates a zip file with the okteto logs",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting doctor command")
 
