@@ -409,7 +409,6 @@ services:
 }
 
 func TestDev_translateDeprecatedFields(t *testing.T) {
-	warningHasBeenShown = true
 	tests := []struct {
 		name    string
 		dev     *Dev

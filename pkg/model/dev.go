@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/log"
@@ -99,7 +100,7 @@ var (
 
 	devTerminationGracePeriodSeconds int64
 
-	warningHasBeenShown = false
+	once sync.Once
 )
 
 //Dev represents a development container
@@ -226,15 +227,15 @@ func Get(devPath string) (*Dev, error) {
 		return nil, err
 	}
 
+	if err := dev.loadAbsPaths(devPath); err != nil {
+		return nil, err
+	}
+
 	if err := dev.validate(); err != nil {
 		return nil, err
 	}
 
 	if err := dev.translateDeprecatedFields(); err != nil {
-		return nil, err
-	}
-
-	if err := dev.loadAbsPaths(devPath); err != nil {
 		return nil, err
 	}
 
@@ -301,6 +302,9 @@ func Read(bytes []byte) (*Dev, error) {
 }
 
 func loadAbsPath(folder, path string) string {
+	if len(path) > 0 {
+		path = os.ExpandEnv(path)
+	}
 	if filepath.IsAbs(path) {
 		return path
 	}
@@ -389,17 +393,12 @@ func (dev *Dev) setDefaults() error {
 }
 
 func (dev *Dev) translateDeprecatedFields() error {
-
-	showWarning := func() {
-		if warningHasBeenShown {
-			return
-		}
+	warnMessage := func() {
 		log.Yellow("'mounthpath' is deprecated to define your synchronized folders. Use the field 'volumes' instead. More info at https://okteto.com/docs/reference/manifest#volumes-string-optional")
-		warningHasBeenShown = true
 	}
 
 	if dev.MountPath != "" {
-		showWarning()
+		once.Do(warnMessage)
 		dev.Volumes = append(
 			dev.Volumes,
 			Volume{
@@ -423,7 +422,7 @@ func (dev *Dev) translateDeprecatedFields() error {
 			if dev.MountPath == "" {
 				return fmt.Errorf("'mountpath' is not supported. Use 'volumes' instead to specify your synchronized folders (https://okteto.com/docs/reference/manifest#volumes-string-optional)")
 			}
-			showWarning()
+			once.Do(warnMessage)
 			s.Volumes = append(
 				s.Volumes,
 				Volume{

@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log"
 )
 
 // HasLocalVolumes returns true if the manifest has local volumes
@@ -43,6 +44,9 @@ func (dev *Dev) HasRemoteVolumes() bool {
 
 // IsSyncFolder returns if path must be synched
 func (dev *Dev) IsSyncFolder(path string) (bool, error) {
+	if path == "" {
+		return false, nil
+	}
 	found := false
 	for _, v := range dev.Volumes {
 		if v.LocalPath == "" {
@@ -50,6 +54,7 @@ func (dev *Dev) IsSyncFolder(path string) (bool, error) {
 		}
 		rel, err := filepath.Rel(v.LocalPath, path)
 		if err != nil {
+			log.Infof("error making rel '%s' and '%s'", v.LocalPath, path)
 			return false, err
 		}
 		if strings.HasPrefix(rel, "..") {
@@ -145,9 +150,6 @@ func (dev *Dev) validateDuplicatedVolumes() error {
 func (dev *Dev) validateDuplicatedSyncFolders() error {
 	seen := map[string]bool{}
 	for _, v := range dev.Volumes {
-		if v.LocalPath == "" {
-			continue
-		}
 		result, err := dev.IsSyncFolder(v.LocalPath)
 		if err != nil {
 			return err
@@ -165,9 +167,6 @@ func (dev *Dev) validateDuplicatedSyncFolders() error {
 
 func (dev *Dev) validateServiceSyncFolders(main *Dev) error {
 	for _, v := range dev.Volumes {
-		if v.LocalPath == "" {
-			continue
-		}
 		_, err := main.IsSyncFolder(v.LocalPath)
 		if err != nil {
 			return fmt.Errorf("Local volume '%s' in '%s' not defined in the main development container", v.LocalPath, dev.Name)
