@@ -61,6 +61,7 @@ var (
 func Up() *cobra.Command {
 	var devPath string
 	var namespace string
+	var k8sContext string
 	var remote int
 	var autoDeploy bool
 	var build bool
@@ -101,12 +102,12 @@ func Up() *cobra.Command {
 
 			checkLocalWatchesConfiguration()
 
-			dev, err := loadDevOrInit(namespace, devPath)
+			dev, err := loadDevOrInit(namespace, k8sContext, devPath)
 			if err != nil {
 				return err
 			}
 
-			if err := loadDevOverrides(dev, namespace, forcePull, remote); err != nil {
+			if err := loadDevOverrides(dev, namespace, k8sContext, forcePull, remote); err != nil {
 				return err
 			}
 
@@ -125,6 +126,7 @@ func Up() *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
 	cmd.Flags().BoolVarP(&build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
@@ -133,7 +135,7 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-func loadDevOrInit(namespace, devPath string) (*model.Dev, error) {
+func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
 	dev, err := utils.LoadDev(devPath)
 
 	if err == nil {
@@ -150,7 +152,7 @@ func loadDevOrInit(namespace, devPath string) (*model.Dev, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unknown current folder: %s", err)
 	}
-	if err := initCMD.Run(namespace, devPath, "", workDir, false); err != nil {
+	if err := initCMD.Run(namespace, k8sContext, devPath, "", workDir, false); err != nil {
 		return nil, err
 	}
 
@@ -158,11 +160,9 @@ func loadDevOrInit(namespace, devPath string) (*model.Dev, error) {
 	return utils.LoadDev(devPath)
 }
 
-func loadDevOverrides(dev *model.Dev, namespace string, forcePull bool, remote int) error {
+func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int) error {
 
-	if err := dev.UpdateNamespace(namespace); err != nil {
-		return err
-	}
+	dev.UpdateContext(namespace, k8sContext)
 
 	if remote > 0 {
 		dev.RemotePort = remote
@@ -191,7 +191,7 @@ func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 
 	var namespace string
 	var err error
-	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal()
+	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal(up.Dev.Context)
 	if err != nil {
 		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}

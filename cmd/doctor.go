@@ -31,6 +31,7 @@ import (
 func Doctor() *cobra.Command {
 	var devPath string
 	var namespace string
+	var k8sContext string
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: fmt.Sprintf("Generates a zip file with the okteto logs"),
@@ -45,11 +46,9 @@ func Doctor() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := dev.UpdateNamespace(namespace); err != nil {
-				return err
-			}
+			dev.UpdateContext(namespace, k8sContext)
 
-			c, _, namespace, err := k8Client.GetLocal()
+			c, _, namespace, err := k8Client.GetLocal(dev.Context)
 			if err != nil {
 				return err
 			}
@@ -69,5 +68,6 @@ func Doctor() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command was executing")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command was executing")
 	return cmd
 }

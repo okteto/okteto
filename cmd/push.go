@@ -38,6 +38,7 @@ import (
 func Push(ctx context.Context) *cobra.Command {
 	var devPath string
 	var namespace string
+	var k8sContext string
 	var imageTag string
 	var autoDeploy bool
 	var progress string
@@ -59,11 +60,9 @@ func Push(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("deployment name provided does not match the name field in your okteto manifest")
 			}
 
-			if err := dev.UpdateNamespace(namespace); err != nil {
-				return err
-			}
+			dev.UpdateContext(namespace, k8sContext)
 
-			c, _, configNamespace, err := k8Client.GetLocal()
+			c, _, configNamespace, err := k8Client.GetLocal(dev.Context)
 			if err != nil {
 				return err
 			}
@@ -103,6 +102,7 @@ func Push(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the push command is executed")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the push command is executed")
 	cmd.Flags().StringVarP(&imageTag, "tag", "t", "", "image tag to build, push and redeploy")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
 	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")

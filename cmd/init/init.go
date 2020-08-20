@@ -46,6 +46,7 @@ const (
 //Init automatically generates the manifest
 func Init() *cobra.Command {
 	var namespace string
+	var k8sContext string
 	var devPath string
 	var overwrite bool
 	cmd := &cobra.Command{
@@ -58,7 +59,7 @@ func Init() *cobra.Command {
 				return err
 			}
 
-			if err := Run(namespace, devPath, l, workDir, overwrite); err != nil {
+			if err := Run(namespace, k8sContext, devPath, l, workDir, overwrite); err != nil {
 				return err
 			}
 
@@ -74,13 +75,14 @@ func Init() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace target for generating the okteto manifest")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "overwrite existing manifest file")
 	return cmd
 }
 
 // Run runs the sequence to generate okteto.yml
-func Run(namespace, devPath, language, workDir string, overwrite bool) error {
+func Run(namespace, k8sContext, devPath, language, workDir string, overwrite bool) error {
 	fmt.Println("This command walks you through creating an okteto manifest.")
 	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	fmt.Println("See https://okteto.com/docs/reference/manifest for the official documentation about the okteto manifest.")
@@ -105,7 +107,7 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 	}
 
 	if checkForDeployment {
-		d, container, err := getDeployment(namespace)
+		d, container, err := getDeployment(namespace, k8sContext)
 		if err != nil {
 			return err
 		}
@@ -130,7 +132,7 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 			}
 		}
 
-		if !supportsPersistentVolumes(namespace) {
+		if !supportsPersistentVolumes(namespace, k8sContext) {
 			log.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
 			dev.Volumes = nil
 			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
@@ -166,8 +168,8 @@ func Run(namespace, devPath, language, workDir string, overwrite bool) error {
 	return nil
 }
 
-func getDeployment(namespace string) (*appsv1.Deployment, string, error) {
-	c, _, currentNamespace, err := k8Client.GetLocal()
+func getDeployment(namespace, k8sContext string) (*appsv1.Deployment, string, error) {
+	c, _, currentNamespace, err := k8Client.GetLocal(k8sContext)
 	if err != nil {
 		log.Yellow("Failed to load your local Kubeconfig: %s", err)
 		return nil, "", nil
@@ -199,9 +201,9 @@ func getDeployment(namespace string) (*appsv1.Deployment, string, error) {
 	return d, container, nil
 }
 
-func supportsPersistentVolumes(namespace string) bool {
+func supportsPersistentVolumes(namespace, k8sContext string) bool {
 	log.Debugf("checking persistent volumes support in your cluster...")
-	c, _, currentNamespace, err := k8Client.GetLocal()
+	c, _, currentNamespace, err := k8Client.GetLocal(k8sContext)
 	if err != nil {
 		log.Debugf("couldn't get kubernetes local client: %s", err.Error())
 		return false

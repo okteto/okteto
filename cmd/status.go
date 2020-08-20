@@ -34,6 +34,7 @@ import (
 func Status() *cobra.Command {
 	var devPath string
 	var namespace string
+	var k8sContext string
 	var showInfo bool
 	var watch bool
 	cmd := &cobra.Command{
@@ -50,11 +51,9 @@ func Status() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := dev.UpdateNamespace(namespace); err != nil {
-				return err
-			}
+			dev.UpdateContext(namespace, k8sContext)
 
-			_, _, namespace, err = k8Client.GetLocal()
+			_, _, namespace, err = k8Client.GetLocal(dev.Context)
 			if err != nil {
 				return err
 			}
@@ -88,6 +87,7 @@ func Status() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executing")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command is executing")
 	cmd.Flags().BoolVarP(&showInfo, "info", "i", false, "show syncthing links for troubleshooting the synchronization service")
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "watch for changes")
 	return cmd

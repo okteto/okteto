@@ -27,6 +27,7 @@ import (
 //Restart restarts the pods of a given dev mode deployment
 func Restart() *cobra.Command {
 	var namespace string
+	var k8sContext string
 	var devPath string
 
 	cmd := &cobra.Command{
@@ -37,9 +38,7 @@ func Restart() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := dev.UpdateNamespace(namespace); err != nil {
-				return err
-			}
+			dev.UpdateContext(namespace, k8sContext)
 			serviceName := ""
 			if len(args) > 0 {
 				serviceName = args[0]
@@ -55,13 +54,14 @@ func Restart() *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the restart command is executed")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the restart command is executed")
 
 	return cmd
 }
 
 func executeRestart(dev *model.Dev, sn string) error {
 	log.Infof("restarting services")
-	client, _, namespace, err := k8Client.GetLocal()
+	client, _, namespace, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
 		return err
 	}
