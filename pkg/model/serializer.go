@@ -235,7 +235,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		log.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
-		v.LocalPath = parts[0]
+		v.LocalPath = os.ExpandEnv(parts[0])
 		v.RemotePath = parts[1]
 	} else {
 		v.RemotePath = parts[0]
@@ -258,7 +258,7 @@ func (s *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		s.LocalPath = parts[0]
+		s.LocalPath = os.ExpandEnv(parts[0])
 		s.RemotePath = parts[1]
 		return nil
 	}
