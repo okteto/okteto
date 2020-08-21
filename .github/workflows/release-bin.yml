@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
     # Inputs the workflow accepts.
     inputs:
-      name:
-        # Friendly description to be shown in the UI instead of 'name'
+      tag:
+        # Friendly description to be shown in the UI instead of 'tag'
         description: 'tag'
         # Input has to be provided for the workflow to run
         required: true
@@ -39,4 +39,4 @@ jobs:
         docker buildx build \
           --platform linux/amd64,linux/arm64,linux/arm/v7 \
           --output "type=image,push=true" \
-          --build-arg COMMIT_SHA=${{ github.sha }} -t bin:${{ github.event.inputs.tag }} .
+          --build-arg COMMIT_SHA=${{ github.sha }} -t okteto/bin:${{ github.event.inputs.tag }} .
