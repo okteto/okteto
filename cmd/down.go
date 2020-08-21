@@ -34,6 +34,7 @@ import (
 func Down() *cobra.Command {
 	var devPath string
 	var namespace string
+	var k8sContext string
 	var rm bool
 
 	cmd := &cobra.Command{
@@ -47,9 +48,7 @@ func Down() *cobra.Command {
 				return err
 			}
 
-			if err := dev.UpdateNamespace(namespace); err != nil {
-				return err
-			}
+			dev.LoadContext(namespace, k8sContext)
 
 			if err := runDown(dev); err != nil {
 				analytics.TrackDown(false)
@@ -86,6 +85,7 @@ func Down() *cobra.Command {
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volume")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the down command is executed")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the down command is executed")
 	return cmd
 }
 
@@ -94,7 +94,7 @@ func runDown(dev *model.Dev) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	client, _, namespace, err := k8Client.GetLocal()
+	client, _, namespace, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func removeVolume(ctx context.Context, dev *model.Dev) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	client, _, namespace, err := k8Client.GetLocal()
+	client, _, namespace, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
 		return err
 	}

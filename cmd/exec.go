@@ -36,6 +36,7 @@ import (
 func Exec() *cobra.Command {
 	var devPath string
 	var namespace string
+	var k8sContext string
 
 	cmd := &cobra.Command{
 		Use:   "exec <command>",
@@ -48,9 +49,7 @@ func Exec() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := dev.UpdateNamespace(namespace); err != nil {
-				return err
-			}
+			dev.LoadContext(namespace, k8sContext)
 			err = executeExec(ctx, dev, args)
 			analytics.TrackExec(err == nil)
 
@@ -73,6 +72,7 @@ func Exec() *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the exec command is executed")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the exec command is executed")
 
 	return cmd
 }
@@ -87,7 +87,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return ssh.Exec(ctx, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
 
-	client, cfg, namespace, err := k8Client.GetLocal()
+	client, cfg, namespace, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
 		return err
 	}

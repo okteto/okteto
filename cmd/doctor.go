@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -31,9 +30,10 @@ import (
 func Doctor() *cobra.Command {
 	var devPath string
 	var namespace string
+	var k8sContext string
 	cmd := &cobra.Command{
 		Use:   "doctor",
-		Short: fmt.Sprintf("Generates a zip file with the okteto logs"),
+		Short: "Generates a zip file with the okteto logs",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting doctor command")
 
@@ -45,11 +45,9 @@ func Doctor() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := dev.UpdateNamespace(namespace); err != nil {
-				return err
-			}
+			dev.LoadContext(namespace, k8sContext)
 
-			c, _, namespace, err := k8Client.GetLocal()
+			c, _, namespace, err := k8Client.GetLocal(dev.Context)
 			if err != nil {
 				return err
 			}
@@ -69,5 +67,6 @@ func Doctor() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command was executing")
+	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command was executing")
 	return cmd
 }

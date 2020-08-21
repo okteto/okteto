@@ -43,7 +43,7 @@ func translate(s *model.Stack, forceBuild, noCache bool) error {
 		return nil
 	}
 
-	c, _, configNamespace, err := k8Client.GetLocal()
+	c, _, configNamespace, err := k8Client.GetLocal("")
 	if err != nil {
 		return err
 	}

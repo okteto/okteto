@@ -105,6 +105,7 @@ type Dev struct {
 	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
@@ -361,6 +362,7 @@ func (dev *Dev) setDefaults() error {
 			return fmt.Errorf("'name' and 'labels' cannot be defined at the same time for service '%s'", s.Name)
 		}
 		s.Namespace = ""
+		s.Context = ""
 		s.setRunAsUserDefaults(dev)
 		s.Forward = make([]Forward, 0)
 		s.Reverse = make([]Reverse, 0)
@@ -731,16 +733,20 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	return rule
 }
 
-//UpdateNamespace updates the dev namespace
-func (dev *Dev) UpdateNamespace(namespace string) error {
-	if namespace == "" {
-		return nil
+//LoadContext loads the dev namespace and context
+func (dev *Dev) LoadContext(namespace, k8sContext string) {
+	if namespace != "" {
+		dev.Namespace = namespace
 	}
-	if dev.Namespace != "" && dev.Namespace != namespace {
-		return fmt.Errorf("the namespace in the okteto manifest '%s' does not match the namespace '%s'", dev.Namespace, namespace)
+	if dev.Namespace != "" {
+		dev.Namespace = os.ExpandEnv(dev.Namespace)
 	}
-	dev.Namespace = namespace
-	return nil
+	if k8sContext != "" {
+		dev.Context = k8sContext
+	}
+	if dev.Context != "" {
+		dev.Context = os.ExpandEnv(dev.Context)
+	}
 }
 
 //GevSandbox returns a deployment sandbox

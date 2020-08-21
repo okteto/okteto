@@ -26,13 +26,17 @@ var config *rest.Config
 var namespace string
 
 //GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
-func GetLocal() (*kubernetes.Clientset, *rest.Config, string, error) {
+func GetLocal(context string) (*kubernetes.Clientset, *rest.Config, string, error) {
 	if client == nil {
 		var err error
 
 		clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			clientcmd.NewDefaultClientConfigLoadingRules(),
-			&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}})
+			&clientcmd.ConfigOverrides{
+				CurrentContext: context,
+				ClusterInfo:    clientcmdapi.Cluster{Server: ""},
+			},
+		)
 
 		namespace, _, err = clientConfig.Namespace()
 		if err != nil {
