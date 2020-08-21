@@ -35,8 +35,6 @@ import (
 )
 
 const (
-	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.2.2"
 	// OktetoMarkerPathVariable is the marker used for syncthing
 	OktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
 
@@ -85,6 +83,9 @@ const (
 )
 
 var (
+	//OktetoBinImageTag image tag with okteto internal binaries
+	OktetoBinImageTag = "okteto/bin:1.2.2"
+
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name

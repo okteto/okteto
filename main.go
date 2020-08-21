@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -47,6 +48,11 @@ func init() {
 	}
 
 	runtime.ErrorHandlers = errorHandlers
+
+	if bin := os.Getenv("OKTETO_BIN"); bin != "" {
+		model.OktetoBinImageTag = bin
+		log.Debugf("using %s as the bin image", bin)
+	}
 }
 
 func main() {
