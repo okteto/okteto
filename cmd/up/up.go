@@ -162,7 +162,7 @@ func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
 
 func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int) error {
 
-	dev.UpdateContext(namespace, k8sContext)
+	dev.LoadContext(namespace, k8sContext)
 
 	if remote > 0 {
 		dev.RemotePort = remote
@@ -923,6 +923,9 @@ func (up *upContext) shutdown() {
 }
 
 func printDisplayContext(dev *model.Dev) {
+	if dev.Context != "" {
+		log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), dev.Context))
+	}
 	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 	if dev.RemoteModeEnabled() {

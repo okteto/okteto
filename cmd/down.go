@@ -48,7 +48,7 @@ func Down() *cobra.Command {
 				return err
 			}
 
-			dev.UpdateContext(namespace, k8sContext)
+			dev.LoadContext(namespace, k8sContext)
 
 			if err := runDown(dev); err != nil {
 				analytics.TrackDown(false)

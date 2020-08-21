@@ -38,7 +38,7 @@ func Restart() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			dev.UpdateContext(namespace, k8sContext)
+			dev.LoadContext(namespace, k8sContext)
 			serviceName := ""
 			if len(args) > 0 {
 				serviceName = args[0]

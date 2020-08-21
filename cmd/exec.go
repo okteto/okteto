@@ -49,7 +49,7 @@ func Exec() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			dev.UpdateContext(namespace, k8sContext)
+			dev.LoadContext(namespace, k8sContext)
 			err = executeExec(ctx, dev, args)
 			analytics.TrackExec(err == nil)
 

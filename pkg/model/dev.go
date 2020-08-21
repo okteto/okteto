@@ -733,8 +733,8 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	return rule
 }
 
-//UpdateContext updates the dev namespace and context
-func (dev *Dev) UpdateContext(namespace, k8sContext string) {
+//LoadContext loads the dev namespace and context
+func (dev *Dev) LoadContext(namespace, k8sContext string) {
 	if namespace != "" {
 		dev.Namespace = namespace
 	}

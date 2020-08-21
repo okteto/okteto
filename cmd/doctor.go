@@ -45,7 +45,7 @@ func Doctor() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			dev.UpdateContext(namespace, k8sContext)
+			dev.LoadContext(namespace, k8sContext)
 
 			c, _, namespace, err := k8Client.GetLocal(dev.Context)
 			if err != nil {
