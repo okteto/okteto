@@ -50,7 +50,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 						Name: "okteto/test:1.0",
 					},
 				},
-				Volumes: []model.Volume{
+				Syncs: []model.Sync{
 					{
 						LocalPath:  ".",
 						RemotePath: "/path",

@@ -30,7 +30,7 @@ container: dev
 image: web:latest
 command: ["./run_web.sh"]
 imagePullPolicy: Never
-volumes:
+sync:
   - .:/app
   - sub:/path
 resources:
@@ -39,14 +39,12 @@ resources:
     memory: 1Gi
     nvidia.com/gpu: 1
     amd.com/gpu: 1
-persistentVolume:
-  enabled: true
 services:
   - name: worker
     container: dev
     image: worker:latest
     imagePullPolicy: IfNotPresent
-    volumes:
+    sync:
       - worker:/src
     healthchecks: true`)
 

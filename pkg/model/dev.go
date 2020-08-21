@@ -82,6 +82,8 @@ const (
 
 	// this path is expected by remote
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
+
+	syncFieldDocsURL = "https://okteto.com/docs/reference/manifest#sync-string-required"
 )
 
 var (
@@ -125,6 +127,7 @@ type Dev struct {
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	Syncs                []Sync                `json:"sync,omitempty" yaml:"sync,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
 	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
@@ -155,6 +158,12 @@ type BuildInfoRaw struct {
 
 // Volume represents a volume in the development container
 type Volume struct {
+	LocalPath  string
+	RemotePath string
+}
+
+// Sync represents a sync folder in the development container
+type Sync struct {
 	LocalPath  string
 	RemotePath string
 }
@@ -227,15 +236,15 @@ func Get(devPath string) (*Dev, error) {
 		return nil, err
 	}
 
+	if err := dev.translateDeprecatedVolumeFields(); err != nil {
+		return nil, err
+	}
+
 	if err := dev.loadAbsPaths(devPath); err != nil {
 		return nil, err
 	}
 
 	if err := dev.validate(); err != nil {
-		return nil, err
-	}
-
-	if err := dev.translateDeprecatedFields(); err != nil {
 		return nil, err
 	}
 
@@ -251,6 +260,7 @@ func Read(bytes []byte) (*Dev, error) {
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
+		Syncs:       make([]Sync, 0),
 		Services:    make([]*Dev, 0),
 	}
 
@@ -329,6 +339,9 @@ func (dev *Dev) loadAbsPaths(devPath string) error {
 		}
 		dev.Volumes[i].LocalPath = loadAbsPath(devDir, dev.Volumes[i].LocalPath)
 	}
+	for i := range dev.Syncs {
+		dev.Syncs[i].LocalPath = loadAbsPath(devDir, dev.Syncs[i].LocalPath)
+	}
 
 	return nil
 }
@@ -368,6 +381,7 @@ func (dev *Dev) setDefaults() error {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
 	}
 	dev.setRunAsUserDefaults(dev)
+
 	for _, s := range dev.Services {
 		if s.ImagePullPolicy == "" {
 			s.ImagePullPolicy = apiv1.PullAlways
@@ -388,60 +402,6 @@ func (dev *Dev) setDefaults() error {
 		s.Reverse = make([]Reverse, 0)
 		s.Secrets = make([]Secret, 0)
 		s.Services = make([]*Dev, 0)
-	}
-	return nil
-}
-
-func (dev *Dev) translateDeprecatedFields() error {
-	warnMessage := func() {
-		log.Yellow("'mounthpath' is deprecated to define your synchronized folders. Use the field 'volumes' instead. More info at https://okteto.com/docs/reference/manifest#volumes-string-optional")
-	}
-
-	if dev.MountPath != "" {
-		once.Do(warnMessage)
-		dev.Volumes = append(
-			dev.Volumes,
-			Volume{
-				LocalPath:  ".",
-				RemotePath: dev.MountPath,
-			},
-		)
-	} else if dev.WorkDir != "" && !dev.HasLocalVolumes() {
-		dev.MountPath = dev.WorkDir
-		dev.Volumes = append(
-			dev.Volumes,
-			Volume{
-				LocalPath:  ".",
-				RemotePath: dev.WorkDir,
-			},
-		)
-	}
-
-	for _, s := range dev.Services {
-		if s.MountPath != "" {
-			if dev.MountPath == "" {
-				return fmt.Errorf("'mountpath' is not supported. Use 'volumes' instead to specify your synchronized folders (https://okteto.com/docs/reference/manifest#volumes-string-optional)")
-			}
-			once.Do(warnMessage)
-			s.Volumes = append(
-				s.Volumes,
-				Volume{
-					LocalPath:  filepath.Join(".", s.SubPath),
-					RemotePath: s.MountPath,
-				},
-			)
-		} else if s.WorkDir != "" && !s.HasLocalVolumes() {
-			if dev.MountPath == "" {
-				return fmt.Errorf("'mountpath' is not supported. Use 'volumes' instead to specify your synched folders (https://okteto.com/docs/reference/manifest#volumes-string-optional)")
-			}
-			s.Volumes = append(
-				s.Volumes,
-				Volume{
-					LocalPath:  filepath.Join(".", s.SubPath),
-					RemotePath: s.WorkDir,
-				},
-			)
-		}
 	}
 	return nil
 }
@@ -721,25 +681,24 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 
 	if main.PersistentVolumeEnabled() {
 		for _, v := range dev.Volumes {
-			if v.LocalPath == "" {
-				rule.Volumes = append(
-					rule.Volumes,
-					VolumeMount{
-						Name:      main.GetVolumeName(),
-						MountPath: v.RemotePath,
-						SubPath:   filepath.Join(DataSubPath, v.RemotePath),
-					},
-				)
-			} else {
-				rule.Volumes = append(
-					rule.Volumes,
-					VolumeMount{
-						Name:      main.GetVolumeName(),
-						MountPath: v.RemotePath,
-						SubPath:   filepath.Join(SourceCodeSubPath, v.LocalPath),
-					},
-				)
-			}
+			rule.Volumes = append(
+				rule.Volumes,
+				VolumeMount{
+					Name:      main.GetVolumeName(),
+					MountPath: v.RemotePath,
+					SubPath:   filepath.Join(DataSubPath, v.RemotePath),
+				},
+			)
+		}
+		for _, sync := range dev.Syncs {
+			rule.Volumes = append(
+				rule.Volumes,
+				VolumeMount{
+					Name:      main.GetVolumeName(),
+					MountPath: sync.RemotePath,
+					SubPath:   filepath.Join(SourceCodeSubPath, sync.LocalPath),
+				},
+			)
 		}
 	}
 

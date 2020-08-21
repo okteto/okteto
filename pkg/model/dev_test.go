@@ -408,461 +408,6 @@ services:
 	}
 }
 
-func TestDev_translateDeprecatedFields(t *testing.T) {
-	tests := []struct {
-		name    string
-		dev     *Dev
-		result  *Dev
-		wantErr bool
-	}{
-		{
-			name: "workdir",
-			dev: &Dev{
-				WorkDir: "/workdir",
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  ".",
-						RemotePath: "/workdir",
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "mountpath",
-			dev: &Dev{
-				MountPath: "/mountpath",
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  ".",
-						RemotePath: "/mountpath",
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "workdir-and-mountpath",
-			dev: &Dev{
-				WorkDir:   "/workdir",
-				MountPath: "/mountpath",
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  ".",
-						RemotePath: "/mountpath",
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "workdir-volumes",
-			dev: &Dev{
-				WorkDir: "/workdir",
-				Volumes: []Volume{
-					{
-						LocalPath:  "local",
-						RemotePath: "remote",
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  "local",
-						RemotePath: "remote",
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "mountpath-volumes",
-			dev: &Dev{
-				MountPath: "/mountpath",
-				Volumes: []Volume{
-					{
-						LocalPath:  "local",
-						RemotePath: "remote",
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  "local",
-						RemotePath: "remote",
-					},
-					{
-						LocalPath:  ".",
-						RemotePath: "/mountpath",
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "workdir-and-mountpath-volumes",
-			dev: &Dev{
-				WorkDir:   "/workdir",
-				MountPath: "/mountpath",
-				Volumes: []Volume{
-					{
-						LocalPath:  "local",
-						RemotePath: "remote",
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  "local",
-						RemotePath: "remote",
-					},
-					{
-						LocalPath:  ".",
-						RemotePath: "/mountpath",
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "services-workdir",
-			dev: &Dev{
-				WorkDir: "/workdir1",
-				Services: []*Dev{
-					{
-						WorkDir: "/workdir2",
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  ".",
-						RemotePath: "/workdir1",
-					},
-				},
-				Services: []*Dev{
-					{
-						Volumes: []Volume{
-							{
-								LocalPath:  ".",
-								RemotePath: "/workdir2",
-							},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "services-workdir-subpath",
-			dev: &Dev{
-				WorkDir: "/workdir1",
-				Services: []*Dev{
-					{
-						WorkDir: "/workdir2",
-						SubPath: "subpath",
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  ".",
-						RemotePath: "/workdir1",
-					},
-				},
-				Services: []*Dev{
-					{
-						Volumes: []Volume{
-							{
-								LocalPath:  "subpath",
-								RemotePath: "/workdir2",
-							},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "services-mountpath",
-			dev: &Dev{
-				MountPath: "/mountpath1",
-				Services: []*Dev{
-					{
-						MountPath: "/mountpath2",
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  ".",
-						RemotePath: "/mountpath1",
-					},
-				},
-				Services: []*Dev{
-					{
-						Volumes: []Volume{
-							{
-								LocalPath:  ".",
-								RemotePath: "/mountpath2",
-							},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "services-mountpath-subpath",
-			dev: &Dev{
-				MountPath: "/mountpath1",
-				Services: []*Dev{
-					{
-						MountPath: "/mountpath2",
-						SubPath:   "subpath",
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  ".",
-						RemotePath: "/mountpath1",
-					},
-				},
-				Services: []*Dev{
-					{
-						Volumes: []Volume{
-							{
-								LocalPath:  "subpath",
-								RemotePath: "/mountpath2",
-							},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "services-workdir-error",
-			dev: &Dev{
-				WorkDir: "/workdir1",
-				Volumes: []Volume{
-					{
-						LocalPath:  "local",
-						RemotePath: "remote",
-					},
-				},
-				Services: []*Dev{
-					{
-						WorkDir: "/workdir1",
-					},
-				},
-			},
-			result:  nil,
-			wantErr: true,
-		},
-		{
-			name: "services-mountpath-error",
-			dev: &Dev{
-				WorkDir: "/mountpath1",
-				Volumes: []Volume{
-					{
-						LocalPath:  "local",
-						RemotePath: "remote",
-					},
-				},
-				Services: []*Dev{
-					{
-						MountPath: "/mountpath2",
-					},
-				},
-			},
-			result:  nil,
-			wantErr: true,
-		},
-		{
-			name: "services-workdir-volumes",
-			dev: &Dev{
-				WorkDir: "/workdir1",
-				Volumes: []Volume{
-					{
-						LocalPath:  "local1",
-						RemotePath: "remote1",
-					},
-				},
-				Services: []*Dev{
-					{
-						WorkDir: "/workdir2",
-						Volumes: []Volume{
-							{
-								LocalPath:  "local2",
-								RemotePath: "remote2",
-							},
-						},
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  "local1",
-						RemotePath: "remote1",
-					},
-				},
-				Services: []*Dev{
-					{
-						Volumes: []Volume{
-							{
-								LocalPath:  "local2",
-								RemotePath: "remote2",
-							},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "services-mountpath-volumes",
-			dev: &Dev{
-				MountPath: "/mountpath1",
-				Volumes: []Volume{
-					{
-						LocalPath:  "local1",
-						RemotePath: "remote1",
-					},
-				},
-				Services: []*Dev{
-					{
-						MountPath: "/mountpath2",
-						Volumes: []Volume{
-							{
-								LocalPath:  "local2",
-								RemotePath: "remote2",
-							},
-						},
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  "local1",
-						RemotePath: "remote1",
-					},
-					{
-						LocalPath:  ".",
-						RemotePath: "/mountpath1",
-					},
-				},
-				Services: []*Dev{
-					{
-						Volumes: []Volume{
-							{
-								LocalPath:  "local2",
-								RemotePath: "remote2",
-							},
-							{
-								LocalPath:  ".",
-								RemotePath: "/mountpath2",
-							},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "services-workdir-and-mountpath-volumes",
-			dev: &Dev{
-				WorkDir:   "/workdir1",
-				MountPath: "/mountpath1",
-				Volumes: []Volume{
-					{
-						LocalPath:  "local1",
-						RemotePath: "remote1",
-					},
-				},
-				Services: []*Dev{
-					{
-						WorkDir:   "/workdir2",
-						MountPath: "/mountpath2",
-						Volumes: []Volume{
-							{
-								LocalPath:  "local2",
-								RemotePath: "remote2",
-							},
-						},
-					},
-				},
-			},
-			result: &Dev{
-				Volumes: []Volume{
-					{
-						LocalPath:  "local1",
-						RemotePath: "remote1",
-					},
-					{
-						LocalPath:  ".",
-						RemotePath: "/mountpath1",
-					},
-				},
-				Services: []*Dev{
-					{
-						Volumes: []Volume{
-							{
-								LocalPath:  "local2",
-								RemotePath: "remote2",
-							},
-							{
-								LocalPath:  ".",
-								RemotePath: "/mountpath2",
-							},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.dev.translateDeprecatedFields()
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("test '%s': error was expected", tt.name)
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("test '%s': unexpected error: %s", tt.name, err.Error())
-			}
-			if !reflect.DeepEqual(tt.dev.Volumes, tt.result.Volumes) {
-				t.Errorf("test '%s': expected main volumes: %v, actual: %v", tt.name, tt.dev.Volumes, tt.result.Volumes)
-			}
-			for i, s := range tt.dev.Services {
-				if !reflect.DeepEqual(s.Volumes, tt.result.Services[i].Volumes) {
-					t.Errorf("test '%s': expected service volumes: %v, actual: %v", tt.name, s.Volumes, tt.result.Services[i].Volumes)
-				}
-			}
-		})
-	}
-}
-
 func TestDev_validateName(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -883,7 +428,7 @@ func TestDev_validateName(t *testing.T) {
 				ImagePullPolicy: apiv1.PullAlways,
 				Image:           &BuildInfo{},
 				Push:            &BuildInfo{},
-				Volumes: []Volume{
+				Syncs: []Sync{
 					{
 						LocalPath:  ".",
 						RemotePath: "/app",
@@ -1068,13 +613,13 @@ func Test_validate(t *testing.T) {
 			name: "services-with-disabled-pvc",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       persistentVolume:
         enabled: false
       services:
         - name: foo
-          volumes:
+          sync:
             - .:/app`),
 			expectErr: true,
 		},
@@ -1082,13 +627,11 @@ func Test_validate(t *testing.T) {
 			name: "services-with-enabled-pvc",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
-      persistentVolume:
-        enabled: true
       services:
         - name: foo
-          volumes:
+          sync:
             - .:/app`),
 			expectErr: false,
 		},
@@ -1096,7 +639,7 @@ func Test_validate(t *testing.T) {
 			name: "pvc-size",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       persistentVolume:
         enabled: true
@@ -1107,29 +650,27 @@ func Test_validate(t *testing.T) {
 			name: "volumes-mount-path-/",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
-        - /
-      persistentVolume:
-        enabled: true`),
+      volumes:
+        - /`),
 			expectErr: true,
 		},
 		{
 			name: "volumes-relative-mount-path",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
-        - path
-      persistentVolume:
-        enabled: true`),
+      volumes:
+        - path`),
 			expectErr: true,
 		},
 		{
 			name: "external-volumes-mount-path-/",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       externalVolumes:
         - name:/`),
@@ -1139,7 +680,7 @@ func Test_validate(t *testing.T) {
 			name: "external-volumes-relative-mount-path",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       externalVolumes:
         - name:path`),
@@ -1149,7 +690,7 @@ func Test_validate(t *testing.T) {
 			name: "wrong-pvc-size",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       persistentVolume:
         enabled: true
@@ -1160,13 +701,11 @@ func Test_validate(t *testing.T) {
 			name: "services-with-mountpath-pullpolicy",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
-      persistentVolume:
-        enabled: true
       services:
         - name: foo
-          volumes:
+          sync:
             - .:/app
           imagePullPolicy: Always`),
 			expectErr: false,
@@ -1175,11 +714,11 @@ func Test_validate(t *testing.T) {
 			name: "services-with-bad-pullpolicy",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       services:
         - name: foo
-          volumes:
+          sync:
             - .:/app
           imagePullPolicy: Sometimes`),
 			expectErr: true,
@@ -1188,18 +727,16 @@ func Test_validate(t *testing.T) {
 			name: "volumes",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
-        - docs:/docs
-      persistentVolume:
-        enabled: true`),
+        - docs:/docs`),
 			expectErr: false,
 		},
 		{
 			name: "external-volumes",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       externalVolumes:
         - pvc1:path:/path
@@ -1210,7 +747,7 @@ func Test_validate(t *testing.T) {
 			name: "secrets",
 			manifest: []byte(fmt.Sprintf(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       secrets:
         - %s:/remote
@@ -1221,7 +758,7 @@ func Test_validate(t *testing.T) {
 			name: "bad-pull-policy",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       imagePullPolicy: what`),
 			expectErr: true,
@@ -1230,7 +767,7 @@ func Test_validate(t *testing.T) {
 			name: "good-pull-policy",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       imagePullPolicy: IfNotPresent`),
 			expectErr: false,
@@ -1239,7 +776,7 @@ func Test_validate(t *testing.T) {
 			name: "subpath-on-main-dev",
 			manifest: []byte(`
           name: deployment
-          volumes:
+          sync:
             - .:/app
           subpath: /app/docs`),
 			expectErr: true,
@@ -1248,7 +785,7 @@ func Test_validate(t *testing.T) {
 			name: "valid-ssh-server-port",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       sshServerPort: 2222`),
 			expectErr: false,
@@ -1257,7 +794,7 @@ func Test_validate(t *testing.T) {
 			name: "invalid-ssh-server-port",
 			manifest: []byte(`
       name: deployment
-      volumes:
+      sync:
         - .:/app
       sshServerPort: -1`),
 			expectErr: true,

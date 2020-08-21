@@ -188,18 +188,18 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		Folders:          []Folder{},
 	}
 	index := 1
-	for _, v := range dev.Volumes {
-		result, err := dev.IsSyncFolder(v.LocalPath)
+	for _, sync := range dev.Syncs {
+		result, err := dev.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
 			return nil, err
 		}
-		if result {
+		if !result {
 			s.Folders = append(
 				s.Folders,
 				Folder{
 					Name:       strconv.Itoa(index),
-					LocalPath:  v.LocalPath,
-					RemotePath: v.RemotePath,
+					LocalPath:  sync.LocalPath,
+					RemotePath: sync.RemotePath,
 				},
 			)
 			index++

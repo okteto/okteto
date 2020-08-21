@@ -57,7 +57,7 @@ securityContext:
   runAsUser: 100
   runAsGroup: 101
   fsGroup: 102
-volumes:
+sync:
   - .:/app
   - sub:/path
 secrets:
@@ -73,7 +73,7 @@ services:
     container: dev
     image: worker:latest
     command: ["./run_worker.sh"]
-    volumes:
+    sync:
        - worker:/src`, file.Name()))
 
 	dev, err := model.Read(manifest)
@@ -418,7 +418,7 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	manifest := []byte(`name: web
 namespace: n
 image: web:latest
-volumes:
+sync:
   - .:/okteto
 persistentVolume:
   enabled: false`)

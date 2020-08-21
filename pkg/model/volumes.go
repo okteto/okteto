@@ -22,39 +22,88 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 )
 
-// HasLocalVolumes returns true if the manifest has local volumes
-func (dev *Dev) HasLocalVolumes() bool {
-	for _, v := range dev.Volumes {
-		if v.LocalPath != "" {
-			return true
-		}
+func (dev *Dev) translateDeprecatedVolumeFields() error {
+	if err := dev.translateDeprecatedMountPath(nil); err != nil {
+		return err
 	}
-	return false
+	if err := dev.translateDeprecatedWorkdir(nil); err != nil {
+		return err
+	}
+	dev.translateDeprecatedVolumes()
+
+	for _, s := range dev.Services {
+		if err := s.translateDeprecatedMountPath(dev); err != nil {
+			return err
+		}
+		if err := s.translateDeprecatedWorkdir(dev); err != nil {
+			return err
+		}
+		s.translateDeprecatedVolumes()
+	}
+	return nil
 }
 
-// HasRemoteVolumes returns true if the manifest has remote volumes
-func (dev *Dev) HasRemoteVolumes() bool {
-	for _, v := range dev.Volumes {
-		if v.LocalPath == "" {
-			return true
-		}
+func (dev *Dev) translateDeprecatedMountPath(main *Dev) error {
+	if dev.MountPath == "" {
+		return nil
 	}
-	return false
+	if main != nil && main.MountPath == "" {
+		return fmt.Errorf("'mountpath' is not supported to define your synchronized folders for '%s'. Use the field 'sync' instead (%s)", dev.Name, syncFieldDocsURL)
+	}
+
+	warnMessage := func() {
+		log.Yellow("'mounthpath' is deprecated to define your synchronized folders. Use the field 'sync' instead (%s)", syncFieldDocsURL)
+	}
+
+	once.Do(warnMessage)
+	dev.Syncs = append(
+		dev.Syncs,
+		Sync{
+			LocalPath:  filepath.Join(".", dev.SubPath),
+			RemotePath: dev.MountPath,
+		},
+	)
+	return nil
 }
 
-// IsSyncFolder returns if path must be synched
-func (dev *Dev) IsSyncFolder(path string) (bool, error) {
-	if path == "" {
-		return false, nil
+func (dev *Dev) translateDeprecatedWorkdir(main *Dev) error {
+	if dev.WorkDir == "" || len(dev.Syncs) > 0 {
+		return nil
 	}
-	found := false
+	if main != nil && main.MountPath == "" {
+		return fmt.Errorf("'workdir' is not supported to define your synchronized folders for '%s'. Use the field 'sync' instead (%s)", dev.Name, syncFieldDocsURL)
+	}
+
+	dev.MountPath = dev.WorkDir
+	dev.Syncs = append(
+		dev.Syncs,
+		Sync{
+			LocalPath:  filepath.Join(".", dev.SubPath),
+			RemotePath: dev.WorkDir,
+		},
+	)
+	return nil
+}
+
+func (dev *Dev) translateDeprecatedVolumes() {
+	volumes := []Volume{}
 	for _, v := range dev.Volumes {
 		if v.LocalPath == "" {
+			volumes = append(volumes, v)
 			continue
 		}
-		rel, err := filepath.Rel(v.LocalPath, path)
+		dev.Syncs = append(dev.Syncs, Sync{LocalPath: v.LocalPath, RemotePath: v.RemotePath})
+	}
+	dev.Volumes = volumes
+}
+
+//IsSubPathFolder checks if a sync folder is a suboath of another sync folder
+func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
+	found := false
+	for _, sync := range dev.Syncs {
+		rel, err := filepath.Rel(sync.LocalPath, path)
 		if err != nil {
-			log.Infof("error making rel '%s' and '%s'", v.LocalPath, path)
+			log.Infof("error making rel '%s' and '%s'", sync.LocalPath, path)
 			return false, err
 		}
 		if strings.HasPrefix(rel, "..") {
@@ -62,11 +111,11 @@ func (dev *Dev) IsSyncFolder(path string) (bool, error) {
 		}
 		found = true
 		if rel != "." {
-			return false, nil
+			return true, nil
 		}
 	}
 	if found {
-		return true, nil
+		return false, nil
 	}
 	return false, errors.ErrNotFound
 }
@@ -105,28 +154,36 @@ func (dev *Dev) validatePersistentVolume() error {
 	if len(dev.Services) > 0 {
 		return fmt.Errorf("'persistentVolume.enabled' must be set to true to work with services")
 	}
-	if dev.HasRemoteVolumes() {
-		return fmt.Errorf("'persistentVolume.enabled' must be set to true to use remote volumes")
+	if len(dev.Volumes) > 0 {
+		return fmt.Errorf("'persistentVolume.enabled' must be set to true to use volumes")
 	}
-	for _, v := range dev.Volumes {
-		result, err := dev.IsSyncFolder(v.LocalPath)
+	for _, sync := range dev.Syncs {
+		result, err := dev.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
 			return err
 		}
-		if !result {
-			return fmt.Errorf("'persistentVolume.enabled' must be set to true to use subfolders in the 'volumes' field")
+		if result {
+			return fmt.Errorf("'persistentVolume.enabled' must be set to true to use subfolders in the 'sync' field")
 		}
 	}
 	return nil
 }
 
-func (dev *Dev) validateVolumeRemotePaths() error {
+func (dev *Dev) validateRemotePaths() error {
 	for _, v := range dev.Volumes {
 		if !strings.HasPrefix(v.RemotePath, "/") {
-			return fmt.Errorf("relative remote paths are not supported as volumes")
+			return fmt.Errorf("relative remote paths are not supported in the field 'volumes'")
 		}
 		if v.RemotePath == "/" {
-			return fmt.Errorf("remote path '/' is not supported as volumes")
+			return fmt.Errorf("remote path '/' is not supported in the field 'volumes'")
+		}
+	}
+	for _, sync := range dev.Syncs {
+		if !strings.HasPrefix(sync.RemotePath, "/") {
+			return fmt.Errorf("relative remote paths are not supported in the field 'sync'")
+		}
+		if sync.RemotePath == "/" {
+			return fmt.Errorf("remote path '/' is not supported in the field 'sync'")
 		}
 	}
 	return nil
@@ -135,52 +192,57 @@ func (dev *Dev) validateVolumeRemotePaths() error {
 func (dev *Dev) validateDuplicatedVolumes() error {
 	seen := map[string]bool{}
 	for _, v := range dev.Volumes {
-		key := v.LocalPath + ":" + v.RemotePath
-		if seen[key] {
-			if v.LocalPath == "" {
-				return fmt.Errorf("duplicated volume '%s'", v.RemotePath)
-			}
-			return fmt.Errorf("duplicated volume '%s:%s'", v.LocalPath, v.RemotePath)
+		if seen[v.RemotePath] {
+			return fmt.Errorf("duplicated volume '%s'", v.RemotePath)
 		}
-		seen[key] = true
+		seen[v.RemotePath] = true
 	}
 	return nil
 }
 
 func (dev *Dev) validateDuplicatedSyncFolders() error {
 	seen := map[string]bool{}
-	for _, v := range dev.Volumes {
-		result, err := dev.IsSyncFolder(v.LocalPath)
+	seenRootLocalPath := map[string]bool{}
+	for _, sync := range dev.Syncs {
+		key := sync.LocalPath + ":" + sync.RemotePath
+		if seen[key] {
+			return fmt.Errorf("duplicated sync '%s'", sync)
+		}
+		seen[key] = true
+		result, err := dev.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
 			return err
 		}
-		if !result {
+		if result {
 			continue
 		}
-		if seen[v.LocalPath] {
-			return fmt.Errorf("duplicated local volume '%s'", v.LocalPath)
+		if seenRootLocalPath[sync.LocalPath] {
+			return fmt.Errorf("duplicated sync localPath '%s'", sync.LocalPath)
 		}
-		seen[v.LocalPath] = true
+		seenRootLocalPath[sync.LocalPath] = true
 	}
 	return nil
 }
 
 func (dev *Dev) validateServiceSyncFolders(main *Dev) error {
-	for _, v := range dev.Volumes {
-		_, err := main.IsSyncFolder(v.LocalPath)
+	for _, sync := range dev.Syncs {
+		_, err := main.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
-			return fmt.Errorf("Local volume '%s' in '%s' not defined in the main development container", v.LocalPath, dev.Name)
+			if err == errors.ErrNotFound {
+				return fmt.Errorf("LocalPath '%s' in the service '%s' not defined in the field 'sync' of the main development container", sync.LocalPath, dev.Name)
+			}
+			return err
 		}
 	}
 	return nil
 }
 
 func (dev *Dev) validateVolumes(main *Dev) error {
-	if !dev.HasLocalVolumes() {
-		return fmt.Errorf("the 'volumes' field must define a local folder to be synched. More info at https://okteto.com/docs/reference/manifest#volumes-string-optional")
+	if len(dev.Syncs) == 0 {
+		return fmt.Errorf("the 'sync' field is mandatory. More info at %s", syncFieldDocsURL)
 	}
 
-	if err := dev.validateVolumeRemotePaths(); err != nil {
+	if err := dev.validateRemotePaths(); err != nil {
 		return err
 	}
 

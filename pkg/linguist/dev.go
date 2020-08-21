@@ -24,6 +24,7 @@ import (
 type languageDefault struct {
 	image           string
 	environment     []model.EnvVar
+	syncs           []model.Sync
 	volumes         []model.Volume
 	forward         []model.Forward
 	reverse         []model.Reverse
@@ -62,7 +63,7 @@ func init() {
 				Remote: 9229,
 			},
 		},
-		volumes: []model.Volume{
+		syncs: []model.Sync{
 			{
 				LocalPath:  ".",
 				RemotePath: "/okteto",
@@ -91,14 +92,16 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
-			},
-			{
 				RemotePath: "/go/pkg/",
 			},
 			{
 				RemotePath: "/root/.cache/go-build/",
+			},
+		},
+		syncs: []model.Sync{
+			{
+				LocalPath:  ".",
+				RemotePath: "/okteto",
 			},
 		},
 	}
@@ -119,11 +122,13 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
+				RemotePath: "/root/.cache/pip",
+			},
+		},
+		syncs: []model.Sync{
+			{
 				LocalPath:  ".",
 				RemotePath: "/okteto",
-			},
-			{
-				RemotePath: "/root/.cache/pip",
 			},
 		},
 	}
@@ -144,11 +149,13 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
+				RemotePath: "/home/gradle/.gradle",
+			},
+		},
+		syncs: []model.Sync{
+			{
 				LocalPath:  ".",
 				RemotePath: "/okteto",
-			},
-			{
-				RemotePath: "/home/gradle/.gradle",
 			},
 		},
 	}
@@ -169,11 +176,13 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
+				RemotePath: "/root/.m2",
+			},
+		},
+		syncs: []model.Sync{
+			{
 				LocalPath:  ".",
 				RemotePath: "/okteto",
-			},
-			{
-				RemotePath: "/root/.m2",
 			},
 		},
 	}
@@ -194,11 +203,13 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
+				RemotePath: "/usr/local/bundle/cache",
+			},
+		},
+		syncs: []model.Sync{
+			{
 				LocalPath:  ".",
 				RemotePath: "/okteto",
-			},
-			{
-				RemotePath: "/usr/local/bundle/cache",
 			},
 		},
 	}
@@ -217,7 +228,7 @@ func init() {
 				Value: "Development",
 			},
 		},
-		volumes: []model.Volume{
+		syncs: []model.Sync{
 			{
 				LocalPath:  ".",
 				RemotePath: "/okteto",
@@ -243,11 +254,13 @@ func init() {
 		},
 		volumes: []model.Volume{
 			{
+				RemotePath: "/root/.composer/cache",
+			},
+		},
+		syncs: []model.Sync{
+			{
 				LocalPath:  ".",
 				RemotePath: "/okteto",
-			},
-			{
-				RemotePath: "/root/.composer/cache",
 			},
 		},
 	}
@@ -261,7 +274,7 @@ func init() {
 	languageDefaults[Unrecognized] = languageDefault{
 		image:   model.DefaultImage,
 		forward: []model.Forward{},
-		volumes: []model.Volume{
+		syncs: []model.Sync{
 			{
 				LocalPath:  ".",
 				RemotePath: "/okteto",
@@ -308,6 +321,7 @@ func GetDevDefaults(language, workdir string, iAskingForDeployment bool) (*model
 		},
 		Environment:     vals.environment,
 		Volumes:         vals.volumes,
+		Syncs:           vals.syncs,
 		Forward:         vals.forward,
 		Reverse:         vals.reverse,
 		RemotePort:      vals.remote,

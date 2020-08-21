@@ -1,8 +1,8 @@
 name: cli
 image: okteto/golang:1
-command: [ "bash" ]
-persistentVolume:
-  enabled: true
+command: bash
 volumes:
   - /go/pkg/
   - /root/.cache/go-build/
+sync:
+  - .:/okteto
