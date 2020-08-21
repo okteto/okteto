@@ -391,7 +391,7 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 
 	log.Printf("create namespace output: \n%s\n", string(o))
 
-	_, _, n, err := k8Client.GetLocal()
+	_, _, n, err := k8Client.GetLocal("")
 	if err != nil {
 		return err
 	}
@@ -567,7 +567,7 @@ func getOktetoPath(ctx context.Context) (string, error) {
 }
 
 func getDeployment(ns, name string) (*appsv1.Deployment, error) {
-	client, _, _, err := k8Client.GetLocal()
+	client, _, _, err := k8Client.GetLocal("")
 	if err != nil {
 		return nil, err
 	}
