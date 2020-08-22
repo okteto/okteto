@@ -35,9 +35,6 @@ import (
 )
 
 const (
-	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.2.3"
-
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
 	//OktetoDefaultPVSize default volume size
@@ -88,7 +85,7 @@ const (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.2.2"
+	OktetoBinImageTag = "okteto/bin:1.2.3"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -111,8 +108,8 @@ type Dev struct {
 	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
+	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
@@ -124,17 +121,17 @@ type Dev struct {
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
+	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
+	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
+	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
+	Syncs                []Sync                `json:"sync,omitempty" yaml:"sync,omitempty"`
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
-	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	Syncs                []Sync                `json:"sync,omitempty" yaml:"sync,omitempty"`
-	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
-	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
-	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
-	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
+	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 }
 
 //Command represents the start command of a development contaianer
@@ -311,16 +308,6 @@ func Read(bytes []byte) (*Dev, error) {
 	return dev, nil
 }
 
-func loadAbsPath(folder, path string) string {
-	if len(path) > 0 {
-		path = os.ExpandEnv(path)
-	}
-	if filepath.IsAbs(path) {
-		return path
-	}
-	return filepath.Join(folder, path)
-}
-
 func (dev *Dev) loadAbsPaths(devPath string) error {
 
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
@@ -333,17 +320,34 @@ func (dev *Dev) loadAbsPaths(devPath string) error {
 	dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
 	dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
 
+	dev.loadVolumeAbsPaths(devDir)
+	for _, s := range dev.Services {
+		s.loadVolumeAbsPaths(devDir)
+	}
+
+	return nil
+}
+
+func (dev *Dev) loadVolumeAbsPaths(folder string) {
 	for i := range dev.Volumes {
 		if dev.Volumes[i].LocalPath == "" {
 			continue
 		}
-		dev.Volumes[i].LocalPath = loadAbsPath(devDir, dev.Volumes[i].LocalPath)
+		dev.Volumes[i].LocalPath = loadAbsPath(folder, dev.Volumes[i].LocalPath)
 	}
 	for i := range dev.Syncs {
-		dev.Syncs[i].LocalPath = loadAbsPath(devDir, dev.Syncs[i].LocalPath)
+		dev.Syncs[i].LocalPath = loadAbsPath(folder, dev.Syncs[i].LocalPath)
 	}
+}
 
-	return nil
+func loadAbsPath(folder, path string) string {
+	if len(path) > 0 {
+		path = os.ExpandEnv(path)
+	}
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(folder, path)
 }
 
 func (dev *Dev) loadName() {

@@ -48,7 +48,7 @@ func (dev *Dev) translateDeprecatedMountPath(main *Dev) error {
 		return nil
 	}
 	if main != nil && main.MountPath == "" {
-		return fmt.Errorf("'mountpath' is not supported to define your synchronized folders for '%s'. Use the field 'sync' instead (%s)", dev.Name, syncFieldDocsURL)
+		return fmt.Errorf("'mountpath' is not supported to define your synchronized folders in 'services'. Use the field 'sync' instead (%s)", syncFieldDocsURL)
 	}
 
 	warnMessage := func() {
@@ -71,7 +71,7 @@ func (dev *Dev) translateDeprecatedWorkdir(main *Dev) error {
 		return nil
 	}
 	if main != nil && main.MountPath == "" {
-		return fmt.Errorf("'workdir' is not supported to define your synchronized folders for '%s'. Use the field 'sync' instead (%s)", dev.Name, syncFieldDocsURL)
+		return fmt.Errorf("'workdir' is not supported to define your synchronized folders in 'services'. Use the field 'sync' instead (%s)", syncFieldDocsURL)
 	}
 
 	dev.MountPath = dev.WorkDir
@@ -229,7 +229,7 @@ func (dev *Dev) validateServiceSyncFolders(main *Dev) error {
 		_, err := main.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
 			if err == errors.ErrNotFound {
-				return fmt.Errorf("LocalPath '%s' in the service '%s' not defined in the field 'sync' of the main development container", sync.LocalPath, dev.Name)
+				return fmt.Errorf("LocalPath '%s' in 'services' not defined in the field 'sync' of the main development container", sync.LocalPath)
 			}
 			return err
 		}
