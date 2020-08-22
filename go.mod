@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver v1.4.2
 	github.com/Venafi/vcert v3.18.4+incompatible
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
-	github.com/briandowns/spinner v1.10.0
+	github.com/briandowns/spinner v1.11.1
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50
