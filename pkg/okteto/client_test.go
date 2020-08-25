@@ -92,10 +92,10 @@ func TestSetKubeConfig(t *testing.T) {
 }
 
 func TestInDevContainer(t *testing.T) {
-	v := os.Getenv("OKTETO_MARKER_PATH")
-	os.Setenv("OKTETO_MARKER_PATH", "")
+	v := os.Getenv("OKTETO_NAMESPACE")
+	os.Setenv("OKTETO_NAMESPACE", "")
 	defer func() {
-		os.Setenv("OKTETO_MARKER_PATH", v)
+		os.Setenv("OKTETO_NAMESPACE", v)
 	}()
 
 	in := InDevContainer()
@@ -103,13 +103,13 @@ func TestInDevContainer(t *testing.T) {
 		t.Errorf("in dev container when there was no marker env var")
 	}
 
-	os.Setenv("OKTETO_MARKER_PATH", "")
+	os.Setenv("OKTETO_NAMESPACE", "")
 	in = InDevContainer()
 	if in {
 		t.Errorf("in dev container when there was an empty marker env var")
 	}
 
-	os.Setenv("OKTETO_MARKER_PATH", "1")
+	os.Setenv("OKTETO_NAMESPACE", "1")
 	in = InDevContainer()
 	if !in {
 		t.Errorf("not in dev container when there was a marker env var")

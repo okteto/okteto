@@ -342,12 +342,12 @@ func TestVolumeMashalling(t *testing.T) {
 		{
 			"global",
 			[]byte("/path"),
-			Volume{SubPath: "", MountPath: "/path"},
+			Volume{LocalPath: "", RemotePath: "/path"},
 		},
 		{
 			"relative",
 			[]byte("sub:/path"),
-			Volume{SubPath: "sub", MountPath: "/path"},
+			Volume{LocalPath: "sub", RemotePath: "/path"},
 		},
 	}
 

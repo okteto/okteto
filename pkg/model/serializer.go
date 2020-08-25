@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
@@ -233,20 +234,41 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		v.SubPath = parts[0]
-		v.MountPath = parts[1]
+		log.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
+		v.LocalPath = os.ExpandEnv(parts[0])
+		v.RemotePath = parts[1]
 	} else {
-		v.MountPath = parts[0]
+		v.RemotePath = parts[0]
 	}
 	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (v Volume) MarshalYAML() (interface{}, error) {
-	if v.SubPath == "" {
-		return v.MountPath, nil
+	return v.RemotePath, nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (s *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw string
+	err := unmarshal(&raw)
+	if err != nil {
+		return err
 	}
-	return v.SubPath + ":" + v.MountPath, nil
+
+	parts := strings.SplitN(raw, ":", 2)
+	if len(parts) == 2 {
+		s.LocalPath = os.ExpandEnv(parts[0])
+		s.RemotePath = parts[1]
+		return nil
+	}
+
+	return fmt.Errorf("each element in the 'sync' field must follow the syntax 'localPath:remotePath'")
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (s Sync) MarshalYAML() (interface{}, error) {
+	return s.LocalPath + ":" + s.RemotePath, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

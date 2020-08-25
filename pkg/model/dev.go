@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/log"
@@ -35,9 +35,6 @@ import (
 )
 
 const (
-	// OktetoMarkerPathVariable is the marker used for syncthing
-	OktetoMarkerPathVariable = "OKTETO_MARKER_PATH"
-
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
 	//OktetoDefaultPVSize default volume size
@@ -51,6 +48,8 @@ const (
 	DeprecatedOktetoVolumeName = "okteto"
 	//OktetoVolumeNameTemplate name template of the development container persistent volume
 	OktetoVolumeNameTemplate = "okteto-%s"
+	//DataSubPath subpath in the development container persistent volume for the data volumes
+	DataSubPath = "data"
 	//SourceCodeSubPath subpath in the development container persistent volume for the source code
 	SourceCodeSubPath = "src"
 	//OktetoSyncthingMountPath syncthing volume mount path
@@ -80,11 +79,13 @@ const (
 
 	// this path is expected by remote
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
+
+	syncFieldDocsURL = "https://okteto.com/docs/reference/manifest#sync-string-required"
 )
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.2.2"
+	OktetoBinImageTag = "okteto/bin:1.2.3"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -97,6 +98,8 @@ var (
 	DevReplicas int32 = 1
 
 	devTerminationGracePeriodSeconds int64
+
+	once sync.Once
 )
 
 //Dev represents a development container
@@ -105,8 +108,8 @@ type Dev struct {
 	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
+	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
 	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
@@ -118,18 +121,17 @@ type Dev struct {
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
+	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
+	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
+	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
+	Syncs                []Sync                `json:"sync,omitempty" yaml:"sync,omitempty"`
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
-	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
-	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
-	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
-	DevPath              string                `json:"-" yaml:"-"`
-	DevDir               string                `json:"-" yaml:"-"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
-	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
+	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 }
 
 //Command represents the start command of a development contaianer
@@ -153,8 +155,14 @@ type BuildInfoRaw struct {
 
 // Volume represents a volume in the development container
 type Volume struct {
-	SubPath   string
-	MountPath string
+	LocalPath  string
+	RemotePath string
+}
+
+// Sync represents a sync folder in the development container
+type Sync struct {
+	LocalPath  string
+	RemotePath string
 }
 
 // ExternalVolume represents a external volume in the development container
@@ -225,19 +233,17 @@ func Get(devPath string) (*Dev, error) {
 		return nil, err
 	}
 
-	if err := dev.validate(); err != nil {
+	if err := dev.translateDeprecatedVolumeFields(); err != nil {
 		return nil, err
 	}
 
-	dev.DevDir, err = filepath.Abs(filepath.Dir(devPath))
-	if err != nil {
+	if err := dev.loadAbsPaths(devPath); err != nil {
 		return nil, err
 	}
-	dev.DevPath = filepath.Base(devPath)
-	dev.Image.Context = filepath.Join(dev.DevDir, dev.Image.Context)
-	dev.Image.Dockerfile = filepath.Join(dev.DevDir, dev.Image.Dockerfile)
-	dev.Push.Context = filepath.Join(dev.DevDir, dev.Push.Context)
-	dev.Push.Dockerfile = filepath.Join(dev.DevDir, dev.Push.Dockerfile)
+
+	if err := dev.validate(); err != nil {
+		return nil, err
+	}
 
 	return dev, nil
 }
@@ -251,6 +257,7 @@ func Read(bytes []byte) (*Dev, error) {
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
+		Syncs:       make([]Sync, 0),
 		Services:    make([]*Dev, 0),
 	}
 
@@ -301,6 +308,48 @@ func Read(bytes []byte) (*Dev, error) {
 	return dev, nil
 }
 
+func (dev *Dev) loadAbsPaths(devPath string) error {
+
+	devDir, err := filepath.Abs(filepath.Dir(devPath))
+	if err != nil {
+		return err
+	}
+
+	dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
+	dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
+	dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
+	dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+
+	dev.loadVolumeAbsPaths(devDir)
+	for _, s := range dev.Services {
+		s.loadVolumeAbsPaths(devDir)
+	}
+
+	return nil
+}
+
+func (dev *Dev) loadVolumeAbsPaths(folder string) {
+	for i := range dev.Volumes {
+		if dev.Volumes[i].LocalPath == "" {
+			continue
+		}
+		dev.Volumes[i].LocalPath = loadAbsPath(folder, dev.Volumes[i].LocalPath)
+	}
+	for i := range dev.Syncs {
+		dev.Syncs[i].LocalPath = loadAbsPath(folder, dev.Syncs[i].LocalPath)
+	}
+}
+
+func loadAbsPath(folder, path string) string {
+	if len(path) > 0 {
+		path = os.ExpandEnv(path)
+	}
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(folder, path)
+}
+
 func (dev *Dev) loadName() {
 	if len(dev.Name) > 0 {
 		dev.Name = os.ExpandEnv(dev.Name)
@@ -322,15 +371,9 @@ func (dev *Dev) setDefaults() error {
 	}
 	setBuildDefaults(dev.Image)
 	setBuildDefaults(dev.Push)
-	if dev.MountPath == "" && dev.WorkDir == "" {
-		dev.MountPath = "/okteto"
-		dev.WorkDir = "/okteto"
-	}
+
 	if dev.ImagePullPolicy == "" {
 		dev.ImagePullPolicy = apiv1.PullAlways
-	}
-	if dev.WorkDir != "" && dev.MountPath == "" {
-		dev.MountPath = dev.WorkDir
 	}
 	if dev.Labels == nil {
 		dev.Labels = map[string]string{}
@@ -342,16 +385,10 @@ func (dev *Dev) setDefaults() error {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
 	}
 	dev.setRunAsUserDefaults(dev)
+
 	for _, s := range dev.Services {
-		if s.MountPath == "" && s.WorkDir == "" {
-			s.MountPath = "/okteto"
-			s.WorkDir = "/okteto"
-		}
 		if s.ImagePullPolicy == "" {
 			s.ImagePullPolicy = apiv1.PullAlways
-		}
-		if s.WorkDir != "" && s.MountPath == "" {
-			s.MountPath = s.WorkDir
 		}
 		if s.Labels == nil {
 			s.Labels = map[string]string{}
@@ -425,20 +462,15 @@ func (dev *Dev) validate() error {
 		return err
 	}
 
-	if !dev.PersistentVolumeEnabled() {
-		if len(dev.Services) > 0 {
-			return fmt.Errorf("'persistentVolume.enabled' must be set to true to work with services")
-		}
-		if len(dev.Volumes) > 0 {
-			return fmt.Errorf("'persistentVolume.enabled' must be set to true to use volumes")
-		}
-	}
-
-	if err := validateVolumes(dev.Volumes); err != nil {
+	if err := dev.validatePersistentVolume(); err != nil {
 		return err
 	}
 
-	if err := validateExternalVolumes(dev.ExternalVolumes); err != nil {
+	if err := dev.validateVolumes(nil); err != nil {
+		return err
+	}
+
+	if err := dev.validateExternalVolumes(); err != nil {
 		return err
 	}
 
@@ -446,14 +478,17 @@ func (dev *Dev) validate() error {
 		return fmt.Errorf("'persistentVolume.size' is not valid. A sample value would be '10Gi'")
 	}
 
+	if dev.SSHServerPort <= 0 {
+		return fmt.Errorf("'sshServerPort' must be > 0")
+	}
+
 	for _, s := range dev.Services {
 		if err := validatePullPolicy(s.ImagePullPolicy); err != nil {
 			return err
 		}
-	}
-
-	if dev.SSHServerPort <= 0 {
-		return fmt.Errorf("'sshServerPort' must be > 0")
+		if err := s.validateVolumes(dev); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -477,30 +512,6 @@ func validateSecrets(secrets []Secret) error {
 			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
 		}
 		seen[s.GetFileName()] = true
-	}
-	return nil
-}
-
-func validateVolumes(vList []Volume) error {
-	for _, v := range vList {
-		if !strings.HasPrefix(v.MountPath, "/") {
-			return fmt.Errorf("volume relative paths are not supported")
-		}
-		if v.MountPath == "/" {
-			return fmt.Errorf("mount path '/' is not supported")
-		}
-	}
-	return nil
-}
-
-func validateExternalVolumes(vList []ExternalVolume) error {
-	for _, v := range vList {
-		if !strings.HasPrefix(v.MountPath, "/") {
-			return fmt.Errorf("external volume '%s' mount path must be absolute", v.Name)
-		}
-		if v.MountPath == "/" {
-			return fmt.Errorf("external volume '%s' mount path '/' is not supported", v.Name)
-		}
 	}
 	return nil
 }
@@ -593,19 +604,6 @@ func (dev *Dev) LabelsSelector() string {
 	return labels
 }
 
-func fullDevSubPath(subPath string) string {
-	if subPath == "" {
-		return SourceCodeSubPath
-	}
-	return path.Join(SourceCodeSubPath, subPath)
-}
-
-func fullGlobalSubPath(mountPath string) string {
-	mountPath = strings.TrimSuffix(mountPath, "/")
-	mountPath = ValidKubeNameRegex.ReplaceAllString(mountPath, "-")
-	return fmt.Sprintf("volume%s", mountPath)
-}
-
 // ToTranslationRule translates a dev struct into a translation rule
 func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	rule := &TranslationRule{
@@ -622,27 +620,9 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		Healthchecks:     dev.Healthchecks,
 	}
 
-	if main.PersistentVolumeEnabled() {
-		rule.Volumes = append(
-			rule.Volumes,
-			VolumeMount{
-				Name:      main.GetVolumeName(),
-				MountPath: dev.MountPath,
-				SubPath:   fullDevSubPath(dev.SubPath),
-			},
-		)
-	}
-
 	if main == dev {
-		rule.Marker = dev.DevPath
+		rule.Marker = OktetoBinImageTag //for backward compatibility
 		rule.OktetoBinImageTag = OktetoBinImageTag
-		rule.Environment = append(
-			rule.Environment,
-			EnvVar{
-				Name:  OktetoMarkerPathVariable,
-				Value: path.Join(dev.MountPath, dev.DevPath),
-			},
-		)
 		rule.Environment = append(
 			rule.Environment,
 			EnvVar{
@@ -703,21 +683,27 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		rule.Args = []string{}
 	}
 
-	for _, v := range dev.Volumes {
-		var devSubPath string
-		if v.SubPath == "" {
-			devSubPath = fullGlobalSubPath(v.MountPath)
-		} else {
-			devSubPath = fullDevSubPath(v.SubPath)
+	if main.PersistentVolumeEnabled() {
+		for _, v := range dev.Volumes {
+			rule.Volumes = append(
+				rule.Volumes,
+				VolumeMount{
+					Name:      main.GetVolumeName(),
+					MountPath: v.RemotePath,
+					SubPath:   filepath.Join(DataSubPath, v.RemotePath),
+				},
+			)
 		}
-		rule.Volumes = append(
-			rule.Volumes,
-			VolumeMount{
-				Name:      main.GetVolumeName(),
-				MountPath: v.MountPath,
-				SubPath:   devSubPath,
-			},
-		)
+		for _, sync := range dev.Syncs {
+			rule.Volumes = append(
+				rule.Volumes,
+				VolumeMount{
+					Name:      main.GetVolumeName(),
+					MountPath: sync.RemotePath,
+					SubPath:   filepath.Join(SourceCodeSubPath, sync.LocalPath),
+				},
+			)
+		}
 	}
 
 	for _, v := range dev.ExternalVolumes {
@@ -826,31 +812,4 @@ func (s *Secret) GetKeyName() string {
 // GetFileName returns the secret file name
 func (s *Secret) GetFileName() string {
 	return filepath.Base(s.RemotePath)
-}
-
-// PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
-func (dev *Dev) PersistentVolumeEnabled() bool {
-	if dev.PersistentVolumeInfo == nil {
-		return true
-	}
-	return dev.PersistentVolumeInfo.Enabled
-}
-
-// PersistentVolumeSize returns the persistent volume size
-func (dev *Dev) PersistentVolumeSize() string {
-	if dev.PersistentVolumeInfo == nil {
-		return OktetoDefaultPVSize
-	}
-	if dev.PersistentVolumeInfo.Size == "" {
-		return OktetoDefaultPVSize
-	}
-	return dev.PersistentVolumeInfo.Size
-}
-
-// PersistentVolumeStorageClass returns the persistent volume storage class
-func (dev *Dev) PersistentVolumeStorageClass() string {
-	if dev.PersistentVolumeInfo == nil {
-		return ""
-	}
-	return dev.PersistentVolumeInfo.StorageClass
 }
