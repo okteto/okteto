@@ -120,6 +120,15 @@ func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	return false, errors.ErrNotFound
 }
 
+func getDataSubPath(path string) string {
+	return filepath.ToSlash(filepath.Join(DataSubPath, path))
+}
+
+func getSourceSubPath(path string) string {
+	path = path[len(filepath.VolumeName(path)):]
+	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, path))
+}
+
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
 func (dev *Dev) PersistentVolumeEnabled() bool {
 	if dev.PersistentVolumeInfo == nil {

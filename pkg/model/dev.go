@@ -690,18 +690,17 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				VolumeMount{
 					Name:      main.GetVolumeName(),
 					MountPath: v.RemotePath,
-					SubPath:   filepath.Join(DataSubPath, v.RemotePath),
+					SubPath:   getDataSubPath(v.RemotePath),
 				},
 			)
 		}
 		for _, sync := range dev.Syncs {
-			localPath := sync.LocalPath[len(filepath.VolumeName(sync.LocalPath)):]
 			rule.Volumes = append(
 				rule.Volumes,
 				VolumeMount{
 					Name:      main.GetVolumeName(),
 					MountPath: sync.RemotePath,
-					SubPath:   filepath.ToSlash(filepath.Join(SourceCodeSubPath, localPath)),
+					SubPath:   getSourceSubPath(sync.LocalPath),
 				},
 			)
 		}

@@ -15,6 +15,7 @@ package model
 
 import (
 	"reflect"
+	"runtime"
 	"testing"
 )
 
@@ -691,6 +692,77 @@ func Test_IsSubPathFolder(t *testing.T) {
 			}
 			if result != tt.expected {
 				t.Errorf("'%s' got '%t' expected '%t'", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func Test_getDataSubPath(t *testing.T) {
+	var tests = []struct {
+		name   string
+		path   string
+		result string
+	}{
+		{
+			name:   "single",
+			path:   "/var",
+			result: "data/var",
+		},
+		{
+			name:   "double",
+			path:   "/var/okteto",
+			result: "data/var/okteto",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getDataSubPath(tt.path)
+			if result != tt.result {
+				t.Errorf("'%s' got '%s' expected '%s'", tt.name, result, tt.result)
+			}
+		})
+	}
+}
+
+func Test_getSourceSubPath(t *testing.T) {
+	var tests = []struct {
+		name    string
+		path    string
+		linux   bool
+		windows bool
+		result  string
+	}{
+		{
+			name:    "relative",
+			path:    "code/func",
+			linux:   true,
+			windows: true,
+			result:  "src/code/func",
+		},
+		{
+			name:    "linux",
+			path:    "/code/func",
+			linux:   true,
+			windows: false,
+			result:  "src/code/func",
+		},
+		{
+			name:    "windows",
+			path:    "c:\\code\\func",
+			linux:   false,
+			windows: true,
+			result:  "src/code/func",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if (tt.linux && (runtime.GOOS == "linux" || runtime.GOOS == "darwin")) || (tt.windows && runtime.GOOS == "windows") {
+				result := getSourceSubPath(tt.path)
+				if result != tt.result {
+					t.Errorf("'%s' got '%s' for '%s', expected '%s'", tt.name, result, runtime.GOOS, tt.result)
+				}
 			}
 		})
 	}
