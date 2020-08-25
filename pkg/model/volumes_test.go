@@ -727,38 +727,52 @@ func Test_getDataSubPath(t *testing.T) {
 
 func Test_getSourceSubPath(t *testing.T) {
 	var tests = []struct {
-		name    string
-		path    string
-		linux   bool
-		windows bool
-		result  string
+		name   string
+		path   string
+		goos   string
+		result string
 	}{
 		{
-			name:    "relative",
-			path:    "code/func",
-			linux:   true,
-			windows: true,
-			result:  "src/code/func",
+			name:   "relative-linux",
+			path:   "code/func",
+			goos:   "linux",
+			result: "src/code/func",
 		},
 		{
-			name:    "linux",
-			path:    "/code/func",
-			linux:   true,
-			windows: false,
-			result:  "src/code/func",
+			name:   "relative-darwin",
+			path:   "code/func",
+			goos:   "darwin",
+			result: "src/code/func",
 		},
 		{
-			name:    "windows",
-			path:    "c:\\code\\func",
-			linux:   false,
-			windows: true,
-			result:  "src/code/func",
+			name:   "relative-windows",
+			path:   "code\\func",
+			goos:   "windows",
+			result: "src/code/func",
+		},
+		{
+			name:   "absulote-linux",
+			path:   "/code/func",
+			goos:   "linux",
+			result: "src/code/func",
+		},
+		{
+			name:   "absulote-darwin",
+			path:   "/code/func",
+			goos:   "darwin",
+			result: "src/code/func",
+		},
+		{
+			name:   "absulote-windows",
+			path:   "c:\\code\\func",
+			goos:   "windows",
+			result: "src/code/func",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if (tt.linux && (runtime.GOOS == "linux" || runtime.GOOS == "darwin")) || (tt.windows && runtime.GOOS == "windows") {
+			if tt.goos == runtime.GOOS {
 				result := getSourceSubPath(tt.path)
 				if result != tt.result {
 					t.Errorf("'%s' got '%s' for '%s', expected '%s'", tt.name, result, runtime.GOOS, tt.result)
