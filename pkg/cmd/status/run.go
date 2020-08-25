@@ -24,12 +24,12 @@ import (
 
 //Run runs the "okteto status" sequence
 func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64, error) {
-	progressLocal, err := sy.GetCompletionProgress(ctx, dev, true)
+	progressLocal, err := sy.GetCompletionProgress(ctx, true)
 	if err != nil {
 		log.Infof("error accessing local syncthing status: %s", err)
 		return 0, fmt.Errorf("error accessing local syncthing status")
 	}
-	progressRemote, err := sy.GetCompletionProgress(ctx, dev, false)
+	progressRemote, err := sy.GetCompletionProgress(ctx, false)
 	if err != nil {
 		log.Infof("error accessing remote syncthing status: %s", err)
 		return 0, fmt.Errorf("error accessing remote syncthing status")

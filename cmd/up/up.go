@@ -733,17 +733,17 @@ func (up *upContext) startSyncthing(resetSyncthing bool) error {
 					return errors.ErrLostSyncthing
 				}
 			}
-			if pods.OktetoFolderINotWritable(up.Context, up.Dev, up.Client) {
-				return errors.UserError{
-					E:    fmt.Errorf("User %d doesn't have write permissions for the %s directory", userID, up.Dev.MountPath),
-					Hint: fmt.Sprintf("Update your development image to grant user %d write permissions to %s\n    Alternatively, enable 'persistentVolume.enabled: true' in your okteto manifest\n    After that, run 'okteto up' again", userID, up.Dev.MountPath),
-				}
-			}
 		}
 
+		if len(up.Dev.Secrets) > 0 {
+			return errors.UserError{
+				E:    fmt.Errorf("Failed to connect to the synchronization service"),
+				Hint: fmt.Sprintf("Check your development container logs for errors: 'kubectl logs %s'\n    Check that your container can write to the destination path of your secrets\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
+			}
+		}
 		return errors.UserError{
 			E:    fmt.Errorf("Failed to connect to the synchronization service"),
-			Hint: fmt.Sprintf("Check your development container logs for errors: 'kubectl logs %s'\n    If you are using secrets, check that your container can write to the destination path of your secrets\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
+			Hint: fmt.Sprintf("Check your development container logs for errors: 'kubectl logs %s'\n    Run 'okteto down -v' to reset the synchronization service and try again.", up.Pod),
 		}
 	}
 
@@ -757,7 +757,9 @@ func (up *upContext) startSyncthing(resetSyncthing bool) error {
 		}
 	}
 
-	up.Sy.SendStignoreFile(up.Context, up.Dev)
+	if err := up.Sy.SendStignoreFile(up.Context, up.Dev); err != nil {
+		return err
+	}
 
 	if err := up.Sy.WaitForScanning(up.Context, up.Dev, true); err != nil {
 		return err

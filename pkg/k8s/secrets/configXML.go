@@ -21,7 +21,8 @@ import (
 )
 
 const configXML = `<configuration version="31">
-<folder id="okteto-{{ .Dev.Name }}" label="{{ .Dev.Name }}" path="{{ .Dev.MountPath }}" type="sendreceive" rescanIntervalS="300" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+{{ range .Folders }}
+<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .RemotePath }}" type="sendreceive" rescanIntervalS="300" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
     <device id="ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU" introducedBy=""></device>
@@ -42,6 +43,7 @@ const configXML = `<configuration version="31">
     <markerName>.</markerName>
     <useLargeBlocks>false</useLargeBlocks>
 </folder>
+{{ end }}
 <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
     <address>dynamic</address>
     <paused>false</paused>

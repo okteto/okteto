@@ -57,7 +57,8 @@ securityContext:
   runAsUser: 100
   runAsGroup: 101
   fsGroup: 102
-volumes:
+sync:
+  - .:/app
   - sub:/path
 secrets:
   - %s:/remote
@@ -72,15 +73,14 @@ services:
     container: dev
     image: worker:latest
     command: ["./run_worker.sh"]
-    mountpath: /src
-    subpath: /worker`, file.Name()))
+    sync:
+       - worker:/src`, file.Name()))
 
 	dev, err := model.Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
 	d1 := dev.GevSandbox()
-	dev.DevPath = "okteto.yml"
 	rule1 := dev.ToTranslationRule(dev)
 	tr1 := &model.Translation{
 		Interactive: true,
@@ -211,10 +211,6 @@ services:
 							WorkingDir:      "/app",
 							Env: []apiv1.EnvVar{
 								{
-									Name:  "OKTETO_MARKER_PATH",
-									Value: "/app/okteto.yml",
-								},
-								{
 									Name:  "OKTETO_NAMESPACE",
 									Value: "n",
 								},
@@ -235,14 +231,14 @@ services:
 								{
 									Name:      dev.GetVolumeName(),
 									ReadOnly:  false,
-									MountPath: "/app",
-									SubPath:   model.SourceCodeSubPath,
+									MountPath: "/var/syncthing",
+									SubPath:   model.SyncthingSubPath,
 								},
 								{
 									Name:      dev.GetVolumeName(),
 									ReadOnly:  false,
-									MountPath: "/var/syncthing",
-									SubPath:   model.SyncthingSubPath,
+									MountPath: "/app",
+									SubPath:   model.SourceCodeSubPath,
 								},
 								{
 									Name:      dev.GetVolumeName(),
@@ -422,6 +418,8 @@ func Test_translateWithoutVolumes(t *testing.T) {
 	manifest := []byte(`name: web
 namespace: n
 image: web:latest
+sync:
+  - .:/okteto
 persistentVolume:
   enabled: false`)
 
@@ -430,7 +428,6 @@ persistentVolume:
 		t.Fatal(err)
 	}
 	d1 := dev.GevSandbox()
-	dev.DevPath = "okteto.yml"
 	rule1 := dev.ToTranslationRule(dev)
 	tr1 := &model.Translation{
 		Interactive: true,
@@ -522,12 +519,8 @@ persistentVolume:
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
 							Args:            []string{"-e"},
-							WorkingDir:      "/okteto",
+							WorkingDir:      "",
 							Env: []apiv1.EnvVar{
-								{
-									Name:  "OKTETO_MARKER_PATH",
-									Value: "/okteto/okteto.yml",
-								},
 								{
 									Name:  "OKTETO_NAMESPACE",
 									Value: "n",

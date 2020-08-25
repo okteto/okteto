@@ -23,7 +23,6 @@ import (
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -166,9 +165,9 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }
 
-// InDevContainer returns true if running in an Okteto dev pod
+// InDevContainer returns true if running in an okteto dev container
 func InDevContainer() bool {
-	if v, ok := os.LookupEnv(model.OktetoMarkerPathVariable); ok && v != "" {
+	if v, ok := os.LookupEnv("OKTETO_NAMESPACE"); ok && v != "" {
 		return true
 	}
 

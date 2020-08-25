@@ -12,13 +12,6 @@ if [ -d "/var/okteto/bin" ]; then
   fi
 fi
 
-oktetoFolder=$(dirname "$OKTETO_MARKER_PATH")
-if [ ! -w "${oktetoFolder}" ]; then
-    echo \"${oktetoFolder}\" is not writeable by $userID
-    exit 1
-fi
-mkdir -p "${oktetoFolder}"
-
 remote=0
 ephemeral=0
 while getopts ":s:re" opt; do
