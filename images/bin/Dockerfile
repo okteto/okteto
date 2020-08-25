@@ -1,9 +1,9 @@
-FROM syncthing/syncthing:1.8.0 AS syncthing
-FROM okteto/remote:0.3.1 AS remote
-FROM okteto/supervisor:0.1.2 AS supervisor
-FROM okteto/clean:0.1.2 AS clean
+FROM --platform=$BUILDPLATFORM syncthing/syncthing:1.8.0 AS syncthing
+FROM --platform=$BUILDPLATFORM okteto/remote:0.3.1 AS remote
+FROM --platform=$BUILDPLATFORM okteto/supervisor:0.1.2 AS supervisor
+FROM --platform=$BUILDPLATFORM okteto/clean:0.1.2 AS clean
 
-FROM busybox
+FROM --platform=$BUILDPLATFORM busybox
 
 COPY --from=remote /usr/local/bin/remote /usr/local/bin/remote
 COPY --from=supervisor /usr/local/bin/supervisor /usr/local/bin/supervisor
