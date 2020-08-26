@@ -97,6 +97,26 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	return nil
 }
 
+//CleanNamespace cleans a namespace locally
+func CleanNamespace(ctx context.Context, namespace string) error {
+	cred, err := okteto.GetCredentials(ctx, namespace)
+	if err != nil {
+		return err
+	}
+
+	kubeConfigFile := config.GetKubeConfigFile()
+
+	u, _ := url.Parse(okteto.GetURL())
+	parsedHost := strings.ReplaceAll(u.Host, ".", "_")
+
+	if err := okteto.RemoveKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), parsedHost); err != nil {
+		return err
+	}
+
+	log.Success("Cleaned context '%s' in '%s'", parsedHost, kubeConfigFile)
+	return nil
+}
+
 func askIfLogin() bool {
 	result, err := utils.AskYesNo("Authentication required. Do you want to log into Okteto? [y/n]: ")
 	if err != nil {

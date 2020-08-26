@@ -108,31 +108,14 @@ func translateAPIErr(err error) error {
 
 //SetKubeConfig updates a kubeconfig file with okteto cluster credentials
 func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
-	contextName := ""
-	if namespace == "" {
-		// don't include namespace for the personal namespace
-		contextName = clusterName
-		namespace = cred.Namespace
-	} else {
-		contextName = fmt.Sprintf("%s-%s", clusterName, namespace)
-	}
+	contextName := getContextName(cred, namespace, clusterName)
 
-	var cfg *clientcmdapi.Config
-	_, err := os.Stat(kubeConfigPath)
+	cfg, err := getOrCreateKubeConfig(kubeConfigPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			cfg = clientcmdapi.NewConfig()
-		} else {
-			return err
-		}
-	} else {
-		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
-	//create cluster
+	// create cluster
 	cluster, ok := cfg.Clusters[clusterName]
 	if !ok {
 		cluster = clientcmdapi.NewCluster()
@@ -142,7 +125,7 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	cluster.Server = cred.Server
 	cfg.Clusters[clusterName] = cluster
 
-	//create user
+	// create user
 	user, ok := cfg.AuthInfos[userName]
 	if !ok {
 		user = clientcmdapi.NewAuthInfo()
@@ -150,7 +133,7 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	user.Token = cred.Token
 	cfg.AuthInfos[userName] = user
 
-	//create context
+	// create context
 	context, ok := cfg.Contexts[contextName]
 	if !ok {
 		context = clientcmdapi.NewContext()
@@ -166,6 +149,50 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }
 
+//RemoveKubeConfig removes from a kubeconfig fle the okteto cluster credentials
+func RemoveKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
+	contextToRemoveName := getContextName(cred, namespace, clusterName)
+	cfg, err := getOrCreateKubeConfig(kubeConfigPath)
+	if err != nil {
+		return err
+	}
+
+	contextToRemove, ok := cfg.Contexts[contextToRemoveName]
+	if !ok {
+		return fmt.Errorf("didn't find context %s", contextToRemoveName)
+	}
+
+	clusterReferenced, userReferenced := false, false
+	for contextName, context := range cfg.Contexts {
+		if contextName == contextToRemoveName {
+			continue
+		}
+
+		if context.Cluster == contextToRemove.Cluster {
+			clusterReferenced = true
+		}
+
+		if context.AuthInfo == contextToRemove.AuthInfo {
+			userReferenced = true
+		}
+	}
+
+	// remove cluster
+	if !clusterReferenced {
+		delete(cfg.Clusters, clusterName)
+	}
+
+	// remove user
+	if !userReferenced {
+		delete(cfg.AuthInfos, userName)
+	}
+
+	// remove context
+	delete(cfg.Contexts, contextToRemoveName)
+
+	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
+}
+
 // InDevContainer returns true if running in an Okteto dev pod
 func InDevContainer() bool {
 	if v, ok := os.LookupEnv(model.OktetoMarkerPathVariable); ok && v != "" {
@@ -173,4 +200,34 @@ func InDevContainer() bool {
 	}
 
 	return false
+}
+
+func getOrCreateKubeConfig(kubeConfigPath string) (*clientcmdapi.Config, error) {
+	var cfg *clientcmdapi.Config
+	_, err := os.Stat(kubeConfigPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			cfg = clientcmdapi.NewConfig()
+		} else {
+			return nil, err
+		}
+	} else {
+		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cfg, nil
+}
+
+func getContextName(cred *Credential, namespace, clusterName string) string {
+	contextName := ""
+	if namespace == "" {
+		// don't include namespace for the personal namespace
+		contextName = clusterName
+		namespace = cred.Namespace
+	} else {
+		contextName = fmt.Sprintf("%s-%s", clusterName, namespace)
+	}
+	return contextName
 }
