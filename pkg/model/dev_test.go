@@ -18,7 +18,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"reflect"
 	"testing"
 
@@ -429,6 +428,12 @@ func TestDev_validateName(t *testing.T) {
 				ImagePullPolicy: apiv1.PullAlways,
 				Image:           &BuildInfo{},
 				Push:            &BuildInfo{},
+				Syncs: []Sync{
+					{
+						LocalPath:  ".",
+						RemotePath: "/app",
+					},
+				},
 			}
 			// Since dev isn't being unmarshalled through Read, apply defaults
 			// before validating.
@@ -608,26 +613,34 @@ func Test_validate(t *testing.T) {
 			name: "services-with-disabled-pvc",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       persistentVolume:
         enabled: false
       services:
-        - name: foo`),
+        - name: foo
+          sync:
+            - .:/app`),
 			expectErr: true,
 		},
 		{
 			name: "services-with-enabled-pvc",
 			manifest: []byte(`
       name: deployment
-      persistentVolume:
-        enabled: true
+      sync:
+        - .:/app
       services:
-        - name: foo`),
+        - name: foo
+          sync:
+            - .:/app`),
 			expectErr: false,
 		},
 		{
 			name: "pvc-size",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       persistentVolume:
         enabled: true
         size: 10Gi`),
@@ -637,26 +650,28 @@ func Test_validate(t *testing.T) {
 			name: "volumes-mount-path-/",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       volumes:
-        - /
-      persistentVolume:
-        enabled: true`),
+        - /`),
 			expectErr: true,
 		},
 		{
 			name: "volumes-relative-mount-path",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       volumes:
-        - path
-      persistentVolume:
-        enabled: true`),
+        - path`),
 			expectErr: true,
 		},
 		{
 			name: "external-volumes-mount-path-/",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       externalVolumes:
         - name:/`),
 			expectErr: true,
@@ -665,6 +680,8 @@ func Test_validate(t *testing.T) {
 			name: "external-volumes-relative-mount-path",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       externalVolumes:
         - name:path`),
 			expectErr: true,
@@ -673,6 +690,8 @@ func Test_validate(t *testing.T) {
 			name: "wrong-pvc-size",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       persistentVolume:
         enabled: true
         size: wrong`),
@@ -682,10 +701,12 @@ func Test_validate(t *testing.T) {
 			name: "services-with-mountpath-pullpolicy",
 			manifest: []byte(`
       name: deployment
-      persistentVolume:
-        enabled: true
+      sync:
+        - .:/app
       services:
         - name: foo
+          sync:
+            - .:/app
           imagePullPolicy: Always`),
 			expectErr: false,
 		},
@@ -693,8 +714,12 @@ func Test_validate(t *testing.T) {
 			name: "services-with-bad-pullpolicy",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       services:
         - name: foo
+          sync:
+            - .:/app
           imagePullPolicy: Sometimes`),
 			expectErr: true,
 		},
@@ -702,9 +727,8 @@ func Test_validate(t *testing.T) {
 			name: "volumes",
 			manifest: []byte(`
       name: deployment
-      persistentVolume:
-        enabled: true
-      volumes:
+      sync:
+        - .:/app
         - docs:/docs`),
 			expectErr: false,
 		},
@@ -712,6 +736,8 @@ func Test_validate(t *testing.T) {
 			name: "external-volumes",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       externalVolumes:
         - pvc1:path:/path
         - pvc2:/path`),
@@ -721,6 +747,8 @@ func Test_validate(t *testing.T) {
 			name: "secrets",
 			manifest: []byte(fmt.Sprintf(`
       name: deployment
+      sync:
+        - .:/app
       secrets:
         - %s:/remote
         - %s:/remote`, file.Name(), file.Name())),
@@ -730,6 +758,8 @@ func Test_validate(t *testing.T) {
 			name: "bad-pull-policy",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       imagePullPolicy: what`),
 			expectErr: true,
 		},
@@ -737,20 +767,26 @@ func Test_validate(t *testing.T) {
 			name: "good-pull-policy",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       imagePullPolicy: IfNotPresent`),
 			expectErr: false,
 		},
 		{
 			name: "subpath-on-main-dev",
 			manifest: []byte(`
-      name: deployment
-      subpath: /app/docs`),
+          name: deployment
+          sync:
+            - .:/app
+          subpath: /app/docs`),
 			expectErr: true,
 		},
 		{
 			name: "valid-ssh-server-port",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       sshServerPort: 2222`),
 			expectErr: false,
 		},
@@ -758,6 +794,8 @@ func Test_validate(t *testing.T) {
 			name: "invalid-ssh-server-port",
 			manifest: []byte(`
       name: deployment
+      sync:
+        - .:/app
       sshServerPort: -1`),
 			expectErr: true,
 		},
@@ -827,67 +865,6 @@ func TestPersistentVolumeEnabled(t *testing.T) {
 
 			if dev.PersistentVolumeEnabled() != tt.expected {
 				t.Errorf("Expecting %t but got %t", tt.expected, dev.PersistentVolumeEnabled())
-			}
-		})
-	}
-}
-
-func Test_fullDevSubPath(t *testing.T) {
-	var tests = []struct {
-		name    string
-		subPath string
-		want    string
-	}{
-		{
-			name:    "source-code-without-subpath",
-			subPath: "",
-			want:    SourceCodeSubPath,
-		},
-		{
-			name:    "source-code-with-subpath",
-			subPath: "data",
-			want:    path.Join(SourceCodeSubPath, "data"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := fullDevSubPath(tt.subPath)
-			if result != tt.want {
-				t.Errorf("error in test '%s', expected '%s' vs '%s'", tt.name, tt.want, result)
-			}
-		})
-	}
-}
-
-func Test_fullGlobalSubPath(t *testing.T) {
-	var tests = []struct {
-		name      string
-		mountPath string
-		want      string
-	}{
-		{
-			name:      "single-path",
-			mountPath: "/app",
-			want:      "volume-app",
-		},
-		{
-			name:      "double-path",
-			mountPath: "/app/app",
-			want:      "volume-app-app",
-		},
-		{
-			name:      "trailing-slash",
-			mountPath: "/app/app/",
-			want:      "volume-app-app",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := fullGlobalSubPath(tt.mountPath)
-			if result != tt.want {
-				t.Errorf("error in test '%s', expected '%s' vs '%s'", tt.name, tt.want, result)
 			}
 		})
 	}

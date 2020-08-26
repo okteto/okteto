@@ -55,6 +55,11 @@ func TestRun(t *testing.T) {
 		t.Fatalf("manifest was overwritten: %s", err)
 	}
 
+	dev, err = utils.LoadDev(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if err := Run("", "", p, "ruby", dir, true); err != nil {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}

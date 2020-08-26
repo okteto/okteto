@@ -30,19 +30,20 @@ func (s *Syncthing) checkLocalAndRemoteStatus(ctx context.Context) error {
 }
 
 func (s *Syncthing) checkStatus(ctx context.Context, local bool) error {
-	status, err := s.GetStatus(ctx, s.Dev, local)
-	if err != nil {
-		return fmt.Errorf("error getting status from local=%t: %s", local, err)
-	}
-	if status.PullErrors == 0 {
-		return nil
-	}
+	for _, folder := range s.Folders {
+		status, err := s.GetStatus(ctx, &folder, local)
+		if err != nil {
+			return fmt.Errorf("error getting status from path:%s local=%t: %s", folder.LocalPath, local, err)
+		}
+		if status.PullErrors == 0 {
+			continue
+		}
 
-	err = s.GetFolderErrors(ctx, s.Dev, local)
-	if err == nil {
-		return nil
+		if err := s.GetFolderErrors(ctx, &folder, local); err != nil {
+			return fmt.Errorf("error getting folder errors from path:%s local=%t: %s", folder.LocalPath, local, err)
+		}
 	}
-	return fmt.Errorf("error getting folder errors from local=%t: %s", local, err)
+	return nil
 }
 
 // Monitor will send a message to disconnected if remote syncthing is disconnected for more than 10 seconds.

@@ -34,7 +34,6 @@ annotations:
 		t.Fatal(err)
 	}
 	d := dev.GevSandbox()
-	dev.DevPath = "okteto.yml"
 	translations, err := GetTranslations(dev, d, nil)
 	if err != nil {
 		t.Fatal(err)
