@@ -690,7 +690,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				VolumeMount{
 					Name:      main.GetVolumeName(),
 					MountPath: v.RemotePath,
-					SubPath:   filepath.Join(DataSubPath, v.RemotePath),
+					SubPath:   getDataSubPath(v.RemotePath),
 				},
 			)
 		}
@@ -700,7 +700,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				VolumeMount{
 					Name:      main.GetVolumeName(),
 					MountPath: sync.RemotePath,
-					SubPath:   filepath.Join(SourceCodeSubPath, sync.LocalPath),
+					SubPath:   getSourceSubPath(sync.LocalPath),
 				},
 			)
 		}

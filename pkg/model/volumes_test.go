@@ -15,6 +15,7 @@ package model
 
 import (
 	"reflect"
+	"runtime"
 	"testing"
 )
 
@@ -691,6 +692,91 @@ func Test_IsSubPathFolder(t *testing.T) {
 			}
 			if result != tt.expected {
 				t.Errorf("'%s' got '%t' expected '%t'", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func Test_getDataSubPath(t *testing.T) {
+	var tests = []struct {
+		name   string
+		path   string
+		result string
+	}{
+		{
+			name:   "single",
+			path:   "/var",
+			result: "data/var",
+		},
+		{
+			name:   "double",
+			path:   "/var/okteto",
+			result: "data/var/okteto",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getDataSubPath(tt.path)
+			if result != tt.result {
+				t.Errorf("'%s' got '%s' expected '%s'", tt.name, result, tt.result)
+			}
+		})
+	}
+}
+
+func Test_getSourceSubPath(t *testing.T) {
+	var tests = []struct {
+		name   string
+		path   string
+		goos   string
+		result string
+	}{
+		{
+			name:   "relative-linux",
+			path:   "code/func",
+			goos:   "linux",
+			result: "src/code/func",
+		},
+		{
+			name:   "relative-darwin",
+			path:   "code/func",
+			goos:   "darwin",
+			result: "src/code/func",
+		},
+		{
+			name:   "relative-windows",
+			path:   "code\\func",
+			goos:   "windows",
+			result: "src/code/func",
+		},
+		{
+			name:   "absulote-linux",
+			path:   "/code/func",
+			goos:   "linux",
+			result: "src/code/func",
+		},
+		{
+			name:   "absulote-darwin",
+			path:   "/code/func",
+			goos:   "darwin",
+			result: "src/code/func",
+		},
+		{
+			name:   "absulote-windows",
+			path:   "c:\\code\\func",
+			goos:   "windows",
+			result: "src/code/func",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.goos == runtime.GOOS {
+				result := getSourceSubPath(tt.path)
+				if result != tt.result {
+					t.Errorf("'%s' got '%s' for '%s', expected '%s'", tt.name, result, runtime.GOOS, tt.result)
+				}
 			}
 		})
 	}
