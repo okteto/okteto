@@ -148,7 +148,7 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }
 
-//RemoveKubeConfig removes from a kubeconfig fle the okteto cluster credentials
+//RemoveKubeConfig removes okteto cluster context from a kubeconfig file
 func RemoveKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
 	contextToRemoveName, _ := getContextName(cred, namespace, clusterName)
 	cfg, err := getOrCreateKubeConfig(kubeConfigPath)
