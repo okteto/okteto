@@ -85,35 +85,31 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	}
 
 	kubeConfigFile := config.GetKubeConfigFile()
+	clusterHost := getClusterHost()
 
-	u, _ := url.Parse(okteto.GetURL())
-	parsedHost := strings.ReplaceAll(u.Host, ".", "_")
-
-	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), parsedHost); err != nil {
+	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterHost); err != nil {
 		return err
 	}
 
-	log.Success("Updated context '%s' in '%s'", parsedHost, kubeConfigFile)
+	log.Success("Updated context '%s' in '%s'", clusterHost, kubeConfigFile)
 	return nil
 }
 
-//CleanNamespace cleans a namespace locally
-func CleanNamespace(ctx context.Context, namespace string) error {
+//RemoveNamespace removes an added namespace locally
+func RemoveNamespace(ctx context.Context, namespace string) error {
 	cred, err := okteto.GetCredentials(ctx, namespace)
 	if err != nil {
 		return err
 	}
 
 	kubeConfigFile := config.GetKubeConfigFile()
+	clusterHost := getClusterHost()
 
-	u, _ := url.Parse(okteto.GetURL())
-	parsedHost := strings.ReplaceAll(u.Host, ".", "_")
-
-	if err := okteto.RemoveKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), parsedHost); err != nil {
+	if err := okteto.RemoveKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterHost); err != nil {
 		return err
 	}
 
-	log.Success("Cleaned context '%s' in '%s'", parsedHost, kubeConfigFile)
+	log.Success("Removed context '%s' in '%s'", clusterHost, kubeConfigFile)
 	return nil
 }
 
@@ -141,4 +137,9 @@ func askOktetoURL() (string, error) {
 	oktetoURL = u
 
 	return oktetoURL, nil
+}
+
+func getClusterHost() string {
+	u, _ := url.Parse(okteto.GetURL())
+	return strings.ReplaceAll(u.Host, ".", "_")
 }

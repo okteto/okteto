@@ -100,12 +100,12 @@ func TestRemoveKubeConfig(t *testing.T) {
 	c := &Credential{}
 
 	// empty config
-	if err := RemoveKubeConfig(c, file.Name(), "", "123-123-123", "cloud-okteto-com"); err == nil {
-		t.Fatal("didn't return error for context not found")
+	if err := RemoveKubeConfig(c, file.Name(), "", "123-123-123", "cloud-okteto-com"); err != nil {
+		t.Fatal(err.Error())
 	}
 
-	if err := RemoveKubeConfig(c, file.Name(), "ns", "123-123-123", "cloud-okteto-com"); err == nil {
-		t.Fatal("didn't return error for context not found")
+	if err := RemoveKubeConfig(c, file.Name(), "ns", "123-123-123", "cloud-okteto-com"); err != nil {
+		t.Fatal(err.Error())
 	}
 
 	config := `apiVersion: v1
