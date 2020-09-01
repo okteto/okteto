@@ -14,6 +14,7 @@
 package model
 
 import (
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"testing"
@@ -880,42 +881,42 @@ func Test_getSourceSubPath(t *testing.T) {
 		{
 			name:   "linux-root",
 			dev:    &Dev{parentSyncFolder: "/"},
-			path:   "/code/func",
+			path:   filepath.ToSlash("/code/func"),
 			goos:   "linux",
 			result: "src/code/func",
 		},
 		{
 			name:   "darwin-root",
 			dev:    &Dev{parentSyncFolder: "/"},
-			path:   "/code/func",
+			path:   filepath.ToSlash("/code/func"),
 			goos:   "darwin",
 			result: "src/code/func",
 		},
 		{
 			name:   "windows-root",
 			dev:    &Dev{parentSyncFolder: "/"},
-			path:   "c:\\code\\func",
+			path:   filepath.ToSlash("c:\\code\\func"),
 			goos:   "windows",
 			result: "src/code/func",
 		},
 		{
 			name:   "linux-relative",
 			dev:    &Dev{parentSyncFolder: "/code"},
-			path:   "/code/func",
+			path:   filepath.ToSlash("/code/func"),
 			goos:   "linux",
 			result: "src/func",
 		},
 		{
 			name:   "darwin-relative",
 			dev:    &Dev{parentSyncFolder: "/code"},
-			path:   "/code/func",
+			path:   filepath.ToSlash("/code/func"),
 			goos:   "darwin",
 			result: "src/func",
 		},
 		{
 			name:   "windows-relative",
 			dev:    &Dev{parentSyncFolder: "/code"},
-			path:   "c:\\code\\func",
+			path:   filepath.ToSlash("c:\\code\\func"),
 			goos:   "windows",
 			result: "src/func",
 		},
