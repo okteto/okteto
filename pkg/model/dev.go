@@ -127,6 +127,7 @@ type Dev struct {
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
 	Syncs                []Sync                `json:"sync,omitempty" yaml:"sync,omitempty"`
+	parentSyncFolder     string                `json:"-" yaml:"-"`
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
@@ -244,6 +245,8 @@ func Get(devPath string) (*Dev, error) {
 	if err := dev.validate(); err != nil {
 		return nil, err
 	}
+
+	dev.computeParentSyncFolder()
 
 	return dev, nil
 }
@@ -700,7 +703,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				VolumeMount{
 					Name:      main.GetVolumeName(),
 					MountPath: sync.RemotePath,
-					SubPath:   getSourceSubPath(sync.LocalPath),
+					SubPath:   main.getSourceSubPath(sync.LocalPath),
 				},
 			)
 		}

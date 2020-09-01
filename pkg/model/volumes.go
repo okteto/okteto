@@ -97,7 +97,7 @@ func (dev *Dev) translateDeprecatedVolumes() {
 	dev.Volumes = volumes
 }
 
-//IsSubPathFolder checks if a sync folder is a suboath of another sync folder
+//IsSubPathFolder checks if a sync folder is a subpath of another sync folder
 func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	found := false
 	for _, sync := range dev.Syncs {
@@ -120,13 +120,45 @@ func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	return false, errors.ErrNotFound
 }
 
+func (dev *Dev) computeParentSyncFolder() {
+	pathSplits := map[int]string{}
+	maxIndex := -1
+	for i, sync := range dev.Syncs {
+		path := filepath.ToSlash(sync.LocalPath)
+		if i == 0 {
+			for j, subPath := range strings.Split(path, "/") {
+				pathSplits[j] = subPath
+				maxIndex = j
+			}
+			continue
+		}
+		for j, subPath := range strings.Split(path, "/") {
+			if j >= maxIndex {
+				break
+			}
+			oldSubPath, ok := pathSplits[j]
+			if !ok || oldSubPath != subPath {
+				maxIndex = j - 1
+				break
+			}
+		}
+	}
+	dev.parentSyncFolder = "/"
+	for i := 1; i <= maxIndex; i++ {
+		dev.parentSyncFolder = filepath.ToSlash(filepath.Join(dev.parentSyncFolder, pathSplits[i]))
+	}
+}
+
 func getDataSubPath(path string) string {
 	return filepath.ToSlash(filepath.Join(DataSubPath, path))
 }
 
-func getSourceSubPath(path string) string {
-	path = path[len(filepath.VolumeName(path)):]
-	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, path))
+func (dev *Dev) getSourceSubPath(path string) string {
+	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(path))
+	if err != nil {
+		log.Fatalf("error on getSourceSubPath of '%s': %s", path, err.Error())
+	}
+	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(rel)))
 }
 
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
