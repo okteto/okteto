@@ -720,6 +720,21 @@ func Test_computeParentSyncFolder(t *testing.T) {
 			result: "/aaa",
 		},
 		{
+			name: "windows-double-preffix",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "c:\\common\\aaa\\111",
+					},
+					{
+						LocalPath: "c:\\common\\aaa\\222",
+					},
+				},
+			},
+			goos:   "windows",
+			result: "/common/aaa",
+		},
+		{
 			name: "linux-root",
 			dev: &Dev{
 				Syncs: []Sync{
