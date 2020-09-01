@@ -147,6 +147,9 @@ func (dev *Dev) computeParentSyncFolder() {
 	for i := 1; i <= maxIndex; i++ {
 		dev.parentSyncFolder = filepath.ToSlash(filepath.Join(dev.parentSyncFolder, pathSplits[i]))
 	}
+
+	dev.parentSyncFolder = dev.parentSyncFolder[len(filepath.VolumeName(dev.parentSyncFolder)):]
+
 }
 
 func getDataSubPath(path string) string {
@@ -154,6 +157,7 @@ func getDataSubPath(path string) string {
 }
 
 func (dev *Dev) getSourceSubPath(path string) string {
+	path = path[len(filepath.VolumeName(path)):]
 	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(path))
 	if err != nil {
 		log.Fatalf("error on getSourceSubPath of '%s': %s", path, err.Error())

@@ -14,7 +14,6 @@
 package model
 
 import (
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"testing"
@@ -721,6 +720,21 @@ func Test_computeParentSyncFolder(t *testing.T) {
 			result: "/aaa",
 		},
 		{
+			name: "windows-double-preffix",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "c:\\common\\aaa\\111",
+					},
+					{
+						LocalPath: "c:\\common\\aaa\\222",
+					},
+				},
+			},
+			goos:   "windows",
+			result: "/common/aaa",
+		},
+		{
 			name: "linux-root",
 			dev: &Dev{
 				Syncs: []Sync{
@@ -881,42 +895,42 @@ func Test_getSourceSubPath(t *testing.T) {
 		{
 			name:   "linux-root",
 			dev:    &Dev{parentSyncFolder: "/"},
-			path:   filepath.ToSlash("/code/func"),
+			path:   "/code/func",
 			goos:   "linux",
 			result: "src/code/func",
 		},
 		{
 			name:   "darwin-root",
 			dev:    &Dev{parentSyncFolder: "/"},
-			path:   filepath.ToSlash("/code/func"),
+			path:   "/code/func",
 			goos:   "darwin",
 			result: "src/code/func",
 		},
 		{
 			name:   "windows-root",
 			dev:    &Dev{parentSyncFolder: "/"},
-			path:   filepath.ToSlash("c:\\code\\func"),
+			path:   "c:\\code\\func",
 			goos:   "windows",
 			result: "src/code/func",
 		},
 		{
 			name:   "linux-relative",
 			dev:    &Dev{parentSyncFolder: "/code"},
-			path:   filepath.ToSlash("/code/func"),
+			path:   "/code/func",
 			goos:   "linux",
 			result: "src/func",
 		},
 		{
 			name:   "darwin-relative",
 			dev:    &Dev{parentSyncFolder: "/code"},
-			path:   filepath.ToSlash("/code/func"),
+			path:   "/code/func",
 			goos:   "darwin",
 			result: "src/func",
 		},
 		{
 			name:   "windows-relative",
 			dev:    &Dev{parentSyncFolder: "/code"},
-			path:   filepath.ToSlash("c:\\code\\func"),
+			path:   "c:\\code\\func",
 			goos:   "windows",
 			result: "src/func",
 		},
