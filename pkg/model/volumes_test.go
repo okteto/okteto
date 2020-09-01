@@ -697,6 +697,150 @@ func Test_IsSubPathFolder(t *testing.T) {
 	}
 }
 
+func Test_computeParentSyncFolder(t *testing.T) {
+	var tests = []struct {
+		name   string
+		dev    *Dev
+		goos   string
+		result string
+	}{
+		{
+			name: "linux-preffix",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "/aaa/111111",
+					},
+					{
+						LocalPath: "/aaa/111222",
+					},
+				},
+			},
+			goos:   "linux",
+			result: "/aaa",
+		},
+		{
+			name: "linux-root",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "/aaa/111",
+					},
+					{
+						LocalPath: "/bbb/222",
+					},
+					{
+						LocalPath: "/aaa/222",
+					},
+				},
+			},
+			goos:   "linux",
+			result: "/",
+		},
+		{
+			name: "darwin-root",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "/aaa/111",
+					},
+					{
+						LocalPath: "/bbb/222",
+					},
+					{
+						LocalPath: "/aaa/222",
+					},
+				},
+			},
+			goos:   "darwin",
+			result: "/",
+		},
+		{
+			name: "windows-root",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "c:\\aaa\\111",
+					},
+					{
+						LocalPath: "c:\\bbb\\222",
+					},
+					{
+						LocalPath: "c:\\aaa\\222",
+					},
+				},
+			},
+			goos:   "windows",
+			result: "/",
+		},
+		{
+			name: "linux-relative",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "/common/aaa/111",
+					},
+					{
+						LocalPath: "/common/bbb/222",
+					},
+					{
+						LocalPath: "/common/aaa/222",
+					},
+				},
+			},
+			goos:   "linux",
+			result: "/common",
+		},
+		{
+			name: "darwin-relative",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "/common/aaa/111",
+					},
+					{
+						LocalPath: "/common/bbb/222",
+					},
+					{
+						LocalPath: "/common/aaa/222",
+					},
+				},
+			},
+			goos:   "darwin",
+			result: "/common",
+		},
+		{
+			name: "windows-relative",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "c:\\common\\aaa\\111",
+					},
+					{
+						LocalPath: "c:\\common\\bbb\\222",
+					},
+					{
+						LocalPath: "c:\\common\\aaa\\222",
+					},
+				},
+			},
+			goos:   "windows",
+			result: "/common",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.goos == runtime.GOOS {
+				tt.dev.computeParentSyncFolder()
+				if tt.result != tt.dev.parentSyncFolder {
+					t.Errorf("'%s' got '%s' for '%s', expected '%s'", tt.name, tt.dev.parentSyncFolder, runtime.GOOS, tt.result)
+				}
+			}
+		})
+	}
+}
+
 func Test_getDataSubPath(t *testing.T) {
 	var tests = []struct {
 		name   string
@@ -728,52 +872,59 @@ func Test_getDataSubPath(t *testing.T) {
 func Test_getSourceSubPath(t *testing.T) {
 	var tests = []struct {
 		name   string
+		dev    *Dev
 		path   string
 		goos   string
 		result string
 	}{
 		{
-			name:   "relative-linux",
-			path:   "code/func",
-			goos:   "linux",
-			result: "src/code/func",
-		},
-		{
-			name:   "relative-darwin",
-			path:   "code/func",
-			goos:   "darwin",
-			result: "src/code/func",
-		},
-		{
-			name:   "relative-windows",
-			path:   "code\\func",
-			goos:   "windows",
-			result: "src/code/func",
-		},
-		{
-			name:   "absulote-linux",
+			name:   "linux-root",
+			dev:    &Dev{parentSyncFolder: "/"},
 			path:   "/code/func",
 			goos:   "linux",
 			result: "src/code/func",
 		},
 		{
-			name:   "absulote-darwin",
+			name:   "darwin-root",
+			dev:    &Dev{parentSyncFolder: "/"},
 			path:   "/code/func",
 			goos:   "darwin",
 			result: "src/code/func",
 		},
 		{
-			name:   "absulote-windows",
+			name:   "windows-root",
+			dev:    &Dev{parentSyncFolder: "/"},
 			path:   "c:\\code\\func",
 			goos:   "windows",
 			result: "src/code/func",
+		},
+		{
+			name:   "linux-relative",
+			dev:    &Dev{parentSyncFolder: "/code"},
+			path:   "/code/func",
+			goos:   "linux",
+			result: "src/func",
+		},
+		{
+			name:   "darwin-relative",
+			dev:    &Dev{parentSyncFolder: "/code"},
+			path:   "/code/func",
+			goos:   "darwin",
+			result: "src/func",
+		},
+		{
+			name:   "windows-relative",
+			dev:    &Dev{parentSyncFolder: "/code"},
+			path:   "c:\\code\\func",
+			goos:   "windows",
+			result: "src/func",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.goos == runtime.GOOS {
-				result := getSourceSubPath(tt.path)
+				result := tt.dev.getSourceSubPath(tt.path)
 				if result != tt.result {
 					t.Errorf("'%s' got '%s' for '%s', expected '%s'", tt.name, result, runtime.GOOS, tt.result)
 				}
