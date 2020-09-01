@@ -705,6 +705,21 @@ func Test_computeParentSyncFolder(t *testing.T) {
 		result string
 	}{
 		{
+			name: "linux-preffix",
+			dev: &Dev{
+				Syncs: []Sync{
+					{
+						LocalPath: "/aaa/111111",
+					},
+					{
+						LocalPath: "/aaa/111222",
+					},
+				},
+			},
+			goos:   "linux",
+			result: "/aaa",
+		},
+		{
 			name: "linux-root",
 			dev: &Dev{
 				Syncs: []Sync{

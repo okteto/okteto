@@ -133,7 +133,7 @@ func (dev *Dev) computeParentSyncFolder() {
 			continue
 		}
 		for j, subPath := range strings.Split(path, "/") {
-			if j >= maxIndex {
+			if j > maxIndex {
 				break
 			}
 			oldSubPath, ok := pathSplits[j]
