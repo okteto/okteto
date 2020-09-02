@@ -125,9 +125,7 @@ services:
 						},
 					},
 					SecurityContext: &apiv1.PodSecurityContext{
-						RunAsUser:  &runAsUser,
-						RunAsGroup: &runAsGroup,
-						FSGroup:    &fsGroup,
+						FSGroup: &fsGroup,
 					},
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
@@ -218,6 +216,10 @@ services:
 									Name:  "OKTETO_NAME",
 									Value: "web",
 								},
+							},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  &runAsUser,
+								RunAsGroup: &runAsGroup,
 							},
 							Resources: apiv1.ResourceRequirements{
 								Limits: apiv1.ResourceList{
@@ -345,9 +347,7 @@ services:
 						},
 					},
 					SecurityContext: &apiv1.PodSecurityContext{
-						RunAsUser:  &rootUser,
-						RunAsGroup: &rootUser,
-						FSGroup:    &rootUser,
+						FSGroup: &rootUser,
 					},
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
@@ -368,6 +368,10 @@ services:
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"./run_worker.sh"},
 							Args:            []string{},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  &rootUser,
+								RunAsGroup: &rootUser,
+							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      dev.GetVolumeName(),
