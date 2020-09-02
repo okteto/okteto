@@ -24,7 +24,7 @@ import (
 func Version() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: fmt.Sprintf("View the version of the okteto binary"),
+		Short: "View the version of the okteto binary",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("okteto version %s \n", config.VersionString)
 			return nil

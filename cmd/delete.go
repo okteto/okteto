@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
@@ -26,7 +25,7 @@ import (
 func Delete(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Short: fmt.Sprintf("Deletes resources"),
+		Short: "Deletes resources",
 	}
 	cmd.AddCommand(namespace.Delete(ctx))
 	cmd.AddCommand(pipeline.Destroy(ctx))

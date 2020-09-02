@@ -15,7 +15,6 @@ package stack
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -36,7 +35,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deploy <name>",
-		Short: fmt.Sprintf("Deploys a stack"),
+		Short: "Deploys a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := utils.LoadStack(name, stackPath)
 			if err != nil {

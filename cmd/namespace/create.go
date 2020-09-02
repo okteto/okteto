@@ -32,7 +32,7 @@ func Create(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "namespace <name>",
-		Short: fmt.Sprintf("Creates a namespace"),
+		Short: "Creates a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err

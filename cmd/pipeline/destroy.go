@@ -20,7 +20,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -34,7 +33,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "pipeline",
-		Short: fmt.Sprintf("Deletes an okteto pipeline"),
+		Short: "Deletes an okteto pipeline",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
@@ -49,13 +48,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 
 			if namespace == "" {
-				_, _, namespace, err = k8Client.GetLocal("")
+				namespace, err = getCurrentNamespace(ctx)
 				if err != nil {
-					log.Infof("couldn't get the current namespace: %w", err)
-					return errors.UserError{
-						E:    fmt.Errorf("couldn't get the current namespace"),
-						Hint: "Run `okteto namespace`, or use the `--namespace` parameter",
-					}
+					return err
 				}
 			}
 

@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -39,7 +40,7 @@ func Create(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "pipeline",
-		Short: fmt.Sprintf("Creates an okteto pipeline"),
+		Short: "Creates an okteto pipeline",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
@@ -58,13 +59,9 @@ func Create(ctx context.Context) *cobra.Command {
 			}
 
 			if namespace == "" {
-				_, _, namespace, err = k8Client.GetLocal("")
+				namespace, err = getCurrentNamespace(ctx)
 				if err != nil {
-					log.Infof("couldn't get the current namespace: %w", err)
-					return errors.UserError{
-						E:    fmt.Errorf("couldn't get the current namespace"),
-						Hint: "Run `okteto namespace`, or use the `--namespace` parameter",
-					}
+					return err
 				}
 			}
 
@@ -126,7 +123,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string) error {
 					return nil
 				}
 
-				return fmt.Errorf("failed to get pipeline '%s': %w", name, err)
+				return fmt.Errorf("failed to get pipeline '%s': %s", name, err)
 			}
 
 			switch p.Status {
@@ -139,4 +136,29 @@ func waitUntilRunning(ctx context.Context, name, namespace string) error {
 			}
 		}
 	}
+}
+
+func getCurrentNamespace(ctx context.Context) (string, error) {
+	c, _, namespace, err := k8Client.GetLocal("")
+	if err != nil {
+		log.Infof("couldn't get the current namespace: %w", err)
+		return "", errors.UserError{
+			E:    fmt.Errorf("couldn't get the current namespace"),
+			Hint: "Run `okteto namespace`, or use the `--namespace` parameter",
+		}
+	}
+
+	ns, err := namespaces.Get(namespace, c)
+	if err != nil {
+		return namespace, nil
+	}
+
+	if !namespaces.IsOktetoNamespace(ns) {
+		return "", errors.UserError{
+			E:    fmt.Errorf("your current namespace '%s' is not managed by okteto", namespace),
+			Hint: "Run `okteto namespace`, or use the `--namespace` parameter",
+		}
+	}
+
+	return namespace, nil
 }

@@ -15,7 +15,6 @@ package stack
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -31,7 +30,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	var namespace string
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
-		Short: fmt.Sprintf("Destroys a stack"),
+		Short: "Destroys a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := utils.LoadStack(name, stackPath)
 			if err != nil {
