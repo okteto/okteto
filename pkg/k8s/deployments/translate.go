@@ -390,14 +390,6 @@ func TranslatePodSecurityContext(spec *apiv1.PodSpec, s *model.SecurityContext) 
 		spec.SecurityContext = &apiv1.PodSecurityContext{}
 	}
 
-	if s.RunAsUser != nil {
-		spec.SecurityContext.RunAsUser = s.RunAsUser
-	}
-
-	if s.RunAsGroup != nil {
-		spec.SecurityContext.RunAsGroup = s.RunAsGroup
-	}
-
 	if s.FSGroup != nil {
 		spec.SecurityContext.FSGroup = s.FSGroup
 	}
@@ -405,7 +397,7 @@ func TranslatePodSecurityContext(spec *apiv1.PodSpec, s *model.SecurityContext) 
 
 //TranslateContainerSecurityContext translates the security context attached to a container
 func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityContext) {
-	if s == nil || s.Capabilities == nil {
+	if s == nil {
 		return
 	}
 
@@ -413,6 +405,17 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 		c.SecurityContext = &apiv1.SecurityContext{}
 	}
 
+	if s.RunAsUser != nil {
+		c.SecurityContext.RunAsUser = s.RunAsUser
+	}
+
+	if s.RunAsGroup != nil {
+		c.SecurityContext.RunAsGroup = s.RunAsGroup
+	}
+
+	if s.Capabilities == nil {
+		return
+	}
 	if c.SecurityContext.Capabilities == nil {
 		c.SecurityContext.Capabilities = &apiv1.Capabilities{}
 	}
