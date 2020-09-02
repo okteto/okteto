@@ -141,7 +141,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string) error {
 func getCurrentNamespace(ctx context.Context) (string, error) {
 	c, _, namespace, err := k8Client.GetLocal("")
 	if err != nil {
-		log.Infof("couldn't get the current namespace: %w", err)
+		log.Infof("couldn't get the current namespace: %s", err)
 		return "", errors.UserError{
 			E:    fmt.Errorf("couldn't get the current namespace"),
 			Hint: "Run `okteto namespace`, or use the `--namespace` parameter",
