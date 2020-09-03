@@ -15,10 +15,8 @@ package syncthing
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 )
 
@@ -33,14 +31,15 @@ func (s *Syncthing) checkStatus(ctx context.Context, local bool) error {
 	for _, folder := range s.Folders {
 		status, err := s.GetStatus(ctx, &folder, local)
 		if err != nil {
-			return fmt.Errorf("error getting status from path:%s local=%t: %s", folder.LocalPath, local, err)
+			log.Infof("error getting status from path:%s local=%t", folder.LocalPath, local)
+			return err
 		}
 		if status.PullErrors == 0 {
 			continue
 		}
 
 		if err := s.GetFolderErrors(ctx, &folder, local); err != nil {
-			return fmt.Errorf("error getting folder errors from path:%s local=%t: %s", folder.LocalPath, local, err)
+			return err
 		}
 	}
 	return nil
@@ -58,9 +57,10 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 				retries = 0
 				continue
 			}
+			log.Infof("syncthing monitor error %d: %s", retries, err)
 			if retries >= 3 {
-				log.Infof("syncthing not connected, sending disconnect signal: %s", err)
-				disconnect <- errors.ErrLostSyncthing
+				log.Infof("syncthing monitor error, sending disconnect signal: %s", err)
+				disconnect <- err
 				return
 			}
 			retries++

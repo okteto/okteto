@@ -55,6 +55,9 @@ var (
 	// ErrNotInDevContainer is returned when an unsupported command is invoked from a dev container (e.g. okteto up)
 	ErrNotInDevContainer = fmt.Errorf("this command is not supported from inside an development container")
 
+	// ErrResetSyncthing is raised when syncthing database must be reset
+	ErrResetSyncthing = fmt.Errorf("synchronization database corrupted")
+
 	// ErrLostSyncthing is raised when we lose connectivity with syncthing
 	ErrLostSyncthing = fmt.Errorf("synchronization service unresponsive")
 

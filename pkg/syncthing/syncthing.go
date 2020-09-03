@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	okerr "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -527,11 +528,13 @@ func (s *Syncthing) GetStatus(ctx context.Context, folder *Folder, local bool) (
 	status := &Status{}
 	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
 	if err != nil {
-		return nil, err
+		log.Infof("error getting status: %s", err.Error())
+		return nil, errors.ErrLostSyncthing
 	}
 	err = json.Unmarshal(body, status)
 	if err != nil {
-		return nil, err
+		log.Infof("error unmarshalling status: %s", err.Error())
+		return nil, errors.ErrLostSyncthing
 	}
 
 	return status, nil
@@ -588,11 +591,13 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 	folderErrorsList := []FolderErrors{}
 	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true)
 	if err != nil {
-		return err
+		log.Infof("error getting events: %s", err.Error())
+		return errors.ErrLostSyncthing
 	}
 	err = json.Unmarshal(body, &folderErrorsList)
 	if err != nil {
-		return err
+		log.Infof("error unmarshalling events: %s", err.Error())
+		return errors.ErrLostSyncthing
 	}
 
 	if len(folderErrorsList) == 0 {
@@ -611,6 +616,12 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 		return nil
 	}
 
+	if strings.Contains(errMsg, "no connected device has the required version of this file") {
+		log.Infof("corrupted syncthing database, needs reset local=%t: %s", local, errMsg)
+		return errors.ErrResetSyncthing
+	}
+
+	log.Infof("syncthing pull error local=%t: %s", local, errMsg)
 	return fmt.Errorf("%s: %s", folderErrors.Data.Errors[0].Path, errMsg)
 }
 
