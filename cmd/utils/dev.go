@@ -16,6 +16,7 @@ package utils
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
@@ -118,4 +119,17 @@ func ParseURL(u string) (string, error) {
 	}
 
 	return strings.TrimRight(url.String(), "/"), nil
+}
+
+//CheckIfDirectory checks if a path is a directory
+func CheckIfDirectory(path string) error {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		log.Infof("error on CheckIfDirectory: %s", err.Error())
+		return fmt.Errorf("'%s' does not exist", path)
+	}
+	if fileInfo.IsDir() {
+		return nil
+	}
+	return fmt.Errorf("'%s' is a regular file", path)
 }

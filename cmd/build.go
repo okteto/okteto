@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -51,6 +52,10 @@ func Build(ctx context.Context) *cobra.Command {
 			path := "."
 			if len(args) == 1 {
 				path = args[0]
+			}
+
+			if err := utils.CheckIfDirectory(path); err != nil {
+				return fmt.Errorf("wrong build context: %s", err.Error())
 			}
 
 			buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
