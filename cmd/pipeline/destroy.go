@@ -25,8 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Destroy an okteto pipeline
-func Destroy(ctx context.Context) *cobra.Command {
+func destroy(ctx context.Context) *cobra.Command {
 	var name string
 	var namespace string
 	var wait bool

@@ -17,7 +17,6 @@ import (
 	"context"
 
 	"github.com/okteto/okteto/cmd/namespace"
-	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +27,5 @@ func Create(ctx context.Context) *cobra.Command {
 		Short: "Creates resources",
 	}
 	cmd.AddCommand(namespace.Create(ctx))
-	cmd.AddCommand(pipeline.Create(ctx))
 	return cmd
 }

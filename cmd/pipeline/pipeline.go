@@ -11,21 +11,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package pipeline
 
 import (
 	"context"
 
-	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/spf13/cobra"
 )
 
-//Delete creates resources
-func Delete(ctx context.Context) *cobra.Command {
+//Pipeline pipeline management commands
+func Pipeline(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Deletes resources",
+		Use:   "pipeline",
+		Short: "Pipeline management commands",
 	}
-	cmd.AddCommand(namespace.Delete(ctx))
+	cmd.AddCommand(deploy(ctx))
+	cmd.AddCommand(destroy(ctx))
 	return cmd
 }

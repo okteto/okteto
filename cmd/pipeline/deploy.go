@@ -30,8 +30,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Create an okteto pipeline
-func Create(ctx context.Context) *cobra.Command {
+func deploy(ctx context.Context) *cobra.Command {
 	var branch string
 	var repository string
 	var name string
