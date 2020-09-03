@@ -38,8 +38,8 @@ func deploy(ctx context.Context) *cobra.Command {
 	var wait bool
 
 	cmd := &cobra.Command{
-		Use:   "pipeline",
-		Short: "Creates an okteto pipeline",
+		Use:   "deploy",
+		Short: "Deploys an okteto pipeline",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
@@ -54,7 +54,13 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if repository == "" {
+				// TODO: get local repository
 				return fmt.Errorf("repository is missing")
+			}
+
+			if branch == "" {
+				// TODO: get local branch
+				return fmt.Errorf("branch is missing")
 			}
 
 			if namespace == "" {

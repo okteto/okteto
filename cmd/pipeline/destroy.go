@@ -31,8 +31,8 @@ func destroy(ctx context.Context) *cobra.Command {
 	var wait bool
 
 	cmd := &cobra.Command{
-		Use:   "pipeline",
-		Short: "Deletes an okteto pipeline",
+		Use:   "destroy",
+		Short: "Destroys an okteto pipeline",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
