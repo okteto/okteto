@@ -314,7 +314,10 @@ func (up *upContext) activate(autoDeploy, build bool) {
 		log.Success("Development container activated")
 
 		if err := up.sync(); err != nil {
-			if err == errors.ErrLostSyncthing || !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
+			if up.shouldRetry(err) {
+				if pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
+					up.resetSyncthing = true
+				}
 				log.Yellow("\nConnection lost to your development container, reconnecting...\n")
 				up.shutdown()
 				continue
@@ -777,8 +780,11 @@ func (up *upContext) startSyncthing() error {
 		return err
 	}
 
-	return up.Sy.WaitForScanning(up.Context, up.Dev, false)
+	if err := up.Sy.WaitForScanning(up.Context, up.Dev, false); err != nil {
+		return err
+	}
 
+	return nil
 }
 
 func (up *upContext) synchronizeFiles() error {
