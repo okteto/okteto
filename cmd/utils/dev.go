@@ -131,5 +131,18 @@ func CheckIfDirectory(path string) error {
 	if fileInfo.IsDir() {
 		return nil
 	}
-	return fmt.Errorf("'%s' is a regular file", path)
+	return fmt.Errorf("'%s' is not a directory", path)
+}
+
+//CheckIfRegularFile checks if a path is a regular file
+func CheckIfRegularFile(path string) error {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		log.Infof("error on CheckIfRegularFile: %s", err.Error())
+		return fmt.Errorf("'%s' does not exist", path)
+	}
+	if !fileInfo.IsDir() {
+		return nil
+	}
+	return fmt.Errorf("'%s' is not a regular file", path)
 }

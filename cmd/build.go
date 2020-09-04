@@ -55,7 +55,11 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			if err := utils.CheckIfDirectory(path); err != nil {
-				return fmt.Errorf("wrong build context: %s", err.Error())
+				return fmt.Errorf("invalid build context: %s", err.Error())
+			}
+
+			if err := utils.CheckIfRegularFile(file); err != nil {
+				return fmt.Errorf("invalid Dockerfile: %s", err.Error())
 			}
 
 			buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()

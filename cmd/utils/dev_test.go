@@ -186,7 +186,7 @@ func Test_CheckIfDirectory(t *testing.T) {
 		{
 			name: "file",
 			path: "dev.go",
-			want: fmt.Errorf("'dev.go' is a regular file"),
+			want: fmt.Errorf("'dev.go' is not a directory"),
 		},
 		{
 			name: "file",
@@ -205,6 +205,44 @@ func Test_CheckIfDirectory(t *testing.T) {
 			}
 			if got.Error() != tt.want.Error() {
 				t.Errorf("CheckIfDirectory(%s) = %s, want %s", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_CheckIfRegularFile(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want error
+	}{
+		{
+			name: "file",
+			path: "dev.go",
+			want: nil,
+		},
+		{
+			name: "directory",
+			path: ".",
+			want: fmt.Errorf("'.' is not a regular file"),
+		},
+		{
+			name: "file",
+			path: "no.go",
+			want: fmt.Errorf("'no.go' does not exist"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CheckIfRegularFile(tt.path)
+			if got == nil && tt.want == nil {
+				return
+			}
+			if got == nil || tt.want == nil {
+				t.Errorf("CheckIfRegularFile(%s) = %s, want %s", tt.path, got, tt.want)
+			}
+			if got.Error() != tt.want.Error() {
+				t.Errorf("CheckIfRegularFile(%s) = %s, want %s", tt.path, got, tt.want)
 			}
 		})
 	}
