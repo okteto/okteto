@@ -46,7 +46,7 @@ func NewAPIClient() *http.Client {
 func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte, readBody bool) ([]byte, error) {
 	retries := 0
 	for {
-		result, err := s.eachAPICall(ctx, url, method, code, params, local, body, readBody)
+		result, err := s.callWithRetry(ctx, url, method, code, params, local, body, readBody)
 		if err == nil {
 			return result, nil
 		}
@@ -59,7 +59,7 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 	}
 }
 
-func (s *Syncthing) eachAPICall(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte, readBody bool) ([]byte, error) {
+func (s *Syncthing) callWithRetry(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte, readBody bool) ([]byte, error) {
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
