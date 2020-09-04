@@ -116,11 +116,12 @@ func Up() *cobra.Command {
 			}
 
 			up := &upContext{
-				Dev:  dev,
-				Exit: make(chan error, 1),
+				Dev:            dev,
+				Exit:           make(chan error, 1),
+				resetSyncthing: resetSyncthing,
 			}
 
-			return up.start(autoDeploy, build, resetSyncthing)
+			return up.start(autoDeploy, build)
 		},
 	}
 
@@ -187,7 +188,7 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 	return nil
 }
 
-func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
+func (up *upContext) start(autoDeploy, build bool) error {
 
 	var namespace string
 	var err error
@@ -222,7 +223,7 @@ func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 
 	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
 
-	go up.activate(autoDeploy, build, resetSyncthing)
+	go up.activate(autoDeploy, build)
 	defer up.shutdown()
 
 	select {
@@ -242,7 +243,7 @@ func (up *upContext) start(autoDeploy, build, resetSyncthing bool) error {
 }
 
 // activate activates the development container
-func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
+func (up *upContext) activate(autoDeploy, build bool) {
 
 	up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 	if up.isTerm {
@@ -312,8 +313,7 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 
 		log.Success("Development container activated")
 
-		if err := up.sync(resetSyncthing && !isRetry); err != nil {
-
+		if err := up.sync(); err != nil {
 			if err == errors.ErrLostSyncthing || !pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
 				log.Yellow("\nConnection lost to your development container, reconnecting...\n")
 				up.shutdown()
@@ -351,6 +351,7 @@ func (up *upContext) activate(autoDeploy, build, resetSyncthing bool) {
 		prevError := up.waitUntilExitOrInterrupt()
 
 		if up.shouldRetry(prevError) {
+			log.Yellow("\nConnection lost to your development container, reconnecting...\n")
 			if !up.Dev.PersistentVolumeEnabled() {
 				if err := pods.Destroy(up.Pod, up.Dev.Namespace, up.Client); err != nil {
 					up.Exit <- err
@@ -370,6 +371,9 @@ func (up *upContext) shouldRetry(err error) bool {
 	switch err {
 	case nil:
 		return false
+	case errors.ErrResetSyncthing:
+		up.resetSyncthing = true
+		return true
 	case errors.ErrLostSyncthing:
 		return true
 	case errors.ErrCommandFailed:
@@ -695,15 +699,15 @@ func (up *upContext) initializeSyncthing() error {
 	return nil
 }
 
-func (up *upContext) sync(resetSyncthing bool) error {
-	if err := up.startSyncthing(resetSyncthing); err != nil {
+func (up *upContext) sync() error {
+	if err := up.startSyncthing(); err != nil {
 		return err
 	}
 
 	return up.synchronizeFiles()
 }
 
-func (up *upContext) startSyncthing(resetSyncthing bool) error {
+func (up *upContext) startSyncthing() error {
 	spinner := utils.NewSpinner("Starting the file synchronization service...")
 	spinner.Start()
 	up.updateStateFile(startingSync)
@@ -718,7 +722,6 @@ func (up *upContext) startSyncthing(resetSyncthing bool) error {
 	}
 
 	if err := up.Sy.WaitForPing(up.Context, false); err != nil {
-
 		userID := pods.GetDevPodUserID(up.Context, up.Dev, up.Client)
 		if up.Dev.PersistentVolumeEnabled() {
 			if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
@@ -747,14 +750,23 @@ func (up *upContext) startSyncthing(resetSyncthing bool) error {
 		}
 	}
 
-	if resetSyncthing {
+	if up.resetSyncthing {
 		spinner.Update("Resetting synchronization service database...")
-		if err := up.Sy.ResetDatabase(up.Context, up.Dev, true); err != nil {
-			return err
-		}
 		if err := up.Sy.ResetDatabase(up.Context, up.Dev, false); err != nil {
 			return err
 		}
+		if err := up.Sy.ResetDatabase(up.Context, up.Dev, true); err != nil {
+			return err
+		}
+
+		if err := up.Sy.WaitForPing(up.Context, false); err != nil {
+			return err
+		}
+		if err := up.Sy.WaitForPing(up.Context, true); err != nil {
+			return err
+		}
+
+		up.resetSyncthing = false
 	}
 
 	if err := up.Sy.SendStignoreFile(up.Context, up.Dev); err != nil {
