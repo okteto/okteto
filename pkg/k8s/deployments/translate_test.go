@@ -369,8 +369,9 @@ services:
 							Command:         []string{"./run_worker.sh"},
 							Args:            []string{},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &rootUser,
-								RunAsGroup: &rootUser,
+								RunAsUser:    &rootUser,
+								RunAsGroup:   &rootUser,
+								RunAsNonRoot: &falseBoolean,
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{

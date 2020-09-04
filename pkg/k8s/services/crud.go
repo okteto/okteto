@@ -85,6 +85,9 @@ func GetPortsByPod(p *apiv1.Pod, c *kubernetes.Clientset) ([]int, error) {
 	for _, e := range eList.Items {
 		for _, s := range e.Subsets {
 			for _, a := range append(s.Addresses, s.NotReadyAddresses...) {
+				if a.TargetRef == nil {
+					continue
+				}
 				if a.TargetRef.UID == p.UID {
 					for _, p := range s.Ports {
 						result = append(result, int(p.Port))
