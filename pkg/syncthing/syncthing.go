@@ -346,7 +346,8 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 		ignores := &Ignores{}
 		body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true)
 		if err != nil {
-			return fmt.Errorf("error getting ignore files: %s", err.Error())
+			log.Infof("error getting ignore files: %s", err.Error())
+			return errors.ErrLostSyncthing
 		}
 		err = json.Unmarshal(body, ignores)
 		if err != nil {
@@ -364,11 +365,13 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 		}
 		body, err = json.Marshal(ignores)
 		if err != nil {
-			return fmt.Errorf("error marshalling ignore files: %s", err.Error())
+			log.Infof("error marshalling ignore files: %s", err.Error())
+			return errors.ErrLostSyncthing
 		}
 		_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false)
 		if err != nil {
-			return fmt.Errorf("error posting ignore files: %s", err.Error())
+			log.Infof("error posting ignore files: %s", err.Error())
+			return errors.ErrLostSyncthing
 		}
 	}
 	return nil
@@ -396,7 +399,7 @@ func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 		_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false)
 		if err != nil {
 			log.Infof("error posting 'rest/db/override' syncthing API: %s", err)
-			return err
+			return errors.ErrLostSyncthing
 		}
 	}
 	return nil
@@ -424,13 +427,13 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	for i := 0; ; i++ {
 		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
 		if err != nil {
-			log.Debugf("error calling 'rest/db/status' local=%t syncthing API: %s", local, err)
-			continue
+			log.Infof("error calling 'rest/db/status' local=%t syncthing API: %s", local, err)
+			return errors.ErrLostSyncthing
 		}
 		err = json.Unmarshal(body, status)
 		if err != nil {
-			log.Debugf("error unmarshaling 'rest/db/status': %s", err)
-			continue
+			log.Infof("error unmarshaling 'rest/db/status': %s", err)
+			return errors.ErrLostSyncthing
 		}
 
 		if i%100 == 0 {
@@ -467,14 +470,12 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 			select {
 			case <-ticker.C:
 				if err := s.Overwrite(ctx, dev); err != nil {
-					log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
-					continue
+					return err
 				}
 
 				completion, err := s.GetCompletion(ctx, true)
 				if err != nil {
-					log.Debugf("error calling getting completion: %s", err)
-					continue
+					return err
 				}
 
 				if completion.GlobalBytes == 0 {
@@ -497,8 +498,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				for _, folder := range s.Folders {
 					status, err := s.GetStatus(ctx, &folder, false)
 					if err != nil {
-						log.Debugf("error getting status: %s", err)
-						continue
+						return err
 					}
 					if status.PullErrors > 0 {
 						if err := s.GetFolderErrors(ctx, &folder, false); err != nil {
@@ -553,11 +553,13 @@ func (s *Syncthing) GetCompletion(ctx context.Context, local bool) (*Completion,
 		completion := &Completion{}
 		body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true)
 		if err != nil {
-			return nil, err
+			log.Infof("error calling 'rest/db/completion' local=%t syncthing API: %s", local, err)
+			return nil, errors.ErrLostSyncthing
 		}
 		err = json.Unmarshal(body, completion)
 		if err != nil {
-			return nil, err
+			log.Infof("error unmarshalling 'rest/db/completion' local=%t syncthing API: %s", local, err)
+			return nil, errors.ErrLostSyncthing
 		}
 		result.Completion += completion.Completion
 		result.GlobalBytes += completion.GlobalBytes
