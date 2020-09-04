@@ -58,8 +58,11 @@ var (
 	// ErrResetSyncthing is raised when syncthing database must be reset
 	ErrResetSyncthing = fmt.Errorf("synchronization database corrupted")
 
+	// ErrBusySyncthing is raised when syncthing is busy
+	ErrBusySyncthing = fmt.Errorf("synchronization service is unresponsive")
+
 	// ErrLostSyncthing is raised when we lose connectivity with syncthing
-	ErrLostSyncthing = fmt.Errorf("synchronization service unresponsive")
+	ErrLostSyncthing = fmt.Errorf("synchronization service is disconnected")
 
 	// ErrNotInDevMode is raised when the eployment is not in dev mode
 	ErrNotInDevMode = fmt.Errorf("Deployment is not in development mode anymore")
