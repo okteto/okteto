@@ -50,7 +50,7 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 		if err == nil {
 			return result, nil
 		}
-		if retries == 15 {
+		if retries == 3 {
 			return nil, err
 		}
 		log.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())
@@ -63,10 +63,13 @@ func (s *Syncthing) callWithRetry(ctx context.Context, url, method string, code 
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
-		s.Client.Timeout = 10 * time.Second
+		s.Client.Timeout = 3 * time.Second
 	} else {
 		urlPath = path.Join(s.RemoteGUIAddress, url)
-		s.Client.Timeout = 30 * time.Second
+		s.Client.Timeout = 25 * time.Second
+		if url == "rest/db/ignores" {
+			s.Client.Timeout = 5 * time.Second
+		}
 	}
 
 	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), bytes.NewBuffer(body))

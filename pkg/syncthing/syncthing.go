@@ -347,7 +347,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 		body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true)
 		if err != nil {
 			log.Infof("error getting ignore files: %s", err.Error())
-			return errors.ErrLostSyncthing
+			continue
 		}
 		err = json.Unmarshal(body, ignores)
 		if err != nil {
@@ -366,12 +366,12 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 		body, err = json.Marshal(ignores)
 		if err != nil {
 			log.Infof("error marshalling ignore files: %s", err.Error())
-			return errors.ErrLostSyncthing
+			continue
 		}
 		_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false)
 		if err != nil {
 			log.Infof("error posting ignore files: %s", err.Error())
-			return errors.ErrLostSyncthing
+			continue
 		}
 	}
 	return nil
