@@ -63,13 +63,10 @@ func (s *Syncthing) callWithRetry(ctx context.Context, url, method string, code 
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
-		s.Client.Timeout = 3 * time.Second
+		s.Client.Timeout = 10 * time.Second
 	} else {
 		urlPath = path.Join(s.RemoteGUIAddress, url)
-		s.Client.Timeout = 10 * time.Second
-	}
-	if url == "rest/events" || url == "rest/db/completion" {
-		s.Client.Timeout = 25 * time.Second
+		s.Client.Timeout = 30 * time.Second
 	}
 
 	req, err := http.NewRequest(method, fmt.Sprintf("http://%s", urlPath), bytes.NewBuffer(body))
