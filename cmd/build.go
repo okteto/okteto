@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -56,6 +57,10 @@ func Build(ctx context.Context) *cobra.Command {
 
 			if err := utils.CheckIfDirectory(path); err != nil {
 				return fmt.Errorf("invalid build context: %s", err.Error())
+			}
+
+			if file == "" {
+				file = filepath.Join(path, "Dockerfile")
 			}
 
 			if err := utils.CheckIfRegularFile(file); err != nil {

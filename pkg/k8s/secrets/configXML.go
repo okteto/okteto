@@ -20,7 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
-const configXML = `<configuration version="31">
+const configXML = `<configuration version="30">
 {{ range .Folders }}
 <folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .RemotePath }}" type="sendreceive" rescanIntervalS="300" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
