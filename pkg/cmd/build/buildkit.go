@@ -134,6 +134,10 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFro
 }
 
 func getDockerFile(path, dockerFile string, isOktetoCluster bool) (string, error) {
+	if dockerFile == "" {
+		dockerFile = filepath.Join(path, "Dockerfile")
+	}
+
 	if !isOktetoCluster {
 		return dockerFile, nil
 	}
