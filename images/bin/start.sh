@@ -58,4 +58,4 @@ if [ $remote -eq 1 ]; then
 fi
 
 echo "Executing supervisor..." 
-exec /var/okteto/bin/okteto-supervisor $params
+exec /var/okteto/bin/supervisor $params
