@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	okerr "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -345,11 +346,13 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 		ignores := &Ignores{}
 		body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true)
 		if err != nil {
-			return fmt.Errorf("error getting ignore files: %s", err.Error())
+			log.Infof("error getting ignore files: %s", err.Error())
+			continue
 		}
 		err = json.Unmarshal(body, ignores)
 		if err != nil {
-			return fmt.Errorf("error unmarshalling ignore files: %s", err.Error())
+			log.Infof("error unmarshalling ignore files: %s", err.Error())
+			continue
 		}
 		for i, line := range ignores.Ignore {
 			line := strings.TrimSpace(line)
@@ -363,11 +366,13 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 		}
 		body, err = json.Marshal(ignores)
 		if err != nil {
-			return fmt.Errorf("error marshalling ignore files: %s", err.Error())
+			log.Infof("error marshalling ignore files: %s", err.Error())
+			continue
 		}
 		_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false)
 		if err != nil {
-			return fmt.Errorf("error posting ignore files: %s", err.Error())
+			log.Infof("error posting ignore files: %s", err.Error())
+			continue
 		}
 	}
 	return nil
@@ -381,7 +386,10 @@ func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local boo
 		_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil, false)
 		if err != nil {
 			log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
-			return err
+			if strings.Contains(err.Error(), "Client.Timeout") {
+				return errors.ErrUnknownSyncError
+			}
+			return errors.ErrLostSyncthing
 		}
 	}
 	return nil
@@ -395,7 +403,10 @@ func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 		_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false)
 		if err != nil {
 			log.Infof("error posting 'rest/db/override' syncthing API: %s", err)
-			return err
+			if strings.Contains(err.Error(), "Client.Timeout") {
+				return errors.ErrBusySyncthing
+			}
+			return errors.ErrLostSyncthing
 		}
 	}
 	return nil
@@ -423,13 +434,16 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	for i := 0; ; i++ {
 		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
 		if err != nil {
-			log.Debugf("error calling 'rest/db/status' local=%t syncthing API: %s", local, err)
-			continue
+			log.Infof("error calling 'rest/db/status' local=%t syncthing API: %s", local, err)
+			if strings.Contains(err.Error(), "Client.Timeout") {
+				return errors.ErrBusySyncthing
+			}
+			return errors.ErrLostSyncthing
 		}
 		err = json.Unmarshal(body, status)
 		if err != nil {
-			log.Debugf("error unmarshaling 'rest/db/status': %s", err)
-			continue
+			log.Infof("error unmarshaling 'rest/db/status': %s", err)
+			return errors.ErrLostSyncthing
 		}
 
 		if i%100 == 0 {
@@ -466,14 +480,18 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 			select {
 			case <-ticker.C:
 				if err := s.Overwrite(ctx, dev); err != nil {
-					log.Infof("error calling 'rest/db/override' syncthing API: %s", err)
-					continue
+					if err == errors.ErrBusySyncthing {
+						continue
+					}
+					return err
 				}
 
 				completion, err := s.GetCompletion(ctx, true)
 				if err != nil {
-					log.Debugf("error calling getting completion: %s", err)
-					continue
+					if err == errors.ErrBusySyncthing {
+						continue
+					}
+					return err
 				}
 
 				if completion.GlobalBytes == 0 {
@@ -496,12 +514,16 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				for _, folder := range s.Folders {
 					status, err := s.GetStatus(ctx, &folder, false)
 					if err != nil {
-						log.Debugf("error getting status: %s", err)
-						continue
+						if err == errors.ErrBusySyncthing {
+							continue
+						}
+						return err
 					}
 					if status.PullErrors > 0 {
 						if err := s.GetFolderErrors(ctx, &folder, false); err != nil {
-							return err
+							if err == errors.ErrBusySyncthing {
+								continue
+							}
 						}
 						retries++
 						if retries >= 60 {
@@ -527,11 +549,16 @@ func (s *Syncthing) GetStatus(ctx context.Context, folder *Folder, local bool) (
 	status := &Status{}
 	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
 	if err != nil {
-		return nil, err
+		log.Infof("error getting status: %s", err.Error())
+		if strings.Contains(err.Error(), "Client.Timeout") {
+			return nil, errors.ErrBusySyncthing
+		}
+		return nil, errors.ErrLostSyncthing
 	}
 	err = json.Unmarshal(body, status)
 	if err != nil {
-		return nil, err
+		log.Infof("error unmarshalling status: %s", err.Error())
+		return nil, errors.ErrLostSyncthing
 	}
 
 	return status, nil
@@ -550,11 +577,16 @@ func (s *Syncthing) GetCompletion(ctx context.Context, local bool) (*Completion,
 		completion := &Completion{}
 		body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true)
 		if err != nil {
-			return nil, err
+			log.Infof("error calling 'rest/db/completion' local=%t syncthing API: %s", local, err)
+			if strings.Contains(err.Error(), "Client.Timeout") {
+				return nil, errors.ErrBusySyncthing
+			}
+			return nil, errors.ErrLostSyncthing
 		}
 		err = json.Unmarshal(body, completion)
 		if err != nil {
-			return nil, err
+			log.Infof("error unmarshalling 'rest/db/completion' local=%t syncthing API: %s", local, err)
+			return nil, errors.ErrLostSyncthing
 		}
 		result.Completion += completion.Completion
 		result.GlobalBytes += completion.GlobalBytes
@@ -588,11 +620,16 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 	folderErrorsList := []FolderErrors{}
 	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true)
 	if err != nil {
-		return err
+		log.Infof("error getting events: %s", err.Error())
+		if strings.Contains(err.Error(), "Client.Timeout") {
+			return errors.ErrBusySyncthing
+		}
+		return errors.ErrLostSyncthing
 	}
 	err = json.Unmarshal(body, &folderErrorsList)
 	if err != nil {
-		return err
+		log.Infof("error unmarshalling events: %s", err.Error())
+		return errors.ErrLostSyncthing
 	}
 
 	if len(folderErrorsList) == 0 {
@@ -611,6 +648,12 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 		return nil
 	}
 
+	if strings.Contains(errMsg, "no connected device has the required version of this file") {
+		log.Infof("corrupted syncthing database, needs reset local=%t: %s", local, errMsg)
+		return errors.ErrResetSyncthing
+	}
+
+	log.Infof("syncthing pull error local=%t: %s", local, errMsg)
 	return fmt.Errorf("%s: %s", folderErrors.Data.Errors[0].Path, errMsg)
 }
 

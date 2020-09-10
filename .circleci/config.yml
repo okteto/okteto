@@ -94,7 +94,7 @@ jobs:
       - checkout
       - run: 
           name: upgrade golang
-          command: choco upgrade golang
+          command: choco upgrade golang --version 1.15
       - restore_cache: 
           keys:
             - v4-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
