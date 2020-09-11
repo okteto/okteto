@@ -117,6 +117,8 @@ func getPipelineName() (string, error) {
 func waitUntilRunning(ctx context.Context, name, namespace string) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(5 * time.Minute)
+	attempts := 0
+
 	for {
 		select {
 		case <-to.C:
@@ -135,7 +137,10 @@ func waitUntilRunning(ctx context.Context, name, namespace string) error {
 			case "running":
 				return nil
 			case "error":
-				return fmt.Errorf("pipeline '%s' failed", name)
+				attempts++
+				if attempts > 30 {
+					return fmt.Errorf("pipeline '%s' failed", name)
+				}
 			default:
 				log.Infof("pipeline '%s' is '%s'", name, p.Status)
 			}
