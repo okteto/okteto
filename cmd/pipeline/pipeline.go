@@ -11,23 +11,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package pipeline
 
 import (
-	"fmt"
+	"context"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/spf13/cobra"
 )
 
-//Version returns information about the binary
-func Version() *cobra.Command {
-	return &cobra.Command{
-		Use:   "version",
-		Short: "View the version of the okteto binary",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("okteto version %s \n", config.VersionString)
-			return nil
-		},
+//Pipeline pipeline management commands
+func Pipeline(ctx context.Context) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "pipeline",
+		Short: "Pipeline management commands",
 	}
+	cmd.AddCommand(deploy(ctx))
+	cmd.AddCommand(destroy(ctx))
+	return cmd
 }

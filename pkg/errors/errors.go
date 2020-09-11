@@ -75,5 +75,15 @@ func IsNotFound(err error) bool {
 
 // IsNotExist returns true if err is of the type does not exist
 func IsNotExist(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "does not exist")
+	if err == nil {
+		return false
+	}
+
+	switch {
+	case strings.Contains(err.Error(), "does not exist"),
+		strings.Contains(err.Error(), "doesn't exist"):
+		return true
+	default:
+		return false
+	}
 }

@@ -15,7 +15,6 @@ package stack
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -24,7 +23,7 @@ import (
 func Stack(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stack",
-		Short: fmt.Sprintf("Stack management commands"),
+		Short: "Stack management commands",
 	}
 	cmd.AddCommand(Deploy(ctx))
 	cmd.AddCommand(Destroy(ctx))

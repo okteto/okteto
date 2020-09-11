@@ -29,7 +29,7 @@ import (
 func Delete(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
 		Use:   "namespace <name>",
-		Short: fmt.Sprintf("Deletes a namespace"),
+		Short: "Deletes a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
