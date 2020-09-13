@@ -311,6 +311,46 @@ services:
 	}
 }
 
+func Test_loadLabels(t *testing.T) {
+	tests := []struct {
+		name   string
+		labels map[string]string
+		value  string
+		want   map[string]string
+	}{
+		{
+			name:   "no-var",
+			labels: map[string]string{"a": "1", "b": "2"},
+			value:  "3",
+			want:   map[string]string{"a": "1", "b": "2"},
+		},
+		{
+			name:   "var",
+			labels: map[string]string{"a": "1", "b": "${value}"},
+			value:  "3",
+			want:   map[string]string{"a": "1", "b": "3"},
+		},
+		{
+			name:   "mising",
+			labels: map[string]string{"a": "1", "b": "${valueX}"},
+			value:  "1",
+			want:   map[string]string{"a": "1", "b": ""},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev := &Dev{Labels: tt.labels}
+			os.Setenv("value", tt.value)
+			dev.loadLabels()
+
+			if !reflect.DeepEqual(tt.want, dev.Labels) {
+				t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
+			}
+		})
+	}
+}
+
 func Test_loadImage(t *testing.T) {
 	tests := []struct {
 		name      string

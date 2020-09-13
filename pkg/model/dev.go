@@ -291,6 +291,11 @@ func Read(bytes []byte) (*Dev, error) {
 		s.loadName()
 	}
 
+	dev.loadLabels()
+	for _, s := range dev.Services {
+		s.loadLabels()
+	}
+
 	dev.loadImage()
 	for _, s := range dev.Services {
 		s.loadImage()
@@ -356,6 +361,12 @@ func loadAbsPath(folder, path string) string {
 func (dev *Dev) loadName() {
 	if len(dev.Name) > 0 {
 		dev.Name = os.ExpandEnv(dev.Name)
+	}
+}
+
+func (dev *Dev) loadLabels() {
+	for i := range dev.Labels {
+		dev.Labels[i] = os.ExpandEnv(dev.Labels[i])
 	}
 }
 
