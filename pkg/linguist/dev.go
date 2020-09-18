@@ -56,7 +56,7 @@ func init() {
 	languageDefaults = make(map[string]languageDefault)
 	forwardDefaults = make(map[string][]model.Forward)
 	languageDefaults[javascript] = languageDefault{
-		image: "okteto/node:10",
+		image: "okteto/node:12",
 		forward: []model.Forward{
 			{
 				Local:  9229,
