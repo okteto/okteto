@@ -24,7 +24,6 @@ import (
 type languageDefault struct {
 	image           string
 	environment     []model.EnvVar
-	syncs           []model.Sync
 	volumes         []model.Volume
 	forward         []model.Forward
 	reverse         []model.Reverse
@@ -63,12 +62,6 @@ func init() {
 				Remote: 9229,
 			},
 		},
-		syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
-			},
-		},
 	}
 	forwardDefaults[javascript] = []model.Forward{
 		{
@@ -98,12 +91,6 @@ func init() {
 				RemotePath: "/root/.cache/go-build/",
 			},
 		},
-		syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
-			},
-		},
 	}
 	forwardDefaults[golang] = []model.Forward{
 		{
@@ -123,12 +110,6 @@ func init() {
 		volumes: []model.Volume{
 			{
 				RemotePath: "/root/.cache/pip",
-			},
-		},
-		syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
 			},
 		},
 	}
@@ -152,12 +133,6 @@ func init() {
 				RemotePath: "/home/gradle/.gradle",
 			},
 		},
-		syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
-			},
-		},
 	}
 	forwardDefaults[gradle] = []model.Forward{
 		{
@@ -177,12 +152,6 @@ func init() {
 		volumes: []model.Volume{
 			{
 				RemotePath: "/root/.m2",
-			},
-		},
-		syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
 			},
 		},
 	}
@@ -206,12 +175,6 @@ func init() {
 				RemotePath: "/usr/local/bundle/cache",
 			},
 		},
-		syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
-			},
-		},
 	}
 	forwardDefaults[ruby] = []model.Forward{
 		{
@@ -226,12 +189,6 @@ func init() {
 			{
 				Name:  "ASPNETCORE_ENVIRONMENT",
 				Value: "Development",
-			},
-		},
-		syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
 			},
 		},
 		forward: []model.Forward{},
@@ -257,12 +214,6 @@ func init() {
 				RemotePath: "/root/.composer/cache",
 			},
 		},
-		syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
-			},
-		},
 	}
 	forwardDefaults[php] = []model.Forward{
 		{
@@ -274,12 +225,6 @@ func init() {
 	languageDefaults[Unrecognized] = languageDefault{
 		image:   model.DefaultImage,
 		forward: []model.Forward{},
-		syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/okteto",
-			},
-		},
 	}
 	forwardDefaults[Unrecognized] = []model.Forward{
 		{
@@ -315,13 +260,17 @@ func GetDevDefaults(language, workdir string, iAskingForDeployment bool) (*model
 				Name: vals.image,
 			},
 		},
-		WorkDir: "/okteto",
 		Command: model.Command{
 			Values: []string{"bash"},
 		},
-		Environment:     vals.environment,
-		Volumes:         vals.volumes,
-		Syncs:           vals.syncs,
+		Environment: vals.environment,
+		Volumes:     vals.volumes,
+		Syncs: []model.Sync{
+			{
+				LocalPath:  ".",
+				RemotePath: "/usr/src/app",
+			},
+		},
 		Forward:         vals.forward,
 		Reverse:         vals.reverse,
 		RemotePort:      vals.remote,
