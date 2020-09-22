@@ -169,10 +169,6 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 		dev.RemotePort = remote
 	}
 
-	if dev.ExecuteOverSSHEnabled() {
-		log.Info("execute over SSH mode enabled")
-	}
-
 	if dev.RemoteModeEnabled() {
 		if err := sshKeys(); err != nil {
 			return err
@@ -591,7 +587,7 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 }
 
 func (up *upContext) forwards() error {
-	if up.Dev.ExecuteOverSSHEnabled() || up.Dev.RemoteModeEnabled() {
+	if up.Dev.RemoteModeEnabled() {
 		return up.sshForwards()
 	}
 

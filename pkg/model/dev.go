@@ -801,7 +801,9 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return false
 	}
 
-	if dev.ExecuteOverSSHEnabled() {
+	_, ok := os.LookupEnv("OKTETO_EXECUTE_SSH")
+	if ok {
+		log.Info("execute over SSH mode enabled")
 		return true
 	}
 
@@ -810,12 +812,6 @@ func (dev *Dev) RemoteModeEnabled() bool {
 	}
 
 	return len(dev.Reverse) > 0
-}
-
-// ExecuteOverSSHEnabled returns true if execute over SSH is enabled
-func (dev *Dev) ExecuteOverSSHEnabled() bool {
-	_, ok := os.LookupEnv("OKTETO_EXECUTE_SSH")
-	return ok
 }
 
 // GetKeyName returns the secret key name
