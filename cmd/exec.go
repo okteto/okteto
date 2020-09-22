@@ -107,7 +107,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		dev.Container = p.Spec.Containers[0].Name
 	}
 
-	if dev.ExecuteOverSSHEnabled() || dev.RemoteModeEnabled() {
+	if dev.RemoteModeEnabled() {
 		log.Infof("executing remote command over SSH")
 		dev.LoadRemote(ssh.GetPublicKey())
 		return ssh.Exec(ctx, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
