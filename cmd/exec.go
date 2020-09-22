@@ -96,6 +96,13 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
+	if p == nil {
+		return errors.UserError{
+			E:    fmt.Errorf("development mode is not enabled on your deployment"),
+			Hint: "Run `okteto up` to enable it and try again",
+		}
+	}
+
 	if dev.Container == "" {
 		dev.Container = p.Spec.Containers[0].Name
 	}
