@@ -205,7 +205,7 @@ func supportsPersistentVolumes(namespace, k8sContext string) bool {
 	log.Debugf("checking persistent volumes support in your cluster...")
 	c, _, currentNamespace, err := k8Client.GetLocal(k8sContext)
 	if err != nil {
-		log.Debugf("couldn't get kubernetes local client: %s", err.Error())
+		log.Infof("couldn't get kubernetes local client: %s", err.Error())
 		return false
 	}
 	if namespace == "" {
@@ -214,7 +214,7 @@ func supportsPersistentVolumes(namespace, k8sContext string) bool {
 
 	ns, err := namespaces.Get(namespace, c)
 	if err != nil {
-		log.Debugf("failed to get the current namespace: %s", err.Error())
+		log.Infof("failed to get the current namespace: %s", err.Error())
 		return false
 	}
 
@@ -224,7 +224,7 @@ func supportsPersistentVolumes(namespace, k8sContext string) bool {
 
 	stClassList, err := c.StorageV1().StorageClasses().List(metav1.ListOptions{})
 	if err != nil {
-		log.Debugf("error getting storage classes: %s", err.Error())
+		log.Infof("error getting storage classes: %s", err.Error())
 		return false
 	}
 
@@ -234,7 +234,8 @@ func supportsPersistentVolumes(namespace, k8sContext string) bool {
 			return true
 		}
 	}
-	log.Debugf("default storage class not found")
+
+	log.Infof("default storage class not found")
 	return false
 }
 
