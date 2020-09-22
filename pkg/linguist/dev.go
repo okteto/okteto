@@ -121,7 +121,7 @@ func init() {
 	}
 
 	languageDefaults[gradle] = languageDefault{
-		image: "okteto/gradle:latest",
+		image: "okteto/gradle:6.5",
 		forward: []model.Forward{
 			{
 				Local:  5005,
@@ -142,7 +142,7 @@ func init() {
 	}
 
 	languageDefaults[maven] = languageDefault{
-		image: "okteto/maven:latest",
+		image: "okteto/maven:3",
 		forward: []model.Forward{
 			{
 				Local:  5005,
@@ -184,7 +184,7 @@ func init() {
 	}
 
 	languageDefaults[csharp] = languageDefault{
-		image: "mcr.microsoft.com/dotnet/core/sdk",
+		image: "okteto/dotnetcore:3",
 		environment: []model.EnvVar{
 			{
 				Name:  "ASPNETCORE_ENVIRONMENT",
