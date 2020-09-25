@@ -88,6 +88,9 @@ jspm_packages
 *.so
 *.dylib
 
+# vendor folders
+vendor
+
 # Test binary, built with go test -c
 *.test
 
