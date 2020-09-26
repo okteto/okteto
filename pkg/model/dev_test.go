@@ -909,3 +909,37 @@ func TestPersistentVolumeEnabled(t *testing.T) {
 		})
 	}
 }
+
+func Test_ExpandEnv(t *testing.T) {
+	os.Setenv("BAR", "bar")
+	tests := []struct {
+		name   string
+		value  string
+		result string
+	}{
+		{
+			name:   "no-var",
+			value:  "value",
+			result: "value",
+		},
+		{
+			name:   "var",
+			value:  "value-${BAR}-value",
+			result: "value-bar-value",
+		},
+		{
+			name:   "default",
+			value:  "value-${FOO:-foo}-value",
+			result: "value-foo-value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ExpandEnv(tt.value)
+			if result != tt.result {
+				t.Errorf("error in test '%s': '%s', expected: '%s'", tt.name, result, tt.result)
+			}
+		})
+	}
+}

@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
@@ -350,7 +351,7 @@ func (dev *Dev) loadVolumeAbsPaths(folder string) {
 
 func loadAbsPath(folder, path string) string {
 	if len(path) > 0 {
-		path = os.ExpandEnv(path)
+		path = ExpandEnv(path)
 	}
 	if filepath.IsAbs(path) {
 		return path
@@ -360,13 +361,13 @@ func loadAbsPath(folder, path string) string {
 
 func (dev *Dev) loadName() {
 	if len(dev.Name) > 0 {
-		dev.Name = os.ExpandEnv(dev.Name)
+		dev.Name = ExpandEnv(dev.Name)
 	}
 }
 
 func (dev *Dev) loadLabels() {
 	for i := range dev.Labels {
-		dev.Labels[i] = os.ExpandEnv(dev.Labels[i])
+		dev.Labels[i] = ExpandEnv(dev.Labels[i])
 	}
 }
 
@@ -375,7 +376,7 @@ func (dev *Dev) loadImage() {
 		dev.Image = &BuildInfo{}
 	}
 	if len(dev.Image.Name) > 0 {
-		dev.Image.Name = os.ExpandEnv(dev.Image.Name)
+		dev.Image.Name = ExpandEnv(dev.Image.Name)
 	}
 }
 
@@ -740,7 +741,7 @@ func (dev *Dev) LoadContext(namespace, k8sContext string) {
 		dev.Namespace = namespace
 	}
 	if dev.Namespace != "" {
-		dev.Namespace = os.ExpandEnv(dev.Namespace)
+		dev.Namespace = ExpandEnv(dev.Namespace)
 	}
 	if k8sContext != "" {
 		dev.Context = k8sContext
@@ -822,4 +823,14 @@ func (s *Secret) GetKeyName() string {
 // GetFileName returns the secret file name
 func (s *Secret) GetFileName() string {
 	return filepath.Base(s.RemotePath)
+}
+
+//ExpandEnv expands the environments supporting the notation "${var:-$DEFAULT}"
+func ExpandEnv(value string) string {
+	result, err := envsubst.String(value)
+	if err != nil {
+		log.Errorf("error expanding variables on '%s': %s", value, err.Error())
+		result = os.ExpandEnv(value)
+	}
+	return result
 }

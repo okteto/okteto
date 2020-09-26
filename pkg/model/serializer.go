@@ -35,11 +35,11 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", 2)
 	e.Name = parts[0]
 	if len(parts) == 2 {
-		e.Value = os.ExpandEnv(parts[1])
+		e.Value = ExpandEnv(parts[1])
 		return nil
 	}
 
-	e.Name = os.ExpandEnv(parts[0])
+	e.Name = ExpandEnv(parts[0])
 	return nil
 }
 
@@ -125,7 +125,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	rawExpanded := os.ExpandEnv(raw)
+	rawExpanded := ExpandEnv(raw)
 	parts := strings.Split(rawExpanded, ":")
 	if len(parts) < 2 || len(parts) > 3 {
 		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
@@ -235,7 +235,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		log.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
-		v.LocalPath = os.ExpandEnv(parts[0])
+		v.LocalPath = ExpandEnv(parts[0])
 		v.RemotePath = parts[1]
 	} else {
 		v.RemotePath = parts[0]
@@ -258,7 +258,7 @@ func (s *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		s.LocalPath = os.ExpandEnv(parts[0])
+		s.LocalPath = ExpandEnv(parts[0])
 		s.RemotePath = parts[1]
 		return nil
 	}
