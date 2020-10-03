@@ -287,19 +287,13 @@ func Read(bytes []byte) (*Dev, error) {
 		}
 	}
 
-	dev.loadName()
-	for _, s := range dev.Services {
-		s.loadName()
+	if err := dev.expandEnvVars(); err != nil {
+		return nil, err
 	}
-
-	dev.loadLabels()
 	for _, s := range dev.Services {
-		s.loadLabels()
-	}
-
-	dev.loadImage()
-	for _, s := range dev.Services {
-		s.loadImage()
+		if err := s.expandEnvVars(); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := dev.setDefaults(); err != nil {
@@ -318,22 +312,18 @@ func Read(bytes []byte) (*Dev, error) {
 }
 
 func (dev *Dev) loadAbsPaths(devPath string) error {
-
 	devDir, err := filepath.Abs(filepath.Dir(devPath))
 	if err != nil {
 		return err
 	}
-
 	dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
 	dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
 	dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
 	dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
-
 	dev.loadVolumeAbsPaths(devDir)
 	for _, s := range dev.Services {
 		s.loadVolumeAbsPaths(devDir)
 	}
-
 	return nil
 }
 
@@ -350,34 +340,87 @@ func (dev *Dev) loadVolumeAbsPaths(folder string) {
 }
 
 func loadAbsPath(folder, path string) string {
-	if len(path) > 0 {
-		path = ExpandEnv(path)
-	}
 	if filepath.IsAbs(path) {
 		return path
 	}
 	return filepath.Join(folder, path)
 }
 
-func (dev *Dev) loadName() {
+func (dev *Dev) expandEnvVars() error {
+	if err := dev.loadName(); err != nil {
+		return err
+	}
+	if err := dev.loadNamespace(); err != nil {
+		return err
+	}
+	if err := dev.loadContext(); err != nil {
+		return err
+	}
+	if err := dev.loadLabels(); err != nil {
+		return err
+	}
+	if err := dev.loadImage(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dev *Dev) loadName() error {
+	var err error
 	if len(dev.Name) > 0 {
-		dev.Name = ExpandEnv(dev.Name)
+		dev.Name, err = ExpandEnv(dev.Name)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (dev *Dev) loadLabels() {
+func (dev *Dev) loadNamespace() error {
+	var err error
+	if len(dev.Namespace) > 0 {
+		dev.Namespace, err = ExpandEnv(dev.Namespace)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (dev *Dev) loadContext() error {
+	var err error
+	if len(dev.Context) > 0 {
+		dev.Context, err = ExpandEnv(dev.Context)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (dev *Dev) loadLabels() error {
+	var err error
 	for i := range dev.Labels {
-		dev.Labels[i] = ExpandEnv(dev.Labels[i])
+		dev.Labels[i], err = ExpandEnv(dev.Labels[i])
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (dev *Dev) loadImage() {
+func (dev *Dev) loadImage() error {
+	var err error
 	if dev.Image == nil {
 		dev.Image = &BuildInfo{}
 	}
 	if len(dev.Image.Name) > 0 {
-		dev.Image.Name = ExpandEnv(dev.Image.Name)
+		dev.Image.Name, err = ExpandEnv(dev.Image.Name)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (dev *Dev) setDefaults() error {
@@ -740,14 +783,8 @@ func (dev *Dev) LoadContext(namespace, k8sContext string) {
 	if namespace != "" {
 		dev.Namespace = namespace
 	}
-	if dev.Namespace != "" {
-		dev.Namespace = ExpandEnv(dev.Namespace)
-	}
 	if k8sContext != "" {
 		dev.Context = k8sContext
-	}
-	if dev.Context != "" {
-		dev.Context = os.ExpandEnv(dev.Context)
 	}
 }
 
@@ -826,11 +863,10 @@ func (s *Secret) GetFileName() string {
 }
 
 //ExpandEnv expands the environments supporting the notation "${var:-$DEFAULT}"
-func ExpandEnv(value string) string {
+func ExpandEnv(value string) (string, error) {
 	result, err := envsubst.String(value)
 	if err != nil {
-		log.Errorf("error expanding variables on '%s': %s", value, err.Error())
-		result = os.ExpandEnv(value)
+		return "", fmt.Errorf("error expanding environment on '%s': %s", value, err.Error())
 	}
-	return result
+	return result, nil
 }

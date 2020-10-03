@@ -34,7 +34,11 @@ const (
 
 func translate(s *model.Stack, forceBuild, noCache bool) error {
 	for i, svc := range s.Services {
-		svc.Image = model.ExpandEnv(svc.Image)
+		var err error
+		svc.Image, err = model.ExpandEnv(svc.Image)
+		if err != nil {
+			return err
+		}
 		s.Services[i] = svc
 	}
 

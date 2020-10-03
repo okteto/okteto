@@ -35,12 +35,15 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", 2)
 	e.Name = parts[0]
 	if len(parts) == 2 {
-		e.Value = ExpandEnv(parts[1])
+		e.Value, err = ExpandEnv(parts[1])
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
-	e.Name = ExpandEnv(parts[0])
-	return nil
+	e.Name, err = ExpandEnv(parts[0])
+	return err
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
@@ -125,7 +128,10 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	rawExpanded := ExpandEnv(raw)
+	rawExpanded, err := ExpandEnv(raw)
+	if err != nil {
+		return err
+	}
 	parts := strings.Split(rawExpanded, ":")
 	if len(parts) < 2 || len(parts) > 3 {
 		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
@@ -235,7 +241,10 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		log.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
-		v.LocalPath = ExpandEnv(parts[0])
+		v.LocalPath, err = ExpandEnv(parts[0])
+		if err != nil {
+			return err
+		}
 		v.RemotePath = parts[1]
 	} else {
 		v.RemotePath = parts[0]
@@ -258,7 +267,10 @@ func (s *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		s.LocalPath = ExpandEnv(parts[0])
+		s.LocalPath, err = ExpandEnv(parts[0])
+		if err != nil {
+			return err
+		}
 		s.RemotePath = parts[1]
 		return nil
 	}

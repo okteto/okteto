@@ -936,7 +936,10 @@ func Test_ExpandEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ExpandEnv(tt.value)
+			result, err := ExpandEnv(tt.value)
+			if err != nil {
+				t.Errorf("error in test '%s': %s", tt.name, err.Error())
+			}
 			if result != tt.result {
 				t.Errorf("error in test '%s': '%s', expected: '%s'", tt.name, result, tt.result)
 			}
