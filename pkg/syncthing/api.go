@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -50,7 +51,7 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 		if err == nil {
 			return result, nil
 		}
-		if retries == 3 {
+		if retries == 3 || strings.Contains(url, "rest/db/ignores") {
 			return nil, err
 		}
 		log.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())

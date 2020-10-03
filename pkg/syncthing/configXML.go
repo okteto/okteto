@@ -15,7 +15,7 @@ package syncthing
 
 const configXML = `<configuration version="32">
 {{ range .Folders }}
-<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .LocalPath }}" type="{{ $.Type }}" rescanIntervalS="300" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .LocalPath }}" type="{{ $.Type }}" rescanIntervalS="{{ $.RescanInterval }}" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
     <device id="{{$.RemoteDeviceID}}" introducedBy=""></device>
