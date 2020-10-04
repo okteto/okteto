@@ -41,6 +41,7 @@ const (
 	ruby       = "ruby"
 	csharp     = "csharp"
 	php        = "php"
+	rust       = "rust"
 
 	// Unrecognized is the option returned when the linguist couldn't detect a language
 	Unrecognized = "other"
@@ -89,6 +90,24 @@ func init() {
 			},
 			{
 				RemotePath: "/root/.cache/go-build/",
+			},
+		},
+	}
+	forwardDefaults[golang] = []model.Forward{
+		{
+			Local:  8080,
+			Remote: 8080,
+		},
+	}
+
+	languageDefaults[rust] = languageDefault{
+		image: "okteto/rust:1",
+		volumes: []model.Volume{
+			{
+				RemotePath: "/usr/local/cargo/registry",
+			},
+			{
+				RemotePath: "/home/root/app/target",
 			},
 		},
 	}
@@ -318,6 +337,8 @@ func normalizeLanguage(language string) string {
 		return csharp
 	case "php":
 		return php
+	case "rust":
+		return rust
 	default:
 		return Unrecognized
 	}
