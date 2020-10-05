@@ -90,7 +90,7 @@ func TestStacks(t *testing.T) {
 		log.Println("destroyed stack")
 
 		time.Sleep(5 * time.Second)
-		_, err = getDeployment(namespace, "vote")
+		_, err = getDeployment(ctx, namespace, "vote")
 		if err == nil {
 			t.Fatalf("'vote' deployment not deleted after 'okteto stack destroy'")
 		}

@@ -227,7 +227,7 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		deployment, err := getDeployment(namespace, name)
+		deployment, err := getDeployment(ctx, namespace, name)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -293,7 +293,7 @@ func TestAll(t *testing.T) {
 			t.Error(err)
 		}
 
-		if err := compareDeployment(deployment); err != nil {
+		if err := compareDeployment(ctx, deployment); err != nil {
 			t.Error(err)
 		}
 
@@ -566,17 +566,17 @@ func getOktetoPath(ctx context.Context) (string, error) {
 	return oktetoPath, nil
 }
 
-func getDeployment(ns, name string) (*appsv1.Deployment, error) {
+func getDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, error) {
 	client, _, _, err := k8Client.GetLocal("")
 	if err != nil {
 		return nil, err
 	}
 
-	return client.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+	return client.AppsV1().Deployments(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
-func compareDeployment(deployment *appsv1.Deployment) error {
-	after, err := getDeployment(deployment.GetNamespace(), deployment.GetName())
+func compareDeployment(ctx context.Context, deployment *appsv1.Deployment) error {
+	after, err := getDeployment(ctx, deployment.GetNamespace(), deployment.GetName())
 	if err != nil {
 		return err
 	}
