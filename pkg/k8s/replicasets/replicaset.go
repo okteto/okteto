@@ -14,6 +14,7 @@
 package replicasets
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -27,8 +28,9 @@ const (
 )
 
 // GetReplicaSetByDeployment given a deployment, returns its current replica set or an error
-func GetReplicaSetByDeployment(d *appsv1.Deployment, labels string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
+func GetReplicaSetByDeployment(ctx context.Context, d *appsv1.Deployment, labels string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
 	rsList, err := c.AppsV1().ReplicaSets(d.Namespace).List(
+		ctx,
 		metav1.ListOptions{
 			LabelSelector: labels,
 		},

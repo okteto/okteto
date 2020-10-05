@@ -14,6 +14,7 @@
 package stack
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -32,7 +33,7 @@ const (
 	helmDriver            = "secrets"
 )
 
-func translate(s *model.Stack, forceBuild, noCache bool) error {
+func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
 	for i, svc := range s.Services {
 		var err error
 		svc.Image, err = model.ExpandEnv(svc.Image)
@@ -55,7 +56,7 @@ func translate(s *model.Stack, forceBuild, noCache bool) error {
 	}
 
 	oktetoRegistryURL := ""
-	n, err := namespaces.Get(s.Namespace, c)
+	n, err := namespaces.Get(ctx, s.Namespace, c)
 	if err == nil {
 		if namespaces.IsOktetoNamespace(n) {
 			oktetoRegistryURL, err = okteto.GetRegistry()
@@ -80,7 +81,7 @@ func translate(s *model.Stack, forceBuild, noCache bool) error {
 		log.Information("Building image for service '%s'...", name)
 		var imageDigest string
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-		imageDigest, err = build.Run(buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, imageTag, buildArgs, "tty")
+		imageDigest, err = build.Run(ctx, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, imageTag, buildArgs, "tty")
 		if err != nil {
 			return fmt.Errorf("error building image for '%s': %s", name, err)
 		}

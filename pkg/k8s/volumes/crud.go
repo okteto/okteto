@@ -34,7 +34,7 @@ import (
 func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvc := translate(dev)
-	k8Volume, err := vClient.Get(pvc.Name, metav1.GetOptions{})
+	k8Volume, err := vClient.Get(ctx, pvc.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes volume claim: %s", err)
 	}
@@ -42,7 +42,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error 
 		return checkPVCValues(k8Volume, dev)
 	}
 	log.Infof("creating volume claim '%s'", pvc.Name)
-	_, err = vClient.Create(pvc)
+	_, err = vClient.Create(ctx, pvc, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("error creating kubernetes volume claim: %s", err)
 	}
@@ -91,7 +91,7 @@ func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error
 	timeout := time.Now().Add(to)
 
 	for i := 0; ; i++ {
-		err := vClient.Delete(dev.GetVolumeName(), &metav1.DeleteOptions{})
+		err := vClient.Delete(ctx, dev.GetVolumeName(), metav1.DeleteOptions{})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				log.Infof("volume claim '%s' successfully destroyed", dev.GetVolumeName())
@@ -102,7 +102,7 @@ func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error
 		}
 
 		if time.Now().After(timeout) {
-			if err := checkIfAttached(dev, c); err != nil {
+			if err := checkIfAttached(ctx, dev, c); err != nil {
 				return err
 			}
 
@@ -124,8 +124,8 @@ func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error
 
 }
 
-func checkIfAttached(dev *model.Dev, c *kubernetes.Clientset) error {
-	pods, err := c.CoreV1().Pods(dev.Namespace).List(metav1.ListOptions{})
+func checkIfAttached(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+	pods, err := c.CoreV1().Pods(dev.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Infof("failed to get available pods: %s", err)
 		return nil

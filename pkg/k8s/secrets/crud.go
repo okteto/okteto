@@ -14,6 +14,7 @@
 package secrets
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -31,8 +32,8 @@ const (
 )
 
 // Get returns the value of a secret
-func Get(name, namespace string, c *kubernetes.Clientset) (*v1.Secret, error) {
-	secret, err := c.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{})
+func Get(ctx context.Context, name, namespace string, c *kubernetes.Clientset) (*v1.Secret, error) {
+	secret, err := c.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return secret, fmt.Errorf("Error getting kubernetes secret: %s", err)
 	}
@@ -40,11 +41,11 @@ func Get(name, namespace string, c *kubernetes.Clientset) (*v1.Secret, error) {
 }
 
 //Create creates the syncthing config secret
-func Create(dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) error {
+func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) error {
 	secretName := GetSecretName(dev)
 	log.Debugf("creating configuration secret %s", secretName)
 
-	sct, err := Get(secretName, dev.Namespace, c)
+	sct, err := Get(ctx, secretName, dev.Namespace, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes secret: %s", err)
 	}
@@ -73,14 +74,14 @@ func Create(dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) err
 	}
 
 	if sct.Name == "" {
-		_, err := c.CoreV1().Secrets(dev.Namespace).Create(data)
+		_, err := c.CoreV1().Secrets(dev.Namespace).Create(ctx, data, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating kubernetes sync secret: %s", err)
 		}
 
 		log.Infof("created okteto secret '%s'.", secretName)
 	} else {
-		_, err := c.CoreV1().Secrets(dev.Namespace).Update(data)
+		_, err := c.CoreV1().Secrets(dev.Namespace).Update(ctx, data, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("error updating kubernetes okteto secret: %s", err)
 		}
@@ -90,9 +91,9 @@ func Create(dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) err
 }
 
 //Destroy deletes the syncthing config secret
-func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
+func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	secretName := GetSecretName(dev)
-	err := c.CoreV1().Secrets(dev.Namespace).Delete(secretName, &metav1.DeleteOptions{})
+	err := c.CoreV1().Secrets(dev.Namespace).Delete(ctx, secretName, metav1.DeleteOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return nil

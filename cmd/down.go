@@ -50,7 +50,7 @@ func Down() *cobra.Command {
 
 			dev.LoadContext(namespace, k8sContext)
 
-			if err := runDown(dev); err != nil {
+			if err := runDown(ctx, dev); err != nil {
 				analytics.TrackDown(false)
 				return err
 			}
@@ -89,7 +89,7 @@ func Down() *cobra.Command {
 	return cmd
 }
 
-func runDown(dev *model.Dev) error {
+func runDown(ctx context.Context, dev *model.Dev) error {
 	spinner := utils.NewSpinner("Deactivating your development container...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -102,12 +102,12 @@ func runDown(dev *model.Dev) error {
 		dev.Namespace = namespace
 	}
 
-	d, err := deployments.Get(dev, dev.Namespace, client)
+	d, err := deployments.Get(ctx, dev, dev.Namespace, client)
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 
-	trList, err := deployments.GetTranslations(dev, d, client)
+	trList, err := deployments.GetTranslations(ctx, dev, d, client)
 	if err != nil {
 		return err
 	}

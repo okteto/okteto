@@ -14,6 +14,7 @@
 package init
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -86,6 +87,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	fmt.Println("This command walks you through creating an okteto manifest.")
 	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	fmt.Println("See https://okteto.com/docs/reference/manifest for the official documentation about the okteto manifest.")
+	ctx := context.Background()
 	devPath, err := validateDevPath(devPath, overwrite)
 	if err != nil {
 		return err
@@ -107,7 +109,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	}
 
 	if checkForDeployment {
-		d, container, err := getDeployment(namespace, k8sContext)
+		d, container, err := getDeployment(ctx, namespace, k8sContext)
 		if err != nil {
 			return err
 		}
@@ -122,7 +124,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 			suffix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
-			err = initCMD.SetDevDefaultsFromDeployment(dev, d, container)
+			err = initCMD.SetDevDefaultsFromDeployment(ctx, dev, d, container)
 			spinner.Stop()
 			if err == nil {
 				log.Success(fmt.Sprintf("Deployment '%s' successfully analyzed", d.Name))
@@ -132,7 +134,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 			}
 		}
 
-		if !supportsPersistentVolumes(namespace, k8sContext) {
+		if !supportsPersistentVolumes(ctx, namespace, k8sContext) {
 			log.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
 			dev.Volumes = nil
 			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
@@ -168,7 +170,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	return nil
 }
 
-func getDeployment(namespace, k8sContext string) (*appsv1.Deployment, string, error) {
+func getDeployment(ctx context.Context, namespace, k8sContext string) (*appsv1.Deployment, string, error) {
 	c, _, currentNamespace, err := k8Client.GetLocal(k8sContext)
 	if err != nil {
 		log.Yellow("Failed to load your local Kubeconfig: %s", err)
@@ -178,7 +180,7 @@ func getDeployment(namespace, k8sContext string) (*appsv1.Deployment, string, er
 		namespace = currentNamespace
 	}
 
-	d, err := askForDeployment(namespace, c)
+	d, err := askForDeployment(ctx, namespace, c)
 	if err != nil {
 		return nil, "", err
 	}
@@ -201,7 +203,7 @@ func getDeployment(namespace, k8sContext string) (*appsv1.Deployment, string, er
 	return d, container, nil
 }
 
-func supportsPersistentVolumes(namespace, k8sContext string) bool {
+func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
 	log.Debugf("checking persistent volumes support in your cluster...")
 	c, _, currentNamespace, err := k8Client.GetLocal(k8sContext)
 	if err != nil {
@@ -212,7 +214,7 @@ func supportsPersistentVolumes(namespace, k8sContext string) bool {
 		namespace = currentNamespace
 	}
 
-	ns, err := namespaces.Get(namespace, c)
+	ns, err := namespaces.Get(ctx, namespace, c)
 	if err != nil {
 		log.Infof("failed to get the current namespace: %s", err.Error())
 		return false
@@ -222,7 +224,7 @@ func supportsPersistentVolumes(namespace, k8sContext string) bool {
 		return true
 	}
 
-	stClassList, err := c.StorageV1().StorageClasses().List(metav1.ListOptions{})
+	stClassList, err := c.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Infof("error getting storage classes: %s", err.Error())
 		return false
@@ -276,8 +278,8 @@ func askForLanguage() (string, error) {
 	)
 }
 
-func askForDeployment(namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
-	dList, err := deployments.List(namespace, c)
+func askForDeployment(ctx context.Context, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+	dList, err := deployments.List(ctx, namespace, c)
 	if err != nil {
 		log.Yellow("Failed to list deployments: %s", err)
 		return nil, nil

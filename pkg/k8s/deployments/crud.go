@@ -32,8 +32,8 @@ import (
 )
 
 //List returns the list of deployments
-func List(namespace string, c kubernetes.Interface) ([]appsv1.Deployment, error) {
-	dList, err := c.AppsV1().Deployments(namespace).List(metav1.ListOptions{})
+func List(ctx context.Context, namespace string, c kubernetes.Interface) ([]appsv1.Deployment, error) {
+	dList, err := c.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func List(namespace string, c kubernetes.Interface) ([]appsv1.Deployment, error)
 }
 
 //Get returns a deployment object given its name and namespace
-func Get(dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
+func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	if namespace == "" {
 		return nil, fmt.Errorf("empty namespace")
 	}
@@ -50,13 +50,14 @@ func Get(dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Depl
 	var err error
 
 	if len(dev.Labels) == 0 {
-		d, err = c.AppsV1().Deployments(namespace).Get(dev.Name, metav1.GetOptions{})
+		d, err = c.AppsV1().Deployments(namespace).Get(ctx, dev.Name, metav1.GetOptions{})
 		if err != nil {
 			log.Debugf("error while retrieving deployment %s/%s: %s", namespace, dev.Name, err)
 			return nil, err
 		}
 	} else {
 		deploys, err := c.AppsV1().Deployments(namespace).List(
+			ctx,
 			metav1.ListOptions{
 				LabelSelector: dev.LabelsSelector(),
 			},
@@ -77,8 +78,8 @@ func Get(dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Depl
 }
 
 //GetRevisionAnnotatedDeploymentOrFailed returns a deployment object if it is healthy and annotated with its revision or an error
-func GetRevisionAnnotatedDeploymentOrFailed(dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*appsv1.Deployment, error) {
-	d, err := Get(dev, dev.Namespace, c)
+func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*appsv1.Deployment, error) {
+	d, err := Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		if waitUntilDeployed && errors.IsNotFound(err) {
 			return nil, nil
@@ -104,7 +105,7 @@ func GetRevisionAnnotatedDeploymentOrFailed(dev *model.Dev, c *kubernetes.Client
 }
 
 //GetTranslations fills all the deployments pointed by a development container
-func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
+func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
 	result := map[string]*model.Translation{}
 	if d != nil {
 		rule := dev.ToTranslationRule(dev)
@@ -120,16 +121,16 @@ func GetTranslations(dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clients
 		}
 	}
 
-	if err := loadServiceTranslations(dev, result, c); err != nil {
+	if err := loadServiceTranslations(ctx, dev, result, c); err != nil {
 		return nil, err
 	}
 
 	return result, nil
 }
 
-func loadServiceTranslations(dev *model.Dev, result map[string]*model.Translation, c kubernetes.Interface) error {
+func loadServiceTranslations(ctx context.Context, dev *model.Dev, result map[string]*model.Translation, c kubernetes.Interface) error {
 	for _, s := range dev.Services {
-		d, err := Get(s, dev.Namespace, c)
+		d, err := Get(ctx, s, dev.Namespace, c)
 		if err != nil {
 			return err
 		}
@@ -158,13 +159,13 @@ func loadServiceTranslations(dev *model.Dev, result map[string]*model.Translatio
 }
 
 //Deploy creates or updates a deployment
-func Deploy(d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset) error {
+func Deploy(ctx context.Context, d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset) error {
 	if forceCreate {
-		if err := create(d, client); err != nil {
+		if err := create(ctx, d, client); err != nil {
 			return err
 		}
 	} else {
-		if err := update(d, client); err != nil {
+		if err := update(ctx, d, client); err != nil {
 			return err
 		}
 	}
@@ -177,7 +178,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 	timeout := time.Now().Add(2 * config.GetTimeout()) // 60 seconds
 
 	for i := 0; ; i++ {
-		updated, err := client.AppsV1().Deployments(d.Namespace).Get(d.Name, metav1.GetOptions{})
+		updated, err := client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
 		if err != nil {
 			log.Debugf("error while retrieving deployment %s/%s: %s", d.Namespace, d.Name, err)
 			return err
@@ -186,7 +187,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 		revision := updated.Annotations[revisionAnnotation]
 		if revision != "" {
 			d.Annotations[okLabels.RevisionAnnotation] = revision
-			return update(d, client)
+			return update(ctx, d, client)
 		}
 
 		if time.Now().After(timeout) {
@@ -234,12 +235,12 @@ func HasBeenChanged(d *appsv1.Deployment) bool {
 }
 
 // UpdateDeployments update all deployments in the given translation list
-func UpdateDeployments(trList map[string]*model.Translation, c *kubernetes.Clientset) error {
+func UpdateDeployments(ctx context.Context, trList map[string]*model.Translation, c *kubernetes.Clientset) error {
 	for _, tr := range trList {
 		if tr.Deployment == nil {
 			continue
 		}
-		if err := update(tr.Deployment, c); err != nil {
+		if err := update(ctx, tr.Deployment, c); err != nil {
 			return err
 		}
 	}
@@ -288,20 +289,20 @@ func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	return d, nil
 }
 
-func create(d *appsv1.Deployment, c *kubernetes.Clientset) error {
+func create(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	log.Debugf("creating deployment %s/%s", d.Namespace, d.Name)
-	_, err := c.AppsV1().Deployments(d.Namespace).Create(d)
+	_, err := c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func update(d *appsv1.Deployment, c *kubernetes.Clientset) error {
+func update(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) error {
 	log.Debugf("updating deployment %s/%s", d.Namespace, d.Name)
 	d.ResourceVersion = ""
 	d.Status = appsv1.DeploymentStatus{}
-	_, err := c.AppsV1().Deployments(d.Namespace).Update(d)
+	_, err := c.AppsV1().Deployments(d.Namespace).Update(ctx, d, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -319,10 +320,10 @@ func deleteUserAnnotations(annotations map[string]string, tr *model.Translation)
 }
 
 //Destroy destroys a k8s service
-func Destroy(dev *model.Dev, c *kubernetes.Clientset) error {
+func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	log.Infof("deleting deployment '%s'", dev.Name)
 	dClient := c.AppsV1().Deployments(dev.Namespace)
-	err := dClient.Delete(dev.Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+	err := dClient.Delete(ctx, dev.Name, metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			log.Infof("deployment '%s' was already deleted.", dev.Name)

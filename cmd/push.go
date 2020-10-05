@@ -50,6 +50,7 @@ func Push(ctx context.Context) *cobra.Command {
 		Short: "Builds, pushes and redeploys source code to the target deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting push command")
+			ctx := context.Background()
 
 			dev, err := utils.LoadDevOrDefault(devPath, deploymentName)
 			if err != nil {
@@ -76,7 +77,7 @@ func Push(ctx context.Context) *cobra.Command {
 			}
 
 			oktetoRegistryURL := ""
-			n, err := namespaces.Get(dev.Namespace, c)
+			n, err := namespaces.Get(ctx, dev.Namespace, c)
 			if err == nil {
 				if namespaces.IsOktetoNamespace(n) {
 					oktetoRegistryURL, err = okteto.GetRegistry()
@@ -86,7 +87,7 @@ func Push(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if err := runPush(dev, autoDeploy, imageTag, oktetoRegistryURL, progress, noCache, c); err != nil {
+			if err := runPush(ctx, dev, autoDeploy, imageTag, oktetoRegistryURL, progress, noCache, c); err != nil {
 				analytics.TrackPush(false, oktetoRegistryURL)
 				return err
 			}
@@ -111,9 +112,9 @@ func Push(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
+func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
 	exists := true
-	d, err := deployments.Get(dev, dev.Namespace, c)
+	d, err := deployments.Get(ctx, dev, dev.Namespace, c)
 
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -137,7 +138,7 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		}
 	}
 
-	trList, err := deployments.GetTranslations(dev, d, c)
+	trList, err := deployments.GetTranslations(ctx, dev, d, c)
 	if err != nil {
 		return err
 	}
@@ -176,7 +177,7 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		return err
 	}
 
-	imageTag, err = buildImage(dev, imageTag, imageFromDeployment, oktetoRegistryURL, noCache, progress)
+	imageTag, err = buildImage(ctx, dev, imageTag, imageFromDeployment, oktetoRegistryURL, noCache, progress)
 	if err != nil {
 		return err
 	}
@@ -186,14 +187,14 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 	defer spinner.Stop()
 
 	if d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
-		if err := services.CreateDev(dev, c); err != nil {
+		if err := services.CreateDev(ctx, dev, c); err != nil {
 			return err
 		}
 	}
 
 	if !exists {
 		d.Spec.Template.Spec.Containers[0].Image = imageTag
-		return deployments.Deploy(d, true, c)
+		return deployments.Deploy(ctx, d, true, c)
 	}
 
 	for _, tr := range trList {
@@ -209,10 +210,10 @@ func runPush(dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progr
 		}
 	}
 
-	return deployments.UpdateDeployments(trList, c)
+	return deployments.UpdateDeployments(ctx, trList, c)
 }
 
-func buildImage(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
+func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return "", err
@@ -226,7 +227,7 @@ func buildImage(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL
 
 	var imageDigest string
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	imageDigest, err = build.Run(buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, buildTag, buildArgs, progress)
+	imageDigest, err = build.Run(ctx, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, buildTag, buildArgs, progress)
 	if err != nil {
 		return "", fmt.Errorf("error building image '%s': %s", buildTag, err)
 	}

@@ -50,8 +50,8 @@ var (
 )
 
 // GetBySelector returns the first pod that matches the selector or error if not found
-func GetBySelector(namespace string, selector map[string]string, c kubernetes.Interface) (*apiv1.Pod, error) {
-	ps, err := ListBySelector(namespace, selector, c)
+func GetBySelector(ctx context.Context, namespace string, selector map[string]string, c kubernetes.Interface) (*apiv1.Pod, error) {
+	ps, err := ListBySelector(ctx, namespace, selector, c)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func GetBySelector(namespace string, selector map[string]string, c kubernetes.In
 }
 
 // ListBySelector returns all the pods that matches the selector or error if not found
-func ListBySelector(namespace string, selector map[string]string, c kubernetes.Interface) ([]apiv1.Pod, error) {
+func ListBySelector(ctx context.Context, namespace string, selector map[string]string, c kubernetes.Interface) ([]apiv1.Pod, error) {
 	if len(selector) == 0 {
 		return nil, fmt.Errorf("empty selector")
 	}
@@ -77,9 +77,12 @@ func ListBySelector(namespace string, selector map[string]string, c kubernetes.I
 
 	s := strings.TrimRight(b.String(), ",")
 
-	p, err := c.CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: s,
-	})
+	p, err := c.CoreV1().Pods(namespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: s,
+		},
+	)
 
 	if err != nil {
 		return nil, err
@@ -120,13 +123,13 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 
 // GetDevPod returns the dev pod for a deployment
 func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
-	d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(dev, c, waitUntilDeployed)
+	d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(ctx, dev, c, waitUntilDeployed)
 	if d == nil {
 		return nil, err
 	}
 
 	labels := fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name)
-	rs, err := replicasets.GetReplicaSetByDeployment(d, labels, c)
+	rs, err := replicasets.GetReplicaSetByDeployment(ctx, d, labels, c)
 	if rs == nil {
 		if err == nil {
 			log.Infof("didn't find replicaset with revision %v", d.Annotations[deploymentRevisionAnnotation])
@@ -138,12 +141,15 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 
 	log.Infof("replicaset %s with revision %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
 
-	return GetPodByReplicaSet(rs, labels, c)
+	return GetPodByReplicaSet(ctx, rs, labels, c)
 }
 
 //GetPodByReplicaSet returns a pod of a given replicaset
-func GetPodByReplicaSet(rs *appsv1.ReplicaSet, labels string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
-	podList, err := c.CoreV1().Pods(rs.Namespace).List(metav1.ListOptions{LabelSelector: labels})
+func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, labels string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+	podList, err := c.CoreV1().Pods(rs.Namespace).List(
+		ctx,
+		metav1.ListOptions{LabelSelector: labels},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +224,7 @@ func WaitUntilRunning(ctx context.Context, dev *model.Dev, podName string, c *ku
 		FieldSelector: fmt.Sprintf("metadata.name=%s", podName),
 	}
 
-	watchPod, err := c.CoreV1().Pods(dev.Namespace).Watch(opts)
+	watchPod, err := c.CoreV1().Pods(dev.Namespace).Watch(ctx, opts)
 	if err != nil {
 		return err
 	}
@@ -227,7 +233,7 @@ func WaitUntilRunning(ctx context.Context, dev *model.Dev, podName string, c *ku
 		FieldSelector: fmt.Sprintf("involvedObject.kind=Pod,involvedObject.name=%s", podName),
 	}
 
-	watchPodEvents, err := c.CoreV1().Events(dev.Namespace).Watch(opts)
+	watchPodEvents, err := c.CoreV1().Events(dev.Namespace).Watch(ctx, opts)
 	if err != nil {
 		return err
 	}
@@ -277,8 +283,8 @@ func WaitUntilRunning(ctx context.Context, dev *model.Dev, podName string, c *ku
 }
 
 //Exists returns true if pod still exists and is not being deleted
-func Exists(podName, namespace string, c kubernetes.Interface) bool {
-	pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+func Exists(ctx context.Context, podName, namespace string, c kubernetes.Interface) bool {
+	pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
@@ -286,10 +292,11 @@ func Exists(podName, namespace string, c kubernetes.Interface) bool {
 }
 
 //Destroy destroys a pod by name
-func Destroy(podName, namespace string, c kubernetes.Interface) error {
+func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interface) error {
 	err := c.CoreV1().Pods(namespace).Delete(
+		ctx,
 		podName,
-		&metav1.DeleteOptions{
+		metav1.DeleteOptions{
 			GracePeriodSeconds: &devTerminationGracePeriodSeconds,
 		},
 	)
@@ -363,17 +370,17 @@ func GetDevPodLogs(ctx context.Context, dev *model.Dev, timestamps bool, c *kube
 	if dev.Container == "" {
 		dev.Container = p.Spec.Containers[0].Name
 	}
-	return containerLogs(dev.Container, p, dev.Namespace, timestamps, c)
+	return containerLogs(ctx, dev.Container, p, dev.Namespace, timestamps, c)
 }
 
-func containerLogs(container string, pod *apiv1.Pod, namespace string, timestamps bool, c kubernetes.Interface) (string, error) {
+func containerLogs(ctx context.Context, container string, pod *apiv1.Pod, namespace string, timestamps bool, c kubernetes.Interface) (string, error) {
 	podLogOpts := apiv1.PodLogOptions{
 		Container:  container,
 		Timestamps: timestamps,
 		TailLines:  &tailLines,
 	}
 	req := c.CoreV1().Pods(namespace).GetLogs(pod.Name, &podLogOpts)
-	logsStream, err := req.Stream()
+	logsStream, err := req.Stream(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -389,8 +396,9 @@ func containerLogs(container string, pod *apiv1.Pod, namespace string, timestamp
 }
 
 // Restart restarts the pods of a deployment
-func Restart(dev *model.Dev, c *kubernetes.Clientset, sn string) error {
+func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn string) error {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
+		ctx,
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name),
 		},
@@ -408,7 +416,7 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset, sn string) error {
 			continue
 		}
 		found = true
-		err := c.CoreV1().Pods(dev.Namespace).Delete(pods.Items[i].Name, &metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+		err := c.CoreV1().Pods(dev.Namespace).Delete(ctx, pods.Items[i].Name, metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil
@@ -420,10 +428,10 @@ func Restart(dev *model.Dev, c *kubernetes.Clientset, sn string) error {
 	if !found {
 		return fmt.Errorf("Unable to find any service with the provided name")
 	}
-	return waitUntilRunning(dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
+	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
 }
 
-func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error {
+func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubernetes.Clientset) error {
 	t := time.NewTicker(1 * time.Second)
 	notready := map[string]bool{}
 
@@ -433,6 +441,7 @@ func waitUntilRunning(namespace, selector string, c *kubernetes.Clientset) error
 		}
 
 		pods, err := c.CoreV1().Pods(namespace).List(
+			ctx,
 			metav1.ListOptions{
 				LabelSelector: selector,
 			},

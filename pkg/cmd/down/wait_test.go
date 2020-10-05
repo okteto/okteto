@@ -14,6 +14,7 @@
 package down
 
 import (
+	"context"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/k8s/labels"
@@ -53,6 +54,7 @@ func Test_waitForDevPodsTermination(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pod := &v1.Pod{}
@@ -68,7 +70,7 @@ func Test_waitForDevPodsTermination(t *testing.T) {
 			dPod.ObjectMeta.SetDeletionTimestamp(&metav1.Time{})
 
 			client := fake.NewSimpleClientset(pod, dPod)
-			waitForDevPodsTermination(client, tt.dev, 5)
+			waitForDevPodsTermination(ctx, client, tt.dev, 5)
 		})
 	}
 

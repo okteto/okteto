@@ -14,6 +14,7 @@
 package services
 
 import (
+	"context"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/errors"
@@ -23,6 +24,7 @@ import (
 )
 
 func TestGet(t *testing.T) {
+	ctx := context.Background()
 	svc := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fake",
@@ -31,7 +33,7 @@ func TestGet(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset(svc)
-	s, err := Get(svc.GetNamespace(), svc.GetName(), clientset)
+	s, err := Get(ctx, svc.GetNamespace(), svc.GetName(), clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +46,7 @@ func TestGet(t *testing.T) {
 		t.Fatalf("wrong service. Got %s, expected %s", s.Name, svc.GetName())
 	}
 
-	_, err = Get("missing", "test", clientset)
+	_, err = Get(ctx, "missing", "test", clientset)
 	if err == nil {
 		t.Fatal("expected error")
 	}

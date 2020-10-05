@@ -34,8 +34,7 @@ var (
 )
 
 //SetDevDefaultsFromDeployment sets dev defaults from a running deployment
-func SetDevDefaultsFromDeployment(dev *model.Dev, d *appsv1.Deployment, container string) error {
-	ctx := context.Background()
+func SetDevDefaultsFromDeployment(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, container string) error {
 	c, _, _, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
 		return err
@@ -44,7 +43,7 @@ func SetDevDefaultsFromDeployment(dev *model.Dev, d *appsv1.Deployment, containe
 	setAnnotationsFromDeployment(dev, d)
 	setNameAndLabelsFromDeployment(ctx, dev, d)
 
-	pod, err := getRunningPod(d, container, c)
+	pod, err := getRunningPod(ctx, d, container, c)
 	if err != nil {
 		return err
 	}
@@ -52,12 +51,12 @@ func SetDevDefaultsFromDeployment(dev *model.Dev, d *appsv1.Deployment, containe
 	return setForwardsFromPod(ctx, dev, pod, c)
 }
 
-func getRunningPod(d *appsv1.Deployment, container string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
-	rs, err := replicasets.GetReplicaSetByDeployment(d, "", c)
+func getRunningPod(ctx context.Context, d *appsv1.Deployment, container string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+	rs, err := replicasets.GetReplicaSetByDeployment(ctx, d, "", c)
 	if err != nil {
 		return nil, err
 	}
-	pod, err := pods.GetPodByReplicaSet(rs, "", c)
+	pod, err := pods.GetPodByReplicaSet(ctx, rs, "", c)
 
 	if err != nil {
 		return nil, err
@@ -79,7 +78,7 @@ func getRunningPod(d *appsv1.Deployment, container string, c *kubernetes.Clients
 }
 
 func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *kubernetes.Clientset) error {
-	ports, err := services.GetPortsByPod(pod, c)
+	ports, err := services.GetPortsByPod(ctx, pod, c)
 	if err != nil {
 		return err
 	}
