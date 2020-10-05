@@ -161,7 +161,7 @@ func TestEnvVarMashalling(t *testing.T) {
 	}
 }
 
-func TestCommandMashalling(t *testing.T) {
+func TestCommandUnmashalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -194,6 +194,38 @@ func TestCommandMashalling(t *testing.T) {
 
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCommandMashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		command  Command
+		expected string
+	}{
+		{
+			name:     "single-command",
+			command:  Command{Values: []string{"bash"}},
+			expected: "bash\n",
+		},
+		{
+			name:     "multiple-command",
+			command:  Command{Values: []string{"yarn", "start"}},
+			expected: "- yarn\n- start\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.command)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
 			}
 		})
 	}
