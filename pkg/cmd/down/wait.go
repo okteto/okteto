@@ -14,6 +14,7 @@
 package down
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -24,29 +25,29 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func waitForDevPodsTermination(c kubernetes.Interface, d *model.Dev, t int) {
+func waitForDevPodsTermination(ctx context.Context, c kubernetes.Interface, d *model.Dev, t int) {
 	interactive := map[string]string{labels.InteractiveDevLabel: d.Name}
 	detached := map[string]string{labels.DetachedDevLabel: d.Name}
 
 	wg := &sync.WaitGroup{}
 
 	wg.Add(1)
-	go _waitForDevPodsTermination(c, d.Namespace, interactive, wg, t)
+	go _waitForDevPodsTermination(ctx, c, d.Namespace, interactive, wg, t)
 
 	if len(d.Services) > 0 {
 		wg.Add(1)
-		go _waitForDevPodsTermination(c, d.Namespace, detached, wg, t)
+		go _waitForDevPodsTermination(ctx, c, d.Namespace, detached, wg, t)
 	}
 
 	wg.Wait()
 }
 
-func _waitForDevPodsTermination(c kubernetes.Interface, namespace string, selector map[string]string, wg *sync.WaitGroup, t int) {
+func _waitForDevPodsTermination(ctx context.Context, c kubernetes.Interface, namespace string, selector map[string]string, wg *sync.WaitGroup, t int) {
 	defer wg.Done()
 
 	tick := time.NewTicker(1 * time.Second)
 	for i := 0; i < t; i++ {
-		ps, err := pods.ListBySelector(namespace, selector, c)
+		ps, err := pods.ListBySelector(ctx, namespace, selector, c)
 		if err != nil {
 			log.Infof("failed to get dev pods with selector %s, exiting: %s", selector, err)
 			return
@@ -55,7 +56,7 @@ func _waitForDevPodsTermination(c kubernetes.Interface, namespace string, select
 		exit := true
 		for i := range ps {
 			log.Infof("waiting for %s/%s to terminate", ps[i].GetNamespace(), ps[i].GetName())
-			if pods.Exists(ps[i].GetName(), ps[i].GetNamespace(), c) {
+			if pods.Exists(ctx, ps[i].GetName(), ps[i].GetNamespace(), c) {
 				exit = false
 			}
 		}

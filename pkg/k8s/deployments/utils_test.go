@@ -14,6 +14,7 @@
 package deployments
 
 import (
+	"context"
 	"testing"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -21,6 +22,7 @@ import (
 )
 
 func Test_set_translation_as_annotation_and_back(t *testing.T) {
+	ctx := context.Background()
 	manifest := []byte(`name: web
 container: dev
 image: web:latest
@@ -34,7 +36,7 @@ annotations:
 		t.Fatal(err)
 	}
 	d := dev.GevSandbox()
-	translations, err := GetTranslations(dev, d, nil)
+	translations, err := GetTranslations(ctx, dev, d, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

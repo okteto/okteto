@@ -40,7 +40,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		s.Namespace = settings.Namespace()
 	}
 
-	if err := translate(s, forceBuild, noCache); err != nil {
+	if err := translate(ctx, s, forceBuild, noCache); err != nil {
 		return err
 	}
 

@@ -14,6 +14,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -25,8 +26,8 @@ import (
 )
 
 //CreateDev deploys a default k8s service for a development container
-func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
-	old, err := Get(dev.Namespace, dev.Name, c)
+func CreateDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+	old, err := Get(ctx, dev.Namespace, dev.Name, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes service: %s", err)
 	}
@@ -36,7 +37,7 @@ func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
 
 	if old.Name == "" {
 		log.Infof("creating service '%s'", s.Name)
-		_, err = sClient.Create(s)
+		_, err = sClient.Create(ctx, s, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating kubernetes service: %s", err)
 		}
@@ -45,7 +46,7 @@ func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
 		log.Infof("updating service '%s'", s.Name)
 		old.Spec.Ports = s.Spec.Ports
 		old.Annotations = s.Annotations
-		_, err = sClient.Update(old)
+		_, err = sClient.Update(ctx, old, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("error updating kubernetes service: %s", err)
 		}
@@ -55,10 +56,10 @@ func CreateDev(dev *model.Dev, c *kubernetes.Clientset) error {
 }
 
 //DestroyDev destroys the default service for a development container
-func DestroyDev(dev *model.Dev, c *kubernetes.Clientset) error {
+func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	log.Infof("deleting service '%s'", dev.Name)
 	sClient := c.CoreV1().Services(dev.Namespace)
-	err := sClient.Delete(dev.Name, &metav1.DeleteOptions{})
+	err := sClient.Delete(ctx, dev.Name, metav1.DeleteOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			log.Infof("service '%s' was already deleted.", dev.Name)
@@ -71,13 +72,13 @@ func DestroyDev(dev *model.Dev, c *kubernetes.Clientset) error {
 }
 
 // Get returns a kubernetes service by the name, or an error if it doesn't exist
-func Get(namespace, name string, c kubernetes.Interface) (*apiv1.Service, error) {
-	return c.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
+func Get(ctx context.Context, namespace, name string, c kubernetes.Interface) (*apiv1.Service, error) {
+	return c.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 //GetPortsByPod returns the ports exposed via endpoint of a given pod
-func GetPortsByPod(p *apiv1.Pod, c *kubernetes.Clientset) ([]int, error) {
-	eList, err := c.CoreV1().Endpoints(p.Namespace).List(metav1.ListOptions{})
+func GetPortsByPod(ctx context.Context, p *apiv1.Pod, c *kubernetes.Clientset) ([]int, error) {
+	eList, err := c.CoreV1().Endpoints(p.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

@@ -115,10 +115,13 @@ func Up() *cobra.Command {
 				autoDeploy = true
 			}
 
+			ctx, cancel := context.WithCancel(context.Background())
 			up := &upContext{
 				Dev:            dev,
 				Exit:           make(chan error, 1),
 				resetSyncthing: resetSyncthing,
+				Context:        ctx,
+				Cancel:         cancel,
 			}
 
 			return up.start(autoDeploy, build)
@@ -197,7 +200,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 		up.Dev.Namespace = namespace
 	}
 
-	up.Namespace, err = namespaces.Get(up.Dev.Namespace, up.Client)
+	up.Namespace, err = namespaces.Get(up.Context, up.Dev.Namespace, up.Client)
 	if err != nil {
 		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
 		return fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
@@ -255,7 +258,6 @@ func (up *upContext) activate(autoDeploy, build bool) {
 	isRetry := false
 
 	for {
-		up.Context, up.Cancel = context.WithCancel(context.Background())
 		up.Disconnect = make(chan error, 1)
 		up.CommandResult = make(chan error, 1)
 		up.cleaned = make(chan string, 1)
@@ -311,7 +313,7 @@ func (up *upContext) activate(autoDeploy, build bool) {
 
 		if err := up.sync(); err != nil {
 			if up.shouldRetry(err) {
-				if pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
+				if pods.Exists(up.Context, up.Pod, up.Dev.Namespace, up.Client) {
 					up.resetSyncthing = true
 				}
 				log.Yellow("\nConnection lost to your development container, reconnecting...\n")
@@ -352,7 +354,7 @@ func (up *upContext) activate(autoDeploy, build bool) {
 		if up.shouldRetry(prevError) {
 			log.Yellow("\nConnection lost to your development container, reconnecting...\n")
 			if !up.Dev.PersistentVolumeEnabled() {
-				if err := pods.Destroy(up.Pod, up.Dev.Namespace, up.Client); err != nil {
+				if err := pods.Destroy(up.Context, up.Pod, up.Dev.Namespace, up.Client); err != nil {
 					up.Exit <- err
 					return
 				}
@@ -376,7 +378,7 @@ func (up *upContext) shouldRetry(err error) bool {
 	case errors.ErrLostSyncthing:
 		return true
 	case errors.ErrCommandFailed:
-		if pods.Exists(up.Pod, up.Dev.Namespace, up.Client) {
+		if pods.Exists(up.Context, up.Pod, up.Dev.Namespace, up.Client) {
 			return false
 		}
 
@@ -388,7 +390,7 @@ func (up *upContext) shouldRetry(err error) bool {
 }
 
 func (up *upContext) getCurrentDeployment(autoDeploy, isRetry bool) (*appsv1.Deployment, bool, error) {
-	d, err := deployments.Get(up.Dev, up.Dev.Namespace, up.Client)
+	d, err := deployments.Get(up.Context, up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
 		if d.Annotations[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
 			up.isSwap = true
@@ -470,7 +472,7 @@ func (up *upContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 
 	var imageDigest string
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
-	imageDigest, err = buildCMD.Run(buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, imageTag, buildArgs, "tty")
+	imageDigest, err = buildCMD.Run(up.Context, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, imageTag, buildArgs, "tty")
 	if err != nil {
 		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
 	}
@@ -513,11 +515,11 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 	up.updateStateFile(starting)
 
 	log.Info("create deployment secrets")
-	if err := secrets.Create(up.Dev, up.Client, up.Sy); err != nil {
+	if err := secrets.Create(up.Context, up.Dev, up.Client, up.Sy); err != nil {
 		return err
 	}
 
-	trList, err := deployments.GetTranslations(up.Dev, d, up.Client)
+	trList, err := deployments.GetTranslations(up.Context, up.Dev, d, up.Client)
 	if err != nil {
 		return err
 	}
@@ -528,11 +530,11 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 
 	for name := range trList {
 		if name == d.Name {
-			if err := deployments.Deploy(trList[name].Deployment, create, up.Client); err != nil {
+			if err := deployments.Deploy(up.Context, trList[name].Deployment, create, up.Client); err != nil {
 				return err
 			}
 		} else {
-			if err := deployments.Deploy(trList[name].Deployment, false, up.Client); err != nil {
+			if err := deployments.Deploy(up.Context, trList[name].Deployment, false, up.Client); err != nil {
 				return err
 			}
 		}
@@ -548,7 +550,7 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 	}
 
 	if create {
-		if err := services.CreateDev(up.Dev, up.Client); err != nil {
+		if err := services.CreateDev(up.Context, up.Dev, up.Client); err != nil {
 			return err
 		}
 	}
@@ -731,7 +733,7 @@ func (up *upContext) startSyncthing() error {
 			}
 		} else {
 			if pods.OktetoDevPodMustBeRecreated(up.Context, up.Dev, up.Client) {
-				if err := pods.Destroy(up.Pod, up.Dev.Namespace, up.Client); err == nil {
+				if err := pods.Destroy(up.Context, up.Pod, up.Dev.Namespace, up.Client); err == nil {
 					return errors.ErrLostSyncthing
 				}
 			}

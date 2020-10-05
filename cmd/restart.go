@@ -14,6 +14,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
@@ -34,6 +36,7 @@ func Restart() *cobra.Command {
 		Use:   "restart",
 		Short: "Restarts the deployments listed in the services field of the okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
 			dev, err := utils.LoadDev(devPath)
 			if err != nil {
 				return err
@@ -43,7 +46,7 @@ func Restart() *cobra.Command {
 			if len(args) > 0 {
 				serviceName = args[0]
 			}
-			if err := executeRestart(dev, serviceName); err != nil {
+			if err := executeRestart(ctx, dev, serviceName); err != nil {
 				return err
 			}
 			log.Success("Deployments restarted")
@@ -59,7 +62,7 @@ func Restart() *cobra.Command {
 	return cmd
 }
 
-func executeRestart(dev *model.Dev, sn string) error {
+func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	log.Infof("restarting services")
 	client, _, namespace, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
@@ -74,7 +77,7 @@ func executeRestart(dev *model.Dev, sn string) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	if err := pods.Restart(dev, client, sn); err != nil {
+	if err := pods.Restart(ctx, dev, client, sn); err != nil {
 		return err
 	}
 

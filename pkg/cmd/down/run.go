@@ -14,6 +14,8 @@
 package down
 
 import (
+	"context"
+
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -27,6 +29,7 @@ import (
 
 //Run runs the "okteto down" sequence
 func Run(dev *model.Dev, d *appsv1.Deployment, trList map[string]*model.Translation, wait bool, c *kubernetes.Clientset) error {
+	ctx := context.Background()
 	if len(trList) == 0 {
 		log.Info("no translations available in the deployment")
 	}
@@ -41,11 +44,11 @@ func Run(dev *model.Dev, d *appsv1.Deployment, trList map[string]*model.Translat
 		}
 		tr.Deployment = dTmp
 	}
-	if err := deployments.UpdateDeployments(trList, c); err != nil {
+	if err := deployments.UpdateDeployments(ctx, trList, c); err != nil {
 		return err
 	}
 
-	if err := secrets.Destroy(dev, c); err != nil {
+	if err := secrets.Destroy(ctx, dev, c); err != nil {
 		return err
 	}
 
@@ -60,10 +63,10 @@ func Run(dev *model.Dev, d *appsv1.Deployment, trList map[string]*model.Translat
 	}
 
 	if d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
-		if err := deployments.Destroy(dev, c); err != nil {
+		if err := deployments.Destroy(ctx, dev, c); err != nil {
 			return err
 		}
-		if err := services.DestroyDev(dev, c); err != nil {
+		if err := services.DestroyDev(ctx, dev, c); err != nil {
 			return err
 		}
 	}
@@ -72,7 +75,7 @@ func Run(dev *model.Dev, d *appsv1.Deployment, trList map[string]*model.Translat
 		return nil
 	}
 
-	waitForDevPodsTermination(c, dev, 30)
+	waitForDevPodsTermination(ctx, c, dev, 30)
 	return nil
 }
 

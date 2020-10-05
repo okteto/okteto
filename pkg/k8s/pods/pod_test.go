@@ -14,6 +14,7 @@
 package pods
 
 import (
+	"context"
 	"testing"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -105,6 +106,7 @@ func TestGetBySelector(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewSimpleClientset(ns)
@@ -114,7 +116,7 @@ func TestGetBySelector(t *testing.T) {
 				}
 			}
 
-			r, err := GetBySelector("test", tt.selector, c)
+			r, err := GetBySelector(ctx, "test", tt.selector, c)
 			if err != nil {
 				if !tt.expectError {
 					t.Fatal(err)

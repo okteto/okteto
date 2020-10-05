@@ -72,17 +72,18 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			tag, err = expandOktetoDevRegistry(tag)
+			ctx := context.Background()
+			tag, err = expandOktetoDevRegistry(ctx, tag)
 			if err != nil {
 				return err
 			}
 
-			cacheFrom, err = expandOktetoDevRegistry(cacheFrom)
+			cacheFrom, err = expandOktetoDevRegistry(ctx, cacheFrom)
 			if err != nil {
 				return err
 			}
 
-			if _, err := build.Run(buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
+			if _, err := build.Run(ctx, buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}
@@ -109,7 +110,7 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func expandOktetoDevRegistry(tag string) (string, error) {
+func expandOktetoDevRegistry(ctx context.Context, tag string) (string, error) {
 	if !strings.HasPrefix(tag, okteto.DevRegistry) {
 		return tag, nil
 	}
@@ -118,7 +119,7 @@ func expandOktetoDevRegistry(tag string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}
-	n, err := namespaces.Get(namespace, c)
+	n, err := namespaces.Get(ctx, namespace, c)
 	if err != nil {
 		return "", fmt.Errorf("failed to get your current namespace '%s': %s", namespace, err.Error())
 	}

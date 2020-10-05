@@ -127,7 +127,7 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 
 	p.activeServices = map[string]*active{}
 	for svc := range p.services {
-		go p.forwardService(namespace, svc)
+		go p.forwardService(p.ctx, namespace, svc)
 	}
 
 	log.Debugf("waiting port forwarding to finish")
@@ -195,9 +195,8 @@ func (p *PortForwardManager) buildForwarder(name, namespace, pod string, ports [
 	return a, pf, nil
 }
 
-func (p *PortForwardManager) buildForwarderToService(namespace, service string) (*active, *portforward.PortForwarder, error) {
-
-	svc, err := services.Get(namespace, service, p.client)
+func (p *PortForwardManager) buildForwarderToService(ctx context.Context, namespace, service string) (*active, *portforward.PortForwarder, error) {
+	svc, err := services.Get(ctx, namespace, service, p.client)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -206,7 +205,7 @@ func (p *PortForwardManager) buildForwarderToService(namespace, service string) 
 		return nil, nil, fmt.Errorf("service/%s doesn't have ports", svc.GetName())
 	}
 
-	pod, err := pods.GetBySelector(namespace, svc.Spec.Selector, p.client)
+	pod, err := pods.GetBySelector(ctx, namespace, svc.Spec.Selector, p.client)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get pod mapped to service/%s: %w", svc.GetName(), err)
 	}
@@ -246,7 +245,7 @@ func (p *PortForwardManager) buildDialer(namespace, pod string) (httpstream.Dial
 	return spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", url), nil
 }
 
-func (p *PortForwardManager) forwardService(namespace, service string) {
+func (p *PortForwardManager) forwardService(ctx context.Context, namespace, service string) {
 	t := time.NewTicker(3 * time.Second)
 
 	for {
@@ -255,7 +254,7 @@ func (p *PortForwardManager) forwardService(namespace, service string) {
 		}
 
 		log.Debugf("forwarding ports for service/%s", service)
-		a, pf, err := p.buildForwarderToService(namespace, service)
+		a, pf, err := p.buildForwarderToService(ctx, namespace, service)
 		if err != nil {
 			log.Debugf("failed to forward ports to service/%s: %s", service, err)
 			<-t.C

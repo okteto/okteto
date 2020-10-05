@@ -14,6 +14,8 @@
 package namespaces
 
 import (
+	"context"
+
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -41,8 +43,8 @@ func IsOktetoAllowed(ns *apiv1.Namespace) bool {
 }
 
 // Get returns the namespace object of ns
-func Get(ns string, c *kubernetes.Clientset) (*apiv1.Namespace, error) {
-	n, err := c.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+func Get(ctx context.Context, ns string, c *kubernetes.Clientset) (*apiv1.Namespace, error) {
+	n, err := c.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

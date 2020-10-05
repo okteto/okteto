@@ -158,7 +158,7 @@ func getCurrentNamespace(ctx context.Context) (string, error) {
 		}
 	}
 
-	ns, err := namespaces.Get(namespace, c)
+	ns, err := namespaces.Get(ctx, namespace, c)
 	if err != nil {
 		return namespace, nil
 	}
