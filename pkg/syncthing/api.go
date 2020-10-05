@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -44,14 +43,14 @@ func NewAPIClient() *http.Client {
 }
 
 // APICall calls the syncthing API and returns the parsed json or an error
-func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte, readBody bool) ([]byte, error) {
+func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte, readBody bool, maxRetries int) ([]byte, error) {
 	retries := 0
 	for {
 		result, err := s.callWithRetry(ctx, url, method, code, params, local, body, readBody)
 		if err == nil {
 			return result, nil
 		}
-		if retries == 3 || strings.Contains(url, "rest/db/ignores") {
+		if retries == maxRetries {
 			return nil, err
 		}
 		log.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())

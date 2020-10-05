@@ -319,7 +319,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 
 	log.Infof("waiting for syncthing local=%t to be ready", local)
 	for i := 0; ; i++ {
-		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false)
+		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 3)
 		if err == nil {
 			log.Infof("syncthing local=%t is ready", local)
 			return nil
@@ -350,7 +350,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 		log.Infof("sending '.stignore' file %s to the remote syncthing", folder.Name)
 		params := getFolderParameter(&folder)
 		ignores := &Ignores{}
-		body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true)
+		body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true, 0)
 		if err != nil {
 			log.Infof("error getting ignore files: %s", err.Error())
 			continue
@@ -375,7 +375,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 			log.Infof("error marshalling ignore files: %s", err.Error())
 			continue
 		}
-		_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false)
+		_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false, 0)
 		if err != nil {
 			log.Infof("error posting ignore files: %s", err.Error())
 			continue
@@ -389,7 +389,7 @@ func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local boo
 	for _, folder := range s.Folders {
 		log.Infof("reseting syncthing database path=%s local=%t", folder.LocalPath, local)
 		params := getFolderParameter(&folder)
-		_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil, false)
+		_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil, false, 3)
 		if err != nil {
 			log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
 			if strings.Contains(err.Error(), "Client.Timeout") {
@@ -406,7 +406,7 @@ func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 	for _, folder := range s.Folders {
 		log.Infof("overriding local changes to the remote syncthing path=%s", folder.LocalPath)
 		params := getFolderParameter(&folder)
-		_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false)
+		_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false, 3)
 		if err != nil {
 			log.Infof("error posting 'rest/db/override' syncthing API: %s", err)
 			if strings.Contains(err.Error(), "Client.Timeout") {
@@ -438,7 +438,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	timeout := time.Now().Add(to)
 
 	for i := 0; ; i++ {
-		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
+		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true, 3)
 		if err != nil {
 			log.Infof("error calling 'rest/db/status' local=%t syncthing API: %s", local, err)
 			if strings.Contains(err.Error(), "Client.Timeout") {
@@ -553,7 +553,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 func (s *Syncthing) GetStatus(ctx context.Context, folder *Folder, local bool) (*Status, error) {
 	params := getFolderParameter(folder)
 	status := &Status{}
-	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true)
+	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true, 3)
 	if err != nil {
 		log.Infof("error getting status: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
@@ -581,7 +581,7 @@ func (s *Syncthing) GetCompletion(ctx context.Context, local bool) (*Completion,
 			params["device"] = localDeviceID
 		}
 		completion := &Completion{}
-		body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true)
+		body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true, 3)
 		if err != nil {
 			log.Infof("error calling 'rest/db/completion' local=%t syncthing API: %s", local, err)
 			if strings.Contains(err.Error(), "Client.Timeout") {
@@ -624,7 +624,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 	params["timeout"] = "15"
 	params["events"] = "FolderErrors"
 	folderErrorsList := []FolderErrors{}
-	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true)
+	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
 	if err != nil {
 		log.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
@@ -665,7 +665,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 
 // Restart restarts the syncthing process
 func (s *Syncthing) Restart(ctx context.Context) error {
-	_, err := s.APICall(ctx, "rest/system/restart", "POST", 200, nil, true, nil, false)
+	_, err := s.APICall(ctx, "rest/system/restart", "POST", 200, nil, true, nil, false, 3)
 	return err
 }
 
