@@ -42,6 +42,7 @@ type Service struct {
 	Replicas        int          `yaml:"replicas"`
 	Command         Command      `yaml:"command,omitempty"`
 	Environment     []EnvVar     `yaml:"environment,omitempty"`
+	EnvFiles        []string     `yaml:"env_file,omitempty"`
 	Ports           []int        `yaml:"ports,omitempty"`
 	Volumes         []string     `yaml:"volumes,omitempty"`
 	StopGracePeriod int          `yaml:"stop_grace_period,omitempty"`
