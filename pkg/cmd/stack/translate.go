@@ -16,6 +16,7 @@ package stack
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
@@ -23,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/subosito/gotenv"
 )
 
 const (
@@ -34,19 +36,66 @@ const (
 )
 
 func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
-	for i, svc := range s.Services {
-		var err error
+	if err := translateEnvVars(s); err != nil {
+		return nil
+	}
+
+	if forceBuild {
+		if err := translateBuildImages(ctx, s, noCache); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func translateEnvVars(s *model.Stack) error {
+	var err error
+	for name, svc := range s.Services {
 		svc.Image, err = model.ExpandEnv(svc.Image)
 		if err != nil {
 			return err
 		}
-		s.Services[i] = svc
+		for _, envFilepath := range svc.EnvFiles {
+			translateEnvFile(&svc, envFilepath)
+		}
+		svc.EnvFiles = nil
+		s.Services[name] = svc
+	}
+	return nil
+}
+
+func translateEnvFile(svc *model.Service, filename string) error {
+	var err error
+	filename, err = model.ExpandEnv(filename)
+	if err != nil {
+		return err
 	}
 
-	if !forceBuild {
-		return nil
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
 	}
+	defer f.Close()
 
+	envMap, err := gotenv.StrictParse(f)
+	if err != nil {
+		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
+	}
+	for _, e := range svc.Environment {
+		if _, ok := envMap[e.Name]; ok {
+			delete(envMap, e.Name)
+		}
+	}
+	for name, value := range envMap {
+		svc.Environment = append(
+			svc.Environment,
+			model.EnvVar{Name: name, Value: value},
+		)
+	}
+	return nil
+}
+
+func translateBuildImages(ctx context.Context, s *model.Stack, noCache bool) error {
 	c, _, configNamespace, err := k8Client.GetLocal("")
 	if err != nil {
 		return err
