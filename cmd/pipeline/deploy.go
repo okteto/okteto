@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/go-git/go-git/v5"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
@@ -53,14 +55,30 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get the current working directory: %w", err)
+			}
+
 			if repository == "" {
-				// TODO: get local repository
-				return fmt.Errorf("repository is missing")
+				log.Info("infering git repository URL")
+				r, err := getRepositoryURL(ctx, cwd)
+				if err != nil {
+					return err
+				}
+
+				repository = r
+
 			}
 
 			if branch == "" {
-				// TODO: get local branch
-				return fmt.Errorf("branch is missing")
+				log.Info("infering git repository branch")
+				b, err := getBranch(ctx, cwd)
+				if err != nil {
+					return err
+				}
+
+				branch = b
 			}
 
 			if namespace == "" {
@@ -92,6 +110,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch str
 	spinner.Start()
 	defer spinner.Stop()
 
+	log.Infof("deploy pipeline %s repository=%s branch=%s on namespace=%s", name, repository, branch, namespace)
 	_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch)
 	if err != nil {
 		return fmt.Errorf("failed to deploy pipeline: %w", err)
@@ -171,4 +190,53 @@ func getCurrentNamespace(ctx context.Context) (string, error) {
 	}
 
 	return namespace, nil
+}
+
+func getRepositoryURL(ctx context.Context, path string) (string, error) {
+	repo, err := git.PlainOpen(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	origin, err := repo.Remote("origin")
+	if err != nil {
+		if err != git.ErrRemoteNotFound {
+			return "", fmt.Errorf("failed to get the git repo's remote configuration: %w", err)
+		}
+	}
+
+	if origin != nil {
+		return origin.Config().URLs[0], nil
+	}
+
+	remotes, err := repo.Remotes()
+	if err != nil {
+		return "", fmt.Errorf("failed to get git repo's remote information: %w", err)
+	}
+
+	if len(remotes) == 0 {
+		return "", fmt.Errorf("git repo doesn't have any remote")
+	}
+
+	return remotes[0].Config().URLs[0], nil
+}
+
+func getBranch(ctx context.Context, path string) (string, error) {
+	repo, err := git.PlainOpen(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	branch := head.Name()
+	if !branch.IsBranch() {
+		return "", fmt.Errorf("git repo is not on a valid branch")
+	}
+
+	name := strings.TrimPrefix(branch.String(), "refs/heads/")
+	return name, nil
 }
