@@ -15,9 +15,14 @@ package build
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 
+	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/pkg/errors"
 )
 
@@ -38,10 +43,47 @@ func Run(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, d
 		defer os.Remove(processedDockerfile)
 	}
 
+	tag, err = expandOktetoDevRegistry(ctx, tag)
+	if err != nil {
+		return "", err
+	}
+	cacheFrom, err = expandOktetoDevRegistry(ctx, cacheFrom)
+	if err != nil {
+		return "", err
+	}
 	opt, err := getSolveOpt(path, processedDockerfile, tag, target, noCache, cacheFrom, buildArgs)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create build solver")
 	}
 
 	return solveBuild(ctx, buildkitClient, opt, progress)
+}
+
+func expandOktetoDevRegistry(ctx context.Context, tag string) (string, error) {
+	if !strings.HasPrefix(tag, okteto.DevRegistry) {
+		return tag, nil
+	}
+
+	c, _, namespace, err := client.GetLocal("")
+	if err != nil {
+		return "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+	}
+	n, err := namespaces.Get(ctx, namespace, c)
+	if err != nil {
+		return "", fmt.Errorf("failed to get your current namespace '%s': %s", namespace, err.Error())
+	}
+	if !namespaces.IsOktetoNamespace(n) {
+		return "", fmt.Errorf("cannot use the okteto.dev container registry: your current namespace '%s' is not managed by okteto", namespace)
+	}
+
+	oktetoRegistryURL, err := okteto.GetRegistry()
+	if err != nil {
+		return "", fmt.Errorf("cannot use the okteto.dev container registry: unable to get okteto registry url: %s", err)
+	}
+
+	oldTag := tag
+	tag = strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, namespace), 1)
+
+	log.Information("'%s' expanded to '%s'.", oldTag, tag)
+	return tag, nil
 }

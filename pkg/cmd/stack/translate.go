@@ -42,7 +42,7 @@ func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) er
 
 	if forceBuild {
 		if err := translateBuildImages(ctx, s, noCache); err != nil {
-			return nil
+			return err
 		}
 	}
 	return nil
