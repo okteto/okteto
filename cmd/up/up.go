@@ -779,8 +779,10 @@ func (up *upContext) startSyncthing() error {
 		return err
 	}
 
-	if err := up.Sy.WaitForScanning(up.Context, up.Dev, false); err != nil {
-		return err
+	if !up.Dev.PersistentVolumeEnabled() {
+		if err := up.Sy.WaitForScanning(up.Context, up.Dev, false); err != nil {
+			return err
+		}
 	}
 
 	return nil
