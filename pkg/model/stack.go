@@ -42,6 +42,7 @@ type Service struct {
 	Replicas        int          `yaml:"replicas"`
 	Command         Command      `yaml:"command,omitempty"`
 	Environment     []EnvVar     `yaml:"environment,omitempty"`
+	EnvFiles        []string     `yaml:"env_file,omitempty"`
 	Ports           []int        `yaml:"ports,omitempty"`
 	Volumes         []string     `yaml:"volumes,omitempty"`
 	StopGracePeriod int          `yaml:"stop_grace_period,omitempty"`
@@ -73,6 +74,19 @@ func GetStack(name, stackPath string) (*Stack, error) {
 		return nil, err
 	}
 
+	stackDir, err := filepath.Abs(filepath.Dir(stackPath))
+	if err != nil {
+		return nil, err
+	}
+
+	for name, svc := range s.Services {
+		if svc.Build == nil {
+			continue
+		}
+		svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
+		svc.Build.Dockerfile = loadAbsPath(stackDir, svc.Build.Dockerfile)
+		s.Services[name] = svc
+	}
 	return s, nil
 }
 
@@ -100,8 +114,11 @@ func ReadStack(bytes []byte) (*Stack, error) {
 	}
 	for i, svc := range s.Services {
 		if svc.Build != nil {
-			svc.Build.Context = svc.Build.Name
-			svc.Build.Name = ""
+			if svc.Build.Name != "" {
+				svc.Build.Context = svc.Build.Name
+				svc.Build.Name = ""
+			}
+			setBuildDefaults(svc.Build)
 		}
 		if svc.Replicas == 0 {
 			svc.Replicas = 1
