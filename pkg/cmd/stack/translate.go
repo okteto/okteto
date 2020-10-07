@@ -17,6 +17,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
@@ -58,6 +60,9 @@ func translateEnvVars(s *model.Stack) error {
 		for _, envFilepath := range svc.EnvFiles {
 			translateEnvFile(&svc, envFilepath)
 		}
+		sort.SliceStable(svc.Environment, func(i, j int) bool {
+			return strings.Compare(svc.Environment[i].Name, svc.Environment[j].Name) < 0
+		})
 		svc.EnvFiles = nil
 		s.Services[name] = svc
 	}
