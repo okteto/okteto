@@ -16,6 +16,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -29,6 +30,7 @@ func destroy(ctx context.Context) *cobra.Command {
 	var name string
 	var namespace string
 	var wait bool
+	var timeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "destroy",
@@ -53,11 +55,16 @@ func destroy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if err := deletePipeline(ctx, name, namespace, wait); err != nil {
+			if err := deletePipeline(ctx, name, namespace, wait, timeout); err != nil {
 				return err
 			}
 
-			log.Success("Pipeline '%s' deleted", name)
+			if wait {
+				log.Success("Pipeline '%s' deleted", name)
+			} else {
+				log.Success("Pipeline '%s' scheduled for deletion", name)
+			}
+
 			return nil
 		},
 	}
@@ -65,10 +72,11 @@ func destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&name, "name", "p", "", "name of the pipeline (defaults to the folder name)")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed (defaults to the current namespace)")
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
+	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	return cmd
 }
 
-func deletePipeline(ctx context.Context, name, namespace string, wait bool) error {
+func deletePipeline(ctx context.Context, name, namespace string, wait bool, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Deleting your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -88,5 +96,5 @@ func deletePipeline(ctx context.Context, name, namespace string, wait bool) erro
 	}
 
 	// this will also run if it's not found
-	return waitUntilRunning(ctx, name, namespace)
+	return waitUntilRunning(ctx, name, namespace, timeout)
 }
