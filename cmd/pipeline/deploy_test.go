@@ -67,6 +67,10 @@ func Test_getRepositoryURL(t *testing.T) {
 			}
 			defer os.RemoveAll(dir)
 
+			if _, err := getRepositoryURL(context.TODO(), dir); err == nil {
+				t.Fatal("expected error when there's no github repo")
+			}
+
 			r, err := git.PlainInit(dir, true)
 			if err != nil {
 				t.Fatal(err)
@@ -129,13 +133,14 @@ func Test_getBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := w.Commit("example go-git commit", &git.CommitOptions{
+	commit, err := w.Commit("example go-git commit", &git.CommitOptions{
 		Author: &object.Signature{
 			Name:  "John Doe",
 			Email: "john@doe.org",
 			When:  time.Now(),
 		},
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -162,5 +167,15 @@ func Test_getBranch(t *testing.T) {
 
 	if b != "my-branch" {
 		t.Errorf("expected branch my-branch, got %s", b)
+	}
+
+	if err := w.Checkout(&git.CheckoutOptions{
+		Hash: commit,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := getBranch(context.TODO(), dir); err == nil {
+		t.Fatal("didn't fail when getting a non branch")
 	}
 }
