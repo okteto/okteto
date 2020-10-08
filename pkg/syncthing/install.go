@@ -29,7 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-const syncthingVersion = "1.9.0"
+const syncthingVersion = "1.10.0"
 
 var (
 	downloadURLs = map[string]string{
