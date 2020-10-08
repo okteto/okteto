@@ -38,6 +38,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	var name string
 	var namespace string
 	var wait bool
+	var timeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -88,11 +89,16 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if err := deployPipeline(ctx, name, namespace, repository, branch, wait); err != nil {
+			if err := deployPipeline(ctx, name, namespace, repository, branch, wait, timeout); err != nil {
 				return err
 			}
 
-			log.Success("Pipeline '%s' created", name)
+			if wait {
+				log.Success("Pipeline '%s' successfully executed", name)
+			} else {
+				log.Success("Pipeline '%s' started", name)
+			}
+
 			return nil
 		},
 	}
@@ -102,10 +108,11 @@ func deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
+	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	return cmd
 }
 
-func deployPipeline(ctx context.Context, name, namespace, repository, branch string, wait bool) error {
+func deployPipeline(ctx context.Context, name, namespace, repository, branch string, wait bool, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Creating your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -121,7 +128,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch str
 	}
 
 	spinner.Update("Waiting for the pipeline to finish...")
-	return waitUntilRunning(ctx, name, namespace)
+	return waitUntilRunning(ctx, name, namespace, timeout)
 }
 
 func getPipelineName() (string, error) {
@@ -133,9 +140,9 @@ func getPipelineName() (string, error) {
 	return filepath.Base(workDir), nil
 }
 
-func waitUntilRunning(ctx context.Context, name, namespace string) error {
+func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(5 * time.Minute)
+	to := time.NewTicker(timeout)
 	attempts := 0
 
 	for {
