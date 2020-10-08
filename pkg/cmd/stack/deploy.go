@@ -111,6 +111,11 @@ func saveStackFile(s *model.Stack) (string, error) {
 		return "", fmt.Errorf("failed to create dynamic stack manifest file: %s", err)
 	}
 
+	for name, svc := range s.Services {
+		svc.Build = nil
+		s.Services[name] = svc
+	}
+
 	marshalled, err := yaml.Marshal(s)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshall dynamic stack manifest: %s", err)
