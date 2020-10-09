@@ -186,14 +186,14 @@ func TrackDestroyStack(success bool) {
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(success bool, name, email, oktetoID, githubID string) {
+func TrackLogin(success bool, name, email, oktetoID, externalID string) {
 	if !isEnabled() {
 		return
 	}
 
 	track(loginEvent, success, nil)
 	if name == "" {
-		name = githubID
+		name = externalID
 	}
 
 	if err := mixpanelClient.Update(oktetoID, &mixpanel.Update{
@@ -202,7 +202,7 @@ func TrackLogin(success bool, name, email, oktetoID, githubID string) {
 			"$name":    name,
 			"$email":   email,
 			"oktetoId": oktetoID,
-			"githubId": githubID,
+			"githubId": externalID,
 		},
 	}); err != nil {
 		log.Infof("failed to update user: %s", err)

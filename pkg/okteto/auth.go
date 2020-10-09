@@ -47,6 +47,7 @@ type Token struct {
 type User struct {
 	Name        string
 	Email       string
+	ExternalID  string
 	GithubID    string
 	Token       string
 	ID          string
@@ -87,7 +88,7 @@ func AuthWithToken(ctx context.Context, url, token string) (*User, error) {
 	return &user.User, nil
 }
 
-// Auth authenticates in okteto with a github OAuth code
+// Auth authenticates in okteto with an OAuth code
 func Auth(ctx context.Context, code, url string) (*User, error) {
 	client, err := getClient(url)
 	if err != nil {
@@ -110,7 +111,7 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 }
 
 func saveAuthData(user *User, url string) error {
-	if user.GithubID == "" || user.Token == "" {
+	if user.ExternalID == "" || user.Token == "" {
 		return fmt.Errorf("empty response")
 	}
 
@@ -130,7 +131,7 @@ func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, e
 	var user q
 	q := fmt.Sprintf(`query {
 		user {
-			id,name,email,githubID,token,new,registry,buildkit,certificate
+			id,name,email,externalID,token,new,registry,buildkit,certificate
 		}}`)
 
 	req := getRequest(q, token)
@@ -153,7 +154,7 @@ func queryUserLegacy(ctx context.Context, client *graphql.Client, token string) 
 	var user q
 	q := fmt.Sprintf(`query {
 		user {
-			id,name,email,githubID,token,new
+			id,name,email,githubID,token,new,registry,buildkit,certificate
 		}}`)
 
 	req := getRequest(q, token)
@@ -162,6 +163,7 @@ func queryUserLegacy(ctx context.Context, client *graphql.Client, token string) 
 		return nil, err
 	}
 
+	user.User.ExternalID = user.User.GithubID
 	return &user, nil
 }
 
@@ -169,7 +171,7 @@ func authUser(ctx context.Context, client *graphql.Client, code string) (*u, err
 	var user u
 	q := fmt.Sprintf(`mutation {
 		auth(code: "%s", source: "cli") {
-			id,name,email,githubID,token,new,registry,buildkit,certificate
+			id,name,email,externalID,token,new,registry,buildkit,certificate
 		}}`, code)
 
 	req := graphql.NewRequest(q)
@@ -189,14 +191,15 @@ func authUserLegacy(ctx context.Context, client *graphql.Client, code string) (*
 	var user u
 	q := fmt.Sprintf(`mutation {
 	auth(code: "%s", source: "cli") {
-		id,name,email,githubID,token,new
-	}}`, code)
+		id,name,email,githubID,token,new,registry,buildkit,certificate
+		}}`, code)
 
 	req := graphql.NewRequest(q)
 	if err := client.Run(ctx, req, &user); err != nil {
 		return nil, err
 	}
 
+	user.Auth.ExternalID = user.Auth.GithubID
 	return &user, nil
 }
 
