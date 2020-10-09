@@ -48,6 +48,7 @@ type User struct {
 	Name        string
 	Email       string
 	ExternalID  string
+	GithubID    string
 	Token       string
 	ID          string
 	New         bool
@@ -87,7 +88,7 @@ func AuthWithToken(ctx context.Context, url, token string) (*User, error) {
 	return &user.User, nil
 }
 
-// Auth authenticates in okteto with a github OAuth code
+// Auth authenticates in okteto with an OAuth code
 func Auth(ctx context.Context, code, url string) (*User, error) {
 	client, err := getClient(url)
 	if err != nil {
@@ -162,6 +163,7 @@ func queryUserLegacy(ctx context.Context, client *graphql.Client, token string) 
 		return nil, err
 	}
 
+	user.User.ExternalID = user.User.GithubID
 	return &user, nil
 }
 
@@ -197,6 +199,7 @@ func authUserLegacy(ctx context.Context, client *graphql.Client, code string) (*
 		return nil, err
 	}
 
+	user.Auth.ExternalID = user.Auth.GithubID
 	return &user, nil
 }
 
