@@ -610,11 +610,7 @@ func (up *upContext) forwards() error {
 		return err
 	}
 
-	if err := up.Forwarder.Start(up.Pod, up.Dev.Namespace); err != nil {
-		return err
-	}
-
-	return nil
+	return up.Forwarder.Start(up.Pod, up.Dev.Namespace)
 }
 
 func (up *upContext) sshForwards() error {
