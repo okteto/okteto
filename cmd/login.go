@@ -82,15 +82,15 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 			log.Infof("authenticated user %s", u.ID)
 
 			if oktetoURL == okteto.CloudURL {
-				log.Success("Logged in as %s", u.GithubID)
+				log.Success("Logged in as %s", u.ExternalID)
 			} else {
-				log.Success("Logged in as %s @ %s", u.GithubID, oktetoURL)
+				log.Success("Logged in as %s @ %s", u.ExternalID, oktetoURL)
 			}
 			log.Hint("    Run `okteto namespace` to switch your context and download your Kubernetes credentials.")
 			if u.New {
 				analytics.TrackSignup(true, u.ID)
 			}
-			analytics.TrackLogin(true, u.Name, u.Email, u.ID, u.GithubID)
+			analytics.TrackLogin(true, u.Name, u.Email, u.ID, u.ExternalID)
 			return nil
 		},
 	}

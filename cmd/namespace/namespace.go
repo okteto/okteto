@@ -73,9 +73,9 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		log.Infof("authenticated user %s", u.ID)
 
 		if oktetoURL == okteto.CloudURL {
-			log.Success("Logged in as %s", u.GithubID)
+			log.Success("Logged in as %s", u.ExternalID)
 		} else {
-			log.Success("Logged in as %s @ %s", u.GithubID, oktetoURL)
+			log.Success("Logged in as %s @ %s", u.ExternalID, oktetoURL)
 		}
 	}
 
