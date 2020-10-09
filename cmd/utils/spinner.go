@@ -15,11 +15,17 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 	"unicode"
 
 	sp "github.com/briandowns/spinner"
+	"github.com/okteto/okteto/pkg/log"
 )
+
+var spinnerSupport bool
 
 //Spinner represents an okteto spinner
 type Spinner struct {
@@ -28,6 +34,7 @@ type Spinner struct {
 
 //NewSpinner returns a new Spinner
 func NewSpinner(suffix string) *Spinner {
+	spinnerSupport = !loadBoolean("OKTETO_DISABLE_SPINNER")
 	s := sp.New(sp.CharSets[14], 100*time.Millisecond)
 	s.HideCursor = true
 	s.Suffix = fmt.Sprintf(" %s", suffix)
@@ -36,19 +43,42 @@ func NewSpinner(suffix string) *Spinner {
 	}
 }
 
+func loadBoolean(k string) bool {
+	v := os.Getenv(k)
+	if v == "" {
+		v = "false"
+	}
+
+	h, err := strconv.ParseBool(v)
+	if err != nil {
+		log.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+	}
+
+	return h
+}
+
 //Start starts the spinner
 func (p *Spinner) Start() {
-	p.sp.Start()
+	if spinnerSupport {
+		p.sp.Start()
+	} else {
+		fmt.Println(strings.TrimSpace(p.sp.Suffix))
+	}
 }
 
 //Stop stops the spinner
 func (p *Spinner) Stop() {
-	p.sp.Stop()
+	if spinnerSupport {
+		p.sp.Stop()
+	}
 }
 
 //Update updates the spinner message
 func (p *Spinner) Update(text string) {
 	p.sp.Suffix = fmt.Sprintf(" %s", ucFirst(text))
+	if !spinnerSupport {
+		fmt.Println(strings.TrimSpace(p.sp.Suffix))
+	}
 }
 
 func ucFirst(str string) string {
