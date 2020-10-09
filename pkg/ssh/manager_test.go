@@ -269,3 +269,27 @@ func (fm *ForwardManager) waitForwardsConnected() error {
 		<-tk.C
 	}
 }
+
+func TestAdd(t *testing.T) {
+
+	pf := NewForwardManager(context.Background(), "0.0.0.0:22000", "0.0.0.0", "0.0.0.0", nil)
+	if err := pf.Add(model.Forward{Local: 1010, Remote: 1010}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := pf.Add(model.Forward{Local: 1011, Remote: 1011}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := pf.Add(model.Forward{Local: 1010, Remote: 1011}); err == nil {
+		t.Fatal("duplicated local port didn't return an error")
+	}
+
+	if err := pf.Add(model.Forward{Local: 1012, Remote: 15123, Service: true, ServiceName: "svc"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if pf.forwards[1012].remoteAddress != "svc:15123" {
+		t.Fatalf("expected 'svc:15123', got '%s'", pf.forwards[1012].remoteAddress)
+	}
+}
