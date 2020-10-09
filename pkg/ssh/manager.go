@@ -62,8 +62,7 @@ func (fm *ForwardManager) canAdd(localPort int) error {
 func (fm *ForwardManager) Add(f model.Forward) error {
 
 	if err := fm.canAdd(f.Local); err != nil {
-		return nil
-
+		return err
 	}
 
 	fm.forwards[f.Local] = &forward{
@@ -71,6 +70,11 @@ func (fm *ForwardManager) Add(f model.Forward) error {
 		remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
 		ctx:           fm.ctx,
 	}
+
+	if f.Service {
+		fm.forwards[f.Local].remoteAddress = fmt.Sprintf("%s:%d", f.ServiceName, f.Remote)
+	}
+
 	return nil
 }
 

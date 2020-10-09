@@ -610,35 +610,7 @@ func (up *upContext) forwards() error {
 		return err
 	}
 
-	if up.Dev.RemoteModeEnabled() {
-		if err := up.Forwarder.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
-			return err
-		}
-	}
-
-	if err := up.Forwarder.Start(up.Pod, up.Dev.Namespace); err != nil {
-		return err
-	}
-
-	if up.Dev.RemoteModeEnabled() {
-		if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
-			log.Infof("failed to add entry to your SSH config file: %s", err)
-			return fmt.Errorf("failed to add entry to your SSH config file")
-		}
-
-		reverseManager := ssh.NewForwardManager(up.Context, fmt.Sprintf(":%d", up.Dev.RemotePort), "localhost", "0.0.0.0", nil)
-		for _, f := range up.Dev.Reverse {
-			if err := reverseManager.AddReverse(f); err != nil {
-				return err
-			}
-		}
-
-		if err := reverseManager.Start("", ""); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return up.Forwarder.Start(up.Pod, up.Dev.Namespace)
 }
 
 func (up *upContext) sshForwards() error {

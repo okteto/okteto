@@ -65,7 +65,9 @@ func (f *forward) start() {
 		}
 
 		log.Infof("%s -> accepted connection: %v", f.String(), localConn)
+
 		go f.handle(localConn)
+
 	}
 }
 
