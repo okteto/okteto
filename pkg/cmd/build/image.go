@@ -53,7 +53,7 @@ func GetRepoNameWithoutTag(name string) string {
 //GetImageTag returns the image tag to build for a given services
 func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
 	if oktetoRegistryURL != "" {
-		if image == "" {
+		if image == "" || image == model.DefaultImage {
 			return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, namespace, service)
 		}
 		return image
@@ -64,7 +64,7 @@ func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
 
 //GetDevImageTag returns the image tag to build and push
 func GetDevImageTag(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string) string {
-	if imageTag != "" {
+	if imageTag != "" && imageTag != model.DefaultImage {
 		return imageTag
 	}
 	return GetImageTag(imageFromDeployment, dev.Name, dev.Namespace, oktetoRegistryURL)
