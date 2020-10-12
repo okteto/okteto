@@ -27,14 +27,24 @@ import (
 	"github.com/mholt/archiver"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"gopkg.in/yaml.v1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
+//PodInfo info collected for pods
+type PodInfo struct {
+	CPU        string               `yaml:"cpu,omitempty"`
+	Memory     string               `yaml:"memory,omitempty"`
+	Conditions []apiv1.PodCondition `yaml:"conditions,omitempty"`
+}
+
 //Run runs the "okteto status" sequence
-func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
+func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clientset) (string, error) {
 	z := archiver.Zip{
 		CompressionLevel:       flate.DefaultCompression,
 		MkdirAll:               true,
@@ -50,6 +60,15 @@ func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, 
 	}
 	defer os.Remove(summaryFilename)
 
+	stignoreFilenames := generateStignoreFiles(dev)
+
+	podPath, err := generatePodFile(ctx, dev, c)
+	if err != nil {
+		log.Infof("failed to get information about the remote dev container: %s", err)
+		log.Yellow(errors.ErrNotInDevMode.Error())
+	}
+	defer os.RemoveAll(podPath)
+
 	remoteLogsPath, err := generateRemoteSyncthingLogsFile(ctx, dev, c)
 	if err != nil {
 		log.Debugf("error getting remote syncthing logs: %s", err)
@@ -59,12 +78,16 @@ func Run(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, 
 
 	now := time.Now()
 	archiveName := fmt.Sprintf("okteto-doctor-%s.zip", now.Format("20060102150405"))
-	files := []string{summaryFilename}
+	files := []string{summaryFilename, devPath}
+	files = append(files, stignoreFilenames...)
 	if model.FileExists(filepath.Join(config.GetOktetoHome(), "okteto.log")) {
 		files = append(files, filepath.Join(config.GetOktetoHome(), "okteto.log"))
 	}
 	if model.FileExists(config.GetSyncthingLogFile(dev.Namespace, dev.Name)) {
 		files = append(files, config.GetSyncthingLogFile(dev.Namespace, dev.Name))
+	}
+	if podPath != "" {
+		files = append(files, podPath)
 	}
 	if remoteLogsPath != "" {
 		files = append(files, remoteLogsPath)
@@ -90,6 +113,67 @@ func generateSummaryFile() (string, error) {
 		return "", err
 	}
 	return summaryPath, nil
+}
+
+func generateStignoreFiles(dev *model.Dev) []string {
+	result := []string{}
+	for i := range dev.Syncs {
+		absBasename, err := filepath.Abs(dev.Syncs[i].LocalPath)
+		if err != nil {
+			log.Infof("error getting absolute path of localPath %s: %s", dev.Syncs[i].LocalPath, err.Error())
+			continue
+		}
+		stignoreFile := path.Join(absBasename, ".stignore")
+		if _, err := os.Stat(stignoreFile); !os.IsNotExist(err) {
+			result = append(result, stignoreFile)
+		}
+	}
+	return result
+}
+
+func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
+	pod, err := pods.GetDevPod(ctx, dev, c, false)
+	if err != nil {
+		return "", err
+	}
+
+	tempdir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", err
+	}
+	podFilename := path.Join(tempdir, "pod.yaml")
+	podFile, err := os.OpenFile(podFilename, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		return "", err
+	}
+	defer podFile.Close()
+
+	devContainer := deployments.GetDevContainer(&pod.Spec, dev.Container)
+	cpu := "unlimited"
+	memory := "unlimited"
+	limits := devContainer.Resources.Limits
+	if limits != nil {
+		if v, ok := limits[apiv1.ResourceCPU]; ok {
+			cpu = v.String()
+		}
+		if v, ok := limits[apiv1.ResourceMemory]; ok {
+			memory = v.String()
+		}
+	}
+	podInfo := PodInfo{
+		CPU:        cpu,
+		Memory:     memory,
+		Conditions: pod.Status.Conditions,
+	}
+	marshalled, err := yaml.Marshal(podInfo)
+	if err != nil {
+		return "", err
+	}
+	fmt.Fprint(podFile, string(marshalled))
+	if err := podFile.Sync(); err != nil {
+		return "", err
+	}
+	return podFilename, nil
 }
 
 func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {

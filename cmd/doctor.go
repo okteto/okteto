@@ -57,7 +57,7 @@ func Doctor() *cobra.Command {
 			}
 
 			ctx := context.Background()
-			filename, err := doctor.Run(ctx, dev, c)
+			filename, err := doctor.Run(ctx, dev, devPath, c)
 			if err == nil {
 				log.Information("Your doctor file is available at %s", filename)
 			}
