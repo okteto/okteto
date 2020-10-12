@@ -55,7 +55,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 
 	podPath, err := generatePodFile(ctx, dev, c)
 	if err != nil {
-		log.Debugf("error getting remote dev container: %s", err)
+		log.Infof("failed to get information about the remote dev container: %s", err)
 		log.Yellow(errors.ErrNotInDevMode.Error())
 	}
 	defer os.RemoveAll(podPath)
@@ -111,7 +111,7 @@ func generateStignoreFiles(dev *model.Dev) []string {
 	for i := range dev.Syncs {
 		absBasename, err := filepath.Abs(dev.Syncs[i].LocalPath)
 		if err != nil {
-			log.Debugf("error getting absolute path: %s", err.Error())
+			log.Infof("error getting absolute path of localPath %s: %s", dev.Syncs[i].LocalPath, err.Error())
 			continue
 		}
 		stignoreFile := path.Join(absBasename, ".stignore")
