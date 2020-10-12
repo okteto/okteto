@@ -472,7 +472,7 @@ func (up *upContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 
 	var imageDigest string
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
-	imageDigest, err = buildCMD.Run(up.Context, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, imageTag, buildArgs, "tty")
+	imageDigest, err = buildCMD.Run(up.Context, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, "tty")
 	if err != nil {
 		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
 	}

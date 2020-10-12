@@ -32,7 +32,7 @@ func Build(ctx context.Context) *cobra.Command {
 	var tag string
 	var target string
 	var noCache bool
-	var cacheFrom string
+	var cacheFrom []string
 	var progress string
 	var buildArgs []string
 
@@ -90,7 +90,7 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
 	cmd.Flags().StringVarP(&target, "target", "", "", "set the target build stage to build")
 	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
-	cmd.Flags().StringVarP(&cacheFrom, "cache-from", "", "", "cache source image")
+	cmd.Flags().StringArrayVar(&cacheFrom, "cache-from", nil, "cache source images")
 	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&buildArgs, "build-arg", nil, "set build-time variables")
 	return cmd
