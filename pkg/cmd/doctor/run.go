@@ -27,12 +27,21 @@ import (
 	"github.com/mholt/archiver"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
+
+//PodInfo info collected for pods
+type PodInfo struct {
+	CPU        string               `yaml:"cpu,omitempty"`
+	Memory     string               `yaml:"memory,omitempty"`
+	Conditions []apiv1.PodCondition `yaml:"conditions,omitempty"`
+}
 
 //Run runs the "okteto status" sequence
 func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clientset) (string, error) {
@@ -128,7 +137,10 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 		return "", err
 	}
 
-	tempdir, _ := ioutil.TempDir("", "")
+	tempdir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", err
+	}
 	podFilename := path.Join(tempdir, "pod.yaml")
 	podFile, err := os.OpenFile(podFilename, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -136,7 +148,24 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	}
 	defer podFile.Close()
 
-	marshalled, err := yaml.Marshal(pod)
+	devContainer := deployments.GetDevContainer(&pod.Spec, dev.Container)
+	cpu := "unlimited"
+	memory := "unlimited"
+	limits := devContainer.Resources.Limits
+	if limits != nil {
+		if v, ok := limits[apiv1.ResourceCPU]; ok {
+			cpu = v.String()
+		}
+		if v, ok := limits[apiv1.ResourceMemory]; ok {
+			memory = v.String()
+		}
+	}
+	podInfo := PodInfo{
+		CPU:        cpu,
+		Memory:     memory,
+		Conditions: pod.Status.Conditions,
+	}
+	marshalled, err := yaml.Marshal(podInfo)
 	if err != nil {
 		return "", err
 	}
