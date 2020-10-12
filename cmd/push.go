@@ -227,7 +227,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 
 	var imageDigest string
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	imageDigest, err = build.Run(ctx, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, buildTag, buildArgs, progress)
+	imageDigest, err = build.Run(ctx, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, progress)
 	if err != nil {
 		return "", fmt.Errorf("error building image '%s': %s", buildTag, err)
 	}
