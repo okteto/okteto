@@ -48,7 +48,7 @@ func add(path string, name string, port int) error {
 		newParam(portKeyword, []string{strconv.Itoa(port)}, nil),
 		newParam(strictHostKeyCheckingKeyword, []string{"no"}, nil),
 		newParam(userKnownHostsFileKeyword, []string{"/dev/null"}, nil),
-		newParam(identityFile, []string{privateKey}, nil),
+		newParam(identityFile, []string{"\"" + privateKey + "\""}, nil),
 	}
 
 	cfg.hosts = append(cfg.hosts, host)
