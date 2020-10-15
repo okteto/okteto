@@ -17,7 +17,7 @@ Today, most developers try to either run parts of the infrastructure locally or 
 
 ## How it works
 
-Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can be any docker image.
+Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can be any docker image. The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
 
 In addition to that, `okteto up` will:
 
