@@ -16,6 +16,7 @@ package up
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
@@ -32,6 +33,7 @@ const (
 	synchronizing upState = "synchronizing"
 	ready         upState = "ready"
 	failed        upState = "failed"
+	stateFile             = "okteto.state"
 )
 
 func (up *upContext) updateStateFile(state upState) {
@@ -47,7 +49,7 @@ func (up *upContext) updateStateFileWithMessage(state upState, message string) {
 		log.Info("can't update state file, name is empty")
 	}
 
-	s := config.GetStateFile(up.Dev.Namespace, up.Dev.Name)
+	s := filepath.Join(config.GetDeploymentHome(up.Dev.Namespace, up.Dev.Name), stateFile)
 	log.Debugf("updating statefile %s: '%s'", s, state)
 
 	m := string(state)

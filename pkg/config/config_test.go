@@ -16,6 +16,7 @@ package config
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 )
@@ -30,14 +31,22 @@ func TestGetUserHomeDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() {
+		os.RemoveAll(dir)
+		os.Unsetenv("OKTETO_USERHOME")
+	}()
 
-	os.Setenv("OKTETO_HOME", dir)
+	os.Setenv("OKTETO_USERHOME", dir)
 	home = GetUserHomeDir()
 	if home != dir {
-		t.Fatalf("OKTETO_HOME override failed, got %s instead of %s", home, dir)
+		t.Fatalf("OKTETO_USERHOME override failed, got %s instead of %s", home, dir)
 	}
 
+	oktetoHome := GetOktetoHome()
+	expected := path.Join(dir, ".okteto")
+	if oktetoHome != expected {
+		t.Errorf("got %s, expected %s", oktetoHome, expected)
+	}
 }
 
 func Test_homedirWindows(t *testing.T) {
@@ -106,18 +115,20 @@ func Test_homedirWindows(t *testing.T) {
 }
 
 func TestGetOktetoHome(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() {
+		os.RemoveAll(dir)
+		os.Unsetenv("OKTETO_HOME")
+	}()
 
 	os.Setenv("OKTETO_HOME", dir)
 
 	got := GetOktetoHome()
-	expected := filepath.Join(dir, ".okteto")
-	if got != expected {
-		t.Errorf("expected %s, got %s", expected, got)
+	if got != dir {
+		t.Errorf("expected %s, got %s", dir, got)
 	}
 }
 
@@ -131,7 +142,7 @@ func TestGetDeploymentHome(t *testing.T) {
 	os.Setenv("OKTETO_HOME", dir)
 
 	got := GetDeploymentHome("ns", "dp")
-	expected := filepath.Join(dir, ".okteto", "ns", "dp")
+	expected := filepath.Join(dir, "ns", "dp")
 	if got != expected {
 		t.Errorf("expected %s, got %s", expected, got)
 	}

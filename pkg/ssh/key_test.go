@@ -22,19 +22,23 @@ import (
 
 func TestKeyExists(t *testing.T) {
 
-	dir, err := ioutil.TempDir("", "")
+	dir, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer os.RemoveAll(dir)
+	defer func() {
+		os.RemoveAll(dir)
+		os.Unsetenv("OKTETO_HOME")
+	}()
 
 	os.Setenv("OKTETO_HOME", dir)
+
 	if KeyExists() {
 		t.Error("keys shouldn't exist in an empty directory")
 	}
 
-	if _, err := os.Create(filepath.Join(dir, ".okteto", publicKeyFile)); err != nil {
+	if _, err := os.Create(filepath.Join(dir, publicKeyFile)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -42,7 +46,7 @@ func TestKeyExists(t *testing.T) {
 		t.Error("keys shouldn't exist when private key is missing")
 	}
 
-	if _, err := os.Create(filepath.Join(dir, ".okteto", privateKeyFile)); err != nil {
+	if _, err := os.Create(filepath.Join(dir, privateKeyFile)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -53,14 +57,17 @@ func TestKeyExists(t *testing.T) {
 }
 
 func TestGenerateKeys(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer os.RemoveAll(dir)
-	os.Setenv("OKTETO_HOME", dir)
+	defer func() {
+		os.RemoveAll(dir)
+		os.Unsetenv("OKTETO_HOME")
+	}()
 
+	os.Setenv("OKTETO_HOME", dir)
 	public, private := getKeyPaths()
 	if err := generateKeys(public, private, 128); err != nil {
 		t.Error(err)
