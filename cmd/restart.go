@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -47,8 +48,9 @@ func Restart() *cobra.Command {
 				serviceName = args[0]
 			}
 			if err := executeRestart(ctx, dev, serviceName); err != nil {
-				return err
+				return fmt.Errorf("failed to restart your deployments: %s", err)
 			}
+
 			log.Success("Deployments restarted")
 
 			return nil
@@ -77,9 +79,5 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	if err := pods.Restart(ctx, dev, client, sn); err != nil {
-		return err
-	}
-
-	return nil
+	return pods.Restart(ctx, dev, client, sn)
 }

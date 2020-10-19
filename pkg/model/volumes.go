@@ -303,11 +303,7 @@ func (dev *Dev) validateVolumes(main *Dev) error {
 		return nil
 	}
 
-	if err := dev.validateServiceSyncFolders(main); err != nil {
-		return err
-	}
-
-	return nil
+	return dev.validateServiceSyncFolders(main)
 }
 
 func (dev *Dev) validateExternalVolumes() error {

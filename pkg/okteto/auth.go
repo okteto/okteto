@@ -129,10 +129,10 @@ func saveAuthData(user *User, url string) error {
 
 func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
 	var user q
-	q := fmt.Sprintf(`query {
+	q := `query {
 		user {
 			id,name,email,externalID,token,new,registry,buildkit,certificate
-		}}`)
+		}}`
 
 	req := getRequest(q, token)
 
@@ -152,10 +152,10 @@ func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, e
 
 func queryUserLegacy(ctx context.Context, client *graphql.Client, token string) (*q, error) {
 	var user q
-	q := fmt.Sprintf(`query {
+	q := `query {
 		user {
 			id,name,email,githubID,token,new,registry,buildkit,certificate
-		}}`)
+		}}`
 
 	req := getRequest(q, token)
 

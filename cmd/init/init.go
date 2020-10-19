@@ -324,7 +324,7 @@ func askForOptions(options []string, label string) (string, error) {
 		Items: options,
 		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
-			Label:    fmt.Sprintf("{{ . }}"),
+			Label:    "{{ . }}",
 			Selected: " ✓  {{ . | oktetoblue }}",
 			Active:   fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect),
 			Inactive: "  {{ . | oktetoblue }}",

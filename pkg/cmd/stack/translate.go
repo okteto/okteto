@@ -58,7 +58,9 @@ func translateEnvVars(s *model.Stack) error {
 			return err
 		}
 		for _, envFilepath := range svc.EnvFiles {
-			translateEnvFile(&svc, envFilepath)
+			if err := translateEnvFile(&svc, envFilepath); err != nil {
+				return err
+			}
 		}
 		sort.SliceStable(svc.Environment, func(i, j int) bool {
 			return strings.Compare(svc.Environment[i].Name, svc.Environment[j].Name) < 0
@@ -86,11 +88,11 @@ func translateEnvFile(svc *model.Service, filename string) error {
 	if err != nil {
 		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
 	}
+
 	for _, e := range svc.Environment {
-		if _, ok := envMap[e.Name]; ok {
-			delete(envMap, e.Name)
-		}
+		delete(envMap, e.Name)
 	}
+
 	for name, value := range envMap {
 		svc.Environment = append(
 			svc.Environment,

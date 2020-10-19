@@ -27,7 +27,7 @@ import (
 )
 
 // Run runs the build sequence
-func Run(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, cacheFrom []string, buildArgs []string, progress string) (string, error) {
+func Run(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, cacheFrom, buildArgs []string, progress string) (string, error) {
 	log.Infof("building your image on %s", buildKitHost)
 	buildkitClient, err := getBuildkitClient(ctx, isOktetoCluster, buildKitHost)
 	if err != nil {

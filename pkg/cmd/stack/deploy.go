@@ -74,7 +74,8 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		}
 		log.Information("'%s' has been added to your helm repositories.", stackHelmRepoName)
 	} else {
-		if err := helm.UpdateRepo(re, settings, stackHelmChartName); err != nil {
+		err := helm.UpdateRepo(re, settings, stackHelmChartName)
+		if err != nil {
 			return err
 		}
 	}

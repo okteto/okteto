@@ -51,15 +51,6 @@ func TestRun(t *testing.T) {
 		t.Errorf("got %s, expected %s", dev.Image, "okteto/golang:1")
 	}
 
-	if err := Run("", "", p, "java", dir, false); err == nil {
-		t.Fatalf("manifest was overwritten: %s", err)
-	}
-
-	dev, err = utils.LoadDev(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	if err := Run("", "", p, "ruby", dir, true); err != nil {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
