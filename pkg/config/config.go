@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 const (
@@ -47,6 +48,14 @@ func GetBinaryFullPath() string {
 
 // GetOktetoHome returns the path of the okteto folder
 func GetOktetoHome() string {
+	if v, ok := os.LookupEnv("OKTETO_HOME"); ok {
+		if !model.FileExists(v) {
+			log.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
+		}
+
+		return v
+	}
+
 	home := GetUserHomeDir()
 	d := filepath.Join(home, oktetoFolderName)
 
@@ -86,7 +95,11 @@ func GetSyncthingLogFile(namespace, name string) string {
 
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
-	if v, ok := os.LookupEnv("OKTETO_HOME"); ok {
+	if v, ok := os.LookupEnv("OKTETO_USERHOME"); ok {
+		if !model.FileExists(v) {
+			log.Fatalf("OKTETO_USERHOME points to a non-existing file: %s", v)
+		}
+
 		return v
 	}
 

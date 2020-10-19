@@ -32,7 +32,7 @@ func TestGetUserHomeDir(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	os.Setenv("OKTETO_HOME", dir)
+	os.Setenv("OKTETO_USERHOME", dir)
 	home = GetUserHomeDir()
 	if home != dir {
 		t.Fatalf("OKTETO_HOME override failed, got %s instead of %s", home, dir)
@@ -115,9 +115,8 @@ func TestGetOktetoHome(t *testing.T) {
 	os.Setenv("OKTETO_HOME", dir)
 
 	got := GetOktetoHome()
-	expected := filepath.Join(dir, ".okteto")
-	if got != expected {
-		t.Errorf("expected %s, got %s", expected, got)
+	if got != dir {
+		t.Errorf("expected %s, got %s", dir, got)
 	}
 }
 
