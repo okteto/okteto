@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -55,8 +56,13 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 		return fmt.Errorf("error generating syncthing configuration: %s", err)
 	}
 	data := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: secretName},
-		Type:       v1.SecretTypeOpaque,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: secretName,
+			Labels: map[string]string{
+				labels.DevLabel: "true",
+			},
+		},
+		Type: v1.SecretTypeOpaque,
 		Data: map[string][]byte{
 			"config.xml": config,
 			"cert.pem":   []byte(certPEM),
