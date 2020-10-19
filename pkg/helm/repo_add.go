@@ -24,7 +24,7 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v1"
+	yaml "gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/repo"
@@ -73,7 +73,7 @@ func AddRepo(settings *cli.EnvSettings, repoName, repoURL, chartName, chartVersi
 	f.Update(&re)
 
 	if err := f.WriteFile(settings.RepositoryConfig, 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to update local helm configuration: %w", err)
 	}
 	return nil
 }
