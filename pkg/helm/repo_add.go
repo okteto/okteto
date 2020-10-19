@@ -73,7 +73,7 @@ func AddRepo(settings *cli.EnvSettings, repoName, repoURL, chartName, chartVersi
 	f.Update(&re)
 
 	if err := f.WriteFile(settings.RepositoryConfig, 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to update local helm configuration: %w", err)
 	}
 	return nil
 }
