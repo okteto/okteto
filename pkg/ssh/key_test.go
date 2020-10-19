@@ -29,7 +29,7 @@ func TestKeyExists(t *testing.T) {
 
 	defer os.RemoveAll(dir)
 
-	os.Setenv("OKTETO_HOME", dir)
+	os.Setenv("OKTETO_USERHOME", dir)
 	if KeyExists() {
 		t.Error("keys shouldn't exist in an empty directory")
 	}
