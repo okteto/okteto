@@ -97,7 +97,7 @@ func GetSyncthingLogFile(namespace, name string) string {
 func GetUserHomeDir() string {
 	if v, ok := os.LookupEnv("OKTETO_USERHOME"); ok {
 		if !model.FileExists(v) {
-			log.Fatalf("OKTETO_USERHOME points to a non-existing file: %s", v)
+			log.Fatalf("OKTETO_USERHOME points to a non-existing directory: %s", v)
 		}
 
 		return v
