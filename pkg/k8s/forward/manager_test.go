@@ -26,19 +26,19 @@ import (
 func TestAdd(t *testing.T) {
 
 	pf := NewPortForwardManager(context.Background(), nil, nil)
-	if err := pf.Add(model.Forward{Local: 1010, Remote: 1010}); err != nil {
+	if err := pf.Add(model.Forward{Local: 10100, Remote: 1010}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := pf.Add(model.Forward{Local: 1011, Remote: 1011}); err != nil {
+	if err := pf.Add(model.Forward{Local: 10110, Remote: 1011}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := pf.Add(model.Forward{Local: 1010, Remote: 1011}); err == nil {
+	if err := pf.Add(model.Forward{Local: 10100, Remote: 1011}); err == nil {
 		t.Fatal("duplicated local port didn't return an error")
 	}
 
-	if err := pf.Add(model.Forward{Local: 1012, Remote: 0, Service: true, ServiceName: "svc"}); err != nil {
+	if err := pf.Add(model.Forward{Local: 10120, Remote: 0, Service: true, ServiceName: "svc"}); err != nil {
 		t.Fatal(err)
 	}
 
