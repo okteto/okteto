@@ -24,7 +24,7 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v1"
+	yaml "gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/repo"
