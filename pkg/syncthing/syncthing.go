@@ -180,7 +180,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("localhost:%d", guiPort),
 		Home:             config.GetDeploymentHome(dev.Namespace, dev.Name),
-		LogPath:          config.GetSyncthingLogFile(dev.Namespace, dev.Name),
+		LogPath:          GetLogFile(dev.Namespace, dev.Name),
 		ListenAddress:    fmt.Sprintf("localhost:%d", listenPort),
 		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
@@ -706,7 +706,7 @@ func (s *Syncthing) SaveConfig(dev *model.Dev) error {
 		return err
 	}
 
-	syncthingInfoFile := config.GetSyncthingInfoFile(dev.Namespace, dev.Name)
+	syncthingInfoFile := getInfoFile(dev.Namespace, dev.Name)
 	if err := ioutil.WriteFile(syncthingInfoFile, marshalled, 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing info file: %w", err)
 	}
@@ -716,7 +716,7 @@ func (s *Syncthing) SaveConfig(dev *model.Dev) error {
 
 // Load loads the syncthing object from the dev home folder
 func Load(dev *model.Dev) (*Syncthing, error) {
-	syncthingInfoFile := config.GetSyncthingInfoFile(dev.Namespace, dev.Name)
+	syncthingInfoFile := getInfoFile(dev.Namespace, dev.Name)
 	b, err := ioutil.ReadFile(syncthingInfoFile)
 	if err != nil {
 		return nil, err
@@ -816,4 +816,13 @@ func getBinaryName() string {
 func getFolderParameter(folder *Folder) map[string]string {
 	folderName := fmt.Sprintf("okteto-%s", folder.Name)
 	return map[string]string{"folder": folderName, "device": DefaultRemoteDeviceID}
+}
+
+func getInfoFile(namespace, name string) string {
+	return filepath.Join(config.GetDeploymentHome(namespace, name), "syncthing.info")
+}
+
+// GetLogFile returns the path to the syncthing log file
+func GetLogFile(namespace, name string) string {
+	return filepath.Join(config.GetDeploymentHome(namespace, name), "syncthing.log")
 }

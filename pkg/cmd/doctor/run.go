@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/syncthing"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -83,8 +84,8 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	if model.FileExists(filepath.Join(config.GetOktetoHome(), "okteto.log")) {
 		files = append(files, filepath.Join(config.GetOktetoHome(), "okteto.log"))
 	}
-	if model.FileExists(config.GetSyncthingLogFile(dev.Namespace, dev.Name)) {
-		files = append(files, config.GetSyncthingLogFile(dev.Namespace, dev.Name))
+	if model.FileExists(syncthing.GetLogFile(dev.Namespace, dev.Name)) {
+		files = append(files, syncthing.GetLogFile(dev.Namespace, dev.Name))
 	}
 	if podPath != "" {
 		files = append(files, podPath)
