@@ -49,16 +49,16 @@ func TestReverseManager_Add(t *testing.T) {
 			}
 
 			if err := r.AddReverse(tt.add); (err != nil) != tt.wantErr {
-				t.Errorf("ReverseManager.Add() error = %v, wantErr %v", err, tt.wantErr)
+				t.Fatalf("ReverseManager.Add() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			f := r.reverses[8080]
 			if f.localAddress != ":8080" {
-				t.Errorf("local address is not :8080, it is: %s", f.localAddress)
+				t.Fatalf("local address is not :8080, it is: %s", f.localAddress)
 			}
 
 			if f.remoteAddress != ":8081" {
-				t.Errorf("remote address is not :8081, it is: %s", f.remoteAddress)
+				t.Fatalf("remote address is not :8081, it is: %s", f.remoteAddress)
 			}
 		})
 	}
