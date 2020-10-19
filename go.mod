@@ -1,5 +1,7 @@
 module github.com/okteto/okteto
 
+go 1.15
+
 require (
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.5.0
@@ -34,7 +36,7 @@ require (
 	github.com/mattn/psutil v0.0.0-20170126005127-e6c88f1e9be6
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/go-ps v1.0.0
-	github.com/moby/buildkit v0.7.2
+	github.com/moby/buildkit v0.7.2-1
 	github.com/nicksnyder/go-i18n v1.10.0 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
@@ -75,4 +77,4 @@ replace github.com/containerd/containerd => github.com/containerd/containerd v1.
 
 replace github.com/docker/docker => github.com/docker/docker v1.4.2-0.20200227233006-38f52c9fec82
 
-go 1.15
+replace github.com/moby/buildkit => github.com/okteto/buildkit v0.7.2-1
