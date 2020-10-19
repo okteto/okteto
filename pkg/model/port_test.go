@@ -16,36 +16,38 @@ package model
 import (
 	"fmt"
 	"net"
-
-	"github.com/okteto/okteto/pkg/log"
+	"testing"
 )
 
-// GetAvailablePort returns a random port that's available
-func GetAvailablePort() (int, error) {
-	address, err := net.ResolveTCPAddr("tcp", ":0")
+func TestGetAvailablePort(t *testing.T) {
+	p, err := GetAvailablePort()
 	if err != nil {
-		return 0, err
+		t.Fatal(err)
 	}
 
-	listener, err := net.ListenTCP("tcp", address)
-	if err != nil {
-		return 0, err
+	if p == 0 {
+		t.Fatal("got an empty port")
 	}
-
-	defer listener.Close()
-	return listener.Addr().(*net.TCPAddr).Port, nil
-
 }
 
-// IsPortAvailable returns true if the port is already taken
-func IsPortAvailable(port int) bool {
-	address := fmt.Sprintf(":%d", port)
-	listener, err := net.Listen("tcp", address)
+func TestIsPortAvailable(t *testing.T) {
+	p, err := GetAvailablePort()
 	if err != nil {
-		log.Infof("port %s is taken: %s", address, err)
-		return false
+		t.Fatal(err)
 	}
 
-	defer listener.Close()
-	return true
+	if !IsPortAvailable(p) {
+		t.Fatalf("port %d wasn't available", p)
+	}
+
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", p))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer l.Close()
+
+	if IsPortAvailable(p) {
+		t.Fatalf("port %d was available", p)
+	}
 }
