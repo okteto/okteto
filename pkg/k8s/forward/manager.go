@@ -91,7 +91,11 @@ func NewPortForwardManager(ctx context.Context, restConfig *rest.Config, c kuber
 // Add initializes a port forward
 func (p *PortForwardManager) Add(f model.Forward) error {
 	if _, ok := p.ports[f.Local]; ok {
-		return fmt.Errorf("port %d is already taken, please check your configuration", f.Local)
+		return fmt.Errorf("port %d is listed multiple times, please check your configuration", f.Local)
+	}
+
+	if !model.IsPortAvailable(f.Local) {
+		return fmt.Errorf("port %d is already in use in your local machine, please check your configuration", f.Local)
 	}
 
 	p.ports[f.Local] = f

@@ -13,7 +13,12 @@
 
 package model
 
-import "net"
+import (
+	"fmt"
+	"net"
+
+	"github.com/okteto/okteto/pkg/log"
+)
 
 // GetAvailablePort returns a random port that's available
 func GetAvailablePort() (int, error) {
@@ -30,4 +35,17 @@ func GetAvailablePort() (int, error) {
 	defer listener.Close()
 	return listener.Addr().(*net.TCPAddr).Port, nil
 
+}
+
+// IsPortAvailable returns true if the port is already taken
+func IsPortAvailable(port int) bool {
+	address := fmt.Sprintf(":%d", port)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		log.Infof("port %s is taken: %s", address, err)
+		return false
+	}
+
+	defer listener.Close()
+	return true
 }

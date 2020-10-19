@@ -48,11 +48,15 @@ func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInter
 
 func (fm *ForwardManager) canAdd(localPort int) error {
 	if _, ok := fm.reverses[localPort]; ok {
-		return fmt.Errorf("port %d is already taken, please check your reverse forwards configuration", localPort)
+		return fmt.Errorf("port %d is listed multiple times, please check your reverse forwards configuration", localPort)
 	}
 
 	if _, ok := fm.forwards[localPort]; ok {
-		return fmt.Errorf("port %d is already taken, please check your forwards configuration", localPort)
+		return fmt.Errorf("port %d is listed multiple times, please check your forwards configuration", localPort)
+	}
+
+	if !model.IsPortAvailable(localPort) {
+		return fmt.Errorf("port %d is already in use in your local machine, please check your configuration", localPort)
 	}
 
 	return nil
