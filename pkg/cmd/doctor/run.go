@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -103,7 +102,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 
 func generateSummaryFile() (string, error) {
 	tempdir, _ := ioutil.TempDir("", "")
-	summaryPath := path.Join(tempdir, "okteto-summary.txt")
+	summaryPath := filepath.Join(tempdir, "okteto-summary.txt")
 	fileSummary, err := os.OpenFile(summaryPath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return "", err
@@ -124,7 +123,7 @@ func generateStignoreFiles(dev *model.Dev) []string {
 			log.Infof("error getting absolute path of localPath %s: %s", dev.Syncs[i].LocalPath, err.Error())
 			continue
 		}
-		stignoreFile := path.Join(absBasename, ".stignore")
+		stignoreFile := filepath.Join(absBasename, ".stignore")
 		if _, err := os.Stat(stignoreFile); !os.IsNotExist(err) {
 			result = append(result, stignoreFile)
 		}
@@ -142,7 +141,7 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	if err != nil {
 		return "", err
 	}
-	podFilename := path.Join(tempdir, "pod.yaml")
+	podFilename := filepath.Join(tempdir, "pod.yaml")
 	podFile, err := os.OpenFile(podFilename, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return "", err
@@ -184,7 +183,7 @@ func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kub
 	}
 
 	tempdir, _ := ioutil.TempDir("", "")
-	remoteLogsPath := path.Join(tempdir, "remote-syncthing.log")
+	remoteLogsPath := filepath.Join(tempdir, "remote-syncthing.log")
 	fileRemoteLog, err := os.OpenFile(remoteLogsPath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return "", err

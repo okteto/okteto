@@ -16,7 +16,6 @@ package config
 import (
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 )
@@ -43,7 +42,7 @@ func TestGetUserHomeDir(t *testing.T) {
 	}
 
 	oktetoHome := GetOktetoHome()
-	expected := path.Join(dir, ".okteto")
+	expected := filepath.Join(dir, ".okteto")
 	if oktetoHome != expected {
 		t.Errorf("got %s, expected %s", oktetoHome, expected)
 	}
