@@ -92,7 +92,7 @@ func (dev *Dev) translateDeprecatedVolumes() {
 			volumes = append(volumes, v)
 			continue
 		}
-		dev.Syncs = append(dev.Syncs, Sync{LocalPath: v.LocalPath, RemotePath: v.RemotePath})
+		dev.Syncs = append(dev.Syncs, Sync(v))
 	}
 	dev.Volumes = volumes
 }
