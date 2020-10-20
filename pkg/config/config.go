@@ -48,9 +48,9 @@ func GetBinaryFullPath() string {
 
 // GetOktetoHome returns the path of the okteto folder
 func GetOktetoHome() string {
-	if v, ok := os.LookupEnv("OKTETO_HOME"); ok {
+	if v, ok := os.LookupEnv("OKTETO_FOLDER"); ok {
 		if !model.FileExists(v) {
-			log.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
+			log.Fatalf("OKTETO_FOLDER points to a non-existing directory: %s", v)
 		}
 
 		return v
@@ -80,9 +80,9 @@ func GetDeploymentHome(namespace, name string) string {
 
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
-	if v, ok := os.LookupEnv("OKTETO_USERHOME"); ok {
+	if v, ok := os.LookupEnv("OKTETO_HOME"); ok {
 		if !model.FileExists(v) {
-			log.Fatalf("OKTETO_USERHOME points to a non-existing directory: %s", v)
+			log.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}
 
 		return v
@@ -114,7 +114,7 @@ func homedirWindows() (string, error) {
 	path := os.Getenv("HOMEPATH")
 	home := drive + path
 	if drive == "" || path == "" {
-		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_USERHOME to set your home directory")
+		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_HOME to set your home directory")
 	}
 
 	return home, nil

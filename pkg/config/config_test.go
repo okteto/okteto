@@ -32,13 +32,13 @@ func TestGetUserHomeDir(t *testing.T) {
 	}
 	defer func() {
 		os.RemoveAll(dir)
-		os.Unsetenv("OKTETO_USERHOME")
+		os.Unsetenv("OKTETO_HOME")
 	}()
 
-	os.Setenv("OKTETO_USERHOME", dir)
+	os.Setenv("OKTETO_HOME", dir)
 	home = GetUserHomeDir()
 	if home != dir {
-		t.Fatalf("OKTETO_USERHOME override failed, got %s instead of %s", home, dir)
+		t.Fatalf("OKTETO_HOME override failed, got %s instead of %s", home, dir)
 	}
 
 	oktetoHome := GetOktetoHome()
@@ -120,10 +120,10 @@ func TestGetOktetoHome(t *testing.T) {
 	}
 	defer func() {
 		os.RemoveAll(dir)
-		os.Unsetenv("OKTETO_HOME")
+		os.Unsetenv("OKTETO_FOLDER")
 	}()
 
-	os.Setenv("OKTETO_HOME", dir)
+	os.Setenv("OKTETO_FOLDER", dir)
 
 	got := GetOktetoHome()
 	if got != dir {
@@ -138,7 +138,7 @@ func TestGetDeploymentHome(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	os.Setenv("OKTETO_HOME", dir)
+	os.Setenv("OKTETO_FOLDER", dir)
 
 	got := GetDeploymentHome("ns", "dp")
 	expected := filepath.Join(dir, "ns", "dp")

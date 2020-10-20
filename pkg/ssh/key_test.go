@@ -29,10 +29,10 @@ func TestKeyExists(t *testing.T) {
 
 	defer func() {
 		os.RemoveAll(dir)
-		os.Unsetenv("OKTETO_HOME")
+		os.Unsetenv("OKTETO_FOLDER")
 	}()
 
-	os.Setenv("OKTETO_HOME", dir)
+	os.Setenv("OKTETO_FOLDER", dir)
 
 	if KeyExists() {
 		t.Error("keys shouldn't exist in an empty directory")
@@ -64,10 +64,10 @@ func TestGenerateKeys(t *testing.T) {
 
 	defer func() {
 		os.RemoveAll(dir)
-		os.Unsetenv("OKTETO_HOME")
+		os.Unsetenv("OKTETO_FOLDER")
 	}()
 
-	os.Setenv("OKTETO_HOME", dir)
+	os.Setenv("OKTETO_FOLDER", dir)
 	public, private := getKeyPaths()
 	if err := generateKeys(public, private, 128); err != nil {
 		t.Error(err)
