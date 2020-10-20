@@ -28,10 +28,10 @@ func TestGetFiles(t *testing.T) {
 	}
 	defer func() {
 		os.RemoveAll(dir)
-		os.Unsetenv("OKTETO_HOME")
+		os.Unsetenv("OKTETO_FOLDER")
 	}()
 
-	os.Setenv("OKTETO_HOME", dir)
+	os.Setenv("OKTETO_FOLDER", dir)
 	log := GetLogFile("test", "application")
 	expected := filepath.Join(dir, "test", "application", "syncthing.log")
 
