@@ -40,7 +40,7 @@ func Build(ctx context.Context) *cobra.Command {
 		Use:   "build [PATH]",
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Debug("starting build command")
+			log.Info("starting build command")
 
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err

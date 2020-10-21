@@ -50,7 +50,6 @@ func (up *upContext) updateStateFileWithMessage(state upState, message string) {
 	}
 
 	s := filepath.Join(config.GetDeploymentHome(up.Dev.Namespace, up.Dev.Name), stateFile)
-	log.Debugf("updating statefile %s: '%s'", s, state)
 
 	m := string(state)
 	if message != "" {
@@ -58,6 +57,6 @@ func (up *upContext) updateStateFileWithMessage(state upState, message string) {
 	}
 
 	if err := ioutil.WriteFile(s, []byte(m), 0644); err != nil {
-		log.Infof("can't update state file, %s", err)
+		log.Infof("failed to update state file, %s", err)
 	}
 }

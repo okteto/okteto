@@ -61,16 +61,13 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 				oktetoURL = u
 			}
 
-			log.Debugf("authenticating with %s", oktetoURL)
-
 			var u *okteto.User
 			var err error
 
 			if len(token) > 0 {
-				log.Debugf("authenticating with an api token")
+				log.Infof("authenticating with an api token")
 				u, err = login.WithToken(ctx, oktetoURL, token)
 			} else {
-				log.Debugf("authenticating with the browser")
 				u, err = login.WithBrowser(ctx, oktetoURL)
 			}
 

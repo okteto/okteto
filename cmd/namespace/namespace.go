@@ -35,7 +35,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 		Use:   "namespace [name]",
 		Short: "Downloads k8s credentials for a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Debug("starting kubeconfig command")
+			log.Info("starting namespace command")
 
 			namespace := ""
 			if len(args) > 0 {

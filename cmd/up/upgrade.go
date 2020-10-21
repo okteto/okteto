@@ -36,8 +36,6 @@ func upgradeAvailable() string {
 		return ""
 	}
 
-	log.Debugf("latest version: %s", v)
-
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
 		if err != nil {
