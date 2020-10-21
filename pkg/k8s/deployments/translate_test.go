@@ -96,7 +96,7 @@ services:
 			},
 		},
 	}
-	err = translate(tr1, nil, nil)
+	err = translate(tr1, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +318,7 @@ services:
 			},
 		},
 	}
-	err = translate(tr2, nil, nil)
+	err = translate(tr2, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -441,7 +441,7 @@ persistentVolume:
 		Deployment:  d1,
 		Rules:       []*model.TranslationRule{rule1},
 	}
-	err = translate(tr1, nil, nil)
+	err = translate(tr1, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
