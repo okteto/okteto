@@ -63,7 +63,7 @@ func Status() *cobra.Command {
 
 			sy, err := syncthing.Load(dev)
 			if err != nil {
-				log.Debugf("error accessing to syncthing info file: %s", err)
+				log.Infof("error accessing the syncthing info file: %s", err)
 				return errors.ErrNotInDevMode
 			}
 			if showInfo {

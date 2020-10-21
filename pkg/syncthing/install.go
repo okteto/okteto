@@ -45,7 +45,7 @@ var (
 
 // Install installs syncthing locally
 func Install(p getter.ProgressTracker) error {
-	log.Debugf("installing syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
+	log.Infof("installing syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
 
 	downloadURL, err := GetDownloadURL(runtime.GOOS, runtime.GOARCH)
 	if err != nil {

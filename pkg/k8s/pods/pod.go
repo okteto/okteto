@@ -114,7 +114,7 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 		case <-ticker.C:
 			continue
 		case <-ctx.Done():
-			log.Debug("cancelling call to get dev pod")
+			log.Debug("call to pod.GetDevPodInLoop cancelled")
 			return nil, ctx.Err()
 		}
 	}
@@ -276,7 +276,7 @@ func WaitUntilRunning(ctx context.Context, dev *model.Dev, podName string, c *ku
 				}
 			}
 		case <-ctx.Done():
-			log.Debug("cancelling call to monitor dev pod")
+			log.Debug("call to pods.WaitUntilRunning cancelled")
 			return ctx.Err()
 		}
 	}

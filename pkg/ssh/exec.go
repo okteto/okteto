@@ -43,7 +43,6 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 			break
 		}
 
-		log.Debugf("failed to connect to SSH server, will retry: %s", err)
 		<-t.C
 	}
 

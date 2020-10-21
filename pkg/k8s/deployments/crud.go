@@ -52,8 +52,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 	if len(dev.Labels) == 0 {
 		d, err = c.AppsV1().Deployments(namespace).Get(ctx, dev.Name, metav1.GetOptions{})
 		if err != nil {
-			log.Debugf("error while retrieving deployment %s/%s: %s", namespace, dev.Name, err)
-			return nil, err
+			return nil, fmt.Errorf("failed to get deployment %s/%s: %w", namespace, dev.Name, err)
 		}
 	} else {
 		deploys, err := c.AppsV1().Deployments(namespace).List(
@@ -180,8 +179,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 	for i := 0; ; i++ {
 		updated, err := client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
 		if err != nil {
-			log.Debugf("error while retrieving deployment %s/%s: %s", d.Namespace, d.Name, err)
-			return err
+			return fmt.Errorf("failed to get deployment %s/%s: %w", d.Namespace, d.Name, err)
 		}
 
 		revision := updated.Annotations[revisionAnnotation]
@@ -198,7 +196,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 		case <-ticker.C:
 			continue
 		case <-ctx.Done():
-			log.Debug("cancelling call to update okteto revision")
+			log.Info("call to deployments.UpdateOktetoRevision cancelled")
 			return ctx.Err()
 		}
 	}
@@ -290,7 +288,6 @@ func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 }
 
 func create(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	log.Debugf("creating deployment %s/%s", d.Namespace, d.Name)
 	_, err := c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
 	if err != nil {
 		return err
@@ -299,7 +296,6 @@ func create(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) 
 }
 
 func update(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	log.Debugf("updating deployment %s/%s", d.Namespace, d.Name)
 	d.ResourceVersion = ""
 	d.Status = appsv1.DeploymentStatus{}
 	_, err := c.AppsV1().Deployments(d.Namespace).Update(ctx, d, metav1.UpdateOptions{})
@@ -326,7 +322,6 @@ func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error
 	err := dClient.Delete(ctx, dev.Name, metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			log.Infof("deployment '%s' was already deleted.", dev.Name)
 			return nil
 		}
 		return fmt.Errorf("error deleting kubernetes deployment: %s", err)
