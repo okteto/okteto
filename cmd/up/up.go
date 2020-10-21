@@ -384,11 +384,9 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 	case errors.ErrLostSyncthing:
 		return true
 	case errors.ErrCommandFailed:
-		if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
+		if up.Sy.Ping(ctx, false) {
 			return false
 		}
-
-		log.Infof("pod/%s was terminated, will try to reconnect", up.Pod)
 		return true
 	}
 
