@@ -169,7 +169,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 
 	rescanInterval := os.Getenv("OKTETO_RESCAN_INTERVAL")
 	if rescanInterval == "" {
-		rescanInterval = "3600"
+		rescanInterval = "300"
 	}
 	s := &Syncthing{
 		APIKey:           "cnd",
