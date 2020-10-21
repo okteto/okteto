@@ -804,6 +804,7 @@ Then, try to run 'okteto down -v' + 'okteto up'  again`,
 	}
 
 	go up.Sy.Monitor(ctx, up.Disconnect)
+	go up.Sy.MonitorStatus(ctx, up.Disconnect)
 	log.Infof("restarting syncthing to update sync mode to sendreceive")
 	return up.Sy.Restart(ctx)
 }
