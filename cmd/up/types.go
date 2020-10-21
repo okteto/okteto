@@ -14,6 +14,8 @@
 package up
 
 import (
+	"context"
+
 	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -23,6 +25,8 @@ import (
 
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
+	Cancel            context.CancelFunc
+	Canceled          bool
 	Dev               *model.Dev
 	isOktetoNamespace bool
 	isSwap            bool
@@ -40,7 +44,6 @@ type upContext struct {
 	inFd              uintptr
 	isTerm            bool
 	stateTerm         *term.State
-	isRunning         bool
 }
 
 // Forwarder is an interface for the port-forwarding features

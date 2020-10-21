@@ -120,6 +120,15 @@ func Up() *cobra.Command {
 				Exit:           make(chan error, 1),
 				resetSyncthing: resetSyncthing,
 			}
+			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
+			if up.isTerm {
+				var err error
+				up.stateTerm, err = term.SaveState(up.inFd)
+				if err != nil {
+					log.Infof("failed to save the state of the terminal: %s", err.Error())
+					return fmt.Errorf("failed to save the state of the terminal")
+				}
+			}
 
 			err = up.start(autoDeploy, build)
 			log.Debug("completed up command")
@@ -224,154 +233,135 @@ func (up *upContext) start(autoDeploy, build bool) error {
 
 	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
 
-	go up.activate(autoDeploy, build)
+	go up.activateLoop(autoDeploy, build)
 
 	select {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
+		up.shutdown()
 		fmt.Println()
 	case err := <-up.Exit:
-		if err == nil {
-			log.Infof("exit signal received, starting shutdown sequence")
-		} else {
-			log.Infof("exit signal received due to error, starting shutdown sequence: %s", err)
-			up.updateStateFileWithMessage(failed, err.Error())
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
 	return nil
 }
 
-// activate activates the development container
-func (up *upContext) activate(autoDeploy, build bool) {
-
-	up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
-	if up.isTerm {
-		var err error
-		up.stateTerm, err = term.SaveState(up.inFd)
-		if err != nil {
-			log.Infof("failed to save the state of the terminal: %s", err)
-			up.Exit <- fmt.Errorf("failed to save the state of the terminal")
-			return
-		}
-	}
-
+// activateLoop activates the development container in a retry loop
+func (up *upContext) activateLoop(autoDeploy, build bool) {
 	isRetry := false
-
 	for {
-		// create a new context on every iteration
-		ctx, cancel := context.WithCancel(context.Background())
-		defer up.shutdown(cancel)
-
-		up.isRunning = true
-		up.Disconnect = make(chan error, 1)
-		up.CommandResult = make(chan error, 1)
-		up.cleaned = make(chan string, 1)
-
-		d, create, err := up.getCurrentDeployment(ctx, autoDeploy, isRetry)
+		err := up.activate(isRetry, autoDeploy, build)
 		if err != nil {
-			log.Infof("failed to get deployment %s/%s: %s", up.Dev.Namespace, up.Dev.Name, err)
-			up.Exit <- err
-			return
-		}
-
-		if isRetry && !deployments.IsDevModeOn(d) {
-			log.Information("Development container has been deactivated")
-			up.Exit <- nil
-			return
-		}
-
-		if deployments.IsDevModeOn(d) && deployments.HasBeenChanged(d) {
-			up.Exit <- errors.UserError{
-				E:    fmt.Errorf("Deployment '%s' has been modified while your development container was active", d.Name),
-				Hint: "Follow these steps:\n      1. Execute 'okteto down'\n      2. Apply your manifest changes again: 'kubectl apply'\n      3. Execute 'okteto up' again\n    More information is available here: https://okteto.com/docs/reference/known-issues/index.html#kubectl-apply-changes-are-undone-by-okteto-up",
-			}
-			return
-		}
-
-		if !isRetry {
-			if build {
-				if err := up.buildDevImage(ctx, d, create); err != nil {
-					up.Exit <- fmt.Errorf("error building dev image: %s", err)
-					return
-				}
-			}
-		}
-
-		if err := up.initializeSyncthing(); err != nil {
-			up.Exit <- err
-			return
-		}
-
-		if err := up.devMode(ctx, d, create); err != nil {
-			up.Exit <- fmt.Errorf("couldn't activate your development container: %s", err)
-			return
-		}
-
-		if err := up.forwards(ctx); err != nil {
-			up.Exit <- fmt.Errorf("couldn't forward traffic to your development container: %s", err)
-			return
-		}
-
-		go up.cleanCommand(ctx)
-
-		log.Success("Development container activated")
-
-		if err := up.sync(ctx); err != nil {
-			if up.shouldRetry(ctx, err) {
-				if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
-					up.resetSyncthing = true
-				}
-				log.Yellow("\nConnection lost to your development container, reconnecting...\n")
-				up.shutdown(cancel)
+			if err == errors.ErrLostSyncthing {
+				isRetry = true
 				continue
+			} else {
+				up.Exit <- err
+				return
 			}
-
-			up.Exit <- err
-			return
 		}
-
-		up.success = true
-
-		if isRetry {
-			analytics.TrackReconnect(true, up.getClusterType(), up.isSwap)
-		}
-
-		isRetry = true
-
-		log.Success("Files synchronized")
-
-		go func() {
-			output := <-up.cleaned
-			log.Debugf("clean command output: %s", output)
-
-			if isWatchesConfigurationTooLow(output) {
-				log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
-				log.Yellow("This can affect file synchronization performance.")
-				log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
-			}
-
-			printDisplayContext(up.Dev)
-			up.CommandResult <- up.runCommand(ctx)
-		}()
-
-		prevError := up.waitUntilExitOrInterrupt()
-
-		if up.shouldRetry(ctx, prevError) {
-			log.Yellow("\nConnection lost to your development container, reconnecting...\n")
-			if !up.Dev.PersistentVolumeEnabled() {
-				if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
-					up.Exit <- err
-					return
-				}
-			}
-			up.shutdown(cancel)
-			continue
-		}
-
-		up.Exit <- prevError
+		up.Exit <- nil
 		return
 	}
+}
+
+func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
+	// create a new context on every iteration
+	ctx, cancel := context.WithCancel(context.Background())
+	up.Cancel = cancel
+	up.Canceled = false
+	defer up.shutdown()
+
+	up.Disconnect = make(chan error, 1)
+	up.CommandResult = make(chan error, 1)
+	up.cleaned = make(chan string, 1)
+
+	d, create, err := up.getCurrentDeployment(ctx, autoDeploy, isRetry)
+	if err != nil {
+		return err
+	}
+
+	if isRetry && !deployments.IsDevModeOn(d) {
+		log.Information("Development container has been deactivated")
+		return nil
+	}
+
+	if deployments.IsDevModeOn(d) && deployments.HasBeenChanged(d) {
+		return errors.UserError{
+			E:    fmt.Errorf("Deployment '%s' has been modified while your development container was active", d.Name),
+			Hint: "Follow these steps:\n      1. Execute 'okteto down'\n      2. Apply your manifest changes again: 'kubectl apply'\n      3. Execute 'okteto up' again\n    More information is available here: https://okteto.com/docs/reference/known-issues/index.html#kubectl-apply-changes-are-undone-by-okteto-up",
+		}
+	}
+
+	if !isRetry && build {
+		if err := up.buildDevImage(ctx, d, create); err != nil {
+			return fmt.Errorf("error building dev image: %s", err)
+		}
+	}
+
+	if err := up.initializeSyncthing(); err != nil {
+		return err
+	}
+
+	if err := up.devMode(ctx, d, create); err != nil {
+		return fmt.Errorf("couldn't activate your development container: %s", err.Error())
+	}
+
+	if err := up.forwards(ctx); err != nil {
+		return fmt.Errorf("couldn't forward traffic to your development container: %s", err.Error())
+	}
+
+	go up.cleanCommand(ctx)
+
+	log.Success("Development container activated")
+
+	if err := up.sync(ctx); err != nil {
+		if up.shouldRetry(ctx, err) {
+			if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
+				up.resetSyncthing = true
+			}
+			log.Yellow("\nConnection lost to your development container, reconnecting...\n")
+			return errors.ErrLostSyncthing
+		}
+		return err
+	}
+
+	up.success = true
+	if isRetry {
+		analytics.TrackReconnect(true, up.getClusterType(), up.isSwap)
+	}
+	log.Success("Files synchronized")
+
+	go func() {
+		output := <-up.cleaned
+		log.Debugf("clean command output: %s", output)
+
+		if isWatchesConfigurationTooLow(output) {
+			log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
+			log.Yellow("This can affect file synchronization performance.")
+			log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
+		}
+
+		printDisplayContext(up.Dev)
+		up.CommandResult <- up.runCommand(ctx)
+	}()
+
+	prevError := up.waitUntilExitOrInterrupt()
+
+	if up.shouldRetry(ctx, prevError) {
+		log.Yellow("\nConnection lost to your development container, reconnecting...\n")
+		if !up.Dev.PersistentVolumeEnabled() {
+			if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
+				return err
+			}
+		}
+		return errors.ErrLostSyncthing
+	}
+
+	return prevError
 }
 
 func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
@@ -891,9 +881,16 @@ func (up *upContext) getClusterType() string {
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
-func (up *upContext) shutdown(cancel context.CancelFunc) {
-	if !up.isRunning {
+func (up *upContext) shutdown() {
+	if up.Canceled {
 		return
+	}
+	up.Canceled = true
+
+	if up.isTerm {
+		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
+			log.Infof("failed to restore terminal: %s", err)
+		}
 	}
 
 	log.Infof("starting shutdown sequence")
@@ -901,8 +898,8 @@ func (up *upContext) shutdown(cancel context.CancelFunc) {
 		analytics.TrackUpError(true, up.isSwap)
 	}
 
-	if cancel != nil {
-		cancel()
+	if up.Cancel != nil {
+		up.Cancel()
 		log.Info("sent cancellation signal")
 	}
 
@@ -918,13 +915,6 @@ func (up *upContext) shutdown(cancel context.CancelFunc) {
 		up.Forwarder.Stop()
 	}
 
-	if up.isTerm {
-		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
-			log.Infof("failed to restore terminal: %s", err)
-		}
-	}
-
-	up.isRunning = false
 	log.Info("completed shutdown sequence")
 }
 
