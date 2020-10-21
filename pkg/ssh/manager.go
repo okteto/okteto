@@ -124,4 +124,6 @@ func (fm *ForwardManager) Stop() {
 	if fm.pf != nil {
 		fm.pf.Stop()
 	}
+
+	log.Info("stopped SSH forward manager")
 }

@@ -905,7 +905,7 @@ func (up *upContext) shutdown() {
 		}
 	}
 
-	log.Infof("stopping forwarder")
+	log.Infof("stopping forwarders")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
 	}
