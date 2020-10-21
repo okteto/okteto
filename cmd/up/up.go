@@ -905,13 +905,13 @@ func (up *upContext) shutdown() {
 		}
 	}
 
-	log.Infof("stopping forwarder")
+	log.Infof("stopping forwarders")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
 	}
 
 	if up.isTerm {
-		log.Debug("Restoring terminal")
+		log.Debug("restoring terminal")
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			log.Infof("failed to restore terminal: %s", err)
 		}

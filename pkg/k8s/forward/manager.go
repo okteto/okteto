@@ -156,7 +156,7 @@ func (p *PortForwardManager) Stop() {
 
 	p.activeServices = nil
 	p.activeDev = nil
-	log.Debugf("forwarder stopped")
+	log.Infof("stopped k8s forwarder")
 }
 
 func (p *PortForwardManager) buildForwarderToDevPod(namespace, pod string) (*active, *portforward.PortForwarder, error) {
