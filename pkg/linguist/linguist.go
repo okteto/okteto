@@ -201,7 +201,7 @@ func sortLanguagesByUsage(fSummary map[string][]string) []string {
 		_, _ = buff.WriteString(fmt.Sprintf("%.2f%%\t%s\n", percent, fType))
 	}
 
-	log.Debugf("Language guesses: \r\n %s", buff.String())
+	log.Infof("Language guesses: \r\n %s", buff.String())
 
 	return keys
 }

@@ -52,7 +52,7 @@ func init() {
 
 	if bin := os.Getenv("OKTETO_BIN"); bin != "" {
 		model.OktetoBinImageTag = bin
-		log.Debugf("using %s as the bin image", bin)
+		log.Infof("using %s as the bin image", bin)
 	}
 }
 

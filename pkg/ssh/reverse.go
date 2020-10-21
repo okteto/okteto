@@ -57,14 +57,12 @@ func (r *reverse) start() {
 
 		r.setConnected()
 
-		log.Infof("%s -> waiting for a connection", r.String())
 		remoteConn, err := remoteListener.Accept()
 		if err != nil {
 			log.Infof("%s -> failed to accept connection: %v", r.String(), err)
 			continue
 		}
 
-		log.Infof("%s -> accepted connection: %v", r.String(), remoteConn)
 		go r.handle(remoteConn)
 
 	}
@@ -86,7 +84,6 @@ func (r *reverse) handle(remote net.Conn) {
 	go r.transfer(local, remote, quit)
 
 	<-quit
-	log.Infof("%s -> stopped", r.String())
 }
 
 func (r *reverse) String() string {

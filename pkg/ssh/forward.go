@@ -15,9 +15,11 @@ package ssh
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -57,14 +59,11 @@ func (f *forward) start() {
 	f.setConnected()
 
 	for {
-		log.Infof("%s -> waiting for a connection", f.String())
 		localConn, err := localListener.Accept()
 		if err != nil {
 			log.Infof("%s -> failed to accept connection: %v", f.String(), err)
 			continue
 		}
-
-		log.Infof("%s -> accepted connection: %v", f.String(), localConn)
 
 		go f.handle(localConn)
 
@@ -76,7 +75,7 @@ func (f *forward) handle(local net.Conn) {
 
 	remote, err := f.pool.get(f.remoteAddress)
 	if err != nil {
-		log.Infof("%s -> forwarding failed: %s", f.String(), err)
+		log.Infof("%s -> %s", f.String(), err)
 		return
 	}
 
@@ -88,7 +87,6 @@ func (f *forward) handle(local net.Conn) {
 	go f.transfer(local, remote, quit)
 
 	<-quit
-	log.Infof("%s -> stopped", f.String())
 }
 
 func (f *forward) String() string {
@@ -98,7 +96,10 @@ func (f *forward) String() string {
 func (f *forward) transfer(from io.Writer, to io.Reader, quit chan struct{}) {
 	_, err := io.Copy(from, to)
 	if err != nil {
-		log.Infof("%s -> data transfer failed: %v", f.String(), err)
+		m := errors.Unwrap(err).Error()
+		if !strings.Contains(m, "use of closed network connection") {
+			log.Infof("%s -> data transfer failed: %v", f.String(), err)
+		}
 	}
 
 	quit <- struct{}{}

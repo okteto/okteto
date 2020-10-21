@@ -44,7 +44,6 @@ func Get(ctx context.Context, name, namespace string, c *kubernetes.Clientset) (
 //Create creates the syncthing config secret
 func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) error {
 	secretName := GetSecretName(dev)
-	log.Debugf("creating configuration secret %s", secretName)
 
 	sct, err := Get(ctx, secretName, dev.Namespace, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
@@ -75,7 +74,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 		if err != nil {
 			return fmt.Errorf("error reading secret '%s': %s", s.LocalPath, err)
 		}
-		log.Debugf("added configuration secret %s", s.GetKeyName())
+
 		data.Data[s.GetKeyName()] = content
 	}
 
@@ -85,13 +84,13 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 			return fmt.Errorf("error creating kubernetes sync secret: %s", err)
 		}
 
-		log.Infof("created okteto secret '%s'.", secretName)
+		log.Infof("created okteto secret '%s'", secretName)
 	} else {
 		_, err := c.CoreV1().Secrets(dev.Namespace).Update(ctx, data, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("error updating kubernetes okteto secret: %s", err)
 		}
-		log.Infof("okteto secret '%s' was updated.", secretName)
+		log.Infof("updated okteto secret '%s'", secretName)
 	}
 	return nil
 }

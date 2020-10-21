@@ -123,7 +123,7 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 	go func() {
 		err := devPF.ForwardPorts()
 		if err != nil {
-			log.Debugf("port forwarding to dev pod finished with errors: %s", err)
+			log.Infof("port forwarding to dev pod finished with errors: %s", err)
 			p.activeDev.closeReady()
 			p.activeDev.err = err
 		}
@@ -134,14 +134,13 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 		go p.forwardService(p.ctx, namespace, svc)
 	}
 
-	log.Debugf("waiting port forwarding to finish")
 	<-p.activeDev.readyChan
 
 	if err := p.activeDev.error(); err != nil {
 		return err
 	}
 
-	log.Debugf("all port-forwards are connected")
+	log.Infof("all port-forwards are connected")
 	return nil
 }
 
@@ -156,7 +155,7 @@ func (p *PortForwardManager) Stop() {
 
 	p.activeServices = nil
 	p.activeDev = nil
-	log.Debugf("forwarder stopped")
+	log.Infof("stopped k8s forwarder")
 }
 
 func (p *PortForwardManager) buildForwarderToDevPod(namespace, pod string) (*active, *portforward.PortForwarder, error) {
@@ -257,20 +256,20 @@ func (p *PortForwardManager) forwardService(ctx context.Context, namespace, serv
 			return
 		}
 
-		log.Debugf("forwarding ports for service/%s", service)
+		log.Infof("forwarding ports for service/%s", service)
 		a, pf, err := p.buildForwarderToService(ctx, namespace, service)
 		if err != nil {
-			log.Debugf("failed to forward ports to service/%s: %s", service, err)
+			log.Infof("failed to forward ports to service/%s: %s", service, err)
 			<-t.C
 			continue
 		}
 
 		err = pf.ForwardPorts()
 		if err != nil {
-			log.Debugf("port forwarding to service/%s finished with errors: %s", service, err)
+			log.Infof("port forwarding to service/%s finished with errors: %s", service, err)
 			a.stop()
 		} else {
-			log.Debugf("port forwarding to service/%s finished", service)
+			log.Infof("port forwarding to service/%s finished", service)
 		}
 
 		<-t.C

@@ -71,7 +71,7 @@ func Up() *cobra.Command {
 		Use:   "up",
 		Short: "Activates your development container",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Debug("starting up command")
+			log.Info("starting up command")
 
 			if okteto.InDevContainer() {
 				return errors.ErrNotInDevContainer
@@ -228,13 +228,13 @@ func (up *upContext) start(autoDeploy, build bool) error {
 
 	select {
 	case <-stop:
-		log.Debugf("CTRL+C received, starting shutdown sequence")
+		log.Infof("CTRL+C received, starting shutdown sequence")
 		fmt.Println()
 	case err := <-up.Exit:
 		if err == nil {
-			log.Debugf("exit signal received, starting shutdown sequence")
+			log.Infof("exit signal received, starting shutdown sequence")
 		} else {
-			log.Infof("okteto up failed: %s", err)
+			log.Infof("exit signal received due to error, starting shutdown sequence: %s", err)
 			up.updateStateFileWithMessage(failed, err.Error())
 			return err
 		}
@@ -342,7 +342,7 @@ func (up *upContext) activate(autoDeploy, build bool) {
 
 		go func() {
 			output := <-up.cleaned
-			log.Debugf("Clean command output: %s", output)
+			log.Debugf("clean command output: %s", output)
 
 			if isWatchesConfigurationTooLow(output) {
 				log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
@@ -893,7 +893,7 @@ func (up *upContext) getClusterType() string {
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
 func (up *upContext) shutdown(cancel context.CancelFunc) {
-	log.Debugf("up shutdown")
+	log.Infof("starting shutdown sequence")
 	if !up.success {
 		analytics.TrackUpError(true, up.isSwap)
 	}
@@ -910,13 +910,12 @@ func (up *upContext) shutdown(cancel context.CancelFunc) {
 		}
 	}
 
-	log.Infof("stopping forwarder")
+	log.Infof("stopping forwarders")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
 	}
 
 	if up.isTerm {
-		log.Debug("Restoring terminal")
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			log.Infof("failed to restore terminal: %s", err)
 		}
