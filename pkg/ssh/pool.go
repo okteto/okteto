@@ -63,7 +63,10 @@ func (p *pool) keepAlive() {
 	for {
 		select {
 		case <-p.ctx.Done():
-			log.Infof("ssh pool keep alive completed")
+			if p.ctx.Err() != nil {
+				log.Infof("ssh pool keep alive completed with error: %s", p.ctx.Err())
+			}
+
 			return
 		case <-t.C:
 			if _, _, err := p.client.SendRequest("dev.okteto.com/keepalive", true, nil); err != nil {

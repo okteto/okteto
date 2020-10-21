@@ -40,6 +40,7 @@ type upContext struct {
 	inFd              uintptr
 	isTerm            bool
 	stateTerm         *term.State
+	isRunning         bool
 }
 
 // Forwarder is an interface for the port-forwarding features

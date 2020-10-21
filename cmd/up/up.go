@@ -263,6 +263,7 @@ func (up *upContext) activate(autoDeploy, build bool) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer up.shutdown(cancel)
 
+		up.isRunning = true
 		up.Disconnect = make(chan error, 1)
 		up.CommandResult = make(chan error, 1)
 		up.cleaned = make(chan string, 1)
@@ -893,6 +894,10 @@ func (up *upContext) getClusterType() string {
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
 func (up *upContext) shutdown(cancel context.CancelFunc) {
+	if !up.isRunning {
+		return
+	}
+
 	log.Infof("starting shutdown sequence")
 	if !up.success {
 		analytics.TrackUpError(true, up.isSwap)
@@ -921,6 +926,7 @@ func (up *upContext) shutdown(cancel context.CancelFunc) {
 		}
 	}
 
+	up.isRunning = false
 	log.Info("completed shutdown sequence")
 }
 
