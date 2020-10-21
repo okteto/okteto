@@ -258,6 +258,8 @@ func (up *upContext) activate(autoDeploy, build bool) {
 	isRetry := false
 
 	for {
+		// create a new context on every iteration
+		up.Context, up.Cancel = context.WithCancel(context.Background())
 		up.Disconnect = make(chan error, 1)
 		up.CommandResult = make(chan error, 1)
 		up.cleaned = make(chan string, 1)
