@@ -19,7 +19,6 @@ import (
 	"os"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
@@ -48,7 +47,7 @@ var (
 	falseBoolean                     = false
 )
 
-func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
+func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace bool) error {
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
 		if devContainer == nil {
@@ -69,7 +68,7 @@ func translate(t *model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientse
 	delete(annotations, revisionAnnotation)
 	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
 
-	if c != nil && namespaces.IsOktetoNamespace(ns) {
+	if c != nil && isOktetoNamespace {
 		c := os.Getenv("OKTETO_CLIENTSIDE_TRANSLATION")
 		if c == "" {
 			commonTranslation(t)

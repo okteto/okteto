@@ -203,9 +203,9 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 }
 
 //TranslateDevMode translates the deployment manifests to put them in dev mode
-func TranslateDevMode(tr map[string]*model.Translation, ns *apiv1.Namespace, c *kubernetes.Clientset) error {
+func TranslateDevMode(tr map[string]*model.Translation, c *kubernetes.Clientset, isOktetoNamespace bool) error {
 	for _, t := range tr {
-		err := translate(t, ns, c)
+		err := translate(t, c, isOktetoNamespace)
 		if err != nil {
 			return err
 		}
