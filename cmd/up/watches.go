@@ -55,6 +55,6 @@ func isWatchesConfigurationTooLow(value string) bool {
 		log.Infof("failed to parse the value of max_user_watches: %s", err)
 		return false
 	}
-	log.Debugf("max_user_watches = %d", c)
+
 	return c <= 8192
 }

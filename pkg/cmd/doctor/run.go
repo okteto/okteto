@@ -71,9 +71,10 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 
 	remoteLogsPath, err := generateRemoteSyncthingLogsFile(ctx, dev, c)
 	if err != nil {
-		log.Debugf("error getting remote syncthing logs: %s", err)
+		log.Infof("error getting remote syncthing logs: %s", err)
 		log.Yellow(errors.ErrNotInDevMode.Error())
 	}
+
 	defer os.RemoveAll(remoteLogsPath)
 
 	now := time.Now()
