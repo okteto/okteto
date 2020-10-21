@@ -46,10 +46,11 @@ import (
 )
 
 var (
-	deploymentTemplate = template.Must(template.New("deployment").Parse(deploymentFormat))
-	manifestTemplate   = template.Must(template.New("manifest").Parse(manifestFormat))
-	user               = ""
-	kubectlBinary      = "kubectl"
+	deploymentTemplate       = template.Must(template.New("deployment").Parse(deploymentFormat))
+	manifestTemplate         = template.Must(template.New("manifest").Parse(manifestFormat))
+	user                     = ""
+	kubectlBinary            = "kubectl"
+	zero               int64 = 0
 )
 
 type deployment struct {
@@ -57,6 +58,7 @@ type deployment struct {
 }
 
 const (
+	endpoint         = "http://localhost:8080/index.html"
 	deploymentFormat = `
 apiVersion: apps/v1
 kind: Deployment
@@ -239,7 +241,6 @@ func TestAll(t *testing.T) {
 		}
 
 		log.Println("getting synchronized content")
-		endpoint := "http://localhost:8080/index.html"
 
 		c, err := getContent(endpoint, 120)
 		if err != nil {
@@ -252,37 +253,24 @@ func TestAll(t *testing.T) {
 			t.Fatalf("expected synchronized content to be %s, got %s", name, c)
 		}
 
-		// Update content in token file
-		updatedContent := fmt.Sprintf("%s-updated", name)
-		start := time.Now()
-		ioutil.WriteFile(contentPath, []byte(updatedContent), 0644)
-
-		if err := ioutil.WriteFile(contentPath, []byte(updatedContent), 0644); err != nil {
-			t.Fatalf("failed to update %s: %s", contentPath, err)
+		if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
+			t.Fatal(err)
 		}
 
-		log.Printf("getting updated content from %s\n", endpoint)
-		tick := time.NewTicker(1 * time.Second)
-		gotUpdated := false
-		for i := 0; i < 10; i++ {
-			<-tick.C
-			c, err = getContent(endpoint, 120)
-			if err != nil {
-				t.Fatalf("failed to get updated content: %s", err)
-			}
-
-			if c != updatedContent {
-				log.Printf("expected updated content to be %s, got %s\n", updatedContent, c)
-				continue
-			}
-
-			log.Printf("got updated content after %v\n", time.Now().Sub(start))
-			gotUpdated = true
-			break
+		if err := killLocalSyncthing(); err != nil {
+			t.Fatal(err)
 		}
 
-		if !gotUpdated {
-			t.Fatal("never got the updated content")
+		if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := destroyPod(ctx, name, namespace); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300); err != nil {
+			t.Fatal(err)
 		}
 
 		if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
@@ -330,10 +318,10 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 	return fmt.Errorf("%s didn't rollout after 30 seconds", name)
 }
 
-func getContent(endpoint string, totRetries int) (string, error) {
+func getContent(endpoint string, timeout int) (string, error) {
 	retries := 0
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < totRetries; i++ {
+	for i := 0; i < timeout; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
 			retries++
@@ -369,7 +357,6 @@ func writeManifest(path, name string) error {
 	if err != nil {
 		return err
 	}
-
 	defer oFile.Close()
 
 	if err := manifestTemplate.Execute(oFile, deployment{Name: name}); err != nil {
@@ -410,6 +397,89 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	o, err := deleteCMD.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
+	}
+
+	return nil
+}
+
+func testUpdateContent(content, contentPath string, timeout int) error {
+	start := time.Now()
+	ioutil.WriteFile(contentPath, []byte(content), 0644)
+
+	if err := ioutil.WriteFile(contentPath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to update %s: %s", contentPath, err.Error())
+	}
+
+	log.Printf("getting updated content from %s\n", endpoint)
+	tick := time.NewTicker(1 * time.Second)
+	gotUpdated := false
+	for i := 0; i < timeout; i++ {
+		<-tick.C
+		currentContent, err := getContent(endpoint, timeout)
+		if err != nil {
+			log.Printf("failed to get updated content: %s", err.Error())
+			continue
+		}
+
+		if currentContent != content {
+			log.Printf("expected updated content to be %s, got %s\n", content, currentContent)
+			continue
+		}
+
+		log.Printf("got updated content after %v\n", time.Now().Sub(start))
+		gotUpdated = true
+		break
+	}
+
+	if !gotUpdated {
+		return fmt.Errorf("never got the updated content %s", content)
+	}
+
+	return nil
+}
+
+func killLocalSyncthing() error {
+	processes, err := ps.Processes()
+	if err != nil {
+		return fmt.Errorf("fail to list processes: %s", err.Error())
+	}
+	for _, p := range processes {
+		if p.Executable() == "syncthing" {
+			pr, err := os.FindProcess(p.Pid())
+			if err != nil {
+				log.Printf("fail to find process %d : %s", p.Pid(), err)
+				continue
+			}
+			if err := pr.Kill(); err != nil {
+				log.Printf("fail to kill process %d : %s", p.Pid(), err)
+			}
+		}
+	}
+	return nil
+}
+
+func destroyPod(ctx context.Context, name, namespace string) error {
+	log.Printf("destroying pods of %s", name)
+	c, _, _, err := k8Client.GetLocal("")
+	if err != nil {
+		return err
+	}
+
+	pods, err := c.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("app=%s", name)})
+	if err != nil {
+		return fmt.Errorf("failed to retrieve deployment %s pods: %s", name, err.Error())
+	}
+
+	for _, p := range pods.Items {
+		log.Printf("destroying pod %s", p.Name)
+		err := c.CoreV1().Pods(namespace).Delete(
+			ctx,
+			p.Name,
+			metav1.DeleteOptions{GracePeriodSeconds: &zero},
+		)
+		if err != nil {
+			return fmt.Errorf("error deleting pod %s: %s", p.Name, err.Error())
+		}
 	}
 
 	return nil

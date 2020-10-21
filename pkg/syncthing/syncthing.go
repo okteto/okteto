@@ -318,14 +318,11 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 
 	log.Infof("waiting for syncthing local=%t to be ready", local)
 	for i := 0; ; i++ {
-		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 3)
-		if err == nil {
-			log.Infof("syncthing local=%t is ready", local)
+		if s.Ping(ctx, local) {
 			return nil
 		}
-
 		if i%5 == 0 {
-			log.Infof("syncthing local=%t is not ready yet: %s", local, err)
+			log.Infof("syncthing local=%t is not ready yet", local)
 		}
 
 		if time.Now().After(timeout) {
@@ -340,7 +337,12 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 			return ctx.Err()
 		}
 	}
+}
 
+//Ping checks if syncthing is available
+func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
+	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 3)
+	return err == nil
 }
 
 //SendStignoreFile sends .stignore from local to remote
