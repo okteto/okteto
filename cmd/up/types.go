@@ -14,8 +14,6 @@
 package up
 
 import (
-	"context"
-
 	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -26,8 +24,6 @@ import (
 
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
-	Context        context.Context
-	Cancel         context.CancelFunc
 	Dev            *model.Dev
 	Namespace      *apiv1.Namespace
 	isSwap         bool

@@ -115,16 +115,15 @@ func Up() *cobra.Command {
 				autoDeploy = true
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
 			up := &upContext{
 				Dev:            dev,
 				Exit:           make(chan error, 1),
 				resetSyncthing: resetSyncthing,
-				Context:        ctx,
-				Cancel:         cancel,
 			}
 
-			return up.start(autoDeploy, build)
+			err = up.start(autoDeploy, build)
+			log.Debug("completed up command")
+			return err
 		},
 	}
 
@@ -200,7 +199,8 @@ func (up *upContext) start(autoDeploy, build bool) error {
 		up.Dev.Namespace = namespace
 	}
 
-	up.Namespace, err = namespaces.Get(up.Context, up.Dev.Namespace, up.Client)
+	ctx := context.Background()
+	up.Namespace, err = namespaces.Get(ctx, up.Dev.Namespace, up.Client)
 	if err != nil {
 		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
 		return fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
@@ -223,7 +223,6 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
 
 	go up.activate(autoDeploy, build)
-	defer up.shutdown()
 
 	select {
 	case <-stop:
@@ -259,12 +258,14 @@ func (up *upContext) activate(autoDeploy, build bool) {
 
 	for {
 		// create a new context on every iteration
-		up.Context, up.Cancel = context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(context.Background())
+		defer up.shutdown(cancel)
+
 		up.Disconnect = make(chan error, 1)
 		up.CommandResult = make(chan error, 1)
 		up.cleaned = make(chan string, 1)
 
-		d, create, err := up.getCurrentDeployment(autoDeploy, isRetry)
+		d, create, err := up.getCurrentDeployment(ctx, autoDeploy, isRetry)
 		if err != nil {
 			log.Infof("failed to get deployment %s/%s: %s", up.Dev.Namespace, up.Dev.Name, err)
 			up.Exit <- err
@@ -287,7 +288,7 @@ func (up *upContext) activate(autoDeploy, build bool) {
 
 		if !isRetry {
 			if build {
-				if err := up.buildDevImage(d, create); err != nil {
+				if err := up.buildDevImage(ctx, d, create); err != nil {
 					up.Exit <- fmt.Errorf("error building dev image: %s", err)
 					return
 				}
@@ -299,27 +300,27 @@ func (up *upContext) activate(autoDeploy, build bool) {
 			return
 		}
 
-		if err := up.devMode(d, create); err != nil {
+		if err := up.devMode(ctx, d, create); err != nil {
 			up.Exit <- fmt.Errorf("couldn't activate your development container: %s", err)
 			return
 		}
 
-		if err := up.forwards(); err != nil {
+		if err := up.forwards(ctx); err != nil {
 			up.Exit <- fmt.Errorf("couldn't forward traffic to your development container: %s", err)
 			return
 		}
 
-		go up.cleanCommand()
+		go up.cleanCommand(ctx)
 
 		log.Success("Development container activated")
 
-		if err := up.sync(); err != nil {
-			if up.shouldRetry(err) {
-				if pods.Exists(up.Context, up.Pod, up.Dev.Namespace, up.Client) {
+		if err := up.sync(ctx); err != nil {
+			if up.shouldRetry(ctx, err) {
+				if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
 					up.resetSyncthing = true
 				}
 				log.Yellow("\nConnection lost to your development container, reconnecting...\n")
-				up.shutdown()
+				up.shutdown(cancel)
 				continue
 			}
 
@@ -348,20 +349,20 @@ func (up *upContext) activate(autoDeploy, build bool) {
 			}
 
 			printDisplayContext(up.Dev)
-			up.CommandResult <- up.runCommand()
+			up.CommandResult <- up.runCommand(ctx)
 		}()
 
 		prevError := up.waitUntilExitOrInterrupt()
 
-		if up.shouldRetry(prevError) {
+		if up.shouldRetry(ctx, prevError) {
 			log.Yellow("\nConnection lost to your development container, reconnecting...\n")
 			if !up.Dev.PersistentVolumeEnabled() {
-				if err := pods.Destroy(up.Context, up.Pod, up.Dev.Namespace, up.Client); err != nil {
+				if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
 					up.Exit <- err
 					return
 				}
 			}
-			up.shutdown()
+			up.shutdown(cancel)
 			continue
 		}
 
@@ -370,7 +371,7 @@ func (up *upContext) activate(autoDeploy, build bool) {
 	}
 }
 
-func (up *upContext) shouldRetry(err error) bool {
+func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 	switch err {
 	case nil:
 		return false
@@ -380,7 +381,7 @@ func (up *upContext) shouldRetry(err error) bool {
 	case errors.ErrLostSyncthing:
 		return true
 	case errors.ErrCommandFailed:
-		if pods.Exists(up.Context, up.Pod, up.Dev.Namespace, up.Client) {
+		if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
 			return false
 		}
 
@@ -391,8 +392,8 @@ func (up *upContext) shouldRetry(err error) bool {
 	return false
 }
 
-func (up *upContext) getCurrentDeployment(autoDeploy, isRetry bool) (*appsv1.Deployment, bool, error) {
-	d, err := deployments.Get(up.Context, up.Dev, up.Dev.Namespace, up.Client)
+func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy, isRetry bool) (*appsv1.Deployment, bool, error) {
+	d, err := deployments.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
 		if d.Annotations[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
 			up.isSwap = true
@@ -442,7 +443,7 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *upContext) buildDevImage(d *appsv1.Deployment, create bool) error {
+func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	oktetoRegistryURL := ""
 	if namespaces.IsOktetoNamespace(up.Namespace) {
 		var err error
@@ -474,7 +475,7 @@ func (up *upContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 
 	var imageDigest string
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
-	imageDigest, err = buildCMD.Run(up.Context, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, "tty")
+	imageDigest, err = buildCMD.Run(ctx, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, "tty")
 	if err != nil {
 		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
 	}
@@ -491,14 +492,14 @@ func (up *upContext) buildDevImage(d *appsv1.Deployment, create bool) error {
 	return nil
 }
 
-func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
+func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	up.updateStateFile(activating)
 	spinner.Start()
 	defer spinner.Stop()
 
 	if up.Dev.PersistentVolumeEnabled() {
-		if err := volumes.Create(up.Context, up.Dev, up.Client); err != nil {
+		if err := volumes.Create(ctx, up.Dev, up.Client); err != nil {
 			return err
 		}
 	}
@@ -517,11 +518,11 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 	up.updateStateFile(starting)
 
 	log.Info("create deployment secrets")
-	if err := secrets.Create(up.Context, up.Dev, up.Client, up.Sy); err != nil {
+	if err := secrets.Create(ctx, up.Dev, up.Client, up.Sy); err != nil {
 		return err
 	}
 
-	trList, err := deployments.GetTranslations(up.Context, up.Dev, d, up.Client)
+	trList, err := deployments.GetTranslations(ctx, up.Dev, d, up.Client)
 	if err != nil {
 		return err
 	}
@@ -532,11 +533,11 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 
 	for name := range trList {
 		if name == d.Name {
-			if err := deployments.Deploy(up.Context, trList[name].Deployment, create, up.Client); err != nil {
+			if err := deployments.Deploy(ctx, trList[name].Deployment, create, up.Client); err != nil {
 				return err
 			}
 		} else {
-			if err := deployments.Deploy(up.Context, trList[name].Deployment, false, up.Client); err != nil {
+			if err := deployments.Deploy(ctx, trList[name].Deployment, false, up.Client); err != nil {
 				return err
 			}
 		}
@@ -545,19 +546,19 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 			continue
 		}
 
-		if err := deployments.UpdateOktetoRevision(up.Context, trList[name].Deployment, up.Client); err != nil {
+		if err := deployments.UpdateOktetoRevision(ctx, trList[name].Deployment, up.Client); err != nil {
 			return err
 		}
 
 	}
 
 	if create {
-		if err := services.CreateDev(up.Context, up.Dev, up.Client); err != nil {
+		if err := services.CreateDev(ctx, up.Dev, up.Client); err != nil {
 			return err
 		}
 	}
 
-	pod, err := pods.GetDevPodInLoop(up.Context, up.Dev, up.Client, create)
+	pod, err := pods.GetDevPodInLoop(ctx, up.Dev, up.Client, create)
 	if err != nil {
 		return err
 	}
@@ -582,7 +583,7 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 		}
 	}()
 
-	if err := pods.WaitUntilRunning(up.Context, up.Dev, pod.Name, up.Client, reporter); err != nil {
+	if err := pods.WaitUntilRunning(ctx, up.Dev, pod.Name, up.Client, reporter); err != nil {
 		return err
 	}
 
@@ -590,13 +591,13 @@ func (up *upContext) devMode(d *appsv1.Deployment, create bool) error {
 	return nil
 }
 
-func (up *upContext) forwards() error {
+func (up *upContext) forwards(ctx context.Context) error {
 	if up.Dev.RemoteModeEnabled() {
-		return up.sshForwards()
+		return up.sshForwards(ctx)
 	}
 
 	log.Infof("starting port forwards")
-	up.Forwarder = forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
+	up.Forwarder = forward.NewPortForwardManager(ctx, up.RestConfig, up.Client)
 
 	for _, f := range up.Dev.Forward {
 		if err := up.Forwarder.Add(f); err != nil {
@@ -615,14 +616,14 @@ func (up *upContext) forwards() error {
 	return up.Forwarder.Start(up.Pod, up.Dev.Namespace)
 }
 
-func (up *upContext) sshForwards() error {
+func (up *upContext) sshForwards(ctx context.Context) error {
 	log.Infof("starting SSH port forwards")
-	f := forward.NewPortForwardManager(up.Context, up.RestConfig, up.Client)
+	f := forward.NewPortForwardManager(ctx, up.RestConfig, up.Client)
 	if err := f.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
 		return err
 	}
 
-	up.Forwarder = ssh.NewForwardManager(up.Context, fmt.Sprintf(":%d", up.Dev.RemotePort), "localhost", "0.0.0.0", f)
+	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), "localhost", "0.0.0.0", f)
 
 	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
@@ -674,30 +675,30 @@ func (up *upContext) initializeSyncthing() error {
 	return nil
 }
 
-func (up *upContext) sync() error {
-	if err := up.startSyncthing(); err != nil {
+func (up *upContext) sync(ctx context.Context) error {
+	if err := up.startSyncthing(ctx); err != nil {
 		return err
 	}
 
-	return up.synchronizeFiles()
+	return up.synchronizeFiles(ctx)
 }
 
-func (up *upContext) startSyncthing() error {
+func (up *upContext) startSyncthing(ctx context.Context) error {
 	spinner := utils.NewSpinner("Starting the file synchronization service...")
 	spinner.Start()
 	up.updateStateFile(startingSync)
 	defer spinner.Stop()
 
-	if err := up.Sy.Run(up.Context); err != nil {
+	if err := up.Sy.Run(ctx); err != nil {
 		return err
 	}
 
-	if err := up.Sy.WaitForPing(up.Context, true); err != nil {
+	if err := up.Sy.WaitForPing(ctx, true); err != nil {
 		return err
 	}
 
-	if err := up.Sy.WaitForPing(up.Context, false); err != nil {
-		userID := pods.GetDevPodUserID(up.Context, up.Dev, up.Client)
+	if err := up.Sy.WaitForPing(ctx, false); err != nil {
+		userID := pods.GetDevPodUserID(ctx, up.Dev, up.Client)
 		if up.Dev.PersistentVolumeEnabled() {
 			if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
 				return errors.UserError{
@@ -706,8 +707,8 @@ func (up *upContext) startSyncthing() error {
 				}
 			}
 		} else {
-			if pods.OktetoDevPodMustBeRecreated(up.Context, up.Dev, up.Client) {
-				if err := pods.Destroy(up.Context, up.Pod, up.Dev.Namespace, up.Client); err == nil {
+			if pods.OktetoDevPodMustBeRecreated(ctx, up.Dev, up.Client) {
+				if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err == nil {
 					return errors.ErrLostSyncthing
 				}
 			}
@@ -727,34 +728,34 @@ func (up *upContext) startSyncthing() error {
 
 	if up.resetSyncthing {
 		spinner.Update("Resetting synchronization service database...")
-		if err := up.Sy.ResetDatabase(up.Context, up.Dev, false); err != nil {
+		if err := up.Sy.ResetDatabase(ctx, up.Dev, false); err != nil {
 			return err
 		}
-		if err := up.Sy.ResetDatabase(up.Context, up.Dev, true); err != nil {
+		if err := up.Sy.ResetDatabase(ctx, up.Dev, true); err != nil {
 			return err
 		}
 
-		if err := up.Sy.WaitForPing(up.Context, false); err != nil {
+		if err := up.Sy.WaitForPing(ctx, false); err != nil {
 			return err
 		}
-		if err := up.Sy.WaitForPing(up.Context, true); err != nil {
+		if err := up.Sy.WaitForPing(ctx, true); err != nil {
 			return err
 		}
 
 		up.resetSyncthing = false
 	}
 
-	if err := up.Sy.SendStignoreFile(up.Context, up.Dev); err != nil {
+	if err := up.Sy.SendStignoreFile(ctx, up.Dev); err != nil {
 		return err
 	}
 
 	spinner.Update("Scanning file system...")
-	if err := up.Sy.WaitForScanning(up.Context, up.Dev, true); err != nil {
+	if err := up.Sy.WaitForScanning(ctx, up.Dev, true); err != nil {
 		return err
 	}
 
 	if !up.Dev.PersistentVolumeEnabled() {
-		if err := up.Sy.WaitForScanning(up.Context, up.Dev, false); err != nil {
+		if err := up.Sy.WaitForScanning(ctx, up.Dev, false); err != nil {
 			return err
 		}
 	}
@@ -762,7 +763,7 @@ func (up *upContext) startSyncthing() error {
 	return nil
 }
 
-func (up *upContext) synchronizeFiles() error {
+func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	suffix := "Synchronizing your files..."
 	spinner := utils.NewSpinner(suffix)
 	pbScaling := 0.30
@@ -785,7 +786,7 @@ func (up *upContext) synchronizeFiles() error {
 		}
 	}()
 
-	if err := up.Sy.WaitForCompletion(up.Context, up.Dev, reporter); err != nil {
+	if err := up.Sy.WaitForCompletion(ctx, up.Dev, reporter); err != nil {
 		if err == errors.ErrUnknownSyncError {
 			analytics.TrackSyncError()
 			return errors.UserError{
@@ -801,7 +802,7 @@ Then, try to run 'okteto down -v' + 'okteto up'  again`,
 	// render to 100
 	spinner.Update(utils.RenderProgressBar(suffix, 100, pbScaling))
 
-	if err := up.Sy.SendStignoreFile(up.Context, up.Dev); err != nil {
+	if err := up.Sy.SendStignoreFile(ctx, up.Dev); err != nil {
 		return err
 	}
 
@@ -811,19 +812,19 @@ Then, try to run 'okteto down -v' + 'okteto up'  again`,
 		return err
 	}
 
-	go up.Sy.Monitor(up.Context, up.Disconnect)
+	go up.Sy.Monitor(ctx, up.Disconnect)
 	log.Infof("restarting syncthing to update sync mode to sendreceive")
-	return up.Sy.Restart(up.Context)
+	return up.Sy.Restart(ctx)
 }
 
-func (up *upContext) cleanCommand() {
+func (up *upContext) cleanCommand(ctx context.Context) {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
 
 	cmd := "cat /proc/sys/fs/inotify/max_user_watches; (cp /var/okteto/bin/* /usr/local/bin; cp /var/okteto/cloudbin/* /usr/local/bin; /var/okteto/bin/clean) >/dev/null 2>&1"
 
 	err := exec.Exec(
-		up.Context,
+		ctx,
 		up.Client,
 		up.RestConfig,
 		up.Dev.Namespace,
@@ -845,16 +846,16 @@ func (up *upContext) cleanCommand() {
 	up.cleaned <- out.String()
 }
 
-func (up *upContext) runCommand() error {
+func (up *upContext) runCommand(ctx context.Context) error {
 	log.Infof("starting remote command")
 	up.updateStateFile(ready)
 
 	if up.Dev.RemoteModeEnabled() {
-		return ssh.Exec(up.Context, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command.Values)
+		return ssh.Exec(ctx, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command.Values)
 	}
 
 	return exec.Exec(
-		up.Context,
+		ctx,
 		up.Client,
 		up.RestConfig,
 		up.Dev.Namespace,
@@ -889,14 +890,14 @@ func (up *upContext) getClusterType() string {
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
-func (up *upContext) shutdown() {
+func (up *upContext) shutdown(cancel context.CancelFunc) {
 	log.Debugf("up shutdown")
 	if !up.success {
 		analytics.TrackUpError(true, up.isSwap)
 	}
 
-	if up.Cancel != nil {
-		up.Cancel()
+	if cancel != nil {
+		cancel()
 		log.Info("sent cancellation signal")
 	}
 
