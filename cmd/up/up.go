@@ -210,7 +210,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 		return fmt.Errorf("'okteto up' is not allowed in the current namespace")
 	}
 
-	up.IsOktetoNamespace = namespaces.IsOktetoNamespace(ns)
+	up.isOktetoNamespace = namespaces.IsOktetoNamespace(ns)
 
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
 		log.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
@@ -448,7 +448,7 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 
 func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	oktetoRegistryURL := ""
-	if up.IsOktetoNamespace {
+	if up.isOktetoNamespace {
 		var err error
 		oktetoRegistryURL, err = okteto.GetRegistry()
 		if err != nil {
@@ -530,7 +530,7 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 		return err
 	}
 
-	if err := deployments.TranslateDevMode(trList, up.Client, up.IsOktetoNamespace); err != nil {
+	if err := deployments.TranslateDevMode(trList, up.Client, up.isOktetoNamespace); err != nil {
 		return err
 	}
 
@@ -873,7 +873,7 @@ func (up *upContext) runCommand(ctx context.Context) error {
 }
 
 func (up *upContext) getClusterType() string {
-	if up.IsOktetoNamespace {
+	if up.isOktetoNamespace {
 		return "okteto"
 	}
 

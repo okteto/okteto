@@ -24,7 +24,7 @@ import (
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
 	Dev               *model.Dev
-	IsOktetoNamespace bool
+	isOktetoNamespace bool
 	isSwap            bool
 	Client            *kubernetes.Clientset
 	RestConfig        *rest.Config
