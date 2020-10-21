@@ -200,15 +200,17 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	}
 
 	ctx := context.Background()
-	up.Namespace, err = namespaces.Get(ctx, up.Dev.Namespace, up.Client)
+	ns, err := namespaces.Get(ctx, up.Dev.Namespace, up.Client)
 	if err != nil {
 		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
 		return fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
 	}
 
-	if !namespaces.IsOktetoAllowed(up.Namespace) {
+	if !namespaces.IsOktetoAllowed(ns) {
 		return fmt.Errorf("'okteto up' is not allowed in the current namespace")
 	}
+
+	up.IsOktetoNamespace = namespaces.IsOktetoNamespace(ns)
 
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
 		log.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
@@ -445,7 +447,7 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 
 func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	oktetoRegistryURL := ""
-	if namespaces.IsOktetoNamespace(up.Namespace) {
+	if up.IsOktetoNamespace {
 		var err error
 		oktetoRegistryURL, err = okteto.GetRegistry()
 		if err != nil {
@@ -527,7 +529,7 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 		return err
 	}
 
-	if err := deployments.TranslateDevMode(trList, up.Namespace, up.Client); err != nil {
+	if err := deployments.TranslateDevMode(trList, up.Client, up.IsOktetoNamespace); err != nil {
 		return err
 	}
 
@@ -870,7 +872,7 @@ func (up *upContext) runCommand(ctx context.Context) error {
 }
 
 func (up *upContext) getClusterType() string {
-	if up.Namespace != nil && namespaces.IsOktetoNamespace(up.Namespace) {
+	if up.IsOktetoNamespace {
 		return "okteto"
 	}
 

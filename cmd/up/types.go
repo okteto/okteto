@@ -17,30 +17,29 @@ import (
 	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
-	Dev            *model.Dev
-	Namespace      *apiv1.Namespace
-	isSwap         bool
-	Client         *kubernetes.Clientset
-	RestConfig     *rest.Config
-	Pod            string
-	Forwarder      forwarder
-	Disconnect     chan error
-	CommandResult  chan error
-	Exit           chan error
-	Sy             *syncthing.Syncthing
-	cleaned        chan string
-	success        bool
-	resetSyncthing bool
-	inFd           uintptr
-	isTerm         bool
-	stateTerm      *term.State
+	Dev               *model.Dev
+	IsOktetoNamespace bool
+	isSwap            bool
+	Client            *kubernetes.Clientset
+	RestConfig        *rest.Config
+	Pod               string
+	Forwarder         forwarder
+	Disconnect        chan error
+	CommandResult     chan error
+	Exit              chan error
+	Sy                *syncthing.Syncthing
+	cleaned           chan string
+	success           bool
+	resetSyncthing    bool
+	inFd              uintptr
+	isTerm            bool
+	stateTerm         *term.State
 }
 
 // Forwarder is an interface for the port-forwarding features
