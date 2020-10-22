@@ -15,6 +15,7 @@ package ssh
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -43,7 +44,6 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 			break
 		}
 
-		log.Debugf("failed to connect to SSH server, will retry: %s", err)
 		<-t.C
 	}
 
@@ -117,7 +117,9 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 	}
 	go func() {
 		if _, err = io.Copy(stdin, inR); err != nil {
-			log.Infof("error while reading from stdIn: %s", err)
+			if !errors.Is(err, io.EOF) {
+				log.Infof("error while reading from stdIn: %s", err)
+			}
 		}
 	}()
 

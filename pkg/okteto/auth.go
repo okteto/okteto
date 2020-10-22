@@ -300,7 +300,7 @@ func GetCertificatePath() string {
 func saveToken(id, token, url, registry, buildkit string) error {
 	t, err := GetToken()
 	if err != nil {
-		log.Debugf("bad token, re-initializing: %s", err)
+		log.Infof("bad token, re-initializing: %s", err)
 		t = &Token{}
 	}
 
@@ -328,7 +328,7 @@ func SaveMachineID(machineID string) error {
 func SaveID(userID string) error {
 	t, err := GetToken()
 	if err != nil {
-		log.Debugf("bad token, re-initializing: %s", err)
+		log.Infof("bad token, re-initializing: %s", err)
 		t = &Token{}
 	}
 
@@ -344,7 +344,7 @@ func save(t *Token) error {
 	}
 
 	p := getTokenPath()
-	log.Debugf("saving token at %s", p)
+
 	if _, err := os.Stat(p); err == nil {
 		err = os.Chmod(p, 0600)
 		if err != nil {

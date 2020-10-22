@@ -18,7 +18,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
@@ -83,7 +82,6 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 
 	if err := t.Safe(fn); err != nil {
 		if strings.Contains(err.Error(), "exit code 130") {
-			log.Debugf("process terminated with a ctrl+C: %s", err)
 			return nil
 		}
 

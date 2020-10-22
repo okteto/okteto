@@ -219,39 +219,38 @@ func TrackSignup(success bool, userID string) {
 }
 
 func track(event string, success bool, props map[string]interface{}) {
-	if isEnabled() {
-		mpOS := ""
-		switch runtime.GOOS {
-		case "darwin":
-			mpOS = "Mac OS X"
-		case "windows":
-			mpOS = "Windows"
-		case "linux":
-			mpOS = "Linux"
-		}
+	if !isEnabled() {
+		return
+	}
+	mpOS := ""
+	switch runtime.GOOS {
+	case "darwin":
+		mpOS = "Mac OS X"
+	case "windows":
+		mpOS = "Windows"
+	case "linux":
+		mpOS = "Linux"
+	}
 
-		origin, ok := os.LookupEnv("OKTETO_ORIGIN")
-		if !ok {
-			origin = "cli"
-		}
+	origin, ok := os.LookupEnv("OKTETO_ORIGIN")
+	if !ok {
+		origin = "cli"
+	}
 
-		if props == nil {
-			props = map[string]interface{}{}
-		}
-		props["$os"] = mpOS
-		props["version"] = config.VersionString
-		props["$referring_domain"] = okteto.GetURL()
-		props["machine_id"] = getMachineID()
-		props["origin"] = origin
-		props["success"] = success
+	if props == nil {
+		props = map[string]interface{}{}
+	}
+	props["$os"] = mpOS
+	props["version"] = config.VersionString
+	props["$referring_domain"] = okteto.GetURL()
+	props["machine_id"] = getMachineID()
+	props["origin"] = origin
+	props["success"] = success
 
-		e := &mixpanel.Event{Properties: props}
-		trackID := getTrackID()
-		if err := mixpanelClient.Track(trackID, event, e); err != nil {
-			log.Infof("Failed to send analytics: %s", err)
-		}
-	} else {
-		log.Debugf("not sending event for %s", event)
+	e := &mixpanel.Event{Properties: props}
+	trackID := getTrackID()
+	if err := mixpanelClient.Track(trackID, event, e); err != nil {
+		log.Infof("Failed to send analytics: %s", err)
 	}
 }
 
@@ -320,7 +319,7 @@ func getMachineID() string {
 func generateMachineID() string {
 	mid, err := machineid.ProtectedID("okteto")
 	if err != nil {
-		log.Debugf("failed to generate a machine id")
+		log.Infof("failed to generate a machine id: %s", err)
 		mid = "na"
 	}
 

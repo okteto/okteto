@@ -16,7 +16,7 @@ package syncthing
 import (
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 )
 
@@ -28,19 +28,19 @@ func TestGetFiles(t *testing.T) {
 	}
 	defer func() {
 		os.RemoveAll(dir)
-		os.Unsetenv("OKTETO_HOME")
+		os.Unsetenv("OKTETO_FOLDER")
 	}()
 
-	os.Setenv("OKTETO_HOME", dir)
+	os.Setenv("OKTETO_FOLDER", dir)
 	log := GetLogFile("test", "application")
-	expected := path.Join(dir, "test", "application", "syncthing.log")
+	expected := filepath.Join(dir, "test", "application", "syncthing.log")
 
 	if log != expected {
 		t.Errorf("got %s, expected %s", log, expected)
 	}
 
 	info := getInfoFile("test", "application")
-	expected = path.Join(dir, "test", "application", "syncthing.info")
+	expected = filepath.Join(dir, "test", "application", "syncthing.info")
 	if info != expected {
 		t.Errorf("got %s, expected %s", info, expected)
 	}

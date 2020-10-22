@@ -117,7 +117,7 @@ func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error
 		case <-ticker.C:
 			continue
 		case <-ctx.Done():
-			log.Debug("cancelling call to update okteto revision")
+			log.Info("call to volumes.Destroy cancelled")
 			return ctx.Err()
 		}
 	}

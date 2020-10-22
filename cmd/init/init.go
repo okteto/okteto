@@ -159,7 +159,6 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	stignore := filepath.Join(devDir, stignoreFile)
 
 	if !model.FileExists(stignore) {
-		log.Debugf("getting stignore for %s", language)
 		c := linguist.GetSTIgnore(language)
 		if err := ioutil.WriteFile(stignore, c, 0600); err != nil {
 			log.Infof("failed to write stignore file: %s", err)
@@ -204,7 +203,6 @@ func getDeployment(ctx context.Context, namespace, k8sContext string) (*appsv1.D
 }
 
 func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
-	log.Debugf("checking persistent volumes support in your cluster...")
 	c, _, currentNamespace, err := k8Client.GetLocal(k8sContext)
 	if err != nil {
 		log.Infof("couldn't get kubernetes local client: %s", err.Error())
@@ -232,7 +230,7 @@ func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string
 
 	for i := range stClassList.Items {
 		if stClassList.Items[i].Annotations[okLabels.DefaultStorageClassAnnotation] == "true" {
-			log.Debugf("found default storage class '%s'", stClassList.Items[i].Name)
+			log.Infof("found default storage class '%s'", stClassList.Items[i].Name)
 			return true
 		}
 	}
@@ -336,7 +334,7 @@ func askForOptions(options []string, label string) (string, error) {
 
 	i, _, err := prompt.Run()
 	if err != nil {
-		log.Debugf("invalid init option: %s", err)
+		log.Infof("invalid init option: %s", err)
 		return "", fmt.Errorf("invalid option")
 	}
 

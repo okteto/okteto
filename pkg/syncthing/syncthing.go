@@ -169,7 +169,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 
 	rescanInterval := os.Getenv("OKTETO_RESCAN_INTERVAL")
 	if rescanInterval == "" {
-		rescanInterval = "3600"
+		rescanInterval = "300"
 	}
 	s := &Syncthing{
 		APIKey:           "cnd",
@@ -228,7 +228,6 @@ func (s *Syncthing) cleanupDaemon(pid int, wait bool) error {
 	}
 
 	if process.Executable() != getBinaryName() {
-		log.Debugf("found %s pid-%d ppid-%d", process.Executable(), process.Pid(), process.PPid())
 		return nil
 	}
 
@@ -319,14 +318,11 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 
 	log.Infof("waiting for syncthing local=%t to be ready", local)
 	for i := 0; ; i++ {
-		_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 3)
-		if err == nil {
-			log.Infof("syncthing local=%t is ready", local)
+		if s.Ping(ctx, local) {
 			return nil
 		}
-
 		if i%5 == 0 {
-			log.Debugf("syncthing local=%t is not ready yet: %s", local, err)
+			log.Infof("syncthing local=%t is not ready yet", local)
 		}
 
 		if time.Now().After(timeout) {
@@ -337,11 +333,16 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 		case <-ticker.C:
 			continue
 		case <-ctx.Done():
-			log.Debugf("cancelling syncthing.WaitForPing local=%t", local)
+			log.Infof("syncthing.WaitForPing cancelled local=%t", local)
 			return ctx.Err()
 		}
 	}
+}
 
+//Ping checks if syncthing is available
+func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
+	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 3)
+	return err == nil
 }
 
 //SendStignoreFile sends .stignore from local to remote
@@ -469,7 +470,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 		case <-ticker.C:
 			continue
 		case <-ctx.Done():
-			log.Debug("cancelling call to 'rest/db/status'")
+			log.Info("call to syncthing.waitForFolderScanning canceled")
 			return ctx.Err()
 		}
 	}
@@ -541,7 +542,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				}
 
 			case <-ctx.Done():
-				log.Debug("cancelling call to 'rest/db/completion'")
+				log.Info("call to syncthing.WaitForCompletion canceled")
 				return ctx.Err()
 			}
 		}
@@ -763,11 +764,12 @@ func RemoveFolder(dev *model.Dev) error {
 		}
 
 		if empty {
-			log.Debugf("deleting %s since it's empty", parentDir)
 			if err := os.RemoveAll(parentDir); err != nil {
 				log.Infof("couldn't delete folder: %s", err)
 				return nil
 			}
+
+			log.Infof("removed %s", parentDir)
 		}
 	}
 
