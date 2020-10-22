@@ -59,7 +59,7 @@ func GetBuildKitHost() (string, bool, error) {
 }
 
 //getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFrom []string, buildArgs []string) (*client.SolveOpt, error) {
+func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFrom, buildArgs []string) (*client.SolveOpt, error) {
 	if file == "" {
 		file = filepath.Join(buildCtx, "Dockerfile")
 	}

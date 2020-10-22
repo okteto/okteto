@@ -31,7 +31,7 @@ func AddEntry(name string, port int) error {
 	return add(getSSHConfigPath(), buildHostname(name), port)
 }
 
-func add(path string, name string, port int) error {
+func add(path, name string, port int) error {
 	cfg, err := getConfig(path)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func RemoveEntry(name string) error {
 	return remove(getSSHConfigPath(), buildHostname(name))
 }
 
-func remove(path string, name string) error {
+func remove(path, name string) error {
 	cfg, err := getConfig(path)
 	if err != nil {
 		return err
