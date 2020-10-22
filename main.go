@@ -39,6 +39,8 @@ import (
 )
 
 func init() {
+	log.SetLevel("warn")
+
 	// override client-go error handlers to downgrade the "logging before flag.Parse" error
 	errorHandlers := []func(error){
 		func(e error) {
