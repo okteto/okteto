@@ -62,6 +62,12 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 
 	stignoreFilenames := generateStignoreFiles(dev)
 
+	manifestPath, err := generateManifestFile(ctx, devPath)
+	if err != nil {
+		log.Infof("failed to get information for okteto manifest: %s", err)
+	}
+	defer os.RemoveAll(manifestPath)
+
 	podPath, err := generatePodFile(ctx, dev, c)
 	if err != nil {
 		log.Infof("failed to get information about the remote dev container: %s", err)
@@ -74,12 +80,11 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 		log.Infof("error getting remote syncthing logs: %s", err)
 		log.Yellow(errors.ErrNotInDevMode.Error())
 	}
-
 	defer os.RemoveAll(remoteLogsPath)
 
 	now := time.Now()
 	archiveName := fmt.Sprintf("okteto-doctor-%s.zip", now.Format("20060102150405"))
-	files := []string{summaryFilename, devPath}
+	files := []string{summaryFilename}
 	files = append(files, stignoreFilenames...)
 	if model.FileExists(filepath.Join(config.GetOktetoHome(), "okteto.log")) {
 		files = append(files, filepath.Join(config.GetOktetoHome(), "okteto.log"))
@@ -89,6 +94,9 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	}
 	if podPath != "" {
 		files = append(files, podPath)
+	}
+	if manifestPath != "" {
+		files = append(files, manifestPath)
 	}
 	if remoteLogsPath != "" {
 		files = append(files, remoteLogsPath)
@@ -130,6 +138,54 @@ func generateStignoreFiles(dev *model.Dev) []string {
 		}
 	}
 	return result
+}
+
+func generateManifestFile(ctx context.Context, devPath string) (string, error) {
+	tempdir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", err
+	}
+	manifestFilename := filepath.Join(tempdir, "okteto.yml")
+	manifestFile, err := os.OpenFile(manifestFilename, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		return "", err
+	}
+	defer manifestFile.Close()
+
+	b, err := ioutil.ReadFile(devPath)
+	if err != nil {
+		return "", err
+	}
+
+	dev := &model.Dev{
+		Image:       &model.BuildInfo{},
+		Push:        &model.BuildInfo{},
+		Environment: make([]model.EnvVar, 0),
+		Secrets:     make([]model.Secret, 0),
+		Forward:     make([]model.Forward, 0),
+		Volumes:     make([]model.Volume, 0),
+		Syncs:       make([]model.Sync, 0),
+		Services:    make([]*model.Dev, 0),
+	}
+
+	if err := yaml.Unmarshal(b, dev); err != nil {
+		return "", err
+	}
+
+	dev.Environment = nil
+	for i := range dev.Services {
+		dev.Services[i].Environment = nil
+	}
+
+	marshalled, err := yaml.Marshal(dev)
+	if err != nil {
+		return "", err
+	}
+	fmt.Fprint(manifestFile, string(marshalled))
+	if err := manifestFile.Sync(); err != nil {
+		return "", err
+	}
+	return manifestFilename, nil
 }
 
 func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
