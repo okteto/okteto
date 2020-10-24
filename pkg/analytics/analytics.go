@@ -111,10 +111,11 @@ func TrackSyncError() {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, dev, clusterType string, single, swap, remote bool) {
+func TrackUp(success bool, dev, clusterType string, interactive, single, swap, remote bool) {
 	props := map[string]interface{}{
 		"name":          dev,
 		"clusterType":   clusterType,
+		"interactive":   interactive,
 		"singleService": single,
 		"swap":          swap,
 		"remote":        remote,

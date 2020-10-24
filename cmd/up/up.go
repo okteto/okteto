@@ -231,7 +231,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
+	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), up.getInteractive(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
 
 	go up.activateLoop(autoDeploy, build)
 
@@ -879,6 +879,21 @@ func (up *upContext) getClusterType() string {
 		}
 	}
 	return "remote"
+}
+
+func (up *upContext) getInteractive() bool {
+	if len(up.Dev.Command.Values) == 0 {
+		return true
+	}
+	if len(up.Dev.Command.Values) == 1 {
+		switch up.Dev.Command.Values[0] {
+		case "sh", "bash":
+			return true
+		default:
+			return false
+		}
+	}
+	return false
 }
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
