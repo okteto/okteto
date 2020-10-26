@@ -22,7 +22,7 @@ import (
 
 // GetAvailablePort returns a random port that's available
 func GetAvailablePort() (int, error) {
-	address, err := net.ResolveTCPAddr("tcp", ":0")
+	address, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
 	}
@@ -39,7 +39,7 @@ func GetAvailablePort() (int, error) {
 
 // IsPortAvailable returns true if the port is already taken
 func IsPortAvailable(port int) bool {
-	address := fmt.Sprintf(":%d", port)
+	address := fmt.Sprintf("127.0.0.1:%d", port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Infof("port %s is taken: %s", address, err)
