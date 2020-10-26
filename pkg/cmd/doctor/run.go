@@ -72,15 +72,16 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	if err != nil {
 		log.Infof("failed to get information about the remote dev container: %s", err)
 		log.Yellow(errors.ErrNotInDevMode.Error())
+	} else {
+		defer os.RemoveAll(podPath)
 	}
-	defer os.RemoveAll(podPath)
 
 	remoteLogsPath, err := generateRemoteSyncthingLogsFile(ctx, dev, c)
 	if err != nil {
 		log.Infof("error getting remote syncthing logs: %s", err)
-		log.Yellow(errors.ErrNotInDevMode.Error())
+	} else {
+		defer os.RemoveAll(remoteLogsPath)
 	}
-	defer os.RemoveAll(remoteLogsPath)
 
 	now := time.Now()
 	archiveName := fmt.Sprintf("okteto-doctor-%s.zip", now.Format("20060102150405"))
@@ -192,6 +193,10 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	pod, err := pods.GetDevPod(ctx, dev, c, false)
 	if err != nil {
 		return "", err
+	}
+
+	if pod == nil {
+		return "", errors.ErrNotFound
 	}
 
 	tempdir, err := ioutil.TempDir("", "")
