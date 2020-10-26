@@ -95,7 +95,10 @@ func (p *PortForwardManager) Add(f model.Forward) error {
 	}
 
 	if !model.IsPortAvailable(f.Local) {
-		return fmt.Errorf("port %d is already in use in your local machine, please check your configuration", f.Local)
+		if f.Local <= 1024 {
+			return fmt.Errorf("local port %d is privileged, it requires root access", f.Local)
+		}
+		return fmt.Errorf("local port %d is already in use in your local machine, please check your configuration", f.Local)
 	}
 
 	p.ports[f.Local] = f

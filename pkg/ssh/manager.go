@@ -56,7 +56,10 @@ func (fm *ForwardManager) canAdd(localPort int) error {
 	}
 
 	if !model.IsPortAvailable(localPort) {
-		return fmt.Errorf("port %d is already in use in your local machine, please check your configuration", localPort)
+		if localPort <= 1024 {
+			return fmt.Errorf("local port %d is privileged, it requires root access", localPort)
+		}
+		return fmt.Errorf("local port %d is already in use in your local machine, please check your configuration", localPort)
 	}
 
 	return nil
