@@ -40,7 +40,7 @@ func TestIsPortAvailable(t *testing.T) {
 		t.Fatalf("port %d wasn't available", p)
 	}
 
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", p))
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", p))
 	if err != nil {
 		t.Fatal(err)
 	}
