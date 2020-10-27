@@ -29,7 +29,7 @@ import (
 )
 
 // Exec executes the command over SSH
-func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
+func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
 	log.Info("starting SSH connection")
 	sshConfig, err := getSSHClientConfig()
 	if err != nil {
@@ -39,7 +39,7 @@ func Exec(ctx context.Context, remotePort int, tty bool, inR io.Reader, outW, er
 	var connection *ssh.Client
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 100; i++ {
-		connection, err = ssh.Dial("tcp", fmt.Sprintf("localhost:%d", remotePort), sshConfig)
+		connection, err = ssh.Dial("tcp", fmt.Sprintf("%s:%d", iface, remotePort), sshConfig)
 		if err == nil {
 			break
 		}

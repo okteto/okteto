@@ -20,7 +20,7 @@ import (
 )
 
 func TestGetAvailablePort(t *testing.T) {
-	p, err := GetAvailablePort()
+	p, err := GetAvailablePort(Localhost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,23 +31,23 @@ func TestGetAvailablePort(t *testing.T) {
 }
 
 func TestIsPortAvailable(t *testing.T) {
-	p, err := GetAvailablePort()
+	p, err := GetAvailablePort(Localhost)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !IsPortAvailable(p) {
+	if !IsPortAvailable(Localhost, p) {
 		t.Fatalf("port %d wasn't available", p)
 	}
 
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", p))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", Localhost, p))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	defer l.Close()
 
-	if IsPortAvailable(p) {
+	if IsPortAvailable(Localhost, p) {
 		t.Fatalf("port %d was available", p)
 	}
 }

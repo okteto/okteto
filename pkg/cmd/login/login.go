@@ -80,7 +80,7 @@ func StartWithBrowser(ctx context.Context, url string) (*Handler, error) {
 		return nil, fmt.Errorf("couldn't generate a random token, please try again")
 	}
 
-	port, err := model.GetAvailablePort()
+	port, err := model.GetAvailablePort(model.Localhost)
 
 	if err != nil {
 		log.Infof("couldn't access the network: %s", err)
