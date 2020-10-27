@@ -86,7 +86,7 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 			return nil
 		}
 		if strings.Contains(err.Error(), "exit code 137") {
-			return fmt.Errorf("Connection lost to your devolopment container")
+			return fmt.Errorf("Connection lost to your development container")
 		}
 
 		return err
