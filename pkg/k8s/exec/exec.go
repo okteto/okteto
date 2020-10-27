@@ -15,6 +15,7 @@ package exec
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strings"
 
@@ -83,6 +84,9 @@ func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, pod
 	if err := t.Safe(fn); err != nil {
 		if strings.Contains(err.Error(), "exit code 130") {
 			return nil
+		}
+		if strings.Contains(err.Error(), "exit code 137") {
+			return fmt.Errorf("Connection lost to your development container")
 		}
 
 		return err
