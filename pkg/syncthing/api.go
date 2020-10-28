@@ -67,7 +67,7 @@ func (s *Syncthing) callWithRetry(ctx context.Context, url, method string, code 
 	} else {
 		urlPath = path.Join(s.RemoteGUIAddress, url)
 		s.Client.Timeout = 25 * time.Second
-		if url == "rest/db/ignores" {
+		if url == "rest/db/ignores" || url == "rest/system/ping" {
 			s.Client.Timeout = 5 * time.Second
 		}
 	}

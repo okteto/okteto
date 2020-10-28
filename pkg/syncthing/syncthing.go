@@ -341,7 +341,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 
 //Ping checks if syncthing is available
 func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
-	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 3)
+	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 1)
 	return err == nil
 }
 
