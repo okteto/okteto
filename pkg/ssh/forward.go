@@ -96,7 +96,10 @@ func (f *forward) String() string {
 func (f *forward) transfer(from io.Writer, to io.Reader, quit chan struct{}) {
 	_, err := io.Copy(from, to)
 	if err != nil {
-		m := errors.Unwrap(err).Error()
+		if unwrapError := errors.Unwrap(err); unwrapError != nil {
+			err = unwrapError
+		}
+		m := err.Error()
 		if !strings.Contains(m, "use of closed network connection") {
 			log.Infof("%s -> data transfer failed: %v", f.String(), err)
 		}

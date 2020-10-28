@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
+	"github.com/alessio/shellescape"
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -145,7 +145,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		}
 	}()
 
-	cmd := strings.Join(command, " ")
+	cmd := shellescape.QuoteCommand(command)
 	log.Infof("executing command over SSH: '%s'", cmd)
 	return session.Run(cmd)
 }
