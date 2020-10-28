@@ -35,7 +35,7 @@ func GetRepoNameWithoutTag(name string) string {
 		return name[:i]
 	}
 	i = strings.IndexRune(name, '/')
-	if i == -1 || (!strings.ContainsAny(name[:i], ".:") && name[:i] != "localhost") {
+	if i == -1 || (!strings.ContainsAny(name[:i], ".:") && name[:i] != model.Localhost) {
 		domain, remainder = "", name
 	} else {
 		domain, remainder = name[:i], name[i+1:]

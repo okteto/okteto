@@ -53,7 +53,7 @@ func (t *testSSHHandler) listenAndServe(address string) {
 
 func TestForward(t *testing.T) {
 	ctx := context.Background()
-	sshPort, err := model.GetAvailablePort()
+	sshPort, err := model.GetAvailablePort(model.Localhost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestForward(t *testing.T) {
 	sshAddr := fmt.Sprintf("localhost:%d", sshPort)
 	ssh := testSSHHandler{}
 	go ssh.listenAndServe(sshAddr)
-	fm := NewForwardManager(ctx, sshAddr, "localhost", "0.0.0.0", nil)
+	fm := NewForwardManager(ctx, sshAddr, model.Localhost, "0.0.0.0", nil)
 
 	if err := startServers(fm); err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestForward(t *testing.T) {
 
 func TestReverse(t *testing.T) {
 	ctx := context.Background()
-	sshPort, err := model.GetAvailablePort()
+	sshPort, err := model.GetAvailablePort(model.Localhost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestReverse(t *testing.T) {
 	sshAddr := fmt.Sprintf("localhost:%d", sshPort)
 	ssh := testSSHHandler{}
 	go ssh.listenAndServe(sshAddr)
-	fm := NewForwardManager(ctx, sshAddr, "localhost", "0.0.0.0", nil)
+	fm := NewForwardManager(ctx, sshAddr, model.Localhost, "0.0.0.0", nil)
 
 	if err := connectReverseForwards(fm); err != nil {
 		t.Fatal(err)
@@ -114,12 +114,12 @@ func TestReverse(t *testing.T) {
 
 func startServers(fm *ForwardManager) error {
 	for i := 0; i < 1; i++ {
-		local, err := model.GetAvailablePort()
+		local, err := model.GetAvailablePort(model.Localhost)
 		if err != nil {
 			return err
 		}
 
-		remote, err := model.GetAvailablePort()
+		remote, err := model.GetAvailablePort(model.Localhost)
 		if err != nil {
 			return err
 		}
@@ -139,12 +139,12 @@ func startServers(fm *ForwardManager) error {
 
 func connectReverseForwards(fm *ForwardManager) error {
 	for i := 0; i < 1; i++ {
-		local, err := model.GetAvailablePort()
+		local, err := model.GetAvailablePort(model.Localhost)
 		if err != nil {
 			return err
 		}
 
-		remote, err := model.GetAvailablePort()
+		remote, err := model.GetAvailablePort(model.Localhost)
 		if err != nil {
 			return err
 		}

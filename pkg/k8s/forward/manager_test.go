@@ -15,7 +15,6 @@ package forward
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"sort"
 	"testing"
@@ -25,7 +24,7 @@ import (
 
 func TestAdd(t *testing.T) {
 
-	pf := NewPortForwardManager(context.Background(), nil, nil)
+	pf := NewPortForwardManager(context.Background(), model.Localhost, nil, nil)
 	if err := pf.Add(model.Forward{Local: 10100, Remote: 1010}); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +51,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestStop(t *testing.T) {
-	pf := NewPortForwardManager(context.Background(), nil, nil)
+	pf := NewPortForwardManager(context.Background(), model.Localhost, nil, nil)
 	pf.activeDev = &active{
 		readyChan: make(chan struct{}, 1),
 		stopChan:  make(chan struct{}, 1),
@@ -143,36 +142,6 @@ func Test_active_closeReady(t *testing.T) {
 			}
 
 			a.closeReady()
-		})
-	}
-}
-
-func Test_getListenAddresses(t *testing.T) {
-	tests := []struct {
-		name  string
-		want  []string
-		extra string
-	}{
-		{
-			name: "default",
-			want: []string{"localhost"},
-		},
-		{
-			name:  "from-env",
-			want:  []string{"localhost", "0.0.0.0"},
-			extra: "0.0.0.0",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			os.Unsetenv("OKTETO_ADDRESS")
-			if len(tt.extra) > 0 {
-				os.Setenv("OKTETO_ADDRESS", tt.extra)
-			}
-
-			if got := getListenAddresses(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getListenAddresses() = %v, want %v", got, tt.want)
-			}
 		})
 	}
 }

@@ -54,7 +54,7 @@ import (
 const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
 var (
-	localClusters = []string{"127.", "172.", "192.", "169.", "localhost", "::1", "fe80::", "fc00::"}
+	localClusters = []string{"127.", "172.", "192.", "169.", model.Localhost, "::1", "fe80::", "fc00::"}
 )
 
 //Up starts a development container
@@ -588,7 +588,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 	}
 
 	log.Infof("starting port forwards")
-	up.Forwarder = forward.NewPortForwardManager(ctx, up.RestConfig, up.Client)
+	up.Forwarder = forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client)
 
 	for _, f := range up.Dev.Forward {
 		if err := up.Forwarder.Add(f); err != nil {
@@ -609,12 +609,12 @@ func (up *upContext) forwards(ctx context.Context) error {
 
 func (up *upContext) sshForwards(ctx context.Context) error {
 	log.Infof("starting SSH port forwards")
-	f := forward.NewPortForwardManager(ctx, up.RestConfig, up.Client)
+	f := forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client)
 	if err := f.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
 		return err
 	}
 
-	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), "localhost", "0.0.0.0", f)
+	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f)
 
 	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
@@ -636,7 +636,7 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		}
 	}
 
-	if err := ssh.AddEntry(up.Dev.Name, up.Dev.RemotePort); err != nil {
+	if err := ssh.AddEntry(up.Dev.Name, up.Dev.Interface, up.Dev.RemotePort); err != nil {
 		log.Infof("failed to add entry to your SSH config file: %s", err)
 		return fmt.Errorf("failed to add entry to your SSH config file")
 	}
@@ -843,7 +843,7 @@ func (up *upContext) runCommand(ctx context.Context) error {
 	up.updateStateFile(ready)
 
 	if up.Dev.RemoteModeEnabled() {
-		return ssh.Exec(ctx, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command.Values)
+		return ssh.Exec(ctx, up.Dev.Interface, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command.Values)
 	}
 
 	return exec.Exec(

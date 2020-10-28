@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
+	"runtime"
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -39,6 +39,7 @@ const devName = "okteto-development"
 // PortForwardManager keeps a list of all the active port forwards
 type PortForwardManager struct {
 	stopped        bool
+	iface          string
 	ports          map[int]model.Forward
 	services       map[string]struct{}
 	activeDev      *active
@@ -78,9 +79,10 @@ func (a *active) error() error {
 }
 
 // NewPortForwardManager initializes a new instance
-func NewPortForwardManager(ctx context.Context, restConfig *rest.Config, c kubernetes.Interface) *PortForwardManager {
+func NewPortForwardManager(ctx context.Context, iface string, restConfig *rest.Config, c kubernetes.Interface) *PortForwardManager {
 	return &PortForwardManager{
 		ctx:        ctx,
+		iface:      iface,
 		ports:      make(map[int]model.Forward),
 		services:   make(map[string]struct{}),
 		restConfig: restConfig,
@@ -94,8 +96,17 @@ func (p *PortForwardManager) Add(f model.Forward) error {
 		return fmt.Errorf("port %d is listed multiple times, please check your configuration", f.Local)
 	}
 
-	if !model.IsPortAvailable(f.Local) {
-		return fmt.Errorf("port %d is already in use in your local machine, please check your configuration", f.Local)
+	if !model.IsPortAvailable(p.iface, f.Local) {
+		if f.Local <= 1024 {
+			os := runtime.GOOS
+			switch os {
+			case "darwin":
+				return fmt.Errorf("local port %d is privileged. Define 'interface: 0.0.0.0' in your okteto manifest and try again", f.Local)
+			case "linux":
+				return fmt.Errorf("local port %d is privileged. Try running \"sudo setcap 'cap_net_bind_service=+ep' /usr/local/bin/okteto\" and try again", f.Local)
+			}
+		}
+		return fmt.Errorf("local port %d is already in-use in your local machine", f.Local)
 	}
 
 	p.ports[f.Local] = f
@@ -170,7 +181,6 @@ func (p *PortForwardManager) buildForwarderToDevPod(namespace, pod string) (*act
 }
 
 func (p *PortForwardManager) buildForwarder(name, namespace, pod string, ports []string) (*active, *portforward.PortForwarder, error) {
-	addresses := getListenAddresses()
 	dialer, err := p.buildDialer(namespace, pod)
 	if err != nil {
 		return nil, nil, err
@@ -184,7 +194,7 @@ func (p *PortForwardManager) buildForwarder(name, namespace, pod string, ports [
 
 	pf, err := portforward.NewOnAddresses(
 		dialer,
-		addresses,
+		[]string{p.iface},
 		ports,
 		a.stopChan,
 		a.readyChan,
@@ -274,14 +284,4 @@ func (p *PortForwardManager) forwardService(ctx context.Context, namespace, serv
 
 		<-t.C
 	}
-}
-
-func getListenAddresses() []string {
-	addresses := []string{"localhost"}
-	extraAddress := os.Getenv("OKTETO_ADDRESS")
-	if len(extraAddress) > 0 {
-		addresses = append(addresses, extraAddress)
-	}
-
-	return addresses
 }

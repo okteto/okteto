@@ -140,22 +140,22 @@ type FolderError struct {
 // New constructs a new Syncthing.
 func New(dev *model.Dev) (*Syncthing, error) {
 	fullPath := getInstallPath()
-	remotePort, err := model.GetAvailablePort()
+	remotePort, err := model.GetAvailablePort(dev.Interface)
 	if err != nil {
 		return nil, err
 	}
 
-	remoteGUIPort, err := model.GetAvailablePort()
+	remoteGUIPort, err := model.GetAvailablePort(dev.Interface)
 	if err != nil {
 		return nil, err
 	}
 
-	guiPort, err := model.GetAvailablePort()
+	guiPort, err := model.GetAvailablePort(dev.Interface)
 	if err != nil {
 		return nil, err
 	}
 
-	listenPort, err := model.GetAvailablePort()
+	listenPort, err := model.GetAvailablePort(dev.Interface)
 	if err != nil {
 		return nil, err
 	}
@@ -178,13 +178,13 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		binPath:          fullPath,
 		Client:           NewAPIClient(),
 		FileWatcherDelay: DefaultFileWatcherDelay,
-		GUIAddress:       fmt.Sprintf("localhost:%d", guiPort),
+		GUIAddress:       fmt.Sprintf("%s:%d", dev.Interface, guiPort),
 		Home:             config.GetDeploymentHome(dev.Namespace, dev.Name),
 		LogPath:          GetLogFile(dev.Namespace, dev.Name),
-		ListenAddress:    fmt.Sprintf("localhost:%d", listenPort),
-		RemoteAddress:    fmt.Sprintf("tcp://localhost:%d", remotePort),
+		ListenAddress:    fmt.Sprintf("%s:%d", dev.Interface, listenPort),
+		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", dev.Interface, remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
-		RemoteGUIAddress: fmt.Sprintf("localhost:%d", remoteGUIPort),
+		RemoteGUIAddress: fmt.Sprintf("%s:%d", dev.Interface, remoteGUIPort),
 		LocalGUIPort:     guiPort,
 		LocalPort:        listenPort,
 		RemoteGUIPort:    remoteGUIPort,

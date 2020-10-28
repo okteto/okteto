@@ -36,6 +36,8 @@ import (
 )
 
 const (
+	//Localhost localhost
+	Localhost                   = "localhost"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
 	//OktetoDefaultPVSize default volume size
@@ -131,6 +133,7 @@ type Dev struct {
 	parentSyncFolder     string                `json:"-" yaml:"-"`
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+	Interface            string                `json:"interface,omitempty" yaml:"interface,omitempty"`
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
@@ -438,6 +441,9 @@ func (dev *Dev) setDefaults() error {
 	if dev.Annotations == nil {
 		dev.Annotations = map[string]string{}
 	}
+	if dev.Interface == "" {
+		dev.Interface = Localhost
+	}
 	if dev.SSHServerPort == 0 {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
 	}
@@ -576,7 +582,7 @@ func validateSecrets(secrets []Secret) error {
 //LoadRemote configures remote execution
 func (dev *Dev) LoadRemote(pubKeyPath string) {
 	if dev.RemotePort == 0 {
-		p, err := GetAvailablePort()
+		p, err := GetAvailablePort(dev.Interface)
 		if err != nil {
 			log.Infof("failed to get random port for SSH connection: %s", err)
 			p = 2222
