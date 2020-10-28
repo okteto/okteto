@@ -306,8 +306,12 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 		return err
 	}
 
+	if err := up.setDevContainer(d); err != nil {
+		return err
+	}
+
 	if err := up.devMode(ctx, d, create); err != nil {
-		return fmt.Errorf("couldn't activate your development container: %s", err.Error())
+		return fmt.Errorf("couldn't activate your development container (%s): %s", up.Dev.Container, err.Error())
 	}
 
 	if err := up.forwards(ctx); err != nil {
@@ -483,6 +487,19 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	return nil
 }
 
+func (up *upContext) setDevContainer(d *appsv1.Deployment) error {
+	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
+	if devContainer == nil {
+		return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
+	}
+
+	up.Dev.Container = devContainer.Name
+
+	if up.Dev.Image.Name == "" {
+		up.Dev.Image.Name = devContainer.Image
+	}
+}
+
 func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	up.updateStateFile(activating)
@@ -493,17 +510,6 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 		if err := volumes.Create(ctx, up.Dev, up.Client); err != nil {
 			return err
 		}
-	}
-
-	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
-	if devContainer == nil {
-		return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
-	}
-
-	up.Dev.Container = devContainer.Name
-
-	if up.Dev.Image.Name == "" {
-		up.Dev.Image.Name = devContainer.Image
 	}
 
 	up.updateStateFile(starting)
