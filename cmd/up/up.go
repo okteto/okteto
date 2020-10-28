@@ -498,6 +498,8 @@ func (up *upContext) setDevContainer(d *appsv1.Deployment) error {
 	if up.Dev.Image.Name == "" {
 		up.Dev.Image.Name = devContainer.Image
 	}
+
+	return nil
 }
 
 func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create bool) error {
