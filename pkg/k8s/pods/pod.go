@@ -159,6 +159,14 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, labels strin
 				if podList.Items[i].Status.Phase == apiv1.PodRunning {
 					return &podList.Items[i], nil
 				}
+
+				for _, c := range podList.Items[i].Status.ContainerStatuses {
+					if c.State.Waiting != nil {
+						if c.State.Waiting.Reason == "ImagePullBackOff" {
+							return nil, fmt.Errorf("container '%s' image '%s' not found or it is private and 'imagePullSecrets' is not properly configured", c.Name, c.Image)
+						}
+					}
+				}
 			}
 		}
 	}
