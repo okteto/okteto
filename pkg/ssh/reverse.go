@@ -54,17 +54,19 @@ func (r *reverse) start() {
 	defer remoteListener.Close()
 
 	for {
+		select {
+		case <-r.ctx.Done():
+			return
+		default:
+			r.setConnected()
+			remoteConn, err := remoteListener.Accept()
+			if err != nil {
+				log.Infof("%s -> failed to accept connection: %v", r.String(), err)
+				continue
+			}
 
-		r.setConnected()
-
-		remoteConn, err := remoteListener.Accept()
-		if err != nil {
-			log.Infof("%s -> failed to accept connection: %v", r.String(), err)
-			continue
+			go r.handle(remoteConn)
 		}
-
-		go r.handle(remoteConn)
-
 	}
 }
 
@@ -72,7 +74,7 @@ func (r *reverse) handle(remote net.Conn) {
 	defer remote.Close()
 
 	quit := make(chan struct{}, 1)
-	local, err := getConn(r.localAddress, 3)
+	local, err := getConn(r.ctx, r.localAddress, 3)
 	if err != nil {
 		log.Infof("%s -> failed to listen on local address: %v", r.String(), err)
 		return

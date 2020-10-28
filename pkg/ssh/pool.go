@@ -26,20 +26,16 @@ import (
 type pool struct {
 	ka     time.Duration
 	ctx    context.Context
-	cancel func()
-
 	client *ssh.Client
 }
 
 func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig) (*pool, error) {
-	c, cancel := context.WithCancel(ctx)
 	p := &pool{
-		ka:     30 * time.Second,
-		ctx:    c,
-		cancel: cancel,
+		ka:  30 * time.Second,
+		ctx: ctx,
 	}
 
-	conn, err := getTCPConnection(serverAddr, p.ka)
+	conn, err := getTCPConnection(ctx, serverAddr, p.ka)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish a tcp connection for %s: %s", serverAddr, err)
 	}
@@ -90,8 +86,8 @@ func (p *pool) getListener(address string) (net.Listener, error) {
 	return l, nil
 }
 
-func getTCPConnection(serverAddr string, keepAlive time.Duration) (net.Conn, error) {
-	c, err := getConn(serverAddr, 3)
+func getTCPConnection(ctx context.Context, serverAddr string, keepAlive time.Duration) (net.Conn, error) {
+	c, err := getConn(ctx, serverAddr, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -107,11 +103,12 @@ func getTCPConnection(serverAddr string, keepAlive time.Duration) (net.Conn, err
 	return c, nil
 }
 
-func getConn(serverAddr string, maxRetries int) (net.Conn, error) {
+func getConn(ctx context.Context, serverAddr string, maxRetries int) (net.Conn, error) {
 	var lastErr error
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 3; i++ {
-		c, err := net.Dial("tcp", serverAddr)
+		d := net.Dialer{}
+		c, err := d.DialContext(ctx, "tcp", serverAddr)
 		if err == nil {
 			return c, nil
 		}

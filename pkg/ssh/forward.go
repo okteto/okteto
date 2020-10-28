@@ -59,14 +59,18 @@ func (f *forward) start() {
 	f.setConnected()
 
 	for {
-		localConn, err := localListener.Accept()
-		if err != nil {
-			log.Infof("%s -> failed to accept connection: %v", f.String(), err)
-			continue
+		select {
+		case <-f.ctx.Done():
+			return
+		default:
+			localConn, err := localListener.Accept()
+			if err != nil {
+				log.Infof("%s -> failed to accept connection: %v", f.String(), err)
+				continue
+			}
+
+			go f.handle(localConn)
 		}
-
-		go f.handle(localConn)
-
 	}
 }
 
