@@ -117,6 +117,7 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 	for _, ff := range fm.forwards {
 		ff.pool = pool
 		go ff.start()
+
 	}
 
 	for _, rt := range fm.reverses {
@@ -129,7 +130,6 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 
 // Stop sends a stop signal to all the connections
 func (fm *ForwardManager) Stop() {
-	// TODO stop forwards and reverses
 
 	if fm.pf != nil {
 		fm.pf.Stop()

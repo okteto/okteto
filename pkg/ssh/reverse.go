@@ -54,17 +54,19 @@ func (r *reverse) start() {
 	defer remoteListener.Close()
 
 	for {
+		select {
+		case <-r.ctx.Done():
+			return
+		default:
+			r.setConnected()
+			remoteConn, err := remoteListener.Accept()
+			if err != nil {
+				log.Infof("%s -> failed to accept connection: %v", r.String(), err)
+				continue
+			}
 
-		r.setConnected()
-
-		remoteConn, err := remoteListener.Accept()
-		if err != nil {
-			log.Infof("%s -> failed to accept connection: %v", r.String(), err)
-			continue
+			go r.handle(remoteConn)
 		}
-
-		go r.handle(remoteConn)
-
 	}
 }
 
