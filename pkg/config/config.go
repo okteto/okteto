@@ -34,7 +34,7 @@ const (
 // VersionString the version of the cli
 var VersionString string
 
-// DefaultBackoff is the backoff for retryable network operations. This results in a wait of up to 35 seconds:
+// DefaultBackoff is the backoff for retryable network operations. This results in a wait of up to 30 seconds:
 var DefaultBackoff = wait.Backoff{
 	Steps:    9,
 	Duration: 10 * time.Millisecond,

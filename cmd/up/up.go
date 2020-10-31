@@ -263,11 +263,12 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 
 			if errors.IsTransient(err) {
 				networkRetries++
-			if networkRetries > 3 {
+				if networkRetries > 3 {
 					up.Exit <- err
 					return
 				}
 
+				log.Infof("failed to connect due to networking issues, retrying: %s", err)
 				continue
 			}
 
