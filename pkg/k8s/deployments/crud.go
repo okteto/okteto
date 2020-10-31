@@ -59,6 +59,7 @@ func getByName(ctx context.Context, name, namespace string, c kubernetes.Interfa
 	err := retry.OnError(config.DefaultBackoff, errors.IsTransient, func() error {
 		d, err := c.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
+			log.Infof("failed to get deployment/%s, might try again:%s", name, err)
 			return err
 		}
 		dep = d
@@ -66,6 +67,7 @@ func getByName(ctx context.Context, name, namespace string, c kubernetes.Interfa
 	})
 
 	if err != nil {
+		log.Infof("failed to get deployment: %s", err)
 		return nil, err
 	}
 
@@ -82,6 +84,7 @@ func getByLabel(ctx context.Context, selector, namespace string, c kubernetes.In
 		)
 
 		if err != nil {
+			log.Infof("failed to get deployment, might try again:%s", err)
 			return err
 		}
 
@@ -90,6 +93,7 @@ func getByLabel(ctx context.Context, selector, namespace string, c kubernetes.In
 	})
 
 	if err != nil {
+		log.Infof("failed to get deployment: %s", err)
 		return nil, err
 	}
 

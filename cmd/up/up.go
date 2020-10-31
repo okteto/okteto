@@ -258,11 +258,16 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 			if err == errors.ErrLostSyncthing {
 				isRetry = true
 				continue
-			} else {
-				up.Exit <- err
-				return
 			}
+
+			if errors.IsTransient(err) {
+				continue
+			}
+
+			up.Exit <- err
+			return
 		}
+
 		up.Exit <- nil
 		return
 	}
@@ -326,7 +331,7 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 			if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
 				up.resetSyncthing = true
 			}
-			log.Yellow("\nConnection lost to your development container, reconnecting...\n")
+			log.Yellow("\nConnection lost to your development container while synchronizing your files, reconnecting...")
 			return errors.ErrLostSyncthing
 		}
 		return err
@@ -353,9 +358,12 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	}()
 
 	prevError := up.waitUntilExitOrInterrupt()
+	if err != nil {
+		log.Infof("command finished with error: %s", prevError)
+	}
 
 	if up.shouldRetry(ctx, prevError) {
-		log.Yellow("\nConnection lost to your development container, reconnecting...\n")
+		log.Yellow("\nConnection lost to your development container, reconnecting...")
 		if !up.Dev.PersistentVolumeEnabled() {
 			if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
 				return err

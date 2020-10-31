@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 )
@@ -53,6 +54,7 @@ func Get(ctx context.Context, name string, c *kubernetes.Clientset) (*apiv1.Name
 	err := retry.OnError(config.DefaultBackoff, errors.IsTransient, func() error {
 		n, err := c.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
+			log.Infof("failed to get deployment, might try again: %s", err)
 			return err
 		}
 
