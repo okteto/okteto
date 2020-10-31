@@ -252,6 +252,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 // activateLoop activates the development container in a retry loop
 func (up *upContext) activateLoop(autoDeploy, build bool) {
 	isRetry := false
+	networkRetries := 0
 	for {
 		err := up.activate(isRetry, autoDeploy, build)
 		if err != nil {
@@ -261,6 +262,12 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 			}
 
 			if errors.IsTransient(err) {
+				networkRetries++
+			if networkRetries > 3 {
+					up.Exit <- err
+					return
+				}
+
 				continue
 			}
 
