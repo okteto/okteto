@@ -278,8 +278,6 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	up.CommandResult = make(chan error, 1)
 	up.cleaned = make(chan string, 1)
 
-	// check if I can talk to the cluster
-
 	d, create, err := up.getCurrentDeployment(ctx, autoDeploy, isRetry)
 	if err != nil {
 		return err
