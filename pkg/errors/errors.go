@@ -73,6 +73,22 @@ func IsNotFound(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "not found")
 }
 
+// IsTransient returns true if err represents a transient error
+func IsTransient(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	switch {
+	case strings.Contains(err.Error(), "operation time out"),
+		strings.Contains(err.Error(), "can't assign requested address"),
+		strings.Contains(err.Error(), "network is unreachable"):
+		return true
+	default:
+		return false
+	}
+}
+
 // IsNotExist returns true if err is of the type does not exist
 func IsNotExist(err error) bool {
 	if err == nil {

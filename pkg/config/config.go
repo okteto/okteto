@@ -24,6 +24,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
@@ -32,6 +33,14 @@ const (
 
 // VersionString the version of the cli
 var VersionString string
+
+// DefaultBackoff is the backoff for retryable network operations. This results in a wait of up to 100 seconds:
+var DefaultBackoff = wait.Backoff{
+	Steps:    10,
+	Duration: 10 * time.Millisecond,
+	Factor:   3.0,
+	Jitter:   0.1,
+}
 
 var timeout time.Duration
 var tOnce sync.Once

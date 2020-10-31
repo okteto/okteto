@@ -29,6 +29,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
 )
 
 //List returns the list of deployments
@@ -46,34 +47,59 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 		return nil, fmt.Errorf("empty namespace")
 	}
 
-	var d *appsv1.Deployment
-	var err error
-
-	if len(dev.Labels) == 0 {
-		d, err = c.AppsV1().Deployments(namespace).Get(ctx, dev.Name, metav1.GetOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get deployment %s/%s: %w", namespace, dev.Name, err)
-		}
-	} else {
-		deploys, err := c.AppsV1().Deployments(namespace).List(
-			ctx,
-			metav1.ListOptions{
-				LabelSelector: dev.LabelsSelector(),
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-		if len(deploys.Items) == 0 {
-			return nil, fmt.Errorf("deployment for labels '%s' not found", dev.LabelsSelector())
-		}
-		if len(deploys.Items) > 1 {
-			return nil, fmt.Errorf("Found '%d' deployments for labels '%s' instead of 1", len(deploys.Items), dev.LabelsSelector())
-		}
-		d = &deploys.Items[0]
+	if len(dev.Labels) > 0 {
+		return getByLabel(ctx, dev.LabelsSelector(), namespace, c)
 	}
 
-	return d, nil
+	return getByName(ctx, dev.Name, namespace, c)
+}
+
+func getByName(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
+	var dep *appsv1.Deployment
+	err := retry.OnError(config.DefaultBackoff, errors.IsTransient, func() error {
+		d, err := c.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		dep = d
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return dep, nil
+}
+
+func getByLabel(ctx context.Context, selector, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
+	var deploys *appsv1.DeploymentList
+	err := retry.OnError(config.DefaultBackoff, errors.IsTransient, func() error {
+		d, err := c.AppsV1().Deployments(namespace).List(ctx,
+			metav1.ListOptions{
+				LabelSelector: selector,
+			},
+		)
+
+		if err != nil {
+			return err
+		}
+
+		deploys = d
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(deploys.Items) == 0 {
+		return nil, fmt.Errorf("deployment for labels '%s' not found", selector)
+	}
+	if len(deploys.Items) > 1 {
+		return nil, fmt.Errorf("found '%d' deployments for labels '%s' instead of 1", len(deploys.Items), selector)
+	}
+	return &deploys.Items[0], nil
 }
 
 //GetRevisionAnnotatedDeploymentOrFailed returns a deployment object if it is healthy and annotated with its revision or an error
@@ -177,9 +203,9 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 	timeout := time.Now().Add(2 * config.GetTimeout()) // 60 seconds
 
 	for i := 0; ; i++ {
-		updated, err := client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
+		updated, err := getByName(ctx, d.GetName(), d.GetNamespace(), client)
 		if err != nil {
-			return fmt.Errorf("failed to get deployment %s/%s: %w", d.Namespace, d.Name, err)
+			return err
 		}
 
 		revision := updated.Annotations[revisionAnnotation]

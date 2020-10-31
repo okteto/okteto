@@ -19,8 +19,11 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -43,11 +46,23 @@ func IsOktetoAllowed(ns *apiv1.Namespace) bool {
 }
 
 // Get returns the namespace object of ns
-func Get(ctx context.Context, ns string, c *kubernetes.Clientset) (*apiv1.Namespace, error) {
-	n, err := c.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
+func Get(ctx context.Context, name string, c *kubernetes.Clientset) (*apiv1.Namespace, error) {
+
+	var namespace *apiv1.Namespace
+
+	err := retry.OnError(config.DefaultBackoff, errors.IsTransient, func() error {
+		n, err := c.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		namespace = n
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	return n, nil
+	return namespace, nil
 }

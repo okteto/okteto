@@ -269,7 +269,6 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 }
 
 func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
-	// create a new context on every iteration
 	ctx, cancel := context.WithCancel(context.Background())
 	up.Cancel = cancel
 	up.Canceled = false
@@ -278,6 +277,8 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	up.Disconnect = make(chan error, 1)
 	up.CommandResult = make(chan error, 1)
 	up.cleaned = make(chan string, 1)
+
+	// check if I can talk to the cluster
 
 	d, create, err := up.getCurrentDeployment(ctx, autoDeploy, isRetry)
 	if err != nil {
@@ -397,7 +398,7 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy, isRet
 	}
 
 	if !errors.IsNotFound(err) || isRetry {
-		return nil, false, fmt.Errorf("couldn't get deployment %s/%s, please try again: %s", up.Dev.Namespace, up.Dev.Name, err)
+		return nil, false, fmt.Errorf("couldn't get deployment %s/%s, please try again: %w", up.Dev.Namespace, up.Dev.Name, err)
 	}
 
 	if len(up.Dev.Labels) > 0 {
@@ -546,9 +547,8 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 		}
 
 		if err := deployments.UpdateOktetoRevision(ctx, trList[name].Deployment, up.Client); err != nil {
-			return err
+			return fmt.Errorf("couldn't get deployment %s/%s, please try again: %w", trList[name].Deployment.GetNamespace(), trList[name].Deployment.GetName(), err)
 		}
-
 	}
 
 	if create {
