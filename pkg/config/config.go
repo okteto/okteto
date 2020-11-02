@@ -50,7 +50,7 @@ func GetBinaryFullPath() string {
 func GetOktetoHome() string {
 	if v, ok := os.LookupEnv("OKTETO_FOLDER"); ok {
 		if !model.FileExists(v) {
-			log.Fatalf("OKTETO_FOLDER points to a non-existing directory: %s", v)
+			log.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
 
 		return v
