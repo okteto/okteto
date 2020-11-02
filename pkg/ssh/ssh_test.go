@@ -225,6 +225,39 @@ func Test_removeHost(t *testing.T) {
 	}
 }
 
+func TestGetPort(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.RemoveAll(dir)
+
+	if err := os.Setenv("OKTETO_HOME", dir); err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Unsetenv("OKTETO_HOME")
+
+	if _, err := GetPort(t.Name()); err == nil {
+		t.Fatal("expected error on non existing host")
+	}
+
+	if err := AddEntry(t.Name(), "localhost", 123456); err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := GetPort(t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if p != 123456 {
+		t.Errorf("got %d, expected %d", p, 123456)
+	}
+
+}
+
 func Test_getSSHConfigPath(t *testing.T) {
 	ssh := getSSHConfigPath()
 	parts := strings.Split(ssh, string(os.PathSeparator))
