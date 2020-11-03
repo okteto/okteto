@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -201,7 +202,9 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	var err error
 	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal(up.Dev.Context)
 	if err != nil {
-		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+		kubecfg := config.GetKubeConfigFile()
+		log.Infof("failed to load local Kubeconfig: %s", err)
+		return fmt.Errorf("failed to load your local Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
 	}
 
 	if up.Dev.Namespace == "" {
