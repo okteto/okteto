@@ -109,7 +109,21 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 
 	if dev.RemoteModeEnabled() {
 		log.Infof("executing remote command over SSH")
+		if dev.RemotePort == 0 {
+			p, err := ssh.GetPort(dev.Name)
+			if err != nil {
+				log.Infof("failed to get the SSH port for %s: %s", dev.Name, err)
+				return errors.UserError{
+					E:    fmt.Errorf("development mode is not enabled on your deployment"),
+					Hint: "Run `okteto up` to enable it and try again",
+				}
+			}
+
+			dev.RemotePort = p
+		}
+
 		dev.LoadRemote(ssh.GetPublicKey())
+
 		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
 

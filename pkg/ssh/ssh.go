@@ -60,6 +60,32 @@ func RemoveEntry(name string) error {
 	return remove(getSSHConfigPath(), buildHostname(name))
 }
 
+// GetPort returns the corresponding SSH port for the dev env
+func GetPort(name string) (int, error) {
+	cfg, err := getConfig(getSSHConfigPath())
+	if err != nil {
+		return 0, err
+	}
+
+	hostname := buildHostname(name)
+	i, found := findHost(cfg, hostname)
+	if !found {
+		return 0, fmt.Errorf("development container not found")
+	}
+
+	param := cfg.hosts[i].getParam(portKeyword)
+	if param == nil {
+		return 0, fmt.Errorf("port not found")
+	}
+
+	port, err := strconv.Atoi(param.value())
+	if err != nil {
+		return 0, fmt.Errorf("invalid port: %s", param.value())
+	}
+
+	return port, nil
+}
+
 func remove(path, name string) error {
 	cfg, err := getConfig(path)
 	if err != nil {
