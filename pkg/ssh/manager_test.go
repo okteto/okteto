@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gliderlabs/ssh"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -47,12 +47,12 @@ func (t *testSSHHandler) listenAndServe(address string) {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatal(err)
+		log.Fatalf(err.Error())
 	}
 }
 
 func TestForward(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	sshPort, err := model.GetAvailablePort(model.Localhost)
 	if err != nil {
 		t.Fatal(err)
@@ -75,9 +75,15 @@ func TestForward(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Print("forwards connected")
+	log.Info("forwards connected")
 
 	if err := callForwards(fm); err != nil {
+		t.Error(err)
+	}
+
+	cancel()
+	fm.Stop()
+	if err := fm.waitForwardsDisconnected(); err != nil {
 		t.Error(err)
 	}
 }
@@ -266,6 +272,33 @@ func (fm *ForwardManager) waitForwardsConnected() error {
 		if connected {
 			return nil
 		}
+		<-tk.C
+	}
+}
+
+func (fm *ForwardManager) waitForwardsDisconnected() error {
+	connectTimeout := 120 * time.Second
+	tk := time.NewTicker(500 * time.Millisecond)
+	start := time.Now()
+
+	for {
+		elapsed := time.Since(start)
+		if elapsed > connectTimeout {
+			return fmt.Errorf("forwards not disconnected after %s", connectTimeout)
+		}
+
+		disconnected := true
+		for _, f := range fm.forwards {
+			if f.connected() {
+				log.Infof("%s is still connected", f)
+				disconnected = false
+			}
+		}
+
+		if disconnected {
+			return nil
+		}
+
 		<-tk.C
 	}
 }
