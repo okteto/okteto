@@ -19,6 +19,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
 )
@@ -121,6 +122,8 @@ func getConn(ctx context.Context, serverAddr string, maxRetries int) (net.Conn, 
 
 func (p *pool) stop() {
 	if err := p.client.Close(); err != nil {
-		log.Infof("failed to close SSH pool: %s", err)
+		if !errors.IsClosedNetwork(err) {
+			log.Infof("failed to close SSH pool: %s", err)
+		}
 	}
 }

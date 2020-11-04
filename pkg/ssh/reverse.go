@@ -54,7 +54,7 @@ func (r *reverse) start(ctx context.Context) {
 	defer remoteListener.Close()
 	go func() {
 		<-ctx.Done()
-
+		r.setDisconnected()
 		if err := remoteListener.Close(); err != nil {
 			log.Infof("%s -> failed to close: %s", r.String(), err)
 		}
@@ -66,6 +66,10 @@ func (r *reverse) start(ctx context.Context) {
 		r.setConnected()
 		remoteConn, err := remoteListener.Accept()
 		if err != nil {
+			if !r.connected() {
+				return
+			}
+
 			log.Infof("%s -> failed to accept connection: %v", r.String(), err)
 			continue
 		}

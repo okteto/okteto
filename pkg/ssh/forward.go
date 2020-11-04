@@ -42,7 +42,12 @@ func (f *forward) setConnected() {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	f.c = true
+}
 
+func (f *forward) setDisconnected() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.c = false
 }
 
 func (f *forward) start(ctx context.Context) {
@@ -54,6 +59,7 @@ func (f *forward) start(ctx context.Context) {
 
 	go func() {
 		<-ctx.Done()
+		f.setDisconnected()
 		if err := localListener.Close(); err != nil {
 			log.Infof("%s -> failed to close: %s", f.String(), err)
 		}
@@ -66,6 +72,10 @@ func (f *forward) start(ctx context.Context) {
 	for {
 		localConn, err := localListener.Accept()
 		if err != nil {
+			if !f.connected() {
+				return
+			}
+
 			log.Infof("%s -> failed to accept connection: %v", f.String(), err)
 			continue
 		}
