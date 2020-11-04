@@ -123,5 +123,4 @@ func (p *pool) stop() {
 	if err := p.client.Close(); err != nil {
 		log.Infof("failed to close SSH pool: %s", err)
 	}
-
 }
