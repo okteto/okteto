@@ -58,7 +58,6 @@ func (p *pool) keepAlive(ctx context.Context) {
 	t := time.NewTicker(p.ka)
 	defer t.Stop()
 	for {
-
 		select {
 		case <-ctx.Done():
 			if ctx.Err() != nil {
