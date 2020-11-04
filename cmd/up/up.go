@@ -372,6 +372,7 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	prevError := up.waitUntilExitOrInterrupt()
 
 	if up.shouldRetry(ctx, prevError) {
+		log.Println()
 		log.Yellow("Connection lost to your development container, reconnecting...")
 		if !up.Dev.PersistentVolumeEnabled() {
 			if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
