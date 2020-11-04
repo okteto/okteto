@@ -18,10 +18,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"time"
 
 	"github.com/alessio/shellescape"
+	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -39,7 +41,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	var connection *ssh.Client
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 100; i++ {
-		connection, err = ssh.Dial("tcp", fmt.Sprintf("%s:%d", iface, remotePort), sshConfig)
+		connection, err = dial(ctx, "tcp", fmt.Sprintf("%s:%d", iface, remotePort), sshConfig)
 		if err == nil {
 			break
 		}
@@ -52,6 +54,17 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 
 	defer connection.Close()
+	go func() {
+		<-ctx.Done()
+		if connection != nil {
+			if err := connection.Close(); err != nil {
+				if !okErrors.IsClosedNetwork(err) {
+					log.Infof("failed to close ssh client for exec: %s", err)
+				}
+			}
+		}
+		log.Infof("ssh client for exec closed")
+	}()
 
 	session, err := connection.NewSession()
 	if err != nil {
@@ -92,6 +105,8 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 			if err := terminal.Restore(termFD, state); err != nil {
 				log.Infof("failed to restore terminal: %s", err)
 			}
+
+			log.Infof("terminal restored")
 		}()
 
 		if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
@@ -157,4 +172,17 @@ func isTerminal(r io.Reader) (int, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func dial(ctx context.Context, network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	d := net.Dialer{Timeout: config.Timeout}
+	conn, err := d.DialContext(ctx, network, addr)
+	if err != nil {
+		return nil, err
+	}
+	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	if err != nil {
+		return nil, err
+	}
+	return ssh.NewClient(c, chans, reqs), nil
 }

@@ -255,16 +255,27 @@ func (up *upContext) start(autoDeploy, build bool) error {
 // activateLoop activates the development container in a retry loop
 func (up *upContext) activateLoop(autoDeploy, build bool) {
 	isRetry := false
+	t := time.NewTicker(3 * time.Second)
+	defer t.Stop()
+
 	for {
 		err := up.activate(isRetry, autoDeploy, build)
 		if err != nil {
+			log.Infof("activate failed with: %s", err)
+
 			if err == errors.ErrLostSyncthing {
 				isRetry = true
 				continue
-			} else {
-				up.Exit <- err
-				return
 			}
+
+			if errors.IsTransient(err) {
+				log.Yellow("Connection lost to your development container, reconnecting...")
+				<-t.C
+				continue
+			}
+
+			up.Exit <- err
+			return
 		}
 		up.Exit <- nil
 		return
@@ -277,7 +288,6 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	up.Cancel = cancel
 	up.Canceled = false
-	defer up.shutdown()
 
 	up.Disconnect = make(chan error, 1)
 	up.CommandResult = make(chan error, 1)
@@ -306,6 +316,8 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 		}
 	}
 
+	defer up.shutdown()
+
 	if err := up.initializeSyncthing(); err != nil {
 		return err
 	}
@@ -331,7 +343,7 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 			if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
 				up.resetSyncthing = true
 			}
-			log.Yellow("\nConnection lost to your development container, reconnecting...\n")
+			log.Yellow("Connection lost to your development container while synchronizing your files, reconnecting...")
 			return errors.ErrLostSyncthing
 		}
 		return err
@@ -360,7 +372,8 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	prevError := up.waitUntilExitOrInterrupt()
 
 	if up.shouldRetry(ctx, prevError) {
-		log.Yellow("\nConnection lost to your development container, reconnecting...\n")
+		log.Println()
+		log.Yellow("Connection lost to your development container, reconnecting...")
 		if !up.Dev.PersistentVolumeEnabled() {
 			if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
 				return err
