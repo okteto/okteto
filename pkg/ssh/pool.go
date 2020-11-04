@@ -25,13 +25,15 @@ import (
 )
 
 type pool struct {
-	ka     time.Duration
-	client *ssh.Client
+	ka      time.Duration
+	client  *ssh.Client
+	stopped bool
 }
 
 func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig) (*pool, error) {
 	p := &pool{
-		ka: 30 * time.Second,
+		ka:      30 * time.Second,
+		stopped: false,
 	}
 
 	conn, err := getTCPConnection(ctx, serverAddr, p.ka)
@@ -56,15 +58,20 @@ func (p *pool) keepAlive(ctx context.Context) {
 	t := time.NewTicker(p.ka)
 	defer t.Stop()
 	for {
-
 		select {
 		case <-ctx.Done():
 			if ctx.Err() != nil {
-				log.Infof("ssh pool keep alive completed with error: %s", ctx.Err())
+				if !p.stopped {
+					log.Infof("ssh pool keep alive completed with error: %s", ctx.Err())
+				}
 			}
 
 			return
 		case <-t.C:
+			if p.stopped {
+				return
+			}
+
 			if _, _, err := p.client.SendRequest("dev.okteto.com/keepalive", true, nil); err != nil {
 				log.Infof("failed to send SSH keepalive: %s", err)
 			}
@@ -121,6 +128,7 @@ func getConn(ctx context.Context, serverAddr string, maxRetries int) (net.Conn, 
 }
 
 func (p *pool) stop() {
+	p.stopped = true
 	if err := p.client.Close(); err != nil {
 		if !errors.IsClosedNetwork(err) {
 			log.Infof("failed to close SSH pool: %s", err)

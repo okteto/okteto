@@ -86,6 +86,10 @@ func TestForward(t *testing.T) {
 	if err := fm.waitForwardsDisconnected(); err != nil {
 		t.Error(err)
 	}
+
+	if !fm.pool.stopped {
+		t.Error("pool is not stopped")
+	}
 }
 
 func TestReverse(t *testing.T) {
