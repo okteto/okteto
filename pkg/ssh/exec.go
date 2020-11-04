@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"time"
 
@@ -39,7 +40,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	var connection *ssh.Client
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 100; i++ {
-		connection, err = ssh.Dial("tcp", fmt.Sprintf("%s:%d", iface, remotePort), sshConfig)
+		connection, err = dial(ctx, "tcp", fmt.Sprintf("%s:%d", iface, remotePort), sshConfig)
 		if err == nil {
 			break
 		}
@@ -95,6 +96,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 			// empty line after the disconnection to reset the input
 			log.Println()
+			log.Infof("terminal restored")
 		}()
 
 		if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
@@ -160,4 +162,17 @@ func isTerminal(r io.Reader) (int, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func dial(ctx context.Context, network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	d := net.Dialer{Timeout: config.Timeout}
+	conn, err := d.DialContext(ctx, network, addr)
+	if err != nil {
+		return nil, err
+	}
+	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	if err != nil {
+		return nil, err
+	}
+	return ssh.NewClient(c, chans, reqs), nil
 }
