@@ -255,22 +255,37 @@ func (up *upContext) start(autoDeploy, build bool) error {
 // activateLoop activates the development container in a retry loop
 func (up *upContext) activateLoop(autoDeploy, build bool) {
 	isRetry := false
-	t := time.NewTicker(3 * time.Second)
+	isTransientError := false
+	t := time.NewTicker(1 * time.Second)
+	iter := 0
 	defer t.Stop()
 
 	for {
+		if isRetry || isTransientError {
+			log.Infof("waiting for shutdown sequence to finish")
+			<-up.Canceled
+			if iter == 0 {
+				log.Yellow("Connection lost to your development container, reconnecting...")
+			}
+			iter++
+			iter = iter % 10
+			if isTransientError {
+				<-t.C
+			}
+		}
 		err := up.activate(isRetry, autoDeploy, build)
 		if err != nil {
 			log.Infof("activate failed with: %s", err)
 
 			if err == errors.ErrLostSyncthing {
 				isRetry = true
+				isTransientError = false
+				iter = 0
 				continue
 			}
 
 			if errors.IsTransient(err) {
-				log.Yellow("Connection lost to your development container, reconnecting...")
-				<-t.C
+				isTransientError = true
 				continue
 			}
 
@@ -287,7 +302,10 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	// create a new context on every iteration
 	ctx, cancel := context.WithCancel(context.Background())
 	up.Cancel = cancel
-	up.Canceled = false
+	up.Canceled = make(chan bool, 1)
+	up.Sy = nil
+	up.Forwarder = nil
+	defer up.shutdown()
 
 	up.Disconnect = make(chan error, 1)
 	up.CommandResult = make(chan error, 1)
@@ -316,8 +334,6 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 		}
 	}
 
-	defer up.shutdown()
-
 	if err := up.initializeSyncthing(); err != nil {
 		return err
 	}
@@ -343,7 +359,6 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 			if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
 				up.resetSyncthing = true
 			}
-			log.Yellow("Connection lost to your development container while synchronizing your files, reconnecting...")
 			return errors.ErrLostSyncthing
 		}
 		return err
@@ -372,8 +387,6 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	prevError := up.waitUntilExitOrInterrupt()
 
 	if up.shouldRetry(ctx, prevError) {
-		log.Println()
-		log.Yellow("Connection lost to your development container, reconnecting...")
 		if !up.Dev.PersistentVolumeEnabled() {
 			if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
 				return err
@@ -923,11 +936,6 @@ func (up *upContext) getInteractive() bool {
 
 // Shutdown runs the cancellation sequence. It will wait for all tasks to finish for up to 500 milliseconds
 func (up *upContext) shutdown() {
-	if up.Canceled {
-		return
-	}
-	up.Canceled = true
-
 	if up.isTerm {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			log.Infof("failed to restore terminal: %s", err)
@@ -957,6 +965,8 @@ func (up *upContext) shutdown() {
 	}
 
 	log.Info("completed shutdown sequence")
+	up.Canceled <- true
+
 }
 
 func printDisplayContext(dev *model.Dev) {

@@ -26,7 +26,7 @@ import (
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
 	Cancel            context.CancelFunc
-	Canceled          bool
+	Canceled          chan bool
 	Dev               *model.Dev
 	isOktetoNamespace bool
 	isSwap            bool
