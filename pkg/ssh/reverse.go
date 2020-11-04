@@ -54,23 +54,28 @@ func (r *reverse) start(ctx context.Context) {
 	defer remoteListener.Close()
 	go func() {
 		<-ctx.Done()
-		remoteListener.Close()
+		r.setDisconnected()
+		if err := remoteListener.Close(); err != nil {
+			log.Infof("%s -> failed to close: %s", r.String(), err)
+		}
+
+		log.Infof("%s -> done", r.String())
 	}()
 
 	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			r.setConnected()
-			remoteConn, err := remoteListener.Accept()
-			if err != nil {
-				log.Infof("%s -> failed to accept connection: %v", r.String(), err)
-				continue
+		r.setConnected()
+		remoteConn, err := remoteListener.Accept()
+		if err != nil {
+			if !r.connected() {
+				return
 			}
 
-			go r.handle(ctx, remoteConn)
+			log.Infof("%s -> failed to accept connection: %v", r.String(), err)
+			continue
 		}
+
+		go r.handle(ctx, remoteConn)
+
 	}
 }
 

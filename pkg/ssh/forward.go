@@ -15,13 +15,12 @@ package ssh
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
-	"strings"
 	"sync"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 )
 
@@ -43,7 +42,12 @@ func (f *forward) setConnected() {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	f.c = true
+}
 
+func (f *forward) setDisconnected() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.c = false
 }
 
 func (f *forward) start(ctx context.Context) {
@@ -55,27 +59,29 @@ func (f *forward) start(ctx context.Context) {
 
 	go func() {
 		<-ctx.Done()
-		localListener.Close()
+		f.setDisconnected()
+		if err := localListener.Close(); err != nil {
+			log.Infof("%s -> failed to close: %s", f.String(), err)
+		}
+		log.Infof("%s -> done", f.String())
 	}()
 
 	f.setConnected()
 	log.Infof("%s -> started", f.String())
 
 	for {
-		select {
-		case <-ctx.Done():
-			log.Infof("%s -> done", f.String())
-			return
-		default:
-			localConn, err := localListener.Accept()
-			if err != nil {
-				log.Infof("%s -> failed to accept connection: %v", f.String(), err)
-				continue
+		localConn, err := localListener.Accept()
+		if err != nil {
+			if !f.connected() {
+				return
 			}
 
-			go f.handle(localConn)
+			log.Infof("%s -> failed to accept connection: %v", f.String(), err)
+			continue
 		}
+		go f.handle(localConn)
 	}
+
 }
 
 func (f *forward) handle(local net.Conn) {
@@ -104,11 +110,7 @@ func (f *forward) String() string {
 func (f *forward) transfer(from io.Writer, to io.Reader, quit chan struct{}) {
 	_, err := io.Copy(from, to)
 	if err != nil {
-		if unwrapError := errors.Unwrap(err); unwrapError != nil {
-			err = unwrapError
-		}
-		m := err.Error()
-		if !strings.Contains(m, "use of closed network connection") {
+		if !errors.IsClosedNetwork(err) {
 			log.Infof("%s -> data transfer failed: %v", f.String(), err)
 		}
 	}
