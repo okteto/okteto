@@ -55,7 +55,9 @@ func (f *forward) start(ctx context.Context) {
 
 	go func() {
 		<-ctx.Done()
-		localListener.Close()
+		if err := localListener.Close(); err != nil {
+			log.Infof("%s -> failed to close: %s", f.String(), err)
+		}
 	}()
 
 	f.setConnected()

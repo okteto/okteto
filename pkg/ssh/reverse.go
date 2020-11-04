@@ -54,7 +54,10 @@ func (r *reverse) start(ctx context.Context) {
 	defer remoteListener.Close()
 	go func() {
 		<-ctx.Done()
-		remoteListener.Close()
+
+		if err := remoteListener.Close(); err != nil {
+			log.Infof("%s -> failed to close: %s", r.String(), err)
+		}
 	}()
 
 	for {

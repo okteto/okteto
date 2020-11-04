@@ -120,5 +120,8 @@ func getConn(ctx context.Context, serverAddr string, maxRetries int) (net.Conn, 
 }
 
 func (p *pool) stop() {
-	p.client.Close()
+	if err := p.client.Close(); err != nil {
+		log.Infof("failed to close SSH pool: %s", err)
+	}
+
 }
