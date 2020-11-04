@@ -60,9 +60,10 @@ func (p *pool) keepAlive(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			if ctx.Err() != nil {
-				if !p.stopped {
-					log.Infof("ssh pool keep alive completed with error: %s", ctx.Err())
+			err := ctx.Err()
+			if err != nil {
+				if err != context.Canceled {
+					log.Infof("ssh pool keep alive completed with error: %s", err)
 				}
 			}
 

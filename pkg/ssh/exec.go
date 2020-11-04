@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/alessio/shellescape"
+	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -53,6 +54,17 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 
 	defer connection.Close()
+	go func() {
+		<-ctx.Done()
+		if connection != nil {
+			if err := connection.Close(); err != nil {
+				if !okErrors.IsClosedNetwork(err) {
+					log.Infof("failed to close ssh client for exec: %s", err)
+				}
+			}
+		}
+		log.Infof("ssh client for exec closed")
+	}()
 
 	session, err := connection.NewSession()
 	if err != nil {
@@ -94,8 +106,6 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 				log.Infof("failed to restore terminal: %s", err)
 			}
 
-			// empty line after the disconnection to reset the input
-			log.Println()
 			log.Infof("terminal restored")
 		}()
 
