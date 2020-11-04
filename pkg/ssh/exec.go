@@ -92,6 +92,9 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 			if err := terminal.Restore(termFD, state); err != nil {
 				log.Infof("failed to restore terminal: %s", err)
 			}
+
+			// empty line after the disconnection to reset the input
+			log.Println()
 		}()
 
 		if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
