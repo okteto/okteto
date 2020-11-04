@@ -87,19 +87,3 @@ func IsNotExist(err error) bool {
 		return false
 	}
 }
-
-// IsTransient returns true if err represents a transient error
-func IsTransient(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	switch {
-	case strings.Contains(err.Error(), "operation time out"),
-		strings.Contains(err.Error(), "can't assign requested address"),
-		strings.Contains(err.Error(), "network is unreachable"):
-		return true
-	default:
-		return false
-	}
-}

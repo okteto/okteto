@@ -255,25 +255,16 @@ func (up *upContext) start(autoDeploy, build bool) error {
 // activateLoop activates the development container in a retry loop
 func (up *upContext) activateLoop(autoDeploy, build bool) {
 	isRetry := false
-	t := time.NewTicker(3 * time.Second)
 	for {
 		err := up.activate(isRetry, autoDeploy, build)
 		if err != nil {
-			log.Infof("activate failed with %s", err)
-
 			if err == errors.ErrLostSyncthing {
 				isRetry = true
 				continue
+			} else {
+				up.Exit <- err
+				return
 			}
-
-			if errors.IsTransient(err) {
-				log.Yellow("Connection lost to your development container, reconnecting...")
-				<-t.C
-				continue
-			}
-
-			up.Exit <- err
-			return
 		}
 		up.Exit <- nil
 		return
@@ -286,6 +277,7 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	up.Cancel = cancel
 	up.Canceled = false
+	defer up.shutdown()
 
 	up.Disconnect = make(chan error, 1)
 	up.CommandResult = make(chan error, 1)
@@ -313,8 +305,6 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 			return fmt.Errorf("error building dev image: %s", err)
 		}
 	}
-
-	defer up.shutdown()
 
 	if err := up.initializeSyncthing(); err != nil {
 		return err
