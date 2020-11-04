@@ -25,14 +25,12 @@ import (
 
 type pool struct {
 	ka     time.Duration
-	ctx    context.Context
 	client *ssh.Client
 }
 
 func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig) (*pool, error) {
 	p := &pool{
-		ka:  30 * time.Second,
-		ctx: ctx,
+		ka: 30 * time.Second,
 	}
 
 	conn, err := getTCPConnection(ctx, serverAddr, p.ka)
@@ -48,19 +46,20 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 	client := ssh.NewClient(clientConn, chans, reqs)
 
 	p.client = client
-	go p.keepAlive()
+	go p.keepAlive(ctx)
 
 	return p, nil
 }
 
-func (p *pool) keepAlive() {
+func (p *pool) keepAlive(ctx context.Context) {
 	t := time.NewTicker(p.ka)
 	defer t.Stop()
 	for {
+
 		select {
-		case <-p.ctx.Done():
-			if p.ctx.Err() != nil {
-				log.Infof("ssh pool keep alive completed with error: %s", p.ctx.Err())
+		case <-ctx.Done():
+			if ctx.Err() != nil {
+				log.Infof("ssh pool keep alive completed with error: %s", ctx.Err())
 			}
 
 			return
@@ -118,4 +117,8 @@ func getConn(ctx context.Context, serverAddr string, maxRetries int) (net.Conn, 
 	}
 
 	return nil, lastErr
+}
+
+func (p *pool) stop() {
+	p.client.Close()
 }

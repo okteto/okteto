@@ -26,7 +26,6 @@ import (
 )
 
 type forward struct {
-	ctx           context.Context
 	localAddress  string
 	remoteAddress string
 	c             bool
@@ -47,20 +46,25 @@ func (f *forward) setConnected() {
 
 }
 
-func (f *forward) start() {
+func (f *forward) start(ctx context.Context) {
 	localListener, err := net.Listen("tcp", f.localAddress)
 	if err != nil {
-		log.Infof("%s -> failed to listen on local address: %v", f.String(), err)
+		log.Infof("%s -> failed to listen: %s", f.String(), err)
 		return
 	}
 
-	defer localListener.Close()
+	go func() {
+		<-ctx.Done()
+		localListener.Close()
+	}()
 
 	f.setConnected()
+	log.Infof("%s -> started", f.String())
 
 	for {
 		select {
-		case <-f.ctx.Done():
+		case <-ctx.Done():
+			log.Infof("%s -> done", f.String())
 			return
 		default:
 			localConn, err := localListener.Accept()

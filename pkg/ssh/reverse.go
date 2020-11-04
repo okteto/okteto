@@ -14,6 +14,7 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -37,14 +38,13 @@ func (fm *ForwardManager) AddReverse(f model.Reverse) error {
 		forward: forward{
 			localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
 			remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
-			ctx:           fm.ctx,
 		},
 	}
 
 	return nil
 }
 
-func (r *reverse) start() {
+func (r *reverse) start(ctx context.Context) {
 	remoteListener, err := r.pool.getListener(r.remoteAddress)
 	if err != nil {
 		log.Infof("%s -> failed to listen on remote address: %v", r.String(), err)
@@ -52,10 +52,14 @@ func (r *reverse) start() {
 	}
 
 	defer remoteListener.Close()
+	go func() {
+		<-ctx.Done()
+		remoteListener.Close()
+	}()
 
 	for {
 		select {
-		case <-r.ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 			r.setConnected()
@@ -65,16 +69,16 @@ func (r *reverse) start() {
 				continue
 			}
 
-			go r.handle(remoteConn)
+			go r.handle(ctx, remoteConn)
 		}
 	}
 }
 
-func (r *reverse) handle(remote net.Conn) {
+func (r *reverse) handle(ctx context.Context, remote net.Conn) {
 	defer remote.Close()
 
 	quit := make(chan struct{}, 1)
-	local, err := getConn(r.ctx, r.localAddress, 3)
+	local, err := getConn(ctx, r.localAddress, 3)
 	if err != nil {
 		log.Infof("%s -> failed to listen on local address: %v", r.String(), err)
 		return
