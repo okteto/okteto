@@ -87,3 +87,12 @@ func IsNotExist(err error) bool {
 		return false
 	}
 }
+
+// IsClosedNetwork returns true if the error is caused by a closed network connection
+func IsClosedNetwork(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return strings.Contains(err.Error(), "use of closed network connection")
+}

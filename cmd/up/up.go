@@ -272,6 +272,7 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 }
 
 func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
+	log.Infof("activating development container retry=%t", isRetry)
 	// create a new context on every iteration
 	ctx, cancel := context.WithCancel(context.Background())
 	up.Cancel = cancel

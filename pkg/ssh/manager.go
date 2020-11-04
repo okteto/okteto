@@ -32,6 +32,7 @@ type ForwardManager struct {
 	ctx             context.Context
 	sshAddr         string
 	pf              *k8sforward.PortForwardManager
+	pool            *pool
 }
 
 // NewForwardManager returns a newly initialized instance of ForwardManager
@@ -82,7 +83,6 @@ func (fm *ForwardManager) Add(f model.Forward) error {
 	fm.forwards[f.Local] = &forward{
 		localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
 		remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
-		ctx:           fm.ctx,
 	}
 
 	if f.Service {
@@ -114,15 +114,17 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 		return err
 	}
 
+	fm.pool = pool
+
 	for _, ff := range fm.forwards {
 		ff.pool = pool
-		go ff.start()
+		go ff.start(fm.ctx)
 
 	}
 
 	for _, rt := range fm.reverses {
 		rt.pool = pool
-		go rt.start()
+		go rt.start(fm.ctx)
 	}
 
 	return nil
@@ -130,6 +132,10 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 
 // Stop sends a stop signal to all the connections
 func (fm *ForwardManager) Stop() {
+
+	if fm.pool != nil {
+		fm.pool.stop()
+	}
 
 	if fm.pf != nil {
 		fm.pf.Stop()

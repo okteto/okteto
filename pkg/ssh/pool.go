@@ -19,20 +19,21 @@ import (
 	"net"
 	"time"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
 )
 
 type pool struct {
-	ka     time.Duration
-	ctx    context.Context
-	client *ssh.Client
+	ka      time.Duration
+	client  *ssh.Client
+	stopped bool
 }
 
 func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig) (*pool, error) {
 	p := &pool{
-		ka:  30 * time.Second,
-		ctx: ctx,
+		ka:      30 * time.Second,
+		stopped: false,
 	}
 
 	conn, err := getTCPConnection(ctx, serverAddr, p.ka)
@@ -48,23 +49,29 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 	client := ssh.NewClient(clientConn, chans, reqs)
 
 	p.client = client
-	go p.keepAlive()
+	go p.keepAlive(ctx)
 
 	return p, nil
 }
 
-func (p *pool) keepAlive() {
+func (p *pool) keepAlive(ctx context.Context) {
 	t := time.NewTicker(p.ka)
 	defer t.Stop()
 	for {
 		select {
-		case <-p.ctx.Done():
-			if p.ctx.Err() != nil {
-				log.Infof("ssh pool keep alive completed with error: %s", p.ctx.Err())
+		case <-ctx.Done():
+			if ctx.Err() != nil {
+				if !p.stopped {
+					log.Infof("ssh pool keep alive completed with error: %s", ctx.Err())
+				}
 			}
 
 			return
 		case <-t.C:
+			if p.stopped {
+				return
+			}
+
 			if _, _, err := p.client.SendRequest("dev.okteto.com/keepalive", true, nil); err != nil {
 				log.Infof("failed to send SSH keepalive: %s", err)
 			}
@@ -118,4 +125,13 @@ func getConn(ctx context.Context, serverAddr string, maxRetries int) (net.Conn, 
 	}
 
 	return nil, lastErr
+}
+
+func (p *pool) stop() {
+	p.stopped = true
+	if err := p.client.Close(); err != nil {
+		if !errors.IsClosedNetwork(err) {
+			log.Infof("failed to close SSH pool: %s", err)
+		}
+	}
 }
