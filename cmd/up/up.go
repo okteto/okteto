@@ -719,7 +719,17 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	defer spinner.Stop()
 
 	if err := up.Sy.Run(ctx); err != nil {
-		return err
+		log.Infof("local synchronization process is unresponsive: %s", err.Error())
+		if up.Dev.Interface == model.Localhost {
+			return errors.UserError{
+				E:    fmt.Errorf("Local synchronization process is unresponsive on localhost"),
+				Hint: "Could you try adding 'interface: 0.0.0.0' to your okteto manifest?",
+			}
+		}
+		return errors.UserError{
+			E:    fmt.Errorf("Local synchronization process is unresponsive on localhost"),
+			Hint: fmt.Sprintf("Check the synchronization process logs at %s", up.Sy.LogPath),
+		}
 	}
 
 	if err := up.Sy.WaitForPing(ctx, true); err != nil {
@@ -727,6 +737,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	}
 
 	if err := up.Sy.WaitForPing(ctx, false); err != nil {
+		log.Infof("remote synchronization process is unresponsive: %s", err.Error())
 		userID := pods.GetDevPodUserID(ctx, up.Dev, up.Client)
 		if up.Dev.PersistentVolumeEnabled() {
 			if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
