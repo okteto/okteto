@@ -263,7 +263,7 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 	for {
 		if isRetry || isTransientError {
 			log.Infof("waiting for shutdown sequence to finish")
-			<-up.Canceled
+			<-up.ShutdownCompleted
 			if iter == 0 {
 				log.Yellow("Connection lost to your development container, reconnecting...")
 			}
@@ -302,7 +302,7 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	// create a new context on every iteration
 	ctx, cancel := context.WithCancel(context.Background())
 	up.Cancel = cancel
-	up.Canceled = make(chan bool, 1)
+	up.ShutdownCompleted = make(chan bool, 1)
 	up.Sy = nil
 	up.Forwarder = nil
 	defer up.shutdown()
@@ -965,7 +965,7 @@ func (up *upContext) shutdown() {
 	}
 
 	log.Info("completed shutdown sequence")
-	up.Canceled <- true
+	up.ShutdownCompleted <- true
 
 }
 
