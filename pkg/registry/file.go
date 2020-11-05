@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package registry
 
 import (
 	"bufio"
@@ -23,51 +23,26 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/pkg/errors"
 )
 
-//GetRepoNameWithoutTag returns the image name without the tag
-func GetRepoNameWithoutTag(name string) string {
-	var domain, remainder string
-	i := strings.IndexRune(name, '@')
-	if i != -1 {
-		return name[:i]
+//GetDockerfile returns the dockerfile with the cache translations
+func GetDockerfile(path, dockerFile string, isOktetoCluster bool) (string, error) {
+	if dockerFile == "" {
+		dockerFile = filepath.Join(path, "Dockerfile")
 	}
-	i = strings.IndexRune(name, '/')
-	if i == -1 || (!strings.ContainsAny(name[:i], ".:") && name[:i] != model.Localhost) {
-		domain, remainder = "", name
-	} else {
-		domain, remainder = name[:i], name[i+1:]
-	}
-	i = strings.LastIndex(remainder, ":")
-	if i == -1 {
-		return name
-	}
-	if domain == "" {
-		return remainder[:i]
-	}
-	return fmt.Sprintf("%s/%s", domain, remainder[:i])
-}
 
-//GetImageTag returns the image tag to build for a given services
-func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
-	if oktetoRegistryURL != "" {
-		if image == "" || image == model.DefaultImage {
-			return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, namespace, service)
-		}
-		return image
+	if !isOktetoCluster {
+		return dockerFile, nil
 	}
-	imageWithoutTag := GetRepoNameWithoutTag(image)
-	return fmt.Sprintf("%s:okteto", imageWithoutTag)
-}
 
-//GetDevImageTag returns the image tag to build and push
-func GetDevImageTag(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string) string {
-	if imageTag != "" && imageTag != model.DefaultImage {
-		return imageTag
+	fileWithCacheHandler, err := getDockerfileWithCacheHandler(dockerFile)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create temporary build folder")
 	}
-	return GetImageTag(imageFromDeployment, dev.Name, dev.Namespace, oktetoRegistryURL)
+
+	return fileWithCacheHandler, nil
 }
 
 func getDockerfileWithCacheHandler(filename string) (string, error) {

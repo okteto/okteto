@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/subosito/gotenv"
 )
 
@@ -133,7 +134,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, noCache bool) err
 			continue
 		}
 		oneBuild = true
-		imageTag := build.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
+		imageTag := registry.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
 		log.Information("Building image for service '%s'...", name)
 		var imageDigest string
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
@@ -142,7 +143,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, noCache bool) err
 			return fmt.Errorf("error building image for '%s': %s", name, err)
 		}
 		if imageDigest != "" {
-			imageWithoutTag := build.GetRepoNameWithoutTag(imageTag)
+			imageWithoutTag := registry.GetRepoNameWithoutTag(imageTag)
 			imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 		}
 		svc.Image = imageTag

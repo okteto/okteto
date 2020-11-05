@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
@@ -222,7 +223,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 	if imageTag == "" {
 		imageTag = dev.Push.Name
 	}
-	buildTag := build.GetDevImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
+	buildTag := registry.GetDevImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
 	log.Infof("pushing with image tag %s", buildTag)
 
 	var imageDigest string
@@ -233,7 +234,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 	}
 
 	if imageDigest != "" {
-		imageWithoutTag := build.GetRepoNameWithoutTag(buildTag)
+		imageWithoutTag := registry.GetRepoNameWithoutTag(buildTag)
 		buildTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 

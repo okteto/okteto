@@ -135,23 +135,6 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFro
 	return opt, nil
 }
 
-func getDockerFile(path, dockerFile string, isOktetoCluster bool) (string, error) {
-	if dockerFile == "" {
-		dockerFile = filepath.Join(path, "Dockerfile")
-	}
-
-	if !isOktetoCluster {
-		return dockerFile, nil
-	}
-
-	fileWithCacheHandler, err := getDockerfileWithCacheHandler(dockerFile)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to create temporary build folder")
-	}
-
-	return fileWithCacheHandler, nil
-}
-
 func getBuildkitClient(ctx context.Context, isOktetoCluster bool, buildKitHost string) (*client.Client, error) {
 	if isOktetoCluster {
 		c, err := getClientForOktetoCluster(ctx, buildKitHost)

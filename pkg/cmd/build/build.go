@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/pkg/errors"
 )
 
@@ -34,7 +35,7 @@ func Run(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, d
 		return "", err
 	}
 
-	processedDockerfile, err := getDockerFile(path, dockerFile, isOktetoCluster)
+	processedDockerfile, err := registry.GetDockerfile(path, dockerFile, isOktetoCluster)
 	if err != nil {
 		return "", err
 	}
