@@ -36,17 +36,19 @@ type Stack struct {
 
 //Service represents an okteto stack service
 type Service struct {
-	Public          bool         `yaml:"public,omitempty"`
-	Image           string       `yaml:"image"`
-	Build           *BuildInfo   `yaml:"build,omitempty"`
-	Replicas        int          `yaml:"replicas"`
-	Command         Command      `yaml:"command,omitempty"`
-	Environment     []EnvVar     `yaml:"environment,omitempty"`
-	EnvFiles        []string     `yaml:"env_file,omitempty"`
-	Ports           []int        `yaml:"ports,omitempty"`
-	Volumes         []string     `yaml:"volumes,omitempty"`
-	StopGracePeriod int          `yaml:"stop_grace_period,omitempty"`
-	Resources       ResourceList `yaml:"resources,omitempty"`
+	Labels          map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Public          bool              `yaml:"public,omitempty"`
+	Image           string            `yaml:"image"`
+	Build           *BuildInfo        `yaml:"build,omitempty"`
+	Replicas        int               `yaml:"replicas"`
+	Command         Command           `yaml:"command,omitempty"`
+	Environment     []EnvVar          `yaml:"environment,omitempty"`
+	EnvFiles        []string          `yaml:"env_file,omitempty"`
+	Ports           []int             `yaml:"ports,omitempty"`
+	Volumes         []string          `yaml:"volumes,omitempty"`
+	StopGracePeriod int               `yaml:"stop_grace_period,omitempty"`
+	Resources       ResourceList      `yaml:"resources,omitempty"`
 }
 
 //GetStack returns an okteto stack object from a given file
