@@ -219,6 +219,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 	if err != nil {
 		return "", err
 	}
+	log.Information("Running your build in %s...", buildKitHost)
 
 	if imageTag == "" {
 		imageTag = dev.Push.Name
@@ -234,7 +235,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 	}
 
 	if imageDigest != "" {
-		imageWithoutTag := registry.GetRepoNameWithoutTag(buildTag)
+		imageWithoutTag, _ := registry.GetRepoNameAndTag(buildTag)
 		buildTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 

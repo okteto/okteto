@@ -20,12 +20,12 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-//GetRepoNameWithoutTag returns the image name without the tag
-func GetRepoNameWithoutTag(name string) string {
+//GetRepoNameAndTag returns the image name without the tag
+func GetRepoNameAndTag(name string) (string, string) {
 	var domain, remainder string
 	i := strings.IndexRune(name, '@')
 	if i != -1 {
-		return name[:i]
+		return name[:i], name[i+1:]
 	}
 	i = strings.IndexRune(name, '/')
 	if i == -1 || (!strings.ContainsAny(name[:i], ".:") && name[:i] != "localhost") {
@@ -35,12 +35,12 @@ func GetRepoNameWithoutTag(name string) string {
 	}
 	i = strings.LastIndex(remainder, ":")
 	if i == -1 {
-		return name
+		return name, "latest"
 	}
 	if domain == "" {
-		return remainder[:i]
+		return remainder[:i], remainder[i+1:]
 	}
-	return fmt.Sprintf("%s/%s", domain, remainder[:i])
+	return fmt.Sprintf("%s/%s", domain, remainder[:i]), remainder[i+1:]
 }
 
 //GetImageTag returns the image tag to build for a given services
@@ -51,7 +51,7 @@ func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
 		}
 		return image
 	}
-	imageWithoutTag := GetRepoNameWithoutTag(image)
+	imageWithoutTag, _ := GetRepoNameAndTag(image)
 	return fmt.Sprintf("%s:okteto", imageWithoutTag)
 }
 

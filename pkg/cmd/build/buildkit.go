@@ -43,19 +43,13 @@ const (
 func GetBuildKitHost() (string, bool, error) {
 	buildKitHost := os.Getenv("BUILDKIT_HOST")
 	if buildKitHost != "" {
-		log.Information("Running your build in %s...", buildKitHost)
 		return buildKitHost, false, nil
 	}
 	buildkitURL, err := okteto.GetBuildKit()
 	if err != nil {
 		return "", false, err
 	}
-	if buildkitURL == okteto.CloudBuildKitURL {
-		log.Information("Running your build in Okteto Cloud...")
-	} else {
-		log.Information("Running your build in Okteto Enterprise...")
-	}
-	return buildkitURL, true, err
+	return buildkitURL, true, nil
 }
 
 //getSolveOpt returns the buildkit solve options

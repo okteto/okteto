@@ -20,63 +20,76 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-func Test_GetRepoNameWithoutTag(t *testing.T) {
+func Test_GetRepoNameAndTag(t *testing.T) {
 	var tests = []struct {
-		name     string
-		image    string
-		expected string
+		name         string
+		image        string
+		expectedRepo string
+		expectedTag  string
 	}{
 		{
-			name:     "official-with-tag",
-			image:    "ubuntu:2",
-			expected: "ubuntu",
+			name:         "official-with-tag",
+			image:        "ubuntu:2",
+			expectedRepo: "ubuntu",
+			expectedTag:  "2",
 		},
 		{
-			name:     "official-without-tag",
-			image:    "ubuntu",
-			expected: "ubuntu",
+			name:         "official-without-tag",
+			image:        "ubuntu",
+			expectedRepo: "ubuntu",
+			expectedTag:  "latest",
 		},
 		{
-			name:     "repo-with-tag",
-			image:    "test/ubuntu:2",
-			expected: "test/ubuntu",
+			name:         "repo-with-tag",
+			image:        "test/ubuntu:2",
+			expectedRepo: "test/ubuntu",
+			expectedTag:  "2",
 		},
 		{
-			name:     "repo-without-tag",
-			image:    "test/ubuntu",
-			expected: "test/ubuntu",
+			name:         "repo-without-tag",
+			image:        "test/ubuntu",
+			expectedRepo: "test/ubuntu",
+			expectedTag:  "latest",
 		},
 		{
-			name:     "registry-with-tag",
-			image:    "registry/gitlab.com/test/ubuntu:2",
-			expected: "registry/gitlab.com/test/ubuntu",
+			name:         "registry-with-tag",
+			image:        "registry/gitlab.com/test/ubuntu:2",
+			expectedRepo: "registry/gitlab.com/test/ubuntu",
+			expectedTag:  "2",
 		},
 		{
-			name:     "registry-without-tag",
-			image:    "registry/gitlab.com/test/ubuntu",
-			expected: "registry/gitlab.com/test/ubuntu",
+			name:         "registry-without-tag",
+			image:        "registry/gitlab.com/test/ubuntu",
+			expectedRepo: "registry/gitlab.com/test/ubuntu",
+			expectedTag:  "latest",
 		},
 		{
-			name:     "localhost-with-tag",
-			image:    "localhost:5000/test/ubuntu:2",
-			expected: "localhost:5000/test/ubuntu",
+			name:         "localhost-with-tag",
+			image:        "localhost:5000/test/ubuntu:2",
+			expectedRepo: "localhost:5000/test/ubuntu",
+			expectedTag:  "2",
 		},
 		{
-			name:     "registry-without-tag",
-			image:    "localhost:5000/test/ubuntu",
-			expected: "localhost:5000/test/ubuntu",
+			name:         "registry-without-tag",
+			image:        "localhost:5000/test/ubuntu",
+			expectedRepo: "localhost:5000/test/ubuntu",
+			expectedTag:  "latest",
 		},
 		{
-			name:     "sha256",
-			image:    "pchico83/test@sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
-			expected: "pchico83/test",
+			name:         "sha256",
+			image:        "pchico83/test@sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expectedRepo: "pchico83/test",
+			expectedTag:  "sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GetRepoNameWithoutTag(tt.image)
-			if tt.expected != result {
-				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.name)
+			repo, tag := GetRepoNameAndTag(tt.image)
+			if tt.expectedRepo != repo {
+				t.Errorf("expected repo %s got %s in test %s", tt.expectedRepo, repo, tt.name)
+			}
+			if tt.expectedTag != tag {
+				t.Errorf("expected tag %s got %s in test %s", tt.expectedTag, tag, tt.name)
 			}
 		})
 	}

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
@@ -43,10 +44,8 @@ func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) er
 		return nil
 	}
 
-	if forceBuild {
-		if err := translateBuildImages(ctx, s, noCache); err != nil {
-			return err
-		}
+	if err := translateBuildImages(ctx, s, forceBuild, noCache); err != nil {
+		return err
 	}
 	return nil
 }
@@ -103,7 +102,7 @@ func translateEnvFile(svc *model.Service, filename string) error {
 	return nil
 }
 
-func translateBuildImages(ctx context.Context, s *model.Stack, noCache bool) error {
+func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
 	c, _, configNamespace, err := k8Client.GetLocal("")
 	if err != nil {
 		return err
@@ -127,14 +126,28 @@ func translateBuildImages(ctx context.Context, s *model.Stack, noCache bool) err
 	if err != nil {
 		return err
 	}
+	building := false
 
-	oneBuild := false
 	for name, svc := range s.Services {
 		if svc.Build == nil {
 			continue
 		}
-		oneBuild = true
-		imageTag := registry.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
+		mustBuild := forceBuild
+		imageTag, err := registry.GetImageTagWithDigest(ctx, svc.Image)
+		if err != nil {
+			log.Infof("error accessing the image %s: %s", svc.Image, err.Error())
+			if err == errors.ErrNotFound {
+				mustBuild = true
+			}
+		}
+		if !mustBuild {
+			continue
+		}
+		if !building {
+			building = true
+			log.Information("Running your build in %s...", buildKitHost)
+		}
+		imageTag = registry.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
 		log.Information("Building image for service '%s'...", name)
 		var imageDigest string
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
@@ -143,16 +156,12 @@ func translateBuildImages(ctx context.Context, s *model.Stack, noCache bool) err
 			return fmt.Errorf("error building image for '%s': %s", name, err)
 		}
 		if imageDigest != "" {
-			imageWithoutTag := registry.GetRepoNameWithoutTag(imageTag)
+			imageWithoutTag, _ := registry.GetRepoNameAndTag(imageTag)
 			imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 		}
 		svc.Image = imageTag
 		s.Services[name] = svc
 		log.Success("Image for service '%s' successfully pushed", name)
-	}
-
-	if !oneBuild {
-		log.Information("No build directives found in your Stack manifest")
 	}
 
 	return nil

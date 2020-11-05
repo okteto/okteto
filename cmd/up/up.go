@@ -502,6 +502,7 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	if err != nil {
 		return err
 	}
+	log.Information("Running your build in %s...", buildKitHost)
 
 	imageTag := registry.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
 	log.Infof("building dev image tag %s", imageTag)
@@ -513,7 +514,7 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
 	}
 	if imageDigest != "" {
-		imageWithoutTag := registry.GetRepoNameWithoutTag(imageTag)
+		imageWithoutTag, _ := registry.GetRepoNameAndTag(imageTag)
 		imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 	for _, s := range up.Dev.Services {
