@@ -57,10 +57,12 @@ const (
 	SourceCodeSubPath = "src"
 	//OktetoSyncthingMountPath syncthing volume mount path
 	OktetoSyncthingMountPath = "/var/syncthing"
-	remoteMountPath          = "/var/okteto/remote"
+	//RemoteMountPath remote volume mount path
+	RemoteMountPath = "/var/okteto/remote"
 	//SyncthingSubPath subpath in the development container persistent volume for the syncthing data
 	SyncthingSubPath = "syncthing"
-	remoteSubPath    = "okteto-remote"
+	//RemoteSubPath subpath in the development container persistent volume for the remote data
+	RemoteSubPath = "okteto-remote"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
@@ -722,8 +724,8 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				rule.Volumes,
 				VolumeMount{
 					Name:      main.GetVolumeName(),
-					MountPath: remoteMountPath,
-					SubPath:   remoteSubPath,
+					MountPath: RemoteMountPath,
+					SubPath:   RemoteSubPath,
 				},
 			)
 		}
@@ -839,12 +841,6 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 // RemoteModeEnabled returns true if remote is enabled
 func (dev *Dev) RemoteModeEnabled() bool {
 	if dev == nil {
-		return false
-	}
-
-	_, ok := os.LookupEnv("OKTETO_EXECUTE_SSH")
-	if ok {
-		log.Info("execute over SSH mode enabled")
 		return true
 	}
 
@@ -852,7 +848,14 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return true
 	}
 
-	return len(dev.Reverse) > 0
+	if len(dev.Reverse) > 0 {
+		return true
+	}
+
+	if v, ok := os.LookupEnv("OKTETO_EXECUTE_SSH"); ok && v == "false" {
+		return false
+	}
+	return true
 }
 
 // GetKeyName returns the secret key name

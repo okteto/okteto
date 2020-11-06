@@ -205,7 +205,7 @@ services:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-s", "remote:/remote"},
+							Args:            []string{"-r", "-s", "remote:/remote"},
 							WorkingDir:      "/app",
 							Env: []apiv1.EnvVar{
 								{
@@ -235,6 +235,12 @@ services:
 									ReadOnly:  false,
 									MountPath: "/var/syncthing",
 									SubPath:   model.SyncthingSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: model.RemoteMountPath,
+									SubPath:   model.RemoteSubPath,
 								},
 								{
 									Name:      dev.GetVolumeName(),
@@ -523,7 +529,7 @@ persistentVolume:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-e"},
+							Args:            []string{"-r", "-e"},
 							WorkingDir:      "",
 							Env: []apiv1.EnvVar{
 								{
@@ -541,6 +547,12 @@ persistentVolume:
 									ReadOnly:  false,
 									MountPath: "/var/syncthing",
 									SubPath:   model.SyncthingSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: model.RemoteMountPath,
+									SubPath:   model.RemoteSubPath,
 								},
 								{
 									Name:      oktetoSyncSecretVolume,

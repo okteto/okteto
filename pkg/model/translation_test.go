@@ -61,7 +61,7 @@ services:
 		Image:             "web:latest",
 		ImagePullPolicy:   apiv1.PullNever,
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{},
+		Args:              []string{"-r"},
 		Healthchecks:      false,
 		Environment: []EnvVar{
 			{
@@ -93,6 +93,11 @@ services:
 				Name:      dev.GetVolumeName(),
 				MountPath: OktetoSyncthingMountPath,
 				SubPath:   SyncthingSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: RemoteMountPath,
+				SubPath:   RemoteSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
