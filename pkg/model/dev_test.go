@@ -612,31 +612,6 @@ func Test_LoadForcePull(t *testing.T) {
 	}
 }
 
-func TestRemoteEnabled(t *testing.T) {
-	var dev *Dev
-	if dev.RemoteModeEnabled() {
-		t.Errorf("nil should be remote disabled")
-	}
-
-	dev = &Dev{}
-
-	if dev.RemoteModeEnabled() {
-		t.Errorf("default should be remote disabled")
-	}
-
-	dev = &Dev{RemotePort: 22000}
-
-	if !dev.RemoteModeEnabled() {
-		t.Errorf("remote should be enabled after adding a port")
-	}
-
-	dev = &Dev{Reverse: []Reverse{{Local: 22000, Remote: 22000}}}
-
-	if !dev.RemoteModeEnabled() {
-		t.Errorf("remote should be enabled after adding a remote forward")
-	}
-}
-
 func Test_validate(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {
