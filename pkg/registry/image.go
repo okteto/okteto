@@ -20,7 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-//GetRepoNameAndTag returns the image name without the tag
+//GetRepoNameAndTag returns the image name without the tag and the tag
 func GetRepoNameAndTag(name string) (string, string) {
 	var domain, remainder string
 	i := strings.IndexRune(name, '@')

@@ -16,6 +16,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
@@ -46,14 +47,25 @@ func GetImageTagWithDigest(ctx context.Context, imageTag string) (string, error)
 		log.Infof("error getting token: %s", err.Error())
 		return imageTag, nil
 	}
-	c, err := New("https://"+registryURL, username, token.Token)
+	u, err := url.Parse(registryURL)
+	if err != nil {
+		log.Infof("error parsing registry url: %s", err.Error())
+		return imageTag, nil
+	}
+	u.Scheme = "https"
+	c, err := NewRegistryClient(u.String(), username, token.Token)
 	if err != nil {
 		log.Infof("error creating registry client: %s", err.Error())
 		return imageTag, nil
 	}
 
 	repoURL, tag := GetRepoNameAndTag(expandedTag)
-	repoName := repoURL[strings.IndexRune(repoURL, '/')+1:]
+	index := strings.IndexRune(repoURL, '/')
+	if index == -1 {
+		log.Infof("malformed registry url: %s", repoURL)
+		return imageTag, nil
+	}
+	repoName := repoURL[index+1:]
 	digest, err := c.ManifestDigest(repoName, tag)
 	if err != nil {
 		if strings.Contains(err.Error(), "status=404") {
@@ -61,7 +73,7 @@ func GetImageTagWithDigest(ctx context.Context, imageTag string) (string, error)
 		}
 		return "", fmt.Errorf("error getting image tag diggest: %s", err.Error())
 	}
-	return repoName + "@" + digest.String(), nil
+	return fmt.Sprintf("%s@%s", repoName, digest.String()), nil
 }
 
 //ExpandOktetoDevRegistry translates okteto.dev

@@ -39,22 +39,14 @@ func Run(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, d
 		defer os.Remove(processedDockerfile)
 	}
 
-	expandedTag, err := registry.ExpandOktetoDevRegistry(ctx, tag)
+	tag, err = registry.ExpandOktetoDevRegistry(ctx, tag)
 	if err != nil {
 		return "", err
 	}
-	if tag != expandedTag {
-		log.Information("'%s' expanded to '%s'.", tag, expandedTag)
-		tag = expandedTag
-	}
 	for i := range cacheFrom {
-		expandedTag, err = registry.ExpandOktetoDevRegistry(ctx, cacheFrom[i])
+		cacheFrom[i], err = registry.ExpandOktetoDevRegistry(ctx, cacheFrom[i])
 		if err != nil {
 			return "", err
-		}
-		if cacheFrom[i] != expandedTag {
-			log.Information("'%s' expanded to '%s'.", cacheFrom[i], expandedTag)
-			cacheFrom[i] = expandedTag
 		}
 	}
 	opt, err := getSolveOpt(path, processedDockerfile, tag, target, noCache, cacheFrom, buildArgs)

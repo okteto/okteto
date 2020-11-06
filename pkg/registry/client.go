@@ -21,9 +21,9 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 )
 
-// New creates a new Registry with the given URL and credentials, then Ping()s it
+// NewRegistryClient creates a new Registry with the given URL and credentials, then Ping()s it
 // before returning it to verify that the registry is available.
-func New(registryURL, username, password string) (*registry.Registry, error) {
+func NewRegistryClient(registryURL, username, password string) (*registry.Registry, error) {
 	transport := http.DefaultTransport
 	return newFromTransport(registryURL, username, password, transport)
 }

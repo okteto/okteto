@@ -132,22 +132,17 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		if svc.Build == nil {
 			continue
 		}
-		mustBuild := forceBuild
-		imageTag, err := registry.GetImageTagWithDigest(ctx, svc.Image)
-		if err != nil {
-			log.Infof("error accessing the image %s: %s", svc.Image, err.Error())
-			if err == errors.ErrNotFound {
-				mustBuild = true
+		if !forceBuild {
+			if _, err := registry.GetImageTagWithDigest(ctx, svc.Image); err != errors.ErrNotFound {
+				continue
 			}
-		}
-		if !mustBuild {
-			continue
+			log.Infof("image '%s' not found, building it", svc.Image)
 		}
 		if !building {
 			building = true
 			log.Information("Running your build in %s...", buildKitHost)
 		}
-		imageTag = registry.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
+		imageTag := registry.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
 		log.Information("Building image for service '%s'...", name)
 		var imageDigest string
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
