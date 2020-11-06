@@ -42,6 +42,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 
 	"github.com/okteto/okteto/pkg/k8s/forward"
@@ -328,6 +329,11 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 		}
 	}
 
+	if _, err := registry.GetImageTagWithDigest(ctx, up.Dev.Image.Name); err == errors.ErrNotFound {
+		log.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
+		build = true
+	}
+
 	if !isRetry && build {
 		if err := up.buildDevImage(ctx, d, create); err != nil {
 			return fmt.Errorf("error building dev image: %s", err)
@@ -494,8 +500,9 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	if err != nil {
 		return err
 	}
+	log.Information("Running your build in %s...", buildKitHost)
 
-	imageTag := buildCMD.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
+	imageTag := registry.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
 	log.Infof("building dev image tag %s", imageTag)
 
 	var imageDigest string
@@ -505,7 +512,7 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
 	}
 	if imageDigest != "" {
-		imageWithoutTag := buildCMD.GetRepoNameWithoutTag(imageTag)
+		imageWithoutTag, _ := registry.GetRepoNameAndTag(imageTag)
 		imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 	for _, s := range up.Dev.Services {
