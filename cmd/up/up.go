@@ -858,7 +858,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
 
-	cmd := "cat /proc/sys/fs/inotify/max_user_watches; (cp /var/okteto/bin/* /usr/local/bin; cp /var/okteto/cloudbin/* /usr/local/bin; /var/okteto/bin/clean) >/dev/null 2>&1"
+	cmd := "cat /proc/sys/fs/inotify/max_user_watches; /var/okteto/bin/clean >/dev/null 2>&1"
 
 	err := exec.Exec(
 		ctx,
@@ -876,8 +876,6 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 
 	if err != nil {
 		log.Infof("failed to clean session: %s", err)
-		up.cleaned <- out.String()
-		return
 	}
 
 	up.cleaned <- out.String()
