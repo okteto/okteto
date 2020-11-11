@@ -199,6 +199,7 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	if !rule.Healthchecks {
 		c.ReadinessProbe = nil
 		c.LivenessProbe = nil
+		c.StartupProbe = nil
 	}
 
 	TranslateResources(c, rule.Resources)
