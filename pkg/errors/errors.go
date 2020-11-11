@@ -96,6 +96,7 @@ func IsTransient(err error) bool {
 
 	switch {
 	case strings.Contains(err.Error(), "operation time out"),
+		strings.Contains(err.Error(), "operation timed out"),
 		strings.Contains(err.Error(), "can't assign requested address"),
 		strings.Contains(err.Error(), "network is unreachable"):
 		return true
