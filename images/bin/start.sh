@@ -4,11 +4,9 @@ set -e
 
 userID="$(id -u)"
 echo "USER:$userID"
-if [ -d "/var/okteto/bin" ]; then
+if [ -d "/var/okteto/cloudbin" ]; then
   if [ -w "/usr/local/bin" ]; then
-    cp /var/okteto/bin/* /usr/local/bin
-  else
-    echo /usr/local/bin is not writeable by $userID
+    cp /var/okteto/cloudbin/* /usr/local/bin
   fi
 fi
 
@@ -33,7 +31,7 @@ while getopts ":s:re" opt; do
       
       echo "Copying secret $sourceFILE to $destFILE"
       if [ "/var/okteto/secret/$sourceFILE" != "$destFILE" ]; then
-        cp -p /var/okteto/secret/$sourceFILE $destFILE
+        cp /var/okteto/secret/$sourceFILE $destFILE
       fi
       ;;
     \?)
@@ -51,6 +49,7 @@ fi
 touch ${syncthingHome}/executed
 echo "Copying configuration files to $syncthingHome ..."
 cp /var/syncthing/secret/* $syncthingHome
+chmod 644 $syncthingHome/cert.pem $syncthingHome/config.xml $syncthingHome/key.pem
 
 params=""
 if [ $remote -eq 1 ]; then
