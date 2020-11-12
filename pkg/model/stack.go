@@ -45,6 +45,8 @@ type Service struct {
 	Command         Command           `yaml:"command,omitempty"`
 	Environment     []EnvVar          `yaml:"environment,omitempty"`
 	EnvFiles        []string          `yaml:"env_file,omitempty"`
+	CapAdd          []string          `yaml:"cap_add,omitempty"`
+	CapDrop         []string          `yaml:"cap_drop,omitempty"`
 	Ports           []int             `yaml:"ports,omitempty"`
 	Volumes         []string          `yaml:"volumes,omitempty"`
 	StopGracePeriod int               `yaml:"stop_grace_period,omitempty"`
