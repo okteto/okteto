@@ -146,6 +146,11 @@ type Command struct {
 	Values []string
 }
 
+//Args represents the args of a development contaianer
+type Args struct {
+	Values []string
+}
+
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
 	BuildInfoRaw

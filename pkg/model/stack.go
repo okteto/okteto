@@ -43,6 +43,7 @@ type Service struct {
 	Build           *BuildInfo        `yaml:"build,omitempty"`
 	Replicas        int               `yaml:"replicas"`
 	Command         Command           `yaml:"command,omitempty"`
+	Args            Args              `yaml:"args,omitempty"`
 	Environment     []EnvVar          `yaml:"environment,omitempty"`
 	EnvFiles        []string          `yaml:"env_file,omitempty"`
 	CapAdd          []string          `yaml:"cap_add,omitempty"`
