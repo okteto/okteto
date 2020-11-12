@@ -81,6 +81,28 @@ func (c Command) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (a *Args) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var multi []string
+	err := unmarshal(&multi)
+	if err != nil {
+		var single string
+		err := unmarshal(&single)
+		if err != nil {
+			return err
+		}
+		a.Values = []string{single}
+	} else {
+		a.Values = multi
+	}
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (a Args) MarshalYAML() (interface{}, error) {
+	return a.Values, nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)
