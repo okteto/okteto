@@ -49,6 +49,9 @@ var (
 	// ErrQuota is returned when there aren't enough resources to enable dev mode
 	ErrQuota = fmt.Errorf("Quota exceeded, please free some resources and try again")
 
+	// ErrSSHConnectError is returned when okteto cannot connect to ssh
+	ErrSSHConnectError = fmt.Errorf("ssh start error")
+
 	// ErrUnknownSyncError is returned when syncthing reports an unknown sync error
 	ErrUnknownSyncError = fmt.Errorf("Unknown syncthing error")
 

@@ -19,6 +19,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
@@ -41,9 +42,10 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 		return nil, fmt.Errorf("failed to establish a tcp connection for %s: %s", serverAddr, err)
 	}
 
-	clientConn, chans, reqs, err := ssh.NewClientConn(conn, serverAddr, config)
+	clientConn, chans, reqs, err := retryNewClientConn(ctx, conn, serverAddr, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ssh connection for %s: %w", serverAddr, err)
+		log.Infof("failed to create ssh connection for %s: %s", serverAddr, err.Error())
+		return nil, errors.ErrSSHConnectError
 	}
 
 	client := ssh.NewClient(clientConn, chans, reqs)
@@ -52,6 +54,33 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 	go p.keepAlive(ctx)
 
 	return p, nil
+}
+
+func retryNewClientConn(ctx context.Context, c net.Conn, addr string, conf *ssh.ClientConfig) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
+	ticker := time.NewTicker(300 * time.Millisecond)
+	to := config.GetTimeout() / 6 // 5 seconds
+	timeout := time.Now().Add(to)
+
+	log.Infof("waiting for ssh to be ready")
+	for i := 0; ; i++ {
+		clientConn, chans, reqs, err := ssh.NewClientConn(c, addr, conf)
+		if err == nil {
+			return clientConn, chans, reqs, nil
+		}
+		log.Infof("ssh is not ready yet: %s", err)
+
+		if time.Now().After(timeout) {
+			return nil, nil, nil, err
+		}
+
+		select {
+		case <-ticker.C:
+			continue
+		case <-ctx.Done():
+			log.Infof("ssh.retryNewClientConn cancelled")
+			return nil, nil, nil, err
+		}
+	}
 }
 
 func (p *pool) keepAlive(ctx context.Context) {
