@@ -356,7 +356,13 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 
 	if err := up.forwards(ctx); err != nil {
 		if err == errors.ErrSSHConnectError {
-			return up.checkOktetoStartError(ctx, "Failed to connect to your development container")
+			err := up.checkOktetoStartError(ctx, "Failed to connect to your development container")
+			if err == errors.ErrLostSyncthing {
+				if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
+					return fmt.Errorf("error recreating development container: %s", err.Error())
+				}
+			}
+			return err
 		}
 		return fmt.Errorf("couldn't connect to your development container: %s", err.Error())
 	}
@@ -742,7 +748,14 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	}
 
 	if err := up.Sy.WaitForPing(ctx, false); err != nil {
-		return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
+		log.Infof("failed to ping syncthing: %s", err.Error())
+		err = up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
+		if err == errors.ErrLostSyncthing {
+			if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
+				return fmt.Errorf("error recreating development container: %s", err.Error())
+			}
+		}
+		return err
 	}
 
 	if up.resetSyncthing {
@@ -896,9 +909,7 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 		}
 	} else {
 		if pods.OktetoDevPodMustBeRecreated(ctx, up.Dev, up.Client) {
-			if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err == nil {
-				return errors.ErrLostSyncthing
-			}
+			return errors.ErrLostSyncthing
 		}
 	}
 
