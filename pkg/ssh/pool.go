@@ -58,7 +58,7 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 
 func retryNewClientConn(ctx context.Context, c net.Conn, addr string, conf *ssh.ClientConfig) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
 	ticker := time.NewTicker(300 * time.Millisecond)
-	to := config.GetTimeout() / 6 // 5 seconds
+	to := config.GetTimeout() / 2 // 15 seconds
 	timeout := time.Now().Add(to)
 
 	log.Infof("waiting for ssh to be ready")
