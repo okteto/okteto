@@ -592,7 +592,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 		p, err := GetAvailablePort(dev.Interface)
 		if err != nil {
 			log.Infof("failed to get random port for SSH connection: %s", err)
-			p = 2222
+			p = oktetoDefaultSSHServerPort
 		}
 
 		dev.RemotePort = p

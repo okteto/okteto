@@ -37,12 +37,7 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 		stopped: false,
 	}
 
-	conn, err := getTCPConnection(ctx, serverAddr, p.ka)
-	if err != nil {
-		return nil, fmt.Errorf("failed to establish a tcp connection for %s: %s", serverAddr, err)
-	}
-
-	clientConn, chans, reqs, err := retryNewClientConn(ctx, conn, serverAddr, config)
+	clientConn, chans, reqs, err := retryNewClientConn(ctx, serverAddr, config, p)
 	if err != nil {
 		log.Infof("failed to create ssh connection for %s: %s", serverAddr, err.Error())
 		return nil, errors.ErrSSHConnectError
@@ -56,17 +51,21 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 	return p, nil
 }
 
-func retryNewClientConn(ctx context.Context, c net.Conn, addr string, conf *ssh.ClientConfig) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
+func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig, p *pool) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
 	ticker := time.NewTicker(300 * time.Millisecond)
-	to := config.GetTimeout() / 2 // 15 seconds
+	to := config.GetTimeout() / 10 // 3 seconds
 	timeout := time.Now().Add(to)
 
-	log.Infof("waiting for ssh to be ready")
+	log.Infof("waiting for ssh to be ready %s", addr)
 	for i := 0; ; i++ {
-		clientConn, chans, reqs, err := ssh.NewClientConn(c, addr, conf)
+		conn, err := getTCPConnection(ctx, addr, p.ka)
 		if err == nil {
-			return clientConn, chans, reqs, nil
+			clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr, conf)
+			if err == nil {
+				return clientConn, chans, reqs, nil
+			}
 		}
+
 		log.Infof("ssh is not ready yet: %s", err)
 
 		if time.Now().After(timeout) {
@@ -143,7 +142,7 @@ func getTCPConnection(ctx context.Context, serverAddr string, keepAlive time.Dur
 func getConn(ctx context.Context, serverAddr string, maxRetries int) (net.Conn, error) {
 	var lastErr error
 	t := time.NewTicker(100 * time.Millisecond)
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		d := net.Dialer{}
 		c, err := d.DialContext(ctx, "tcp", serverAddr)
 		if err == nil {
