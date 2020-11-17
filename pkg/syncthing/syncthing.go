@@ -32,7 +32,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	okerr "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/bcrypt"
@@ -394,7 +393,7 @@ func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local boo
 		if err != nil {
 			log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
 			if strings.Contains(err.Error(), "Client.Timeout") {
-				return errors.ErrUnknownSyncError
+				return fmt.Errorf("error resetting syncthing database local=%t: %s", local, err.Error())
 			}
 			return errors.ErrLostSyncthing
 		}
@@ -482,7 +481,6 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for _, folder := range s.Folders {
 		log.Infof("waiting for synchronization to complete path=%s", folder.LocalPath)
-		retries := 0
 		for {
 			select {
 			case <-ticker.C:
@@ -518,27 +516,11 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 					return nil
 				}
 
-				for _, folder := range s.Folders {
-					status, err := s.GetStatus(ctx, &folder, false)
-					if err != nil {
-						if err == errors.ErrBusySyncthing {
-							continue
-						}
-						return err
-					}
-					if status.PullErrors > 0 {
-						if err := s.GetFolderErrors(ctx, &folder, false); err != nil {
-							if err == errors.ErrBusySyncthing {
-								continue
-							}
-						}
-						retries++
-						if retries >= 60 {
-							return okerr.ErrUnknownSyncError
-						}
+				if err := s.GetFolderErrors(ctx, &folder, false); err != nil {
+					if err == errors.ErrBusySyncthing {
 						continue
 					}
-					retries = 0
+					return err
 				}
 
 			case <-ctx.Done():
@@ -548,27 +530,6 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 		}
 	}
 	return nil
-}
-
-// GetStatus returns the syncthing status
-func (s *Syncthing) GetStatus(ctx context.Context, folder *Folder, local bool) (*Status, error) {
-	params := getFolderParameter(folder)
-	status := &Status{}
-	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true, 3)
-	if err != nil {
-		log.Infof("error getting status: %s", err.Error())
-		if strings.Contains(err.Error(), "Client.Timeout") {
-			return nil, errors.ErrBusySyncthing
-		}
-		return nil, errors.ErrLostSyncthing
-	}
-	err = json.Unmarshal(body, status)
-	if err != nil {
-		log.Infof("error unmarshalling status: %s", err.Error())
-		return nil, errors.ErrLostSyncthing
-	}
-
-	return status, nil
 }
 
 // GetCompletion returns the syncthing completion
@@ -622,7 +583,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 	params := getFolderParameter(folder)
 	params["since"] = "0"
 	params["limit"] = "1"
-	params["timeout"] = "15"
+	params["timeout"] = "0"
 	params["events"] = "FolderErrors"
 	folderErrorsList := []FolderErrors{}
 	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
@@ -658,6 +619,11 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 	if strings.Contains(errMsg, "no connected device has the required version of this file") {
 		log.Infof("corrupted syncthing database, needs reset local=%t: %s", local, errMsg)
 		return errors.ErrResetSyncthing
+	}
+
+	if strings.Contains(errMsg, "insufficient space") {
+		log.Infof("syncthing insufficient space local=%t: %s", local, errMsg)
+		return errors.ErrInsufficientSpace
 	}
 
 	log.Infof("syncthing pull error local=%t: %s", local, errMsg)

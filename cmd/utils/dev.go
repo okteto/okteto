@@ -101,7 +101,7 @@ func AskIfDeploy(name, namespace string) error {
 	if !deploy {
 		return errors.UserError{
 			E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", name, namespace),
-			Hint: "Deploy your application first or use `okteto namespace` to select a different namespace and try again",
+			Hint: "Deploy your application first or use 'okteto namespace' to select a different namespace and try again",
 		}
 	}
 	return nil
