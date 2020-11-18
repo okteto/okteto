@@ -32,7 +32,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 		gitPath := filepath.Join(folder.LocalPath, ".git")
 		if !model.FileExists(stignorePath) {
 			log.Infof("'.stignore' does not exist in folder '%s'", folder.LocalPath)
-			if err := askIfCreatingStignore(folder.LocalPath, stignorePath, gitPath); err != nil {
+			if err := askIfCreateStignoreDefaults(folder.LocalPath, stignorePath, gitPath); err != nil {
 				return err
 			}
 			continue
@@ -50,17 +50,17 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 	return nil
 }
 
-func askIfCreatingStignore(folder, stignorePath, gitPath string) error {
-	log.Information("It is recommended to define a '.stignore' file to avoid synchronizing things like build artifacts, git metadata or third party libraries.")
-	answer, err := utils.AskYesNo("    Do you want to automatically create a '.stignore' file? [y/n] ")
+func askIfCreateStignoreDefaults(folder, stignorePath, gitPath string) error {
+	log.Information("Okteto requires a '.stignore' file containing file patterns the synchrinization service should ignore.")
+	stignoreDefaults, err := utils.AskYesNo("    Do you want to infer defaults for the '.stignore' file? (otherwise, it will be left blank) [y/n] ")
 	if err != nil {
-		return fmt.Errorf("failed to ask for adding '.stignore' to '%s': %s", folder, err.Error())
+		return fmt.Errorf("failed to add '.stignore' to '%s': %s", folder, err.Error())
 	}
 
-	if !answer {
+	if !stignoreDefaults {
 		stignoreContent := ""
 		if model.FileExists(gitPath) {
-			stignoreContent = ".git\n"
+			stignoreContent = "// .git\n"
 		}
 		if err := ioutil.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
 			return fmt.Errorf("failed to create empty '%s': %s", stignorePath, err.Error())
@@ -89,17 +89,17 @@ func askIfUpdatingStignore(folder, stignorePath, gitPath string) error {
 		return nil
 	}
 
-	log.Information("It is recommended to not synchronize the '%s' folder.", gitPath)
-	answer, err := utils.AskYesNo("    Do you want to ignore it? [y/n] ")
+	log.Information("The synchronization service performance is degraded if the '.git' folder is synchronized.")
+	ignoreGit, err := utils.AskYesNo("    Do you want to ignore the '.git' folder in your '.stignore' file? [y/n] ")
 	if err != nil {
 		return fmt.Errorf("failed to ask for adding '.git' to '%s': %s", stignorePath, err.Error())
 	}
-	if !answer {
-		return nil
-	}
-
 	log.Infof("adding '.git' to '%s'", stignorePath)
-	stignoreContent = fmt.Sprintf(".git\n%s", stignoreContent)
+	if ignoreGit {
+		stignoreContent = fmt.Sprintf(".git\n%s", stignoreContent)
+	} else {
+		stignoreContent = fmt.Sprintf("// .git\n%s", stignoreContent)
+	}
 	if err := ioutil.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
 		return fmt.Errorf("failed to update '%s': %s", stignorePath, err.Error())
 	}
