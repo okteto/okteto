@@ -51,7 +51,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 }
 
 func askIfCreateStignoreDefaults(folder, stignorePath, gitPath string) error {
-	log.Information("Okteto requires a '.stignore' file containing file patterns the synchrinization service should ignore.")
+	log.Information("Okteto requires a '.stignore' file containing file patterns the synchronization service should ignore.")
 	stignoreDefaults, err := utils.AskYesNo("    Do you want to infer defaults for the '.stignore' file? (otherwise, it will be left blank) [y/n] ")
 	if err != nil {
 		return fmt.Errorf("failed to add '.stignore' to '%s': %s", folder, err.Error())
