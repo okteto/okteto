@@ -134,7 +134,10 @@ func getBuildkitClient(ctx context.Context, isOktetoCluster bool, buildKitHost s
 		c, err := getClientForOktetoCluster(ctx, buildKitHost)
 		if err != nil {
 			log.Infof("failed to create okteto build client: %s", err)
-			return nil, okErrors.UserError{E: fmt.Errorf("failed to create okteto build client"), Hint: okErrors.ErrNotLogged.Error()}
+			return nil, okErrors.UserError{
+				E:    fmt.Errorf("failed to create okteto build client"),
+				Hint: okErrors.ErrNotLogged.Error(),
+			}
 		}
 
 		return c, nil

@@ -59,7 +59,7 @@ var (
 	ErrResetSyncthing = fmt.Errorf("synchronization database corrupted")
 
 	// ErrInsufficientSpace is raised when syncthing fails with no space available
-	ErrInsufficientSpace = fmt.Errorf("synchronization failure with no space available")
+	ErrInsufficientSpace = fmt.Errorf("there isn't enough disk space available to synchronize your files")
 
 	// ErrBusySyncthing is raised when syncthing is busy
 	ErrBusySyncthing = fmt.Errorf("synchronization service is unresponsive")
