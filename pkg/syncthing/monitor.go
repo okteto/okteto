@@ -47,7 +47,7 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 
 // MonitorStatus will send a message to disconnected if there is a synchronization error
 func (s *Syncthing) MonitorStatus(ctx context.Context, disconnect chan error) {
-	ticker := time.NewTicker(300 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -82,15 +82,6 @@ func (s *Syncthing) checkLocalAndRemoteStatus(ctx context.Context) error {
 
 func (s *Syncthing) checkStatus(ctx context.Context, local bool) error {
 	for _, folder := range s.Folders {
-		status, err := s.GetStatus(ctx, &folder, local)
-		if err != nil {
-			log.Infof("error getting status from path:%s local=%t", folder.LocalPath, local)
-			return err
-		}
-		if status.PullErrors == 0 {
-			continue
-		}
-
 		if err := s.GetFolderErrors(ctx, &folder, local); err != nil {
 			return err
 		}

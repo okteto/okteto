@@ -52,14 +52,14 @@ var (
 	// ErrSSHConnectError is returned when okteto cannot connect to ssh
 	ErrSSHConnectError = fmt.Errorf("ssh start error")
 
-	// ErrUnknownSyncError is returned when syncthing reports an unknown sync error
-	ErrUnknownSyncError = fmt.Errorf("Unknown syncthing error")
-
 	// ErrNotInDevContainer is returned when an unsupported command is invoked from a dev container (e.g. okteto up)
 	ErrNotInDevContainer = fmt.Errorf("this command is not supported from inside an development container")
 
 	// ErrResetSyncthing is raised when syncthing database must be reset
 	ErrResetSyncthing = fmt.Errorf("synchronization database corrupted")
+
+	// ErrInsufficientSpace is raised when syncthing fails with no space available
+	ErrInsufficientSpace = fmt.Errorf("there isn't enough disk space available to synchronize your files")
 
 	// ErrBusySyncthing is raised when syncthing is busy
 	ErrBusySyncthing = fmt.Errorf("synchronization service is unresponsive")

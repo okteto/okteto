@@ -180,7 +180,7 @@ func getCurrentNamespace(ctx context.Context) (string, error) {
 		log.Infof("couldn't get the current namespace: %s", err)
 		return "", errors.UserError{
 			E:    fmt.Errorf("couldn't get the current namespace"),
-			Hint: "Run `okteto namespace`, or use the `--namespace` parameter",
+			Hint: "Run 'okteto namespace', or use the '--namespace' parameter",
 		}
 	}
 
@@ -192,7 +192,7 @@ func getCurrentNamespace(ctx context.Context) (string, error) {
 	if !namespaces.IsOktetoNamespace(ns) {
 		return "", errors.UserError{
 			E:    fmt.Errorf("your current namespace '%s' is not managed by okteto", namespace),
-			Hint: "Run `okteto namespace`, or use the `--namespace` parameter",
+			Hint: "Run 'okteto namespace', or use the '--namespace' parameter",
 		}
 	}
 

@@ -56,7 +56,7 @@ func Exec() *cobra.Command {
 			if errors.IsNotFound(err) {
 				return errors.UserError{
 					E:    fmt.Errorf("Development container not found in namespace %s", dev.Namespace),
-					Hint: "Run `okteto up` to launch it or use `okteto namespace` to select the correct namespace and try again",
+					Hint: "Run 'okteto up' to launch it or use 'okteto namespace' to select the correct namespace and try again",
 				}
 			}
 
@@ -99,7 +99,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	if p == nil {
 		return errors.UserError{
 			E:    fmt.Errorf("development mode is not enabled on your deployment"),
-			Hint: "Run `okteto up` to enable it and try again",
+			Hint: "Run 'okteto up' to enable it and try again",
 		}
 	}
 
@@ -115,7 +115,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 				log.Infof("failed to get the SSH port for %s: %s", dev.Name, err)
 				return errors.UserError{
 					E:    fmt.Errorf("development mode is not enabled on your deployment"),
-					Hint: "Run `okteto up` to enable it and try again",
+					Hint: "Run 'okteto up' to enable it and try again",
 				}
 			}
 
