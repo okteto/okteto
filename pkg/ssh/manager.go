@@ -57,6 +57,10 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 		return fmt.Errorf("port %d is listed multiple times, please check your forwards configuration", localPort)
 	}
 
+	if !checkAvailable {
+		return nil
+	}
+
 	if !model.IsPortAvailable(fm.localInterface, localPort) {
 		if localPort <= 1024 {
 			os := runtime.GOOS
