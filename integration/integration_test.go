@@ -221,6 +221,11 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		stignorePath := filepath.Join(dir, ".stignore")
+		if err := ioutil.WriteFile(stignorePath, []byte("venv"), 0600); err != nil {
+			t.Fatal(err)
+		}
+
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}
