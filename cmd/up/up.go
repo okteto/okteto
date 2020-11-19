@@ -86,7 +86,6 @@ func Up() *cobra.Command {
 				if utils.GetWarningState(warningFolder, "version") != u {
 					log.Yellow("Okteto %s is available. To upgrade:", u)
 					log.Yellow("    %s", getUpgradeCommand())
-					fmt.Println()
 					if err := utils.SetWarningState(warningFolder, "version", u); err != nil {
 						log.Infof("failed to set warning version state: %s", err.Error())
 					}
@@ -406,10 +405,15 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 		log.Debugf("clean command output: %s", output)
 
 		if isWatchesConfigurationTooLow(output) {
-			// if !already shown
-			log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
-			log.Yellow("This can affect file synchronization performance.")
-			log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
+			folder := config.GetNamespaceHome(up.Dev.Namespace)
+			if utils.GetWarningState(folder, ".remotewatcher") == "" {
+				log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
+				log.Yellow("This can affect file synchronization performance.")
+				log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
+				if err := utils.SetWarningState(folder, ".remotewatcher", "true"); err != nil {
+					log.Infof("failed to set warning remotewatcher state: %s", err.Error())
+				}
+			}
 		}
 
 		printDisplayContext(up.Dev)

@@ -27,9 +27,5 @@ func SetWarningState(path, name, value string) error {
 	}
 	filePath := filepath.Join(path, name)
 
-	if err := ioutil.WriteFile(filePath, []byte(value), 0644); err != nil {
-		return err
-	}
-
-	return nil
+	return ioutil.WriteFile(filePath, []byte(value), 0644)
 }
