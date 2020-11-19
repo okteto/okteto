@@ -51,7 +51,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 }
 
 func askIfCreateStignoreDefaults(folder, stignorePath, gitPath string) error {
-	log.Information("Okteto requires a '.stignore' file containing file patterns the synchronization service should ignore.")
+	log.Information("Okteto requires a '.stignore' file to ignore file patterns that help optimize the synchronization service.")
 	stignoreDefaults, err := utils.AskYesNo("    Do you want to infer defaults for the '.stignore' file? (otherwise, it will be left blank) [y/n] ")
 	if err != nil {
 		return fmt.Errorf("failed to add '.stignore' to '%s': %s", folder, err.Error())
@@ -59,9 +59,6 @@ func askIfCreateStignoreDefaults(folder, stignorePath, gitPath string) error {
 
 	if !stignoreDefaults {
 		stignoreContent := ""
-		if model.FileExists(gitPath) {
-			stignoreContent = "// .git\n"
-		}
 		if err := ioutil.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
 			return fmt.Errorf("failed to create empty '%s': %s", stignorePath, err.Error())
 		}
