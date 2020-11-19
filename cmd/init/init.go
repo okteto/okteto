@@ -98,7 +98,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 		checkForDeployment = true
 	}
 
-	language, err = getLanguage(language, workDir)
+	language, err = GetLanguage(language, workDir)
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,8 @@ func validateDevPath(devPath string, overwrite bool) (string, error) {
 	return devPath, nil
 }
 
-func getLanguage(language, workDir string) (string, error) {
+//GetLanguage returns the language of a given folder
+func GetLanguage(language, workDir string) (string, error) {
 	if language != "" {
 		return language, nil
 	}
