@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -81,10 +82,15 @@ func Up() *cobra.Command {
 
 			u := upgradeAvailable()
 			if len(u) > 0 {
-				// if !already shown
-				log.Yellow("Okteto %s is available. To upgrade:", u)
-				log.Yellow("    %s", getUpgradeCommand())
-				fmt.Println()
+				warningFolder := filepath.Join(config.GetOktetoHome(), ".warnings")
+				if utils.GetWarningState(warningFolder, "version") != u {
+					log.Yellow("Okteto %s is available. To upgrade:", u)
+					log.Yellow("    %s", getUpgradeCommand())
+					fmt.Println()
+					if err := utils.SetWarningState(warningFolder, "version", u); err != nil {
+						log.Infof("failed to set warning version state: %s", err.Error())
+					}
+				}
 			}
 
 			if syncthing.ShouldUpgrade() {
