@@ -81,6 +81,7 @@ func Up() *cobra.Command {
 
 			u := upgradeAvailable()
 			if len(u) > 0 {
+				// if !already shown
 				log.Yellow("Okteto %s is available. To upgrade:", u)
 				log.Yellow("    %s", getUpgradeCommand())
 				fmt.Println()
@@ -399,6 +400,7 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 		log.Debugf("clean command output: %s", output)
 
 		if isWatchesConfigurationTooLow(output) {
+			// if !already shown
 			log.Yellow("\nThe value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 			log.Yellow("This can affect file synchronization performance.")
 			log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
