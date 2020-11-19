@@ -48,13 +48,17 @@ func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInter
 	}
 }
 
-func (fm *ForwardManager) canAdd(localPort int) error {
+func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 	if _, ok := fm.reverses[localPort]; ok {
 		return fmt.Errorf("port %d is listed multiple times, please check your reverse forwards configuration", localPort)
 	}
 
 	if _, ok := fm.forwards[localPort]; ok {
 		return fmt.Errorf("port %d is listed multiple times, please check your forwards configuration", localPort)
+	}
+
+	if !checkAvailable {
+		return nil
 	}
 
 	if !model.IsPortAvailable(fm.localInterface, localPort) {
@@ -76,7 +80,7 @@ func (fm *ForwardManager) canAdd(localPort int) error {
 // Add initializes a remote forward
 func (fm *ForwardManager) Add(f model.Forward) error {
 
-	if err := fm.canAdd(f.Local); err != nil {
+	if err := fm.canAdd(f.Local, true); err != nil {
 		return err
 	}
 
