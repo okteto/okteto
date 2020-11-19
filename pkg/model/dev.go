@@ -24,9 +24,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -109,13 +111,14 @@ var (
 
 //Dev represents a development container
 type Dev struct {
-	Name                 string                `json:"name" yaml:"name"`
-	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
-	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
+	Name                 string             `json:"name" yaml:"name"`
+	Labels               map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations          map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Tolerations          []apiv1.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	Context              string             `json:"context,omitempty" yaml:"context,omitempty"`
+	Namespace            string             `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Container            string             `json:"container,omitempty" yaml:"container,omitempty"`
+	EmptyImage           bool
 	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
@@ -429,6 +432,9 @@ func (dev *Dev) loadImage() error {
 			return err
 		}
 	}
+	if dev.Image.Name == "" {
+		dev.EmptyImage = true
+	}
 	return nil
 }
 
@@ -656,6 +662,14 @@ func SerializeBuildArgs(buildArgs []EnvVar) []string {
 	return result
 }
 
+//SetTimestamp sets the dev timestacmp
+func (dev *Dev) SetTimestamp() {
+	if dev.Annotations == nil {
+		dev.Annotations = map[string]string{}
+	}
+	dev.Annotations[labels.TimestampAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+}
+
 //GetVolumeName returns the okteto volume name for a given development container
 func (dev *Dev) GetVolumeName() string {
 	return fmt.Sprintf(OktetoVolumeNameTemplate, dev.Name)
@@ -678,7 +692,6 @@ func (dev *Dev) LabelsSelector() string {
 func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	rule := &TranslationRule{
 		Container:        dev.Container,
-		Image:            dev.Image.Name,
 		ImagePullPolicy:  dev.ImagePullPolicy,
 		Environment:      dev.Environment,
 		Secrets:          dev.Secrets,
@@ -688,6 +701,10 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		SecurityContext:  dev.SecurityContext,
 		Resources:        dev.Resources,
 		Healthchecks:     dev.Healthchecks,
+	}
+
+	if !dev.EmptyImage {
+		rule.Image = dev.Image.Name
 	}
 
 	if main == dev {

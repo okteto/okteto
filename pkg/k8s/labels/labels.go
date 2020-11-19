@@ -17,6 +17,9 @@ const (
 	//Version represents the current dev data version
 	Version = "1.0"
 
+	// TimeFormat is the format to use when storing timestamps as a string
+	TimeFormat = "2006-01-02T15:04:05"
+
 	// DevLabel indicates the dev pod
 	DevLabel = "dev.okteto.com"
 
@@ -31,6 +34,9 @@ const (
 
 	// DeploymentAnnotation indicates the original deployment manifest  when the development container was activated
 	DeploymentAnnotation = "dev.okteto.com/deployment"
+
+	// TimestampAnnotation indicates the timestamp of an operation
+	TimestampAnnotation = "dev.okteto.com/timestamp"
 
 	// TranslationAnnotation sets the translation rules
 	TranslationAnnotation = "dev.okteto.com/translation"

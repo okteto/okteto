@@ -144,17 +144,12 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		}
 		imageTag := registry.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
 		log.Information("Building image for service '%s'...", name)
-		var imageDigest string
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-		imageDigest, err = build.Run(ctx, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, "tty")
-		if err != nil {
+		if err := build.Run(ctx, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, "tty"); err != nil {
 			return fmt.Errorf("error building image for '%s': %s", name, err)
 		}
-		if imageDigest != "" {
-			imageWithoutTag, _ := registry.GetRepoNameAndTag(imageTag)
-			imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
-		}
 		svc.Image = imageTag
+		svc.SetTimestamp()
 		s.Services[name] = svc
 		log.Success("Image for service '%s' successfully pushed", name)
 	}

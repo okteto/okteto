@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -200,6 +201,14 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 			return ctx.Err()
 		}
 	}
+}
+
+//SetTimestamp sets the deployment timestacmp
+func SetTimestamp(d *appsv1.Deployment) {
+	if d.Spec.Template.Annotations == nil {
+		d.Spec.Template.Annotations = map[string]string{}
+	}
+	d.Spec.Template.Annotations[labels.TimestampAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }
 
 //TranslateDevMode translates the deployment manifests to put them in dev mode

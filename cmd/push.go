@@ -195,6 +195,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 
 	if !exists {
 		d.Spec.Template.Spec.Containers[0].Image = imageTag
+		deployments.SetTimestamp(d)
 		return deployments.Deploy(ctx, d, true, c)
 	}
 
@@ -207,6 +208,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 			if devContainer == nil {
 				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
 			}
+			deployments.SetTimestamp(tr.Deployment)
 			devContainer.Image = imageTag
 		}
 	}
@@ -227,16 +229,9 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 	buildTag := registry.GetDevImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
 	log.Infof("pushing with image tag %s", buildTag)
 
-	var imageDigest string
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	imageDigest, err = build.Run(ctx, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, progress)
-	if err != nil {
+	if err := build.Run(ctx, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, progress); err != nil {
 		return "", fmt.Errorf("error building image '%s': %s", buildTag, err)
-	}
-
-	if imageDigest != "" {
-		imageWithoutTag, _ := registry.GetRepoNameAndTag(buildTag)
-		buildTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 
 	return buildTag, nil

@@ -19,7 +19,9 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -184,4 +186,12 @@ func (s *Stack) UpdateNamespace(namespace string) error {
 	}
 	s.Namespace = namespace
 	return nil
+}
+
+//SetTimestamp sets the dev timestacmp
+func (s *Service) SetTimestamp() {
+	if s.Annotations == nil {
+		s.Annotations = map[string]string{}
+	}
+	s.Annotations[labels.TimestampAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }
