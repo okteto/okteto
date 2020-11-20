@@ -193,5 +193,5 @@ func (s *Service) SetTimestamp() {
 	if s.Annotations == nil {
 		s.Annotations = map[string]string{}
 	}
-	s.Annotations[labels.TimestampAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+	s.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }

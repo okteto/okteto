@@ -667,7 +667,7 @@ func (dev *Dev) SetTimestamp() {
 	if dev.Annotations == nil {
 		dev.Annotations = map[string]string{}
 	}
-	dev.Annotations[labels.TimestampAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+	dev.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }
 
 //GetVolumeName returns the okteto volume name for a given development container

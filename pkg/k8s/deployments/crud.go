@@ -208,7 +208,7 @@ func SetTimestamp(d *appsv1.Deployment) {
 	if d.Spec.Template.Annotations == nil {
 		d.Spec.Template.Annotations = map[string]string{}
 	}
-	d.Spec.Template.Annotations[labels.TimestampAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+	d.Spec.Template.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }
 
 //TranslateDevMode translates the deployment manifests to put them in dev mode

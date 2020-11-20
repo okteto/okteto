@@ -35,8 +35,8 @@ const (
 	// DeploymentAnnotation indicates the original deployment manifest  when the development container was activated
 	DeploymentAnnotation = "dev.okteto.com/deployment"
 
-	// TimestampAnnotation indicates the timestamp of an operation
-	TimestampAnnotation = "dev.okteto.com/timestamp"
+	// LastBuiltAnnotation indicates the timestamp of an operation
+	LastBuiltAnnotation = "dev.okteto.com/last-built"
 
 	// TranslationAnnotation sets the translation rules
 	TranslationAnnotation = "dev.okteto.com/translation"
