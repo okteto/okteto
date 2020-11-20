@@ -203,8 +203,8 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 	}
 }
 
-//SetTimestamp sets the deployment timestacmp
-func SetTimestamp(d *appsv1.Deployment) {
+//SetLastBuiltAnnotation sets the deployment timestacmp
+func SetLastBuiltAnnotation(d *appsv1.Deployment) {
 	if d.Spec.Template.Annotations == nil {
 		d.Spec.Template.Annotations = map[string]string{}
 	}

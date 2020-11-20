@@ -188,8 +188,8 @@ func (s *Stack) UpdateNamespace(namespace string) error {
 	return nil
 }
 
-//SetTimestamp sets the dev timestacmp
-func (s *Service) SetTimestamp() {
+//SetLastBuiltAnnotationtamp sets the dev timestacmp
+func (s *Service) SetLastBuiltAnnotationtamp() {
 	if s.Annotations == nil {
 		s.Annotations = map[string]string{}
 	}

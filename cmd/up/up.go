@@ -530,11 +530,11 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	for _, s := range up.Dev.Services {
 		if s.Image.Name == up.Dev.Image.Name {
 			s.Image.Name = imageTag
-			s.SetTimestamp()
+			s.SetLastBuiltAnnotation()
 		}
 	}
 	up.Dev.Image.Name = imageTag
-	up.Dev.SetTimestamp()
+	up.Dev.SetLastBuiltAnnotation()
 	return nil
 }
 

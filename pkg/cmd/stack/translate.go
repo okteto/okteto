@@ -149,7 +149,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 			return fmt.Errorf("error building image for '%s': %s", name, err)
 		}
 		svc.Image = imageTag
-		svc.SetTimestamp()
+		svc.SetLastBuiltAnnotationtamp()
 		s.Services[name] = svc
 		log.Success("Image for service '%s' successfully pushed", name)
 	}

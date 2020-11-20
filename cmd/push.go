@@ -195,7 +195,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 
 	if !exists {
 		d.Spec.Template.Spec.Containers[0].Image = imageTag
-		deployments.SetTimestamp(d)
+		deployments.SetLastBuiltAnnotation(d)
 		return deployments.Deploy(ctx, d, true, c)
 	}
 
@@ -208,7 +208,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 			if devContainer == nil {
 				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
 			}
-			deployments.SetTimestamp(tr.Deployment)
+			deployments.SetLastBuiltAnnotation(tr.Deployment)
 			devContainer.Image = imageTag
 		}
 	}

@@ -662,8 +662,8 @@ func SerializeBuildArgs(buildArgs []EnvVar) []string {
 	return result
 }
 
-//SetTimestamp sets the dev timestacmp
-func (dev *Dev) SetTimestamp() {
+//SetLastBuiltAnnotation sets the dev timestacmp
+func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Annotations == nil {
 		dev.Annotations = map[string]string{}
 	}
