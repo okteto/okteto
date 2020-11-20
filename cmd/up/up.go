@@ -523,22 +523,18 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	imageTag := registry.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
 	log.Infof("building dev image tag %s", imageTag)
 
-	var imageDigest string
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
-	imageDigest, err = buildCMD.Run(ctx, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, "tty")
-	if err != nil {
+	if err := buildCMD.Run(ctx, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, "tty"); err != nil {
 		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
-	}
-	if imageDigest != "" {
-		imageWithoutTag, _ := registry.GetRepoNameAndTag(imageTag)
-		imageTag = fmt.Sprintf("%s@%s", imageWithoutTag, imageDigest)
 	}
 	for _, s := range up.Dev.Services {
 		if s.Image.Name == up.Dev.Image.Name {
 			s.Image.Name = imageTag
+			s.SetLastBuiltAnnotation()
 		}
 	}
 	up.Dev.Image.Name = imageTag
+	up.Dev.SetLastBuiltAnnotation()
 	return nil
 }
 

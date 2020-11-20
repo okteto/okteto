@@ -181,13 +181,12 @@ func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*clien
 	return c, nil
 }
 
-func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string) (string, error) {
-	var solveResp *client.SolveResponse
+func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string) error {
 	ch := make(chan *client.SolveStatus)
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		var err error
-		solveResp, err = c.Solve(ctx, nil, *opt, ch)
+		_, err = c.Solve(ctx, nil, *opt, ch)
 		return errors.Wrap(err, "build failed")
 	})
 
@@ -202,9 +201,5 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 		return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stdout, ch)
 	})
 
-	if err := eg.Wait(); err != nil {
-		return "", err
-	}
-
-	return solveResp.ExporterResponse["containerimage.digest"], nil
+	return eg.Wait()
 }
