@@ -66,6 +66,18 @@ func GetOktetoHome() string {
 	return d
 }
 
+// GetNamespaceHome returns the path of the folder
+func GetNamespaceHome(namespace string) string {
+	okHome := GetOktetoHome()
+	d := filepath.Join(okHome, namespace)
+
+	if err := os.MkdirAll(d, 0700); err != nil {
+		log.Fatalf("failed to create %s: %s", d, err)
+	}
+
+	return d
+}
+
 // GetDeploymentHome returns the path of the folder
 func GetDeploymentHome(namespace, name string) string {
 	okHome := GetOktetoHome()

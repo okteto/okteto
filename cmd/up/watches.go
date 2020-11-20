@@ -14,17 +14,24 @@
 package up
 
 import (
-	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 )
 
 func checkLocalWatchesConfiguration() {
 	if runtime.GOOS != "linux" {
+		return
+	}
+
+	warningFolder := filepath.Join(config.GetOktetoHome(), ".warnings")
+	if utils.GetWarningState(warningFolder, "localwatcher") != "" {
 		return
 	}
 
@@ -39,7 +46,9 @@ func checkLocalWatchesConfiguration() {
 		log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches is too low.")
 		log.Yellow("This can affect Okteto's file synchronization performance.")
 		log.Yellow("We recommend you to raise it to at least 524288 to ensure proper performance.")
-		fmt.Println()
+		if err := utils.SetWarningState(warningFolder, "localwatcher", "true"); err != nil {
+			log.Infof("failed to set warning localwatcher state: %s", err.Error())
+		}
 	}
 }
 
