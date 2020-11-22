@@ -60,10 +60,11 @@ func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig
 	for i := 0; ; i++ {
 		conn, err := getTCPConnection(ctx, addr, p.ka)
 		if err == nil {
-			clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr, conf)
-			if err == nil {
+			clientConn, chans, reqs, errConn := ssh.NewClientConn(conn, addr, conf)
+			if errConn == nil {
 				return clientConn, chans, reqs, nil
 			}
+			err = errConn
 		}
 
 		log.Infof("ssh is not ready yet: %s", err)
@@ -77,7 +78,7 @@ func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig
 			continue
 		case <-ctx.Done():
 			log.Infof("ssh.retryNewClientConn cancelled")
-			return nil, nil, nil, err
+			return nil, nil, nil, fmt.Errorf("ssh.retryNewClientConn cancelled")
 		}
 	}
 }
