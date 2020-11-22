@@ -66,7 +66,9 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 			os := runtime.GOOS
 			switch os {
 			case "darwin":
-				return fmt.Errorf("local port %d is privileged. Define 'interface: 0.0.0.0' in your okteto manifest and try again", localPort)
+				if fm.localInterface == model.Localhost {
+					return fmt.Errorf("local port %d is privileged. Define 'interface: 0.0.0.0' in your okteto manifest and try again", localPort)
+				}
 			case "linux":
 				return fmt.Errorf("local port %d is privileged. Try running \"sudo setcap 'cap_net_bind_service=+ep' /usr/local/bin/okteto\" and try again", localPort)
 			}
