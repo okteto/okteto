@@ -608,7 +608,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	p := Secret{
 		LocalPath:  pubKeyPath,
 		RemotePath: authorizedKeysPath,
-		Mode:       0444,
+		Mode:       0644,
 	}
 
 	log.Infof("enabled remote mode")
