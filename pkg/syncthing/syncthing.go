@@ -74,7 +74,7 @@ type Syncthing struct {
 	binPath          string       `yaml:"-"`
 	Client           *http.Client `yaml:"-"`
 	cmd              *exec.Cmd    `yaml:"-"`
-	Folders          []Folder     `yaml:"folders"`
+	Folders          []*Folder    `yaml:"folders"`
 	FileWatcherDelay int          `yaml:"-"`
 	ForceSendOnly    bool         `yaml:"-"`
 	GUIAddress       string       `yaml:"local"`
@@ -99,6 +99,7 @@ type Folder struct {
 	Name       string `yaml:"name"`
 	LocalPath  string `yaml:"localPath"`
 	RemotePath string `yaml:"remotePath"`
+	Retries    int
 }
 
 //Ignores represents the .stignore file
@@ -190,7 +191,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		RemotePort:       remotePort,
 		Type:             "sendonly",
 		IgnoreDelete:     true,
-		Folders:          []Folder{},
+		Folders:          []*Folder{},
 		RescanInterval:   rescanInterval,
 	}
 	index := 1
@@ -202,7 +203,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		if !result {
 			s.Folders = append(
 				s.Folders,
-				Folder{
+				&Folder{
 					Name:       strconv.Itoa(index),
 					LocalPath:  sync.LocalPath,
 					RemotePath: sync.RemotePath,
@@ -341,14 +342,20 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 //Ping checks if syncthing is available
 func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 1)
-	return err == nil
+	if err == nil {
+		return true
+	}
+	if strings.Contains(err.Error(), "Client.Timeout") {
+		return true
+	}
+	return false
 }
 
 //SendStignoreFile sends .stignore from local to remote
 func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error {
 	for _, folder := range s.Folders {
 		log.Infof("sending '.stignore' file %s to the remote syncthing", folder.Name)
-		params := getFolderParameter(&folder)
+		params := getFolderParameter(folder)
 		ignores := &Ignores{}
 		body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true, 0)
 		if err != nil {
@@ -388,7 +395,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
 	for _, folder := range s.Folders {
 		log.Infof("reseting syncthing database path=%s local=%t", folder.LocalPath, local)
-		params := getFolderParameter(&folder)
+		params := getFolderParameter(folder)
 		_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil, false, 3)
 		if err != nil {
 			log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
@@ -405,7 +412,7 @@ func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local boo
 func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 	for _, folder := range s.Folders {
 		log.Infof("overriding local changes to the remote syncthing path=%s", folder.LocalPath)
-		params := getFolderParameter(&folder)
+		params := getFolderParameter(folder)
 		_, err := s.APICall(ctx, "rest/db/override", "POST", 200, params, true, nil, false, 3)
 		if err != nil {
 			log.Infof("error posting 'rest/db/override' syncthing API: %s", err)
@@ -421,7 +428,7 @@ func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 //WaitForScanning waits for synthing to finish initial scanning
 func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local bool) error {
 	for _, folder := range s.Folders {
-		if err := s.waitForFolderScanning(ctx, &folder, local); err != nil {
+		if err := s.waitForFolderScanning(ctx, folder, local); err != nil {
 			return err
 		}
 	}
@@ -478,7 +485,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 // WaitForCompletion waits for the remote to be totally synched
 func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
 	defer close(reporter)
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(1000 * time.Millisecond)
 	for _, folder := range s.Folders {
 		log.Infof("waiting for synchronization to complete path=%s", folder.LocalPath)
 		for {
@@ -516,10 +523,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 					return nil
 				}
 
-				if err := s.GetFolderErrors(ctx, &folder, false); err != nil {
-					if err == errors.ErrBusySyncthing {
-						continue
-					}
+				if err := s.IsHealthy(ctx, false, 30); err != nil {
 					return err
 				}
 
@@ -536,7 +540,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 func (s *Syncthing) GetCompletion(ctx context.Context, local bool) (*Completion, error) {
 	result := &Completion{}
 	for _, folder := range s.Folders {
-		params := getFolderParameter(&folder)
+		params := getFolderParameter(folder)
 		if local {
 			params["device"] = DefaultRemoteDeviceID
 		} else {
@@ -578,6 +582,56 @@ func (s *Syncthing) GetCompletionProgress(ctx context.Context, local bool) (floa
 	return progress, nil
 }
 
+// IsHealthy returns the syncthing error or nil
+func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
+	for _, folder := range s.Folders {
+		status, err := s.GetStatus(ctx, folder, false)
+		if err != nil {
+			if err == errors.ErrBusySyncthing {
+				continue
+			}
+			return err
+		}
+		if status.PullErrors == 0 {
+			folder.Retries = 0
+			continue
+		}
+
+		err = s.GetFolderErrors(ctx, folder, false)
+		log.Infof("syncthing error in folder '%s' local=%t: %s", folder.RemotePath, local, err)
+		folder.Retries++
+		if folder.Retries <= max {
+			continue
+		}
+		if err == nil || err == errors.ErrBusySyncthing {
+			return errors.ErrUnknownSyncError
+		}
+		return err
+	}
+	return nil
+}
+
+// GetStatus returns the syncthing status
+func (s *Syncthing) GetStatus(ctx context.Context, folder *Folder, local bool) (*Status, error) {
+	params := getFolderParameter(folder)
+	status := &Status{}
+	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true, 3)
+	if err != nil {
+		log.Infof("error getting status: %s", err.Error())
+		if strings.Contains(err.Error(), "Client.Timeout") {
+			return nil, errors.ErrBusySyncthing
+		}
+		return nil, errors.ErrLostSyncthing
+	}
+	err = json.Unmarshal(body, status)
+	if err != nil {
+		log.Infof("error unmarshalling status: %s", err.Error())
+		return nil, errors.ErrLostSyncthing
+	}
+
+	return status, nil
+}
+
 // GetFolderErrors returns the last folder errors
 func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local bool) error {
 	params := getFolderParameter(folder)
@@ -594,6 +648,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 		}
 		return errors.ErrLostSyncthing
 	}
+
 	err = json.Unmarshal(body, &folderErrorsList)
 	if err != nil {
 		log.Infof("error unmarshalling events: %s", err.Error())
@@ -601,20 +656,14 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 	}
 
 	if len(folderErrorsList) == 0 {
-		log.Infof("ignoring syncthing unknown error local=%t: empty folderErrorsList", local)
 		return nil
 	}
 	folderErrors := folderErrorsList[len(folderErrorsList)-1]
 	if len(folderErrors.Data.Errors) == 0 {
-		log.Infof("ignoring syncthing unknown error local=%t: empty folderErrors.Data.Errors", local)
 		return nil
 	}
 
 	errMsg := folderErrors.Data.Errors[0].Error
-	if strings.Contains(errMsg, "too many open files") {
-		log.Infof("ignoring syncthing 'too many open files' error local=%t: %s", local, errMsg)
-		return nil
-	}
 
 	if strings.Contains(errMsg, "no connected device has the required version of this file") {
 		log.Infof("corrupted syncthing database, needs reset local=%t: %s", local, errMsg)

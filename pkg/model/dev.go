@@ -111,14 +111,14 @@ var (
 
 //Dev represents a development container
 type Dev struct {
-	Name                 string             `json:"name" yaml:"name"`
-	Labels               map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations          map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Tolerations          []apiv1.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
-	Context              string             `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string             `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Container            string             `json:"container,omitempty" yaml:"container,omitempty"`
-	EmptyImage           bool
+	Name                 string                `json:"name" yaml:"name"`
+	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
+	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
+	EmptyImage           bool                  `json:"-" yaml:"-"`
 	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
