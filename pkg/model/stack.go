@@ -50,6 +50,7 @@ type Service struct {
 	EnvFiles        []string          `yaml:"env_file,omitempty"`
 	CapAdd          []string          `yaml:"cap_add,omitempty"`
 	CapDrop         []string          `yaml:"cap_drop,omitempty"`
+	Healthchecks    bool              `yaml:"healthchecks,omitempty"`
 	Ports           []int             `yaml:"ports,omitempty"`
 	Volumes         []string          `yaml:"volumes,omitempty"`
 	StopGracePeriod int               `yaml:"stop_grace_period,omitempty"`
