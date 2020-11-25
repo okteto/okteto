@@ -209,6 +209,14 @@ func init() {
 				Name:  "ASPNETCORE_ENVIRONMENT",
 				Value: "Development",
 			},
+			{
+				Name:  "VSTEST_HOST_DEBUG",
+				Value: "0",
+			},
+			{
+				Name:  "VSTEST_RUNNER_DEBUG",
+				Value: "0",
+			},
 		},
 		forward: []model.Forward{},
 		remote:  22000,
