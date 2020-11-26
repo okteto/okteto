@@ -28,6 +28,7 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 	for {
 		select {
 		case <-ticker.C:
+			s.SendStignoreFile(ctx)
 			if s.checkLocalAndRemotePing(ctx) {
 				retries = 0
 				continue

@@ -96,10 +96,11 @@ type Syncthing struct {
 
 //Folder represents a sync folder
 type Folder struct {
-	Name       string `yaml:"name"`
-	LocalPath  string `yaml:"localPath"`
-	RemotePath string `yaml:"remotePath"`
-	Retries    int
+	Name         string `yaml:"name"`
+	LocalPath    string `yaml:"localPath"`
+	RemotePath   string `yaml:"remotePath"`
+	Retries      int    `yaml:"-"`
+	SentStIgnore bool   `yaml:"-"`
 }
 
 //Ignores represents the .stignore file
@@ -352,8 +353,11 @@ func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 }
 
 //SendStignoreFile sends .stignore from local to remote
-func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error {
+func (s *Syncthing) SendStignoreFile(ctx context.Context) {
 	for _, folder := range s.Folders {
+		if folder.SentStIgnore {
+			continue
+		}
 		log.Infof("sending '.stignore' file %s to the remote syncthing", folder.Name)
 		params := getFolderParameter(folder)
 		ignores := &Ignores{}
@@ -387,8 +391,8 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context, dev *model.Dev) error 
 			log.Infof("error posting ignore files: %s", err.Error())
 			continue
 		}
+		folder.SentStIgnore = true
 	}
-	return nil
 }
 
 //ResetDatabase resets the syncthing database
@@ -491,6 +495,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 		for {
 			select {
 			case <-ticker.C:
+				s.SendStignoreFile(ctx)
 				if err := s.Overwrite(ctx, dev); err != nil {
 					if err == errors.ErrBusySyncthing {
 						continue

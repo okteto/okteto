@@ -793,10 +793,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		up.resetSyncthing = false
 	}
 
-	if err := up.Sy.SendStignoreFile(ctx, up.Dev); err != nil {
-		return err
-	}
-
+	up.Sy.SendStignoreFile(ctx)
 	spinner.Update("Scanning file system...")
 	if err := up.Sy.WaitForScanning(ctx, up.Dev, true); err != nil {
 		return err
@@ -853,10 +850,6 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 
 	// render to 100
 	spinner.Update(utils.RenderProgressBar(suffix, 100, pbScaling))
-
-	if err := up.Sy.SendStignoreFile(ctx, up.Dev); err != nil {
-		return err
-	}
 
 	up.Sy.Type = "sendreceive"
 	up.Sy.IgnoreDelete = false
