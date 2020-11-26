@@ -106,6 +106,7 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "can't assign requested address"),
 		strings.Contains(err.Error(), "command exited without exit status or exit signal"),
 		strings.Contains(err.Error(), "connection refused"),
+		strings.Contains(err.Error(), "connection reset by peer"),
 		strings.Contains(err.Error(), "network is unreachable"):
 		return true
 	default:
