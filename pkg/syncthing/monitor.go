@@ -28,6 +28,7 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 	for {
 		select {
 		case <-ticker.C:
+			s.SendStignoreFile(ctx)
 			if s.checkLocalAndRemotePing(ctx) {
 				retries = 0
 				continue
@@ -47,7 +48,7 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 
 // MonitorStatus will send a message to disconnected if there is a synchronization error
 func (s *Syncthing) MonitorStatus(ctx context.Context, disconnect chan error) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -74,17 +75,8 @@ func (s *Syncthing) checkLocalAndRemotePing(ctx context.Context) bool {
 }
 
 func (s *Syncthing) checkLocalAndRemoteStatus(ctx context.Context) error {
-	if err := s.checkStatus(ctx, true); err != nil {
+	if err := s.IsHealthy(ctx, true, 3); err != nil {
 		return err
 	}
-	return s.checkStatus(ctx, false)
-}
-
-func (s *Syncthing) checkStatus(ctx context.Context, local bool) error {
-	for _, folder := range s.Folders {
-		if err := s.GetFolderErrors(ctx, &folder, local); err != nil {
-			return err
-		}
-	}
-	return nil
+	return s.IsHealthy(ctx, false, 3)
 }

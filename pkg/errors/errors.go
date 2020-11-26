@@ -55,6 +55,9 @@ var (
 	// ErrNotInDevContainer is returned when an unsupported command is invoked from a dev container (e.g. okteto up)
 	ErrNotInDevContainer = fmt.Errorf("this command is not supported from inside an development container")
 
+	// ErrUnknownSyncError is returned when syncthing reports an unknown sync error
+	ErrUnknownSyncError = fmt.Errorf("Unknown syncthing error")
+
 	// ErrResetSyncthing is raised when syncthing database must be reset
 	ErrResetSyncthing = fmt.Errorf("synchronization database corrupted")
 
@@ -103,6 +106,7 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "can't assign requested address"),
 		strings.Contains(err.Error(), "command exited without exit status or exit signal"),
 		strings.Contains(err.Error(), "connection refused"),
+		strings.Contains(err.Error(), "connection reset by peer"),
 		strings.Contains(err.Error(), "network is unreachable"):
 		return true
 	default:
