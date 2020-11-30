@@ -801,7 +801,8 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 
 	if !up.Dev.PersistentVolumeEnabled() {
 		if err := up.Sy.WaitForScanning(ctx, up.Dev, false); err != nil {
-			return err
+			log.Infof("failed to wait for syncthing scanning: %s", err.Error())
+			return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
 		}
 	}
 

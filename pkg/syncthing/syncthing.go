@@ -441,26 +441,15 @@ func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local b
 
 func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, local bool) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
-	params := getFolderParameter(folder)
-	status := &Status{}
 	log.Infof("waiting for initial scan to complete path=%s local=%t", folder.LocalPath, local)
 
 	to := config.GetTimeout() * 10 // 5 minutes
 	timeout := time.Now().Add(to)
 
 	for i := 0; ; i++ {
-		body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true, 3)
-		if err != nil {
-			log.Infof("error calling 'rest/db/status' local=%t syncthing API: %s", local, err)
-			if strings.Contains(err.Error(), "Client.Timeout") {
-				return errors.ErrBusySyncthing
-			}
-			return errors.ErrLostSyncthing
-		}
-		err = json.Unmarshal(body, status)
-		if err != nil {
-			log.Infof("error unmarshaling 'rest/db/status': %s", err)
-			return errors.ErrLostSyncthing
+		status, err := s.GetStatus(ctx, folder, local)
+		if err != nil && err != errors.ErrBusySyncthing {
+			return errors.ErrUnknownSyncError
 		}
 
 		if i%100 == 0 {
