@@ -65,19 +65,8 @@ We created a [few guides to help you get started](https://github.com/okteto/samp
 - Frequently asked questions ([FAQs](https://okteto.com/docs/reference/faqs/index.html))
 - [Known issues](https://okteto.com/docs/reference/known-issues/index.html)
 
-## Roadmap and Contributions
+## Support and Community
 
-`okteto` is written in Go under the [Apache 2.0 license](LICENSE) - contributions are welcomed whether that means providing feedback, testing a new feature, or hacking on the source.
-
-### How do I become a contributor?
-
-Please see the guide on [contributing](contributing.md).
-
-### Roadmap
-
-We use GitHub [issues](https://github.com/okteto/okteto/issues) to track our roadmap. A [milestone](https://github.com/okteto/okteto/milestones) is created every month to track the work scheduled for that time period. Feedback and help are always appreciated!
-
-## Stay in Touch
 Got questions? Have feedback? Join the conversation in our [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) Slack channel! If you don't already have a Kubernetes slack account, [sign up here](http://slack.k8s.io/). 
 
 Follow [@OktetoHQ](https://twitter.com/oktetohq) on Twitter for important announcements.
@@ -88,8 +77,38 @@ Or get in touch with the maintainers:
 - [Ramiro Berrelleza](https://twitter.com/rberrelleza)
 - [Ramon Lamana](https://twitter.com/monchocromo)
 
-## About Okteto
+## Roadmap
 
-`okteto` is licensed under the Apache 2.0 License.
+We use GitHub [issues](https://github.com/okteto/okteto/issues) to track our roadmap. A [milestone](https://github.com/okteto/okteto/milestones) is created every month to track the work scheduled for that time period. Feedback and help are always appreciated!
 
-This project adheres to the Contributor Covenant [code of conduct](code-of-conduct.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to hello@okteto.com.
+## Contributions
+
+We ❤️ contributions big or small. See contributing.md for a guide on how to get started.
+
+### Thanks to all our contributors!
+[//]: contributor-faces
+<a href="https://github.com/rberrelleza"><img src="https://avatars0.githubusercontent.com/u/475313?v=4" title="rberrelleza" width="80" height="80"></a>
+<a href="https://github.com/pchico83"><img src="https://avatars3.githubusercontent.com/u/7474696?v=4" title="pchico83" width="80" height="80"></a>
+<a href="https://github.com/rlamana"><img src="https://avatars1.githubusercontent.com/u/237819?v=4" title="rlamana" width="80" height="80"></a>
+<a href="https://github.com/marco2704"><img src="https://avatars1.githubusercontent.com/u/12150248?v=4" title="marco2704" width="80" height="80"></a>
+<a href="https://github.com/adhaamehab"><img src="https://avatars2.githubusercontent.com/u/13816742?v=4" title="adhaamehab" width="80" height="80"></a>
+<a href="https://github.com/danielhelfand"><img src="https://avatars3.githubusercontent.com/u/34258252?v=4" title="danielhelfand" width="80" height="80"></a>
+<a href="https://github.com/glensc"><img src="https://avatars1.githubusercontent.com/u/199095?v=4" title="glensc" width="80" height="80"></a>
+<a href="https://github.com/kivi"><img src="https://avatars0.githubusercontent.com/u/366163?v=4" title="kivi" width="80" height="80"></a>
+<a href="https://github.com/alanmbarr"><img src="https://avatars3.githubusercontent.com/u/760506?v=4" title="alanmbarr" width="80" height="80"></a>
+<a href="https://github.com/AnesBenmerzoug"><img src="https://avatars3.githubusercontent.com/u/27914730?v=4" title="AnesBenmerzoug" width="80" height="80"></a>
+<a href="https://github.com/borjaburgos"><img src="https://avatars0.githubusercontent.com/u/3640206?v=4" title="borjaburgos" width="80" height="80"></a>
+<a href="https://github.com/Cirrith"><img src="https://avatars0.githubusercontent.com/u/4418305?v=4" title="Cirrith" width="80" height="80"></a>
+<a href="https://github.com/ironcladlou"><img src="https://avatars0.githubusercontent.com/u/298299?v=4" title="ironcladlou" width="80" height="80"></a>
+<a href="https://github.com/unthought"><img src="https://avatars0.githubusercontent.com/u/1222558?v=4" title="unthought" width="80" height="80"></a>
+<a href="https://github.com/drodriguezhdez"><img src="https://avatars0.githubusercontent.com/u/29516565?v=4" title="drodriguezhdez" width="80" height="80"></a>
+<a href="https://github.com/snitkdan"><img src="https://avatars2.githubusercontent.com/u/15274429?v=4" title="snitkdan" width="80" height="80"></a>
+<a href="https://github.com/fermayo"><img src="https://avatars0.githubusercontent.com/u/3635457?v=4" title="fermayo" width="80" height="80"></a>
+<a href="https://github.com/dekkers"><img src="https://avatars1.githubusercontent.com/u/656182?v=4" title="dekkers" width="80" height="80"></a>
+<a href="https://github.com/thatnerdjosh"><img src="https://avatars0.githubusercontent.com/u/5251847?v=4" title="thatnerdjosh" width="80" height="80"></a>
+<a href="https://github.com/kingdonb"><img src="https://avatars2.githubusercontent.com/u/3286998?v=4" title="kingdonb" width="80" height="80"></a>
+<a href="https://github.com/freeman"><img src="https://avatars1.githubusercontent.com/u/7547?v=4" title="freeman" width="80" height="80"></a>
+<a href="https://github.com/tommyto-whs"><img src="https://avatars3.githubusercontent.com/u/59745049?v=4" title="tommyto-whs" width="80" height="80"></a>
+<a href="https://github.com/zdog234"><img src="https://avatars2.githubusercontent.com/u/17930657?v=4" title="zdog234" width="80" height="80"></a>
+
+[//]: contributor-faces
