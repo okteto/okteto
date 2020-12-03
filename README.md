@@ -71,12 +71,6 @@ Got questions? Have feedback? Join the conversation in our [#okteto](https://kub
 
 Follow [@OktetoHQ](https://twitter.com/oktetohq) on Twitter for important announcements.
 
-Or get in touch with the maintainers:
-
-- [Pablo Chico de Guzman](https://twitter.com/pchico83)
-- [Ramiro Berrelleza](https://twitter.com/rberrelleza)
-- [Ramon Lamana](https://twitter.com/monchocromo)
-
 ## Roadmap
 
 We use GitHub [issues](https://github.com/okteto/okteto/issues) to track our roadmap. A [milestone](https://github.com/okteto/okteto/milestones) is created every month to track the work scheduled for that time period. Feedback and help are always appreciated!
