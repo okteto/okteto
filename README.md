@@ -83,7 +83,7 @@ We use GitHub [issues](https://github.com/okteto/okteto/issues) to track our roa
 
 ## Contributions
 
-We ❤️ contributions big or small. See contributing.md for a guide on how to get started.
+We ❤️ contributions big or small. [See our guide](contributing.md) on how to get started.
 
 ### Thanks to all our contributors!
 [//]: contributor-faces
