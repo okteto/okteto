@@ -108,6 +108,9 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "command exited without exit status or exit signal"),
 		strings.Contains(err.Error(), "connection refused"),
 		strings.Contains(err.Error(), "connection reset by peer"),
+		strings.Contains(err.Error(), "unexpected EOF"),
+		strings.Contains(err.Error(), "TLS handshake timeout"),
+		strings.Contains(err.Error(), "in the time allotted"),
 		strings.Contains(err.Error(), "network is unreachable"):
 		return true
 	default:
