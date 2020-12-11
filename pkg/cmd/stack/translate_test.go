@@ -14,6 +14,7 @@
 package stack
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -76,5 +77,21 @@ func Test_translateEnvVars(t *testing.T) {
 		if e.Name == "C" && e.Value != "original" {
 			t.Errorf("Wrong envirironment variable C: %s", e.Value)
 		}
+	}
+}
+
+func Test_translate(t *testing.T) {
+	ctx := context.Background()
+	stack := &model.Stack{
+		Name: "name",
+		Services: map[string]model.Service{
+			"1": {
+				Image:    "image",
+				EnvFiles: []string{"/non-existing"},
+			},
+		},
+	}
+	if err := translate(ctx, stack, false, false); err == nil {
+		t.Fatalf("An error should be returned")
 	}
 }
