@@ -23,7 +23,6 @@ In addition to that, `okteto up` will:
 
 1. Create a bidirectional file [synchronization service](https://okteto.com/docs/reference/file-synchronization) to keep your changes up to date between your local filesystem and your development container.
 1. Automatic local and remote port forwarding using [SSH](https://okteto.com/docs/reference/ssh-server), so you can access your cluster services via `localhost` or connect a remote debugger.
-ervices via `localhost` or connect a remote debugger.
 1. Give you an interactive terminal to your development container, so you can build, test, and run your application as you would from a local terminal.
 
 All of this (and more) can be configured via a [simple yaml manifest](https://okteto.com/docs/reference/manifest).
