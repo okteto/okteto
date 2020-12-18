@@ -388,7 +388,7 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context) {
 		}
 		_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false, 0)
 		if err != nil {
-			log.Infof("error posting ignore files: %s", err.Error())
+			log.Infof("error posting ignore files to remote syncthing instance: %s", err.Error())
 			continue
 		}
 		folder.SentStIgnore = true

@@ -41,7 +41,6 @@ func Down() *cobra.Command {
 		Use:   "down",
 		Short: "Deactivates your development container",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Info("starting down command")
 			ctx := context.Background()
 			dev, err := utils.LoadDev(devPath)
 			if err != nil {
@@ -77,7 +76,6 @@ func Down() *cobra.Command {
 			log.Println()
 
 			analytics.TrackDown(true)
-			log.Info("completed down command")
 			return nil
 		},
 	}

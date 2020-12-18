@@ -1,9 +1,13 @@
 #!/bin/sh
 
+log(){
+  echo $(date +%Y-%m-%dT%H:%M:%S) $1 
+}
 set -e
 
 userID="$(id -u)"
 echo "USER:$userID"
+log "development container starting" 
 if [ -d "/var/okteto/cloudbin" ]; then
   if [ -w "/usr/local/bin" ]; then
     cp /var/okteto/cloudbin/* /usr/local/bin
@@ -29,13 +33,13 @@ while getopts ":s:re" opt; do
         mkdir -p $dirName
       fi
       
-      echo "Copying secret $sourceFILE to $destFILE"
+      log "Copying secret $sourceFILE to $destFILE"
       if [ "/var/okteto/secret/$sourceFILE" != "$destFILE" ]; then
         cp /var/okteto/secret/$sourceFILE $destFILE
       fi
       ;;
     \?)
-      echo "Invalid option: -$OPTARG" >&2
+      log "Invalid option: -$OPTARG" >&2
       exit 1
       ;;
   esac
@@ -43,11 +47,11 @@ done
 
 syncthingHome=/var/syncthing
 if [ $ephemeral -eq 1 ] && [ -f ${syncthingHome}/executed ]; then
-    echo "failing: syncthing restarted and persistent volumes are not enabled in the okteto manifest. Run 'okteto down' and try again"
+    log "failing: syncthing restarted and persistent volumes are not enabled in the okteto manifest. Run 'okteto down' and try again"
     exit 1
 fi
 touch ${syncthingHome}/executed
-echo "Copying configuration files to $syncthingHome ..."
+log "Copying configuration files to $syncthingHome"
 cp /var/syncthing/secret/* $syncthingHome
 chmod 644 $syncthingHome/cert.pem $syncthingHome/config.xml $syncthingHome/key.pem
 
@@ -56,5 +60,5 @@ if [ $remote -eq 1 ]; then
     params="--remote"
 fi
 
-echo "Executing supervisor..." 
+log "Executing okteto-supervisor $params" 
 exec /var/okteto/bin/okteto-supervisor $params

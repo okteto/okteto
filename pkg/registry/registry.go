@@ -30,9 +30,12 @@ import (
 func GetImageTagWithDigest(ctx context.Context, imageTag string) (string, error) {
 	registryURL, err := okteto.GetRegistry()
 	if err != nil {
-		log.Infof("error accessing to okteto registry: %s", err.Error())
+		if err != errors.ErrNotLogged {
+			log.Infof("error accessing to okteto registry: %s", err.Error())
+		}
 		return imageTag, nil
 	}
+
 	expandedTag, err := ExpandOktetoDevRegistry(ctx, imageTag)
 	if err != nil {
 		log.Infof("error expanding okteto registry: %s", err.Error())

@@ -106,7 +106,7 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 			return fmt.Errorf("failed to start SSH port-forward: %w", err)
 		}
 
-		log.Info("port forward to dev pod connected")
+		log.Info("k8s port forward to dev pod connected")
 	}
 
 	c, err := getSSHClientConfig()

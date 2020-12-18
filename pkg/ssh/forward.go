@@ -67,9 +67,9 @@ func (f *forward) start(ctx context.Context) {
 	}()
 
 	f.setConnected()
-	log.Infof("%s -> started", f.String())
 
 	for {
+		log.Infof("%s -> listening for local connections", f.String())
 		localConn, err := localListener.Accept()
 		if err != nil {
 			if !f.connected() {
@@ -89,7 +89,7 @@ func (f *forward) handle(local net.Conn) {
 
 	remote, err := f.pool.get(f.remoteAddress)
 	if err != nil {
-		log.Infof("%s -> %s", f.String(), err)
+		log.Infof("%s -> failed to dial remote connection: %s", f.String(), f.remoteAddress, err)
 		return
 	}
 

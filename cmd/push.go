@@ -50,7 +50,6 @@ func Push(ctx context.Context) *cobra.Command {
 		Use:   "push",
 		Short: "Builds, pushes and redeploys source code to the target deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Info("starting push command")
 			ctx := context.Background()
 
 			dev, err := utils.LoadDevOrDefault(devPath, deploymentName)
@@ -97,7 +96,6 @@ func Push(ctx context.Context) *cobra.Command {
 			log.Println()
 
 			analytics.TrackPush(true, oktetoRegistryURL)
-			log.Info("completed push command")
 			return nil
 		},
 	}

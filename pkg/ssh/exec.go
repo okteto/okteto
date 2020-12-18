@@ -32,7 +32,6 @@ import (
 
 // Exec executes the command over SSH
 func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
-	log.Info("starting SSH connection")
 	sshConfig, err := getSSHClientConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get SSH configuration: %s", err)
@@ -161,7 +160,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}()
 
 	cmd := shellescape.QuoteCommand(command)
-	log.Infof("executing command over SSH: '%s'", cmd)
+	log.Infof("executing command over ssh: '%s'", cmd)
 	return session.Run(cmd)
 }
 
