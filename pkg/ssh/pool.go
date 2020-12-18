@@ -69,12 +69,11 @@ func start(ctx context.Context, serverAddr string, config *ssh.ClientConfig, kee
 
 	client := ssh.NewClient(clientConn, chans, reqs)
 
-	r, c, err := client.SendRequest("dev.okteto.com/ping", true, []byte("pong"))
-	if err != nil {
+	if _, _, err := client.SendRequest("dev.okteto.com/ping", true, []byte("pong")); err != nil {
 		return nil, fmt.Errorf("ssh connection ping failed: %w", err)
 	}
 
-	log.Infof("ssh ping to %s was successful: %t %c", serverAddr, r, string(c))
+	log.Infof("ssh ping to %s was successful", serverAddr)
 
 	return client, nil
 }

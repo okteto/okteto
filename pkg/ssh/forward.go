@@ -89,7 +89,7 @@ func (f *forward) handle(local net.Conn) {
 
 	remote, err := f.pool.get(f.remoteAddress)
 	if err != nil {
-		log.Infof("%s -> failed to dial remote connection: %s", f.String(), f.remoteAddress, err)
+		log.Infof("%s -> failed to dial remote connection: %s", f.String(), err)
 		return
 	}
 
