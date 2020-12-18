@@ -46,7 +46,7 @@ const (
 
 var (
 	devTerminationGracePeriodSeconds int64
-	tailLines                        int64 = 1200
+	limitBytes                       int64 = 5 * 1024 * 1024 // 5Mb
 )
 
 // GetBySelector returns the first pod that matches the selector or error if not found
@@ -399,8 +399,8 @@ func GetDevPodLogs(ctx context.Context, dev *model.Dev, timestamps bool, c *kube
 func containerLogs(ctx context.Context, container string, pod *apiv1.Pod, namespace string, timestamps bool, c kubernetes.Interface) (string, error) {
 	podLogOpts := apiv1.PodLogOptions{
 		Container:  container,
+		LimitBytes: &limitBytes,
 		Timestamps: timestamps,
-		TailLines:  &tailLines,
 	}
 	req := c.CoreV1().Pods(namespace).GetLogs(pod.Name, &podLogOpts)
 	logsStream, err := req.Stream(ctx)
