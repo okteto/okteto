@@ -112,7 +112,7 @@ func ReadStack(bytes []byte) (*Stack, error) {
 				_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 			}
 
-			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/stack for details")
+			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/stacks for details")
 			return nil, errors.New(sb.String())
 		}
 
