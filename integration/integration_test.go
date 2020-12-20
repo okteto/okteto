@@ -557,7 +557,7 @@ func waitForReady(namespace, name string) error {
 	state := path.Join(config.GetOktetoHome(), namespace, name, "okteto.state")
 
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < 180; i++ {
+	for i := 0; i < 360; i++ {
 		c, err := ioutil.ReadFile(state)
 		if err != nil {
 			log.Printf("failed to read state file %s: %s", state, err)
