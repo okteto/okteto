@@ -27,7 +27,7 @@ import (
 )
 
 func checkStignoreConfiguration(dev *model.Dev) error {
-	for _, folder := range dev.Syncs {
+	for _, folder := range dev.Sync.Folders {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
 		gitPath := filepath.Join(folder.LocalPath, ".git")
 		if !model.FileExists(stignorePath) {

@@ -63,6 +63,8 @@ const (
 	RemoteMountPath = "/var/okteto/remote"
 	//SyncthingSubPath subpath in the development container persistent volume for the syncthing data
 	SyncthingSubPath = "syncthing"
+	//DefaultSyncthingRescanInterval default syncthing re-scan interval
+	DefaultSyncthingRescanInterval = 300
 	//RemoteSubPath subpath in the development container persistent volume for the remote data
 	RemoteSubPath = "okteto-remote"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
@@ -134,7 +136,7 @@ type Dev struct {
 	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
-	Syncs                []Sync                `json:"sync,omitempty" yaml:"sync,omitempty"`
+	Sync                 Sync                  `json:"sync,omitempty" yaml:"sync,omitempty"`
 	parentSyncFolder     string                `json:"-" yaml:"-"`
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
@@ -156,11 +158,6 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
-	BuildInfoRaw
-}
-
-// BuildInfoRaw represents the build info for serialization
-type BuildInfoRaw struct {
 	Name       string   `yaml:"name,omitempty"`
 	Context    string   `yaml:"context,omitempty"`
 	Dockerfile string   `yaml:"dockerfile,omitempty"`
@@ -175,8 +172,17 @@ type Volume struct {
 	RemotePath string
 }
 
-// Sync represents a sync folder in the development container
+// Sync represents a sync info in the development container
 type Sync struct {
+	Compression    bool         `json:"compression" yaml:"compression"`
+	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
+	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
+	LocalPath      string
+	RemotePath     string
+}
+
+// SyncFolder represents a sync folder in the development container
+type SyncFolder struct {
 	LocalPath  string
 	RemotePath string
 }
@@ -275,8 +281,10 @@ func Read(bytes []byte) (*Dev, error) {
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
-		Syncs:       make([]Sync, 0),
-		Services:    make([]*Dev, 0),
+		Sync: Sync{
+			Folders: make([]SyncFolder, 0),
+		},
+		Services: make([]*Dev, 0),
 	}
 
 	if bytes != nil {
@@ -348,8 +356,8 @@ func (dev *Dev) loadVolumeAbsPaths(folder string) {
 		}
 		dev.Volumes[i].LocalPath = loadAbsPath(folder, dev.Volumes[i].LocalPath)
 	}
-	for i := range dev.Syncs {
-		dev.Syncs[i].LocalPath = loadAbsPath(folder, dev.Syncs[i].LocalPath)
+	for i := range dev.Sync.Folders {
+		dev.Sync.Folders[i].LocalPath = loadAbsPath(folder, dev.Sync.Folders[i].LocalPath)
 	}
 }
 
@@ -462,6 +470,16 @@ func (dev *Dev) setDefaults() error {
 	}
 	dev.setRunAsUserDefaults(dev)
 
+	if os.Getenv("OKTETO_RESCAN_INTERVAL") != "" {
+		rescanInterval, err := strconv.Atoi(os.Getenv("OKTETO_RESCAN_INTERVAL"))
+		if err != nil {
+			return fmt.Errorf("cannot parse 'OKTETO_RESCAN_INTERVAL' into an integer: %s", err.Error())
+		}
+		dev.Sync.RescanInterval = rescanInterval
+	} else if dev.Sync.RescanInterval == 0 {
+		dev.Sync.RescanInterval = DefaultSyncthingRescanInterval
+	}
+
 	for _, s := range dev.Services {
 		if s.ImagePullPolicy == "" {
 			s.ImagePullPolicy = apiv1.PullAlways
@@ -482,6 +500,8 @@ func (dev *Dev) setDefaults() error {
 		s.Reverse = make([]Reverse, 0)
 		s.Secrets = make([]Secret, 0)
 		s.Services = make([]*Dev, 0)
+		s.Sync.Compression = false
+		s.Sync.RescanInterval = DefaultSyncthingRescanInterval
 	}
 	return nil
 }
@@ -779,7 +799,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				},
 			)
 		}
-		for _, sync := range dev.Syncs {
+		for _, sync := range dev.Sync.Folders {
 			rule.Volumes = append(
 				rule.Volumes,
 				VolumeMount{

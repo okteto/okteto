@@ -127,10 +127,10 @@ func generateSummaryFile() (string, error) {
 
 func generateStignoreFiles(dev *model.Dev) []string {
 	result := []string{}
-	for i := range dev.Syncs {
-		absBasename, err := filepath.Abs(dev.Syncs[i].LocalPath)
+	for i := range dev.Sync.Folders {
+		absBasename, err := filepath.Abs(dev.Sync.Folders[i].LocalPath)
 		if err != nil {
-			log.Infof("error getting absolute path of localPath %s: %s", dev.Syncs[i].LocalPath, err.Error())
+			log.Infof("error getting absolute path of localPath %s: %s", dev.Sync.Folders[i].LocalPath, err.Error())
 			continue
 		}
 		stignoreFile := filepath.Join(absBasename, ".stignore")
@@ -165,8 +165,10 @@ func generateManifestFile(ctx context.Context, devPath string) (string, error) {
 		Secrets:     make([]model.Secret, 0),
 		Forward:     make([]model.Forward, 0),
 		Volumes:     make([]model.Volume, 0),
-		Syncs:       make([]model.Sync, 0),
-		Services:    make([]*model.Dev, 0),
+		Sync: model.Sync{
+			Folders: make([]model.SyncFolder, 0),
+		},
+		Services: make([]*model.Dev, 0),
 	}
 
 	if err := yaml.Unmarshal(b, dev); err != nil {

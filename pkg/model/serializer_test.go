@@ -239,17 +239,17 @@ func TestImageMashalling(t *testing.T) {
 	}{
 		{
 			name:     "single-name",
-			image:    BuildInfo{BuildInfoRaw{Name: "image-name"}},
+			image:    BuildInfo{Name: "image-name"},
 			expected: "image-name\n",
 		},
 		{
 			name:     "single-name-and-defaults",
-			image:    BuildInfo{BuildInfoRaw{Name: "image-name", Context: "."}},
+			image:    BuildInfo{Name: "image-name", Context: "."},
 			expected: "image-name\n",
 		},
 		{
 			name:     "build",
-			image:    BuildInfo{BuildInfoRaw{Name: "image-name", Context: "path"}},
+			image:    BuildInfo{Name: "image-name", Context: "path"},
 			expected: "name: image-name\ncontext: path\n",
 		},
 	}

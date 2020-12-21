@@ -47,14 +47,14 @@ func Test_loadDevOrDefault(t *testing.T) {
 			dev: &model.Dev{
 				Name: "loaded",
 				Image: &model.BuildInfo{
-					BuildInfoRaw: model.BuildInfoRaw{
-						Name: "okteto/test:1.0",
-					},
+					Name: "okteto/test:1.0",
 				},
-				Syncs: []model.Sync{
-					{
-						LocalPath:  ".",
-						RemotePath: "/path",
+				Sync: model.Sync{
+					Folders: []model.SyncFolder{
+						{
+							LocalPath:  ".",
+							RemotePath: "/path",
+						},
 					},
 				},
 			},

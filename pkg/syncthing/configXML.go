@@ -37,7 +37,7 @@ const configXML = `<configuration version="32">
     <useLargeBlocks>false</useLargeBlocks>
 </folder>
 {{ end }}
-<device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="local" introducer="false" skipIntroductionRemovals="false" introducedBy="">
+<device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="{{ .Compression }}" introducer="false" skipIntroductionRemovals="false" introducedBy="">
     <address>dynamic</address>
     <paused>false</paused>
     <autoAcceptFolders>false</autoAcceptFolders>
@@ -45,7 +45,7 @@ const configXML = `<configuration version="32">
     <maxRecvKbps>0</maxRecvKbps>
     <maxRequestKiB>0</maxRequestKiB>
 </device>
-<device id="{{.RemoteDeviceID}}" name="remote" compression="metadata" introducer="false" skipIntroductionRemovals="false" introducedBy="">
+<device id="{{.RemoteDeviceID}}" name="remote" compression="{{ .Compression }}" introducer="false" skipIntroductionRemovals="false" introducedBy="">
     <address>{{.RemoteAddress}}</address>
     <paused>false</paused>
     <autoAcceptFolders>false</autoAcceptFolders>
