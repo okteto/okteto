@@ -92,6 +92,7 @@ type Syncthing struct {
 	IgnoreDelete     bool         `yaml:"-"`
 	pid              int          `yaml:"-"`
 	RescanInterval   string       `yaml:"-"`
+	Compression      string       `yaml:"-"`
 }
 
 //Folder represents a sync folder
@@ -168,9 +169,9 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		hash = []byte("")
 	}
 
-	rescanInterval := os.Getenv("OKTETO_RESCAN_INTERVAL")
-	if rescanInterval == "" {
-		rescanInterval = "300"
+	compression := "metadata"
+	if dev.Sync.Compression {
+		compression = "always"
 	}
 	s := &Syncthing{
 		APIKey:           "cnd",
@@ -193,10 +194,11 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		Type:             "sendonly",
 		IgnoreDelete:     true,
 		Folders:          []*Folder{},
-		RescanInterval:   rescanInterval,
+		RescanInterval:   strconv.Itoa(dev.Sync.RescanInterval),
+		Compression:      compression,
 	}
 	index := 1
-	for _, sync := range dev.Syncs {
+	for _, sync := range dev.Sync.Folders {
 		result, err := dev.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
 			return nil, err

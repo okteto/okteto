@@ -24,6 +24,24 @@ import (
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
+// BuildInfoRaw represents the build info for serialization
+type buildInfoRaw struct {
+	Name       string   `yaml:"name,omitempty"`
+	Context    string   `yaml:"context,omitempty"`
+	Dockerfile string   `yaml:"dockerfile,omitempty"`
+	CacheFrom  []string `yaml:"cache_from,omitempty"`
+	Target     string   `yaml:"target,omitempty"`
+	Args       []EnvVar `yaml:"args,omitempty"`
+}
+
+type syncRaw struct {
+	Compression    bool         `json:"compression" yaml:"compression"`
+	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
+	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
+	LocalPath      string
+	RemotePath     string
+}
+
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
@@ -103,6 +121,36 @@ func (a Args) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawFolders []SyncFolder
+	err := unmarshal(&rawFolders)
+	if err == nil {
+		sync.RescanInterval = DefaultSyncthingRescanInterval
+		sync.Folders = rawFolders
+		return nil
+	}
+
+	var rawSync syncRaw
+	err = unmarshal(&rawSync)
+	if err != nil {
+		return err
+	}
+
+	sync.Compression = rawSync.Compression
+	sync.RescanInterval = rawSync.RescanInterval
+	sync.Folders = rawSync.Folders
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (sync Sync) MarshalYAML() (interface{}, error) {
+	if !sync.Compression && sync.RescanInterval == DefaultSyncthingRescanInterval {
+		return sync.Folders, nil
+	}
+	return syncRaw(sync), nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)
@@ -111,7 +159,7 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return nil
 	}
 
-	var rawBuildInfo BuildInfoRaw
+	var rawBuildInfo buildInfoRaw
 	err = unmarshal(&rawBuildInfo)
 	if err != nil {
 		return err
@@ -128,16 +176,16 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (buildInfo BuildInfo) MarshalYAML() (interface{}, error) {
 	if buildInfo.Context != "" && buildInfo.Context != "." {
-		return buildInfo.BuildInfoRaw, nil
+		return buildInfoRaw(buildInfo), nil
 	}
 	if buildInfo.Dockerfile != "" && buildInfo.Dockerfile != "./Dockerfile" {
-		return buildInfo.BuildInfoRaw, nil
+		return buildInfoRaw(buildInfo), nil
 	}
 	if buildInfo.Target != "" {
-		return buildInfo.BuildInfoRaw, nil
+		return buildInfoRaw(buildInfo), nil
 	}
 	if buildInfo.Args != nil && len(buildInfo.Args) != 0 {
-		return buildInfo.BuildInfoRaw, nil
+		return buildInfoRaw(buildInfo), nil
 	}
 	return buildInfo.Name, nil
 }
@@ -280,7 +328,7 @@ func (v Volume) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (s *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)
 	if err != nil {
@@ -301,7 +349,7 @@ func (s *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (s Sync) MarshalYAML() (interface{}, error) {
+func (s SyncFolder) MarshalYAML() (interface{}, error) {
 	return s.LocalPath + ":" + s.RemotePath, nil
 }
 

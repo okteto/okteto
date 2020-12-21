@@ -56,9 +56,9 @@ func (dev *Dev) translateDeprecatedMountPath(main *Dev) error {
 	}
 
 	once.Do(warnMessage)
-	dev.Syncs = append(
-		dev.Syncs,
-		Sync{
+	dev.Sync.Folders = append(
+		dev.Sync.Folders,
+		SyncFolder{
 			LocalPath:  filepath.Join(".", dev.SubPath),
 			RemotePath: dev.MountPath,
 		},
@@ -67,7 +67,7 @@ func (dev *Dev) translateDeprecatedMountPath(main *Dev) error {
 }
 
 func (dev *Dev) translateDeprecatedWorkdir(main *Dev) error {
-	if dev.WorkDir == "" || len(dev.Syncs) > 0 {
+	if dev.WorkDir == "" || len(dev.Sync.Folders) > 0 {
 		return nil
 	}
 	if main != nil && main.MountPath == "" {
@@ -75,9 +75,9 @@ func (dev *Dev) translateDeprecatedWorkdir(main *Dev) error {
 	}
 
 	dev.MountPath = dev.WorkDir
-	dev.Syncs = append(
-		dev.Syncs,
-		Sync{
+	dev.Sync.Folders = append(
+		dev.Sync.Folders,
+		SyncFolder{
 			LocalPath:  filepath.Join(".", dev.SubPath),
 			RemotePath: dev.WorkDir,
 		},
@@ -92,7 +92,7 @@ func (dev *Dev) translateDeprecatedVolumes() {
 			volumes = append(volumes, v)
 			continue
 		}
-		dev.Syncs = append(dev.Syncs, Sync(v))
+		dev.Sync.Folders = append(dev.Sync.Folders, SyncFolder(v))
 	}
 	dev.Volumes = volumes
 }
@@ -100,7 +100,7 @@ func (dev *Dev) translateDeprecatedVolumes() {
 //IsSubPathFolder checks if a sync folder is a subpath of another sync folder
 func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	found := false
-	for _, sync := range dev.Syncs {
+	for _, sync := range dev.Sync.Folders {
 		rel, err := filepath.Rel(sync.LocalPath, path)
 		if err != nil {
 			log.Infof("error making rel '%s' and '%s'", sync.LocalPath, path)
@@ -123,7 +123,7 @@ func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 func (dev *Dev) computeParentSyncFolder() {
 	pathSplits := map[int]string{}
 	maxIndex := -1
-	for i, sync := range dev.Syncs {
+	for i, sync := range dev.Sync.Folders {
 		path := filepath.ToSlash(sync.LocalPath)
 		if i == 0 {
 			for j, subPath := range strings.Split(path, "/") {
@@ -202,7 +202,7 @@ func (dev *Dev) validatePersistentVolume() error {
 	if len(dev.Volumes) > 0 {
 		return fmt.Errorf("'persistentVolume.enabled' must be set to true to use volumes")
 	}
-	for _, sync := range dev.Syncs {
+	for _, sync := range dev.Sync.Folders {
 		result, err := dev.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
 			return err
@@ -223,7 +223,7 @@ func (dev *Dev) validateRemotePaths() error {
 			return fmt.Errorf("remote path '/' is not supported in the field 'volumes'")
 		}
 	}
-	for _, sync := range dev.Syncs {
+	for _, sync := range dev.Sync.Folders {
 		if !strings.HasPrefix(sync.RemotePath, "/") {
 			return fmt.Errorf("relative remote paths are not supported in the field 'sync'")
 		}
@@ -248,7 +248,7 @@ func (dev *Dev) validateDuplicatedVolumes() error {
 func (dev *Dev) validateDuplicatedSyncFolders() error {
 	seen := map[string]bool{}
 	seenRootLocalPath := map[string]bool{}
-	for _, sync := range dev.Syncs {
+	for _, sync := range dev.Sync.Folders {
 		key := sync.LocalPath + ":" + sync.RemotePath
 		if seen[key] {
 			return fmt.Errorf("duplicated sync '%s'", sync)
@@ -270,7 +270,7 @@ func (dev *Dev) validateDuplicatedSyncFolders() error {
 }
 
 func (dev *Dev) validateServiceSyncFolders(main *Dev) error {
-	for _, sync := range dev.Syncs {
+	for _, sync := range dev.Sync.Folders {
 		_, err := main.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
 			if err == errors.ErrNotFound {
@@ -283,7 +283,7 @@ func (dev *Dev) validateServiceSyncFolders(main *Dev) error {
 }
 
 func (dev *Dev) validateVolumes(main *Dev) error {
-	if len(dev.Syncs) == 0 {
+	if len(dev.Sync.Folders) == 0 {
 		return fmt.Errorf("the 'sync' field is mandatory. More info at %s", syncFieldDocsURL)
 	}
 

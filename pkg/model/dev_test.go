@@ -468,10 +468,12 @@ func TestDev_validateName(t *testing.T) {
 				ImagePullPolicy: apiv1.PullAlways,
 				Image:           &BuildInfo{},
 				Push:            &BuildInfo{},
-				Syncs: []Sync{
-					{
-						LocalPath:  ".",
-						RemotePath: "/app",
+				Sync: Sync{
+					Folders: []SyncFolder{
+						{
+							LocalPath:  ".",
+							RemotePath: "/app",
+						},
 					},
 				},
 			}

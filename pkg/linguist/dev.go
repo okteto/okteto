@@ -283,19 +283,20 @@ func GetDevDefaults(language, workdir string, iAskingForDeployment bool) (*model
 
 	dev := &model.Dev{
 		Image: &model.BuildInfo{
-			BuildInfoRaw: model.BuildInfoRaw{
-				Name: vals.image,
-			},
+			Name: vals.image,
 		},
 		Command: model.Command{
 			Values: []string{"bash"},
 		},
 		Environment: vals.environment,
 		Volumes:     vals.volumes,
-		Syncs: []model.Sync{
-			{
-				LocalPath:  ".",
-				RemotePath: "/usr/src/app",
+		Sync: model.Sync{
+			RescanInterval: model.DefaultSyncthingRescanInterval,
+			Folders: []model.SyncFolder{
+				{
+					LocalPath:  ".",
+					RemotePath: "/usr/src/app",
+				},
 			},
 		},
 		Forward:         vals.forward,
