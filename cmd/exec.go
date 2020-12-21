@@ -108,7 +108,6 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	}
 
 	if dev.RemoteModeEnabled() {
-		log.Infof("executing remote command over SSH")
 		if dev.RemotePort == 0 {
 			p, err := ssh.GetPort(dev.Name)
 			if err != nil {
@@ -120,6 +119,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			}
 
 			dev.RemotePort = p
+			log.Infof("executing remote command over SSH port %d", dev.RemotePort)
 		}
 
 		dev.LoadRemote(ssh.GetPublicKey())

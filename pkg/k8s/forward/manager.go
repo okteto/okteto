@@ -34,8 +34,6 @@ import (
 	"k8s.io/client-go/transport/spdy"
 )
 
-const devName = "okteto-development"
-
 // PortForwardManager keeps a list of all the active port forwards
 type PortForwardManager struct {
 	stopped        bool
@@ -127,14 +125,14 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 	p.stopped = false
 	a, devPF, err := p.buildForwarderToDevPod(namespace, devPod)
 	if err != nil {
-		return fmt.Errorf("failed to forward ports to development container: %w", err)
+		return fmt.Errorf("failed to k8s forward to development container: %w", err)
 	}
 
 	p.activeDev = a
 	go func() {
 		err := devPF.ForwardPorts()
 		if err != nil {
-			log.Infof("port forwarding to dev pod finished with errors: %s", err)
+			log.Infof("k8s forwarding to dev pod finished with errors: %s", err)
 			p.activeDev.closeReady()
 			p.activeDev.err = err
 		}
@@ -151,7 +149,7 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 		return err
 	}
 
-	log.Infof("all port-forwards are connected")
+	log.Infof("all k8s port-forwards are connected")
 	return nil
 }
 
@@ -177,10 +175,10 @@ func (p *PortForwardManager) buildForwarderToDevPod(namespace, pod string) (*act
 		}
 	}
 
-	return p.buildForwarder(devName, namespace, pod, ports)
+	return p.buildForwarder(namespace, pod, ports)
 }
 
-func (p *PortForwardManager) buildForwarder(name, namespace, pod string, ports []string) (*active, *portforward.PortForwarder, error) {
+func (p *PortForwardManager) buildForwarder(namespace, pod string, ports []string) (*active, *portforward.PortForwarder, error) {
 	dialer, err := p.buildDialer(namespace, pod)
 	if err != nil {
 		return nil, nil, err
@@ -224,7 +222,7 @@ func (p *PortForwardManager) buildForwarderToService(ctx context.Context, namesp
 	}
 
 	ports := getServicePorts(svc.GetName(), p.ports)
-	return p.buildForwarder(service, pod.GetNamespace(), pod.GetName(), ports)
+	return p.buildForwarder(pod.GetNamespace(), pod.GetName(), ports)
 }
 
 func getServicePorts(service string, forwards map[int]model.Forward) []string {
@@ -266,20 +264,19 @@ func (p *PortForwardManager) forwardService(ctx context.Context, namespace, serv
 			return
 		}
 
-		log.Infof("forwarding ports for service/%s", service)
+		log.Infof("k8s forwarding ports for service/%s", service)
 		a, pf, err := p.buildForwarderToService(ctx, namespace, service)
 		if err != nil {
-			log.Infof("failed to forward ports to service/%s: %s", service, err)
+			log.Infof("failed to k8s forward ports to service/%s: %s", service, err)
 			<-t.C
 			continue
 		}
 
-		err = pf.ForwardPorts()
-		if err != nil {
-			log.Infof("port forwarding to service/%s finished with errors: %s", service, err)
+		if err := pf.ForwardPorts(); err != nil {
+			log.Infof("k8s forwarding to service/%s finished with errors: %s", service, err)
 			a.stop()
 		} else {
-			log.Infof("port forwarding to service/%s finished", service)
+			log.Infof("k8s forwarding to service/%s finished", service)
 		}
 
 		<-t.C

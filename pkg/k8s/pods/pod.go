@@ -95,7 +95,8 @@ func ListBySelector(ctx context.Context, namespace string, selector map[string]s
 func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	to := 4 * config.GetTimeout() // 120 seconds
-	timeout := time.Now().Add(to)
+	start := time.Now()
+	timeout := start.Add(to)
 
 	for i := 0; ; i++ {
 		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)
@@ -112,6 +113,10 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 
 		select {
 		case <-ticker.C:
+			if i%5 == 0 {
+				log.Info("development container is not ready yet, will retry")
+			}
+
 			continue
 		case <-ctx.Done():
 			log.Debug("call to pod.GetDevPodInLoop cancelled")
@@ -139,8 +144,6 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 		return nil, err
 	}
 
-	log.Infof("replicaset %s with revision %s is progressing", rs.Name, d.Annotations[deploymentRevisionAnnotation])
-
 	return GetPodByReplicaSet(ctx, rs, labels, c)
 }
 
@@ -160,17 +163,29 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, labels strin
 					return &podList.Items[i], nil
 				}
 
-				for _, c := range podList.Items[i].Status.ContainerStatuses {
-					if c.State.Waiting != nil {
-						if c.State.Waiting.Reason == "ImagePullBackOff" {
-							return nil, fmt.Errorf("image '%s' not found or it is private and 'imagePullSecrets' is not properly configured", c.Image)
-						}
-					}
+				if err := isContainerError(podList.Items[i].Status.InitContainerStatuses); err != nil {
+					return nil, err
+				}
+
+				if err := isContainerError(podList.Items[i].Status.ContainerStatuses); err != nil {
+					return nil, err
 				}
 			}
 		}
 	}
 	return nil, nil
+}
+
+func isContainerError(status []v1.ContainerStatus) error {
+	for _, c := range status {
+		if c.State.Waiting != nil {
+			if c.State.Waiting.Reason == "ImagePullBackOff" {
+				return fmt.Errorf("image '%s' not found or it is private and 'imagePullSecrets' is not properly configured", c.Image)
+			}
+		}
+	}
+
+	return nil
 }
 
 //GetUserByPod returns the current user of a running pod
@@ -254,7 +269,7 @@ func WaitUntilRunning(ctx context.Context, dev *model.Dev, podName string, c *ku
 				log.Errorf("type error getting pod: %s", event)
 				continue
 			}
-			log.Infof("dev pod %s updated to %s", pod.Name, pod.Status.Phase)
+			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
 			if pod.Status.Phase == apiv1.PodRunning {
 				return nil
 			}

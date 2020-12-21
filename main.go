@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/okteto/okteto/cmd"
 	initCMD "github.com/okteto/okteto/cmd/init"
@@ -61,7 +62,6 @@ func init() {
 func main() {
 	ctx := context.Background()
 	log.Init(logrus.WarnLevel, config.GetOktetoHome(), config.VersionString)
-	log.Info("start")
 	var logLevel string
 
 	root := &cobra.Command{
@@ -69,8 +69,13 @@ func main() {
 		Short:         "Manage development containers",
 		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
-			log.SetLevel(logLevel)
 			ccmd.SilenceUsage = true
+			log.SetLevel(logLevel)
+			log.Infof("started %s", strings.Join(os.Args, " "))
+
+		},
+		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
+			log.Infof("finished %s", strings.Join(os.Args, " "))
 		},
 	}
 

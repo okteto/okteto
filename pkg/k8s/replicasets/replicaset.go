@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/log"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -43,7 +42,6 @@ func GetReplicaSetByDeployment(ctx context.Context, d *appsv1.Deployment, labels
 		for _, or := range rsList.Items[i].OwnerReferences {
 			if or.UID == d.UID {
 				if v, ok := rsList.Items[i].Annotations[deploymentRevisionAnnotation]; ok && v == d.Annotations[deploymentRevisionAnnotation] {
-					log.Infof("replicaset %s with revison %s is progressing", rsList.Items[i].Name, d.Annotations[deploymentRevisionAnnotation])
 					return &rsList.Items[i], nil
 				}
 			}

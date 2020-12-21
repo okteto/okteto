@@ -74,7 +74,6 @@ func Up() *cobra.Command {
 		Use:   "up",
 		Short: "Activates your development container",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Info("starting up command")
 
 			if okteto.InDevContainer() {
 				return errors.ErrNotInDevContainer
@@ -143,7 +142,6 @@ func Up() *cobra.Command {
 			}
 
 			err = up.start(autoDeploy, build)
-			log.Debug("completed up command")
 			return err
 		},
 	}

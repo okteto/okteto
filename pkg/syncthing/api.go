@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -53,7 +54,13 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 		if retries == maxRetries {
 			return nil, err
 		}
-		log.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())
+
+		if strings.Contains(err.Error(), "connection refused") {
+			log.Infof("syncthing is not ready, retrying local=%t", local)
+		} else {
+			log.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())
+		}
+
 		time.Sleep(200 * time.Millisecond)
 		retries++
 	}

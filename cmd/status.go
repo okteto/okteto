@@ -40,7 +40,6 @@ func Status() *cobra.Command {
 		Use:   "status",
 		Short: "Status of the synchronization process",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Info("starting status command")
 
 			if okteto.InDevContainer() {
 				return errors.ErrNotInDevContainer

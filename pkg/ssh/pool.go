@@ -37,13 +37,23 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 		stopped: false,
 	}
 
-	clientConn, chans, reqs, err := retryNewClientConn(ctx, serverAddr, config, p)
-	if err != nil {
-		log.Infof("failed to create ssh connection for %s: %s", serverAddr, err.Error())
-		return nil, errors.ErrSSHConnectError
+	var err error
+	var client *ssh.Client
+	t := time.NewTicker(500 * time.Millisecond)
+
+	for i := 0; i < 10; i++ {
+		client, err = start(ctx, serverAddr, config, p.ka)
+		if err == nil {
+			break
+		}
+
+		log.Infof("failed to establish SSH connection with your development container: %s", err)
+		<-t.C
 	}
 
-	client := ssh.NewClient(clientConn, chans, reqs)
+	if err != nil {
+		return nil, errors.ErrSSHConnectError
+	}
 
 	p.client = client
 	go p.keepAlive(ctx)
@@ -51,26 +61,44 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig)
 	return p, nil
 }
 
-func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig, p *pool) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
+func start(ctx context.Context, serverAddr string, config *ssh.ClientConfig, keepAlive time.Duration) (*ssh.Client, error) {
+	clientConn, chans, reqs, err := retryNewClientConn(ctx, serverAddr, config, keepAlive)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ssh client connection: %w", err)
+	}
+
+	client := ssh.NewClient(clientConn, chans, reqs)
+
+	if _, _, err := client.SendRequest("dev.okteto.com/ping", true, []byte("pong")); err != nil {
+		return nil, fmt.Errorf("ssh connection ping failed: %w", err)
+	}
+
+	log.Infof("ssh ping to %s was successful", serverAddr)
+
+	return client, nil
+}
+
+func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig, keepAlive time.Duration) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	to := config.GetTimeout() / 10 // 3 seconds
 	timeout := time.Now().Add(to)
 
-	log.Infof("waiting for ssh to be ready %s", addr)
+	log.Infof("waiting for ssh connection to %s to be ready", addr)
 	for i := 0; ; i++ {
-		conn, err := getTCPConnection(ctx, addr, p.ka)
+		conn, err := getTCPConnection(ctx, addr, keepAlive)
 		if err == nil {
 			clientConn, chans, reqs, errConn := ssh.NewClientConn(conn, addr, conf)
 			if errConn == nil {
+				log.Infof("ssh connection to %s is ready", addr)
 				return clientConn, chans, reqs, nil
 			}
 			err = errConn
 		}
 
-		log.Infof("ssh is not ready yet: %s", err)
+		log.Infof("ssh connection to %s is not yet ready: %s", addr, err)
 
 		if time.Now().After(timeout) {
-			return nil, nil, nil, err
+			return nil, nil, nil, fmt.Errorf("ssh connection to %s wasn't ready after %s: %s", addr, to.String(), err)
 		}
 
 		select {
