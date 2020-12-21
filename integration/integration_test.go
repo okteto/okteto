@@ -320,7 +320,7 @@ func waitForDeployment(ctx context.Context, name string, revision, timeout int) 
 		time.Sleep(1 * time.Second)
 	}
 
-	return fmt.Errorf("%s didn't rollout after 30 seconds", name)
+	return fmt.Errorf("%s didn't rollout after %d seconds", name, timeout)
 }
 
 func getContent(endpoint string, timeout int) (string, error) {
@@ -505,7 +505,7 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 	}
 
 	log.Println("waiting for the deployment to be restored")
-	if err := waitForDeployment(ctx, name, 3, 60); err != nil {
+	if err := waitForDeployment(ctx, name, 3, 120); err != nil {
 		return err
 	}
 
@@ -595,7 +595,7 @@ func deploy(ctx context.Context, name, path string) error {
 		return fmt.Errorf("kubectl apply failed: %s", string(o))
 	}
 
-	if err := waitForDeployment(ctx, name, 1, 60); err != nil {
+	if err := waitForDeployment(ctx, name, 1, 120); err != nil {
 		return err
 	}
 
