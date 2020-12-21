@@ -111,6 +111,8 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "unexpected EOF"),
 		strings.Contains(err.Error(), "TLS handshake timeout"),
 		strings.Contains(err.Error(), "in the time allotted"),
+		strings.Contains(err.Error(), "broken pipe"),
+		strings.Contains(err.Error(), "dial tcp: operation was canceled"),
 		strings.Contains(err.Error(), "network is unreachable"):
 		return true
 	default:

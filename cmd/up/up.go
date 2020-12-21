@@ -487,6 +487,9 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 			fmt.Println()
 			if err != nil {
 				log.Infof("command failed: %s", err)
+				if errors.IsTransient(err) {
+					return err
+				}
 				return errors.ErrCommandFailed
 			}
 
