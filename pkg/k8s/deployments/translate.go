@@ -33,7 +33,8 @@ const (
 	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
 	oktetoVersionAnnotation    = "dev.okteto.com/version"
 	revisionAnnotation         = "deployment.kubernetes.io/revision"
-	oktetoBinName              = "okteto-bin"
+	//OktetoBinName name of the okteto bin init container
+	OktetoBinName = "okteto-bin"
 
 	//syncthing
 	oktetoSyncSecretVolume = "okteto-sync-secret" // skipcq GSC-G101  not a secret
@@ -314,12 +315,12 @@ func TranslateOktetoBinVolumeMounts(c *apiv1.Container) {
 		c.VolumeMounts = []apiv1.VolumeMount{}
 	}
 	for _, vm := range c.VolumeMounts {
-		if vm.Name == oktetoBinName {
+		if vm.Name == OktetoBinName {
 			return
 		}
 	}
 	vm := apiv1.VolumeMount{
-		Name:      oktetoBinName,
+		Name:      OktetoBinName,
 		MountPath: "/var/okteto/bin",
 	}
 	c.VolumeMounts = append(c.VolumeMounts, vm)
@@ -367,13 +368,13 @@ func TranslateOktetoBinVolume(spec *apiv1.PodSpec) {
 		spec.Volumes = []apiv1.Volume{}
 	}
 	for i := range spec.Volumes {
-		if spec.Volumes[i].Name == oktetoBinName {
+		if spec.Volumes[i].Name == OktetoBinName {
 			return
 		}
 	}
 
 	v := apiv1.Volume{
-		Name: oktetoBinName,
+		Name: OktetoBinName,
 		VolumeSource: apiv1.VolumeSource{
 			EmptyDir: &apiv1.EmptyDirVolumeSource{},
 		},
@@ -435,13 +436,13 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 //TranslateOktetoInitBinContainer translates the bin init container of a pod
 func TranslateOktetoInitBinContainer(oktetoBinImageTag string, spec *apiv1.PodSpec) {
 	c := apiv1.Container{
-		Name:            oktetoBinName,
+		Name:            OktetoBinName,
 		Image:           oktetoBinImageTag,
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
-				Name:      oktetoBinName,
+				Name:      OktetoBinName,
 				MountPath: "/okteto/bin",
 			},
 		},

@@ -179,7 +179,7 @@ services:
 							},
 						},
 						{
-							Name: oktetoBinName,
+							Name: OktetoBinName,
 							VolumeSource: apiv1.VolumeSource{
 								EmptyDir: &apiv1.EmptyDirVolumeSource{},
 							},
@@ -187,13 +187,13 @@ services:
 					},
 					InitContainers: []apiv1.Container{
 						{
-							Name:            oktetoBinName,
+							Name:            OktetoBinName,
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
-									Name:      oktetoBinName,
+									Name:      OktetoBinName,
 									MountPath: "/okteto/bin",
 								},
 							},
@@ -265,7 +265,7 @@ services:
 									MountPath: "/var/okteto/secret/",
 								},
 								{
-									Name:      oktetoBinName,
+									Name:      OktetoBinName,
 									ReadOnly:  false,
 									MountPath: "/var/okteto/bin",
 								},
@@ -503,7 +503,7 @@ persistentVolume:
 							},
 						},
 						{
-							Name: oktetoBinName,
+							Name: OktetoBinName,
 							VolumeSource: apiv1.VolumeSource{
 								EmptyDir: &apiv1.EmptyDirVolumeSource{},
 							},
@@ -511,13 +511,13 @@ persistentVolume:
 					},
 					InitContainers: []apiv1.Container{
 						{
-							Name:            oktetoBinName,
+							Name:            OktetoBinName,
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
-									Name:      oktetoBinName,
+									Name:      OktetoBinName,
 									MountPath: "/okteto/bin",
 								},
 							},
@@ -560,7 +560,7 @@ persistentVolume:
 									MountPath: "/var/syncthing/secret/",
 								},
 								{
-									Name:      oktetoBinName,
+									Name:      OktetoBinName,
 									ReadOnly:  false,
 									MountPath: "/var/okteto/bin",
 								},
