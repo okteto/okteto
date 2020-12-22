@@ -136,9 +136,10 @@ func TestMain(m *testing.M) {
 
 		if clientside {
 			mode = "client"
-			log.Println("running in CLIENTSIDE mode")
 		}
 	}
+
+	log.Printf("running in %s mode", mode)
 
 	if runtime.GOOS == "windows" {
 		kubectlBinary = "kubectl.exe"
