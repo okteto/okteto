@@ -46,6 +46,12 @@ var (
 	devReplicas                      int32 = 1
 	devTerminationGracePeriodSeconds int64
 	falseBoolean                     = false
+
+	//OktetoUpInitContainerCPU cpu used by the up init container
+	OktetoUpInitContainerCPU = resource.MustParse("25m")
+
+	//OktetoUpInitContainerMemory memory used by the up init container
+	OktetoUpInitContainerMemory = resource.MustParse("25Mi")
 )
 
 func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace bool) error {
@@ -444,6 +450,16 @@ func TranslateOktetoInitBinContainer(oktetoBinImageTag string, spec *apiv1.PodSp
 			{
 				Name:      OktetoBinName,
 				MountPath: "/okteto/bin",
+			},
+		},
+		Resources: apiv1.ResourceRequirements{
+			Requests: map[apiv1.ResourceName]resource.Quantity{
+				apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
+				apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+			},
+			Limits: map[apiv1.ResourceName]resource.Quantity{
+				apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
+				apiv1.ResourceMemory: OktetoUpInitContainerMemory,
 			},
 		},
 	}
