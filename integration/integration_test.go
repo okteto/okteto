@@ -130,7 +130,7 @@ func TestMain(m *testing.M) {
 	if v, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
 		clientside, err := strconv.ParseBool(v)
 		if err != nil {
-			log.Printf("'%s' is not a valid value for environment variable %s", v, k)
+			log.Printf("'%s' is not a valid value for OKTETO_CLIENTSIDE_TRANSLATION", v)
 			os.Exit(1)
 		}
 
