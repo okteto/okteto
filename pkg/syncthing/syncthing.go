@@ -454,13 +454,14 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 			return errors.ErrUnknownSyncError
 		}
 
-		if i%100 == 0 {
-			// one log every 10 seconds
-			log.Infof("syncthing folder local=%t is '%s'", local, status.State)
-		}
-
-		if status.State != "scanning" && status.State != "scan-waiting" {
-			return nil
+		if status != nil {
+			if i%100 == 0 {
+				// one log every 10 seconds
+				log.Infof("syncthing folder local=%t is '%s'", local, status.State)
+			}
+			if status.State != "scanning" && status.State != "scan-waiting" {
+				return nil
+			}
 		}
 
 		if time.Now().After(timeout) {
