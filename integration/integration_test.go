@@ -27,6 +27,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -126,9 +127,17 @@ func TestMain(m *testing.M) {
 	}
 
 	mode = "server"
-	if _, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
-		log.Println("running in CLIENTSIDE mode")
-		mode = "client"
+	if v, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
+		clientside, err := strconv.ParseBool(v)
+		if err != nil {
+			log.Printf("'%s' is not a valid value for environment variable %s", v, k)
+			os.Exit(1)
+		}
+
+		if clientside {
+			mode = "client"
+			log.Println("running in CLIENTSIDE mode")
+		}
 	}
 
 	if runtime.GOOS == "windows" {
@@ -230,20 +239,24 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := deploy(ctx, name, dPath); err != nil {
+		if err := deploy(ctx, namespace, name, dPath); err != nil {
 			t.Fatal(err)
 		}
 
-		deployment, err := getDeployment(ctx, namespace, name)
+		originalDeployment, err := getDeployment(ctx, namespace, name)
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations["deployment.kubernetes.io/revision"])
 
 		var wg sync.WaitGroup
 		p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		waitForDeployment(ctx, namespace, name, 2, 120)
 
 		log.Println("getting synchronized content")
 
@@ -278,7 +291,14 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := down(ctx, name, manifestPath, oktetoPath); err != nil {
+		d, err := getDeployment(ctx, namespace, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations["deployment.kubernetes.io/revision"])
+
+		if err := down(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 			t.Fatal(err)
 		}
 
@@ -286,7 +306,7 @@ func TestAll(t *testing.T) {
 			t.Error(err)
 		}
 
-		if err := compareDeployment(ctx, deployment); err != nil {
+		if err := compareDeployment(ctx, originalDeployment); err != nil {
 			t.Error(err)
 		}
 
@@ -296,18 +316,19 @@ func TestAll(t *testing.T) {
 	})
 }
 
-func waitForDeployment(ctx context.Context, name string, revision, timeout int) error {
+func waitForDeployment(ctx context.Context, namespace, name string, revision, timeout int) error {
 	for i := 0; i < timeout; i++ {
-		args := []string{"rollout", "status", "deployment", name, "--revision", fmt.Sprintf("%d", revision)}
+		args := []string{"--namespace", namespace, "rollout", "status", "deployment", name, "--revision", fmt.Sprintf("%d", revision)}
 
 		cmd := exec.Command(kubectlBinary, args...)
 		cmd.Env = os.Environ()
 		o, _ := cmd.CombinedOutput()
-		log.Printf("%s %s", kubectlBinary, strings.Join(args, " "))
+		log.Printf("waitForDeployment command: %s", cmd.String())
 		output := string(o)
-		log.Println(output)
+		log.Printf("waitForDeployment output: %s", output)
 
 		if strings.Contains(output, "is different from the running revision") {
+
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -490,10 +511,8 @@ func destroyPod(ctx context.Context, name, namespace string) error {
 	return nil
 }
 
-func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
-	log.Printf("okteto down -f %s -v", manifestPath)
-	downCMD := exec.Command(oktetoPath, "down", "-f", manifestPath, "-v")
-
+func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string) error {
+	downCMD := exec.Command(oktetoPath, "down", "-n", namespace, "-f", manifestPath, "-v")
 	downCMD.Env = os.Environ()
 	o, err := downCMD.CombinedOutput()
 
@@ -505,7 +524,7 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 	}
 
 	log.Println("waiting for the deployment to be restored")
-	if err := waitForDeployment(ctx, name, 3, 120); err != nil {
+	if err := waitForDeployment(ctx, namespace, name, 3, 120); err != nil {
 		return err
 	}
 
@@ -513,11 +532,11 @@ func down(ctx context.Context, name, manifestPath, oktetoPath string) error {
 }
 
 func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, oktetoPath string) (*os.Process, error) {
-	log.Println("starting okteto up")
 	var out bytes.Buffer
-	cmd := exec.Command(oktetoPath, "up", "-f", manifestPath)
+	cmd := exec.Command(oktetoPath, "up", "-n", namespace, "-f", manifestPath)
 	cmd.Env = os.Environ()
 	cmd.Stdout = &out
+	log.Printf("up command: %s", cmd.String())
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("okteto up failed to start: %s", err)
 	}
@@ -586,16 +605,16 @@ func waitForReady(namespace, name string) error {
 	return fmt.Errorf("development container was never ready")
 }
 
-func deploy(ctx context.Context, name, path string) error {
+func deploy(ctx context.Context, namespace, name, path string) error {
 	log.Printf("deploying kubernetes manifest %s", path)
-	cmd := exec.Command(kubectlBinary, "apply", "-f", path)
+	cmd := exec.Command(kubectlBinary, "apply", "-n", namespace, "-f", path)
 	cmd.Env = os.Environ()
 
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("kubectl apply failed: %s", string(o))
 	}
 
-	if err := waitForDeployment(ctx, name, 1, 120); err != nil {
+	if err := waitForDeployment(ctx, namespace, name, 1, 120); err != nil {
 		return err
 	}
 
