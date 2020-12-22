@@ -234,12 +234,12 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		deployment, err := getDeployment(ctx, namespace, name)
+		originalDeployment, err := getDeployment(ctx, namespace, name)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		log.Printf("deployment: %s, revision: %s", deployment.Name, deployment.Annotations[" deployment.kubernetes.io/revision"])
+		log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations[" deployment.kubernetes.io/revision"])
 
 		var wg sync.WaitGroup
 		p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
@@ -282,6 +282,13 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		d, err := getDeployment(ctx, namespace, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[" deployment.kubernetes.io/revision"])
+
 		if err := down(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 			t.Fatal(err)
 		}
@@ -290,7 +297,7 @@ func TestAll(t *testing.T) {
 			t.Error(err)
 		}
 
-		if err := compareDeployment(ctx, deployment); err != nil {
+		if err := compareDeployment(ctx, originalDeployment); err != nil {
 			t.Error(err)
 		}
 
