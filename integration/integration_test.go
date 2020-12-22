@@ -27,6 +27,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -126,9 +127,17 @@ func TestMain(m *testing.M) {
 	}
 
 	mode = "server"
-	if _, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
-		log.Println("running in CLIENTSIDE mode")
-		mode = "client"
+	if v, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
+		clientside, err := strconv.ParseBool(v)
+		if err != nil {
+			log.Printf("'%s' is not a valid value for environment variable %s", v, k)
+			os.Exit(1)
+		}
+
+		if clientside {
+			mode = "client"
+			log.Println("running in CLIENTSIDE mode")
+		}
 	}
 
 	if runtime.GOOS == "windows" {
