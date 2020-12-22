@@ -239,7 +239,7 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations[" deployment.kubernetes.io/revision"])
+		log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations["deployment.kubernetes.io/revision"])
 
 		var wg sync.WaitGroup
 		p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
@@ -287,7 +287,7 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[" deployment.kubernetes.io/revision"])
+		log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations["deployment.kubernetes.io/revision"])
 
 		if err := down(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 			t.Fatal(err)
@@ -319,6 +319,7 @@ func waitForDeployment(ctx context.Context, namespace, name string, revision, ti
 		log.Printf("waitForDeployment output: %s", output)
 
 		if strings.Contains(output, "is different from the running revision") {
+
 			time.Sleep(1 * time.Second)
 			continue
 		}
