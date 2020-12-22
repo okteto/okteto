@@ -127,7 +127,7 @@ func TestMain(m *testing.M) {
 	}
 
 	mode = "server"
-	if v, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
+	if v, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok && v != "" {
 		clientside, err := strconv.ParseBool(v)
 		if err != nil {
 			log.Printf("'%s' is not a valid value for OKTETO_CLIENTSIDE_TRANSLATION", v)
