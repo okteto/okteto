@@ -197,6 +197,16 @@ services:
 									MountPath: "/okteto/bin",
 								},
 							},
+							Resources: apiv1.ResourceRequirements{
+								Requests: map[apiv1.ResourceName]resource.Quantity{
+									apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
+									apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+								},
+								Limits: map[apiv1.ResourceName]resource.Quantity{
+									apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
+									apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+								},
+							},
 						},
 					},
 					Containers: []apiv1.Container{
@@ -519,6 +529,16 @@ persistentVolume:
 								{
 									Name:      OktetoBinName,
 									MountPath: "/okteto/bin",
+								},
+							},
+							Resources: apiv1.ResourceRequirements{
+								Requests: map[apiv1.ResourceName]resource.Quantity{
+									apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
+									apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+								},
+								Limits: map[apiv1.ResourceName]resource.Quantity{
+									apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
+									apiv1.ResourceMemory: OktetoUpInitContainerMemory,
 								},
 							},
 						},
