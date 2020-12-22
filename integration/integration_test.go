@@ -127,18 +127,19 @@ func TestMain(m *testing.M) {
 	}
 
 	mode = "server"
-	if v, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok {
+	if v, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok && v != "" {
 		clientside, err := strconv.ParseBool(v)
 		if err != nil {
-			log.Printf("'%s' is not a valid value for environment variable %s", v, k)
+			log.Printf("'%s' is not a valid value for OKTETO_CLIENTSIDE_TRANSLATION", v)
 			os.Exit(1)
 		}
 
 		if clientside {
 			mode = "client"
-			log.Println("running in CLIENTSIDE mode")
 		}
 	}
+
+	log.Printf("running in %s mode", mode)
 
 	if runtime.GOOS == "windows" {
 		kubectlBinary = "kubectl.exe"
