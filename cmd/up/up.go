@@ -263,14 +263,13 @@ func (up *upContext) start(autoDeploy, build bool) error {
 
 // activateLoop activates the development container in a retry loop
 func (up *upContext) activateLoop(autoDeploy, build bool) {
-	isRetry := false
 	isTransientError := false
 	t := time.NewTicker(1 * time.Second)
 	iter := 0
 	defer t.Stop()
 
 	for {
-		if isRetry || isTransientError {
+		if up.isRetry || isTransientError {
 			log.Infof("waiting for shutdown sequence to finish")
 			<-up.ShutdownCompleted
 			if iter == 0 {
@@ -282,12 +281,11 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 				<-t.C
 			}
 		}
-		err := up.activate(isRetry, autoDeploy, build)
+		err := up.activate(autoDeploy, build)
 		if err != nil {
 			log.Infof("activate failed with: %s", err)
 
 			if err == errors.ErrLostSyncthing {
-				isRetry = true
 				isTransientError = false
 				iter = 0
 				continue
@@ -306,8 +304,8 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 	}
 }
 
-func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
-	log.Infof("activating development container retry=%t", isRetry)
+func (up *upContext) activate(autoDeploy, build bool) error {
+	log.Infof("activating development container retry=%t", up.isRetry)
 	// create a new context on every iteration
 	ctx, cancel := context.WithCancel(context.Background())
 	up.Cancel = cancel
@@ -320,12 +318,12 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	up.CommandResult = make(chan error, 1)
 	up.cleaned = make(chan string, 1)
 
-	d, create, err := up.getCurrentDeployment(ctx, autoDeploy, isRetry)
+	d, create, err := up.getCurrentDeployment(ctx, autoDeploy)
 	if err != nil {
 		return err
 	}
 
-	if isRetry && !deployments.IsDevModeOn(d) {
+	if up.isRetry && !deployments.IsDevModeOn(d) {
 		log.Information("Development container has been deactivated")
 		return nil
 	}
@@ -346,7 +344,7 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 		build = true
 	}
 
-	if !isRetry && build {
+	if !up.isRetry && build {
 		if err := up.buildDevImage(ctx, d, create); err != nil {
 			return fmt.Errorf("error building dev image: %s", err)
 		}
@@ -365,6 +363,7 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	}
 
 	log.Success("Development container activated")
+	up.isRetry = true
 
 	if err := up.forwards(ctx); err != nil {
 		if err == errors.ErrSSHConnectError {
@@ -393,7 +392,7 @@ func (up *upContext) activate(isRetry, autoDeploy, build bool) error {
 	}
 
 	up.success = true
-	if isRetry {
+	if up.isRetry {
 		analytics.TrackReconnect(true, up.getClusterType(), up.isSwap)
 	}
 	log.Success("Files synchronized")
@@ -448,7 +447,7 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 	return false
 }
 
-func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy, isRetry bool) (*appsv1.Deployment, bool, error) {
+func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) (*appsv1.Deployment, bool, error) {
 	d, err := deployments.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
 		if d.Annotations[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
@@ -457,7 +456,7 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy, isRet
 		return d, false, nil
 	}
 
-	if !errors.IsNotFound(err) || isRetry {
+	if !errors.IsNotFound(err) || up.isRetry {
 		return nil, false, fmt.Errorf("couldn't get deployment %s/%s, please try again: %s", up.Dev.Namespace, up.Dev.Name, err)
 	}
 
