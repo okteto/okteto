@@ -35,7 +35,7 @@ const (
 	stackHelmRepoURL      = "https://apps.okteto.com"
 	stackHelmRepoName     = "okteto-charts"
 	stackHelmChartName    = "stacks"
-	stackHelmChartVersion = "0.1.0"
+	stackHelmChartVersion = "0.1.1"
 	helmDriver            = "secrets"
 )
 

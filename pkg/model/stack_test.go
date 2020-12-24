@@ -16,7 +16,6 @@ package model
 import (
 	"testing"
 
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -38,10 +37,13 @@ services:
     resources:
       cpu: 100m
       memory: 258Mi
+      storage: 1Gi
   db:
     image: postgres:9.4
     resources:
-      storage: 1Gi
+      storage:
+        size: 1Gi
+        class: standard
     volumes:
       - /var/lib/postgresql/data`)
 	s, err := ReadStack(manifest)
@@ -94,13 +96,17 @@ services:
 	if s.Services["vote"].StopGracePeriod != 5 {
 		t.Errorf("'vote.stop_graace_period' was not parsed: %+v", s)
 	}
-	cpu := s.Services["vote"].Resources[apiv1.ResourceCPU]
+	cpu := s.Services["vote"].Resources.CPU.Value
 	if cpu.Cmp(resource.MustParse("100m")) != 0 {
 		t.Errorf("'vote.resources.cpu' was not parsed: %+v", s)
 	}
-	memory := s.Services["vote"].Resources[apiv1.ResourceMemory]
+	memory := s.Services["vote"].Resources.Memory.Value
 	if memory.Cmp(resource.MustParse("258Mi")) != 0 {
-		t.Errorf("'vote.resources.cpu' was not parsed: %+v", s)
+		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
+	}
+	storage := s.Services["vote"].Resources.Storage.Size.Value
+	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
+		t.Errorf("'vote.resources.storage' was not parsed: %+v", s)
 	}
 	if _, ok := s.Services["db"]; !ok {
 		t.Errorf("'db' was not parsed: %+v", s)
@@ -117,9 +123,12 @@ services:
 	if s.Services["db"].Volumes[0] != "/var/lib/postgresql/data" {
 		t.Errorf("'db.volumes[0]' was not parsed: %+v", s)
 	}
-	storage := s.Services["db"].Resources[apiv1.ResourceStorage]
+	storage = s.Services["db"].Resources.Storage.Size.Value
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
-		t.Errorf("'db.resources.storage' was not parsed: %+v", s)
+		t.Errorf("'db.resources.storage.size' was not parsed: %+v", s)
+	}
+	if s.Services["db"].Resources.Storage.Class != "standard" {
+		t.Errorf("'db.resources.storage.class' was not parsed: %+v", s)
 	}
 }
 

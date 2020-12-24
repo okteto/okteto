@@ -23,6 +23,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	yaml "gopkg.in/yaml.v2"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
 var (
@@ -54,7 +55,25 @@ type Service struct {
 	Ports           []int             `yaml:"ports,omitempty"`
 	Volumes         []string          `yaml:"volumes,omitempty"`
 	StopGracePeriod int               `yaml:"stop_grace_period,omitempty"`
-	Resources       ResourceList      `yaml:"resources,omitempty"`
+	Resources       ServiceResources  `yaml:"resources,omitempty"`
+}
+
+//ServiceResources represents an okteto stack service resources
+type ServiceResources struct {
+	CPU     Quantity        `json:"cpu,omitempty" yaml:"cpu,omitempty"`
+	Memory  Quantity        `json:"memory,omitempty" yaml:"memory,omitempty"`
+	Storage StorageResource `json:"storage,omitempty" yaml:"storage,omitempty"`
+}
+
+//StorageResource represents an okteto stack service storage resource
+type StorageResource struct {
+	Size  Quantity `json:"size,omitempty" yaml:"size,omitempty"`
+	Class string   `json:"class,omitempty" yaml:"class,omitempty"`
+}
+
+//Quantity represents an okteto stack service storage resource
+type Quantity struct {
+	Value resource.Quantity
 }
 
 //GetStack returns an okteto stack object from a given file
