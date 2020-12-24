@@ -1,0 +1,10 @@
+dictionaries:
+  - en
+
+excluded_words:
+  - Infof
+  - Debugf
+  - Warnf
+  - Errorf
+
+spellcheck_filenames: true
