@@ -6,5 +6,9 @@ excluded_words:
   - Debugf
   - Warnf
   - Errorf
+  - apimachinery
+  - unmarshal
+  - UnmarshalYAML
+  - Unmarshaler
 
 spellcheck_filenames: true
