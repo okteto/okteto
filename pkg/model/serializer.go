@@ -42,6 +42,11 @@ type syncRaw struct {
 	RemotePath     string
 }
 
+type storageResourceRaw struct {
+	Size  Quantity `json:"size,omitempty" yaml:"size,omitempty"`
+	Class string   `json:"class,omitempty" yaml:"class,omitempty"`
+}
+
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
@@ -188,6 +193,54 @@ func (buildInfo BuildInfo) MarshalYAML() (interface{}, error) {
 		return buildInfoRaw(buildInfo), nil
 	}
 	return buildInfo.Name, nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (s *StorageResource) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawQuantity Quantity
+	err := unmarshal(&rawQuantity)
+	if err == nil {
+		s.Size = rawQuantity
+		return nil
+	}
+
+	var rawStorageResource storageResourceRaw
+	err = unmarshal(&rawStorageResource)
+	if err != nil {
+		return err
+	}
+
+	s.Size = rawStorageResource.Size
+	s.Class = rawStorageResource.Class
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (q *Quantity) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		qK8s, err := resource.ParseQuantity(rawString)
+		if err != nil {
+			return err
+		}
+		q.Value = qK8s
+		return nil
+	}
+
+	var rawQuantity resource.Quantity
+	err = unmarshal(&rawQuantity)
+	if err != nil {
+		return err
+	}
+
+	q.Value = rawQuantity
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (q Quantity) MarshalYAML() (interface{}, error) {
+	return q.Value.String(), nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
