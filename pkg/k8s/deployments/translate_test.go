@@ -199,12 +199,12 @@ services:
 							},
 							Resources: apiv1.ResourceRequirements{
 								Requests: map[apiv1.ResourceName]resource.Quantity{
-									apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
-									apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+									apiv1.ResourceCPU:    OktetoUpInitContainerRequestsCPU,
+									apiv1.ResourceMemory: OktetoUpInitContainerRequestsMemory,
 								},
 								Limits: map[apiv1.ResourceName]resource.Quantity{
-									apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
-									apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+									apiv1.ResourceCPU:    OktetoUpInitContainerLimitsCPU,
+									apiv1.ResourceMemory: OktetoUpInitContainerLimitsMemory,
 								},
 							},
 						},
@@ -533,12 +533,12 @@ persistentVolume:
 							},
 							Resources: apiv1.ResourceRequirements{
 								Requests: map[apiv1.ResourceName]resource.Quantity{
-									apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
-									apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+									apiv1.ResourceCPU:    OktetoUpInitContainerRequestsCPU,
+									apiv1.ResourceMemory: OktetoUpInitContainerRequestsMemory,
 								},
 								Limits: map[apiv1.ResourceName]resource.Quantity{
-									apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
-									apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+									apiv1.ResourceCPU:    OktetoUpInitContainerLimitsCPU,
+									apiv1.ResourceMemory: OktetoUpInitContainerLimitsMemory,
 								},
 							},
 						},

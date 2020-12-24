@@ -47,11 +47,14 @@ var (
 	devTerminationGracePeriodSeconds int64
 	falseBoolean                     = false
 
-	//OktetoUpInitContainerCPU cpu used by the up init container
-	OktetoUpInitContainerCPU = resource.MustParse("25m")
-
-	//OktetoUpInitContainerMemory memory used by the up init container
-	OktetoUpInitContainerMemory = resource.MustParse("25Mi")
+	//OktetoUpInitContainerRequestsCPU cpu requests used by the up init container
+	OktetoUpInitContainerRequestsCPU = resource.MustParse("10m")
+	//OktetoUpInitContainerRequestsMemory memory requests used by the up init container
+	OktetoUpInitContainerRequestsMemory = resource.MustParse("10Mi")
+	//OktetoUpInitContainerLimitsCPU cpu limits used by the up init container
+	OktetoUpInitContainerLimitsCPU = resource.MustParse("30m")
+	//OktetoUpInitContainerLimitsMemory limits requests used by the up init container
+	OktetoUpInitContainerLimitsMemory = resource.MustParse("30Mi")
 )
 
 func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace bool) error {
@@ -454,12 +457,12 @@ func TranslateOktetoInitBinContainer(oktetoBinImageTag string, spec *apiv1.PodSp
 		},
 		Resources: apiv1.ResourceRequirements{
 			Requests: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
-				apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+				apiv1.ResourceCPU:    OktetoUpInitContainerRequestsCPU,
+				apiv1.ResourceMemory: OktetoUpInitContainerRequestsMemory,
 			},
 			Limits: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceCPU:    OktetoUpInitContainerCPU,
-				apiv1.ResourceMemory: OktetoUpInitContainerMemory,
+				apiv1.ResourceCPU:    OktetoUpInitContainerLimitsCPU,
+				apiv1.ResourceMemory: OktetoUpInitContainerLimitsMemory,
 			},
 		},
 	}
