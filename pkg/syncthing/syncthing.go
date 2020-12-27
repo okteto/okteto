@@ -102,6 +102,7 @@ type Folder struct {
 	RemotePath   string `yaml:"remotePath"`
 	Retries      int    `yaml:"-"`
 	SentStIgnore bool   `yaml:"-"`
+	Overwritten  bool   `yaml:"-"`
 }
 
 //Ignores represents the .stignore file
@@ -427,8 +428,22 @@ func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 			}
 			return errors.ErrLostSyncthing
 		}
+		folder.Overwritten = true
 	}
 	return nil
+}
+
+//IsAllIgnoredAndOverwritten checks if all .stignore files and overwrite operations has been completed
+func (s *Syncthing) IsAllIgnoredAndOverwritten() bool {
+	for _, folder := range s.Folders {
+		if !folder.SentStIgnore {
+			return false
+		}
+		if !folder.Overwritten {
+			return false
+		}
+	}
+	return true
 }
 
 //WaitForScanning waits for synthing to finish initial scanning
@@ -504,7 +519,11 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				}
 
 				if completion.GlobalBytes == 0 {
-					return nil
+					if s.IsAllIgnoredAndOverwritten() {
+						return nil
+					}
+					log.Info("synced completed, but retrying stignores and overwrites")
+					continue
 				}
 
 				progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100

@@ -10,5 +10,6 @@ excluded_words:
   - unmarshal
   - UnmarshalYAML
   - Unmarshaler
+  - stignore
 
 spellcheck_filenames: true
