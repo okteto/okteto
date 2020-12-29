@@ -28,15 +28,7 @@ import (
 )
 
 //GetDockerfile returns the dockerfile with the cache translations
-func GetDockerfile(path, dockerFile string, isOktetoCluster bool) (string, error) {
-	if dockerFile == "" {
-		dockerFile = filepath.Join(path, "Dockerfile")
-	}
-
-	if !isOktetoCluster {
-		return dockerFile, nil
-	}
-
+func GetDockerfile(path, dockerFile string) (string, error) {
 	fileWithCacheHandler, err := getDockerfileWithCacheHandler(dockerFile)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")

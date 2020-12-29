@@ -16,8 +16,10 @@ package build
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/pkg/errors"
 )
@@ -30,13 +32,16 @@ func Run(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, d
 		return err
 	}
 
-	processedDockerfile, err := registry.GetDockerfile(path, dockerFile, isOktetoCluster)
-	if err != nil {
-		return err
+	if dockerFile == "" {
+		dockerFile = filepath.Join(path, "Dockerfile")
 	}
 
-	if isOktetoCluster {
-		defer os.Remove(processedDockerfile)
+	if buildKitHost == okteto.CloudBuildKitURL {
+		dockerFile, err = registry.GetDockerfile(path, dockerFile)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(dockerFile)
 	}
 
 	tag, err = registry.ExpandOktetoDevRegistry(ctx, tag)
@@ -49,7 +54,7 @@ func Run(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, d
 			return err
 		}
 	}
-	opt, err := getSolveOpt(path, processedDockerfile, tag, target, noCache, cacheFrom, buildArgs)
+	opt, err := getSolveOpt(path, dockerFile, tag, target, noCache, cacheFrom, buildArgs)
 	if err != nil {
 		return errors.Wrap(err, "failed to create build solver")
 	}
