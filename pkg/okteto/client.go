@@ -107,8 +107,6 @@ func translateAPIErr(err error) error {
 
 //SetKubeConfig updates a kubeconfig file with okteto cluster credentials
 func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
-	contextName, namespace := getContextName(cred, namespace, clusterName)
-
 	cfg, err := getOrCreateKubeConfig(kubeConfigPath)
 	if err != nil {
 		return err
@@ -133,7 +131,7 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	cfg.AuthInfos[userName] = user
 
 	// create context
-	context, ok := cfg.Contexts[contextName]
+	context, ok := cfg.Contexts[clusterName]
 	if !ok {
 		context = clientcmdapi.NewContext()
 	}
@@ -141,55 +139,9 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	context.Cluster = clusterName
 	context.AuthInfo = userName
 	context.Namespace = namespace
-	cfg.Contexts[contextName] = context
+	cfg.Contexts[clusterName] = context
 
-	cfg.CurrentContext = contextName
-
-	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
-}
-
-//RemoveKubeConfig removes okteto cluster context from a kubeconfig file
-func RemoveKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
-	contextToRemoveName, _ := getContextName(cred, namespace, clusterName)
-	cfg, err := getOrCreateKubeConfig(kubeConfigPath)
-	if err != nil {
-		return err
-	}
-
-	// check if there is context to remove
-	contextToRemove, ok := cfg.Contexts[contextToRemoveName]
-	if !ok {
-		return nil
-	}
-
-	// check for references of cluster and user
-	clusterReferenced, userReferenced := false, false
-	for contextName, context := range cfg.Contexts {
-		if contextName == contextToRemoveName {
-			continue
-		}
-
-		if context.Cluster == contextToRemove.Cluster {
-			clusterReferenced = true
-		}
-
-		if context.AuthInfo == contextToRemove.AuthInfo {
-			userReferenced = true
-		}
-	}
-
-	// remove cluster
-	if !clusterReferenced {
-		delete(cfg.Clusters, clusterName)
-	}
-
-	// remove user
-	if !userReferenced {
-		delete(cfg.AuthInfos, userName)
-	}
-
-	// remove context
-	delete(cfg.Contexts, contextToRemoveName)
+	cfg.CurrentContext = clusterName
 
 	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }
@@ -219,16 +171,4 @@ func getOrCreateKubeConfig(kubeConfigPath string) (*clientcmdapi.Config, error) 
 		}
 	}
 	return cfg, nil
-}
-
-func getContextName(cred *Credential, namespace, clusterName string) (string, string) {
-	contextName := ""
-	if namespace == "" {
-		// don't include namespace for the personal namespace
-		contextName = clusterName
-		namespace = cred.Namespace
-	} else {
-		contextName = fmt.Sprintf("%s-%s", clusterName, namespace)
-	}
-	return contextName, namespace
 }

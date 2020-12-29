@@ -62,12 +62,12 @@ func TestSetKubeConfig(t *testing.T) {
 		t.Errorf("the config file didn't have two users: %+v", cfg.AuthInfos)
 	}
 
-	if len(cfg.Contexts) != 5 {
+	if len(cfg.Contexts) != 2 {
 		t.Errorf("the config file didn't have five contexts: %+v", cfg.Contexts)
 	}
 
-	if cfg.CurrentContext != "sf-okteto-com-ns-2" {
-		t.Errorf("current context was not sf-okteto-com-ns-2, it was %s", cfg.CurrentContext)
+	if cfg.CurrentContext != "sf-okteto-com" {
+		t.Errorf("current context was not sf-okteto-com, it was %s", cfg.CurrentContext)
 	}
 
 	// add duplicated
@@ -85,106 +85,8 @@ func TestSetKubeConfig(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if len(cfg.Contexts) != 5 {
-		t.Fatalf("the config file didn't have five contexts after adding the same twice: %+v", cfg.Contexts)
-	}
-}
-
-func TestRemoveKubeConfig(t *testing.T) {
-	file, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer os.Remove(file.Name())
-
-	c := &Credential{}
-
-	// empty config
-	if err := RemoveKubeConfig(c, file.Name(), "", "123-123-123", "cloud-okteto-com"); err != nil {
-		t.Fatal(err.Error())
-	}
-
-	if err := RemoveKubeConfig(c, file.Name(), "ns", "123-123-123", "cloud-okteto-com"); err != nil {
-		t.Fatal(err.Error())
-	}
-
-	config := `apiVersion: v1
-clusters:
-- cluster:
-    server: ""
-  name: cloud-okteto-com
-- cluster:
-    server: ""
-  name: sf-okteto-com
-contexts:
-- context:
-    cluster: cloud-okteto-com
-    user: 123-123-123
-  name: cloud-okteto-com
-- context:
-    cluster: cloud-okteto-com
-    namespace: ns
-    user: 123-123-123
-  name: cloud-okteto-com-ns
-- context:
-    cluster: sf-okteto-com
-    user: 123-123-124
-  name: sf-okteto-com
-current-context: cloud-okteto-com-ns-2
-kind: Config
-preferences: {}
-users:
-- name: 123-123-123
-  user: {}
-- name: 123-123-124
-  user: {}`
-
-	if _, err := file.Write([]byte(config)); err != nil {
-		t.Fatal(err.Error())
-	}
-
-	// cluster and user still referenced
-	if err := RemoveKubeConfig(c, file.Name(), "", "123-123-123", "cloud-okteto-com"); err != nil {
-		t.Fatal(err.Error())
-	}
-
-	cfg, err := clientcmd.LoadFromFile(file.Name())
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-
-	if len(cfg.Clusters) != 2 {
-		t.Errorf("the config file didn't have two clusters: %+v", cfg.Clusters)
-	}
-
-	if len(cfg.AuthInfos) != 2 {
-		t.Errorf("the config file didn't have two users: %+v", cfg.AuthInfos)
-	}
-
 	if len(cfg.Contexts) != 2 {
-		t.Errorf("the config file didn't have two contexts: %+v", cfg.Contexts)
-	}
-
-	// cluster and user no longer referenced
-	if err := RemoveKubeConfig(c, file.Name(), "ns", "123-123-123", "cloud-okteto-com"); err != nil {
-		t.Fatal(err.Error())
-	}
-
-	cfg, err = clientcmd.LoadFromFile(file.Name())
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-
-	if len(cfg.Clusters) != 1 {
-		t.Errorf("the config file didn't have one cluster: %+v", cfg.Clusters)
-	}
-
-	if len(cfg.AuthInfos) != 1 {
-		t.Errorf("the config file didn't have one user: %+v", cfg.AuthInfos)
-	}
-
-	if len(cfg.Contexts) != 1 {
-		t.Errorf("the config file didn't have one contexts: %+v", cfg.Contexts)
+		t.Fatalf("the config file didn't have five contexts after adding the same twice: %+v", cfg.Contexts)
 	}
 }
 

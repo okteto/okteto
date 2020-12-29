@@ -53,10 +53,6 @@ func executeDeleteNamespace(ctx context.Context, namespace string) error {
 		return fmt.Errorf("failed to delete namespace: %s", err)
 	}
 
-	if err := RemoveNamespace(ctx, namespace); err != nil {
-		return fmt.Errorf("failed to remove namespace: %s", err)
-	}
-
 	log.Success("Namespace '%s' deleted", namespace)
 	return nil
 }
