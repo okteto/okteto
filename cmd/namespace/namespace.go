@@ -78,7 +78,7 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		}
 	}
 
-	cred, err := okteto.GetCredentials(ctx)
+	cred, err := okteto.GetCredentials(ctx, namespace)
 	if err != nil {
 		return err
 	}
