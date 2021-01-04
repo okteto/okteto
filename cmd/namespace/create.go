@@ -68,7 +68,7 @@ func executeCreateNamespace(ctx context.Context, namespace string, members *[]st
 		}
 	}
 
-	if err := RunNamespace(ctx, namespace); err != nil {
+	if err := RunNamespace(ctx, oktetoNS); err != nil {
 		return fmt.Errorf("failed to activate your new namespace: %s", err)
 	}
 
