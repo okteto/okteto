@@ -78,9 +78,12 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		}
 	}
 
-	cred, err := okteto.GetCredentials(ctx, namespace)
+	cred, err := okteto.GetCredentials(ctx)
 	if err != nil {
 		return err
+	}
+	if namespace == "" {
+		namespace = cred.Namespace
 	}
 
 	kubeConfigFile := config.GetKubeConfigFile()
@@ -91,24 +94,6 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	}
 
 	log.Success("Updated context '%s' in '%s'", clusterHost, kubeConfigFile)
-	return nil
-}
-
-//RemoveNamespace removes an added namespace locally
-func RemoveNamespace(ctx context.Context, namespace string) error {
-	cred, err := okteto.GetCredentials(ctx, namespace)
-	if err != nil {
-		return err
-	}
-
-	kubeConfigFile := config.GetKubeConfigFile()
-	clusterHost := getClusterHost()
-
-	if err := okteto.RemoveKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterHost); err != nil {
-		return err
-	}
-
-	log.Success("Removed context '%s' in '%s'", clusterHost, kubeConfigFile)
 	return nil
 }
 

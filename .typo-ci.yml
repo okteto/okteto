@@ -6,6 +6,7 @@ excluded_words:
   - Debugf
   - Warnf
   - Errorf
+  - Fatalf
   - apimachinery
   - unmarshal
   - UnmarshalYAML
