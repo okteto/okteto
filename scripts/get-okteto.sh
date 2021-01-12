@@ -19,7 +19,17 @@ latestURL=https://github.com/okteto/okteto/releases/latest/download
 
 case "$OS" in
     darwin) 
-      URL=${latestURL}/okteto-Darwin-x86_64
+      case "$ARCH" in
+       x86_64) 
+            URL=${latestURL}/okteto-Darwin-x86_64
+            ;;
+        arm64) 
+            URL=${latestURL}/okteto-Darwin-arm64
+            ;;
+        *) 
+            printf "$red> The architecture (${ARCH}) is not supported by this installation script.$reset\n" 
+            exit 1 
+            ;;
       ;;
     linux)
       case "$ARCH" in
