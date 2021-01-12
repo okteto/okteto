@@ -1,6 +1,6 @@
 module github.com/okteto/okteto
 
-go 1.15
+go 1.16
 
 require (
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect

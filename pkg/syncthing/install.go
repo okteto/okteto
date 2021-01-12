@@ -29,14 +29,15 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-const syncthingVersion = "1.12.0"
+const syncthingVersion = "1.12.2"
 
 var (
 	downloadURLs = map[string]string{
-		"linux":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-amd64-v%[1]s.tar.gz", syncthingVersion),
-		"arm64":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm64-v%[1]s.tar.gz", syncthingVersion),
-		"darwin":  fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.zip", syncthingVersion),
-		"windows": fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-windows-amd64-v%[1]s.zip", syncthingVersion),
+		"linux":       fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-amd64-v%[1]s.tar.gz", syncthingVersion),
+		"arm64":       fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm64-v%[1]s.tar.gz", syncthingVersion),
+		"darwin":      fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.zip", syncthingVersion),
+		"darwinArm64": "https://build.syncthing.net/guestAuth/repository/download/Release_Nightly/90573:id/syncthing-macos-arm64-v1.12.2-dev.43.gf6fac3e9.zip",
+		"windows":     fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-windows-amd64-v%[1]s.zip", syncthingVersion),
 	}
 
 	minimumVersion = semver.MustParse(syncthingVersion)
@@ -156,6 +157,16 @@ func GetDownloadURL(os, arch string) (string, error) {
 			return downloadURLs["arm"], nil
 		case "arm64":
 			return downloadURLs["arm64"], nil
+		}
+	}
+
+	if os == "darwin" {
+		switch arch {
+		case "arm64":
+			return downloadURLs["darwinArm64"], nil
+		default:
+			return downloadURLs["darwin"], nil
+
 		}
 	}
 
