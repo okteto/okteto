@@ -140,9 +140,6 @@ func getInstalledVersion() *semver.Version {
 
 func parseVersionFromOutput(output []byte) (*semver.Version, error) {
 	found := versionRegex.FindSubmatch(output)
-	for _, f := range found {
-		fmt.Println(string(f))
-	}
 
 	v := ""
 	switch len(found) {
