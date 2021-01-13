@@ -16,7 +16,7 @@ package up
 import (
 	"testing"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 )
 
 func Test_shouldNotify(t *testing.T) {

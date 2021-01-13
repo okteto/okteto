@@ -34,7 +34,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	ps "github.com/mitchellh/go-ps"
 	upCmd "github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/config"
