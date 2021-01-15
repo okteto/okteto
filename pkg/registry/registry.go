@@ -27,7 +27,7 @@ import (
 )
 
 //GetImageTagWithDigest returns the image tag diggest
-func GetImageTagWithDigest(ctx context.Context, namespace string, imageTag string) (string, error) {
+func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (string, error) {
 	registryURL, err := okteto.GetRegistry()
 	if err != nil {
 		if err != errors.ErrNotLogged {
