@@ -27,7 +27,7 @@ import (
 )
 
 //GetImageTagWithDigest returns the image tag diggest
-func GetImageTagWithDigest(ctx context.Context, imageTag string) (string, error) {
+func GetImageTagWithDigest(ctx context.Context, namespace string, imageTag string) (string, error) {
 	registryURL, err := okteto.GetRegistry()
 	if err != nil {
 		if err != errors.ErrNotLogged {
@@ -36,7 +36,7 @@ func GetImageTagWithDigest(ctx context.Context, imageTag string) (string, error)
 		return imageTag, nil
 	}
 
-	expandedTag, err := ExpandOktetoDevRegistry(ctx, imageTag)
+	expandedTag, err := ExpandOktetoDevRegistry(ctx, namespace, imageTag)
 	if err != nil {
 		log.Infof("error expanding okteto registry: %s", err.Error())
 		return imageTag, nil
@@ -80,12 +80,12 @@ func GetImageTagWithDigest(ctx context.Context, imageTag string) (string, error)
 }
 
 //ExpandOktetoDevRegistry translates okteto.dev
-func ExpandOktetoDevRegistry(ctx context.Context, tag string) (string, error) {
+func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string, error) {
 	if !strings.HasPrefix(tag, okteto.DevRegistry) {
 		return tag, nil
 	}
 
-	c, _, namespace, err := client.GetLocal("")
+	c, _, _, err := client.GetLocal("")
 	if err != nil {
 		return "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}
