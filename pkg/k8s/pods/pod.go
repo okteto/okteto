@@ -267,6 +267,10 @@ func WaitUntilRunning(ctx context.Context, dev *model.Dev, podName string, c *ku
 			pod, ok := event.Object.(*v1.Pod)
 			if !ok {
 				log.Errorf("type error getting pod: %s", event)
+				watchPod, err = c.CoreV1().Pods(dev.Namespace).Watch(ctx, opts)
+				if err != nil {
+					return err
+				}
 				continue
 			}
 			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
