@@ -1,4 +1,4 @@
-FROM syncthing/syncthing:1.12.0 AS syncthing
+FROM syncthing/syncthing:1.12.1 AS syncthing
 FROM okteto/remote:0.3.3 AS remote
 FROM okteto/supervisor:0.1.3 AS supervisor
 FROM okteto/clean:0.1.5 AS clean
