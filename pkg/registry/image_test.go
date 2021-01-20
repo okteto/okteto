@@ -129,14 +129,6 @@ func Test_GetDevImageTag(t *testing.T) {
 			expected:            "registry.cloud.okteto.net/ns/dev:okteto",
 		},
 		{
-			name:                "default-image-from-deployment",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:            "",
-			imageFromDeployment: model.DefaultImage,
-			oktetoRegistryURL:   okteto.CloudRegistryURL,
-			expected:            "registry.cloud.okteto.net/ns/dev:okteto",
-		},
-		{
 			name:                "okteto",
 			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
 			imageTag:            "",
