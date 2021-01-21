@@ -131,8 +131,11 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 			d.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
 			exists = false
 
-			if imageTag == "" && oktetoRegistryURL == "" {
-				return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
+			if imageTag == "" {
+				if oktetoRegistryURL == "" {
+					return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
+				}
+				imageTag = registry.GetImageTag("", dev.Name, dev.Namespace, oktetoRegistryURL)
 			}
 		}
 	}
