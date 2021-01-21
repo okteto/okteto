@@ -190,20 +190,20 @@ func Test_getMinimumVersion(t *testing.T) {
 		},
 	}
 
-	env := os.Getenv(syncthinvVersionEnvVar)
-	if err := os.Setenv(syncthinvVersionEnvVar, ""); err != nil {
+	env := os.Getenv(syncthingVersionEnvVar)
+	if err := os.Setenv(syncthingVersionEnvVar, ""); err != nil {
 		t.Fatal(err)
 	}
 
 	defer func() {
-		if err := os.Setenv(syncthinvVersionEnvVar, env); err != nil {
+		if err := os.Setenv(syncthingVersionEnvVar, env); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
 	for _, tt := range tests {
 		t.Run(tt.version, func(t *testing.T) {
-			if err := os.Setenv(syncthinvVersionEnvVar, tt.version); err != nil {
+			if err := os.Setenv(syncthingVersionEnvVar, tt.version); err != nil {
 				t.Fatal(err)
 			}
 			got := getMinimumVersion()
