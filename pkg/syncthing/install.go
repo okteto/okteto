@@ -23,31 +23,35 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	getter "github.com/hashicorp/go-getter"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
-const syncthingVersion = "1.12.1"
+const (
+	syncthingVersion       = "1.12.1"
+	syncthinvVersionEnvVar = "OKTETO_SYNCTHING_VERSION"
+)
 
 var (
-	downloadURLs = map[string]string{
-		"linux":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-amd64-v%[1]s.tar.gz", syncthingVersion),
-		"arm64":   fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm64-v%[1]s.tar.gz", syncthingVersion),
-		"darwin":  fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.zip", syncthingVersion),
-		"windows": fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-windows-amd64-v%[1]s.zip", syncthingVersion),
+	versionRegex       = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+)(-rc\.[0-9])?.*`)
+	downloadURLFormats = map[string]string{
+		"linux":       "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-amd64-v%[1]s.tar.gz",
+		"arm":         "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm-v%[1]s.tar.gz",
+		"arm64":       "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm64-v%[1]s.tar.gz",
+		"darwinArm64": "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-arm64-v%[1]s.zip",
+		"darwin":      "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.zip",
+		"windows":     "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-windows-amd64-v%[1]s.zip",
 	}
-
-	minimumVersion = semver.MustParse(syncthingVersion)
-	versionRegex   = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+) .*`)
 )
 
 // Install installs syncthing locally
 func Install(p getter.ProgressTracker) error {
 	log.Infof("installing syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
 
-	downloadURL, err := GetDownloadURL(runtime.GOOS, runtime.GOARCH)
+	minimum := getMinimumVersion()
+	downloadURL, err := GetDownloadURL(runtime.GOOS, runtime.GOARCH, minimum.String())
 	if err != nil {
 		return err
 	}
@@ -117,7 +121,18 @@ func ShouldUpgrade() bool {
 		return true
 	}
 
-	return minimumVersion.GreaterThan(current)
+	minimum := getMinimumVersion()
+
+	return minimum.GreaterThan(current)
+}
+
+func getMinimumVersion() *semver.Version {
+	v := os.Getenv(syncthinvVersionEnvVar)
+	if v == "" {
+		v = syncthingVersion
+	}
+
+	return semver.MustParse(v)
 }
 
 func getInstalledVersion() *semver.Version {
@@ -128,38 +143,61 @@ func getInstalledVersion() *semver.Version {
 		return nil
 	}
 
-	found := versionRegex.FindSubmatch(output)
-	if len(found) < 2 {
-		log.Errorf("failed to extract the version from `%s`", output)
-		return nil
-	}
-
-	s, err := semver.NewVersion(string(found[1]))
+	s, err := parseVersionFromOutput(output)
 	if err != nil {
-		log.Errorf("failed to parse the current syncthing version `%s`: %s", found, err)
+		log.Errorf("failed to parse the current syncthing version `%s`: %s", output, err)
 		return nil
 	}
 
 	return s
 }
 
-// GetDownloadURL returns the url of the syncthing package for the OS and ARCH
-func GetDownloadURL(os, arch string) (string, error) {
-	src, ok := downloadURLs[os]
-	if !ok {
-		return "", fmt.Errorf("%s is not a supported platform", os)
+func parseVersionFromOutput(output []byte) (*semver.Version, error) {
+	found := versionRegex.FindSubmatch(output)
+
+	v := ""
+	switch len(found) {
+	case 3:
+		v = fmt.Sprintf("%s%s", found[1], found[2])
+	case 2:
+		v = fmt.Sprintf("%s", found[1])
+	default:
+		return nil, fmt.Errorf("failed to extract the version from `%s`", output)
 	}
 
-	if os == "linux" {
+	s, err := semver.NewVersion(v)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse the current syncthing version `%s`: %s", v, err)
+	}
+
+	return s, nil
+}
+
+// GetDownloadURL returns the url of the syncthing package for the OS and ARCH
+func GetDownloadURL(os, arch, version string) (string, error) {
+	switch os {
+	case "linux":
 		switch arch {
 		case "arm":
-			return downloadURLs["arm"], nil
+			return fmt.Sprintf(downloadURLFormats["arm"], version), nil
 		case "arm64":
-			return downloadURLs["arm64"], nil
+			return fmt.Sprintf(downloadURLFormats["arm64"], version), nil
+		case "amd64":
+			return fmt.Sprintf(downloadURLFormats["linux"], version), nil
 		}
+	case "darwin":
+		switch arch {
+		case "arm64":
+			return fmt.Sprintf(downloadURLFormats["darwinArm64"], version), nil
+		default:
+			return fmt.Sprintf(downloadURLFormats["darwin"], version), nil
+
+		}
+	case "windows":
+		return fmt.Sprintf(downloadURLFormats[os], version), nil
 	}
 
-	return src, nil
+	return "", fmt.Errorf("%s-%s is not a supported platform", os, arch)
 }
 
 func getBinaryPathInDownload(dir, url string) string {
