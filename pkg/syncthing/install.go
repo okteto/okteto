@@ -50,7 +50,7 @@ var (
 func Install(p getter.ProgressTracker) error {
 	log.Infof("installing syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
 
-	minimum := getMinimumVersion()
+	minimum := GetMinimumVersion()
 	downloadURL, err := GetDownloadURL(runtime.GOOS, runtime.GOARCH, minimum.String())
 	if err != nil {
 		return err
@@ -121,12 +121,12 @@ func ShouldUpgrade() bool {
 		return true
 	}
 
-	minimum := getMinimumVersion()
+	minimum := GetMinimumVersion()
 
 	return minimum.GreaterThan(current)
 }
 
-func getMinimumVersion() *semver.Version {
+func GetMinimumVersion() *semver.Version {
 	v := os.Getenv(syncthingVersionEnvVar)
 	if v == "" {
 		v = syncthingVersion
