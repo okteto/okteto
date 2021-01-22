@@ -38,7 +38,7 @@ func TestInstall(t *testing.T) {
 		t.Fatal("failed to get version")
 	}
 
-	m := getMinimumVersion()
+	m := GetMinimumVersion()
 
 	if v.Compare(m) != 0 {
 		t.Fatalf("got %s, expected %s", v.String(), m.String())
@@ -171,7 +171,7 @@ func Test_parseVersionFromOutput(t *testing.T) {
 	}
 }
 
-func Test_getMinimumVersion(t *testing.T) {
+func TestGetMinimumVersion(t *testing.T) {
 	var tests = []struct {
 		version  string
 		expected string
@@ -206,7 +206,7 @@ func Test_getMinimumVersion(t *testing.T) {
 			if err := os.Setenv(syncthingVersionEnvVar, tt.version); err != nil {
 				t.Fatal(err)
 			}
-			got := getMinimumVersion()
+			got := GetMinimumVersion()
 			if got.String() != tt.expected {
 				t.Errorf("got %s, expected %s", got.String(), tt.expected)
 			}
