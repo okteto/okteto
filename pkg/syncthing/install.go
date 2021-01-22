@@ -149,7 +149,7 @@ func getInstalledVersion() *semver.Version {
 		return nil
 	}
 
-	return s, nil
+	return s
 }
 
 func parseVersionFromOutput(output []byte) (*semver.Version, error) {
