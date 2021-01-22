@@ -162,16 +162,22 @@ func TestGetVersion(t *testing.T) {
 
 func TestDownloadSyncthing(t *testing.T) {
 	var tests = []struct {
-		os string
+		os   string
+		arch string
 	}{
-		{os: "windows"}, {os: "darwin"}, {os: "linux"},
+		{os: "windows", arch: "amd64"},
+		{os: "darwin", arch: "amd64"},
+		{os: "darwin", arch: "arm64"},
+		{os: "linux", arch: "amd64"},
+		{os: "linux", arch: "arm64"},
+		{os: "linux", arch: "arm"},
 	}
 
 	ctx := context.Background()
 	m := syncthing.GetMinimumVersion()
 	for _, tt := range tests {
-		t.Run(tt.os, func(t *testing.T) {
-			u, err := syncthing.GetDownloadURL(tt.os, "amd64", m.String())
+		t.Run(fmt.Sprintf("%s-%s", tt.os, tt.arch), func(t *testing.T) {
+			u, err := syncthing.GetDownloadURL(tt.os, tt.arch, m.String())
 			req, err := http.NewRequest("GET", u, nil)
 			if err != nil {
 				t.Fatal(err.Error())
