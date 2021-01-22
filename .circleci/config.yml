@@ -230,6 +230,7 @@ workflows:
               only: 
                 - master
                 - /.*(e2e)/
+                - /.*(integration)/
       - release-master:
           requires:
             - integration
