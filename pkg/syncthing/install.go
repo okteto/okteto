@@ -29,26 +29,29 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-const syncthingVersion = "1.13.0-rc.1"
+const (
+	syncthingVersion       = "1.12.1"
+	syncthingVersionEnvVar = "OKTETO_SYNCTHING_VERSION"
+)
 
 var (
-	downloadURLs = map[string]string{
-		"linux":       fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-amd64-v%[1]s.tar.gz", syncthingVersion),
-		"arm64":       fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm64-v%[1]s.tar.gz", syncthingVersion),
-		"darwin":      fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.zip", syncthingVersion),
-		"darwinArm64": fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-arm64-v%[1]s.zip", syncthingVersion),
-		"windows":     fmt.Sprintf("https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-windows-amd64-v%[1]s.zip", syncthingVersion),
+	versionRegex       = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+)(-rc\.[0-9])?.*`)
+	downloadURLFormats = map[string]string{
+		"linux":       "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-amd64-v%[1]s.tar.gz",
+		"arm":         "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm-v%[1]s.tar.gz",
+		"arm64":       "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-linux-arm64-v%[1]s.tar.gz",
+		"darwinArm64": "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-arm64-v%[1]s.zip",
+		"darwin":      "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-macos-amd64-v%[1]s.zip",
+		"windows":     "https://github.com/syncthing/syncthing/releases/download/v%[1]s/syncthing-windows-amd64-v%[1]s.zip",
 	}
-
-	minimumVersion = semver.MustParse(syncthingVersion)
-	versionRegex   = regexp.MustCompile(`syncthing v(\d+\.\d+\.\d+)(-rc\.[0-9])?.*`)
 )
 
 // Install installs syncthing locally
 func Install(p getter.ProgressTracker) error {
 	log.Infof("installing syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
 
-	downloadURL, err := GetDownloadURL(runtime.GOOS, runtime.GOARCH)
+	minimum := getMinimumVersion()
+	downloadURL, err := GetDownloadURL(runtime.GOOS, runtime.GOARCH, minimum.String())
 	if err != nil {
 		return err
 	}
@@ -118,7 +121,18 @@ func ShouldUpgrade() bool {
 		return true
 	}
 
-	return minimumVersion.GreaterThan(current)
+	minimum := getMinimumVersion()
+
+	return minimum.GreaterThan(current)
+}
+
+func getMinimumVersion() *semver.Version {
+	v := os.Getenv(syncthingVersionEnvVar)
+	if v == "" {
+		v = syncthingVersion
+	}
+
+	return semver.MustParse(v)
 }
 
 func getInstalledVersion() *semver.Version {
@@ -135,7 +149,7 @@ func getInstalledVersion() *semver.Version {
 		return nil
 	}
 
-	return s
+	return s, nil
 }
 
 func parseVersionFromOutput(output []byte) (*semver.Version, error) {
@@ -160,32 +174,30 @@ func parseVersionFromOutput(output []byte) (*semver.Version, error) {
 }
 
 // GetDownloadURL returns the url of the syncthing package for the OS and ARCH
-func GetDownloadURL(os, arch string) (string, error) {
-	src, ok := downloadURLs[os]
-	if !ok {
-		return "", fmt.Errorf("%s is not a supported platform", os)
-	}
-
-	if os == "linux" {
+func GetDownloadURL(os, arch, version string) (string, error) {
+	switch os {
+	case "linux":
 		switch arch {
 		case "arm":
-			return downloadURLs["arm"], nil
+			return fmt.Sprintf(downloadURLFormats["arm"], version), nil
 		case "arm64":
-			return downloadURLs["arm64"], nil
+			return fmt.Sprintf(downloadURLFormats["arm64"], version), nil
+		case "amd64":
+			return fmt.Sprintf(downloadURLFormats["linux"], version), nil
 		}
-	}
-
-	if os == "darwin" {
+	case "darwin":
 		switch arch {
 		case "arm64":
-			return downloadURLs["darwinArm64"], nil
+			return fmt.Sprintf(downloadURLFormats["darwinArm64"], version), nil
 		default:
-			return downloadURLs["darwin"], nil
+			return fmt.Sprintf(downloadURLFormats["darwin"], version), nil
 
 		}
+	case "windows":
+		return fmt.Sprintf(downloadURLFormats[os], version), nil
 	}
 
-	return src, nil
+	return "", fmt.Errorf("%s-%s is not a supported platform", os, arch)
 }
 
 func getBinaryPathInDownload(dir, url string) string {

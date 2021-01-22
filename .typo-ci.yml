@@ -12,5 +12,6 @@ excluded_words:
   - UnmarshalYAML
   - Unmarshaler
   - stignore
+  - solaris
 
 spellcheck_filenames: true

@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
-	github.com/Masterminds/semver/v3 v3.1.0
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/a8m/envsubst v1.2.0
 	github.com/alessio/shellescape v1.3.0
 	github.com/briandowns/spinner v1.11.1
