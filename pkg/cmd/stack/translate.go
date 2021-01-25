@@ -44,10 +44,7 @@ func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) er
 		return err
 	}
 
-	if err := translateBuildImages(ctx, s, forceBuild, noCache); err != nil {
-		return err
-	}
-	return nil
+	return translateBuildImages(ctx, s, forceBuild, noCache)
 }
 
 func translateEnvVars(s *model.Stack) error {
@@ -133,7 +130,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 			continue
 		}
 		if !forceBuild {
-			if _, err := registry.GetImageTagWithDigest(ctx, svc.Image); err != errors.ErrNotFound {
+			if _, err := registry.GetImageTagWithDigest(ctx, s.Namespace, svc.Image); err != errors.ErrNotFound {
 				continue
 			}
 			log.Infof("image '%s' not found, building it", svc.Image)
@@ -145,7 +142,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		imageTag := registry.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-		if err := build.Run(ctx, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, "tty"); err != nil {
+		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, "tty"); err != nil {
 			return fmt.Errorf("error building image for '%s': %s", name, err)
 		}
 		svc.Image = imageTag

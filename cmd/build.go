@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
@@ -68,8 +69,13 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 			log.Information("Running your build in %s...", buildKitHost)
 
+			_, _, namespace, err := client.GetLocal("")
+			if err != nil {
+				return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+			}
+
 			ctx := context.Background()
-			if err := build.Run(ctx, buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
+			if err := build.Run(ctx, namespace, buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
 				analytics.TrackBuild(false)
 				return err
 			}

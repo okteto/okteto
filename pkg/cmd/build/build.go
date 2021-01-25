@@ -25,7 +25,7 @@ import (
 )
 
 // Run runs the build sequence
-func Run(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, cacheFrom, buildArgs []string, progress string) error {
+func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, cacheFrom, buildArgs []string, progress string) error {
 	log.Infof("building your image on %s", buildKitHost)
 	buildkitClient, err := getBuildkitClient(ctx, isOktetoCluster, buildKitHost)
 	if err != nil {
@@ -44,12 +44,12 @@ func Run(ctx context.Context, buildKitHost string, isOktetoCluster bool, path, d
 		defer os.Remove(dockerFile)
 	}
 
-	tag, err = registry.ExpandOktetoDevRegistry(ctx, tag)
+	tag, err = registry.ExpandOktetoDevRegistry(ctx, namespace, tag)
 	if err != nil {
 		return err
 	}
 	for i := range cacheFrom {
-		cacheFrom[i], err = registry.ExpandOktetoDevRegistry(ctx, cacheFrom[i])
+		cacheFrom[i], err = registry.ExpandOktetoDevRegistry(ctx, namespace, cacheFrom[i])
 		if err != nil {
 			return err
 		}
