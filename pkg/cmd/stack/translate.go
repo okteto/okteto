@@ -44,10 +44,7 @@ func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) er
 		return err
 	}
 
-	if err := translateBuildImages(ctx, s, forceBuild, noCache); err != nil {
-		return err
-	}
-	return nil
+	return translateBuildImages(ctx, s, forceBuild, noCache)
 }
 
 func translateEnvVars(s *model.Stack) error {
