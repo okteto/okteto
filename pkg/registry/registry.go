@@ -85,10 +85,15 @@ func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string
 		return tag, nil
 	}
 
-	c, _, _, err := client.GetLocal("")
+	c, _, ns, err := client.GetLocal("")
 	if err != nil {
 		return "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}
+
+	if namespace == "" {
+		namespace = ns
+	}
+
 	n, err := namespaces.Get(ctx, namespace, c)
 	if err != nil {
 		return "", fmt.Errorf("failed to get your current namespace '%s': %s", namespace, err.Error())
