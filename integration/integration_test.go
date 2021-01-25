@@ -34,7 +34,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	ps "github.com/mitchellh/go-ps"
 	upCmd "github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/config"
@@ -164,14 +164,14 @@ func TestDownloadSyncthing(t *testing.T) {
 	var tests = []struct {
 		os string
 	}{
-		{os: "windows"}, {os: "darwin"}, {os: "linux"}, {os: "arm64"},
+		{os: "windows"}, {os: "darwin"}, {os: "linux"},
 	}
 
 	ctx := context.Background()
-
+	m := syncthing.GetMinimumVersion()
 	for _, tt := range tests {
 		t.Run(tt.os, func(t *testing.T) {
-			u, err := syncthing.GetDownloadURL(tt.os, "amd64")
+			u, err := syncthing.GetDownloadURL(tt.os, "amd64", m.String())
 			req, err := http.NewRequest("GET", u, nil)
 			if err != nil {
 				t.Fatal(err.Error())
