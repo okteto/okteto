@@ -339,7 +339,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		}
 	}
 
-	if _, err := registry.GetImageTagWithDigest(ctx, up.Dev.Image.Name); err == errors.ErrNotFound {
+	if _, err := registry.GetImageTagWithDigest(ctx, up.Dev.Namespace, up.Dev.Image.Name); err == errors.ErrNotFound {
 		log.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		build = true
 	}
@@ -536,7 +536,7 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	log.Infof("building dev image tag %s", imageTag)
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
-	if err := buildCMD.Run(ctx, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, "tty"); err != nil {
+	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, "tty"); err != nil {
 		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
 	}
 	for _, s := range up.Dev.Services {
