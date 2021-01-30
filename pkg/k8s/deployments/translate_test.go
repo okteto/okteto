@@ -104,20 +104,6 @@ services:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					Affinity: &apiv1.Affinity{
-						PodAffinity: &apiv1.PodAffinity{
-							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-								{
-									LabelSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											okLabels.InteractiveDevLabel: "web",
-										},
-									},
-									TopologyKey: "kubernetes.io/hostname",
-								},
-							},
-						},
-					},
 					Tolerations: []apiv1.Toleration{
 						{
 							Key:      "nvidia/cpu",
@@ -465,20 +451,6 @@ persistentVolume:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					Affinity: &apiv1.Affinity{
-						PodAffinity: &apiv1.PodAffinity{
-							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-								{
-									LabelSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											okLabels.InteractiveDevLabel: "web",
-										},
-									},
-									TopologyKey: "kubernetes.io/hostname",
-								},
-							},
-						},
-					},
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						{

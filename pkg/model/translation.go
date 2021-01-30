@@ -50,6 +50,11 @@ type TranslationRule struct {
 	Resources         ResourceRequirements `json:"resources,omitempty"`
 }
 
+//IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest
+func (r *TranslationRule) IsMainDevContainer() bool {
+	return r.OktetoBinImageTag != ""
+}
+
 //VolumeMount represents a volume mount
 type VolumeMount struct {
 	Name      string `json:"name,omitempty"`
