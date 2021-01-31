@@ -99,11 +99,12 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
 	TranslateDevAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
 	TranslateDevTolerations(&t.Deployment.Spec.Template.Spec, t.Tolerations)
-	TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
 	if t.Interactive {
 		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
+	} else {
+		TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
 	}
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
@@ -115,7 +116,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
 		TranslateOktetoDevSecret(&t.Deployment.Spec.Template.Spec, t.Name, rule.Secrets)
-		if rule.OktetoBinImageTag != "" {
+		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(rule.OktetoBinImageTag, &t.Deployment.Spec.Template.Spec)
 			TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
