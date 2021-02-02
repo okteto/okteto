@@ -16,7 +16,10 @@ package status
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -36,4 +39,24 @@ func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64,
 	}
 	progress := (progressLocal + progressRemote) / 2
 	return progress, nil
+}
+
+//Wait waits for the okteto up sequence to finish
+func Wait(ctx context.Context, dev *model.Dev) error {
+	spinner := utils.NewSpinner("Activating your development container...")
+	spinner.Start()
+	defer spinner.Stop()
+	for {
+		status, err := config.GetState(dev)
+		if err != nil {
+			return err
+		}
+		if status == config.Failed {
+			return fmt.Errorf("your development container has failed")
+		}
+		if status == config.Ready {
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
 }

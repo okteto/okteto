@@ -20,6 +20,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -91,6 +92,10 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		dev.Namespace = namespace
 	}
 
+	if err := status.Wait(ctx, dev); err != nil {
+		return err
+	}
+
 	p, err := pods.GetDevPod(ctx, dev, client, false)
 	if err != nil {
 		return err
@@ -98,7 +103,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 
 	if p == nil {
 		return errors.UserError{
-			E:    fmt.Errorf("development mode is not enabled on your deployment"),
+			E:    fmt.Errorf("development mode is not enabled"),
 			Hint: "Run 'okteto up' to enable it and try again",
 		}
 	}
