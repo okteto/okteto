@@ -567,7 +567,9 @@ func (up *upContext) setDevContainer(d *appsv1.Deployment) error {
 
 func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
-	up.updateStateFile(activating)
+	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
+		return err
+	}
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -577,7 +579,9 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 		}
 	}
 
-	up.updateStateFile(starting)
+	if err := config.UpdateStateFile(up.Dev, config.Starting); err != nil {
+		return err
+	}
 
 	log.Info("create deployment secrets")
 	if err := secrets.Create(ctx, up.Dev, up.Client, up.Sy); err != nil {
@@ -631,7 +635,9 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 		message := "Activating your development container"
 		if up.Dev.PersistentVolumeEnabled() {
 			message = "Attaching persistent volume"
-			up.updateStateFile(attaching)
+			if err := config.UpdateStateFile(up.Dev, config.Attaching); err != nil {
+				log.Infof("error updating state: %s", err.Error())
+			}
 		}
 		for {
 			spinner.Update(fmt.Sprintf("%s...", message))
@@ -640,7 +646,9 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 				return
 			}
 			if strings.HasPrefix(message, "Pulling") {
-				up.updateStateFile(pulling)
+				if err := config.UpdateStateFile(up.Dev, config.Pulling); err != nil {
+					log.Infof("error updating state: %s", err.Error())
+				}
 			}
 		}
 	}()
@@ -752,7 +760,9 @@ func (up *upContext) sync(ctx context.Context) error {
 func (up *upContext) startSyncthing(ctx context.Context) error {
 	spinner := utils.NewSpinner("Starting the file synchronization service...")
 	spinner.Start()
-	up.updateStateFile(startingSync)
+	if err := config.UpdateStateFile(up.Dev, config.StartingSync); err != nil {
+		return err
+	}
 	defer spinner.Stop()
 
 	if err := up.Sy.Run(ctx); err != nil {
@@ -814,7 +824,9 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	spinner := utils.NewSpinner(suffix)
 	pbScaling := 0.30
 
-	up.updateStateFile(synchronizing)
+	if err := config.UpdateStateFile(up.Dev, config.Synchronizing); err != nil {
+		return err
+	}
 	spinner.Start()
 	defer spinner.Stop()
 	reporter := make(chan float64)
@@ -893,7 +905,9 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 
 func (up *upContext) runCommand(ctx context.Context) error {
 	log.Infof("starting remote command")
-	up.updateStateFile(ready)
+	if err := config.UpdateStateFile(up.Dev, config.Ready); err != nil {
+		return err
+	}
 
 	if up.Dev.RemoteModeEnabled() {
 		return ssh.Exec(ctx, up.Dev.Interface, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command.Values)
@@ -1002,7 +1016,7 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 func (up *upContext) shutdown() {
 	if up.isTerm {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
-			log.Infof("failed to restore terminal: %s", err)
+			log.Infof("failed to restore terminal: %s", err.Error())
 		}
 	}
 
@@ -1019,13 +1033,16 @@ func (up *upContext) shutdown() {
 	if up.Sy != nil {
 		log.Infof("stopping syncthing")
 		if err := up.Sy.Stop(false); err != nil {
-			log.Infof("failed to stop syncthing during shutdown: %s", err)
+			log.Infof("failed to stop syncthing during shutdown: %s", err.Error())
 		}
 	}
 
 	log.Infof("stopping forwarders")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
+	}
+	if err := config.DeleteStateFile(up.Dev); err != nil {
+		log.Infof("failed to delete state file: %s", err.Error())
 	}
 
 	log.Info("completed shutdown sequence")

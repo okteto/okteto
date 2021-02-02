@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -22,12 +23,34 @@ import (
 	"sync"
 	"time"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"gopkg.in/yaml.v2"
 )
+
+//UpState represents the state of the up command
+type UpState string
 
 const (
 	oktetoFolderName = ".okteto"
+	//Activating up started
+	Activating UpState = "activating"
+	//Starting up started the dev pod creation
+	Starting UpState = "starting"
+	//Attaching up attaching volume
+	Attaching UpState = "attaching"
+	//Pulling up pulling images
+	Pulling UpState = "pulling"
+	//StartingSync up preparing syncthing
+	StartingSync UpState = "startingSync"
+	//Synchronizing up is syncthing
+	Synchronizing UpState = "synchronizing"
+	//Ready up finished
+	Ready UpState = "ready"
+	//Failed up failed
+	Failed    UpState = "failed"
+	stateFile         = "okteto.state"
 )
 
 // VersionString the version of the cli
@@ -88,6 +111,66 @@ func GetDeploymentHome(namespace, name string) string {
 	}
 
 	return d
+}
+
+//UpdateStateFile updates the state file of a given dev environment
+func UpdateStateFile(dev *model.Dev, state UpState) error {
+	if dev.Namespace == "" {
+		return fmt.Errorf("can't update state file, namespace is empty")
+	}
+
+	if dev.Name == "" {
+		return fmt.Errorf("can't update state file, name is empty")
+	}
+
+	s := filepath.Join(GetDeploymentHome(dev.Namespace, dev.Name), stateFile)
+	if err := ioutil.WriteFile(s, []byte(state), 0644); err != nil {
+		return fmt.Errorf("failed to update state file: %s", err)
+	}
+
+	return nil
+}
+
+//DeleteStateFile deletes the state file of a given dev environment
+func DeleteStateFile(dev *model.Dev) error {
+	if dev.Namespace == "" {
+		return fmt.Errorf("can't delete state file, namespace is empty")
+	}
+
+	if dev.Name == "" {
+		return fmt.Errorf("can't delete state file, name is empty")
+	}
+
+	s := filepath.Join(GetDeploymentHome(dev.Namespace, dev.Name), stateFile)
+	return os.Remove(s)
+}
+
+//GetState returns the state of a given dev environment
+func GetState(dev *model.Dev) (UpState, error) {
+	var result UpState
+	if dev.Namespace == "" {
+		return Failed, fmt.Errorf("can't update state file, namespace is empty")
+	}
+
+	if dev.Name == "" {
+		return Failed, fmt.Errorf("can't update state file, name is empty")
+	}
+
+	statePath := filepath.Join(GetDeploymentHome(dev.Namespace, dev.Name), stateFile)
+	stateBytes, err := ioutil.ReadFile(statePath)
+	if err != nil {
+		log.Infof("error reading state file: %s", err.Error())
+		return Failed, errors.UserError{
+			E:    fmt.Errorf("development mode is not enabled on your deployment"),
+			Hint: "Run 'okteto up' to enable it and try again",
+		}
+	}
+
+	if err := yaml.Unmarshal(stateBytes, &result); err != nil {
+		return Failed, err
+	}
+
+	return result, nil
 }
 
 // GetUserHomeDir returns the OS home dir
