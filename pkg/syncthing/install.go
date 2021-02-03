@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	syncthingVersion       = "1.13.0-rc.1"
+	syncthingVersion       = "1.13.1"
 	syncthingVersionEnvVar = "OKTETO_SYNCTHING_VERSION"
 )
 
