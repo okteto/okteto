@@ -30,6 +30,7 @@ case "$OS" in
             printf "$red> The architecture (${ARCH}) is not supported by this installation script.$reset\n" 
             exit 1 
             ;;
+      esac
       ;;
     linux)
       case "$ARCH" in
