@@ -85,7 +85,8 @@ jobs:
           name: "Update brew formula"
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
-            ./update_homebrew_formula.sh 0.0.1 $sha
+            sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
+            ./update_homebrew_formula.sh 0.0.1 $sha $sha_arm
   windows-unit:
     environment: 
       OKTETO_USER: cindylopez
@@ -186,7 +187,8 @@ jobs:
           name: "Update brew formula"
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
-            ./update_homebrew_formula.sh $CIRCLE_TAG $sha
+            sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
+            ./update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
             pushd homebrew-cli
             git push https://${GITHUB_TOKEN}@github.com/okteto/homebrew-okteto.git master
   release-master:
