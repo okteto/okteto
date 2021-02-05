@@ -110,11 +110,6 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFro
 				},
 			},
 		}
-		opt.CacheExports = []client.CacheOptionsEntry{
-			{
-				Type: "inline",
-			},
-		}
 	}
 	for _, cacheFromImage := range cacheFrom {
 		opt.CacheImports = append(
