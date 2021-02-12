@@ -30,6 +30,7 @@ func destroy(ctx context.Context) *cobra.Command {
 	var name string
 	var namespace string
 	var wait bool
+	var destroyVolumes bool
 	var timeout time.Duration
 
 	cmd := &cobra.Command{
@@ -55,14 +56,14 @@ func destroy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if err := deletePipeline(ctx, name, namespace, wait, timeout); err != nil {
+			if err := deletePipeline(ctx, name, namespace, wait, destroyVolumes, timeout); err != nil {
 				return err
 			}
 
 			if wait {
-				log.Success("Pipeline '%s' deleted", name)
+				log.Success("Pipeline '%s' destroyed", name)
 			} else {
-				log.Success("Pipeline '%s' scheduled for deletion", name)
+				log.Success("Pipeline '%s' scheduled for destruction", name)
 			}
 
 			return nil
@@ -72,16 +73,17 @@ func destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&name, "name", "p", "", "name of the pipeline (defaults to the folder name)")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed (defaults to the current namespace)")
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
+	cmd.Flags().BoolVarP(&destroyVolumes, "volumes", "v", false, "remove persistent volumes created by the pipeline (defaults to false)")
 	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	return cmd
 }
 
-func deletePipeline(ctx context.Context, name, namespace string, wait bool, timeout time.Duration) error {
-	spinner := utils.NewSpinner("Deleting your pipeline...")
+func deletePipeline(ctx context.Context, name, namespace string, wait, destroyVolumes bool, timeout time.Duration) error {
+	spinner := utils.NewSpinner("Destroying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
 
-	_, err := okteto.DeletePipeline(ctx, name, namespace)
+	_, err := okteto.DeletePipeline(ctx, name, namespace, destroyVolumes)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Infof("pipeline '%s' not found", name)
