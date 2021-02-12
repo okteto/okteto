@@ -37,17 +37,22 @@ func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64,
 		log.Infof("error accessing remote syncthing status: %s", err)
 		return 0, fmt.Errorf("error accessing remote syncthing status")
 	}
-	if progressLocal == 100 && progressRemote == 100 {
-		return 100, nil
+
+	return computeProgress(progressLocal, progressRemote), nil
+}
+
+func computeProgress(local, remote float64) float64 {
+	if local == 100 && remote == 100 {
+		return 100
 	}
-	if progressLocal == 100 {
-		return progressRemote, nil
+
+	if local == 100 {
+		return remote
 	}
-	if progressRemote == 100 {
-		return progressLocal, nil
+	if remote == 100 {
+		return local
 	}
-	progress := (progressLocal + progressRemote) / 2
-	return progress, nil
+	return (local + remote) / 2
 }
 
 //Wait waits for the okteto up sequence to finish
