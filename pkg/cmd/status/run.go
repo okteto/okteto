@@ -37,6 +37,15 @@ func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64,
 		log.Infof("error accessing remote syncthing status: %s", err)
 		return 0, fmt.Errorf("error accessing remote syncthing status")
 	}
+	if progressLocal == 100 && progressRemote == 100 {
+		return 100, nil
+	}
+	if progressLocal == 100 {
+		return progressRemote, nil
+	}
+	if progressRemote == 100 {
+		return progressLocal, nil
+	}
 	progress := (progressLocal + progressRemote) / 2
 	return progress, nil
 }
