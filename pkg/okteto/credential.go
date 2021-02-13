@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
+	"github.com/okteto/okteto/pkg/config"
 )
 
 // Credentials top body answer
@@ -34,12 +36,12 @@ type Credential struct {
 }
 
 // GetCredentials returns the space config credentials
-func GetCredentials(ctx context.Context, namespace string) (*Credential, error) {
+func GetCredentials(ctx context.Context) (*Credential, error) {
 	q := fmt.Sprintf(`query{
-		credentials(space: "%s"){
+		credentials(space: ""){
 			server, certificate, token, namespace
 		},
-	}`, namespace)
+	}`)
 
 	var cred Credentials
 	if err := query(ctx, q, &cred); err != nil {
@@ -53,4 +55,19 @@ func GetCredentials(ctx context.Context, namespace string) (*Credential, error) 
 func GetClusterContext() string {
 	u, _ := url.Parse(GetURL())
 	return strings.ReplaceAll(u.Host, ".", "_")
+}
+
+//RefreshOktetoKubeconfig refreshes the k8s credentials
+func RefreshOktetoKubeconfig(ctx context.Context, namespace string) (string, string, error) {
+	kubeConfigFile := config.GetKubeConfigFile()
+	cred, err := GetCredentials(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	err = SetKubeConfig(cred, kubeConfigFile, namespace, GetUserID(), GetClusterContext(), false)
+	if err != nil {
+		return "", "", err
+	}
+
+	return cred.Server, cred.Token, nil
 }

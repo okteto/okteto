@@ -14,6 +14,7 @@
 package client
 
 import (
+	"context"
 	"net/url"
 	"strings"
 
@@ -34,11 +35,11 @@ const (
 )
 
 var (
-	client        *kubernetes.Clientset
-	config        *rest.Config
-	namespace     string
-	context       string
-	localClusters = []string{"127.", "172.", "192.", "169.", model.Localhost, "::1", "fe80::", "fc00::"}
+	client         *kubernetes.Clientset
+	config         *rest.Config
+	namespace      string
+	currentContext string
+	localClusters  = []string{"127.", "172.", "192.", "169.", model.Localhost, "::1", "fe80::", "fc00::"}
 )
 
 //GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
@@ -63,19 +64,26 @@ func GetLocal(k8sContext string) (*kubernetes.Clientset, *rest.Config, string, e
 		if err != nil {
 			return nil, nil, "", err
 		}
-		context = rawConfig.CurrentContext
+
+		currentContext = rawConfig.CurrentContext
+		if okteto.GetClusterContext() == currentContext {
+			ctx := context.Background()
+			go okteto.RefreshOktetoKubeconfig(ctx, namespace)
+		}
 
 		config, err = clientConfig.ClientConfig()
 		if err != nil {
 			return nil, nil, "", err
 		}
 
+		config.Wrap(refreshCredentialsFn)
+
 		client, err = kubernetes.NewForConfig(config)
 		if err != nil {
 			return nil, nil, "", err
 		}
 
-		setAnalytics(context, config.Host)
+		setAnalytics(currentContext, config.Host)
 	}
 
 	return client, config, namespace, nil

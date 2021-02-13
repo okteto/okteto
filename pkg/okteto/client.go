@@ -106,7 +106,7 @@ func translateAPIErr(err error) error {
 }
 
 //SetKubeConfig updates a kubeconfig file with okteto cluster credentials
-func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
+func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string, setCurrent bool) error {
 	cfg, err := getOrCreateKubeConfig(kubeConfigPath)
 	if err != nil {
 		return err
@@ -141,7 +141,9 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	context.Namespace = namespace
 	cfg.Contexts[clusterName] = context
 
-	cfg.CurrentContext = clusterName
+	if setCurrent {
+		cfg.CurrentContext = clusterName
+	}
 
 	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }
