@@ -70,7 +70,7 @@ func Build(ctx context.Context) *cobra.Command {
 
 			ctx := context.Background()
 			if err := build.Run(ctx, "", buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
-				analytics.TrackBuild(false)
+				analytics.TrackBuild(buildKitHost, false)
 				return err
 			}
 
@@ -81,7 +81,7 @@ func Build(ctx context.Context) *cobra.Command {
 				log.Success(fmt.Sprintf("Image '%s' successfully pushed", tag))
 			}
 
-			analytics.TrackBuild(true)
+			analytics.TrackBuild(buildKitHost, true)
 			return nil
 		},
 	}

@@ -14,6 +14,12 @@
 package client
 
 import (
+	"net/url"
+	"strings"
+
+	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -21,19 +27,29 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var client *kubernetes.Clientset
-var config *rest.Config
-var namespace string
+const (
+	oktetoClusterType = "okteto"
+	localClusterType  = "local"
+	remoteClusterType = "remote"
+)
+
+var (
+	client        *kubernetes.Clientset
+	config        *rest.Config
+	namespace     string
+	context       string
+	localClusters = []string{"127.", "172.", "192.", "169.", model.Localhost, "::1", "fe80::", "fc00::"}
+)
 
 //GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
-func GetLocal(context string) (*kubernetes.Clientset, *rest.Config, string, error) {
+func GetLocal(k8sContext string) (*kubernetes.Clientset, *rest.Config, string, error) {
 	if client == nil {
 		var err error
 
 		clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			clientcmd.NewDefaultClientConfigLoadingRules(),
 			&clientcmd.ConfigOverrides{
-				CurrentContext: context,
+				CurrentContext: k8sContext,
 				ClusterInfo:    clientcmdapi.Cluster{Server: ""},
 			},
 		)
@@ -42,6 +58,12 @@ func GetLocal(context string) (*kubernetes.Clientset, *rest.Config, string, erro
 		if err != nil {
 			return nil, nil, "", err
 		}
+
+		rawConfig, err := clientConfig.RawConfig()
+		if err != nil {
+			return nil, nil, "", err
+		}
+		context = rawConfig.CurrentContext
 
 		config, err = clientConfig.ClientConfig()
 		if err != nil {
@@ -52,7 +74,10 @@ func GetLocal(context string) (*kubernetes.Clientset, *rest.Config, string, erro
 		if err != nil {
 			return nil, nil, "", err
 		}
+
+		setAnalytics(context, config.Host)
 	}
+
 	return client, config, namespace, nil
 }
 
@@ -67,4 +92,27 @@ func Reset() {
 func InCluster() bool {
 	_, err := rest.InClusterConfig()
 	return err == nil
+}
+
+func setAnalytics(clusterContext, clusterHost string) {
+	if okteto.GetClusterContext() == clusterContext {
+		analytics.SetClusterType(oktetoClusterType)
+		analytics.SetClusterContext(clusterContext)
+		return
+	}
+
+	u, err := url.Parse(clusterHost)
+	host := ""
+	if err == nil {
+		host = u.Hostname()
+	} else {
+		host = clusterHost
+	}
+	for _, l := range localClusters {
+		if strings.HasPrefix(host, l) {
+			analytics.SetClusterType(localClusterType)
+			return
+		}
+	}
+	analytics.SetClusterType(remoteClusterType)
 }

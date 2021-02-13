@@ -16,6 +16,8 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 )
 
 // Credentials top body answer
@@ -45,4 +47,10 @@ func GetCredentials(ctx context.Context, namespace string) (*Credential, error) 
 	}
 
 	return &cred.Credentials, nil
+}
+
+//GetClusterContext returns the k8s context names given an okteto URL
+func GetClusterContext() string {
+	u, _ := url.Parse(GetURL())
+	return strings.ReplaceAll(u.Host, ".", "_")
 }

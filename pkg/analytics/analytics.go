@@ -57,6 +57,8 @@ const (
 
 var (
 	mixpanelClient mixpanel.Mixpanel
+	clusterType    string
+	clusterContext string
 )
 
 func init() {
@@ -71,6 +73,16 @@ func init() {
 	}
 
 	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "")
+}
+
+// SetClusterType sets the cluster type for analytics
+func SetClusterType(value string) {
+	clusterType = value
+}
+
+// SetClusterContext sets the cluster context for analytics
+func SetClusterContext(value string) {
+	clusterContext = value
 }
 
 // TrackInit sends a tracking event to mixpanel when the user creates a manifest
@@ -97,10 +109,9 @@ func TrackDeleteNamespace(success bool) {
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func TrackReconnect(success bool, clusterType string, swap bool) {
+func TrackReconnect(success, swap bool) {
 	props := map[string]interface{}{
-		"clusterType": clusterType,
-		"swap":        swap,
+		"swap": swap,
 	}
 	track(reconnectEvent, success, props)
 }
@@ -111,10 +122,9 @@ func TrackSyncError() {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, dev, clusterType string, interactive, single, swap, remote bool) {
+func TrackUp(success bool, devName string, interactive, single, swap, remote bool) {
 	props := map[string]interface{}{
-		"name":          dev,
-		"clusterType":   clusterType,
+		"name":          devName,
 		"interactive":   interactive,
 		"singleService": single,
 		"swap":          swap,
@@ -172,8 +182,11 @@ func trackDisable(success bool) {
 }
 
 // TrackBuild sends a tracking event to mixpanel when the user builds on remote
-func TrackBuild(success bool) {
-	track(buildEvent, success, nil)
+func TrackBuild(oktetoBuilkitURL string, success bool) {
+	props := map[string]interface{}{
+		"oktetoBuilkitURL": oktetoBuilkitURL,
+	}
+	track(buildEvent, success, props)
 }
 
 // TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack
@@ -247,6 +260,12 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["machine_id"] = getMachineID()
 	props["origin"] = origin
 	props["success"] = success
+	if clusterType != "" {
+		props["clusterType"] = clusterType
+	}
+	if clusterContext != "" {
+		props["clusterContext"] = clusterContext
+	}
 
 	e := &mixpanel.Event{Properties: props}
 	trackID := getTrackID()
