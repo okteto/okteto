@@ -23,6 +23,9 @@ import (
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
+	if dev.WorkDir == "" && dev.MountPath == "" && len(dev.Sync.Folders) == 0 {
+		dev.WorkDir = "/okteto"
+	}
 	if err := dev.translateDeprecatedMountPath(nil); err != nil {
 		return err
 	}
