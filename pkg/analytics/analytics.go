@@ -109,7 +109,7 @@ func TrackDeleteNamespace(success bool) {
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func TrackReconnect(success bool, swap bool) {
+func TrackReconnect(success, swap bool) {
 	props := map[string]interface{}{
 		"swap": swap,
 	}
@@ -122,12 +122,13 @@ func TrackSyncError() {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, devName string, interactive, single, swap bool) {
+func TrackUp(success bool, devName string, interactive, single, swap, remote bool) {
 	props := map[string]interface{}{
 		"name":          devName,
 		"interactive":   interactive,
 		"singleService": single,
 		"swap":          swap,
+		"remote":        remote,
 	}
 	track(upEvent, success, props)
 }
