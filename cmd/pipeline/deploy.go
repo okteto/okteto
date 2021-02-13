@@ -94,9 +94,9 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if wait {
-				log.Success("Pipeline '%s' successfully executed", name)
+				log.Success("Pipeline '%s' successfully deployed", name)
 			} else {
-				log.Success("Pipeline '%s' started", name)
+				log.Success("Pipeline '%s' scheduled for deployment", name)
 			}
 
 			return nil
@@ -113,7 +113,7 @@ func deploy(ctx context.Context) *cobra.Command {
 }
 
 func deployPipeline(ctx context.Context, name, namespace, repository, branch string, wait bool, timeout time.Duration) error {
-	spinner := utils.NewSpinner("Creating your pipeline...")
+	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
 

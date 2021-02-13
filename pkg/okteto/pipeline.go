@@ -88,13 +88,22 @@ func GetPipelineByName(ctx context.Context, name, namespace string) (*PipelineRu
 }
 
 // DeletePipeline deletes a pipeline
-func DeletePipeline(ctx context.Context, name, namespace string) (string, error) {
+func DeletePipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (string, error) {
 	log.Infof("delete pipeline: %s/%s", namespace, name)
-	q := fmt.Sprintf(`mutation{
-		destroyGitRepository(name: "%s", space: "%s"){
-			id,status
-		},
-	}`, name, namespace)
+	q := ""
+	if destroyVolumes {
+		q = fmt.Sprintf(`mutation{
+			destroyGitRepository(name: "%s", space: "%s", destroyVolumes: %t){
+				id,status
+			},
+		}`, name, namespace, destroyVolumes)
+	} else {
+		q = fmt.Sprintf(`mutation{
+			destroyGitRepository(name: "%s", space: "%s"){
+				id,status
+			},
+		}`, name, namespace)
+	}
 
 	var body DeployPipelineBody
 	if err := query(ctx, q, &body); err != nil {
