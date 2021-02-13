@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -55,10 +54,6 @@ import (
 
 // ReconnectingMessage is the message shown when we are trying to reconnect
 const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
-
-var (
-	localClusters = []string{"127.", "172.", "192.", "169.", model.Localhost, "::1", "fe80::", "fc00::"}
-)
 
 //Up starts a development container
 func Up() *cobra.Command {
@@ -209,10 +204,14 @@ func (up *upContext) start(autoDeploy, build bool) error {
 
 	var namespace string
 	var err error
+
 	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal(up.Dev.Context)
 	if err != nil {
 		kubecfg := config.GetKubeConfigFile()
 		log.Infof("failed to load local Kubeconfig: %s", err)
+		if up.Dev.Context == "" {
+			return fmt.Errorf("failed to load your local Kubeconfig %q", kubecfg)
+		}
 		return fmt.Errorf("failed to load your local Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
 	}
 
@@ -243,7 +242,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	analytics.TrackUp(true, up.Dev.Name, up.getClusterType(), up.getInteractive(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
+	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.isSwap)
 
 	go up.activateLoop(autoDeploy, build)
 
@@ -393,7 +392,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 
 	up.success = true
 	if up.isRetry {
-		analytics.TrackReconnect(true, up.getClusterType(), up.isSwap)
+		analytics.TrackReconnect(true, up.isSwap)
 	}
 	log.Success("Files synchronized")
 
@@ -957,26 +956,6 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 		Hint: fmt.Sprintf(`Check your development container logs for errors: 'kubectl logs %s'.
     Run 'okteto down -v' to reset your development container and try again`, up.Pod),
 	}
-}
-
-func (up *upContext) getClusterType() string {
-	if up.isOktetoNamespace {
-		return "okteto"
-	}
-
-	u, err := url.Parse(up.RestConfig.Host)
-	host := ""
-	if err == nil {
-		host = u.Hostname()
-	} else {
-		host = up.RestConfig.Host
-	}
-	for _, l := range localClusters {
-		if strings.HasPrefix(host, l) {
-			return "local"
-		}
-	}
-	return "remote"
 }
 
 func (up *upContext) getInteractive() bool {
