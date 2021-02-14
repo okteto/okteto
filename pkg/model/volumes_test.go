@@ -27,6 +27,29 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name: "none",
+			dev: &Dev{
+				WorkDir: "",
+				Volumes: []Volume{},
+				Sync: Sync{
+					Folders: []SyncFolder{},
+				},
+			},
+			result: &Dev{
+				Volumes: []Volume{},
+				WorkDir: "/okteto",
+				Sync: Sync{
+					Folders: []SyncFolder{
+						{
+							LocalPath:  ".",
+							RemotePath: "/okteto",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "workdir",
 			dev: &Dev{
 				WorkDir: "/workdir",
