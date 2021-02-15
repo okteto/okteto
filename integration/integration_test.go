@@ -39,6 +39,7 @@ import (
 	upCmd "github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -256,6 +257,17 @@ func TestAll(t *testing.T) {
 		}
 
 		log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations["deployment.kubernetes.io/revision"])
+
+		//set bad server to test k8s credential refresh
+		kubeConfigFile := config.GetKubeConfigFile()
+		cred, err := okteto.GetCredentials(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cred.Server = "https://31.192.137.200:443"
+		if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), okteto.GetClusterContext(), false); err != nil {
+			t.Fatal(err)
+		}
 
 		var wg sync.WaitGroup
 		p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
