@@ -38,7 +38,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/google/uuid"
-	ps "github.com/mitchellh/go-ps"
+	"github.com/shirou/gopsutil/process"
 )
 
 var (
@@ -46,11 +46,10 @@ var (
 )
 
 const (
-	certFile         = "cert.pem"
-	keyFile          = "key.pem"
-	configFile       = "config.xml"
-	logFile          = "syncthing.log"
-	syncthingPidFile = "syncthing.pid"
+	certFile   = "cert.pem"
+	keyFile    = "key.pem"
+	configFile = "config.xml"
+	logFile    = "syncthing.log"
 
 	// DefaultRemoteDeviceID remote syncthing ID
 	DefaultRemoteDeviceID = "ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU"
@@ -90,7 +89,6 @@ type Syncthing struct {
 	LocalPort        int          `yaml:"-"`
 	Type             string       `yaml:"-"`
 	IgnoreDelete     bool         `yaml:"-"`
-	pid              int          `yaml:"-"`
 	RescanInterval   string       `yaml:"-"`
 	Compression      string       `yaml:"-"`
 }
@@ -220,29 +218,6 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	return s, nil
 }
 
-func (s *Syncthing) cleanupDaemon(pid int, wait bool) error {
-	process, err := ps.FindProcess(pid)
-	if process == nil && err == nil {
-		return nil
-	}
-
-	if err != nil {
-		log.Infof("error when looking up the process: %s", err)
-		return err
-	}
-
-	if process.Executable() != getBinaryName() {
-		return nil
-	}
-
-	err = terminate(pid, wait)
-	if err == nil {
-		log.Infof("terminated syncthing with pid %d", pid)
-	}
-
-	return err
-}
-
 func (s *Syncthing) initConfig() error {
 	if err := os.MkdirAll(s.Home, 0700); err != nil {
 		return fmt.Errorf("failed to create %s: %s", s.Home, err)
@@ -283,8 +258,6 @@ func (s *Syncthing) Run(ctx context.Context) error {
 		return err
 	}
 
-	pidPath := filepath.Join(s.Home, syncthingPidFile)
-
 	cmdArgs := []string{
 		"-home", s.Home,
 		"-no-browser",
@@ -304,13 +277,6 @@ func (s *Syncthing) Run(ctx context.Context) error {
 		return nil
 	}
 
-	if err := ioutil.WriteFile(pidPath, []byte(strconv.Itoa(s.cmd.Process.Pid)), 0600); err != nil {
-		return fmt.Errorf("failed to write syncthing pid file: %w", err)
-	}
-
-	s.pid = s.cmd.Process.Pid
-
-	log.Infof("local syncthing pid-%d running", s.pid)
 	return nil
 }
 
@@ -702,32 +668,36 @@ func (s *Syncthing) Restart(ctx context.Context) error {
 }
 
 // Stop halts the background process and cleans up.
-func (s *Syncthing) Stop(force bool) error {
-	pidPath := filepath.Join(s.Home, syncthingPidFile)
-	pid, err := getPID(pidPath)
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	if !force {
-		if pid != s.pid {
-			log.Infof("syncthing pid-%d wasn't created by this command, skipping", pid)
-			return nil
-		}
-	}
-
-	if err := s.cleanupDaemon(pid, force); err != nil {
+func (s *Syncthing) Stop(wait bool) error {
+	pList, err := process.Processes()
+	if err != nil {
 		return err
 	}
-
-	if err := os.Remove(pidPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil
+	for _, p := range pList {
+		exe, err := p.Exe()
+		if err != nil {
+			log.Infof("error getting procress exec: %s", err.Error())
+			continue
 		}
-
-		log.Infof("failed to delete pidfile %s: %s", pidPath, err)
+		if exe != getInstallPath() {
+			continue
+		}
+		if getParentExe(p) == getInstallPath() {
+			continue
+		}
+		argLine, err := p.Cmdline()
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(argLine, fmt.Sprintf("-home %s", s.Home)) {
+			continue
+		}
+		log.Infof("terminating syncthing with wait %t", wait)
+		if err := terminate(p, wait); err != nil {
+			log.Infof("error terminating syncthing: %s", err.Error())
+		}
+		log.Infof("terminated syncthing with wait %t", wait)
 	}
-
 	return nil
 }
 
@@ -819,19 +789,6 @@ func isDirEmpty(path string) (bool, error) {
 		return true, nil
 	}
 	return false, err // Either not empty or error, suits both cases
-}
-
-func getPID(pidPath string) (int, error) {
-	if _, err := os.Stat(pidPath); err != nil {
-		return 0, err
-	}
-
-	content, err := ioutil.ReadFile(pidPath) // nolint: gosec
-	if err != nil {
-		return 0, err
-	}
-
-	return strconv.Atoi(string(content))
 }
 
 func getInstallPath() string {
