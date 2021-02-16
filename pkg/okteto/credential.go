@@ -15,7 +15,6 @@ package okteto
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -37,11 +36,11 @@ type Credential struct {
 
 // GetCredentials returns the space config credentials
 func GetCredentials(ctx context.Context) (*Credential, error) {
-	q := fmt.Sprintf(`query{
+	q := `query{
 		credentials(space: ""){
 			server, certificate, token, namespace
 		},
-	}`)
+	}`
 
 	var cred Credentials
 	if err := query(ctx, q, &cred); err != nil {
