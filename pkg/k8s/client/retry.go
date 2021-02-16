@@ -90,5 +90,8 @@ func isCredentialError(resp *http.Response, err error) bool {
 	if err != nil && strings.Contains(err.Error(), "no such host") {
 		return true
 	}
+	if err != nil && strings.Contains(err.Error(), "after a period of time") {
+		return true
+	}
 	return false
 }
