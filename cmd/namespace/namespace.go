@@ -16,8 +16,6 @@ package namespace
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -78,7 +76,7 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		}
 	}
 
-	cred, err := okteto.GetCredentials(ctx, namespace)
+	cred, err := okteto.GetCredentials(ctx)
 	if err != nil {
 		return err
 	}
@@ -87,13 +85,13 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	}
 
 	kubeConfigFile := config.GetKubeConfigFile()
-	clusterHost := getClusterHost()
+	clusterContext := okteto.GetClusterContext()
 
-	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterHost); err != nil {
+	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterContext, true); err != nil {
 		return err
 	}
 
-	log.Success("Updated context '%s' in '%s'", clusterHost, kubeConfigFile)
+	log.Success("Updated context '%s' in '%s'", clusterContext, kubeConfigFile)
 	return nil
 }
 
@@ -121,9 +119,4 @@ func askOktetoURL() (string, error) {
 	oktetoURL = u
 
 	return oktetoURL, nil
-}
-
-func getClusterHost() string {
-	u, _ := url.Parse(okteto.GetURL())
-	return strings.ReplaceAll(u.Host, ".", "_")
 }
