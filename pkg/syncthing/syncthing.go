@@ -89,6 +89,7 @@ type Syncthing struct {
 	LocalPort        int          `yaml:"-"`
 	Type             string       `yaml:"-"`
 	IgnoreDelete     bool         `yaml:"-"`
+	pid              int          `yaml:"-"`
 	RescanInterval   string       `yaml:"-"`
 	Compression      string       `yaml:"-"`
 }
@@ -276,6 +277,8 @@ func (s *Syncthing) Run(ctx context.Context) error {
 	if s.cmd.Process == nil {
 		return nil
 	}
+
+	s.pid = s.cmd.Process.Pid
 
 	return nil
 }
@@ -667,37 +670,51 @@ func (s *Syncthing) Restart(ctx context.Context) error {
 	return err
 }
 
-// Stop halts the background process and cleans up.
-func (s *Syncthing) Stop(wait bool) error {
+// HardTerminate halts the background process and cleans up.
+func (s *Syncthing) HardTerminate() error {
 	pList, err := process.Processes()
 	if err != nil {
 		return err
 	}
 	for _, p := range pList {
-		exe, err := p.Exe()
+		executablePath, err := p.Exe()
 		if err != nil {
-			log.Infof("error getting procress exec: %s", err.Error())
+			log.Infof("error getting exec path for process %d: %s", p.Pid, err.Error())
 			continue
 		}
-		if exe != getInstallPath() {
+		if executablePath != getInstallPath() {
 			continue
 		}
-		if getParentExe(p) == getInstallPath() {
-			continue
-		}
-		argLine, err := p.Cmdline()
+		cmdline, err := p.Cmdline()
 		if err != nil {
 			return err
 		}
-		if !strings.Contains(argLine, fmt.Sprintf("-home %s", s.Home)) {
+		if !strings.Contains(cmdline, fmt.Sprintf("-home %s", s.Home)) {
 			continue
 		}
-		log.Infof("terminating syncthing with wait %t", wait)
-		if err := terminate(p, wait); err != nil {
-			log.Infof("error terminating syncthing: %s", err.Error())
+		log.Infof("terminating syncthing %d with wait: %s", p.Pid, s.Home)
+		if err := terminate(p, true); err != nil {
+			log.Infof("error terminating syncthing %d with wait: %s", p.Pid, err.Error())
 		}
-		log.Infof("terminated syncthing with wait %t", wait)
+		log.Infof("terminated syncthing %d with wait: %s", p.Pid, s.Home)
 	}
+	return nil
+}
+
+// SoftTerminate best effor to halt the background process
+func (s *Syncthing) SoftTerminate() error {
+	if s.pid == 0 {
+		return nil
+	}
+	p, err := process.NewProcess(int32(s.pid))
+	if err != nil {
+		return fmt.Errorf("error getting syncthing process %d: %s", s.pid, err.Error())
+	}
+	log.Infof("terminating syncthing %d without wait", s.pid)
+	if err := terminate(p, false); err != nil {
+		return fmt.Errorf("error terminating syncthing %d without wait: %s", p.Pid, err.Error())
+	}
+	log.Infof("terminated syncthing %d without wait", s.pid)
 	return nil
 }
 

@@ -16,44 +16,27 @@ package syncthing
 import (
 	"time"
 
-	"github.com/okteto/okteto/pkg/log"
 	"github.com/shirou/gopsutil/process"
 )
-
-func getParentExe(p *process.Process) string {
-	parent, err := p.Parent()
-	if err != nil {
-		log.Infof("error getting parent process: %s", err.Error())
-		return ""
-	}
-	if parent == nil {
-		return ""
-	}
-	parentExe, err := parent.Exe()
-	if err != nil {
-		log.Infof("error getting parent process exe: %s", err.Error())
-		return ""
-	}
-	return parentExe
-
-}
 
 func terminate(p *process.Process, wait bool) error {
 	if err := p.Terminate(); err != nil {
 		return err
 	}
 
-	if wait {
-		isRunning, err := p.IsRunning()
+	if !wait {
+		return nil
+	}
+
+	isRunning, err := p.IsRunning()
+	if err != nil {
+		return err
+	}
+	for isRunning {
+		time.Sleep(10 * time.Millisecond)
+		isRunning, err = p.IsRunning()
 		if err != nil {
 			return err
-		}
-		for isRunning {
-			time.Sleep(10 * time.Millisecond)
-			isRunning, err = p.IsRunning()
-			if err != nil {
-				return err
-			}
 		}
 	}
 
