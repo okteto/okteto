@@ -45,7 +45,6 @@ require (
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pierrec/lz4 v2.4.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/shirou/gopsutil v3.21.1+incompatible
 	github.com/sirupsen/logrus v1.6.0
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/cobra v1.1.1
