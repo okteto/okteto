@@ -89,7 +89,8 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		var termFD int
 		var ok bool
 		if termFD, ok = isTerminal(inR); ok {
-			width, height, err = terminal.GetSize(termFD)
+			width, height, err = terminal.GetSize(int(os.Stdout.Fd()))
+			log.Infof("terminal width %d height %d", width, height)
 			if err != nil {
 				log.Infof("request for terminal size failed: %s", err)
 			}
