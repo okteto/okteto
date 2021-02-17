@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/alessio/shellescape"
+	dockerterm "github.com/moby/term"
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
@@ -36,6 +37,9 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	if err != nil {
 		return fmt.Errorf("failed to get SSH configuration: %s", err)
 	}
+
+	//dockerterm.StdStreams() configures the terminal on windows
+	dockerterm.StdStreams()
 
 	var connection *ssh.Client
 	t := time.NewTicker(100 * time.Millisecond)

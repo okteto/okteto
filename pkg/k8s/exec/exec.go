@@ -19,6 +19,7 @@ import (
 	"io"
 	"strings"
 
+	dockerterm "github.com/moby/term"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
@@ -30,6 +31,8 @@ import (
 
 // Exec executes the command in the development container
 func Exec(ctx context.Context, c *kubernetes.Clientset, config *rest.Config, podNamespace, podName, container string, tty bool, stdin io.Reader, stdout, stderr io.Writer, command []string) error {
+	//dockerterm.StdStreams() configures the terminal on windows
+	dockerterm.StdStreams()
 
 	p := &kexec.ExecOptions{}
 
