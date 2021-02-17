@@ -1,5 +1,3 @@
-// +build !windows
-
 // Copyright 2020 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,23 +14,9 @@
 package syncthing
 
 import (
-	"os"
-	"strings"
+	"github.com/mattn/psutil"
 )
 
 func terminate(pid int, wait bool) error {
-	proc := os.Process{Pid: pid}
-	if err := proc.Signal(os.Interrupt); err != nil {
-		if strings.Contains(err.Error(), "process already finished") {
-			return nil
-		}
-
-		return err
-	}
-
-	if wait {
-		defer proc.Wait() // nolint: errcheck
-	}
-
-	return nil
+	return psutil.TerminateTree(pid, 0)
 }

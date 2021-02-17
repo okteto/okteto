@@ -316,7 +316,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	up.Disconnect = make(chan error, 1)
 	up.CommandResult = make(chan error, 1)
 	up.cleaned = make(chan string, 1)
-	up.hardTerminate = make(chan error, 1)
 
 	d, create, err := up.getCurrentDeployment(ctx, autoDeploy)
 	if err != nil {
@@ -350,7 +349,9 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		}
 	}
 
-	go up.initializeSyncthing()
+	if err := up.initializeSyncthing(); err != nil {
+		return err
+	}
 
 	if err := up.setDevContainer(d); err != nil {
 		return err
@@ -581,22 +582,17 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 		return err
 	}
 
+	log.Info("create deployment secrets")
+	if err := secrets.Create(ctx, up.Dev, up.Client, up.Sy); err != nil {
+		return err
+	}
+
 	trList, err := deployments.GetTranslations(ctx, up.Dev, d, up.Client)
 	if err != nil {
 		return err
 	}
 
 	if err := deployments.TranslateDevMode(trList, up.Client, up.isOktetoNamespace); err != nil {
-		return err
-	}
-
-	initSyncErr := <-up.hardTerminate
-	if initSyncErr != nil {
-		return initSyncErr
-	}
-
-	log.Info("create deployment secrets")
-	if err := secrets.Create(ctx, up.Dev, up.Client, up.Sy); err != nil {
 		return err
 	}
 
@@ -745,7 +741,9 @@ func (up *upContext) initializeSyncthing() error {
 		log.Infof("error saving syncthing object: %s", err)
 	}
 
-	up.hardTerminate <- up.Sy.HardTerminate()
+	if err := up.Sy.Stop(true); err != nil {
+		log.Infof("failed to stop existing syncthing processes: %s", err)
+	}
 
 	return nil
 }
@@ -1013,7 +1011,7 @@ func (up *upContext) shutdown() {
 
 	if up.Sy != nil {
 		log.Infof("stopping syncthing")
-		if err := up.Sy.SoftTerminate(); err != nil {
+		if err := up.Sy.Stop(false); err != nil {
 			log.Infof("failed to stop syncthing during shutdown: %s", err.Error())
 		}
 	}
