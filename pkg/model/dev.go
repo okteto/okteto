@@ -284,7 +284,8 @@ func Read(bytes []byte) (*Dev, error) {
 		Sync: Sync{
 			Folders: make([]SyncFolder, 0),
 		},
-		Services: make([]*Dev, 0),
+		Services:             make([]*Dev, 0),
+		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
 	}
 
 	if bytes != nil {
