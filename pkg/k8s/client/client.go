@@ -65,7 +65,11 @@ func GetLocal(k8sContext string) (*kubernetes.Clientset, *rest.Config, string, e
 			return nil, nil, "", err
 		}
 
-		currentContext = rawConfig.CurrentContext
+		if k8sContext != "" {
+			currentContext = k8sContext
+		} else {
+			currentContext = rawConfig.CurrentContext
+		}
 		if okteto.GetClusterContext() == currentContext {
 			ctx := context.Background()
 			go okteto.RefreshOktetoKubeconfig(ctx, namespace)
