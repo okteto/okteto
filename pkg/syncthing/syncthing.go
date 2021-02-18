@@ -670,7 +670,7 @@ func (s *Syncthing) Restart(ctx context.Context) error {
 	return err
 }
 
-// HardTerminate halts the background process and cleans up.
+// HardTerminate halts the background process, waits for 1s and kills the process if it is still running
 func (s *Syncthing) HardTerminate() error {
 	pList, err := process.Processes()
 	if err != nil {
@@ -701,7 +701,7 @@ func (s *Syncthing) HardTerminate() error {
 	return nil
 }
 
-// SoftTerminate best effor to halt the background process
+// SoftTerminate halts the background process
 func (s *Syncthing) SoftTerminate() error {
 	if s.pid == 0 {
 		return nil

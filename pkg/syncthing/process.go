@@ -28,17 +28,41 @@ func terminate(p *process.Process, wait bool) error {
 		return nil
 	}
 
-	isRunning, err := p.IsRunning()
+	notRunning, err := waitUntilNotRunning(p)
 	if err != nil {
 		return err
 	}
-	for isRunning {
-		time.Sleep(10 * time.Millisecond)
+
+	if notRunning {
+		return nil
+	}
+
+	if err := p.Kill(); err != nil {
+		return err
+	}
+
+	_, err = waitUntilNotRunning(p)
+	return err
+}
+
+func waitUntilNotRunning(p *process.Process) (bool, error) {
+	isRunning, err := p.IsRunning()
+	if err != nil {
+		return false, err
+	}
+
+	tick := time.NewTicker(10 * time.Millisecond)
+
+	for i := 0; i < 100; i++ {
+		if !isRunning {
+			return true, nil
+		}
+		<-tick.C
 		isRunning, err = p.IsRunning()
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
-	return nil
+	return false, nil
 }
