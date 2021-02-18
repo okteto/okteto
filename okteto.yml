@@ -1,8 +1,7 @@
 name: cli
 image: okteto/golang:1
 command: bash
+workdir: /okteto
 volumes:
   - /go/pkg/
   - /root/.cache/go-build/
-sync:
-  - .:/okteto

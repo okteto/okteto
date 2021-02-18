@@ -677,12 +677,12 @@ func (s *Syncthing) HardTerminate() error {
 		return err
 	}
 	for _, p := range pList {
-		executablePath, err := p.Exe()
+		name, err := p.Name()
 		if err != nil {
-			log.Infof("error getting exec path for process %d: %s", p.Pid, err.Error())
+			log.Infof("error getting name for process %d: %s", p.Pid, err.Error())
 			continue
 		}
-		if executablePath != getInstallPath() {
+		if !strings.Contains(name, "syncthing") {
 			continue
 		}
 		cmdline, err := p.Cmdline()
