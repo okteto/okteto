@@ -40,6 +40,7 @@ type upContext struct {
 	Exit              chan error
 	Sy                *syncthing.Syncthing
 	cleaned           chan string
+	hardTerminate     chan error
 	success           bool
 	resetSyncthing    bool
 	inFd              uintptr

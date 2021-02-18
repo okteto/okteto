@@ -86,7 +86,7 @@ func stopSyncthing(dev *model.Dev) {
 		return
 	}
 
-	if err := sy.Stop(true); err != nil {
-		log.Infof("failed to stop existing syncthing")
+	if err := sy.HardTerminate(); err != nil {
+		log.Infof("failed to hard terminate existing syncthing")
 	}
 }
