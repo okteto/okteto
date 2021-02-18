@@ -144,6 +144,7 @@ type Dev struct {
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
+	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 }
 
 //Command represents the start command of a development contaianer

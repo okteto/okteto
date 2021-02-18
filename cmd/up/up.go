@@ -467,10 +467,11 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) 
 		return nil, false, err
 	}
 
-	if !autoDeploy {
-		if err := utils.AskIfDeploy(up.Dev.Name, up.Dev.Namespace); err != nil {
-			return nil, false, err
-		}
+	if !autoDeploy && !up.Dev.Autocreate {
+		err = errors.UserError{
+			E:    fmt.Errorf("Can't autocreate deployment"),
+			Hint: "Deploy your app first on okteto cloud or enable it using --deploy arg or setting autocreate variable to true in your manifest"}
+		return nil, false, err
 	}
 
 	return up.Dev.GevSandbox(), true, nil
