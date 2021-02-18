@@ -109,7 +109,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			if err := loadDevOverrides(dev, namespace, k8sContext, forcePull, remote); err != nil {
+			if err := loadDevOverrides(dev, namespace, k8sContext, forcePull, remote, autoDeploy); err != nil {
 				return err
 			}
 
@@ -177,7 +177,7 @@ func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
 	return utils.LoadDev(devPath)
 }
 
-func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int) error {
+func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int, autoDeploy bool) error {
 
 	dev.LoadContext(namespace, k8sContext)
 
@@ -191,6 +191,10 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 		}
 
 		dev.LoadRemote(ssh.GetPublicKey())
+	}
+
+	if !dev.Autocreate {
+		dev.Autocreate = autoDeploy
 	}
 
 	if forcePull {
@@ -467,10 +471,10 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) 
 		return nil, false, err
 	}
 
-	if !autoDeploy && !up.Dev.Autocreate {
+	if !up.Dev.Autocreate {
 		err = errors.UserError{
-			E:    fmt.Errorf("Can't autocreate deployment"),
-			Hint: "Deploy your app first on okteto cloud or enable it using --deploy arg or setting autocreate variable to true in your manifest"}
+			E:    fmt.Errorf("Deployment %s not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
+			Hint: "- Make sure your application is deployed and ready.\n-Make sure your context is pointing to the right namespace.\n- Set the `autocreate` property in your okteto.yml manifest if you want to automatically create a new development container."}
 		return nil, false, err
 	}
 
