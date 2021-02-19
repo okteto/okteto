@@ -1,5 +1,3 @@
-// +build !windows
-
 // Copyright 2020 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,23 +14,55 @@
 package syncthing
 
 import (
-	"os"
-	"strings"
+	"time"
+
+	"github.com/shirou/gopsutil/process"
 )
 
-func terminate(pid int, wait bool) error {
-	proc := os.Process{Pid: pid}
-	if err := proc.Signal(os.Interrupt); err != nil {
-		if strings.Contains(err.Error(), "process already finished") {
-			return nil
-		}
-
+func terminate(p *process.Process, wait bool) error {
+	if err := p.Terminate(); err != nil {
 		return err
 	}
 
-	if wait {
-		defer proc.Wait() // nolint: errcheck
+	if !wait {
+		return nil
 	}
 
-	return nil
+	notRunning, err := waitUntilNotRunning(p)
+	if err != nil {
+		return err
+	}
+
+	if notRunning {
+		return nil
+	}
+
+	if err := p.Kill(); err != nil {
+		return err
+	}
+
+	_, err = waitUntilNotRunning(p)
+	return err
+}
+
+func waitUntilNotRunning(p *process.Process) (bool, error) {
+	isRunning, err := p.IsRunning()
+	if err != nil {
+		return false, err
+	}
+
+	tick := time.NewTicker(10 * time.Millisecond)
+
+	for i := 0; i < 100; i++ {
+		if !isRunning {
+			return true, nil
+		}
+		<-tick.C
+		isRunning, err = p.IsRunning()
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return false, nil
 }
