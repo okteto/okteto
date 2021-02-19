@@ -104,6 +104,12 @@ func Up() *cobra.Command {
 
 			checkLocalWatchesConfiguration()
 
+			if autoDeploy {
+				log.Yellow(`Warning: The use of 'deploy' flag will be deprecated in a future release. 
+    	 Please set 'autocreate' in your okteto manifest to get the same behaviour. 
+    	 More information is available here: https://okteto.com/docs/reference/cli#up`)
+			}
+
 			dev, err := loadDevOrInit(namespace, k8sContext, devPath)
 			if err != nil {
 				return err
@@ -146,6 +152,7 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
+	cmd.Flags().MarkHidden("deploy")
 	cmd.Flags().BoolVarP(&build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
 	cmd.Flags().BoolVarP(&forcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().BoolVarP(&resetSyncthing, "reset", "", false, "reset the file synchronization database")
