@@ -475,9 +475,9 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) 
 		err = errors.UserError{
 			E: fmt.Errorf("Deployment %s not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
 			Hint: `Please:
-	- Make sure your application is deployed and ready.
-	- Make sure your context is pointing to the right namespace.
-	- Set the 'autocreate' property in your okteto.yml manifest if you want to automatically create a new development container.
+      - Make sure your application is deployed.
+      - Make sure your context is pointing to the right namespace.
+      - To automatically create a new deployment, set 'autocreate' in your okteto manifest.
     More information is available here: https://okteto.com/docs/reference/cli#up`,
 		}
 		return nil, false, err
