@@ -5,7 +5,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: okteto/golang-ci:1.16rc1
+      - image: okteto/golang-ci:1.16
     steps:
       - checkout
       - restore_cache: 
@@ -76,7 +76,7 @@ jobs:
           path: /root/.okteto        
   mock-publish-github-release:
     docker:
-      - image: okteto/golang-ci:1.15
+      - image: okteto/golang-ci:1.16
     steps:
       - checkout
       - attach_workspace:
@@ -95,7 +95,7 @@ jobs:
       - checkout
       - run: 
           name: upgrade golang
-          command: choco upgrade golang --version 1.15
+          command: choco upgrade golang --version 1.16
       - restore_cache: 
           keys:
             - v4-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -142,7 +142,7 @@ jobs:
           path: C:\Users\circleci\.okteto
   release:
     docker:
-      - image: circleci/golang:1.15
+      - image: circleci/golang:1.16
     steps:
       - checkout
       - attach_workspace:
@@ -193,7 +193,7 @@ jobs:
             git push https://${GITHUB_TOKEN}@github.com/okteto/homebrew-okteto.git master
   release-master:
     docker:
-      - image: circleci/golang:1.15
+      - image: circleci/golang:1.16
     steps:
       - checkout
       - setup_remote_docker:
