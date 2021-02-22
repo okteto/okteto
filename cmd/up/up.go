@@ -105,9 +105,9 @@ func Up() *cobra.Command {
 			checkLocalWatchesConfiguration()
 
 			if autoDeploy {
-				log.Yellow(`Warning: The use of 'deploy' flag will be deprecated in a future release. 
-    	 Please set 'autocreate' in your okteto manifest to get the same behaviour. 
-    	 More information is available here: https://okteto.com/docs/reference/cli#up`)
+				log.Yellow(`The use of 'deploy' flag will be deprecated in a future release. 
+Please set 'autocreate' in your okteto manifest to get the same behavior. 
+More information is available here: https://okteto.com/docs/reference/cli#up`)
 			}
 
 			dev, err := loadDevOrInit(namespace, k8sContext, devPath)
