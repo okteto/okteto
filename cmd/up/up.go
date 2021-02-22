@@ -105,8 +105,8 @@ func Up() *cobra.Command {
 			checkLocalWatchesConfiguration()
 
 			if autoDeploy {
-				log.Yellow(`The use of 'deploy' flag will be deprecated in a future release. 
-Please set 'autocreate' in your okteto manifest to get the same behavior. 
+				log.Yellow(`The 'deploy' flag is deprecated and will be removed in a future release.
+Set the 'autocreate' field in your okteto manifest to get the same behavior.
 More information is available here: https://okteto.com/docs/reference/cli#up`)
 			}
 
@@ -480,11 +480,9 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) 
 
 	if !up.Dev.Autocreate {
 		err = errors.UserError{
-			E: fmt.Errorf("Deployment %s not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
-			Hint: `Please:
-      - Make sure your application is deployed.
-      - Make sure your context is pointing to the right namespace.
-      - To automatically create a new deployment, set 'autocreate' in your okteto manifest.
+			E: fmt.Errorf("Deployment '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
+			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+    Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
     More information is available here: https://okteto.com/docs/reference/cli#up`,
 		}
 		return nil, false, err

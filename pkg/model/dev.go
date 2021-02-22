@@ -114,6 +114,7 @@ var (
 //Dev represents a development container
 type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
+	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
@@ -144,7 +145,6 @@ type Dev struct {
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
-	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 }
 
 //Command represents the start command of a development contaianer
