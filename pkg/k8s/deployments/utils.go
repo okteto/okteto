@@ -71,7 +71,6 @@ func getTranslationFromAnnotation(annotations map[string]string) (model.Translat
 	return tr, nil
 }
 
-//GetTranslations fills all the deployments pointed by a development container
 func getPreviousDeploymentReplicas(d *appsv1.Deployment) int32 {
 	replicas := *d.Spec.Replicas
 	previousState, ok := d.Annotations[okLabels.StateBeforeSleepingAnnontation]
