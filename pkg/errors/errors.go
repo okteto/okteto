@@ -32,13 +32,13 @@ func (u UserError) Error() string {
 
 // CommandError is meant for errors displayed to the user. It can include a message and a hint
 type CommandError struct {
-	E        error
-	ExitCode error
+	E      error
+	Reason error
 }
 
 // Error returns the error message
 func (u CommandError) Error() string {
-	return fmt.Sprintf("%s: %s", u.E.Error(), u.ExitCode.Error())
+	return fmt.Sprintf("%s: %s", u.E.Error(), u.Reason.Error())
 }
 
 var (

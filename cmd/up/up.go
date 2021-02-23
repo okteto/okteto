@@ -503,8 +503,8 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 					return err
 				}
 				return errors.CommandError{
-					E:        errors.ErrCommandFailed,
-					ExitCode: err,
+					E:      errors.ErrCommandFailed,
+					Reason: err,
 				}
 			}
 
