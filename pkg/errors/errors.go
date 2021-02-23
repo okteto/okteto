@@ -30,7 +30,7 @@ func (u UserError) Error() string {
 	return u.E.Error()
 }
 
-// UserError is meant for errors displayed to the user. It can include a message and a hint
+// CommandError is meant for errors displayed to the user. It can include a message and a hint
 type CommandError struct {
 	E        error
 	ExitCode error
