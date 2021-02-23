@@ -19,6 +19,8 @@ import (
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func Test_set_translation_as_annotation_and_back(t *testing.T) {
@@ -63,5 +65,64 @@ annotations:
 	}
 	if tr1.Replicas != tr2.Replicas {
 		t.Fatal("Mismatching Replicas count between original and unmarshalled translation")
+	}
+}
+
+func Test_getPreviousDeploymentReplicas(t *testing.T) {
+	var twoReplica int32 = 2
+	var tests = []struct {
+		name     string
+		d        *appsv1.Deployment
+		expected int32
+	}{
+		{
+			name: "ok",
+			d: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: nil,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &twoReplica,
+				},
+			},
+			expected: 2,
+		},
+		{
+			name: "sleeping-state-ok",
+			d: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						okLabels.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &twoReplica,
+				},
+			},
+			expected: 3,
+		},
+		{
+			name: "sleeping-state-ko",
+			d: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						okLabels.StateBeforeSleepingAnnontation: "wrong",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &twoReplica,
+				},
+			},
+			expected: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getPreviousDeploymentReplicas(tt.d)
+			if result != tt.expected {
+				t.Errorf("Test '%s' failed: expected %d but got %d", tt.name, tt.expected, result)
+			}
+		})
 	}
 }

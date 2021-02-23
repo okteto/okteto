@@ -17,9 +17,15 @@ import (
 	"encoding/json"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+type stateBeforeSleeping struct {
+	Replicas int
+}
 
 func setLabel(o metav1.Object, key, value string) {
 	labels := o.GetLabels()
@@ -63,4 +69,18 @@ func getTranslationFromAnnotation(annotations map[string]string) (model.Translat
 		return model.Translation{}, err
 	}
 	return tr, nil
+}
+
+func getPreviousDeploymentReplicas(d *appsv1.Deployment) int32 {
+	replicas := *d.Spec.Replicas
+	previousState, ok := d.Annotations[okLabels.StateBeforeSleepingAnnontation]
+	if !ok {
+		return replicas
+	}
+	var state stateBeforeSleeping
+	if err := json.Unmarshal([]byte(previousState), &state); err != nil {
+		log.Infof("error getting previous state of deployment '%s': %s", d.Name, err.Error())
+		return 1
+	}
+	return int32(state.Replicas)
 }
