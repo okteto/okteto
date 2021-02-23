@@ -30,6 +30,17 @@ func (u UserError) Error() string {
 	return u.E.Error()
 }
 
+// UserError is meant for errors displayed to the user. It can include a message and a hint
+type CommandError struct {
+	E        error
+	ExitCode error
+}
+
+// Error returns the error message
+func (u CommandError) Error() string {
+	return fmt.Sprintf("%s: %s", u.E.Error(), u.ExitCode.Error())
+}
+
 var (
 	// ErrNotDevDeployment is raised when we detect that the deployment was returned to production mode
 	ErrNotDevDeployment = errors.New("Deployment is no longer in developer mode")
