@@ -114,6 +114,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 			return err
 		}
 		if d == nil {
+			dev.Autocreate = true
 			linguist.SetForwardDefaults(dev, language)
 		} else {
 			dev.Container = container
