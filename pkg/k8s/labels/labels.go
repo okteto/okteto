@@ -55,4 +55,7 @@ const (
 
 	//DefaultStorageClassAnnotation indicates the defaault storage class
 	DefaultStorageClassAnnotation = "storageclass.kubernetes.io/is-default-class"
+
+	//StateBeforeSleepingAnnontation indicates the state of the resource prior to scale it to zero
+	StateBeforeSleepingAnnontation = "dev.okteto.com/state-before-sleeping"
 )
