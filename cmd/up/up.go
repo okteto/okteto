@@ -120,6 +120,8 @@ More information is available here: https://okteto.com/docs/reference/cli#up`)
 				return err
 			}
 
+			log.Init(logrus.WarnLevel, config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
+
 			if err := checkStignoreConfiguration(dev); err != nil {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
 			}
@@ -209,15 +211,18 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 		dev.LoadForcePull()
 	}
 
+	if dev.Namespace == "" {
+		dev.Namespace, _ = k8Client.GetNamespace(k8sContext)
+	}
+
 	return nil
 }
 
 func (up *upContext) start(autoDeploy, build bool) error {
 
-	var namespace string
 	var err error
 
-	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal(up.Dev.Context)
+	up.Client, up.RestConfig, _, err = k8Client.GetLocal(up.Dev.Context)
 	if err != nil {
 		kubecfg := config.GetKubeConfigFile()
 		log.Infof("failed to load local Kubeconfig: %s", err)
@@ -226,12 +231,6 @@ func (up *upContext) start(autoDeploy, build bool) error {
 		}
 		return fmt.Errorf("failed to load your local Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
 	}
-
-	if up.Dev.Namespace == "" {
-		up.Dev.Namespace = namespace
-	}
-
-	log.Init(logrus.WarnLevel, config.GetDeploymentHome(up.Dev.Namespace, up.Dev.Name), config.VersionString)
 
 	ctx := context.Background()
 	ns, err := namespaces.Get(ctx, up.Dev.Namespace, up.Client)
