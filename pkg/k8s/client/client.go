@@ -80,6 +80,7 @@ func GetLocal(k8sContext string) (*kubernetes.Clientset, *rest.Config, string, e
 		}
 
 		setAnalytics(currentContext, config.Host)
+		return client, config, namespace, nil
 	}
 
 	return client, config, namespace, nil
