@@ -44,6 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
+	"github.com/sirupsen/logrus"
 
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -229,6 +230,8 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	if up.Dev.Namespace == "" {
 		up.Dev.Namespace = namespace
 	}
+
+	log.Init(logrus.WarnLevel, config.GetDeploymentHome(up.Dev.Namespace, up.Dev.Name), config.VersionString)
 
 	ctx := context.Background()
 	ns, err := namespaces.Get(ctx, up.Dev.Namespace, up.Client)

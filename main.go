@@ -29,7 +29,6 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/util/runtime"
 
@@ -61,7 +60,6 @@ func init() {
 
 func main() {
 	ctx := context.Background()
-	log.Init(logrus.WarnLevel, config.GetOktetoHome(), config.VersionString)
 	var logLevel string
 
 	root := &cobra.Command{
