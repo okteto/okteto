@@ -58,11 +58,9 @@ func init() {
 }
 
 // Init configures the logger for the package to use.
-func Init(level logrus.Level, dir, version string) {
+func Init(level logrus.Level) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
-
-	CreateLogFile(dir, version)
 }
 
 func CreateLogFile(dir, version string) {
