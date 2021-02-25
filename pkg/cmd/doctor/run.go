@@ -88,9 +88,9 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	files := []string{summaryFilename}
 	files = append(files, stignoreFilenames...)
 
-	deploymentLogs := filepath.Join(config.GetDeploymentHome(dev.Namespace, dev.Name), "okteto.log")
-	if model.FileExists(deploymentLogs) {
-		files = append(files, deploymentLogs)
+	deploymentLogsPath := filepath.Join(config.GetDeploymentHome(dev.Namespace, dev.Name), "okteto.log")
+	if model.FileExists(deploymentLogsPath) {
+		files = append(files, deploymentLogsPath)
 	}
 
 	if model.FileExists(syncthing.GetLogFile(dev.Namespace, dev.Name)) {
