@@ -46,8 +46,9 @@ var (
 //GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
 func GetLocal(k8sContext string) (*kubernetes.Clientset, *rest.Config, string, error) {
 	if client == nil {
+		var err error
 		clientConfig = GetClientConfig(k8sContext)
-		namespace, err := GetNamespace(k8sContext)
+		namespace, err = GetNamespace(k8sContext)
 		if err != nil {
 			return nil, nil, "", err
 		}
@@ -80,7 +81,6 @@ func GetLocal(k8sContext string) (*kubernetes.Clientset, *rest.Config, string, e
 		}
 
 		setAnalytics(currentContext, config.Host)
-		return client, config, namespace, nil
 	}
 
 	return client, config, namespace, nil
