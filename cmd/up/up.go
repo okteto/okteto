@@ -44,7 +44,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
-	"github.com/sirupsen/logrus"
 
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -120,7 +119,7 @@ More information is available here: https://okteto.com/docs/reference/cli#up`)
 				return err
 			}
 
-			log.Init(logrus.WarnLevel, config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
+			log.CreateLogFile(config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
