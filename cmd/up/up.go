@@ -190,6 +190,10 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 
 	dev.LoadContext(namespace, k8sContext)
 
+	if dev.Namespace == "" {
+		dev.Namespace, _ = k8Client.GetNamespace(k8sContext)
+	}
+
 	if remote > 0 {
 		dev.RemotePort = remote
 	}
@@ -208,10 +212,6 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 
 	if forcePull {
 		dev.LoadForcePull()
-	}
-
-	if dev.Namespace == "" {
-		dev.Namespace, _ = k8Client.GetNamespace(k8sContext)
 	}
 
 	return nil
