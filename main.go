@@ -108,9 +108,9 @@ func main() {
 			}
 		}
 		if cErr, ok := err.(errors.CommandError); ok {
-			if strings.Contains(cErr.Reason.Error(), "exit code 137") || strings.Contains(cErr.Reason.Error(), "4294967295") {
+			if strings.Contains(cErr.Reason.Error(), "exit code 137") || strings.Contains(cErr.Reason.Error(), "4294967295") || strings.Contains(cErr.Reason.Error(), "status 137") {
 				log.Yellow(`Insufficient memory. Please update your resources on your manifest.
-More information is available: https://okteto.com/docs/reference/manifest#resources-object-optional`)
+More information is available here: https://okteto.com/docs/reference/manifest#resources-object-optional`)
 			}
 		}
 		os.Exit(1)
