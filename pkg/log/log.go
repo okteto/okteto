@@ -58,10 +58,12 @@ func init() {
 }
 
 // Init configures the logger for the package to use.
-func Init(level logrus.Level, dir, version string) {
+func Init(level logrus.Level) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
+}
 
+func ConfigureFileLogger(dir, version string) {
 	fileLogger := logrus.New()
 	fileLogger.SetFormatter(&logrus.TextFormatter{
 		DisableColors: true,

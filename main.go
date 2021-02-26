@@ -61,7 +61,7 @@ func init() {
 
 func main() {
 	ctx := context.Background()
-	log.Init(logrus.WarnLevel, config.GetOktetoHome(), config.VersionString)
+	log.Init(logrus.WarnLevel)
 	var logLevel string
 
 	root := &cobra.Command{
