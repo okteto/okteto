@@ -503,7 +503,10 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 				if errors.IsTransient(err) {
 					return err
 				}
-				return errors.ErrCommandFailed
+				return errors.CommandError{
+					E:      errors.ErrCommandFailed,
+					Reason: err,
+				}
 			}
 
 			log.Info("command completed")
