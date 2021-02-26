@@ -63,7 +63,7 @@ func Init(level logrus.Level) {
 	log.out.SetLevel(level)
 }
 
-func CreateLogFile(dir, version string) {
+func ConfigureFileLogger(dir, version string) {
 	fileLogger := logrus.New()
 	fileLogger.SetFormatter(&logrus.TextFormatter{
 		DisableColors: true,

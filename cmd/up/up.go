@@ -119,7 +119,7 @@ More information is available here: https://okteto.com/docs/reference/cli#up`)
 				return err
 			}
 
-			log.CreateLogFile(config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
+			log.ConfigureFileLogger(config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
