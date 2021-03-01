@@ -35,7 +35,6 @@ const (
 )
 
 var (
-	clientConfig   clientcmd.ClientConfig
 	client         *kubernetes.Clientset
 	config         *rest.Config
 	namespace      string
