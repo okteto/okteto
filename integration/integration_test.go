@@ -423,7 +423,7 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 
 	log.Printf("create namespace output: \n%s\n", string(o))
 
-	_, _, n, err := k8Client.GetLocal("")
+	n, err := k8Client.GetNamespace("")
 	if err != nil {
 		return err
 	}
