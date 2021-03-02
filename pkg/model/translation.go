@@ -48,7 +48,7 @@ type TranslationRule struct {
 	Volumes           []VolumeMount        `json:"volumes,omitempty"`
 	SecurityContext   *SecurityContext     `json:"securityContext,omitempty"`
 	Resources         ResourceRequirements `json:"resources,omitempty"`
-	InitContainer     *InitContainer       `json:"initContainers,omitempty"`
+	InitContainer     InitContainer        `json:"initContainers,omitempty"`
 }
 
 //IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest

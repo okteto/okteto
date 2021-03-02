@@ -145,7 +145,7 @@ type Dev struct {
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
-	InitContainer        *InitContainer        `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
+	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 }
 
 //Command represents the start command of a development contaianer
@@ -205,8 +205,8 @@ type PersistentVolumeInfo struct {
 
 // InitContainer represents the initial container
 type InitContainer struct {
-	Image     string                `json:"image,omitempty" yaml:"image,omitempty"`
-	Resources *ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
+	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 // SecurityContext represents a pod security context
@@ -294,7 +294,6 @@ func Read(bytes []byte) (*Dev, error) {
 		},
 		Services:             make([]*Dev, 0),
 		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
-		InitContainer:        &InitContainer{Resources: &ResourceRequirements{}},
 	}
 
 	if bytes != nil {

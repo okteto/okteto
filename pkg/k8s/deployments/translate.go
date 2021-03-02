@@ -113,7 +113,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		}
 
 		TranslateDevContainer(devContainer, rule)
-		TranslateInitContainer(rule.InitContainer)
+		TranslateInitContainer(&rule.InitContainer)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
 		TranslateOktetoDevSecret(&t.Deployment.Spec.Template.Spec, t.Name, rule.Secrets)
@@ -468,7 +468,8 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 }
 
 //TranslateOktetoInitBinContainer translates the bin init container of a pod
-func TranslateOktetoInitBinContainer(initContainer *model.InitContainer, spec *apiv1.PodSpec) {
+func TranslateOktetoInitBinContainer(initContainer model.InitContainer, spec *apiv1.PodSpec) {
+
 	c := apiv1.Container{
 		Name:            OktetoBinName,
 		Image:           initContainer.Image,
