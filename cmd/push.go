@@ -52,7 +52,7 @@ func Push(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			dev, err := utils.LoadDevOrDefault(devPath, deploymentName)
+			dev, err := utils.LoadDevOrDefault(devPath, deploymentName, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
@@ -61,15 +61,9 @@ func Push(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("deployment name provided does not match the name field in your okteto manifest")
 			}
 
-			dev.LoadContext(namespace, k8sContext)
-
-			c, _, configNamespace, err := k8Client.GetLocal(dev.Context)
+			c, _, err := k8Client.GetLocal(dev.Context)
 			if err != nil {
 				return err
-			}
-
-			if dev.Namespace == "" {
-				dev.Namespace = configNamespace
 			}
 
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {

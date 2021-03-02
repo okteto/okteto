@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
@@ -100,12 +101,12 @@ func translateEnvFile(svc *model.Service, filename string) error {
 }
 
 func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
-	c, _, configNamespace, err := k8Client.GetLocal("")
+	c, _, err := k8Client.GetLocal("")
 	if err != nil {
 		return err
 	}
 	if s.Namespace == "" {
-		s.Namespace = configNamespace
+		s.Namespace = client.GetCurrentNamespace("")
 	}
 
 	oktetoRegistryURL := ""

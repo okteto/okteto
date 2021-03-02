@@ -505,7 +505,7 @@ func killLocalSyncthing() error {
 
 func destroyPod(ctx context.Context, name, namespace string) error {
 	log.Printf("destroying pods of %s", name)
-	c, _, _, err := k8Client.GetLocal("")
+	c, _, err := k8Client.GetLocal("")
 	if err != nil {
 		return err
 	}
@@ -680,7 +680,7 @@ func getOktetoPath(ctx context.Context) (string, error) {
 }
 
 func getDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, error) {
-	client, _, _, err := k8Client.GetLocal("")
+	client, _, err := k8Client.GetLocal("")
 	if err != nil {
 		return nil, err
 	}

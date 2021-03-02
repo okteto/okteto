@@ -60,7 +60,7 @@ func (rc *refreshCredentials) RoundTrip(req *http.Request) (*http.Response, erro
 	var err error
 	var host string
 	ctx := context.Background()
-	host, roundTripToken, err = okteto.RefreshOktetoKubeconfig(ctx, namespace)
+	host, roundTripToken, err = okteto.RefreshOktetoKubeconfig(ctx, currentNamespace)
 	if err != nil {
 		log.Infof("failed to refresh your kubernetes credentials: %s", err.Error())
 		return resp, errOrig

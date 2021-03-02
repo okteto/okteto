@@ -46,11 +46,10 @@ func Exec() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			dev, err := utils.LoadDev(devPath)
+			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
-			dev.LoadContext(namespace, k8sContext)
 			err = executeExec(ctx, dev, args)
 			analytics.TrackExec(err == nil)
 
@@ -83,13 +82,9 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
 
-	client, cfg, namespace, err := k8Client.GetLocal(dev.Context)
+	client, cfg, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
 		return err
-	}
-
-	if dev.Namespace == "" {
-		dev.Namespace = namespace
 	}
 
 	if err := status.Wait(ctx, dev); err != nil {

@@ -21,7 +21,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/errors"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -45,19 +44,9 @@ func Status() *cobra.Command {
 				return errors.ErrNotInDevContainer
 			}
 
-			dev, err := utils.LoadDev(devPath)
+			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
-			}
-			dev.LoadContext(namespace, k8sContext)
-
-			_, _, namespace, err = k8Client.GetLocal(dev.Context)
-			if err != nil {
-				return err
-			}
-
-			if dev.Namespace == "" {
-				dev.Namespace = namespace
 			}
 
 			sy, err := syncthing.Load(dev)

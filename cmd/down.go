@@ -42,12 +42,10 @@ func Down() *cobra.Command {
 		Short: "Deactivates your development container",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			dev, err := utils.LoadDev(devPath)
+			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
-
-			dev.LoadContext(namespace, k8sContext)
 
 			if err := runDown(ctx, dev); err != nil {
 				analytics.TrackDown(false)
@@ -92,12 +90,9 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	client, _, namespace, err := k8Client.GetLocal(dev.Context)
+	client, _, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
 		return err
-	}
-	if dev.Namespace == "" {
-		dev.Namespace = namespace
 	}
 
 	d, err := deployments.Get(ctx, dev, dev.Namespace, client)
@@ -123,12 +118,9 @@ func removeVolume(ctx context.Context, dev *model.Dev) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	client, _, namespace, err := k8Client.GetLocal(dev.Context)
+	client, _, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
 		return err
-	}
-	if dev.Namespace == "" {
-		dev.Namespace = namespace
 	}
 
 	return volumes.Destroy(ctx, dev, client)

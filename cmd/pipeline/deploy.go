@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
@@ -175,7 +176,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 }
 
 func getCurrentNamespace(ctx context.Context) (string, error) {
-	c, _, namespace, err := k8Client.GetLocal("")
+	c, _, err := k8Client.GetLocal("")
 	if err != nil {
 		log.Infof("couldn't get the current namespace: %s", err)
 		return "", errors.UserError{
@@ -183,6 +184,7 @@ func getCurrentNamespace(ctx context.Context) (string, error) {
 			Hint: "Run 'okteto namespace', or use the '--namespace' parameter",
 		}
 	}
+	namespace := client.GetCurrentNamespace("")
 
 	ns, err := namespaces.Get(ctx, namespace, c)
 	if err != nil {

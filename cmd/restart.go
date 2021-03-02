@@ -38,11 +38,10 @@ func Restart() *cobra.Command {
 		Short: "Restarts the deployments listed in the services field of the okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			dev, err := utils.LoadDev(devPath)
+			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
-			dev.LoadContext(namespace, k8sContext)
 			serviceName := ""
 			if len(args) > 0 {
 				serviceName = args[0]
@@ -66,13 +65,9 @@ func Restart() *cobra.Command {
 
 func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	log.Infof("restarting services")
-	client, _, namespace, err := k8Client.GetLocal(dev.Context)
+	client, _, err := k8Client.GetLocal(dev.Context)
 	if err != nil {
 		return err
-	}
-
-	if dev.Namespace == "" {
-		dev.Namespace = namespace
 	}
 
 	spinner := utils.NewSpinner("Restarting deployments...")

@@ -41,19 +41,14 @@ func Doctor() *cobra.Command {
 				return errors.ErrNotInDevContainer
 			}
 
-			dev, err := utils.LoadDev(devPath)
-			if err != nil {
-				return err
-			}
-			dev.LoadContext(namespace, k8sContext)
-
-			c, _, namespace, err := k8Client.GetLocal(dev.Context)
+			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
 
-			if dev.Namespace == "" {
-				dev.Namespace = namespace
+			c, _, err := k8Client.GetLocal(dev.Context)
+			if err != nil {
+				return err
 			}
 
 			ctx := context.Background()

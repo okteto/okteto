@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -31,23 +32,48 @@ const (
 )
 
 //LoadDev loads an okteto manifest checking "yml" and "yaml"
-func LoadDev(devPath string) (*model.Dev, error) {
+func LoadDev(devPath, namespace, k8sContext string) (*model.Dev, error) {
 	if !model.FileExists(devPath) {
 		if devPath == DefaultDevManifest {
 			if model.FileExists(secondaryDevManifest) {
-				return LoadDev(secondaryDevManifest)
+				return LoadDev(secondaryDevManifest, namespace, k8sContext)
 			}
 		}
 
 		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
 	}
 
-	return model.Get(devPath)
+	dev, err := model.Get(devPath)
+	if err != nil {
+		return nil, err
+	}
+	loadContext(dev, k8sContext)
+	loadNamespace(dev, namespace)
+	return dev, nil
+}
+
+func loadContext(dev *model.Dev, k8sContext string) {
+	if k8sContext != "" {
+		dev.Context = k8sContext
+	}
+	if dev.Context == "" {
+		dev.Context = client.GetCurrentContext()
+	}
+
+}
+
+func loadNamespace(dev *model.Dev, namespace string) {
+	if namespace != "" {
+		dev.Namespace = namespace
+	}
+	if dev.Namespace == "" {
+		dev.Namespace = client.GetCurrentNamespace(dev.Context)
+	}
 }
 
 //LoadDevOrDefault loads an okteto manifest or a default one if does not exist
-func LoadDevOrDefault(devPath, name string) (*model.Dev, error) {
-	dev, err := LoadDev(devPath)
+func LoadDevOrDefault(devPath, name, namespace, k8sContext string) (*model.Dev, error) {
+	dev, err := LoadDev(devPath, namespace, k8sContext)
 	if err == nil {
 		return dev, nil
 	}
