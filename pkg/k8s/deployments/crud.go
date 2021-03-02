@@ -109,6 +109,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, 
 	result := map[string]*model.Translation{}
 	if d != nil {
 		rule := dev.ToTranslationRule(dev)
+		replicas := getPreviousDeploymentReplicas(d)
 		result[d.Name] = &model.Translation{
 			Interactive: true,
 			Name:        dev.Name,
@@ -116,7 +117,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, 
 			Deployment:  d,
 			Annotations: dev.Annotations,
 			Tolerations: dev.Tolerations,
-			Replicas:    *d.Spec.Replicas,
+			Replicas:    replicas,
 			Rules:       []*model.TranslationRule{rule},
 		}
 	}

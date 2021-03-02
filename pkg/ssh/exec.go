@@ -166,7 +166,18 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 	cmd := shellescape.QuoteCommand(command)
 	log.Infof("executing command over ssh: '%s'", cmd)
-	return session.Run(cmd)
+	err = session.Run(cmd)
+
+	log.Infof("command failed: %s", err)
+
+	if okErrors.IsTransient(err) {
+		return err
+	}
+
+	return okErrors.CommandError{
+		E:      okErrors.ErrCommandFailed,
+		Reason: err,
+	}
 }
 
 func isTerminal(r io.Reader) (int, bool) {

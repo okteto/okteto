@@ -46,16 +46,8 @@ var (
 func GetLocal(k8sContext string) (*kubernetes.Clientset, *rest.Config, string, error) {
 	if client == nil {
 		var err error
-
-		clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			clientcmd.NewDefaultClientConfigLoadingRules(),
-			&clientcmd.ConfigOverrides{
-				CurrentContext: k8sContext,
-				ClusterInfo:    clientcmdapi.Cluster{Server: ""},
-			},
-		)
-
-		namespace, _, err = clientConfig.Namespace()
+		clientConfig := GetClientConfig(k8sContext)
+		namespace, err = GetNamespace(k8sContext)
 		if err != nil {
 			return nil, nil, "", err
 		}
@@ -91,6 +83,28 @@ func GetLocal(k8sContext string) (*kubernetes.Clientset, *rest.Config, string, e
 	}
 
 	return client, config, namespace, nil
+}
+
+//GetNamespace returns the name of the namespace in use
+func GetNamespace(k8sContext string) (string, error) {
+	var err error
+	clientConfig := GetClientConfig(k8sContext)
+	namespace, _, err = clientConfig.Namespace()
+	if err != nil {
+		return "", err
+	}
+	return namespace, nil
+}
+
+//GetClientConfig sets the client config for the context in use
+func GetClientConfig(k8sContext string) clientcmd.ClientConfig {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{
+			CurrentContext: k8sContext,
+			ClusterInfo:    clientcmdapi.Cluster{Server: ""},
+		},
+	)
 }
 
 //Reset cleans the cached client

@@ -87,9 +87,12 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	archiveName := fmt.Sprintf("okteto-doctor-%s.zip", now.Format("20060102150405"))
 	files := []string{summaryFilename}
 	files = append(files, stignoreFilenames...)
-	if model.FileExists(filepath.Join(config.GetOktetoHome(), "okteto.log")) {
-		files = append(files, filepath.Join(config.GetOktetoHome(), "okteto.log"))
+
+	deploymentLogsPath := filepath.Join(config.GetDeploymentHome(dev.Namespace, dev.Name), "okteto.log")
+	if model.FileExists(deploymentLogsPath) {
+		files = append(files, deploymentLogsPath)
 	}
+
 	if model.FileExists(syncthing.GetLogFile(dev.Namespace, dev.Name)) {
 		files = append(files, syncthing.GetLogFile(dev.Namespace, dev.Name))
 	}

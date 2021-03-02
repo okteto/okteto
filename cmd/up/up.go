@@ -104,14 +104,22 @@ func Up() *cobra.Command {
 
 			checkLocalWatchesConfiguration()
 
+			if autoDeploy {
+				log.Yellow(`The 'deploy' flag is deprecated and will be removed in a future release.
+Set the 'autocreate' field in your okteto manifest to get the same behavior.
+More information is available here: https://okteto.com/docs/reference/cli#up`)
+			}
+
 			dev, err := loadDevOrInit(namespace, k8sContext, devPath)
 			if err != nil {
 				return err
 			}
 
-			if err := loadDevOverrides(dev, namespace, k8sContext, forcePull, remote); err != nil {
+			if err := loadDevOverrides(dev, namespace, k8sContext, forcePull, remote, autoDeploy); err != nil {
 				return err
 			}
+
+			log.ConfigureFileLogger(config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
@@ -146,6 +154,7 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
+	cmd.Flags().MarkHidden("deploy")
 	cmd.Flags().BoolVarP(&build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
 	cmd.Flags().BoolVarP(&forcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().BoolVarP(&resetSyncthing, "reset", "", false, "reset the file synchronization database")
@@ -177,9 +186,13 @@ func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
 	return utils.LoadDev(devPath)
 }
 
-func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int) error {
+func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int, autoDeploy bool) error {
 
 	dev.LoadContext(namespace, k8sContext)
+
+	if dev.Namespace == "" {
+		dev.Namespace, _ = k8Client.GetNamespace(k8sContext)
+	}
 
 	if remote > 0 {
 		dev.RemotePort = remote
@@ -193,6 +206,10 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 		dev.LoadRemote(ssh.GetPublicKey())
 	}
 
+	if !dev.Autocreate {
+		dev.Autocreate = autoDeploy
+	}
+
 	if forcePull {
 		dev.LoadForcePull()
 	}
@@ -202,10 +219,9 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 
 func (up *upContext) start(autoDeploy, build bool) error {
 
-	var namespace string
 	var err error
 
-	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal(up.Dev.Context)
+	up.Client, up.RestConfig, _, err = k8Client.GetLocal(up.Dev.Context)
 	if err != nil {
 		kubecfg := config.GetKubeConfigFile()
 		log.Infof("failed to load local Kubeconfig: %s", err)
@@ -213,10 +229,6 @@ func (up *upContext) start(autoDeploy, build bool) error {
 			return fmt.Errorf("failed to load your local Kubeconfig %q", kubecfg)
 		}
 		return fmt.Errorf("failed to load your local Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
-	}
-
-	if up.Dev.Namespace == "" {
-		up.Dev.Namespace = namespace
 	}
 
 	ctx := context.Background()
@@ -467,10 +479,14 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) 
 		return nil, false, err
 	}
 
-	if !autoDeploy {
-		if err := utils.AskIfDeploy(up.Dev.Name, up.Dev.Namespace); err != nil {
-			return nil, false, err
+	if !up.Dev.Autocreate {
+		err = errors.UserError{
+			E: fmt.Errorf("Deployment '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
+			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+    Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
+    More information is available here: https://okteto.com/docs/reference/cli#up`,
 		}
+		return nil, false, err
 	}
 
 	return up.Dev.GevSandbox(), true, nil
@@ -487,7 +503,10 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 				if errors.IsTransient(err) {
 					return err
 				}
-				return errors.ErrCommandFailed
+				return errors.CommandError{
+					E:      errors.ErrCommandFailed,
+					Reason: err,
+				}
 			}
 
 			log.Info("command completed")
