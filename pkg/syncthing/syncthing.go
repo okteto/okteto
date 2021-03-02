@@ -38,6 +38,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/google/uuid"
+	gops "github.com/mitchellh/go-ps"
 	"github.com/shirou/gopsutil/process"
 )
 
@@ -676,19 +677,42 @@ func (s *Syncthing) HardTerminate() error {
 	if err != nil {
 		return err
 	}
+
 	for _, p := range pList {
+		if p.Pid == 0 {
+			continue
+		}
+
 		name, err := p.Name()
 		if err != nil {
 			log.Infof("error getting name for process %d: %s", p.Pid, err.Error())
 			continue
 		}
+
+		// workaround until https://github.com/shirou/gopsutil/issues/1043 is fixed
+		if name == "" && runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+			pr, err := gops.FindProcess(int(p.Pid))
+			if err != nil {
+				log.Infof("error getting process  %d: %s", p.Pid, err.Error())
+				continue
+			}
+
+			name = pr.Executable()
+		}
+
+		if name == "" {
+			continue
+		}
+
 		if !strings.Contains(name, "syncthing") {
 			continue
 		}
+
 		cmdline, err := p.Cmdline()
 		if err != nil {
 			return err
 		}
+
 		if !strings.Contains(cmdline, fmt.Sprintf("-home %s", s.Home)) {
 			continue
 		}

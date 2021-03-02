@@ -35,7 +35,6 @@ require (
 	github.com/machinebox/graphql v0.2.2
 	github.com/manifoldco/promptui v0.3.2
 	github.com/matryer/is v1.2.0 // indirect
-	github.com/mattn/psutil v0.0.0-20170126005127-e6c88f1e9be6
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/moby/buildkit v0.7.2-1
@@ -56,7 +55,7 @@ require (
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
+	golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6 // indirect
 	google.golang.org/grpc v1.28.0
 	google.golang.org/protobuf v1.24.0 // indirect
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
