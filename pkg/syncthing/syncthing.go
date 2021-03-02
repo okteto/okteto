@@ -685,7 +685,10 @@ func (s *Syncthing) HardTerminate() error {
 
 		name, err := p.Name()
 		if err != nil {
-			log.Infof("error getting name for process %d: %s", p.Pid, err.Error())
+			// it's expected go get EOF if the process no longer exists at this point.
+			if err != io.EOF {
+				log.Infof("error getting name for process %d: %s", p.Pid, err.Error())
+			}
 			continue
 		}
 
