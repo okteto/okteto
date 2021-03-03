@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
+	"gopkg.in/yaml.v2"
 )
 
 func TestRun(t *testing.T) {
@@ -63,4 +64,33 @@ func TestRun(t *testing.T) {
 	if dev.Image.Name != "okteto/ruby:2" {
 		t.Errorf("got %s, expected %s", dev.Image, "okteto/ruby:2")
 	}
+}
+
+func TestRunJustCreateNeccesaryFields(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.RemoveAll(dir)
+
+	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
+	if err := Run("", "", p, "golang", dir, false); err != nil {
+		t.Fatal(err)
+	}
+
+	file, _ := ioutil.ReadFile(p)
+	var result map[string]interface{}
+	yaml.Unmarshal([]byte(file), &result)
+
+	OptionalTags := [...]string{"annotations", "autocreate", "container", "context", "environment",
+		"externalVolumes", "healthchecks", "interface", "imagePullPolicy", "labels", "namespace",
+		"push", "resources", "remote", "reverse", "secrets", "services", "subpath",
+		"tolerations", "workdir"}
+	for _, tag := range OptionalTags {
+		if _, ok := result[tag]; ok {
+			t.Fatal(fmt.Errorf("%s in manifest after running `okteto up` and its not neccesary", tag))
+		}
+	}
+
 }
