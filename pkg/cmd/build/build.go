@@ -62,7 +62,7 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 
 	err = solveBuild(ctx, buildkitClient, opt, progress)
 	if oktetoErrors.IsRegistryTransient(err) {
-		log.Yellow("Retrying registry transient error...")
+		log.Yellow("Failed to push  %s to the registry,  retrying ...",  image)
 		return solveBuild(ctx, buildkitClient, opt, progress)
 	}
 	return err
