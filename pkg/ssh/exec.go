@@ -173,14 +173,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 	log.Infof("command failed: %s", err)
 
-	if okErrors.IsTransient(err) {
-		return err
-	}
-
-	return okErrors.CommandError{
-		E:      okErrors.ErrCommandFailed,
-		Reason: err,
-	}
+	return err
 }
 
 func isTerminal(r io.Reader) (int, bool) {
