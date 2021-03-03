@@ -488,6 +488,9 @@ func (dev *Dev) setDefaults() error {
 	} else if dev.Sync.RescanInterval == 0 {
 		dev.Sync.RescanInterval = DefaultSyncthingRescanInterval
 	}
+	if dev.InitContainer.Image == "" {
+		dev.InitContainer.Image = OktetoBinImageTag
+	}
 
 	for _, s := range dev.Services {
 		if s.ImagePullPolicy == "" {
