@@ -172,7 +172,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 }
 
 func getDeployment(ctx context.Context, namespace, k8sContext string) (*appsv1.Deployment, string, error) {
-	c, _, err := k8Client.GetLocal(k8sContext)
+	c, _, err := k8Client.GetLocalWithContext(k8sContext)
 	if err != nil {
 		log.Yellow("Failed to load your local Kubeconfig: %s", err)
 		return nil, "", nil
@@ -205,7 +205,7 @@ func getDeployment(ctx context.Context, namespace, k8sContext string) (*appsv1.D
 }
 
 func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
-	c, _, err := k8Client.GetLocal(k8sContext)
+	c, _, err := k8Client.GetLocalWithContext(k8sContext)
 	if err != nil {
 		log.Infof("couldn't get kubernetes local client: %s", err.Error())
 		return false

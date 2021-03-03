@@ -90,7 +90,7 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	client, _, err := k8Client.GetLocal(dev.Context)
+	client, _, err := k8Client.GetLocalWithContext(dev.Context)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func removeVolume(ctx context.Context, dev *model.Dev) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	client, _, err := k8Client.GetLocal(dev.Context)
+	client, _, err := k8Client.GetLocalWithContext(dev.Context)
 	if err != nil {
 		return err
 	}

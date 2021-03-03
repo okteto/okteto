@@ -45,7 +45,12 @@ var (
 )
 
 //GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
-func GetLocal(currentContext string) (*kubernetes.Clientset, *rest.Config, error) {
+func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
+	return GetLocalWithContext("")
+}
+
+//GetLocalWithContext returns a kubernetes client for a given context. It will detect if KUBECONFIG is defined.
+func GetLocalWithContext(currentContext string) (*kubernetes.Clientset, *rest.Config, error) {
 	if client == nil {
 		var err error
 		clientConfig = getClientConfig(currentContext)

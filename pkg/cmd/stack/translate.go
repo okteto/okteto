@@ -101,7 +101,7 @@ func translateEnvFile(svc *model.Service, filename string) error {
 }
 
 func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
-	c, _, err := k8Client.GetLocal("")
+	c, _, err := k8Client.GetLocal()
 	if err != nil {
 		return err
 	}

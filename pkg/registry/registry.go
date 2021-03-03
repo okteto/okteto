@@ -85,7 +85,7 @@ func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string
 		return tag, nil
 	}
 
-	c, _, err := client.GetLocal("")
+	c, _, err := client.GetLocal()
 	if err != nil {
 		return "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}

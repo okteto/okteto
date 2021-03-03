@@ -61,7 +61,7 @@ func Push(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("deployment name provided does not match the name field in your okteto manifest")
 			}
 
-			c, _, err := k8Client.GetLocal(dev.Context)
+			c, _, err := k8Client.GetLocalWithContext(dev.Context)
 			if err != nil {
 				return err
 			}

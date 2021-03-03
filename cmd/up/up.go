@@ -214,7 +214,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 
 	var err error
 
-	up.Client, up.RestConfig, err = k8Client.GetLocal(up.Dev.Context)
+	up.Client, up.RestConfig, err = k8Client.GetLocalWithContext(up.Dev.Context)
 	if err != nil {
 		kubecfg := config.GetKubeConfigFile()
 		log.Infof("failed to load local Kubeconfig: %s", err)

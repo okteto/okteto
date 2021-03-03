@@ -26,8 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -84,10 +82,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if namespace == "" {
-				namespace, err = getCurrentNamespace(ctx)
-				if err != nil {
-					return err
-				}
+				namespace = getCurrentNamespace(ctx)
 			}
 
 			if err := deployPipeline(ctx, name, namespace, repository, branch, wait, timeout); err != nil {
@@ -175,30 +170,12 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 	}
 }
 
-func getCurrentNamespace(ctx context.Context) (string, error) {
-	c, _, err := k8Client.GetLocal("")
-	if err != nil {
-		log.Infof("couldn't get the current namespace: %s", err)
-		return "", errors.UserError{
-			E:    fmt.Errorf("couldn't get the current namespace"),
-			Hint: "Run 'okteto namespace', or use the '--namespace' parameter",
-		}
+func getCurrentNamespace(ctx context.Context) string {
+	currentContext := client.GetCurrentContext()
+	if okteto.GetClusterContext() == currentContext {
+		return client.GetCurrentNamespace("")
 	}
-	namespace := client.GetCurrentNamespace("")
-
-	ns, err := namespaces.Get(ctx, namespace, c)
-	if err != nil {
-		return namespace, nil
-	}
-
-	if !namespaces.IsOktetoNamespace(ns) {
-		return "", errors.UserError{
-			E:    fmt.Errorf("your current namespace '%s' is not managed by okteto", namespace),
-			Hint: "Run 'okteto namespace', or use the '--namespace' parameter",
-		}
-	}
-
-	return namespace, nil
+	return ""
 }
 
 func getRepositoryURL(ctx context.Context, path string) (string, error) {

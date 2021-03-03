@@ -46,7 +46,7 @@ func Doctor() *cobra.Command {
 				return err
 			}
 
-			c, _, err := k8Client.GetLocal(dev.Context)
+			c, _, err := k8Client.GetLocalWithContext(dev.Context)
 			if err != nil {
 				return err
 			}
