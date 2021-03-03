@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -59,5 +60,10 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		return errors.Wrap(err, "failed to create build solver")
 	}
 
-	return solveBuild(ctx, buildkitClient, opt, progress)
+	err = solveBuild(ctx, buildkitClient, opt, progress)
+	if oktetoErrors.IsRegistryTransient(err) {
+		log.Yellow("Retrying registry transient error...")
+		return solveBuild(ctx, buildkitClient, opt, progress)
+	}
+	return err
 }
