@@ -167,6 +167,9 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	cmd := shellescape.QuoteCommand(command)
 	log.Infof("executing command over ssh: '%s'", cmd)
 	err = session.Run(cmd)
+	if err == nil {
+		return nil
+	}
 
 	log.Infof("command failed: %s", err)
 
