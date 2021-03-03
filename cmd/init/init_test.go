@@ -42,7 +42,7 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dev, err := utils.LoadDev(p)
+	dev, err := utils.LoadDev(p, "namespace", "context")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestRun(t *testing.T) {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
-	dev, err = utils.LoadDev(p)
+	dev, err = utils.LoadDev(p, "namespace", "context")
 	if err != nil {
 		t.Fatal(err)
 	}

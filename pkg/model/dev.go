@@ -827,16 +827,6 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	return rule
 }
 
-//LoadContext loads the dev namespace and context
-func (dev *Dev) LoadContext(namespace, k8sContext string) {
-	if namespace != "" {
-		dev.Namespace = namespace
-	}
-	if k8sContext != "" {
-		dev.Context = k8sContext
-	}
-}
-
 //GevSandbox returns a deployment sandbox
 func (dev *Dev) GevSandbox() *appsv1.Deployment {
 	image := dev.Image.Name

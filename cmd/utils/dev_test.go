@@ -63,7 +63,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			def, err := LoadDevOrDefault("/tmp/a-path", tt.deployment)
+			def, err := LoadDevOrDefault("/tmp/a-path", tt.deployment, "namespace", "context")
 			if tt.expectErr {
 				if err == nil {
 					t.Fatal("expected error when loading")
@@ -99,7 +99,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			loaded, err := LoadDevOrDefault(f.Name(), "foo")
+			loaded, err := LoadDevOrDefault(f.Name(), "foo", "namespace", "context")
 			if err != nil {
 				t.Fatalf("unexpected error when loading existing manifest: %s", err.Error())
 			}
@@ -115,7 +115,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 		})
 	}
 	name := "demo-deployment"
-	def, err := LoadDevOrDefault("/tmp/bad-path", name)
+	def, err := LoadDevOrDefault("/tmp/bad-path", name, "namespace", "context")
 	if err != nil {
 		t.Fatal("default dev was not returned")
 	}
@@ -124,7 +124,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 		t.Errorf("expected %s, got %s", name, def.Name)
 	}
 
-	_, err = LoadDevOrDefault("/tmp/bad-path", "")
+	_, err = LoadDevOrDefault("/tmp/bad-path", "", "namespace", "context")
 	if err == nil {
 		t.Error("expected error with empty deployment name")
 	}

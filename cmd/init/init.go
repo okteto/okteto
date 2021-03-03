@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -171,13 +172,13 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 }
 
 func getDeployment(ctx context.Context, namespace, k8sContext string) (*appsv1.Deployment, string, error) {
-	c, _, currentNamespace, err := k8Client.GetLocal(k8sContext)
+	c, _, err := k8Client.GetLocalWithContext(k8sContext)
 	if err != nil {
 		log.Yellow("Failed to load your local Kubeconfig: %s", err)
 		return nil, "", nil
 	}
 	if namespace == "" {
-		namespace = currentNamespace
+		namespace = client.GetCurrentNamespace(k8sContext)
 	}
 
 	d, err := askForDeployment(ctx, namespace, c)
@@ -204,13 +205,13 @@ func getDeployment(ctx context.Context, namespace, k8sContext string) (*appsv1.D
 }
 
 func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
-	c, _, currentNamespace, err := k8Client.GetLocal(k8sContext)
+	c, _, err := k8Client.GetLocalWithContext(k8sContext)
 	if err != nil {
 		log.Infof("couldn't get kubernetes local client: %s", err.Error())
 		return false
 	}
 	if namespace == "" {
-		namespace = currentNamespace
+		namespace = client.GetCurrentNamespace(k8sContext)
 	}
 
 	ns, err := namespaces.Get(ctx, namespace, c)

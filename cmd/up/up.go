@@ -162,7 +162,7 @@ More information is available here: https://okteto.com/docs/reference/cli#up`)
 }
 
 func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
-	dev, err := utils.LoadDev(devPath)
+	dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 
 	if err == nil {
 		return dev, nil
@@ -183,17 +183,10 @@ func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
 	}
 
 	log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
-	return utils.LoadDev(devPath)
+	return utils.LoadDev(devPath, namespace, k8sContext)
 }
 
 func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int, autoDeploy bool) error {
-
-	dev.LoadContext(namespace, k8sContext)
-
-	if dev.Namespace == "" {
-		dev.Namespace, _ = k8Client.GetNamespace(k8sContext)
-	}
-
 	if remote > 0 {
 		dev.RemotePort = remote
 	}
@@ -221,7 +214,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 
 	var err error
 
-	up.Client, up.RestConfig, _, err = k8Client.GetLocal(up.Dev.Context)
+	up.Client, up.RestConfig, err = k8Client.GetLocalWithContext(up.Dev.Context)
 	if err != nil {
 		kubecfg := config.GetKubeConfigFile()
 		log.Infof("failed to load local Kubeconfig: %s", err)
