@@ -33,26 +33,27 @@ const (
 	// This is mixpanel's public token, is needed to send analytics to the project
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
-	upEvent              = "Up"
-	upErrorEvent         = "Up Error"
-	reconnectEvent       = "Reconnect"
-	syncErrorEvent       = "Sync Error"
-	downEvent            = "Down"
-	downVolumesEvent     = "DownVolumes"
-	pushEvent            = "Push"
-	statusEvent          = "Status"
-	doctorEvent          = "Doctor"
-	buildEvent           = "Build"
-	deployStackEvent     = "Deploy Stack"
-	destroyStackEvent    = "Destroy Stack"
-	loginEvent           = "Login"
-	initEvent            = "Create Manifest"
-	namespaceEvent       = "Namespace"
-	namespaceCreateEvent = "CreateNamespace"
-	namespaceDeleteEvent = "DeleteNamespace"
-	execEvent            = "Exec"
-	signupEvent          = "Signup"
-	disableEvent         = "Disable Analytics"
+	upEvent                  = "Up"
+	upErrorEvent             = "Up Error"
+	reconnectEvent           = "Reconnect"
+	syncErrorEvent           = "Sync Error"
+	downEvent                = "Down"
+	downVolumesEvent         = "DownVolumes"
+	pushEvent                = "Push"
+	statusEvent              = "Status"
+	doctorEvent              = "Doctor"
+	buildEvent               = "Build"
+	buildTransientErrorEvent = "BuildTransientError"
+	deployStackEvent         = "Deploy Stack"
+	destroyStackEvent        = "Destroy Stack"
+	loginEvent               = "Login"
+	initEvent                = "Create Manifest"
+	namespaceEvent           = "Namespace"
+	namespaceCreateEvent     = "CreateNamespace"
+	namespaceDeleteEvent     = "DeleteNamespace"
+	execEvent                = "Exec"
+	signupEvent              = "Signup"
+	disableEvent             = "Disable Analytics"
 )
 
 var (
@@ -187,6 +188,14 @@ func TrackBuild(oktetoBuilkitURL string, success bool) {
 		"oktetoBuilkitURL": oktetoBuilkitURL,
 	}
 	track(buildEvent, success, props)
+}
+
+// TrackBuildTransientError sends a tracking event to mixpanel when the user build fails because of a transient error
+func TrackBuildTransientError(oktetoBuilkitURL string, success bool) {
+	props := map[string]interface{}{
+		"oktetoBuilkitURL": oktetoBuilkitURL,
+	}
+	track(buildTransientErrorEvent, success, props)
 }
 
 // TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack

@@ -131,21 +131,6 @@ func IsTransient(err error) bool {
 	}
 }
 
-// IsRegistryTransient returns true if err represents a transient registry error
-func IsRegistryTransient(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	switch {
-	case strings.Contains(err.Error(), "failed commit on ref") && strings.Contains(err.Error(), "500 Internal Server Error"),
-		strings.Contains(err.Error(), "transport is closing"):
-		return true
-	default:
-		return false
-	}
-}
-
 // IsClosedNetwork returns true if the error is caused by a closed network connection
 func IsClosedNetwork(err error) bool {
 	if err == nil {
