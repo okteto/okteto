@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -59,5 +60,16 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		return errors.Wrap(err, "failed to create build solver")
 	}
 
-	return solveBuild(ctx, buildkitClient, opt, progress)
+	err = solveBuild(ctx, buildkitClient, opt, progress)
+	if registry.IsTransientError(err) {
+		log.Yellow("Failed to push '%s' to the registry, retrying ...", tag)
+		success := true
+		err := solveBuild(ctx, buildkitClient, opt, progress)
+		if err != nil {
+			success = false
+		}
+		analytics.TrackBuildTransientError(buildKitHost, success)
+		return err
+	}
+	return err
 }

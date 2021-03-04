@@ -110,3 +110,18 @@ func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string
 	tag = strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, namespace), 1)
 	return tag, nil
 }
+
+// IsTransientError returns true if err represents a transient registry error
+func IsTransientError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	switch {
+	case strings.Contains(err.Error(), "failed commit on ref") && strings.Contains(err.Error(), "500 Internal Server Error"),
+		strings.Contains(err.Error(), "transport is closing"):
+		return true
+	default:
+		return false
+	}
+}
