@@ -38,7 +38,7 @@ type CommandError struct {
 
 // Error returns the error message
 func (u CommandError) Error() string {
-	return fmt.Sprintf("%s: %s", u.E.Error(), u.Reason.Error())
+	return fmt.Sprintf("%s: %s", u.E.Error(), strings.ToLower(u.Reason.Error()))
 }
 
 var (

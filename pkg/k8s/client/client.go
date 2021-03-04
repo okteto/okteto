@@ -36,7 +36,6 @@ const (
 )
 
 var (
-	client           *kubernetes.Clientset
 	config           *rest.Config
 	clientConfig     clientcmd.ClientConfig
 	currentNamespace string
@@ -51,18 +50,15 @@ func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
 
 //GetLocalWithContext returns a kubernetes client for a given context. It will detect if KUBECONFIG is defined.
 func GetLocalWithContext(currentContext string) (*kubernetes.Clientset, *rest.Config, error) {
-	if client == nil {
-		var err error
+	if config == nil {
 		clientConfig = getClientConfig(currentContext)
 		if okteto.GetClusterContext() == currentContext {
 			ctx := context.Background()
 			namespace := GetCurrentNamespace(currentContext)
-			if err != nil {
-				return nil, nil, err
-			}
 			go okteto.RefreshOktetoKubeconfig(ctx, namespace)
 		}
 
+		var err error
 		config, err = clientConfig.ClientConfig()
 		if err != nil {
 			return nil, nil, err
@@ -70,12 +66,13 @@ func GetLocalWithContext(currentContext string) (*kubernetes.Clientset, *rest.Co
 
 		config.Wrap(refreshCredentialsFn)
 
-		client, err = kubernetes.NewForConfig(config)
-		if err != nil {
-			return nil, nil, err
-		}
-
 		setAnalytics(currentContext, config.Host)
+
+	}
+
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return client, config, nil
@@ -123,7 +120,6 @@ func GetCurrentNamespace(k8sContext string) string {
 
 //Reset cleans the cached client
 func Reset() {
-	client = nil
 	config = nil
 	clientConfig = nil
 	currentNamespace = ""
