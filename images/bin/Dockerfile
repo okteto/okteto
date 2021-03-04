@@ -12,3 +12,6 @@ COPY --from=clean /usr/local/bin/clean /usr/local/bin/clean
 
 # copy start
 COPY start.sh /usr/local/bin/start.sh
+
+ARG OKTETO_BIN_TAG
+RUN echo $OKTETO_BIN_TAG > /usr/local/bin/version.txt

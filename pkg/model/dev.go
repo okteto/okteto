@@ -931,3 +931,7 @@ func ExpandEnv(value string) (string, error) {
 	}
 	return result, nil
 }
+
+func GetCurrentImageTagVersion() string {
+	return strings.Split(OktetoBinImageTag, ":")[1]
+}
