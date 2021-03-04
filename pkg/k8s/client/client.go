@@ -67,7 +67,6 @@ func GetLocalWithContext(currentContext string) (*kubernetes.Clientset, *rest.Co
 		config.Wrap(refreshCredentialsFn)
 
 		setAnalytics(currentContext, config.Host)
-
 	}
 
 	client, err := kubernetes.NewForConfig(config)

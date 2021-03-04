@@ -78,6 +78,9 @@ func isCredentialError(resp *http.Response, err error) bool {
 	if resp != nil && resp.StatusCode == 401 {
 		return true
 	}
+	if err != nil && strings.Contains(err.Error(), "connection refused") {
+		return true
+	}
 	if err != nil && strings.Contains(err.Error(), "i/o timeout") {
 		return true
 	}
