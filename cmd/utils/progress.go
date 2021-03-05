@@ -19,14 +19,40 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cheggaaa/pb/v3"
+	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/vbauerster/mpb/v6"
+	mbp "github.com/vbauerster/mpb/v6"
+	"github.com/vbauerster/mpb/v6/decor"
+)
+
+const (
+	GroupWidth           = 40
+	MainProgressBarWidth = 40
+	FileProgressBarWidth = 30
+	MaxNameChars         = 20
 )
 
 // ProgressBar tracks progress of the download
 type ProgressBar struct {
 	// lock everything below
 	lock sync.Mutex
+}
+
+// SyncthingProgress tracks the progress of all the files syncthing
+type SyncthingProgress struct {
+	Group        *mbp.Progress
+	MainBar      *mbp.Bar
+	FileProgress map[string]Progress
+	waitGroup    *sync.WaitGroup
+}
+
+type Progress struct {
+	Size  int64
+	Bar   *mbp.Bar
+	Start time.Time
 }
 
 // TrackProgress instantiates a new progress bar that will
@@ -84,4 +110,83 @@ func RenderProgressBar(prefix string, current, scalingFactor float64) string {
 	_, _ = sb.WriteString("]")
 	_, _ = sb.WriteString(fmt.Sprintf(" %3v%%", int(current)))
 	return sb.String()
+}
+
+// New creates a new syncthing progress
+func NewSyncthingProgressBar() SyncthingProgress {
+	var s SyncthingProgress
+	s.waitGroup = new(sync.WaitGroup)
+	s.Group = mbp.New(mbp.WithWidth(GroupWidth))
+	s.FileProgress = make(map[string]Progress)
+	s.MainBar = s.NewBar("Total synchronized", 100, MainProgressBarWidth)
+	return s
+}
+
+// NewBar creates a new bar to the group of progress bars
+func (s SyncthingProgress) NewBar(name string, total int64, width int) *mbp.Bar {
+	return s.Group.Add(total,
+		// Bar style
+		mpb.NewBarFiller("╢▌▌░╟"),
+		mpb.BarFillerTrim(),
+		mpb.PrependDecorators(
+			// display our name with one space on the right
+			decor.Name(s.GetNameDisplay(name), decor.WC{W: len(s.GetNameDisplay(name)) + 1, C: decor.DidentRight}),
+		),
+		mpb.AppendDecorators(decor.Percentage()),
+		mbp.BarWidth(width))
+}
+
+// UpdateProgress updates all the progress bars in the pool
+func (s SyncthingProgress) UpdateProgress(syncthingItems map[string]syncthing.ItemsStatus) {
+	for folder, status := range syncthingItems {
+		dirProgressionMap := make(map[string]int64)
+		for file, value := range status.Progress {
+			rootPath := syncthing.GetRootPath(file)
+			if _, ok := dirProgressionMap[rootPath]; !ok {
+				dirProgressionMap[rootPath] = value
+			} else {
+				dirProgressionMap[rootPath] += value
+			}
+		}
+		for file, value := range dirProgressionMap {
+			if s.IsRegistered(file) {
+				s.UpdateBar(file, value)
+			} else {
+				totalSize := syncthingItems[folder].TotalItemSize[file]
+				s.FileProgress[file] = Progress{Bar: s.NewBar(file, totalSize, FileProgressBarWidth), Size: totalSize}
+				s.UpdateBar(file, value)
+			}
+		}
+
+	}
+
+}
+
+// UpdateBar updates the progress bar to a certain value
+func (s SyncthingProgress) UpdateBar(name string, value int64) {
+	s.FileProgress[name].Bar.SetCurrent(value)
+}
+
+// isRegistered checks if a bar name exists in the pool of progressBars
+func (s SyncthingProgress) IsRegistered(name string) bool {
+	_, exists := s.FileProgress[syncthing.GetRootPath(name)]
+	return exists
+}
+
+// GetNameDisplaye set the max num char of a file to a constant
+func (s SyncthingProgress) GetNameDisplay(name string) string {
+	nameLength := len(name)
+	if nameLength <= MaxNameChars {
+		return fmt.Sprintf("%s%s", name, strings.Repeat(" ", MaxNameChars-nameLength))
+	} else {
+		displayName := name[:MaxNameChars-3]
+		return fmt.Sprintf("%s...", displayName)
+	}
+}
+
+func (s SyncthingProgress) Finish() {
+	for _, progressBar := range s.FileProgress {
+		completed := progressBar.Size
+		progressBar.Bar.SetCurrent(completed)
+	}
 }
