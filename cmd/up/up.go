@@ -836,29 +836,37 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
-	suffix := "Synchronizing your files..."
-	spinner := utils.NewSpinner(suffix)
-	pbScaling := 0.30
-
 	if err := config.UpdateStateFile(up.Dev, config.Synchronizing); err != nil {
 		return err
 	}
-	spinner.Start()
-	defer spinner.Stop()
-	reporter := make(chan float64)
-	go func() {
-		<-time.NewTicker(2 * time.Second).C
-		var previous float64
 
+	if err := up.Sy.NewStatus(ctx); err != nil {
+		return err
+	}
+
+	progressBar := utils.NewSyncthingProgressBar()
+	reporter := make(chan int64)
+	var eventAPIErr error
+	go func() {
+		var previous int64
 		for c := range reporter {
 			if c > previous {
-				// todo: how to calculate how many characters can the line fit?
-				pb := utils.RenderProgressBar(suffix, c, pbScaling)
-				spinner.Update(pb)
+				progressBar.MainBar.SetCurrent(c)
 				previous = c
 			}
+			eventAPIErr = up.Sy.UpdateSyncthingStatus(ctx)
+			progressBar.UpdateProgress(up.Sy.Status)
+			if eventAPIErr != nil {
+				break
+			}
 		}
+
+		progressBar.Finish()
 	}()
+
+	if eventAPIErr != nil {
+		return eventAPIErr
+	}
 
 	if err := up.Sy.WaitForCompletion(ctx, up.Dev, reporter); err != nil {
 		analytics.TrackSyncError()
@@ -877,9 +885,11 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		}
 	}
 
-	// render to 100
-	spinner.Update(utils.RenderProgressBar(suffix, 100, pbScaling))
+	progressBar.Group.Wait()
 
+	if len(progressBar.FileProgress) > 0 {
+		log.Yellow("Consider adding these files to the .stignore")
+	}
 	up.Sy.Type = "sendreceive"
 	up.Sy.IgnoreDelete = false
 	if err := up.Sy.UpdateConfig(); err != nil {
