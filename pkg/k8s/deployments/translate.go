@@ -221,9 +221,6 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 }
 
 func TranslateInitContainer(initContainer *model.InitContainer) {
-	if initContainer.Image == "" {
-		initContainer.Image = "okteto/bin:1.2.21"
-	}
 	if initContainer.Resources.Limits == nil {
 		initContainer.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity)
 	}
