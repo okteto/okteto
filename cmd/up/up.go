@@ -425,7 +425,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			}
 		}
 
-		if version != model.GetCurrentImageTagVersion() {
+		if version != model.OktetoBinImageTag {
 			log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
 			log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
 		}
