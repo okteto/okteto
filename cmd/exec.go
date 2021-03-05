@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -50,7 +51,19 @@ func Exec() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			t := time.NewTicker(1 * time.Second)
+			iter := 0
 			err = executeExec(ctx, dev, args)
+			for errors.IsTransient(err) {
+				if iter == 0 {
+					log.Yellow("Connection lost to your development container, reconnecting...")
+				}
+				iter++
+				iter = iter % 10
+				<-t.C
+				err = executeExec(ctx, dev, args)
+			}
+
 			analytics.TrackExec(err == nil)
 
 			if errors.IsNotFound(err) {
@@ -87,11 +100,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	if err := status.Wait(ctx, dev); err != nil {
-		return err
-	}
-
-	p, err := pods.GetDevPod(ctx, dev, client, false)
+	p, err := pods.GetDevPod(ctx, dev, client, true)
 	if err != nil {
 		return err
 	}
@@ -101,6 +110,10 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			E:    fmt.Errorf("development mode is not enabled"),
 			Hint: "Run 'okteto up' to enable it and try again",
 		}
+	}
+
+	if err := status.Wait(ctx, dev); err != nil {
+		return err
 	}
 
 	if dev.Container == "" {

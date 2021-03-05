@@ -178,7 +178,7 @@ func getDeployment(ctx context.Context, namespace, k8sContext string) (*appsv1.D
 		return nil, "", nil
 	}
 	if namespace == "" {
-		namespace = client.GetCurrentNamespace(k8sContext)
+		namespace = client.GetContextNamespace(k8sContext)
 	}
 
 	d, err := askForDeployment(ctx, namespace, c)
@@ -211,7 +211,7 @@ func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string
 		return false
 	}
 	if namespace == "" {
-		namespace = client.GetCurrentNamespace(k8sContext)
+		namespace = client.GetContextNamespace(k8sContext)
 	}
 
 	ns, err := namespaces.Get(ctx, namespace, c)

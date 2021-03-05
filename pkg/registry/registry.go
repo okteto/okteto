@@ -91,7 +91,7 @@ func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string
 	}
 
 	if namespace == "" {
-		namespace = client.GetCurrentNamespace("")
+		namespace = client.GetContextNamespace("")
 	}
 
 	n, err := namespaces.Get(ctx, namespace, c)
