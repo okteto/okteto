@@ -106,7 +106,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		return err
 	}
 	if s.Namespace == "" {
-		s.Namespace = client.GetCurrentNamespace("")
+		s.Namespace = client.GetContextNamespace("")
 	}
 
 	oktetoRegistryURL := ""

@@ -171,9 +171,9 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 }
 
 func getCurrentNamespace(ctx context.Context) string {
-	currentContext := client.GetCurrentContext()
+	currentContext := client.GetSessionContext("")
 	if okteto.GetClusterContext() == currentContext {
-		return client.GetCurrentNamespace("")
+		return client.GetContextNamespace("")
 	}
 	return ""
 }

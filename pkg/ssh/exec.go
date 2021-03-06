@@ -20,6 +20,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/alessio/shellescape"
@@ -168,6 +169,9 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	log.Infof("executing command over ssh: '%s'", cmd)
 	err = session.Run(cmd)
 	if err == nil {
+		return nil
+	}
+	if strings.Contains(err.Error(), "exit status 130") {
 		return nil
 	}
 

@@ -57,7 +57,7 @@ func loadContext(dev *model.Dev, k8sContext string) {
 		dev.Context = k8sContext
 	}
 	if dev.Context == "" {
-		dev.Context = client.GetCurrentContext()
+		dev.Context = client.GetSessionContext("")
 	}
 
 }
@@ -67,7 +67,7 @@ func loadNamespace(dev *model.Dev, namespace string) {
 		dev.Namespace = namespace
 	}
 	if dev.Namespace == "" {
-		dev.Namespace = client.GetCurrentNamespace(dev.Context)
+		dev.Namespace = client.GetContextNamespace(dev.Context)
 	}
 }
 

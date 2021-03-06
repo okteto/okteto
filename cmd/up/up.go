@@ -227,8 +227,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	ctx := context.Background()
 	ns, err := namespaces.Get(ctx, up.Dev.Namespace, up.Client)
 	if err != nil {
-		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
-		return fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
+		return err
 	}
 
 	if !namespaces.IsOktetoAllowed(ns) {
@@ -272,6 +271,8 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 	iter := 0
 	defer t.Stop()
 
+	defer config.DeleteStateFile(up.Dev)
+
 	for {
 		if up.isRetry || isTransientError {
 			log.Infof("waiting for shutdown sequence to finish")
@@ -310,6 +311,11 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 
 func (up *upContext) activate(autoDeploy, build bool) error {
 	log.Infof("activating development container retry=%t", up.isRetry)
+
+	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
+		return err
+	}
+
 	// create a new context on every iteration
 	ctx, cancel := context.WithCancel(context.Background())
 	up.Cancel = cancel
@@ -577,9 +583,6 @@ func (up *upContext) setDevContainer(d *appsv1.Deployment) error {
 
 func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
-	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
-		return err
-	}
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -1033,9 +1036,6 @@ func (up *upContext) shutdown() {
 	log.Infof("stopping forwarders")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
-	}
-	if err := config.DeleteStateFile(up.Dev); err != nil {
-		log.Infof("failed to delete state file: %s", err.Error())
 	}
 
 	log.Info("completed shutdown sequence")
