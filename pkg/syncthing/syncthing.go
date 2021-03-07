@@ -700,6 +700,11 @@ func (s *Syncthing) HardTerminate() error {
 				continue
 			}
 
+			if pr == nil {
+				log.Infof("process  %d not found", p.Pid)
+				continue
+			}
+
 			name = pr.Executable()
 		}
 
