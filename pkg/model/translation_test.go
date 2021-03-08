@@ -110,6 +110,9 @@ services:
 				SubPath:   path.Join(SourceCodeSubPath, "sub"),
 			},
 		},
+		InitContainer: InitContainer{
+			Image: OktetoBinImageTag,
+		},
 	}
 
 	marshalled1, _ := yaml.Marshal(rule1)

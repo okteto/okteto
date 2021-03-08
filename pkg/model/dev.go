@@ -145,6 +145,7 @@ type Dev struct {
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
+	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 }
 
 //Command represents the start command of a development contaianer
@@ -200,6 +201,12 @@ type PersistentVolumeInfo struct {
 	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	StorageClass string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
 	Size         string `json:"size,omitempty" yaml:"size,omitempty"`
+}
+
+// InitContainer represents the initial container
+type InitContainer struct {
+	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
+	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 // SecurityContext represents a pod security context
@@ -481,6 +488,9 @@ func (dev *Dev) setDefaults() error {
 	} else if dev.Sync.RescanInterval == 0 {
 		dev.Sync.RescanInterval = DefaultSyncthingRescanInterval
 	}
+	if dev.InitContainer.Image == "" {
+		dev.InitContainer.Image = OktetoBinImageTag
+	}
 
 	for _, s := range dev.Services {
 		if s.ImagePullPolicy == "" {
@@ -723,6 +733,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		SecurityContext:  dev.SecurityContext,
 		Resources:        dev.Resources,
 		Healthchecks:     dev.Healthchecks,
+		InitContainer:    dev.InitContainer,
 	}
 
 	if !dev.EmptyImage {

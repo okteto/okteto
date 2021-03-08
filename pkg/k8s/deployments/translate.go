@@ -113,12 +113,13 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		}
 
 		TranslateDevContainer(devContainer, rule)
+		TranslateInitContainer(&rule.InitContainer)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
 		TranslateOktetoDevSecret(&t.Deployment.Spec.Template.Spec, t.Name, rule.Secrets)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
-			TranslateOktetoInitBinContainer(rule.OktetoBinImageTag, &t.Deployment.Spec.Template.Spec)
+			TranslateOktetoInitBinContainer(rule.InitContainer, &t.Deployment.Spec.Template.Spec)
 			TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
 		}
 	}
@@ -217,6 +218,26 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	TranslateEnvVars(c, rule)
 	TranslateVolumeMounts(c, rule)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
+}
+
+func TranslateInitContainer(initContainer *model.InitContainer) {
+	if initContainer.Resources.Limits == nil {
+		initContainer.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity)
+	}
+	if initContainer.Resources.Requests == nil {
+		initContainer.Resources.Requests = make(map[apiv1.ResourceName]resource.Quantity)
+	}
+	setDefaultResourceValueIfNotPresent(initContainer.Resources.Limits, apiv1.ResourceMemory, OktetoUpInitContainerLimitsMemory)
+	setDefaultResourceValueIfNotPresent(initContainer.Resources.Limits, apiv1.ResourceCPU, OktetoUpInitContainerLimitsCPU)
+
+	setDefaultResourceValueIfNotPresent(initContainer.Resources.Requests, apiv1.ResourceMemory, OktetoUpInitContainerRequestsMemory)
+	setDefaultResourceValueIfNotPresent(initContainer.Resources.Requests, apiv1.ResourceCPU, OktetoUpInitContainerRequestsCPU)
+}
+
+func setDefaultResourceValueIfNotPresent(resourceList model.ResourceList, resourceName apiv1.ResourceName, value resource.Quantity) {
+	if _, ok := resourceList[resourceName]; !ok {
+		resourceList[resourceName] = value
+	}
 }
 
 //TranslateResources translates the resources attached to a container
@@ -444,10 +465,11 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 }
 
 //TranslateOktetoInitBinContainer translates the bin init container of a pod
-func TranslateOktetoInitBinContainer(oktetoBinImageTag string, spec *apiv1.PodSpec) {
+func TranslateOktetoInitBinContainer(initContainer model.InitContainer, spec *apiv1.PodSpec) {
+
 	c := apiv1.Container{
 		Name:            OktetoBinName,
-		Image:           oktetoBinImageTag,
+		Image:           initContainer.Image,
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 		VolumeMounts: []apiv1.VolumeMount{
@@ -458,12 +480,12 @@ func TranslateOktetoInitBinContainer(oktetoBinImageTag string, spec *apiv1.PodSp
 		},
 		Resources: apiv1.ResourceRequirements{
 			Requests: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceCPU:    OktetoUpInitContainerRequestsCPU,
-				apiv1.ResourceMemory: OktetoUpInitContainerRequestsMemory,
+				apiv1.ResourceCPU:    initContainer.Resources.Requests[apiv1.ResourceCPU],
+				apiv1.ResourceMemory: initContainer.Resources.Requests[apiv1.ResourceMemory],
 			},
 			Limits: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceCPU:    OktetoUpInitContainerLimitsCPU,
-				apiv1.ResourceMemory: OktetoUpInitContainerLimitsMemory,
+				apiv1.ResourceCPU:    initContainer.Resources.Limits[apiv1.ResourceCPU],
+				apiv1.ResourceMemory: initContainer.Resources.Limits[apiv1.ResourceMemory],
 			},
 		},
 	}
