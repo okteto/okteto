@@ -34,6 +34,7 @@ func RunWithRetry(f func() error) error {
 		return err
 	}
 
+	log.Infof("Updating Kubernetes credentials for error: %s", err.Error())
 	ctx := context.Background()
 	namespace := client.GetContextNamespace("")
 	if _, _, err := okteto.RefreshOktetoKubeconfig(ctx, namespace); err != nil {
