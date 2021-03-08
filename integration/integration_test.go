@@ -423,11 +423,7 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 
 	log.Printf("create namespace output: \n%s\n", string(o))
 
-	_, _, n, err := k8Client.GetLocal("")
-	if err != nil {
-		return err
-	}
-
+	n := k8Client.GetContextNamespace("")
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -505,7 +501,7 @@ func killLocalSyncthing() error {
 
 func destroyPod(ctx context.Context, name, namespace string) error {
 	log.Printf("destroying pods of %s", name)
-	c, _, _, err := k8Client.GetLocal("")
+	c, _, err := k8Client.GetLocal()
 	if err != nil {
 		return err
 	}
@@ -680,7 +676,7 @@ func getOktetoPath(ctx context.Context) (string, error) {
 }
 
 func getDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, error) {
-	client, _, _, err := k8Client.GetLocal("")
+	client, _, err := k8Client.GetLocal()
 	if err != nil {
 		return nil, err
 	}

@@ -35,8 +35,7 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	if err == nil {
 		t.Errorf("didn't report proper error")
 	}
-
-	if err != errors.ErrCommandFailed {
+	if _, ok := err.(errors.CommandError); !ok {
 		t.Errorf("didn't translate the error: %s", err)
 	}
 

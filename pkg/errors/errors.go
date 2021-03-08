@@ -30,6 +30,17 @@ func (u UserError) Error() string {
 	return u.E.Error()
 }
 
+// CommandError is meant for errors displayed to the user. It can include a message and a hint
+type CommandError struct {
+	E      error
+	Reason error
+}
+
+// Error returns the error message
+func (u CommandError) Error() string {
+	return fmt.Sprintf("%s: %s", u.E.Error(), strings.ToLower(u.Reason.Error()))
+}
+
 var (
 	// ErrNotDevDeployment is raised when we detect that the deployment was returned to production mode
 	ErrNotDevDeployment = errors.New("Deployment is no longer in developer mode")
@@ -112,12 +123,45 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "TLS handshake timeout"),
 		strings.Contains(err.Error(), "in the time allotted"),
 		strings.Contains(err.Error(), "broken pipe"),
+		strings.Contains(err.Error(), "No connection could be made"),
 		strings.Contains(err.Error(), "dial tcp: operation was canceled"),
 		strings.Contains(err.Error(), "network is unreachable"):
 		return true
 	default:
 		return false
 	}
+}
+
+//IsCredentialError need to refresh credentials
+func IsCredentialError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if strings.Contains(err.Error(), "Unauthorized") {
+		return true
+	}
+	if strings.Contains(err.Error(), "connection refused") {
+		return true
+	}
+	if strings.Contains(err.Error(), "i/o timeout") {
+		return true
+	}
+	if strings.Contains(err.Error(), "Client.Timeout") {
+		return true
+	}
+	if strings.Contains(err.Error(), "context deadline exceeded") {
+		return true
+	}
+	if strings.Contains(err.Error(), "x509") {
+		return true
+	}
+	if strings.Contains(err.Error(), "no such host") {
+		return true
+	}
+	if strings.Contains(err.Error(), "after a period of time") {
+		return true
+	}
+	return false
 }
 
 // IsClosedNetwork returns true if the error is caused by a closed network connection

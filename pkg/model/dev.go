@@ -94,7 +94,7 @@ const (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.2.21"
+	OktetoBinImageTag = "okteto/bin:1.2.22"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -836,16 +836,6 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	}
 
 	return rule
-}
-
-//LoadContext loads the dev namespace and context
-func (dev *Dev) LoadContext(namespace, k8sContext string) {
-	if namespace != "" {
-		dev.Namespace = namespace
-	}
-	if k8sContext != "" {
-		dev.Context = k8sContext
-	}
 }
 
 //GevSandbox returns a deployment sandbox

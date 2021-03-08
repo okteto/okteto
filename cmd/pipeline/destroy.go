@@ -50,10 +50,7 @@ func destroy(ctx context.Context) *cobra.Command {
 			}
 
 			if namespace == "" {
-				namespace, err = getCurrentNamespace(ctx)
-				if err != nil {
-					return err
-				}
+				namespace = getCurrentNamespace(ctx)
 			}
 
 			if err := deletePipeline(ctx, name, namespace, wait, destroyVolumes, timeout); err != nil {

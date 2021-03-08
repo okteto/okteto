@@ -119,6 +119,8 @@ More information is available here: https://okteto.com/docs/reference/cli#up`)
 				return err
 			}
 
+			log.ConfigureFileLogger(config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
+
 			if err := checkStignoreConfiguration(dev); err != nil {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
 			}
@@ -160,7 +162,7 @@ More information is available here: https://okteto.com/docs/reference/cli#up`)
 }
 
 func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
-	dev, err := utils.LoadDev(devPath)
+	dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 
 	if err == nil {
 		return dev, nil
@@ -181,13 +183,10 @@ func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
 	}
 
 	log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
-	return utils.LoadDev(devPath)
+	return utils.LoadDev(devPath, namespace, k8sContext)
 }
 
 func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int, autoDeploy bool) error {
-
-	dev.LoadContext(namespace, k8sContext)
-
 	if remote > 0 {
 		dev.RemotePort = remote
 	}
@@ -213,10 +212,9 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 
 func (up *upContext) start(autoDeploy, build bool) error {
 
-	var namespace string
 	var err error
 
-	up.Client, up.RestConfig, namespace, err = k8Client.GetLocal(up.Dev.Context)
+	up.Client, up.RestConfig, err = k8Client.GetLocalWithContext(up.Dev.Context)
 	if err != nil {
 		kubecfg := config.GetKubeConfigFile()
 		log.Infof("failed to load local Kubeconfig: %s", err)
@@ -226,15 +224,10 @@ func (up *upContext) start(autoDeploy, build bool) error {
 		return fmt.Errorf("failed to load your local Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
 	}
 
-	if up.Dev.Namespace == "" {
-		up.Dev.Namespace = namespace
-	}
-
 	ctx := context.Background()
 	ns, err := namespaces.Get(ctx, up.Dev.Namespace, up.Client)
 	if err != nil {
-		log.Infof("failed to get namespace %s: %s", up.Dev.Namespace, err)
-		return fmt.Errorf("couldn't get namespace/%s, please try again", up.Dev.Namespace)
+		return err
 	}
 
 	if !namespaces.IsOktetoAllowed(ns) {
@@ -278,6 +271,8 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 	iter := 0
 	defer t.Stop()
 
+	defer config.DeleteStateFile(up.Dev)
+
 	for {
 		if up.isRetry || isTransientError {
 			log.Infof("waiting for shutdown sequence to finish")
@@ -316,6 +311,11 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 
 func (up *upContext) activate(autoDeploy, build bool) error {
 	log.Infof("activating development container retry=%t", up.isRetry)
+
+	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
+		return err
+	}
+
 	// create a new context on every iteration
 	ctx, cancel := context.WithCancel(context.Background())
 	up.Cancel = cancel
@@ -510,7 +510,10 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 				if errors.IsTransient(err) {
 					return err
 				}
-				return errors.ErrCommandFailed
+				return errors.CommandError{
+					E:      errors.ErrCommandFailed,
+					Reason: err,
+				}
 			}
 
 			log.Info("command completed")
@@ -588,9 +591,6 @@ func (up *upContext) setDevContainer(d *appsv1.Deployment) error {
 
 func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
-	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
-		return err
-	}
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -1044,9 +1044,6 @@ func (up *upContext) shutdown() {
 	log.Infof("stopping forwarders")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
-	}
-	if err := config.DeleteStateFile(up.Dev); err != nil {
-		log.Infof("failed to delete state file: %s", err.Error())
 	}
 
 	log.Info("completed shutdown sequence")

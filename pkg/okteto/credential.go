@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -45,6 +46,10 @@ func GetCredentials(ctx context.Context) (*Credential, error) {
 	var cred Credentials
 	if err := query(ctx, q, &cred); err != nil {
 		return nil, err
+	}
+
+	if cred.Credentials.Server == "" {
+		return nil, fmt.Errorf("%s is not available. Please, retry again in a few minutes", GetURL())
 	}
 
 	return &cred.Credentials, nil

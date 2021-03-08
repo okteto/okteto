@@ -15,8 +15,10 @@ package client
 
 import (
 	"context"
+	"log"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/model"
@@ -35,69 +37,80 @@ const (
 )
 
 var (
-	client         *kubernetes.Clientset
-	config         *rest.Config
-	namespace      string
-	currentContext string
+	sessionContext string
 	localClusters  = []string{"127.", "172.", "192.", "169.", model.Localhost, "::1", "fe80::", "fc00::"}
 )
 
 //GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
-func GetLocal(k8sContext string) (*kubernetes.Clientset, *rest.Config, string, error) {
-	if client == nil {
-		var err error
+func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
+	return GetLocalWithContext("")
+}
 
-		clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			clientcmd.NewDefaultClientConfigLoadingRules(),
-			&clientcmd.ConfigOverrides{
-				CurrentContext: k8sContext,
-				ClusterInfo:    clientcmdapi.Cluster{Server: ""},
-			},
-		)
-
-		namespace, _, err = clientConfig.Namespace()
-		if err != nil {
-			return nil, nil, "", err
-		}
-
-		rawConfig, err := clientConfig.RawConfig()
-		if err != nil {
-			return nil, nil, "", err
-		}
-
-		if k8sContext != "" {
-			currentContext = k8sContext
-		} else {
-			currentContext = rawConfig.CurrentContext
-		}
-		if okteto.GetClusterContext() == currentContext {
-			ctx := context.Background()
-			go okteto.RefreshOktetoKubeconfig(ctx, namespace)
-		}
-
-		config, err = clientConfig.ClientConfig()
-		if err != nil {
-			return nil, nil, "", err
-		}
-
-		config.Wrap(refreshCredentialsFn)
-
-		client, err = kubernetes.NewForConfig(config)
-		if err != nil {
-			return nil, nil, "", err
-		}
-
-		setAnalytics(currentContext, config.Host)
+//GetLocalWithContext returns a kubernetes client for a given context. It will detect if KUBECONFIG is defined.
+func GetLocalWithContext(thisContext string) (*kubernetes.Clientset, *rest.Config, error) {
+	thisContext = GetSessionContext(thisContext)
+	clientConfig := getClientConfig(thisContext)
+	if okteto.GetClusterContext() == thisContext {
+		ctx := context.Background()
+		namespace := GetContextNamespace(thisContext)
+		go okteto.RefreshOktetoKubeconfig(ctx, namespace)
 	}
 
-	return client, config, namespace, nil
+	config, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	config.Timeout = time.Second * 10
+
+	setAnalytics(sessionContext, config.Host)
+
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	return client, config, nil
+}
+
+func getClientConfig(k8sContext string) clientcmd.ClientConfig {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{
+			CurrentContext: k8sContext,
+			ClusterInfo:    clientcmdapi.Cluster{Server: ""},
+		},
+	)
+}
+
+//GetSessionContext sets the client config for the context in use
+func GetSessionContext(k8sContext string) string {
+	if k8sContext != "" {
+		return k8sContext
+	}
+	if sessionContext != "" {
+		return sessionContext
+	}
+	cc := getClientConfig("")
+	rawConfig, err := cc.RawConfig()
+	if err != nil {
+		log.Fatalf("error accessing you kubeconfig file: %s", err.Error())
+	}
+	sessionContext = rawConfig.CurrentContext
+	return sessionContext
+}
+
+//GetContextNamespace returns the name of the namespace in use by a given context
+func GetContextNamespace(k8sContext string) string {
+	namespace, _, err := getClientConfig(k8sContext).Namespace()
+	if err != nil {
+		log.Fatalf("error accessing you kubeconfig file: %s", err.Error())
+	}
+	return namespace
 }
 
 //Reset cleans the cached client
 func Reset() {
-	client = nil
-	config = nil
-	namespace = ""
+	sessionContext = ""
 }
 
 // InCluster returns true if Okteto is running on a Kubernetes cluster

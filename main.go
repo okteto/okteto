@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -61,7 +62,7 @@ func init() {
 
 func main() {
 	ctx := context.Background()
-	log.Init(logrus.WarnLevel, config.GetOktetoHome(), config.VersionString)
+	log.Init(logrus.WarnLevel)
 	var logLevel string
 
 	root := &cobra.Command{
@@ -98,7 +99,7 @@ func main() {
 	root.AddCommand(cmd.Exec())
 	root.AddCommand(cmd.Restart())
 
-	err := root.Execute()
+	err := utils.RunWithRetry(root.Execute)
 
 	if err != nil {
 		log.Fail(err.Error())
@@ -107,7 +108,12 @@ func main() {
 				log.Hint("    %s", uErr.Hint)
 			}
 		}
-
+		if cErr, ok := err.(errors.CommandError); ok {
+			if strings.Contains(cErr.Reason.Error(), "exit code 137") || strings.Contains(cErr.Reason.Error(), "4294967295") || strings.Contains(cErr.Reason.Error(), "status 137") {
+				log.Yellow(`Insufficient memory. Please update your resources on your okteto manifest.
+More information is available here: https://okteto.com/docs/reference/manifest#resources-object-optional`)
+			}
+		}
 		os.Exit(1)
 	}
 }
