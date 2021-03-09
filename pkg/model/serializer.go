@@ -47,6 +47,13 @@ type storageResourceRaw struct {
 	Class string   `json:"class,omitempty" yaml:"class,omitempty"`
 }
 
+// healthCheckProbesRaw represents the healthchecks info for serialization
+type healthCheckProbesRaw struct {
+	Liveness  bool `json:"liveness,omitempty" yaml:"liveness,omitempty"`
+	Readiness bool `json:"readiness,omitempty" yaml:"readiness,omitempty"`
+	Startup   bool `json:"startup,omitempty" yaml:"startup,omitempty"`
+}
+
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
@@ -435,6 +442,34 @@ func (v ExternalVolume) MarshalYAML() (interface{}, error) {
 		return v.Name + ":" + v.MountPath, nil
 	}
 	return v.Name + ":" + v.SubPath + ":" + v.MountPath, nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (healthcheckProbes *HealthchecksProbes) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawBool bool
+	err := unmarshal(&rawBool)
+	if err == nil {
+		healthcheckProbes.Liveness = true
+		healthcheckProbes.Startup = true
+		healthcheckProbes.Readiness = true
+		return nil
+	}
+
+	var healthCheckProbesRaw healthCheckProbesRaw
+	err = unmarshal(&healthCheckProbesRaw)
+	if err != nil {
+		return err
+	}
+
+	healthcheckProbes.Liveness = healthCheckProbesRaw.Liveness
+	healthcheckProbes.Startup = healthCheckProbesRaw.Startup
+	healthcheckProbes.Readiness = healthCheckProbesRaw.Readiness
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (healthcheckProbes HealthchecksProbes) MarshalYAML() (interface{}, error) {
+	return healthCheckProbesRaw(healthcheckProbes), nil
 }
 
 func checkFileAndNotDirectory(path string) error {
