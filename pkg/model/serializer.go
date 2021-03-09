@@ -469,6 +469,9 @@ func (healthcheckProbes *HealthchecksProbes) UnmarshalYAML(unmarshal func(interf
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (healthcheckProbes HealthchecksProbes) MarshalYAML() (interface{}, error) {
+	if healthcheckProbes.Liveness && healthcheckProbes.Readiness && healthcheckProbes.Startup {
+		return true, nil
+	}
 	return healthCheckProbesRaw(healthcheckProbes), nil
 }
 
