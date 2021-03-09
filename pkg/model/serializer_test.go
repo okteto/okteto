@@ -433,3 +433,35 @@ func TestVolumeMashalling(t *testing.T) {
 		})
 	}
 }
+
+func TestDevMarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		dev      Dev
+		expected string
+	}{
+		{
+			name:     "healtcheck-not-defaults",
+			dev:      Dev{Name: "name-test", Healthchecks: &HealthchecksProbes{Liveness: true}},
+			expected: "name: name-test\nhealthchecks:\n  liveness: true\n",
+		},
+		{
+			name:     "pv-enabled-not-show-after-marshall",
+			dev:      Dev{Name: "name-test", PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true}},
+			expected: "name: name-test\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.dev)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
+			}
+		})
+	}
+}

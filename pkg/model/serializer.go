@@ -485,3 +485,26 @@ func checkFileAndNotDirectory(path string) error {
 	}
 	return fmt.Errorf("Secret '%s' is not a regular file", path)
 }
+
+func (d Dev) MarshalYAML() (interface{}, error) {
+	type dev Dev // prevent recursion
+	toMarshall := dev(d)
+	if isDefaultHealthchecks(d) {
+		toMarshall.Healthchecks = nil
+	}
+	if d.AreDefaultPersistentVolumeValues() {
+		toMarshall.PersistentVolumeInfo = nil
+	}
+
+	return Dev(toMarshall), nil
+
+}
+
+func isDefaultHealthchecks(d Dev) bool {
+	if d.Healthchecks != nil {
+		if d.Healthchecks.Liveness || d.Healthchecks.Readiness || d.Healthchecks.Startup {
+			return false
+		}
+	}
+	return true
+}

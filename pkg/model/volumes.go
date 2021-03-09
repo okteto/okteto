@@ -195,6 +195,16 @@ func (dev *Dev) PersistentVolumeStorageClass() string {
 	return dev.PersistentVolumeInfo.StorageClass
 }
 
+func (dev *Dev) AreDefaultPersistentVolumeValues() bool {
+	if dev.PersistentVolumeInfo != nil {
+		if dev.PersistentVolumeSize() == OktetoDefaultPVSize && dev.PersistentVolumeStorageClass() == "" && dev.PersistentVolumeEnabled() {
+			return true
+		}
+	}
+	return false
+
+}
+
 func (dev *Dev) validatePersistentVolume() error {
 	if dev.PersistentVolumeEnabled() {
 		return nil
