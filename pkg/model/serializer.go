@@ -449,9 +449,9 @@ func (healthcheckProbes *HealthchecksProbes) UnmarshalYAML(unmarshal func(interf
 	var rawBool bool
 	err := unmarshal(&rawBool)
 	if err == nil {
-		healthcheckProbes.Liveness = true
-		healthcheckProbes.Startup = true
-		healthcheckProbes.Readiness = true
+		healthcheckProbes.Liveness = rawBool
+		healthcheckProbes.Startup = rawBool
+		healthcheckProbes.Readiness = rawBool
 		return nil
 	}
 
