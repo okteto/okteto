@@ -282,7 +282,7 @@ func TestHealthcheckMashalling(t *testing.T) {
 		{
 			name:         "all-healthchecks-true",
 			healthchecks: HealthchecksProbes{Liveness: true, Readiness: true, Startup: true},
-			expected:     "liveness: true\nreadiness: true\nstartup: true\n",
+			expected:     "true\n",
 		},
 	}
 
