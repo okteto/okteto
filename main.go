@@ -84,6 +84,7 @@ func main() {
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
+	root.AddCommand(cmd.Username())
 	root.AddCommand(cmd.Build(ctx))
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.Delete(ctx))
