@@ -61,7 +61,7 @@ func TestForward(t *testing.T) {
 	sshAddr := fmt.Sprintf("localhost:%d", sshPort)
 	ssh := testSSHHandler{}
 	go ssh.listenAndServe(sshAddr)
-	fm := NewForwardManager(ctx, sshAddr, model.Localhost, "0.0.0.0", nil)
+	fm := NewForwardManager(ctx, sshAddr, model.Localhost, "0.0.0.0", nil, "")
 
 	if err := startServers(fm); err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestReverse(t *testing.T) {
 	sshAddr := fmt.Sprintf("localhost:%d", sshPort)
 	ssh := testSSHHandler{}
 	go ssh.listenAndServe(sshAddr)
-	fm := NewForwardManager(ctx, sshAddr, model.Localhost, "0.0.0.0", nil)
+	fm := NewForwardManager(ctx, sshAddr, model.Localhost, "0.0.0.0", nil, "")
 
 	if err := connectReverseForwards(fm); err != nil {
 		t.Fatal(err)
@@ -309,7 +309,7 @@ func (fm *ForwardManager) waitForwardsDisconnected() error {
 
 func TestAdd(t *testing.T) {
 
-	pf := NewForwardManager(context.Background(), "0.0.0.0:22000", "0.0.0.0", "0.0.0.0", nil)
+	pf := NewForwardManager(context.Background(), "0.0.0.0:22000", "0.0.0.0", "0.0.0.0", nil, "")
 	if err := pf.Add(model.Forward{Local: 10010, Remote: 1010}); err != nil {
 		t.Fatal(err)
 	}

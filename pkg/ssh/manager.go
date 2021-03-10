@@ -33,10 +33,11 @@ type ForwardManager struct {
 	sshAddr         string
 	pf              *k8sforward.PortForwardManager
 	pool            *pool
+	namespace       string
 }
 
 // NewForwardManager returns a newly initialized instance of ForwardManager
-func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string, pf *k8sforward.PortForwardManager) *ForwardManager {
+func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string, pf *k8sforward.PortForwardManager, namespace string) *ForwardManager {
 	return &ForwardManager{
 		ctx:             ctx,
 		localInterface:  localInterface,
@@ -45,6 +46,7 @@ func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInter
 		reverses:        make(map[int]*reverse),
 		sshAddr:         sshAddr,
 		pf:              pf,
+		namespace:       namespace,
 	}
 }
 
