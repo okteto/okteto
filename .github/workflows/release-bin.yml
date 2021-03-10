@@ -32,7 +32,7 @@ jobs:
       with:
         qemu-version: latest
         buildx-version: latest
-    
+
     - name: "Push"
       working-directory: images/bin
       run: |

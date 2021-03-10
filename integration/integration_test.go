@@ -96,7 +96,7 @@ metadata:
   annotations:
     dev.okteto.com/auto-ingress: "true"
 spec:
-  type: ClusterIP  
+  type: ClusterIP
   ports:
   - name: {{ .Name }}
     port: 8080

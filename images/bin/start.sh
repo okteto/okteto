@@ -1,13 +1,13 @@
 #!/bin/sh
 
 log(){
-  echo $(date +%Y-%m-%dT%H:%M:%S) $1 
+  echo $(date +%Y-%m-%dT%H:%M:%S) $1
 }
 set -e
 
 userID="$(id -u)"
 echo "USER:$userID"
-log "development container starting" 
+log "development container starting"
 if [ -d "/var/okteto/cloudbin" ]; then
   if [ -w "/usr/local/bin" ]; then
     cp /var/okteto/cloudbin/* /usr/local/bin
@@ -28,11 +28,11 @@ while getopts ":s:re" opt; do
       sourceFILE="$(echo $OPTARG | cut -d':' -f1)"
       destFILE="$(echo $OPTARG | cut -d':' -f2)"
       dirName="$(dirname $destFILE)"
-      
+
       if [ ! -d "$dirName" ]; then
         mkdir -p $dirName
       fi
-      
+
       log "Copying secret $sourceFILE to $destFILE"
       if [ "/var/okteto/secret/$sourceFILE" != "$destFILE" ]; then
         cp /var/okteto/secret/$sourceFILE $destFILE
@@ -60,5 +60,5 @@ if [ $remote -eq 1 ]; then
     params="--remote"
 fi
 
-log "Executing okteto-supervisor $params" 
+log "Executing okteto-supervisor $params"
 exec /var/okteto/bin/okteto-supervisor $params

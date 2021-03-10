@@ -1,4 +1,4 @@
-# !/bin/sh
+#!/bin/sh
 set -e
 
 VERSION=$1
@@ -30,7 +30,7 @@ class Okteto < Formula
   homepage "https://github.com/okteto/okteto"
   version "$VERSION"
   license "Apache-2.0"
-  
+
   if Hardware::CPU.arm?
     sha256 "$SHA_ARM"
     url "https://github.com/okteto/okteto/releases/download/$VERSION/okteto-Darwin-arm64"
@@ -46,7 +46,7 @@ class Okteto < Formula
       url "https://downloads.okteto.com/cli/master/okteto-Darwin-x86_64"
     end
   end
-  
+
   def install
     if Hardware::CPU.arm?
       bin.install "okteto-Darwin-arm64"

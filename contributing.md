@@ -1,10 +1,10 @@
 # Contributions
 
-Interested in contributing? As an open source project, we'd appreciate any help and contributions! 
+Interested in contributing? As an open source project, we'd appreciate any help and contributions!
 
-We follow the standard [github pull request process](https://help.github.com/articles/about-pull-requests/). We'll try to review your contributions as soon as possible. 
+We follow the standard [github pull request process](https://help.github.com/articles/about-pull-requests/). We'll try to review your contributions as soon as possible.
 
-## Code of Conduct 
+## Code of Conduct
 
 This project adheres to the Contributor Covenant [code of conduct](code-of-conduct.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to hello@okteto.com.
 
@@ -14,7 +14,7 @@ Not ready to contribute code, but see something that needs work? While we encour
 
 ## Report security issues
 
-If you want to report a sensitive security issue or a security exploit, you can directly contact the project maintainers via [Twitter DM](https://twitter.com/oktetoHQ) or via hello@okteto.com.
+If you want to report a sensitive security issue, or a security exploit, you can directly contact the project maintainers via [Twitter DM](https://twitter.com/oktetoHQ) or via hello@okteto.com.
 
 ## Pull Requests
 
@@ -85,9 +85,9 @@ Please make sure to read and observe our [code of conduct](code-of-conduct.md).
 
 # Development Guide
 
-Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.16](https://golang.org/doc/go1.16). It uses go modules for dependency management. 
+Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.16](https://golang.org/doc/go1.16). It uses go modules for dependency management.
 
-## Build 
+## Build
 To start working on Okteto, simply fork this repository, clone the okteto repository locally, and run the following command at the root of the project:
 
 ```
@@ -102,7 +102,7 @@ bin/okteto
 
 After you make changes, simply run `make` again to recompile your changes.
 
-## Test 
+## Test
 
 Unit tests for the project can be executed by running:
 

@@ -31,15 +31,15 @@ var loginHTML = []byte(`
       .header {
         margin: 52px;
       }
-      
+
       .header .logo {
         display: block;
         margin: 0 auto;
       }
 
-      .container { 
-        margin: 50px auto 40px auto; 
-        width: 600px; 
+      .container {
+        margin: 50px auto 40px auto;
+        width: 600px;
         text-align: center;
       }
 
