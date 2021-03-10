@@ -45,6 +45,7 @@ type PortForwardManager struct {
 	ctx            context.Context
 	restConfig     *rest.Config
 	client         kubernetes.Interface
+	namespace      string
 }
 
 type active struct {
@@ -77,7 +78,7 @@ func (a *active) error() error {
 }
 
 // NewPortForwardManager initializes a new instance
-func NewPortForwardManager(ctx context.Context, iface string, restConfig *rest.Config, c kubernetes.Interface) *PortForwardManager {
+func NewPortForwardManager(ctx context.Context, iface string, restConfig *rest.Config, c kubernetes.Interface, namespace string) *PortForwardManager {
 	return &PortForwardManager{
 		ctx:        ctx,
 		iface:      iface,
@@ -85,6 +86,7 @@ func NewPortForwardManager(ctx context.Context, iface string, restConfig *rest.C
 		services:   make(map[string]struct{}),
 		restConfig: restConfig,
 		client:     c,
+		namespace:  namespace,
 	}
 }
 

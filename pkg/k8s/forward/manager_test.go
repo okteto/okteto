@@ -24,7 +24,7 @@ import (
 
 func TestAdd(t *testing.T) {
 
-	pf := NewPortForwardManager(context.Background(), model.Localhost, nil, nil)
+	pf := NewPortForwardManager(context.Background(), model.Localhost, nil, nil, "")
 	if err := pf.Add(model.Forward{Local: 10100, Remote: 1010}); err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestStop(t *testing.T) {
-	pf := NewPortForwardManager(context.Background(), model.Localhost, nil, nil)
+	pf := NewPortForwardManager(context.Background(), model.Localhost, nil, nil, "")
 	pf.activeDev = &active{
 		readyChan: make(chan struct{}, 1),
 		stopChan:  make(chan struct{}, 1),
