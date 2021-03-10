@@ -125,6 +125,8 @@ func (f *Forward) UnmarshalExtendedForm(unmarshal func(interface{}) error) error
 	if len(rawForward.Labels) != 0 || rawForward.ServiceName != "" {
 		f.Service = true
 	}
-
+	if f.Labels != nil && f.ServiceName != "" {
+		return fmt.Errorf("Can not use ServiceName and Labels to specify the service.\nUse either the service name or labels to get the service to expose.")
+	}
 	return nil
 }
