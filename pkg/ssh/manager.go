@@ -151,3 +151,12 @@ func (fm *ForwardManager) Stop() {
 
 	log.Info("stopped SSH forward manager")
 }
+
+func (fm *ForwardManager) TransformLabelsToServiceName(f model.Forward) (model.Forward, error) {
+	serviceName, err := fm.pf.GetServiceNameByLabel(fm.namespace, f.Labels)
+	if err != nil {
+		return f, err
+	}
+	f.ServiceName = serviceName
+	return f, nil
+}

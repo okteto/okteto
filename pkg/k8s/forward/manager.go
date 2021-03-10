@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -169,6 +170,15 @@ func (p *PortForwardManager) Stop() {
 	log.Infof("stopped k8s forwarder")
 }
 
+func (fm *PortForwardManager) TransformLabelsToServiceName(f model.Forward) (model.Forward, error) {
+	serviceName, err := fm.GetServiceNameByLabel(fm.namespace, f.Labels)
+	if err != nil {
+		return f, err
+	}
+	f.ServiceName = serviceName
+	return f, nil
+}
+
 func (p *PortForwardManager) buildForwarderToDevPod(namespace, pod string) (*active, *portforward.PortForwarder, error) {
 	ports := []string{}
 	for _, f := range p.ports {
@@ -283,4 +293,21 @@ func (p *PortForwardManager) forwardService(ctx context.Context, namespace, serv
 
 		<-t.C
 	}
+}
+
+func (p *PortForwardManager) GetServiceNameByLabel(namespace string, labels map[string]string) (string, error) {
+	labelsString := TransformLabelsToString(labels)
+	serviceName, err := services.GetServiceNameByLabel(p.ctx, namespace, p.client, labelsString)
+	if err != nil {
+		return "", err
+	}
+	return serviceName, nil
+}
+
+func TransformLabelsToString(labels map[string]string) string {
+	labelList := make([]string, 0)
+	for key, value := range labels {
+		labelList = append(labelList, fmt.Sprintf("%s=%s", key, value))
+	}
+	return strings.Join(labelList, ",")
 }
