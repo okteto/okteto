@@ -208,25 +208,16 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 		c.Args = rule.Args
 	}
 
-	TranslateHealtchecks(c, *rule.Healthchecks)
+	if !rule.Healthchecks {
+		c.ReadinessProbe = nil
+		c.LivenessProbe = nil
+		c.StartupProbe = nil
+	}
 
 	TranslateResources(c, rule.Resources)
 	TranslateEnvVars(c, rule)
 	TranslateVolumeMounts(c, rule)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
-}
-
-//TranslateHealtchecks translates the healthchecks attached to a container
-func TranslateHealtchecks(c *apiv1.Container, h model.HealthchecksProbes) {
-	if !h.Liveness {
-		c.LivenessProbe = nil
-	}
-	if !h.Readiness {
-		c.ReadinessProbe = nil
-	}
-	if !h.Startup {
-		c.StartupProbe = nil
-   	}
 }
 
 func TranslateInitContainer(initContainer *model.InitContainer) {

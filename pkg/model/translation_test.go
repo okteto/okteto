@@ -46,9 +46,7 @@ services:
     imagePullPolicy: IfNotPresent
     sync:
       - worker:/src
-    healthchecks: 
-      readiness: true
-      liveness: true`)
+    healthchecks: true`)
 
 	dev, err := Read(manifest)
 	if err != nil {
@@ -64,7 +62,7 @@ services:
 		ImagePullPolicy:   apiv1.PullNever,
 		Command:           []string{"/var/okteto/bin/start.sh"},
 		Args:              []string{"-r"},
-		Healthchecks:      &HealthchecksProbes{},
+		Healthchecks:      false,
 		Environment: []EnvVar{
 			{
 				Name:  "OKTETO_NAMESPACE",
@@ -131,7 +129,7 @@ services:
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         nil,
 		Args:            nil,
-		Healthchecks:    &HealthchecksProbes{Readiness: true, Liveness: true},
+		Healthchecks:    true,
 		Environment:     make([]EnvVar, 0),
 		SecurityContext: &SecurityContext{
 			RunAsUser:  &rootUser,

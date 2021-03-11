@@ -128,7 +128,7 @@ type Dev struct {
 	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
-	Healthchecks         *HealthchecksProbes   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
+	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
@@ -248,13 +248,6 @@ type ResourceRequirements struct {
 	Requests ResourceList `json:"requests,omitempty" yaml:"requests,omitempty"`
 }
 
-// HealthchecksProbes defines probes for containers
-type HealthchecksProbes struct {
-	Liveness  bool `json:"liveness,omitempty" yaml:"liveness,omitempty"`
-	Readiness bool `json:"readiness,omitempty" yaml:"readiness,omitempty"`
-	Startup   bool `json:"startup,omitempty" yaml:"startup,omitempty"`
-}
-
 // ResourceList is a set of (resource name, quantity) pairs.
 type ResourceList map[apiv1.ResourceName]resource.Quantity
 
@@ -301,7 +294,6 @@ func Read(bytes []byte) (*Dev, error) {
 		},
 		Services:             make([]*Dev, 0),
 		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
-		Healthchecks:         &HealthchecksProbes{},
 	}
 
 	if bytes != nil {
@@ -479,9 +471,6 @@ func (dev *Dev) setDefaults() error {
 	if dev.Annotations == nil {
 		dev.Annotations = map[string]string{}
 	}
-	if dev.Healthchecks == nil {
-		dev.Healthchecks = &HealthchecksProbes{}
-	}
 	if dev.Interface == "" {
 		dev.Interface = Localhost
 	}
@@ -525,9 +514,6 @@ func (dev *Dev) setDefaults() error {
 		s.Services = make([]*Dev, 0)
 		s.Sync.Compression = false
 		s.Sync.RescanInterval = DefaultSyncthingRescanInterval
-		if s.Healthchecks == nil {
-			s.Healthchecks = &HealthchecksProbes{}
-		}
 	}
 	return nil
 }
