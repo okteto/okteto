@@ -190,3 +190,37 @@ func TestForward_less(t *testing.T) {
 		})
 	}
 }
+
+func TestForwardExtended_MarshalYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+		data     Forward
+	}{
+		{
+			name:     "service-name",
+			expected: "8080:svc:9090",
+			data:     Forward{Local: 8080, Remote: 9090, Service: true, ServiceName: "svc"},
+		},
+		{
+			name:     "service-name-and-labels",
+			expected: "8080:svc:5214",
+			data:     Forward{Local: 8080, Remote: 5214, Service: true, ServiceName: "svc", Labels: map[string]string{"key": "value"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := yaml.Marshal(tt.data)
+			if err != nil {
+				t.Error(err)
+			}
+
+			outStr := strings.Trim(string(b), "\n")
+			if outStr != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual '%+v', Expected '%+v'", outStr, tt.expected)
+			}
+
+		})
+	}
+}

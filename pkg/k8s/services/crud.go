@@ -100,3 +100,29 @@ func GetPortsByPod(ctx context.Context, p *apiv1.Pod, c *kubernetes.Clientset) (
 	}
 	return result, nil
 }
+
+//GetServiceNameByLabel returns the name of the service with certain labels
+func GetServiceNameByLabel(ctx context.Context, namespace string, c kubernetes.Interface, labels string) (string, error) {
+	serviceList, err := c.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels})
+	if err != nil {
+		return "", err
+	}
+	foundServices := serviceList.Items
+	if len(foundServices) == 0 {
+		return "", fmt.Errorf("Could not find any service with the following labels: '%s'.", labels)
+	} else if len(foundServices) == 1 {
+		serviceInfo := foundServices[0].ObjectMeta
+		return serviceInfo.Name, nil
+	}
+	servicesNames := GetServicesNamesFromList(serviceList)
+	return "", fmt.Errorf("Services [%s] have the following labels: '%s'.\nPlease specify the one you want to forward by name or use more specific labels.", servicesNames, labels)
+}
+
+func GetServicesNamesFromList(serviceList *apiv1.ServiceList) string {
+	names := make([]string, 0)
+
+	for _, service := range serviceList.Items {
+		names = append(names, service.ObjectMeta.Name)
+	}
+	return strings.Join(names, ", ")
+}

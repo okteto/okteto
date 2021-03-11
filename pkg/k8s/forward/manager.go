@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
@@ -45,6 +46,7 @@ type PortForwardManager struct {
 	ctx            context.Context
 	restConfig     *rest.Config
 	client         kubernetes.Interface
+	namespace      string
 }
 
 type active struct {
@@ -77,7 +79,7 @@ func (a *active) error() error {
 }
 
 // NewPortForwardManager initializes a new instance
-func NewPortForwardManager(ctx context.Context, iface string, restConfig *rest.Config, c kubernetes.Interface) *PortForwardManager {
+func NewPortForwardManager(ctx context.Context, iface string, restConfig *rest.Config, c kubernetes.Interface, namespace string) *PortForwardManager {
 	return &PortForwardManager{
 		ctx:        ctx,
 		iface:      iface,
@@ -85,6 +87,7 @@ func NewPortForwardManager(ctx context.Context, iface string, restConfig *rest.C
 		services:   make(map[string]struct{}),
 		restConfig: restConfig,
 		client:     c,
+		namespace:  namespace,
 	}
 }
 
@@ -165,6 +168,15 @@ func (p *PortForwardManager) Stop() {
 	p.activeServices = nil
 	p.activeDev = nil
 	log.Infof("stopped k8s forwarder")
+}
+
+func (fm *PortForwardManager) TransformLabelsToServiceName(f model.Forward) (model.Forward, error) {
+	serviceName, err := fm.GetServiceNameByLabel(fm.namespace, f.Labels)
+	if err != nil {
+		return f, err
+	}
+	f.ServiceName = serviceName
+	return f, nil
 }
 
 func (p *PortForwardManager) buildForwarderToDevPod(namespace, pod string) (*active, *portforward.PortForwarder, error) {
@@ -281,4 +293,13 @@ func (p *PortForwardManager) forwardService(ctx context.Context, namespace, serv
 
 		<-t.C
 	}
+}
+
+func (p *PortForwardManager) GetServiceNameByLabel(namespace string, labelsMap map[string]string) (string, error) {
+	labelsString := labels.TransformLabelsToSelector(labelsMap)
+	serviceName, err := services.GetServiceNameByLabel(p.ctx, namespace, p.client, labelsString)
+	if err != nil {
+		return "", err
+	}
+	return serviceName, nil
 }

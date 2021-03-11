@@ -11,36 +11,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package view
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/cobra"
 )
 
-//RunWithRetry runs a function and it refresh the kubernetes credentilas if needed
-func RunWithRetry(f func() error) error {
-	err := f()
-
-	if !errors.IsCredentialError(err) {
-		return err
+//URL returns the Okteto URL where the current user is authenticated
+func URL(ctx context.Context) *cobra.Command {
+	return &cobra.Command{
+		Use:   "url",
+		Short: "Returns the Okteto URL where the current user is authenticated",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			t, err := okteto.GetToken()
+			if err != nil {
+				log.Infof("error getting okteto token: %s", err.Error())
+				return errors.ErrNotLogged
+			}
+			fmt.Println(t.URL)
+			return nil
+		},
 	}
-
-	if okteto.GetClusterContext() != client.GetSessionContext("") {
-		return err
-	}
-
-	log.Infof("Updating Kubernetes credentials for error: %s", err.Error())
-	ctx := context.Background()
-	namespace := client.GetContextNamespace("")
-	if _, _, err := okteto.RefreshOktetoKubeconfig(ctx, namespace); err != nil {
-		return err
-	}
-	log.Information("Kubernetes credentials updated")
-
-	return f()
 }

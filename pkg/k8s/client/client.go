@@ -14,11 +14,9 @@
 package client
 
 import (
-	"context"
 	"log"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/model"
@@ -50,18 +48,13 @@ func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
 func GetLocalWithContext(thisContext string) (*kubernetes.Clientset, *rest.Config, error) {
 	thisContext = GetSessionContext(thisContext)
 	clientConfig := getClientConfig(thisContext)
-	if okteto.GetClusterContext() == thisContext {
-		ctx := context.Background()
-		namespace := GetContextNamespace(thisContext)
-		go okteto.RefreshOktetoKubeconfig(ctx, namespace)
-	}
 
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	config.Timeout = time.Second * 10
+	config.Timeout = getKubernetesTimeout()
 
 	setAnalytics(sessionContext, config.Host)
 

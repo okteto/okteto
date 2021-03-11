@@ -24,6 +24,8 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var oktetoRegistry = ""
@@ -53,6 +55,18 @@ type authProvider struct {
 
 func (ap *authProvider) Register(server *grpc.Server) {
 	auth.RegisterAuthServer(server, ap)
+}
+
+func (ap *authProvider) FetchToken(ctx context.Context, req *auth.FetchTokenRequest) (*auth.FetchTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FetchToken not implemented")
+}
+
+func (ap *authProvider) GetTokenAuthority(ctx context.Context, req *auth.GetTokenAuthorityRequest) (*auth.GetTokenAuthorityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTokenAuthority not implemented")
+}
+
+func (ap *authProvider) VerifyTokenAuthority(ctx context.Context, req *auth.VerifyTokenAuthorityRequest) (*auth.VerifyTokenAuthorityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VerifyTokenAuthority not implemented")
 }
 
 func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {

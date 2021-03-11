@@ -410,7 +410,10 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		output := <-up.cleaned
 		log.Debugf("clean command output: %s", output)
 
-		if isWatchesConfigurationTooLow(output) {
+		outByCommand := strings.Split(output, "\n")
+		version, watches := outByCommand[0], outByCommand[1]
+
+		if isWatchesConfigurationTooLow(watches) {
 			folder := config.GetNamespaceHome(up.Dev.Namespace)
 			if utils.GetWarningState(folder, ".remotewatcher") == "" {
 				log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
@@ -420,6 +423,11 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 					log.Infof("failed to set warning remotewatcher state: %s", err.Error())
 				}
 			}
+		}
+
+		if version != model.OktetoBinImageTag {
+			log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
+			log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
 		}
 
 		printDisplayContext(up.Dev)
@@ -689,9 +697,17 @@ func (up *upContext) forwards(ctx context.Context) error {
 	}
 
 	log.Infof("starting port forwards")
-	up.Forwarder = forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client)
+	up.Forwarder = forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client, up.Dev.Namespace)
 
-	for _, f := range up.Dev.Forward {
+	for idx, f := range up.Dev.Forward {
+		if f.Labels != nil {
+			forwardWithServiceName, err := up.Forwarder.TransformLabelsToServiceName(f)
+			if err != nil {
+				return err
+			}
+			up.Dev.Forward[idx] = forwardWithServiceName
+			f = forwardWithServiceName
+		}
 		if err := up.Forwarder.Add(f); err != nil {
 			return err
 		}
@@ -710,12 +726,12 @@ func (up *upContext) forwards(ctx context.Context) error {
 
 func (up *upContext) sshForwards(ctx context.Context) error {
 	log.Infof("starting SSH port forwards")
-	f := forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client)
+	f := forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client, up.Dev.Namespace)
 	if err := f.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
 		return err
 	}
 
-	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f)
+	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f, up.Dev.Namespace)
 
 	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
@@ -725,7 +741,15 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return err
 	}
 
-	for _, f := range up.Dev.Forward {
+	for idx, f := range up.Dev.Forward {
+		if f.Labels != nil {
+			forwardWithServiceName, err := up.Forwarder.TransformLabelsToServiceName(f)
+			if err != nil {
+				return err
+			}
+			up.Dev.Forward[idx] = forwardWithServiceName
+			f = forwardWithServiceName
+		}
 		if err := up.Forwarder.Add(f); err != nil {
 			return err
 		}
@@ -896,7 +920,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
 
-	cmd := "cat /proc/sys/fs/inotify/max_user_watches; /var/okteto/bin/clean >/dev/null 2>&1"
+	cmd := "cat /var/okteto/bin/version.txt; cat /proc/sys/fs/inotify/max_user_watches; /var/okteto/bin/clean >/dev/null 2>&1"
 
 	err := exec.Exec(
 		ctx,
