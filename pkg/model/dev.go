@@ -747,6 +747,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		SecurityContext:    dev.SecurityContext,
 		Resources:          dev.Resources,
 		Healthchecks:       false,
+		InitContainer:      dev.InitContainer,
 		HealthchecksProbes: dev.Healthchecks,
 	}
 

@@ -48,6 +48,7 @@ type TranslationRule struct {
 	Volumes            []VolumeMount        `json:"volumes,omitempty"`
 	SecurityContext    *SecurityContext     `json:"securityContext,omitempty"`
 	Resources          ResourceRequirements `json:"resources,omitempty"`
+	InitContainer      InitContainer        `json:"initContainers,omitempty"`
 	HealthchecksProbes *HealthchecksProbes  `json:"probes" yaml:"probes"`
 }
 
