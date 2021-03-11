@@ -22,7 +22,7 @@ require (
 	github.com/frankban/quicktest v1.7.3 // indirect
 	github.com/gliderlabs/ssh v0.3.1
 	github.com/go-git/go-git/v5 v5.1.0
-	github.com/gofrs/flock v0.7.3
+	github.com/gofrs/flock v0.8.0
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/uuid v1.1.2
@@ -45,6 +45,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/src-d/enry/v2 v2.1.0
 	github.com/subosito/gotenv v1.2.0
+	github.com/xlab/handysort v0.0.0-20150421192137-fb3537ed64a1 // indirect
 	golang.org/x/crypto v0.0.0-20201117144127-c1f2f97bffc9
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
@@ -52,13 +53,15 @@ require (
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0
-	helm.sh/helm/v3 v3.3.4
-	k8s.io/api v0.19.0
-	k8s.io/apimachinery v0.19.0
-	k8s.io/cli-runtime v0.18.8
-	k8s.io/client-go v0.19.0
-	k8s.io/kubectl v0.18.8
+	helm.sh/helm/v3 v3.5.1
+	k8s.io/api v0.20.1
+	k8s.io/apimachinery v0.20.1
+	k8s.io/cli-runtime v0.20.1
+	k8s.io/client-go v0.20.1
+	k8s.io/kubectl v0.20.1
 	rsc.io/letsencrypt v0.0.3 // indirect
+	vbom.ml/util v0.0.0-20160121211510-db5cfe13f5cc // indirect
 )
 
+replace github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
 replace github.com/moby/buildkit => github.com/okteto/buildkit v0.8.2-okteto1
