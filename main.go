@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/cmd"
+	configCMD "github.com/okteto/okteto/cmd/config"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
@@ -84,7 +85,7 @@ func main() {
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
-	root.AddCommand(cmd.Username())
+	root.AddCommand(configCMD.Config(ctx))
 	root.AddCommand(cmd.Build(ctx))
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.Delete(ctx))

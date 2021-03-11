@@ -35,13 +35,13 @@ const (
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	Token     string `json:"Token"`
 	URL       string `json:"URL"`
-	ID        string `json:"ID"`
-	Username  string `json:"Username"`
-	MachineID string `json:"MachineID"`
 	Buildkit  string `json:"Buildkit"`
 	Registry  string `json:"Registry"`
+	ID        string `json:"ID"`
+	Username  string `json:"Username"`
+	Token     string `json:"Token"`
+	MachineID string `json:"MachineID"`
 }
 
 // User contains the auth information of the logged in user

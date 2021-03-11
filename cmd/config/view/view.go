@@ -11,46 +11,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package view
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-//Username returns the username of the authenticated user
-func Username() *cobra.Command {
+//View shows okteto configuration values of the authenticated user
+func View(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "username",
-		Short: "Returns the username of the authenticated user",
+		Use:   "view",
+		Short: "Shows okteto configuration values of the authenticated user",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-			username := okteto.GetUsername()
-			if username != "" {
-				fmt.Println(username)
-				return nil
-			}
 			t, err := okteto.GetToken()
 			if err != nil {
 				log.Infof("error getting okteto token: %s", err.Error())
 				return errors.ErrNotLogged
 			}
-			log.Info("refreshing okteto token...")
-			u, err := login.WithToken(ctx, t.URL, t.Token)
+			tBytes, err := json.MarshalIndent(t, "", "   ")
 			if err != nil {
-				log.Infof("error refreshing okteto token: %s", err.Error())
-				return errors.ErrNotLogged
+				log.Infof("error marshalling token: %s", err.Error())
+				fmt.Println(t)
+				return nil
 			}
-			fmt.Println(u.ExternalID)
+			fmt.Println(string(tBytes))
 			return nil
 		},
 	}
-
+	cmd.AddCommand(Username(ctx))
+	cmd.AddCommand(URL(ctx))
 	return cmd
 }
