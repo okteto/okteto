@@ -13,6 +13,11 @@
 
 package labels
 
+import (
+	"fmt"
+	"strings"
+)
+
 const (
 	//Version represents the current dev data version
 	Version = "1.0"
@@ -59,3 +64,11 @@ const (
 	//StateBeforeSleepingAnnontation indicates the state of the resource prior to scale it to zero
 	StateBeforeSleepingAnnontation = "dev.okteto.com/state-before-sleeping"
 )
+
+func TransformLabelsToSelector(labels map[string]string) string {
+	labelList := make([]string, 0)
+	for key, value := range labels {
+		labelList = append(labelList, fmt.Sprintf("%s=%s", key, value))
+	}
+	return strings.Join(labelList, ",")
+}

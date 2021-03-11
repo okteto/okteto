@@ -23,10 +23,19 @@ const malformedPortForward = "Wrong port-forward syntax '%s', must be of the for
 
 // Forward represents a port forwarding definition
 type Forward struct {
-	Local       int
-	Remote      int
-	Service     bool   `json:"-" yaml:"-"`
-	ServiceName string `json:"-" yaml:"-"`
+	Local       int               `json:"localPort" yaml:"localPort"`
+	Remote      int               `json:"remotePort" yaml:"remotePort"`
+	Service     bool              `json:"-" yaml:"-"`
+	ServiceName string            `json:"name" yaml:"name"`
+	Labels      map[string]string `json:"labels" yaml:"labels"`
+}
+
+type ForwardRaw struct {
+	Local       int               `json:"localPort" yaml:"localPort"`
+	Remote      int               `json:"remotePort" yaml:"remotePort"`
+	Service     bool              `json:"-" yaml:"-"`
+	ServiceName string            `json:"name" yaml:"name"`
+	Labels      map[string]string `json:"labels" yaml:"labels"`
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg for port forwards.
@@ -38,7 +47,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)
 	if err != nil {
-		return err
+		return f.UnmarshalExtendedForm(unmarshal)
 	}
 
 	parts := strings.Split(raw, ":")
@@ -101,4 +110,23 @@ func (f *Forward) less(c *Forward) bool {
 	}
 
 	return f.Local < c.Local
+}
+
+func (f *Forward) UnmarshalExtendedForm(unmarshal func(interface{}) error) error {
+	var rawForward ForwardRaw
+	err := unmarshal(&rawForward)
+	if err != nil {
+		return err
+	}
+	f.Local = rawForward.Local
+	f.Remote = rawForward.Remote
+	f.ServiceName = rawForward.ServiceName
+	f.Labels = rawForward.Labels
+	if len(rawForward.Labels) != 0 || rawForward.ServiceName != "" {
+		f.Service = true
+	}
+	if f.Labels != nil && f.ServiceName != "" {
+		return fmt.Errorf("Can not use ServiceName and Labels to specify the service.\nUse either the service name or labels to get the service to expose.")
+	}
+	return nil
 }

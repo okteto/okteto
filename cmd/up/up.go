@@ -697,9 +697,17 @@ func (up *upContext) forwards(ctx context.Context) error {
 	}
 
 	log.Infof("starting port forwards")
-	up.Forwarder = forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client)
+	up.Forwarder = forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client, up.Dev.Namespace)
 
-	for _, f := range up.Dev.Forward {
+	for idx, f := range up.Dev.Forward {
+		if f.Labels != nil {
+			forwardWithServiceName, err := up.Forwarder.TransformLabelsToServiceName(f)
+			if err != nil {
+				return err
+			}
+			up.Dev.Forward[idx] = forwardWithServiceName
+			f = forwardWithServiceName
+		}
 		if err := up.Forwarder.Add(f); err != nil {
 			return err
 		}
@@ -718,12 +726,12 @@ func (up *upContext) forwards(ctx context.Context) error {
 
 func (up *upContext) sshForwards(ctx context.Context) error {
 	log.Infof("starting SSH port forwards")
-	f := forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client)
+	f := forward.NewPortForwardManager(ctx, up.Dev.Interface, up.RestConfig, up.Client, up.Dev.Namespace)
 	if err := f.Add(model.Forward{Local: up.Dev.RemotePort, Remote: up.Dev.SSHServerPort}); err != nil {
 		return err
 	}
 
-	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f)
+	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f, up.Dev.Namespace)
 
 	if err := up.Forwarder.Add(model.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
@@ -733,7 +741,15 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return err
 	}
 
-	for _, f := range up.Dev.Forward {
+	for idx, f := range up.Dev.Forward {
+		if f.Labels != nil {
+			forwardWithServiceName, err := up.Forwarder.TransformLabelsToServiceName(f)
+			if err != nil {
+				return err
+			}
+			up.Dev.Forward[idx] = forwardWithServiceName
+			f = forwardWithServiceName
+		}
 		if err := up.Forwarder.Add(f); err != nil {
 			return err
 		}

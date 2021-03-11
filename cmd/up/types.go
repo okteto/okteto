@@ -54,4 +54,5 @@ type forwarder interface {
 	AddReverse(model.Reverse) error
 	Start(string, string) error
 	Stop()
+	TransformLabelsToServiceName(model.Forward) (model.Forward, error)
 }

@@ -33,10 +33,11 @@ type ForwardManager struct {
 	sshAddr         string
 	pf              *k8sforward.PortForwardManager
 	pool            *pool
+	namespace       string
 }
 
 // NewForwardManager returns a newly initialized instance of ForwardManager
-func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string, pf *k8sforward.PortForwardManager) *ForwardManager {
+func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string, pf *k8sforward.PortForwardManager, namespace string) *ForwardManager {
 	return &ForwardManager{
 		ctx:             ctx,
 		localInterface:  localInterface,
@@ -45,6 +46,7 @@ func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInter
 		reverses:        make(map[int]*reverse),
 		sshAddr:         sshAddr,
 		pf:              pf,
+		namespace:       namespace,
 	}
 }
 
@@ -148,4 +150,13 @@ func (fm *ForwardManager) Stop() {
 	}
 
 	log.Info("stopped SSH forward manager")
+}
+
+func (fm *ForwardManager) TransformLabelsToServiceName(f model.Forward) (model.Forward, error) {
+	serviceName, err := fm.pf.GetServiceNameByLabel(fm.namespace, f.Labels)
+	if err != nil {
+		return f, err
+	}
+	f.ServiceName = serviceName
+	return f, nil
 }
