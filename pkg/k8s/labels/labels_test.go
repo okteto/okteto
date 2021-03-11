@@ -22,32 +22,38 @@ func TestTransformLabelsToSelector(t *testing.T) {
 	tests := []struct {
 		name     string
 		labels   map[string]string
-		expected string
+		expected []string
 	}{
 		{
 			"single-label",
 			map[string]string{"app": "db"},
-			"app=db",
+			[]string{"app=db"},
 		},
 		{
 			"multiple_labels",
 			map[string]string{"app": "db", "stage": "prod"},
-			"app=db,stage=prod",
+			[]string{"app=db,stage=prod", "stage=prod,app=db"},
 		},
 		{
 			"none_labels",
 			map[string]string{},
-			"",
+			[]string{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
+			passed := true
 			result := TransformLabelsToSelector(tt.labels)
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("didn't transformed correctly. Actual %+v, Expected %+v", result, tt.expected)
+			for _, possibleSolution := range tt.expected {
+				if reflect.DeepEqual(result, possibleSolution) {
+					passed = true
+				}
 			}
+			if !passed {
+				t.Errorf("didn't transformed correctly. Actual %+v, Expected one of %+v", result, tt.expected)
+			}
+
 		})
 	}
 }
