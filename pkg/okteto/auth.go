@@ -35,12 +35,13 @@ const (
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	Token     string `json:"Token"`
 	URL       string `json:"URL"`
-	ID        string `json:"ID"`
-	MachineID string `json:"MachineID"`
 	Buildkit  string `json:"Buildkit"`
 	Registry  string `json:"Registry"`
+	ID        string `json:"ID"`
+	Username  string `json:"Username"`
+	Token     string `json:"Token"`
+	MachineID string `json:"MachineID"`
 }
 
 // User contains the auth information of the logged in user
@@ -115,7 +116,7 @@ func saveAuthData(user *User, url string) error {
 		return fmt.Errorf("empty response")
 	}
 
-	if err := saveToken(user.ID, user.Token, url, user.Registry, user.Buildkit); err != nil {
+	if err := saveToken(user.ID, user.ExternalID, user.Token, url, user.Registry, user.Buildkit); err != nil {
 		return err
 	}
 
@@ -242,6 +243,16 @@ func GetUserID() string {
 	return t.ID
 }
 
+// GetUsername returns the username of the authenticated user
+func GetUsername() string {
+	t, err := GetToken()
+	if err != nil {
+		return ""
+	}
+
+	return t.Username
+}
+
 // GetMachineID returns the userID of the authenticated user
 func GetMachineID() string {
 	t, err := GetToken()
@@ -297,7 +308,7 @@ func GetCertificatePath() string {
 	return filepath.Join(config.GetOktetoHome(), ".ca.crt")
 }
 
-func saveToken(id, token, url, registry, buildkit string) error {
+func saveToken(id, username, token, url, registry, buildkit string) error {
 	t, err := GetToken()
 	if err != nil {
 		log.Infof("bad token, re-initializing: %s", err)
@@ -305,6 +316,7 @@ func saveToken(id, token, url, registry, buildkit string) error {
 	}
 
 	t.ID = id
+	t.Username = username
 	t.Token = token
 	t.URL = url
 	t.Buildkit = buildkit
