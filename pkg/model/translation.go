@@ -32,22 +32,23 @@ type Translation struct {
 
 //TranslationRule represents how to apply a container translation in a deployment
 type TranslationRule struct {
-	Marker            string               `json:"marker"`
-	OktetoBinImageTag string               `json:"oktetoBinImageTag"`
-	Node              string               `json:"node,omitempty"`
-	Container         string               `json:"container,omitempty"`
-	Image             string               `json:"image,omitempty"`
-	ImagePullPolicy   apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment       []EnvVar             `json:"environment,omitempty"`
-	Secrets           []Secret             `json:"secrets,omitempty"`
-	Command           []string             `json:"command,omitempty"`
-	Args              []string             `json:"args,omitempty"`
-	WorkDir           string               `json:"workdir"`
-	Healthchecks      *HealthchecksProbes  `json:"healthchecks" yaml:"healthchecks"`
-	PersistentVolume  bool                 `json:"persistentVolume" yaml:"persistentVolume"`
-	Volumes           []VolumeMount        `json:"volumes,omitempty"`
-	SecurityContext   *SecurityContext     `json:"securityContext,omitempty"`
-	Resources         ResourceRequirements `json:"resources,omitempty"`
+	Marker             string               `json:"marker"`
+	OktetoBinImageTag  string               `json:"oktetoBinImageTag"`
+	Node               string               `json:"node,omitempty"`
+	Container          string               `json:"container,omitempty"`
+	Image              string               `json:"image,omitempty"`
+	ImagePullPolicy    apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	Environment        []EnvVar             `json:"environment,omitempty"`
+	Secrets            []Secret             `json:"secrets,omitempty"`
+	Command            []string             `json:"command,omitempty"`
+	Args               []string             `json:"args,omitempty"`
+	WorkDir            string               `json:"workdir"`
+	Healthchecks       bool                 `json:"healthchecks" yaml:"healthchecks"`
+	PersistentVolume   bool                 `json:"persistentVolume" yaml:"persistentVolume"`
+	Volumes            []VolumeMount        `json:"volumes,omitempty"`
+	SecurityContext    *SecurityContext     `json:"securityContext,omitempty"`
+	Resources          ResourceRequirements `json:"resources,omitempty"`
+	HealthchecksProbes *HealthchecksProbes  `json:"probes" yaml:"probes"`
 }
 
 //IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest

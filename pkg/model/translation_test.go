@@ -57,14 +57,14 @@ services:
 
 	rule1 := dev.ToTranslationRule(dev)
 	rule1OK := &TranslationRule{
-		Marker:            OktetoBinImageTag,
-		OktetoBinImageTag: OktetoBinImageTag,
-		Container:         "dev",
-		Image:             "web:latest",
-		ImagePullPolicy:   apiv1.PullNever,
-		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r"},
-		Healthchecks:      &HealthchecksProbes{},
+		Marker:             OktetoBinImageTag,
+		OktetoBinImageTag:  OktetoBinImageTag,
+		Container:          "dev",
+		Image:              "web:latest",
+		ImagePullPolicy:    apiv1.PullNever,
+		Command:            []string{"/var/okteto/bin/start.sh"},
+		Args:               []string{"-r"},
+		HealthchecksProbes: &HealthchecksProbes{},
 		Environment: []EnvVar{
 			{
 				Name:  "OKTETO_NAMESPACE",
@@ -123,13 +123,14 @@ services:
 	dev2 := dev.Services[0]
 	rule2 := dev2.ToTranslationRule(dev)
 	rule2OK := &TranslationRule{
-		Container:       "dev",
-		Image:           "worker:latest",
-		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Command:         nil,
-		Args:            nil,
-		Healthchecks:    &HealthchecksProbes{Readiness: true, Liveness: true},
-		Environment:     make([]EnvVar, 0),
+		Container:          "dev",
+		Image:              "worker:latest",
+		ImagePullPolicy:    apiv1.PullIfNotPresent,
+		Command:            nil,
+		Args:               nil,
+		Healthchecks:       true,
+		HealthchecksProbes: &HealthchecksProbes{Readiness: true, Liveness: true},
+		Environment:        make([]EnvVar, 0),
 		SecurityContext: &SecurityContext{
 			RunAsUser:  &rootUser,
 			RunAsGroup: &rootUser,

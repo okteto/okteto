@@ -727,22 +727,25 @@ func (dev *Dev) LabelsSelector() string {
 // ToTranslationRule translates a dev struct into a translation rule
 func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	rule := &TranslationRule{
-		Container:        dev.Container,
-		ImagePullPolicy:  dev.ImagePullPolicy,
-		Environment:      dev.Environment,
-		Secrets:          dev.Secrets,
-		WorkDir:          dev.WorkDir,
-		PersistentVolume: main.PersistentVolumeEnabled(),
-		Volumes:          []VolumeMount{},
-		SecurityContext:  dev.SecurityContext,
-		Resources:        dev.Resources,
-		Healthchecks:     dev.Healthchecks,
+		Container:          dev.Container,
+		ImagePullPolicy:    dev.ImagePullPolicy,
+		Environment:        dev.Environment,
+		Secrets:            dev.Secrets,
+		WorkDir:            dev.WorkDir,
+		PersistentVolume:   main.PersistentVolumeEnabled(),
+		Volumes:            []VolumeMount{},
+		SecurityContext:    dev.SecurityContext,
+		Resources:          dev.Resources,
+		Healthchecks:       false,
+		HealthchecksProbes: dev.Healthchecks,
 	}
 
 	if !dev.EmptyImage {
 		rule.Image = dev.Image.Name
 	}
-
+	if areHealthchecksEnabled(rule.HealthchecksProbes) {
+		rule.Healthchecks = true
+	}
 	if main == dev {
 		rule.Marker = OktetoBinImageTag //for backward compatibility
 		rule.OktetoBinImageTag = OktetoBinImageTag
@@ -839,6 +842,13 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	}
 
 	return rule
+}
+
+func areHealthchecksEnabled(probes *HealthchecksProbes) bool {
+	if probes != nil {
+		return probes.Liveness || probes.Readiness || probes.Startup
+	}
+	return false
 }
 
 //GevSandbox returns a deployment sandbox
