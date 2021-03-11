@@ -20,9 +20,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"runtime"
-	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
@@ -295,19 +295,11 @@ func (p *PortForwardManager) forwardService(ctx context.Context, namespace, serv
 	}
 }
 
-func (p *PortForwardManager) GetServiceNameByLabel(namespace string, labels map[string]string) (string, error) {
-	labelsString := TransformLabelsToString(labels)
+func (p *PortForwardManager) GetServiceNameByLabel(namespace string, labelsMap map[string]string) (string, error) {
+	labelsString := labels.TransformLabelsToSelector(labelsMap)
 	serviceName, err := services.GetServiceNameByLabel(p.ctx, namespace, p.client, labelsString)
 	if err != nil {
 		return "", err
 	}
 	return serviceName, nil
-}
-
-func TransformLabelsToString(labels map[string]string) string {
-	labelList := make([]string, 0)
-	for key, value := range labels {
-		labelList = append(labelList, fmt.Sprintf("%s=%s", key, value))
-	}
-	return strings.Join(labelList, ",")
 }
