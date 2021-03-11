@@ -43,7 +43,7 @@ type TranslationRule struct {
 	Command           []string             `json:"command,omitempty"`
 	Args              []string             `json:"args,omitempty"`
 	WorkDir           string               `json:"workdir"`
-	Healthchecks      bool                 `json:"healthchecks" yaml:"healthchecks"`
+	Healthchecks      *HealthchecksProbes  `json:"healthchecks" yaml:"healthchecks"`
 	PersistentVolume  bool                 `json:"persistentVolume" yaml:"persistentVolume"`
 	Volumes           []VolumeMount        `json:"volumes,omitempty"`
 	SecurityContext   *SecurityContext     `json:"securityContext,omitempty"`
