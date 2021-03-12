@@ -18,37 +18,37 @@ cmd_exists() {
 latestURL=https://github.com/okteto/okteto/releases/latest/download
 
 case "$OS" in
-    darwin) 
+    darwin)
       case "$ARCH" in
-       x86_64) 
+       x86_64)
             URL=${latestURL}/okteto-Darwin-x86_64
             ;;
-        arm64) 
+        arm64)
             URL=${latestURL}/okteto-Darwin-arm64
             ;;
-        *) 
-            printf "$red> The architecture (${ARCH}) is not supported by this installation script.$reset\n" 
-            exit 1 
+        *)
+            printf "$red> The architecture (${ARCH}) is not supported by this installation script.$reset\n"
+            exit 1
             ;;
       esac
       ;;
     linux)
       case "$ARCH" in
-        x86_64) 
+        x86_64)
             URL=${latestURL}/okteto-Linux-x86_64
             ;;
-        amd64) 
+        amd64)
             URL=${latestURL}/okteto-Linux-x86_64
             ;;
-        armv8*) 
+        armv8*)
             URL=${latestURL}/okteto-Linux-arm64
             ;;
         aarch64)
             URL=${latestURL}/okteto-Linux-arm64
             ;;
-        *) 
-            printf "$red> The architecture (${ARCH}) is not supported by this installation script.$reset\n" 
-            exit 1 
+        *)
+            printf "$red> The architecture (${ARCH}) is not supported by this installation script.$reset\n"
+            exit 1
             ;;
       esac
       ;;

@@ -52,7 +52,7 @@ func upgradeAvailable() string {
 	return ""
 }
 
-// GetLatestVersionFromGithub returns the latest okteto version from Github
+// GetLatestVersionFromGithub returns the latest okteto version from GitHub
 func GetLatestVersionFromGithub() (string, error) {
 	client := github.NewClient(nil)
 	ctx := context.Background()

@@ -8,10 +8,10 @@ jobs:
       - image: okteto/golang-ci:1.16
     steps:
       - checkout
-      - restore_cache: 
+      - restore_cache:
           keys:
             - v3-pkg-cache-{{ checksum "go.sum" }}
-      - run: 
+      - run:
           name: test
           command: |
             make test
@@ -34,13 +34,13 @@ jobs:
           path: coverage.txt
           destination: coverage.txt
   integration:
-    environment: 
+    environment:
       OKTETO_USER: cindylopez
     docker:
       - image: okteto/dev:latest
     steps:
       - checkout
-      - restore_cache: 
+      - restore_cache:
           keys:
             - v3-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
@@ -55,15 +55,15 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
             /usr/local/bin/okteto login --token ${API_TOKEN}
-      - run: 
+      - run:
           name: integration tests (serverside)
-          environment: 
+          environment:
             OKTETO_CLIENTSIDE_TRANSLATION: ''
             OKTETO_SKIP_CLEANUP: 'true'
           command: make integration
-      - run: 
+      - run:
           name: integration tests (clientside)
-          environment: 
+          environment:
             OKTETO_SKIP_CLEANUP: 'true'
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
           command: make integration
@@ -73,7 +73,7 @@ jobs:
             - ~/.cache/go-build
             - /go/pkg
       - store_artifacts:
-          path: /root/.okteto        
+          path: /root/.okteto
   mock-publish-github-release:
     docker:
       - image: okteto/golang-ci:1.16
@@ -88,24 +88,24 @@ jobs:
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
             ./update_homebrew_formula.sh 0.0.1 $sha $sha_arm
   windows-unit:
-    environment: 
+    environment:
       OKTETO_USER: cindylopez
     executor: win/default
-    steps: 
+    steps:
       - checkout
-      - run: 
+      - run:
           name: upgrade golang
           command: choco upgrade golang --version 1.16
-      - restore_cache: 
+      - restore_cache:
           keys:
             - v4-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
-      - run: 
+      - run:
           name: test
           command: |
             go mod download
             go version
             go test ./...
-      - run: 
+      - run:
           name: upgrade kubectl
           command: choco install kubernetes-cli
       - attach_workspace:
@@ -116,17 +116,17 @@ jobs:
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
             & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_TOKEN
-      - run: 
+      - run:
           name: integration tests (serverside)
-          environment: 
+          environment:
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
             OKTETO_SKIP_CLEANUP: 'true'
             OKTETO_CLIENTSIDE_TRANSLATION: ''
           command: |
             go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
-      - run: 
+      - run:
           name: integration tests (clientside)
-          environment: 
+          environment:
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
             OKTETO_SKIP_CLEANUP: 'true'
@@ -171,7 +171,7 @@ jobs:
           overwrite: false
       - setup_remote_docker:
           version: "19.03.8"
-      - run:  
+      - run:
           name: "Publish Docker container"
           command: |
             export DOCKER_BUILDKIT=1
@@ -198,7 +198,7 @@ jobs:
       - checkout
       - setup_remote_docker:
           version: "19.03.8"
-      - run:  
+      - run:
           name: "Publish Docker container"
           command: |
             export DOCKER_BUILDKIT=1
@@ -229,7 +229,7 @@ workflows:
             - build
           filters:
             branches:
-              only: 
+              only:
                 - master
                 - /.*(e2e)/
                 - /.*(integration)/
@@ -258,6 +258,6 @@ workflows:
             - build
           filters:
             branches:
-              only: 
+              only:
                 - master
                 - /.*(windows)/

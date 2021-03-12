@@ -13,7 +13,7 @@ label = $(word 3, $(temp))
 UNAME := $(shell uname)
 ifeq ($(UNAME), Darwin)
 SHACOMMAND := shasum -a 256
-else 
+else
 SHACOMMAND := sha256sum
 endif
 
@@ -23,8 +23,8 @@ endif
 build-all: $(PLATFORMS)
 
 $(PLATFORMS):
-	GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 $(BUILDCOMMAND) -o "bin/$(label)" 
-	$(SHACOMMAND) "bin/$(label)" > "bin/$(label).sha256" 
+	GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 $(BUILDCOMMAND) -o "bin/$(label)"
+	$(SHACOMMAND) "bin/$(label)" > "bin/$(label).sha256"
 
 .PHONY: latest
 latest:

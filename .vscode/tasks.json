@@ -1,6 +1,6 @@
 {
-	"version": "2.0.0",	
-	"type": "shell",	
+	"version": "2.0.0",
+	"type": "shell",
 	"echoCommand": true,
 	"cwd": "${workspaceFolder}",
 	"tasks": [
@@ -11,6 +11,6 @@
 				"kind": "build",
 				"isDefault": true
 			}
-		},		
+		}
 	]
 }
