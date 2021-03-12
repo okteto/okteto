@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -92,6 +93,8 @@ func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev,
 			if strings.Contains(c.Message, "exceeded quota") {
 				log.Infof("%s: %s", errors.ErrQuota, c.Message)
 				return nil, errors.ErrQuota
+			} else if isResourcesRelatedError(c.Message) {
+				return nil, getResourceLimitError(c.Message, dev)
 			}
 			return nil, fmt.Errorf(c.Message)
 		}
@@ -102,6 +105,36 @@ func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev,
 	}
 
 	return d, nil
+}
+
+func isResourcesRelatedError(errorMessage string) bool {
+	if strings.Contains(errorMessage, "maximum cpu usage") || strings.Contains(errorMessage, "maximum memory usage") {
+		return true
+	}
+	return false
+}
+
+func getResourceLimitError(errorMessage string, dev *model.Dev) error {
+	var errorToReturn string
+	if strings.Contains(errorMessage, "maximum cpu usage") {
+		cpuMaximumRegex, _ := regexp.Compile(`cpu usage per Pod is (\d*\w*)`)
+		maximumCpu := cpuMaximumRegex.FindStringSubmatch(errorMessage)[1]
+		var limitCpuString string
+		if limitCpu, ok := dev.Resources.Limits["cpu"]; ok {
+			limitCpuString = limitCpu.String()
+		}
+		errorToReturn += fmt.Sprintf("Maximum CPU limit per pod is %s, the current value is %s. ", maximumCpu, limitCpuString)
+	}
+	if strings.Contains(errorMessage, "maximum memory usage") {
+		memoryMaximumRegex, _ := regexp.Compile(`memory usage per Pod is (\d*\w*)`)
+		maximumMemory := memoryMaximumRegex.FindStringSubmatch(errorMessage)[1]
+		var limitMemoryString string
+		if limitMemory, ok := dev.Resources.Limits["memory"]; ok {
+			limitMemoryString = limitMemory.String()
+		}
+		errorToReturn += fmt.Sprintf("Maximum memory limit per pod is %s, the current value is %s.", maximumMemory, limitMemoryString)
+	}
+	return fmt.Errorf(errorToReturn)
 }
 
 //GetTranslations fills all the deployments pointed by a development container
