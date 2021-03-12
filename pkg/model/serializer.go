@@ -489,7 +489,7 @@ func checkFileAndNotDirectory(path string) error {
 func (d Dev) MarshalYAML() (interface{}, error) {
 	type dev Dev // prevent recursion
 	toMarshall := dev(d)
-	if isDefaultHealthchecks(d) {
+	if isDefaultHealthchecks(&d) {
 		toMarshall.Healthchecks = nil
 	}
 	if d.AreDefaultPersistentVolumeValues() {
@@ -500,7 +500,7 @@ func (d Dev) MarshalYAML() (interface{}, error) {
 
 }
 
-func isDefaultHealthchecks(d Dev) bool {
+func isDefaultHealthchecks(d *Dev) bool {
 	if d.Healthchecks != nil {
 		if d.Healthchecks.Liveness || d.Healthchecks.Readiness || d.Healthchecks.Startup {
 			return false
