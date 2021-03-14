@@ -777,8 +777,8 @@ func (up *upContext) initializeSyncthing() error {
 
 	up.Sy = sy
 
-	log.Infof("local syncthing intialized: gui -> %d, sync -> %d", up.Sy.LocalGUIPort, up.Sy.LocalPort)
-	log.Infof("remote syncthing intialized: gui -> %d, sync -> %d", up.Sy.RemoteGUIPort, up.Sy.RemotePort)
+	log.Infof("local syncthing initialized: gui -> %d, sync -> %d", up.Sy.LocalGUIPort, up.Sy.LocalPort)
+	log.Infof("remote syncthing initialized: gui -> %d, sync -> %d", up.Sy.RemoteGUIPort, up.Sy.RemotePort)
 
 	if err := up.Sy.SaveConfig(up.Dev); err != nil {
 		log.Infof("error saving syncthing object: %s", err)

@@ -25,7 +25,7 @@ var (
 	secondaryStackManifests = []string{"stack.yaml", "okteto-stack.yml", "okteto-stack.yaml"}
 )
 
-//LoadStack loads an okteto stack manifet checking "yml" and "yaml"
+//LoadStack loads an okteto stack manifest checking "yml" and "yaml"
 func LoadStack(name, stackPath string) (*model.Stack, error) {
 	if model.FileExists(stackPath) {
 		return model.GetStack(name, stackPath)
