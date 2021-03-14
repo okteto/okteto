@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-//RunWithRetry runs a function and it refresh the kubernetes credentilas if needed
+//RunWithRetry runs a function and it refresh the kubernetes credentials if needed
 func RunWithRetry(f func() error) error {
 	err := f()
 

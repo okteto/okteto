@@ -66,7 +66,7 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func TestRunJustCreateNeccesaryFields(t *testing.T) {
+func TestRunJustCreateNecessaryFields(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +89,7 @@ func TestRunJustCreateNeccesaryFields(t *testing.T) {
 		"tolerations", "workdir"}
 	for _, tag := range OptionalTags {
 		if _, ok := result[tag]; ok {
-			t.Fatal(fmt.Errorf("%s in manifest after running `okteto up` and its not neccesary", tag))
+			t.Fatal(fmt.Errorf("%s in manifest after running `okteto up` and its not necessary", tag))
 		}
 	}
 
