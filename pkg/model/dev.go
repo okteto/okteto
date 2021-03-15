@@ -128,7 +128,8 @@ type Dev struct {
 	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
-	Healthchecks         *Probes               `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
+	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
+	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
@@ -301,7 +302,7 @@ func Read(bytes []byte) (*Dev, error) {
 		},
 		Services:             make([]*Dev, 0),
 		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
-		Healthchecks:         &Probes{},
+		Probes:               &Probes{},
 	}
 
 	if bytes != nil {
@@ -479,8 +480,11 @@ func (dev *Dev) setDefaults() error {
 	if dev.Annotations == nil {
 		dev.Annotations = map[string]string{}
 	}
-	if dev.Healthchecks == nil {
-		dev.Healthchecks = &Probes{}
+	if dev.Healthchecks {
+		dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
+	}
+	if dev.Probes == nil {
+		dev.Probes = &Probes{}
 	}
 	if dev.Interface == "" {
 		dev.Interface = Localhost
@@ -525,8 +529,8 @@ func (dev *Dev) setDefaults() error {
 		s.Services = make([]*Dev, 0)
 		s.Sync.Compression = false
 		s.Sync.RescanInterval = DefaultSyncthingRescanInterval
-		if s.Healthchecks == nil {
-			s.Healthchecks = &Probes{}
+		if s.Probes == nil {
+			s.Probes = &Probes{}
 		}
 	}
 	return nil
@@ -737,24 +741,29 @@ func (dev *Dev) LabelsSelector() string {
 // ToTranslationRule translates a dev struct into a translation rule
 func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	rule := &TranslationRule{
-		Container:          dev.Container,
-		ImagePullPolicy:    dev.ImagePullPolicy,
-		Environment:        dev.Environment,
-		Secrets:            dev.Secrets,
-		WorkDir:            dev.WorkDir,
-		PersistentVolume:   main.PersistentVolumeEnabled(),
-		Volumes:            []VolumeMount{},
-		SecurityContext:    dev.SecurityContext,
-		Resources:          dev.Resources,
-		Healthchecks:       false,
-		InitContainer:      dev.InitContainer,
-		HealthchecksProbes: dev.Healthchecks,
+		Container:        dev.Container,
+		ImagePullPolicy:  dev.ImagePullPolicy,
+		Environment:      dev.Environment,
+		Secrets:          dev.Secrets,
+		WorkDir:          dev.WorkDir,
+		PersistentVolume: main.PersistentVolumeEnabled(),
+		Volumes:          []VolumeMount{},
+		SecurityContext:  dev.SecurityContext,
+		Resources:        dev.Resources,
+		Healthchecks:     dev.Healthchecks,
+		InitContainer:    dev.InitContainer,
+		Probes:           dev.Probes,
 	}
 
 	if !dev.EmptyImage {
 		rule.Image = dev.Image.Name
 	}
-	if areHealthchecksEnabled(rule.HealthchecksProbes) {
+
+	if rule.Healthchecks {
+		rule.Probes = &Probes{Liveness: true, Startup: true, Readiness: true}
+	}
+
+	if areHealthchecksEnabled(rule.Probes) {
 		rule.Healthchecks = true
 	}
 	if main == dev {
@@ -858,6 +867,13 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 func areHealthchecksEnabled(probes *Probes) bool {
 	if probes != nil {
 		return probes.Liveness || probes.Readiness || probes.Startup
+	}
+	return false
+}
+
+func areAllHealthchecksEnabled(probes *Probes) bool {
+	if probes != nil {
+		return probes.Liveness && probes.Readiness && probes.Startup
 	}
 	return false
 }

@@ -208,7 +208,7 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 		c.Args = rule.Args
 	}
 
-	TranslateProbes(c, *rule.HealthchecksProbes)
+	TranslateProbes(c, *rule.Probes)
 
 	TranslateResources(c, rule.Resources)
 	TranslateEnvVars(c, rule)

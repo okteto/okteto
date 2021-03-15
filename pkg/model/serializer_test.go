@@ -442,12 +442,17 @@ func TestDevMarshalling(t *testing.T) {
 	}{
 		{
 			name:     "healtcheck-not-defaults",
-			dev:      Dev{Name: "name-test", Healthchecks: &Probes{Liveness: true}},
-			expected: "name: name-test\nhealthchecks:\n  liveness: true\n",
+			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true}},
+			expected: "name: name-test\nprobes:\n  liveness: true\n",
 		},
 		{
-			name:     "healtcheck-all-true",
-			dev:      Dev{Name: "name-test", Healthchecks: &Probes{Liveness: true, Readiness: true, Startup: true}},
+			name:     "healtcheck-all-true-by-healthchecks",
+			dev:      Dev{Name: "name-test", Healthchecks: true},
+			expected: "name: name-test\nhealthchecks: true\n",
+		},
+		{
+			name:     "healtcheck-all-true-by-probes",
+			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true, Readiness: true, Startup: true}},
 			expected: "name: name-test\nhealthchecks: true\n",
 		},
 		{
