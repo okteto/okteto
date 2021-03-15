@@ -123,7 +123,7 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 		if limitCpu, ok := dev.Resources.Limits[apiv1.ResourceCPU]; ok {
 			manifestCpu = limitCpu.String()
 		}
-		errorToReturn += fmt.Sprintf("Maximum CPU limit per pod is %s, the current value is %s. ", maximumCpu, limitCpuString)
+		errorToReturn += fmt.Sprintf("The value of resources.limits.cpu in your okteto manifest (%s) exceeds the maximum CPU limit per pod (%s)", manifestCpu, maximumCpuPerPod)
 	}
 	if strings.Contains(errorMessage, "maximum memory usage") {
 		memoryMaximumRegex, _ := regexp.Compile(`memory usage per Pod is (\d*\w*)`)
@@ -132,7 +132,7 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 		if limitMemory, ok := dev.Resources.Limits[apiv1.ResourceMemory]; ok {
 			manifestMemory = limitMemory.String()
 		}
-		errorToReturn += fmt.Sprintf("Maximum memory limit per pod is %s, the current value is %s.", maximumMemory, limitMemoryString)
+		errorToReturn += fmt.Sprintf("The value of resources.limits.memory in your okteto manifest (%s) exceeds the maximum CPU limit per pod (%s)", manifestMemory, maximumMemoryPerPod)
 	}
 	return fmt.Errorf(errorToReturn)
 }
