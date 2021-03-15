@@ -481,7 +481,10 @@ func (dev *Dev) setDefaults() error {
 		dev.Annotations = map[string]string{}
 	}
 	if dev.Healthchecks {
-		dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
+		log.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future release. Please use the field 'probes' instead.")
+		if dev.Probes == nil {
+			dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
+		}
 	}
 	if dev.Probes == nil {
 		dev.Probes = &Probes{}
