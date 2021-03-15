@@ -64,7 +64,7 @@ services:
 		ImagePullPolicy:    apiv1.PullNever,
 		Command:            []string{"/var/okteto/bin/start.sh"},
 		Args:               []string{"-r"},
-		HealthchecksProbes: &HealthchecksProbes{},
+		HealthchecksProbes: &Probes{},
 		Environment: []EnvVar{
 			{
 				Name:  "OKTETO_NAMESPACE",
@@ -132,7 +132,7 @@ services:
 		Command:            nil,
 		Args:               nil,
 		Healthchecks:       true,
-		HealthchecksProbes: &HealthchecksProbes{Readiness: true, Liveness: true},
+		HealthchecksProbes: &Probes{Readiness: true, Liveness: true},
 		Environment:        make([]EnvVar, 0),
 		SecurityContext: &SecurityContext{
 			RunAsUser:  &rootUser,

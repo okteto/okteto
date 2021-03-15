@@ -49,7 +49,7 @@ type TranslationRule struct {
 	SecurityContext    *SecurityContext     `json:"securityContext,omitempty"`
 	Resources          ResourceRequirements `json:"resources,omitempty"`
 	InitContainer      InitContainer        `json:"initContainers,omitempty"`
-	HealthchecksProbes *HealthchecksProbes  `json:"probes" yaml:"probes"`
+	HealthchecksProbes *Probes              `json:"probes" yaml:"probes"`
 }
 
 //IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest

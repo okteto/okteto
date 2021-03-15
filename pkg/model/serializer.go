@@ -445,7 +445,7 @@ func (v ExternalVolume) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (healthcheckProbes *HealthchecksProbes) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (healthcheckProbes *Probes) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawBool bool
 	err := unmarshal(&rawBool)
 	if err == nil {
@@ -468,7 +468,7 @@ func (healthcheckProbes *HealthchecksProbes) UnmarshalYAML(unmarshal func(interf
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (healthcheckProbes HealthchecksProbes) MarshalYAML() (interface{}, error) {
+func (healthcheckProbes Probes) MarshalYAML() (interface{}, error) {
 	if healthcheckProbes.Liveness && healthcheckProbes.Readiness && healthcheckProbes.Startup {
 		return true, nil
 	}

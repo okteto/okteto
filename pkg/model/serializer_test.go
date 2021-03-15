@@ -271,17 +271,17 @@ func TestImageMashalling(t *testing.T) {
 func TestHealthcheckMashalling(t *testing.T) {
 	tests := []struct {
 		name         string
-		healthchecks HealthchecksProbes
+		healthchecks Probes
 		expected     string
 	}{
 		{
 			name:         "liveness-true-and-defaults",
-			healthchecks: HealthchecksProbes{Liveness: true},
+			healthchecks: Probes{Liveness: true},
 			expected:     "liveness: true\n",
 		},
 		{
 			name:         "all-healthchecks-true",
-			healthchecks: HealthchecksProbes{Liveness: true, Readiness: true, Startup: true},
+			healthchecks: Probes{Liveness: true, Readiness: true, Startup: true},
 			expected:     "true\n",
 		},
 	}
@@ -442,12 +442,12 @@ func TestDevMarshalling(t *testing.T) {
 	}{
 		{
 			name:     "healtcheck-not-defaults",
-			dev:      Dev{Name: "name-test", Healthchecks: &HealthchecksProbes{Liveness: true}},
+			dev:      Dev{Name: "name-test", Healthchecks: &Probes{Liveness: true}},
 			expected: "name: name-test\nhealthchecks:\n  liveness: true\n",
 		},
 		{
 			name:     "healtcheck-all-true",
-			dev:      Dev{Name: "name-test", Healthchecks: &HealthchecksProbes{Liveness: true, Readiness: true, Startup: true}},
+			dev:      Dev{Name: "name-test", Healthchecks: &Probes{Liveness: true, Readiness: true, Startup: true}},
 			expected: "name: name-test\nhealthchecks: true\n",
 		},
 		{

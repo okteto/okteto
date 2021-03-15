@@ -128,7 +128,7 @@ type Dev struct {
 	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
-	Healthchecks         *HealthchecksProbes   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
+	Healthchecks         *Probes               `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
@@ -248,8 +248,8 @@ type ResourceRequirements struct {
 	Requests ResourceList `json:"requests,omitempty" yaml:"requests,omitempty"`
 }
 
-// HealthchecksProbes defines probes for containers
-type HealthchecksProbes struct {
+// Probes defines probes for containers
+type Probes struct {
 	Liveness  bool `json:"liveness,omitempty" yaml:"liveness,omitempty"`
 	Readiness bool `json:"readiness,omitempty" yaml:"readiness,omitempty"`
 	Startup   bool `json:"startup,omitempty" yaml:"startup,omitempty"`
@@ -301,7 +301,7 @@ func Read(bytes []byte) (*Dev, error) {
 		},
 		Services:             make([]*Dev, 0),
 		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
-		Healthchecks:         &HealthchecksProbes{},
+		Healthchecks:         &Probes{},
 	}
 
 	if bytes != nil {
@@ -480,7 +480,7 @@ func (dev *Dev) setDefaults() error {
 		dev.Annotations = map[string]string{}
 	}
 	if dev.Healthchecks == nil {
-		dev.Healthchecks = &HealthchecksProbes{}
+		dev.Healthchecks = &Probes{}
 	}
 	if dev.Interface == "" {
 		dev.Interface = Localhost
@@ -526,7 +526,7 @@ func (dev *Dev) setDefaults() error {
 		s.Sync.Compression = false
 		s.Sync.RescanInterval = DefaultSyncthingRescanInterval
 		if s.Healthchecks == nil {
-			s.Healthchecks = &HealthchecksProbes{}
+			s.Healthchecks = &Probes{}
 		}
 	}
 	return nil
@@ -855,7 +855,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	return rule
 }
 
-func areHealthchecksEnabled(probes *HealthchecksProbes) bool {
+func areHealthchecksEnabled(probes *Probes) bool {
 	if probes != nil {
 		return probes.Liveness || probes.Readiness || probes.Startup
 	}
