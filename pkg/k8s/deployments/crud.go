@@ -118,19 +118,19 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 	var errorToReturn string
 	if strings.Contains(errorMessage, "maximum cpu usage") {
 		cpuMaximumRegex, _ := regexp.Compile(`cpu usage per Pod is (\d*\w*)`)
-		maximumCpu := cpuMaximumRegex.FindStringSubmatch(errorMessage)[1]
-		var limitCpuString string
-		if limitCpu, ok := dev.Resources.Limits["cpu"]; ok {
-			limitCpuString = limitCpu.String()
+		maximumCpuPerPod := cpuMaximumRegex.FindStringSubmatch(errorMessage)[1]
+		var manifestCpu string
+		if limitCpu, ok := dev.Resources.Limits[apiv1.ResourceCPU]; ok {
+			manifestCpu = limitCpu.String()
 		}
 		errorToReturn += fmt.Sprintf("Maximum CPU limit per pod is %s, the current value is %s. ", maximumCpu, limitCpuString)
 	}
 	if strings.Contains(errorMessage, "maximum memory usage") {
 		memoryMaximumRegex, _ := regexp.Compile(`memory usage per Pod is (\d*\w*)`)
-		maximumMemory := memoryMaximumRegex.FindStringSubmatch(errorMessage)[1]
-		var limitMemoryString string
-		if limitMemory, ok := dev.Resources.Limits["memory"]; ok {
-			limitMemoryString = limitMemory.String()
+		maximumMemoryPerPod := memoryMaximumRegex.FindStringSubmatch(errorMessage)[1]
+		var manifestMemory string
+		if limitMemory, ok := dev.Resources.Limits[apiv1.ResourceMemory]; ok {
+			manifestMemory = limitMemory.String()
 		}
 		errorToReturn += fmt.Sprintf("Maximum memory limit per pod is %s, the current value is %s.", maximumMemory, limitMemoryString)
 	}
