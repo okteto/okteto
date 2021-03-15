@@ -406,34 +406,42 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 	log.Success("Files synchronized")
 
+	var splitError error
 	go func() {
 		output := <-up.cleaned
 		log.Debugf("clean command output: %s", output)
 
 		outByCommand := strings.Split(output, "\n")
-		version, watches := outByCommand[0], outByCommand[1]
+		if len(outByCommand) >= 2 {
+			version, watches := outByCommand[0], outByCommand[1]
 
-		if isWatchesConfigurationTooLow(watches) {
-			folder := config.GetNamespaceHome(up.Dev.Namespace)
-			if utils.GetWarningState(folder, ".remotewatcher") == "" {
-				log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
-				log.Yellow("This can affect file synchronization performance.")
-				log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
-				if err := utils.SetWarningState(folder, ".remotewatcher", "true"); err != nil {
-					log.Infof("failed to set warning remotewatcher state: %s", err.Error())
+			if isWatchesConfigurationTooLow(watches) {
+				folder := config.GetNamespaceHome(up.Dev.Namespace)
+				if utils.GetWarningState(folder, ".remotewatcher") == "" {
+					log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
+					log.Yellow("This can affect file synchronization performance.")
+					log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
+					if err := utils.SetWarningState(folder, ".remotewatcher", "true"); err != nil {
+						log.Infof("failed to set warning remotewatcher state: %s", err.Error())
+					}
 				}
 			}
+
+			if version != model.OktetoBinImageTag {
+				log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
+				log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
+			}
+
+			printDisplayContext(up.Dev)
+			up.CommandResult <- up.runCommand(ctx)
+		} else {
+			splitError = fmt.Errorf("Can not get binary version or max watchers. Please consider using %s as init container or set your max watches in your cluster nodes", model.OktetoBinImageTag)
 		}
 
-		if version != model.OktetoBinImageTag {
-			log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
-			log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
-		}
-
-		printDisplayContext(up.Dev)
-		up.CommandResult <- up.runCommand(ctx)
 	}()
-
+	if splitError != nil {
+		return splitError
+	}
 	prevError := up.waitUntilExitOrInterrupt()
 
 	if up.shouldRetry(ctx, prevError) {
