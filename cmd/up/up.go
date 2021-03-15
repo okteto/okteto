@@ -406,7 +406,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 	log.Success("Files synchronized")
 
-	var splitError error
 	go func() {
 		output := <-up.cleaned
 		log.Debugf("clean command output: %s", output)
@@ -430,18 +429,17 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			if version != model.OktetoBinImageTag {
 				log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
 				log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
+				log.Infof("Manifest init image %s instead of actual init image (%s)", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
 			}
-
-			printDisplayContext(up.Dev)
-			up.CommandResult <- up.runCommand(ctx)
 		} else {
-			splitError = fmt.Errorf("Can not get binary version or max watchers. Please consider using %s as init container or set your max watches in your cluster nodes", model.OktetoBinImageTag)
+			log.Yellow("Couldn't get init container image version and watches configuration.")
+			log.Yellow("This can affect file synchronization performance and the application startup.")
+			log.Yellow("Please consider upgrading your init container image with the content of %s", model.OktetoBinImageTag)
+			log.Yellow("and setting the value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes")
 		}
-
+		printDisplayContext(up.Dev)
+		up.CommandResult <- up.runCommand(ctx)
 	}()
-	if splitError != nil {
-		return splitError
-	}
 	prevError := up.waitUntilExitOrInterrupt()
 
 	if up.shouldRetry(ctx, prevError) {
