@@ -15,27 +15,110 @@ package stack
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/helm"
+	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/k8s/pods"
+	"github.com/okteto/okteto/pkg/k8s/services"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
+	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/model"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
+	"k8s.io/client-go/kubernetes"
 )
 
 //Destroy destroys a stack
-func Destroy(ctx context.Context, s *model.Stack) error {
+func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool) error {
+	if s.Namespace == "" {
+		s.Namespace = client.GetContextNamespace("")
+	}
+
+	c, _, _ := client.GetLocal()
+
+	cfg := translateConfigMap(s)
+	output := fmt.Sprintf("Destroying stack '%s'...", s.Name)
+	cfg.Data[statusField] = destroyingStatus
+	cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
+	if err := configmaps.Deploy(ctx, cfg, s.Namespace, c); err != nil {
+		return err
+	}
+
+	err := destroy(ctx, s, removeVolumes, c)
+	if err != nil {
+		output = fmt.Sprintf("%s\nStack '%s' destruction failed: %s", output, s.Name, err.Error())
+		cfg.Data[statusField] = errorStatus
+		cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
+		if err := configmaps.Deploy(ctx, cfg, s.Namespace, c); err != nil {
+			return err
+		}
+	} else {
+		if err := configmaps.Destroy(ctx, cfg.Name, s.Namespace, c); err != nil {
+			return err
+		}
+	}
+	return err
+}
+
+func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kubernetes.Clientset) error {
 	spinner := utils.NewSpinner(fmt.Sprintf("Destroying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
 
-	settings := cli.New()
-	actionConfig := new(action.Configuration)
-	if s.Namespace == "" {
-		s.Namespace = settings.Namespace()
+	if err := destroyHelmRelease(ctx, s, spinner); err != nil {
+		return err
 	}
+
+	s.Services = nil
+	if err := destroyServicesNotInStack(ctx, s, c); err != nil {
+		return err
+	}
+
+	spinner.Update("Waiting for services to be destroyed...")
+	if err := waitForPodsToBeDestroyed(ctx, s, c); err != nil {
+		return err
+	}
+
+	if removeVolumes {
+		spinner.Update("Destroying volumes...")
+		if err := destroyStackVolumes(ctx, s, c); err != nil {
+			return err
+		}
+	}
+
+	if err := configmaps.Destroy(ctx, s.GetConfigMapName(), s.Namespace, c); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func helmReleaseExist(c *action.List, name string) (bool, error) {
+	c.AllNamespaces = false
+	results, err := c.Run()
+	if err != nil {
+		return false, err
+	}
+	for _, release := range results {
+		if release.Name == name {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func destroyHelmRelease(ctx context.Context, s *model.Stack, spinner *utils.Spinner) error {
+	settings := cli.New()
+
+	actionConfig := new(action.Configuration)
 
 	if err := actionConfig.Init(settings.RESTClientGetter(), s.Namespace, helmDriver, func(format string, v ...interface{}) {
 		message := strings.TrimSuffix(fmt.Sprintf(format, v...), "\n")
@@ -44,17 +127,88 @@ func Destroy(ctx context.Context, s *model.Stack) error {
 		return fmt.Errorf("error initializing stack client: %s", err)
 	}
 
-	exists, err := helm.ReleaseExist(action.NewList(actionConfig), s.Name)
+	exists, err := helmReleaseExist(action.NewList(actionConfig), s.Name)
 	if err != nil {
 		return fmt.Errorf("error listing stacks: %s", err)
 	}
-	if !exists {
-		return fmt.Errorf("stack %s does not exist", s.Name)
+	if exists {
+		uClient := action.NewUninstall(actionConfig)
+		if _, err := uClient.Run(s.Name); err != nil {
+			return fmt.Errorf("error destroying stack '%s': %s", s.Name, err)
+		}
+	}
+	return nil
+}
+
+func destroyServicesNotInStack(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {
+	dList, err := deployments.List(ctx, s.Namespace, s.GetLabelSelector(), c)
+	if err != nil {
+		return err
+	}
+	for _, d := range dList {
+		if _, ok := s.Services[d.Name]; !ok {
+			if err := deployments.Destroy(ctx, d.Name, d.Namespace, c); err != nil {
+				return err
+			}
+		}
 	}
 
-	uClient := action.NewUninstall(actionConfig)
-	if _, err := uClient.Run(s.Name); err != nil {
-		return fmt.Errorf("error destroying stack '%s': %s", s.Name, err)
+	sfsList, err := statefulsets.List(ctx, s.Namespace, s.GetLabelSelector(), c)
+	if err != nil {
+		return err
+	}
+	for _, sfs := range sfsList {
+		if _, ok := s.Services[sfs.Name]; !ok {
+			if err := statefulsets.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
+				return err
+			}
+		}
+	}
+
+	svcList, err := services.List(ctx, s.Namespace, s.GetLabelSelector(), c)
+	if err != nil {
+		return err
+	}
+	for _, svc := range svcList {
+		if _, ok := s.Services[svc.Name]; !ok {
+			if err := services.Destroy(ctx, svc.Name, svc.Namespace, c); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func waitForPodsToBeDestroyed(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	timeout := time.Now().Add(300 * time.Second)
+
+	selector := map[string]string{okLabels.StackNameLabel: s.Name}
+	for time.Now().Before(timeout) {
+		<-ticker.C
+		podList, err := pods.ListBySelector(ctx, s.Namespace, selector, c)
+		if err != nil {
+			return err
+		}
+		if len(podList) == 0 {
+			return nil
+		}
+	}
+	return fmt.Errorf("kubernetes is taking too long to destroy your stack. Please check for errors and try again")
+}
+
+func destroyStackVolumes(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {
+	vList, err := volumes.List(ctx, s.Namespace, s.GetLabelSelector(), c)
+	if err != nil {
+		return err
+	}
+	for _, v := range vList {
+		if v.Labels[okLabels.StackNameLabel] == s.Name {
+			if err := volumes.Destroy(ctx, v.Name, v.Namespace, c); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
