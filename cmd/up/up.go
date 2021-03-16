@@ -429,7 +429,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			if version != model.OktetoBinImageTag {
 				log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
 				log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
-				log.Infof("Manifest init image %s instead of actual init image (%s)", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
+				log.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
 			}
 		}
 		printDisplayContext(up.Dev)
