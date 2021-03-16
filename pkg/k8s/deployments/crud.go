@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -87,14 +88,8 @@ func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev,
 		return nil, err
 	}
 
-	for _, c := range d.Status.Conditions {
-		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
-			if strings.Contains(c.Message, "exceeded quota") {
-				log.Infof("%s: %s", errors.ErrQuota, c.Message)
-				return nil, errors.ErrQuota
-			}
-			return nil, fmt.Errorf(c.Message)
-		}
+	if err = checkConditionErrors(d, dev); err != nil {
+		return nil, err
 	}
 
 	if d.Generation != d.Status.ObservedGeneration {
@@ -102,6 +97,51 @@ func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev,
 	}
 
 	return d, nil
+}
+
+func checkConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
+	for _, c := range deployment.Status.Conditions {
+		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
+			if strings.Contains(c.Message, "exceeded quota") {
+				log.Infof("%s: %s", errors.ErrQuota, c.Message)
+				return errors.ErrQuota
+			} else if isResourcesRelatedError(c.Message) {
+				return getResourceLimitError(c.Message, dev)
+			}
+			return fmt.Errorf(c.Message)
+		}
+	}
+	return nil
+}
+
+func isResourcesRelatedError(errorMessage string) bool {
+	if strings.Contains(errorMessage, "maximum cpu usage") || strings.Contains(errorMessage, "maximum memory usage") {
+		return true
+	}
+	return false
+}
+
+func getResourceLimitError(errorMessage string, dev *model.Dev) error {
+	var errorToReturn string
+	if strings.Contains(errorMessage, "maximum cpu usage") {
+		cpuMaximumRegex, _ := regexp.Compile(`cpu usage per Pod is (\d*\w*)`)
+		maximumCpuPerPod := cpuMaximumRegex.FindStringSubmatch(errorMessage)[1]
+		var manifestCpu string
+		if limitCpu, ok := dev.Resources.Limits[apiv1.ResourceCPU]; ok {
+			manifestCpu = limitCpu.String()
+		}
+		errorToReturn += fmt.Sprintf("The value of resources.limits.cpu in your okteto manifest (%s) exceeds the maximum CPU limit per pod (%s). ", manifestCpu, maximumCpuPerPod)
+	}
+	if strings.Contains(errorMessage, "maximum memory usage") {
+		memoryMaximumRegex, _ := regexp.Compile(`memory usage per Pod is (\d*\w*)`)
+		maximumMemoryPerPod := memoryMaximumRegex.FindStringSubmatch(errorMessage)[1]
+		var manifestMemory string
+		if limitMemory, ok := dev.Resources.Limits[apiv1.ResourceMemory]; ok {
+			manifestMemory = limitMemory.String()
+		}
+		errorToReturn += fmt.Sprintf("The value of resources.limits.memory in your okteto manifest (%s) exceeds the maximum memory limit per pod (%s). ", manifestMemory, maximumMemoryPerPod)
+	}
+	return fmt.Errorf(strings.TrimSpace(errorToReturn))
 }
 
 //GetTranslations fills all the deployments pointed by a development container
