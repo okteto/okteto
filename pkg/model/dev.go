@@ -129,6 +129,7 @@ type Dev struct {
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
 	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
+	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
@@ -248,6 +249,13 @@ type ResourceRequirements struct {
 	Requests ResourceList `json:"requests,omitempty" yaml:"requests,omitempty"`
 }
 
+// Probes defines probes for containers
+type Probes struct {
+	Liveness  bool `json:"liveness,omitempty" yaml:"liveness,omitempty"`
+	Readiness bool `json:"readiness,omitempty" yaml:"readiness,omitempty"`
+	Startup   bool `json:"startup,omitempty" yaml:"startup,omitempty"`
+}
+
 // ResourceList is a set of (resource name, quantity) pairs.
 type ResourceList map[apiv1.ResourceName]resource.Quantity
 
@@ -294,6 +302,7 @@ func Read(bytes []byte) (*Dev, error) {
 		},
 		Services:             make([]*Dev, 0),
 		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
+		Probes:               &Probes{},
 	}
 
 	if bytes != nil {
@@ -471,6 +480,15 @@ func (dev *Dev) setDefaults() error {
 	if dev.Annotations == nil {
 		dev.Annotations = map[string]string{}
 	}
+	if dev.Healthchecks {
+		log.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future release. Please use the field 'probes' instead.")
+		if dev.Probes == nil {
+			dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
+		}
+	}
+	if dev.Probes == nil {
+		dev.Probes = &Probes{}
+	}
 	if dev.Interface == "" {
 		dev.Interface = Localhost
 	}
@@ -514,6 +532,9 @@ func (dev *Dev) setDefaults() error {
 		s.Services = make([]*Dev, 0)
 		s.Sync.Compression = false
 		s.Sync.RescanInterval = DefaultSyncthingRescanInterval
+		if s.Probes == nil {
+			s.Probes = &Probes{}
+		}
 	}
 	return nil
 }
@@ -734,12 +755,20 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		Resources:        dev.Resources,
 		Healthchecks:     dev.Healthchecks,
 		InitContainer:    dev.InitContainer,
+		Probes:           dev.Probes,
 	}
 
 	if !dev.EmptyImage {
 		rule.Image = dev.Image.Name
 	}
 
+	if rule.Healthchecks {
+		rule.Probes = &Probes{Liveness: true, Startup: true, Readiness: true}
+	}
+
+	if areHealthchecksEnabled(rule.Probes) {
+		rule.Healthchecks = true
+	}
 	if main == dev {
 		rule.Marker = OktetoBinImageTag //for backward compatibility
 		rule.OktetoBinImageTag = OktetoBinImageTag
@@ -836,6 +865,20 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 	}
 
 	return rule
+}
+
+func areHealthchecksEnabled(probes *Probes) bool {
+	if probes != nil {
+		return probes.Liveness || probes.Readiness || probes.Startup
+	}
+	return false
+}
+
+func areAllHealthchecksEnabled(probes *Probes) bool {
+	if probes != nil {
+		return probes.Liveness && probes.Readiness && probes.Startup
+	}
+	return false
 }
 
 //GevSandbox returns a deployment sandbox
