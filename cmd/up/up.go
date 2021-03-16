@@ -410,30 +410,31 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		output := <-up.cleaned
 		log.Debugf("clean command output: %s", output)
 
-		outByCommand := strings.Split(output, "\n")
-		version, watches := outByCommand[0], outByCommand[1]
+		outByCommand := strings.Split(strings.TrimSpace(output), "\n")
+		if len(outByCommand) >= 2 {
+			version, watches := outByCommand[0], outByCommand[1]
 
-		if isWatchesConfigurationTooLow(watches) {
-			folder := config.GetNamespaceHome(up.Dev.Namespace)
-			if utils.GetWarningState(folder, ".remotewatcher") == "" {
-				log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
-				log.Yellow("This can affect file synchronization performance.")
-				log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
-				if err := utils.SetWarningState(folder, ".remotewatcher", "true"); err != nil {
-					log.Infof("failed to set warning remotewatcher state: %s", err.Error())
+			if isWatchesConfigurationTooLow(watches) {
+				folder := config.GetNamespaceHome(up.Dev.Namespace)
+				if utils.GetWarningState(folder, ".remotewatcher") == "" {
+					log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
+					log.Yellow("This can affect file synchronization performance.")
+					log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
+					if err := utils.SetWarningState(folder, ".remotewatcher", "true"); err != nil {
+						log.Infof("failed to set warning remotewatcher state: %s", err.Error())
+					}
 				}
 			}
-		}
 
-		if version != model.OktetoBinImageTag {
-			log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
-			log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
+			if version != model.OktetoBinImageTag {
+				log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
+				log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
+				log.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
+			}
 		}
-
 		printDisplayContext(up.Dev)
 		up.CommandResult <- up.runCommand(ctx)
 	}()
-
 	prevError := up.waitUntilExitOrInterrupt()
 
 	if up.shouldRetry(ctx, prevError) {
