@@ -156,7 +156,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 			}
 
 			switch p.Status {
-			case "running":
+			case "deployed", "running":
 				return nil
 			case "error":
 				attempts++
