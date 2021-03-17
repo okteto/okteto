@@ -268,6 +268,38 @@ func TestImageMashalling(t *testing.T) {
 	}
 }
 
+func TestHealthcheckMashalling(t *testing.T) {
+	tests := []struct {
+		name         string
+		healthchecks Probes
+		expected     string
+	}{
+		{
+			name:         "liveness-true-and-defaults",
+			healthchecks: Probes{Liveness: true},
+			expected:     "liveness: true\n",
+		},
+		{
+			name:         "all-healthchecks-true",
+			healthchecks: Probes{Liveness: true, Readiness: true, Startup: true},
+			expected:     "true\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.healthchecks)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
+			}
+		})
+	}
+}
+
 func TestSecretMashalling(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {
@@ -397,6 +429,48 @@ func TestVolumeMashalling(t *testing.T) {
 			_, err := yaml.Marshal(&v)
 			if err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestDevMarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		dev      Dev
+		expected string
+	}{
+		{
+			name:     "healtcheck-not-defaults",
+			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true}},
+			expected: "name: name-test\nprobes:\n  liveness: true\n",
+		},
+		{
+			name:     "healtcheck-all-true-by-healthchecks",
+			dev:      Dev{Name: "name-test", Healthchecks: true},
+			expected: "name: name-test\nhealthchecks: true\n",
+		},
+		{
+			name:     "healtcheck-all-true-by-probes",
+			dev:      Dev{Name: "name-test", Probes: &Probes{Liveness: true, Readiness: true, Startup: true}},
+			expected: "name: name-test\nhealthchecks: true\n",
+		},
+		{
+			name:     "pv-enabled-not-show-after-marshall",
+			dev:      Dev{Name: "name-test", PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true}},
+			expected: "name: name-test\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.dev)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
 			}
 		})
 	}
