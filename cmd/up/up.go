@@ -405,6 +405,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		analytics.TrackReconnect(true, up.isSwap)
 	}
 	log.Success("Files synchronized")
+	printFilesThatShouldBeIgnored(up.Sy)
 
 	go func() {
 		output := <-up.cleaned
@@ -839,29 +840,40 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	if err := config.UpdateStateFile(up.Dev, config.Synchronizing); err != nil {
 		return err
 	}
-
-	if err := up.Sy.NewStatus(ctx); err != nil {
-		return err
-	}
-
 	progressBar := utils.NewSyncthingProgressBar()
-	reporter := make(chan int64)
+
+	reporter := make(chan float64)
 	var eventAPIErr error
+
 	go func() {
-		var previous int64
 		for c := range reporter {
-			if c > previous {
-				progressBar.MainBar.SetCurrent(c)
-				previous = c
+			if !up.Sy.StatusReady {
+				eventAPIErr = up.Sy.NewStatus(ctx)
 			}
-			eventAPIErr = up.Sy.UpdateSyncthingStatus(ctx)
-			progressBar.UpdateProgress(up.Sy.Status)
-			if eventAPIErr != nil {
-				break
+			if c != 100 {
+				eventAPIErr = up.Sy.UpdateSyncthingStatus(ctx)
+				progressBar.UpdateProgress(up.Sy.Status)
 			}
 		}
-
+	}()
+	go func() {
+		var previous float64
+		for c := range reporter {
+			if c > previous {
+				progressBar.MainBar.SetCurrent(int64(c))
+				previous = c
+			}
+		}
 		progressBar.Finish()
+	}()
+
+	go func() {
+		for c := range reporter {
+			if c != 100 {
+				lastItem, _ := up.Sy.GetLastItemStarted(ctx)
+				progressBar.UpdateLastItem(lastItem)
+			}
+		}
 	}()
 
 	if eventAPIErr != nil {
@@ -887,9 +899,6 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 
 	progressBar.Group.Wait()
 
-	if len(progressBar.FileProgress) > 0 {
-		log.Yellow("Consider adding these files to the .stignore")
-	}
 	up.Sy.Type = "sendreceive"
 	up.Sy.IgnoreDelete = false
 	if err := up.Sy.UpdateConfig(); err != nil {
@@ -1081,4 +1090,11 @@ func printDisplayContext(dev *model.Dev) {
 		}
 	}
 	fmt.Println()
+}
+
+func printFilesThatShouldBeIgnored(sync *syncthing.Syncthing) {
+	if filesToIgnore := sync.GetFilesThatShouldBeIgnored(); filesToIgnore != "" {
+		log.Yellow("The following files takes longer than expected. Consider adding them to the .stignore:")
+		log.Yellow("    %s", filesToIgnore)
+	}
 }

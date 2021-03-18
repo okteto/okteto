@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -64,46 +63,38 @@ const (
 
 	// GUIPort is the port used by syncthing in the cluster for the http endpoint
 	GUIPort = 8384
-
-	// MinSizeToShowProgressBar is the mininmun size in bytes that a file must have to show its
-	MinSizeToShowProgressBar = 5242880
 )
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
-	APIKey           string                 `yaml:"apikey"`
-	GUIPassword      string                 `yaml:"password"`
-	GUIPasswordHash  string                 `yaml:"-"`
-	binPath          string                 `yaml:"-"`
-	Client           *http.Client           `yaml:"-"`
-	cmd              *exec.Cmd              `yaml:"-"`
-	Folders          []*Folder              `yaml:"folders"`
-	FileWatcherDelay int                    `yaml:"-"`
-	ForceSendOnly    bool                   `yaml:"-"`
-	GUIAddress       string                 `yaml:"local"`
-	Home             string                 `yaml:"-"`
-	LogPath          string                 `yaml:"-"`
-	ListenAddress    string                 `yaml:"-"`
-	RemoteAddress    string                 `yaml:"-"`
-	RemoteDeviceID   string                 `yaml:"-"`
-	RemoteGUIAddress string                 `yaml:"remote"`
-	RemoteGUIPort    int                    `yaml:"-"`
-	RemotePort       int                    `yaml:"-"`
-	LocalGUIPort     int                    `yaml:"-"`
-	LocalPort        int                    `yaml:"-"`
-	Type             string                 `yaml:"-"`
-	IgnoreDelete     bool                   `yaml:"-"`
-	pid              int                    `yaml:"-"`
-	RescanInterval   string                 `yaml:"-"`
-	Compression      string                 `yaml:"-"`
-	Status           map[string]ItemsStatus `yaml:"-"`
-}
-
-type ItemsStatus struct {
-	TotalItemSize map[string]int64
-	Progress      map[string]int64
-	InitialStatus map[string]int64
-	LastEvent     int
+	APIKey            string                   `yaml:"apikey"`
+	GUIPassword       string                   `yaml:"password"`
+	GUIPasswordHash   string                   `yaml:"-"`
+	binPath           string                   `yaml:"-"`
+	Client            *http.Client             `yaml:"-"`
+	cmd               *exec.Cmd                `yaml:"-"`
+	Folders           []*Folder                `yaml:"folders"`
+	FileWatcherDelay  int                      `yaml:"-"`
+	ForceSendOnly     bool                     `yaml:"-"`
+	GUIAddress        string                   `yaml:"local"`
+	Home              string                   `yaml:"-"`
+	LogPath           string                   `yaml:"-"`
+	ListenAddress     string                   `yaml:"-"`
+	RemoteAddress     string                   `yaml:"-"`
+	RemoteDeviceID    string                   `yaml:"-"`
+	RemoteGUIAddress  string                   `yaml:"remote"`
+	RemoteGUIPort     int                      `yaml:"-"`
+	RemotePort        int                      `yaml:"-"`
+	LocalGUIPort      int                      `yaml:"-"`
+	LocalPort         int                      `yaml:"-"`
+	Type              string                   `yaml:"-"`
+	IgnoreDelete      bool                     `yaml:"-"`
+	pid               int                      `yaml:"-"`
+	RescanInterval    string                   `yaml:"-"`
+	Compression       string                   `yaml:"-"`
+	Status            map[string]*FolderStatus `yaml:"-"`
+	StatusReady       bool                     `yaml:"-"`
+	ShouldIgnoreFiles []string                 `yaml:""`
 }
 
 //Folder represents a sync folder
@@ -151,6 +142,7 @@ type FolderError struct {
 	Path  string `json:"path"`
 }
 
+// ItemEvent represents an item event of any type in syncthing.
 type ItemEvent struct {
 	Id       int       `json:"id"`
 	GlobalId int       `json:"globalID"`
@@ -158,11 +150,41 @@ type ItemEvent struct {
 	Data     EventData `json:"data"`
 }
 
+// EventData represents an the information about an event of any type in syncthing.
 type EventData struct {
 	Action string `json:"action"`
 	Folder string `json:"folder"`
 	Item   string `json:"item"`
 	Type   string `json:"type"`
+}
+
+// Need represents the resources that are needed to be synchronized a folder.
+type Need struct {
+	Total    int        `json:"total"`
+	Page     int        `json:"page"`
+	PerPage  int        `json:"perpage"`
+	Progress []NeedItem `json:"progress"`
+	Queued   []NeedItem `json:"queued"`
+	Rest     []NeedItem `json:"rest"`
+}
+
+// NeedItem represents the information about an item that is needed to be synchronized.
+type NeedItem struct {
+	Deleted       bool      `json:"deleted"`
+	Ignored       bool      `json:"ignored"`
+	Invalid       bool      `json:"invalid"`
+	MustRescan    bool      `json:"mustRescan"`
+	NoPermissions bool      `json:"noPermissions"`
+	LocalFlags    int       `json:"localFlags"`
+	Modified      time.Time `json:"modified"`
+	ModifiedBy    string    `json:"modifiedBy"`
+	Name          string    `json:"name"`
+	Permissions   string    `json:"permissions"`
+	Sequence      int       `json:"sequence"`
+	Size          int       `json:"size"`
+	Type          string    `json:"type"`
+	Version       []string  `json:"version"`
+	NumBlocks     *string   `json:"numBlocks"`
 }
 
 // New constructs a new Syncthing.
@@ -489,7 +511,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 }
 
 // WaitForCompletion waits for the remote to be totally synched
-func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan int64) error {
+func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
 	defer close(reporter)
 	ticker := time.NewTicker(1000 * time.Millisecond)
 	for _, folder := range s.Folders {
@@ -521,7 +543,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 					continue
 				}
 
-				progress := int64(math.Round((float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100))
+				progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
 				log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
 					progress,
 					completion.NeedBytes,
@@ -623,100 +645,70 @@ func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 }
 
 func (s *Syncthing) NewStatus(ctx context.Context) error {
-	s.Status = make(map[string]ItemsStatus)
+	s.Status = make(map[string]*FolderStatus)
 	for _, folder := range s.Folders {
-		err := s.GetDirectorySizes(ctx, folder)
+		s.Status[GetFolderName(folder)] = &FolderStatus{}
+		err := s.SetLastItemFinished(ctx, folder)
 		if err != nil {
-			if err == errors.ErrBusySyncthing {
-				continue
-			}
+			return err
+		}
+		err = s.GetTreeByNeed(ctx, folder)
+		if err != nil {
 			return err
 		}
 	}
+	s.StatusReady = true
 	return nil
 }
 
-// GetStatus returns the syncthing status
-func (s *Syncthing) GetDirectorySizes(ctx context.Context, folder *Folder) error {
+func (s *Syncthing) GetNeeded(ctx context.Context, folder *Folder) (map[string]int, error) {
+	notCompleted := make(map[string]int, 0)
 	params := getFolderParameter(folder)
-	var status map[string]interface{}
-	body, err := s.APICall(ctx, "rest/db/browse", "GET", 200, params, true, nil, true, 3)
+	body, err := s.APICall(ctx, "rest/db/need", "GET", 200, params, false, nil, true, 3)
+	var result Need
 	if err != nil {
 		log.Infof("error getting status: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			return errors.ErrBusySyncthing
+			return notCompleted, errors.ErrBusySyncthing
 		}
-		return errors.ErrLostSyncthing
+		return notCompleted, errors.ErrLostSyncthing
 	}
-	err = json.Unmarshal(body, &status)
+	err = json.Unmarshal(body, &result)
 	if err != nil {
 		log.Information("error unmarshalling status: %s", err.Error())
-		return errors.ErrLostSyncthing
+		return notCompleted, errors.ErrLostSyncthing
 	}
-	for directory, content := range status {
-		totalDirectorySize := GetSize(content)
-		if totalDirectorySize > MinSizeToShowProgressBar {
-			folderName := GetFolderName(folder)
-			if _, ok := s.Status[folderName]; !ok {
-				s.Status[folderName] = ItemsStatus{Progress: make(map[string]int64),
-					TotalItemSize: make(map[string]int64),
-					InitialStatus: make(map[string]int64)}
-			}
-			s.Status[folderName].TotalItemSize[directory] = totalDirectorySize
-		}
+	for _, inProgressItem := range result.Progress {
+		notCompleted[inProgressItem.Name] = inProgressItem.Size
 	}
-	return nil
-}
-
-func GetSize(fileDict interface{}) int64 {
-	totalSize := int64(0)
-	if directory, ok := fileDict.(map[string]interface{}); ok {
-		for _, fileInside := range directory {
-			totalSize += GetSize(fileInside)
-		}
-	} else if file, ok := fileDict.([]interface{}); ok {
-		totalSize += int64(file[1].(float64))
+	for _, inQueueItem := range result.Queued {
+		notCompleted[inQueueItem.Name] = inQueueItem.Size
 	}
-	return totalSize
+	for _, restingItem := range result.Rest {
+		notCompleted[restingItem.Name] = restingItem.Size
+	}
+	return notCompleted, err
 }
 
 // GetObjectSyncthing returns the syncthing error or nil
 func (s *Syncthing) UpdateSyncthingStatus(ctx context.Context) error {
 	for _, folder := range s.Folders {
 		folderName := GetFolderName(folder)
-		inProgressItems, err := s.GetProgressEvent(ctx, folder, false, s.Status[folderName].LastEvent)
+		_, err := s.GetProgressEvent(ctx, folder, false, s.Status[folderName].LastDownloadEvent)
 		if err != nil {
 			if err == errors.ErrBusySyncthing {
 				continue
 			}
 			return err
 		}
-		finishedItems, err := s.GetFinishedItems(ctx, folder, s.Status[folderName].LastEvent)
+		_, err = s.GetFinishedItems(ctx, folder, s.Status[folderName].LastFinishedEvent)
 		if err != nil {
 			if err == errors.ErrBusySyncthing {
 				continue
 			}
 			return err
 		}
-		for _, item := range finishedItems {
-			progressItem := GetRootPath(item)
-			if _, ok := s.Status[folderName].TotalItemSize[progressItem]; ok {
-				s.Status[folderName].Progress[item] = s.Status[folderName].TotalItemSize[item]
-			}
-		}
-		proccessed := make(map[string]int64)
-		for item, progress := range inProgressItems {
-			progressItem := GetRootPath(item)
-			if _, ok := s.Status[folderName].TotalItemSize[progressItem]; ok {
-				proccessed[progressItem] += progress
-			}
-		}
-		for item, progress := range proccessed {
-			progressItem := GetRootPath(item)
-			if _, ok := s.Status[folderName].TotalItemSize[progressItem]; ok {
-				s.Status[folderName].Progress[item] = progress + s.Status[folderName].InitialStatus[progressItem]
-			}
-		}
+
 	}
 
 	return nil
@@ -843,10 +835,49 @@ func (s *Syncthing) GetFinished(ctx context.Context, folder *Folder, startFrom i
 }
 
 // GetObjectSyncthing the files syncthing
+func (s *Syncthing) GetLastItemStarted(ctx context.Context) (string, error) {
+	lastStartedItem := ""
+	var latestEventTime *time.Time
+	for _, folder := range s.Folders {
+		params := getFolderParameter(folder)
+		params["since"] = "0"
+		params["timeout"] = "0"
+		params["events"] = "ItemStarted"
+		var result []ItemEvent
+		body, err := s.APICall(ctx, "rest/events", "GET", 200, params, false, nil, true, 3)
+		if err != nil {
+			log.Infof("error getting events: %s", err.Error())
+			if strings.Contains(err.Error(), "Client.Timeout") {
+				return lastStartedItem, errors.ErrBusySyncthing
+			}
+			return lastStartedItem, errors.ErrLostSyncthing
+		}
+
+		json.Unmarshal(body, &result)
+		if err != nil {
+			log.Infof("error unmarshalling events: %s", err.Error())
+			return lastStartedItem, errors.ErrLostSyncthing
+		}
+		if len(result) > 0 {
+			lastItem := result[len(result)-1]
+			lastItemTime := lastItem.Time
+
+			if latestEventTime != nil {
+				if latestEventTime.After(lastItemTime) {
+					lastStartedItem = result[len(result)-1].Data.Item
+				}
+			} else {
+				lastStartedItem = result[len(result)-1].Data.Item
+			}
+		}
+	}
+	return lastStartedItem, nil
+}
+
+// GetObjectSyncthing the files syncthing
 func (s *Syncthing) GetFinishedItems(ctx context.Context, folder *Folder, startFrom int) ([]string, error) {
 	finishedFilesInDirsAndFolders := make([]string, 0)
 	finishedItems, err := s.GetFinished(ctx, folder, startFrom)
-
 	if err != nil {
 		log.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
@@ -855,12 +886,20 @@ func (s *Syncthing) GetFinishedItems(ctx context.Context, folder *Folder, startF
 		return finishedFilesInDirsAndFolders, errors.ErrLostSyncthing
 	}
 
+	finishedMap := make(map[string]int)
 	for _, item := range finishedItems {
 		isDir := item.Data.Type == "dir"
 		if !isDir {
-			finishedFilesInDirsAndFolders = append(finishedFilesInDirsAndFolders, item.Data.Item)
+			finishedMap[item.Data.Item] = 1
 		}
 	}
+
+	for itemName := range finishedMap {
+		finishedFilesInDirsAndFolders = append(finishedFilesInDirsAndFolders, itemName)
+	}
+
+	folderName := GetFolderName(folder)
+	s.Status[folderName].setFinishedItems(finishedFilesInDirsAndFolders)
 	return finishedFilesInDirsAndFolders, nil
 }
 
@@ -887,10 +926,6 @@ func (s *Syncthing) GetProgressEvent(ctx context.Context, folder *Folder, local 
 		return itemProgress, errors.ErrLostSyncthing
 	}
 	if len(result) > 0 {
-		if folderStatus, ok := s.Status[GetFolderName(folder)]; ok {
-			lastProgressStatus := result[len(result)-1]
-			folderStatus.LastEvent = int(lastProgressStatus["globalID"].(float64))
-		}
 		downloadProgress := make(map[string]int64)
 		for _, eventProgress := range result {
 			downloadProgress = GetBytesProccessed(eventProgress, params["folder"])
@@ -899,6 +934,8 @@ func (s *Syncthing) GetProgressEvent(ctx context.Context, folder *Folder, local 
 			}
 		}
 	}
+	folderName := GetFolderName(folder)
+	s.Status[folderName].setProccess(itemProgress)
 	return itemProgress, nil
 }
 

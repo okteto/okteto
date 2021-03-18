@@ -40,6 +40,8 @@ var (
 	successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" ✓ ")
 
 	informationSymbol = color.New(color.BgHiBlue, color.FgBlack).Sprint(" i ")
+
+	greyString = color.New(color.FgHiBlack).SprintfFunc()
 )
 
 type logger struct {
@@ -197,4 +199,13 @@ func Fail(format string, args ...interface{}) {
 func Println(args ...interface{}) {
 	log.out.Info(args...)
 	fmt.Fprintln(color.Output, args...)
+}
+
+func GreyString(format string, args ...interface{}) string {
+	return greyString(format, args...)
+}
+
+// Green writes a line in green
+func GreenString(format string, args ...interface{}) string {
+	return greenString(format, args...)
 }
