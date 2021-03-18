@@ -390,6 +390,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 
 	go up.cleanCommand(ctx)
 
+	start := time.Now()
 	if err := up.sync(ctx); err != nil {
 		if up.shouldRetry(ctx, err) {
 			if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
@@ -405,7 +406,12 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		analytics.TrackReconnect(true, up.isSwap)
 	}
 	log.Success("Files synchronized")
-	printFilesThatShouldBeIgnored(up.Sy)
+
+	elapsed := time.Since(start)
+	maxDuration := time.Duration(1) * time.Minute
+	if elapsed > maxDuration {
+		log.Yellow("It seems that synchronization is taking too long. Consider adding some files to .stignore.")
+	}
 
 	go func() {
 		output := <-up.cleaned
@@ -837,7 +843,6 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
-	start := time.Now()
 	if err := config.UpdateStateFile(up.Dev, config.Synchronizing); err != nil {
 		return err
 	}
@@ -845,18 +850,6 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 
 	reporter := make(chan float64)
 	var eventAPIErr error
-
-	go func() {
-		for c := range reporter {
-			if !up.Sy.StatusReady {
-				eventAPIErr = up.Sy.NewStatus(ctx)
-			}
-			if c != 100 {
-				eventAPIErr = up.Sy.UpdateSyncthingStatus(ctx)
-				progressBar.UpdateProgress(up.Sy.Status)
-			}
-		}
-	}()
 	go func() {
 		for c := range reporter {
 			if c != 100 {
@@ -884,8 +877,12 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		analytics.TrackSyncError()
 		switch err {
 		case errors.ErrLostSyncthing, errors.ErrResetSyncthing:
+			progressBar.Finish()
+			progressBar.Group.Wait()
 			return err
 		case errors.ErrInsufficientSpace:
+			progressBar.Finish()
+			progressBar.Group.Wait()
 			return up.getInsufficientSpaceError(err)
 		default:
 			return errors.UserError{
@@ -898,12 +895,6 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	}
 	progressBar.Finish()
 	progressBar.Group.Wait()
-
-	elapsed := time.Since(start)
-	maxDuration := time.Duration(1) * time.Minute
-	if elapsed > maxDuration {
-		log.Yellow("It seems that synchronization is taking too long. Consider adding some files to .stignore.")
-	}
 	up.Sy.Type = "sendreceive"
 	up.Sy.IgnoreDelete = false
 	if err := up.Sy.UpdateConfig(); err != nil {
@@ -1095,11 +1086,4 @@ func printDisplayContext(dev *model.Dev) {
 		}
 	}
 	fmt.Println()
-}
-
-func printFilesThatShouldBeIgnored(sync *syncthing.Syncthing) {
-	if filesToIgnore := sync.GetFilesThatShouldBeIgnored(); filesToIgnore != "" {
-		log.Yellow("The following files takes longer than expected. Consider adding them to the .stignore:")
-		log.Yellow("    %s", filesToIgnore)
-	}
 }

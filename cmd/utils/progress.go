@@ -23,7 +23,6 @@ import (
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/vbauerster/mpb/v6"
 	mbp "github.com/vbauerster/mpb/v6"
 	"github.com/vbauerster/mpb/v6/decor"
@@ -156,36 +155,6 @@ func (s *SyncthingProgress) NewBar(name string, total int64, width int) *mbp.Bar
 
 func (s *SyncthingProgress) UpdateLastItemInSync(lastItem string) {
 	s.LastItemInSync = lastItem
-}
-
-// UpdateProgress updates all the progress bars in the pool
-func (s *SyncthingProgress) UpdateProgress(syncthingItems map[string]*syncthing.FolderStatus) {
-	for _, folderInfo := range syncthingItems {
-		dirProgressionMap := folderInfo.ToShowMap()
-		for file, value := range dirProgressionMap {
-			if s.IsRegistered(file) {
-				s.UpdateBar(file, value)
-			} else {
-				item := syncthing.GetItem(file, folderInfo.Items)
-				totalSize := item.Size
-				s.FileProgress[file] = Progress{Bar: s.NewBar(file, totalSize, FileProgressBarWidth), Size: totalSize}
-				s.UpdateBar(file, value)
-			}
-		}
-
-	}
-
-}
-
-// UpdateBar updates the progress bar to a certain value
-func (s *SyncthingProgress) UpdateBar(name string, value int64) {
-	s.FileProgress[name].Bar.SetCurrent(value)
-}
-
-// isRegistered checks if a bar name exists in the pool of progressBars
-func (s *SyncthingProgress) IsRegistered(name string) bool {
-	_, exists := s.FileProgress[syncthing.GetRootPath(name)]
-	return exists
 }
 
 // GetNameDisplaye set the max num char of a file to a constant

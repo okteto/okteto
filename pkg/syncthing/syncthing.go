@@ -644,102 +644,9 @@ func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 	return nil
 }
 
-func (s *Syncthing) NewStatus(ctx context.Context) error {
-	s.Status = make(map[string]*FolderStatus)
-	for _, folder := range s.Folders {
-		s.Status[GetFolderName(folder)] = &FolderStatus{}
-		err := s.SetLastItemFinished(ctx, folder)
-		if err != nil {
-			return err
-		}
-		err = s.GetTreeByNeed(ctx, folder)
-		if err != nil {
-			return err
-		}
-	}
-	s.StatusReady = true
-	return nil
-}
-
-func (s *Syncthing) GetNeeded(ctx context.Context, folder *Folder) (map[string]int, error) {
-	notCompleted := make(map[string]int, 0)
-	params := getFolderParameter(folder)
-	body, err := s.APICall(ctx, "rest/db/need", "GET", 200, params, false, nil, true, 3)
-	var result Need
-	if err != nil {
-		log.Infof("error getting status: %s", err.Error())
-		if strings.Contains(err.Error(), "Client.Timeout") {
-			return notCompleted, errors.ErrBusySyncthing
-		}
-		return notCompleted, errors.ErrLostSyncthing
-	}
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		log.Information("error unmarshalling status: %s", err.Error())
-		return notCompleted, errors.ErrLostSyncthing
-	}
-	for _, inProgressItem := range result.Progress {
-		notCompleted[inProgressItem.Name] = inProgressItem.Size
-	}
-	for _, inQueueItem := range result.Queued {
-		notCompleted[inQueueItem.Name] = inQueueItem.Size
-	}
-	for _, restingItem := range result.Rest {
-		notCompleted[restingItem.Name] = restingItem.Size
-	}
-	return notCompleted, err
-}
-
-// GetObjectSyncthing returns the syncthing error or nil
-func (s *Syncthing) UpdateSyncthingStatus(ctx context.Context) error {
-	for _, folder := range s.Folders {
-		folderName := GetFolderName(folder)
-		_, err := s.GetProgressEvent(ctx, folder, false, s.Status[folderName].LastDownloadEvent)
-		if err != nil {
-			if err == errors.ErrBusySyncthing {
-				continue
-			}
-			return err
-		}
-		_, err = s.GetFinishedItems(ctx, folder, s.Status[folderName].LastFinishedEvent)
-		if err != nil {
-			if err == errors.ErrBusySyncthing {
-				continue
-			}
-			return err
-		}
-
-	}
-
-	return nil
-}
-
 // GetRootPath returns the root directory if its inside a directory or the name of the file if not
 func GetRootPath(file string) string {
 	return strings.Split(file, "/")[0]
-}
-
-// GetStatus returns the syncthing status
-func (s *Syncthing) GetFileSize(ctx context.Context, folder *Folder, file string) (int64, error) {
-	var size int64
-	params := getFolderParameter(folder)
-	params["file"] = file
-	var result map[string]interface{}
-	body, err := s.APICall(ctx, "rest/db/file", "GET", 200, params, true, nil, true, 3)
-	if err != nil {
-		log.Infof("error getting status: %s", err.Error())
-		if strings.Contains(err.Error(), "Client.Timeout") {
-			return size, errors.ErrBusySyncthing
-		}
-		return size, errors.ErrLostSyncthing
-	}
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		log.Infof("error unmarshalling status: %s", err.Error())
-		return size, errors.ErrLostSyncthing
-	}
-	size = int64(result["local"].(map[string]interface{})["size"].(float64))
-	return size, nil
 }
 
 // GetStatus returns the syncthing status
@@ -811,30 +718,6 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 }
 
 // GetObjectSyncthing the files syncthing
-func (s *Syncthing) GetFinished(ctx context.Context, folder *Folder, startFrom int) ([]ItemEvent, error) {
-	params := getFolderParameter(folder)
-	params["since"] = fmt.Sprint(startFrom)
-	params["timeout"] = "0"
-	params["events"] = "ItemFinished"
-	var result []ItemEvent
-	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, false, nil, true, 3)
-	if err != nil {
-		log.Infof("error getting events: %s", err.Error())
-		if strings.Contains(err.Error(), "Client.Timeout") {
-			return result, errors.ErrBusySyncthing
-		}
-		return result, errors.ErrLostSyncthing
-	}
-
-	json.Unmarshal(body, &result)
-	if err != nil {
-		log.Infof("error unmarshalling events: %s", err.Error())
-		return result, errors.ErrLostSyncthing
-	}
-	return result, nil
-}
-
-// GetObjectSyncthing the files syncthing
 func (s *Syncthing) GetInSynchronizationItem(ctx context.Context) (string, error) {
 	lastStartedItem := ""
 	for _, folder := range s.Folders {
@@ -873,35 +756,6 @@ func (s *Syncthing) GetInSynchronizationItem(ctx context.Context) (string, error
 }
 
 // GetObjectSyncthing the files syncthing
-func (s *Syncthing) GetFinishedItems(ctx context.Context, folder *Folder, startFrom int) ([]string, error) {
-	finishedFilesInDirsAndFolders := make([]string, 0)
-	finishedItems, err := s.GetFinished(ctx, folder, startFrom)
-	if err != nil {
-		log.Infof("error getting events: %s", err.Error())
-		if strings.Contains(err.Error(), "Client.Timeout") {
-			return finishedFilesInDirsAndFolders, errors.ErrBusySyncthing
-		}
-		return finishedFilesInDirsAndFolders, errors.ErrLostSyncthing
-	}
-
-	finishedMap := make(map[string]int)
-	for _, item := range finishedItems {
-		isDir := item.Data.Type == "dir"
-		if !isDir {
-			finishedMap[item.Data.Item] = 1
-		}
-	}
-
-	for itemName := range finishedMap {
-		finishedFilesInDirsAndFolders = append(finishedFilesInDirsAndFolders, itemName)
-	}
-
-	folderName := GetFolderName(folder)
-	s.Status[folderName].setFinishedItems(finishedFilesInDirsAndFolders)
-	return finishedFilesInDirsAndFolders, nil
-}
-
-// GetObjectSyncthing the files syncthing
 func (s *Syncthing) GetProgressEvent(ctx context.Context, folder *Folder, local bool, startFrom int) (map[string]int64, error) {
 	itemProgress := make(map[string]int64)
 	params := getFolderParameter(folder)
@@ -932,8 +786,6 @@ func (s *Syncthing) GetProgressEvent(ctx context.Context, folder *Folder, local 
 			}
 		}
 	}
-	folderName := GetFolderName(folder)
-	s.Status[folderName].setProccess(itemProgress)
 	return itemProgress, nil
 }
 
