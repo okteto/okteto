@@ -211,7 +211,9 @@ func NewLineBarFiller(filler mpb.BarFiller) mpb.BarFiller {
 	return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
 		w.Write([]byte("   "))
 		filler.Fill(w, reqWidth, st)
-		w.Write([]byte("\n"))
+		percentage := Percentage(st.Total, st.Current, 100)
+		afterBarText := fmt.Sprintf(" %d%%\n", int(percentage))
+		w.Write([]byte(afterBarText))
 	})
 }
 
@@ -219,9 +221,19 @@ func (sync *SyncthingProgress) ItemStartedDecorator(wcc ...decor.WC) decor.Decor
 	var msg string
 	fn := func(s decor.Statistics) string {
 		if !s.Completed {
-			msg = sync.LastStartedItem
+			msg = sync.LastItemInSync
 		}
 		return msg
 	}
 	return decor.Any(fn, wcc...)
+}
+
+func Percentage(total, current int64, width int) float64 {
+	if total <= 0 {
+		return 0
+	}
+	if current >= total {
+		return float64(width)
+	}
+	return float64(int64(width)*current) / float64(total)
 }
