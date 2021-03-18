@@ -101,7 +101,12 @@ func addFileInDirectory(name string, size int, actualTreeStatus []*ItemInfo) []*
 	folders := splittedName[:len(splittedName)-1]
 	var previousFolder *ItemInfo
 	for _, folderName := range folders {
-		folder := getFolderIfExists(folderName, actualTreeStatus)
+		var folder *ItemInfo
+		if previousFolder == nil {
+			folder = getFolderIfExists(folderName, actualTreeStatus)
+		} else {
+			folder = getFolderIfExists(folderName, previousFolder.Children)
+		}
 		if folder == nil {
 			folder = &ItemInfo{Name: folderName, Children: make([]*ItemInfo, 0)}
 			if previousFolder == nil {
@@ -153,6 +158,9 @@ func addFileToFolder(fileName string, size int, actualFolder []*ItemInfo) []*Ite
 func updateFolderSizes(actualFolder []*ItemInfo) {
 	for _, item := range actualFolder {
 		if len(item.Children) > 0 {
+			for _, child := range item.Children {
+				child.Size = child.CalculateSize()
+			}
 			item.Size = item.CalculateSize()
 			if item.IsDirToShow() {
 				item.ToShow = true
