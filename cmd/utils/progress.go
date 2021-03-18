@@ -130,7 +130,7 @@ func (s *SyncthingProgress) NewMainBar(width int) *mbp.Bar {
 	return s.Group.Add(100, nil,
 		mpb.PrependDecorators(
 			decor.OnComplete(decor.Spinner(nil, decor.WCSyncSpace), "Files synchronized"),
-			decor.OnComplete(decor.Name(" Synchronizing your files: "), ""),
+			decor.OnComplete(decor.Name(" Synchronizing: "), ""),
 			decor.OnComplete(s.ItemStartedDecorator(), ""),
 		),
 		mpb.BarExtender(NewLineBarFiller(mpb.NewBarFiller("[->_]"))),
