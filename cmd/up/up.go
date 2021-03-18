@@ -857,21 +857,20 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		}
 	}()
 	go func() {
+		for c := range reporter {
+			if c != 100 {
+				lastItem, _ := up.Sy.GetInSynchronizationItem(ctx)
+				progressBar.UpdateLastItemInSync(lastItem)
+			}
+		}
+	}()
+
+	go func() {
 		var previous float64
 		for c := range reporter {
 			if c > previous {
 				progressBar.MainBar.SetCurrent(int64(c))
 				previous = c
-			}
-		}
-		progressBar.Finish()
-	}()
-
-	go func() {
-		for c := range reporter {
-			if c != 100 {
-				lastItem, _ := up.Sy.GetLastItemStarted(ctx)
-				progressBar.UpdateLastItem(lastItem)
 			}
 		}
 	}()
@@ -896,7 +895,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 			}
 		}
 	}
-
+	progressBar.Finish()
 	progressBar.Group.Wait()
 
 	up.Sy.Type = "sendreceive"

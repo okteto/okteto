@@ -835,15 +835,14 @@ func (s *Syncthing) GetFinished(ctx context.Context, folder *Folder, startFrom i
 }
 
 // GetObjectSyncthing the files syncthing
-func (s *Syncthing) GetLastItemStarted(ctx context.Context) (string, error) {
+func (s *Syncthing) GetInSynchronizationItem(ctx context.Context) (string, error) {
 	lastStartedItem := ""
-	var latestEventTime *time.Time
 	for _, folder := range s.Folders {
 		params := getFolderParameter(folder)
 		params["since"] = "0"
 		params["timeout"] = "0"
-		params["events"] = "ItemStarted"
-		var result []ItemEvent
+		params["events"] = "DownloadProgress"
+		var result []map[string]interface{}
 		body, err := s.APICall(ctx, "rest/events", "GET", 200, params, false, nil, true, 3)
 		if err != nil {
 			log.Infof("error getting events: %s", err.Error())
@@ -860,14 +859,13 @@ func (s *Syncthing) GetLastItemStarted(ctx context.Context) (string, error) {
 		}
 		if len(result) > 0 {
 			lastItem := result[len(result)-1]
-			lastItemTime := lastItem.Time
-
-			if latestEventTime != nil {
-				if latestEventTime.After(lastItemTime) {
-					lastStartedItem = result[len(result)-1].Data.Item
+			downloadProgressMap := GetBytes(lastItem, GetFolderName(folder))
+			var biggerFileSize int64
+			for fileName, fileProgress := range downloadProgressMap {
+				if fileProgress > biggerFileSize {
+					lastStartedItem = fileName
+					biggerFileSize = fileProgress
 				}
-			} else {
-				lastStartedItem = result[len(result)-1].Data.Item
 			}
 		}
 	}
@@ -948,6 +946,21 @@ func GetBytesProccessed(progressStatusJSON map[string]interface{}, folder string
 		for fileName := range folderStatus {
 			fileData := folderStatus[fileName].(map[string]interface{})
 			folderProgression[fileName] = int64(fileData["bytesDone"].(float64))
+		}
+	}
+
+	return folderProgression
+}
+
+// GetBytesProccessed returns the bytes that have been proccessed for a file
+func GetBytes(progressStatusJSON map[string]interface{}, folder string) map[string]int64 {
+	data := progressStatusJSON["data"].(map[string]interface{})
+	folderProgression := make(map[string]int64)
+	if len(data) > 0 {
+		folderStatus := data[folder].(map[string]interface{})
+		for fileName := range folderStatus {
+			fileData := folderStatus[fileName].(map[string]interface{})
+			folderProgression[fileName] = int64(fileData["bytesTotal"].(float64))
 		}
 	}
 
