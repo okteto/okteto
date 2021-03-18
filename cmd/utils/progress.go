@@ -204,6 +204,7 @@ func (s *SyncthingProgress) Finish() {
 		completed := progressBar.Size
 		progressBar.Bar.SetCurrent(completed)
 	}
+	s.MainBar.SetCurrent(100)
 }
 
 func NewLineBarFiller(filler mpb.BarFiller) mpb.BarFiller {
