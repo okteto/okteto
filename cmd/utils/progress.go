@@ -44,11 +44,11 @@ type ProgressBar struct {
 
 // SyncthingProgress tracks the progress of all the files syncthing
 type SyncthingProgress struct {
-	Group           *mbp.Progress
-	MainBar         *mbp.Bar
-	FileProgress    map[string]Progress
-	waitGroup       *sync.WaitGroup
-	LastStartedItem string
+	Group          *mbp.Progress
+	MainBar        *mbp.Bar
+	FileProgress   map[string]Progress
+	waitGroup      *sync.WaitGroup
+	LastItemInSync string
 }
 
 type Progress struct {
@@ -154,8 +154,8 @@ func (s *SyncthingProgress) NewBar(name string, total int64, width int) *mbp.Bar
 	)
 }
 
-func (s *SyncthingProgress) UpdateLastItem(lastItem string) {
-	s.LastStartedItem = lastItem
+func (s *SyncthingProgress) UpdateLastItemInSync(lastItem string) {
+	s.LastItemInSync = lastItem
 }
 
 // UpdateProgress updates all the progress bars in the pool
