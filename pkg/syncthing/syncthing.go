@@ -651,11 +651,6 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 
 	errMsg := folderErrors.Data.Errors[0].Error
 
-	if strings.Contains(errMsg, "no connected device has the required version of this file") {
-		log.Infof("corrupted syncthing database, needs reset local=%t: %s", local, errMsg)
-		return errors.ErrResetSyncthing
-	}
-
 	if strings.Contains(errMsg, "insufficient space") {
 		log.Infof("syncthing insufficient space local=%t: %s", local, errMsg)
 		return errors.ErrInsufficientSpace
