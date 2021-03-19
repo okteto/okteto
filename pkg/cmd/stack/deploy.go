@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -28,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,9 +98,12 @@ func deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 				return err
 			}
 		}
+		spinner.Stop()
+		log.Success("Deployed service '%s'", name)
+		spinner.Start()
 	}
 
-	if err := destroyServicesNotInStack(ctx, s, c); err != nil {
+	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 		return err
 	}
 
@@ -115,19 +120,25 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 	d := translateDeployment(svcName, s)
 	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("error getting kubernetes deployment: %s", err)
+		return fmt.Errorf("error getting deployment of service '%s': %s", svcName, err.Error())
 	}
 	new := old.Name == ""
 	if !new {
+		if old.Labels[okLabels.StackNameLabel] == "" {
+			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
+		}
 		if d.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
-			return fmt.Errorf("The service '%s' existed before deploying the stack", svcName)
+			return fmt.Errorf("name collision: the deployment '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
 		}
 		if deployments.IsDevModeOn(old) {
 			deployments.RestoreDevModeFrom(d, old)
 		}
 	}
 	if err := deployments.Deploy(ctx, d, new, c); err != nil {
-		return err
+		if new {
+			return fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
+		}
+		return fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
 	}
 	return nil
 }
@@ -136,19 +147,29 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 	sfs := translateStatefulSet(svcName, s)
 	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("error getting kubernetes statefulset: %s", err)
+		return fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
 	}
 	if old.Name == "" {
 		if err := statefulsets.Create(ctx, sfs, c); err != nil {
-			return err
+			return fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
 		}
 	} else {
-		if sfs.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
-			return fmt.Errorf("The service '%s' existed before deploying the stack", svcName)
+		if old.Labels[okLabels.StackNameLabel] == "" {
+			return fmt.Errorf("name collision: the statefulset '%s' was running before deploying your stack", svcName)
 		}
-		sfs.Spec.RevisionHistoryLimit = old.Spec.RevisionHistoryLimit
+		if sfs.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
+			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+		}
 		if err := statefulsets.Update(ctx, sfs, c); err != nil {
-			return err
+			if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
+				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
+			}
+			if err := statefulsets.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
+				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
+			}
+			if err := statefulsets.Create(ctx, sfs, c); err != nil {
+				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
+			}
 		}
 	}
 	return nil

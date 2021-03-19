@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -72,12 +73,12 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	spinner.Start()
 	defer spinner.Stop()
 
-	if err := destroyHelmRelease(ctx, s, spinner); err != nil {
+	if err := destroyHelmRelease(ctx, spinner, s); err != nil {
 		return err
 	}
 
 	s.Services = nil
-	if err := destroyServicesNotInStack(ctx, s, c); err != nil {
+	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 		return err
 	}
 
@@ -88,7 +89,7 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 
 	if removeVolumes {
 		spinner.Update("Destroying volumes...")
-		if err := destroyStackVolumes(ctx, s, c); err != nil {
+		if err := destroyStackVolumes(ctx, spinner, s, c); err != nil {
 			return err
 		}
 	}
@@ -115,7 +116,7 @@ func helmReleaseExist(c *action.List, name string) (bool, error) {
 	return false, nil
 }
 
-func destroyHelmRelease(ctx context.Context, s *model.Stack, spinner *utils.Spinner) error {
+func destroyHelmRelease(ctx context.Context, spinner *utils.Spinner, s *model.Stack) error {
 	settings := cli.New()
 
 	actionConfig := new(action.Configuration)
@@ -134,13 +135,13 @@ func destroyHelmRelease(ctx context.Context, s *model.Stack, spinner *utils.Spin
 	if exists {
 		uClient := action.NewUninstall(actionConfig)
 		if _, err := uClient.Run(s.Name); err != nil {
-			return fmt.Errorf("error destroying stack '%s': %s", s.Name, err)
+			return fmt.Errorf("error destroying stack '%s': %s", s.Name, err.Error())
 		}
 	}
 	return nil
 }
 
-func destroyServicesNotInStack(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {
+func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
 	dList, err := deployments.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
@@ -148,8 +149,14 @@ func destroyServicesNotInStack(ctx context.Context, s *model.Stack, c *kubernete
 	for _, d := range dList {
 		if _, ok := s.Services[d.Name]; !ok {
 			if err := deployments.Destroy(ctx, d.Name, d.Namespace, c); err != nil {
-				return err
+				return fmt.Errorf("error destroying deployment of service '%s': %s", d.Name, err)
 			}
+			if err := services.Destroy(ctx, d.Name, d.Namespace, c); err != nil {
+				return fmt.Errorf("error destroying service '%s': %s", d.Name, err)
+			}
+			spinner.Stop()
+			log.Success("Destroyed service '%s'", d.Name)
+			spinner.Start()
 		}
 	}
 
@@ -160,20 +167,14 @@ func destroyServicesNotInStack(ctx context.Context, s *model.Stack, c *kubernete
 	for _, sfs := range sfsList {
 		if _, ok := s.Services[sfs.Name]; !ok {
 			if err := statefulsets.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
-				return err
+				return fmt.Errorf("error destroying statefulset of service '%s': %s", sfs.Name, err)
 			}
-		}
-	}
-
-	svcList, err := services.List(ctx, s.Namespace, s.GetLabelSelector(), c)
-	if err != nil {
-		return err
-	}
-	for _, svc := range svcList {
-		if _, ok := s.Services[svc.Name]; !ok {
-			if err := services.Destroy(ctx, svc.Name, svc.Namespace, c); err != nil {
-				return err
+			if err := services.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
+				return fmt.Errorf("error destroying service '%s': %s", sfs.Name, err)
 			}
+			spinner.Stop()
+			log.Success("Destroyed service '%s'", sfs.Name)
+			spinner.Start()
 		}
 	}
 
@@ -198,7 +199,7 @@ func waitForPodsToBeDestroyed(ctx context.Context, s *model.Stack, c *kubernetes
 	return fmt.Errorf("kubernetes is taking too long to destroy your stack. Please check for errors and try again")
 }
 
-func destroyStackVolumes(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {
+func destroyStackVolumes(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
 	vList, err := volumes.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
@@ -206,8 +207,11 @@ func destroyStackVolumes(ctx context.Context, s *model.Stack, c *kubernetes.Clie
 	for _, v := range vList {
 		if v.Labels[okLabels.StackNameLabel] == s.Name {
 			if err := volumes.Destroy(ctx, v.Name, v.Namespace, c); err != nil {
-				return err
+				return fmt.Errorf("error destroying volume '%s': %s", v.Name, err)
 			}
+			spinner.Stop()
+			log.Success("Destroyed volume '%s'", v.Name)
+			spinner.Start()
 		}
 	}
 	return nil
