@@ -121,6 +121,8 @@ type Completion struct {
 	Completion  float64 `json:"completion"`
 	GlobalBytes int64   `json:"globalBytes"`
 	NeedBytes   int64   `json:"needBytes"`
+	GlobalItems int64   `json:"globalItems"`
+	NeedItems   int64   `json:"needItems"`
 	NeedDeletes int64   `json:"needDeletes"`
 }
 
@@ -466,98 +468,117 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 // WaitForCompletion waits for the remote to be totally synched
 func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
 	defer close(reporter)
-	ticker := time.NewTicker(1000 * time.Millisecond)
-	for _, folder := range s.Folders {
-		log.Infof("waiting for synchronization to complete path=%s", folder.LocalPath)
-		for {
-			select {
-			case <-ticker.C:
-				s.SendStignoreFile(ctx)
-				if err := s.Overwrite(ctx, dev); err != nil {
-					if err == errors.ErrBusySyncthing {
-						continue
-					}
+	ticker := time.NewTicker(250 * time.Millisecond)
+	retries := 0
+	remoteInitialized := false
+	var completion *Completion
+	var err error
+	for {
+		select {
+		case <-ticker.C:
+			retries++
+			s.SendStignoreFile(ctx)
+			if err := s.Overwrite(ctx, dev); err != nil {
+				if err != errors.ErrBusySyncthing {
 					return err
 				}
+			}
 
-				completion, err := s.GetCompletion(ctx, true)
-				if err != nil {
-					if err == errors.ErrBusySyncthing {
-						continue
-					}
-					return err
-				}
-
-				if completion.GlobalBytes == 0 {
-					if s.IsAllIgnoredAndOverwritten() {
-						return nil
-					}
-					log.Info("synced completed, but retrying stignores and overwrites")
+			remoteInitialized, completion, err = s.getCompletionFromLocalOrRemote(ctx, remoteInitialized)
+			if err != nil {
+				if err == errors.ErrBusySyncthing {
 					continue
 				}
+				return err
+			}
 
-				progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
-				log.Infof("syncthing folder is %.2f%%, needBytes %d, needDeletes %d",
-					progress,
-					completion.NeedBytes,
-					completion.NeedDeletes,
-				)
-
-				reporter <- progress
-
-				if completion.NeedBytes == 0 {
+			if completion.GlobalBytes == 0 {
+				if s.IsAllIgnoredAndOverwritten() {
 					return nil
 				}
+				log.Info("synced completed, but retrying stignores and overwrites")
+				continue
+			}
 
-				if err := s.IsHealthy(ctx, false, 30); err != nil {
+			progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
+			log.Infof("syncthing folder: globalBytes %d, needBytes %d, globalItems %d, needItems %d, needDeletes %d",
+				completion.GlobalBytes,
+				completion.NeedBytes,
+				completion.GlobalItems,
+				completion.NeedItems,
+				completion.NeedDeletes,
+			)
+			reporter <- progress
+
+			if completion.NeedBytes == 0 {
+				if s.IsAllIgnoredAndOverwritten() {
+					return nil
+				}
+				log.Info("synced completed, but retrying stignores and overwrites")
+				continue
+			}
+
+			if retries%50 == 0 {
+				if err := s.IsHealthy(ctx, false, 3); err != nil {
 					return err
 				}
-
-			case <-ctx.Done():
-				log.Info("call to syncthing.WaitForCompletion canceled")
-				return ctx.Err()
 			}
+
+		case <-ctx.Done():
+			log.Info("call to syncthing.WaitForCompletion canceled")
+			return ctx.Err()
 		}
 	}
-	return nil
+}
+
+func (s *Syncthing) getCompletionFromLocalOrRemote(ctx context.Context, remoteInitialized bool) (bool, *Completion, error) {
+	if !remoteInitialized {
+		localCompletion, err := s.GetCompletion(ctx, true, DefaultRemoteDeviceID)
+		if err != nil {
+			return false, nil, err
+		}
+		remoteCompletion, err := s.GetCompletion(ctx, false, DefaultRemoteDeviceID)
+		if err != nil {
+			log.Infof("error calling remote GetCompletion: %s", err.Error())
+			return false, localCompletion, err
+		}
+		if remoteCompletion.NeedBytes > 0 {
+			log.Info("switching to remote completion")
+			return true, remoteCompletion, nil
+		}
+		return false, localCompletion, err
+	}
+	completion, err := s.GetCompletion(ctx, true, DefaultRemoteDeviceID)
+	return true, completion, err
 }
 
 // GetCompletion returns the syncthing completion
-func (s *Syncthing) GetCompletion(ctx context.Context, local bool) (*Completion, error) {
-	result := &Completion{}
-	for _, folder := range s.Folders {
-		params := getFolderParameter(folder)
-		if local {
-			params["device"] = DefaultRemoteDeviceID
-		} else {
-			params["device"] = localDeviceID
+func (s *Syncthing) GetCompletion(ctx context.Context, local bool, device string) (*Completion, error) {
+	params := map[string]string{"device": device}
+	completion := &Completion{}
+	body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true, 3)
+	if err != nil {
+		log.Infof("error calling 'rest/db/completion' local=%t syncthing API: %s", local, err)
+		if strings.Contains(err.Error(), "Client.Timeout") {
+			return nil, errors.ErrBusySyncthing
 		}
-		completion := &Completion{}
-		body, err := s.APICall(ctx, "rest/db/completion", "GET", 200, params, local, nil, true, 3)
-		if err != nil {
-			log.Infof("error calling 'rest/db/completion' local=%t syncthing API: %s", local, err)
-			if strings.Contains(err.Error(), "Client.Timeout") {
-				return nil, errors.ErrBusySyncthing
-			}
-			return nil, errors.ErrLostSyncthing
-		}
-		err = json.Unmarshal(body, completion)
-		if err != nil {
-			log.Infof("error unmarshalling 'rest/db/completion' local=%t syncthing API: %s", local, err)
-			return nil, errors.ErrLostSyncthing
-		}
-		result.Completion += completion.Completion
-		result.GlobalBytes += completion.GlobalBytes
-		result.NeedBytes += completion.NeedBytes
-		result.NeedDeletes += completion.NeedDeletes
+		return nil, errors.ErrLostSyncthing
 	}
-
-	return result, nil
+	err = json.Unmarshal(body, completion)
+	if err != nil {
+		log.Infof("error unmarshalling 'rest/db/completion' local=%t syncthing API: %s", local, err)
+		return nil, errors.ErrLostSyncthing
+	}
+	return completion, nil
 }
 
 // GetCompletionProgress returns the syncthing completion progress
 func (s *Syncthing) GetCompletionProgress(ctx context.Context, local bool) (float64, error) {
-	completion, err := s.GetCompletion(ctx, local)
+	device := DefaultRemoteDeviceID
+	if local {
+		device = localDeviceID
+	}
+	completion, err := s.GetCompletion(ctx, local, device)
 	if err != nil {
 		return 0, err
 	}

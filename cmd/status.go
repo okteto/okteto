@@ -20,6 +20,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -49,6 +50,12 @@ func Status() *cobra.Command {
 				return err
 			}
 
+			ctx := context.Background()
+			waitForStates := []config.UpState{config.Synchronizing, config.Ready}
+			if err := status.Wait(ctx, dev, waitForStates); err != nil {
+				return err
+			}
+
 			sy, err := syncthing.Load(dev)
 			if err != nil {
 				log.Infof("error accessing the syncthing info file: %s", err)
@@ -61,7 +68,6 @@ func Status() *cobra.Command {
 				log.Information("Syncthing password: %s", sy.GUIPassword)
 			}
 
-			ctx := context.Background()
 			if watch {
 				err = runWithWatch(ctx, dev, sy)
 			} else {
@@ -86,11 +92,15 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 	pbScaling := 0.30
 	spinner.Start()
 	defer spinner.Stop()
+
+	ticker := time.NewTicker(1000 * time.Millisecond)
 	for {
+		<-ticker.C
 		message := ""
 		progress, err := status.Run(ctx, dev, sy)
 		if err != nil {
-			return err
+			log.Infof("error accessing status: %s", err)
+			continue
 		}
 		if progress == 100 {
 			message = "Files synchronized"
@@ -98,7 +108,6 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 			message = utils.RenderProgressBar(suffix, progress, pbScaling)
 		}
 		spinner.Update(message)
-		time.Sleep(2 * time.Second)
 	}
 }
 
