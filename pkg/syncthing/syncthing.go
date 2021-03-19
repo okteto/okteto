@@ -473,6 +473,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 	remoteInitialized := false
 	var completion *Completion
 	var err error
+	needDeletesRetries := 0
 	for {
 		select {
 		case <-ticker.C:
@@ -511,6 +512,12 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 			reporter <- progress
 
 			if completion.NeedBytes == 0 {
+				if completion.NeedDeletes > 0 {
+					needDeletesRetries++
+					if needDeletesRetries < 50 {
+						continue
+					}
+				}
 				if s.IsAllIgnoredAndOverwritten() {
 					return nil
 				}
@@ -542,13 +549,13 @@ func (s *Syncthing) getCompletionFromLocalOrRemote(ctx context.Context, remoteIn
 			log.Infof("error calling remote GetCompletion: %s", err.Error())
 			return false, localCompletion, err
 		}
-		if remoteCompletion.NeedBytes > 0 {
-			log.Info("switching to remote completion")
+		if remoteCompletion.GlobalBytes == localCompletion.GlobalBytes {
+			log.Infof("switching to remote completion with global bytes %d", remoteCompletion.GlobalBytes)
 			return true, remoteCompletion, nil
 		}
 		return false, localCompletion, err
 	}
-	completion, err := s.GetCompletion(ctx, true, DefaultRemoteDeviceID)
+	completion, err := s.GetCompletion(ctx, false, DefaultRemoteDeviceID)
 	return true, completion, err
 }
 
