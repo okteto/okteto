@@ -159,7 +159,7 @@ jobs:
           path: C:\Users\circleci\.okteto
   release:
     docker:
-      - image: circleci/golang:1.16
+      - image: okteto/golang-ci:1.16
     steps:
       - checkout
       - attach_workspace:
@@ -193,7 +193,7 @@ jobs:
             git push https://${GITHUB_TOKEN}@github.com/okteto/homebrew-okteto.git master
   release-master:
     docker:
-      - image: circleci/golang:1.16
+      - image: okteto/golang-ci:1.16
     steps:
       - checkout
       - setup_remote_docker:
