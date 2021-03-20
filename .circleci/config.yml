@@ -78,7 +78,7 @@ jobs:
             - /go/pkg
       - store_artifacts:
           path: /root/.okteto
-  mock-publish-github-release:
+  mock-release:
     docker:
       - image: okteto/golang-ci:1.16
     steps:
@@ -230,6 +230,13 @@ workflows:
                 - master
                 - /.*(e2e)/
                 - /.*(integration)/
+      - mock-release:
+          context: GKE
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
       - release-master:
           context: GKE
           requires:
@@ -237,12 +244,6 @@ workflows:
           filters:
             branches:
               only: master
-      - mock-publish-github-release:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*/
       - release:
           context: GKE
           requires:
