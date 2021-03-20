@@ -95,7 +95,7 @@ jobs:
       - run:
           name: mock upload binaries
           command: |
-            gsutil -m rsync -a public-read -n -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_SHA1}  
+            gsutil -m rsync -n -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_SHA1}  
       - setup_remote_docker:
           version: "19.03.8"
       - run:
@@ -168,7 +168,7 @@ jobs:
       - run: 
           name: upload release binaries
           command: |
-            gsutil -m rsync -a public-read -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
+            gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
       - setup_remote_docker:
           version: "19.03.8"
       - run:
@@ -211,7 +211,7 @@ jobs:
       - run: 
           name: upload latest binaries
           command: |
-            gsutil -m rsync -a public-read -r ./artifacts/bin gs://downloads.okteto.com/cli/master
+            gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/master
 
 workflows:
   version: 2
