@@ -33,7 +33,7 @@ const configXML = `<configuration version="32">
     <hashers>0</hashers>
     <order>random</order>
     <ignoreDelete>false</ignoreDelete>
-    <scanProgressIntervalS>2</scanProgressIntervalS>
+    <scanProgressIntervalS>1</scanProgressIntervalS>
     <pullerPauseS>0</pullerPauseS>
     <maxConflicts>0</maxConflicts>
     <disableSparseFiles>false</disableSparseFiles>

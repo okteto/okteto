@@ -15,115 +15,191 @@ package stack
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/helm"
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
+	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/k8s/pods"
+	"github.com/okteto/okteto/pkg/k8s/services"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
-
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/cli/values"
-	"helm.sh/helm/v3/pkg/repo"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 //Deploy deploys a stack
 func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool) error {
-	settings := cli.New()
 	if s.Namespace == "" {
-		s.Namespace = settings.Namespace()
+		s.Namespace = client.GetContextNamespace("")
 	}
+
+	c, _, err := client.GetLocal()
+	if err != nil {
+		return err
+	}
+
+	cfg := translateConfigMap(s)
+	output := fmt.Sprintf("Deploying stack '%s'...", s.Name)
+	cfg.Data[statusField] = progressingStatus
+	cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
+	if err := configmaps.Deploy(ctx, cfg, s.Namespace, c); err != nil {
+		return err
+	}
+
+	err = deploy(ctx, s, forceBuild, wait, noCache, c)
+	if err != nil {
+		output = fmt.Sprintf("%s\nStack '%s' deployment failed: %s", output, s.Name, err.Error())
+		cfg.Data[statusField] = errorStatus
+		cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
+	} else {
+		output = fmt.Sprintf("%s\nStack '%s' successfully deployed", output, s.Name)
+		cfg.Data[statusField] = deployedStatus
+		cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
+	}
+
+	if err := configmaps.Deploy(ctx, cfg, s.Namespace, c); err != nil {
+		return err
+	}
+
+	return err
+}
+
+func deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool, c *kubernetes.Clientset) error {
+	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
+	spinner.Start()
+	defer spinner.Stop()
 
 	if err := translate(ctx, s, forceBuild, noCache); err != nil {
 		return err
 	}
 
-	dynamicStackFilename, err := saveStackFile(s)
-	if err != nil {
+	for name := range s.Services {
+		if len(s.Services[name].Volumes) == 0 {
+			if err := deployDeployment(ctx, name, s, c); err != nil {
+				return err
+			}
+		} else {
+			if err := deployStatefulSet(ctx, name, s, c); err != nil {
+				return err
+			}
+		}
+		if len(s.Services[name].Ports) > 0 {
+			svcK8s := translateService(name, s)
+			if err := services.Create(ctx, svcK8s, c); err != nil {
+				return err
+			}
+		}
+		spinner.Stop()
+		log.Success("Deployed service '%s'", name)
+		spinner.Start()
+	}
+
+	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 		return err
 	}
-	defer os.Remove(dynamicStackFilename)
 
-	valueOpts := &values.Options{}
-	valueOpts.ValueFiles = []string{dynamicStackFilename}
-	vals, err := valueOpts.MergeValues(nil)
-	if err != nil {
-		return fmt.Errorf("error initializing stack values: %s", err)
+	if !wait {
+		return nil
 	}
 
-	var re *repo.Entry
-	rf, err := repo.LoadFile(settings.RepositoryConfig)
-	if !isNotExist(err) {
-		for _, r := range rf.Repositories {
-			if r.Name != stackHelmRepoName {
-				continue
-			}
-			re = r
-			break
+	spinner.Update("Waiting for services to be ready...")
+	return waitForPodsToBeRunning(ctx, s, c)
+
+}
+
+func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
+	d := translateDeployment(svcName, s)
+	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("error getting deployment of service '%s': %s", svcName, err.Error())
+	}
+	isNewDeployment := old.Name == ""
+	if !isNewDeployment {
+		if old.Labels[okLabels.StackNameLabel] == "" {
+			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
+		}
+		if d.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
+			return fmt.Errorf("name collision: the deployment '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+		}
+		if deployments.IsDevModeOn(old) {
+			deployments.RestoreDevModeFrom(d, old)
 		}
 	}
-	if re == nil {
-		if err := helm.AddRepo(settings, stackHelmRepoName, stackHelmRepoURL, stackHelmChartName, stackHelmChartVersion); err != nil {
-			return err
+	if err := deployments.Deploy(ctx, d, isNewDeployment, c); err != nil {
+		if isNewDeployment {
+			return fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
 		}
-		log.Information("'%s' has been added to your helm repositories.", stackHelmRepoName)
+		return fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+	}
+	return nil
+}
+
+func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
+	sfs := translateStatefulSet(svcName, s)
+	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
+	}
+	if old.Name == "" {
+		if err := statefulsets.Create(ctx, sfs, c); err != nil {
+			return fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
+		}
 	} else {
-		err := helm.UpdateRepo(re, settings, stackHelmChartName)
+		if old.Labels[okLabels.StackNameLabel] == "" {
+			return fmt.Errorf("name collision: the statefulset '%s' was running before deploying your stack", svcName)
+		}
+		if sfs.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
+			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+		}
+		if err := statefulsets.Update(ctx, sfs, c); err != nil {
+			if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
+				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
+			}
+			if err := statefulsets.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
+				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
+			}
+			if err := statefulsets.Create(ctx, sfs, c); err != nil {
+				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
+			}
+		}
+	}
+	return nil
+}
+
+func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {
+	var numPods int32 = 0
+	for _, svc := range s.Services {
+		numPods += svc.Replicas
+	}
+
+	ticker := time.NewTicker(100 * time.Millisecond)
+	timeout := time.Now().Add(300 * time.Second)
+
+	selector := map[string]string{okLabels.StackNameLabel: s.Name}
+	for time.Now().Before(timeout) {
+		<-ticker.C
+		pendingPods := numPods
+		podList, err := pods.ListBySelector(ctx, s.Namespace, selector, c)
 		if err != nil {
 			return err
 		}
+		for i := range podList {
+			if podList[i].Status.Phase == apiv1.PodRunning {
+				pendingPods--
+			}
+		}
+		if pendingPods == 0 {
+			return nil
+		}
 	}
-
-	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
-	spinner.Start()
-	defer spinner.Stop()
-
-	actionConfig := new(action.Configuration)
-	if err := actionConfig.Init(settings.RESTClientGetter(), s.Namespace, helmDriver, func(format string, v ...interface{}) {
-		message := strings.TrimSuffix(fmt.Sprintf(format, v...), "\n")
-		spinner.Update(fmt.Sprintf("%s...", message))
-	}); err != nil {
-		return fmt.Errorf("error initializing stack client: %s", err)
-	}
-
-	exists, err := helm.ReleaseExist(action.NewList(actionConfig), s.Name)
-	if err != nil {
-		return fmt.Errorf("error listing stacks: %s", err)
-	}
-	if exists {
-		return helm.Upgrade(action.NewUpgrade(actionConfig), settings, s, stackHelmRepoName, stackHelmChartName, stackHelmChartVersion, vals, wait)
-	}
-	return helm.Install(action.NewInstall(actionConfig), settings, s, stackHelmRepoName, stackHelmChartName, stackHelmChartVersion, vals, wait)
-}
-
-func isNotExist(err error) bool {
-	return os.IsNotExist(errors.Cause(err))
-}
-
-func saveStackFile(s *model.Stack) (string, error) {
-	tmpFile, err := ioutil.TempFile("", "okteto-stack")
-	if err != nil {
-		return "", fmt.Errorf("failed to create dynamic stack manifest file: %s", err)
-	}
-
-	for name, svc := range s.Services {
-		svc.Build = nil
-		s.Services[name] = svc
-	}
-
-	marshalled, err := yaml.Marshal(s)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshall dynamic stack manifest: %s", err)
-	}
-
-	if err := ioutil.WriteFile(tmpFile.Name(), marshalled, 0600); err != nil {
-		return "", fmt.Errorf("failed to save dynaamic stack manifest: %s", err)
-	}
-	return tmpFile.Name(), nil
+	return fmt.Errorf("kubernetes is taking too long to create your stack. Please check for errors and try again")
 }

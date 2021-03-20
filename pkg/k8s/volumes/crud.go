@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
@@ -29,6 +30,20 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 )
+
+//List returns the list of volumes
+func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]apiv1.PersistentVolumeClaim, error) {
+	vList, err := c.CoreV1().PersistentVolumeClaims(namespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: labels,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return vList.Items, nil
+}
 
 //Create deploys the volume claim for a given development container
 func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
@@ -81,36 +96,41 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 
 }
 
-//Destroy destroys the volume claim for a given development container
-func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
-	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
-	log.Infof("destroying volume claim '%s'", dev.GetVolumeName())
+//DestroyDev destroys the persistent volume claim for a given development container
+func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+	return Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c)
+}
+
+//Destroy destroys a persistent volume claim
+func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
+	vClient := c.CoreV1().PersistentVolumeClaims(namespace)
+	log.Infof("destroying volume '%s'", name)
 
 	ticker := time.NewTicker(1 * time.Second)
 	to := 3 * config.GetTimeout() // 90 seconds
 	timeout := time.Now().Add(to)
 
 	for i := 0; ; i++ {
-		err := vClient.Delete(ctx, dev.GetVolumeName(), metav1.DeleteOptions{})
+		err := vClient.Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil {
-			if strings.Contains(err.Error(), "not found") {
-				log.Infof("volume claim '%s' successfully destroyed", dev.GetVolumeName())
+			if errors.IsNotFound(err) {
+				log.Infof("volume '%s' successfully destroyed", name)
 				return nil
 			}
 
-			return fmt.Errorf("error getting kubernetes volume claim: %s", err)
+			return fmt.Errorf("error deleting kubernetes volume: %s", err)
 		}
 
 		if time.Now().After(timeout) {
-			if err := checkIfAttached(ctx, dev, c); err != nil {
+			if err := checkIfAttached(ctx, name, namespace, c); err != nil {
 				return err
 			}
 
-			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", dev.GetVolumeName(), to.String())
+			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, to.String())
 		}
 
 		if i%10 == 5 {
-			log.Infof("waiting for volume claim '%s' to be destroyed", dev.GetVolumeName())
+			log.Infof("waiting for volume '%s' to be destroyed", name)
 		}
 
 		select {
@@ -124,8 +144,8 @@ func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error
 
 }
 
-func checkIfAttached(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
-	pods, err := c.CoreV1().Pods(dev.Namespace).List(ctx, metav1.ListOptions{})
+func checkIfAttached(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
+	pods, err := c.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Infof("failed to get available pods: %s", err)
 		return nil
@@ -134,9 +154,9 @@ func checkIfAttached(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	for i := range pods.Items {
 		for j := range pods.Items[i].Spec.Volumes {
 			if pods.Items[i].Spec.Volumes[j].PersistentVolumeClaim != nil {
-				if pods.Items[i].Spec.Volumes[j].PersistentVolumeClaim.ClaimName == dev.GetVolumeName() {
-					log.Infof("pvc/%s is still attached to pod/%s", dev.GetVolumeName(), pods.Items[i].Name)
-					return fmt.Errorf("can't delete your volume claim since it's still attached to 'pod/%s'", pods.Items[i].Name)
+				if pods.Items[i].Spec.Volumes[j].PersistentVolumeClaim.ClaimName == name {
+					log.Infof("pvc/%s is still attached to pod/%s", name, pods.Items[i].Name)
+					return fmt.Errorf("can't delete the volume '%s' since it's still attached to 'pod/%s'", name, pods.Items[i].Name)
 				}
 			}
 		}

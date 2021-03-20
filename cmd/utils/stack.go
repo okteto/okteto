@@ -21,8 +21,8 @@ import (
 
 var (
 	//DefaultStackManifest default okteto stack manifest file
-	DefaultStackManifest    = "stack.yml"
-	secondaryStackManifests = []string{"stack.yaml", "okteto-stack.yml", "okteto-stack.yaml"}
+	DefaultStackManifest    = "okteto-stack.yml"
+	secondaryStackManifests = []string{"okteto-stack.yaml", "stack.yml", "stack.yaml"}
 )
 
 //LoadStack loads an okteto stack manifest checking "yml" and "yaml"

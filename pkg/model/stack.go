@@ -23,6 +23,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	yaml "gopkg.in/yaml.v2"
+	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -39,23 +40,23 @@ type Stack struct {
 
 //Service represents an okteto stack service
 type Service struct {
-	Labels          map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Public          bool              `yaml:"public,omitempty"`
-	Image           string            `yaml:"image"`
-	Build           *BuildInfo        `yaml:"build,omitempty"`
-	Replicas        int               `yaml:"replicas"`
-	Command         Command           `yaml:"command,omitempty"`
-	Args            Args              `yaml:"args,omitempty"`
-	Environment     []EnvVar          `yaml:"environment,omitempty"`
-	EnvFiles        []string          `yaml:"env_file,omitempty"`
-	CapAdd          []string          `yaml:"cap_add,omitempty"`
-	CapDrop         []string          `yaml:"cap_drop,omitempty"`
-	Healthchecks    bool              `yaml:"healthchecks,omitempty"`
-	Ports           []int             `yaml:"ports,omitempty"`
-	Volumes         []string          `yaml:"volumes,omitempty"`
-	StopGracePeriod int               `yaml:"stop_grace_period,omitempty"`
-	Resources       ServiceResources  `yaml:"resources,omitempty"`
+	Labels          map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Public          bool               `yaml:"public,omitempty"`
+	Image           string             `yaml:"image"`
+	Build           *BuildInfo         `yaml:"build,omitempty"`
+	Replicas        int32              `yaml:"replicas"`
+	Command         Command            `yaml:"command,omitempty"`
+	Args            Args               `yaml:"args,omitempty"`
+	Environment     []EnvVar           `yaml:"environment,omitempty"`
+	EnvFiles        []string           `yaml:"env_file,omitempty"`
+	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
+	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
+	Healthchecks    bool               `yaml:"healthchecks,omitempty"`
+	Ports           []int32            `yaml:"ports,omitempty"`
+	Volumes         []string           `yaml:"volumes,omitempty"`
+	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
+	Resources       ServiceResources   `yaml:"resources,omitempty"`
 }
 
 //ServiceResources represents an okteto stack service resources
@@ -149,8 +150,11 @@ func ReadStack(bytes []byte) (*Stack, error) {
 		}
 		if svc.Replicas == 0 {
 			svc.Replicas = 1
-			s.Services[i] = svc
 		}
+		if svc.Resources.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
+			svc.Resources.Storage.Size.Value = resource.MustParse("1Gi")
+		}
+		s.Services[i] = svc
 	}
 	return s, nil
 }
@@ -208,10 +212,20 @@ func (s *Stack) UpdateNamespace(namespace string) error {
 	return nil
 }
 
-//SetLastBuiltAnnotationtamp sets the dev timestacmp
-func (s *Service) SetLastBuiltAnnotationtamp() {
-	if s.Annotations == nil {
-		s.Annotations = map[string]string{}
+//GetLabelSelector returns the label selector for the stack name
+func (s *Stack) GetLabelSelector() string {
+	return fmt.Sprintf("%s=%s", labels.StackNameLabel, s.Name)
+}
+
+//GetLabelSelector returns the label selector for the stack name
+func (s *Stack) GetConfigMapName() string {
+	return fmt.Sprintf("okteto-%s", s.Name)
+}
+
+//SetLastBuiltAnnotationtamp sets the dev timestamp
+func (svc *Service) SetLastBuiltAnnotationtamp() {
+	if svc.Annotations == nil {
+		svc.Annotations = map[string]string{}
 	}
-	s.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+	svc.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }

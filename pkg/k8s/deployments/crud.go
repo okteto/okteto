@@ -34,8 +34,13 @@ import (
 )
 
 //List returns the list of deployments
-func List(ctx context.Context, namespace string, c kubernetes.Interface) ([]appsv1.Deployment, error) {
-	dList, err := c.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]appsv1.Deployment, error) {
+	dList, err := c.AppsV1().Deployments(namespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: labels,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -273,6 +278,14 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 	return ok
 }
 
+//RestoreDevModeFrom restores labels an annotations from a deployment in dev mode
+func RestoreDevModeFrom(d, old *appsv1.Deployment) {
+	d.Labels[okLabels.DevLabel] = old.Labels[okLabels.DevLabel]
+	d.Spec.Replicas = old.Spec.Replicas
+	d.Annotations = old.Annotations
+	d.Spec.Template.Annotations = old.Spec.Template.Annotations
+}
+
 //HasBeenChanged returns if a deployment has been updated since the development container was activated
 func HasBeenChanged(d *appsv1.Deployment) bool {
 	oktetoRevision := d.Annotations[okLabels.RevisionAnnotation]
@@ -365,17 +378,22 @@ func deleteUserAnnotations(annotations map[string]string, tr *model.Translation)
 	return nil
 }
 
-//Destroy destroys a k8s service
-func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
-	log.Infof("deleting deployment '%s'", dev.Name)
-	dClient := c.AppsV1().Deployments(dev.Namespace)
-	err := dClient.Delete(ctx, dev.Name, metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+//DestroyDev destroys the k8s deployment of a dev environment
+func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+	return Destroy(ctx, dev.Name, dev.Namespace, c)
+}
+
+//Destroy destroys a k8s deployment
+func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
+	log.Infof("deleting deployment '%s'", name)
+	dClient := c.AppsV1().Deployments(namespace)
+	err := dClient.Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("error deleting kubernetes deployment: %s", err)
 	}
-	log.Infof("deployment '%s' deleted", dev.Name)
+	log.Infof("deployment '%s' deleted", name)
 	return nil
 }

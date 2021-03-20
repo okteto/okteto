@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
@@ -25,15 +26,34 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+//List returns the list of services
+func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]apiv1.Service, error) {
+	svcList, err := c.CoreV1().Services(namespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: labels,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return svcList.Items, nil
+}
+
 //CreateDev deploys a default k8s service for a development container
 func CreateDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
-	old, err := Get(ctx, dev.Namespace, dev.Name, c)
+	s := translate(dev)
+	return Create(ctx, s, c)
+}
+
+//Create creates a k8s service
+func Create(ctx context.Context, s *apiv1.Service, c *kubernetes.Clientset) error {
+	old, err := Get(ctx, s.Namespace, s.Name, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes service: %s", err)
 	}
 
-	s := translate(dev)
-	sClient := c.CoreV1().Services(dev.Namespace)
+	sClient := c.CoreV1().Services(s.Namespace)
 
 	if old.Name == "" {
 		log.Infof("creating service '%s'", s.Name)
@@ -57,17 +77,21 @@ func CreateDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) err
 
 //DestroyDev destroys the default service for a development container
 func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
-	log.Infof("deleting service '%s'", dev.Name)
-	sClient := c.CoreV1().Services(dev.Namespace)
-	err := sClient.Delete(ctx, dev.Name, metav1.DeleteOptions{})
+	return Destroy(ctx, dev.Name, dev.Namespace, c)
+}
+
+//Destroy destroys a k8s service
+func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
+	log.Infof("deleting service '%s'", name)
+	err := c.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			log.Infof("service '%s' was already deleted.", dev.Name)
+		if errors.IsNotFound(err) {
+			log.Infof("service '%s' was already deleted.", name)
 			return nil
 		}
 		return fmt.Errorf("error deleting kubernetes service: %s", err)
 	}
-	log.Infof("service '%s' deleted", dev.Name)
+	log.Infof("service '%s' deleted", name)
 	return nil
 }
 

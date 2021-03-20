@@ -280,7 +280,7 @@ func askForLanguage() (string, error) {
 }
 
 func askForDeployment(ctx context.Context, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
-	dList, err := deployments.List(ctx, namespace, c)
+	dList, err := deployments.List(ctx, namespace, "", c)
 	if err != nil {
 		log.Yellow("Failed to list deployments: %s", err)
 		return nil, nil

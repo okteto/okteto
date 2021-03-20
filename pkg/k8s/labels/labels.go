@@ -63,8 +63,21 @@ const (
 
 	//StateBeforeSleepingAnnontation indicates the state of the resource prior to scale it to zero
 	StateBeforeSleepingAnnontation = "dev.okteto.com/state-before-sleeping"
+
+	// StackLabel indicates the object is a stack
+	StackLabel = "stack.okteto.com"
+
+	// StackNameLabel indicates the name of the stack an object belongs to
+	StackNameLabel = "stack.okteto.com/name"
+
+	// StackServiceNameLabel indicates the name of the stack service an object belongs to
+	StackServiceNameLabel = "stack.okteto.com/service"
+
+	// OktetoAutoIngressAnnotation indicates an ingress must be crreated for a service
+	OktetoAutoIngressAnnotation = "dev.okteto.com/auto-ingress"
 )
 
+//TransformLabelsToSelector transforms a map of labels into a string k8s selector
 func TransformLabelsToSelector(labels map[string]string) string {
 	labelList := make([]string, 0)
 	for key, value := range labels {
