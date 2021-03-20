@@ -1,6 +1,10 @@
+aliases:
+ - &init-gcloud |
+    echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
+    gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+    gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
 version: 2.1
 orbs:
-  aws-s3: circleci/aws-s3@1.0.6
   win: circleci/windows@2.1.0
 jobs:
   build:
@@ -147,28 +151,11 @@ jobs:
       - checkout
       - attach_workspace:
           at: ./artifacts
-      - aws-s3/sync:
-          from: ./artifacts/bin
-          to: "s3://downloads.okteto.com/cli"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_TAG} \
-            --cache-control "max-age=86400" \
-            --exclude "*.*.*/" \
-      - aws-s3/sync:
-          from: ./artifacts/bin
-          to: "s3://downloads.okteto.com/cli/${CIRCLE_TAG}"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_TAG} \
-            --cache-control "max-age=86400" \
-          overwrite: false
+      - run: *init-gcloud
+      - run: 
+          name: upload binaries
+          command: |
+            gsutil -m -a public-read rsync -d -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
       - setup_remote_docker:
           version: "19.03.8"
       - run:
@@ -207,15 +194,12 @@ jobs:
             docker push okteto/okteto:latest
       - attach_workspace:
           at: ./artifacts
-      - aws-s3/sync:
-          from: ./artifacts/bin
-          to: "s3://downloads.okteto.com/cli/master"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_SHA1}
+      - run: *init-gcloud
+      - run: 
+          name: upload latest binaries
+          command: |
+            gsutil -m -a public-read rsync -d -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
+
 workflows:
   version: 2
   build-release:
@@ -234,6 +218,7 @@ workflows:
                 - /.*(e2e)/
                 - /.*(integration)/
       - release-master:
+          context: GKE
           requires:
             - integration
           filters:
@@ -246,6 +231,7 @@ workflows:
             tags:
               only: /.*/
       - release:
+          context: GKE
           requires:
             - build
           filters:
