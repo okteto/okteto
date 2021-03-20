@@ -69,9 +69,6 @@ var (
 	// ErrUnknownSyncError is returned when syncthing reports an unknown sync error
 	ErrUnknownSyncError = fmt.Errorf("Unknown syncthing error")
 
-	// ErrResetSyncthing is raised when syncthing database must be reset
-	ErrResetSyncthing = fmt.Errorf("synchronization database corrupted")
-
 	// ErrInsufficientSpace is raised when syncthing fails with no space available
 	ErrInsufficientSpace = fmt.Errorf("there isn't enough disk space available to synchronize your files")
 

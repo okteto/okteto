@@ -392,9 +392,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 
 	if err := up.sync(ctx); err != nil {
 		if up.shouldRetry(ctx, err) {
-			if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
-				up.resetSyncthing = true
-			}
 			return errors.ErrLostSyncthing
 		}
 		return err
@@ -453,9 +450,6 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 	switch err {
 	case nil:
 		return false
-	case errors.ErrResetSyncthing:
-		up.resetSyncthing = true
-		return true
 	case errors.ErrLostSyncthing:
 		return true
 	case errors.ErrCommandFailed:
@@ -888,7 +882,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	if err := up.Sy.WaitForCompletion(ctx, up.Dev, reporter); err != nil {
 		analytics.TrackSyncError()
 		switch err {
-		case errors.ErrLostSyncthing, errors.ErrResetSyncthing:
+		case errors.ErrLostSyncthing:
 			return err
 		case errors.ErrInsufficientSpace:
 			return up.getInsufficientSpaceError(err)
