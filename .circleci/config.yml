@@ -91,6 +91,19 @@ jobs:
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
             ./update_homebrew_formula.sh 0.0.1 $sha $sha_arm
+      - run: *init-gcloud
+      - run:
+          name: mock upload binaries
+          command: |
+            gsutil -m -a public-read rsync -n -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_SHA1}  
+      - setup_remote_docker:
+          version: "19.03.8"
+      - run:
+          name: "build Docker container"
+          command: |
+            export DOCKER_BUILDKIT=1
+            docker build -t okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_SHA1 .
+  
   windows-unit:
     environment:
       OKTETO_USER: cindylopez
@@ -155,7 +168,7 @@ jobs:
       - run: 
           name: upload release binaries
           command: |
-            gsutil -m -a public-read rsync -d -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
+            gsutil -m -a public-read rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
       - setup_remote_docker:
           version: "19.03.8"
       - run:
@@ -198,7 +211,7 @@ jobs:
       - run: 
           name: upload latest binaries
           command: |
-            gsutil -m -a public-read rsync -d -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
+            gsutil -m -a public-read rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/master
 
 workflows:
   version: 2
