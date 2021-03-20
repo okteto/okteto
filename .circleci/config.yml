@@ -20,7 +20,7 @@ jobs:
           command: |
             make test
             bash <(curl -s https://codecov.io/bash)
-      - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
+      - run: env VERSION_STRING=$CIRCLE_TAG make -j 4 build-all
       - run: env VERSION_STRING=$CIRCLE_TAG make latest
       - persist_to_workspace:
           root: .
