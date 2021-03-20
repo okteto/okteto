@@ -1,6 +1,10 @@
+aliases:
+ - &init-gcloud |
+    echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
+    gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+    gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
 version: 2.1
 orbs:
-  aws-s3: circleci/aws-s3@1.0.6
   win: circleci/windows@2.1.0
 jobs:
   build:
@@ -74,7 +78,7 @@ jobs:
             - /go/pkg
       - store_artifacts:
           path: /root/.okteto
-  mock-publish-github-release:
+  mock-release:
     docker:
       - image: okteto/golang-ci:1.16
     steps:
@@ -87,6 +91,19 @@ jobs:
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
             ./update_homebrew_formula.sh 0.0.1 $sha $sha_arm
+      - run: *init-gcloud
+      - run:
+          name: mock upload binaries
+          command: |
+            gsutil -m rsync -a public-read -n -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_SHA1}  
+      - setup_remote_docker:
+          version: "19.03.8"
+      - run:
+          name: "build Docker container"
+          command: |
+            export DOCKER_BUILDKIT=1
+            docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
+  
   windows-unit:
     environment:
       OKTETO_USER: cindylopez
@@ -147,28 +164,11 @@ jobs:
       - checkout
       - attach_workspace:
           at: ./artifacts
-      - aws-s3/sync:
-          from: ./artifacts/bin
-          to: "s3://downloads.okteto.com/cli"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_TAG} \
-            --cache-control "max-age=86400" \
-            --exclude "*.*.*/" \
-      - aws-s3/sync:
-          from: ./artifacts/bin
-          to: "s3://downloads.okteto.com/cli/${CIRCLE_TAG}"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_TAG} \
-            --cache-control "max-age=86400" \
-          overwrite: false
+      - run: *init-gcloud
+      - run: 
+          name: upload release binaries
+          command: |
+            gsutil -m rsync -a public-read -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
       - setup_remote_docker:
           version: "19.03.8"
       - run:
@@ -207,15 +207,12 @@ jobs:
             docker push okteto/okteto:latest
       - attach_workspace:
           at: ./artifacts
-      - aws-s3/sync:
-          from: ./artifacts/bin
-          to: "s3://downloads.okteto.com/cli/master"
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-          arguments: |
-            --acl public-read \
-            --metadata version=${CIRCLE_SHA1}
+      - run: *init-gcloud
+      - run: 
+          name: upload latest binaries
+          command: |
+            gsutil -m rsync -a public-read -r ./artifacts/bin gs://downloads.okteto.com/cli/master
+
 workflows:
   version: 2
   build-release:
@@ -233,19 +230,22 @@ workflows:
                 - master
                 - /.*(e2e)/
                 - /.*(integration)/
-      - release-master:
-          requires:
-            - integration
-          filters:
-            branches:
-              only: master
-      - mock-publish-github-release:
+      - mock-release:
+          context: GKE
           requires:
             - build
           filters:
             tags:
               only: /.*/
+      - release-master:
+          context: GKE
+          requires:
+            - integration
+          filters:
+            branches:
+              only: master
       - release:
+          context: GKE
           requires:
             - build
           filters:
