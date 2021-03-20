@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -112,7 +113,8 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		}
 	}
 
-	if err := status.Wait(ctx, dev); err != nil {
+	waitForStates := []config.UpState{config.Ready}
+	if err := status.Wait(ctx, dev, waitForStates); err != nil {
 		return err
 	}
 

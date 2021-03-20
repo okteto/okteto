@@ -30,12 +30,12 @@ func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64,
 	progressLocal, err := sy.GetCompletionProgress(ctx, true)
 	if err != nil {
 		log.Infof("error accessing local syncthing status: %s", err)
-		return 0, fmt.Errorf("error accessing local syncthing status")
+		return 0, err
 	}
 	progressRemote, err := sy.GetCompletionProgress(ctx, false)
 	if err != nil {
 		log.Infof("error accessing remote syncthing status: %s", err)
-		return 0, fmt.Errorf("error accessing remote syncthing status")
+		return 0, err
 	}
 
 	return computeProgress(progressLocal, progressRemote), nil
@@ -56,10 +56,12 @@ func computeProgress(local, remote float64) float64 {
 }
 
 //Wait waits for the okteto up sequence to finish
-func Wait(ctx context.Context, dev *model.Dev) error {
+func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()
 	defer spinner.Stop()
+
+	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		status, err := config.GetState(dev)
 		if err != nil {
@@ -68,9 +70,11 @@ func Wait(ctx context.Context, dev *model.Dev) error {
 		if status == config.Failed {
 			return fmt.Errorf("your development container has failed")
 		}
-		if status == config.Ready {
-			return nil
+		for _, okStatus := range okStatusList {
+			if status == okStatus {
+				return nil
+			}
 		}
-		time.Sleep(1 * time.Second)
+		<-ticker.C
 	}
 }
