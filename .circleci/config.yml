@@ -102,7 +102,7 @@ jobs:
           name: "build Docker container"
           command: |
             export DOCKER_BUILDKIT=1
-            docker build -t okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_SHA1 .
+            docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
   
   windows-unit:
     environment:
