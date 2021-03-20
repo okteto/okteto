@@ -237,6 +237,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              ignore: master
       - release-master:
           context: GKE
           requires:
