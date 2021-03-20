@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/config"
@@ -49,7 +48,6 @@ type User struct {
 	Name        string
 	Email       string
 	ExternalID  string
-	GithubID    string
 	Token       string
 	ID          string
 	New         bool
@@ -138,33 +136,9 @@ func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, e
 	req := getRequest(q, token)
 
 	if err := client.Run(ctx, req, &user); err != nil {
-		if err := client.Run(ctx, req, &user); err != nil {
-			if strings.Contains(err.Error(), "Cannot query field") {
-				log.Infof("query using the legacy parameters: %s", err)
-				return queryUserLegacy(ctx, client, token)
-			}
-
-			return nil, err
-		}
-	}
-
-	return &user, nil
-}
-
-func queryUserLegacy(ctx context.Context, client *graphql.Client, token string) (*q, error) {
-	var user q
-	q := `query {
-		user {
-			id,name,email,githubID,token,new,registry,buildkit,certificate
-		}}`
-
-	req := getRequest(q, token)
-
-	if err := client.Run(ctx, req, &user); err != nil {
 		return nil, err
 	}
 
-	user.User.ExternalID = user.User.GithubID
 	return &user, nil
 }
 
@@ -177,30 +151,9 @@ func authUser(ctx context.Context, client *graphql.Client, code string) (*u, err
 
 	req := graphql.NewRequest(q)
 	if err := client.Run(ctx, req, &user); err != nil {
-		if strings.Contains(err.Error(), "Cannot query field") {
-			log.Infof("query using the legacy parameters: %s", err)
-			return authUserLegacy(ctx, client, code)
-		}
-
 		return nil, err
 	}
 
-	return &user, nil
-}
-
-func authUserLegacy(ctx context.Context, client *graphql.Client, code string) (*u, error) {
-	var user u
-	q := fmt.Sprintf(`mutation {
-	auth(code: "%s", source: "cli") {
-		id,name,email,githubID,token,new,registry,buildkit,certificate
-		}}`, code)
-
-	req := graphql.NewRequest(q)
-	if err := client.Run(ctx, req, &user); err != nil {
-		return nil, err
-	}
-
-	user.Auth.ExternalID = user.Auth.GithubID
 	return &user, nil
 }
 
