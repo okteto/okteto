@@ -122,8 +122,8 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting deployment of service '%s': %s", svcName, err.Error())
 	}
-	new := old.Name == ""
-	if !new {
+	isNewDeployment := old.Name == ""
+	if !isNewDeployment {
 		if old.Labels[okLabels.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
 		}
@@ -134,8 +134,8 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 			deployments.RestoreDevModeFrom(d, old)
 		}
 	}
-	if err := deployments.Deploy(ctx, d, new, c); err != nil {
-		if new {
+	if err := deployments.Deploy(ctx, d, isNewDeployment, c); err != nil {
+		if isNewDeployment {
 			return fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
 		}
 		return fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
@@ -192,8 +192,8 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 		if err != nil {
 			return err
 		}
-		for _, pod := range podList {
-			if pod.Status.Phase == apiv1.PodRunning {
+		for i := range podList {
+			if podList[i].Status.Phase == apiv1.PodRunning {
 				pendingPods--
 			}
 		}

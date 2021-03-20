@@ -279,11 +279,11 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 }
 
 //RestoreDevModeFrom restores labels an annotations from a deployment in dev mode
-func RestoreDevModeFrom(new, old *appsv1.Deployment) {
-	new.Labels[okLabels.DevLabel] = old.Labels[okLabels.DevLabel]
-	new.Spec.Replicas = old.Spec.Replicas
-	new.Annotations = old.Annotations
-	new.Spec.Template.Annotations = old.Spec.Template.Annotations
+func RestoreDevModeFrom(d, old *appsv1.Deployment) {
+	d.Labels[okLabels.DevLabel] = old.Labels[okLabels.DevLabel]
+	d.Spec.Replicas = old.Spec.Replicas
+	d.Annotations = old.Annotations
+	d.Spec.Template.Annotations = old.Spec.Template.Annotations
 }
 
 //HasBeenChanged returns if a deployment has been updated since the development container was activated

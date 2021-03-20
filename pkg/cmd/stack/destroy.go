@@ -60,10 +60,8 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool) error {
 		if err := configmaps.Deploy(ctx, cfg, s.Namespace, c); err != nil {
 			return err
 		}
-	} else {
-		if err := configmaps.Destroy(ctx, cfg.Name, s.Namespace, c); err != nil {
-			return err
-		}
+	} else if err := configmaps.Destroy(ctx, cfg.Name, s.Namespace, c); err != nil {
+		return err
 	}
 	return err
 }
@@ -94,12 +92,7 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 		}
 	}
 
-	if err := configmaps.Destroy(ctx, s.GetConfigMapName(), s.Namespace, c); err != nil {
-		return err
-	}
-
-	return nil
-
+	return configmaps.Destroy(ctx, s.GetConfigMapName(), s.Namespace, c)
 }
 
 func helmReleaseExist(c *action.List, name string) (bool, error) {
@@ -146,36 +139,38 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 	if err != nil {
 		return err
 	}
-	for _, d := range dList {
-		if _, ok := s.Services[d.Name]; !ok {
-			if err := deployments.Destroy(ctx, d.Name, d.Namespace, c); err != nil {
-				return fmt.Errorf("error destroying deployment of service '%s': %s", d.Name, err)
-			}
-			if err := services.Destroy(ctx, d.Name, d.Namespace, c); err != nil {
-				return fmt.Errorf("error destroying service '%s': %s", d.Name, err)
-			}
-			spinner.Stop()
-			log.Success("Destroyed service '%s'", d.Name)
-			spinner.Start()
+	for i := range dList {
+		if _, ok := s.Services[dList[i].Name]; ok {
+			continue
 		}
+		if err := deployments.Destroy(ctx, dList[i].Name, dList[i].Namespace, c); err != nil {
+			return fmt.Errorf("error destroying deployment of service '%s': %s", dList[i].Name, err)
+		}
+		if err := services.Destroy(ctx, dList[i].Name, dList[i].Namespace, c); err != nil {
+			return fmt.Errorf("error destroying service '%s': %s", dList[i].Name, err)
+		}
+		spinner.Stop()
+		log.Success("Destroyed service '%s'", dList[i].Name)
+		spinner.Start()
 	}
 
 	sfsList, err := statefulsets.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
 	}
-	for _, sfs := range sfsList {
-		if _, ok := s.Services[sfs.Name]; !ok {
-			if err := statefulsets.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
-				return fmt.Errorf("error destroying statefulset of service '%s': %s", sfs.Name, err)
-			}
-			if err := services.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
-				return fmt.Errorf("error destroying service '%s': %s", sfs.Name, err)
-			}
-			spinner.Stop()
-			log.Success("Destroyed service '%s'", sfs.Name)
-			spinner.Start()
+	for i := range sfsList {
+		if _, ok := s.Services[sfsList[i].Name]; ok {
+			continue
 		}
+		if err := statefulsets.Destroy(ctx, sfsList[i].Name, sfsList[i].Namespace, c); err != nil {
+			return fmt.Errorf("error destroying statefulset of service '%s': %s", sfsList[i].Name, err)
+		}
+		if err := services.Destroy(ctx, sfsList[i].Name, sfsList[i].Namespace, c); err != nil {
+			return fmt.Errorf("error destroying service '%s': %s", sfsList[i].Name, err)
+		}
+		spinner.Stop()
+		log.Success("Destroyed service '%s'", sfsList[i].Name)
+		spinner.Start()
 	}
 
 	return nil
