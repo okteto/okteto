@@ -875,14 +875,12 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 
 	if err := up.Sy.WaitForCompletion(ctx, up.Dev, reporter); err != nil {
 		analytics.TrackSyncError()
+		progressBar.Finish()
+		progressBar.Group.Wait()
 		switch err {
 		case errors.ErrLostSyncthing, errors.ErrResetSyncthing:
-			progressBar.Finish()
-			progressBar.Group.Wait()
 			return err
 		case errors.ErrInsufficientSpace:
-			progressBar.Finish()
-			progressBar.Group.Wait()
 			return up.getInsufficientSpaceError(err)
 		default:
 			return errors.UserError{
