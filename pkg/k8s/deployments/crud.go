@@ -109,6 +109,12 @@ func checkConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
 		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
 				log.Infof("%s: %s", errors.ErrQuota, c.Message)
+				if strings.Contains(c.Message, "requested: pods=") {
+					return fmt.Errorf("Quota exceeded, you have reached the maximum number of pods per namespace")
+				}
+				if strings.Contains(c.Message, "requested: requests.storage=") {
+					return fmt.Errorf("Quota exceeded, you have reached the maximum storage per namespace")
+				}
 				return errors.ErrQuota
 			} else if isResourcesRelatedError(c.Message) {
 				return getResourceLimitError(c.Message, dev)
