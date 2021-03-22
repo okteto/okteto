@@ -42,9 +42,6 @@ func (u CommandError) Error() string {
 }
 
 var (
-	// ErrNotDevDeployment is raised when we detect that the deployment was returned to production mode
-	ErrNotDevDeployment = errors.New("Deployment is no longer in developer mode")
-
 	// ErrCommandFailed is raised when the command execution failed
 	ErrCommandFailed = errors.New("Command execution failed")
 
@@ -80,6 +77,9 @@ var (
 
 	// ErrNotInDevMode is raised when the eployment is not in dev mode
 	ErrNotInDevMode = fmt.Errorf("Deployment is not in development mode anymore")
+
+	// ErrDevPodDeleted raised if dev pod is deleted in the middle of the "okteto up" sequence
+	ErrDevPodDeleted = fmt.Errorf("development container has been removed")
 )
 
 // IsNotFound returns true if err is of the type not found
@@ -122,7 +122,8 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "broken pipe"),
 		strings.Contains(err.Error(), "No connection could be made"),
 		strings.Contains(err.Error(), "dial tcp: operation was canceled"),
-		strings.Contains(err.Error(), "network is unreachable"):
+		strings.Contains(err.Error(), "network is unreachable"),
+		strings.Contains(err.Error(), "development container has been removed"):
 		return true
 	default:
 		return false

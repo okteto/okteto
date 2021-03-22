@@ -50,6 +50,8 @@ import (
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ReconnectingMessage is the message shown when we are trying to reconnect
@@ -368,7 +370,10 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 
 	if err := up.devMode(ctx, d, create); err != nil {
-		return fmt.Errorf("couldn't activate your development container (%s): %s", up.Dev.Container, err.Error())
+		if errors.IsTransient(err) {
+			return err
+		}
+		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
 	}
 
 	log.Success("Development container activated")
@@ -378,7 +383,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		if err == errors.ErrSSHConnectError {
 			err := up.checkOktetoStartError(ctx, "Failed to connect to your development container")
 			if err == errors.ErrLostSyncthing {
-				if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
+				if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
 					return fmt.Errorf("error recreating development container: %s", err.Error())
 				}
 			}
@@ -436,7 +441,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 
 	if up.shouldRetry(ctx, prevError) {
 		if !up.Dev.PersistentVolumeEnabled() {
-			if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
+			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
 				return err
 			}
 		}
@@ -585,18 +590,26 @@ func (up *upContext) setDevContainer(d *appsv1.Deployment) error {
 }
 
 func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create bool) error {
+	if err := up.createDevContainer(ctx, d, create); err != nil {
+		return err
+	}
+
+	return up.waitUntilDevelopmentContainerIsRunning(ctx)
+}
+
+func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()
 	defer spinner.Stop()
+
+	if err := config.UpdateStateFile(up.Dev, config.Starting); err != nil {
+		return err
+	}
 
 	if up.Dev.PersistentVolumeEnabled() {
 		if err := volumes.Create(ctx, up.Dev, up.Client); err != nil {
 			return err
 		}
-	}
-
-	if err := config.UpdateStateFile(up.Dev, config.Starting); err != nil {
-		return err
 	}
 
 	trList, err := deployments.GetTranslations(ctx, up.Dev, d, up.Client)
@@ -650,36 +663,93 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 		return err
 	}
 
-	reporter := make(chan string)
-	defer close(reporter)
-	go func() {
-		message := "Activating your development container"
-		if up.Dev.PersistentVolumeEnabled() {
-			message = "Attaching persistent volume"
-			if err := config.UpdateStateFile(up.Dev, config.Attaching); err != nil {
-				log.Infof("error updating state: %s", err.Error())
-			}
+	up.Pod = pod
+	return nil
+}
+
+func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context) error {
+	spinner := utils.NewSpinner("Activating your development container...")
+	spinner.Start()
+	defer spinner.Stop()
+
+	optsWatchPod := metav1.ListOptions{
+		Watch:         true,
+		FieldSelector: fmt.Sprintf("metadata.name=%s", up.Pod.Name),
+	}
+
+	watcherPod, err := up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
+	if err != nil {
+		return err
+	}
+
+	optsWatchEvents := metav1.ListOptions{
+		Watch:         true,
+		FieldSelector: fmt.Sprintf("involvedObject.kind=Pod,involvedObject.name=%s", up.Pod.Name),
+	}
+
+	watcherEvents, err := up.Client.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
+	if err != nil {
+		return err
+	}
+
+	if up.Dev.PersistentVolumeEnabled() {
+		spinner.Update("Activating: attaching persistent volume...")
+		if err := config.UpdateStateFile(up.Dev, config.Attaching); err != nil {
+			log.Infof("error updating state: %s", err.Error())
 		}
-		for {
-			spinner.Update(fmt.Sprintf("%s...", message))
-			message = <-reporter
-			if message == "" {
-				return
+	}
+
+	for {
+		select {
+		case event := <-watcherEvents.ResultChan():
+			e, ok := event.Object.(*apiv1.Event)
+			if !ok {
+				watcherEvents, err = up.Client.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
+				if err != nil {
+					return err
+				}
+				continue
 			}
-			if strings.HasPrefix(message, "Pulling") {
+			log.Infof("pod %s event: %s", up.Pod, e.Message)
+			optsWatchEvents.ResourceVersion = e.ResourceVersion
+			switch e.Reason {
+			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
+				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
+					continue
+				}
+				return fmt.Errorf(e.Message)
+			case "SuccessfulAttachVolume":
+				spinner.Update("Activating: pulling images...")
+			case "Killing":
+				return errors.ErrDevPodDeleted
+			case "Pulling":
+				message := strings.Replace(e.Message, "Pulling", "pulling", 1)
+				spinner.Update(fmt.Sprintf("Activating: %s...", message))
 				if err := config.UpdateStateFile(up.Dev, config.Pulling); err != nil {
 					log.Infof("error updating state: %s", err.Error())
 				}
 			}
+		case event := <-watcherPod.ResultChan():
+			pod, ok := event.Object.(*apiv1.Pod)
+			if !ok {
+				watcherPod, err = up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
+			if pod.Status.Phase == apiv1.PodRunning {
+				return nil
+			}
+			if pod.DeletionTimestamp != nil {
+				return errors.ErrDevPodDeleted
+			}
+		case <-ctx.Done():
+			log.Debug("call to waitUntilDevelopmentContainerIsRunning cancelled")
+			return ctx.Err()
 		}
-	}()
-
-	if err := pods.WaitUntilRunning(ctx, up.Dev, pod.Name, up.Client, reporter); err != nil {
-		return err
 	}
-
-	up.Pod = pod.Name
-	return nil
 }
 
 func (up *upContext) forwards(ctx context.Context) error {
@@ -716,7 +786,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 		return err
 	}
 
-	return up.Forwarder.Start(up.Pod, up.Dev.Namespace)
+	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
 }
 
 func (up *upContext) sshForwards(ctx context.Context) error {
@@ -761,7 +831,7 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return fmt.Errorf("failed to add entry to your SSH config file")
 	}
 
-	return up.Forwarder.Start(up.Pod, up.Dev.Namespace)
+	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
 }
 
 func (up *upContext) initializeSyncthing() error {
@@ -812,7 +882,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		log.Infof("failed to ping syncthing: %s", err.Error())
 		err = up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
 		if err == errors.ErrLostSyncthing {
-			if err := pods.Destroy(ctx, up.Pod, up.Dev.Namespace, up.Client); err != nil {
+			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
 				return fmt.Errorf("error recreating development container: %s", err.Error())
 			}
 		}
@@ -922,7 +992,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 		up.Client,
 		up.RestConfig,
 		up.Dev.Namespace,
-		up.Pod,
+		up.Pod.Name,
 		up.Dev.Container,
 		false,
 		in,
@@ -953,7 +1023,7 @@ func (up *upContext) runCommand(ctx context.Context) error {
 		up.Client,
 		up.RestConfig,
 		up.Dev.Namespace,
-		up.Pod,
+		up.Pod.Name,
 		up.Dev.Container,
 		true,
 		os.Stdin,
