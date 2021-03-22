@@ -390,7 +390,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 
 	go up.cleanCommand(ctx)
 
-	start := time.Now()
 	if err := up.sync(ctx); err != nil {
 		if up.shouldRetry(ctx, err) {
 			if pods.Exists(ctx, up.Pod, up.Dev.Namespace, up.Client) {
@@ -406,12 +405,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		analytics.TrackReconnect(true, up.isSwap)
 	}
 	log.Success("Files synchronized")
-
-	elapsed := time.Since(start)
-	maxDuration := time.Duration(1) * time.Minute
-	if elapsed > maxDuration {
-		log.Yellow("It seems that synchronization is taking too long. Consider adding some files to .stignore.")
-	}
 
 	go func() {
 		output := <-up.cleaned
@@ -843,6 +836,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
+	start := time.Now()
 	if err := config.UpdateStateFile(up.Dev, config.Synchronizing); err != nil {
 		return err
 	}
@@ -893,6 +887,13 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	}
 	progressBar.Finish()
 	progressBar.Group.Wait()
+
+	elapsed := time.Since(start)
+	maxDuration := time.Duration(1) * time.Minute
+	if elapsed > maxDuration {
+		log.Yellow("It seems that synchronization is taking too long. Consider adding some files to .stignore.")
+	}
+
 	up.Sy.Type = "sendreceive"
 	up.Sy.IgnoreDelete = false
 	if err := up.Sy.UpdateConfig(); err != nil {
