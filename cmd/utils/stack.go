@@ -16,13 +16,15 @@ package utils
 import (
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
 var (
 	//DefaultStackManifest default okteto stack manifest file
 	DefaultStackManifest    = "okteto-stack.yml"
-	secondaryStackManifests = []string{"okteto-stack.yaml", "stack.yml", "stack.yaml"}
+	secondaryStackManifests = []string{"okteto-stack.yaml", "stack.yml", "stack.yaml", "docker-compose.yml", "docker-compose.yaml"}
+	deprecatedManifests     = []string{"stack.yml", "stack.yaml"}
 )
 
 //LoadStack loads an okteto stack manifest checking "yml" and "yaml"
@@ -34,11 +36,30 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 	if stackPath == DefaultStackManifest {
 		for _, secondaryStackManifest := range secondaryStackManifests {
 			if model.FileExists(secondaryStackManifest) {
+				if isDeprecatedExtension(stackPath) {
+					log.Yellow("The stack name that you are using will be deprecated in a future version. Pleas consider using one of the accepted ones.")
+					log.Yellow("More information is available here: https://okteto.com/docs/reference/cli#destroy-1")
+				}
 				return model.GetStack(name, secondaryStackManifest)
 			}
 		}
 	}
 
+	composeFile := model.GetFileByRegex("docker-compose.*")
+	if composeFile != "" {
+		log.Yellow("Using %s as compose file. If you want to specify other compose file, you can do it by using --file flag.", composeFile)
+		return model.GetStack(name, composeFile)
+	}
+	// TODO: Get file starting with docker-compose.*
 	return nil, fmt.Errorf("'%s' does not exist", stackPath)
 
+}
+
+func isDeprecatedExtension(stackPath string) bool {
+	for _, deprecatedManifest := range deprecatedManifests {
+		if deprecatedManifest == stackPath {
+			return true
+		}
+	}
+	return false
 }
