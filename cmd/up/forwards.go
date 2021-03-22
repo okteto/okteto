@@ -13,7 +13,7 @@ import (
 )
 
 func (up *upContext) forwards(ctx context.Context) error {
-	spinner := utils.NewSpinner("Connecting to your development container...")
+	spinner := utils.NewSpinner("Configuring SSH tunnel to your development container...")
 	spinner.Start()
 	defer spinner.Stop()
 

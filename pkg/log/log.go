@@ -40,6 +40,8 @@ var (
 	successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" ✓ ")
 
 	informationSymbol = color.New(color.BgHiBlue, color.FgBlack).Sprint(" i ")
+
+	warningSymbol = color.New(color.BgHiYellow, color.FgBlack).Sprint(" ! ")
 )
 
 type logger struct {
@@ -181,6 +183,12 @@ func Success(format string, args ...interface{}) {
 func Information(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	fmt.Fprintf(color.Output, "%s %s\n", informationSymbol, blueString(format, args...))
+}
+
+// Warning prints a message with the warning symbol first, and the text in yellow
+func Warning(format string, args ...interface{}) {
+	log.out.Infof(format, args...)
+	fmt.Fprintf(color.Output, "%s %s\n", warningSymbol, yellowString(format, args...))
 }
 
 // Hint prints a message with the text in blue

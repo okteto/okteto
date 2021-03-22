@@ -142,6 +142,19 @@ type FolderError struct {
 	Path  string `json:"path"`
 }
 
+// ItemEvent represents an item event of any type in syncthing.
+type ItemEvent struct {
+	Id       int                                        `json:"id"`
+	GlobalId int                                        `json:"globalID"`
+	Time     time.Time                                  `json:"time"`
+	Data     map[string]map[string]DownloadProgressData `json:"data"`
+}
+
+// DownloadProgressData represents an the information about a DownloadProgress event
+type DownloadProgressData struct {
+	BytesTotal int64 `json:"bytesTotal"`
+}
+
 // New constructs a new Syncthing.
 func New(dev *model.Dev) (*Syncthing, error) {
 	fullPath := getInstallPath()
@@ -371,7 +384,34 @@ func (s *Syncthing) SendStignoreFile(ctx context.Context) {
 }
 
 //ResetDatabase resets the syncthing database
-func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
+func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev) error {
+
+	if err := s.resetDatabase(ctx, dev, false); err != nil {
+		return err
+	}
+	if err := s.resetDatabase(ctx, dev, true); err != nil {
+		return err
+	}
+
+	if err := s.WaitForPing(ctx, false); err != nil {
+		return err
+	}
+	if err := s.WaitForPing(ctx, true); err != nil {
+		return err
+	}
+
+	if err := s.WaitForScanning(ctx, dev, true); err != nil {
+		return err
+	}
+
+	if err := s.WaitForScanning(ctx, dev, false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Syncthing) resetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
 	for _, folder := range s.Folders {
 		log.Infof("reseting syncthing database path=%s local=%t", folder.LocalPath, local)
 		params := getFolderParameter(folder)
@@ -470,14 +510,14 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 	defer close(reporter)
 	ticker := time.NewTicker(250 * time.Millisecond)
 	retries := 0
-	remoteInitialized := false
-	var completion *Completion
-	var err error
 	needDeletesRetries := 0
+	globalBytesRetries := 0
+	var previousGlobalBytes int64 = 0
 	for {
 		select {
 		case <-ticker.C:
 			retries++
+
 			s.SendStignoreFile(ctx)
 			if err := s.Overwrite(ctx, dev); err != nil {
 				if err != errors.ErrBusySyncthing {
@@ -485,7 +525,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				}
 			}
 
-			remoteInitialized, completion, err = s.getCompletionFromLocalOrRemote(ctx, remoteInitialized)
+			localCompletion, remoteCompletion, err := s.getLocalAndRemoteCompletion(ctx)
 			if err != nil {
 				if err == errors.ErrBusySyncthing {
 					continue
@@ -493,7 +533,37 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				return err
 			}
 
-			if completion.GlobalBytes == 0 {
+			if localCompletion.GlobalBytes != remoteCompletion.GlobalBytes {
+				log.Infof("local globalBytes %d, remote global bytes %d", localCompletion.GlobalBytes, remoteCompletion.GlobalBytes)
+				if remoteCompletion.GlobalBytes != previousGlobalBytes {
+					previousGlobalBytes = remoteCompletion.GlobalBytes
+					globalBytesRetries = 0
+					continue
+				}
+				globalBytesRetries++
+				if globalBytesRetries >= 120 {
+					continue
+				}
+				log.Infof("globalBytesRetries %d, resetting syncthing database", globalBytesRetries)
+				if err := s.ResetDatabase(ctx, dev); err != nil {
+					log.Infof("error resetting syncthing database: %s", err.Error())
+					continue
+				}
+				globalBytesRetries = 0
+				continue
+			}
+
+			progress := (float64(remoteCompletion.GlobalBytes-remoteCompletion.NeedBytes) / float64(remoteCompletion.GlobalBytes)) * 100
+			log.Infof("syncthing folder: globalBytes %d, needBytes %d, globalItems %d, needItems %d, needDeletes %d",
+				remoteCompletion.GlobalBytes,
+				remoteCompletion.NeedBytes,
+				remoteCompletion.GlobalItems,
+				remoteCompletion.NeedItems,
+				remoteCompletion.NeedDeletes,
+			)
+			reporter <- progress
+
+			if remoteCompletion.GlobalBytes == 0 {
 				if s.IsAllIgnoredAndOverwritten() {
 					return nil
 				}
@@ -501,18 +571,8 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				continue
 			}
 
-			progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
-			log.Infof("syncthing folder: globalBytes %d, needBytes %d, globalItems %d, needItems %d, needDeletes %d",
-				completion.GlobalBytes,
-				completion.NeedBytes,
-				completion.GlobalItems,
-				completion.NeedItems,
-				completion.NeedDeletes,
-			)
-			reporter <- progress
-
-			if completion.NeedBytes == 0 {
-				if completion.NeedDeletes > 0 {
+			if remoteCompletion.NeedBytes == 0 {
+				if remoteCompletion.NeedDeletes > 0 {
 					needDeletesRetries++
 					if needDeletesRetries < 50 {
 						continue
@@ -538,25 +598,16 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 	}
 }
 
-func (s *Syncthing) getCompletionFromLocalOrRemote(ctx context.Context, remoteInitialized bool) (bool, *Completion, error) {
-	if !remoteInitialized {
-		localCompletion, err := s.GetCompletion(ctx, true, DefaultRemoteDeviceID)
-		if err != nil {
-			return false, nil, err
-		}
-		remoteCompletion, err := s.GetCompletion(ctx, false, DefaultRemoteDeviceID)
-		if err != nil {
-			log.Infof("error calling remote GetCompletion: %s", err.Error())
-			return false, localCompletion, err
-		}
-		if remoteCompletion.GlobalBytes == localCompletion.GlobalBytes {
-			log.Infof("switching to remote completion with global bytes %d", remoteCompletion.GlobalBytes)
-			return true, remoteCompletion, nil
-		}
-		return false, localCompletion, err
+func (s *Syncthing) getLocalAndRemoteCompletion(ctx context.Context) (*Completion, *Completion, error) {
+	localCompletion, err := s.GetCompletion(ctx, true, localDeviceID)
+	if err != nil {
+		return nil, nil, err
 	}
-	completion, err := s.GetCompletion(ctx, false, DefaultRemoteDeviceID)
-	return true, completion, err
+	remoteCompletion, err := s.GetCompletion(ctx, true, DefaultRemoteDeviceID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return localCompletion, remoteCompletion, nil
 }
 
 // GetCompletion returns the syncthing completion
@@ -686,6 +737,49 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local b
 
 	log.Infof("syncthing pull error local=%t: %s", local, errMsg)
 	return fmt.Errorf("%s: %s", folderErrors.Data.Errors[0].Path, errMsg)
+}
+
+// GetObjectSyncthing the files syncthing
+func (s *Syncthing) GetInSynchronizationFile(ctx context.Context) string {
+	events := []ItemEvent{}
+	params := map[string]string{
+		"device":  DefaultRemoteDeviceID,
+		"since":   "0",
+		"limit":   "1",
+		"timeout": "0",
+		"events":  "DownloadProgress",
+	}
+	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, false, nil, true, 0)
+	if err != nil {
+		log.Infof("error getting GetInSynchronizationItem: %s", err.Error())
+		return ""
+	}
+
+	if err := json.Unmarshal(body, &events); err != nil {
+		log.Infof("error unmarshalling events: %s", err.Error())
+		return ""
+	}
+
+	if len(events) == 0 {
+		return ""
+	}
+
+	return getInSynchronizationLargestFile(events[len(events)-1])
+}
+
+func getInSynchronizationLargestFile(e ItemEvent) string {
+	result := ""
+	var largerFileSize int64
+	for _, folderStatus := range e.Data {
+		for fileName := range folderStatus {
+			fileSize := folderStatus[fileName].BytesTotal
+			if fileSize > largerFileSize {
+				result = fileName
+				largerFileSize = fileSize
+			}
+		}
+	}
+	return result
 }
 
 // Restart restarts the syncthing process
@@ -876,8 +970,11 @@ func getBinaryName() string {
 }
 
 func getFolderParameter(folder *Folder) map[string]string {
-	folderName := fmt.Sprintf("okteto-%s", folder.Name)
-	return map[string]string{"folder": folderName, "device": DefaultRemoteDeviceID}
+	return map[string]string{"folder": GetFolderName(folder), "device": DefaultRemoteDeviceID}
+}
+
+func GetFolderName(folder *Folder) string {
+	return fmt.Sprintf("okteto-%s", folder.Name)
 }
 
 func getInfoFile(namespace, name string) string {
