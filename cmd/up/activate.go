@@ -88,7 +88,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
 	}
 
-	log.Success("Development container activated")
 	up.isRetry = true
 
 	if err := up.forwards(ctx); err != nil {
@@ -103,8 +102,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		}
 		return fmt.Errorf("couldn't connect to your development container: %s", err.Error())
 	}
-	log.Success("Connected to your development container")
-
 	go up.cleanCommand(ctx)
 
 	if err := up.sync(ctx); err != nil {
@@ -118,7 +115,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	if up.isRetry {
 		analytics.TrackReconnect(true, up.isSwap)
 	}
-	log.Success("Files synchronized")
 
 	go func() {
 		output := <-up.cleaned
@@ -180,7 +176,6 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 	if err := up.createDevContainer(ctx, d, create); err != nil {
 		return err
 	}
-
 	return up.waitUntilDevelopmentContainerIsRunning(ctx)
 }
 
@@ -255,7 +250,15 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 }
 
 func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context) error {
-	spinner := utils.NewSpinner("Activating your development container...")
+	msg := "Pulling images..."
+	if up.Dev.PersistentVolumeEnabled() {
+		msg = "Attaching persistent volume..."
+		if err := config.UpdateStateFile(up.Dev, config.Attaching); err != nil {
+			log.Infof("error updating state: %s", err.Error())
+		}
+	}
+
+	spinner := utils.NewSpinner(msg)
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -279,13 +282,6 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 		return err
 	}
 
-	if up.Dev.PersistentVolumeEnabled() {
-		spinner.Update("Activating: attaching persistent volume...")
-		if err := config.UpdateStateFile(up.Dev, config.Attaching); err != nil {
-			log.Infof("error updating state: %s", err.Error())
-		}
-	}
-
 	for {
 		select {
 		case event := <-watcherEvents.ResultChan():
@@ -306,12 +302,15 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 				}
 				return fmt.Errorf(e.Message)
 			case "SuccessfulAttachVolume":
-				spinner.Update("Activating: pulling images...")
+				spinner.Stop()
+				log.Success("Persistent volume successfully attached")
+				spinner.Update("Pulling images...")
+				spinner.Start()
 			case "Killing":
 				return errors.ErrDevPodDeleted
 			case "Pulling":
 				message := strings.Replace(e.Message, "Pulling", "pulling", 1)
-				spinner.Update(fmt.Sprintf("Activating: %s...", message))
+				spinner.Update(fmt.Sprintf("%s...", message))
 				if err := config.UpdateStateFile(up.Dev, config.Pulling); err != nil {
 					log.Infof("error updating state: %s", err.Error())
 				}
@@ -327,6 +326,8 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			}
 			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
 			if pod.Status.Phase == apiv1.PodRunning {
+				spinner.Stop()
+				log.Success("Images successfully pulled")
 				return nil
 			}
 			if pod.DeletionTimestamp != nil {

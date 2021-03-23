@@ -23,6 +23,7 @@ import (
 
 	"github.com/containerd/console"
 	"github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/cmd/buildctl/build"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
@@ -53,7 +54,7 @@ func GetBuildKitHost() (string, bool, error) {
 }
 
 //getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFrom, buildArgs []string) (*client.SolveOpt, error) {
+func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFrom, buildArgs, secrets []string) (*client.SolveOpt, error) {
 	if file == "" {
 		file = filepath.Join(buildCtx, "Dockerfile")
 	}
@@ -91,6 +92,14 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFro
 		attachable = append(attachable, newDockerAndOktetoAuthProvider(registryURL, okteto.GetUserID(), token.Token, os.Stderr))
 	} else {
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))
+	}
+
+	if len(secrets) > 0 {
+		secretProvider, err := build.ParseSecret(secrets)
+		if err != nil {
+			return nil, err
+		}
+		attachable = append(attachable, secretProvider)
 	}
 	opt := &client.SolveOpt{
 		LocalDirs:     localDirs,

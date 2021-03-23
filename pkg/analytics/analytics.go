@@ -37,6 +37,7 @@ const (
 	upErrorEvent             = "Up Error"
 	reconnectEvent           = "Reconnect"
 	syncErrorEvent           = "Sync Error"
+	syncResetDatabase        = "Sync Reset Database"
 	downEvent                = "Down"
 	downVolumesEvent         = "DownVolumes"
 	pushEvent                = "Push"
@@ -120,6 +121,11 @@ func TrackReconnect(success, swap bool) {
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
 func TrackSyncError() {
 	track(syncErrorEvent, false, nil)
+}
+
+// TrackResetDatabase sends a tracking event to mixpanel when the syncthing database is reset
+func TrackResetDatabase(success bool) {
+	track(syncResetDatabase, success, nil)
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
