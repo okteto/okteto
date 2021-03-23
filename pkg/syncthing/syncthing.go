@@ -30,6 +30,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -404,11 +405,7 @@ func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev) error {
 		return err
 	}
 
-	if err := s.WaitForScanning(ctx, dev, false); err != nil {
-		return err
-	}
-
-	return nil
+	return s.WaitForScanning(ctx, dev, false)
 }
 
 func (s *Syncthing) resetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
@@ -547,8 +544,10 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				log.Infof("globalBytesRetries %d, resetting syncthing database", globalBytesRetries)
 				if err := s.ResetDatabase(ctx, dev); err != nil {
 					log.Infof("error resetting syncthing database: %s", err.Error())
+					analytics.TrackResetDatabase(false)
 					continue
 				}
+				analytics.TrackResetDatabase(true)
 				globalBytesRetries = 0
 				continue
 			}
