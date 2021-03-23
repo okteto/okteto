@@ -46,6 +46,7 @@ securityContext:
     - SYS_TRACE
     drop:
     - SYS_NICE
+serviceAccount: sa
 workdir: /app
 persistentVolume:
   enabled: true

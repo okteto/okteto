@@ -134,6 +134,7 @@ type Dev struct {
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
 	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
 	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
@@ -752,6 +753,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		PersistentVolume: main.PersistentVolumeEnabled(),
 		Volumes:          []VolumeMount{},
 		SecurityContext:  dev.SecurityContext,
+		ServiceAccount:   dev.ServiceAccount,
 		Resources:        dev.Resources,
 		Healthchecks:     dev.Healthchecks,
 		InitContainer:    dev.InitContainer,
@@ -912,6 +914,7 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 					},
 				},
 				Spec: apiv1.PodSpec{
+					ServiceAccountName:            "sa",
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Containers: []apiv1.Container{
 						{

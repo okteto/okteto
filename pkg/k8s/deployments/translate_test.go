@@ -57,6 +57,7 @@ securityContext:
   runAsUser: 100
   runAsGroup: 101
   fsGroup: 102
+serviceAccount: "sa"
 sync:
   - .:/app
   - sub:/path
@@ -113,6 +114,7 @@ services:
 					SecurityContext: &apiv1.PodSecurityContext{
 						FSGroup: &fsGroup,
 					},
+					ServiceAccountName:            "sa",
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						{
@@ -351,6 +353,7 @@ services:
 					SecurityContext: &apiv1.PodSecurityContext{
 						FSGroup: &rootUser,
 					},
+					ServiceAccountName:            "sa",
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						{
@@ -451,6 +454,7 @@ persistentVolume:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
+					ServiceAccountName:            "sa",
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						{

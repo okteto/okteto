@@ -116,6 +116,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		TranslateInitContainer(&rule.InitContainer)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
+		TranslatePodServiceAccount(&t.Deployment.Spec.Template.Spec, rule.ServiceAccount)
 		TranslateOktetoDevSecret(&t.Deployment.Spec.Template.Spec, t.Name, rule.Secrets)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
@@ -434,6 +435,13 @@ func TranslatePodSecurityContext(spec *apiv1.PodSpec, s *model.SecurityContext) 
 
 	if s.FSGroup != nil {
 		spec.SecurityContext.FSGroup = s.FSGroup
+	}
+}
+
+//TranslatePodServiceAccount translates the security accout the pod uses
+func TranslatePodServiceAccount(spec *apiv1.PodSpec, sa string) {
+	if sa != "" {
+		spec.ServiceAccountName = sa
 	}
 }
 
