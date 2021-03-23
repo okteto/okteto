@@ -39,7 +39,38 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 
-	return up.synchronizeFiles(ctx)
+	start := time.Now()
+	if err := config.UpdateStateFile(up.Dev, config.Synchronizing); err != nil {
+		return err
+	}
+
+	if err := up.synchronizeFiles(ctx); err != nil {
+		return err
+	}
+
+	log.Success("Files synchronized")
+
+	elapsed := time.Since(start)
+	maxDuration := time.Duration(1) * time.Minute
+	if elapsed > maxDuration {
+		minutes := elapsed / time.Minute
+		elapsed -= minutes * time.Minute
+		seconds := elapsed / time.Second
+		log.Warning(`File synchronization took %dm %ds
+    Consider to update your '.stignore' to optimize the file synchronization
+    More information is available here: https://okteto.com/docs/reference/file-synchronization`, minutes, seconds)
+	}
+
+	up.Sy.Type = "sendreceive"
+	up.Sy.IgnoreDelete = false
+	if err := up.Sy.UpdateConfig(); err != nil {
+		return err
+	}
+
+	go up.Sy.Monitor(ctx, up.Disconnect)
+	go up.Sy.MonitorStatus(ctx, up.Disconnect)
+	log.Infof("restarting syncthing to update sync mode to sendreceive")
+	return up.Sy.Restart(ctx)
 }
 
 func (up *upContext) startSyncthing(ctx context.Context) error {
@@ -71,17 +102,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 
 	if up.resetSyncthing {
 		spinner.Update("Resetting synchronization service database...")
-		if err := up.Sy.ResetDatabase(ctx, up.Dev, false); err != nil {
-			return err
-		}
-		if err := up.Sy.ResetDatabase(ctx, up.Dev, true); err != nil {
-			return err
-		}
-
-		if err := up.Sy.WaitForPing(ctx, false); err != nil {
-			return err
-		}
-		if err := up.Sy.WaitForPing(ctx, true); err != nil {
+		if err := up.Sy.ResetDatabase(ctx, up.Dev); err != nil {
 			return err
 		}
 
@@ -105,28 +126,44 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
-	suffix := "Synchronizing your files..."
-	spinner := utils.NewSpinner(suffix)
-	pbScaling := 0.30
-
-	if err := config.UpdateStateFile(up.Dev, config.Synchronizing); err != nil {
-		return err
-	}
+	spinner := utils.NewSpinner("Synchronizing your files...")
 	spinner.Start()
 	defer spinner.Stop()
-	reporter := make(chan float64)
-	go func() {
-		<-time.NewTicker(2 * time.Second).C
-		var previous float64
 
-		for c := range reporter {
-			if c > previous {
-				// todo: how to calculate how many characters can the line fit?
-				pb := utils.RenderProgressBar(suffix, c, pbScaling)
-				spinner.Update(pb)
-				previous = c
+	progressBar := utils.NewSyncthingProgressBar(40)
+	defer progressBar.Finish()
+
+	quit := make(chan bool)
+
+	go func() {
+		for {
+			select {
+			case <-quit:
+				return
+			case <-time.NewTicker(1 * time.Second).C:
+				inSynchronizationFile := up.Sy.GetInSynchronizationFile(ctx)
+				if inSynchronizationFile != "" {
+					spinner.Stop()
+					progressBar.UpdateItemInSync(inSynchronizationFile)
+				}
 			}
 		}
+	}()
+
+	reporter := make(chan float64)
+	go func() {
+		var previous float64
+		for c := range reporter {
+			if c > previous {
+				value := int64(c)
+				if value > 0 && value < 100 {
+					spinner.Stop()
+					progressBar.SetCurrent(value)
+					previous = c
+				}
+			}
+		}
+		quit <- true
 	}()
 
 	if err := up.Sy.WaitForCompletion(ctx, up.Dev, reporter); err != nil {
@@ -146,17 +183,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		}
 	}
 
-	// render to 100
-	spinner.Update(utils.RenderProgressBar(suffix, 100, pbScaling))
+	progressBar.SetCurrent(100)
 
-	up.Sy.Type = "sendreceive"
-	up.Sy.IgnoreDelete = false
-	if err := up.Sy.UpdateConfig(); err != nil {
-		return err
-	}
-
-	go up.Sy.Monitor(ctx, up.Disconnect)
-	go up.Sy.MonitorStatus(ctx, up.Disconnect)
-	log.Infof("restarting syncthing to update sync mode to sendreceive")
-	return up.Sy.Restart(ctx)
+	return nil
 }
