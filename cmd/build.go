@@ -35,6 +35,7 @@ func Build(ctx context.Context) *cobra.Command {
 	var cacheFrom []string
 	var progress string
 	var buildArgs []string
+	var secrets []string
 
 	cmd := &cobra.Command{
 		Use:   "build [PATH]",
@@ -69,7 +70,7 @@ func Build(ctx context.Context) *cobra.Command {
 			log.Information("Running your build in %s...", buildKitHost)
 
 			ctx := context.Background()
-			if err := build.Run(ctx, "", buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, progress); err != nil {
+			if err := build.Run(ctx, "", buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, secrets, progress); err != nil {
 				analytics.TrackBuild(buildKitHost, false)
 				return err
 			}
@@ -93,5 +94,6 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVar(&cacheFrom, "cache-from", nil, "cache source images")
 	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&buildArgs, "build-arg", nil, "set build-time variables")
+	cmd.Flags().StringArrayVar(&secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
 	return cmd
 }
