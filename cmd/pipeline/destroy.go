@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -41,6 +42,10 @@ func destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if !okteto.IsAuthenticated() {
+				return errors.ErrNotLogged
+			}
+
 			var err error
 			if name == "" {
 				name, err = getPipelineName()
@@ -51,6 +56,11 @@ func destroy(ctx context.Context) *cobra.Command {
 
 			if namespace == "" {
 				namespace = getCurrentNamespace(ctx)
+			}
+
+			currentContext := client.GetSessionContext("")
+			if okteto.GetClusterContext() != currentContext {
+				log.Information("Pipeline context: %s/%s", okteto.GetURL(), namespace)
 			}
 
 			if err := deletePipeline(ctx, name, namespace, wait, destroyVolumes, timeout); err != nil {
