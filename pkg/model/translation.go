@@ -47,6 +47,7 @@ type TranslationRule struct {
 	PersistentVolume  bool                 `json:"persistentVolume" yaml:"persistentVolume"`
 	Volumes           []VolumeMount        `json:"volumes,omitempty"`
 	SecurityContext   *SecurityContext     `json:"securityContext,omitempty"`
+	ServiceAccount    string               `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	Resources         ResourceRequirements `json:"resources,omitempty"`
 	InitContainer     InitContainer        `json:"initContainers,omitempty"`
 	Probes            *Probes              `json:"probes" yaml:"probes"`
