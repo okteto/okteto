@@ -23,7 +23,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -122,9 +121,6 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 	if err != nil {
 		return err
 	}
-	if s.Namespace == "" {
-		s.Namespace = client.GetContextNamespace("")
-	}
 
 	oktetoRegistryURL := ""
 	n, err := namespaces.Get(ctx, s.Namespace, c)
@@ -147,6 +143,10 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		if svc.Build == nil {
 			continue
 		}
+		if isOktetoCluster {
+			imageName := fmt.Sprintf("%s-%s", s.Name, name)
+			svc.Image = registry.GetImageTag("", imageName, s.Namespace, oktetoRegistryURL)
+		}
 		if !forceBuild {
 			if _, err := registry.GetImageTagWithDigest(ctx, s.Namespace, svc.Image); err != errors.ErrNotFound {
 				continue
@@ -157,16 +157,18 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 			building = true
 			log.Information("Running your build in %s...", buildKitHost)
 		}
-		imageTag := registry.GetImageTag(svc.Image, name, s.Namespace, oktetoRegistryURL)
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, imageTag, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
 			return fmt.Errorf("error building image for '%s': %s", name, err)
 		}
-		svc.Image = imageTag
-		svc.SetLastBuiltAnnotationtamp()
+		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
 		log.Success("Image for service '%s' successfully pushed", name)
+	}
+
+	if !building && forceBuild {
+		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
 	}
 
 	return nil

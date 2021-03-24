@@ -74,13 +74,14 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 }
 
 func deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool, c *kubernetes.Clientset) error {
-	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
-	spinner.Start()
-	defer spinner.Stop()
 
 	if err := translate(ctx, s, forceBuild, noCache); err != nil {
 		return err
 	}
+
+	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
+	spinner.Start()
+	defer spinner.Stop()
 
 	for name := range s.Services {
 		if len(s.Services[name].Volumes) == 0 {
