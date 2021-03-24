@@ -57,7 +57,7 @@ securityContext:
   runAsUser: 100
   runAsGroup: 101
   fsGroup: 102
-serviceAccount: "sa"
+serviceAccount: sa
 sync:
   - .:/app
   - sub:/path
@@ -74,6 +74,7 @@ services:
     container: dev
     image: worker:latest
     command: ["./run_worker.sh"]
+    serviceAccount: sa
     sync:
        - worker:/src`, file.Name()))
 
@@ -454,7 +455,6 @@ persistentVolume:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					ServiceAccountName:            "sa",
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						{

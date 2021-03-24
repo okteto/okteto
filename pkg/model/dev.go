@@ -914,7 +914,7 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 					},
 				},
 				Spec: apiv1.PodSpec{
-					ServiceAccountName:            "sa",
+					ServiceAccountName:            dev.ServiceAccount,
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Containers: []apiv1.Container{
 						{
