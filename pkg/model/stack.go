@@ -171,7 +171,7 @@ func (s *Stack) validate() error {
 		if err := validateStackName(name); err != nil {
 			return fmt.Errorf("Invalid service name '%s': %s", name, err)
 		}
-		if svc.Image == "" {
+		if svc.Image == "" && svc.Build == nil {
 			return fmt.Errorf(fmt.Sprintf("Invalid service '%s': image cannot be empty", name))
 		}
 		for _, v := range svc.Volumes {
@@ -222,8 +222,8 @@ func (s *Stack) GetConfigMapName() string {
 	return fmt.Sprintf("okteto-%s", s.Name)
 }
 
-//SetLastBuiltAnnotationtamp sets the dev timestamp
-func (svc *Service) SetLastBuiltAnnotationtamp() {
+//SetLastBuiltAnnotation sets the dev timestamp
+func (svc *Service) SetLastBuiltAnnotation() {
 	if svc.Annotations == nil {
 		svc.Annotations = map[string]string{}
 	}
