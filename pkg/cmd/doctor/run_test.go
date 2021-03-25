@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"gopkg.in/yaml.v2"
 )
 
 func Test_generateManifestFile(t *testing.T) {
@@ -29,9 +30,8 @@ func Test_generateManifestFile(t *testing.T) {
 		expectErr bool
 	}{
 		{
-			name:      "empty",
-			dev:       nil,
-			expectErr: true,
+			name: "empty",
+			dev:  nil,
 		},
 		{
 			name: "basic",
@@ -40,7 +40,6 @@ func Test_generateManifestFile(t *testing.T) {
 				Image:   &model.BuildInfo{Name: "okteto/dev"},
 				Command: model.Command{Values: []string{"bash"}},
 			},
-			expectErr: false,
 		},
 		{
 			name: "with-services",
@@ -52,9 +51,13 @@ func Test_generateManifestFile(t *testing.T) {
 					Name:    "svc",
 					Image:   &model.BuildInfo{Name: "okteto/svc"},
 					Command: model.Command{Values: []string{"bash"}},
+				}, {
+					Name:        "svc2",
+					Image:       nil,
+					Command:     model.Command{Values: []string{"bash"}},
+					Environment: []model.EnvVar{{Name: "foo", Value: "bar"}},
 				}},
 			},
-			expectErr: false,
 		},
 	}
 
@@ -67,12 +70,17 @@ func Test_generateManifestFile(t *testing.T) {
 			}
 			defer os.Remove(file.Name())
 
+			out, err := yaml.Marshal(tt.dev)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err = file.Write(out); err != nil {
+				t.Fatal("Failed to write to temporary file", err)
+			}
+
 			_, err = generateManifestFile(context.TODO(), file.Name())
 			if err != nil {
-				if tt.expectErr {
-					return
-				}
-
 				t.Fatal(err)
 			}
 		})

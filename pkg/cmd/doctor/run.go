@@ -179,12 +179,25 @@ func generateManifestFile(ctx context.Context, devPath string) (string, error) {
 	}
 
 	dev.Environment = nil
-	dev.Image.Args = nil
-	dev.Push.Args = nil
+
+	if dev.Image != nil {
+		dev.Image.Args = nil
+	}
+
+	if dev.Push != nil {
+		dev.Push.Args = nil
+	}
+
 	for i := range dev.Services {
 		dev.Services[i].Environment = nil
-		dev.Services[i].Image.Args = nil
-		dev.Services[i].Push.Args = nil
+
+		if dev.Services[i].Image != nil {
+			dev.Services[i].Image.Args = nil
+		}
+
+		if dev.Services[i].Push != nil {
+			dev.Services[i].Push.Args = nil
+		}
 	}
 
 	marshalled, err := yaml.Marshal(dev)
