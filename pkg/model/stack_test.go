@@ -44,6 +44,8 @@ services:
       storage:
         size: 1Gi
         class: standard
+    entrypoint: e
+    command: c
     volumes:
       - /var/lib/postgresql/data`)
 	s, err := ReadStack(manifest)
@@ -117,6 +119,19 @@ services:
 	if s.Services["db"].Replicas != 1 {
 		t.Errorf("'db.replicas' was not parsed: %+v", s)
 	}
+	if len(s.Services["db"].Command.Values) != 1 {
+		t.Errorf("'db.command' was not parsed: %+v", s.Services["db"].Command.Values)
+	}
+	if s.Services["db"].Command.Values[0] != "e" {
+		t.Errorf("'db.command' was not parsed: %+v", s.Services["db"].Command.Values)
+	}
+	if len(s.Services["db"].Args.Values) != 1 {
+		t.Errorf("'db.args' was not parsed: %+v", s.Services["db"].Args.Values)
+	}
+	if s.Services["db"].Args.Values[0] != "c" {
+		t.Errorf("'db.args' was not parsed: %+v", s.Services["db"].Args.Values)
+	}
+
 	if len(s.Services["db"].Volumes) != 1 {
 		t.Errorf("'db.volumes' was not parsed: %+v", s)
 	}
