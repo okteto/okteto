@@ -14,8 +14,8 @@
 package ssh
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -29,9 +29,10 @@ import (
 )
 
 const (
-	privateKeyFile = "id_rsa_okteto"
-	publicKeyFile  = "id_rsa_okteto.pub"
-	bitSize        = 4096
+	privateKeyFileED25519 = "id_ed25519_okteto"
+	publicKeyFileED25519  = "id_ed25519_okteto.pub"
+
+	bitSize = 4096
 )
 
 // KeyExists returns true if the okteto key pair exists
@@ -56,79 +57,53 @@ func KeyExists() bool {
 // GenerateKeys generates a SSH key pair on path
 func GenerateKeys() error {
 	publicKeyPath, privateKeyPath := getKeyPaths()
-	return generateKeys(publicKeyPath, privateKeyPath, bitSize)
+	return generateEDSKeys(publicKeyPath, privateKeyPath)
 }
 
-func generateKeys(public, private string, bitSize int) error {
-	privateKey, err := generatePrivateKey(bitSize)
+func generateEDSKeys(publicKeyPath, privateKeyPath string) error {
+	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		return fmt.Errorf("failed to generate private SSH key: %s", err)
+		return fmt.Errorf("failed to generate ssh keypair: %w", err)
 	}
 
-	publicKeyBytes, err := generatePublicKey(&privateKey.PublicKey)
+	publicKey, err := ssh.NewPublicKey(pubKey)
 	if err != nil {
-		return fmt.Errorf("failed to generate public SSH key: %s", err)
+		return fmt.Errorf("failed to generate public ssh key: %w", err)
 	}
 
-	privateKeyBytes := encodePrivateKeyToPEM(privateKey)
+	publicKeyMarshalled := ssh.MarshalAuthorizedKey(publicKey)
 
-	if err := ioutil.WriteFile(public, publicKeyBytes, 0600); err != nil {
-		return fmt.Errorf("failed to write public SSH key: %s", err)
-	}
-
-	if err := ioutil.WriteFile(private, privateKeyBytes, 0600); err != nil {
-		return fmt.Errorf("failed to write private SSH key: %s", err)
-	}
-
-	log.Infof("created ssh keypair at  %s and %s", public, private)
-	return nil
-}
-
-func generatePrivateKey(bitSize int) (*rsa.PrivateKey, error) {
-	// Private Key generation
-	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	privateKeyMarshalled, err := x509.MarshalPKCS8PrivateKey(privKey)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to marshal private ssh key: %w", err)
 	}
-
-	// Validate Private Key
-	err = privateKey.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	return privateKey, nil
-}
-
-func encodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
-	privDER := x509.MarshalPKCS1PrivateKey(privateKey)
 
 	privBlock := pem.Block{
-		Type:    "RSA PRIVATE KEY",
-		Headers: nil,
-		Bytes:   privDER,
+		Type:  "PRIVATE KEY",
+		Bytes: privateKeyMarshalled,
 	}
 
 	privatePEM := pem.EncodeToMemory(&privBlock)
-
-	return privatePEM
-}
-
-func generatePublicKey(privatekey *rsa.PublicKey) ([]byte, error) {
-	publicRsaKey, err := ssh.NewPublicKey(privatekey)
-	if err != nil {
-		return nil, err
+	if privatePEM == nil {
+		return fmt.Errorf("failed to encode private SSH key")
 	}
 
-	pubKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
+	if err := ioutil.WriteFile(publicKeyPath, publicKeyMarshalled, 0600); err != nil {
+		return fmt.Errorf("failed to write public SSH key: %s", err)
+	}
 
-	return pubKeyBytes, nil
+	if err := ioutil.WriteFile(privateKeyPath, privatePEM, 0600); err != nil {
+		return fmt.Errorf("failed to write private SSH key: %s", err)
+	}
+
+	log.Infof("created ssh keypair at  %s and %s", publicKeyPath, privateKeyPath)
+	return nil
 }
 
 func getKeyPaths() (string, string) {
 	dir := config.GetOktetoHome()
-	public := filepath.Join(dir, publicKeyFile)
-	private := filepath.Join(dir, privateKeyFile)
+	public := filepath.Join(dir, publicKeyFileED25519)
+	private := filepath.Join(dir, privateKeyFileED25519)
 	return public, private
 }
 

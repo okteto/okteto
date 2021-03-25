@@ -29,12 +29,17 @@ func getPrivateKey() (ssh.Signer, error) {
 		return nil, fmt.Errorf("failed to load private key: %s", err)
 	}
 
-	key, err := ssh.ParsePrivateKey(buf)
+	key, err := ssh.ParseRawPrivateKey(buf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse private key: %s", err)
 	}
 
-	return key, nil
+	signer, err := ssh.NewSignerFromKey(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate SSH key from private key: %w", err)
+	}
+
+	return signer, nil
 }
 
 func getSSHClientConfig() (*ssh.ClientConfig, error) {
