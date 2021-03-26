@@ -46,6 +46,7 @@ type Service struct {
 	Image           string             `yaml:"image"`
 	Build           *BuildInfo         `yaml:"build,omitempty"`
 	Replicas        int32              `yaml:"replicas"`
+	Entrypoint      Entrypoint         `yaml:"entrypoint,omitempty"`
 	Command         Command            `yaml:"command,omitempty"`
 	Args            Args               `yaml:"args,omitempty"`
 	Environment     []EnvVar           `yaml:"environment,omitempty"`
@@ -153,6 +154,11 @@ func ReadStack(bytes []byte) (*Stack, error) {
 		}
 		if svc.Resources.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
 			svc.Resources.Storage.Size.Value = resource.MustParse("1Gi")
+		}
+		if len(svc.Entrypoint.Values) > 0 {
+			svc.Args.Values = nil
+			svc.Args.Values = svc.Command.Values
+			svc.Command.Values = svc.Entrypoint.Values
 		}
 		s.Services[i] = svc
 	}
