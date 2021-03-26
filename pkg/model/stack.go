@@ -40,10 +40,7 @@ type Stack struct {
 
 //Service represents an okteto stack service
 type Service struct {
-	Labels          map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Public          bool               `yaml:"public,omitempty"`
-	Image           string             `yaml:"image"`
+	Deploy          *DeployInfo        `yaml:"deploy,omitempty"`
 	Build           *BuildInfo         `yaml:"build,omitempty"`
 	Replicas        int32              `yaml:"replicas"`
 	Command         Command            `yaml:"command,omitempty"`
@@ -52,11 +49,11 @@ type Service struct {
 	EnvFiles        []string           `yaml:"env_file,omitempty"`
 	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
 	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
-	Healthchecks    bool               `yaml:"healthchecks,omitempty"`
-	Ports           []int32            `yaml:"ports,omitempty"`
-	Volumes         []string           `yaml:"volumes,omitempty"`
-	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
-	Resources       ServiceResources   `yaml:"resources,omitempty"`
+	EnvFiles        []string           `yaml:"env_file,omitempty"`
+	Environment     []EnvVar           `yaml:"enviroment,omitempty"`
+	Scale           int32              `yaml:"scale,omitempty"`
+	StopGracePeriod time.Duration      `yaml:"stop_grace_period,omitempty"`
+	Replicas  int32            `yaml:"replicas,omitempty"`
 }
 
 //ServiceResources represents an okteto stack service resources
@@ -75,6 +72,11 @@ type StorageResource struct {
 //Quantity represents an okteto stack service storage resource
 type Quantity struct {
 	Value resource.Quantity
+}
+
+type DeployInfo struct {
+	Replicas  int32                `yaml:"replicas,omitempty"`
+	Resources ResourceRequirements `yaml:"resources,omitempty"`
 }
 
 //GetStack returns an okteto stack object from a given file

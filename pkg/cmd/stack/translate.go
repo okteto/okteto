@@ -201,7 +201,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 			Annotations: translateAnnotations(&svc),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32Ptr(svc.Replicas),
+			Replicas: pointer.Int32Ptr(svc.Deploy.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
@@ -240,7 +240,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 			Annotations: translateAnnotations(&svc),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas:             pointer.Int32Ptr(svc.Replicas),
+			Replicas:             pointer.Int32Ptr(svc.Deploy.Replicas),
 			RevisionHistoryLimit: pointer.Int32Ptr(2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(name, s),
