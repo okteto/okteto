@@ -258,7 +258,7 @@ func Test_translateStatefulSet(t *testing.T) {
 				Ports:   []model.Port{{Port: 80}, {Port: 90}},
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
-				Volumes: []string{"/volume1", "/volume2"},
+				Volumes: []model.VolumeStack{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
 				Resources: model.ServiceResources{
 					CPU:    model.Quantity{Value: resource.MustParse("100m")},
 					Memory: model.Quantity{Value: resource.MustParse("1Gi")},

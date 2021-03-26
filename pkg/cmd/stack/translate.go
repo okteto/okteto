@@ -270,6 +270,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 							Image:           svc.Image,
 							Command:         svc.Entrypoint.Values,
 							Args:            svc.Command.Values,
+							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
 						},
 					},
@@ -359,7 +360,7 @@ func translateVolumeMounts(svc *model.Service) []apiv1.VolumeMount {
 		result = append(
 			result,
 			apiv1.VolumeMount{
-				MountPath: v,
+				MountPath: v.RemotePath,
 				Name:      pvcName,
 				SubPath:   fmt.Sprintf("data-%d", i),
 			},

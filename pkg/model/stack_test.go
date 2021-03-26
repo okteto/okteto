@@ -120,7 +120,7 @@ services:
 	if len(s.Services["db"].Volumes) != 1 {
 		t.Errorf("'db.volumes' was not parsed: %+v", s)
 	}
-	if s.Services["db"].Volumes[0] != "/var/lib/postgresql/data" {
+	if s.Services["db"].Volumes[0].RemotePath != "/var/lib/postgresql/data" {
 		t.Errorf("'db.volumes[0]' was not parsed: %+v", s)
 	}
 	storage = s.Services["db"].Resources.Storage.Size.Value
@@ -186,7 +186,7 @@ func TestStack_validate(t *testing.T) {
 				Name: "name",
 				Services: map[string]*Service{
 					"name": {
-						Volumes: []string{"relative"},
+						Volumes: []VolumeStack{{RemotePath: "relative"}},
 					},
 				},
 			},
@@ -197,7 +197,7 @@ func TestStack_validate(t *testing.T) {
 				Name: "name",
 				Services: map[string]*Service{
 					"name": {
-						Volumes: []string{"/source:/dest"},
+						Volumes: []VolumeStack{{LocalPath: "/source", RemotePath: "/dest"}},
 					},
 				},
 			},
