@@ -49,6 +49,7 @@ type Service struct {
 	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	EnvFiles        []string           `yaml:"env_file,omitempty"`
 	Environment     []EnvVar           `yaml:"enviroment,omitempty"`
+	Ports           []Port             `yaml:"ports,omitempty"`
 	Scale           int32              `yaml:"scale,omitempty"`
 	StopGracePeriod time.Duration      `yaml:"stop_grace_period,omitempty"`
 	Replicas  int32            `yaml:"replicas,omitempty"`
@@ -75,6 +76,12 @@ type Quantity struct {
 type DeployInfo struct {
 	Replicas  int32                `yaml:"replicas,omitempty"`
 	Resources ResourceRequirements `yaml:"resources,omitempty"`
+}
+
+type Port struct {
+	Port     int32
+	Public   bool
+	Protocol apiv1.Protocol
 }
 
 //GetStack returns an okteto stack object from a given file
@@ -108,6 +115,8 @@ func GetStack(name, stackPath string) (*Stack, error) {
 	}
 
 	for name, svc := range s.Services {
+		svc.extendPorts()
+		svc.Public = svc.isPublic()
 		if svc.Build == nil {
 			continue
 		}
@@ -228,4 +237,34 @@ func (svc *Service) SetLastBuiltAnnotationtamp() {
 		svc.Annotations = map[string]string{}
 	}
 	svc.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+}
+
+//extendPorts adds the ports that are in expose field to the port list.
+func (svc *Service) extendPorts() bool {
+	for _, port := range svc.Expose {
+		if !svc.isAlreadyAdded(port) {
+			svc.Ports = append(svc.Ports, Port{Port: port, Public: false, Protocol: apiv1.ProtocolTCP})
+		}
+	}
+	return false
+}
+
+//isAlreadyAdded checks if a port is already on port list
+func (svc *Service) isAlreadyAdded(p int32) bool {
+	for _, port := range svc.Ports {
+		if port.Port == p {
+			return true
+		}
+	}
+	return false
+}
+
+//isPublic sets the deploy resources and replicas of a service
+func (svc *Service) isPublic() bool {
+	for _, port := range svc.Ports {
+		if port.Public {
+			return true
+		}
+	}
+	return false
 }

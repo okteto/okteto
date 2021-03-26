@@ -155,7 +155,7 @@ func Test_translateDeployment(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports: []int32{80, 90},
+				Ports: []model.Port{{Port: 80}, {Port: 90}},
 			},
 		},
 	}
@@ -255,7 +255,7 @@ func Test_translateStatefulSet(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports:   []int32{80, 90},
+				Ports:   []model.Port{{Port: 80}, {Port: 90}},
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				Volumes: []string{"/volume1", "/volume2"},
@@ -415,7 +415,7 @@ func Test_translateService(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
-				Ports: []int32{80, 90},
+				Ports: []model.Port{{Port: 80}, {Port: 90}},
 			},
 		},
 	}

@@ -90,7 +90,7 @@ services:
 	if len(s.Services["vote"].Ports) != 1 {
 		t.Errorf("'vote.ports' was not parsed: %+v", s)
 	}
-	if s.Services["vote"].Ports[0] != 80 {
+	if s.Services["vote"].Ports[0].Port != 80 {
 		t.Errorf("'vote.ports[0]' was not parsed: %+v", s)
 	}
 	if s.Services["vote"].StopGracePeriod != 5 {
@@ -157,7 +157,7 @@ func TestStack_validate(t *testing.T) {
 			name: "empty-service-name",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"": {},
 				},
 			},
@@ -166,7 +166,7 @@ func TestStack_validate(t *testing.T) {
 			name: "bad-service-name",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"-bad-name": {},
 				},
 			},

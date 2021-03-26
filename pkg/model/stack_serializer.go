@@ -103,10 +103,13 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	s.Ports = serviceRaw.Ports
 	s.Annotations = serviceRaw.Annotations
 	s.Public = serviceRaw.Public
 	return s, nil
 }
+
 func (msg *RawMessage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	msg.unmarshal = unmarshal
 	return nil
@@ -125,6 +128,53 @@ func (warning *WarningType) UnmarshalYAML(unmarshal func(interface{}) error) err
 	return nil
 }
 
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawPort string
+	err := unmarshal(&rawPort)
+	if err != nil {
+		return fmt.Errorf("Port field is only supported in short syntax")
+	}
+
+	parts := strings.Split(rawPort, ":")
+	var portString string
+	if len(parts) == 1 {
+		portString = parts[0]
+		if strings.Contains(portString, "-") {
+			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort) // TODO: change message
+		}
+	} else if len(parts) <= 3 {
+		portString = parts[len(parts)-1]
+		if strings.Contains(portString, "-") {
+			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort) // TODO: change message
+		}
+	} else {
+		return fmt.Errorf(malformedPortForward, rawPort)
+	}
+
+	p.Protocol = apiv1.ProtocolTCP
+	if strings.Contains(portString, "/") {
+		portAndProtocol := strings.Split(portString, "/")
+		portString = portAndProtocol[0]
+		if protocol, err := getProtocol(portAndProtocol[1]); err == nil {
+			p.Protocol = protocol
+		} else {
+			return fmt.Errorf("Can not convert %s. Only TCP ports are allowed.", portString)
+		}
+	}
+	port, err := strconv.Atoi(portString)
+	if err != nil {
+		return fmt.Errorf("Can not convert %s to a port.", portString)
+	}
+	p.Port = int32(port)
+	p.Public = isPublicPort(p.Port)
+
+	return nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (p *Port) MarshalYAML() (interface{}, error) {
+	return Port{Port: p.Port, Public: p.Public}, nil
 }
 
 func unmarshalDeploy(deployInfo *DeployInfoRaw, scale int32, replicas int32, resources ServiceResources) (*DeployInfo, error) {
@@ -166,6 +216,24 @@ func (r DeployComposeResources) toResourceList() ResourceList {
 		resources[apiv1.ResourceMemory] = r.Memory.Value
 	}
 	return resources
+}
+
+func isPublicPort(port int32) bool {
+	return (80 <= port && port <= 90) || (8000 <= port && port <= 9000) || port == 3000 || port == 5000
+}
+
+func getProtocol(protocolName string) (apiv1.Protocol, error) {
+	protocolName = strings.ToLower(protocolName)
+	switch protocolName {
+	case "tcp":
+		return apiv1.ProtocolTCP, nil
+	case "udp":
+		return apiv1.ProtocolUDP, nil
+	case "sctp":
+		return apiv1.ProtocolSCTP, nil
+	default:
+		return apiv1.ProtocolTCP, fmt.Errorf("%s is not supported as a protocol", protocolName)
+	}
 }
 func getTopLevelNotSupportedFields(s *StackRaw) []string {
 	notSupported := make([]string, 0)

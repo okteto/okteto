@@ -110,3 +110,85 @@ func Test_DeployUnmarshalling(t *testing.T) {
 	}
 }
 
+func Test_PortUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name          string
+		portRaw       string
+		expected      Port
+		expectedError bool
+	}{
+		{
+			name:          "singlePort",
+			portRaw:       "3000",
+			expected:      Port{Port: 3000, Public: true},
+			expectedError: false,
+		},
+		{
+			name:          "singleRange",
+			portRaw:       "3000-3005",
+			expected:      Port{Port: 0, Public: false},
+			expectedError: true,
+		},
+		{
+			name:          "singlePortForwarding",
+			portRaw:       "8000:8000",
+			expected:      Port{Port: 8000, Public: true},
+			expectedError: false,
+		},
+		{
+			name:          "RangeForwarding",
+			portRaw:       "9090-9091:8080-8081",
+			expected:      Port{Port: 0, Public: false},
+			expectedError: true,
+		},
+		{
+			name:          "DifferentPort",
+			portRaw:       "49100:22",
+			expected:      Port{Port: 22, Public: false},
+			expectedError: false,
+		},
+		{
+			name:          "LocalhostForwarding",
+			portRaw:       "127.0.0.1:8001:8001",
+			expected:      Port{Port: 8001, Public: true},
+			expectedError: false,
+		},
+		{
+			name:          "Localhost Range",
+			portRaw:       "127.0.0.1:5000-5010:5000-5010",
+			expected:      Port{Port: 0, Public: false},
+			expectedError: true,
+		},
+		{
+			name:          "Protocol",
+			portRaw:       "6060:6060/udp",
+			expected:      Port{Port: 6060, Public: true},
+			expectedError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result Port
+			if err := yaml.Unmarshal([]byte(tt.portRaw), &result); err != nil {
+				if !tt.expectedError {
+					t.Fatalf("unexpected error unmarshaling %s: %s", tt.name, err.Error())
+				}
+				return
+			}
+			if tt.expectedError {
+				t.Fatalf("expected error unmarshaling %s not thrown", tt.name)
+			}
+			if result.Port != tt.expected.Port {
+				t.Errorf("didn't unmarshal correctly Port. Actual %d, Expected %d", result.Port, tt.expected.Port)
+			}
+			if result.Public != tt.expected.Public {
+				t.Errorf("didn't unmarshal correctly Public. Actual %t, Expected %t", result.Public, tt.expected.Public)
+			}
+
+			_, err := yaml.Marshal(&result)
+			if err != nil {
+				t.Fatalf("error marshaling %s: %s", tt.name, err)
+			}
+		})
+	}
+}

@@ -216,12 +216,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 						{
 							Name:            svcName,
 							Image:           svc.Image,
-							Command:         svc.Command.Values,
-							Args:            svc.Args.Values,
-							Env:             translateServiceEnvironment(&svc),
-							Ports:           translateContainerPorts(&svc),
-							SecurityContext: translateSecurityContext(&svc),
-							Resources:       translateResources(&svc),
+							Ports:           translateContainerPorts(svc),
 						},
 					},
 				},
@@ -270,13 +265,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 						{
 							Name:            name,
 							Image:           svc.Image,
-							Command:         svc.Command.Values,
-							Args:            svc.Args.Values,
-							Env:             translateServiceEnvironment(&svc),
-							Ports:           translateContainerPorts(&svc),
-							SecurityContext: translateSecurityContext(&svc),
-							VolumeMounts:    translateVolumeMounts(&svc),
-							Resources:       translateResources(&svc),
+							Ports:           translateContainerPorts(svc),
 						},
 					},
 				},
@@ -406,7 +395,7 @@ func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	result := []apiv1.ContainerPort{}
 	for _, p := range svc.Ports {
-		result = append(result, apiv1.ContainerPort{ContainerPort: p})
+		result = append(result, apiv1.ContainerPort{ContainerPort: p.Port})
 	}
 	return result
 }
@@ -417,9 +406,10 @@ func translateServicePorts(svc *model.Service) []apiv1.ServicePort {
 		result = append(
 			result,
 			apiv1.ServicePort{
-				Name:       fmt.Sprintf("p-%d", p),
-				Port:       int32(p),
-				TargetPort: intstr.IntOrString{IntVal: p},
+				Name:       fmt.Sprintf("p-%d-%s", p.Port, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
+				Port:       int32(p.Port),
+				TargetPort: intstr.IntOrString{IntVal: p.Port},
+				Protocol:   p.Protocol,
 			},
 		)
 	}
