@@ -73,7 +73,7 @@ func translateStackEnvVars(s *model.Stack) error {
 			return err
 		}
 		for _, envFilepath := range svc.EnvFiles {
-			if err := translateServiceEnvFile(&svc, envFilepath); err != nil {
+			if err := translateServiceEnvFile(svc, envFilepath); err != nil {
 				return err
 			}
 		}
@@ -218,6 +218,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							Image:           svc.Image,
 							Command:         svc.Entrypoint.Values,
 							Args:            svc.Command.Values,
+							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
 						},
 					},
