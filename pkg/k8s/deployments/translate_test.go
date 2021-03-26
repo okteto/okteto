@@ -215,6 +215,7 @@ services:
 									Name:  "OKTETO_NAME",
 									Value: "web",
 								},
+								{Name: "OKTETO_SCHEMA_VERSION", Value: "1"},
 							},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:  &runAsUser,
@@ -536,6 +537,7 @@ persistentVolume:
 									Name:  "OKTETO_NAME",
 									Value: "web",
 								},
+								{Name: "OKTETO_SCHEMA_VERSION", Value: "1"},
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{

@@ -72,6 +72,7 @@ services:
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "OKTETO_SCHEMA_VERSION", Value: "1"},
 		},
 		SecurityContext: &SecurityContext{
 			RunAsUser:  &rootUser,
@@ -173,6 +174,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			expected: []EnvVar{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
+				{Name: "OKTETO_SCHEMA_VERSION", Value: "1"},
 			},
 		},
 		{
@@ -184,6 +186,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			expected: []EnvVar{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
+				{Name: "OKTETO_SCHEMA_VERSION", Value: "1"},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},
 			},
 		},
