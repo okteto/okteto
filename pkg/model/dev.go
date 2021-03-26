@@ -789,6 +789,10 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 				Name:  "OKTETO_NAME",
 				Value: dev.Name,
 			},
+			EnvVar{
+				Name:  "OKTETO_SCHEMA_VERSION",
+				Value: "1",
+			},
 		)
 
 		// We want to minimize environment mutations, so only reconfigure the SSH

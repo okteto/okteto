@@ -31,30 +31,10 @@ import (
 const (
 	privateKeyFileED25519 = "id_ed25519_okteto"
 	publicKeyFileED25519  = "id_ed25519_okteto.pub"
-
-	privateKeyFileRSA = "id_okteto"
-	publicKeyFileRSA  = "id_okteto.pub"
 )
 
 // KeyExists returns true if the okteto key pair exists
 func KeyExists() bool {
-	if ed25519KeyExists() {
-		return true
-	}
-
-	if legacyKeyExists() {
-		return true
-	}
-
-	return false
-}
-
-func legacyKeyExists() bool {
-	pub, priv := getLegacyKeyPaths()
-	return model.FileExists(priv) && model.FileExists(pub)
-}
-
-func ed25519KeyExists() bool {
 	pub, priv := getKeyPaths()
 	return model.FileExists(priv) && model.FileExists(pub)
 }
@@ -112,32 +92,13 @@ func getKeyPaths() (string, string) {
 	return public, private
 }
 
-func getLegacyKeyPaths() (string, string) {
-	dir := config.GetOktetoHome()
-	public := filepath.Join(dir, privateKeyFileRSA)
-	private := filepath.Join(dir, publicKeyFileRSA)
-	return public, private
-}
-
 // GetPublicKey returns the path to the public key
 func GetPublicKeyPath() string {
 	pub, _ := getKeyPaths()
-
-	if model.FileExists(pub) {
-		return pub
-	}
-
-	pub, _ = getLegacyKeyPaths()
 	return pub
 }
 
 func getPrivateKeyPath() string {
 	_, priv := getKeyPaths()
-
-	if model.FileExists(priv) {
-		return priv
-	}
-
-	_, priv = getLegacyKeyPaths()
 	return priv
 }
