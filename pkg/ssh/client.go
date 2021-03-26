@@ -23,7 +23,7 @@ import (
 var clientConfig *ssh.ClientConfig
 
 func getPrivateKey() (ssh.Signer, error) {
-	_, private := getKeyPaths()
+	private := getPrivateKeyPath()
 	buf, err := ioutil.ReadFile(private)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load private key: %s", err)

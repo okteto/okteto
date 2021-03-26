@@ -137,7 +137,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			log.Infof("executing remote command over SSH port %d", dev.RemotePort)
 		}
 
-		dev.LoadRemote(ssh.GetPublicKey())
+		dev.LoadRemote(ssh.GetPublicKeyPath())
 
 		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
