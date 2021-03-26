@@ -175,7 +175,7 @@ func TestStack_validate(t *testing.T) {
 			name: "empty-service-image",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"name": {},
 				},
 			},
@@ -184,7 +184,7 @@ func TestStack_validate(t *testing.T) {
 			name: "relative-volume-path",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"name": {
 						Volumes: []string{"relative"},
 					},
@@ -195,7 +195,7 @@ func TestStack_validate(t *testing.T) {
 			name: "volume-bind-mount",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"name": {
 						Volumes: []string{"/source:/dest"},
 					},

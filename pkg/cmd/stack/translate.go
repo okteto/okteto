@@ -198,7 +198,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 			Name:        svcName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
-			Annotations: translateAnnotations(&svc),
+			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32Ptr(svc.Deploy.Replicas),
@@ -208,7 +208,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      translateLabels(svcName, s),
-					Annotations: translateAnnotations(&svc),
+					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
@@ -237,7 +237,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 			Name:        name,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(name, s),
-			Annotations: translateAnnotations(&svc),
+			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:             pointer.Int32Ptr(svc.Deploy.Replicas),
@@ -249,7 +249,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      translateLabels(name, s),
-					Annotations: translateAnnotations(&svc),
+					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
@@ -286,7 +286,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        pvcName,
 						Labels:      translateLabels(name, s),
-						Annotations: translateAnnotations(&svc),
+						Annotations: translateAnnotations(svc),
 					},
 					Spec: apiv1.PersistentVolumeClaimSpec{
 						AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
@@ -295,7 +295,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 								"storage": svc.Resources.Storage.Size.Value,
 							},
 						},
-						StorageClassName: translateStorageClass(&svc),
+						StorageClassName: translateStorageClass(svc),
 					},
 				},
 			},
@@ -305,7 +305,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
-	annotations := translateAnnotations(&svc)
+	annotations := translateAnnotations(svc)
 	if svc.Public {
 		annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
 	}
@@ -318,8 +318,8 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: translateLabelSelector(svcName, s),
-			Type:     translateServiceType(&svc),
-			Ports:    translateServicePorts(&svc),
+			Type:     translateServiceType(svc),
+			Ports:    translateServicePorts(svc),
 		},
 	}
 }

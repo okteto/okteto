@@ -43,7 +43,7 @@ func Test_translate(t *testing.T) {
 	ctx := context.Background()
 	stack := &model.Stack{
 		Name: "name",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"1": {
 				Image:    "image",
 				EnvFiles: []string{"/non-existing"},
@@ -70,7 +70,7 @@ func Test_translateEnvVars(t *testing.T) {
 	os.Setenv("ENV_PATH", tmpFile.Name())
 	stack := &model.Stack{
 		Name: "name",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"1": {
 				Image:    "${IMAGE}",
 				EnvFiles: []string{"${ENV_PATH}"},
@@ -106,7 +106,7 @@ func Test_translateEnvVars(t *testing.T) {
 func Test_translateConfigMap(t *testing.T) {
 	s := &model.Stack{
 		Name: "stackName",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Image: "image",
 			},
@@ -130,7 +130,7 @@ func Test_translateConfigMap(t *testing.T) {
 func Test_translateDeployment(t *testing.T) {
 	s := &model.Stack{
 		Name: "stackName",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Labels: map[string]string{
 					"label1": "value1",
@@ -230,7 +230,7 @@ func Test_translateDeployment(t *testing.T) {
 func Test_translateStatefulSet(t *testing.T) {
 	s := &model.Stack{
 		Name: "stackName",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Labels: map[string]string{
 					"label1": "value1",
@@ -405,7 +405,7 @@ func Test_translateStatefulSet(t *testing.T) {
 func Test_translateService(t *testing.T) {
 	s := &model.Stack{
 		Name: "stackName",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Labels: map[string]string{
 					"label1": "value1",
