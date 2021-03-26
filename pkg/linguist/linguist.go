@@ -65,7 +65,7 @@ func ProcessDirectory(root string) (string, error) {
 
 		relativePath, err := filepath.Rel(root, path)
 		if err != nil {
-			log.Infof("failed to calculate relative path: %w", err)
+			log.Infof("failed to calculate relative path: %s", err)
 			return nil
 		}
 
@@ -95,7 +95,7 @@ func ProcessDirectory(root string) (string, error) {
 			if language, ok = enry.GetLanguageByFilename(path); !ok {
 				content, err := readFile(path, readFileLimit)
 				if err != nil {
-					log.Infof("failed to read %s: %w", path, err)
+					log.Infof("failed to read %s: %s", path, err)
 					return nil
 				}
 
