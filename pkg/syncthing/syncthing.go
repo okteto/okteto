@@ -917,7 +917,7 @@ func RemoveFolder(dev *model.Dev) error {
 	}
 
 	if err := os.RemoveAll(s.Home); err != nil {
-		log.Info(err)
+		log.Info("failed to remote syncthing home directory at %s: %w", s.Home, err)
 		return nil
 	}
 
@@ -925,7 +925,7 @@ func RemoveFolder(dev *model.Dev) error {
 	if parentDir != "." {
 		empty, err := isDirEmpty(parentDir)
 		if err != nil {
-			log.Info(err)
+			log.Info("failed to see if %s is empty: %w", parentDir, err)
 			return nil
 		}
 

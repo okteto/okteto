@@ -258,7 +258,7 @@ func GetLanguage(language, workDir string) (string, error) {
 	}
 	l, err := linguist.ProcessDirectory(workDir)
 	if err != nil {
-		log.Info(err)
+		log.Infof("failed to process directory: %w", err)
 		l = linguist.Unrecognized
 	}
 	log.Infof("language '%s' inferred for your current directory", l)
