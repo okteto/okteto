@@ -67,7 +67,7 @@ func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) er
 
 func translateStackEnvVars(s *model.Stack) error {
 	var err error
-	for name, svc := range s.Services {
+	for _, svc := range s.Services {
 		svc.Image, err = model.ExpandEnv(svc.Image)
 		if err != nil {
 			return err
@@ -81,7 +81,6 @@ func translateStackEnvVars(s *model.Stack) error {
 			return strings.Compare(svc.Environment[i].Name, svc.Environment[j].Name) < 0
 		})
 		svc.EnvFiles = nil
-		s.Services[name] = svc
 	}
 	return nil
 }
@@ -134,6 +133,8 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 			if err != nil {
 				return err
 			}
+		} else {
+			return errors.UserError{E: fmt.Errorf("Can not connect to okteto build service"), Hint: "Make sure you are already logged in."}
 		}
 	}
 
@@ -220,6 +221,9 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							Args:            svc.Command.Values,
 							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
+							SecurityContext: translateSecurityContext(svc),
+							Resources:       translateResources(svc),
+							WorkingDir:      svc.WorkingDir,
 						},
 					},
 				},
@@ -272,6 +276,10 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 							Args:            svc.Command.Values,
 							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
+							SecurityContext: translateSecurityContext(svc),
+							VolumeMounts:    translateVolumeMounts(svc),
+							Resources:       translateResources(svc),
+							WorkingDir:      svc.WorkingDir,
 						},
 					},
 				},
@@ -342,6 +350,9 @@ func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 func translateAnnotations(svc *model.Service) map[string]string {
 	result := map[string]string{}
 	for k, v := range svc.Annotations {
+		result[k] = v
+	}
+	for k, v := range svc.Xannotations {
 		result[k] = v
 	}
 	return result
