@@ -31,8 +31,6 @@ import (
 const (
 	privateKeyFileED25519 = "id_ed25519_okteto"
 	publicKeyFileED25519  = "id_ed25519_okteto.pub"
-
-	bitSize = 4096
 )
 
 // KeyExists returns true if the okteto key pair exists

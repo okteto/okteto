@@ -38,7 +38,7 @@ func TestKeyExists(t *testing.T) {
 		t.Error("keys shouldn't exist in an empty directory")
 	}
 
-	if _, err := os.Create(filepath.Join(dir, publicKeyFile)); err != nil {
+	if _, err := os.Create(filepath.Join(dir, publicKeyFileED25519)); err != nil {
 		t.Fatal(err)
 	}
 
