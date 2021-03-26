@@ -702,7 +702,7 @@ func (dev *Dev) Save(path string) error {
 	}
 
 	if err := ioutil.WriteFile(path, marshalled, 0600); err != nil {
-		log.Info(err)
+		log.Infof("failed to write okteto manifest at %s: %s", path, err)
 		return fmt.Errorf("Failed to write your manifest")
 	}
 

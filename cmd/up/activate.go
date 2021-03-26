@@ -293,7 +293,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 				}
 				continue
 			}
-			log.Infof("pod %s event: %s", up.Pod, e.Message)
+
 			optsWatchEvents.ResourceVersion = e.ResourceVersion
 			switch e.Reason {
 			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
