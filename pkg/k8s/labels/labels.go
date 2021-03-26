@@ -64,6 +64,9 @@ const (
 	//StateBeforeSleepingAnnontation indicates the state of the resource prior to scale it to zero
 	StateBeforeSleepingAnnontation = "dev.okteto.com/state-before-sleeping"
 
+	// DeployedByLabel indicates the service account that deployed an object
+	DeployedByLabel = "dev.okteto.com/deployed-by"
+
 	// StackLabel indicates the object is a stack
 	StackLabel = "stack.okteto.com"
 

@@ -91,7 +91,7 @@ func deploy(ctx context.Context) *cobra.Command {
 
 			currentContext := client.GetSessionContext("")
 			if okteto.GetClusterContext() != currentContext {
-				log.Information("Pipeline context: %s/%s", okteto.GetURL(), namespace)
+				log.Information("Pipeline context: %s", okteto.GetURL())
 			}
 
 			if err := deployPipeline(ctx, name, namespace, repository, branch, wait, timeout); err != nil {
@@ -184,7 +184,7 @@ func getCurrentNamespace(ctx context.Context) string {
 	if okteto.GetClusterContext() == currentContext {
 		return client.GetContextNamespace("")
 	}
-	return okteto.GetUsername()
+	return ""
 }
 
 func getRepositoryURL(ctx context.Context, path string) (string, error) {

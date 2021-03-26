@@ -161,6 +161,9 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 		if sfs.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
 			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
 		}
+		if v, ok := old.Labels[okLabels.DeployedByLabel]; ok {
+			sfs.Labels[okLabels.DeployedByLabel] = v
+		}
 		if err := statefulsets.Update(ctx, sfs, c); err != nil {
 			if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
