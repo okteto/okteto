@@ -211,7 +211,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(int64(svc.StopGracePeriod.Seconds())),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -250,7 +250,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(int64(svc.StopGracePeriod.Seconds())),
 					InitContainers: []apiv1.Container{
 						{
 							Name:    fmt.Sprintf("init-%s", name),

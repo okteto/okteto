@@ -192,3 +192,42 @@ func Test_PortUnmarshalling(t *testing.T) {
 		})
 	}
 }
+
+func Test_DurationUnmarshalling(t *testing.T) {
+	expectedTime, _ := time.ParseDuration("12s")
+
+	tests := []struct {
+		name     string
+		duration []byte
+		expected time.Duration
+	}{
+		{
+			name:     "string-no-units",
+			duration: []byte("12"),
+			expected: expectedTime,
+		},
+		{
+			name:     "string-no-units",
+			duration: []byte("12s"),
+			expected: expectedTime,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var msg *RawMessage
+			if err := yaml.Unmarshal(tt.duration, &msg); err != nil {
+				t.Fatal(err)
+			}
+
+			duration, err := unmarshalDuration(msg)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if duration != tt.expected {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", duration, tt.expected)
+			}
+		})
+	}
+}
