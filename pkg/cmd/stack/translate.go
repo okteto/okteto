@@ -216,6 +216,8 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 						{
 							Name:            svcName,
 							Image:           svc.Image,
+							Command:         svc.Entrypoint.Values,
+							Args:            svc.Command.Values,
 							Ports:           translateContainerPorts(svc),
 						},
 					},
@@ -265,6 +267,8 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 						{
 							Name:            name,
 							Image:           svc.Image,
+							Command:         svc.Entrypoint.Values,
+							Args:            svc.Command.Values,
 							Ports:           translateContainerPorts(svc),
 						},
 					},

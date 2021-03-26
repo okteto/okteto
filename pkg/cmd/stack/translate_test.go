@@ -143,8 +143,8 @@ func Test_translateDeployment(t *testing.T) {
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
-				Command:         model.Command{Values: []string{"command1", "command2"}},
-				Args:            model.Args{Values: []string{"args1", "args2"}},
+				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:         model.Command{Values: []string{"args1", "args2"}},
 				Environment: []model.EnvVar{
 					{
 						Name:  "env1",
@@ -243,8 +243,8 @@ func Test_translateStatefulSet(t *testing.T) {
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
-				Command:         model.Command{Values: []string{"command1", "command2"}},
-				Args:            model.Args{Values: []string{"args1", "args2"}},
+				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:         model.Command{Values: []string{"args1", "args2"}},
 				Environment: []model.EnvVar{
 					{
 						Name:  "env1",

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -33,6 +34,11 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
+	Version    string              `yaml:"version,omitempty"`
+	Name       string              `yaml:"name"`
+	Xname      string              `yaml:"x-name,omitempty"`
+	Namespace  string              `yaml:"namespace,omitempty"`
+	Xnamespace string              `yaml:"x-namespace,omitempty"`
 	Services   map[string]*Service `yaml:"services,omitempty"`
 }
 
@@ -40,19 +46,35 @@ type Stack struct {
 type Service struct {
 	Deploy          *DeployInfo        `yaml:"deploy,omitempty"`
 	Build           *BuildInfo         `yaml:"build,omitempty"`
-	Replicas        int32              `yaml:"replicas"`
-	Command         Command            `yaml:"command,omitempty"`
-	Args            Args               `yaml:"args,omitempty"`
-	Environment     []EnvVar           `yaml:"environment,omitempty"`
-	EnvFiles        []string           `yaml:"env_file,omitempty"`
 	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
 	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
+	Entrypoint      Entrypoint         `yaml:"entrypoint,omitempty"`
+	Command         Command            `yaml:"command,omitempty"`
 	EnvFiles        []string           `yaml:"env_file,omitempty"`
 	Environment     []EnvVar           `yaml:"enviroment,omitempty"`
+	Expose          []int32            `yaml:"expose,omitempty"`
+	Image           string             `yaml:"image,omitempty"`
+	Labels          map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Xannotations    map[string]string  `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"`
 	Ports           []Port             `yaml:"ports,omitempty"`
 	Scale           int32              `yaml:"scale,omitempty"`
 	StopGracePeriod time.Duration      `yaml:"stop_grace_period,omitempty"`
+	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`
+	WorkingDir      string             `yaml:"working_dir,omitempty"`
+
+	Public    bool             `yaml:"public,omitempty"`
 	Replicas  int32            `yaml:"replicas,omitempty"`
+	Resources ServiceResources `yaml:"resources,omitempty"`
+}
+
+type VolumeStack struct {
+	LocalPath  string
+	RemotePath string
+}
+
+type Envs struct {
+	List []EnvVar
 }
 
 //ServiceResources represents an okteto stack service resources
@@ -105,6 +127,7 @@ func GetStack(name, stackPath string) (*Stack, error) {
 			return nil, err
 		}
 	}
+
 	if err := s.validate(); err != nil {
 		return nil, err
 	}
@@ -117,12 +140,16 @@ func GetStack(name, stackPath string) (*Stack, error) {
 	for name, svc := range s.Services {
 		svc.extendPorts()
 		svc.Public = svc.isPublic()
+		svc.IgnoreSyncVolumes()
+		if svc.Image == "" {
+			svc.Image = fmt.Sprintf("okteto.dev/%s", name)
+		}
 		if svc.Build == nil {
 			continue
 		}
 		svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
 		svc.Build.Dockerfile = loadAbsPath(stackDir, svc.Build.Dockerfile)
-		s.Services[name] = svc
+
 	}
 	return s, nil
 }
@@ -157,15 +184,22 @@ func ReadStack(bytes []byte) (*Stack, error) {
 			}
 			setBuildDefaults(svc.Build)
 		}
-		if svc.Replicas == 0 {
-			svc.Replicas = 1
-		}
 		if svc.Resources.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
 			svc.Resources.Storage.Size.Value = resource.MustParse("1Gi")
 		}
 		s.Services[i] = svc
 	}
 	return s, nil
+}
+
+func (svc *Service) IgnoreSyncVolumes() {
+	notIgnoredVolumes := make([]VolumeStack, 0)
+	for _, volume := range svc.Volumes {
+		if volume.LocalPath == "" {
+			notIgnoredVolumes = append(notIgnoredVolumes, volume)
+		}
+	}
+	svc.Volumes = notIgnoredVolumes
 }
 
 func (s *Stack) validate() error {
@@ -181,14 +215,17 @@ func (s *Stack) validate() error {
 			return fmt.Errorf("Invalid service name '%s': %s", name, err)
 		}
 		if svc.Image == "" {
-			return fmt.Errorf(fmt.Sprintf("Invalid service '%s': image cannot be empty", name))
-		}
-		for _, v := range svc.Volumes {
-			if !strings.HasPrefix(v, "/") {
-				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
+			if svc.Build == nil {
+				return fmt.Errorf(fmt.Sprintf("Invalid service '%s': Service %s has neither an image nor a build context specified. At least one must be provided", name, name))
 			}
-			if strings.Contains(v, ":") {
-				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': volume bind mounts are not supported", v, name))
+		}
+
+		for _, v := range svc.Volumes {
+			if v.LocalPath != "" {
+				log.Yellow("[%s]: Volume %s:%s will be ignored. You can use them by using 'sync' field in okteto up", name, v.LocalPath, v.RemotePath)
+			}
+			if !strings.HasPrefix(v.RemotePath, "/") {
+				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
 			}
 		}
 	}
