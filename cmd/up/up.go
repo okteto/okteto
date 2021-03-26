@@ -188,7 +188,7 @@ func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bo
 			return err
 		}
 
-		dev.LoadRemote(ssh.GetPublicKey())
+		dev.LoadRemote(ssh.GetPublicKeyPath())
 	}
 
 	if !dev.Autocreate {

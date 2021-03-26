@@ -9,7 +9,6 @@ require (
 	github.com/alessio/shellescape v1.3.0
 	github.com/briandowns/spinner v1.11.1
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
-	github.com/cheggaaa/pb v1.0.27
 	github.com/cheggaaa/pb/v3 v3.0.5
 	github.com/containerd/console v1.0.1
 	github.com/denisbrodbeck/machineid v1.0.1
@@ -45,7 +44,6 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/src-d/enry/v2 v2.1.0
 	github.com/subosito/gotenv v1.2.0
-	github.com/vbauerster/mpb v3.4.0+incompatible
 	github.com/vbauerster/mpb/v6 v6.0.2
 	golang.org/x/crypto v0.0.0-20201117144127-c1f2f97bffc9
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
