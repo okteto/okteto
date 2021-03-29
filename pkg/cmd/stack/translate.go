@@ -26,7 +26,6 @@ import (
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/subosito/gotenv"
 	yaml "gopkg.in/yaml.v2"
@@ -125,7 +124,10 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		if svc.Build == nil {
 			continue
 		}
-		if isOktetoCluster && !strings.HasPrefix(svc.Image, okteto.DevRegistry) {
+		if svc.Image == "" {
+			if !isOktetoCluster {
+				return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
+			}
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !forceBuild {
