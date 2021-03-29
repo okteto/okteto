@@ -151,10 +151,6 @@ type WarningType struct {
 	used bool
 }
 
-type Entrypoint struct {
-	Values []string
-}
-
 type ResourcesRaw struct {
 	Limits       DeployComposeResources `json:"limits,omitempty" yaml:"limits,omitempty"`
 	Reservations DeployComposeResources `json:"reservations,omitempty" yaml:"reservations,omitempty"`
@@ -236,6 +232,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s.WorkingDir = serviceRaw.WorkingDir
 
 	s.Public = serviceRaw.Public
+	s.Resources = serviceRaw.Resources
 	return s, nil
 }
 
@@ -325,13 +322,13 @@ func unmarshalDeploy(deployInfo *DeployInfoRaw, scale int32, replicas int32, res
 	}
 
 	if !resources.CPU.Value.IsZero() {
-		deploy.Resources.Requests[apiv1.ResourceCPU] = resources.CPU.Value
+		deploy.Resources.Limits[apiv1.ResourceCPU] = resources.CPU.Value
 	}
 	if !resources.Memory.Value.IsZero() {
-		deploy.Resources.Requests[apiv1.ResourceMemory] = resources.Memory.Value
+		deploy.Resources.Limits[apiv1.ResourceMemory] = resources.Memory.Value
 	}
 	if !resources.Storage.Size.Value.IsZero() {
-		deploy.Resources.Requests[apiv1.ResourceStorage] = resources.Storage.Size.Value
+		deploy.Resources.Limits[apiv1.ResourceStorage] = resources.Storage.Size.Value
 	}
 	return deploy, nil
 }
@@ -398,8 +395,8 @@ func unmarshalLabels(raw *RawMessage) (map[string]string, error) {
 	return envMap, err
 }
 
-func unmarshalDuration(raw *RawMessage) (time.Duration, error) {
-	var duration time.Duration
+func unmarshalDuration(raw *RawMessage) (int64, error) {
+	var duration int64
 	if raw == nil {
 		return duration, nil
 	}
@@ -407,21 +404,19 @@ func unmarshalDuration(raw *RawMessage) (time.Duration, error) {
 	var durationString string
 	err := raw.unmarshal(&durationString)
 	if err != nil {
-		return time.Duration(0), err
+		return duration, err
 	}
 	seconds, err := strconv.Atoi(durationString)
 	if err != nil {
-		err = raw.unmarshal(&duration)
-		if err == nil {
-			return duration, nil
+		var d time.Duration
+		err = raw.unmarshal(&d)
+		if err != nil {
+			return duration, err
 		}
+		return int64(d.Seconds()), nil
 	}
-	duration, err = time.ParseDuration(fmt.Sprintf("%ds", seconds))
-	if err != nil {
-		return time.Duration(0), err
-	}
+	return int64(seconds), nil
 
-	return duration, err
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

@@ -122,7 +122,7 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Data[nameField] != "stackName" {
 		t.Errorf("Wrong data.name: '%s'", result.Data[nameField])
 	}
-	if result.Data[yamlField] != "bmFtZTogc3RhY2tOYW1lCnNlcnZpY2VzOgogIHN2Y05hbWU6CiAgICBpbWFnZTogaW1hZ2UKICAgIHJlcGxpY2FzOiAwCg==" {
+	if result.Data[yamlField] != "bmFtZTogc3RhY2tOYW1lCnNlcnZpY2VzOgogIHN2Y05hbWU6CiAgICBpbWFnZTogaW1hZ2UK" {
 		t.Errorf("Wrong data.yaml: '%s'", result.Data[yamlField])
 	}
 }
@@ -141,7 +141,7 @@ func Test_translateDeployment(t *testing.T) {
 					"annotation2": "value2",
 				},
 				Image:           "image",
-				Replicas:        3,
+				Deploy:          &model.DeployInfo{Replicas: 3},
 				StopGracePeriod: 20,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
@@ -241,7 +241,7 @@ func Test_translateStatefulSet(t *testing.T) {
 					"annotation2": "value2",
 				},
 				Image:           "image",
-				Replicas:        3,
+				Deploy:          &model.DeployInfo{Replicas: 3, Resources: model.ResourceRequirements{Limits: map[apiv1.ResourceName]resource.Quantity{apiv1.ResourceCPU: resource.MustParse("100m"), apiv1.ResourceMemory: resource.MustParse("1Gi")}}},
 				StopGracePeriod: 20,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
@@ -260,8 +260,7 @@ func Test_translateStatefulSet(t *testing.T) {
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				Volumes: []model.VolumeStack{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
 				Resources: model.ServiceResources{
-					CPU:    model.Quantity{Value: resource.MustParse("100m")},
-					Memory: model.Quantity{Value: resource.MustParse("1Gi")},
+
 					Storage: model.StorageResource{
 						Size:  model.Quantity{Value: resource.MustParse("20Gi")},
 						Class: "class-name",
@@ -415,7 +414,7 @@ func Test_translateService(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
-				Ports: []model.Port{{Port: 80}, {Port: 90}},
+				Ports: []model.Port{{Port: 80, Protocol: apiv1.ProtocolTCP}, {Port: 90, Protocol: apiv1.ProtocolTCP}},
 			},
 		},
 	}
@@ -441,14 +440,16 @@ func Test_translateService(t *testing.T) {
 	}
 	ports := []apiv1.ServicePort{
 		{
-			Name:       "p-80",
+			Name:       "p-80-tcp",
 			Port:       80,
 			TargetPort: intstr.IntOrString{IntVal: 80},
+			Protocol:   apiv1.ProtocolTCP,
 		},
 		{
-			Name:       "p-90",
+			Name:       "p-90-tcp",
 			Port:       90,
 			TargetPort: intstr.IntOrString{IntVal: 90},
+			Protocol:   apiv1.ProtocolTCP,
 		},
 	}
 	if !reflect.DeepEqual(result.Spec.Ports, ports) {

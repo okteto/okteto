@@ -59,7 +59,7 @@ type Service struct {
 	Xannotations    map[string]string  `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"`
 	Ports           []Port             `yaml:"ports,omitempty"`
 	Scale           int32              `yaml:"scale,omitempty"`
-	StopGracePeriod time.Duration      `yaml:"stop_grace_period,omitempty"`
+	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
 	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`
 	WorkingDir      string             `yaml:"working_dir,omitempty"`
 
@@ -176,7 +176,7 @@ func ReadStack(bytes []byte) (*Stack, error) {
 		msg = strings.TrimSuffix(msg, "in type model.Stack")
 		return nil, errors.New(msg)
 	}
-	for i, svc := range s.Services {
+	for _, svc := range s.Services {
 		if svc.Build != nil {
 			if svc.Build.Name != "" {
 				svc.Build.Context = svc.Build.Name
@@ -187,7 +187,6 @@ func ReadStack(bytes []byte) (*Stack, error) {
 		if svc.Resources.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
 			svc.Resources.Storage.Size.Value = resource.MustParse("1Gi")
 		}
-		s.Services[i] = svc
 	}
 	return s, nil
 }

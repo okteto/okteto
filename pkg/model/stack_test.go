@@ -16,6 +16,7 @@ package model
 import (
 	"testing"
 
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -26,7 +27,7 @@ services:
     public: true
     image: okteto/vote:1
     build: vote
-    command: python app.py
+    entrypoint: python app.py
     environment:
       - OPTION_A=Cats
       - OPTION_B=Dogs
@@ -71,14 +72,14 @@ services:
 	if s.Services["vote"].Build.Context != "vote" {
 		t.Errorf("'vote.build' was not parsed: %+v", s.Services["vote"].Build)
 	}
-	if len(s.Services["vote"].Command.Values) != 3 {
-		t.Errorf("'vote.command' was not parsed: %+v", s)
+	if len(s.Services["vote"].Entrypoint.Values) != 3 {
+		t.Errorf("'vote.entrypoint' was not parsed: %+v", s)
 	}
-	if s.Services["vote"].Command.Values[0] != "sh" || s.Services["vote"].Command.Values[1] != "-c" || s.Services["vote"].Command.Values[2] != "python app.py" {
-		t.Errorf("'vote.command' was not parsed: %+v", s)
+	if s.Services["vote"].Entrypoint.Values[0] != "sh" || s.Services["vote"].Entrypoint.Values[1] != "-c" || s.Services["vote"].Entrypoint.Values[2] != "python app.py" {
+		t.Errorf("'vote.entrypoint' was not parsed: %+v", s)
 	}
-	if s.Services["vote"].Replicas != 2 {
-		t.Errorf("'vote.replicas' was not parsed: %+v", s)
+	if s.Services["vote"].Deploy.Replicas != 2 {
+		t.Errorf("'vote.deploy.replicas' was not parsed: %+v", s)
 	}
 	if len(s.Services["vote"].Environment) != 2 {
 		t.Errorf("'vote.env' was not parsed: %+v", s)
@@ -98,13 +99,13 @@ services:
 	if s.Services["vote"].StopGracePeriod != 5 {
 		t.Errorf("'vote.stop_graace_period' was not parsed: %+v", s)
 	}
-	cpu := s.Services["vote"].Resources.CPU.Value
+	cpu := s.Services["vote"].Deploy.Resources.Limits[apiv1.ResourceCPU]
 	if cpu.Cmp(resource.MustParse("100m")) != 0 {
-		t.Errorf("'vote.resources.cpu' was not parsed: %+v", s)
+		t.Errorf("'vote.deploy.limits.cpu' was not parsed: %+v", s)
 	}
-	memory := s.Services["vote"].Resources.Memory.Value
+	memory := s.Services["vote"].Deploy.Resources.Limits[apiv1.ResourceMemory]
 	if memory.Cmp(resource.MustParse("258Mi")) != 0 {
-		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
+		t.Errorf("'vote.deploy.limits.memory' was not parsed: %+v", s)
 	}
 	storage := s.Services["vote"].Resources.Storage.Size.Value
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
@@ -116,20 +117,20 @@ services:
 	if s.Services["db"].Image != "postgres:9.4" {
 		t.Errorf("'db.image' was not parsed: %+v", s)
 	}
-	if s.Services["db"].Replicas != 1 {
-		t.Errorf("'db.replicas' was not parsed: %+v", s)
+	if s.Services["db"].Deploy.Replicas != 1 {
+		t.Errorf("'db.deploy.replicas' was not parsed: %+v", s)
+	}
+	if len(s.Services["db"].Entrypoint.Values) != 1 {
+		t.Errorf("'db.entrypoint' was not parsed: %+v", s.Services["db"].Entrypoint.Values)
+	}
+	if s.Services["db"].Entrypoint.Values[0] != "e" {
+		t.Errorf("'db.entrypoint' was not parsed: %+v", s.Services["db"].Entrypoint.Values)
 	}
 	if len(s.Services["db"].Command.Values) != 1 {
 		t.Errorf("'db.command' was not parsed: %+v", s.Services["db"].Command.Values)
 	}
-	if s.Services["db"].Command.Values[0] != "e" {
+	if s.Services["db"].Command.Values[0] != "c" {
 		t.Errorf("'db.command' was not parsed: %+v", s.Services["db"].Command.Values)
-	}
-	if len(s.Services["db"].Args.Values) != 1 {
-		t.Errorf("'db.args' was not parsed: %+v", s.Services["db"].Args.Values)
-	}
-	if s.Services["db"].Args.Values[0] != "c" {
-		t.Errorf("'db.args' was not parsed: %+v", s.Services["db"].Args.Values)
 	}
 
 	if len(s.Services["db"].Volumes) != 1 {

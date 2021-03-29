@@ -214,7 +214,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(int64(svc.StopGracePeriod.Seconds())),
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -256,7 +256,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(int64(svc.StopGracePeriod.Seconds())),
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers: []apiv1.Container{
 						{
 							Name:    fmt.Sprintf("init-%s", name),
@@ -437,15 +437,19 @@ func translateServicePorts(svc *model.Service) []apiv1.ServicePort {
 
 func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 	result := apiv1.ResourceRequirements{}
-	if svc.Resources.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
-		result.Limits = apiv1.ResourceList{}
-		result.Limits[apiv1.ResourceCPU] = svc.Resources.CPU.Value
-	}
-	if svc.Resources.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
-		if result.Limits == nil {
+	if cpuResource, ok := svc.Deploy.Resources.Limits[apiv1.ResourceCPU]; ok {
+		if cpuResource.Cmp(resource.MustParse("0")) > 0 {
 			result.Limits = apiv1.ResourceList{}
+			result.Limits[apiv1.ResourceCPU] = cpuResource
 		}
-		result.Limits[apiv1.ResourceMemory] = svc.Resources.Memory.Value
+	}
+	if memoryResource, ok := svc.Deploy.Resources.Limits[apiv1.ResourceMemory]; ok {
+		if memoryResource.Cmp(resource.MustParse("0")) > 0 {
+			if result.Limits == nil {
+				result.Limits = apiv1.ResourceList{}
+			}
+			result.Limits[apiv1.ResourceMemory] = memoryResource
+		}
 	}
 	return result
 }

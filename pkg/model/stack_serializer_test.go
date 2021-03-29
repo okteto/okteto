@@ -15,7 +15,6 @@ package model
 
 import (
 	"testing"
-	"time"
 
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -162,7 +161,7 @@ func Test_PortUnmarshalling(t *testing.T) {
 		{
 			name:          "Protocol",
 			portRaw:       "6060:6060/udp",
-			expected:      Port{Port: 6060, Public: true},
+			expected:      Port{Port: 6060, Public: false},
 			expectedError: false,
 		},
 	}
@@ -194,22 +193,21 @@ func Test_PortUnmarshalling(t *testing.T) {
 }
 
 func Test_DurationUnmarshalling(t *testing.T) {
-	expectedTime, _ := time.ParseDuration("12s")
 
 	tests := []struct {
 		name     string
 		duration []byte
-		expected time.Duration
+		expected int64
 	}{
 		{
 			name:     "string-no-units",
 			duration: []byte("12"),
-			expected: expectedTime,
+			expected: 12,
 		},
 		{
 			name:     "string-no-units",
 			duration: []byte("12s"),
-			expected: expectedTime,
+			expected: 12,
 		},
 	}
 	for _, tt := range tests {
