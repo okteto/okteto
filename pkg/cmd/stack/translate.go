@@ -354,9 +354,6 @@ func translateAnnotations(svc *model.Service) map[string]string {
 	for k, v := range svc.Annotations {
 		result[k] = v
 	}
-	for k, v := range svc.Xannotations {
-		result[k] = v
-	}
 	return result
 }
 
