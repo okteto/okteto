@@ -15,12 +15,14 @@ package stack
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
 
@@ -56,6 +58,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err == nil {
 				log.Success("Stack '%s' successfully deployed", s.Name)
 			}
+			printDisplayPorts(s)
 			return err
 		},
 	}
@@ -66,4 +69,20 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&wait, "wait", "", false, "wait until a minimum number of containers are in a ready state for every service")
 	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
 	return cmd
+}
+
+func printDisplayPorts(s *model.Stack) {
+
+	for name, svc := range s.Services {
+		if len(svc.Ports) > 0 {
+			log.Println(fmt.Sprintf("    %s ", log.BlueString(name)))
+			for _, p := range svc.Ports {
+				var public string
+				if p.Public {
+					public = "(public)"
+				}
+				log.Println(fmt.Sprintf("        %d %s", p.Port, public))
+			}
+		}
+	}
 }

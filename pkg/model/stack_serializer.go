@@ -507,7 +507,7 @@ func displayNotSupportedFields(s *StackRaw) {
 		s.Warnings = append(s.Warnings, getServiceNotSupportedFields(name, svcInfo)...)
 	}
 	if len(s.Warnings) > 0 {
-		log.Yellow("The following fields are not supported in this version and will be omitted")
+		log.Yellow("The following fields are not supported in this version and will be omitted:")
 		notSupportedFields := strings.Join(s.Warnings, "\n  - ")
 		log.Yellow("  - %s", notSupportedFields)
 		log.Yellow("Help us to decide which fields should okteto implement next by filing an issue in https://github.com/okteto/okteto/issues/new")

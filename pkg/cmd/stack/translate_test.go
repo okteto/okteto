@@ -122,7 +122,7 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Data[nameField] != "stackName" {
 		t.Errorf("Wrong data.name: '%s'", result.Data[nameField])
 	}
-	if result.Data[yamlField] != "bmFtZTogc3RhY2tOYW1lCnNlcnZpY2VzOgogIHN2Y05hbWU6CiAgICBpbWFnZTogaW1hZ2UK" {
+	if result.Data[yamlField] != "bmFtZTogc3RhY2tOYW1lCnNlcnZpY2VzOgogIHN2Y05hbWU6CiAgICBpbWFnZTogaW1hZ2UKd2FybmluZ3M6IFtdCg==" {
 		t.Errorf("Wrong data.yaml: '%s'", result.Data[yamlField])
 	}
 }
