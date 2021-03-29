@@ -38,6 +38,8 @@ type Stack struct {
 	Name      string              `yaml:"name"`
 	Namespace string              `yaml:"namespace,omitempty"`
 	Services  map[string]*Service `yaml:"services,omitempty"`
+
+	Warnings []string
 }
 
 //Service represents an okteto stack service
@@ -217,7 +219,7 @@ func (s *Stack) validate() error {
 
 		for _, v := range svc.Volumes {
 			if v.LocalPath != "" {
-				log.Yellow("[%s]: Volume %s:%s will be ignored. You can use them by using 'sync' field in okteto up", name, v.LocalPath, v.RemotePath)
+				log.Yellow("[%s]: Volume '%s:%s' will be ignored. You can use it by using 'sync' field in okteto up", name, v.LocalPath, v.RemotePath)
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))

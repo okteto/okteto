@@ -192,6 +192,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	stackRaw.Warnings = make([]string, 0)
 
 	displayNotSupportedFields(&stackRaw)
+	s.Warnings = stackRaw.Warnings
 	return nil
 }
 
