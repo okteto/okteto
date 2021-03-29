@@ -173,9 +173,14 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	s.Name = stackRaw.Name
-	s.Xname = stackRaw.Xname
+	if stackRaw.Xname != "" {
+		s.Name = stackRaw.Xname
+	}
+
 	s.Namespace = stackRaw.Namespace
-	s.Xnamespace = stackRaw.Xnamespace
+	if stackRaw.Namespace != "" {
+		s.Namespace = stackRaw.Namespace
+	}
 
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {

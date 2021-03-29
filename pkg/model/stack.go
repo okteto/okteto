@@ -34,12 +34,10 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Version    string              `yaml:"version,omitempty"`
-	Name       string              `yaml:"name"`
-	Xname      string              `yaml:"x-name,omitempty"`
-	Namespace  string              `yaml:"namespace,omitempty"`
-	Xnamespace string              `yaml:"x-namespace,omitempty"`
-	Services   map[string]*Service `yaml:"services,omitempty"`
+	Version   string              `yaml:"version,omitempty"`
+	Name      string              `yaml:"name"`
+	Namespace string              `yaml:"namespace,omitempty"`
+	Services  map[string]*Service `yaml:"services,omitempty"`
 }
 
 //Service represents an okteto stack service
