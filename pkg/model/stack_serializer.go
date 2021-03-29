@@ -52,7 +52,7 @@ type ServiceRaw struct {
 	Entrypoint      Command            `yaml:"entrypoint,omitempty"`                                   // Done
 	EnvFiles        []string           `yaml:"env_file,omitempty"`                                     // Done
 	Environment     *RawMessage        `yaml:"environment,omitempty"`                                  // Done with Envs
-	Expose          []int32            `yaml:"expose,omitempty"`                                       // Done
+	Expose          *RawMessage        `yaml:"expose,omitempty"`                                       // Done
 	Image           string             `yaml:"image,omitempty"`                                        // Done
 	Labels          *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`               // Accept also list
 	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`     // Done
@@ -219,7 +219,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	}
 
 	s.Ports = serviceRaw.Ports
-	s.Expose = serviceRaw.Expose
+	s.Expose, err = unmarshalExpose(serviceRaw.Expose)
+	if err != nil {
+		return nil, err
+	}
 
 	s.Labels, err = unmarshalLabels(serviceRaw.Labels)
 	if err != nil {
@@ -347,6 +350,31 @@ func (r DeployComposeResources) toResourceList() ResourceList {
 		resources[apiv1.ResourceMemory] = r.Memory.Value
 	}
 	return resources
+}
+
+func unmarshalExpose(raw *RawMessage) ([]int32, error) {
+	exposeInInt := make([]int32, 0)
+	if raw == nil {
+		return exposeInInt, nil
+	}
+	err := raw.unmarshal(&exposeInInt)
+	if err == nil {
+		return exposeInInt, nil
+	}
+	var exposeInString []string
+	err = raw.unmarshal(&exposeInString)
+	if err != nil {
+		return exposeInInt, err
+	}
+
+	for _, expose := range exposeInString {
+		portInInt, err := strconv.Atoi(expose)
+		if err != nil {
+			return exposeInInt, err
+		}
+		exposeInInt = append(exposeInInt, int32(portInInt))
+	}
+	return exposeInInt, nil
 }
 
 func unmarshalEnvs(raw *RawMessage) ([]EnvVar, error) {
