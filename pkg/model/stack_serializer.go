@@ -230,7 +230,11 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	}
 
 	s.Annotations = serviceRaw.Annotations
-	s.Xannotations = serviceRaw.Xannotations
+	for key, annotation := range serviceRaw.Annotations {
+		if _, ok := s.Annotations[key]; !ok {
+			s.Annotations[key] = annotation
+		}
+	}
 
 	s.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
 	if err != nil {

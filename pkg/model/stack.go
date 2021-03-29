@@ -54,7 +54,6 @@ type Service struct {
 	Image           string             `yaml:"image,omitempty"`
 	Labels          map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Xannotations    map[string]string  `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"`
 	Ports           []Port             `yaml:"ports,omitempty"`
 	Scale           int32              `yaml:"scale,omitempty"`
 	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
