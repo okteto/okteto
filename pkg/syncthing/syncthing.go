@@ -598,11 +598,11 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 }
 
 func (s *Syncthing) getLocalAndRemoteCompletion(ctx context.Context) (*Completion, *Completion, error) {
-	localCompletion, err := s.GetCompletion(ctx, true, localDeviceID)
+	localCompletion, err := s.GetCompletion(ctx, true, DefaultRemoteDeviceID)
 	if err != nil {
 		return nil, nil, err
 	}
-	remoteCompletion, err := s.GetCompletion(ctx, true, DefaultRemoteDeviceID)
+	remoteCompletion, err := s.GetCompletion(ctx, false, DefaultRemoteDeviceID)
 	if err != nil {
 		return nil, nil, err
 	}
