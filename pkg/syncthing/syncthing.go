@@ -566,8 +566,8 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				if s.IsAllIgnoredAndOverwritten() {
 					return nil
 				}
-				log.Info("synced completed, but retrying stignores and overwrites")
-				continue
+				log.Info("synced completed, but stignores and overwrites not sent")
+				return nil
 			}
 
 			if remoteCompletion.NeedBytes == 0 {
@@ -580,8 +580,8 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				if s.IsAllIgnoredAndOverwritten() {
 					return nil
 				}
-				log.Info("synced completed, but retrying stignores and overwrites")
-				continue
+				log.Info("synced completed, but stignores and overwrites not sent")
+				return nil
 			}
 
 			if retries%50 == 0 {
