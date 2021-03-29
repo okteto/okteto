@@ -32,7 +32,7 @@ func FileExists(name string) bool {
 	}
 
 	if err != nil {
-		log.Infof("Failed to check if %s exists: %s", name, err)
+		log.Infof("failed to check if %s exists: %s", name, err)
 	}
 
 	return true

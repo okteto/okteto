@@ -87,7 +87,6 @@ func (s *Syncthing) callWithRetry(ctx context.Context, url, method string, code 
 	req = req.WithContext(ctx)
 
 	q := req.URL.Query()
-	q.Add("limit", "30")
 
 	for key, value := range params {
 		q.Add(key, value)

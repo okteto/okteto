@@ -134,6 +134,7 @@ type Dev struct {
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
 	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
 	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
@@ -147,6 +148,11 @@ type Dev struct {
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
+}
+
+//Entrypoint represents the start command of a development contaianer
+type Entrypoint struct {
+	Values []string
 }
 
 //Command represents the start command of a development contaianer
@@ -696,7 +702,7 @@ func (dev *Dev) Save(path string) error {
 	}
 
 	if err := ioutil.WriteFile(path, marshalled, 0600); err != nil {
-		log.Info(err)
+		log.Infof("failed to write okteto manifest at %s: %s", path, err)
 		return fmt.Errorf("Failed to write your manifest")
 	}
 
@@ -752,6 +758,7 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 		PersistentVolume: main.PersistentVolumeEnabled(),
 		Volumes:          []VolumeMount{},
 		SecurityContext:  dev.SecurityContext,
+		ServiceAccount:   dev.ServiceAccount,
 		Resources:        dev.Resources,
 		Healthchecks:     dev.Healthchecks,
 		InitContainer:    dev.InitContainer,
@@ -781,6 +788,10 @@ func (dev *Dev) ToTranslationRule(main *Dev) *TranslationRule {
 			EnvVar{
 				Name:  "OKTETO_NAME",
 				Value: dev.Name,
+			},
+			EnvVar{
+				Name:  "OKTETO_SCHEMA_VERSION",
+				Value: "1",
 			},
 		)
 
@@ -912,6 +923,7 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 					},
 				},
 				Spec: apiv1.PodSpec{
+					ServiceAccountName:            dev.ServiceAccount,
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Containers: []apiv1.Container{
 						{

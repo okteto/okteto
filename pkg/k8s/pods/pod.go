@@ -33,7 +33,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -159,33 +158,11 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, labels strin
 	for i := range podList.Items {
 		for _, or := range podList.Items[i].OwnerReferences {
 			if or.UID == rs.UID {
-				if podList.Items[i].Status.Phase == apiv1.PodRunning {
-					return &podList.Items[i], nil
-				}
-
-				if err := isContainerError(podList.Items[i].Status.InitContainerStatuses); err != nil {
-					return nil, err
-				}
-
-				if err := isContainerError(podList.Items[i].Status.ContainerStatuses); err != nil {
-					return nil, err
-				}
+				return &podList.Items[i], nil
 			}
 		}
 	}
 	return nil, nil
-}
-
-func isContainerError(status []v1.ContainerStatus) error {
-	for _, c := range status {
-		if c.State.Waiting != nil {
-			if c.State.Waiting.Reason == "ImagePullBackOff" {
-				return fmt.Errorf("image '%s' not found or it is private and 'imagePullSecrets' is not properly configured", c.Image)
-			}
-		}
-	}
-
-	return nil
 }
 
 //GetUserByPod returns the current user of a running pod
@@ -239,74 +216,6 @@ func execCommandInPod(ctx context.Context, p *apiv1.Pod, container string, cmd [
 	}
 	result := strings.TrimSuffix(out.String(), "\n")
 	return result, nil
-}
-
-//WaitUntilRunning waits for the pod to get to running state, sending updates via reporter
-func WaitUntilRunning(ctx context.Context, dev *model.Dev, podName string, c *kubernetes.Clientset, reporter chan string) error {
-	opts := metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("metadata.name=%s", podName),
-	}
-
-	watchPod, err := c.CoreV1().Pods(dev.Namespace).Watch(ctx, opts)
-	if err != nil {
-		return err
-	}
-
-	opts = metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("involvedObject.kind=Pod,involvedObject.name=%s", podName),
-	}
-
-	watchPodEvents, err := c.CoreV1().Events(dev.Namespace).Watch(ctx, opts)
-	if err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case event := <-watchPod.ResultChan():
-			pod, ok := event.Object.(*v1.Pod)
-			if !ok {
-				log.Errorf("type error getting pod: %s", event)
-				watchPod, err = c.CoreV1().Pods(dev.Namespace).Watch(ctx, opts)
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
-			if pod.Status.Phase == apiv1.PodRunning {
-				return nil
-			}
-			if pod.DeletionTimestamp != nil {
-				return fmt.Errorf("development container has been removed")
-			}
-		case event := <-watchPodEvents.ResultChan():
-			e, ok := event.Object.(*v1.Event)
-			if !ok {
-				log.Infof("unknown event type: %s", event)
-				continue
-			}
-
-			log.Infof("pod %s event: %s", podName, e.Message)
-			switch e.Reason {
-			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
-				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
-					continue
-				}
-
-				return fmt.Errorf(e.Message)
-			case "FailedAttachVolume", "FailedMount":
-				reporter <- fmt.Sprintf("%s: retrying", e.Message)
-			default:
-				if e.Reason == "Pulling" {
-					reporter <- strings.Replace(e.Message, "pulling", "Pulling", 1)
-				}
-			}
-		case <-ctx.Done():
-			log.Debug("call to pods.WaitUntilRunning cancelled")
-			return ctx.Err()
-		}
-	}
 }
 
 //Exists returns true if pod still exists and is not being deleted

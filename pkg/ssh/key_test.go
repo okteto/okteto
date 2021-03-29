@@ -38,7 +38,7 @@ func TestKeyExists(t *testing.T) {
 		t.Error("keys shouldn't exist in an empty directory")
 	}
 
-	if _, err := os.Create(filepath.Join(dir, publicKeyFile)); err != nil {
+	if _, err := os.Create(filepath.Join(dir, publicKeyFileED25519)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -46,7 +46,7 @@ func TestKeyExists(t *testing.T) {
 		t.Error("keys shouldn't exist when private key is missing")
 	}
 
-	if _, err := os.Create(filepath.Join(dir, privateKeyFile)); err != nil {
+	if _, err := os.Create(filepath.Join(dir, privateKeyFileED25519)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -69,7 +69,7 @@ func TestGenerateKeys(t *testing.T) {
 
 	os.Setenv("OKTETO_FOLDER", dir)
 	public, private := getKeyPaths()
-	if err := generateKeys(public, private, 128); err != nil {
+	if err := generateEDSKeys(public, private); err != nil {
 		t.Error(err)
 	}
 

@@ -81,6 +81,16 @@ func Push(ctx context.Context) *cobra.Command {
 				}
 			}
 
+			if autoDeploy {
+				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
+    Set the 'autocreate' field in your okteto manifest to get the same behavior.
+    More information is available here: https://okteto.com/docs/reference/cli#up`)
+			}
+
+			if !dev.Autocreate {
+				dev.Autocreate = autoDeploy
+			}
+
 			if err := runPush(ctx, dev, autoDeploy, imageTag, oktetoRegistryURL, progress, noCache, c); err != nil {
 				analytics.TrackPush(false, oktetoRegistryURL)
 				return err
@@ -114,23 +124,28 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 			return err
 		}
 
-		if len(dev.Services) == 0 {
-			if !autoDeploy {
-				if err := utils.AskIfDeploy(dev.Name, dev.Namespace); err != nil {
-					return err
-				}
+		if !dev.Autocreate {
+			return errors.UserError{
+				E: fmt.Errorf("Deployment '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
+				Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+    Or set the 'autocreate' field in your okteto manifest if you want to create a standalone deployment
+    More information is available here: https://okteto.com/docs/reference/cli#up`,
 			}
+		}
 
-			d = dev.GevSandbox()
-			d.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
-			exists = false
+		if len(dev.Services) > 0 {
+			return fmt.Errorf("'autocreate' cannot be used in combination with 'services'")
+		}
 
-			if imageTag == "" {
-				if oktetoRegistryURL == "" {
-					return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
-				}
-				imageTag = registry.GetImageTag("", dev.Name, dev.Namespace, oktetoRegistryURL)
+		d = dev.GevSandbox()
+		d.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+		exists = false
+
+		if imageTag == "" {
+			if oktetoRegistryURL == "" {
+				return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
 			}
+			imageTag = registry.GetImageTag("", dev.Name, dev.Namespace, oktetoRegistryURL)
 		}
 	}
 
@@ -225,7 +240,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 	log.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	if err := build.Run(ctx, dev.Namespace, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, progress); err != nil {
+	if err := build.Run(ctx, dev.Namespace, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, nil, progress); err != nil {
 		return "", fmt.Errorf("error building image '%s': %s", buildTag, err)
 	}
 

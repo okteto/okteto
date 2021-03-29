@@ -116,6 +116,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		TranslateInitContainer(&rule.InitContainer)
 		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
 		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
+		TranslatePodServiceAccount(&t.Deployment.Spec.Template.Spec, rule.ServiceAccount)
 		TranslateOktetoDevSecret(&t.Deployment.Spec.Template.Spec, t.Name, rule.Secrets)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
@@ -208,7 +209,7 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 		c.Args = rule.Args
 	}
 
-	TranslateProbes(c, *rule.Probes)
+	TranslateProbes(c, rule.Probes)
 
 	TranslateResources(c, rule.Resources)
 	TranslateEnvVars(c, rule)
@@ -217,7 +218,10 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 }
 
 //TranslateProbes translates the healthchecks attached to a container
-func TranslateProbes(c *apiv1.Container, h model.Probes) {
+func TranslateProbes(c *apiv1.Container, h *model.Probes) {
+	if h == nil {
+		return
+	}
 	if !h.Liveness {
 		c.LivenessProbe = nil
 	}
@@ -434,6 +438,13 @@ func TranslatePodSecurityContext(spec *apiv1.PodSpec, s *model.SecurityContext) 
 
 	if s.FSGroup != nil {
 		spec.SecurityContext.FSGroup = s.FSGroup
+	}
+}
+
+//TranslatePodServiceAccount translates the security accout the pod uses
+func TranslatePodServiceAccount(spec *apiv1.PodSpec, sa string) {
+	if sa != "" {
+		spec.ServiceAccountName = sa
 	}
 }
 

@@ -57,6 +57,7 @@ securityContext:
   runAsUser: 100
   runAsGroup: 101
   fsGroup: 102
+serviceAccount: sa
 sync:
   - .:/app
   - sub:/path
@@ -73,6 +74,7 @@ services:
     container: dev
     image: worker:latest
     command: ["./run_worker.sh"]
+    serviceAccount: sa
     sync:
        - worker:/src`, file.Name()))
 
@@ -113,6 +115,7 @@ services:
 					SecurityContext: &apiv1.PodSecurityContext{
 						FSGroup: &fsGroup,
 					},
+					ServiceAccountName:            "sa",
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						{
@@ -212,6 +215,7 @@ services:
 									Name:  "OKTETO_NAME",
 									Value: "web",
 								},
+								{Name: "OKTETO_SCHEMA_VERSION", Value: "1"},
 							},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:  &runAsUser,
@@ -351,6 +355,7 @@ services:
 					SecurityContext: &apiv1.PodSecurityContext{
 						FSGroup: &rootUser,
 					},
+					ServiceAccountName:            "sa",
 					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
 					Volumes: []apiv1.Volume{
 						{
@@ -532,6 +537,7 @@ persistentVolume:
 									Name:  "OKTETO_NAME",
 									Value: "web",
 								},
+								{Name: "OKTETO_SCHEMA_VERSION", Value: "1"},
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{

@@ -26,7 +26,7 @@ import (
 )
 
 // Run runs the build sequence
-func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, cacheFrom, buildArgs []string, progress string) error {
+func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, cacheFrom, buildArgs, secrets []string, progress string) error {
 	log.Infof("building your image on %s", buildKitHost)
 	buildkitClient, err := getBuildkitClient(ctx, isOktetoCluster, buildKitHost)
 	if err != nil {
@@ -55,7 +55,7 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 			return err
 		}
 	}
-	opt, err := getSolveOpt(path, dockerFile, tag, target, noCache, cacheFrom, buildArgs)
+	opt, err := getSolveOpt(path, dockerFile, tag, target, noCache, cacheFrom, buildArgs, secrets)
 	if err != nil {
 		return errors.Wrap(err, "failed to create build solver")
 	}
