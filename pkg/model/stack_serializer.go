@@ -44,23 +44,23 @@ type StackRaw struct {
 
 //Service represents an okteto stack service
 type ServiceRaw struct {
-	Deploy          *DeployInfoRaw     `yaml:"deploy,omitempty"`                                       // Lo de capabilities
-	Build           *BuildInfo         `yaml:"build,omitempty"`                                        // Done
-	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`                                      // Done
-	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`                                     // Done
-	Command         Args               `yaml:"command,omitempty"`                                      // Done
-	Entrypoint      Command            `yaml:"entrypoint,omitempty"`                                   // Done
-	EnvFiles        []string           `yaml:"env_file,omitempty"`                                     // Done
-	Environment     *RawMessage        `yaml:"environment,omitempty"`                                  // Done with Envs
-	Expose          *RawMessage        `yaml:"expose,omitempty"`                                       // Done
-	Image           string             `yaml:"image,omitempty"`                                        // Done
-	Labels          *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`               // Accept also list
-	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`     // Done
-	Xannotations    map[string]string  `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"` // Done
-	Ports           []Port             `yaml:"ports,omitempty"`                                        // Done
-	Scale           int32              `yaml:"scale"`                                                  // Done
-	StopGracePeriod *RawMessage        `yaml:"stop_grace_period,omitempty"`                            // Change to duration
-	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`                                      // Redo
+	Deploy          *DeployInfoRaw     `yaml:"deploy,omitempty"`
+	Build           *BuildInfo         `yaml:"build,omitempty"`
+	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
+	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
+	Command         Args               `yaml:"command,omitempty"`
+	Entrypoint      Command            `yaml:"entrypoint,omitempty"`
+	EnvFiles        []string           `yaml:"env_file,omitempty"`
+	Environment     *RawMessage        `yaml:"environment,omitempty"`
+	Expose          *RawMessage        `yaml:"expose,omitempty"`
+	Image           string             `yaml:"image,omitempty"`
+	Labels          *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Xannotations    map[string]string  `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"`
+	Ports           []Port             `yaml:"ports,omitempty"`
+	Scale           int32              `yaml:"scale"`
+	StopGracePeriod *RawMessage        `yaml:"stop_grace_period,omitempty"`
+	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`
 	WorkingDir      string             `yaml:"working_dir,omitempty"`
 
 	Public    bool             `yaml:"public,omitempty"`
