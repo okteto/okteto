@@ -23,9 +23,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -117,22 +115,6 @@ func translateServiceEnvFile(svc *model.Service, filename string) error {
 }
 
 func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
-	c, _, err := k8Client.GetLocal()
-	if err != nil {
-		return err
-	}
-
-	oktetoRegistryURL := ""
-	n, err := namespaces.Get(ctx, s.Namespace, c)
-	if err == nil {
-		if namespaces.IsOktetoNamespace(n) {
-			oktetoRegistryURL, err = okteto.GetRegistry()
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return err
@@ -143,9 +125,8 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		if svc.Build == nil {
 			continue
 		}
-		if isOktetoCluster {
-			imageName := fmt.Sprintf("%s-%s", s.Name, name)
-			svc.Image = registry.GetImageTag("", imageName, s.Namespace, oktetoRegistryURL)
+		if isOktetoCluster && !strings.HasPrefix(svc.Image, okteto.DevRegistry) {
+			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !forceBuild {
 			if _, err := registry.GetImageTagWithDigest(ctx, s.Namespace, svc.Image); err != errors.ErrNotFound {
