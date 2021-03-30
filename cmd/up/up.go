@@ -502,8 +502,7 @@ func printDisplayContext(dev *model.Dev) {
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 
 	if len(dev.Forward) > 0 {
-		log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
-		for i := 1; i < len(dev.Forward); i++ {
+		for i := 0; i < len(dev.Forward); i++ {
 			if dev.Forward[i].Service {
 				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
 				continue
