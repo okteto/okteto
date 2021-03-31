@@ -254,7 +254,7 @@ func Test_loadName(t *testing.T) {
 			want:    "code-1",
 		},
 		{
-			name:    "mising",
+			name:    "missing",
 			devName: "code-${valueX}",
 			value:   "1",
 			want:    "code-",
@@ -274,7 +274,7 @@ func Test_loadName(t *testing.T) {
 			want:      "code-1",
 		},
 		{
-			name:      "mising-svc",
+			name:      "missing-svc",
 			devName:   "code-${valueX}",
 			value:     "1",
 			onService: true,
@@ -332,7 +332,7 @@ func Test_loadLabels(t *testing.T) {
 			want:   map[string]string{"a": "1", "b": "3"},
 		},
 		{
-			name:   "mising",
+			name:   "missing",
 			labels: map[string]string{"a": "1", "b": "${valueX}"},
 			value:  "1",
 			want:   map[string]string{"a": "1", "b": ""},
