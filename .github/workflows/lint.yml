@@ -1,0 +1,17 @@
+name: Lint
+
+on: [pull_request]
+
+jobs:
+  misspell:
+    name: Check Spelling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v2
+      - name: Install
+        run: |
+          wget -O - -q https://git.io/misspell | sh -s -- -b .
+      - name: Misspell
+        run: |
+          git ls-files --empty-directory | xargs ./misspell -error
