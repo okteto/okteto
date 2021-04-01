@@ -71,6 +71,8 @@ const (
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
 	OktetoRestartAnnotation = "dev.okteto.com/restart"
+	//OktetoStignoreAnnotation indicates the hash of the stignore files to force redeployment
+	OktetoStignoreAnnotation = "dev.okteto.com/stignore"
 
 	//OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"

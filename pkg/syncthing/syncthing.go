@@ -98,17 +98,11 @@ type Syncthing struct {
 
 //Folder represents a sync folder
 type Folder struct {
-	Name         string `yaml:"name"`
-	LocalPath    string `yaml:"localPath"`
-	RemotePath   string `yaml:"remotePath"`
-	Retries      int    `yaml:"-"`
-	SentStIgnore bool   `yaml:"-"`
-	Overwritten  bool   `yaml:"-"`
-}
-
-//Ignores represents the .stignore file
-type Ignores struct {
-	Ignore []string `json:"ignore"`
+	Name        string `yaml:"name"`
+	LocalPath   string `yaml:"localPath"`
+	RemotePath  string `yaml:"remotePath"`
+	Retries     int    `yaml:"-"`
+	Overwritten bool   `yaml:"-"`
 }
 
 // Status represents the status of a syncthing folder.
@@ -328,49 +322,6 @@ func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 		return true
 	}
 	return false
-}
-
-//SendStignoreFile sends .stignore from local to remote
-func (s *Syncthing) SendStignoreFile(ctx context.Context) {
-	for _, folder := range s.Folders {
-		if folder.SentStIgnore {
-			continue
-		}
-		log.Infof("sending '.stignore' file %s to the remote syncthing", folder.Name)
-		params := getFolderParameter(folder)
-		ignores := &Ignores{}
-		body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true, 0)
-		if err != nil {
-			log.Infof("error getting ignore files: %s", err.Error())
-			continue
-		}
-		err = json.Unmarshal(body, ignores)
-		if err != nil {
-			log.Infof("error unmarshalling ignore files: %s", err.Error())
-			continue
-		}
-		for i, line := range ignores.Ignore {
-			line := strings.TrimSpace(line)
-			if line == "" {
-				continue
-			}
-			if strings.Contains(line, "(?d)") {
-				continue
-			}
-			ignores.Ignore[i] = fmt.Sprintf("(?d)%s", line)
-		}
-		body, err = json.Marshal(ignores)
-		if err != nil {
-			log.Infof("error marshalling ignore files: %s", err.Error())
-			continue
-		}
-		_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false, 0)
-		if err != nil {
-			log.Infof("error posting ignore files to remote syncthing instance: %s", err.Error())
-			continue
-		}
-		folder.SentStIgnore = true
-	}
 }
 
 //ResetDatabase resets the syncthing database

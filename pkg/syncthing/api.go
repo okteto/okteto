@@ -38,7 +38,7 @@ func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, err
 //NewAPIClient returns a new syncthing api client configured to call the syncthing api
 func NewAPIClient() *http.Client {
 	return &http.Client{
-		Timeout:   10 * time.Second,
+		Timeout:   60 * time.Second,
 		Transport: &addAPIKeyTransport{http.DefaultTransport},
 	}
 }
@@ -76,10 +76,10 @@ func (s *Syncthing) callWithRetry(ctx context.Context, url, method string, code 
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
-		s.Client.Timeout = 3 * time.Second
+		s.Client.Timeout = 5 * time.Second
 	} else {
 		urlPath = path.Join(s.RemoteGUIAddress, url)
-		if url == "rest/db/ignores" || url == "rest/system/ping" {
+		if url == "rest/system/ping" {
 			s.Client.Timeout = 5 * time.Second
 		}
 	}

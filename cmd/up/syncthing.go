@@ -108,7 +108,6 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		up.resetSyncthing = false
 	}
 
-	up.Sy.SendStignoreFile(ctx)
 	spinner.Update("Scanning file system...")
 	if err := up.Sy.WaitForScanning(ctx, up.Dev, true); err != nil {
 		return err
