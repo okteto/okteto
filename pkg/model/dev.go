@@ -150,17 +150,17 @@ type Dev struct {
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 }
 
-//Entrypoint represents the start command of a development contaianer
+//Entrypoint represents the start command of a development container
 type Entrypoint struct {
 	Values []string
 }
 
-//Command represents the start command of a development contaianer
+//Command represents the start command of a development container
 type Command struct {
 	Values []string
 }
 
-//Args represents the args of a development contaianer
+//Args represents the args of a development container
 type Args struct {
 	Values []string
 }

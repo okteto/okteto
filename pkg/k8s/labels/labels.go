@@ -46,7 +46,7 @@ const (
 	// TranslationAnnotation sets the translation rules
 	TranslationAnnotation = "dev.okteto.com/translation"
 
-	// SyncLabel indicates a synthing pod
+	// SyncLabel indicates a syncthing pod
 	SyncLabel = "syncthing.okteto.com"
 
 	//OktetoRepositoryAnnotation indicates the git repo url with the source code of this component
@@ -76,7 +76,7 @@ const (
 	// StackServiceNameLabel indicates the name of the stack service an object belongs to
 	StackServiceNameLabel = "stack.okteto.com/service"
 
-	// OktetoAutoIngressAnnotation indicates an ingress must be crreated for a service
+	// OktetoAutoIngressAnnotation indicates an ingress must be created for a service
 	OktetoAutoIngressAnnotation = "dev.okteto.com/auto-ingress"
 )
 

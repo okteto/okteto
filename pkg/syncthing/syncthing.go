@@ -300,7 +300,7 @@ func (s *Syncthing) Run(ctx context.Context) error {
 	return nil
 }
 
-//WaitForPing waits for synthing to be ready
+//WaitForPing waits for syncthing to be ready
 func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	to := config.GetTimeout() // 30 seconds
@@ -455,7 +455,7 @@ func (s *Syncthing) IsAllIgnoredAndOverwritten() bool {
 	return true
 }
 
-//WaitForScanning waits for synthing to finish initial scanning
+//WaitForScanning waits for syncthing to finish initial scanning
 func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local bool) error {
 	for _, folder := range s.Folders {
 		if err := s.waitForFolderScanning(ctx, folder, local); err != nil {
