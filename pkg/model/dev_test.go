@@ -16,7 +16,6 @@ package model
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -630,7 +629,7 @@ func Test_LoadForcePull(t *testing.T) {
 func Test_validate(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 
@@ -932,6 +931,36 @@ func Test_ExpandEnv(t *testing.T) {
 			}
 			if result != tt.result {
 				t.Errorf("error in test '%s': '%s', expected: '%s'", tt.name, result, tt.result)
+			}
+		})
+	}
+}
+
+func TestGetTimeout(t *testing.T) {
+	tests := []struct {
+		name    string
+		env     string
+		want    time.Duration
+		wantErr bool
+	}{
+		{name: "default value", want: 30 * time.Second},
+		{name: "env var", want: 134 * time.Second, env: "134s"},
+		{name: "bad env var", wantErr: true, env: "bad value"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.env != "" {
+				os.Setenv("OKTETO_TIMEOUT", tt.env)
+			}
+			got, err := GetTimeout()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetTimeout() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if got != tt.want {
+				t.Errorf("GetTimeout() = %v, want %v", got, tt.want)
 			}
 		})
 	}

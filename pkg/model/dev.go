@@ -1004,7 +1004,7 @@ func GetTimeout() (time.Duration, error) {
 
 	parsed, err := time.ParseDuration(t)
 	if err != nil {
-		return defaultTimeout, fmt.Errorf("OKTETO_TIMEOUT is not a valid duration: %s", t)
+		return 0, fmt.Errorf("OKTETO_TIMEOUT is not a valid duration: %s", t)
 	}
 
 	return parsed, nil
