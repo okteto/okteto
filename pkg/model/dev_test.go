@@ -948,6 +948,10 @@ func TestGetTimeout(t *testing.T) {
 		{name: "bad env var", wantErr: true, env: "bad value"},
 	}
 
+	if original, ok := os.LookupEnv("OKTETO_TIMEOUT"); ok {
+		defer os.Setenv("OKTETO_TIMEOUT", original)
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.env != "" {
