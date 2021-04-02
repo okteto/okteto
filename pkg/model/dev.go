@@ -997,8 +997,8 @@ func ExpandEnv(value string) (string, error) {
 func GetTimeout() (time.Duration, error) {
 	defaultTimeout := (30 * time.Second)
 
-	t, ok := os.LookupEnv("OKTETO_TIMEOUT")
-	if !ok {
+	t := os.Getenv("OKTETO_TIMEOUT")
+	if t == "" {
 		return defaultTimeout, nil
 	}
 
