@@ -995,7 +995,7 @@ func ExpandEnv(value string) (string, error) {
 
 // GetTimeout returns the timeout override
 func GetTimeout() (time.Duration, error) {
-	defaultTimeout := (90 * time.Second)
+	defaultTimeout := (30 * time.Second)
 
 	t, ok := os.LookupEnv("OKTETO_TIMEOUT")
 	if !ok {

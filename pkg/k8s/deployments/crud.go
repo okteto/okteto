@@ -226,7 +226,7 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, forceCreate bool, client 
 //UpdateOktetoRevision updates the okteto version annotation
 func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kubernetes.Clientset, timeout time.Duration) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
-	to := time.Now().Add(timeout)
+	to := time.Now().Add(timeout * 2) // 60 seconds
 
 	for i := 0; ; i++ {
 		updated, err := client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})

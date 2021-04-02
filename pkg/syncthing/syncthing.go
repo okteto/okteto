@@ -469,7 +469,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	ticker := time.NewTicker(100 * time.Millisecond)
 	log.Infof("waiting for initial scan to complete path=%s local=%t", folder.LocalPath, local)
 
-	to := time.Now().Add(s.timeout)
+	to := time.Now().Add(s.timeout * 10) // 5 minutes
 
 	for i := 0; ; i++ {
 		status, err := s.GetStatus(ctx, folder, local)
