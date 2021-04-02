@@ -257,4 +257,4 @@ workflows:
             branches:
               only:
                 - master
-                - /.*(windows)/
+                - /.*(windows|win)/
