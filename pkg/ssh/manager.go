@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"time"
 
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log"
@@ -101,10 +102,10 @@ func (fm *ForwardManager) Add(f model.Forward) error {
 }
 
 // Start starts a port-forward to the remote port and then starts forwards and reverse forwards as goroutines
-func (fm *ForwardManager) Start(devPod, namespace string) error {
+func (fm *ForwardManager) Start(devPod, namespace string, timeout time.Duration) error {
 	log.Info("starting SSH forward manager")
 	if fm.pf != nil {
-		if err := fm.pf.Start(devPod, namespace); err != nil {
+		if err := fm.pf.Start(devPod, namespace, timeout); err != nil {
 			return fmt.Errorf("failed to start SSH port-forward: %w", err)
 		}
 
@@ -117,7 +118,7 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 	}
 
 	log.Infof("starting SSH connection pool on %s", fm.sshAddr)
-	pool, err := startPool(fm.ctx, fm.sshAddr, c)
+	pool, err := startPool(fm.ctx, fm.sshAddr, c, timeout)
 	if err != nil {
 		return err
 	}

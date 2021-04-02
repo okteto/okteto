@@ -67,7 +67,7 @@ func TestForward(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := fm.Start("", ""); err != nil {
+	if err := fm.Start("", "", 30*time.Second); err != nil {
 		t.Fatal(err)
 	}
 
@@ -108,7 +108,7 @@ func TestReverse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := fm.Start("", ""); err != nil {
+	if err := fm.Start("", "", 30*time.Second); err != nil {
 		t.Fatal(err)
 	}
 

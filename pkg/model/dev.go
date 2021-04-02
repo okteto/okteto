@@ -28,6 +28,7 @@ import (
 
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
@@ -148,6 +149,7 @@ type Dev struct {
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
+	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 //Entrypoint represents the start command of a development container
@@ -477,6 +479,10 @@ func (dev *Dev) setDefaults() error {
 	setBuildDefaults(dev.Image)
 	setBuildDefaults(dev.Push)
 
+	if err := dev.setTimeout(); err != nil {
+		return err
+	}
+
 	if dev.ImagePullPolicy == "" {
 		dev.ImagePullPolicy = apiv1.PullAlways
 	}
@@ -542,6 +548,7 @@ func (dev *Dev) setDefaults() error {
 			s.Probes = &Probes{}
 		}
 	}
+
 	return nil
 }
 
@@ -570,6 +577,20 @@ func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 	if dev.SecurityContext.FSGroup == nil {
 		dev.SecurityContext.FSGroup = dev.SecurityContext.RunAsUser
 	}
+}
+
+func (dev *Dev) setTimeout() error {
+	if dev.Timeout != 0 {
+		return nil
+	}
+
+	t, err := config.GetTimeout()
+	if err != nil {
+		return err
+	}
+
+	dev.Timeout = t
+	return nil
 }
 
 func (dev *Dev) validate() error {

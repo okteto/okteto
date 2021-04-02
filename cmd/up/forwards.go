@@ -46,7 +46,7 @@ func (up *upContext) forwards(ctx context.Context) error {
 		return err
 	}
 
-	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace, up.Dev.Timeout)
 }
 
 func (up *upContext) sshForwards(ctx context.Context) error {
@@ -91,5 +91,5 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return fmt.Errorf("failed to add entry to your SSH config file")
 	}
 
-	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace, up.Dev.Timeout)
 }

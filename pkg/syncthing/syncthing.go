@@ -69,31 +69,32 @@ const (
 
 // Syncthing represents the local syncthing process.
 type Syncthing struct {
-	APIKey           string       `yaml:"apikey"`
-	GUIPassword      string       `yaml:"password"`
-	GUIPasswordHash  string       `yaml:"-"`
-	binPath          string       `yaml:"-"`
-	Client           *http.Client `yaml:"-"`
-	cmd              *exec.Cmd    `yaml:"-"`
-	Folders          []*Folder    `yaml:"folders"`
-	FileWatcherDelay int          `yaml:"-"`
-	ForceSendOnly    bool         `yaml:"-"`
-	GUIAddress       string       `yaml:"local"`
-	Home             string       `yaml:"-"`
-	LogPath          string       `yaml:"-"`
-	ListenAddress    string       `yaml:"-"`
-	RemoteAddress    string       `yaml:"-"`
-	RemoteDeviceID   string       `yaml:"-"`
-	RemoteGUIAddress string       `yaml:"remote"`
-	RemoteGUIPort    int          `yaml:"-"`
-	RemotePort       int          `yaml:"-"`
-	LocalGUIPort     int          `yaml:"-"`
-	LocalPort        int          `yaml:"-"`
-	Type             string       `yaml:"-"`
-	IgnoreDelete     bool         `yaml:"-"`
-	pid              int          `yaml:"-"`
-	RescanInterval   string       `yaml:"-"`
-	Compression      string       `yaml:"-"`
+	APIKey           string        `yaml:"apikey"`
+	GUIPassword      string        `yaml:"password"`
+	GUIPasswordHash  string        `yaml:"-"`
+	binPath          string        `yaml:"-"`
+	Client           *http.Client  `yaml:"-"`
+	cmd              *exec.Cmd     `yaml:"-"`
+	Folders          []*Folder     `yaml:"folders"`
+	FileWatcherDelay int           `yaml:"-"`
+	ForceSendOnly    bool          `yaml:"-"`
+	GUIAddress       string        `yaml:"local"`
+	Home             string        `yaml:"-"`
+	LogPath          string        `yaml:"-"`
+	ListenAddress    string        `yaml:"-"`
+	RemoteAddress    string        `yaml:"-"`
+	RemoteDeviceID   string        `yaml:"-"`
+	RemoteGUIAddress string        `yaml:"remote"`
+	RemoteGUIPort    int           `yaml:"-"`
+	RemotePort       int           `yaml:"-"`
+	LocalGUIPort     int           `yaml:"-"`
+	LocalPort        int           `yaml:"-"`
+	Type             string        `yaml:"-"`
+	IgnoreDelete     bool          `yaml:"-"`
+	pid              int           `yaml:"-"`
+	RescanInterval   string        `yaml:"-"`
+	Compression      string        `yaml:"-"`
+	timeout          time.Duration `yaml:"-"`
 }
 
 //Folder represents a sync folder
@@ -303,8 +304,7 @@ func (s *Syncthing) Run(ctx context.Context) error {
 //WaitForPing waits for syncthing to be ready
 func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	ticker := time.NewTicker(300 * time.Millisecond)
-	to := config.GetTimeout() // 30 seconds
-	timeout := time.Now().Add(to)
+	to := time.Now().Add(s.timeout)
 
 	log.Infof("waiting for syncthing local=%t to be ready", local)
 	for i := 0; ; i++ {
@@ -315,7 +315,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 			log.Infof("syncthing local=%t is not ready yet", local)
 		}
 
-		if time.Now().After(timeout) {
+		if time.Now().After(to) {
 			return fmt.Errorf("syncthing local=%t didn't respond after %s", local, to.String())
 		}
 
@@ -469,8 +469,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	ticker := time.NewTicker(100 * time.Millisecond)
 	log.Infof("waiting for initial scan to complete path=%s local=%t", folder.LocalPath, local)
 
-	to := config.GetTimeout() * 10 // 5 minutes
-	timeout := time.Now().Add(to)
+	to := time.Now().Add(s.timeout)
 
 	for i := 0; ; i++ {
 		status, err := s.GetStatus(ctx, folder, local)
@@ -488,7 +487,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 			}
 		}
 
-		if time.Now().After(timeout) {
+		if time.Now().After(to) {
 			return fmt.Errorf("initial file scan not completed after %s, please try again", to.String())
 		}
 
