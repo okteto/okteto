@@ -214,6 +214,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		Folders:          []*Folder{},
 		RescanInterval:   strconv.Itoa(dev.Sync.RescanInterval),
 		Compression:      compression,
+		timeout:          dev.Timeout,
 	}
 	index := 1
 	for _, sync := range dev.Sync.Folders {
@@ -316,7 +317,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 		}
 
 		if time.Now().After(to) {
-			return fmt.Errorf("syncthing local=%t didn't respond after %s", local, to.String())
+			return fmt.Errorf("syncthing local=%t didn't respond after %s", local, s.timeout.String())
 		}
 
 		select {
@@ -488,7 +489,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 		}
 
 		if time.Now().After(to) {
-			return fmt.Errorf("initial file scan not completed after %s, please try again", to.String())
+			return fmt.Errorf("initial file scan not completed after %s, please try again", s.timeout.String())
 		}
 
 		select {

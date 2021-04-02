@@ -124,7 +124,7 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 				return err
 			}
 
-			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, to.String())
+			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, timeout.String())
 		}
 
 		if i%10 == 5 {

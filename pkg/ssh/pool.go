@@ -96,7 +96,7 @@ func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig
 		log.Infof("ssh connection to %s is not yet ready: %s", addr, err)
 
 		if time.Now().After(to) {
-			return nil, nil, nil, fmt.Errorf("ssh connection to %s wasn't ready after %s: %s", addr, to.String(), err)
+			return nil, nil, nil, fmt.Errorf("ssh connection to %s wasn't ready after %s: %s", addr, timeout.String(), err)
 		}
 
 		select {
