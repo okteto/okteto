@@ -20,6 +20,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -50,6 +51,7 @@ serviceAccount: sa
 workdir: /app
 persistentVolume:
   enabled: true
+timeout: 63s
 services:
   - name: deployment
     container: core
@@ -120,6 +122,11 @@ services:
 		if !reflect.DeepEqual(dev.SecurityContext.Capabilities.Drop, []apiv1.Capability{"SYS_NICE"}) {
 			t.Errorf("SecurityContext.Capabilities.Drop was not parsed correctly. Expected [SYS_NICE]")
 		}
+	}
+
+	expected := (63 * time.Second)
+	if expected != main.Timeout {
+		t.Errorf("the default timeout wasn't applied, got %s, expected %s", main.Timeout, expected)
 	}
 }
 
@@ -228,6 +235,11 @@ forward:
 
 			if !d.PersistentVolumeEnabled() {
 				t.Errorf("persistent volume was not enabled by default")
+			}
+
+			defaultTimeout, _ := GetTimeout()
+			if defaultTimeout != d.Timeout {
+				t.Errorf("the default timeout wasn't applied, got %s, expected %s", d.Timeout, defaultTimeout)
 			}
 		})
 	}

@@ -232,20 +232,3 @@ func splitKubeConfigEnv(value string) string {
 	}
 	return strings.Split(value, ":")[0]
 }
-
-// GetTimeout returns the timeout override
-func GetTimeout() (time.Duration, error) {
-	defaultTimeout := (90 * time.Second)
-
-	t, ok := os.LookupEnv("OKTETO_TIMEOUT")
-	if !ok {
-		return defaultTimeout, nil
-	}
-
-	parsed, err := time.ParseDuration(t)
-	if err != nil {
-		return defaultTimeout, fmt.Errorf("OKTETO_TIMEOUT is not a valid duration: %s", t)
-	}
-
-	return parsed, nil
-}

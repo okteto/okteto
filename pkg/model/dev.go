@@ -28,7 +28,6 @@ import (
 
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
@@ -584,7 +583,7 @@ func (dev *Dev) setTimeout() error {
 		return nil
 	}
 
-	t, err := config.GetTimeout()
+	t, err := GetTimeout()
 	if err != nil {
 		return err
 	}
@@ -992,4 +991,21 @@ func ExpandEnv(value string) (string, error) {
 		return "", fmt.Errorf("error expanding environment on '%s': %s", value, err.Error())
 	}
 	return result, nil
+}
+
+// GetTimeout returns the timeout override
+func GetTimeout() (time.Duration, error) {
+	defaultTimeout := (90 * time.Second)
+
+	t, ok := os.LookupEnv("OKTETO_TIMEOUT")
+	if !ok {
+		return defaultTimeout, nil
+	}
+
+	parsed, err := time.ParseDuration(t)
+	if err != nil {
+		return defaultTimeout, fmt.Errorf("OKTETO_TIMEOUT is not a valid duration: %s", t)
+	}
+
+	return parsed, nil
 }

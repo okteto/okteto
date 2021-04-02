@@ -19,8 +19,8 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +43,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			to, err := config.GetTimeout()
+			to, err := model.GetTimeout()
 			if err != nil {
 				return err
 			}
