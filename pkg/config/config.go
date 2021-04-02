@@ -20,8 +20,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -55,9 +53,6 @@ const (
 
 // VersionString the version of the cli
 var VersionString string
-
-var timeout time.Duration
-var tOnce sync.Once
 
 //GetBinaryName returns the name of the binary
 func GetBinaryName() string {
