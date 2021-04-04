@@ -27,18 +27,34 @@ import (
 
 //Run runs the "okteto status" sequence
 func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64, error) {
-	progressLocal, err := sy.GetCompletionProgress(ctx, true)
+	progressLocal, err := getCompletionProgress(ctx, sy, true)
 	if err != nil {
 		log.Infof("error accessing local syncthing status: %s", err)
 		return 0, err
 	}
-	progressRemote, err := sy.GetCompletionProgress(ctx, false)
+	progressRemote, err := getCompletionProgress(ctx, sy, false)
 	if err != nil {
 		log.Infof("error accessing remote syncthing status: %s", err)
 		return 0, err
 	}
 
 	return computeProgress(progressLocal, progressRemote), nil
+}
+
+func getCompletionProgress(ctx context.Context, s *syncthing.Syncthing, local bool) (float64, error) {
+	device := syncthing.DefaultRemoteDeviceID
+	if local {
+		device = syncthing.LocalDeviceID
+	}
+	completion, err := s.GetCompletion(ctx, local, device)
+	if err != nil {
+		return 0, err
+	}
+	if completion.GlobalBytes == 0 {
+		return 100, nil
+	}
+	progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
+	return progress, nil
 }
 
 func computeProgress(local, remote float64) float64 {
