@@ -14,17 +14,88 @@
 package up
 
 import (
+	"bufio"
+	"crypto/md5"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
+
+func addStignoreSecrets(dev *model.Dev) error {
+	output := ""
+	for i, folder := range dev.Sync.Folders {
+		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
+		if !model.FileExists(stignorePath) {
+			continue
+		}
+		infile, err := os.Open(stignorePath)
+		if err != nil {
+			return err
+		}
+		defer infile.Close()
+		reader := bufio.NewReader(infile)
+
+		stignoreName := fmt.Sprintf("stignore-%d", i+1)
+		transformedStignorePath := filepath.Join(config.GetDeploymentHome(dev.Namespace, dev.Name), stignoreName)
+		outfile, err := os.OpenFile(transformedStignorePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer outfile.Close()
+
+		writer := bufio.NewWriter(outfile)
+		defer writer.Flush()
+
+		for {
+			bytes, _, err := reader.ReadLine()
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return err
+			}
+
+			line := strings.TrimSpace(string(bytes))
+			if line == "" {
+				continue
+			}
+			if strings.Contains(line, "(?d)") {
+				continue
+			}
+			if strings.HasPrefix(line, "#") {
+				continue
+			}
+
+			_, err = writer.WriteString(fmt.Sprintf("(?d)%s\n", line))
+			if err != nil {
+				return err
+			}
+			output = fmt.Sprintf("%s\n%s", output, line)
+		}
+
+		dev.Secrets = append(
+			dev.Secrets,
+			model.Secret{
+				LocalPath:  transformedStignorePath,
+				RemotePath: path.Join(folder.RemotePath, ".stignore"),
+				Mode:       0644,
+			},
+		)
+	}
+	dev.Annotations[model.OktetoStignoreAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
+	return nil
+}
 
 func checkStignoreConfiguration(dev *model.Dev) error {
 	for _, folder := range dev.Sync.Folders {

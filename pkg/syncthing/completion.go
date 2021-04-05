@@ -70,10 +70,11 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				}
 			}
 			if err := wfc.computeProgress(ctx); err != nil {
-				if err != errors.ErrBusySyncthing {
-					return err
+				if err == errors.ErrBusySyncthing {
+					reporter <- wfc.progress
+					continue
 				}
-				continue
+				return err
 			}
 
 			reporter <- wfc.progress
@@ -102,6 +103,11 @@ func (wfc *waitForCompletion) computeProgress(ctx context.Context) error {
 	}
 	wfc.localCompletion = localCompletion
 	log.Infof("syncthing status in local: globalBytes %d, needBytes %d, globalItems %d, needItems %d, needDeletes %d", localCompletion.GlobalBytes, localCompletion.NeedBytes, localCompletion.GlobalItems, localCompletion.NeedItems, localCompletion.NeedDeletes)
+	if localCompletion.GlobalBytes == 0 {
+		wfc.progress = 100
+	} else {
+		wfc.progress = (float64(localCompletion.GlobalBytes-localCompletion.NeedBytes) / float64(localCompletion.GlobalBytes)) * 100
+	}
 
 	remoteCompletion, err := wfc.sy.GetCompletion(ctx, false, DefaultRemoteDeviceID)
 	if err != nil {
@@ -115,11 +121,6 @@ func (wfc *waitForCompletion) computeProgress(ctx context.Context) error {
 		remoteCompletion.NeedItems,
 		remoteCompletion.NeedDeletes,
 	)
-	if localCompletion.GlobalBytes == 0 {
-		wfc.progress = 100
-	} else {
-		wfc.progress = (float64(localCompletion.GlobalBytes-localCompletion.NeedBytes) / float64(localCompletion.GlobalBytes)) * 100
-	}
 	return nil
 }
 

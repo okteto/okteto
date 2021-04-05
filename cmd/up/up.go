@@ -117,6 +117,10 @@ func Up() *cobra.Command {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
 			}
 
+			if err := addStignoreSecrets(dev); err != nil {
+				return err
+			}
+
 			if _, ok := os.LookupEnv("OKTETO_AUTODEPLOY"); ok {
 				autoDeploy = true
 			}
