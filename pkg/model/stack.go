@@ -136,13 +136,10 @@ func GetStack(name, stackPath string) (*Stack, error) {
 		return nil, err
 	}
 
-	for name, svc := range s.Services {
+	for _, svc := range s.Services {
 		svc.extendPorts()
 		svc.Public = svc.isPublic()
 		svc.IgnoreSyncVolumes()
-		if svc.Image == "" {
-			svc.Image = fmt.Sprintf("okteto.dev/%s", name)
-		}
 		if svc.Build == nil {
 			continue
 		}
