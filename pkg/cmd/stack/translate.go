@@ -129,8 +129,6 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 			if err != nil {
 				return err
 			}
-		} else {
-			return errors.UserError{E: fmt.Errorf("Can not connect to okteto build service"), Hint: "Make sure you are already logged in."}
 		}
 	}
 
