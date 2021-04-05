@@ -57,7 +57,7 @@ type ServiceRaw struct {
 	Labels          *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Xannotations    map[string]string  `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"`
-	Ports           []Port             `yaml:"ports,omitempty"`
+	Ports           []RawMessage       `yaml:"ports,omitempty"`
 	Scale           int32              `yaml:"scale"`
 	StopGracePeriod *RawMessage        `yaml:"stop_grace_period,omitempty"`
 	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`
@@ -184,7 +184,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
-		s.Services[svcName], err = svcRaw.ToService(svcName)
+		s.Services[svcName], err = svcRaw.ToService(svcName, s.IsCompose)
 		if err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
+func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Service, error) {
 	s := &Service{}
 	var err error
 	s.Deploy, err = unmarshalDeploy(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas, serviceRaw.Resources)
@@ -219,7 +219,11 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 		return nil, err
 	}
 
-	s.Ports = serviceRaw.Ports
+	s.Ports, err = unmarshalPorts(serviceRaw.Ports, isCompose, serviceRaw.Public)
+	if err != nil {
+		return nil, err
+	}
+
 	s.Expose, err = unmarshalExpose(serviceRaw.Expose)
 	if err != nil {
 		return nil, err
@@ -244,7 +248,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s.Volumes = serviceRaw.Volumes
 	s.WorkingDir = serviceRaw.WorkingDir
 
-	s.Public = serviceRaw.Public
 	s.Resources = serviceRaw.Resources
 	return s, nil
 }
@@ -267,6 +270,30 @@ func (warning *WarningType) UnmarshalYAML(unmarshal func(interface{}) error) err
 	return nil
 }
 
+func unmarshalPorts(rawMessages []RawMessage, isCompose bool, isPublic bool) ([]Port, error) {
+	portList := make([]Port, 0)
+	if rawMessages == nil {
+		return portList, nil
+	}
+	for _, port := range rawMessages {
+		var p Port
+		err := port.unmarshal(&p)
+		if err != nil {
+			return portList, err
+		}
+
+		if isCompose {
+			p.Public = isPublicPort(p.Port)
+		}
+		if isPublic {
+			p.Public = true
+		}
+
+		portList = append(portList, p)
+	}
+	return portList, nil
+}
+
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawPort string
@@ -280,12 +307,12 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if len(parts) == 1 {
 		portString = parts[0]
 		if strings.Contains(portString, "-") {
-			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort) // TODO: change message
+			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
 		}
 	} else if len(parts) <= 3 {
 		portString = parts[len(parts)-1]
 		if strings.Contains(portString, "-") {
-			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort) // TODO: change message
+			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
 		}
 	} else {
 		return fmt.Errorf(malformedPortForward, rawPort)
@@ -306,7 +333,6 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("Can not convert %s to a port.", portString)
 	}
 	p.Port = int32(port)
-	p.Public = isPublicPort(p.Port)
 
 	return nil
 }
@@ -507,9 +533,8 @@ func displayNotSupportedFields(s *StackRaw) {
 		s.Warnings = append(s.Warnings, getServiceNotSupportedFields(name, svcInfo)...)
 	}
 	if len(s.Warnings) > 0 {
-		log.Yellow("The following fields are not supported in this version and will be omitted:")
 		notSupportedFields := strings.Join(s.Warnings, "\n  - ")
-		log.Yellow("  - %s", notSupportedFields)
+		log.Warning("The following fields are not supported in this version and will be omitted: \n - %s", notSupportedFields)
 		log.Yellow("Help us to decide which fields should okteto implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
 	}
 }

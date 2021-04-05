@@ -39,7 +39,8 @@ type Stack struct {
 	Namespace string              `yaml:"namespace,omitempty"`
 	Services  map[string]*Service `yaml:"services,omitempty"`
 
-	Warnings []string
+	Warnings  []string
+	IsCompose bool
 }
 
 //Service represents an okteto stack service
@@ -106,13 +107,13 @@ type Port struct {
 }
 
 //GetStack returns an okteto stack object from a given file
-func GetStack(name, stackPath string) (*Stack, error) {
+func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 	b, err := ioutil.ReadFile(stackPath)
 	if err != nil {
 		return nil, err
 	}
 
-	s, err := ReadStack(b)
+	s, err := ReadStack(b, isCompose)
 	if err != nil {
 		return nil, err
 	}
@@ -151,8 +152,8 @@ func GetStack(name, stackPath string) (*Stack, error) {
 }
 
 //ReadStack reads an okteto stack
-func ReadStack(bytes []byte) (*Stack, error) {
-	s := &Stack{}
+func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
+	s := &Stack{IsCompose: isCompose}
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder
@@ -216,7 +217,7 @@ func (s *Stack) validate() error {
 
 		for _, v := range svc.Volumes {
 			if v.LocalPath != "" {
-				log.Yellow("[%s]: Volume '%s:%s' will be ignored. You can use it by using 'sync' field in okteto up", name, v.LocalPath, v.RemotePath)
+				log.Warning("[%s]: volume '%s:%s' will be ignored. You can use it by using 'sync' field in okteto up. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath)
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
