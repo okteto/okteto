@@ -57,7 +57,7 @@ const (
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
 	disableEvent             = "Disable Analytics"
-	stackNotSupportedField   = "NotSupportedField"
+	stackNotSupportedField   = "Stack Field Not Supported"
 )
 
 var (
