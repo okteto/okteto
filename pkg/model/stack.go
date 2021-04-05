@@ -63,7 +63,6 @@ type Service struct {
 	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`
 	WorkingDir      string             `yaml:"working_dir,omitempty"`
 
-	Public    bool             `yaml:"public,omitempty"`
 	Replicas  int32            `yaml:"replicas,omitempty"`
 	Resources ServiceResources `yaml:"resources,omitempty"`
 }
@@ -139,7 +138,6 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 
 	for _, svc := range s.Services {
 		svc.extendPorts()
-		svc.Public = svc.isPublic()
 		svc.IgnoreSyncVolumes()
 		if svc.Build == nil {
 			continue

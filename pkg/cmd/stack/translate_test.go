@@ -122,7 +122,7 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Data[nameField] != "stackName" {
 		t.Errorf("Wrong data.name: '%s'", result.Data[nameField])
 	}
-	if result.Data[yamlField] != "bmFtZTogc3RhY2tOYW1lCnNlcnZpY2VzOgogIHN2Y05hbWU6CiAgICBpbWFnZTogaW1hZ2UKd2FybmluZ3M6IFtdCg==" {
+	if result.Data[yamlField] != "bmFtZTogc3RhY2tOYW1lCnNlcnZpY2VzOgogIHN2Y05hbWU6CiAgICBpbWFnZTogaW1hZ2UKd2FybmluZ3M6IFtdCmlzY29tcG9zZTogZmFsc2UK" {
 		t.Errorf("Wrong data.yaml: '%s'", result.Data[yamlField])
 	}
 }
@@ -402,6 +402,8 @@ func Test_translateStatefulSet(t *testing.T) {
 }
 
 func Test_translateService(t *testing.T) {
+	p1 := model.Port{Port: 80, Public: true, Protocol: apiv1.ProtocolTCP}
+	p2 := model.Port{Port: 90, Public: false, Protocol: apiv1.ProtocolTCP}
 	s := &model.Stack{
 		Name: "stackName",
 		Services: map[string]*model.Service{
@@ -414,13 +416,17 @@ func Test_translateService(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
-				Ports: []model.Port{{Port: 80, Protocol: apiv1.ProtocolTCP}, {Port: 90, Protocol: apiv1.ProtocolTCP}},
+				Ports: []model.Port{p1, p2},
 			},
 		},
 	}
-	result := translateService("svcName", s)
-	if result.Name != "svcName" {
-		t.Errorf("Wrong service name: '%s'", result.Name)
+	result1 := translateService("svcName", s, p1)
+	if result1.Name != "svcName-80" {
+		t.Errorf("Wrong service name: '%s'", result1.Name)
+	}
+	result2 := translateService("svcName", s, p2)
+	if result2.Name != "svcName-90" {
+		t.Errorf("Wrong service name: '%s'.", result2.Name)
 	}
 	labels := map[string]string{
 		"label1":                       "value1",
@@ -428,23 +434,31 @@ func Test_translateService(t *testing.T) {
 		okLabels.StackNameLabel:        "stackName",
 		okLabels.StackServiceNameLabel: "svcName",
 	}
-	if !reflect.DeepEqual(result.Labels, labels) {
-		t.Errorf("Wrong service labels: '%s'", result.Labels)
+	if !reflect.DeepEqual(result1.Labels, labels) {
+		t.Errorf("Wrong service labels: '%s'", result1.Labels)
 	}
 	annotations := map[string]string{
 		"annotation1": "value1",
 		"annotation2": "value2",
 	}
-	if !reflect.DeepEqual(result.Annotations, annotations) {
-		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	if !reflect.DeepEqual(result2.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result2.Annotations)
 	}
-	ports := []apiv1.ServicePort{
+	ports1 := []apiv1.ServicePort{
 		{
 			Name:       "p-80-tcp",
 			Port:       80,
 			TargetPort: intstr.IntOrString{IntVal: 80},
 			Protocol:   apiv1.ProtocolTCP,
 		},
+	}
+	if !reflect.DeepEqual(result1.Spec.Ports, ports1) {
+		t.Errorf("Wrong service ports: '%v'", result1.Spec.Ports)
+	}
+	if result1.Spec.Type != apiv1.ServiceTypeLoadBalancer {
+		t.Errorf("Wrong service type: '%s'", result1.Spec.Type)
+	}
+	ports2 := []apiv1.ServicePort{
 		{
 			Name:       "p-90-tcp",
 			Port:       90,
@@ -452,29 +466,25 @@ func Test_translateService(t *testing.T) {
 			Protocol:   apiv1.ProtocolTCP,
 		},
 	}
-	if !reflect.DeepEqual(result.Spec.Ports, ports) {
-		t.Errorf("Wrong service ports: '%v'", result.Spec.Ports)
+	if !reflect.DeepEqual(result2.Spec.Ports, ports2) {
+		t.Errorf("Wrong service ports: '%v'", result2.Spec.Ports)
 	}
-	if result.Spec.Type != apiv1.ServiceTypeClusterIP {
-		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
+	if result2.Spec.Type != apiv1.ServiceTypeClusterIP {
+		t.Errorf("Wrong service type: '%s'", result2.Spec.Type)
 	}
 	selector := map[string]string{
 		okLabels.StackNameLabel:        "stackName",
 		okLabels.StackServiceNameLabel: "svcName",
 	}
-	if !reflect.DeepEqual(result.Spec.Selector, selector) {
-		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector)
+	if !reflect.DeepEqual(result1.Spec.Selector, selector) {
+		t.Errorf("Wrong spec.selector: '%s'", result1.Spec.Selector)
 	}
 
-	svc := s.Services["svcName"]
-	svc.Public = true
-	s.Services["svcName"] = svc
-	result = translateService("svcName", s)
 	annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
-	if !reflect.DeepEqual(result.Annotations, annotations) {
-		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	if !reflect.DeepEqual(result1.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result1.Annotations)
 	}
-	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
-		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
+	if result1.Spec.Type != apiv1.ServiceTypeLoadBalancer {
+		t.Errorf("Wrong service type: '%s'", result1.Spec.Type)
 	}
 }

@@ -94,10 +94,13 @@ func deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 			}
 		}
 		if len(s.Services[name].Ports) > 0 {
-			svcK8s := translateService(name, s)
-			if err := services.Create(ctx, svcK8s, c); err != nil {
-				return err
+			for _, port := range s.Services[name].Ports {
+				svcK8s := translateService(name, s, port)
+				if err := services.Create(ctx, svcK8s, c); err != nil {
+					return err
+				}
 			}
+
 		}
 		spinner.Stop()
 		log.Success("Deployed service '%s'", name)

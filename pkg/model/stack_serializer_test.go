@@ -180,9 +180,6 @@ func Test_PortUnmarshalling(t *testing.T) {
 			if result.Port != tt.expected.Port {
 				t.Errorf("didn't unmarshal correctly Port. Actual %d, Expected %d", result.Port, tt.expected.Port)
 			}
-			if result.Public != tt.expected.Public {
-				t.Errorf("didn't unmarshal correctly Public. Actual %t, Expected %t", result.Public, tt.expected.Public)
-			}
 
 			_, err := yaml.Marshal(&result)
 			if err != nil {
