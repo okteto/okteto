@@ -37,8 +37,7 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 		for _, secondaryStackManifest := range secondaryStackManifests {
 			if model.FileExists(secondaryStackManifest) {
 				if isDeprecatedExtension(stackPath) {
-					log.Yellow("The stack name that you are using will be deprecated in a future version. Pleas consider using one of the accepted ones.")
-					log.Yellow("More information is available here: https://okteto.com/docs/reference/cli#destroy-1")
+					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", stackPath)
 				}
 				return model.GetStack(name, secondaryStackManifest)
 			}
