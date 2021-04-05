@@ -44,12 +44,6 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 		}
 	}
 
-	composeFile := model.GetFileByRegex("docker-compose.*")
-	if composeFile != "" {
-		log.Yellow("Using %s as compose file. If you want to specify other compose file, you can do it by using --file flag.", composeFile)
-		return model.GetStack(name, composeFile)
-	}
-	// TODO: Get file starting with docker-compose.*
 	return nil, fmt.Errorf("'%s' does not exist", stackPath)
 
 }
