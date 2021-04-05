@@ -78,6 +78,9 @@ const (
 
 	// OktetoAutoIngressAnnotation indicates an ingress must be created for a service
 	OktetoAutoIngressAnnotation = "dev.okteto.com/auto-ingress"
+
+	// OktetoInstallerRunningLabel indicates the okteto installer is running on this resource
+	OktetoInstallerRunningLabel = "dev.okteto.com/installer-running"
 )
 
 //TransformLabelsToSelector transforms a map of labels into a string k8s selector
