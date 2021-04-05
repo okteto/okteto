@@ -14,6 +14,7 @@
 package model
 
 import (
+	"reflect"
 	"testing"
 
 	yaml "gopkg.in/yaml.v2"
@@ -222,6 +223,34 @@ func Test_DurationUnmarshalling(t *testing.T) {
 
 			if duration != tt.expected {
 				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", duration, tt.expected)
+			}
+		})
+	}
+}
+
+func Test_GroupNotSupportedFields(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name:     "no-need-to-group",
+			input:    []string{"volumes", "networks", "service[app].cpus"},
+			expected: []string{"volumes", "networks", "service[app].cpus"},
+		},
+		{
+			name:     "string-no-units",
+			input:    []string{"volumes", "networks", "service[app].cpus", "service[db].cpus"},
+			expected: []string{"volumes", "networks", "service[app, db].cpus"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := GroupWarningsBySvc(tt.input)
+			if !reflect.DeepEqual(tt.expected, output) {
+				t.Errorf("didn't group correctly. Actual %+v, Expected %+v", output, tt.expected)
 			}
 		})
 	}
