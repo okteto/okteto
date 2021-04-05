@@ -448,5 +448,19 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 			result.Limits[apiv1.ResourceMemory] = memoryResource
 		}
 	}
+	if cpuResource, ok := svc.Deploy.Resources.Requests[apiv1.ResourceCPU]; ok {
+		if cpuResource.Cmp(resource.MustParse("0")) > 0 {
+			result.Requests = apiv1.ResourceList{}
+			result.Requests[apiv1.ResourceCPU] = cpuResource
+		}
+	}
+	if memoryResource, ok := svc.Deploy.Resources.Requests[apiv1.ResourceMemory]; ok {
+		if memoryResource.Cmp(resource.MustParse("0")) > 0 {
+			if result.Requests == nil {
+				result.Requests = apiv1.ResourceList{}
+			}
+			result.Requests[apiv1.ResourceMemory] = memoryResource
+		}
+	}
 	return result
 }
