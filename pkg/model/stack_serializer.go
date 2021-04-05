@@ -534,7 +534,7 @@ func displayNotSupportedFields(s *StackRaw) {
 	}
 	if len(s.Warnings) > 0 {
 		notSupportedFields := strings.Join(s.Warnings, "\n  - ")
-		log.Warning("The following fields are not supported in this version and will be omitted: \n - %s", notSupportedFields)
+		log.Warning("The following fields are not supported in this version and will be omitted: \n  - %s", notSupportedFields)
 		log.Yellow("Help us to decide which fields should okteto implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
 	}
 }
