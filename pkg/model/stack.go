@@ -288,13 +288,3 @@ func (svc *Service) isAlreadyAdded(p int32) bool {
 	}
 	return false
 }
-
-//isPublic sets the deploy resources and replicas of a service
-func (svc *Service) isPublic() bool {
-	for _, port := range svc.Ports {
-		if port.Public {
-			return true
-		}
-	}
-	return false
-}
