@@ -52,7 +52,7 @@ type Service struct {
 	Entrypoint      Entrypoint         `yaml:"entrypoint,omitempty"`
 	Command         Command            `yaml:"command,omitempty"`
 	EnvFiles        []string           `yaml:"env_file,omitempty"`
-	Environment     []EnvVar           `yaml:"enviroment,omitempty"`
+	Environment     []EnvVar           `yaml:"environment,omitempty"`
 	Expose          []int32            `yaml:"expose,omitempty"`
 	Image           string             `yaml:"image,omitempty"`
 	Labels          map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
