@@ -16,6 +16,7 @@ package client
 import (
 	"log"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -113,6 +114,12 @@ func InCluster() bool {
 }
 
 func setAnalytics(clusterContext, clusterHost string) {
+	if os.Getenv("OKTETO_NAMESPACE") != "" && os.Getenv("OKTETO_URL") != "" {
+		analytics.SetClusterType(oktetoClusterType)
+		analytics.SetClusterContext(okteto.GetClusterContext())
+		return
+	}
+
 	if okteto.GetClusterContext() == clusterContext {
 		analytics.SetClusterType(oktetoClusterType)
 		analytics.SetClusterContext(clusterContext)
