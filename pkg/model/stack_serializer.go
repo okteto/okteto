@@ -270,7 +270,7 @@ func (warning *WarningType) UnmarshalYAML(unmarshal func(interface{}) error) err
 	return nil
 }
 
-func unmarshalPorts(rawMessages []RawMessage, isCompose bool, isPublic bool) ([]Port, error) {
+func unmarshalPorts(rawMessages []RawMessage, isCompose, isPublic bool) ([]Port, error) {
 	portList := make([]Port, 0)
 	if rawMessages == nil {
 		return portList, nil
@@ -342,7 +342,7 @@ func (p *Port) MarshalYAML() (interface{}, error) {
 	return Port{Port: p.Port, Public: p.Public}, nil
 }
 
-func unmarshalDeploy(deployInfo *DeployInfoRaw, scale int32, replicas int32, resources ServiceResources) (*DeployInfo, error) {
+func unmarshalDeploy(deployInfo *DeployInfoRaw, scale, replicas int32, resources ServiceResources) (*DeployInfo, error) {
 	deploy := &DeployInfo{Replicas: 1, Resources: ResourceRequirements{Limits: make(map[apiv1.ResourceName]resource.Quantity),
 		Requests: make(map[apiv1.ResourceName]resource.Quantity)}}
 	if deployInfo != nil {
