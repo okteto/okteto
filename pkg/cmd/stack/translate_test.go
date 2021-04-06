@@ -401,7 +401,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	}
 }
 
-func Test_translateService(t *testing.T) {
+func Test_translateComposeService(t *testing.T) {
 	p1 := model.Port{Port: 80, Public: true, Protocol: apiv1.ProtocolTCP}
 	p2 := model.Port{Port: 90, Public: false, Protocol: apiv1.ProtocolTCP}
 	s := &model.Stack{
@@ -420,11 +420,11 @@ func Test_translateService(t *testing.T) {
 			},
 		},
 	}
-	result1 := translateService("svcName", s, p1)
+	result1 := translateComposeService("svcName", s, p1)
 	if result1.Name != "svcName-80" {
 		t.Errorf("Wrong service name: '%s'", result1.Name)
 	}
-	result2 := translateService("svcName", s, p2)
+	result2 := translateComposeService("svcName", s, p2)
 	if result2.Name != "svcName-90" {
 		t.Errorf("Wrong service name: '%s'.", result2.Name)
 	}
@@ -486,5 +486,92 @@ func Test_translateService(t *testing.T) {
 	}
 	if result1.Spec.Type != apiv1.ServiceTypeLoadBalancer {
 		t.Errorf("Wrong service type: '%s'", result1.Spec.Type)
+	}
+}
+
+func Test_translateService(t *testing.T) {
+	p1 := model.Port{Port: 80, Public: true, Protocol: apiv1.ProtocolTCP}
+	p2 := model.Port{Port: 90, Public: false, Protocol: apiv1.ProtocolTCP}
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svcName": {
+				Labels: map[string]string{
+					"label1": "value1",
+					"label2": "value2",
+				},
+				Annotations: map[string]string{
+					"annotation1": "value1",
+					"annotation2": "value2",
+				},
+				Ports: []model.Port{p1, p2},
+			},
+		},
+	}
+	result := translateService("svcName", s)
+	if result.Name != "svcName" {
+		t.Errorf("Wrong service name: '%s'", result.Name)
+	}
+	labels := map[string]string{
+		"label1":                       "value1",
+		"label2":                       "value2",
+		okLabels.StackNameLabel:        "stackName",
+		okLabels.StackServiceNameLabel: "svcName",
+	}
+	if !reflect.DeepEqual(result.Labels, labels) {
+		t.Errorf("Wrong service labels: '%s'", result.Labels)
+	}
+	annotations := map[string]string{
+		"annotation1": "value1",
+		"annotation2": "value2",
+	}
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	}
+	ports := []apiv1.ServicePort{
+		{
+			Name:       "p-80-tcp",
+			Port:       80,
+			TargetPort: intstr.IntOrString{IntVal: 80},
+			Protocol:   apiv1.ProtocolTCP,
+		},
+		{
+			Name:       "p-90-tcp",
+			Port:       90,
+			TargetPort: intstr.IntOrString{IntVal: 90},
+			Protocol:   apiv1.ProtocolTCP,
+		},
+	}
+	if !reflect.DeepEqual(result.Spec.Ports, ports) {
+		t.Errorf("Wrong service ports: '%v', expected: '%v'", result.Spec.Ports, ports)
+	}
+	if result.Spec.Type != apiv1.ServiceTypeClusterIP {
+		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
+	}
+	selector := map[string]string{
+		okLabels.StackNameLabel:        "stackName",
+		okLabels.StackServiceNameLabel: "svcName",
+	}
+	if !reflect.DeepEqual(result.Spec.Selector, selector) {
+		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector)
+	}
+
+	svc := s.Services["svcName"]
+	svc.Public = true
+	s.Services["svcName"] = svc
+	result = translateService("svcName", s)
+	annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	}
+	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
+		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
+	}
+	annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	}
+	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
+		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
 	}
 }

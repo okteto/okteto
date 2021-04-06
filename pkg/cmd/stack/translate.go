@@ -306,7 +306,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 	}
 }
 
-func translateService(svcName string, s *model.Stack, port model.Port) *apiv1.Service {
+func translateComposeService(svcName string, s *model.Stack, port model.Port) *apiv1.Service {
 	svc := s.Services[svcName]
 	annotations := translateAnnotations(svc)
 	if port.Public {
@@ -321,8 +321,29 @@ func translateService(svcName string, s *model.Stack, port model.Port) *apiv1.Se
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: translateLabelSelector(svcName, s),
-			Type:     translateServiceType(port),
-			Ports:    translateServicePorts(port),
+			Type:     translatePortType(port),
+			Ports:    translatePort(port),
+		},
+	}
+}
+
+func translateService(svcName string, s *model.Stack) *apiv1.Service {
+	svc := s.Services[svcName]
+	annotations := translateAnnotations(svc)
+	if s.Services[svcName].Public {
+		annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
+	}
+	return &apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        fmt.Sprintf("%s", svcName),
+			Namespace:   s.Namespace,
+			Labels:      translateLabels(svcName, s),
+			Annotations: annotations,
+		},
+		Spec: apiv1.ServiceSpec{
+			Selector: translateLabelSelector(svcName, s),
+			Type:     translateServiceType(*svc),
+			Ports:    translateServicePorts(*svc),
 		},
 	}
 }
@@ -355,8 +376,15 @@ func translateAnnotations(svc *model.Service) map[string]string {
 	return result
 }
 
-func translateServiceType(port model.Port) apiv1.ServiceType {
+func translatePortType(port model.Port) apiv1.ServiceType {
 	if port.Public {
+		return apiv1.ServiceTypeLoadBalancer
+	}
+	return apiv1.ServiceTypeClusterIP
+}
+
+func translateServiceType(svc model.Service) apiv1.ServiceType {
+	if svc.Public {
 		return apiv1.ServiceTypeLoadBalancer
 	}
 	return apiv1.ServiceTypeClusterIP
@@ -414,7 +442,7 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	return result
 }
 
-func translateServicePorts(port model.Port) []apiv1.ServicePort {
+func translatePort(port model.Port) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
 	result = append(
 		result,
@@ -425,6 +453,22 @@ func translateServicePorts(port model.Port) []apiv1.ServicePort {
 			Protocol:   port.Protocol,
 		},
 	)
+	return result
+}
+
+func translateServicePorts(svc model.Service) []apiv1.ServicePort {
+	result := []apiv1.ServicePort{}
+	for _, p := range svc.Ports {
+		result = append(
+			result,
+			apiv1.ServicePort{
+				Name:       fmt.Sprintf("p-%d-%s", p.Port, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
+				Port:       int32(p.Port),
+				TargetPort: intstr.IntOrString{IntVal: p.Port},
+				Protocol:   p.Protocol,
+			},
+		)
+	}
 	return result
 }
 

@@ -249,6 +249,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 	s.WorkingDir = serviceRaw.WorkingDir
 
 	s.Resources = serviceRaw.Resources
+	s.Public = serviceRaw.Public
 	return s, nil
 }
 

@@ -94,13 +94,19 @@ func deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 			}
 		}
 		if len(s.Services[name].Ports) > 0 {
-			for _, port := range s.Services[name].Ports {
-				svcK8s := translateService(name, s, port)
+			if s.IsCompose {
+				for _, port := range s.Services[name].Ports {
+					svcK8s := translateComposeService(name, s, port)
+					if err := services.Create(ctx, svcK8s, c); err != nil {
+						return err
+					}
+				}
+			} else {
+				svcK8s := translateService(name, s)
 				if err := services.Create(ctx, svcK8s, c); err != nil {
 					return err
 				}
 			}
-
 		}
 		spinner.Stop()
 		log.Success("Deployed service '%s'", name)
