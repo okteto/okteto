@@ -16,6 +16,7 @@ package client
 import (
 	"log"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -32,6 +33,8 @@ const (
 	oktetoClusterType = "okteto"
 	localClusterType  = "local"
 	remoteClusterType = "remote"
+	//OktetoContextVariableName defines the kubeconfig context of okteto commands
+	OktetoContextVariableName = "OKTETO_CONTEXT"
 )
 
 var (
@@ -41,7 +44,7 @@ var (
 
 //GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
 func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
-	return GetLocalWithContext("")
+	return GetLocalWithContext(os.Getenv(OktetoContextVariableName))
 }
 
 //GetLocalWithContext returns a kubernetes client for a given context. It will detect if KUBECONFIG is defined.
@@ -94,6 +97,9 @@ func GetSessionContext(k8sContext string) string {
 
 //GetContextNamespace returns the name of the namespace in use by a given context
 func GetContextNamespace(k8sContext string) string {
+	if k8sContext == "" {
+		k8sContext = os.Getenv(OktetoContextVariableName)
+	}
 	namespace, _, err := getClientConfig(k8sContext).Namespace()
 	if err != nil {
 		log.Fatalf("error accessing you kubeconfig file: %s", err.Error())

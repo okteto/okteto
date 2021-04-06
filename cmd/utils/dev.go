@@ -55,11 +55,16 @@ func LoadDev(devPath, namespace, k8sContext string) (*model.Dev, error) {
 func loadContext(dev *model.Dev, k8sContext string) {
 	if k8sContext != "" {
 		dev.Context = k8sContext
+		return
 	}
-	if dev.Context == "" {
-		dev.Context = client.GetSessionContext("")
+	if dev.Context != "" {
+		return
 	}
-
+	if os.Getenv(client.OktetoContextVariableName) != "" {
+		dev.Context = os.Getenv(client.OktetoContextVariableName)
+		return
+	}
+	dev.Context = client.GetSessionContext("")
 }
 
 func loadNamespace(dev *model.Dev, namespace string) {
