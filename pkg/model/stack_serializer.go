@@ -343,8 +343,8 @@ func (p *Port) MarshalYAML() (interface{}, error) {
 }
 
 func unmarshalDeploy(deployInfo *DeployInfoRaw, scale int32, replicas int32, resources ServiceResources) (*DeployInfo, error) {
-	deploy := &DeployInfo{Replicas: 1, Resources: ResourceRequirements{Limits: make(map[apiv1.ResourceName]resource.Quantity, 0),
-		Requests: make(map[apiv1.ResourceName]resource.Quantity, 0)}}
+	deploy := &DeployInfo{Replicas: 1, Resources: ResourceRequirements{Limits: make(map[apiv1.ResourceName]resource.Quantity),
+		Requests: make(map[apiv1.ResourceName]resource.Quantity)}}
 	if deployInfo != nil {
 		if deployInfo.Replicas > deploy.Replicas {
 			deploy.Replicas = deployInfo.Replicas
@@ -373,7 +373,7 @@ func unmarshalDeploy(deployInfo *DeployInfoRaw, scale int32, replicas int32, res
 }
 
 func (r DeployComposeResources) toResourceList() ResourceList {
-	resources := make(map[apiv1.ResourceName]resource.Quantity, 0)
+	resources := make(map[apiv1.ResourceName]resource.Quantity)
 	if !r.Cpus.Value.IsZero() {
 		resources[apiv1.ResourceCPU] = r.Cpus.Value
 	}
@@ -430,7 +430,7 @@ func unmarshalEnvs(raw *RawMessage) ([]EnvVar, error) {
 }
 
 func unmarshalLabels(raw *RawMessage) (map[string]string, error) {
-	envMap := make(map[string]string, 0)
+	envMap := make(map[string]string)
 	if raw == nil {
 		return envMap, nil
 	}
