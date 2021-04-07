@@ -20,6 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
 
@@ -35,12 +36,17 @@ func Destroy(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := utils.LoadStack(name, stackPath)
 			if err != nil {
-				return err
+				if name == "" {
+					return err
+				}
+				log.Errorf("error reading stack: %s", err.Error())
+				s = &model.Stack{Name: name}
 			}
 
 			if err := s.UpdateNamespace(namespace); err != nil {
 				return err
 			}
+
 			err = stack.Destroy(ctx, s, rm)
 			analytics.TrackDestroyStack(err == nil)
 			if err == nil {
