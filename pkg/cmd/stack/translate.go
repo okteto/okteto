@@ -335,7 +335,7 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	}
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "%s",
+			Name:        svcName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
 			Annotations: annotations,
