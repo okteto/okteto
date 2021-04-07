@@ -36,6 +36,7 @@ type Stack struct {
 	Name      string             `yaml:"name"`
 	Namespace string             `yaml:"namespace,omitempty"`
 	Services  map[string]Service `yaml:"services,omitempty"`
+	Manifest  []byte             `yaml:"-"`
 }
 
 //Service represents an okteto stack service
@@ -121,7 +122,9 @@ func GetStack(name, stackPath string) (*Stack, error) {
 
 //ReadStack reads an okteto stack
 func ReadStack(bytes []byte) (*Stack, error) {
-	s := &Stack{}
+	s := &Stack{
+		Manifest: bytes,
+	}
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder

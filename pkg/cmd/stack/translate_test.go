@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -105,7 +106,8 @@ func Test_translateEnvVars(t *testing.T) {
 
 func Test_translateConfigMap(t *testing.T) {
 	s := &model.Stack{
-		Name: "stackName",
+		Manifest: []byte("manifest"),
+		Name:     "stackName",
 		Services: map[string]model.Service{
 			"svcName": {
 				Image: "image",
@@ -122,7 +124,7 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Data[nameField] != "stackName" {
 		t.Errorf("Wrong data.name: '%s'", result.Data[nameField])
 	}
-	if result.Data[yamlField] != "bmFtZTogc3RhY2tOYW1lCnNlcnZpY2VzOgogIHN2Y05hbWU6CiAgICBpbWFnZTogaW1hZ2UKICAgIHJlcGxpY2FzOiAwCg==" {
+	if result.Data[yamlField] != base64.StdEncoding.EncodeToString(s.Manifest) {
 		t.Errorf("Wrong data.yaml: '%s'", result.Data[yamlField])
 	}
 }
