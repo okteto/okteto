@@ -107,7 +107,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			if err := loadDevOverrides(dev, namespace, k8sContext, forcePull, remote, autoDeploy); err != nil {
+			if err := loadDevOverrides(dev, forcePull, remote, autoDeploy); err != nil {
 				return err
 			}
 
@@ -182,7 +182,7 @@ func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
 	return utils.LoadDev(devPath, namespace, k8sContext)
 }
 
-func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int, autoDeploy bool) error {
+func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy bool) error {
 	if remote > 0 {
 		dev.RemotePort = remote
 	}
