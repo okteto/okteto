@@ -283,7 +283,7 @@ func unmarshalPorts(rawMessages []RawMessage, isCompose, isPublic bool) ([]Port,
 			return portList, err
 		}
 
-		if isCompose {
+		if isCompose && !p.Public {
 			p.Public = isPublicPort(p.Port)
 		}
 		if isPublic {
@@ -305,6 +305,7 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(rawPort, ":")
 	var portString string
+	var isPublic bool
 	if len(parts) == 1 {
 		portString = parts[0]
 		if strings.Contains(portString, "-") {
@@ -315,6 +316,7 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if strings.Contains(portString, "-") {
 			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
 		}
+		isPublic = true
 	} else {
 		return fmt.Errorf(malformedPortForward, rawPort)
 	}
@@ -334,6 +336,7 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("Can not convert %s to a port.", portString)
 	}
 	p.Port = int32(port)
+	p.Public = isPublic
 
 	return nil
 }
