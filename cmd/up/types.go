@@ -15,7 +15,6 @@ package up
 
 import (
 	"context"
-	"time"
 
 	"github.com/docker/docker/pkg/term"
 	"github.com/okteto/okteto/pkg/model"
@@ -54,7 +53,7 @@ type upContext struct {
 type forwarder interface {
 	Add(model.Forward) error
 	AddReverse(model.Reverse) error
-	Start(string, string, time.Duration) error
+	Start(string, string) error
 	Stop()
 	TransformLabelsToServiceName(model.Forward) (model.Forward, error)
 }

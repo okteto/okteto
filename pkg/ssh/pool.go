@@ -30,7 +30,7 @@ type pool struct {
 	stopped bool
 }
 
-func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig, timeout time.Duration) (*pool, error) {
+func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig) (*pool, error) {
 	p := &pool{
 		ka:      30 * time.Second,
 		stopped: false,
@@ -41,7 +41,7 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig,
 	t := time.NewTicker(500 * time.Millisecond)
 
 	for i := 0; i < 10; i++ {
-		client, err = start(ctx, serverAddr, config, p.ka, timeout)
+		client, err = start(ctx, serverAddr, config, p.ka)
 		if err == nil {
 			break
 		}
@@ -60,8 +60,8 @@ func startPool(ctx context.Context, serverAddr string, config *ssh.ClientConfig,
 	return p, nil
 }
 
-func start(ctx context.Context, serverAddr string, config *ssh.ClientConfig, keepAlive, timeout time.Duration) (*ssh.Client, error) {
-	clientConn, chans, reqs, err := retryNewClientConn(ctx, serverAddr, config, keepAlive, timeout)
+func start(ctx context.Context, serverAddr string, config *ssh.ClientConfig, keepAlive time.Duration) (*ssh.Client, error) {
+	clientConn, chans, reqs, err := retryNewClientConn(ctx, serverAddr, config, keepAlive)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ssh client connection: %w", err)
 	}
@@ -77,8 +77,9 @@ func start(ctx context.Context, serverAddr string, config *ssh.ClientConfig, kee
 	return client, nil
 }
 
-func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig, keepAlive, timeout time.Duration) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
+func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig, keepAlive time.Duration) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
 	ticker := time.NewTicker(300 * time.Millisecond)
+	timeout := 3 * time.Second
 	to := time.Now().Add(3 * time.Second)
 
 	log.Infof("waiting for ssh connection to %s to be ready", addr)

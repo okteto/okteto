@@ -124,7 +124,7 @@ func (p *PortForwardManager) AddReverse(_ model.Reverse) error {
 }
 
 // Start starts all the port forwarders to the development container
-func (p *PortForwardManager) Start(devPod, namespace string, _ time.Duration) error {
+func (p *PortForwardManager) Start(devPod, namespace string) error {
 	p.stopped = false
 	a, devPF, err := p.buildForwarderToDevPod(namespace, devPod)
 	if err != nil {
