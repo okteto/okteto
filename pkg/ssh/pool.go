@@ -79,7 +79,7 @@ func start(ctx context.Context, serverAddr string, config *ssh.ClientConfig, kee
 
 func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig, keepAlive, timeout time.Duration) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
 	ticker := time.NewTicker(300 * time.Millisecond)
-	to := time.Now().Add(timeout / 10) // 3 seconds
+	to := time.Now().Add(3 * time.Second)
 
 	log.Infof("waiting for ssh connection to %s to be ready", addr)
 	for i := 0; ; i++ {
