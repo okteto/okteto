@@ -47,7 +47,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err = stack.Destroy(ctx, s, rm)
+			to, err := model.GetTimeout()
+			if err != nil {
+				return err
+			}
+
+			err = stack.Destroy(ctx, s, rm, to)
 			analytics.TrackDestroyStack(err == nil)
 			if err == nil {
 				log.Success("Stack '%s' successfully destroyed", s.Name)

@@ -16,10 +16,10 @@ package model
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -50,6 +50,7 @@ serviceAccount: sa
 workdir: /app
 persistentVolume:
   enabled: true
+timeout: 63s
 services:
   - name: deployment
     container: core
@@ -120,6 +121,11 @@ services:
 		if !reflect.DeepEqual(dev.SecurityContext.Capabilities.Drop, []apiv1.Capability{"SYS_NICE"}) {
 			t.Errorf("SecurityContext.Capabilities.Drop was not parsed correctly. Expected [SYS_NICE]")
 		}
+	}
+
+	expected := (63 * time.Second)
+	if expected != main.Timeout {
+		t.Errorf("the default timeout wasn't applied, got %s, expected %s", main.Timeout, expected)
 	}
 }
 
@@ -228,6 +234,11 @@ forward:
 
 			if !d.PersistentVolumeEnabled() {
 				t.Errorf("persistent volume was not enabled by default")
+			}
+
+			defaultTimeout, _ := GetTimeout()
+			if defaultTimeout != d.Timeout {
+				t.Errorf("the default timeout wasn't applied, got %s, expected %s", d.Timeout, defaultTimeout)
 			}
 		})
 	}
@@ -618,7 +629,7 @@ func Test_LoadForcePull(t *testing.T) {
 func Test_validate(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 
@@ -920,6 +931,39 @@ func Test_ExpandEnv(t *testing.T) {
 			}
 			if result != tt.result {
 				t.Errorf("error in test '%s': '%s', expected: '%s'", tt.name, result, tt.result)
+			}
+		})
+	}
+}
+
+func TestGetTimeout(t *testing.T) {
+	tests := []struct {
+		name    string
+		env     string
+		want    time.Duration
+		wantErr bool
+	}{
+		{name: "default value", want: 30 * time.Second},
+		{name: "env var", want: 134 * time.Second, env: "134s"},
+		{name: "bad env var", wantErr: true, env: "bad value"},
+	}
+
+	original := os.Getenv("OKTETO_TIMEOUT")
+	defer os.Setenv("OKTETO_TIMEOUT", original)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.env != "" {
+				os.Setenv("OKTETO_TIMEOUT", tt.env)
+			}
+			got, err := GetTimeout()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetTimeout() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if got != tt.want {
+				t.Errorf("GetTimeout() = %v, want %v", got, tt.want)
 			}
 		})
 	}

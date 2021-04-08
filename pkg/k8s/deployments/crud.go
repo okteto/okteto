@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -225,9 +224,9 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, forceCreate bool, client 
 }
 
 //UpdateOktetoRevision updates the okteto version annotation
-func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kubernetes.Clientset) error {
+func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kubernetes.Clientset, timeout time.Duration) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
-	timeout := time.Now().Add(2 * config.GetTimeout()) // 60 seconds
+	to := time.Now().Add(timeout * 2) // 60 seconds
 
 	for i := 0; ; i++ {
 		updated, err := client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
@@ -241,7 +240,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 			return update(ctx, d, client)
 		}
 
-		if time.Now().After(timeout) {
+		if time.Now().After(to) {
 			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", revisionAnnotation, d.Name)
 		}
 

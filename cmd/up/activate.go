@@ -228,7 +228,7 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 			continue
 		}
 
-		if err := deployments.UpdateOktetoRevision(ctx, trList[name].Deployment, up.Client); err != nil {
+		if err := deployments.UpdateOktetoRevision(ctx, trList[name].Deployment, up.Client, up.Dev.Timeout); err != nil {
 			return err
 		}
 

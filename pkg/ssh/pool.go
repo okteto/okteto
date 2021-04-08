@@ -19,7 +19,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
@@ -80,8 +79,8 @@ func start(ctx context.Context, serverAddr string, config *ssh.ClientConfig, kee
 
 func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig, keepAlive time.Duration) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
 	ticker := time.NewTicker(300 * time.Millisecond)
-	to := config.GetTimeout() / 10 // 3 seconds
-	timeout := time.Now().Add(to)
+	timeout := 3 * time.Second
+	to := time.Now().Add(3 * time.Second)
 
 	log.Infof("waiting for ssh connection to %s to be ready", addr)
 	for i := 0; ; i++ {
@@ -97,8 +96,8 @@ func retryNewClientConn(ctx context.Context, addr string, conf *ssh.ClientConfig
 
 		log.Infof("ssh connection to %s is not yet ready: %s", addr, err)
 
-		if time.Now().After(timeout) {
-			return nil, nil, nil, fmt.Errorf("ssh connection to %s wasn't ready after %s: %s", addr, to.String(), err)
+		if time.Now().After(to) {
+			return nil, nil, nil, fmt.Errorf("ssh connection to %s wasn't ready after %s: %s", addr, timeout.String(), err)
 		}
 
 		select {

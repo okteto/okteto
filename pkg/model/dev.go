@@ -150,6 +150,7 @@ type Dev struct {
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
+	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 //Entrypoint represents the start command of a development container
@@ -479,6 +480,10 @@ func (dev *Dev) setDefaults() error {
 	setBuildDefaults(dev.Image)
 	setBuildDefaults(dev.Push)
 
+	if err := dev.setTimeout(); err != nil {
+		return err
+	}
+
 	if dev.ImagePullPolicy == "" {
 		dev.ImagePullPolicy = apiv1.PullAlways
 	}
@@ -544,6 +549,7 @@ func (dev *Dev) setDefaults() error {
 			s.Probes = &Probes{}
 		}
 	}
+
 	return nil
 }
 
@@ -572,6 +578,20 @@ func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 	if dev.SecurityContext.FSGroup == nil {
 		dev.SecurityContext.FSGroup = dev.SecurityContext.RunAsUser
 	}
+}
+
+func (dev *Dev) setTimeout() error {
+	if dev.Timeout != 0 {
+		return nil
+	}
+
+	t, err := GetTimeout()
+	if err != nil {
+		return err
+	}
+
+	dev.Timeout = t
+	return nil
 }
 
 func (dev *Dev) validate() error {
@@ -973,4 +993,21 @@ func ExpandEnv(value string) (string, error) {
 		return "", fmt.Errorf("error expanding environment on '%s': %s", value, err.Error())
 	}
 	return result, nil
+}
+
+// GetTimeout returns the timeout override
+func GetTimeout() (time.Duration, error) {
+	defaultTimeout := (30 * time.Second)
+
+	t := os.Getenv("OKTETO_TIMEOUT")
+	if t == "" {
+		return defaultTimeout, nil
+	}
+
+	parsed, err := time.ParseDuration(t)
+	if err != nil {
+		return 0, fmt.Errorf("OKTETO_TIMEOUT is not a valid duration: %s", t)
+	}
+
+	return parsed, nil
 }

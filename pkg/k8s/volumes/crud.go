@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -98,17 +97,16 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 
 //DestroyDev destroys the persistent volume claim for a given development container
 func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
-	return Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c)
+	return Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout)
 }
 
 //Destroy destroys a persistent volume claim
-func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
+func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset, timeout time.Duration) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(namespace)
 	log.Infof("destroying volume '%s'", name)
 
 	ticker := time.NewTicker(1 * time.Second)
-	to := 3 * config.GetTimeout() // 90 seconds
-	timeout := time.Now().Add(to)
+	to := time.Now().Add(timeout * 3) // 90 seconds
 
 	for i := 0; ; i++ {
 		err := vClient.Delete(ctx, name, metav1.DeleteOptions{})
@@ -121,12 +119,12 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 			return fmt.Errorf("error deleting kubernetes volume: %s", err)
 		}
 
-		if time.Now().After(timeout) {
+		if time.Now().After(to) {
 			if err := checkIfAttached(ctx, name, namespace, c); err != nil {
 				return err
 			}
 
-			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, to.String())
+			return fmt.Errorf("volume claim '%s' wasn't destroyed after %s", name, timeout.String())
 		}
 
 		if i%10 == 5 {
