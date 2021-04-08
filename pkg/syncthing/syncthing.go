@@ -30,7 +30,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -53,9 +52,10 @@ const (
 	configFile = "config.xml"
 	logFile    = "syncthing.log"
 
-	// DefaultRemoteDeviceID remote syncthing ID
+	// DefaultRemoteDeviceID remote syncthing device ID
 	DefaultRemoteDeviceID = "ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU"
-	localDeviceID         = "ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR"
+	// LocalDeviceID local syncthing device ID
+	LocalDeviceID = "ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR"
 
 	// DefaultFileWatcherDelay how much to wait before starting a sync after a file change
 	DefaultFileWatcherDelay = 5
@@ -99,33 +99,17 @@ type Syncthing struct {
 
 //Folder represents a sync folder
 type Folder struct {
-	Name         string `yaml:"name"`
-	LocalPath    string `yaml:"localPath"`
-	RemotePath   string `yaml:"remotePath"`
-	Retries      int    `yaml:"-"`
-	SentStIgnore bool   `yaml:"-"`
-	Overwritten  bool   `yaml:"-"`
-}
-
-//Ignores represents the .stignore file
-type Ignores struct {
-	Ignore []string `json:"ignore"`
+	Name        string `yaml:"name"`
+	LocalPath   string `yaml:"localPath"`
+	RemotePath  string `yaml:"remotePath"`
+	Retries     int    `yaml:"-"`
+	Overwritten bool   `yaml:"-"`
 }
 
 // Status represents the status of a syncthing folder.
 type Status struct {
 	State      string `json:"state"`
 	PullErrors int64  `json:"pullErrors"`
-}
-
-// Completion represents the completion of a syncthing folder.
-type Completion struct {
-	Completion  float64 `json:"completion"`
-	GlobalBytes int64   `json:"globalBytes"`
-	NeedBytes   int64   `json:"needBytes"`
-	GlobalItems int64   `json:"globalItems"`
-	NeedItems   int64   `json:"needItems"`
-	NeedDeletes int64   `json:"needDeletes"`
 }
 
 // FolderErrors represents folder errors in syncthing.
@@ -309,20 +293,19 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 
 	log.Infof("waiting for syncthing local=%t to be ready", local)
 	for i := 0; ; i++ {
-		if s.Ping(ctx, local) {
-			return nil
-		}
-		if i%5 == 0 {
-			log.Infof("syncthing local=%t is not ready yet", local)
-		}
-
-		if time.Now().After(to) {
-			return fmt.Errorf("syncthing local=%t didn't respond after %s", local, s.timeout.String())
-		}
-
 		select {
 		case <-ticker.C:
-			continue
+			if s.Ping(ctx, local) {
+				return nil
+			}
+			if i%5 == 0 {
+				log.Infof("syncthing local=%t is not ready yet", local)
+			}
+
+			if time.Now().After(timeout) {
+				return fmt.Errorf("syncthing local=%t didn't respond after %s", local, s.timeout.String())
+			}
+
 		case <-ctx.Done():
 			log.Infof("syncthing.WaitForPing cancelled local=%t", local)
 			return ctx.Err()
@@ -332,7 +315,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 
 //Ping checks if syncthing is available
 func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
-	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 1)
+	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 0)
 	if err == nil {
 		return true
 	}
@@ -340,49 +323,6 @@ func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 		return true
 	}
 	return false
-}
-
-//SendStignoreFile sends .stignore from local to remote
-func (s *Syncthing) SendStignoreFile(ctx context.Context) {
-	for _, folder := range s.Folders {
-		if folder.SentStIgnore {
-			continue
-		}
-		log.Infof("sending '.stignore' file %s to the remote syncthing", folder.Name)
-		params := getFolderParameter(folder)
-		ignores := &Ignores{}
-		body, err := s.APICall(ctx, "rest/db/ignores", "GET", 200, params, true, nil, true, 0)
-		if err != nil {
-			log.Infof("error getting ignore files: %s", err.Error())
-			continue
-		}
-		err = json.Unmarshal(body, ignores)
-		if err != nil {
-			log.Infof("error unmarshalling ignore files: %s", err.Error())
-			continue
-		}
-		for i, line := range ignores.Ignore {
-			line := strings.TrimSpace(line)
-			if line == "" {
-				continue
-			}
-			if strings.Contains(line, "(?d)") {
-				continue
-			}
-			ignores.Ignore[i] = fmt.Sprintf("(?d)%s", line)
-		}
-		body, err = json.Marshal(ignores)
-		if err != nil {
-			log.Infof("error marshalling ignore files: %s", err.Error())
-			continue
-		}
-		_, err = s.APICall(ctx, "rest/db/ignores", "POST", 200, params, false, body, false, 0)
-		if err != nil {
-			log.Infof("error posting ignore files to remote syncthing instance: %s", err.Error())
-			continue
-		}
-		folder.SentStIgnore = true
-	}
 }
 
 //ResetDatabase resets the syncthing database
@@ -398,15 +338,7 @@ func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev) error {
 	if err := s.WaitForPing(ctx, false); err != nil {
 		return err
 	}
-	if err := s.WaitForPing(ctx, true); err != nil {
-		return err
-	}
-
-	if err := s.WaitForScanning(ctx, dev, true); err != nil {
-		return err
-	}
-
-	return s.WaitForScanning(ctx, dev, false)
+	return s.WaitForPing(ctx, true)
 }
 
 func (s *Syncthing) resetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
@@ -443,12 +375,9 @@ func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 	return nil
 }
 
-//IsAllIgnoredAndOverwritten checks if all .stignore files and overwrite operations has been completed
-func (s *Syncthing) IsAllIgnoredAndOverwritten() bool {
+//IsAllOverwritten checks if all overwrite operations has been completed
+func (s *Syncthing) IsAllOverwritten() bool {
 	for _, folder := range s.Folders {
-		if !folder.SentStIgnore {
-			return false
-		}
 		if !folder.Overwritten {
 			return false
 		}
@@ -502,113 +431,6 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	}
 }
 
-// WaitForCompletion waits for the remote to be totally synched
-func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
-	defer close(reporter)
-	ticker := time.NewTicker(250 * time.Millisecond)
-	retries := 0
-	needDeletesRetries := 0
-	globalBytesRetries := 0
-	var previousGlobalBytes int64 = 0
-	for {
-		select {
-		case <-ticker.C:
-			retries++
-
-			s.SendStignoreFile(ctx)
-			if err := s.Overwrite(ctx, dev); err != nil {
-				if err != errors.ErrBusySyncthing {
-					return err
-				}
-			}
-
-			localCompletion, remoteCompletion, err := s.getLocalAndRemoteCompletion(ctx)
-			if err != nil {
-				if err == errors.ErrBusySyncthing {
-					continue
-				}
-				return err
-			}
-
-			if localCompletion.GlobalBytes != remoteCompletion.GlobalBytes {
-				log.Infof("local globalBytes %d, remote global bytes %d", localCompletion.GlobalBytes, remoteCompletion.GlobalBytes)
-				if remoteCompletion.GlobalBytes != previousGlobalBytes {
-					previousGlobalBytes = remoteCompletion.GlobalBytes
-					globalBytesRetries = 0
-					continue
-				}
-				globalBytesRetries++
-				if globalBytesRetries >= 120 {
-					continue
-				}
-				log.Infof("globalBytesRetries %d, resetting syncthing database", globalBytesRetries)
-				if err := s.ResetDatabase(ctx, dev); err != nil {
-					log.Infof("error resetting syncthing database: %s", err.Error())
-					analytics.TrackResetDatabase(false)
-					continue
-				}
-				analytics.TrackResetDatabase(true)
-				globalBytesRetries = 0
-				continue
-			}
-
-			progress := (float64(remoteCompletion.GlobalBytes-remoteCompletion.NeedBytes) / float64(remoteCompletion.GlobalBytes)) * 100
-			log.Infof("syncthing folder: globalBytes %d, needBytes %d, globalItems %d, needItems %d, needDeletes %d",
-				remoteCompletion.GlobalBytes,
-				remoteCompletion.NeedBytes,
-				remoteCompletion.GlobalItems,
-				remoteCompletion.NeedItems,
-				remoteCompletion.NeedDeletes,
-			)
-			reporter <- progress
-
-			if remoteCompletion.GlobalBytes == 0 {
-				if s.IsAllIgnoredAndOverwritten() {
-					return nil
-				}
-				log.Info("synced completed, but stignores and overwrites not sent")
-				return nil
-			}
-
-			if remoteCompletion.NeedBytes == 0 {
-				if remoteCompletion.NeedDeletes > 0 {
-					needDeletesRetries++
-					if needDeletesRetries < 50 {
-						continue
-					}
-				}
-				if s.IsAllIgnoredAndOverwritten() {
-					return nil
-				}
-				log.Info("synced completed, but stignores and overwrites not sent")
-				return nil
-			}
-
-			if retries%50 == 0 {
-				if err := s.IsHealthy(ctx, false, 3); err != nil {
-					return err
-				}
-			}
-
-		case <-ctx.Done():
-			log.Info("call to syncthing.WaitForCompletion canceled")
-			return ctx.Err()
-		}
-	}
-}
-
-func (s *Syncthing) getLocalAndRemoteCompletion(ctx context.Context) (*Completion, *Completion, error) {
-	localCompletion, err := s.GetCompletion(ctx, true, DefaultRemoteDeviceID)
-	if err != nil {
-		return nil, nil, err
-	}
-	remoteCompletion, err := s.GetCompletion(ctx, false, DefaultRemoteDeviceID)
-	if err != nil {
-		return nil, nil, err
-	}
-	return localCompletion, remoteCompletion, nil
-}
-
 // GetCompletion returns the syncthing completion
 func (s *Syncthing) GetCompletion(ctx context.Context, local bool, device string) (*Completion, error) {
 	params := map[string]string{"device": device}
@@ -629,23 +451,6 @@ func (s *Syncthing) GetCompletion(ctx context.Context, local bool, device string
 	return completion, nil
 }
 
-// GetCompletionProgress returns the syncthing completion progress
-func (s *Syncthing) GetCompletionProgress(ctx context.Context, local bool) (float64, error) {
-	device := DefaultRemoteDeviceID
-	if local {
-		device = localDeviceID
-	}
-	completion, err := s.GetCompletion(ctx, local, device)
-	if err != nil {
-		return 0, err
-	}
-	if completion.GlobalBytes == 0 {
-		return 100, nil
-	}
-	progress := (float64(completion.GlobalBytes-completion.NeedBytes) / float64(completion.GlobalBytes)) * 100
-	return progress, nil
-}
-
 // IsHealthy returns the syncthing error or nil
 func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 	for _, folder := range s.Folders {
@@ -661,9 +466,9 @@ func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 			continue
 		}
 
-		err = s.GetFolderErrors(ctx, folder, false)
-		log.Infof("syncthing error in folder '%s' local=%t: %s", folder.RemotePath, local, err)
 		folder.Retries++
+		err = s.GetFolderErrors(ctx, folder, false)
+		log.Infof("syncthing error in folder '%s' local=%t retry %d: %s", folder.RemotePath, local, folder.Retries, err)
 		if folder.Retries <= max {
 			continue
 		}

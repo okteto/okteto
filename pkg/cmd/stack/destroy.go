@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -111,6 +112,7 @@ func helmReleaseExist(c *action.List, name string) (bool, error) {
 
 func destroyHelmRelease(ctx context.Context, spinner *utils.Spinner, s *model.Stack) error {
 	settings := cli.New()
+	settings.KubeContext = os.Getenv(client.OktetoContextVariableName)
 
 	actionConfig := new(action.Configuration)
 

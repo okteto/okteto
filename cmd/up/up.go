@@ -107,7 +107,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			if err := loadDevOverrides(dev, namespace, k8sContext, forcePull, remote, autoDeploy); err != nil {
+			if err := loadDevOverrides(dev, forcePull, remote, autoDeploy); err != nil {
 				return err
 			}
 
@@ -115,6 +115,10 @@ func Up() *cobra.Command {
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
+			}
+
+			if err := addStignoreSecrets(dev); err != nil {
+				return err
 			}
 
 			if _, ok := os.LookupEnv("OKTETO_AUTODEPLOY"); ok {
@@ -178,7 +182,7 @@ func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
 	return utils.LoadDev(devPath, namespace, k8sContext)
 }
 
-func loadDevOverrides(dev *model.Dev, namespace, k8sContext string, forcePull bool, remote int, autoDeploy bool) error {
+func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy bool) error {
 	if remote > 0 {
 		dev.RemotePort = remote
 	}

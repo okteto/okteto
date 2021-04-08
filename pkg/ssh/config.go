@@ -47,13 +47,14 @@ type (
 )
 
 const (
-	forwardAgentKeyword          = "ForwardAgent"
-	hostKeyword                  = "Host"
-	hostNameKeyword              = "HostName"
-	portKeyword                  = "Port"
-	strictHostKeyCheckingKeyword = "StrictHostKeyChecking"
-	userKnownHostsFileKeyword    = "UserKnownHostsFile"
-	identityFile                 = "IdentityFile"
+	forwardAgentKeyword           = "ForwardAgent"
+	pubkeyAcceptedKeyTypesKeyword = "PubkeyAcceptedKeyTypes"
+	hostKeyword                   = "Host"
+	hostNameKeyword               = "HostName"
+	portKeyword                   = "Port"
+	strictHostKeyCheckingKeyword  = "StrictHostKeyChecking"
+	userKnownHostsFileKeyword     = "UserKnownHostsFile"
+	identityFile                  = "IdentityFile"
 )
 
 func newHost(hostnames, comments []string) *host {

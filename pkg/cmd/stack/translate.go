@@ -28,7 +28,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/subosito/gotenv"
-	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -132,6 +131,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		}
 		if !forceBuild {
 			if _, err := registry.GetImageTagWithDigest(ctx, s.Namespace, svc.Image); err != errors.ErrNotFound {
+				s.Services[name] = svc
 				continue
 			}
 			log.Infof("image '%s' not found, building it", svc.Image)
@@ -158,10 +158,6 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 }
 
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
-	marshalled, err := yaml.Marshal(s)
-	if err != nil {
-		log.Errorf("error marshalling stack: %s", err.Error())
-	}
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.GetConfigMapName(),
@@ -171,7 +167,7 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 		},
 		Data: map[string]string{
 			nameField: s.Name,
-			yamlField: base64.StdEncoding.EncodeToString(marshalled),
+			yamlField: base64.StdEncoding.EncodeToString(s.Manifest),
 		},
 	}
 }

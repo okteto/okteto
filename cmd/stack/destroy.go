@@ -36,7 +36,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := utils.LoadStack(name, stackPath)
 			if err != nil {
-				return err
+				if name == "" {
+					return err
+				}
+				log.Errorf("error reading stack: %s", err.Error())
+				s = &model.Stack{Name: name}
 			}
 
 			if err := s.UpdateNamespace(namespace); err != nil {

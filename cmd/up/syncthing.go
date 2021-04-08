@@ -105,11 +105,9 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		if err := up.Sy.ResetDatabase(ctx, up.Dev); err != nil {
 			return err
 		}
-
 		up.resetSyncthing = false
 	}
 
-	up.Sy.SendStignoreFile(ctx)
 	spinner.Update("Scanning file system...")
 	if err := up.Sy.WaitForScanning(ctx, up.Dev, true); err != nil {
 		return err
@@ -152,15 +150,11 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 
 	reporter := make(chan float64)
 	go func() {
-		var previous float64
 		for c := range reporter {
-			if c > previous {
-				value := int64(c)
-				if value > 0 && value < 100 {
-					spinner.Stop()
-					progressBar.SetCurrent(value)
-					previous = c
-				}
+			value := int64(c)
+			if value > 0 && value < 100 {
+				spinner.Stop()
+				progressBar.SetCurrent(value)
 			}
 		}
 		quit <- true

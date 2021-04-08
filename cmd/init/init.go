@@ -85,6 +85,10 @@ func Init() *cobra.Command {
 
 // Run runs the sequence to generate okteto.yml
 func Run(namespace, k8sContext, devPath, language, workDir string, overwrite bool) error {
+	if k8sContext == "" {
+		k8sContext = os.Getenv(client.OktetoContextVariableName)
+	}
+
 	fmt.Println("This command walks you through creating an okteto manifest.")
 	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	fmt.Println("See https://okteto.com/docs/reference/manifest for the official documentation about the okteto manifest.")
@@ -108,6 +112,8 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	if err != nil {
 		return err
 	}
+
+	dev.Context = k8sContext
 
 	if checkForDeployment {
 		d, container, err := getDeployment(ctx, namespace, k8sContext)

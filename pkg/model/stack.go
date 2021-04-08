@@ -36,6 +36,7 @@ type Stack struct {
 	Name      string             `yaml:"name"`
 	Namespace string             `yaml:"namespace,omitempty"`
 	Services  map[string]Service `yaml:"services,omitempty"`
+	Manifest  []byte             `yaml:"-"`
 }
 
 //Service represents an okteto stack service
@@ -55,6 +56,7 @@ type Service struct {
 	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	Healthchecks    bool               `yaml:"healthchecks,omitempty"`
 	Ports           []int32            `yaml:"ports,omitempty"`
+	Expose          []int32            `yaml:"expose,omitempty"`
 	Volumes         []string           `yaml:"volumes,omitempty"`
 	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
 	Resources       ServiceResources   `yaml:"resources,omitempty"`
@@ -121,7 +123,9 @@ func GetStack(name, stackPath string) (*Stack, error) {
 
 //ReadStack reads an okteto stack
 func ReadStack(bytes []byte) (*Stack, error) {
-	s := &Stack{}
+	s := &Stack{
+		Manifest: bytes,
+	}
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder
@@ -160,6 +164,14 @@ func ReadStack(bytes []byte) (*Stack, error) {
 			svc.Args.Values = svc.Command.Values
 			svc.Command.Values = svc.Entrypoint.Values
 		}
+		if len(svc.Expose) > 0 && len(svc.Ports) == 0 {
+			svc.Public = false
+		}
+
+		if len(svc.Expose) > 0 {
+			svc.Ports = append(svc.Ports, svc.Expose...)
+		}
+
 		s.Services[i] = svc
 	}
 	return s, nil

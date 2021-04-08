@@ -131,10 +131,18 @@ func setResourcesFromPod(dev *model.Dev, pod *apiv1.Pod, container string) {
 			continue
 		}
 		if pod.Spec.Containers[i].Resources.Limits != nil {
+			cpuLimits := pod.Spec.Containers[i].Resources.Limits[apiv1.ResourceCPU]
+			if cpuLimits.Cmp(resource.MustParse("1")) < 0 {
+				cpuLimits = resource.MustParse("1")
+			}
+			memoryLimits := pod.Spec.Containers[i].Resources.Limits[apiv1.ResourceMemory]
+			if memoryLimits.Cmp(resource.MustParse("3Gi")) < 0 {
+				memoryLimits = resource.MustParse("3Gi")
+			}
 			dev.Resources = model.ResourceRequirements{
 				Limits: model.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("1"),
-					apiv1.ResourceMemory: resource.MustParse("2Gi"),
+					apiv1.ResourceCPU:    cpuLimits,
+					apiv1.ResourceMemory: memoryLimits,
 				},
 			}
 		}

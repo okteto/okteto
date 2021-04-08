@@ -171,7 +171,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	if err == nil {
 		return nil
 	}
-	if strings.Contains(err.Error(), "status 130") {
+	if strings.Contains(err.Error(), "status 130") || strings.Contains(err.Error(), "4294967295") {
 		return nil
 	}
 	if strings.Contains(err.Error(), "exit code 137") || strings.Contains(err.Error(), "exit status 137") {
