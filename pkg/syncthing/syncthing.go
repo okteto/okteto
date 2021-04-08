@@ -302,7 +302,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 				log.Infof("syncthing local=%t is not ready yet", local)
 			}
 
-			if time.Now().After(timeout) {
+			if time.Now().After(to) {
 				return fmt.Errorf("syncthing local=%t didn't respond after %s", local, s.timeout.String())
 			}
 
