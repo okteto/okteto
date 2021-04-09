@@ -108,7 +108,7 @@ func Test_translateConfigMap(t *testing.T) {
 	s := &model.Stack{
 		Manifest: []byte("manifest"),
 		Name:     "stackName",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Image: "image",
 			},
