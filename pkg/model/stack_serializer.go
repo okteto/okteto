@@ -57,7 +57,7 @@ type ServiceRaw struct {
 	Labels          *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Xannotations    map[string]string  `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"`
-	Ports           []RawMessage       `yaml:"ports,omitempty"`
+	Ports           []Port             `yaml:"ports,omitempty"`
 	Scale           int32              `yaml:"scale"`
 	StopGracePeriod *RawMessage        `yaml:"stop_grace_period,omitempty"`
 	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`
@@ -219,9 +219,12 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 		return nil, err
 	}
 
-	s.Ports, err = unmarshalPorts(serviceRaw.Ports, isCompose, serviceRaw.Public)
-	if err != nil {
-		return nil, err
+	s.Public = serviceRaw.Public
+	s.Ports = serviceRaw.Ports
+	for _, p := range s.Ports {
+		if p.Public {
+			s.Public = true
+		}
 	}
 
 	s.Expose, err = unmarshalExpose(serviceRaw.Expose)
@@ -249,7 +252,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 	s.WorkingDir = serviceRaw.WorkingDir
 
 	s.Resources = serviceRaw.Resources
-	s.Public = serviceRaw.Public
 	return s, nil
 }
 
@@ -269,30 +271,6 @@ func (warning *WarningType) UnmarshalYAML(unmarshal func(interface{}) error) err
 		warning.used = true
 	}
 	return nil
-}
-
-func unmarshalPorts(rawMessages []RawMessage, isCompose, isPublic bool) ([]Port, error) {
-	portList := make([]Port, 0)
-	if rawMessages == nil {
-		return portList, nil
-	}
-	for _, port := range rawMessages {
-		var p Port
-		err := port.unmarshal(&p)
-		if err != nil {
-			return portList, err
-		}
-
-		if isCompose && !p.Public {
-			p.Public = isPublicPort(p.Port)
-		}
-		if isPublic {
-			p.Public = true
-		}
-
-		portList = append(portList, p)
-	}
-	return portList, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -331,12 +309,16 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("Can not convert %s. Only TCP ports are allowed.", portString)
 		}
 	}
+
 	port, err := strconv.Atoi(portString)
 	if err != nil {
 		return fmt.Errorf("Can not convert %s to a port.", portString)
 	}
 	p.Port = int32(port)
 	p.Public = isPublic
+	if !isPublic {
+		p.Public = isPublicPort(p.Port)
+	}
 
 	return nil
 }

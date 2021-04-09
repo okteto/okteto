@@ -306,27 +306,6 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 	}
 }
 
-func translateComposeService(svcName string, s *model.Stack, port model.Port) *apiv1.Service {
-	svc := s.Services[svcName]
-	annotations := translateAnnotations(svc)
-	if port.Public {
-		annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
-	}
-	return &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-%d", svcName, port.Port),
-			Namespace:   s.Namespace,
-			Labels:      translateLabels(svcName, s),
-			Annotations: annotations,
-		},
-		Spec: apiv1.ServiceSpec{
-			Selector: translateLabelSelector(svcName, s),
-			Type:     translatePortType(port),
-			Ports:    translatePort(port),
-		},
-	}
-}
-
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
 	annotations := translateAnnotations(svc)
@@ -439,20 +418,6 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	for _, p := range svc.Ports {
 		result = append(result, apiv1.ContainerPort{ContainerPort: p.Port})
 	}
-	return result
-}
-
-func translatePort(port model.Port) []apiv1.ServicePort {
-	result := []apiv1.ServicePort{}
-	result = append(
-		result,
-		apiv1.ServicePort{
-			Name:       fmt.Sprintf("p-%d-%s", port.Port, strings.ToLower(fmt.Sprintf("%v", port.Protocol))),
-			Port:       int32(port.Port),
-			TargetPort: intstr.IntOrString{IntVal: port.Port},
-			Protocol:   port.Protocol,
-		},
-	)
 	return result
 }
 

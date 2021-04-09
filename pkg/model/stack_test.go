@@ -64,7 +64,7 @@ services:
 		t.Errorf("'vote' was not parsed: %+v", s)
 	}
 
-	if !isPublicService(s.Services["vote"]) {
+	if !s.Services["vote"].Public {
 		t.Errorf("'vote.public' was not parsed: %+v", s)
 	}
 	if s.Services["vote"].Image != "okteto/vote:1" {
@@ -249,13 +249,4 @@ func Test_validateStackName(t *testing.T) {
 			}
 		})
 	}
-}
-
-func isPublicService(svc *Service) bool {
-	for _, port := range svc.Ports {
-		if port.Public {
-			return true
-		}
-	}
-	return false
 }
