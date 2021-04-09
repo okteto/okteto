@@ -502,7 +502,7 @@ func Test_translateEndpoints(t *testing.T) {
 	}
 
 	annotations := map[string]string{
-		okLabels.OktetoAutoIngressAnnotation: "true",
+		okLabels.StackIngressAutoGenerateHost: "true",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
