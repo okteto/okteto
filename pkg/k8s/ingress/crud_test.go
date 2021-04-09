@@ -103,7 +103,9 @@ func TestUpdate(t *testing.T) {
 	}
 
 	retrieved, err := clientset.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(ctx, ingress.Name, metav1.GetOptions{})
-
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !reflect.DeepEqual(retrieved, updatedIngress) {
 		t.Fatalf("Didn't updated correctly")
 	}
