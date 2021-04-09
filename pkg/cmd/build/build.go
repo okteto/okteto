@@ -15,10 +15,13 @@ package build
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -70,6 +73,10 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		}
 		analytics.TrackBuildTransientError(buildKitHost, success)
 		return err
+	}
+	if strings.Contains(err.Error(), "insufficient_scope: authorization failed") {
+		err = okErrors.UserError{E: fmt.Errorf("Authorization failed."),
+			Hint: "Make sure that you are already logged in the registry and have permissions to push."}
 	}
 	return err
 }
