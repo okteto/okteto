@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+
+	extensions "k8s.io/api/extensions/v1beta1"
 )
 
 const (
@@ -477,5 +479,54 @@ func Test_translateService(t *testing.T) {
 	}
 	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
 		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
+	}
+}
+
+func Test_translateEndpoints(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Endpoints: map[string][]model.Endpoint{
+			"svcName": {
+				{Path: "/", Port: 80, Service: "svcName"},
+			},
+		},
+		Services: map[string]model.Service{
+			"svcName": {
+				Image: "image",
+			},
+		},
+	}
+	result := translateIngress("svcName", s)
+	if result.Name != "svcName" {
+		t.Errorf("Wrong service name: '%s'", result.Name)
+	}
+
+	annotations := map[string]string{
+		okLabels.OktetoAutoIngressAnnotation: "true",
+	}
+
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	}
+
+	paths := []extensions.HTTPIngressPath{
+		{Path: "/",
+			Backend: extensions.IngressBackend{
+				ServiceName: "svcName",
+				ServicePort: intstr.IntOrString{IntVal: 80},
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(result.Spec.Rules[0].HTTP.Paths, paths) {
+		t.Errorf("Wrong service ports: '%v'", result.Spec.Rules[0].HTTP.Paths)
+	}
+
+	labels := map[string]string{
+		okLabels.StackNameLabel:        "stackName",
+		okLabels.StackIngressNameLabel: "svcName",
+	}
+	if !reflect.DeepEqual(result.Labels, labels) {
+		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
 }

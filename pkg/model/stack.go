@@ -33,10 +33,11 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Name      string             `yaml:"name"`
-	Namespace string             `yaml:"namespace,omitempty"`
-	Services  map[string]Service `yaml:"services,omitempty"`
-	Manifest  []byte             `yaml:"-"`
+	Name      string                `yaml:"name"`
+	Namespace string                `yaml:"namespace,omitempty"`
+	Services  map[string]Service    `yaml:"services,omitempty"`
+	Endpoints map[string][]Endpoint `yaml:"endpoints,omitempty"`
+	Manifest  []byte                `yaml:"-"`
 }
 
 //Service represents an okteto stack service
@@ -78,6 +79,13 @@ type StorageResource struct {
 //Quantity represents an okteto stack service storage resource
 type Quantity struct {
 	Value resource.Quantity
+}
+
+//Endpoints represents an okteto stack ingress
+type Endpoint struct {
+	Path    string `yaml:"path,omitempty"`
+	Service string `yaml:"service,omitempty"`
+	Port    int32  `yaml:"port,omitempty"`
 }
 
 //GetStack returns an okteto stack object from a given file
@@ -185,6 +193,14 @@ func (s *Stack) validate() error {
 		return fmt.Errorf("Invalid stack: 'services' cannot be empty")
 	}
 
+	for _, endpoints := range s.Endpoints {
+		for _, endpoint := range endpoints {
+			if !s.hasService(endpoint.Service) {
+				return fmt.Errorf("Invalid endpoint service name '%s': Service must be declared in services field", endpoint.Service)
+			}
+		}
+	}
+
 	for name, svc := range s.Services {
 		if err := validateStackName(name); err != nil {
 			return fmt.Errorf("Invalid service name '%s': %s", name, err)
@@ -203,6 +219,15 @@ func (s *Stack) validate() error {
 	}
 
 	return nil
+}
+
+func (s *Stack) hasService(svcName string) bool {
+	for name := range s.Services {
+		if svcName == name {
+			return true
+		}
+	}
+	return false
 }
 
 func validateStackName(name string) error {

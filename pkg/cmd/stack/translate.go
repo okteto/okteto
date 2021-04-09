@@ -30,6 +30,8 @@ import (
 	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	extensions "k8s.io/api/extensions/v1beta1"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -305,6 +307,45 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	}
 }
 
+func translateIngress(ingressName string, s *model.Stack) *extensions.Ingress {
+	endpoints := s.Endpoints[ingressName]
+	annotations := map[string]string{okLabels.StackIngressAutoGenerateHost: "true"}
+	return &extensions.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ingressName,
+			Namespace:   s.Namespace,
+			Labels:      translateIngressLabels(ingressName, s),
+			Annotations: annotations,
+		},
+		Spec: extensions.IngressSpec{
+			Rules: []extensions.IngressRule{
+				{
+					IngressRuleValue: extensions.IngressRuleValue{
+						HTTP: &extensions.HTTPIngressRuleValue{
+							Paths: translateEndpoints(endpoints),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func translateEndpoints(endpoints []model.Endpoint) []extensions.HTTPIngressPath {
+	paths := make([]extensions.HTTPIngressPath, 0)
+	for _, endpoint := range endpoints {
+		path := extensions.HTTPIngressPath{
+			Path: endpoint.Path,
+			Backend: extensions.IngressBackend{
+				ServiceName: endpoint.Service,
+				ServicePort: intstr.IntOrString{IntVal: endpoint.Port},
+			},
+		}
+		paths = append(paths, path)
+	}
+	return paths
+}
+
 func translateLabels(svcName string, s *model.Stack) map[string]string {
 	svc := s.Services[svcName]
 	labels := map[string]string{
@@ -313,6 +354,14 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 	}
 	for k := range svc.Labels {
 		labels[k] = svc.Labels[k]
+	}
+	return labels
+}
+
+func translateIngressLabels(endpointName string, s *model.Stack) map[string]string {
+	labels := map[string]string{
+		okLabels.StackNameLabel:        s.Name,
+		okLabels.StackIngressNameLabel: endpointName,
 	}
 	return labels
 }
