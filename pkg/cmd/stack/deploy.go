@@ -201,10 +201,8 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *k
 			return fmt.Errorf("name collision: the ingress '%s' belongs to the stack '%s'", ingressName, old.Labels[okLabels.StackNameLabel])
 		}
 		ingress.Update(ctx, ingressK8s, c)
-	} else {
-		if err := ingress.Create(ctx, ingressK8s, c); err != nil {
-			return err
-		}
+	} else if err := ingress.Create(ctx, ingressK8s, c); err != nil {
+		return err
 	}
 	return nil
 }
