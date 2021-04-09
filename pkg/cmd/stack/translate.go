@@ -123,10 +123,10 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		if svc.Build == nil {
 			continue
 		}
-		if svc.Image == "" {
-			if !isOktetoCluster {
-				return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
-			}
+		if !isOktetoCluster && svc.Image == "" {
+			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
+		}
+		if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !forceBuild {
