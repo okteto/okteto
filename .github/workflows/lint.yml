@@ -1,0 +1,24 @@
+name: Lint
+
+on: [pull_request]
+
+jobs:
+  misspell:
+    name: Check Spelling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v2
+      - name: Install
+        run: |
+          wget -O - -q https://git.io/misspell | sh -s -- -b .
+      - name: Misspell
+        run: |
+          git ls-files --empty-directory | xargs ./misspell -error
+  trailing-whitespace:
+    name: Trailing Whitespace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check for trailing whitespace
+        run: "! git grep -EIn $'[ \t]+$' | grep -v '\\- '"

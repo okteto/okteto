@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -88,25 +89,26 @@ func Test_translateEnvVars(t *testing.T) {
 		t.Errorf("Wrong image: %s", stack.Services["1"].Image)
 	}
 	if len(stack.Services["1"].Environment) != 3 {
-		t.Errorf("Wrong envirironment: %v", stack.Services["1"].Environment)
+		t.Errorf("Wrong environment: %v", stack.Services["1"].Environment)
 	}
 	for _, e := range stack.Services["1"].Environment {
 		if e.Name == "A" && e.Value != "1" {
-			t.Errorf("Wrong envirironment variable A: %s", e.Value)
+			t.Errorf("Wrong environment variable A: %s", e.Value)
 		}
 		if e.Name == "B" && e.Value != "2" {
-			t.Errorf("Wrong envirironment variable B: %s", e.Value)
+			t.Errorf("Wrong environment variable B: %s", e.Value)
 		}
 		if e.Name == "C" && e.Value != "original" {
-			t.Errorf("Wrong envirironment variable C: %s", e.Value)
+			t.Errorf("Wrong environment variable C: %s", e.Value)
 		}
 	}
 }
 
 func Test_translateConfigMap(t *testing.T) {
 	s := &model.Stack{
-		Name: "stackName",
-		Services: map[string]*model.Service{
+		Manifest: []byte("manifest"),
+		Name:     "stackName",
+		Services: map[string]model.Service{
 			"svcName": {
 				Image: "image",
 			},
@@ -122,7 +124,8 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Data[nameField] != "stackName" {
 		t.Errorf("Wrong data.name: '%s'", result.Data[nameField])
 	}
-	if result.Data[yamlField] != "bmFtZTogc3RhY2tOYW1lCnNlcnZpY2VzOgogIHN2Y05hbWU6CiAgICBpbWFnZTogaW1hZ2UKd2FybmluZ3M6IFtdCmlzY29tcG9zZTogZmFsc2UK" {
+	if result.Data[yamlField] != base64.StdEncoding.EncodeToString(s.Manifest) {
+
 		t.Errorf("Wrong data.yaml: '%s'", result.Data[yamlField])
 	}
 }

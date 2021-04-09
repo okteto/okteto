@@ -23,23 +23,18 @@ import (
 var clientConfig *ssh.ClientConfig
 
 func getPrivateKey() (ssh.Signer, error) {
-	private := getPrivateKeyPath()
+	_, private := getKeyPaths()
 	buf, err := ioutil.ReadFile(private)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load private key: %s", err)
 	}
 
-	key, err := ssh.ParseRawPrivateKey(buf)
+	key, err := ssh.ParsePrivateKey(buf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse private key: %s", err)
 	}
 
-	signer, err := ssh.NewSignerFromKey(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate SSH key from private key: %w", err)
-	}
-
-	return signer, nil
+	return key, nil
 }
 
 func getSSHClientConfig() (*ssh.ClientConfig, error) {

@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -37,7 +38,7 @@ import (
 )
 
 //Destroy destroys a stack
-func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool) error {
+func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout time.Duration) error {
 	if s.Namespace == "" {
 		s.Namespace = client.GetContextNamespace("")
 	}
@@ -52,7 +53,7 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool) error {
 		return err
 	}
 
-	err := destroy(ctx, s, removeVolumes, c)
+	err := destroy(ctx, s, removeVolumes, c, timeout)
 	if err != nil {
 		output = fmt.Sprintf("%s\nStack '%s' destruction failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
@@ -66,7 +67,7 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool) error {
 	return err
 }
 
-func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kubernetes.Clientset) error {
+func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kubernetes.Clientset, timeout time.Duration) error {
 	spinner := utils.NewSpinner(fmt.Sprintf("Destroying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
@@ -87,7 +88,7 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 
 	if removeVolumes {
 		spinner.Update("Destroying volumes...")
-		if err := destroyStackVolumes(ctx, spinner, s, c); err != nil {
+		if err := destroyStackVolumes(ctx, spinner, s, c, timeout); err != nil {
 			return err
 		}
 	}
@@ -111,6 +112,7 @@ func helmReleaseExist(c *action.List, name string) (bool, error) {
 
 func destroyHelmRelease(ctx context.Context, spinner *utils.Spinner, s *model.Stack) error {
 	settings := cli.New()
+	settings.KubeContext = os.Getenv(client.OktetoContextVariableName)
 
 	actionConfig := new(action.Configuration)
 
@@ -194,14 +196,14 @@ func waitForPodsToBeDestroyed(ctx context.Context, s *model.Stack, c *kubernetes
 	return fmt.Errorf("kubernetes is taking too long to destroy your stack. Please check for errors and try again")
 }
 
-func destroyStackVolumes(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
+func destroyStackVolumes(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset, timeout time.Duration) error {
 	vList, err := volumes.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
 	}
 	for _, v := range vList {
 		if v.Labels[okLabels.StackNameLabel] == s.Name {
-			if err := volumes.Destroy(ctx, v.Name, v.Namespace, c); err != nil {
+			if err := volumes.Destroy(ctx, v.Name, v.Namespace, c, timeout); err != nil {
 				return fmt.Errorf("error destroying volume '%s': %s", v.Name, err)
 			}
 			spinner.Stop()

@@ -290,6 +290,10 @@ func TestAll(t *testing.T) {
 			t.Fatalf("expected synchronized content to be %s, got %s", name, c)
 		}
 
+		if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
+			t.Fatal(err)
+		}
+
 		if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
 			t.Fatal(err)
 		}
@@ -476,6 +480,21 @@ func testUpdateContent(content, contentPath string, timeout int) error {
 		return fmt.Errorf("never got the updated content %s", content)
 	}
 
+	return nil
+}
+
+func testRemoteStignoreGenerated(ctx context.Context, namespace, name, manifestPath, oktetoPath string) error {
+	cmd := exec.Command(oktetoPath, "exec", "-n", namespace, "-f", manifestPath, "--", "cat .stignore | grep '(?d)venv'")
+	cmd.Env = os.Environ()
+	log.Printf("exec command: %s", cmd.String())
+	bytes, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("okteto exec failed: %v", err)
+	}
+	output := string(bytes)
+	if !strings.Contains(output, "venv") {
+		return fmt.Errorf("okteto exec wrong output: %s", output)
+	}
 	return nil
 }
 

@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/exec"
@@ -93,9 +92,8 @@ func ListBySelector(ctx context.Context, namespace string, selector map[string]s
 // GetDevPodInLoop returns the dev pod for a deployment and loops until it success
 func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	ticker := time.NewTicker(500 * time.Millisecond)
-	to := 4 * config.GetTimeout() // 120 seconds
 	start := time.Now()
-	timeout := start.Add(to)
+	to := start.Add(dev.Timeout * 4) // 120 seconds
 
 	for i := 0; ; i++ {
 		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)
@@ -106,7 +104,7 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 			return pod, nil
 		}
 
-		if time.Now().After(timeout) {
+		if time.Now().After(to) {
 			return nil, fmt.Errorf("kubernetes is taking too long to create your development container. Please check for errors and try again")
 		}
 

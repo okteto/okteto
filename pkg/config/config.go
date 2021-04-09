@@ -20,8 +20,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -55,9 +53,6 @@ const (
 
 // VersionString the version of the cli
 var VersionString string
-
-var timeout time.Duration
-var tOnce sync.Once
 
 //GetBinaryName returns the name of the binary
 func GetBinaryName() string {
@@ -231,26 +226,4 @@ func splitKubeConfigEnv(value string) string {
 		return strings.Split(value, ";")[0]
 	}
 	return strings.Split(value, ":")[0]
-}
-
-// GetTimeout returns the per-action timeout
-func GetTimeout() time.Duration {
-	tOnce.Do(func() {
-		timeout = (30 * time.Second)
-		t, ok := os.LookupEnv("OKTETO_TIMEOUT")
-		if !ok {
-			return
-		}
-
-		parsed, err := time.ParseDuration(t)
-		if err != nil {
-			log.Infof("'%s' is not a valid duration, ignoring", t)
-			return
-		}
-
-		log.Infof("OKTETO_TIMEOUT applied: '%s'", parsed.String())
-		timeout = parsed
-	})
-
-	return timeout
 }

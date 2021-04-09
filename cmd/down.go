@@ -53,7 +53,6 @@ func Down() *cobra.Command {
 			}
 
 			log.Success("Development container deactivated")
-			log.Information("Run 'okteto push' to deploy your code changes to the cluster")
 
 			if rm {
 				if err := removeVolume(ctx, dev); err != nil {
@@ -123,5 +122,5 @@ func removeVolume(ctx context.Context, dev *model.Dev) error {
 		return err
 	}
 
-	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, client)
+	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, client, dev.Timeout)
 }

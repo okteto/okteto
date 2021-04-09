@@ -95,6 +95,50 @@ func Test_GetRepoNameAndTag(t *testing.T) {
 	}
 }
 
+func Test_GetImageTag(t *testing.T) {
+	var tests = []struct {
+		name              string
+		image             string
+		service           string
+		namespace         string
+		oktetoRegistryURL string
+		expected          string
+	}{
+		{
+			name:              "not-in-okteto",
+			image:             "okteto/hello",
+			service:           "service",
+			namespace:         "namespace",
+			oktetoRegistryURL: "",
+			expected:          "okteto/hello:okteto",
+		},
+		{
+			name:              "in-okteto-image-in-okteto",
+			image:             "okteto.dev/hello",
+			service:           "service",
+			namespace:         "namespace",
+			oktetoRegistryURL: "okteto.dev",
+			expected:          "okteto.dev/hello",
+		},
+		{
+			name:              "in-okteto-image-not-in-okteto",
+			image:             "okteto/hello",
+			service:           "service",
+			namespace:         "namespace",
+			oktetoRegistryURL: "okteto.dev",
+			expected:          "okteto.dev/namespace/service:okteto",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetImageTag(tt.image, tt.service, tt.namespace, tt.oktetoRegistryURL)
+			if tt.expected != result {
+				t.Errorf("Test '%s': expected %s got %s", tt.name, tt.expected, result)
+			}
+		})
+	}
+}
+
 func Test_GetDevImageTag(t *testing.T) {
 	var tests = []struct {
 		name                string

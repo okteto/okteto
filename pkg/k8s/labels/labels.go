@@ -46,7 +46,7 @@ const (
 	// TranslationAnnotation sets the translation rules
 	TranslationAnnotation = "dev.okteto.com/translation"
 
-	// SyncLabel indicates a synthing pod
+	// SyncLabel indicates a syncthing pod
 	SyncLabel = "syncthing.okteto.com"
 
 	//OktetoRepositoryAnnotation indicates the git repo url with the source code of this component
@@ -64,6 +64,9 @@ const (
 	//StateBeforeSleepingAnnontation indicates the state of the resource prior to scale it to zero
 	StateBeforeSleepingAnnontation = "dev.okteto.com/state-before-sleeping"
 
+	// DeployedByLabel indicates the service account that deployed an object
+	DeployedByLabel = "dev.okteto.com/deployed-by"
+
 	// StackLabel indicates the object is a stack
 	StackLabel = "stack.okteto.com"
 
@@ -73,8 +76,11 @@ const (
 	// StackServiceNameLabel indicates the name of the stack service an object belongs to
 	StackServiceNameLabel = "stack.okteto.com/service"
 
-	// OktetoAutoIngressAnnotation indicates an ingress must be crreated for a service
+	// OktetoAutoIngressAnnotation indicates an ingress must be created for a service
 	OktetoAutoIngressAnnotation = "dev.okteto.com/auto-ingress"
+
+	// OktetoInstallerRunningLabel indicates the okteto installer is running on this resource
+	OktetoInstallerRunningLabel = "dev.okteto.com/installer-running"
 )
 
 //TransformLabelsToSelector transforms a map of labels into a string k8s selector

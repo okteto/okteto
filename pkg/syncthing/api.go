@@ -38,7 +38,7 @@ func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, err
 //NewAPIClient returns a new syncthing api client configured to call the syncthing api
 func NewAPIClient() *http.Client {
 	return &http.Client{
-		Timeout:   30 * time.Second,
+		Timeout:   60 * time.Second,
 		Transport: &addAPIKeyTransport{http.DefaultTransport},
 	}
 }
@@ -46,23 +46,29 @@ func NewAPIClient() *http.Client {
 // APICall calls the syncthing API and returns the parsed json or an error
 func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, params map[string]string, local bool, body []byte, readBody bool, maxRetries int) ([]byte, error) {
 	retries := 0
+	ticker := time.NewTicker(200 * time.Millisecond)
 	for {
-		result, err := s.callWithRetry(ctx, url, method, code, params, local, body, readBody)
-		if err == nil {
-			return result, nil
-		}
-		if retries == maxRetries {
-			return nil, err
-		}
+		select {
+		case <-ticker.C:
+			result, err := s.callWithRetry(ctx, url, method, code, params, local, body, readBody)
+			if err == nil {
+				return result, nil
+			}
 
-		if strings.Contains(err.Error(), "connection refused") {
-			log.Infof("syncthing is not ready, retrying local=%t", local)
-		} else {
-			log.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())
-		}
+			if retries >= maxRetries {
+				return nil, err
+			}
+			retries++
 
-		time.Sleep(200 * time.Millisecond)
-		retries++
+			if strings.Contains(err.Error(), "connection refused") {
+				log.Infof("syncthing is not ready, retrying local=%t", local)
+			} else {
+				log.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())
+			}
+		case <-ctx.Done():
+			log.Infof("call to syncthing.APICall %s canceled", url)
+			return nil, ctx.Err()
+		}
 	}
 }
 
@@ -70,11 +76,10 @@ func (s *Syncthing) callWithRetry(ctx context.Context, url, method string, code 
 	var urlPath string
 	if local {
 		urlPath = path.Join(s.GUIAddress, url)
-		s.Client.Timeout = 3 * time.Second
+		s.Client.Timeout = 5 * time.Second
 	} else {
 		urlPath = path.Join(s.RemoteGUIAddress, url)
-		s.Client.Timeout = 25 * time.Second
-		if url == "rest/db/ignores" || url == "rest/system/ping" {
+		if url == "rest/system/ping" {
 			s.Client.Timeout = 5 * time.Second
 		}
 	}

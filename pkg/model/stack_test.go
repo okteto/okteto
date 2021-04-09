@@ -98,7 +98,7 @@ services:
 		t.Errorf("'vote.ports[0]' was not parsed: %+v", s)
 	}
 	if s.Services["vote"].StopGracePeriod != 5 {
-		t.Errorf("'vote.stop_graace_period' was not parsed: %+v", s)
+		t.Errorf("'vote.stop_grace_period' was not parsed: %+v", s)
 	}
 	cpu := s.Services["vote"].Deploy.Resources.Limits[apiv1.ResourceCPU]
 	if cpu.Cmp(resource.MustParse("100m")) != 0 {

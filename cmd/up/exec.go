@@ -88,12 +88,12 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 			E: fmt.Errorf(msg),
 			Hint: fmt.Sprintf(`Check your development container logs for errors: 'kubectl logs %s',
     Check that your container can write to the destination path of your secrets.
-    Run 'okteto down -v' to reset your development container and try again`, up.Pod),
+    Run 'okteto down -v' to reset your development container and try again`, up.Pod.Name),
 		}
 	}
 	return errors.UserError{
 		E: fmt.Errorf(msg),
 		Hint: fmt.Sprintf(`Check your development container logs for errors: 'kubectl logs %s'.
-    Run 'okteto down -v' to reset your development container and try again`, up.Pod),
+    Run 'okteto down -v' to reset your development container and try again`, up.Pod.Name),
 	}
 }

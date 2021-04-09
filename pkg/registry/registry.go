@@ -26,7 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-//GetImageTagWithDigest returns the image tag diggest
+//GetImageTagWithDigest returns the image tag digest
 func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (string, error) {
 	registryURL, err := okteto.GetRegistry()
 	if err != nil {
@@ -74,7 +74,7 @@ func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (str
 		if strings.Contains(err.Error(), "status=404") {
 			return "", errors.ErrNotFound
 		}
-		return "", fmt.Errorf("error getting image tag diggest: %s", err.Error())
+		return "", fmt.Errorf("error getting image tag digest: %s", err.Error())
 	}
 	return fmt.Sprintf("%s@%s", repoName, digest.String()), nil
 }

@@ -23,15 +23,11 @@ import (
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/subosito/gotenv"
-	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -116,22 +112,6 @@ func translateServiceEnvFile(svc *model.Service, filename string) error {
 }
 
 func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
-	c, _, err := k8Client.GetLocal()
-	if err != nil {
-		return err
-	}
-
-	oktetoRegistryURL := ""
-	n, err := namespaces.Get(ctx, s.Namespace, c)
-	if err == nil {
-		if namespaces.IsOktetoNamespace(n) {
-			oktetoRegistryURL, err = okteto.GetRegistry()
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return err
@@ -142,12 +122,15 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		if svc.Build == nil {
 			continue
 		}
-		if isOktetoCluster {
-			imageName := fmt.Sprintf("%s-%s", s.Name, name)
-			svc.Image = registry.GetImageTag("", imageName, s.Namespace, oktetoRegistryURL)
+		if !isOktetoCluster && svc.Image == "" {
+			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
+		}
+		if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
+			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !forceBuild {
 			if _, err := registry.GetImageTagWithDigest(ctx, s.Namespace, svc.Image); err != errors.ErrNotFound {
+				s.Services[name] = svc
 				continue
 			}
 			log.Infof("image '%s' not found, building it", svc.Image)
@@ -174,10 +157,6 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 }
 
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
-	marshalled, err := yaml.Marshal(s)
-	if err != nil {
-		log.Errorf("error marshalling stack: %s", err.Error())
-	}
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.GetConfigMapName(),
@@ -187,7 +166,7 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 		},
 		Data: map[string]string{
 			nameField: s.Name,
-			yamlField: base64.StdEncoding.EncodeToString(marshalled),
+			yamlField: base64.StdEncoding.EncodeToString(s.Manifest),
 		},
 	}
 }

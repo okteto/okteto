@@ -34,34 +34,35 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Version   string              `yaml:"version,omitempty"`
 	Name      string              `yaml:"name"`
 	Namespace string              `yaml:"namespace,omitempty"`
 	Services  map[string]*Service `yaml:"services,omitempty"`
 
-	Warnings  []string
-	IsCompose bool
+	Manifest  []byte   `yaml:"-"`
+	Warnings  []string `yaml:"-"`
+	IsCompose bool     `yaml:"-"`
 }
 
 //Service represents an okteto stack service
 type Service struct {
-	Deploy          *DeployInfo        `yaml:"deploy,omitempty"`
-	Build           *BuildInfo         `yaml:"build,omitempty"`
-	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
-	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
-	Entrypoint      Entrypoint         `yaml:"entrypoint,omitempty"`
-	Command         Command            `yaml:"command,omitempty"`
-	EnvFiles        []string           `yaml:"env_file,omitempty"`
-	Environment     []EnvVar           `yaml:"environment,omitempty"`
-	Expose          []int32            `yaml:"expose,omitempty"`
-	Image           string             `yaml:"image,omitempty"`
-	Labels          map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Ports           []Port             `yaml:"ports,omitempty"`
-	Scale           int32              `yaml:"scale,omitempty"`
-	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
-	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`
-	WorkingDir      string             `yaml:"working_dir,omitempty"`
+	Deploy     *DeployInfo        `yaml:"deploy,omitempty"`
+	Build      *BuildInfo         `yaml:"build,omitempty"`
+	CapAdd     []apiv1.Capability `yaml:"cap_add,omitempty"`
+	CapDrop    []apiv1.Capability `yaml:"cap_drop,omitempty"`
+	Entrypoint Entrypoint         `yaml:"entrypoint,omitempty"`
+	Command    Command            `yaml:"command,omitempty"`
+	EnvFiles   []string           `yaml:"env_file,omitempty"`
+
+	Environment     []EnvVar          `yaml:"environment,omitempty"`
+	Expose          []int32           `yaml:"expose,omitempty"`
+	Image           string            `yaml:"image,omitempty"`
+	Labels          map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Ports           []Port            `yaml:"ports,omitempty"`
+	Scale           int32             `yaml:"scale,omitempty"`
+	StopGracePeriod int64             `yaml:"stop_grace_period,omitempty"`
+	Volumes         []VolumeStack     `yaml:"volumes,omitempty"`
+	WorkingDir      string            `yaml:"working_dir,omitempty"`
 
 	Public    bool             `yaml:"public,omitempty"`
 	Replicas  int32            `yaml:"replicas,omitempty"`
@@ -152,7 +153,11 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 
 //ReadStack reads an okteto stack
 func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
-	s := &Stack{IsCompose: isCompose}
+	s := &Stack{
+		IsCompose: isCompose,
+		Manifest:  bytes,
+	}
+
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder
@@ -183,6 +188,15 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		if svc.Resources.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
 			svc.Resources.Storage.Size.Value = resource.MustParse("1Gi")
 		}
+
+		if len(svc.Expose) > 0 && len(svc.Ports) == 0 {
+			svc.Public = false
+		}
+
+		if len(svc.Expose) > 0 {
+			svc.extendPorts()
+		}
+
 	}
 	return s, nil
 }
@@ -271,13 +285,12 @@ func (svc *Service) SetLastBuiltAnnotation() {
 }
 
 //extendPorts adds the ports that are in expose field to the port list.
-func (svc *Service) extendPorts() bool {
+func (svc *Service) extendPorts() {
 	for _, port := range svc.Expose {
 		if !svc.isAlreadyAdded(port) {
 			svc.Ports = append(svc.Ports, Port{Port: port, Public: false, Protocol: apiv1.ProtocolTCP})
 		}
 	}
-	return false
 }
 
 //isAlreadyAdded checks if a port is already on port list
