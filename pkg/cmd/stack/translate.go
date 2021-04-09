@@ -334,13 +334,6 @@ func translateAnnotations(svc *model.Service) map[string]string {
 	return result
 }
 
-func translatePortType(port model.Port) apiv1.ServiceType {
-	if port.Public {
-		return apiv1.ServiceTypeLoadBalancer
-	}
-	return apiv1.ServiceTypeClusterIP
-}
-
 func translateServiceType(svc model.Service) apiv1.ServiceType {
 	if svc.Public {
 		return apiv1.ServiceTypeLoadBalancer
