@@ -70,4 +70,3 @@ git config user.name "okteto"
 git config user.email "ci@okteto.com"
 git commit -m "$VERSION release"
 git --no-pager log -1
-
