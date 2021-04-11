@@ -3,6 +3,13 @@ name: Lint
 on: [pull_request]
 
 jobs:
+  merge-conflict:
+    name: Merge Conflict
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check merge conflict
+        run: grep "^<<<<<<< HEAD" $(git ls-files | xargs) && exit 1 || true
   misspell:
     name: Check Spelling
     runs-on: ubuntu-latest
@@ -10,11 +17,9 @@ jobs:
       - name: Check out
         uses: actions/checkout@v2
       - name: Install
-        run: |
-          wget -O - -q https://git.io/misspell | sh -s -- -b .
+        run: wget -O - -q https://git.io/misspell | sh -s -- -b .
       - name: Misspell
-        run: |
-          git ls-files --empty-directory | xargs ./misspell -error
+        run: git ls-files --empty-directory | xargs ./misspell -error
   trailing-whitespace:
     name: Trailing Whitespace
     runs-on: ubuntu-latest
