@@ -135,6 +135,11 @@ func TestEnvVarMashalling(t *testing.T) {
 			[]byte(`$UNDEFINED`),
 			EnvVar{Name: "", Value: ""},
 		},
+		{
+			"local_env_expanded",
+			[]byte(`OKTETO_TEST_ENV_MARSHALLING`),
+			EnvVar{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -142,6 +147,10 @@ func TestEnvVarMashalling(t *testing.T) {
 
 			var result EnvVar
 			if err := os.Setenv("DEV_ENV", "test_environment"); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := os.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true"); err != nil {
 				t.Fatal(err)
 			}
 
