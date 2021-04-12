@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	okErrors "github.com/okteto/okteto/pkg/errors"
@@ -74,9 +73,13 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		analytics.TrackBuildTransientError(buildKitHost, success)
 		return err
 	}
-	if strings.Contains(err.Error(), "insufficient_scope: authorization failed") {
-		err = okErrors.UserError{E: fmt.Errorf("Authorization failed."),
-			Hint: "Make sure that you are already logged in the registry and have permissions to push."}
+	if err != nil {
+		if registry.IsLoggedIntoRegistryButDontHavePermissions(err) || registry.IsNotLoggedIntoRegistry(err) {
+			imageTag, imageRegistry := registry.SplitRegistryAndImage(tag)
+			err = okErrors.UserError{E: fmt.Errorf("You are not authorized to push image '%s'.", imageTag),
+				Hint: fmt.Sprintf("Login into '%s' and verify that you have permissions to push images.", imageRegistry)}
+		}
 	}
+
 	return err
 }
