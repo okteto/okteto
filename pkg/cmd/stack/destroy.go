@@ -188,7 +188,7 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 			return fmt.Errorf("error destroying ingress '%s': %s", ingressesList[i].Name, err)
 		}
 		spinner.Stop()
-		log.Success("Destroyed ingress '%s'", ingressesList[i].Name)
+		log.Success("Destroyed endpoint '%s'", ingressesList[i].Name)
 		spinner.Start()
 	}
 

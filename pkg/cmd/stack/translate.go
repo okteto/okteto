@@ -309,7 +309,7 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 
 func translateIngress(ingressName string, s *model.Stack) *extensions.Ingress {
 	endpoints := s.Endpoints[ingressName]
-	annotations := map[string]string{okLabels.StackIngressAutoGenerateHost: "true"}
+	annotations := map[string]string{okLabels.OktetoAutoIngressAnnotation: "true"}
 	return &extensions.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ingressName,
@@ -360,8 +360,8 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 
 func translateIngressLabels(endpointName string, s *model.Stack) map[string]string {
 	labels := map[string]string{
-		okLabels.StackNameLabel:        s.Name,
-		okLabels.StackIngressNameLabel: endpointName,
+		okLabels.StackNameLabel:         s.Name,
+		okLabels.StackEndpointNameLabel: endpointName,
 	}
 	return labels
 }

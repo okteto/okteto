@@ -502,7 +502,7 @@ func Test_translateEndpoints(t *testing.T) {
 	}
 
 	annotations := map[string]string{
-		okLabels.StackIngressAutoGenerateHost: "true",
+		okLabels.OktetoAutoIngressAnnotation: "true",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
@@ -523,8 +523,8 @@ func Test_translateEndpoints(t *testing.T) {
 	}
 
 	labels := map[string]string{
-		okLabels.StackNameLabel:        "stackName",
-		okLabels.StackIngressNameLabel: "svcName",
+		okLabels.StackNameLabel:         "stackName",
+		okLabels.StackEndpointNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
