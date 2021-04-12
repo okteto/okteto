@@ -73,7 +73,11 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	e.Name, err = ExpandEnv(parts[0])
-	return err
+	if err != nil {
+		return err
+	}
+	e.Value = os.Getenv(e.Name)
+	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
