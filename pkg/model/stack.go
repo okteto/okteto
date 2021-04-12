@@ -193,10 +193,14 @@ func (s *Stack) validate() error {
 		return fmt.Errorf("Invalid stack: 'services' cannot be empty")
 	}
 
-	for _, endpoints := range s.Endpoints {
+	for endpointName, endpoints := range s.Endpoints {
 		for _, endpoint := range endpoints {
-			if !s.hasService(endpoint.Service) {
-				return fmt.Errorf("Invalid endpoint service name '%s': Service must be declared in services field", endpoint.Service)
+			if service, ok := s.Services[endpoint.Service]; !ok {
+				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not exist.", endpointName, endpoint.Service)
+			} else {
+				if IsPortInService(endpoint.Port, service.Ports) {
+					return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpoint.Service, endpoint.Port)
+				}
 			}
 		}
 	}
@@ -221,9 +225,9 @@ func (s *Stack) validate() error {
 	return nil
 }
 
-func (s *Stack) hasService(svcName string) bool {
-	for name := range s.Services {
-		if svcName == name {
+func IsPortInService(port int32, portList []int32) bool {
+	for _, p := range portList {
+		if p == port {
 			return true
 		}
 	}

@@ -217,6 +217,37 @@ func TestStack_validate(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "endpoint-of-undefined-service",
+			stack: &Stack{
+				Name: "name",
+				Endpoints: map[string][]Endpoint{
+					"endpoint1": {
+						{Service: "app"},
+					},
+				},
+				Services: map[string]Service{
+					"name": {},
+				},
+			},
+		},
+		{
+			name: "endpoint-of-unexported-port",
+			stack: &Stack{
+				Name: "name",
+				Endpoints: map[string][]Endpoint{
+					"endpoint1": {
+						{Service: "name",
+							Port: 80},
+					},
+				},
+				Services: map[string]Service{
+					"name": {Ports: []int32{
+						8080,
+					}},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
