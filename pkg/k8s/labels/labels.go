@@ -77,7 +77,7 @@ const (
 	StackServiceNameLabel = "stack.okteto.com/service"
 
 	// StackEndpointNameLabel indicates the name of the endpoint an object belongs to
-	StackEndpointNameLabel = "stack.okteto.com/ingress"
+	StackEndpointNameLabel = "stack.okteto.com/endpoint"
 
 	// StackIngressAutoGenerateHost generates a ingress host for
 	OktetoIngressAutoGenerateHost = "dev.okteto.com/generate-host"
