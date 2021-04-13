@@ -164,6 +164,8 @@ jobs:
           name: upload release binaries
           command: |
             gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
+            gsutil -m rsync -r gs://downloads.okteto.com/cli/${CIRCLE_TAG} gs://downloads.okteto.com/cli/
+            
       - setup_remote_docker:
           version: "19.03.8"
       - run:
