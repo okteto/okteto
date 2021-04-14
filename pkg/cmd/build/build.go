@@ -77,11 +77,11 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		imageRegistry, imageTag := registry.GetRegistryAndRepo(tag)
 		if registry.IsLoggedIntoRegistryButDontHavePermissions(err) {
 			err = okErrors.UserError{E: fmt.Errorf("You are not authorized to push image '%s'.", imageTag),
-				Hint: fmt.Sprintf("Please login into '%s' with an user with write permissions or use an image with write permissions.", imageRegistry)}
+				Hint: fmt.Sprintf("Please login into the registry '%s' with a user with write permissions to '%s' or use another image.", imageRegistry, imageTag)}
 		}
 		if registry.IsNotLoggedIntoRegistry(err) {
 			err = okErrors.UserError{E: fmt.Errorf("You are not authorized to push image '%s'.", imageTag),
-				Hint: fmt.Sprintf("Login into '%s' and verify that you have permissions to push images.", imageRegistry)}
+				Hint: fmt.Sprintf("Login into the registry '%s' and verify that you have permissions to push the images '%s'.", imageRegistry, imageTag)}
 		}
 	}
 
