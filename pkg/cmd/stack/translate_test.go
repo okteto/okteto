@@ -263,12 +263,16 @@ func Test_translateStatefulSet(t *testing.T) {
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				Volumes: []string{"/volume1", "/volume2"},
-				Resources: model.ServiceResources{
-					CPU:    model.Quantity{Value: resource.MustParse("100m")},
-					Memory: model.Quantity{Value: resource.MustParse("1Gi")},
-					Storage: model.StorageResource{
-						Size:  model.Quantity{Value: resource.MustParse("20Gi")},
-						Class: "class-name",
+				Resources: model.StackResources{
+					Limits: model.ServiceResources{
+						CPU:    model.Quantity{Value: resource.MustParse("100m")},
+						Memory: model.Quantity{Value: resource.MustParse("1Gi")},
+					},
+					Requests: model.ServiceResources{
+						Storage: model.StorageResource{
+							Size:  model.Quantity{Value: resource.MustParse("20Gi")},
+							Class: "class-name",
+						},
 					},
 				},
 			},

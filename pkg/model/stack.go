@@ -60,7 +60,13 @@ type Service struct {
 	Expose          []int32            `yaml:"expose,omitempty"`
 	Volumes         []string           `yaml:"volumes,omitempty"`
 	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
-	Resources       ServiceResources   `yaml:"resources,omitempty"`
+	Resources       StackResources     `yaml:"resources,omitempty"`
+}
+
+//StackResources represents an okteto stack resources
+type StackResources struct {
+	Limits   ServiceResources `json:"limits,omitempty" yaml:"limits,omitempty"`
+	Requests ServiceResources `json:"requests,omitempty" yaml:"requests,omitempty"`
 }
 
 //ServiceResources represents an okteto stack service resources
@@ -163,9 +169,6 @@ func ReadStack(bytes []byte) (*Stack, error) {
 		}
 		if svc.Replicas == 0 {
 			svc.Replicas = 1
-		}
-		if svc.Resources.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
-			svc.Resources.Storage.Size.Value = resource.MustParse("1Gi")
 		}
 		if len(svc.Entrypoint.Values) > 0 {
 			svc.Args.Values = nil

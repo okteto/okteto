@@ -41,9 +41,11 @@ services:
   db:
     image: postgres:9.4
     resources:
-      storage:
-        size: 1Gi
-        class: standard
+      requests:
+        memory: 128Mi
+        storage:
+          size: 1Gi
+          class: standard
     entrypoint: e
     command: c
     volumes:
@@ -98,15 +100,15 @@ services:
 	if s.Services["vote"].StopGracePeriod != 5 {
 		t.Errorf("'vote.stop_grace_period' was not parsed: %+v", s)
 	}
-	cpu := s.Services["vote"].Resources.CPU.Value
+	cpu := s.Services["vote"].Resources.Limits.CPU.Value
 	if cpu.Cmp(resource.MustParse("100m")) != 0 {
 		t.Errorf("'vote.resources.cpu' was not parsed: %+v", s)
 	}
-	memory := s.Services["vote"].Resources.Memory.Value
+	memory := s.Services["vote"].Resources.Limits.Memory.Value
 	if memory.Cmp(resource.MustParse("258Mi")) != 0 {
 		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
 	}
-	storage := s.Services["vote"].Resources.Storage.Size.Value
+	storage := s.Services["vote"].Resources.Requests.Storage.Size.Value
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
 		t.Errorf("'vote.resources.storage' was not parsed: %+v", s)
 	}
@@ -138,12 +140,16 @@ services:
 	if s.Services["db"].Volumes[0] != "/var/lib/postgresql/data" {
 		t.Errorf("'db.volumes[0]' was not parsed: %+v", s)
 	}
-	storage = s.Services["db"].Resources.Storage.Size.Value
+	storage = s.Services["db"].Resources.Requests.Storage.Size.Value
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
 		t.Errorf("'db.resources.storage.size' was not parsed: %+v", s)
 	}
-	if s.Services["db"].Resources.Storage.Class != "standard" {
+	if s.Services["db"].Resources.Requests.Storage.Class != "standard" {
 		t.Errorf("'db.resources.storage.class' was not parsed: %+v", s)
+	}
+	memory = s.Services["db"].Resources.Requests.Memory.Value
+	if memory.Cmp(resource.MustParse("128Mi")) != 0 {
+		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
 	}
 }
 
