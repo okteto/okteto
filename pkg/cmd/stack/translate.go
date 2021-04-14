@@ -273,7 +273,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 						AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 						Resources: apiv1.ResourceRequirements{
 							Requests: apiv1.ResourceList{
-								"storage": svc.Resources.Storage.Size.Value,
+								"storage": svc.Resources.Requests.Storage.Size.Value,
 							},
 						},
 						StorageClassName: translateStorageClass(&svc),
@@ -370,8 +370,8 @@ func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
 }
 
 func translateStorageClass(svc *model.Service) *string {
-	if svc.Resources.Storage.Class != "" {
-		return &svc.Resources.Storage.Class
+	if svc.Resources.Requests.Storage.Class != "" {
+		return &svc.Resources.Requests.Storage.Class
 	}
 	return nil
 }
@@ -409,15 +409,26 @@ func translateServicePorts(svc *model.Service) []apiv1.ServicePort {
 
 func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 	result := apiv1.ResourceRequirements{}
-	if svc.Resources.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
+	if svc.Resources.Limits.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
 		result.Limits = apiv1.ResourceList{}
-		result.Limits[apiv1.ResourceCPU] = svc.Resources.CPU.Value
+		result.Limits[apiv1.ResourceCPU] = svc.Resources.Limits.CPU.Value
 	}
-	if svc.Resources.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
+	if svc.Resources.Limits.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
 		if result.Limits == nil {
 			result.Limits = apiv1.ResourceList{}
 		}
-		result.Limits[apiv1.ResourceMemory] = svc.Resources.Memory.Value
+		result.Limits[apiv1.ResourceMemory] = svc.Resources.Limits.Memory.Value
+	}
+
+	if svc.Resources.Requests.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
+		result.Limits = apiv1.ResourceList{}
+		result.Limits[apiv1.ResourceCPU] = svc.Resources.Requests.CPU.Value
+	}
+	if svc.Resources.Requests.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
+		if result.Limits == nil {
+			result.Limits = apiv1.ResourceList{}
+		}
+		result.Limits[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
 	}
 	return result
 }
