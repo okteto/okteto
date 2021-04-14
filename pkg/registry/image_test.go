@@ -240,3 +240,60 @@ func Test_translateCacheHandler(t *testing.T) {
 		})
 	}
 }
+
+func Test_GetResgistryAndRepo(t *testing.T) {
+	var tests = []struct {
+		name             string
+		image            string
+		expectedRegistry string
+		expectedRepo     string
+	}{
+		{
+			name:             "official-with-tag",
+			image:            "ubuntu:2",
+			expectedRegistry: "docker.io",
+			expectedRepo:     "ubuntu:2",
+		},
+		{
+			name:             "official-without-tag",
+			image:            "ubuntu",
+			expectedRegistry: "docker.io",
+			expectedRepo:     "ubuntu",
+		},
+		{
+			name:             "repo-with-tag",
+			image:            "test/ubuntu:2",
+			expectedRegistry: "docker.io",
+			expectedRepo:     "test/ubuntu:2",
+		},
+		{
+			name:             "repo-without-tag",
+			image:            "test/ubuntu",
+			expectedRegistry: "docker.io",
+			expectedRepo:     "test/ubuntu",
+		},
+		{
+			name:             "registry-with-tag",
+			image:            "registry/gitlab.com/test/ubuntu:2",
+			expectedRegistry: "registry/gitlab.com",
+			expectedRepo:     "test/ubuntu:2",
+		},
+		{
+			name:             "registry-without-tag",
+			image:            "okteto.dev/test/ubuntu",
+			expectedRegistry: "okteto.dev",
+			expectedRepo:     "test/ubuntu",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registry, image := GetRegistryAndRepo(tt.image)
+			if tt.expectedRepo != image {
+				t.Errorf("expected repo %s got %s in test %s", tt.expectedRepo, image, tt.name)
+			}
+			if tt.expectedRegistry != registry {
+				t.Errorf("expected registry %s got %s in test %s", tt.expectedRegistry, registry, tt.name)
+			}
+		})
+	}
+}

@@ -125,3 +125,30 @@ func IsTransientError(err error) bool {
 		return false
 	}
 }
+
+// IsLoggedIntoRegistryButDontHavePermissions returns true when the error is because the user is logged into the registry but doesn't have permissions to push the image
+func IsLoggedIntoRegistryButDontHavePermissions(err error) bool {
+	return strings.Contains(err.Error(), "insufficient_scope: authorization failed")
+}
+
+// IsNotLoggedIntoRegistry returns true when the error is because the user is not logged into the registry
+func IsNotLoggedIntoRegistry(err error) bool {
+	return strings.Contains(err.Error(), "failed to authorize: failed to fetch anonymous token")
+}
+
+// SplitRegistryAndImage returns image tag and the registry to push the image
+func GetRegistryAndRepo(tag string) (string, string) {
+	var imageTag string
+	registryTag := "docker.io"
+	splittedImage := strings.Split(tag, "/")
+
+	if len(splittedImage) == 1 {
+		imageTag = splittedImage[0]
+	} else if len(splittedImage) == 2 {
+		imageTag = strings.Join(splittedImage[len(splittedImage)-2:], "/")
+	} else {
+		imageTag = strings.Join(splittedImage[len(splittedImage)-2:], "/")
+		registryTag = strings.Join(splittedImage[:len(splittedImage)-2], "/")
+	}
+	return registryTag, imageTag
+}
