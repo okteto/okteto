@@ -184,7 +184,7 @@ func getCurrentNamespace(ctx context.Context) string {
 	if okteto.GetClusterContext() == currentContext {
 		return client.GetContextNamespace("")
 	}
-	return ""
+	return os.Getenv("OKTETO_NAMESPACE")
 }
 
 func getRepositoryURL(ctx context.Context, path string) (string, error) {
