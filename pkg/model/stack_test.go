@@ -251,11 +251,12 @@ func TestStack_validate(t *testing.T) {
 					},
 				},
 				Services: map[string]*Service{
-					"name": {Ports: []Port{
-						{
-							Port: 8080,
-						},
-					}},
+					"name": {Image: "test",
+						Ports: []Port{
+							{
+								Port: 8080,
+							},
+						}},
 				},
 			},
 		},
