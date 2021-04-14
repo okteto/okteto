@@ -1,7 +1,7 @@
 #!/bin/sh
 
 log(){
-  echo $(date +%Y-%m-%dT%H:%M:%S) $1
+  echo $(date +%Y-%m-%dT%H:%M:%S) "$1"
 }
 set -e
 
@@ -25,17 +25,17 @@ while getopts ":s:re" opt; do
       remote=1
       ;;
     s)
-      sourceFILE="$(echo $OPTARG | cut -d':' -f1)"
-      destFILE="$(echo $OPTARG | cut -d':' -f2)"
-      dirName="$(dirname $destFILE)"
+      sourceFILE="$(echo "$OPTARG" | cut -d':' -f1)"
+      destFILE="$(echo "$OPTARG" | cut -d':' -f2)"
+      dirName="$(dirname "$destFILE")"
 
       if [ ! -d "$dirName" ]; then
-        mkdir -p $dirName
+        mkdir -p "$dirName"
       fi
 
       log "Copying secret $sourceFILE to $destFILE"
       if [ "/var/okteto/secret/$sourceFILE" != "$destFILE" ]; then
-        cp /var/okteto/secret/$sourceFILE $destFILE
+        cp "/var/okteto/secret/$sourceFILE" "$destFILE"
       fi
       ;;
     \?)
