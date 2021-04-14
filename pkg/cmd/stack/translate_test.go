@@ -264,7 +264,7 @@ func Test_translateStatefulSet(t *testing.T) {
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 
-				Volumes: []model.VolumeStack{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
+				Volumes: []model.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
 				Resources: &model.StackResources{
 					Limits: model.ServiceResources{
 						CPU:    model.Quantity{Value: resource.MustParse("100m")},

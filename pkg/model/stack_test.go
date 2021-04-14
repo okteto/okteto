@@ -210,7 +210,7 @@ func TestStack_validate(t *testing.T) {
 				Name: "name",
 				Services: map[string]*Service{
 					"name": {
-						Volumes: []VolumeStack{{RemotePath: "relative"}},
+						Volumes: []StackVolume{{RemotePath: "relative"}},
 					},
 				},
 			},
@@ -221,7 +221,7 @@ func TestStack_validate(t *testing.T) {
 				Name: "name",
 				Services: map[string]*Service{
 					"name": {
-						Volumes: []VolumeStack{{LocalPath: "/source", RemotePath: "/dest"}},
+						Volumes: []StackVolume{{LocalPath: "/source", RemotePath: "/dest"}},
 					},
 				},
 			},

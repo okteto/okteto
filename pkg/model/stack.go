@@ -59,7 +59,7 @@ type Service struct {
 	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Ports           []Port            `yaml:"ports,omitempty"`
 	StopGracePeriod int64             `yaml:"stop_grace_period,omitempty"`
-	Volumes         []VolumeStack     `yaml:"volumes,omitempty"`
+	Volumes         []StackVolume     `yaml:"volumes,omitempty"`
 	WorkingDir      string            `yaml:"working_dir,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
@@ -67,7 +67,7 @@ type Service struct {
 	Resources *StackResources `yaml:"resources,omitempty"`
 }
 
-type VolumeStack struct {
+type StackVolume struct {
 	LocalPath  string
 	RemotePath string
 }
@@ -211,7 +211,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 }
 
 func (svc *Service) IgnoreSyncVolumes() {
-	notIgnoredVolumes := make([]VolumeStack, 0)
+	notIgnoredVolumes := make([]StackVolume, 0)
 	for _, volume := range svc.Volumes {
 		if volume.LocalPath == "" {
 			notIgnoredVolumes = append(notIgnoredVolumes, volume)

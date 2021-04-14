@@ -60,7 +60,7 @@ type ServiceRaw struct {
 	Ports           []Port             `yaml:"ports,omitempty"`
 	Scale           int32              `yaml:"scale"`
 	StopGracePeriod *RawMessage        `yaml:"stop_grace_period,omitempty"`
-	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`
+	Volumes         []StackVolume      `yaml:"volumes,omitempty"`
 	WorkingDir      string             `yaml:"working_dir,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
@@ -497,7 +497,7 @@ func unmarshalDuration(raw *RawMessage) (int64, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (v *VolumeStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)
 	if err != nil {
@@ -518,7 +518,7 @@ func (v *VolumeStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (v VolumeStack) MarshalYAML() (interface{}, error) {
+func (v StackVolume) MarshalYAML() (interface{}, error) {
 	return v.RemotePath, nil
 }
 
