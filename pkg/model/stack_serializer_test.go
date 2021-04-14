@@ -18,94 +18,141 @@ import (
 	"testing"
 
 	yaml "gopkg.in/yaml.v2"
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Test_DeployUnmarshalling(t *testing.T) {
+func Test_DeployReplicasUnmarshalling(t *testing.T) {
 	tests := []struct {
-		name          string
-		deployRaw     *DeployInfoRaw
-		scale         int32
-		replicas      int32
-		resources     ServiceResources
-		expected      DeployInfo
-		expectedError bool
+		name      string
+		deployRaw *DeployInfoRaw
+		scale     int32
+		replicas  int32
+		expected  int32
 	}{
 		{
-			name:          "empty",
-			deployRaw:     &DeployInfoRaw{},
-			scale:         0,
-			replicas:      0,
-			resources:     ServiceResources{},
-			expected:      DeployInfo{Replicas: 1, Resources: ResourceRequirements{Limits: ResourceList{}, Requests: ResourceList{}}},
-			expectedError: false,
+			name:      "empty",
+			deployRaw: &DeployInfoRaw{},
+			scale:     0,
+			replicas:  0,
+			expected:  1,
 		},
 		{
-			name:          "deploy-replicas-set",
-			deployRaw:     &DeployInfoRaw{Replicas: 4},
-			scale:         0,
-			replicas:      0,
-			resources:     ServiceResources{},
-			expected:      DeployInfo{Replicas: 4, Resources: ResourceRequirements{Limits: ResourceList{}, Requests: ResourceList{}}},
-			expectedError: false,
+			name:      "deploy-replicas-set",
+			deployRaw: &DeployInfoRaw{Replicas: 4},
+			scale:     0,
+			replicas:  0,
+			expected:  4,
 		},
 		{
-			name:          "scale",
-			deployRaw:     &DeployInfoRaw{},
-			scale:         3,
-			replicas:      0,
-			resources:     ServiceResources{},
-			expected:      DeployInfo{Replicas: 3, Resources: ResourceRequirements{Limits: ResourceList{}, Requests: ResourceList{}}},
-			expectedError: false,
+			name:      "scale",
+			deployRaw: &DeployInfoRaw{},
+			scale:     3,
+			replicas:  0,
+			expected:  3,
 		},
 		{
-			name:          "replicas",
-			deployRaw:     &DeployInfoRaw{},
-			scale:         0,
-			replicas:      2,
-			resources:     ServiceResources{},
-			expected:      DeployInfo{Replicas: 2, Resources: ResourceRequirements{Limits: ResourceList{}, Requests: ResourceList{}}},
-			expectedError: false,
+			name:      "replicas",
+			deployRaw: &DeployInfoRaw{},
+			scale:     0,
+			replicas:  2,
+			expected:  2,
 		},
 		{
-			name:          "replicas-and-deploy-replicas",
-			deployRaw:     &DeployInfoRaw{Replicas: 3},
-			scale:         0,
-			replicas:      2,
-			resources:     ServiceResources{},
-			expected:      DeployInfo{Replicas: 3, Resources: ResourceRequirements{Limits: ResourceList{}, Requests: ResourceList{}}},
-			expectedError: false,
-		},
-		{
-			name:          "resources",
-			deployRaw:     &DeployInfoRaw{Resources: ResourcesRaw{Limits: DeployComposeResources{Cpus: Quantity{resource.MustParse("1")}, Memory: Quantity{resource.MustParse("1Gi")}}}},
-			scale:         0,
-			replicas:      0,
-			resources:     ServiceResources{},
-			expected:      DeployInfo{Replicas: 1, Resources: ResourceRequirements{Limits: ResourceList{}, Requests: ResourceList{}}},
-			expectedError: false,
-		},
-		{
-			name:          "resources-by-stack-resources",
-			deployRaw:     &DeployInfoRaw{},
-			scale:         0,
-			replicas:      0,
-			resources:     ServiceResources{Memory: Quantity{resource.MustParse("1Gi")}},
-			expected:      DeployInfo{Replicas: 1, Resources: ResourceRequirements{Limits: ResourceList{}, Requests: map[apiv1.ResourceName]resource.Quantity{apiv1.ResourceMemory: resource.MustParse("1Gi")}}},
-			expectedError: false,
+			name:      "replicas-and-deploy-replicas",
+			deployRaw: &DeployInfoRaw{Replicas: 3},
+			scale:     0,
+			replicas:  2,
+			expected:  3,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			deployInfo, err := unmarshalDeploy(tt.deployRaw, tt.scale, tt.replicas, tt.resources)
-			if deployInfo.Replicas != tt.expected.Replicas {
-				t.Fatalf("expected %d replicas but got %d", tt.expected.Replicas, deployInfo.Replicas)
+			replicas, _ := unmarshalDeployReplicas(tt.deployRaw, tt.scale, tt.replicas)
+			if replicas != tt.expected {
+				t.Fatalf("expected %d replicas but got %d", tt.expected, replicas)
 			}
 
-			if err == nil && tt.expectedError {
-				t.Fatalf("expected error unmarshaling %s not thrown", tt.name)
+		})
+	}
+}
+
+func Test_DeployResourcesUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name      string
+		deployRaw *DeployInfoRaw
+		resources *StackResources
+		expected  *StackResources
+	}{
+		{
+			name:      "both-nil",
+			deployRaw: nil,
+			resources: nil,
+			expected:  &StackResources{},
+		},
+		{
+			name: "deploy-resources-only-limits",
+			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
+				Limits: DeployComposeResources{
+					Cpus:   Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+			},
+			},
+			resources: &StackResources{},
+			expected: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+			},
+		},
+		{
+			name:      "resources",
+			deployRaw: nil,
+			resources: &StackResources{Limits: ServiceResources{
+				CPU:    Quantity{resource.MustParse("1")},
+				Memory: Quantity{resource.MustParse("1Gi")},
+			}},
+			expected: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+			},
+		},
+		{
+			name: "deploy-resources",
+			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
+				Limits: DeployComposeResources{
+					Cpus:   Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Reservations: DeployComposeResources{
+					Cpus:   Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("2Gi")},
+				},
+			},
+			},
+			resources: &StackResources{},
+			expected: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					CPU:    Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("2Gi")},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resources, _ := unmarshalDeployResources(tt.deployRaw, tt.resources)
+			if !reflect.DeepEqual(tt.expected, resources) {
+				t.Fatalf("expected %v but got %v", tt.expected, resources)
 			}
+
 		})
 	}
 }
@@ -252,6 +299,88 @@ func Test_GroupNotSupportedFields(t *testing.T) {
 			if !reflect.DeepEqual(tt.expected, output) {
 				t.Errorf("didn't group correctly. Actual %+v, Expected %+v", output, tt.expected)
 			}
+		})
+	}
+}
+
+func TestStackResourcesUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected StackResources
+	}{
+		{
+			name: "limits-requests",
+			data: []byte("limits:\n  cpu: 100m\n  memory: 100Gi\nrequests:\n  cpu: 200m\n  memory: 200Gi\n"),
+			expected: StackResources{
+				Limits: ServiceResources{
+					CPU: Quantity{
+						Value: resource.MustParse("100m"),
+					},
+					Memory: Quantity{
+						Value: resource.MustParse("100Gi"),
+					},
+				},
+				Requests: ServiceResources{
+					CPU: Quantity{
+						Value: resource.MustParse("200m"),
+					},
+					Memory: Quantity{
+						Value: resource.MustParse("200Gi"),
+					},
+				},
+			},
+		},
+		{
+			name: "simple-resources",
+			data: []byte("cpu: 100m\nmemory: 100Gi\n"),
+			expected: StackResources{
+				Limits: ServiceResources{
+					CPU: Quantity{
+						Value: resource.MustParse("100m"),
+					},
+					Memory: Quantity{
+						Value: resource.MustParse("100Gi"),
+					},
+				},
+			},
+		},
+		{
+			name: "cpu-memory-and-storage",
+			data: []byte("cpu: 100m\nmemory: 100Gi\nstorage:\n  size: 5Gi\n  class: standard\n"),
+			expected: StackResources{
+				Limits: ServiceResources{
+					CPU: Quantity{
+						Value: resource.MustParse("100m"),
+					},
+					Memory: Quantity{
+						Value: resource.MustParse("100Gi"),
+					},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size: Quantity{
+							Value: resource.MustParse("5Gi"),
+						},
+						Class: "standard",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			var stackResources StackResources
+			if err := yaml.UnmarshalStrict(tt.data, &stackResources); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(stackResources, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %v, Expected %v", stackResources, tt.expected)
+			}
+
 		})
 	}
 }

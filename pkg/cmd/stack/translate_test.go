@@ -146,7 +146,7 @@ func Test_translateDeployment(t *testing.T) {
 					"annotation2": "value2",
 				},
 				Image:           "image",
-				Scale:           3,
+				Replicas:        3,
 				StopGracePeriod: 20,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
@@ -246,7 +246,7 @@ func Test_translateStatefulSet(t *testing.T) {
 					"annotation2": "value2",
 				},
 				Image:           "image",
-				Scale:           3,
+				Replicas:        3,
 				StopGracePeriod: 20,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
@@ -265,7 +265,7 @@ func Test_translateStatefulSet(t *testing.T) {
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 
 				Volumes: []model.VolumeStack{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
-				Resources: model.StackResources{
+				Resources: &model.StackResources{
 					Limits: model.ServiceResources{
 						CPU:    model.Quantity{Value: resource.MustParse("100m")},
 						Memory: model.Quantity{Value: resource.MustParse("1Gi")},

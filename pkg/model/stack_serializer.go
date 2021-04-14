@@ -21,7 +21,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
-	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
 //Stack represents an okteto stack
@@ -32,6 +31,7 @@ type StackRaw struct {
 	Namespace  string                 `yaml:"namespace,omitempty"`
 	Xnamespace string                 `yaml:"x-namespace,omitempty"`
 	Services   map[string]*ServiceRaw `yaml:"services,omitempty"`
+	Endpoints  map[string][]Endpoint  `yaml:"endpoints,omitempty"`
 
 	// Docker-compose not implemented
 	Networks *WarningType `yaml:"networks,omitempty"`
@@ -63,9 +63,9 @@ type ServiceRaw struct {
 	Volumes         []VolumeStack      `yaml:"volumes,omitempty"`
 	WorkingDir      string             `yaml:"working_dir,omitempty"`
 
-	Public    bool             `yaml:"public,omitempty"`
-	Replicas  int32            `yaml:"replicas"`
-	Resources ServiceResources `yaml:"resources,omitempty"`
+	Public    bool            `yaml:"public,omitempty"`
+	Replicas  int32           `yaml:"replicas"`
+	Resources *StackResources `yaml:"resources,omitempty"`
 
 	BlkioConfig       *WarningType `yaml:"blkio_config,omitempty"`
 	CpuCount          *WarningType `yaml:"cpu_count,omitempty"`
@@ -182,9 +182,11 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		s.Namespace = stackRaw.Namespace
 	}
 
+	s.Endpoints = stackRaw.Endpoints
+
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
-		s.Services[svcName], err = svcRaw.ToService(svcName, s.IsCompose)
+		s.Services[svcName], err = svcRaw.ToService(svcName)
 		if err != nil {
 			return err
 		}
@@ -196,10 +198,14 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Service, error) {
+func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s := &Service{}
 	var err error
-	s.Deploy, err = unmarshalDeploy(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas, serviceRaw.Resources)
+	s.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources)
+	if err != nil {
+		return nil, err
+	}
+	s.Replicas, err = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +257,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 	s.Volumes = serviceRaw.Volumes
 	s.WorkingDir = serviceRaw.WorkingDir
 
-	s.Resources = serviceRaw.Resources
 	return s, nil
 }
 
@@ -328,45 +333,67 @@ func (p *Port) MarshalYAML() (interface{}, error) {
 	return Port{Port: p.Port, Public: p.Public}, nil
 }
 
-func unmarshalDeploy(deployInfo *DeployInfoRaw, scale, replicas int32, resources ServiceResources) (*DeployInfo, error) {
-	deploy := &DeployInfo{Replicas: 1, Resources: ResourceRequirements{Limits: make(map[apiv1.ResourceName]resource.Quantity),
-		Requests: make(map[apiv1.ResourceName]resource.Quantity)}}
+func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources) (*StackResources, error) {
+	if resources == nil {
+		resources = &StackResources{}
+	}
 	if deployInfo != nil {
-		if deployInfo.Replicas > deploy.Replicas {
-			deploy.Replicas = deployInfo.Replicas
-		}
-		deploy.Resources.Limits = deployInfo.Resources.Limits.toResourceList()
-		deploy.Resources.Requests = deployInfo.Resources.Reservations.toResourceList()
+		resources.Limits = deployInfo.Resources.Limits.toServiceResources()
+		resources.Requests = deployInfo.Resources.Reservations.toServiceResources()
 	}
 
-	if scale > deploy.Replicas {
-		deploy.Replicas = scale
-	}
-	if replicas > deploy.Replicas {
-		deploy.Replicas = replicas
-	}
-
-	if !resources.CPU.Value.IsZero() {
-		deploy.Resources.Limits[apiv1.ResourceCPU] = resources.CPU.Value
-	}
-	if !resources.Memory.Value.IsZero() {
-		deploy.Resources.Limits[apiv1.ResourceMemory] = resources.Memory.Value
-	}
-	if !resources.Storage.Size.Value.IsZero() {
-		deploy.Resources.Limits[apiv1.ResourceStorage] = resources.Storage.Size.Value
-	}
-	return deploy, nil
+	return resources, nil
 }
 
-func (r DeployComposeResources) toResourceList() ResourceList {
-	resources := make(map[apiv1.ResourceName]resource.Quantity)
+func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas int32) (int32, error) {
+	var finalReplicas int32
+	finalReplicas = 1
+	if deployInfo != nil {
+		if deployInfo.Replicas > replicas {
+			finalReplicas = deployInfo.Replicas
+		}
+	}
+	if scale > finalReplicas {
+		finalReplicas = scale
+	}
+	if replicas > finalReplicas {
+		finalReplicas = replicas
+	}
+
+	return finalReplicas, nil
+}
+
+func (r DeployComposeResources) toServiceResources() ServiceResources {
+	resources := ServiceResources{}
 	if !r.Cpus.Value.IsZero() {
-		resources[apiv1.ResourceCPU] = r.Cpus.Value
+		resources.CPU = r.Cpus
 	}
 	if !r.Memory.Value.IsZero() {
-		resources[apiv1.ResourceMemory] = r.Memory.Value
+		resources.Memory = r.Memory
 	}
 	return resources
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (s *StackResources) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type stackResources StackResources // prevent recursion
+	var r stackResources
+	err := unmarshal(&r)
+	if err == nil {
+		s.Limits = r.Limits
+		s.Requests = r.Requests
+		return nil
+	}
+
+	var resources ServiceResources
+	err = unmarshal(&resources)
+	if err != nil {
+		return err
+	}
+	s.Limits.CPU = resources.CPU
+	s.Limits.Memory = resources.Memory
+	s.Requests.Storage = resources.Storage
+	return nil
 }
 
 func unmarshalExpose(raw *RawMessage) ([]int32, error) {

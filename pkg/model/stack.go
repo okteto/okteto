@@ -58,14 +58,13 @@ type Service struct {
 	Labels          map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Ports           []Port            `yaml:"ports,omitempty"`
-	Scale           int32             `yaml:"scale,omitempty"`
 	StopGracePeriod int64             `yaml:"stop_grace_period,omitempty"`
 	Volumes         []VolumeStack     `yaml:"volumes,omitempty"`
 	WorkingDir      string            `yaml:"working_dir,omitempty"`
 
-	Public    bool             `yaml:"public,omitempty"`
-	Replicas  int32            `yaml:"replicas,omitempty"`
-	Resources ServiceResources `yaml:"resources,omitempty"`
+	Public    bool            `yaml:"public,omitempty"`
+	Replicas  int32           `yaml:"replicas,omitempty"`
+	Resources *StackResources `yaml:"resources,omitempty"`
 }
 
 type VolumeStack struct {
@@ -191,8 +190,8 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 			}
 			setBuildDefaults(svc.Build)
 		}
-		if svc.Resources.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
-			svc.Resources.Storage.Size.Value = resource.MustParse("1Gi")
+		if svc.Resources.Requests.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
+			svc.Resources.Requests.Storage.Size.Value = resource.MustParse("1Gi")
 		}
 
 		if svc.Replicas == 0 {

@@ -460,27 +460,28 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 
 func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 	result := apiv1.ResourceRequirements{}
-
-	if svc.Resources.Limits.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
-		result.Limits = apiv1.ResourceList{}
-		result.Limits[apiv1.ResourceCPU] = svc.Resources.Limits.CPU.Value
-	}
-
-	if svc.Resources.Limits.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
-		if result.Limits == nil {
+	if svc.Resources != nil {
+		if svc.Resources.Limits.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
 			result.Limits = apiv1.ResourceList{}
+			result.Limits[apiv1.ResourceCPU] = svc.Resources.Limits.CPU.Value
 		}
-		result.Limits[apiv1.ResourceMemory] = svc.Resources.Limits.Memory.Value
-	}
 
-	if svc.Resources.Requests.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
-		result.Requests = apiv1.ResourceList{}
-		result.Requests[apiv1.ResourceCPU] = svc.Resources.Requests.CPU.Value
-	}
-	if svc.Resources.Requests.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
-		if result.Requests == nil {
+		if svc.Resources.Limits.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
+			if result.Limits == nil {
+				result.Limits = apiv1.ResourceList{}
+			}
+			result.Limits[apiv1.ResourceMemory] = svc.Resources.Limits.Memory.Value
+		}
+
+		if svc.Resources.Requests.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
 			result.Requests = apiv1.ResourceList{}
-			result.Requests[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
+			result.Requests[apiv1.ResourceCPU] = svc.Resources.Requests.CPU.Value
+		}
+		if svc.Resources.Requests.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
+			if result.Requests == nil {
+				result.Requests = apiv1.ResourceList{}
+				result.Requests[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
+			}
 		}
 	}
 	return result
