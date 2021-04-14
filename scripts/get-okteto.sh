@@ -4,10 +4,6 @@
 
 set -e
 
-RED=$(tput setaf 1)
-GREEN=$(tput setaf 2)
-NORMAL=$(tput sgr0)
-
 install_dir='/usr/local/bin'
 install_path='/usr/local/bin/okteto'
 OS=$(uname | tr '[:upper:]' '[:lower:]')
@@ -15,6 +11,7 @@ ARCH=$(uname -m | tr '[:upper:]' '[:lower:]')
 cmd_exists() {
 	command -v "$@" > /dev/null 2>&1
 }
+
 
 latestURL=https://github.com/okteto/okteto/releases/latest/download
 
@@ -28,7 +25,7 @@ case "$OS" in
             URL=${latestURL}/okteto-Darwin-arm64
             ;;
         *)
-            printf '%s> The architecture (%s) is not supported by this installation script.%s\n' $RED $ARCH $NORMAL
+            printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' $ARCH
             exit 1
             ;;
       esac
@@ -48,13 +45,13 @@ case "$OS" in
             URL=${latestURL}/okteto-Linux-arm64
             ;;
         *)
-            printf '%s> The architecture (%s) is not supported by this installation script.%s\n' $RED $ARCH $NORMAL
+            printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' $ARCH
             exit 1
             ;;
       esac
       ;;
     *)
-      printf '%s> The OS (%s) is not supported by this installation script.%s\n' $RED $OS $NORMAL
+      printf '\033[31m> The OS (%s) is not supported by this installation script.\n\033[0m' $OS
       exit 1
       ;;
 esac
@@ -82,6 +79,6 @@ chmod +x "$download_path"
 printf '> Installing %s\n' "$install_path"
 $sh_c "mv -f $download_path $install_path"
 
-printf '%s> Okteto successfully installed!\n%s' $GREEN $NORMAL
+printf '\033[32m> Okteto successfully installed!\n\033[0m'
 
 } # End of wrapping
