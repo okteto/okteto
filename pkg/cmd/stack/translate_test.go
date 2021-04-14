@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+
+	extensions "k8s.io/api/extensions/v1beta1"
 )
 
 const (
@@ -144,7 +146,7 @@ func Test_translateDeployment(t *testing.T) {
 					"annotation2": "value2",
 				},
 				Image:           "image",
-				Deploy:          &model.DeployInfo{Replicas: 3},
+				Scale:           3,
 				StopGracePeriod: 20,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
@@ -244,7 +246,7 @@ func Test_translateStatefulSet(t *testing.T) {
 					"annotation2": "value2",
 				},
 				Image:           "image",
-				Deploy:          &model.DeployInfo{Replicas: 3, Resources: model.ResourceRequirements{Limits: map[apiv1.ResourceName]resource.Quantity{apiv1.ResourceCPU: resource.MustParse("100m"), apiv1.ResourceMemory: resource.MustParse("1Gi")}}},
+				Scale:           3,
 				StopGracePeriod: 20,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
 				Command:         model.Command{Values: []string{"args1", "args2"}},
@@ -261,12 +263,18 @@ func Test_translateStatefulSet(t *testing.T) {
 				Ports:   []model.Port{{Port: 80}, {Port: 90}},
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
-				Volumes: []model.VolumeStack{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
-				Resources: model.ServiceResources{
 
-					Storage: model.StorageResource{
-						Size:  model.Quantity{Value: resource.MustParse("20Gi")},
-						Class: "class-name",
+				Volumes: []model.VolumeStack{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
+				Resources: model.StackResources{
+					Limits: model.ServiceResources{
+						CPU:    model.Quantity{Value: resource.MustParse("100m")},
+						Memory: model.Quantity{Value: resource.MustParse("1Gi")},
+					},
+					Requests: model.ServiceResources{
+						Storage: model.StorageResource{
+							Size:  model.Quantity{Value: resource.MustParse("20Gi")},
+							Class: "class-name",
+						},
 					},
 				},
 			},
@@ -488,5 +496,54 @@ func Test_translateService(t *testing.T) {
 	}
 	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
 		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
+	}
+}
+
+func Test_translateEndpoints(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Endpoints: map[string][]model.Endpoint{
+			"svcName": {
+				{Path: "/", Port: 80, Service: "svcName"},
+			},
+		},
+		Services: map[string]*model.Service{
+			"svcName": {
+				Image: "image",
+			},
+		},
+	}
+	result := translateIngress("svcName", s)
+	if result.Name != "svcName" {
+		t.Errorf("Wrong service name: '%s'", result.Name)
+	}
+
+	annotations := map[string]string{
+		okLabels.OktetoAutoIngressAnnotation: "true",
+	}
+
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	}
+
+	paths := []extensions.HTTPIngressPath{
+		{Path: "/",
+			Backend: extensions.IngressBackend{
+				ServiceName: "svcName",
+				ServicePort: intstr.IntOrString{IntVal: 80},
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(result.Spec.Rules[0].HTTP.Paths, paths) {
+		t.Errorf("Wrong service ports: '%v'", result.Spec.Rules[0].HTTP.Paths)
+	}
+
+	labels := map[string]string{
+		okLabels.StackNameLabel:         "stackName",
+		okLabels.StackEndpointNameLabel: "svcName",
+	}
+	if !reflect.DeepEqual(result.Labels, labels) {
+		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
 }

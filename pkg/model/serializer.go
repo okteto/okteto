@@ -73,7 +73,11 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	e.Name, err = ExpandEnv(parts[0])
-	return err
+	if err != nil {
+		return err
+	}
+	e.Value = os.Getenv(e.Name)
+	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
@@ -540,4 +544,26 @@ func isDefaultProbes(d *Dev) bool {
 		}
 	}
 	return true
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (s *StackResources) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type stackResources StackResources // prevent recursion
+	var r stackResources
+	err := unmarshal(&r)
+	if err == nil {
+		s.Limits = r.Limits
+		s.Requests = r.Requests
+		return nil
+	}
+
+	var resources ServiceResources
+	err = unmarshal(&resources)
+	if err != nil {
+		return err
+	}
+	s.Limits.CPU = resources.CPU
+	s.Limits.Memory = resources.Memory
+	s.Requests.Storage = resources.Storage
+	return nil
 }

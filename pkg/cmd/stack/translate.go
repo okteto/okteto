@@ -30,6 +30,8 @@ import (
 	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	extensions "k8s.io/api/extensions/v1beta1"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -181,7 +183,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32Ptr(svc.Deploy.Replicas),
+			Replicas: pointer.Int32Ptr(svc.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
@@ -221,7 +223,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas:             pointer.Int32Ptr(svc.Deploy.Replicas),
+			Replicas:             pointer.Int32Ptr(svc.Replicas),
 			RevisionHistoryLimit: pointer.Int32Ptr(2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(name, s),
@@ -274,7 +276,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 						AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 						Resources: apiv1.ResourceRequirements{
 							Requests: apiv1.ResourceList{
-								"storage": svc.Resources.Storage.Size.Value,
+								"storage": svc.Resources.Requests.Storage.Size.Value,
 							},
 						},
 						StorageClassName: translateStorageClass(svc),
@@ -306,6 +308,45 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	}
 }
 
+func translateIngress(ingressName string, s *model.Stack) *extensions.Ingress {
+	endpoints := s.Endpoints[ingressName]
+	annotations := map[string]string{okLabels.OktetoAutoIngressAnnotation: "true"}
+	return &extensions.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ingressName,
+			Namespace:   s.Namespace,
+			Labels:      translateIngressLabels(ingressName, s),
+			Annotations: annotations,
+		},
+		Spec: extensions.IngressSpec{
+			Rules: []extensions.IngressRule{
+				{
+					IngressRuleValue: extensions.IngressRuleValue{
+						HTTP: &extensions.HTTPIngressRuleValue{
+							Paths: translateEndpoints(endpoints),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func translateEndpoints(endpoints []model.Endpoint) []extensions.HTTPIngressPath {
+	paths := make([]extensions.HTTPIngressPath, 0)
+	for _, endpoint := range endpoints {
+		path := extensions.HTTPIngressPath{
+			Path: endpoint.Path,
+			Backend: extensions.IngressBackend{
+				ServiceName: endpoint.Service,
+				ServicePort: intstr.IntOrString{IntVal: endpoint.Port},
+			},
+		}
+		paths = append(paths, path)
+	}
+	return paths
+}
+
 func translateLabels(svcName string, s *model.Stack) map[string]string {
 	svc := s.Services[svcName]
 	labels := map[string]string{
@@ -314,6 +355,14 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 	}
 	for k := range svc.Labels {
 		labels[k] = svc.Labels[k]
+	}
+	return labels
+}
+
+func translateIngressLabels(endpointName string, s *model.Stack) map[string]string {
+	labels := map[string]string{
+		okLabels.StackNameLabel:         s.Name,
+		okLabels.StackEndpointNameLabel: endpointName,
 	}
 	return labels
 }
@@ -371,8 +420,8 @@ func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
 }
 
 func translateStorageClass(svc *model.Service) *string {
-	if svc.Resources.Storage.Class != "" {
-		return &svc.Resources.Storage.Class
+	if svc.Resources.Requests.Storage.Class != "" {
+		return &svc.Resources.Requests.Storage.Class
 	}
 	return nil
 }
@@ -411,32 +460,27 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 
 func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 	result := apiv1.ResourceRequirements{}
-	if cpuResource, ok := svc.Deploy.Resources.Limits[apiv1.ResourceCPU]; ok {
-		if cpuResource.Cmp(resource.MustParse("0")) > 0 {
+
+	if svc.Resources.Limits.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
+		result.Limits = apiv1.ResourceList{}
+		result.Limits[apiv1.ResourceCPU] = svc.Resources.Limits.CPU.Value
+	}
+
+	if svc.Resources.Limits.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
+		if result.Limits == nil {
 			result.Limits = apiv1.ResourceList{}
-			result.Limits[apiv1.ResourceCPU] = cpuResource
 		}
+		result.Limits[apiv1.ResourceMemory] = svc.Resources.Limits.Memory.Value
 	}
-	if memoryResource, ok := svc.Deploy.Resources.Limits[apiv1.ResourceMemory]; ok {
-		if memoryResource.Cmp(resource.MustParse("0")) > 0 {
-			if result.Limits == nil {
-				result.Limits = apiv1.ResourceList{}
-			}
-			result.Limits[apiv1.ResourceMemory] = memoryResource
-		}
+
+	if svc.Resources.Requests.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
+		result.Requests = apiv1.ResourceList{}
+		result.Requests[apiv1.ResourceCPU] = svc.Resources.Requests.CPU.Value
 	}
-	if cpuResource, ok := svc.Deploy.Resources.Requests[apiv1.ResourceCPU]; ok {
-		if cpuResource.Cmp(resource.MustParse("0")) > 0 {
+	if svc.Resources.Requests.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
+		if result.Requests == nil {
 			result.Requests = apiv1.ResourceList{}
-			result.Requests[apiv1.ResourceCPU] = cpuResource
-		}
-	}
-	if memoryResource, ok := svc.Deploy.Resources.Requests[apiv1.ResourceMemory]; ok {
-		if memoryResource.Cmp(resource.MustParse("0")) > 0 {
-			if result.Requests == nil {
-				result.Requests = apiv1.ResourceList{}
-			}
-			result.Requests[apiv1.ResourceMemory] = memoryResource
+			result.Requests[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
 		}
 	}
 	return result

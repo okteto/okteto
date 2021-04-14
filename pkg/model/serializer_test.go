@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	yaml "gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func TestReverseMashalling(t *testing.T) {
@@ -135,6 +136,11 @@ func TestEnvVarMashalling(t *testing.T) {
 			[]byte(`$UNDEFINED`),
 			EnvVar{Name: "", Value: ""},
 		},
+		{
+			"local_env_expanded",
+			[]byte(`OKTETO_TEST_ENV_MARSHALLING`),
+			EnvVar{Name: "OKTETO_TEST_ENV_MARSHALLING", Value: "true"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -142,6 +148,10 @@ func TestEnvVarMashalling(t *testing.T) {
 
 			var result EnvVar
 			if err := os.Setenv("DEV_ENV", "test_environment"); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := os.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true"); err != nil {
 				t.Fatal(err)
 			}
 
@@ -472,6 +482,88 @@ func TestDevMarshalling(t *testing.T) {
 			if string(marshalled) != tt.expected {
 				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
 			}
+		})
+	}
+}
+
+func TestStackResourcesUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected StackResources
+	}{
+		{
+			name: "limits-requests",
+			data: []byte("limits:\n  cpu: 100m\n  memory: 100Gi\nrequests:\n  cpu: 200m\n  memory: 200Gi\n"),
+			expected: StackResources{
+				Limits: ServiceResources{
+					CPU: Quantity{
+						Value: resource.MustParse("100m"),
+					},
+					Memory: Quantity{
+						Value: resource.MustParse("100Gi"),
+					},
+				},
+				Requests: ServiceResources{
+					CPU: Quantity{
+						Value: resource.MustParse("200m"),
+					},
+					Memory: Quantity{
+						Value: resource.MustParse("200Gi"),
+					},
+				},
+			},
+		},
+		{
+			name: "simple-resources",
+			data: []byte("cpu: 100m\nmemory: 100Gi\n"),
+			expected: StackResources{
+				Limits: ServiceResources{
+					CPU: Quantity{
+						Value: resource.MustParse("100m"),
+					},
+					Memory: Quantity{
+						Value: resource.MustParse("100Gi"),
+					},
+				},
+			},
+		},
+		{
+			name: "cpu-memory-and-storage",
+			data: []byte("cpu: 100m\nmemory: 100Gi\nstorage:\n  size: 5Gi\n  class: standard\n"),
+			expected: StackResources{
+				Limits: ServiceResources{
+					CPU: Quantity{
+						Value: resource.MustParse("100m"),
+					},
+					Memory: Quantity{
+						Value: resource.MustParse("100Gi"),
+					},
+				},
+				Requests: ServiceResources{
+					Storage: StorageResource{
+						Size: Quantity{
+							Value: resource.MustParse("5Gi"),
+						},
+						Class: "standard",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			var stackResources StackResources
+			if err := yaml.UnmarshalStrict(tt.data, &stackResources); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(stackResources, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %v, Expected %v", stackResources, tt.expected)
+			}
+
 		})
 	}
 }

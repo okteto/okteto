@@ -16,7 +16,6 @@ package model
 import (
 	"testing"
 
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -42,9 +41,11 @@ services:
   db:
     image: postgres:9.4
     resources:
-      storage:
-        size: 1Gi
-        class: standard
+      requests:
+        memory: 128Mi
+        storage:
+          size: 1Gi
+          class: standard
     entrypoint: e
     command: c
     volumes:
@@ -79,7 +80,7 @@ services:
 	if s.Services["vote"].Entrypoint.Values[0] != "sh" || s.Services["vote"].Entrypoint.Values[1] != "-c" || s.Services["vote"].Entrypoint.Values[2] != "python app.py" {
 		t.Errorf("'vote.entrypoint' was not parsed: %+v", s)
 	}
-	if s.Services["vote"].Deploy.Replicas != 2 {
+	if s.Services["vote"].Replicas != 2 {
 		t.Errorf("'vote.deploy.replicas' was not parsed: %+v", s)
 	}
 	if len(s.Services["vote"].Environment) != 2 {
@@ -100,15 +101,17 @@ services:
 	if s.Services["vote"].StopGracePeriod != 5 {
 		t.Errorf("'vote.stop_grace_period' was not parsed: %+v", s)
 	}
-	cpu := s.Services["vote"].Deploy.Resources.Limits[apiv1.ResourceCPU]
+
+	cpu := s.Services["vote"].Resources.Limits.CPU.Value
 	if cpu.Cmp(resource.MustParse("100m")) != 0 {
 		t.Errorf("'vote.deploy.limits.cpu' was not parsed: %+v", s)
 	}
-	memory := s.Services["vote"].Deploy.Resources.Limits[apiv1.ResourceMemory]
+
+	memory := s.Services["vote"].Resources.Limits.Memory.Value
 	if memory.Cmp(resource.MustParse("258Mi")) != 0 {
 		t.Errorf("'vote.deploy.limits.memory' was not parsed: %+v", s)
 	}
-	storage := s.Services["vote"].Resources.Storage.Size.Value
+	storage := s.Services["vote"].Resources.Requests.Storage.Size.Value
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
 		t.Errorf("'vote.resources.storage' was not parsed: %+v", s)
 	}
@@ -118,7 +121,7 @@ services:
 	if s.Services["db"].Image != "postgres:9.4" {
 		t.Errorf("'db.image' was not parsed: %+v", s)
 	}
-	if s.Services["db"].Deploy.Replicas != 1 {
+	if s.Services["db"].Replicas != 1 {
 		t.Errorf("'db.deploy.replicas' was not parsed: %+v", s)
 	}
 	if len(s.Services["db"].Entrypoint.Values) != 1 {
@@ -140,12 +143,16 @@ services:
 	if s.Services["db"].Volumes[0].RemotePath != "/var/lib/postgresql/data" {
 		t.Errorf("'db.volumes[0]' was not parsed: %+v", s)
 	}
-	storage = s.Services["db"].Resources.Storage.Size.Value
+	storage = s.Services["db"].Resources.Requests.Storage.Size.Value
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
 		t.Errorf("'db.resources.storage.size' was not parsed: %+v", s)
 	}
-	if s.Services["db"].Resources.Storage.Class != "standard" {
+	if s.Services["db"].Resources.Requests.Storage.Class != "standard" {
 		t.Errorf("'db.resources.storage.class' was not parsed: %+v", s)
+	}
+	memory = s.Services["db"].Resources.Requests.Memory.Value
+	if memory.Cmp(resource.MustParse("128Mi")) != 0 {
+		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
 	}
 }
 
@@ -216,6 +223,39 @@ func TestStack_validate(t *testing.T) {
 					"name": {
 						Volumes: []VolumeStack{{LocalPath: "/source", RemotePath: "/dest"}},
 					},
+				},
+			},
+		},
+		{
+			name: "endpoint-of-undefined-service",
+			stack: &Stack{
+				Name: "name",
+				Endpoints: map[string][]Endpoint{
+					"endpoint1": {
+						{Service: "app"},
+					},
+				},
+				Services: map[string]*Service{
+					"name": {},
+				},
+			},
+		},
+		{
+			name: "endpoint-of-unexported-port",
+			stack: &Stack{
+				Name: "name",
+				Endpoints: map[string][]Endpoint{
+					"endpoint1": {
+						{Service: "name",
+							Port: 80},
+					},
+				},
+				Services: map[string]*Service{
+					"name": {Ports: []Port{
+						{
+							Port: 8080,
+						},
+					}},
 				},
 			},
 		},

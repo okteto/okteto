@@ -34,18 +34,17 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Name      string              `yaml:"name"`
-	Namespace string              `yaml:"namespace,omitempty"`
-	Services  map[string]*Service `yaml:"services,omitempty"`
+	Name      string                `yaml:"name"`
+	Namespace string                `yaml:"namespace,omitempty"`
+	Services  map[string]*Service   `yaml:"services,omitempty"`
+	Endpoints map[string][]Endpoint `yaml:"endpoints,omitempty"`
 
-	Manifest  []byte   `yaml:"-"`
-	Warnings  []string `yaml:"-"`
-	IsCompose bool     `yaml:"-"`
+	Manifest []byte   `yaml:"-"`
+	Warnings []string `yaml:"-"`
 }
 
 //Service represents an okteto stack service
 type Service struct {
-	Deploy     *DeployInfo        `yaml:"deploy,omitempty"`
 	Build      *BuildInfo         `yaml:"build,omitempty"`
 	CapAdd     []apiv1.Capability `yaml:"cap_add,omitempty"`
 	CapDrop    []apiv1.Capability `yaml:"cap_drop,omitempty"`
@@ -78,6 +77,12 @@ type Envs struct {
 	List []EnvVar
 }
 
+//StackResources represents an okteto stack resources
+type StackResources struct {
+	Limits   ServiceResources `json:"limits,omitempty" yaml:"limits,omitempty"`
+	Requests ServiceResources `json:"requests,omitempty" yaml:"requests,omitempty"`
+}
+
 //ServiceResources represents an okteto stack service resources
 type ServiceResources struct {
 	CPU     Quantity        `json:"cpu,omitempty" yaml:"cpu,omitempty"`
@@ -96,15 +101,17 @@ type Quantity struct {
 	Value resource.Quantity
 }
 
-type DeployInfo struct {
-	Replicas  int32                `yaml:"replicas,omitempty"`
-	Resources ResourceRequirements `yaml:"resources,omitempty"`
-}
-
 type Port struct {
 	Port     int32
 	Public   bool
 	Protocol apiv1.Protocol
+}
+
+//Endpoints represents an okteto stack ingress
+type Endpoint struct {
+	Path    string `yaml:"path,omitempty"`
+	Service string `yaml:"service,omitempty"`
+	Port    int32  `yaml:"port,omitempty"`
 }
 
 //GetStack returns an okteto stack object from a given file
@@ -154,8 +161,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 //ReadStack reads an okteto stack
 func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	s := &Stack{
-		IsCompose: isCompose,
-		Manifest:  bytes,
+		Manifest: bytes,
 	}
 
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
@@ -189,6 +195,10 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 			svc.Resources.Storage.Size.Value = resource.MustParse("1Gi")
 		}
 
+		if svc.Replicas == 0 {
+			svc.Replicas = 1
+		}
+
 		if len(svc.Expose) > 0 && len(svc.Ports) == 0 {
 			svc.Public = false
 		}
@@ -219,6 +229,16 @@ func (s *Stack) validate() error {
 		return fmt.Errorf("Invalid stack: 'services' cannot be empty")
 	}
 
+	for endpointName, endpoints := range s.Endpoints {
+		for _, endpoint := range endpoints {
+			if service, ok := s.Services[endpoint.Service]; !ok {
+				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not exist.", endpointName, endpoint.Service)
+			} else if IsPortInService(endpoint.Port, service.Ports) {
+				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpoint.Service, endpoint.Port)
+			}
+		}
+	}
+
 	for name, svc := range s.Services {
 		if err := validateStackName(name); err != nil {
 			return fmt.Errorf("Invalid service name '%s': %s", name, err)
@@ -239,6 +259,15 @@ func (s *Stack) validate() error {
 	}
 
 	return nil
+}
+
+func IsPortInService(port int32, portList []Port) bool {
+	for _, p := range portList {
+		if p.Port == port {
+			return true
+		}
+	}
+	return false
 }
 
 func validateStackName(name string) error {
