@@ -162,61 +162,61 @@ func Test_PortUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name          string
 		portRaw       string
-		expected      Port
+		expected      PortRaw
 		expectedError bool
 	}{
 		{
 			name:          "singlePort",
 			portRaw:       "3000",
-			expected:      Port{Port: 3000, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerPort: 3000, Protocol: v1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "singleRange",
 			portRaw:       "3000-3005",
-			expected:      Port{Port: 0, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerPort: 0, Protocol: v1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
 			name:          "singlePortForwarding",
 			portRaw:       "8000:8000",
-			expected:      Port{Port: 8000, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{HostPort: 8000, ContainerPort: 8000, Protocol: v1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "RangeForwarding",
 			portRaw:       "9090-9091:8080-8081",
-			expected:      Port{Port: 0, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerPort: 0, Protocol: v1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
 			name:          "DifferentPort",
 			portRaw:       "49100:22",
-			expected:      Port{Port: 22, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{HostPort: 49100, ContainerPort: 22, Protocol: v1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "LocalhostForwarding",
-			portRaw:       "127.0.0.1:8001:8001",
-			expected:      Port{Port: 8001, Protocol: v1.ProtocolTCP},
+			portRaw:       "127.0.0.1:8000:8001",
+			expected:      PortRaw{HostPort: 8000, ContainerPort: 8001, Protocol: v1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "Localhost Range",
 			portRaw:       "127.0.0.1:5000-5010:5000-5010",
-			expected:      Port{Port: 0, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerPort: 0, Protocol: v1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
 			name:          "Protocol",
 			portRaw:       "6060:6060/udp",
-			expected:      Port{Port: 6060, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{HostPort: 6060, ContainerPort: 6060, Protocol: v1.ProtocolUDP},
 			expectedError: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result Port
+			var result PortRaw
 			if err := yaml.Unmarshal([]byte(tt.portRaw), &result); err != nil {
 				if !tt.expectedError {
 					t.Fatalf("unexpected error unmarshaling %s: %s", tt.name, err.Error())
@@ -226,10 +226,17 @@ func Test_PortUnmarshalling(t *testing.T) {
 			if tt.expectedError {
 				t.Fatalf("expected error unmarshaling %s not thrown", tt.name)
 			}
-			if result.Port != tt.expected.Port {
-				t.Errorf("didn't unmarshal correctly Port. Actual %d, Expected %d", result.Port, tt.expected.Port)
+			if result.ContainerPort != tt.expected.ContainerPort {
+				t.Errorf("didn't unmarshal correctly Port. Actual %d, Expected %d", result.ContainerPort, tt.expected.ContainerPort)
 			}
 
+			if result.HostPort != tt.expected.HostPort {
+				t.Errorf("didn't unmarshal correctly Port. Actual %d, Expected %d", result.HostPort, tt.expected.HostPort)
+			}
+
+			if result.Protocol != tt.expected.Protocol {
+				t.Errorf("didn't unmarshal correctly Port protocol. Actual %s, Expected %s", result.Protocol, tt.expected.Protocol)
+			}
 			_, err := yaml.Marshal(&result)
 			if err != nil {
 				t.Fatalf("error marshaling %s: %s", tt.name, err)

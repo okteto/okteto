@@ -54,7 +54,7 @@ type ServiceRaw struct {
 	Image           string             `yaml:"image,omitempty"`
 	Labels          *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Ports           []Port             `yaml:"ports,omitempty"`
+	Ports           []PortRaw          `yaml:"ports,omitempty"`
 	Scale           int32              `yaml:"scale"`
 	StopGracePeriod *RawMessage        `yaml:"stop_grace_period,omitempty"`
 	Volumes         []StackVolume      `yaml:"volumes,omitempty"`
@@ -144,6 +144,12 @@ type DeployInfoRaw struct {
 	UpdateConfig   *WarningType `yaml:"update_config,omitempty"`
 }
 
+type PortRaw struct {
+	ContainerPort int32
+	HostPort      int32
+	Protocol      apiv1.Protocol
+}
+
 type WarningType struct {
 	used bool
 }
@@ -217,11 +223,12 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	}
 
 	s.Public = serviceRaw.Public
-	s.Ports = serviceRaw.Ports
-	for _, p := range s.Ports {
-		if !s.Public && isPublicPort(p.Port) {
+
+	for _, p := range serviceRaw.Ports {
+		if !s.Public && isPublicPort(p.ContainerPort) {
 			s.Public = true
 		}
+		s.Ports = append(s.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
 	}
 
 	s.Expose, err = unmarshalExpose(serviceRaw.Expose)
@@ -270,7 +277,7 @@ func (warning *WarningType) UnmarshalYAML(unmarshal func(interface{}) error) err
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawPort string
 	err := unmarshal(&rawPort)
 	if err != nil {
@@ -279,16 +286,29 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(rawPort, ":")
 	var portString string
+	var hostPortString string
 	if len(parts) == 1 {
+		if strings.Contains(portString, "-") {
+			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
+		}
+
 		portString = parts[0]
-		if strings.Contains(portString, "-") {
-			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
-		}
 	} else if len(parts) <= 3 {
-		portString = parts[len(parts)-1]
 		if strings.Contains(portString, "-") {
 			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
 		}
+
+		portString = parts[len(parts)-1]
+
+		hostPortString = strings.Join(parts[:len(parts)-1], ":")
+		parts := strings.Split(hostPortString, ":")
+		hostString := parts[len(parts)-1]
+		port, err := strconv.Atoi(hostString)
+		if err != nil {
+			return fmt.Errorf("Can not convert %s to a port.", hostString)
+		}
+		p.HostPort = int32(port)
+
 	} else {
 		return fmt.Errorf(malformedPortForward, rawPort)
 	}
@@ -308,7 +328,7 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return fmt.Errorf("Can not convert %s to a port.", portString)
 	}
-	p.Port = int32(port)
+	p.ContainerPort = int32(port)
 
 	return nil
 }
