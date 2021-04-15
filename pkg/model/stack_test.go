@@ -50,7 +50,7 @@ services:
     command: c
     volumes:
       - /var/lib/postgresql/data`)
-	s, err := ReadStack(manifest, false)
+	s, err := ReadStack(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
