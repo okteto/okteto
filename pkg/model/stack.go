@@ -248,7 +248,7 @@ func (s *Stack) validate() error {
 
 		for _, v := range svc.Volumes {
 			if v.LocalPath != "" {
-				log.Warning("[%s]: volume '%s:%s' will be ignored. You can use it by using 'sync' field in okteto up. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath)
+				log.Warning("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath)
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
