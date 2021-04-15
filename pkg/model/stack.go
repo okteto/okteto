@@ -220,6 +220,11 @@ func (svc *Service) IgnoreSyncVolumes() {
 }
 
 func (s *Stack) validate() error {
+	if len(s.Warnings) > 0 {
+		notSupportedFields := strings.Join(GroupWarningsBySvc(s.Warnings), "\n  - ")
+		log.Warning("The following fields are not supported in this version and will be omitted: \n  - %s", notSupportedFields)
+		log.Yellow("Help us to decide which fields should okteto implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
+	}
 	if err := validateStackName(s.Name); err != nil {
 		return fmt.Errorf("Invalid stack name: %s", err)
 	}
@@ -328,4 +333,35 @@ func (svc *Service) isAlreadyAdded(p int32) bool {
 		}
 	}
 	return false
+}
+
+func GroupWarningsBySvc(fields []string) []string {
+	notSupportedMap := make(map[string][]string)
+	result := make([]string, 0)
+	for _, field := range fields {
+
+		if strings.Contains(field, "[") {
+			bracketStart := strings.Index(field, "[")
+			bracketEnds := strings.Index(field, "]")
+
+			svcName := field[bracketStart+1 : bracketEnds]
+
+			beforeBrackets := field[:bracketStart]
+			afterBrackets := field[bracketEnds+1:]
+			field = beforeBrackets + "[%s]" + afterBrackets
+			if elem, ok := notSupportedMap[field]; ok {
+				elem = append(elem, svcName)
+				notSupportedMap[field] = elem
+			} else {
+				notSupportedMap[field] = []string{svcName}
+			}
+		} else {
+			result = append(result, field)
+		}
+	}
+	for f, svcNames := range notSupportedMap {
+		names := strings.Join(svcNames, ", ")
+		result = append(result, fmt.Sprintf(f, names))
+	}
+	return result
 }
