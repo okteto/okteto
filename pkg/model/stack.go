@@ -114,13 +114,13 @@ type Endpoint struct {
 }
 
 //GetStack returns an okteto stack object from a given file
-func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
+func GetStack(name, stackPath string) (*Stack, error) {
 	b, err := ioutil.ReadFile(stackPath)
 	if err != nil {
 		return nil, err
 	}
 
-	s, err := ReadStack(b, isCompose)
+	s, err := ReadStack(b)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 }
 
 //ReadStack reads an okteto stack
-func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
+func ReadStack(bytes []byte) (*Stack, error) {
 	s := &Stack{
 		Manifest: bytes,
 	}

@@ -15,7 +15,6 @@ package utils
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -30,12 +29,8 @@ var (
 
 //LoadStack loads an okteto stack manifest checking "yml" and "yaml"
 func LoadStack(name, stackPath string) (*model.Stack, error) {
-	isCompose := false
 	if model.FileExists(stackPath) {
-		if strings.HasPrefix(stackPath, "docker-compose") {
-			isCompose = true
-		}
-		return model.GetStack(name, stackPath, isCompose)
+		return model.GetStack(name, stackPath)
 	}
 
 	if stackPath == DefaultStackManifest {
@@ -44,10 +39,7 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 				if isDeprecatedExtension(stackPath) {
 					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", stackPath)
 				}
-				if strings.HasPrefix(secondaryStackManifest, "docker-compose") {
-					isCompose = true
-				}
-				return model.GetStack(name, secondaryStackManifest, isCompose)
+				return model.GetStack(name, secondaryStackManifest)
 			}
 		}
 	}
