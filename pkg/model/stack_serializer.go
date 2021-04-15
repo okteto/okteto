@@ -25,13 +25,11 @@ import (
 
 //Stack represents an okteto stack
 type StackRaw struct {
-	Version    string                 `yaml:"version,omitempty"`
-	Name       string                 `yaml:"name"`
-	Xname      string                 `yaml:"x-name,omitempty"`
-	Namespace  string                 `yaml:"namespace,omitempty"`
-	Xnamespace string                 `yaml:"x-namespace,omitempty"`
-	Services   map[string]*ServiceRaw `yaml:"services,omitempty"`
-	Endpoints  map[string][]Endpoint  `yaml:"endpoints,omitempty"`
+	Version   string                 `yaml:"version,omitempty"`
+	Name      string                 `yaml:"name"`
+	Namespace string                 `yaml:"namespace,omitempty"`
+	Services  map[string]*ServiceRaw `yaml:"services,omitempty"`
+	Endpoints map[string][]Endpoint  `yaml:"endpoints,omitempty"`
 
 	// Docker-compose not implemented
 	Networks *WarningType `yaml:"networks,omitempty"`
@@ -56,7 +54,6 @@ type ServiceRaw struct {
 	Image           string             `yaml:"image,omitempty"`
 	Labels          *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Xannotations    map[string]string  `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"`
 	Ports           []Port             `yaml:"ports,omitempty"`
 	Scale           int32              `yaml:"scale"`
 	StopGracePeriod *RawMessage        `yaml:"stop_grace_period,omitempty"`
@@ -173,14 +170,8 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	s.Name = stackRaw.Name
-	if stackRaw.Xname != "" {
-		s.Name = stackRaw.Xname
-	}
 
 	s.Namespace = stackRaw.Namespace
-	if stackRaw.Namespace != "" {
-		s.Namespace = stackRaw.Namespace
-	}
 
 	s.Endpoints = stackRaw.Endpoints
 
