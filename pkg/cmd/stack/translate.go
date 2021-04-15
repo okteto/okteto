@@ -64,13 +64,13 @@ func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) er
 
 func translateStackEnvVars(s *model.Stack) error {
 	var err error
-	for name, svc := range s.Services {
+	for _, svc := range s.Services {
 		svc.Image, err = model.ExpandEnv(svc.Image)
 		if err != nil {
 			return err
 		}
 		for _, envFilepath := range svc.EnvFiles {
-			if err := translateServiceEnvFile(&svc, envFilepath); err != nil {
+			if err := translateServiceEnvFile(svc, envFilepath); err != nil {
 				return err
 			}
 		}
@@ -78,7 +78,6 @@ func translateStackEnvVars(s *model.Stack) error {
 			return strings.Compare(svc.Environment[i].Name, svc.Environment[j].Name) < 0
 		})
 		svc.EnvFiles = nil
-		s.Services[name] = svc
 	}
 	return nil
 }
@@ -181,7 +180,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 			Name:        svcName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
-			Annotations: translateAnnotations(&svc),
+			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32Ptr(svc.Replicas),
@@ -191,7 +190,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      translateLabels(svcName, s),
-					Annotations: translateAnnotations(&svc),
+					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
@@ -199,12 +198,13 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 						{
 							Name:            svcName,
 							Image:           svc.Image,
-							Command:         svc.Command.Values,
-							Args:            svc.Args.Values,
-							Env:             translateServiceEnvironment(&svc),
-							Ports:           translateContainerPorts(&svc),
-							SecurityContext: translateSecurityContext(&svc),
-							Resources:       translateResources(&svc),
+							Command:         svc.Entrypoint.Values,
+							Args:            svc.Command.Values,
+							Env:             translateServiceEnvironment(svc),
+							Ports:           translateContainerPorts(svc),
+							SecurityContext: translateSecurityContext(svc),
+							Resources:       translateResources(svc),
+							WorkingDir:      svc.WorkingDir,
 						},
 					},
 				},
@@ -220,7 +220,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 			Name:        name,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(name, s),
-			Annotations: translateAnnotations(&svc),
+			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:             pointer.Int32Ptr(svc.Replicas),
@@ -232,7 +232,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      translateLabels(name, s),
-					Annotations: translateAnnotations(&svc),
+					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
@@ -253,13 +253,14 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 						{
 							Name:            name,
 							Image:           svc.Image,
-							Command:         svc.Command.Values,
-							Args:            svc.Args.Values,
-							Env:             translateServiceEnvironment(&svc),
-							Ports:           translateContainerPorts(&svc),
-							SecurityContext: translateSecurityContext(&svc),
-							VolumeMounts:    translateVolumeMounts(&svc),
-							Resources:       translateResources(&svc),
+							Command:         svc.Entrypoint.Values,
+							Args:            svc.Command.Values,
+							Env:             translateServiceEnvironment(svc),
+							Ports:           translateContainerPorts(svc),
+							SecurityContext: translateSecurityContext(svc),
+							VolumeMounts:    translateVolumeMounts(svc),
+							Resources:       translateResources(svc),
+							WorkingDir:      svc.WorkingDir,
 						},
 					},
 				},
@@ -269,7 +270,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        pvcName,
 						Labels:      translateLabels(name, s),
-						Annotations: translateAnnotations(&svc),
+						Annotations: translateAnnotations(svc),
 					},
 					Spec: apiv1.PersistentVolumeClaimSpec{
 						AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
@@ -278,7 +279,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 								"storage": svc.Resources.Requests.Storage.Size.Value,
 							},
 						},
-						StorageClassName: translateStorageClass(&svc),
+						StorageClassName: translateStorageClass(svc),
 					},
 				},
 			},
@@ -288,8 +289,8 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
-	annotations := translateAnnotations(&svc)
-	if svc.Public {
+	annotations := translateAnnotations(svc)
+	if s.Services[svcName].Public {
 		annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
 	}
 	return &apiv1.Service{
@@ -301,8 +302,8 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: translateLabelSelector(svcName, s),
-			Type:     translateServiceType(&svc),
-			Ports:    translateServicePorts(&svc),
+			Type:     translateServiceType(*svc),
+			Ports:    translateServicePorts(*svc),
 		},
 	}
 }
@@ -382,7 +383,7 @@ func translateAnnotations(svc *model.Service) map[string]string {
 	return result
 }
 
-func translateServiceType(svc *model.Service) apiv1.ServiceType {
+func translateServiceType(svc model.Service) apiv1.ServiceType {
 	if svc.Public {
 		return apiv1.ServiceTypeLoadBalancer
 	}
@@ -395,7 +396,7 @@ func translateVolumeMounts(svc *model.Service) []apiv1.VolumeMount {
 		result = append(
 			result,
 			apiv1.VolumeMount{
-				MountPath: v,
+				MountPath: v.RemotePath,
 				Name:      pvcName,
 				SubPath:   fmt.Sprintf("data-%d", i),
 			},
@@ -436,20 +437,21 @@ func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	result := []apiv1.ContainerPort{}
 	for _, p := range svc.Ports {
-		result = append(result, apiv1.ContainerPort{ContainerPort: p})
+		result = append(result, apiv1.ContainerPort{ContainerPort: p.Port})
 	}
 	return result
 }
 
-func translateServicePorts(svc *model.Service) []apiv1.ServicePort {
+func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
 	for _, p := range svc.Ports {
 		result = append(
 			result,
 			apiv1.ServicePort{
-				Name:       fmt.Sprintf("p-%d", p),
-				Port:       int32(p),
-				TargetPort: intstr.IntOrString{IntVal: p},
+				Name:       fmt.Sprintf("p-%d-%s", p.Port, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
+				Port:       int32(p.Port),
+				TargetPort: intstr.IntOrString{IntVal: p.Port},
+				Protocol:   p.Protocol,
 			},
 		)
 	}
@@ -458,26 +460,29 @@ func translateServicePorts(svc *model.Service) []apiv1.ServicePort {
 
 func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 	result := apiv1.ResourceRequirements{}
-	if svc.Resources.Limits.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
-		result.Limits = apiv1.ResourceList{}
-		result.Limits[apiv1.ResourceCPU] = svc.Resources.Limits.CPU.Value
-	}
-	if svc.Resources.Limits.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
-		if result.Limits == nil {
+	if svc.Resources != nil {
+		if svc.Resources.Limits.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
 			result.Limits = apiv1.ResourceList{}
+			result.Limits[apiv1.ResourceCPU] = svc.Resources.Limits.CPU.Value
 		}
-		result.Limits[apiv1.ResourceMemory] = svc.Resources.Limits.Memory.Value
-	}
 
-	if svc.Resources.Requests.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
-		result.Limits = apiv1.ResourceList{}
-		result.Limits[apiv1.ResourceCPU] = svc.Resources.Requests.CPU.Value
-	}
-	if svc.Resources.Requests.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
-		if result.Limits == nil {
-			result.Limits = apiv1.ResourceList{}
+		if svc.Resources.Limits.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
+			if result.Limits == nil {
+				result.Limits = apiv1.ResourceList{}
+			}
+			result.Limits[apiv1.ResourceMemory] = svc.Resources.Limits.Memory.Value
 		}
-		result.Limits[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
+
+		if svc.Resources.Requests.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
+			result.Requests = apiv1.ResourceList{}
+			result.Requests[apiv1.ResourceCPU] = svc.Resources.Requests.CPU.Value
+		}
+		if svc.Resources.Requests.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
+			if result.Requests == nil {
+				result.Requests = apiv1.ResourceList{}
+				result.Requests[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
+			}
+		}
 	}
 	return result
 }

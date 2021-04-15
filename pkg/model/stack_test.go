@@ -26,7 +26,7 @@ services:
     public: true
     image: okteto/vote:1
     build: vote
-    command: python app.py
+    entrypoint: python app.py
     environment:
       - OPTION_A=Cats
       - OPTION_B=Dogs
@@ -64,6 +64,7 @@ services:
 	if _, ok := s.Services["vote"]; !ok {
 		t.Errorf("'vote' was not parsed: %+v", s)
 	}
+
 	if !s.Services["vote"].Public {
 		t.Errorf("'vote.public' was not parsed: %+v", s)
 	}
@@ -73,14 +74,14 @@ services:
 	if s.Services["vote"].Build.Context != "vote" {
 		t.Errorf("'vote.build' was not parsed: %+v", s.Services["vote"].Build)
 	}
-	if len(s.Services["vote"].Command.Values) != 3 {
-		t.Errorf("'vote.command' was not parsed: %+v", s)
+	if len(s.Services["vote"].Entrypoint.Values) != 3 {
+		t.Errorf("'vote.entrypoint' was not parsed: %+v", s)
 	}
-	if s.Services["vote"].Command.Values[0] != "sh" || s.Services["vote"].Command.Values[1] != "-c" || s.Services["vote"].Command.Values[2] != "python app.py" {
-		t.Errorf("'vote.command' was not parsed: %+v", s)
+	if s.Services["vote"].Entrypoint.Values[0] != "sh" || s.Services["vote"].Entrypoint.Values[1] != "-c" || s.Services["vote"].Entrypoint.Values[2] != "python app.py" {
+		t.Errorf("'vote.entrypoint' was not parsed: %+v", s)
 	}
 	if s.Services["vote"].Replicas != 2 {
-		t.Errorf("'vote.replicas' was not parsed: %+v", s)
+		t.Errorf("'vote.deploy.replicas' was not parsed: %+v", s)
 	}
 	if len(s.Services["vote"].Environment) != 2 {
 		t.Errorf("'vote.env' was not parsed: %+v", s)
@@ -94,19 +95,21 @@ services:
 	if len(s.Services["vote"].Ports) != 1 {
 		t.Errorf("'vote.ports' was not parsed: %+v", s)
 	}
-	if s.Services["vote"].Ports[0] != 80 {
+	if s.Services["vote"].Ports[0].Port != 80 {
 		t.Errorf("'vote.ports[0]' was not parsed: %+v", s)
 	}
 	if s.Services["vote"].StopGracePeriod != 5 {
 		t.Errorf("'vote.stop_grace_period' was not parsed: %+v", s)
 	}
+
 	cpu := s.Services["vote"].Resources.Limits.CPU.Value
 	if cpu.Cmp(resource.MustParse("100m")) != 0 {
-		t.Errorf("'vote.resources.cpu' was not parsed: %+v", s)
+		t.Errorf("'vote.deploy.limits.cpu' was not parsed: %+v", s)
 	}
+
 	memory := s.Services["vote"].Resources.Limits.Memory.Value
 	if memory.Cmp(resource.MustParse("258Mi")) != 0 {
-		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
+		t.Errorf("'vote.deploy.limits.memory' was not parsed: %+v", s)
 	}
 	storage := s.Services["vote"].Resources.Requests.Storage.Size.Value
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
@@ -119,25 +122,25 @@ services:
 		t.Errorf("'db.image' was not parsed: %+v", s)
 	}
 	if s.Services["db"].Replicas != 1 {
-		t.Errorf("'db.replicas' was not parsed: %+v", s)
+		t.Errorf("'db.deploy.replicas' was not parsed: %+v", s)
+	}
+	if len(s.Services["db"].Entrypoint.Values) != 1 {
+		t.Errorf("'db.entrypoint' was not parsed: %+v", s.Services["db"].Entrypoint.Values)
+	}
+	if s.Services["db"].Entrypoint.Values[0] != "e" {
+		t.Errorf("'db.entrypoint' was not parsed: %+v", s.Services["db"].Entrypoint.Values)
 	}
 	if len(s.Services["db"].Command.Values) != 1 {
 		t.Errorf("'db.command' was not parsed: %+v", s.Services["db"].Command.Values)
 	}
-	if s.Services["db"].Command.Values[0] != "e" {
+	if s.Services["db"].Command.Values[0] != "c" {
 		t.Errorf("'db.command' was not parsed: %+v", s.Services["db"].Command.Values)
-	}
-	if len(s.Services["db"].Args.Values) != 1 {
-		t.Errorf("'db.args' was not parsed: %+v", s.Services["db"].Args.Values)
-	}
-	if s.Services["db"].Args.Values[0] != "c" {
-		t.Errorf("'db.args' was not parsed: %+v", s.Services["db"].Args.Values)
 	}
 
 	if len(s.Services["db"].Volumes) != 1 {
 		t.Errorf("'db.volumes' was not parsed: %+v", s)
 	}
-	if s.Services["db"].Volumes[0] != "/var/lib/postgresql/data" {
+	if s.Services["db"].Volumes[0].RemotePath != "/var/lib/postgresql/data" {
 		t.Errorf("'db.volumes[0]' was not parsed: %+v", s)
 	}
 	storage = s.Services["db"].Resources.Requests.Storage.Size.Value
@@ -178,7 +181,7 @@ func TestStack_validate(t *testing.T) {
 			name: "empty-service-name",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"": {},
 				},
 			},
@@ -187,7 +190,7 @@ func TestStack_validate(t *testing.T) {
 			name: "bad-service-name",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"-bad-name": {},
 				},
 			},
@@ -196,7 +199,7 @@ func TestStack_validate(t *testing.T) {
 			name: "empty-service-image",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"name": {},
 				},
 			},
@@ -205,9 +208,9 @@ func TestStack_validate(t *testing.T) {
 			name: "relative-volume-path",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"name": {
-						Volumes: []string{"relative"},
+						Volumes: []StackVolume{{RemotePath: "relative"}},
 					},
 				},
 			},
@@ -216,9 +219,9 @@ func TestStack_validate(t *testing.T) {
 			name: "volume-bind-mount",
 			stack: &Stack{
 				Name: "name",
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"name": {
-						Volumes: []string{"/source:/dest"},
+						Volumes: []StackVolume{{LocalPath: "/source", RemotePath: "/dest"}},
 					},
 				},
 			},
@@ -232,7 +235,7 @@ func TestStack_validate(t *testing.T) {
 						{Service: "app"},
 					},
 				},
-				Services: map[string]Service{
+				Services: map[string]*Service{
 					"name": {},
 				},
 			},
@@ -247,10 +250,13 @@ func TestStack_validate(t *testing.T) {
 							Port: 80},
 					},
 				},
-				Services: map[string]Service{
-					"name": {Ports: []int32{
-						8080,
-					}},
+				Services: map[string]*Service{
+					"name": {Image: "test",
+						Ports: []Port{
+							{
+								Port: 8080,
+							},
+						}},
 				},
 			},
 		},

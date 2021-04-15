@@ -46,7 +46,7 @@ func Test_translate(t *testing.T) {
 	ctx := context.Background()
 	stack := &model.Stack{
 		Name: "name",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"1": {
 				Image:    "image",
 				EnvFiles: []string{"/non-existing"},
@@ -73,7 +73,7 @@ func Test_translateEnvVars(t *testing.T) {
 	os.Setenv("ENV_PATH", tmpFile.Name())
 	stack := &model.Stack{
 		Name: "name",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"1": {
 				Image:    "${IMAGE}",
 				EnvFiles: []string{"${ENV_PATH}"},
@@ -110,7 +110,7 @@ func Test_translateConfigMap(t *testing.T) {
 	s := &model.Stack{
 		Manifest: []byte("manifest"),
 		Name:     "stackName",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Image: "image",
 			},
@@ -127,6 +127,7 @@ func Test_translateConfigMap(t *testing.T) {
 		t.Errorf("Wrong data.name: '%s'", result.Data[nameField])
 	}
 	if result.Data[yamlField] != base64.StdEncoding.EncodeToString(s.Manifest) {
+
 		t.Errorf("Wrong data.yaml: '%s'", result.Data[yamlField])
 	}
 }
@@ -134,7 +135,7 @@ func Test_translateConfigMap(t *testing.T) {
 func Test_translateDeployment(t *testing.T) {
 	s := &model.Stack{
 		Name: "stackName",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Labels: map[string]string{
 					"label1": "value1",
@@ -147,8 +148,8 @@ func Test_translateDeployment(t *testing.T) {
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
-				Command:         model.Command{Values: []string{"command1", "command2"}},
-				Args:            model.Args{Values: []string{"args1", "args2"}},
+				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:         model.Command{Values: []string{"args1", "args2"}},
 				Environment: []model.EnvVar{
 					{
 						Name:  "env1",
@@ -159,7 +160,7 @@ func Test_translateDeployment(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports: []int32{80, 90},
+				Ports: []model.Port{{Port: 80}, {Port: 90}},
 			},
 		},
 	}
@@ -234,7 +235,7 @@ func Test_translateDeployment(t *testing.T) {
 func Test_translateStatefulSet(t *testing.T) {
 	s := &model.Stack{
 		Name: "stackName",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Labels: map[string]string{
 					"label1": "value1",
@@ -247,8 +248,8 @@ func Test_translateStatefulSet(t *testing.T) {
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
-				Command:         model.Command{Values: []string{"command1", "command2"}},
-				Args:            model.Args{Values: []string{"args1", "args2"}},
+				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:         model.Command{Values: []string{"args1", "args2"}},
 				Environment: []model.EnvVar{
 					{
 						Name:  "env1",
@@ -259,11 +260,12 @@ func Test_translateStatefulSet(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports:   []int32{80, 90},
+				Ports:   []model.Port{{Port: 80}, {Port: 90}},
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
-				Volumes: []string{"/volume1", "/volume2"},
-				Resources: model.StackResources{
+
+				Volumes: []model.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
+				Resources: &model.StackResources{
 					Limits: model.ServiceResources{
 						CPU:    model.Quantity{Value: resource.MustParse("100m")},
 						Memory: model.Quantity{Value: resource.MustParse("1Gi")},
@@ -411,9 +413,11 @@ func Test_translateStatefulSet(t *testing.T) {
 }
 
 func Test_translateService(t *testing.T) {
+	p1 := model.Port{Port: 80, Protocol: apiv1.ProtocolTCP}
+	p2 := model.Port{Port: 90, Protocol: apiv1.ProtocolTCP}
 	s := &model.Stack{
 		Name: "stackName",
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Labels: map[string]string{
 					"label1": "value1",
@@ -423,7 +427,7 @@ func Test_translateService(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
-				Ports: []int32{80, 90},
+				Ports: []model.Port{p1, p2},
 			},
 		},
 	}
@@ -449,18 +453,20 @@ func Test_translateService(t *testing.T) {
 	}
 	ports := []apiv1.ServicePort{
 		{
-			Name:       "p-80",
+			Name:       "p-80-tcp",
 			Port:       80,
 			TargetPort: intstr.IntOrString{IntVal: 80},
+			Protocol:   apiv1.ProtocolTCP,
 		},
 		{
-			Name:       "p-90",
+			Name:       "p-90-tcp",
 			Port:       90,
 			TargetPort: intstr.IntOrString{IntVal: 90},
+			Protocol:   apiv1.ProtocolTCP,
 		},
 	}
 	if !reflect.DeepEqual(result.Spec.Ports, ports) {
-		t.Errorf("Wrong service ports: '%v'", result.Spec.Ports)
+		t.Errorf("Wrong service ports: '%v', expected: '%v'", result.Spec.Ports, ports)
 	}
 	if result.Spec.Type != apiv1.ServiceTypeClusterIP {
 		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
@@ -484,6 +490,13 @@ func Test_translateService(t *testing.T) {
 	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
 		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
 	}
+	annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	}
+	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
+		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
+	}
 }
 
 func Test_translateEndpoints(t *testing.T) {
@@ -494,7 +507,7 @@ func Test_translateEndpoints(t *testing.T) {
 				{Path: "/", Port: 80, Service: "svcName"},
 			},
 		},
-		Services: map[string]model.Service{
+		Services: map[string]*model.Service{
 			"svcName": {
 				Image: "image",
 			},
