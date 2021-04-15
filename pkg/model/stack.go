@@ -102,7 +102,6 @@ type Quantity struct {
 
 type Port struct {
 	Port     int32
-	Public   bool
 	Protocol apiv1.Protocol
 }
 
@@ -316,7 +315,7 @@ func (svc *Service) SetLastBuiltAnnotation() {
 func (svc *Service) extendPorts() {
 	for _, port := range svc.Expose {
 		if !svc.isAlreadyAdded(port) {
-			svc.Ports = append(svc.Ports, Port{Port: port, Public: false, Protocol: apiv1.ProtocolTCP})
+			svc.Ports = append(svc.Ports, Port{Port: port, Protocol: apiv1.ProtocolTCP})
 		}
 	}
 }

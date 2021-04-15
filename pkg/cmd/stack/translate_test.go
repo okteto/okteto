@@ -413,8 +413,8 @@ func Test_translateStatefulSet(t *testing.T) {
 }
 
 func Test_translateService(t *testing.T) {
-	p1 := model.Port{Port: 80, Public: true, Protocol: apiv1.ProtocolTCP}
-	p2 := model.Port{Port: 90, Public: false, Protocol: apiv1.ProtocolTCP}
+	p1 := model.Port{Port: 80, Protocol: apiv1.ProtocolTCP}
+	p2 := model.Port{Port: 90, Protocol: apiv1.ProtocolTCP}
 	s := &model.Stack{
 		Name: "stackName",
 		Services: map[string]*model.Service{

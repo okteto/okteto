@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	yaml "gopkg.in/yaml.v2"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -167,49 +168,49 @@ func Test_PortUnmarshalling(t *testing.T) {
 		{
 			name:          "singlePort",
 			portRaw:       "3000",
-			expected:      Port{Port: 3000, Public: true},
+			expected:      Port{Port: 3000, Protocol: v1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "singleRange",
 			portRaw:       "3000-3005",
-			expected:      Port{Port: 0, Public: false},
+			expected:      Port{Port: 0, Protocol: v1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
 			name:          "singlePortForwarding",
 			portRaw:       "8000:8000",
-			expected:      Port{Port: 8000, Public: true},
+			expected:      Port{Port: 8000, Protocol: v1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "RangeForwarding",
 			portRaw:       "9090-9091:8080-8081",
-			expected:      Port{Port: 0, Public: false},
+			expected:      Port{Port: 0, Protocol: v1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
 			name:          "DifferentPort",
 			portRaw:       "49100:22",
-			expected:      Port{Port: 22, Public: false},
+			expected:      Port{Port: 22, Protocol: v1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "LocalhostForwarding",
 			portRaw:       "127.0.0.1:8001:8001",
-			expected:      Port{Port: 8001, Public: true},
+			expected:      Port{Port: 8001, Protocol: v1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "Localhost Range",
 			portRaw:       "127.0.0.1:5000-5010:5000-5010",
-			expected:      Port{Port: 0, Public: false},
+			expected:      Port{Port: 0, Protocol: v1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
 			name:          "Protocol",
 			portRaw:       "6060:6060/udp",
-			expected:      Port{Port: 6060, Public: false},
+			expected:      Port{Port: 6060, Protocol: v1.ProtocolTCP},
 			expectedError: false,
 		},
 	}

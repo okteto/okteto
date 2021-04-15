@@ -228,7 +228,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s.Public = serviceRaw.Public
 	s.Ports = serviceRaw.Ports
 	for _, p := range s.Ports {
-		if p.Public {
+		if !s.Public && isPublicPort(p.Port) {
 			s.Public = true
 		}
 	}
@@ -288,7 +288,6 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(rawPort, ":")
 	var portString string
-	var isPublic bool
 	if len(parts) == 1 {
 		portString = parts[0]
 		if strings.Contains(portString, "-") {
@@ -299,7 +298,6 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if strings.Contains(portString, "-") {
 			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
 		}
-		isPublic = true
 	} else {
 		return fmt.Errorf(malformedPortForward, rawPort)
 	}
@@ -320,17 +318,13 @@ func (p *Port) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("Can not convert %s to a port.", portString)
 	}
 	p.Port = int32(port)
-	p.Public = isPublic
-	if !isPublic {
-		p.Public = isPublicPort(p.Port)
-	}
 
 	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (p *Port) MarshalYAML() (interface{}, error) {
-	return Port{Port: p.Port, Public: p.Public}, nil
+	return Port{Port: p.Port, Protocol: p.Protocol}, nil
 }
 
 func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources) (*StackResources, error) {
