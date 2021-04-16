@@ -392,3 +392,45 @@ func TestStackResourcesUnmarshalling(t *testing.T) {
 		})
 	}
 }
+
+func Test_validateIngressCreationPorts(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		isPublic bool
+	}{
+		{
+			name:     "Public-service",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
+			isPublic: true,
+		},
+		{
+			name:     "not-public-service",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    image: okteto/vote:1"),
+			isPublic: false,
+		},
+		{
+			name:     "Public-port",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 8080\n    image: okteto/vote:1"),
+			isPublic: true,
+		},
+		{
+			name:     "not-public-port-but-with-assignation",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
+			isPublic: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if svc, ok := s.Services["app"]; ok {
+				if svc.Public != tt.isPublic {
+					t.Fatalf("Expected %v but got %v", tt.isPublic, svc.Public)
+				}
+			}
+		})
+	}
+}
