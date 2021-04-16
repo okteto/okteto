@@ -9,7 +9,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
@@ -19,7 +18,7 @@ func (up *upContext) initializeSyncthing() error {
 	if err != nil {
 		return err
 	}
-
+	sy.ResetDatabase = up.resetSyncthing
 	up.Sy = sy
 
 	log.Infof("local syncthing initialized: gui -> %d, sync -> %d", up.Sy.LocalGUIPort, up.Sy.LocalPort)
@@ -91,21 +90,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 
 	if err := up.Sy.WaitForPing(ctx, false); err != nil {
 		log.Infof("failed to ping syncthing: %s", err.Error())
-		err = up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
-		if err == errors.ErrLostSyncthing {
-			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
-				return fmt.Errorf("error recreating development container: %s", err.Error())
-			}
-		}
-		return err
-	}
-
-	if up.resetSyncthing {
-		spinner.Update("Resetting synchronization service database...")
-		if err := up.Sy.ResetDatabase(ctx, up.Dev); err != nil {
-			return err
-		}
-		up.resetSyncthing = false
+		return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
 	}
 
 	spinner.Update("Scanning file system...")
@@ -118,6 +103,10 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 			log.Infof("failed to wait for syncthing scanning: %s", err.Error())
 			return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
 		}
+	}
+
+	if err := up.Sy.WaitForConnected(ctx, up.Dev); err != nil {
+		return err
 	}
 
 	return nil
@@ -167,6 +156,11 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 			return err
 		case errors.ErrInsufficientSpace:
 			return up.getInsufficientSpaceError(err)
+		case errors.ErrNeedsResetSyncError:
+			return errors.UserError{
+				E:    fmt.Errorf("The synchronization service state is inconsistent"),
+				Hint: `Try running 'okteto up --reset' to reset the synchronization service`,
+			}
 		default:
 			return errors.UserError{
 				E: err,

@@ -14,15 +14,15 @@ if [ -d "/var/okteto/cloudbin" ]; then
   fi
 fi
 
-remote=0
-ephemeral=0
-while getopts ":s:re" opt; do
+remote=""
+reset=""
+while getopts ":s:d:re" opt; do
   case $opt in
-    e)
-      ephemeral=1
+    d)
+      reset="--reset"
       ;;
     r)
-      remote=1
+      remote="--remote"
       ;;
     s)
       sourceFILE="$(echo "$OPTARG" | cut -d':' -f1)"
@@ -46,19 +46,9 @@ while getopts ":s:re" opt; do
 done
 
 syncthingHome=/var/syncthing
-if [ $ephemeral -eq 1 ] && [ -f ${syncthingHome}/executed ]; then
-    log "failing: syncthing restarted and persistent volumes are not enabled in the okteto manifest. Run 'okteto down' and try again"
-    exit 1
-fi
-touch ${syncthingHome}/executed
 log "Copying configuration files to $syncthingHome"
 cp /var/syncthing/secret/* $syncthingHome
 chmod 644 $syncthingHome/cert.pem $syncthingHome/config.xml $syncthingHome/key.pem
 
-params=""
-if [ $remote -eq 1 ]; then
-    params="--remote"
-fi
-
-log "Executing okteto-supervisor $params"
-exec /var/okteto/bin/okteto-supervisor $params
+log "Executing okteto-supervisor $remote $reset"
+exec /var/okteto/bin/okteto-supervisor $remote $reset

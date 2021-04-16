@@ -53,7 +53,7 @@ services:
 		t.Fatal(err)
 	}
 
-	rule1 := dev.ToTranslationRule(dev)
+	rule1 := dev.ToTranslationRule(dev, false)
 	rule1OK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
 		OktetoBinImageTag: OktetoBinImageTag,
@@ -122,7 +122,7 @@ services:
 	}
 
 	dev2 := dev.Services[0]
-	rule2 := dev2.ToTranslationRule(dev)
+	rule2 := dev2.ToTranslationRule(dev, false)
 	rule2OK := &TranslationRule{
 		Container:       "dev",
 		Image:           "worker:latest",
@@ -190,7 +190,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Logf("test: %s", test.name)
-		rule := test.manifest.ToTranslationRule(test.manifest)
+		rule := test.manifest.ToTranslationRule(test.manifest, false)
 		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
 			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
 		}
