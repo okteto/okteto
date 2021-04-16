@@ -35,7 +35,7 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 		if strings.HasPrefix(stackPath, "docker-compose") {
 			isCompose = true
 		}
-		return model.GetStack(name, stackPath, false)
+		return model.GetStack(name, stackPath, isCompose)
 	}
 
 	if stackPath == DefaultStackManifest {
