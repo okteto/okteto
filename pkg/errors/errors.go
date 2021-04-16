@@ -64,7 +64,10 @@ var (
 	ErrNotInDevContainer = fmt.Errorf("this command is not supported from inside an development container")
 
 	// ErrUnknownSyncError is returned when syncthing reports an unknown sync error
-	ErrUnknownSyncError = fmt.Errorf("Unknown syncthing error")
+	ErrUnknownSyncError = fmt.Errorf("unknown syncthing error")
+
+	// ErrNeedsResetSyncError is returned when syncthing reports an inconsistent database state that needs to be reset
+	ErrNeedsResetSyncError = fmt.Errorf("needs syncthing reset error")
 
 	// ErrInsufficientSpace is raised when syncthing fails with no space available
 	ErrInsufficientSpace = fmt.Errorf("there isn't enough disk space available to synchronize your files")
@@ -112,6 +115,7 @@ func IsTransient(err error) bool {
 	case strings.Contains(err.Error(), "operation time out"),
 		strings.Contains(err.Error(), "operation timed out"),
 		strings.Contains(err.Error(), "i/o timeout"),
+		strings.Contains(err.Error(), "Client.Timeout exceeded while awaiting headers"),
 		strings.Contains(err.Error(), "can't assign requested address"),
 		strings.Contains(err.Error(), "command exited without exit status or exit signal"),
 		strings.Contains(err.Error(), "connection refused"),

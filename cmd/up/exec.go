@@ -77,10 +77,6 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
     After that, run 'okteto down -v' to reset your development container and run 'okteto up' again`, userID),
 			}
 		}
-	} else {
-		if pods.OktetoDevPodMustBeRecreated(ctx, up.Dev, up.Client) {
-			return errors.ErrLostSyncthing
-		}
 	}
 
 	if len(up.Dev.Secrets) > 0 {

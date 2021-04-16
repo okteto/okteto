@@ -10,6 +10,7 @@ This project adheres to the Contributor Covenant [code of conduct](code-of-condu
 
 
 ## File an Issue
+
 Not ready to contribute code, but see something that needs work? While we encourage everyone to contribute code, it is also appreciated when someone reports an issue. We use [GitHub issues](https://github.com/okteto/okteto/issues) for this.
 
 ## Report security issues
@@ -81,6 +82,7 @@ Signed-off-by: Cindy Lopez <cindy.lopez@okteto.com>
 If you set your `user.name` and `user.email` git configs, you can sign your commit automatically with `git commit -s`.
 
 ## Code of Conduct
+
 Please make sure to read and observe our [code of conduct](code-of-conduct.md).
 
 # Development Guide
@@ -88,6 +90,7 @@ Please make sure to read and observe our [code of conduct](code-of-conduct.md).
 Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.16](https://golang.org/doc/go1.16). It uses go modules for dependency management.
 
 ## Build
+
 To start working on Okteto, simply fork this repository, clone the okteto repository locally, and run the following command at the root of the project:
 
 ```
@@ -131,3 +134,38 @@ make lint
 The same command runs as part of CI on every PR.
 
 > This command requires that you have [golangci-lint](https://github.com/golangci/golangci-lint#install) available on your `$PATH`.
+
+## pre-commit
+
+A framework for managing and maintaining multi-language pre-commit hooks.
+Pre-commit can be [installed](https://pre-commit.com/#installation) with
+`pip`, `curl`, `brew` or `conda`.
+
+You need to first install pre-commit and then install the pre-commit hooks
+with `pre-commit install`. Now pre-commit will run automatically on git
+commit!
+
+It's usually a good idea to run the hooks against all the files when
+adding new hooks (usually pre-commit will only run on the changed files
+during git hooks). Use `pre-commit run --all-files` to check all files.
+
+To run a single hook use `pre-commit run --all-files <hook_id>`
+
+To update use `pre-commit autoupdate`
+
+- [Quick start](https://pre-commit.com/#quick-start)
+- [Usage](https://pre-commit.com/#usage)
+- [pre-commit-autoupdate](https://pre-commit.com/#pre-commit-autoupdate)
+
+## Other Linters
+
+- [markdowlint-cli](https://github.com/igorshubovych/markdownlint-cli) - [npm](https://www.npmjs.com/package/markdownlint-cli) based and lints [Markdown](https://daringfireball.net/projects/markdown/) files using [markdownlint](https://github.com/DavidAnson/markdownlint)
+- [yamllint](https://yamllint.readthedocs.io/en/stable/index.html) - Lints [YAML](https://yaml.org/) files and is written in [Python](https://www.python.org/)
+
+```shell
+markdownlint -c .github/linters/.markdown-lint.yml .
+```
+
+```shell
+yamllint --strict -c .github/linters/.yaml-lint.yml .
+```

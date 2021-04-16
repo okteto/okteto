@@ -194,7 +194,8 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 		}
 	}
 
-	trList, err := deployments.GetTranslations(ctx, up.Dev, d, up.Client)
+	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
+	trList, err := deployments.GetTranslations(ctx, up.Dev, d, resetOnDevContainerStart, up.Client)
 	if err != nil {
 		return err
 	}

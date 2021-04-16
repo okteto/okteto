@@ -1,0 +1,16 @@
+# https://github.com/igorshubovych/markdownlint-cli
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+# markdownlint -c .github/linters/.markdown-lint.yml .
+
+MD007: false
+MD012: false
+MD013: false
+MD022: false
+MD024: false
+MD025: false
+MD026: false
+MD032: false
+MD033: false
+MD040: false
+MD041: false
+MD047: false
