@@ -4,9 +4,6 @@
 
 set -e
 
-green="\033[32m"
-red="\033[31m"
-reset="\033[0m"
 install_dir='/usr/local/bin'
 install_path='/usr/local/bin/okteto'
 OS=$(uname | tr '[:upper:]' '[:lower:]')
@@ -14,6 +11,7 @@ ARCH=$(uname -m | tr '[:upper:]' '[:lower:]')
 cmd_exists() {
 	command -v "$@" > /dev/null 2>&1
 }
+
 
 latestURL=https://github.com/okteto/okteto/releases/latest/download
 
@@ -27,7 +25,7 @@ case "$OS" in
             URL=${latestURL}/okteto-Darwin-arm64
             ;;
         *)
-            printf "$red> The architecture (${ARCH}) is not supported by this installation script.$reset\n"
+            printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' $ARCH
             exit 1
             ;;
       esac
@@ -47,21 +45,21 @@ case "$OS" in
             URL=${latestURL}/okteto-Linux-arm64
             ;;
         *)
-            printf "$red> The architecture (${ARCH}) is not supported by this installation script.$reset\n"
+            printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' $ARCH
             exit 1
             ;;
       esac
       ;;
     *)
-      printf "$red> The OS (${OS}) is not supported by this installation script.$reset\n"
+      printf '\033[31m> The OS (%s) is not supported by this installation script.\n\033[0m' $OS
       exit 1
       ;;
 esac
 
 sh_c='sh -c'
 if [ ! -w "$install_dir" ]; then
-    # use sudo if $user doesn't have write access to the path
-    if [ "$user" != 'root' ]; then
+    # use sudo if $USER doesn't have write access to the path
+    if [ "$USER" != 'root' ]; then
         if cmd_exists sudo; then
             sh_c='sudo -E sh -c'
 	elif cmd_exists su; then
@@ -73,14 +71,14 @@ if [ ! -w "$install_dir" ]; then
     fi
 fi
 
-printf "> Downloading $URL\n"
+printf '> Downloading %s\n' "$URL"
 download_path=$(mktemp)
 curl -fSL "$URL" -o "$download_path"
 chmod +x "$download_path"
 
-printf "> Installing $install_path\n"
+printf '> Installing %s\n' "$install_path"
 $sh_c "mv -f $download_path $install_path"
 
-printf "$green> Okteto successfully installed!\n$reset"
+printf '\033[32m> Okteto successfully installed!\n\033[0m'
 
 } # End of wrapping
