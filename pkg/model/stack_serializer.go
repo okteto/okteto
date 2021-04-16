@@ -224,7 +224,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s.Public = serviceRaw.Public
 
 	for _, p := range serviceRaw.Ports {
-		if !s.Public && isPublicPort(p.ContainerPort) || p.ContainerPort != 0 {
+		if (!s.Public && isPublicPort(p.ContainerPort)) || p.HostPort != 0 {
 			s.Public = true
 		}
 		s.Ports = append(s.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
