@@ -99,7 +99,7 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 		return err
 	}
 
-	trList, err := deployments.GetTranslations(ctx, dev, d, client)
+	trList, err := deployments.GetTranslations(ctx, dev, d, false, client)
 	if err != nil {
 		return err
 	}

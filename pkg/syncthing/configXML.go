@@ -35,6 +35,7 @@ const configXML = `<configuration version="32">
     <weakHashThresholdPct>25</weakHashThresholdPct>
     <markerName>.</markerName>
     <useLargeBlocks>false</useLargeBlocks>
+    <copyRangeMethod>all</copyRangeMethod>
 </folder>
 {{ end }}
 <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" name="local" compression="{{ .Compression }}" introducer="false" skipIntroductionRemovals="false" introducedBy="">
@@ -62,31 +63,20 @@ const configXML = `<configuration version="32">
 </gui>
 <ldap></ldap>
 <options>
-    <listenAddress>tcp://{{.ListenAddress}}</listenAddress>
-    <globalAnnounceServer>default</globalAnnounceServer>
     <globalAnnounceEnabled>false</globalAnnounceEnabled>
     <localAnnounceEnabled>false</localAnnounceEnabled>
     <maxSendKbps>0</maxSendKbps>
     <maxRecvKbps>0</maxRecvKbps>
-    <reconnectionIntervalS>30</reconnectionIntervalS>
+    <reconnectionIntervalS>1</reconnectionIntervalS>
     <relaysEnabled>false</relaysEnabled>
-    <relayReconnectIntervalM>10</relayReconnectIntervalM>
     <startBrowser>false</startBrowser>
-    <natEnabled>true</natEnabled>
-    <natLeaseMinutes>60</natLeaseMinutes>
-    <natRenewalMinutes>30</natRenewalMinutes>
-    <natTimeoutSeconds>10</natTimeoutSeconds>
+    <natEnabled>false</natEnabled>
     <urAccepted>-1</urAccepted>
-    <urSeen>3</urSeen>
-    <urURL></urURL>
-    <urPostInsecurely>false</urPostInsecurely>
-    <urInitialDelayS>1800</urInitialDelayS>
     <restartOnWakeup>true</restartOnWakeup>
     <autoUpgradeIntervalH>0</autoUpgradeIntervalH>
-    <upgradeToPreReleases>false</upgradeToPreReleases>
     <keepTemporariesH>24</keepTemporariesH>
     <cacheIgnoredFiles>false</cacheIgnoredFiles>
-    <progressUpdateIntervalS>2</progressUpdateIntervalS>
+    <progressUpdateIntervalS>1</progressUpdateIntervalS>
     <limitBandwidthInLan>false</limitBandwidthInLan>
     <minHomeDiskFree unit="%">1</minHomeDiskFree>
     <releasesURL></releasesURL>

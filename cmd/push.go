@@ -149,7 +149,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 		}
 	}
 
-	trList, err := deployments.GetTranslations(ctx, dev, d, c)
+	trList, err := deployments.GetTranslations(ctx, dev, d, false, c)
 	if err != nil {
 		return err
 	}

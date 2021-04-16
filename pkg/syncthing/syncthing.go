@@ -78,6 +78,7 @@ type Syncthing struct {
 	Folders          []*Folder     `yaml:"folders"`
 	FileWatcherDelay int           `yaml:"-"`
 	ForceSendOnly    bool          `yaml:"-"`
+	ResetDatabase    bool          `yaml:"-"`
 	GUIAddress       string        `yaml:"local"`
 	Home             string        `yaml:"-"`
 	LogPath          string        `yaml:"-"`
@@ -134,6 +135,16 @@ type ItemEvent struct {
 	GlobalId int                                        `json:"globalID"`
 	Time     time.Time                                  `json:"time"`
 	Data     map[string]map[string]DownloadProgressData `json:"data"`
+}
+
+// Connections represents syncthing connections.
+type Connections struct {
+	Connections map[string]Connection `json:"connections"`
+}
+
+// Connection represents syncthing connection.
+type Connection struct {
+	Connected bool `json:"connected"`
 }
 
 // DownloadProgressData represents an the information about a DownloadProgress event
@@ -262,6 +273,14 @@ func (s *Syncthing) Run(ctx context.Context) error {
 		return err
 	}
 
+	if s.ResetDatabase {
+		cmd := exec.Command(s.binPath, "-home", s.Home, "-reset-database")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Errorf("error resetting syncthing database: %s\n%s", err.Error(), output)
+		}
+	}
+
 	cmdArgs := []string{
 		"-home", s.Home,
 		"-no-browser",
@@ -325,38 +344,6 @@ func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 	return false
 }
 
-//ResetDatabase resets the syncthing database
-func (s *Syncthing) ResetDatabase(ctx context.Context, dev *model.Dev) error {
-
-	if err := s.resetDatabase(ctx, dev, false); err != nil {
-		return err
-	}
-	if err := s.resetDatabase(ctx, dev, true); err != nil {
-		return err
-	}
-
-	if err := s.WaitForPing(ctx, false); err != nil {
-		return err
-	}
-	return s.WaitForPing(ctx, true)
-}
-
-func (s *Syncthing) resetDatabase(ctx context.Context, dev *model.Dev, local bool) error {
-	for _, folder := range s.Folders {
-		log.Infof("reseting syncthing database path=%s local=%t", folder.LocalPath, local)
-		params := getFolderParameter(folder)
-		_, err := s.APICall(ctx, "rest/system/reset", "POST", 200, params, local, nil, false, 3)
-		if err != nil {
-			log.Infof("error posting 'rest/system/reset' local=%t syncthing API: %s", local, err)
-			if strings.Contains(err.Error(), "Client.Timeout") {
-				return fmt.Errorf("error resetting syncthing database local=%t: %s", local, err.Error())
-			}
-			return errors.ErrLostSyncthing
-		}
-	}
-	return nil
-}
-
 //Overwrite overwrites local changes to the remote syncthing
 func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
 	for _, folder := range s.Folders {
@@ -383,6 +370,47 @@ func (s *Syncthing) IsAllOverwritten() bool {
 		}
 	}
 	return true
+}
+
+//WaitForConnected waits for local and remote syncthing to be connected
+func (s *Syncthing) WaitForConnected(ctx context.Context, dev *model.Dev) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	log.Info("waiting for remote device to be connected")
+	to := time.Now().Add(s.timeout)
+	for i := 0; ; i++ {
+		connections := &Connections{}
+		body, err := s.APICall(ctx, "rest/system/connections", "GET", 200, nil, true, nil, true, 3)
+		if err != nil {
+			log.Infof("error getting connections: %s", err.Error())
+			if strings.Contains(err.Error(), "Client.Timeout") {
+				return errors.ErrBusySyncthing
+			}
+			return errors.ErrLostSyncthing
+		}
+		err = json.Unmarshal(body, connections)
+		if err != nil {
+			log.Infof("error unmarshalling connections: %s", err.Error())
+			return errors.ErrLostSyncthing
+		}
+
+		if connection, ok := connections.Connections[DefaultRemoteDeviceID]; ok {
+			if connection.Connected {
+				return nil
+			}
+		}
+
+		if time.Now().After(to) {
+			return fmt.Errorf("remote syncthing connection not completed after %s, please try again", s.timeout.String())
+		}
+
+		select {
+		case <-ticker.C:
+			continue
+		case <-ctx.Done():
+			log.Info("call to syncthing.WaitForConnected canceled")
+			return ctx.Err()
+		}
+	}
 }
 
 //WaitForScanning waits for syncthing to finish initial scanning
@@ -468,7 +496,7 @@ func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 
 		folder.Retries++
 		err = s.GetFolderErrors(ctx, folder, false)
-		log.Infof("syncthing error in folder '%s' local=%t retry %d: %s", folder.RemotePath, local, folder.Retries, err)
+		log.Infof("syncthing error in folder '%s' local=%t retry %d: %s", folder.RemotePath, local, folder.Retries, err.Error())
 		if folder.Retries <= max {
 			continue
 		}

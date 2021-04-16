@@ -149,6 +149,9 @@ func Test_isCompleted(t *testing.T) {
 				localCompletion: &Completion{
 					NeedBytes: 10,
 				},
+				remoteCompletion: &Completion{
+					NeedBytes: 10,
+				},
 			},
 			needDeletesRetries: 0,
 			want:               false,
@@ -161,7 +164,21 @@ func Test_isCompleted(t *testing.T) {
 					GlobalBytes: 10,
 				},
 				remoteCompletion: &Completion{
+					NeedBytes:   0,
 					GlobalBytes: 20,
+				},
+			},
+			needDeletesRetries: 0,
+			want:               false,
+		},
+		{
+			name: "not-matching-need-bytes",
+			wfc: &waitForCompletion{
+				localCompletion: &Completion{
+					NeedBytes: 0,
+				},
+				remoteCompletion: &Completion{
+					NeedBytes: 10,
 				},
 			},
 			needDeletesRetries: 0,
@@ -176,6 +193,7 @@ func Test_isCompleted(t *testing.T) {
 					NeedDeletes: 10,
 				},
 				remoteCompletion: &Completion{
+					NeedBytes:   0,
 					GlobalBytes: 10,
 				},
 			},
@@ -191,6 +209,7 @@ func Test_isCompleted(t *testing.T) {
 					NeedDeletes: 10,
 				},
 				remoteCompletion: &Completion{
+					NeedBytes:   0,
 					GlobalBytes: 10,
 				},
 				needDeletesRetries: 50,
@@ -210,6 +229,7 @@ func Test_isCompleted(t *testing.T) {
 					NeedDeletes: 0,
 				},
 				remoteCompletion: &Completion{
+					NeedBytes:   0,
 					GlobalBytes: 10,
 				},
 				sy: &Syncthing{
@@ -232,6 +252,7 @@ func Test_isCompleted(t *testing.T) {
 					NeedDeletes: 0,
 				},
 				remoteCompletion: &Completion{
+					NeedBytes:   0,
 					GlobalBytes: 10,
 				},
 				sy: &Syncthing{

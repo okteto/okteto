@@ -15,7 +15,6 @@ package syncthing
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -45,7 +44,6 @@ type waitForCompletion struct {
 	retries                   int64
 	progress                  float64
 	sy                        *Syncthing
-	hasBeenReset              bool
 }
 
 // WaitForCompletion waits for the remote to be totally synched
@@ -57,7 +55,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 		select {
 		case <-ticker.C:
 			wfc.retries++
-			if wfc.retries%50 == 0 {
+			if wfc.retries%40 == 0 {
 				log.Info("checking syncthing for error....")
 				if err := s.IsHealthy(ctx, false, 3); err != nil {
 					return err
@@ -80,9 +78,8 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 			reporter <- wfc.progress
 
 			if wfc.needsDatabaseReset() {
-				err := wfc.resetDatabase(ctx, dev)
-				analytics.TrackResetDatabase(err == nil)
-				continue
+				analytics.TrackResetDatabase(true)
+				return errors.ErrNeedsResetSyncError
 			}
 
 			if wfc.isCompleted() {
@@ -151,23 +148,10 @@ func (wfc *waitForCompletion) needsDatabaseReset() bool {
 	return wfc.globalBytesRetries > 360 // 90 seconds
 }
 
-func (wfc *waitForCompletion) resetDatabase(ctx context.Context, dev *model.Dev) error {
-	if wfc.hasBeenReset {
-		return fmt.Errorf("inconsistent syncthing state")
-	}
-	log.Info("resetting syncthing database in wait for completion loop...")
-	if err := wfc.sy.ResetDatabase(ctx, dev); err != nil {
-		return err
-	}
-	wfc.hasBeenReset = true
-	wfc.globalBytesRetries = 0
-	if err := wfc.sy.WaitForScanning(ctx, dev, true); err != nil {
-		return err
-	}
-	return wfc.sy.WaitForScanning(ctx, dev, false)
-}
-
 func (wfc *waitForCompletion) isCompleted() bool {
+	if wfc.localCompletion.NeedBytes != wfc.remoteCompletion.NeedBytes {
+		return false
+	}
 	if wfc.localCompletion.NeedBytes > 0 {
 		return false
 	}
