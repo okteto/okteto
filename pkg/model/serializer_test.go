@@ -484,3 +484,59 @@ func TestDevMarshalling(t *testing.T) {
 		})
 	}
 }
+
+func TestEndpointUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected Endpoint
+	}{
+		{
+			name: "rule",
+			data: []byte("- path: /\n  service: test\n  port: 8080"),
+			expected: Endpoint{
+				Rules: []EndpointRule{{
+					Path:    "/",
+					Service: "test",
+					Port:    8080,
+				}},
+			},
+		},
+		{
+			name: "full-endpoint",
+			data: []byte("labels:\n  key1: value1\nannotations:\n  key2: value2\nrules:\n- path: /\n  service: test\n  port: 8080"),
+			expected: Endpoint{
+				Labels:      map[string]string{"key1": "value1"},
+				Annotations: map[string]string{"key2": "value2"},
+				Rules: []EndpointRule{{
+					Path:    "/",
+					Service: "test",
+					Port:    8080,
+				}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			var endpoint Endpoint
+			if err := yaml.UnmarshalStrict(tt.data, &endpoint); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(endpoint.Annotations, tt.expected.Annotations) {
+				t.Errorf("didn't unmarshal correctly annotations. Actual %v, Expected %v", endpoint.Annotations, tt.expected.Annotations)
+			}
+
+			if !reflect.DeepEqual(endpoint.Labels, tt.expected.Labels) {
+				t.Errorf("didn't unmarshal correctly labels. Actual %v, Expected %v", endpoint.Labels, tt.expected.Labels)
+			}
+
+			if !reflect.DeepEqual(endpoint.Rules, tt.expected.Rules) {
+				t.Errorf("didn't unmarshal correctly rules. Actual %v, Expected %v", endpoint.Rules, tt.expected.Rules)
+			}
+
+		})
+	}
+}

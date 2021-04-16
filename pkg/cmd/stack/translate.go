@@ -332,14 +332,14 @@ func translateIngress(ingressName string, s *model.Stack) *extensions.Ingress {
 	}
 }
 
-func translateEndpoints(endpoints []model.Endpoint) []extensions.HTTPIngressPath {
+func translateEndpoints(endpoints model.Endpoint) []extensions.HTTPIngressPath {
 	paths := make([]extensions.HTTPIngressPath, 0)
-	for _, endpoint := range endpoints {
+	for _, rule := range endpoints.Rules {
 		path := extensions.HTTPIngressPath{
-			Path: endpoint.Path,
+			Path: rule.Path,
 			Backend: extensions.IngressBackend{
-				ServiceName: endpoint.Service,
-				ServicePort: intstr.IntOrString{IntVal: endpoint.Port},
+				ServiceName: rule.Service,
+				ServicePort: intstr.IntOrString{IntVal: rule.Port},
 			},
 		}
 		paths = append(paths, path)
@@ -360,9 +360,13 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 }
 
 func translateIngressLabels(endpointName string, s *model.Stack) map[string]string {
+	endpoint := s.Endpoints[endpointName]
 	labels := map[string]string{
 		okLabels.StackNameLabel:         s.Name,
 		okLabels.StackEndpointNameLabel: endpointName,
+	}
+	for k := range endpoint.Labels {
+		labels[k] = endpoint.Labels[k]
 	}
 	return labels
 }

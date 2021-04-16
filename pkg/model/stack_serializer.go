@@ -28,7 +28,7 @@ type StackRaw struct {
 	Name      string                 `yaml:"name"`
 	Namespace string                 `yaml:"namespace,omitempty"`
 	Services  map[string]*ServiceRaw `yaml:"services,omitempty"`
-	Endpoints map[string][]Endpoint  `yaml:"endpoints,omitempty"`
+	Endpoints map[string]Endpoint    `yaml:"endpoints,omitempty"`
 
 	// Docker-compose not implemented
 	Networks *WarningType `yaml:"networks,omitempty"`
