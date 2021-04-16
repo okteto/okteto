@@ -105,11 +105,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		}
 	}
 
-	if err := up.Sy.WaitForConnected(ctx, up.Dev); err != nil {
-		return err
-	}
-
-	return nil
+	return up.Sy.WaitForConnected(ctx, up.Dev)
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {

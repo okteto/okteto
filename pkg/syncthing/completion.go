@@ -44,7 +44,6 @@ type waitForCompletion struct {
 	retries                   int64
 	progress                  float64
 	sy                        *Syncthing
-	hasBeenReset              bool
 }
 
 // WaitForCompletion waits for the remote to be totally synched
