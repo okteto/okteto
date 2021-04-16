@@ -1,7 +1,7 @@
 #!/bin/sh
 
 log(){
-  echo $(date +%Y-%m-%dT%H:%M:%S) "$1"
+  echo "$(date +%Y-%m-%dT%H:%M:%S)" "$1"
 }
 set -e
 
