@@ -100,6 +100,7 @@ func deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 				return err
 			}
 		}
+
 		spinner.Stop()
 		log.Success("Deployed service '%s'", name)
 		spinner.Start()

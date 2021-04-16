@@ -15,10 +15,12 @@ package build
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -71,5 +73,17 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		analytics.TrackBuildTransientError(buildKitHost, success)
 		return err
 	}
+	if err != nil {
+		imageRegistry, imageTag := registry.GetRegistryAndRepo(tag)
+		if registry.IsLoggedIntoRegistryButDontHavePermissions(err) {
+			err = okErrors.UserError{E: fmt.Errorf("You are not authorized to push image '%s'.", imageTag),
+				Hint: fmt.Sprintf("Please login into the registry '%s' with a user with write permissions to '%s' or use another image.", imageRegistry, imageTag)}
+		}
+		if registry.IsNotLoggedIntoRegistry(err) {
+			err = okErrors.UserError{E: fmt.Errorf("You are not authorized to push image '%s'.", imageTag),
+				Hint: fmt.Sprintf("Login into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag)}
+		}
+	}
+
 	return err
 }

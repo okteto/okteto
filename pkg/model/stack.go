@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -35,32 +36,50 @@ var (
 type Stack struct {
 	Name      string                `yaml:"name"`
 	Namespace string                `yaml:"namespace,omitempty"`
-	Services  map[string]Service    `yaml:"services,omitempty"`
+	Services  map[string]*Service   `yaml:"services,omitempty"`
 	Endpoints map[string][]Endpoint `yaml:"endpoints,omitempty"`
-	Manifest  []byte                `yaml:"-"`
+
+	Manifest []byte   `yaml:"-"`
+	Warnings []string `yaml:"-"`
 }
 
 //Service represents an okteto stack service
 type Service struct {
-	Labels          map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Public          bool               `yaml:"public,omitempty"`
-	Image           string             `yaml:"image"`
-	Build           *BuildInfo         `yaml:"build,omitempty"`
-	Replicas        int32              `yaml:"replicas"`
-	Entrypoint      Entrypoint         `yaml:"entrypoint,omitempty"`
-	Command         Command            `yaml:"command,omitempty"`
-	Args            Args               `yaml:"args,omitempty"`
-	Environment     []EnvVar           `yaml:"environment,omitempty"`
-	EnvFiles        []string           `yaml:"env_file,omitempty"`
-	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
-	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
-	Healthchecks    bool               `yaml:"healthchecks,omitempty"`
-	Ports           []int32            `yaml:"ports,omitempty"`
-	Expose          []int32            `yaml:"expose,omitempty"`
-	Volumes         []string           `yaml:"volumes,omitempty"`
-	StopGracePeriod int64              `yaml:"stop_grace_period,omitempty"`
-	Resources       ServiceResources   `yaml:"resources,omitempty"`
+	Build      *BuildInfo         `yaml:"build,omitempty"`
+	CapAdd     []apiv1.Capability `yaml:"cap_add,omitempty"`
+	CapDrop    []apiv1.Capability `yaml:"cap_drop,omitempty"`
+	Entrypoint Entrypoint         `yaml:"entrypoint,omitempty"`
+	Command    Command            `yaml:"command,omitempty"`
+	EnvFiles   []string           `yaml:"env_file,omitempty"`
+
+	Environment     []EnvVar          `yaml:"environment,omitempty"`
+	Expose          []int32           `yaml:"expose,omitempty"`
+	Image           string            `yaml:"image,omitempty"`
+	Labels          map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Ports           []Port            `yaml:"ports,omitempty"`
+	StopGracePeriod int64             `yaml:"stop_grace_period,omitempty"`
+	Volumes         []StackVolume     `yaml:"volumes,omitempty"`
+	WorkingDir      string            `yaml:"working_dir,omitempty"`
+
+	Public    bool            `yaml:"public,omitempty"`
+	Replicas  int32           `yaml:"replicas,omitempty"`
+	Resources *StackResources `yaml:"resources,omitempty"`
+}
+
+type StackVolume struct {
+	LocalPath  string
+	RemotePath string
+}
+
+type Envs struct {
+	List []EnvVar
+}
+
+//StackResources represents an okteto stack resources
+type StackResources struct {
+	Limits   ServiceResources `json:"limits,omitempty" yaml:"limits,omitempty"`
+	Requests ServiceResources `json:"requests,omitempty" yaml:"requests,omitempty"`
 }
 
 //ServiceResources represents an okteto stack service resources
@@ -79,6 +98,11 @@ type StorageResource struct {
 //Quantity represents an okteto stack service storage resource
 type Quantity struct {
 	Value resource.Quantity
+}
+
+type Port struct {
+	Port     int32
+	Protocol apiv1.Protocol
 }
 
 //Endpoints represents an okteto stack ingress
@@ -109,6 +133,7 @@ func GetStack(name, stackPath string) (*Stack, error) {
 			return nil, err
 		}
 	}
+
 	if err := s.validate(); err != nil {
 		return nil, err
 	}
@@ -118,13 +143,15 @@ func GetStack(name, stackPath string) (*Stack, error) {
 		return nil, err
 	}
 
-	for name, svc := range s.Services {
+	for _, svc := range s.Services {
+		svc.extendPorts()
+		svc.IgnoreSyncVolumes()
 		if svc.Build == nil {
 			continue
 		}
 		svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
 		svc.Build.Dockerfile = loadAbsPath(stackDir, svc.Build.Dockerfile)
-		s.Services[name] = svc
+
 	}
 	return s, nil
 }
@@ -134,6 +161,7 @@ func ReadStack(bytes []byte) (*Stack, error) {
 	s := &Stack{
 		Manifest: bytes,
 	}
+
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder
@@ -153,7 +181,7 @@ func ReadStack(bytes []byte) (*Stack, error) {
 		msg = strings.TrimSuffix(msg, "in type model.Stack")
 		return nil, errors.New(msg)
 	}
-	for i, svc := range s.Services {
+	for _, svc := range s.Services {
 		if svc.Build != nil {
 			if svc.Build.Name != "" {
 				svc.Build.Context = svc.Build.Name
@@ -161,31 +189,42 @@ func ReadStack(bytes []byte) (*Stack, error) {
 			}
 			setBuildDefaults(svc.Build)
 		}
+		if svc.Resources.Requests.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
+			svc.Resources.Requests.Storage.Size.Value = resource.MustParse("1Gi")
+		}
+
 		if svc.Replicas == 0 {
 			svc.Replicas = 1
 		}
-		if svc.Resources.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
-			svc.Resources.Storage.Size.Value = resource.MustParse("1Gi")
-		}
-		if len(svc.Entrypoint.Values) > 0 {
-			svc.Args.Values = nil
-			svc.Args.Values = svc.Command.Values
-			svc.Command.Values = svc.Entrypoint.Values
-		}
+
 		if len(svc.Expose) > 0 && len(svc.Ports) == 0 {
 			svc.Public = false
 		}
 
 		if len(svc.Expose) > 0 {
-			svc.Ports = append(svc.Ports, svc.Expose...)
+			svc.extendPorts()
 		}
 
-		s.Services[i] = svc
 	}
 	return s, nil
 }
 
+func (svc *Service) IgnoreSyncVolumes() {
+	notIgnoredVolumes := make([]StackVolume, 0)
+	for _, volume := range svc.Volumes {
+		if volume.LocalPath == "" {
+			notIgnoredVolumes = append(notIgnoredVolumes, volume)
+		}
+	}
+	svc.Volumes = notIgnoredVolumes
+}
+
 func (s *Stack) validate() error {
+	if len(s.Warnings) > 0 {
+		notSupportedFields := strings.Join(GroupWarningsBySvc(s.Warnings), "\n  - ")
+		log.Warning("The following fields are not supported in this version and will be omitted: \n  - %s", notSupportedFields)
+		log.Yellow("Help us to decide which fields should okteto implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
+	}
 	if err := validateStackName(s.Name); err != nil {
 		return fmt.Errorf("Invalid stack name: %s", err)
 	}
@@ -197,7 +236,7 @@ func (s *Stack) validate() error {
 		for _, endpoint := range endpoints {
 			if service, ok := s.Services[endpoint.Service]; !ok {
 				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not exist.", endpointName, endpoint.Service)
-			} else if IsPortInService(endpoint.Port, service.Ports) {
+			} else if !IsPortInService(endpoint.Port, service.Ports) {
 				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpoint.Service, endpoint.Port)
 			}
 		}
@@ -207,15 +246,17 @@ func (s *Stack) validate() error {
 		if err := validateStackName(name); err != nil {
 			return fmt.Errorf("Invalid service name '%s': %s", name, err)
 		}
+
 		if svc.Image == "" && svc.Build == nil {
 			return fmt.Errorf(fmt.Sprintf("Invalid service '%s': image cannot be empty", name))
 		}
+
 		for _, v := range svc.Volumes {
-			if !strings.HasPrefix(v, "/") {
-				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
+			if v.LocalPath != "" {
+				log.Warning("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath)
 			}
-			if strings.Contains(v, ":") {
-				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': volume bind mounts are not supported", v, name))
+			if !strings.HasPrefix(v.RemotePath, "/") {
+				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
 			}
 		}
 	}
@@ -223,9 +264,9 @@ func (s *Stack) validate() error {
 	return nil
 }
 
-func IsPortInService(port int32, portList []int32) bool {
+func IsPortInService(port int32, portList []Port) bool {
 	for _, p := range portList {
-		if p == port {
+		if p.Port == port {
 			return true
 		}
 	}
@@ -273,4 +314,54 @@ func (svc *Service) SetLastBuiltAnnotation() {
 		svc.Annotations = map[string]string{}
 	}
 	svc.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+}
+
+//extendPorts adds the ports that are in expose field to the port list.
+func (svc *Service) extendPorts() {
+	for _, port := range svc.Expose {
+		if !svc.isAlreadyAdded(port) {
+			svc.Ports = append(svc.Ports, Port{Port: port, Protocol: apiv1.ProtocolTCP})
+		}
+	}
+}
+
+//isAlreadyAdded checks if a port is already on port list
+func (svc *Service) isAlreadyAdded(p int32) bool {
+	for _, port := range svc.Ports {
+		if port.Port == p {
+			return true
+		}
+	}
+	return false
+}
+
+func GroupWarningsBySvc(fields []string) []string {
+	notSupportedMap := make(map[string][]string)
+	result := make([]string, 0)
+	for _, field := range fields {
+
+		if strings.Contains(field, "[") {
+			bracketStart := strings.Index(field, "[")
+			bracketEnds := strings.Index(field, "]")
+
+			svcName := field[bracketStart+1 : bracketEnds]
+
+			beforeBrackets := field[:bracketStart]
+			afterBrackets := field[bracketEnds+1:]
+			field = beforeBrackets + "[%s]" + afterBrackets
+			if elem, ok := notSupportedMap[field]; ok {
+				elem = append(elem, svcName)
+				notSupportedMap[field] = elem
+			} else {
+				notSupportedMap[field] = []string{svcName}
+			}
+		} else {
+			result = append(result, field)
+		}
+	}
+	for f, svcNames := range notSupportedMap {
+		names := strings.Join(svcNames, ", ")
+		result = append(result, fmt.Sprintf(f, names))
+	}
+	return result
 }
