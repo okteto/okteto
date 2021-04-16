@@ -47,6 +47,7 @@ type ServiceRaw struct {
 	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	Command         Args               `yaml:"command,omitempty"`
 	Entrypoint      Command            `yaml:"entrypoint,omitempty"`
+	Args            Args               `yaml:"args,omitempty"`
 	EnvFiles        []string           `yaml:"env_file,omitempty"`
 	Environment     *RawMessage        `yaml:"environment,omitempty"`
 	Expose          *RawMessage        `yaml:"expose,omitempty"`
@@ -212,7 +213,14 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s.CapDrop = serviceRaw.CapDrop
 
 	s.Command.Values = serviceRaw.Command.Values
-	s.Entrypoint.Values = serviceRaw.Entrypoint.Values
+	if len(s.Command.Values) == 0 {
+		s.Command.Values = serviceRaw.Args.Values
+	}
+	if len(serviceRaw.Entrypoint.Values) > 0 {
+		s.Command.Values = nil
+		s.Command.Values = serviceRaw.Command.Values
+		s.Entrypoint.Values = serviceRaw.Entrypoint.Values
+	}
 
 	s.EnvFiles = serviceRaw.EnvFiles
 

@@ -392,3 +392,58 @@ func TestStackResourcesUnmarshalling(t *testing.T) {
 		})
 	}
 }
+func Test_validateCommandArgs(t *testing.T) {
+	tests := []struct {
+		name       string
+		manifest   []byte
+		Entrypoint Entrypoint
+		Command    Command
+	}{
+		{
+			name:       "only-entrypoint",
+			manifest:   []byte("services:\n  app:\n    entrypoint: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			Entrypoint: Entrypoint{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			Command:    Command{},
+		},
+		{
+			name:       "only-args",
+			manifest:   []byte("services:\n  app:\n    args: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			Command:    Command{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			Entrypoint: Entrypoint{},
+		},
+		{
+			name:       "entrypoint-command",
+			manifest:   []byte("services:\n  app:\n    entrypoint: [\"entrypoint.sh\"]\n    command: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			Command:    Command{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			Entrypoint: Entrypoint{Values: []string{"entrypoint.sh"}},
+		},
+		{
+			name:       "command-args",
+			manifest:   []byte("services:\n  app:\n    command: [\"entrypoint.sh\"]\n    args: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			Command:    Command{Values: []string{"entrypoint.sh"}},
+			Entrypoint: Entrypoint{},
+		},
+		{
+			name:       "only-command",
+			manifest:   []byte("services:\n  app:\n    command: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			Command:    Command{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			Entrypoint: Entrypoint{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if svc, ok := s.Services["app"]; ok {
+				if !reflect.DeepEqual(svc.Command, tt.Command) {
+					t.Fatalf("Expected %v but got %v", tt.Command, svc.Command)
+				}
+				if !reflect.DeepEqual(svc.Entrypoint, tt.Entrypoint) {
+					t.Fatalf("Expected %v but got %v", tt.Command, svc.Command)
+				}
+			}
+		})
+	}
+}
