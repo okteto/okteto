@@ -18,7 +18,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
@@ -55,6 +57,7 @@ const (
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
 	disableEvent             = "Disable Analytics"
+	stackNotSupportedField   = "Stack Field Not Supported"
 )
 
 var (
@@ -245,6 +248,20 @@ func TrackSignup(success bool, userID string) {
 	}
 
 	track(signupEvent, success, nil)
+}
+
+func TrackStackWarnings(warnings []string) {
+	re := regexp.MustCompile(`\[(.*?)\]`)
+	for _, warning := range warnings {
+		found := re.FindString(warning)
+		if found != "" {
+			warning = strings.Replace(warning, found, "", 1)
+		}
+		props := map[string]interface{}{
+			"field": warning,
+		}
+		track(stackNotSupportedField, true, props)
+	}
 }
 
 func track(event string, success bool, props map[string]interface{}) {

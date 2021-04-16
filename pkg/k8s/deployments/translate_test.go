@@ -83,7 +83,7 @@ services:
 		t.Fatal(err)
 	}
 	d1 := dev.GevSandbox()
-	rule1 := dev.ToTranslationRule(dev)
+	rule1 := dev.ToTranslationRule(dev, false)
 	tr1 := &model.Translation{
 		Interactive: true,
 		Name:        dev.Name,
@@ -308,7 +308,7 @@ services:
 
 	dev2 := dev.Services[0]
 	d2 := dev2.GevSandbox()
-	rule2 := dev2.ToTranslationRule(dev)
+	rule2 := dev2.ToTranslationRule(dev, false)
 	tr2 := &model.Translation{
 		Interactive: false,
 		Name:        dev.Name,
@@ -439,7 +439,7 @@ persistentVolume:
 		t.Fatal(err)
 	}
 	d1 := dev.GevSandbox()
-	rule1 := dev.ToTranslationRule(dev)
+	rule1 := dev.ToTranslationRule(dev, true)
 	tr1 := &model.Translation{
 		Interactive: true,
 		Name:        dev.Name,
@@ -525,7 +525,7 @@ persistentVolume:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-e"},
+							Args:            []string{"-r", "-d", "-e"},
 							WorkingDir:      "",
 							Env: []apiv1.EnvVar{
 								{

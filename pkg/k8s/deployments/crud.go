@@ -155,10 +155,10 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 }
 
 //GetTranslations fills all the deployments pointed by a development container
-func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
+func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, reset bool, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
 	result := map[string]*model.Translation{}
 	if d != nil {
-		rule := dev.ToTranslationRule(dev)
+		rule := dev.ToTranslationRule(dev, reset)
 		replicas := getPreviousDeploymentReplicas(d)
 		result[d.Name] = &model.Translation{
 			Interactive: true,
@@ -172,21 +172,21 @@ func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, 
 		}
 	}
 
-	if err := loadServiceTranslations(ctx, dev, result, c); err != nil {
+	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {
 		return nil, err
 	}
 
 	return result, nil
 }
 
-func loadServiceTranslations(ctx context.Context, dev *model.Dev, result map[string]*model.Translation, c kubernetes.Interface) error {
+func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, result map[string]*model.Translation, c kubernetes.Interface) error {
 	for _, s := range dev.Services {
 		d, err := Get(ctx, s, dev.Namespace, c)
 		if err != nil {
 			return err
 		}
 
-		rule := s.ToTranslationRule(dev)
+		rule := s.ToTranslationRule(dev, reset)
 
 		if _, ok := result[d.Name]; ok {
 			result[d.Name].Rules = append(result[d.Name].Rules, rule)

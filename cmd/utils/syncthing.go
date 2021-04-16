@@ -67,6 +67,9 @@ func (s *SyncthingProgress) SetCurrent(v int64) {
 
 //Finish finishes the progress bar
 func (s *SyncthingProgress) Finish() {
+	if s.progressBar != nil {
+		s.progressBar.SetCurrent(100)
+	}
 	s.progressContainer.Wait()
 }
 

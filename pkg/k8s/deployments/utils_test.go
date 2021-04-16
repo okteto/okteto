@@ -38,7 +38,7 @@ annotations:
 		t.Fatal(err)
 	}
 	d := dev.GevSandbox()
-	translations, err := GetTranslations(ctx, dev, d, nil)
+	translations, err := GetTranslations(ctx, dev, d, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

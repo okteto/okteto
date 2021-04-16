@@ -16,13 +16,15 @@ package utils
 import (
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
 var (
 	//DefaultStackManifest default okteto stack manifest file
 	DefaultStackManifest    = "okteto-stack.yml"
-	secondaryStackManifests = []string{"okteto-stack.yaml", "stack.yml", "stack.yaml"}
+	secondaryStackManifests = []string{"okteto-stack.yaml", "stack.yml", "stack.yaml", "docker-compose.yml", "docker-compose.yaml"}
+	deprecatedManifests     = []string{"stack.yml", "stack.yaml"}
 )
 
 //LoadStack loads an okteto stack manifest checking "yml" and "yaml"
@@ -34,6 +36,9 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 	if stackPath == DefaultStackManifest {
 		for _, secondaryStackManifest := range secondaryStackManifests {
 			if model.FileExists(secondaryStackManifest) {
+				if isDeprecatedExtension(stackPath) {
+					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", stackPath)
+				}
 				return model.GetStack(name, secondaryStackManifest)
 			}
 		}
@@ -41,4 +46,13 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 
 	return nil, fmt.Errorf("'%s' does not exist", stackPath)
 
+}
+
+func isDeprecatedExtension(stackPath string) bool {
+	for _, deprecatedManifest := range deprecatedManifests {
+		if deprecatedManifest == stackPath {
+			return true
+		}
+	}
+	return false
 }
