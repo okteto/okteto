@@ -30,10 +30,14 @@ var (
 
 //LoadStack loads an okteto stack manifest checking "yml" and "yaml"
 func LoadStack(name, stackPath string) (*model.Stack, error) {
+	var isCompose bool
 	if model.FileExists(stackPath) {
+		if strings.HasPrefix(stackPath, "docker-compose") {
+			isCompose = true
+		}
 		return model.GetStack(name, stackPath, false)
 	}
-	var isCompose bool
+
 	if stackPath == DefaultStackManifest {
 		for _, secondaryStackManifest := range secondaryStackManifests {
 			if model.FileExists(secondaryStackManifest) {
