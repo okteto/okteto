@@ -393,6 +393,116 @@ func TestStackResourcesUnmarshalling(t *testing.T) {
 	}
 }
 
+func Test_validateCommandArgs(t *testing.T) {
+	tests := []struct {
+		name        string
+		manifest    []byte
+		isCompose   bool
+		Entrypoint  Entrypoint
+		Command     Command
+		expectedErr bool
+	}{
+		{
+			name:        "COMPOSE-only-entrypoint",
+			manifest:    []byte("services:\n  app:\n    entrypoint: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   true,
+			Entrypoint:  Entrypoint{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			Command:     Command{},
+			expectedErr: false,
+		},
+		{
+			name:        "STACK-only-entrypoint",
+			manifest:    []byte("services:\n  app:\n    entrypoint: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   false,
+			Entrypoint:  Entrypoint{},
+			Command:     Command{},
+			expectedErr: true,
+		},
+		{
+			name:        "COMPOSE-entrypoint-command",
+			manifest:    []byte("services:\n  app:\n    entrypoint: [\"entrypoint.sh\"]\n    command: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   true,
+			Command:     Command{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			Entrypoint:  Entrypoint{Values: []string{"entrypoint.sh"}},
+			expectedErr: false,
+		},
+		{
+			name:        "STACK-entrypoint-command",
+			manifest:    []byte("services:\n  app:\n    entrypoint: [\"entrypoint.sh\"]\n    command: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   false,
+			Command:     Command{},
+			Entrypoint:  Entrypoint{},
+			expectedErr: true,
+		},
+		{
+			name:        "COMPOSE-only-args",
+			manifest:    []byte("services:\n  app:\n    args: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   true,
+			Command:     Command{},
+			Entrypoint:  Entrypoint{},
+			expectedErr: true,
+		},
+		{
+			name:        "STACK-only-args",
+			manifest:    []byte("services:\n  app:\n    args: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   false,
+			Command:     Command{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			Entrypoint:  Entrypoint{},
+			expectedErr: false,
+		},
+		{
+			name:        "COMPOSE-command-args",
+			manifest:    []byte("services:\n  app:\n    command: [\"entrypoint.sh\"]\n    args: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   true,
+			Command:     Command{},
+			Entrypoint:  Entrypoint{},
+			expectedErr: true,
+		},
+		{
+			name:        "STACK-command-args",
+			manifest:    []byte("services:\n  app:\n    command: [\"entrypoint.sh\"]\n    args: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   false,
+			Command:     Command{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			Entrypoint:  Entrypoint{Values: []string{"entrypoint.sh"}},
+			expectedErr: false,
+		},
+		{
+			name:        "COMPOSE-only-command",
+			manifest:    []byte("services:\n  app:\n    command: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   true,
+			Command:     Command{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			Entrypoint:  Entrypoint{},
+			expectedErr: false,
+		},
+		{
+			name:        "STACK-only-command",
+			manifest:    []byte("services:\n  app:\n    command: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
+			isCompose:   false,
+			Command:     Command{},
+			Entrypoint:  Entrypoint{Values: []string{"/usr/bin/rpk", "redpanda"}},
+			expectedErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, tt.isCompose)
+			if err != nil && !tt.expectedErr {
+				t.Fatal(err)
+			}
+			if !tt.expectedErr {
+				if svc, ok := s.Services["app"]; ok {
+					if !reflect.DeepEqual(svc.Command, tt.Command) {
+						t.Fatalf("Expected %v but got %v", tt.Command, svc.Command)
+					}
+					if !reflect.DeepEqual(svc.Entrypoint, tt.Entrypoint) {
+						t.Fatalf("Expected %v but got %v", tt.Command, svc.Command)
+					}
+				}
+			}
+		})
+	}
+}
+
 func Test_validateIngressCreationPorts(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -417,7 +527,7 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := ReadStack(tt.manifest)
+			s, err := ReadStack(tt.manifest, false)
 			if err != nil {
 				t.Fatal(err)
 			}

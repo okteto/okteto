@@ -39,8 +39,9 @@ type Stack struct {
 	Services  map[string]*Service   `yaml:"services,omitempty"`
 	Endpoints map[string][]Endpoint `yaml:"endpoints,omitempty"`
 
-	Manifest []byte   `yaml:"-"`
-	Warnings []string `yaml:"-"`
+	Manifest  []byte   `yaml:"-"`
+	Warnings  []string `yaml:"-"`
+	isCompose bool     `yaml:"-"`
 }
 
 //Service represents an okteto stack service
@@ -113,13 +114,13 @@ type Endpoint struct {
 }
 
 //GetStack returns an okteto stack object from a given file
-func GetStack(name, stackPath string) (*Stack, error) {
+func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 	b, err := ioutil.ReadFile(stackPath)
 	if err != nil {
 		return nil, err
 	}
 
-	s, err := ReadStack(b)
+	s, err := ReadStack(b, isCompose)
 	if err != nil {
 		return nil, err
 	}
@@ -157,9 +158,10 @@ func GetStack(name, stackPath string) (*Stack, error) {
 }
 
 //ReadStack reads an okteto stack
-func ReadStack(bytes []byte) (*Stack, error) {
+func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	s := &Stack{
-		Manifest: bytes,
+		Manifest:  bytes,
+		isCompose: isCompose,
 	}
 
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
