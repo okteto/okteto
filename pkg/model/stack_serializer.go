@@ -183,7 +183,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
-		s.Services[svcName], err = svcRaw.ToService(svcName)
+		s.Services[svcName], err = svcRaw.ToService(svcName, s.isCompose)
 		if err != nil {
 			return err
 		}
@@ -195,7 +195,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
+func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Service, error) {
 	s := &Service{}
 	var err error
 	s.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources)
@@ -212,14 +212,23 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s.CapAdd = serviceRaw.CapAdd
 	s.CapDrop = serviceRaw.CapDrop
 
-	s.Command.Values = serviceRaw.Command.Values
-	if len(s.Command.Values) == 0 {
-		s.Command.Values = serviceRaw.Args.Values
-	}
-	if len(serviceRaw.Entrypoint.Values) > 0 {
-		s.Command.Values = nil
-		s.Command.Values = serviceRaw.Command.Values
+	if isCompose {
+		if len(serviceRaw.Args.Values) > 0 {
+			return nil, fmt.Errorf("Unsupported field for services.%s: 'args'", svcName)
+		}
 		s.Entrypoint.Values = serviceRaw.Entrypoint.Values
+		s.Command.Values = serviceRaw.Command.Values
+	} else {
+		if len(serviceRaw.Entrypoint.Values) > 0 {
+			return nil, fmt.Errorf("Unsupported field for services.%s: 'entrypoint'", svcName)
+		}
+		s.Entrypoint.Values = serviceRaw.Command.Values
+		if len(serviceRaw.Command.Values) == 1 {
+			if strings.Contains(serviceRaw.Command.Values[0], " ") {
+				s.Entrypoint.Values = []string{"sh", "-c", serviceRaw.Command.Values[0]}
+			}
+		}
+		s.Command.Values = serviceRaw.Args.Values
 	}
 
 	s.EnvFiles = serviceRaw.EnvFiles
