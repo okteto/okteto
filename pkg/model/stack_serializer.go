@@ -28,7 +28,7 @@ type StackRaw struct {
 	Name      string                 `yaml:"name"`
 	Namespace string                 `yaml:"namespace,omitempty"`
 	Services  map[string]*ServiceRaw `yaml:"services,omitempty"`
-	Endpoints map[string][]Endpoint  `yaml:"endpoints,omitempty"`
+	Endpoints map[string]Endpoint    `yaml:"endpoints,omitempty"`
 
 	// Docker-compose not implemented
 	Networks *WarningType `yaml:"networks,omitempty"`
@@ -47,6 +47,7 @@ type ServiceRaw struct {
 	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	Command         Args               `yaml:"command,omitempty"`
 	Entrypoint      Command            `yaml:"entrypoint,omitempty"`
+	Args            Args               `yaml:"args,omitempty"`
 	EnvFiles        []string           `yaml:"env_file,omitempty"`
 	Environment     *RawMessage        `yaml:"environment,omitempty"`
 	Expose          *RawMessage        `yaml:"expose,omitempty"`
@@ -182,7 +183,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
-		s.Services[svcName], err = svcRaw.ToService(svcName)
+		s.Services[svcName], err = svcRaw.ToService(svcName, s.isCompose)
 		if err != nil {
 			return err
 		}
@@ -194,7 +195,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
+func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Service, error) {
 	s := &Service{}
 	var err error
 	s.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources)
@@ -211,8 +212,24 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s.CapAdd = serviceRaw.CapAdd
 	s.CapDrop = serviceRaw.CapDrop
 
-	s.Command.Values = serviceRaw.Command.Values
-	s.Entrypoint.Values = serviceRaw.Entrypoint.Values
+	if isCompose {
+		if len(serviceRaw.Args.Values) > 0 {
+			return nil, fmt.Errorf("Unsupported field for services.%s: 'args'", svcName)
+		}
+		s.Entrypoint.Values = serviceRaw.Entrypoint.Values
+		s.Command.Values = serviceRaw.Command.Values
+	} else {
+		if len(serviceRaw.Entrypoint.Values) > 0 {
+			return nil, fmt.Errorf("Unsupported field for services.%s: 'entrypoint'", svcName)
+		}
+		s.Entrypoint.Values = serviceRaw.Command.Values
+		if len(serviceRaw.Command.Values) == 1 {
+			if strings.Contains(serviceRaw.Command.Values[0], " ") {
+				s.Entrypoint.Values = []string{"sh", "-c", serviceRaw.Command.Values[0]}
+			}
+		}
+		s.Command.Values = serviceRaw.Args.Values
+	}
 
 	s.EnvFiles = serviceRaw.EnvFiles
 
@@ -224,7 +241,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s.Public = serviceRaw.Public
 
 	for _, p := range serviceRaw.Ports {
-		if !s.Public && isPublicPort(p.ContainerPort) {
+		if p.HostPort != 0 {
 			s.Public = true
 		}
 		s.Ports = append(s.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
@@ -524,10 +541,6 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (v StackVolume) MarshalYAML() (interface{}, error) {
 	return v.RemotePath, nil
-}
-
-func isPublicPort(port int32) bool {
-	return (80 <= port && port <= 90) || (8000 <= port && port <= 9000) || port == 3000 || port == 5000
 }
 
 func getProtocol(protocolName string) (apiv1.Protocol, error) {

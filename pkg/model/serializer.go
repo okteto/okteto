@@ -545,3 +545,23 @@ func isDefaultProbes(d *Dev) bool {
 	}
 	return true
 }
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (endpoint *Endpoint) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rules []EndpointRule
+	err := unmarshal(&rules)
+	if err == nil {
+		endpoint.Rules = rules
+		return nil
+	}
+	type endpointType Endpoint // prevent recursion
+	var endpointRaw endpointType
+	err = unmarshal(&endpointRaw)
+	if err != nil {
+		return err
+	}
+	endpoint.Annotations = endpointRaw.Annotations
+	endpoint.Rules = endpointRaw.Rules
+	endpoint.Labels = endpointRaw.Labels
+	return nil
+}

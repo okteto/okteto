@@ -34,13 +34,13 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Name      string                `yaml:"name"`
-	Namespace string                `yaml:"namespace,omitempty"`
-	Services  map[string]*Service   `yaml:"services,omitempty"`
-	Endpoints map[string][]Endpoint `yaml:"endpoints,omitempty"`
-
-	Manifest []byte   `yaml:"-"`
-	Warnings []string `yaml:"-"`
+	Manifest  []byte              `yaml:"-"`
+	Warnings  []string            `yaml:"-"`
+	isCompose bool                `yaml:"-"`
+	Name      string              `yaml:"name"`
+	Namespace string              `yaml:"namespace,omitempty"`
+	Services  map[string]*Service `yaml:"services,omitempty"`
+	Endpoints map[string]Endpoint `yaml:"endpoints,omitempty"`
 }
 
 //Service represents an okteto stack service
@@ -107,19 +107,26 @@ type Port struct {
 
 //Endpoints represents an okteto stack ingress
 type Endpoint struct {
+	Labels      map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Rules       []EndpointRule    `yaml:"rules,omitempty"`
+}
+
+// EndpointRule represents an okteto ingress rule
+type EndpointRule struct {
 	Path    string `yaml:"path,omitempty"`
 	Service string `yaml:"service,omitempty"`
 	Port    int32  `yaml:"port,omitempty"`
 }
 
 //GetStack returns an okteto stack object from a given file
-func GetStack(name, stackPath string) (*Stack, error) {
+func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 	b, err := ioutil.ReadFile(stackPath)
 	if err != nil {
 		return nil, err
 	}
 
-	s, err := ReadStack(b)
+	s, err := ReadStack(b, isCompose)
 	if err != nil {
 		return nil, err
 	}
@@ -157,9 +164,10 @@ func GetStack(name, stackPath string) (*Stack, error) {
 }
 
 //ReadStack reads an okteto stack
-func ReadStack(bytes []byte) (*Stack, error) {
+func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	s := &Stack{
-		Manifest: bytes,
+		Manifest:  bytes,
+		isCompose: isCompose,
 	}
 
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
@@ -232,12 +240,12 @@ func (s *Stack) validate() error {
 		return fmt.Errorf("Invalid stack: 'services' cannot be empty")
 	}
 
-	for endpointName, endpoints := range s.Endpoints {
-		for _, endpoint := range endpoints {
-			if service, ok := s.Services[endpoint.Service]; !ok {
-				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not exist.", endpointName, endpoint.Service)
-			} else if !IsPortInService(endpoint.Port, service.Ports) {
-				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpoint.Service, endpoint.Port)
+	for endpointName, endpoint := range s.Endpoints {
+		for _, endpointRule := range endpoint.Rules {
+			if service, ok := s.Services[endpointRule.Service]; !ok {
+				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not exist.", endpointName, endpointRule.Service)
+			} else if !IsPortInService(endpointRule.Port, service.Ports) {
+				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpointRule.Service, endpointRule.Port)
 			}
 		}
 	}
