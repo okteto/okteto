@@ -410,11 +410,6 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 			isPublic: false,
 		},
 		{
-			name:     "Public-port",
-			manifest: []byte("services:\n  app:\n    ports:\n    - 8080\n    image: okteto/vote:1"),
-			isPublic: true,
-		},
-		{
 			name:     "not-public-port-but-with-assignation",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
 			isPublic: true,
