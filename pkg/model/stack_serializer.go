@@ -224,7 +224,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string) (*Service, error) {
 	s.Public = serviceRaw.Public
 
 	for _, p := range serviceRaw.Ports {
-		if !s.Public && isPublicPort(p.ContainerPort) {
+		if p.HostPort != 0 {
 			s.Public = true
 		}
 		s.Ports = append(s.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
@@ -524,10 +524,6 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (v StackVolume) MarshalYAML() (interface{}, error) {
 	return v.RemotePath, nil
-}
-
-func isPublicPort(port int32) bool {
-	return (80 <= port && port <= 90) || (8000 <= port && port <= 9000) || port == 3000 || port == 5000
 }
 
 func getProtocol(protocolName string) (apiv1.Protocol, error) {
