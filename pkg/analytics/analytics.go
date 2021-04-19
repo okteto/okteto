@@ -58,6 +58,7 @@ const (
 	signupEvent              = "Signup"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
+	stackIsComposeFile       = "Stack Is compose file"
 )
 
 var (
@@ -262,6 +263,10 @@ func TrackStackWarnings(warnings []string) {
 		}
 		track(stackNotSupportedField, true, props)
 	}
+}
+
+func TrackIsComposeSack(isCompose bool) {
+	track(stackIsComposeFile, isCompose, nil)
 }
 
 func track(event string, success bool, props map[string]interface{}) {

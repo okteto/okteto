@@ -42,6 +42,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 			analytics.TrackStackWarnings(s.Warnings)
+			analytics.TrackIsComposeSack(s.IsCompose)
 
 			if err := s.UpdateNamespace(namespace); err != nil {
 				return err
