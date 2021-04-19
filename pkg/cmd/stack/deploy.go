@@ -80,6 +80,7 @@ func deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 		return err
 	}
 
+	s.DisplayWarnings()
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()

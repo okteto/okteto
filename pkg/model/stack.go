@@ -228,11 +228,6 @@ func (svc *Service) IgnoreSyncVolumes() {
 }
 
 func (s *Stack) validate() error {
-	if len(s.Warnings) > 0 {
-		notSupportedFields := strings.Join(GroupWarningsBySvc(s.Warnings), "\n  - ")
-		log.Warning("The following fields are not supported in this version and will be omitted: \n  - %s", notSupportedFields)
-		log.Yellow("Help us to decide which fields should okteto implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
-	}
 	if err := validateStackName(s.Name); err != nil {
 		return fmt.Errorf("Invalid stack name: %s", err)
 	}
@@ -372,4 +367,12 @@ func GroupWarningsBySvc(fields []string) []string {
 		result = append(result, fmt.Sprintf(f, names))
 	}
 	return result
+}
+
+func (s *Stack) DisplayWarnings() {
+	if len(s.Warnings) > 0 {
+		notSupportedFields := strings.Join(GroupWarningsBySvc(s.Warnings), "\n  - ")
+		log.Warning("The following fields are not supported in this version and will be omitted: \n  - %s", notSupportedFields)
+		log.Yellow("Help us to decide which fields should okteto implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
+	}
 }
