@@ -496,7 +496,9 @@ func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 
 		folder.Retries++
 		err = s.GetFolderErrors(ctx, folder, false)
-		log.Infof("syncthing error in folder '%s' local=%t retry %d: %s", folder.RemotePath, local, folder.Retries, err.Error())
+		if err != nil {
+			log.Infof("syncthing error in folder '%s' local=%t retry %d: %s", folder.RemotePath, local, folder.Retries, err.Error())
+		}
 		if folder.Retries <= max {
 			continue
 		}

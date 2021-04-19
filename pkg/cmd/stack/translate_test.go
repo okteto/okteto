@@ -504,6 +504,8 @@ func Test_translateEndpoints(t *testing.T) {
 		Name: "stackName",
 		Endpoints: map[string]model.Endpoint{
 			"endpoint1": {
+				Labels:      map[string]string{"label1": "value1"},
+				Annotations: map[string]string{"annotation1": "value1"},
 				Rules: []model.EndpointRule{
 					{Path: "/",
 						Service: "svcName",
@@ -524,6 +526,7 @@ func Test_translateEndpoints(t *testing.T) {
 
 	annotations := map[string]string{
 		okLabels.OktetoAutoIngressAnnotation: "true",
+		"annotation1":                        "value1",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
@@ -546,6 +549,7 @@ func Test_translateEndpoints(t *testing.T) {
 	labels := map[string]string{
 		okLabels.StackNameLabel:         "stackName",
 		okLabels.StackEndpointNameLabel: "endpoint1",
+		"label1":                        "value1",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
