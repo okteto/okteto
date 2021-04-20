@@ -34,14 +34,14 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Manifest  []byte              `yaml:"-"`
-	Warnings  []string            `yaml:"-"`
-	isCompose bool                `yaml:"-"`
-	Volumes   []string            `yaml:"-"`
-	Name      string              `yaml:"name"`
-	Namespace string              `yaml:"namespace,omitempty"`
-	Services  map[string]*Service `yaml:"services,omitempty"`
-	Endpoints map[string]Endpoint `yaml:"endpoints,omitempty"`
+	Manifest  []byte                 `yaml:"-"`
+	Warnings  []string               `yaml:"-"`
+	isCompose bool                   `yaml:"-"`
+	Name      string                 `yaml:"name"`
+	Volumes   map[string]*VolumeSpec `yaml:"volumes,omitempty"`
+	Namespace string                 `yaml:"namespace,omitempty"`
+	Services  map[string]*Service    `yaml:"services,omitempty"`
+	Endpoints map[string]Endpoint    `yaml:"endpoints,omitempty"`
 }
 
 //Service represents an okteto stack service
@@ -74,6 +74,10 @@ type StackVolume struct {
 	isPersistentVolume bool
 }
 
+type VolumeSpec struct {
+	Name   string            `yaml:"name,omitempty"`
+	Labels map[string]string `yaml:"labels,omitempty"`
+}
 type Envs struct {
 	List []EnvVar
 }
@@ -267,7 +271,7 @@ func (s *Stack) validate() error {
 				log.Warning("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath)
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
-				return fmt.Errorf(fmt.Sprintf("Invalid volume '%v' in service '%s': must be an absolute path", v, name))
+				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
 			}
 		}
 	}

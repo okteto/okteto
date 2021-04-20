@@ -167,11 +167,12 @@ type DeployComposeResources struct {
 }
 
 type VolumeTopLevel struct {
+	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Name   string            `json:"name,omitempty" yaml:"name,omitempty"`
+
 	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
 	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
 	External   *WarningType `json:"external,omitempty" yaml:"external,omitempty"`
-	Labels     *WarningType `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Name       *WarningType `json:"name,omitempty" yaml:"name,omitempty"`
 }
 type RawMessage struct {
 	unmarshal func(interface{}) error
@@ -190,14 +191,30 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Endpoints = stackRaw.Endpoints
 
-	volumes := make([]string, 0)
-	for volumeName := range stackRaw.Volumes {
-		volumes = append(volumes, sanitizeName(volumeName))
+	volumes := make(map[string]*VolumeSpec, 0)
+	for volumeName, v := range stackRaw.Volumes {
+		result := VolumeSpec{}
+		if v == nil {
+			result.Name = sanitizeName(volumeName)
+			result.Labels = make(map[string]string)
+		} else {
+			if v.Name == "" {
+				result.Name = sanitizeName(volumeName)
+			}
+			if v.Labels == nil {
+				result.Labels = make(map[string]string)
+			}
+		}
+		volumes[volumeName] = &result
 	}
-	s.Volumes = volumes
+
+	s.Volumes = make(map[string]*VolumeSpec)
+	for volumeName, volume := range volumes {
+		s.Volumes[volumeName] = volume
+	}
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
-		s.Services[svcName], err = svcRaw.ToService(svcName, s.isCompose, volumes)
+		s.Services[svcName], err = svcRaw.ToService(svcName, s)
 		if err != nil {
 			return err
 		}
@@ -209,98 +226,98 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool, declaredVolumes []string) (*Service, error) {
-	s := &Service{}
+func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service, error) {
+	svc := &Service{}
 	var err error
-	s.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources)
+	svc.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources)
 	if err != nil {
 		return nil, err
 	}
-	s.Replicas, err = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
+	svc.Replicas, err = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
 	if err != nil {
 		return nil, err
 	}
-	s.Image = serviceRaw.Image
-	s.Build = serviceRaw.Build
+	svc.Image = serviceRaw.Image
+	svc.Build = serviceRaw.Build
 
-	s.CapAdd = serviceRaw.CapAdd
-	s.CapDrop = serviceRaw.CapDrop
+	svc.CapAdd = serviceRaw.CapAdd
+	svc.CapDrop = serviceRaw.CapDrop
 
-	if isCompose {
+	if stack.isCompose {
 		if len(serviceRaw.Args.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'args'", svcName)
 		}
-		s.Entrypoint.Values = serviceRaw.Entrypoint.Values
-		s.Command.Values = serviceRaw.Command.Values
+		svc.Entrypoint.Values = serviceRaw.Entrypoint.Values
+		svc.Command.Values = serviceRaw.Command.Values
 	} else {
 		if len(serviceRaw.Entrypoint.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'entrypoint'", svcName)
 		}
-		s.Entrypoint.Values = serviceRaw.Command.Values
+		svc.Entrypoint.Values = serviceRaw.Command.Values
 		if len(serviceRaw.Command.Values) == 1 {
 			if strings.Contains(serviceRaw.Command.Values[0], " ") {
-				s.Entrypoint.Values = []string{"sh", "-c", serviceRaw.Command.Values[0]}
+				svc.Entrypoint.Values = []string{"sh", "-c", serviceRaw.Command.Values[0]}
 			}
 		}
-		s.Command.Values = serviceRaw.Args.Values
+		svc.Command.Values = serviceRaw.Args.Values
 	}
 
-	s.EnvFiles = serviceRaw.EnvFiles
+	svc.EnvFiles = serviceRaw.EnvFiles
 
-	s.Environment, err = unmarshalEnvs(serviceRaw.Environment)
+	svc.Environment, err = unmarshalEnvs(serviceRaw.Environment)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Public = serviceRaw.Public
+	svc.Public = serviceRaw.Public
 
 	for _, p := range serviceRaw.Ports {
 		if p.HostPort != 0 {
-			s.Public = true
+			svc.Public = true
 		}
-		s.Ports = append(s.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
+		svc.Ports = append(svc.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
 	}
 
-	s.Expose, err = unmarshalExpose(serviceRaw.Expose)
+	svc.Expose, err = unmarshalExpose(serviceRaw.Expose)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Labels, err = unmarshalLabels(serviceRaw.Labels)
+	svc.Labels, err = unmarshalLabels(serviceRaw.Labels)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Annotations = serviceRaw.Annotations
+	svc.Annotations = serviceRaw.Annotations
 	for key, annotation := range serviceRaw.Annotations {
-		if _, ok := s.Annotations[key]; !ok {
-			s.Annotations[key] = annotation
+		if _, ok := svc.Annotations[key]; !ok {
+			svc.Annotations[key] = annotation
 		}
 	}
 
-	s.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
+	svc.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Volumes = serviceRaw.Volumes
-	for idx, volume := range s.Volumes {
-		if isInVolumesTopLevelSection(volume.LocalPath, declaredVolumes) {
+	svc.Volumes = serviceRaw.Volumes
+	for idx, volume := range svc.Volumes {
+		if isInVolumesTopLevelSection(volume.LocalPath, stack.Volumes) {
 			volume.isPersistentVolume = true
-			s.Volumes[idx] = volume
+			svc.Volumes[idx] = volume
 		} else if !strings.HasPrefix(volume.LocalPath, ".") && volume.LocalPath != "" {
 			return nil, fmt.Errorf("Named volume '%s' is used in service %s but no declaration was found in the volumes section.", volume.ToString(), svcName)
 		}
 	}
 
-	s.WorkingDir = serviceRaw.WorkingDir
+	svc.WorkingDir = serviceRaw.WorkingDir
 
-	return s, nil
+	return svc, nil
 }
 
-func isInVolumesTopLevelSection(volumeName string, declaredVolumes []string) bool {
+func isInVolumesTopLevelSection(volumeName string, declaredVolumes map[string]*VolumeSpec) bool {
 	for _, volume := range declaredVolumes {
-		if volume == volumeName {
+		if volume.Name == volumeName {
 			return true
 		}
 	}
@@ -880,12 +897,6 @@ func getVolumesNotSupportedFields(volumeName string, volumeInfo *VolumeTopLevel)
 	}
 	if volumeInfo.External != nil {
 		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].external", volumeName))
-	}
-	if volumeInfo.Labels != nil {
-		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].labels", volumeName))
-	}
-	if volumeInfo.Name != nil {
-		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].name", volumeName))
 	}
 	return notSupported
 }
