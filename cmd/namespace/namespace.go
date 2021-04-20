@@ -135,7 +135,7 @@ func isNamespaceAvailable(ctx context.Context, namespace string) error {
 
 	_, err = namespaces.Get(ctx, namespace, client)
 	if err != nil {
-		return fmt.Errorf("Cannot get '%s' namespace. Please make sure it's created and you have the right permissions.", namespace)
+		return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
 	}
 	return nil
 }
