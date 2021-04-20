@@ -112,7 +112,7 @@ type ServiceRaw struct {
 	Profiles          *WarningType `yaml:"profiles,omitempty"`
 	PullPolicy        *WarningType `yaml:"pull_policy,omitempty"`
 	ReadOnly          *WarningType `yaml:"read_only,omitempty"`
-	Restart           *WarningType `yaml:"restart,omitempty"`
+	Restart           *string      `yaml:"restart,omitempty"`
 	Runtime           *WarningType `yaml:"runtime,omitempty"`
 	Secrets           *WarningType `yaml:"secrets,omitempty"`
 	SecurityOpt       *WarningType `yaml:"security_opt,omitempty"`
@@ -732,7 +732,9 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].read_only", svcName))
 	}
 	if svcInfo.Restart != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].restart", svcName))
+		if *svcInfo.Restart != "always" {
+			notSupported = append(notSupported, fmt.Sprintf("services[%s].restart", svcName))
+		}
 	}
 	if svcInfo.Runtime != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].runtime", svcName))
