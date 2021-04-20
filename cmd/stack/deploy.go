@@ -42,7 +42,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 			analytics.TrackStackWarnings(s.Warnings)
-			analytics.TrackIsComposeSack(s.IsCompose)
 
 			if err := s.UpdateNamespace(namespace); err != nil {
 				return err
@@ -53,7 +52,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			err = stack.Deploy(ctx, s, forceBuild, wait, noCache)
-			analytics.TrackDeployStack(err == nil)
+			analytics.TrackDeployStack(err == nil, s.IsCompose)
 			if err == nil {
 				log.Success("Stack '%s' successfully deployed", s.Name)
 			}
