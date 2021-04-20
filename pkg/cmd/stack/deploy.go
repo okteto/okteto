@@ -28,9 +28,9 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/ingress"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
-	"github.com/okteto/okteto/pkg/k8s/pvcs"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
+	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
@@ -159,18 +159,18 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 	for _, pvc := range pvcList {
 		old, err := c.CoreV1().PersistentVolumeClaims(s.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
 		if err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("error getting persistent volume claim of service '%s': %s", svcName, err.Error())
+			return fmt.Errorf("error getting volume of service '%s': %s", svcName, err.Error())
 		}
 		if old.Name == "" {
-			if err := pvcs.Create(ctx, &pvc, c); err != nil {
-				return fmt.Errorf("error creating persistent volume claim of service '%s': %s", svcName, err.Error())
+			if err := volumes.CreateFromPVC(ctx, &pvc, c); err != nil {
+				return fmt.Errorf("error creating volume of service '%s': %s", svcName, err.Error())
 			}
 		} else {
 			if old.Labels[okLabels.StackNameLabel] == "" {
-				return fmt.Errorf("name collision: the persistent volume claim '%s' was running before deploying your stack", svcName)
+				return fmt.Errorf("name collision: the volume '%s' was running before deploying your stack", svcName)
 			}
 			if pvc.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
-				return fmt.Errorf("name collision: the persistent volume claim '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+				return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
 			}
 			if v, ok := old.Labels[okLabels.DeployedByLabel]; ok {
 				pvc.Labels[okLabels.DeployedByLabel] = v
