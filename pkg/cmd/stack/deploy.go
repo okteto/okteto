@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/ingress"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
+	"github.com/okteto/okteto/pkg/k8s/pvcs"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
@@ -153,6 +154,30 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 }
 
 func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
+
+	pvcList := translatePersistentVolumeClaims(svcName, s)
+	for _, pvc := range pvcList {
+		old, err := c.CoreV1().PersistentVolumeClaims(s.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("error getting persistent volume claim of service '%s': %s", svcName, err.Error())
+		}
+		if old.Name == "" {
+			if err := pvcs.Create(ctx, &pvc, c); err != nil {
+				return fmt.Errorf("error creating persistent volume claim of service '%s': %s", svcName, err.Error())
+			}
+		} else {
+			if old.Labels[okLabels.StackNameLabel] == "" {
+				return fmt.Errorf("name collision: the persistent volume claim '%s' was running before deploying your stack", svcName)
+			}
+			if pvc.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
+				return fmt.Errorf("name collision: the persistent volume claim '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+			}
+			if v, ok := old.Labels[okLabels.DeployedByLabel]; ok {
+				pvc.Labels[okLabels.DeployedByLabel] = v
+			}
+		}
+	}
+
 	sfs := translateStatefulSet(svcName, s)
 	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {

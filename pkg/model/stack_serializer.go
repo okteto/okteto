@@ -24,17 +24,18 @@ import (
 
 //Stack represents an okteto stack
 type StackRaw struct {
-	Version   string                 `yaml:"version,omitempty"`
-	Name      string                 `yaml:"name"`
-	Namespace string                 `yaml:"namespace,omitempty"`
-	Services  map[string]*ServiceRaw `yaml:"services,omitempty"`
-	Endpoints map[string]Endpoint    `yaml:"endpoints,omitempty"`
+	Version   string                     `yaml:"version,omitempty"`
+	Name      string                     `yaml:"name"`
+	Namespace string                     `yaml:"namespace,omitempty"`
+	Services  map[string]*ServiceRaw     `yaml:"services,omitempty"`
+	Endpoints map[string]Endpoint        `yaml:"endpoints,omitempty"`
+	Volumes   map[string]*VolumeTopLevel `yaml:"volumes,omitempty"`
 
 	// Docker-compose not implemented
 	Networks *WarningType `yaml:"networks,omitempty"`
-	Volumes  *WarningType `yaml:"volumes,omitempty"`
-	Configs  *WarningType `yaml:"configs,omitempty"`
-	Secrets  *WarningType `yaml:"secrets,omitempty"`
+
+	Configs *WarningType `yaml:"configs,omitempty"`
+	Secrets *WarningType `yaml:"secrets,omitempty"`
 
 	Warnings []string
 }
@@ -164,6 +165,14 @@ type DeployComposeResources struct {
 	Memory  Quantity     `json:"memory,omitempty" yaml:"memory,omitempty"`
 	Devices *WarningType `json:"devices,omitempty" yaml:"devices,omitempty"`
 }
+
+type VolumeTopLevel struct {
+	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
+	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
+	External   *WarningType `json:"external,omitempty" yaml:"external,omitempty"`
+	Labels     *WarningType `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Name       *WarningType `json:"name,omitempty" yaml:"name,omitempty"`
+}
 type RawMessage struct {
 	unmarshal func(interface{}) error
 }
@@ -181,9 +190,14 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Endpoints = stackRaw.Endpoints
 
+	volumes := make([]string, 0)
+	for volumeName := range stackRaw.Volumes {
+		volumes = append(volumes, sanitizeName(volumeName))
+	}
+	s.Volumes = volumes
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
-		s.Services[svcName], err = svcRaw.ToService(svcName, s.isCompose)
+		s.Services[svcName], err = svcRaw.ToService(svcName, s.isCompose, volumes)
 		if err != nil {
 			return err
 		}
@@ -195,7 +209,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Service, error) {
+func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool, declaredVolumes []string) (*Service, error) {
 	s := &Service{}
 	var err error
 	s.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources)
@@ -268,10 +282,29 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 	if err != nil {
 		return nil, err
 	}
+
 	s.Volumes = serviceRaw.Volumes
+	for idx, volume := range s.Volumes {
+		if isInVolumesTopLevelSection(volume.LocalPath, declaredVolumes) {
+			volume.isPersistentVolume = true
+			s.Volumes[idx] = volume
+		} else if !strings.HasPrefix(volume.LocalPath, ".") && volume.LocalPath != "" {
+			return nil, fmt.Errorf("Named volume '%s' is used in service %s but no declaration was found in the volumes section.", volume.ToString(), svcName)
+		}
+	}
+
 	s.WorkingDir = serviceRaw.WorkingDir
 
 	return s, nil
+}
+
+func isInVolumesTopLevelSection(volumeName string, declaredVolumes []string) bool {
+	for _, volume := range declaredVolumes {
+		if volume == volumeName {
+			return true
+		}
+	}
+	return false
 }
 
 func (msg *RawMessage) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -528,6 +561,7 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		v.LocalPath, err = ExpandEnv(parts[0])
+		v.LocalPath = sanitizeName(v.LocalPath)
 		if err != nil {
 			return err
 		}
@@ -541,6 +575,14 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (v StackVolume) MarshalYAML() (interface{}, error) {
 	return v.RemotePath, nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (v StackVolume) ToString() string {
+	if v.LocalPath != "" {
+		return fmt.Sprintf("%s:%s", v.LocalPath, v.RemotePath)
+	}
+	return v.RemotePath
 }
 
 func getProtocol(protocolName string) (apiv1.Protocol, error) {
@@ -557,10 +599,21 @@ func getProtocol(protocolName string) (apiv1.Protocol, error) {
 	}
 }
 
+func sanitizeName(name string) string {
+	name = strings.Replace(name, " ", "-", -1)
+	name = strings.Replace(name, "_", "-", -1)
+	return name
+}
+
 func setWarnings(s *StackRaw) {
 	s.Warnings = append(s.Warnings, getTopLevelNotSupportedFields(s)...)
 	for name, svcInfo := range s.Services {
 		s.Warnings = append(s.Warnings, getServiceNotSupportedFields(name, svcInfo)...)
+	}
+	for name, volumeInfo := range s.Volumes {
+		if volumeInfo != nil {
+			s.Warnings = append(s.Warnings, getVolumesNotSupportedFields(name, volumeInfo)...)
+		}
 	}
 }
 
@@ -568,9 +621,6 @@ func getTopLevelNotSupportedFields(s *StackRaw) []string {
 	notSupported := make([]string, 0)
 	if s.Networks != nil {
 		notSupported = append(notSupported, "networks")
-	}
-	if s.Volumes != nil {
-		notSupported = append(notSupported, "volumes")
 	}
 	if s.Configs != nil {
 		notSupported = append(notSupported, "configs")
@@ -816,5 +866,26 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.update_config", svcName))
 	}
 
+	return notSupported
+}
+
+func getVolumesNotSupportedFields(volumeName string, volumeInfo *VolumeTopLevel) []string {
+	notSupported := make([]string, 0)
+
+	if volumeInfo.Driver != nil {
+		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver", volumeName))
+	}
+	if volumeInfo.DriverOpts != nil {
+		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver_opts", volumeName))
+	}
+	if volumeInfo.External != nil {
+		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].external", volumeName))
+	}
+	if volumeInfo.Labels != nil {
+		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].labels", volumeName))
+	}
+	if volumeInfo.Name != nil {
+		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].name", volumeName))
+	}
 	return notSupported
 }

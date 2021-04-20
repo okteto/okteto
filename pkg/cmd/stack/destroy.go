@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/ingress"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
+	"github.com/okteto/okteto/pkg/k8s/pvcs"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
@@ -173,6 +174,24 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		}
 		spinner.Stop()
 		log.Success("Destroyed service '%s'", sfsList[i].Name)
+		spinner.Start()
+	}
+
+	pvcList, err := pvcs.List(ctx, s.Namespace, s.GetLabelSelector(), c)
+	if err != nil {
+		return err
+	}
+	for i := range pvcList {
+		for _, volume := range s.Volumes {
+			if volume == pvcList[i].Name {
+				continue
+			}
+		}
+		if err := pvcs.Destroy(ctx, pvcList[i].Name, pvcList[i].Namespace, c); err != nil {
+			return fmt.Errorf("error destroying persistent volume claim of service '%s': %s", pvcList[i].Name, err)
+		}
+		spinner.Stop()
+		log.Success("Destroyed volume '%s'", sfsList[i].Name)
 		spinner.Start()
 	}
 

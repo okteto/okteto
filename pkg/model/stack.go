@@ -37,6 +37,7 @@ type Stack struct {
 	Manifest  []byte              `yaml:"-"`
 	Warnings  []string            `yaml:"-"`
 	isCompose bool                `yaml:"-"`
+	Volumes   []string            `yaml:"-"`
 	Name      string              `yaml:"name"`
 	Namespace string              `yaml:"namespace,omitempty"`
 	Services  map[string]*Service `yaml:"services,omitempty"`
@@ -68,8 +69,9 @@ type Service struct {
 }
 
 type StackVolume struct {
-	LocalPath  string
-	RemotePath string
+	LocalPath          string
+	RemotePath         string
+	isPersistentVolume bool
 }
 
 type Envs struct {
@@ -220,7 +222,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 func (svc *Service) IgnoreSyncVolumes() {
 	notIgnoredVolumes := make([]StackVolume, 0)
 	for _, volume := range svc.Volumes {
-		if volume.LocalPath == "" {
+		if volume.LocalPath == "" || volume.isPersistentVolume {
 			notIgnoredVolumes = append(notIgnoredVolumes, volume)
 		}
 	}
@@ -233,6 +235,7 @@ func (s *Stack) validate() error {
 		log.Warning("The following fields are not supported in this version and will be omitted: \n  - %s", notSupportedFields)
 		log.Yellow("Help us to decide which fields should okteto implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
 	}
+
 	if err := validateStackName(s.Name); err != nil {
 		return fmt.Errorf("Invalid stack name: %s", err)
 	}
@@ -260,11 +263,11 @@ func (s *Stack) validate() error {
 		}
 
 		for _, v := range svc.Volumes {
-			if v.LocalPath != "" {
+			if v.LocalPath != "" && !v.isPersistentVolume {
 				log.Warning("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath)
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
-				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
+				return fmt.Errorf(fmt.Sprintf("Invalid volume '%v' in service '%s': must be an absolute path", v, name))
 			}
 		}
 	}

@@ -213,8 +213,37 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	}
 }
 
+func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.PersistentVolumeClaim {
+	svc := s.Services[name]
+	result := make([]apiv1.PersistentVolumeClaim, 0)
+	for idx, volume := range svc.Volumes {
+		pvcName := getVolumeClaimName(name, &volume, idx)
+		pvc := apiv1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        pvcName,
+				Namespace:   s.Namespace,
+				Labels:      translateLabels(name, s),
+				Annotations: translateAnnotations(svc),
+			},
+			Spec: apiv1.PersistentVolumeClaimSpec{
+				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						"storage": svc.Resources.Requests.Storage.Size.Value,
+					},
+				},
+				StorageClassName: translateStorageClass(svc),
+			},
+		}
+		result = append(result, pvc)
+	}
+
+	return result
+}
+
 func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[name]
+	initContainerName := getVolumeClaimName(name, &svc.Volumes[0], 0)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -244,7 +273,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									MountPath: "/data",
-									Name:      pvcName,
+									Name:      initContainerName,
 								},
 							},
 						},
@@ -258,33 +287,32 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
-							VolumeMounts:    translateVolumeMounts(svc),
+							VolumeMounts:    translateVolumeMounts(name, svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.WorkingDir,
 						},
 					},
-				},
-			},
-			VolumeClaimTemplates: []apiv1.PersistentVolumeClaim{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        pvcName,
-						Labels:      translateLabels(name, s),
-						Annotations: translateAnnotations(svc),
-					},
-					Spec: apiv1.PersistentVolumeClaimSpec{
-						AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-						Resources: apiv1.ResourceRequirements{
-							Requests: apiv1.ResourceList{
-								"storage": svc.Resources.Requests.Storage.Size.Value,
-							},
-						},
-						StorageClassName: translateStorageClass(svc),
-					},
+					Volumes: translateVolumes(name, svc),
 				},
 			},
 		},
 	}
+}
+
+func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
+	volumes := make([]apiv1.Volume, 0)
+	for idx, volume := range svc.Volumes {
+		name := getVolumeClaimName(svcName, &volume, idx)
+		volumes = append(volumes, apiv1.Volume{
+			Name: name,
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: volume.LocalPath,
+				},
+			},
+		})
+	}
+	return volumes
 }
 
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
@@ -402,19 +430,30 @@ func translateServiceType(svc model.Service) apiv1.ServiceType {
 	return apiv1.ServiceTypeClusterIP
 }
 
-func translateVolumeMounts(svc *model.Service) []apiv1.VolumeMount {
+func translateVolumeMounts(svcName string, svc *model.Service) []apiv1.VolumeMount {
 	result := []apiv1.VolumeMount{}
 	for i, v := range svc.Volumes {
+		name := getVolumeClaimName(svcName, &v, i)
 		result = append(
 			result,
 			apiv1.VolumeMount{
 				MountPath: v.RemotePath,
-				Name:      pvcName,
+				Name:      name,
 				SubPath:   fmt.Sprintf("data-%d", i),
 			},
 		)
 	}
 	return result
+}
+
+func getVolumeClaimName(svcName string, v *model.StackVolume, i int) string {
+	var name string
+	if v.LocalPath != "" {
+		name = v.LocalPath
+	} else {
+		name = fmt.Sprintf("%s-%s-%d", pvcName, svcName, i)
+	}
+	return name
 }
 
 func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
