@@ -22,6 +22,8 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -87,6 +89,10 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	kubeConfigFile := config.GetKubeConfigFile()
 	clusterContext := okteto.GetClusterContext()
 
+	if err = isNamespaceAvailable(ctx, namespace); err != nil {
+		return err
+	}
+
 	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterContext, true); err != nil {
 		return err
 	}
@@ -119,4 +125,17 @@ func askOktetoURL() (string, error) {
 	oktetoURL = u
 
 	return oktetoURL, nil
+}
+
+func isNamespaceAvailable(ctx context.Context, namespace string) error {
+	client, _, err := k8Client.GetLocal()
+	if err != nil {
+		return err
+	}
+
+	_, err = namespaces.Get(ctx, namespace, client)
+	if err != nil {
+		return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
+	}
+	return nil
 }
