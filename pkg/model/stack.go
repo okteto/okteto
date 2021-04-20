@@ -368,11 +368,3 @@ func GroupWarningsBySvc(fields []string) []string {
 	}
 	return result
 }
-
-func (s *Stack) DisplayWarnings() {
-	if len(s.Warnings) > 0 {
-		notSupportedFields := strings.Join(GroupWarningsBySvc(s.Warnings), "\n  - ")
-		log.Warning("The following fields are not supported in this version and will be omitted: \n  - %s", notSupportedFields)
-		log.Yellow("Help us to decide which fields should okteto implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
-	}
-}

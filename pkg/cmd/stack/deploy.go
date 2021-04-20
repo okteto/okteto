@@ -80,7 +80,7 @@ func deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 		return err
 	}
 
-	s.DisplayWarnings()
+	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
@@ -236,4 +236,16 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 		}
 	}
 	return fmt.Errorf("kubernetes is taking too long to create your stack. Please check for errors and try again")
+}
+
+func DisplayWarnings(s *model.Stack) {
+	if len(s.Warnings) > 0 {
+		if len(s.Warnings) == 1 {
+			log.Warning("'%s' field is not currently supported and will be ignored.", s.Warnings[0])
+		} else {
+			notSupportedFields := strings.Join(model.GroupWarningsBySvc(s.Warnings), "\n  - ")
+			log.Warning("The following fields are not currently supported and will be ignored: \n  - %s", notSupportedFields)
+		}
+		log.Yellow("Help us to decide which fields to implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
+	}
 }
