@@ -217,12 +217,21 @@ func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.Persis
 	svc := s.Services[name]
 	result := make([]apiv1.PersistentVolumeClaim, 0)
 	for idx, volume := range svc.Volumes {
+		if volume.LocalPath == "" {
+			continue
+		}
+		volumeSpec := s.Volumes[volume.LocalPath]
+		labels := translateLabels(name, s)
+		for key, value := range volumeSpec.Labels {
+			labels[key] = value
+		}
+
 		pvcName := getVolumeClaimName(name, &volume, idx)
 		pvc := apiv1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        pvcName,
 				Namespace:   s.Namespace,
-				Labels:      translateLabels(name, s),
+				Labels:      labels,
 				Annotations: translateAnnotations(svc),
 			},
 			Spec: apiv1.PersistentVolumeClaimSpec{
@@ -295,8 +304,36 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 					Volumes: translateVolumes(name, svc),
 				},
 			},
+			VolumeClaimTemplates: translateVolumeClaimTemplates(name, s),
 		},
 	}
+}
+
+func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.PersistentVolumeClaim {
+	svc := s.Services[svcName]
+	for _, volume := range svc.Volumes {
+		if volume.LocalPath == "" {
+			return []apiv1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        pvcName,
+						Labels:      translateLabels(svcName, s),
+						Annotations: translateAnnotations(svc),
+					},
+					Spec: apiv1.PersistentVolumeClaimSpec{
+						AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+						Resources: apiv1.ResourceRequirements{
+							Requests: apiv1.ResourceList{
+								"storage": svc.Resources.Requests.Storage.Size.Value,
+							},
+						},
+						StorageClassName: translateStorageClass(svc),
+					},
+				},
+			}
+		}
+	}
+	return nil
 }
 
 func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
@@ -451,7 +488,7 @@ func getVolumeClaimName(svcName string, v *model.StackVolume, i int) string {
 	if v.LocalPath != "" {
 		name = v.LocalPath
 	} else {
-		name = fmt.Sprintf("%s-%s-%d", pvcName, svcName, i)
+		name = pvcName
 	}
 	return name
 }

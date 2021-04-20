@@ -326,7 +326,7 @@ func Test_translateStatefulSet(t *testing.T) {
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/data",
-				Name:      fmt.Sprintf("%s-%s-0", pvcName, "svcName"),
+				Name:      pvcName,
 			},
 		},
 	}
@@ -375,12 +375,12 @@ func Test_translateStatefulSet(t *testing.T) {
 	volumeMounts := []apiv1.VolumeMount{
 		{
 			MountPath: "/volume1",
-			Name:      fmt.Sprintf("%s-%s-0", pvcName, "svcName"),
+			Name:      pvcName,
 			SubPath:   "data-0",
 		},
 		{
 			MountPath: "/volume2",
-			Name:      fmt.Sprintf("%s-%s-1", pvcName, "svcName"),
+			Name:      pvcName,
 			SubPath:   "data-1",
 		},
 	}
@@ -388,15 +388,15 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong container.volume_mounts: '%v'", c.VolumeMounts)
 	}
 
-	volume := translatePersistentVolumeClaims("svcName", s)[0]
-	if volume.Name != fmt.Sprintf("%s-%s-0", pvcName, "svcName") {
-		t.Errorf("Wrong statefulset name: '%s'", volume.Name)
+	vct := result.Spec.VolumeClaimTemplates[0]
+	if vct.Name != pvcName {
+		t.Errorf("Wrong statefulset name: '%s'", vct.Name)
 	}
-	if !reflect.DeepEqual(volume.Labels, labels) {
-		t.Errorf("Wrong statefulset labels: '%s'", volume.Labels)
+	if !reflect.DeepEqual(vct.Labels, labels) {
+		t.Errorf("Wrong statefulset labels: '%s'", vct.Labels)
 	}
-	if !reflect.DeepEqual(volume.Annotations, annotations) {
-		t.Errorf("Wrong statefulset annotations: '%s'", volume.Annotations)
+	if !reflect.DeepEqual(vct.Annotations, annotations) {
+		t.Errorf("Wrong statefulset annotations: '%s'", vct.Annotations)
 	}
 	volumeClaimTemplateSpec := apiv1.PersistentVolumeClaimSpec{
 		AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
@@ -407,8 +407,8 @@ func Test_translateStatefulSet(t *testing.T) {
 		},
 		StorageClassName: pointer.StringPtr("class-name"),
 	}
-	if !reflect.DeepEqual(volume.Spec, volumeClaimTemplateSpec) {
-		t.Errorf("Wrong statefulset volume claim template: '%v'", volume.Spec)
+	if !reflect.DeepEqual(vct.Spec, volumeClaimTemplateSpec) {
+		t.Errorf("Wrong statefulset volume claim template: '%v'", vct.Spec)
 	}
 }
 
