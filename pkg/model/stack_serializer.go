@@ -41,24 +41,29 @@ type StackRaw struct {
 
 //Service represents an okteto stack service
 type ServiceRaw struct {
-	Deploy          *DeployInfoRaw     `yaml:"deploy,omitempty"`
-	Build           *BuildInfo         `yaml:"build,omitempty"`
-	CapAdd          []apiv1.Capability `yaml:"cap_add,omitempty"`
-	CapDrop         []apiv1.Capability `yaml:"cap_drop,omitempty"`
-	Command         Args               `yaml:"command,omitempty"`
-	Entrypoint      Command            `yaml:"entrypoint,omitempty"`
-	Args            Args               `yaml:"args,omitempty"`
-	EnvFiles        []string           `yaml:"env_file,omitempty"`
-	Environment     *RawMessage        `yaml:"environment,omitempty"`
-	Expose          *RawMessage        `yaml:"expose,omitempty"`
-	Image           string             `yaml:"image,omitempty"`
-	Labels          *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Ports           []PortRaw          `yaml:"ports,omitempty"`
-	Scale           int32              `yaml:"scale"`
-	StopGracePeriod *RawMessage        `yaml:"stop_grace_period,omitempty"`
-	Volumes         []StackVolume      `yaml:"volumes,omitempty"`
-	WorkingDir      string             `yaml:"working_dir,omitempty"`
+	Deploy                   *DeployInfoRaw     `yaml:"deploy,omitempty"`
+	Build                    *BuildInfo         `yaml:"build,omitempty"`
+	CapAddSneakCase          []apiv1.Capability `yaml:"cap_add,omitempty"`
+	CapAdd                   []apiv1.Capability `yaml:"capAdd,omitempty"`
+	CapDropSneakCase         []apiv1.Capability `yaml:"cap_drop,omitempty"`
+	CapDrop                  []apiv1.Capability `yaml:"capDrop,omitempty"`
+	Command                  Args               `yaml:"command,omitempty"`
+	Entrypoint               Command            `yaml:"entrypoint,omitempty"`
+	Args                     Args               `yaml:"args,omitempty"`
+	EnvFilesSneakCase        []string           `yaml:"env_file,omitempty"`
+	EnvFiles                 []string           `yaml:"envFile,omitempty"`
+	Environment              *RawMessage        `yaml:"environment,omitempty"`
+	Expose                   *RawMessage        `yaml:"expose,omitempty"`
+	Image                    string             `yaml:"image,omitempty"`
+	Labels                   *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations              map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Ports                    []PortRaw          `yaml:"ports,omitempty"`
+	Scale                    int32              `yaml:"scale"`
+	StopGracePeriodSneakCase *RawMessage        `yaml:"stop_grace_period,omitempty"`
+	StopGracePeriod          *RawMessage        `yaml:"stopGracePeriod,omitempty"`
+	Volumes                  []StackVolume      `yaml:"volumes,omitempty"`
+	WorkingDirSneakCase      string             `yaml:"working_dir,omitempty"`
+	WorkingDir               string             `yaml:"workingDir,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas"`
@@ -210,7 +215,13 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 	s.Build = serviceRaw.Build
 
 	s.CapAdd = serviceRaw.CapAdd
+	if len(serviceRaw.CapAddSneakCase) > 0 {
+		s.CapAdd = serviceRaw.CapAddSneakCase
+	}
 	s.CapDrop = serviceRaw.CapDrop
+	if len(serviceRaw.CapDropSneakCase) > 0 {
+		s.CapDrop = serviceRaw.CapDropSneakCase
+	}
 
 	if isCompose {
 		if len(serviceRaw.Args.Values) > 0 {
@@ -232,6 +243,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 	}
 
 	s.EnvFiles = serviceRaw.EnvFiles
+	if len(serviceRaw.EnvFilesSneakCase) > 0 {
+		s.EnvFiles = serviceRaw.EnvFilesSneakCase
+	}
 
 	s.Environment, err = unmarshalEnvs(serviceRaw.Environment)
 	if err != nil {
@@ -268,8 +282,18 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 	if err != nil {
 		return nil, err
 	}
+	if serviceRaw.StopGracePeriodSneakCase != nil {
+		s.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriodSneakCase)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	s.Volumes = serviceRaw.Volumes
 	s.WorkingDir = serviceRaw.WorkingDir
+	if serviceRaw.WorkingDirSneakCase != "" {
+		s.WorkingDir = serviceRaw.WorkingDirSneakCase
+	}
 
 	return s, nil
 }
