@@ -248,4 +248,7 @@ func DisplayWarnings(s *model.Stack) {
 		}
 		log.Yellow("Help us to decide which fields to implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
 	}
+	for _, warning := range s.VolumeMountWarnings {
+		log.Warning(warning)
+	}
 }

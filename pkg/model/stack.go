@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/labels"
-	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -34,13 +33,14 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Manifest  []byte              `yaml:"-"`
-	Warnings  []string            `yaml:"-"`
-	isCompose bool                `yaml:"-"`
-	Name      string              `yaml:"name"`
-	Namespace string              `yaml:"namespace,omitempty"`
-	Services  map[string]*Service `yaml:"services,omitempty"`
-	Endpoints map[string]Endpoint `yaml:"endpoints,omitempty"`
+	Manifest            []byte              `yaml:"-"`
+	Warnings            []string            `yaml:"-"`
+	VolumeMountWarnings []string            `yaml:"-"`
+	isCompose           bool                `yaml:"-"`
+	Name                string              `yaml:"name"`
+	Namespace           string              `yaml:"namespace,omitempty"`
+	Services            map[string]*Service `yaml:"services,omitempty"`
+	Endpoints           map[string]Endpoint `yaml:"endpoints,omitempty"`
 }
 
 //Service represents an okteto stack service
@@ -256,7 +256,7 @@ func (s *Stack) validate() error {
 
 		for _, v := range svc.Volumes {
 			if v.LocalPath != "" {
-				log.Warning("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath)
+				s.VolumeMountWarnings = append(s.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
