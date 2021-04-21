@@ -16,7 +16,7 @@ fi
 
 remote=""
 reset=""
-while getopts ":s:r:e" opt; do
+while getopts ":s:re" opt; do
   case $opt in
     e)
       reset="--reset"
