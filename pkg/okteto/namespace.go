@@ -28,6 +28,11 @@ type DeleteBody struct {
 	Namespace Namespace `json:"deleteSpace" yaml:"deleteSpace"`
 }
 
+//Spaces represents an Okteto list of spaces
+type Spaces struct {
+	Spaces []Namespace `json:"spaces" yaml:"spaces"`
+}
+
 //Namespace represents an Okteto k8s namespace
 type Namespace struct {
 	ID string `json:"id" yaml:"id"`
@@ -47,6 +52,22 @@ func CreateNamespace(ctx context.Context, namespace string) (string, error) {
 	}
 
 	return body.Namespace.ID, nil
+}
+
+// ListNamespaces list namespaces
+func ListNamespaces(ctx context.Context) ([]Namespace, error) {
+	q := `query{
+		spaces{
+			id
+		},
+	}`
+
+	var body Spaces
+	if err := query(ctx, q, &body); err != nil {
+		return nil, err
+	}
+
+	return body.Spaces, nil
 }
 
 // AddNamespaceMembers adds members to a namespace

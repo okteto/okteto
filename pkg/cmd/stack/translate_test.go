@@ -525,8 +525,8 @@ func Test_translateEndpoints(t *testing.T) {
 	}
 
 	annotations := map[string]string{
-		okLabels.OktetoAutoIngressAnnotation: "true",
-		"annotation1":                        "value1",
+		okLabels.OktetoIngressAutoGenerateHost: "true",
+		"annotation1":                          "value1",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
