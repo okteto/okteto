@@ -52,7 +52,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			err = stack.Deploy(ctx, s, forceBuild, wait, noCache)
-			analytics.TrackDeployStack(err == nil)
+			analytics.TrackDeployStack(err == nil, s.IsCompose)
 			if err == nil {
 				log.Success("Stack '%s' successfully deployed", s.Name)
 			}

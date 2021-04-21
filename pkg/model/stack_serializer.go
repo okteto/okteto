@@ -183,7 +183,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
-		s.Services[svcName], err = svcRaw.ToService(svcName, s.isCompose)
+		s.Services[svcName], err = svcRaw.ToService(svcName, s.IsCompose)
 		if err != nil {
 			return err
 		}
