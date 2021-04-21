@@ -348,7 +348,7 @@ func translateEndpoints(endpoints model.Endpoint) []extensions.HTTPIngressPath {
 
 func translateIngressAnnotations(endpointName string, s *model.Stack) map[string]string {
 	endpoint := s.Endpoints[endpointName]
-	annotations := map[string]string{okLabels.OktetoAutoIngressAnnotation: "true"}
+	annotations := map[string]string{okLabels.OktetoIngressAutoGenerateHost: "true"}
 	for k := range endpoint.Annotations {
 		annotations[k] = endpoint.Annotations[k]
 	}
