@@ -71,6 +71,14 @@ func CreateFromPVC(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kube
 	return nil
 }
 
+func Update(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.Interface) error {
+	_, err := c.CoreV1().PersistentVolumeClaims(pvc.Namespace).Update(ctx, pvc, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 	currentSize, ok := pvc.Spec.Resources.Requests["storage"]
 	if !ok {

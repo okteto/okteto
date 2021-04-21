@@ -221,7 +221,7 @@ func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.Persis
 			continue
 		}
 		volumeSpec := s.Volumes[volume.LocalPath]
-		labels := translateVolumeLabels(name, s)
+		labels := translateVolumeLabels(volume.LocalPath, s)
 		annotations := translateAnnotations(svc)
 		for key, value := range volumeSpec.Annotations {
 			annotations[key] = value

@@ -172,9 +172,6 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 			if pvc.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
 				return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
 			}
-			if v, ok := old.Labels[okLabels.DeployedByLabel]; ok {
-				pvc.Labels[okLabels.DeployedByLabel] = v
-			}
 		}
 	}
 

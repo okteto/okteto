@@ -79,6 +79,7 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	}
 
 	s.Services = nil
+	s.Endpoints = nil
 	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 		return err
 	}
@@ -174,26 +175,6 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		}
 		spinner.Stop()
 		log.Success("Destroyed service '%s'", sfsList[i].Name)
-		spinner.Start()
-	}
-
-	pvcList, err := volumes.List(ctx, s.Namespace, s.GetLabelSelector(), c)
-	if err != nil {
-		return err
-	}
-	for i := range pvcList {
-		if isRemovable(s, pvcList[i].Name) {
-			continue
-		}
-		timeout, err := model.GetTimeout()
-		if err != nil {
-			return err
-		}
-		if err := volumes.Destroy(ctx, pvcList[i].Name, pvcList[i].Namespace, c, timeout); err != nil {
-			return fmt.Errorf("error destroying persistent volume claim of service '%s': %s", pvcList[i].Name, err)
-		}
-		spinner.Stop()
-		log.Success("Destroyed volume '%s'", sfsList[i].Name)
 		spinner.Start()
 	}
 

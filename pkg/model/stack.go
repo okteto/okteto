@@ -222,6 +222,11 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		}
 
 	}
+	for _, volume := range s.Volumes {
+		if volume.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
+			volume.Storage.Size.Value = resource.MustParse("1Gi")
+		}
+	}
 	return s, nil
 }
 
