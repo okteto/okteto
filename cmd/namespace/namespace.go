@@ -22,8 +22,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -86,12 +84,16 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		namespace = cred.Namespace
 	}
 
-	kubeConfigFile := config.GetKubeConfigFile()
-	clusterContext := okteto.GetClusterContext()
-
-	if err = isNamespaceAvailable(ctx, namespace); err != nil {
+	hasAccess, err := hasAccessToNamespace(ctx, namespace)
+	if err != nil {
 		return err
 	}
+	if !hasAccess {
+		return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
+	}
+
+	kubeConfigFile := config.GetKubeConfigFile()
+	clusterContext := okteto.GetClusterContext()
 
 	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterContext, true); err != nil {
 		return err
@@ -127,15 +129,16 @@ func askOktetoURL() (string, error) {
 	return oktetoURL, nil
 }
 
-func isNamespaceAvailable(ctx context.Context, namespace string) error {
-	client, _, err := k8Client.GetLocal()
+func hasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
+	nList, err := okteto.ListNamespaces(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	_, err = namespaces.Get(ctx, namespace, client)
-	if err != nil {
-		return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
+	for i := range nList {
+		if nList[i].ID == namespace {
+			return true, nil
+		}
 	}
-	return nil
+	return false, nil
 }
