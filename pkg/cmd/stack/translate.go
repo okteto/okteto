@@ -216,7 +216,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.PersistentVolumeClaim {
 	svc := s.Services[name]
 	result := make([]apiv1.PersistentVolumeClaim, 0)
-	for idx, volume := range svc.Volumes {
+	for _, volume := range svc.Volumes {
 		if volume.LocalPath == "" {
 			continue
 		}
@@ -225,23 +225,27 @@ func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.Persis
 		for key, value := range volumeSpec.Labels {
 			labels[key] = value
 		}
+		annotations := translateAnnotations(svc)
+		for key, value := range volumeSpec.Annotations {
+			annotations[key] = value
+		}
 
-		pvcName := getVolumeClaimName(name, &volume, idx)
+		pvcName := getVolumeClaimName(&volume)
 		pvc := apiv1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        pvcName,
 				Namespace:   s.Namespace,
 				Labels:      labels,
-				Annotations: translateAnnotations(svc),
+				Annotations: annotations,
 			},
 			Spec: apiv1.PersistentVolumeClaimSpec{
 				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 				Resources: apiv1.ResourceRequirements{
 					Requests: apiv1.ResourceList{
-						"storage": svc.Resources.Requests.Storage.Size.Value,
+						"storage": volumeSpec.Storage.Size.Value,
 					},
 				},
-				StorageClassName: translateStorageClass(svc),
+				StorageClassName: translateStorageClass(volumeSpec.Storage.Class),
 			},
 		}
 		result = append(result, pvc)
@@ -252,7 +256,8 @@ func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.Persis
 
 func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[name]
-	initContainerName := getVolumeClaimName(name, &svc.Volumes[0], 0)
+
+	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -276,15 +281,10 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers: []apiv1.Container{
 						{
-							Name:    fmt.Sprintf("init-%s", name),
-							Image:   "busybox",
-							Command: []string{"chmod", "-R", "777", "/data"},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									MountPath: "/data",
-									Name:      initContainerName,
-								},
-							},
+							Name:         fmt.Sprintf("init-%s", name),
+							Image:        "busybox",
+							Command:      initContainerCommand,
+							VolumeMounts: initContainerVolumeMounts,
 						},
 					},
 					Containers: []apiv1.Container{
@@ -309,6 +309,37 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 	}
 }
 
+func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv1.VolumeMount) {
+	volumeMounts := make([]apiv1.VolumeMount, 0)
+	base := "chmod -R 777"
+	var command string
+	var addedVolumesVolume, addedDataVolume bool
+	for _, volume := range svc.Volumes {
+		volumeName := getVolumeClaimName(&volume)
+		if volumeName != pvcName {
+			volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/volumes"})
+			if command == "" {
+				command = fmt.Sprintf("%s /volumes", base)
+				addedVolumesVolume = true
+			} else if !addedVolumesVolume {
+				command += fmt.Sprintf(" && %s /volumes", base)
+			}
+
+		} else {
+			if !addedDataVolume {
+				volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
+				if command == "" {
+					command = fmt.Sprintf("%s /data", base)
+					addedDataVolume = true
+				} else if !addedDataVolume {
+					command += fmt.Sprintf(" && %s /data", base)
+				}
+			}
+		}
+	}
+	return []string{"sh", "-c", command}, volumeMounts
+}
+
 func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.PersistentVolumeClaim {
 	svc := s.Services[svcName]
 	for _, volume := range svc.Volumes {
@@ -327,7 +358,7 @@ func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.Persi
 								"storage": svc.Resources.Requests.Storage.Size.Value,
 							},
 						},
-						StorageClassName: translateStorageClass(svc),
+						StorageClassName: translateStorageClass(svc.Resources.Requests.Storage.Class),
 					},
 				},
 			}
@@ -338,8 +369,8 @@ func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.Persi
 
 func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
 	volumes := make([]apiv1.Volume, 0)
-	for idx, volume := range svc.Volumes {
-		name := getVolumeClaimName(svcName, &volume, idx)
+	for _, volume := range svc.Volumes {
+		name := getVolumeClaimName(&volume)
 		volumes = append(volumes, apiv1.Volume{
 			Name: name,
 			VolumeSource: apiv1.VolumeSource{
@@ -470,20 +501,24 @@ func translateServiceType(svc model.Service) apiv1.ServiceType {
 func translateVolumeMounts(svcName string, svc *model.Service) []apiv1.VolumeMount {
 	result := []apiv1.VolumeMount{}
 	for i, v := range svc.Volumes {
-		name := getVolumeClaimName(svcName, &v, i)
+		name := getVolumeClaimName(&v)
+		subpath := fmt.Sprintf("data-%d", i)
+		if v.LocalPath != "" {
+			subpath = v.LocalPath
+		}
 		result = append(
 			result,
 			apiv1.VolumeMount{
 				MountPath: v.RemotePath,
 				Name:      name,
-				SubPath:   fmt.Sprintf("data-%d", i),
+				SubPath:   subpath,
 			},
 		)
 	}
 	return result
 }
 
-func getVolumeClaimName(svcName string, v *model.StackVolume, i int) string {
+func getVolumeClaimName(v *model.StackVolume) string {
 	var name string
 	if v.LocalPath != "" {
 		name = v.LocalPath
@@ -507,9 +542,9 @@ func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
 	return result
 }
 
-func translateStorageClass(svc *model.Service) *string {
-	if svc.Resources.Requests.Storage.Class != "" {
-		return &svc.Resources.Requests.Storage.Class
+func translateStorageClass(className string) *string {
+	if className != "" {
+		return &className
 	}
 	return nil
 }

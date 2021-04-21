@@ -75,8 +75,10 @@ type StackVolume struct {
 }
 
 type VolumeSpec struct {
-	Name   string            `yaml:"name,omitempty"`
-	Labels map[string]string `yaml:"labels,omitempty"`
+	Name        string            `yaml:"name,omitempty"`
+	Labels      map[string]string `yaml:"labels,omitempty"`
+	Annotations map[string]string `yaml:"annotations,omitempty"`
+	Storage     StorageResource   `json:"storage,omitempty" yaml:"storage,omitempty"`
 }
 type Envs struct {
 	List []EnvVar

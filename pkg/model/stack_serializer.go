@@ -167,8 +167,10 @@ type DeployComposeResources struct {
 }
 
 type VolumeTopLevel struct {
-	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Name   string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Storage     StorageResource   `json:"storage,omitempty" yaml:"storage,omitempty"`
 
 	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
 	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
@@ -197,6 +199,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if v == nil {
 			result.Name = sanitizeName(volumeName)
 			result.Labels = make(map[string]string)
+			result.Annotations = make(map[string]string)
 		} else {
 			if v.Name == "" {
 				result.Name = sanitizeName(volumeName)
@@ -204,13 +207,16 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			if v.Labels == nil {
 				result.Labels = make(map[string]string)
 			}
+			if v.Annotations == nil {
+				result.Annotations = make(map[string]string)
+			}
 		}
 		volumes[volumeName] = &result
 	}
 
 	s.Volumes = make(map[string]*VolumeSpec)
 	for volumeName, volume := range volumes {
-		s.Volumes[volumeName] = volume
+		s.Volumes[sanitizeName(volumeName)] = volume
 	}
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
