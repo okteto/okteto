@@ -1,15 +1,10 @@
-name: Lint Code Base
+name: Superlinter
 
-on:
-  push:
-    branches-ignore: [master]
-    # Remove the line above to run when pushing to master
-  pull_request:
-    branches: [master]
+on: [pull_request]
 
 jobs:
-  build:
-    name: Lint Code Base
+  superlinter:
+    name: superlinter
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

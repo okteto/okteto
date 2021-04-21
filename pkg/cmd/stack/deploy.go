@@ -49,6 +49,10 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		return err
 	}
 
+	if err := translate(ctx, s, forceBuild, noCache); err != nil {
+		return err
+	}
+
 	cfg := translateConfigMap(s)
 	output := fmt.Sprintf("Deploying stack '%s'...", s.Name)
 	cfg.Data[statusField] = progressingStatus
@@ -57,7 +61,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		return err
 	}
 
-	err = deploy(ctx, s, forceBuild, wait, noCache, c)
+	err = deploy(ctx, s, wait, c)
 	if err != nil {
 		output = fmt.Sprintf("%s\nStack '%s' deployment failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
@@ -75,12 +79,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 	return err
 }
 
-func deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool, c *kubernetes.Clientset) error {
-
-	if err := translate(ctx, s, forceBuild, noCache); err != nil {
-		return err
-	}
-
+func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Clientset) error {
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()

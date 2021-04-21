@@ -25,7 +25,7 @@ case "$OS" in
             URL=${latestURL}/okteto-Darwin-arm64
             ;;
         *)
-            printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' $ARCH
+            printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' "$ARCH"
             exit 1
             ;;
       esac
@@ -45,13 +45,13 @@ case "$OS" in
             URL=${latestURL}/okteto-Linux-arm64
             ;;
         *)
-            printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' $ARCH
+            printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' "$ARCH"
             exit 1
             ;;
       esac
       ;;
     *)
-      printf '\033[31m> The OS (%s) is not supported by this installation script.\n\033[0m' $OS
+      printf '\033[31m> The OS (%s) is not supported by this installation script.\n\033[0m' "$OS"
       exit 1
       ;;
 esac

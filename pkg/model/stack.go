@@ -36,7 +36,7 @@ var (
 type Stack struct {
 	Manifest  []byte                 `yaml:"-"`
 	Warnings  []string               `yaml:"-"`
-	isCompose bool                   `yaml:"-"`
+	IsCompose bool                   `yaml:"-"`
 	Name      string                 `yaml:"name"`
 	Volumes   map[string]*VolumeSpec `yaml:"volumes,omitempty"`
 	Namespace string                 `yaml:"namespace,omitempty"`
@@ -175,7 +175,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	s := &Stack{
 		Manifest:  bytes,
-		isCompose: isCompose,
+		IsCompose: isCompose,
 	}
 
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
