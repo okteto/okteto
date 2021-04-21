@@ -221,10 +221,7 @@ func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.Persis
 			continue
 		}
 		volumeSpec := s.Volumes[volume.LocalPath]
-		labels := translateLabels(name, s)
-		for key, value := range volumeSpec.Labels {
-			labels[key] = value
-		}
+		labels := translateVolumeLabels(name, s)
 		annotations := translateAnnotations(svc)
 		for key, value := range volumeSpec.Annotations {
 			annotations[key] = value
@@ -459,6 +456,18 @@ func translateIngressLabels(endpointName string, s *model.Stack) map[string]stri
 	}
 	for k := range endpoint.Labels {
 		labels[k] = endpoint.Labels[k]
+	}
+	return labels
+}
+
+func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string {
+	volume := s.Volumes[volumeName]
+	labels := map[string]string{
+		okLabels.StackNameLabel:       s.Name,
+		okLabels.StackVolumeNameLabel: volumeName,
+	}
+	for k := range volume.Labels {
+		labels[k] = volume.Labels[k]
 	}
 	return labels
 }
