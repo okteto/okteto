@@ -117,7 +117,7 @@ var (
 type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
 	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
-	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
@@ -267,6 +267,9 @@ type Probes struct {
 
 // ResourceList is a set of (resource name, quantity) pairs.
 type ResourceList map[apiv1.ResourceName]resource.Quantity
+
+// Labels is a set of (key, value) pairs.
+type Labels map[string]string
 
 //Get returns a Dev object from a given file
 func Get(devPath string) (*Dev, error) {

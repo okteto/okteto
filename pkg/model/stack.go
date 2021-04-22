@@ -55,7 +55,7 @@ type Service struct {
 	Environment     []EnvVar          `yaml:"environment,omitempty"`
 	Expose          []int32           `yaml:"expose,omitempty"`
 	Image           string            `yaml:"image,omitempty"`
-	Labels          map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels          Labels            `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Ports           []Port            `yaml:"ports,omitempty"`
 	StopGracePeriod int64             `yaml:"stop_grace_period,omitempty"`
@@ -107,7 +107,7 @@ type Port struct {
 
 //Endpoints represents an okteto stack ingress
 type Endpoint struct {
-	Labels      map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels      Labels            `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Rules       []EndpointRule    `yaml:"rules,omitempty"`
 }

@@ -552,6 +552,8 @@ func (endpoint *Endpoint) UnmarshalYAML(unmarshal func(interface{}) error) error
 	err := unmarshal(&rules)
 	if err == nil {
 		endpoint.Rules = rules
+		endpoint.Annotations = make(map[string]string)
+		endpoint.Labels = make(Labels)
 		return nil
 	}
 	type endpointType Endpoint // prevent recursion
@@ -564,4 +566,43 @@ func (endpoint *Endpoint) UnmarshalYAML(unmarshal func(interface{}) error) error
 	endpoint.Rules = endpointRaw.Rules
 	endpoint.Labels = endpointRaw.Labels
 	return nil
+}
+
+func (l *Labels) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	labels := make(Labels)
+	result, err := getKeyValue(unmarshal)
+	if err != nil {
+		return err
+	}
+	for key, value := range result {
+		labels[key] = value
+	}
+	*l = labels
+	return nil
+}
+
+func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
+	result := make(map[string]string)
+
+	var rawList []EnvVar
+	err := unmarshal(&rawList)
+	if err == nil {
+		for _, label := range rawList {
+			result[label.Name] = label.Value
+		}
+		return result, nil
+	}
+	var rawMap map[string]string
+	err = unmarshal(&rawMap)
+	if err != nil {
+		return nil, err
+	}
+	for key, value := range rawMap {
+		value, err = ExpandEnv(value)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = value
+	}
+	return result, nil
 }

@@ -33,6 +33,8 @@ command: ["uwsgi"]
 annotations:
   key1: value1
   key2: value2
+labels:
+  key3: value3
 resources:
   requests:
     memory: "64Mi"
@@ -326,27 +328,27 @@ services:
 func Test_loadLabels(t *testing.T) {
 	tests := []struct {
 		name   string
-		labels map[string]string
+		labels Labels
 		value  string
-		want   map[string]string
+		want   Labels
 	}{
 		{
 			name:   "no-var",
-			labels: map[string]string{"a": "1", "b": "2"},
+			labels: Labels{"a": "1", "b": "2"},
 			value:  "3",
-			want:   map[string]string{"a": "1", "b": "2"},
+			want:   Labels{"a": "1", "b": "2"},
 		},
 		{
 			name:   "var",
-			labels: map[string]string{"a": "1", "b": "${value}"},
+			labels: Labels{"a": "1", "b": "${value}"},
 			value:  "3",
-			want:   map[string]string{"a": "1", "b": "3"},
+			want:   Labels{"a": "1", "b": "3"},
 		},
 		{
 			name:   "missing",
-			labels: map[string]string{"a": "1", "b": "${valueX}"},
+			labels: Labels{"a": "1", "b": "${valueX}"},
 			value:  "1",
-			want:   map[string]string{"a": "1", "b": ""},
+			want:   Labels{"a": "1", "b": ""},
 		},
 	}
 

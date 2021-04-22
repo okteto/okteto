@@ -55,7 +55,7 @@ type ServiceRaw struct {
 	Environment              *RawMessage        `yaml:"environment,omitempty"`
 	Expose                   *RawMessage        `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
-	Labels                   *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations              map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Ports                    []PortRaw          `yaml:"ports,omitempty"`
 	Scale                    int32              `yaml:"scale"`
@@ -266,10 +266,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 		return nil, err
 	}
 
-	s.Labels, err = unmarshalLabels(serviceRaw.Labels)
-	if err != nil {
-		return nil, err
-	}
+	s.Labels = serviceRaw.Labels
 
 	s.Annotations = serviceRaw.Annotations
 	for key, annotation := range serviceRaw.Annotations {
@@ -485,36 +482,6 @@ func unmarshalEnvs(raw *RawMessage) ([]EnvVar, error) {
 	}
 
 	return envList, err
-}
-
-func unmarshalLabels(raw *RawMessage) (map[string]string, error) {
-	envMap := make(map[string]string)
-	if raw == nil {
-		return envMap, nil
-	}
-	err := raw.unmarshal(&envMap)
-	if err == nil {
-		return envMap, nil
-	}
-	var envList []string
-	err = raw.unmarshal(&envList)
-	if err == nil {
-		for _, env := range envList {
-			if strings.Contains(env, "=") {
-				splittedEnv := strings.Split(env, "=")
-				if len(splittedEnv) == 2 {
-					envMap[splittedEnv[0]] = splittedEnv[1]
-				} else {
-					return envMap, fmt.Errorf("Environment variable malformed: %s.", env)
-				}
-			} else {
-				envMap[env] = ""
-			}
-		}
-		return envMap, nil
-	}
-
-	return envMap, err
 }
 
 func unmarshalDuration(raw *RawMessage) (int64, error) {
