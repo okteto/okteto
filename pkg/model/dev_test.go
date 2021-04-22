@@ -357,9 +357,10 @@ func Test_loadLabels(t *testing.T) {
 			dev := &Dev{Labels: tt.labels}
 			os.Setenv("value", tt.value)
 			dev.loadLabels()
-
-			if !reflect.DeepEqual(tt.want, dev.Labels) {
-				t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
+			for key, value := range dev.Labels {
+				if tt.want[key] != value {
+					t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
+				}
 			}
 		})
 	}
