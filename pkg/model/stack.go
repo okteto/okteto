@@ -52,7 +52,7 @@ type Service struct {
 	Command    Command            `yaml:"command,omitempty"`
 	EnvFiles   []string           `yaml:"env_file,omitempty"`
 
-	Environment     []EnvVar      `yaml:"environment,omitempty"`
+	Environment     Environments  `yaml:"environment,omitempty"`
 	Expose          []int32       `yaml:"expose,omitempty"`
 	Image           string        `yaml:"image,omitempty"`
 	Labels          Labels        `json:"labels,omitempty" yaml:"labels,omitempty"`
@@ -73,7 +73,7 @@ type StackVolume struct {
 }
 
 type Envs struct {
-	List []EnvVar
+	List Environments
 }
 
 //StackResources represents an okteto stack resources
