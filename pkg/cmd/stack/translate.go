@@ -314,12 +314,14 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 	for _, volume := range svc.Volumes {
 		volumeName := getVolumeClaimName(&volume)
 		if volumeName != pvcName {
-			volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/volumes"})
-			if command == "" {
-				command = fmt.Sprintf("%s /volumes", base)
-				addedVolumesVolume = true
-			} else if !addedVolumesVolume {
-				command += fmt.Sprintf(" && %s /volumes", base)
+			volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: fmt.Sprintf("/volumes/%s", volumeName)})
+			if !addedVolumesVolume {
+				if command == "" {
+					command = fmt.Sprintf("%s /volumes", base)
+					addedVolumesVolume = true
+				} else {
+					command += fmt.Sprintf(" && %s /volumes", base)
+				}
 			}
 
 		} else {
@@ -328,7 +330,7 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 				if command == "" {
 					command = fmt.Sprintf("%s /data", base)
 					addedDataVolume = true
-				} else if !addedDataVolume {
+				} else {
 					command += fmt.Sprintf(" && %s /data", base)
 				}
 			}
