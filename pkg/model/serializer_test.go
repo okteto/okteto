@@ -501,7 +501,7 @@ func TestEndpointUnmarshalling(t *testing.T) {
 					Port:    8080,
 				}},
 				Labels:      Labels{},
-				Annotations: make(map[string]string),
+				Annotations: make(Annotations),
 			},
 		},
 		{
@@ -509,7 +509,7 @@ func TestEndpointUnmarshalling(t *testing.T) {
 			data: []byte("labels:\n  key1: value1\nannotations:\n  key2: value2\nrules:\n- path: /\n  service: test\n  port: 8080"),
 			expected: Endpoint{
 				Labels:      Labels{"key1": "value1"},
-				Annotations: map[string]string{"key2": "value2"},
+				Annotations: Annotations{"key2": "value2"},
 				Rules: []EndpointRule{{
 					Path:    "/",
 					Service: "test",
@@ -627,6 +627,111 @@ func TestLabelsUnmashalling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(Labels)
+			if err := os.Setenv("DEV_ENV", "test_environment"); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := os.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true"); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestAnnotationsUnmashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected Annotations
+	}{
+		{
+			"key-value-list",
+			[]byte(`- env=production`),
+			Annotations{"env": "production"},
+		},
+		{
+			"key-value-map",
+			[]byte(`env: production`),
+			Annotations{"env": "production"},
+		},
+		{
+			"key-value-complex-list",
+			[]byte(`- env='production=11231231asa#$˜GADAFA'`),
+			Annotations{"env": "'production=11231231asa#$˜GADAFA'"},
+		},
+		{
+			"key-value-with-env-var-list",
+			[]byte(`- env=$DEV_ENV`),
+			Annotations{"env": "test_environment"},
+		},
+		{
+			"key-value-with-env-var-map",
+			[]byte(`env: $DEV_ENV`),
+			Annotations{"env": "test_environment"},
+		},
+		{
+			"key-value-with-env-var-in-string-list",
+			[]byte(`- env=my_env;$DEV_ENV;prod`),
+			Annotations{"env": "my_env;test_environment;prod"},
+		},
+		{
+			"key-value-with-env-var-in-string-map",
+			[]byte(`env: my_env;$DEV_ENV;prod`),
+			Annotations{"env": "my_env;test_environment;prod"},
+		},
+		{
+			"simple-key-list",
+			[]byte(`- noenv`),
+			Annotations{"noenv": ""},
+		},
+		{
+			"key-with-no-value-list",
+			[]byte(`- noenv=`),
+			Annotations{"noenv": ""},
+		},
+		{
+			"key-with-no-value-map",
+			[]byte(`noenv:`),
+			Annotations{"noenv": ""},
+		},
+		{
+			"key-with-env-var-not-defined-list",
+			[]byte(`- noenv=$UNDEFINED`),
+			Annotations{"noenv": ""},
+		},
+		{
+			"key-with-env-var-not-defined-map",
+			[]byte(`noenv: $UNDEFINED`),
+			Annotations{"noenv": ""},
+		},
+		{
+			"just-env-var-list",
+			[]byte(`- $DEV_ENV`),
+			Annotations{"test_environment": ""},
+		},
+		{
+			"just-env-var-undefined-list",
+			[]byte(`- $UNDEFINED`),
+			Annotations{"": ""},
+		},
+		{
+			"local_env_expanded-list",
+			[]byte(`- OKTETO_TEST_ENV_MARSHALLING`),
+			Annotations{"OKTETO_TEST_ENV_MARSHALLING": "true"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := make(Annotations)
 			if err := os.Setenv("DEV_ENV", "test_environment"); err != nil {
 				t.Fatal(err)
 			}

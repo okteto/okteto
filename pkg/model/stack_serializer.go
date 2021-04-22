@@ -56,7 +56,7 @@ type ServiceRaw struct {
 	Expose                   *RawMessage        `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
 	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations              map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Annotations              Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Ports                    []PortRaw          `yaml:"ports,omitempty"`
 	Scale                    int32              `yaml:"scale"`
 	StopGracePeriodSneakCase *RawMessage        `yaml:"stop_grace_period,omitempty"`
@@ -269,11 +269,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Servic
 	s.Labels = serviceRaw.Labels
 
 	s.Annotations = serviceRaw.Annotations
-	for key, annotation := range serviceRaw.Annotations {
-		if _, ok := s.Annotations[key]; !ok {
-			s.Annotations[key] = annotation
-		}
-	}
 
 	s.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
 	if err != nil {

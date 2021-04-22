@@ -91,7 +91,7 @@ func Test_getPreviousDeploymentReplicas(t *testing.T) {
 			name: "sleeping-state-ok",
 			d: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
+					Annotations: model.Annotations{
 						okLabels.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
 					},
 				},
@@ -105,7 +105,7 @@ func Test_getPreviousDeploymentReplicas(t *testing.T) {
 			name: "sleeping-state-ko",
 			d: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
+					Annotations: model.Annotations{
 						okLabels.StateBeforeSleepingAnnontation: "wrong",
 					},
 				},

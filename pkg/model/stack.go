@@ -52,15 +52,15 @@ type Service struct {
 	Command    Command            `yaml:"command,omitempty"`
 	EnvFiles   []string           `yaml:"env_file,omitempty"`
 
-	Environment     []EnvVar          `yaml:"environment,omitempty"`
-	Expose          []int32           `yaml:"expose,omitempty"`
-	Image           string            `yaml:"image,omitempty"`
-	Labels          Labels            `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Ports           []Port            `yaml:"ports,omitempty"`
-	StopGracePeriod int64             `yaml:"stop_grace_period,omitempty"`
-	Volumes         []StackVolume     `yaml:"volumes,omitempty"`
-	WorkingDir      string            `yaml:"working_dir,omitempty"`
+	Environment     []EnvVar      `yaml:"environment,omitempty"`
+	Expose          []int32       `yaml:"expose,omitempty"`
+	Image           string        `yaml:"image,omitempty"`
+	Labels          Labels        `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     Annotations   `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Ports           []Port        `yaml:"ports,omitempty"`
+	StopGracePeriod int64         `yaml:"stop_grace_period,omitempty"`
+	Volumes         []StackVolume `yaml:"volumes,omitempty"`
+	WorkingDir      string        `yaml:"working_dir,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
@@ -107,9 +107,9 @@ type Port struct {
 
 //Endpoints represents an okteto stack ingress
 type Endpoint struct {
-	Labels      Labels            `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Rules       []EndpointRule    `yaml:"rules,omitempty"`
+	Labels      Labels         `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations Annotations    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Rules       []EndpointRule `yaml:"rules,omitempty"`
 }
 
 // EndpointRule represents an okteto ingress rule
@@ -319,7 +319,7 @@ func (s *Stack) GetConfigMapName() string {
 //SetLastBuiltAnnotation sets the dev timestamp
 func (svc *Service) SetLastBuiltAnnotation() {
 	if svc.Annotations == nil {
-		svc.Annotations = map[string]string{}
+		svc.Annotations = Annotations{}
 	}
 	svc.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }

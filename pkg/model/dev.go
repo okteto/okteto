@@ -118,7 +118,7 @@ type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
 	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
@@ -270,6 +270,9 @@ type ResourceList map[apiv1.ResourceName]resource.Quantity
 
 // Labels is a set of (key, value) pairs.
 type Labels map[string]string
+
+// Labels is a set of (key, value) pairs.
+type Annotations map[string]string
 
 //Get returns a Dev object from a given file
 func Get(devPath string) (*Dev, error) {
@@ -494,7 +497,7 @@ func (dev *Dev) setDefaults() error {
 		dev.Labels = map[string]string{}
 	}
 	if dev.Annotations == nil {
-		dev.Annotations = map[string]string{}
+		dev.Annotations = Annotations{}
 	}
 	if dev.Healthchecks {
 		log.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future release. Please use the field 'probes' instead.")
@@ -534,7 +537,7 @@ func (dev *Dev) setDefaults() error {
 			s.Labels = map[string]string{}
 		}
 		if s.Annotations == nil {
-			s.Annotations = map[string]string{}
+			s.Annotations = Annotations{}
 		}
 		if s.Name != "" && len(s.Labels) > 0 {
 			return fmt.Errorf("'name' and 'labels' cannot be defined at the same time for service '%s'", s.Name)
@@ -749,7 +752,7 @@ func SerializeBuildArgs(buildArgs []EnvVar) []string {
 //SetLastBuiltAnnotation sets the dev timestacmp
 func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Annotations == nil {
-		dev.Annotations = map[string]string{}
+		dev.Annotations = Annotations{}
 	}
 	dev.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }
@@ -923,7 +926,7 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
-			Annotations: map[string]string{
+			Annotations: Annotations{
 				OktetoAutoCreateAnnotation: OktetoUpCmd,
 			},
 		},

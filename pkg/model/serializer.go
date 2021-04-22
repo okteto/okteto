@@ -581,6 +581,19 @@ func (l *Labels) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	annotations := make(Annotations)
+	result, err := getKeyValue(unmarshal)
+	if err != nil {
+		return err
+	}
+	for key, value := range result {
+		annotations[key] = value
+	}
+	*a = annotations
+	return nil
+}
+
 func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 	result := make(map[string]string)
 
