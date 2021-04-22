@@ -308,7 +308,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 
 func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv1.VolumeMount) {
 	volumeMounts := make([]apiv1.VolumeMount, 0)
-	base := "chmod -R 777"
+
 	var command string
 	var addedVolumesVolume, addedDataVolume bool
 	for _, volume := range svc.Volumes {
@@ -317,10 +317,10 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 			volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: fmt.Sprintf("/volumes/%s", volumeName)})
 			if !addedVolumesVolume {
 				if command == "" {
-					command = fmt.Sprintf("%s /volumes", base)
+					command = "chmod 777 /volumes/"
 					addedVolumesVolume = true
 				} else {
-					command += fmt.Sprintf(" && %s /volumes", base)
+					command += " && chmod 777 /volumes/"
 				}
 			}
 
@@ -328,10 +328,10 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 			if !addedDataVolume {
 				volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
 				if command == "" {
-					command = fmt.Sprintf("%s /data", base)
+					command = "chmod -R 777 /data"
 					addedDataVolume = true
 				} else {
-					command += fmt.Sprintf(" && %s /data", base)
+					command += " && chmod -R 777 /data"
 				}
 			}
 		}
