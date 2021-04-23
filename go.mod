@@ -27,6 +27,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-getter v1.5.0
 	github.com/heroku/docker-registry-client v0.0.0-20190909225348-afc9e1acc3d5
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/machinebox/graphql v0.2.2
 	github.com/manifoldco/promptui v0.3.2
 	github.com/matryer/is v1.2.0 // indirect

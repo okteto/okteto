@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -95,10 +96,9 @@ func (e *Entrypoint) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		if strings.Contains(single, " ") {
-			e.Values = []string{"sh", "-c", single}
-		} else {
-			e.Values = []string{single}
+		e.Values, err = shellquote.Split(single)
+		if err != nil {
+			return err
 		}
 	} else {
 		e.Values = multi
@@ -124,10 +124,9 @@ func (c *Command) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		if strings.Contains(single, " ") {
-			c.Values = []string{"sh", "-c", single}
-		} else {
-			c.Values = []string{single}
+		c.Values, err = shellquote.Split(single)
+		if err != nil {
+			return err
 		}
 	} else {
 		c.Values = multi
@@ -153,7 +152,10 @@ func (a *Args) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		a.Values = []string{single}
+		a.Values, err = shellquote.Split(single)
+		if err != nil {
+			return err
+		}
 	} else {
 		a.Values = multi
 	}

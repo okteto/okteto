@@ -74,11 +74,11 @@ services:
 	if s.Services["vote"].Build.Context != "vote" {
 		t.Errorf("'vote.build' was not parsed: %+v", s.Services["vote"].Build)
 	}
-	if len(s.Services["vote"].Entrypoint.Values) != 3 {
-		t.Errorf("'vote.entrypoint' was not parsed: %+v", s)
+	if len(s.Services["vote"].Entrypoint.Values) != 2 {
+		t.Errorf("'vote.entrypoint' was not parsed: %+v", s.Services["vote"].Entrypoint.Values)
 	}
-	if s.Services["vote"].Entrypoint.Values[0] != "sh" || s.Services["vote"].Entrypoint.Values[1] != "-c" || s.Services["vote"].Entrypoint.Values[2] != "python app.py" {
-		t.Errorf("'vote.entrypoint' was not parsed: %+v", s)
+	if s.Services["vote"].Entrypoint.Values[0] != "python" && s.Services["vote"].Entrypoint.Values[0] != "app.py" {
+		t.Errorf("'vote.entrypoint' was not parsed: %+v", s.Services["vote"].Entrypoint.Values)
 	}
 	if s.Services["vote"].Replicas != 2 {
 		t.Errorf("'vote.deploy.replicas' was not parsed: %+v", s)
@@ -211,11 +211,11 @@ services:
 	if s.Services["vote"].Build.Context != "vote" {
 		t.Errorf("'vote.build' was not parsed: %+v", s.Services["vote"].Build)
 	}
-	if len(s.Services["vote"].Entrypoint.Values) != 3 {
-		t.Errorf("'vote.entrypoint' was not parsed: %+v", s)
+	if len(s.Services["vote"].Entrypoint.Values) != 2 {
+		t.Errorf("'vote.entrypoint' was not parsed: %+v", s.Services["vote"].Entrypoint.Values)
 	}
-	if s.Services["vote"].Entrypoint.Values[0] != "sh" || s.Services["vote"].Entrypoint.Values[1] != "-c" || s.Services["vote"].Entrypoint.Values[2] != "python app.py" {
-		t.Errorf("'vote.entrypoint' was not parsed: %+v", s)
+	if s.Services["vote"].Entrypoint.Values[0] != "python" && s.Services["vote"].Entrypoint.Values[0] != "app.py" {
+		t.Errorf("'vote.entrypoint' was not parsed: %+v", s.Services["vote"].Entrypoint.Values)
 	}
 	if s.Services["vote"].Replicas != 2 {
 		t.Errorf("'vote.deploy.replicas' was not parsed: %+v", s)

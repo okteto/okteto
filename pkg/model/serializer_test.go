@@ -184,7 +184,7 @@ func TestCommandUnmashalling(t *testing.T) {
 		{
 			"single-space",
 			[]byte("start.sh arg"),
-			Command{Values: []string{"sh", "-c", "start.sh arg"}},
+			Command{Values: []string{"start.sh", "arg"}},
 		},
 		{
 			"multiple",
