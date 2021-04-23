@@ -290,7 +290,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
 	annotations := translateAnnotations(svc)
-	if s.Services[svcName].Public {
+	if s.Services[svcName].Public && annotations[okLabels.OktetoAutoIngressAnnotation] == "" {
 		annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
 	}
 	return &apiv1.Service{
