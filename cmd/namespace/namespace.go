@@ -84,6 +84,14 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		namespace = cred.Namespace
 	}
 
+	hasAccess, err := hasAccessToNamespace(ctx, namespace)
+	if err != nil {
+		return err
+	}
+	if !hasAccess {
+		return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
+	}
+
 	kubeConfigFile := config.GetKubeConfigFile()
 	clusterContext := okteto.GetClusterContext()
 
@@ -119,4 +127,18 @@ func askOktetoURL() (string, error) {
 	oktetoURL = u
 
 	return oktetoURL, nil
+}
+
+func hasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
+	nList, err := okteto.ListNamespaces(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	for i := range nList {
+		if nList[i].ID == namespace {
+			return true, nil
+		}
+	}
+	return false, nil
 }

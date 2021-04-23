@@ -499,6 +499,10 @@ func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 		if err != nil {
 			log.Infof("syncthing error in folder '%s' local=%t retry %d: %s", folder.RemotePath, local, folder.Retries, err.Error())
 		}
+		if err == errors.ErrInsufficientSpace {
+			return err
+		}
+
 		if folder.Retries <= max {
 			continue
 		}

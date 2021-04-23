@@ -1,7 +1,7 @@
 #!/bin/sh
 
 log(){
-  echo $(date +%Y-%m-%dT%H:%M:%S) "$1"
+  echo "$(date +%Y-%m-%dT%H:%M:%S)" "$1"
 }
 set -e
 
@@ -16,9 +16,9 @@ fi
 
 remote=""
 reset=""
-while getopts ":s:d:re" opt; do
+while getopts ":s:re" opt; do
   case $opt in
-    d)
+    e)
       reset="--reset"
       ;;
     r)

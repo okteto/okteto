@@ -96,7 +96,7 @@ const (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.2.25"
+	OktetoBinImageTag = "okteto/bin:1.2.26"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -849,13 +849,10 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			rule.Args = []string{}
 		}
 		if reset {
-			rule.Args = append(rule.Args, "-d")
+			rule.Args = append(rule.Args, "-e")
 		}
 		for _, s := range rule.Secrets {
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
-		}
-		if !main.PersistentVolumeEnabled() {
-			rule.Args = append(rule.Args, "-e")
 		}
 	} else if len(dev.Command.Values) > 0 {
 		rule.Command = dev.Command.Values

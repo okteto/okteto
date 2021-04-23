@@ -539,3 +539,38 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 		})
 	}
 }
+
+func Test_restartFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		isInList bool
+	}{
+		{
+			name:     "no-restart-field",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
+			isInList: false,
+		},
+		{
+			name:     "restart-field-always",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    image: okteto/vote:1\n    restart: always"),
+			isInList: false,
+		},
+		{
+			name:     "restart-field-not-always",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1\n    restart: never"),
+			isInList: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(s.Warnings) == 0 && tt.isInList {
+				t.Fatalf("Expected to see a warning but there is no warning")
+			}
+		})
+	}
+}

@@ -208,8 +208,11 @@ func TrackBuildTransientError(oktetoBuilkitURL string, success bool) {
 }
 
 // TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack
-func TrackDeployStack(success bool) {
-	track(deployStackEvent, success, nil)
+func TrackDeployStack(success, isCompose bool) {
+	props := map[string]interface{}{
+		"isCompose": isCompose,
+	}
+	track(deployStackEvent, success, props)
 }
 
 // TrackDestroyStack sends a tracking event to mixpanel when the user destroys a stack

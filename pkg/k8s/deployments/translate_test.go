@@ -525,7 +525,7 @@ persistentVolume:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-d", "-e"},
+							Args:            []string{"-r", "-e"},
 							WorkingDir:      "",
 							Env: []apiv1.EnvVar{
 								{
