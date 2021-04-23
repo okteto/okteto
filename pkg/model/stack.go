@@ -69,9 +69,8 @@ type Service struct {
 }
 
 type StackVolume struct {
-	LocalPath          string
-	RemotePath         string
-	isPersistentVolume bool
+	LocalPath  string
+	RemotePath string
 }
 
 type VolumeSpec struct {
@@ -160,7 +159,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 
 	for _, svc := range s.Services {
 		svc.extendPorts()
-		svc.IgnoreSyncVolumes()
+		svc.IgnoreSyncVolumes(s)
 		if svc.Build == nil {
 			continue
 		}
@@ -230,10 +229,10 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	return s, nil
 }
 
-func (svc *Service) IgnoreSyncVolumes() {
+func (svc *Service) IgnoreSyncVolumes(s *Stack) {
 	notIgnoredVolumes := make([]StackVolume, 0)
 	for _, volume := range svc.Volumes {
-		if volume.LocalPath == "" || volume.isPersistentVolume {
+		if volume.LocalPath == "" || isInVolumesTopLevelSection(volume.LocalPath, s) {
 			notIgnoredVolumes = append(notIgnoredVolumes, volume)
 		}
 	}
@@ -274,7 +273,7 @@ func (s *Stack) validate() error {
 		}
 
 		for _, v := range svc.Volumes {
-			if v.LocalPath != "" && !v.isPersistentVolume {
+			if v.LocalPath != "" && !isInVolumesTopLevelSection(v.LocalPath, s) {
 				log.Warning("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath)
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
@@ -386,4 +385,13 @@ func GroupWarningsBySvc(fields []string) []string {
 		result = append(result, fmt.Sprintf(f, names))
 	}
 	return result
+}
+
+func isInVolumesTopLevelSection(volumeName string, s *Stack) bool {
+	for _, volume := range s.Volumes {
+		if volume.Name == volumeName {
+			return true
+		}
+	}
+	return false
 }

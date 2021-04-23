@@ -329,8 +329,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	svc.Volumes = serviceRaw.Volumes
 	for idx, volume := range svc.Volumes {
-		if isInVolumesTopLevelSection(volume.LocalPath, stack.Volumes) {
-			volume.isPersistentVolume = true
+		if isInVolumesTopLevelSection(volume.LocalPath, stack) {
 			svc.Volumes[idx] = volume
 		} else if !strings.HasPrefix(volume.LocalPath, ".") && volume.LocalPath != "" {
 			return nil, fmt.Errorf("Named volume '%s' is used in service %s but no declaration was found in the volumes section.", volume.ToString(), svcName)
@@ -342,15 +341,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.WorkingDir = serviceRaw.WorkingDirSneakCase
 	}
 	return svc, nil
-}
-
-func isInVolumesTopLevelSection(volumeName string, declaredVolumes map[string]*VolumeSpec) bool {
-	for _, volume := range declaredVolumes {
-		if volume.Name == volumeName {
-			return true
-		}
-	}
-	return false
 }
 
 func (msg *RawMessage) UnmarshalYAML(unmarshal func(interface{}) error) error {
