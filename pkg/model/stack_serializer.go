@@ -197,6 +197,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	setWarnings(&stackRaw)
 	s.Warnings = stackRaw.Warnings
+	s.VolumeMountWarnings = make([]string, 0)
 	return nil
 }
 
