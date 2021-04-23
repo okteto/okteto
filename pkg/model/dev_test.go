@@ -214,8 +214,17 @@ forward:
 				t.Errorf("command was parsed: %+v", d)
 			}
 
-			if !reflect.DeepEqual(d.Environment, tt.expectedEnvironment) {
-				t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Environment, tt.expectedEnvironment)
+			for _, env := range d.Environment {
+				found := false
+				for _, expectedEnv := range tt.expectedEnvironment {
+					if env.Name == expectedEnv.Name && env.Value == expectedEnv.Value {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Environment, tt.expectedEnvironment)
+				}
 			}
 
 			if !reflect.DeepEqual(d.Forward, tt.expectedForward) {
