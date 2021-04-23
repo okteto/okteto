@@ -497,6 +497,19 @@ func Test_translateService(t *testing.T) {
 	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
 		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
 	}
+
+	svc = s.Services["svcName"]
+	svc.Public = true
+	svc.Annotations[okLabels.OktetoAutoIngressAnnotation] = "private"
+	s.Services["svcName"] = svc
+	result = translateService("svcName", s)
+	annotations[okLabels.OktetoAutoIngressAnnotation] = "private"
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	}
+	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
+		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
+	}
 }
 
 func Test_translateEndpoints(t *testing.T) {
