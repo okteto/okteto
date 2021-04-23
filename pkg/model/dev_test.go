@@ -154,7 +154,7 @@ func Test_LoadDevDefaults(t *testing.T) {
 	var tests = []struct {
 		name                string
 		manifest            []byte
-		expectedEnvironment Environments
+		expectedEnvironment Environment
 		expectedForward     []Forward
 	}{
 		{
@@ -162,7 +162,7 @@ func Test_LoadDevDefaults(t *testing.T) {
 			[]byte(`name: service
 container: core
 workdir: /app`),
-			Environments{},
+			Environment{},
 			[]Forward{},
 		},
 		{
@@ -170,7 +170,7 @@ workdir: /app`),
 			[]byte(`name: service
 container: core
 workdir: /app`),
-			Environments{},
+			Environment{},
 			[]Forward{},
 		},
 		{
@@ -181,7 +181,7 @@ workdir: /app
 environment:
   - ENV=production
   - name=test-node`),
-			Environments{
+			Environment{
 				{Name: "ENV", Value: "production"},
 				{Name: "name", Value: "test-node"},
 			},
@@ -195,7 +195,7 @@ workdir: /app
 forward:
   - 9000:8000
   - 9001:8001`),
-			Environments{},
+			Environment{},
 			[]Forward{
 				{Local: 9000, Remote: 8000, Service: false, ServiceName: ""},
 				{Local: 9001, Remote: 8001, Service: false, ServiceName: ""},

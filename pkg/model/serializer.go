@@ -26,12 +26,12 @@ import (
 
 // BuildInfoRaw represents the build info for serialization
 type buildInfoRaw struct {
-	Name       string       `yaml:"name,omitempty"`
-	Context    string       `yaml:"context,omitempty"`
-	Dockerfile string       `yaml:"dockerfile,omitempty"`
-	CacheFrom  []string     `yaml:"cache_from,omitempty"`
-	Target     string       `yaml:"target,omitempty"`
-	Args       Environments `yaml:"args,omitempty"`
+	Name       string      `yaml:"name,omitempty"`
+	Context    string      `yaml:"context,omitempty"`
+	Dockerfile string      `yaml:"dockerfile,omitempty"`
+	CacheFrom  []string    `yaml:"cache_from,omitempty"`
+	Target     string      `yaml:"target,omitempty"`
+	Args       Environment `yaml:"args,omitempty"`
 }
 
 type syncRaw struct {
@@ -594,8 +594,8 @@ func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (e *Environments) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	envs := make(Environments, 0)
+func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	envs := make(Environment, 0)
 	result, err := getKeyValue(unmarshal)
 	if err != nil {
 		return err

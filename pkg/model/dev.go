@@ -127,7 +127,7 @@ type Dev struct {
 	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment          Environments          `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
 	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
@@ -170,12 +170,12 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
-	Name       string       `yaml:"name,omitempty"`
-	Context    string       `yaml:"context,omitempty"`
-	Dockerfile string       `yaml:"dockerfile,omitempty"`
-	CacheFrom  []string     `yaml:"cache_from,omitempty"`
-	Target     string       `yaml:"target,omitempty"`
-	Args       Environments `yaml:"args,omitempty"`
+	Name       string      `yaml:"name,omitempty"`
+	Context    string      `yaml:"context,omitempty"`
+	Dockerfile string      `yaml:"dockerfile,omitempty"`
+	CacheFrom  []string    `yaml:"cache_from,omitempty"`
+	Target     string      `yaml:"target,omitempty"`
+	Args       Environment `yaml:"args,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -275,7 +275,7 @@ type Labels map[string]string
 type Annotations map[string]string
 
 // Environment is a list of environment variables (key, value pairs).
-type Environments []EnvVar
+type Environment []EnvVar
 
 //Get returns a Dev object from a given file
 func Get(devPath string) (*Dev, error) {
@@ -311,7 +311,7 @@ func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		Image:       &BuildInfo{},
 		Push:        &BuildInfo{},
-		Environment: make(Environments, 0),
+		Environment: make(Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
@@ -741,7 +741,7 @@ func (dev *Dev) Save(path string) error {
 }
 
 //SerializeBuildArgs returns build  aaargs as a llist of strings
-func SerializeBuildArgs(buildArgs Environments) []string {
+func SerializeBuildArgs(buildArgs Environment) []string {
 	result := []string{}
 	for _, e := range buildArgs {
 		result = append(

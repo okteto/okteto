@@ -63,7 +63,7 @@ services:
 		Command:           []string{"/var/okteto/bin/start.sh"},
 		Args:              []string{"-r"},
 		Probes:            &Probes{},
-		Environment: Environments{
+		Environment: Environment{
 			{
 				Name:  "OKTETO_NAMESPACE",
 				Value: "n",
@@ -131,7 +131,7 @@ services:
 		Args:            nil,
 		Healthchecks:    true,
 		Probes:          &Probes{Readiness: true, Liveness: true, Startup: true},
-		Environment:     make(Environments, 0),
+		Environment:     make(Environment, 0),
 		SecurityContext: &SecurityContext{
 			RunAsUser:  &rootUser,
 			RunAsGroup: &rootUser,
@@ -162,7 +162,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	tests := []struct {
 		name     string
 		manifest *Dev
-		expected Environments
+		expected Environment
 	}{
 		{
 			name: "default",
@@ -170,7 +170,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				Image:         &BuildInfo{},
 				SSHServerPort: oktetoDefaultSSHServerPort,
 			},
-			expected: Environments{
+			expected: Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 			},
@@ -181,7 +181,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				Image:         &BuildInfo{},
 				SSHServerPort: 22220,
 			},
-			expected: Environments{
+			expected: Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},
