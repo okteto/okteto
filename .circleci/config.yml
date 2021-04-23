@@ -85,6 +85,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: ./artifacts
+      - add_ssh_keys:
+          fingerprints:
+          - 4d:36:31:c0:22:69:fb:c0:d9:dd:d8:d9:56:cf:1f:90
       - deploy:
           name: "Update brew formula"
           command: |
@@ -179,6 +182,9 @@ jobs:
           command: |
             go get -u github.com/tcnksm/ghr
             ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
+      - add_ssh_keys:
+          fingerprints:
+          - 4d:36:31:c0:22:69:fb:c0:d9:dd:d8:d9:56:cf:1f:90    
       - deploy:
           name: "Update brew formula"
           command: |
@@ -186,7 +192,7 @@ jobs:
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
             ./update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
             pushd homebrew-cli
-            git push https://${GITHUB_TOKEN}@github.com/okteto/homebrew-okteto.git master
+            git push git@github.com:okteto/homebrew-cli.git master
   release-master:
     docker:
       - image: okteto/golang-ci:1.16
