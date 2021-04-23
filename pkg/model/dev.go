@@ -117,8 +117,8 @@ var (
 type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
 	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
-	Labels               map[string]string     `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations          map[string]string     `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
@@ -127,7 +127,7 @@ type Dev struct {
 	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment          []EnvVar              `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
 	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
@@ -170,12 +170,12 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
-	Name       string   `yaml:"name,omitempty"`
-	Context    string   `yaml:"context,omitempty"`
-	Dockerfile string   `yaml:"dockerfile,omitempty"`
-	CacheFrom  []string `yaml:"cache_from,omitempty"`
-	Target     string   `yaml:"target,omitempty"`
-	Args       []EnvVar `yaml:"args,omitempty"`
+	Name       string      `yaml:"name,omitempty"`
+	Context    string      `yaml:"context,omitempty"`
+	Dockerfile string      `yaml:"dockerfile,omitempty"`
+	CacheFrom  []string    `yaml:"cache_from,omitempty"`
+	Target     string      `yaml:"target,omitempty"`
+	Args       Environment `yaml:"args,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -268,6 +268,15 @@ type Probes struct {
 // ResourceList is a set of (resource name, quantity) pairs.
 type ResourceList map[apiv1.ResourceName]resource.Quantity
 
+// Labels is a set of (key, value) pairs.
+type Labels map[string]string
+
+// Annotations is a set of (key, value) pairs.
+type Annotations map[string]string
+
+// Environment is a list of environment variables (key, value pairs).
+type Environment []EnvVar
+
 //Get returns a Dev object from a given file
 func Get(devPath string) (*Dev, error) {
 	b, err := ioutil.ReadFile(devPath)
@@ -302,7 +311,7 @@ func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		Image:       &BuildInfo{},
 		Push:        &BuildInfo{},
-		Environment: make([]EnvVar, 0),
+		Environment: make(Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]Forward, 0),
 		Volumes:     make([]Volume, 0),
@@ -491,7 +500,7 @@ func (dev *Dev) setDefaults() error {
 		dev.Labels = map[string]string{}
 	}
 	if dev.Annotations == nil {
-		dev.Annotations = map[string]string{}
+		dev.Annotations = Annotations{}
 	}
 	if dev.Healthchecks {
 		log.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future release. Please use the field 'probes' instead.")
@@ -531,7 +540,7 @@ func (dev *Dev) setDefaults() error {
 			s.Labels = map[string]string{}
 		}
 		if s.Annotations == nil {
-			s.Annotations = map[string]string{}
+			s.Annotations = Annotations{}
 		}
 		if s.Name != "" && len(s.Labels) > 0 {
 			return fmt.Errorf("'name' and 'labels' cannot be defined at the same time for service '%s'", s.Name)
@@ -732,7 +741,7 @@ func (dev *Dev) Save(path string) error {
 }
 
 //SerializeBuildArgs returns build  aaargs as a llist of strings
-func SerializeBuildArgs(buildArgs []EnvVar) []string {
+func SerializeBuildArgs(buildArgs Environment) []string {
 	result := []string{}
 	for _, e := range buildArgs {
 		result = append(
@@ -746,7 +755,7 @@ func SerializeBuildArgs(buildArgs []EnvVar) []string {
 //SetLastBuiltAnnotation sets the dev timestacmp
 func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Annotations == nil {
-		dev.Annotations = map[string]string{}
+		dev.Annotations = Annotations{}
 	}
 	dev.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }
@@ -920,7 +929,7 @@ func (dev *Dev) GevSandbox() *appsv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
-			Annotations: map[string]string{
+			Annotations: Annotations{
 				OktetoAutoCreateAnnotation: OktetoUpCmd,
 			},
 		},

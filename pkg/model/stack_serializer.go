@@ -56,8 +56,8 @@ type ServiceRaw struct {
 	Environment              *RawMessage        `yaml:"environment,omitempty"`
 	Expose                   *RawMessage        `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
-	Labels                   *RawMessage        `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations              map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations              Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Ports                    []PortRaw          `yaml:"ports,omitempty"`
 	Scale                    int32              `yaml:"scale"`
 	StopGracePeriodSneakCase *RawMessage        `yaml:"stop_grace_period,omitempty"`
@@ -234,6 +234,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	setWarnings(&stackRaw)
 	s.Warnings = stackRaw.Warnings
+	s.VolumeMountWarnings = make([]string, 0)
 	return nil
 }
 
@@ -303,17 +304,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		return nil, err
 	}
 
-	svc.Labels, err = unmarshalLabels(serviceRaw.Labels)
-	if err != nil {
-		return nil, err
-	}
+	svc.Labels = serviceRaw.Labels
 
 	svc.Annotations = serviceRaw.Annotations
-	for key, annotation := range serviceRaw.Annotations {
-		if _, ok := svc.Annotations[key]; !ok {
-			svc.Annotations[key] = annotation
-		}
-	}
 
 	svc.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
 	if err != nil {
@@ -393,7 +386,9 @@ func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("Can not convert %s to a port.", hostString)
 		}
 		p.HostPort = int32(port)
-
+		if IsSkippablePort(p.HostPort) {
+			p.HostPort = 0
+		}
 	} else {
 		return fmt.Errorf(malformedPortForward, rawPort)
 	}
@@ -416,6 +411,18 @@ func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p.ContainerPort = int32(port)
 
 	return nil
+}
+
+func IsSkippablePort(port int32) bool {
+	skippablePorts := map[int32]string{3306: "MySQL", 1521: "OracleDB", 1830: "OracleDB", 5432: "PostgreSQL",
+		1433: "SQL Server", 1434: "SQL Server", 7210: "MaxDB", 7473: "Neo4j", 7474: "Neo4j", 8529: "ArangoDB",
+		7000: "Cassandra", 7001: "Cassandra", 9042: "Cassandra", 8086: "InfluxDB", 9200: "Elasticsearch", 9300: "Elasticsearch",
+		5984: "CouchDB", 27017: "MongoDB", 27018: "MongoDB", 27019: "MongoDB", 28017: "MongoDB", 6379: "Redis",
+		8087: "Riak", 8098: "Riak", 828015: "Rethink", 29015: "Rethink", 7574: "Solr", 8983: "Solr"}
+	if _, ok := skippablePorts[port]; ok {
+		return true
+	}
+	return false
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
@@ -530,36 +537,6 @@ func unmarshalEnvs(raw *RawMessage) ([]EnvVar, error) {
 	}
 
 	return envList, err
-}
-
-func unmarshalLabels(raw *RawMessage) (map[string]string, error) {
-	envMap := make(map[string]string)
-	if raw == nil {
-		return envMap, nil
-	}
-	err := raw.unmarshal(&envMap)
-	if err == nil {
-		return envMap, nil
-	}
-	var envList []string
-	err = raw.unmarshal(&envList)
-	if err == nil {
-		for _, env := range envList {
-			if strings.Contains(env, "=") {
-				splittedEnv := strings.Split(env, "=")
-				if len(splittedEnv) == 2 {
-					envMap[splittedEnv[0]] = splittedEnv[1]
-				} else {
-					return envMap, fmt.Errorf("Environment variable malformed: %s.", env)
-				}
-			} else {
-				envMap[env] = ""
-			}
-		}
-		return envMap, nil
-	}
-
-	return envMap, err
 }
 
 func unmarshalDuration(raw *RawMessage) (int64, error) {
