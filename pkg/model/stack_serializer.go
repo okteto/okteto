@@ -348,7 +348,9 @@ func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("Can not convert %s to a port.", hostString)
 		}
 		p.HostPort = int32(port)
-
+		if IsSkippablePort(p.HostPort) {
+			p.HostPort = 0
+		}
 	} else {
 		return fmt.Errorf(malformedPortForward, rawPort)
 	}
@@ -371,6 +373,20 @@ func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p.ContainerPort = int32(port)
 
 	return nil
+}
+
+func IsSkippablePort(port int32) bool {
+	relationalDBPortList := []int32{7210, 3306, 1521, 1830, 5432, 1433, 3050}
+	noSQLDBPortList := []int32{8529, 7000, 7001, 9042, 5984, 9200, 9300, 27017, 27018, 27019, 28017, 7473, 7474, 6379, 8087, 8098, 28015, 29015, 7574, 8983}
+	messageBrokesPortList := []int32{5672, 3181, 9092}
+	skippablePorts := append(relationalDBPortList, noSQLDBPortList...)
+	skippablePorts = append(skippablePorts, messageBrokesPortList...)
+	for _, p := range skippablePorts {
+		if p == port {
+			return true
+		}
+	}
+	return false
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
