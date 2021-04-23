@@ -33,6 +33,8 @@ command: ["uwsgi"]
 annotations:
   key1: value1
   key2: value2
+labels:
+  key3: value3
 resources:
   requests:
     memory: "64Mi"
@@ -152,7 +154,7 @@ func Test_LoadDevDefaults(t *testing.T) {
 	var tests = []struct {
 		name                string
 		manifest            []byte
-		expectedEnvironment []EnvVar
+		expectedEnvironment Environment
 		expectedForward     []Forward
 	}{
 		{
@@ -160,7 +162,7 @@ func Test_LoadDevDefaults(t *testing.T) {
 			[]byte(`name: service
 container: core
 workdir: /app`),
-			[]EnvVar{},
+			Environment{},
 			[]Forward{},
 		},
 		{
@@ -168,7 +170,7 @@ workdir: /app`),
 			[]byte(`name: service
 container: core
 workdir: /app`),
-			[]EnvVar{},
+			Environment{},
 			[]Forward{},
 		},
 		{
@@ -179,7 +181,7 @@ workdir: /app
 environment:
   - ENV=production
   - name=test-node`),
-			[]EnvVar{
+			Environment{
 				{Name: "ENV", Value: "production"},
 				{Name: "name", Value: "test-node"},
 			},
@@ -193,7 +195,7 @@ workdir: /app
 forward:
   - 9000:8000
   - 9001:8001`),
-			[]EnvVar{},
+			Environment{},
 			[]Forward{
 				{Local: 9000, Remote: 8000, Service: false, ServiceName: ""},
 				{Local: 9001, Remote: 8001, Service: false, ServiceName: ""},
@@ -326,27 +328,27 @@ services:
 func Test_loadLabels(t *testing.T) {
 	tests := []struct {
 		name   string
-		labels map[string]string
+		labels Labels
 		value  string
-		want   map[string]string
+		want   Labels
 	}{
 		{
 			name:   "no-var",
-			labels: map[string]string{"a": "1", "b": "2"},
+			labels: Labels{"a": "1", "b": "2"},
 			value:  "3",
-			want:   map[string]string{"a": "1", "b": "2"},
+			want:   Labels{"a": "1", "b": "2"},
 		},
 		{
 			name:   "var",
-			labels: map[string]string{"a": "1", "b": "${value}"},
+			labels: Labels{"a": "1", "b": "${value}"},
 			value:  "3",
-			want:   map[string]string{"a": "1", "b": "3"},
+			want:   Labels{"a": "1", "b": "3"},
 		},
 		{
 			name:   "missing",
-			labels: map[string]string{"a": "1", "b": "${valueX}"},
+			labels: Labels{"a": "1", "b": "${valueX}"},
 			value:  "1",
-			want:   map[string]string{"a": "1", "b": ""},
+			want:   Labels{"a": "1", "b": ""},
 		},
 	}
 
@@ -355,9 +357,10 @@ func Test_loadLabels(t *testing.T) {
 			dev := &Dev{Labels: tt.labels}
 			os.Setenv("value", tt.value)
 			dev.loadLabels()
-
-			if !reflect.DeepEqual(tt.want, dev.Labels) {
-				t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
+			for key, value := range dev.Labels {
+				if tt.want[key] != value {
+					t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
+				}
 			}
 		})
 	}

@@ -90,7 +90,7 @@ services:
 		Version:     model.TranslationVersion,
 		Deployment:  d1,
 		Rules:       []*model.TranslationRule{rule1},
-		Annotations: map[string]string{"key": "value"},
+		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{
 			{
 				Key:      "nvidia/cpu",
@@ -315,7 +315,7 @@ services:
 		Version:     model.TranslationVersion,
 		Deployment:  d2,
 		Rules:       []*model.TranslationRule{rule2},
-		Annotations: map[string]string{"key": "value"},
+		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{
 			{
 				Key:      "nvidia/cpu",

@@ -137,11 +137,11 @@ func Test_translateDeployment(t *testing.T) {
 		Name: "stackName",
 		Services: map[string]*model.Service{
 			"svcName": {
-				Labels: map[string]string{
+				Labels: model.Labels{
 					"label1": "value1",
 					"label2": "value2",
 				},
-				Annotations: map[string]string{
+				Annotations: model.Annotations{
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
@@ -237,11 +237,11 @@ func Test_translateStatefulSet(t *testing.T) {
 		Name: "stackName",
 		Services: map[string]*model.Service{
 			"svcName": {
-				Labels: map[string]string{
+				Labels: model.Labels{
 					"label1": "value1",
 					"label2": "value2",
 				},
-				Annotations: map[string]string{
+				Annotations: model.Annotations{
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
@@ -419,11 +419,11 @@ func Test_translateService(t *testing.T) {
 		Name: "stackName",
 		Services: map[string]*model.Service{
 			"svcName": {
-				Labels: map[string]string{
+				Labels: model.Labels{
 					"label1": "value1",
 					"label2": "value2",
 				},
-				Annotations: map[string]string{
+				Annotations: model.Annotations{
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
@@ -504,8 +504,8 @@ func Test_translateEndpoints(t *testing.T) {
 		Name: "stackName",
 		Endpoints: map[string]model.Endpoint{
 			"endpoint1": {
-				Labels:      map[string]string{"label1": "value1"},
-				Annotations: map[string]string{"annotation1": "value1"},
+				Labels:      model.Labels{"label1": "value1"},
+				Annotations: model.Annotations{"annotation1": "value1"},
 				Rules: []model.EndpointRule{
 					{Path: "/",
 						Service: "svcName",

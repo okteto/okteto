@@ -26,7 +26,7 @@ const (
 )
 
 func translate(dev *model.Dev) *apiv1.Service {
-	annotations := map[string]string{}
+	annotations := model.Annotations{}
 	if len(dev.Services) == 0 {
 		annotations[oktetoAutoIngressAnnotation] = "true"
 	}

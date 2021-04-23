@@ -24,7 +24,7 @@ type Translation struct {
 	Name        string             `json:"name"`
 	Version     string             `json:"version"`
 	Deployment  *appsv1.Deployment `json:"-"`
-	Annotations map[string]string  `json:"annotations,omitempty"`
+	Annotations Annotations        `json:"annotations,omitempty"`
 	Tolerations []apiv1.Toleration `json:"tolerations,omitempty"`
 	Replicas    int32              `json:"replicas"`
 	Rules       []*TranslationRule `json:"rules"`
@@ -38,7 +38,7 @@ type TranslationRule struct {
 	Container         string               `json:"container,omitempty"`
 	Image             string               `json:"image,omitempty"`
 	ImagePullPolicy   apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment       []EnvVar             `json:"environment,omitempty"`
+	Environment       Environment          `json:"environment,omitempty"`
 	Secrets           []Secret             `json:"secrets,omitempty"`
 	Command           []string             `json:"command,omitempty"`
 	Args              []string             `json:"args,omitempty"`
