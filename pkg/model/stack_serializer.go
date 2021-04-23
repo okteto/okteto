@@ -376,15 +376,13 @@ func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func IsSkippablePort(port int32) bool {
-	relationalDBPortList := []int32{7210, 3306, 1521, 1830, 5432, 1433, 3050}
-	noSQLDBPortList := []int32{8529, 7000, 7001, 9042, 5984, 9200, 9300, 27017, 27018, 27019, 28017, 7473, 7474, 6379, 8087, 8098, 28015, 29015, 7574, 8983}
-	messageBrokesPortList := []int32{5672, 3181, 9092}
-	skippablePorts := append(relationalDBPortList, noSQLDBPortList...)
-	skippablePorts = append(skippablePorts, messageBrokesPortList...)
-	for _, p := range skippablePorts {
-		if p == port {
-			return true
-		}
+	skippablePorts := map[int32]string{3306: "MySQL", 1521: "OracleDB", 1830: "OracleDB", 5432: "PostgreSQL",
+		1433: "SQL Server", 1434: "SQL Server", 7210: "MaxDB", 7473: "Neo4j", 7474: "Neo4j", 8529: "ArangoDB",
+		7000: "Cassandra", 7001: "Cassandra", 9042: "Cassandra", 8086: "InfluxDB", 9200: "Elasticsearch", 9300: "Elasticsearch",
+		5984: "CouchDB", 27017: "MongoDB", 27018: "MongoDB", 27019: "MongoDB", 28017: "MongoDB", 6379: "Redis",
+		8087: "Riak", 8098: "Riak", 828015: "Rethink", 29015: "Rethink", 7574: "Solr", 8983: "Solr"}
+	if _, ok := skippablePorts[port]; ok {
+		return true
 	}
 	return false
 }
