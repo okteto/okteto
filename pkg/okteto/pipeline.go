@@ -128,7 +128,7 @@ func areSameRepository(repoA, repoB string) bool {
 	repoPathA := strings.TrimSuffix(strings.TrimPrefix(parsedRepoA.Path, "/"), ".git")
 	repoPathB := strings.TrimSuffix(strings.TrimPrefix(parsedRepoB.Path, "/"), ".git")
 
-	return repoPathA != repoPathB
+	return repoPathA == repoPathB
 }
 
 // DeletePipeline deletes a pipeline
