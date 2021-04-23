@@ -524,6 +524,16 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
 			isPublic: true,
 		},
+		{
+			name:     "mysql-port-forwarding",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 3306:3306\n    image: okteto/vote:1"),
+			isPublic: false,
+		},
+		{
+			name:     "mysql-port-forwarding-and-public",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 3306:3306\n    image: okteto/vote:1\n    public: true"),
+			isPublic: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
