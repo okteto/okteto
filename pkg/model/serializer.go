@@ -632,3 +632,24 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 	}
 	return result, nil
 }
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (envFiles *EnvFiles) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	result := make(EnvFiles, 0)
+	var single string
+	err := unmarshal(&single)
+	if err != nil {
+		var multi []string
+		err := unmarshal(&multi)
+		if err != nil {
+			return err
+		}
+		result = multi
+		*envFiles = result
+		return nil
+	}
+
+	result = append(result, single)
+	*envFiles = result
+	return nil
+}
