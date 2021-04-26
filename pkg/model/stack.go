@@ -40,7 +40,7 @@ type Stack struct {
 	Name                string              `yaml:"name"`
 	Namespace           string              `yaml:"namespace,omitempty"`
 	Services            map[string]*Service `yaml:"services,omitempty"`
-	Endpoints           map[string]Endpoint `yaml:"endpoints,omitempty"`
+	Endpoints           EndpointSpec        `yaml:"endpoints,omitempty"`
 }
 
 //Service represents an okteto stack service
@@ -104,6 +104,8 @@ type Port struct {
 	Port     int32
 	Protocol apiv1.Protocol
 }
+
+type EndpointSpec map[string]Endpoint
 
 //Endpoints represents an okteto stack ingress
 type Endpoint struct {
