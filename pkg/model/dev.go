@@ -132,6 +132,7 @@ type Dev struct {
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
 	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
+	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
@@ -265,6 +266,12 @@ type Probes struct {
 	Startup   bool `json:"startup,omitempty" yaml:"startup,omitempty"`
 }
 
+// Lifecycle defines the lifecycle for containers
+type Lifecycle struct {
+	PostStart bool `json:"postStart,omitempty" yaml:"postStart,omitempty"`
+	PostStop  bool `json:"postStop,omitempty" yaml:"postStop,omitempty"`
+}
+
 // ResourceList is a set of (resource name, quantity) pairs.
 type ResourceList map[apiv1.ResourceName]resource.Quantity
 
@@ -321,6 +328,7 @@ func Read(bytes []byte) (*Dev, error) {
 		Services:             make([]*Dev, 0),
 		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
 		Probes:               &Probes{},
+		Lifecycle:            &Lifecycle{},
 	}
 
 	if bytes != nil {
@@ -511,6 +519,9 @@ func (dev *Dev) setDefaults() error {
 	if dev.Probes == nil {
 		dev.Probes = &Probes{}
 	}
+	if dev.Lifecycle == nil {
+		dev.Lifecycle = &Lifecycle{}
+	}
 	if dev.Interface == "" {
 		dev.Interface = Localhost
 	}
@@ -556,6 +567,9 @@ func (dev *Dev) setDefaults() error {
 		s.Sync.RescanInterval = DefaultSyncthingRescanInterval
 		if s.Probes == nil {
 			s.Probes = &Probes{}
+		}
+		if s.Lifecycle == nil {
+			s.Lifecycle = &Lifecycle{}
 		}
 	}
 
@@ -794,6 +808,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		Healthchecks:     dev.Healthchecks,
 		InitContainer:    dev.InitContainer,
 		Probes:           dev.Probes,
+		Lifecycle:        dev.Lifecycle,
 	}
 
 	if !dev.EmptyImage {
@@ -804,7 +819,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		rule.Probes = &Probes{Liveness: true, Startup: true, Readiness: true}
 	}
 
-	if areHealthchecksEnabled(rule.Probes) {
+	if areProbesEnabled(rule.Probes) {
 		rule.Healthchecks = true
 	}
 	if main == dev {
@@ -905,14 +920,14 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	return rule
 }
 
-func areHealthchecksEnabled(probes *Probes) bool {
+func areProbesEnabled(probes *Probes) bool {
 	if probes != nil {
 		return probes.Liveness || probes.Readiness || probes.Startup
 	}
 	return false
 }
 
-func areAllHealthchecksEnabled(probes *Probes) bool {
+func areAllProbesEnabled(probes *Probes) bool {
 	if probes != nil {
 		return probes.Liveness && probes.Readiness && probes.Startup
 	}
