@@ -96,9 +96,13 @@ func (e *Entrypoint) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		e.Values, err = shellquote.Split(single)
-		if err != nil {
-			return err
+		if strings.Contains(single, " && ") {
+			e.Values = []string{"sh", "-c", single}
+		} else {
+			e.Values, err = shellquote.Split(single)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		e.Values = multi
@@ -124,9 +128,13 @@ func (c *Command) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		c.Values, err = shellquote.Split(single)
-		if err != nil {
-			return err
+		if strings.Contains(single, " && ") {
+			c.Values = []string{"sh", "-c", single}
+		} else {
+			c.Values, err = shellquote.Split(single)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		c.Values = multi
@@ -152,9 +160,13 @@ func (a *Args) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		a.Values, err = shellquote.Split(single)
-		if err != nil {
-			return err
+		if strings.Contains(single, " && ") {
+			a.Values = []string{"sh", "-c", single}
+		} else {
+			a.Values, err = shellquote.Split(single)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		a.Values = multi
