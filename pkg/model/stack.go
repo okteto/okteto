@@ -112,6 +112,11 @@ type Endpoint struct {
 	Rules       []EndpointRule `yaml:"rules,omitempty"`
 }
 
+//Endpoints represents an okteto stack command
+type CommandStack struct {
+	Values []string
+}
+
 // EndpointRule represents an okteto ingress rule
 type EndpointRule struct {
 	Path    string `yaml:"path,omitempty"`
