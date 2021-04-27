@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -78,6 +79,7 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	}
 
 	s.Services = nil
+	s.Endpoints = nil
 	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 		return err
 	}
@@ -193,6 +195,46 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 	}
 
 	return nil
+}
+
+func isRemovable(s *model.Stack, pvcName string) bool {
+	isInList := false
+	for volumeName := range s.Volumes {
+		if volumeName == pvcName {
+			isInList = true
+			break
+		}
+		if isAutocreatedVolume(s, pvcName) {
+			isInList = true
+			break
+		}
+	}
+	return isInList
+}
+
+func isAutocreatedVolume(s *model.Stack, volumeName string) bool {
+	if strings.Contains(volumeName, "-") {
+		splitted := strings.Split(volumeName, "-")
+		if len(splitted) == 3 {
+			svcName := splitted[1]
+			volumeIdx, err := strconv.Atoi(splitted[2])
+			if err != nil {
+				return false
+			}
+			if svc, ok := s.Services[svcName]; ok {
+				i := 0
+				for _, volume := range svc.Volumes {
+					if volume.LocalPath == "" {
+						if volumeIdx == i {
+							return true
+						}
+						i++
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 func waitForPodsToBeDestroyed(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {

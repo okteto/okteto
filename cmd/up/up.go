@@ -102,6 +102,11 @@ func Up() *cobra.Command {
     More information is available here: https://okteto.com/docs/reference/cli#up`)
 			}
 
+			ctx := context.Background()
+			if err := utils.LoadEnvironment(ctx, false); err != nil {
+				return err
+			}
+
 			dev, err := loadDevOrInit(namespace, k8sContext, devPath)
 			if err != nil {
 				return err

@@ -25,17 +25,18 @@ import (
 
 //Stack represents an okteto stack
 type StackRaw struct {
-	Version   string                 `yaml:"version,omitempty"`
-	Name      string                 `yaml:"name"`
-	Namespace string                 `yaml:"namespace,omitempty"`
-	Services  map[string]*ServiceRaw `yaml:"services,omitempty"`
-	Endpoints map[string]Endpoint    `yaml:"endpoints,omitempty"`
+	Version   string                     `yaml:"version,omitempty"`
+	Name      string                     `yaml:"name"`
+	Namespace string                     `yaml:"namespace,omitempty"`
+	Services  map[string]*ServiceRaw     `yaml:"services,omitempty"`
+	Endpoints map[string]Endpoint        `yaml:"endpoints,omitempty"`
+	Volumes   map[string]*VolumeTopLevel `yaml:"volumes,omitempty"`
 
 	// Docker-compose not implemented
 	Networks *WarningType `yaml:"networks,omitempty"`
-	Volumes  *WarningType `yaml:"volumes,omitempty"`
-	Configs  *WarningType `yaml:"configs,omitempty"`
-	Secrets  *WarningType `yaml:"secrets,omitempty"`
+
+	Configs *WarningType `yaml:"configs,omitempty"`
+	Secrets *WarningType `yaml:"secrets,omitempty"`
 
 	Warnings []string
 }
@@ -51,8 +52,8 @@ type ServiceRaw struct {
 	Command                  Args               `yaml:"command,omitempty"`
 	Entrypoint               CommandStack       `yaml:"entrypoint,omitempty"`
 	Args                     Args               `yaml:"args,omitempty"`
-	EnvFilesSneakCase        []string           `yaml:"env_file,omitempty"`
-	EnvFiles                 []string           `yaml:"envFile,omitempty"`
+	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
+	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
 	Environment              *RawMessage        `yaml:"environment,omitempty"`
 	Expose                   *RawMessage        `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
@@ -170,6 +171,17 @@ type DeployComposeResources struct {
 	Memory  Quantity     `json:"memory,omitempty" yaml:"memory,omitempty"`
 	Devices *WarningType `json:"devices,omitempty" yaml:"devices,omitempty"`
 }
+
+type VolumeTopLevel struct {
+	Labels      map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Storage     StorageResource   `json:"storage,omitempty" yaml:"storage,omitempty"`
+
+	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
+	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
+	External   *WarningType `json:"external,omitempty" yaml:"external,omitempty"`
+}
 type RawMessage struct {
 	unmarshal func(interface{}) error
 }
@@ -187,9 +199,34 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Endpoints = stackRaw.Endpoints
 
+	volumes := make(map[string]*VolumeSpec, 0)
+	for volumeName, v := range stackRaw.Volumes {
+		result := VolumeSpec{}
+		if v == nil {
+			result.Name = sanitizeName(volumeName)
+			result.Labels = make(map[string]string)
+			result.Annotations = make(map[string]string)
+		} else {
+			if v.Name == "" {
+				result.Name = sanitizeName(volumeName)
+			}
+			if v.Labels == nil {
+				result.Labels = make(map[string]string)
+			}
+			if v.Annotations == nil {
+				result.Annotations = make(map[string]string)
+			}
+		}
+		volumes[volumeName] = &result
+	}
+
+	s.Volumes = make(map[string]*VolumeSpec)
+	for volumeName, volume := range volumes {
+		s.Volumes[sanitizeName(volumeName)] = volume
+	}
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
-		s.Services[svcName], err = svcRaw.ToService(svcName, s.IsCompose)
+		s.Services[svcName], err = svcRaw.ToService(svcName, s)
 		if err != nil {
 			return err
 		}
@@ -202,94 +239,102 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (serviceRaw *ServiceRaw) ToService(svcName string, isCompose bool) (*Service, error) {
-	s := &Service{}
+func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service, error) {
+	svc := &Service{}
 	var err error
-	s.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources)
+	svc.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources)
 	if err != nil {
 		return nil, err
 	}
-	s.Replicas, err = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
+	svc.Replicas, err = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
 	if err != nil {
 		return nil, err
 	}
-	s.Image = serviceRaw.Image
-	s.Build = serviceRaw.Build
+	svc.Image = serviceRaw.Image
+	svc.Build = serviceRaw.Build
 
-	s.CapAdd = serviceRaw.CapAdd
+	svc.CapAdd = serviceRaw.CapAdd
 	if len(serviceRaw.CapAddSneakCase) > 0 {
-		s.CapAdd = serviceRaw.CapAddSneakCase
+		svc.CapAdd = serviceRaw.CapAddSneakCase
 	}
-	s.CapDrop = serviceRaw.CapDrop
+	svc.CapDrop = serviceRaw.CapDrop
 	if len(serviceRaw.CapDropSneakCase) > 0 {
-		s.CapDrop = serviceRaw.CapDropSneakCase
+		svc.CapDrop = serviceRaw.CapDropSneakCase
 	}
 
-	if isCompose {
+	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'args'", svcName)
 		}
-		s.Entrypoint.Values = serviceRaw.Entrypoint.Values
-		s.Command.Values = serviceRaw.Command.Values
+		svc.Entrypoint.Values = serviceRaw.Entrypoint.Values
+		svc.Command.Values = serviceRaw.Command.Values
 	} else {
 		if len(serviceRaw.Entrypoint.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'entrypoint'", svcName)
 		}
-		s.Entrypoint.Values = serviceRaw.Command.Values
+		svc.Entrypoint.Values = serviceRaw.Command.Values
 		if len(serviceRaw.Command.Values) == 1 {
 			if strings.Contains(serviceRaw.Command.Values[0], " ") {
-				s.Entrypoint.Values = []string{"sh", "-c", serviceRaw.Command.Values[0]}
+				svc.Entrypoint.Values = []string{"sh", "-c", serviceRaw.Command.Values[0]}
 			}
 		}
-		s.Command.Values = serviceRaw.Args.Values
+		svc.Command.Values = serviceRaw.Args.Values
 	}
 
-	s.EnvFiles = serviceRaw.EnvFiles
+	svc.EnvFiles = serviceRaw.EnvFiles
 	if len(serviceRaw.EnvFilesSneakCase) > 0 {
-		s.EnvFiles = serviceRaw.EnvFilesSneakCase
+		svc.EnvFiles = serviceRaw.EnvFilesSneakCase
 	}
 
-	s.Environment, err = unmarshalEnvs(serviceRaw.Environment)
+	svc.Environment, err = unmarshalEnvs(serviceRaw.Environment)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Public = serviceRaw.Public
+	svc.Public = serviceRaw.Public
 
 	for _, p := range serviceRaw.Ports {
 		if p.HostPort != 0 {
-			s.Public = true
+			svc.Public = true
 		}
-		s.Ports = append(s.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
+		svc.Ports = append(svc.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
 	}
 
-	s.Expose, err = unmarshalExpose(serviceRaw.Expose)
+	svc.Expose, err = unmarshalExpose(serviceRaw.Expose)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Labels = serviceRaw.Labels
+	svc.Labels = serviceRaw.Labels
 
-	s.Annotations = serviceRaw.Annotations
+	svc.Annotations = serviceRaw.Annotations
 
-	s.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
+	svc.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
 	if err != nil {
 		return nil, err
 	}
+
 	if serviceRaw.StopGracePeriodSneakCase != nil {
-		s.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriodSneakCase)
+		svc.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriodSneakCase)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	s.Volumes = serviceRaw.Volumes
-	s.WorkingDir = serviceRaw.WorkingDir
-	if serviceRaw.WorkingDirSneakCase != "" {
-		s.WorkingDir = serviceRaw.WorkingDirSneakCase
+	svc.Volumes = serviceRaw.Volumes
+	for idx, volume := range svc.Volumes {
+		if isInVolumesTopLevelSection(volume.LocalPath, stack) {
+			svc.Volumes[idx] = volume
+		} else if !strings.HasPrefix(volume.LocalPath, ".") && volume.LocalPath != "" {
+			return nil, fmt.Errorf("Named volume '%s' is used in service %s but no declaration was found in the volumes section.", volume.ToString(), svcName)
+		}
 	}
 
-	return s, nil
+	svc.WorkingDir = serviceRaw.WorkingDir
+	if serviceRaw.WorkingDirSneakCase != "" {
+		svc.WorkingDir = serviceRaw.WorkingDirSneakCase
+	}
+	return svc, nil
 }
 
 func (msg *RawMessage) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -530,6 +575,7 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		v.LocalPath, err = ExpandEnv(parts[0])
+		v.LocalPath = sanitizeName(v.LocalPath)
 		if err != nil {
 			return err
 		}
@@ -543,6 +589,14 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (v StackVolume) MarshalYAML() (interface{}, error) {
 	return v.RemotePath, nil
+}
+
+// MarshalYAML Implements the marshaler interface of the yaml pkg.
+func (v StackVolume) ToString() string {
+	if v.LocalPath != "" {
+		return fmt.Sprintf("%s:%s", v.LocalPath, v.RemotePath)
+	}
+	return v.RemotePath
 }
 
 func getProtocol(protocolName string) (apiv1.Protocol, error) {
@@ -559,10 +613,21 @@ func getProtocol(protocolName string) (apiv1.Protocol, error) {
 	}
 }
 
+func sanitizeName(name string) string {
+	name = strings.Replace(name, " ", "-", -1)
+	name = strings.Replace(name, "_", "-", -1)
+	return name
+}
+
 func setWarnings(s *StackRaw) {
 	s.Warnings = append(s.Warnings, getTopLevelNotSupportedFields(s)...)
 	for name, svcInfo := range s.Services {
 		s.Warnings = append(s.Warnings, getServiceNotSupportedFields(name, svcInfo)...)
+	}
+	for name, volumeInfo := range s.Volumes {
+		if volumeInfo != nil {
+			s.Warnings = append(s.Warnings, getVolumesNotSupportedFields(name, volumeInfo)...)
+		}
 	}
 }
 
@@ -570,9 +635,6 @@ func getTopLevelNotSupportedFields(s *StackRaw) []string {
 	notSupported := make([]string, 0)
 	if s.Networks != nil {
 		notSupported = append(notSupported, "networks")
-	}
-	if s.Volumes != nil {
-		notSupported = append(notSupported, "volumes")
 	}
 	if s.Configs != nil {
 		notSupported = append(notSupported, "configs")
@@ -821,6 +883,22 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 	}
 
 	return notSupported
+}
+
+func getVolumesNotSupportedFields(volumeName string, volumeInfo *VolumeTopLevel) []string {
+	notSupported := make([]string, 0)
+
+	if volumeInfo.Driver != nil {
+		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver", volumeName))
+	}
+	if volumeInfo.DriverOpts != nil {
+		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver_opts", volumeName))
+	}
+	if volumeInfo.External != nil {
+		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].external", volumeName))
+	}
+	return notSupported
+
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

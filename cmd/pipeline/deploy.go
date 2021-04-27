@@ -37,6 +37,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	var name string
 	var namespace string
 	var wait bool
+	var skipIfExists bool
 	var timeout time.Duration
 
 	cmd := &cobra.Command{
@@ -94,6 +95,17 @@ func deploy(ctx context.Context) *cobra.Command {
 				log.Information("Pipeline context: %s", okteto.GetURL())
 			}
 
+			if skipIfExists {
+				_, err := okteto.GetPipelineByRepository(ctx, namespace, repository)
+				if err == nil {
+					log.Success("Pipeline '%s' was already deployed", name)
+					return nil
+				}
+				if !errors.IsNotFound(err) {
+					return err
+				}
+			}
+
 			if err := deployPipeline(ctx, name, namespace, repository, branch, wait, timeout); err != nil {
 				return err
 			}
@@ -113,6 +125,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
+	cmd.Flags().BoolVarP(&skipIfExists, "skip-if-exists", "", false, "skip the pipeline deployment if the pipeline already exists in the namespace (defaults to false)")
 	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	return cmd
 }

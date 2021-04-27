@@ -282,27 +282,59 @@ func TestImageMashalling(t *testing.T) {
 	}
 }
 
-func TestHealthcheckMashalling(t *testing.T) {
+func TestProbesMashalling(t *testing.T) {
 	tests := []struct {
-		name         string
-		healthchecks Probes
-		expected     string
+		name     string
+		probes   Probes
+		expected string
 	}{
 		{
-			name:         "liveness-true-and-defaults",
-			healthchecks: Probes{Liveness: true},
-			expected:     "liveness: true\n",
+			name:     "liveness-true-and-defaults",
+			probes:   Probes{Liveness: true},
+			expected: "liveness: true\n",
 		},
 		{
-			name:         "all-healthchecks-true",
-			healthchecks: Probes{Liveness: true, Readiness: true, Startup: true},
-			expected:     "true\n",
+			name:     "all-probes-true",
+			probes:   Probes{Liveness: true, Readiness: true, Startup: true},
+			expected: "true\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			marshalled, err := yaml.Marshal(tt.healthchecks)
+			marshalled, err := yaml.Marshal(tt.probes)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual '%s', Expected '%s'", marshalled, tt.expected)
+			}
+		})
+	}
+}
+
+func TestLifecycleMashalling(t *testing.T) {
+	tests := []struct {
+		name      string
+		lifecycle Lifecycle
+		expected  string
+	}{
+		{
+			name:      "true-and-false",
+			lifecycle: Lifecycle{PostStart: true},
+			expected:  "postStart: true\n",
+		},
+		{
+			name:      "all-lifecycle-true",
+			lifecycle: Lifecycle{PostStart: true, PostStop: true},
+			expected:  "true\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.lifecycle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -744,6 +776,39 @@ func TestAnnotationsUnmashalling(t *testing.T) {
 			if err := os.Setenv("OKTETO_TEST_ENV_MARSHALLING", "true"); err != nil {
 				t.Fatal(err)
 			}
+
+			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestEnvFileUnmashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected EnvFiles
+	}{
+		{
+			"single value",
+			[]byte(`.env`),
+			EnvFiles{".env"},
+		},
+		{
+			"env files list",
+			[]byte("\n  - .env\n  - .env2"),
+			EnvFiles{".env", ".env2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := make(EnvFiles, 0)
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)

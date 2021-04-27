@@ -213,8 +213,48 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	}
 }
 
+func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.PersistentVolumeClaim {
+	svc := s.Services[name]
+	result := make([]apiv1.PersistentVolumeClaim, 0)
+	for _, volume := range svc.Volumes {
+		if volume.LocalPath == "" {
+			continue
+		}
+		volumeSpec := s.Volumes[volume.LocalPath]
+		labels := translateVolumeLabels(volume.LocalPath, s)
+		annotations := translateAnnotations(svc)
+		for key, value := range volumeSpec.Annotations {
+			annotations[key] = value
+		}
+
+		pvcName := getVolumeClaimName(&volume)
+		pvc := apiv1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        pvcName,
+				Namespace:   s.Namespace,
+				Labels:      labels,
+				Annotations: annotations,
+			},
+			Spec: apiv1.PersistentVolumeClaimSpec{
+				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						"storage": volumeSpec.Storage.Size.Value,
+					},
+				},
+				StorageClassName: translateStorageClass(volumeSpec.Storage.Class),
+			},
+		}
+		result = append(result, pvc)
+	}
+
+	return result
+}
+
 func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[name]
+
+	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -238,15 +278,10 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers: []apiv1.Container{
 						{
-							Name:    fmt.Sprintf("init-%s", name),
-							Image:   "busybox",
-							Command: []string{"chmod", "-R", "777", "/data"},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									MountPath: "/data",
-									Name:      pvcName,
-								},
-							},
+							Name:         fmt.Sprintf("init-%s", name),
+							Image:        "busybox",
+							Command:      initContainerCommand,
+							VolumeMounts: initContainerVolumeMounts,
 						},
 					},
 					Containers: []apiv1.Container{
@@ -258,18 +293,61 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
-							VolumeMounts:    translateVolumeMounts(svc),
+							VolumeMounts:    translateVolumeMounts(name, svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.WorkingDir,
 						},
 					},
+					Volumes: translateVolumes(name, svc),
 				},
 			},
-			VolumeClaimTemplates: []apiv1.PersistentVolumeClaim{
+			VolumeClaimTemplates: translateVolumeClaimTemplates(name, s),
+		},
+	}
+}
+
+func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv1.VolumeMount) {
+	volumeMounts := make([]apiv1.VolumeMount, 0)
+
+	var command string
+	var addedVolumesVolume, addedDataVolume bool
+	for _, volume := range svc.Volumes {
+		volumeName := getVolumeClaimName(&volume)
+		if volumeName != pvcName {
+			volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: fmt.Sprintf("/volumes/%s", volumeName)})
+			if !addedVolumesVolume {
+				if command == "" {
+					command = "chmod 777 /volumes/"
+					addedVolumesVolume = true
+				} else {
+					command += " && chmod 777 /volumes/"
+				}
+			}
+
+		} else {
+			if !addedDataVolume {
+				volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
+				if command == "" {
+					command = "chmod 777 /data"
+					addedDataVolume = true
+				} else {
+					command += " && chmod 777 /data"
+				}
+			}
+		}
+	}
+	return []string{"sh", "-c", command}, volumeMounts
+}
+
+func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.PersistentVolumeClaim {
+	svc := s.Services[svcName]
+	for _, volume := range svc.Volumes {
+		if volume.LocalPath == "" {
+			return []apiv1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        pvcName,
-						Labels:      translateLabels(name, s),
+						Labels:      translateLabels(svcName, s),
 						Annotations: translateAnnotations(svc),
 					},
 					Spec: apiv1.PersistentVolumeClaimSpec{
@@ -279,18 +357,35 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 								"storage": svc.Resources.Requests.Storage.Size.Value,
 							},
 						},
-						StorageClassName: translateStorageClass(svc),
+						StorageClassName: translateStorageClass(svc.Resources.Requests.Storage.Class),
 					},
 				},
-			},
-		},
+			}
+		}
 	}
+	return nil
+}
+
+func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
+	volumes := make([]apiv1.Volume, 0)
+	for _, volume := range svc.Volumes {
+		name := getVolumeClaimName(&volume)
+		volumes = append(volumes, apiv1.Volume{
+			Name: name,
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: volume.LocalPath,
+				},
+			},
+		})
+	}
+	return volumes
 }
 
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
 	annotations := translateAnnotations(svc)
-	if s.Services[svcName].Public {
+	if s.Services[svcName].Public && annotations[okLabels.OktetoAutoIngressAnnotation] == "" {
 		annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
 	}
 	return &apiv1.Service{
@@ -367,6 +462,18 @@ func translateIngressLabels(endpointName string, s *model.Stack) map[string]stri
 	return labels
 }
 
+func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string {
+	volume := s.Volumes[volumeName]
+	labels := map[string]string{
+		okLabels.StackNameLabel:       s.Name,
+		okLabels.StackVolumeNameLabel: volumeName,
+	}
+	for k := range volume.Labels {
+		labels[k] = volume.Labels[k]
+	}
+	return labels
+}
+
 func translateLabels(svcName string, s *model.Stack) map[string]string {
 	svc := s.Services[svcName]
 	labels := map[string]string{
@@ -402,19 +509,34 @@ func translateServiceType(svc model.Service) apiv1.ServiceType {
 	return apiv1.ServiceTypeClusterIP
 }
 
-func translateVolumeMounts(svc *model.Service) []apiv1.VolumeMount {
+func translateVolumeMounts(svcName string, svc *model.Service) []apiv1.VolumeMount {
 	result := []apiv1.VolumeMount{}
 	for i, v := range svc.Volumes {
+		name := getVolumeClaimName(&v)
+		subpath := fmt.Sprintf("data-%d", i)
+		if v.LocalPath != "" {
+			subpath = v.LocalPath
+		}
 		result = append(
 			result,
 			apiv1.VolumeMount{
 				MountPath: v.RemotePath,
-				Name:      pvcName,
-				SubPath:   fmt.Sprintf("data-%d", i),
+				Name:      name,
+				SubPath:   subpath,
 			},
 		)
 	}
 	return result
+}
+
+func getVolumeClaimName(v *model.StackVolume) string {
+	var name string
+	if v.LocalPath != "" {
+		name = v.LocalPath
+	} else {
+		name = pvcName
+	}
+	return name
 }
 
 func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
@@ -431,9 +553,9 @@ func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
 	return result
 }
 
-func translateStorageClass(svc *model.Service) *string {
-	if svc.Resources.Requests.Storage.Class != "" {
-		return &svc.Resources.Requests.Storage.Class
+func translateStorageClass(className string) *string {
+	if className != "" {
+		return &className
 	}
 	return nil
 }
