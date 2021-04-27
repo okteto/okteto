@@ -651,6 +651,37 @@ endpoints:
 			},
 		},
 		{
+			name: "direct rules with labels/annotations",
+			manifest: []byte(`name: test
+services:
+  app:
+    ports:
+    - 9213
+    image: okteto/vote:1
+endpoints:
+  annotations:
+    key: value
+  labels:
+    key: value
+  rules:
+  - path: /
+    service: app
+    port: 9213`),
+			expected: EndpointSpec{
+				"test": Endpoint{
+					Annotations: Annotations{"key": "value"},
+					Labels:      Labels{"key": "value"},
+					Rules: []EndpointRule{
+						{
+							Service: "app",
+							Path:    "/",
+							Port:    9213,
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "direct rules",
 			manifest: []byte(`name: test
 services:
