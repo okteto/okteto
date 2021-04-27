@@ -88,6 +88,7 @@ func main() {
 	root.AddCommand(configCMD.Config(ctx))
 	root.AddCommand(cmd.Build(ctx))
 	root.AddCommand(cmd.Create(ctx))
+	root.AddCommand(cmd.List(ctx))
 	root.AddCommand(cmd.Delete(ctx))
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
