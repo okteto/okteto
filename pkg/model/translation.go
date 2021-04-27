@@ -51,6 +51,7 @@ type TranslationRule struct {
 	Resources         ResourceRequirements `json:"resources,omitempty"`
 	InitContainer     InitContainer        `json:"initContainers,omitempty"`
 	Probes            *Probes              `json:"probes" yaml:"probes"`
+	Lifecycle         *Lifecycle           `json:"lifecycle" yaml:"lifecycle"`
 }
 
 //IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest
