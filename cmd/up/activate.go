@@ -3,6 +3,7 @@ package up
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -310,7 +311,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			case "Killing":
 				return errors.ErrDevPodDeleted
 			case "Pulling":
-				message := strings.Replace(e.Message, "Pulling", "pulling", 1)
+				message := getPullingMessage(e.Message)
 				spinner.Update(fmt.Sprintf("%s...", message))
 				if err := config.UpdateStateFile(up.Dev, config.Pulling); err != nil {
 					log.Infof("error updating state: %s", err.Error())
@@ -339,4 +340,10 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			return ctx.Err()
 		}
 	}
+}
+
+func getPullingMessage(message string) string {
+	var oktetoRegistryRegex = regexp.MustCompile(`registry\..*\.okteto\.net\/.*\/`)
+	message = oktetoRegistryRegex.ReplaceAllString(message, "okteto.dev/")
+	return message
 }

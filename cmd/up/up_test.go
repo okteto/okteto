@@ -100,3 +100,35 @@ func Test_printDisplayContext(t *testing.T) {
 	}
 
 }
+
+func TestPullingImageMessage(t *testing.T) {
+	var tests = []struct {
+		name     string
+		message  string
+		expected string
+	}{
+		{
+			name:     "normal image",
+			message:  "Pulling image \"alpine\"",
+			expected: "Pulling image \"alpine\"",
+		},
+		{
+			name:     "okteto registry image",
+			message:  "Pulling image \"registry.user.dev.okteto.net/user/api:fd12423adsae12\"",
+			expected: "Pulling image \"okteto.dev/api:fd12423adsae12\"",
+		},
+		{
+			name:     "okteto cloud image",
+			message:  "Pulling image \"registry.cloud.okteto.net/user/api:fd12423adsae12\"",
+			expected: "Pulling image \"okteto.dev/api:fd12423adsae12\"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if message := getPullingMessage(tt.message); message != tt.expected {
+				t.Errorf("Expected '%s', but '%s' found", tt.expected, message)
+			}
+		})
+	}
+}
