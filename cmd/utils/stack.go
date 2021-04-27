@@ -41,10 +41,10 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 	if stackPath == DefaultStackManifest {
 		for _, secondaryStackManifest := range secondaryStackManifests {
 			if model.FileExists(secondaryStackManifest) {
-				if isDeprecatedExtension(stackPath) {
+				if isDeprecatedExtension(secondaryStackManifest) {
 					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", stackPath)
 				}
-				if strings.HasPrefix(stackPath, "docker-compose") {
+				if strings.HasPrefix(secondaryStackManifest, "docker-compose") {
 					isCompose = true
 				}
 				return model.GetStack(name, secondaryStackManifest, isCompose)

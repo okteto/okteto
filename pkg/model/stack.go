@@ -33,14 +33,15 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Manifest            []byte              `yaml:"-"`
-	Warnings            []string            `yaml:"-"`
-	VolumeMountWarnings []string            `yaml:"-"`
-	IsCompose           bool                `yaml:"-"`
-	Name                string              `yaml:"name"`
-	Namespace           string              `yaml:"namespace,omitempty"`
-	Services            map[string]*Service `yaml:"services,omitempty"`
-	Endpoints           map[string]Endpoint `yaml:"endpoints,omitempty"`
+	Manifest            []byte                 `yaml:"-"`
+	Warnings            []string               `yaml:"-"`
+	VolumeMountWarnings []string               `yaml:"-"`
+	IsCompose           bool                   `yaml:"-"`
+	Name                string                 `yaml:"name"`
+	Volumes             map[string]*VolumeSpec `yaml:"volumes,omitempty"`
+	Namespace           string                 `yaml:"namespace,omitempty"`
+	Services            map[string]*Service    `yaml:"services,omitempty"`
+	Endpoints           map[string]Endpoint    `yaml:"endpoints,omitempty"`
 }
 
 //Service represents an okteto stack service
@@ -72,6 +73,12 @@ type StackVolume struct {
 	RemotePath string
 }
 
+type VolumeSpec struct {
+	Name        string            `yaml:"name,omitempty"`
+	Labels      map[string]string `yaml:"labels,omitempty"`
+	Annotations map[string]string `yaml:"annotations,omitempty"`
+	Storage     StorageResource   `json:"storage,omitempty" yaml:"storage,omitempty"`
+}
 type Envs struct {
 	List Environment
 }
@@ -152,7 +159,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 
 	for _, svc := range s.Services {
 		svc.extendPorts()
-		svc.IgnoreSyncVolumes()
+		svc.IgnoreSyncVolumes(s)
 		if svc.Build == nil {
 			continue
 		}
@@ -214,13 +221,18 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		}
 
 	}
+	for _, volume := range s.Volumes {
+		if volume.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
+			volume.Storage.Size.Value = resource.MustParse("1Gi")
+		}
+	}
 	return s, nil
 }
 
-func (svc *Service) IgnoreSyncVolumes() {
+func (svc *Service) IgnoreSyncVolumes(s *Stack) {
 	notIgnoredVolumes := make([]StackVolume, 0)
 	for _, volume := range svc.Volumes {
-		if volume.LocalPath == "" {
+		if volume.LocalPath == "" || isInVolumesTopLevelSection(volume.LocalPath, s) {
 			notIgnoredVolumes = append(notIgnoredVolumes, volume)
 		}
 	}
@@ -259,7 +271,7 @@ func (s *Stack) validate() error {
 				s.VolumeMountWarnings = append(s.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
-				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v, name))
+				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
 			}
 		}
 	}
@@ -367,4 +379,13 @@ func GroupWarningsBySvc(fields []string) []string {
 		result = append(result, fmt.Sprintf(f, names))
 	}
 	return result
+}
+
+func isInVolumesTopLevelSection(volumeName string, s *Stack) bool {
+	for _, volume := range s.Volumes {
+		if volume.Name == volumeName {
+			return true
+		}
+	}
+	return false
 }

@@ -503,6 +503,33 @@ func Test_validateCommandArgs(t *testing.T) {
 	}
 }
 
+func Test_validateVolumesUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name          string
+		manifest      []byte
+		expectedError bool
+	}{
+		{
+			name:          "correct-volume",
+			manifest:      []byte("services:\n  app:\n    volumes: \n    - redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\nvolumes:\n  redpanda:\n"),
+			expectedError: false,
+		},
+		{
+			name:          "volume-not-declared-in-volumes-top-level-section",
+			manifest:      []byte("services:\n  app:\n    volumes: \n    - redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			expectedError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ReadStack(tt.manifest, true)
+			if err != nil && !tt.expectedError {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func Test_validateIngressCreationPorts(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -550,6 +577,39 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 	}
 }
 
+func Test_sanitizeVolumeName(t *testing.T) {
+	tests := []struct {
+		name               string
+		volumeName         string
+		expectedVolumeName string
+	}{
+		{
+			name:               "correct-volume",
+			volumeName:         "redpanda",
+			expectedVolumeName: "redpanda",
+		},
+		{
+			name:               "volume-name-with-_",
+			volumeName:         "db_postgres",
+			expectedVolumeName: "db-postgres",
+		},
+		{
+			name:               "volume-name-with-space",
+			volumeName:         "db postgres",
+			expectedVolumeName: "db-postgres",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			name := sanitizeName(tt.volumeName)
+			if name != tt.expectedVolumeName {
+				t.Fatalf("Expected '%s', but got %s", tt.expectedVolumeName, name)
+			}
+		})
+	}
+}
+
 func Test_restartFile(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -574,6 +634,7 @@ func Test_restartFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
 			s, err := ReadStack(tt.manifest, false)
 			if err != nil {
 				t.Fatal(err)

@@ -322,7 +322,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	initContainer := apiv1.Container{
 		Name:    fmt.Sprintf("init-%s", "svcName"),
 		Image:   "busybox",
-		Command: []string{"chmod", "-R", "777", "/data"},
+		Command: []string{"sh", "-c", "chmod 777 /data"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/data",
@@ -331,7 +331,7 @@ func Test_translateStatefulSet(t *testing.T) {
 		},
 	}
 	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[0], initContainer) {
-		t.Errorf("Wrong statefulset init container: '%v'", result.Spec.Template.Spec.InitContainers[0])
+		t.Errorf("Wrong statefulset init container: '%v' but expected '%v'", result.Spec.Template.Spec.InitContainers[0], initContainer)
 	}
 	c := result.Spec.Template.Spec.Containers[0]
 	if c.Name != "svcName" {

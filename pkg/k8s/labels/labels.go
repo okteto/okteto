@@ -87,6 +87,9 @@ const (
 
 	// OktetoInstallerRunningLabel indicates the okteto installer is running on this resource
 	OktetoInstallerRunningLabel = "dev.okteto.com/installer-running"
+
+	// StackVolumeNameLabel indicates the name of the stack volume an object belongs to
+	StackVolumeNameLabel = "stack.okteto.com/volume"
 )
 
 //TransformLabelsToSelector transforms a map of labels into a string k8s selector
