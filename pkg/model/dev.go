@@ -284,6 +284,9 @@ type Annotations map[string]string
 // Environment is a list of environment variables (key, value pairs).
 type Environment []EnvVar
 
+// EnvFiles is a list of environment files
+type EnvFiles []string
+
 //Get returns a Dev object from a given file
 func Get(devPath string) (*Dev, error) {
 	b, err := ioutil.ReadFile(devPath)

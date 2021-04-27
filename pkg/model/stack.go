@@ -51,7 +51,7 @@ type Service struct {
 	CapDrop    []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	Entrypoint Entrypoint         `yaml:"entrypoint,omitempty"`
 	Command    Command            `yaml:"command,omitempty"`
-	EnvFiles   []string           `yaml:"env_file,omitempty"`
+	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
 
 	Environment     Environment   `yaml:"environment,omitempty"`
 	Expose          []int32       `yaml:"expose,omitempty"`

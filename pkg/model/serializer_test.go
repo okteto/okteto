@@ -782,3 +782,36 @@ func TestAnnotationsUnmashalling(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvFileUnmashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected EnvFiles
+	}{
+		{
+			"single value",
+			[]byte(`.env`),
+			EnvFiles{".env"},
+		},
+		{
+			"env files list",
+			[]byte("\n  - .env\n  - .env2"),
+			EnvFiles{".env", ".env2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := make(EnvFiles, 0)
+
+			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}

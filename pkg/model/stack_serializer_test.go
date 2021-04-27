@@ -645,3 +645,45 @@ func Test_restartFile(t *testing.T) {
 		})
 	}
 }
+
+func Test_validateEnvFiles(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		EnvFiles EnvFiles
+	}{
+		{
+			name:     "sneak case single file",
+			manifest: []byte("services:\n  app:\n    env_file: .env\n    public: true\n    image: okteto/vote:1"),
+			EnvFiles: EnvFiles{".env"},
+		},
+		{
+			name:     "sneak case list",
+			manifest: []byte("services:\n  app:\n    env_file:\n    - .env\n    - .env2\n    image: okteto/vote:1"),
+			EnvFiles: EnvFiles{".env", ".env2"},
+		},
+		{
+			name:     "camel case single file",
+			manifest: []byte("services:\n  app:\n    envFile: .env\n    image: okteto/vote:1"),
+			EnvFiles: EnvFiles{".env"},
+		},
+		{
+			name:     "camel case list",
+			manifest: []byte("services:\n  app:\n    envFile:\n    - .env\n    - .env2\n    image: okteto/vote:1"),
+			EnvFiles: EnvFiles{".env", ".env2"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if svc, ok := s.Services["app"]; ok {
+				if !reflect.DeepEqual(tt.EnvFiles, svc.EnvFiles) {
+					t.Fatalf("expected %v but got %v", tt.EnvFiles, svc.EnvFiles)
+				}
+			}
+		})
+	}
+}

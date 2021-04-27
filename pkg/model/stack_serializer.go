@@ -51,8 +51,8 @@ type ServiceRaw struct {
 	Command                  Args               `yaml:"command,omitempty"`
 	Entrypoint               Command            `yaml:"entrypoint,omitempty"`
 	Args                     Args               `yaml:"args,omitempty"`
-	EnvFilesSneakCase        []string           `yaml:"env_file,omitempty"`
-	EnvFiles                 []string           `yaml:"envFile,omitempty"`
+	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
+	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
 	Environment              *RawMessage        `yaml:"environment,omitempty"`
 	Expose                   *RawMessage        `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
