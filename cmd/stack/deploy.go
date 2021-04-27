@@ -37,6 +37,15 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy <name>",
 		Short: "Deploys a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+				return err
+			}
+
+			ctx := context.Background()
+			if err := utils.LoadEnvironment(ctx, true); err != nil {
+				return err
+			}
+
 			s, err := utils.LoadStack(name, stackPath)
 			if err != nil {
 				return err
@@ -44,10 +53,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 			analytics.TrackStackWarnings(s.Warnings)
 
 			if err := s.UpdateNamespace(namespace); err != nil {
-				return err
-			}
-
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
 			}
 

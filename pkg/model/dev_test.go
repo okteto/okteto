@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joho/godotenv"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -979,4 +980,153 @@ func TestGetTimeout(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_loadEnvFile(t *testing.T) {
+	tests := []struct {
+		name      string
+		expectErr bool
+		content   map[string]string
+		existing  map[string]string
+		expected  map[string]string
+	}{
+		{
+			name:      "missing",
+			expectErr: true,
+		},
+		{
+			name:      "basic",
+			expectErr: false,
+			content:   map[string]string{"foo": "bar"},
+			expected:  map[string]string{"foo": "bar"},
+		},
+		{
+			name:      "doesnt-override",
+			expectErr: false,
+			content:   map[string]string{"foo": "bar"},
+			existing:  map[string]string{"foo": "var"},
+			expected:  map[string]string{"foo": "var"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.content != nil {
+				file, err := createEnvFile(tt.content)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				defer os.Remove(file)
+			}
+
+			for k, v := range tt.existing {
+				os.Setenv(k, v)
+			}
+
+			if err := godotenv.Load(); err != nil {
+				if tt.expectErr {
+					return
+				}
+
+				t.Fatal(err)
+			}
+
+			if tt.expectErr {
+				t.Fatal("call didn't fail as expected")
+			}
+
+			for k, v := range tt.expected {
+				got := os.Getenv(k)
+				if got != v {
+					t.Errorf("got %s=%s, expected %s=%s", k, got, k, v)
+				}
+			}
+		})
+	}
+}
+
+func Test_LoadDevWithEnvFile(t *testing.T) {
+	content := map[string]string{
+		"DEPLOYMENT":    "main",
+		"TAG":           "1.2",
+		"MY_VAR":        "from-env-file",
+		"SERVICE":       "secondary",
+		"SERVICE_IMAGE": "code/service:2.1",
+	}
+
+	f, err := createEnvFile(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(f)
+
+	manifest := []byte(`
+name: deployment-$DEPLOYMENT
+container: core
+image: code/core:$TAG
+command: ["uwsgi"]
+environment:
+- MY_VAR=$MY_VAR
+services:
+  - name: deployment-$SERVICE
+    container: core
+    image: $SERVICE_IMAGE
+    command: ["uwsgi"]
+    workdir: /app
+    environment:
+    - MY_VAR=$MY_VAR`)
+
+	if err := godotenv.Load(); err != nil {
+		t.Fatal(err)
+	}
+
+	main, err := Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(main.Services) != 1 {
+		t.Errorf("'services' was not parsed: %+v", main)
+	}
+
+	if main.Name != "deployment-main" {
+		t.Errorf("'name' was not parsed: got %s, expected %s", main.Name, "deployment-main")
+	}
+
+	if main.Image.Name != "code/core:1.2" {
+		t.Errorf("'tag' was not parsed: got %s, expected %s", main.Image.Name, "code/core:1.2")
+	}
+
+	if main.Environment[0].Value != "from-env-file" {
+		t.Errorf("'environment' was not parsed: got %s, expected %s", main.Environment[0].Value, "from-env-file")
+	}
+
+	if main.Services[0].Name != "deployment-secondary" {
+		t.Errorf("'name' was not parsed: got %s, expected %s", main.Services[0].Name, "deployment-main")
+	}
+
+	if main.Services[0].Image.Name != "code/service:2.1" {
+		t.Errorf("'tag' was not parsed: got %s, expected %s", main.Services[0].Image.Name, "code/service:2.1")
+	}
+
+	if main.Services[0].Environment[0].Value != "from-env-file" {
+		t.Errorf("'environment' was not parsed: got %s, expected %s", main.Services[0].Environment[0].Value, "from-env-file")
+	}
+}
+
+func createEnvFile(content map[string]string) (string, error) {
+	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return "", err
+	}
+
+	for k, v := range content {
+		file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
+	}
+
+	file.Sync()
+	return file.Name(), nil
 }
