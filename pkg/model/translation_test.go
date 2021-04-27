@@ -46,7 +46,9 @@ services:
     imagePullPolicy: IfNotPresent
     sync:
       - worker:/src
-    healthchecks: true`)
+    healthchecks: true
+    lifecycle:
+       postStart: true`)
 
 	dev, err := Read(manifest)
 	if err != nil {
@@ -63,6 +65,7 @@ services:
 		Command:           []string{"/var/okteto/bin/start.sh"},
 		Args:              []string{"-r"},
 		Probes:            &Probes{},
+		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
 			{
 				Name:  "OKTETO_NAMESPACE",
@@ -131,6 +134,7 @@ services:
 		Args:            nil,
 		Healthchecks:    true,
 		Probes:          &Probes{Readiness: true, Liveness: true, Startup: true},
+		Lifecycle:       &Lifecycle{PostStart: true, PostStop: false},
 		Environment:     make(Environment, 0),
 		SecurityContext: &SecurityContext{
 			RunAsUser:  &rootUser,

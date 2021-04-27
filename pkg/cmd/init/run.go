@@ -17,12 +17,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -47,7 +49,11 @@ func SetDevDefaultsFromDeployment(ctx context.Context, dev *model.Dev, d *appsv1
 	if err != nil {
 		return err
 	}
-	setResourcesFromPod(dev, pod, container)
+
+	if okteto.GetClusterContext() != client.GetSessionContext("") {
+		setResourcesFromPod(dev, pod, container)
+	}
+
 	return setForwardsFromPod(ctx, dev, pod, c)
 }
 

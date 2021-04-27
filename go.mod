@@ -27,6 +27,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-getter v1.5.0
 	github.com/heroku/docker-registry-client v0.0.0-20190909225348-afc9e1acc3d5
+	github.com/joho/godotenv v1.3.0
 	github.com/machinebox/graphql v0.2.2
 	github.com/manifoldco/promptui v0.3.2
 	github.com/matryer/is v1.2.0 // indirect
@@ -45,6 +46,7 @@ require (
 	github.com/src-d/enry/v2 v2.1.0
 	github.com/subosito/gotenv v1.2.0
 	github.com/vbauerster/mpb/v6 v6.0.2
+	github.com/whilp/git-urls v1.0.0
 	golang.org/x/crypto v0.0.0-20201117144127-c1f2f97bffc9
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208

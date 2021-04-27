@@ -51,6 +51,9 @@ func Push(ctx context.Context) *cobra.Command {
 		Short: "Builds, pushes and redeploys source code to the target deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			if err := utils.LoadEnvironment(ctx, false); err != nil {
+				return err
+			}
 
 			dev, err := utils.LoadDevOrDefault(devPath, deploymentName, namespace, k8sContext)
 			if err != nil {
