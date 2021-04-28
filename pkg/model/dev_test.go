@@ -1050,7 +1050,7 @@ func Test_loadEnvFile(t *testing.T) {
 func Test_LoadDevWithEnvFile(t *testing.T) {
 	content := map[string]string{
 		"DEPLOYMENT":    "main",
-		"TAG":           "1.2",
+		"IMAGE_TAG":     "1.2",
 		"MY_VAR":        "from-env-file",
 		"SERVICE":       "secondary",
 		"SERVICE_IMAGE": "code/service:2.1",
@@ -1066,7 +1066,7 @@ func Test_LoadDevWithEnvFile(t *testing.T) {
 	manifest := []byte(`
 name: deployment-$DEPLOYMENT
 container: core
-image: code/core:$TAG
+image: code/core:$IMAGE_TAG
 command: ["uwsgi"]
 environment:
 - MY_VAR=$MY_VAR
