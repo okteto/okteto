@@ -36,7 +36,7 @@ type Spaces struct {
 //Namespace represents an Okteto k8s namespace
 type Namespace struct {
 	ID       string `json:"id" yaml:"id"`
-	SLEEPING bool   `json:"sleeping" yaml:"sleeping"`
+	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
 }
 
 // CreateNamespace creates a namespace
