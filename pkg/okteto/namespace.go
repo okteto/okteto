@@ -35,7 +35,8 @@ type Spaces struct {
 
 //Namespace represents an Okteto k8s namespace
 type Namespace struct {
-	ID string `json:"id" yaml:"id"`
+	ID       string `json:"id" yaml:"id"`
+	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
 }
 
 // CreateNamespace creates a namespace
@@ -58,7 +59,8 @@ func CreateNamespace(ctx context.Context, namespace string) (string, error) {
 func ListNamespaces(ctx context.Context) ([]Namespace, error) {
 	q := `query{
 		spaces{
-			id
+			id,
+			sleeping
 		},
 	}`
 
