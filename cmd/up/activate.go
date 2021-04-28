@@ -17,6 +17,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -310,7 +311,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			case "Killing":
 				return errors.ErrDevPodDeleted
 			case "Pulling":
-				message := strings.Replace(e.Message, "Pulling", "pulling", 1)
+				message := getPullingMessage(e.Message, up.Dev.Namespace)
 				spinner.Update(fmt.Sprintf("%s...", message))
 				if err := config.UpdateStateFile(up.Dev, config.Pulling); err != nil {
 					log.Infof("error updating state: %s", err.Error())
@@ -339,4 +340,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			return ctx.Err()
 		}
 	}
+}
+
+func getPullingMessage(message, namespace string) string {
+	registry, err := okteto.GetRegistry()
+	if err != nil {
+		return message
+	}
+	toReplace := fmt.Sprintf("%s/%s", registry, namespace)
+	return strings.Replace(message, toReplace, "okteto.dev", 1)
 }
