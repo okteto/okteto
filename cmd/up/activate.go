@@ -3,7 +3,6 @@ package up
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -18,6 +17,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -311,7 +311,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			case "Killing":
 				return errors.ErrDevPodDeleted
 			case "Pulling":
-				message := getPullingMessage(e.Message)
+				message := getPullingMessage(e.Message, up.Dev.Namespace)
 				spinner.Update(fmt.Sprintf("%s...", message))
 				if err := config.UpdateStateFile(up.Dev, config.Pulling); err != nil {
 					log.Infof("error updating state: %s", err.Error())
@@ -342,8 +342,11 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 	}
 }
 
-func getPullingMessage(message string) string {
-	var oktetoRegistryRegex = regexp.MustCompile(`registry\..*\.okteto\.net\/.*\/`)
-	message = oktetoRegistryRegex.ReplaceAllString(message, "okteto.dev/")
-	return message
+func getPullingMessage(message, namespace string) string {
+	registry, err := okteto.GetRegistry()
+	if err != nil {
+		return message
+	}
+	toReplace := fmt.Sprintf("%s/%s", registry, namespace)
+	return strings.Replace(message, toReplace, "okteto.dev", 1)
 }
