@@ -646,6 +646,142 @@ func Test_restartFile(t *testing.T) {
 	}
 }
 
+func Test_endpoints(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		expected EndpointSpec
+	}{
+		{
+			name: "rule with name",
+			manifest: []byte(`name: test
+services:
+  app:
+    ports:
+      - 9213
+    image: okteto/vote:1
+endpoints:
+  app:
+    - path: /
+      service: app
+      port: 9213`),
+			expected: EndpointSpec{
+				"app": Endpoint{
+					Annotations: make(Annotations),
+					Labels:      make(Labels),
+					Rules: []EndpointRule{
+						{
+							Service: "app",
+							Path:    "/",
+							Port:    9213,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "rule with name and annotations/labels",
+			manifest: []byte(`name: test
+services:
+  app:
+    ports:
+    - 9213
+    image: okteto/vote:1
+endpoints:
+  app:
+    annotations:
+      key: value
+    labels:
+      key: value
+    rules:
+    - path: /
+      service: app
+      port: 9213`),
+			expected: EndpointSpec{
+				"app": Endpoint{
+					Annotations: Annotations{"key": "value"},
+					Labels:      Labels{"key": "value"},
+					Rules: []EndpointRule{
+						{
+							Service: "app",
+							Path:    "/",
+							Port:    9213,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "direct rules with labels/annotations",
+			manifest: []byte(`name: test
+services:
+  app:
+    ports:
+    - 9213
+    image: okteto/vote:1
+endpoints:
+  annotations:
+    key: value
+  labels:
+    key: value
+  rules:
+  - path: /
+    service: app
+    port: 9213`),
+			expected: EndpointSpec{
+				"test": Endpoint{
+					Annotations: Annotations{"key": "value"},
+					Labels:      Labels{"key": "value"},
+					Rules: []EndpointRule{
+						{
+							Service: "app",
+							Path:    "/",
+							Port:    9213,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "direct rules",
+			manifest: []byte(`name: test
+services:
+  app:
+    ports:
+    - 9213
+    image: okteto/vote:1
+endpoints:
+  - path: /
+    service: app
+    port: 9213`),
+			expected: EndpointSpec{
+				"test": Endpoint{
+					Annotations: make(Annotations),
+					Labels:      make(Labels),
+					Rules: []EndpointRule{
+						{
+							Service: "app",
+							Path:    "/",
+							Port:    9213,
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(tt.expected, s.Endpoints) {
+				t.Fatalf("Expected %v, but got %v", tt.expected, s.Endpoints)
+			}
+		})
+	}
+}
+
 func Test_validateEnvFiles(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -679,6 +815,7 @@ func Test_validateEnvFiles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if svc, ok := s.Services["app"]; ok {
 				if !reflect.DeepEqual(tt.EnvFiles, svc.EnvFiles) {
 					t.Fatalf("expected %v but got %v", tt.EnvFiles, svc.EnvFiles)

@@ -28,7 +28,7 @@ type StackRaw struct {
 	Name      string                     `yaml:"name"`
 	Namespace string                     `yaml:"namespace,omitempty"`
 	Services  map[string]*ServiceRaw     `yaml:"services,omitempty"`
-	Endpoints map[string]Endpoint        `yaml:"endpoints,omitempty"`
+	Endpoints EndpointSpec               `yaml:"endpoints,omitempty"`
 	Volumes   map[string]*VolumeTopLevel `yaml:"volumes,omitempty"`
 
 	// Docker-compose not implemented
@@ -197,6 +197,10 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Namespace = stackRaw.Namespace
 
 	s.Endpoints = stackRaw.Endpoints
+	if endpoint, ok := s.Endpoints[""]; ok {
+		s.Endpoints[s.Name] = endpoint
+		delete(s.Endpoints, "")
+	}
 
 	volumes := make(map[string]*VolumeSpec, 0)
 	for volumeName, v := range stackRaw.Volumes {
@@ -469,6 +473,28 @@ func (r DeployComposeResources) toServiceResources() ServiceResources {
 		resources.Memory = r.Memory
 	}
 	return resources
+}
+
+func (endpoint *EndpointSpec) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	result := make(EndpointSpec)
+	if endpoint == nil {
+		*endpoint = result
+	}
+	var directRule Endpoint
+	err := unmarshal(&directRule)
+	if err == nil {
+		result[""] = directRule
+		*endpoint = result
+		return nil
+	}
+	var expandedAnnotation map[string]Endpoint
+	err = unmarshal(&expandedAnnotation)
+	if err != nil {
+		return err
+	}
+
+	*endpoint = expandedAnnotation
+	return nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
