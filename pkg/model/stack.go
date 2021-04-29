@@ -269,7 +269,7 @@ func (s *Stack) validate() error {
 		}
 
 		for _, v := range svc.Volumes {
-			if v.LocalPath != "" {
+			if v.LocalPath != "" && !isInVolumesTopLevelSection(v.LocalPath, s) {
 				s.VolumeMountWarnings = append(s.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
