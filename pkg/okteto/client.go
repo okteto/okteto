@@ -85,6 +85,30 @@ func query(ctx context.Context, query string, result interface{}) error {
 	return nil
 }
 
+func queryWithVariables(ctx context.Context, query string, variables map[string]interface{}, result interface{}) error {
+	t, err := GetToken()
+	if err != nil {
+		log.Infof("couldn't get token: %s", err)
+		return errors.ErrNotLogged
+	}
+
+	c, err := getClient(t.URL)
+	if err != nil {
+		log.Infof("error getting the graphql client: %s", err)
+		return fmt.Errorf("internal server error")
+	}
+
+	req := getRequest(query, t.Token)
+	for key, value := range variables {
+		req.Var(key, value)
+	}
+	if err := c.Run(ctx, req, result); err != nil {
+		return translateAPIErr(err)
+	}
+
+	return nil
+}
+
 func translateAPIErr(err error) error {
 	e := strings.TrimPrefix(err.Error(), "graphql: ")
 	switch e {

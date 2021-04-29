@@ -51,16 +51,25 @@ type Space struct {
 	GitDeploys []PipelineRun `json:"gitDeploys"`
 }
 
+// Variable represents a pipeline variable
+type Variable struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 // DeployPipeline creates a pipeline
-func DeployPipeline(ctx context.Context, name, namespace, repository, branch string) (string, error) {
-	q := fmt.Sprintf(`mutation{
-		deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s"){
+func DeployPipeline(ctx context.Context, name, namespace, repository, branch string, variables []Variable) (string, error) {
+	q := fmt.Sprintf(`mutation deployGitRepository($variables: [InputVariable]){
+		deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s", variables: $variables){
 			id,status
 		},
 	}`, name, repository, namespace, branch)
+	vars := map[string]interface{}{
+		"variables": variables,
+	}
 
 	var body DeployPipelineBody
-	if err := query(ctx, q, &body); err != nil {
+	if err := queryWithVariables(ctx, q, vars, &body); err != nil {
 		return "", err
 	}
 
