@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kballard/go-shellquote"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -49,7 +50,7 @@ type ServiceRaw struct {
 	CapDropSneakCase         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	CapDrop                  []apiv1.Capability `yaml:"capDrop,omitempty"`
 	Command                  Args               `yaml:"command,omitempty"`
-	Entrypoint               Command            `yaml:"entrypoint,omitempty"`
+	Entrypoint               CommandStack       `yaml:"entrypoint,omitempty"`
 	Args                     Args               `yaml:"args,omitempty"`
 	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
 	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
@@ -923,4 +924,29 @@ func getVolumesNotSupportedFields(volumeName string, volumeInfo *VolumeTopLevel)
 		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].external", volumeName))
 	}
 	return notSupported
+
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (c *CommandStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var multi []string
+	err := unmarshal(&multi)
+	if err != nil {
+		var single string
+		err := unmarshal(&single)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(single, " && ") {
+			c.Values = []string{"sh", "-c", single}
+		} else {
+			c.Values, err = shellquote.Split(single)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		c.Values = multi
+	}
+	return nil
 }
