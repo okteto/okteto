@@ -193,7 +193,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 				tag := strings.Replace(svc.Image, ":", "-", 1)
 				svc.Image = fmt.Sprintf("okteto.dev/%s:okteto-with-volume-mounts", tag)
 			}
-			log.Information("Building image for service '%s'...", name)
+			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
 				return hasAddedAnyVolumeMounts, fmt.Errorf("error building image for '%s': %s", name, err)
