@@ -178,13 +178,13 @@ func GetHiddenExposePorts(image string) []int32 {
 
 	digest, err := c.ManifestV2(repoName, tag)
 	if err != nil {
-		log.Infof("error getting digest of %s/%s: %s", repoName, tag)
+		log.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
 		return exposedPorts
 	}
 
 	response, err := c.DownloadBlob(repoName, digest.Config.Digest)
 	if err != nil {
-		log.Infof("error getting digest of %s/%s: %s", repoName, tag)
+		log.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
 		return exposedPorts
 	}
 
