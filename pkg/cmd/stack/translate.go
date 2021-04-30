@@ -191,7 +191,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 			svc.Build = svcBuild
 			if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
 				tag := strings.Replace(svc.Image, ":", "-", 1)
-				svc.Image = fmt.Sprintf("okteto.dev/%s:okteto", tag)
+				svc.Image = fmt.Sprintf("okteto.dev/%s:okteto-with-volume-mounts", tag)
 			}
 			log.Information("Building image for service '%s'...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
