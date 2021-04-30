@@ -66,6 +66,8 @@ type Service struct {
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
 	Resources *StackResources `yaml:"resources,omitempty"`
+
+	VolumeMounts []StackVolume `yaml:"-"`
 }
 
 type StackVolume struct {
@@ -166,7 +168,6 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 
 	for _, svc := range s.Services {
 		svc.extendPorts()
-		svc.IgnoreSyncVolumes(s)
 		if svc.Build == nil {
 			continue
 		}
@@ -238,12 +239,12 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 
 func (svc *Service) IgnoreSyncVolumes(s *Stack) {
 	notIgnoredVolumes := make([]StackVolume, 0)
-	for _, volume := range svc.Volumes {
-		if volume.LocalPath == "" || isInVolumesTopLevelSection(volume.LocalPath, s) {
+	for _, volume := range svc.VolumeMounts {
+		if !strings.HasPrefix(volume.LocalPath, "/") {
 			notIgnoredVolumes = append(notIgnoredVolumes, volume)
 		}
 	}
-	svc.Volumes = notIgnoredVolumes
+	svc.VolumeMounts = notIgnoredVolumes
 }
 
 func (s *Stack) validate() error {
@@ -273,14 +274,15 @@ func (s *Stack) validate() error {
 			return fmt.Errorf(fmt.Sprintf("Invalid service '%s': image cannot be empty", name))
 		}
 
-		for _, v := range svc.Volumes {
-			if v.LocalPath != "" && !isInVolumesTopLevelSection(v.LocalPath, s) {
+		for _, v := range svc.VolumeMounts {
+			if strings.HasPrefix(v.LocalPath, "/") {
 				s.VolumeMountWarnings = append(s.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
 			}
 		}
+		svc.IgnoreSyncVolumes(s)
 	}
 
 	return nil

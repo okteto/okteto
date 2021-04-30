@@ -118,14 +118,29 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 	if err != nil {
 		return err
 	}
-	building := false
+	hasBuiltSomething, err := buildServices(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache)
+	if err != nil {
+		return err
+	}
+	hasAddedAnyVolumeMounts, err := addVolumeMountsToSvcs(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache)
+	if err != nil {
+		return err
+	}
+	if !hasBuiltSomething && !hasAddedAnyVolumeMounts && forceBuild {
+		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
+	}
 
+	return nil
+}
+
+func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache bool) (bool, error) {
+	hasBuiltSomething := false
 	for name, svc := range s.Services {
 		if svc.Build == nil {
 			continue
 		}
 		if !isOktetoCluster && svc.Image == "" {
-			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
+			return hasBuiltSomething, fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
 		}
 		if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
@@ -137,25 +152,58 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 			}
 			log.Infof("image '%s' not found, building it", svc.Image)
 		}
-		if !building {
-			building = true
+		if !hasBuiltSomething {
+			hasBuiltSomething = true
 			log.Information("Running your build in %s...", buildKitHost)
 		}
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
-			return fmt.Errorf("error building image for '%s': %s", name, err)
+			return hasBuiltSomething, fmt.Errorf("error building image for '%s': %s", name, err)
 		}
 		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
 		log.Success("Image for service '%s' successfully pushed", name)
 	}
+	return hasBuiltSomething, nil
+}
 
-	if !building && forceBuild {
-		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
+func addVolumeMountsToSvcs(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache bool) (bool, error) {
+	hasAddedAnyVolumeMounts := false
+	var err error
+	for name, svc := range s.Services {
+		if len(svc.VolumeMounts) != 0 {
+			if !hasAddedAnyVolumeMounts {
+				hasAddedAnyVolumeMounts = true
+				log.Information("Running your build in %s...", buildKitHost)
+			}
+			fromImage := svc.Image
+			if strings.HasPrefix(fromImage, "okteto.dev") {
+				fromImage, err = registry.ExpandOktetoDevRegistry(ctx, s.Namespace, svc.Image)
+				if err != nil {
+					return hasAddedAnyVolumeMounts, err
+				}
+			}
+			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, svc.VolumeMounts)
+			if err != nil {
+				return hasAddedAnyVolumeMounts, err
+			}
+			svc.Build = svcBuild
+			if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
+				tag := strings.Replace(svc.Image, ":", "-", 1)
+				svc.Image = fmt.Sprintf("okteto.dev/%s:okteto", tag)
+			}
+			log.Information("Building image for service '%s'...", name)
+			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
+			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+				return hasAddedAnyVolumeMounts, fmt.Errorf("error building image for '%s': %s", name, err)
+			}
+			svc.SetLastBuiltAnnotation()
+			s.Services[name] = svc
+			log.Success("Image for service '%s' successfully pushed", name)
+		}
 	}
-
-	return nil
+	return hasAddedAnyVolumeMounts, nil
 }
 
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
