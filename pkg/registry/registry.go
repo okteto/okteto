@@ -149,7 +149,7 @@ func IsNotLoggedIntoRegistry(err error) bool {
 // SplitRegistryAndImage returns image tag and the registry to push the image
 func GetRegistryAndRepo(tag string) (string, string) {
 	var imageTag string
-	registryTag := "https://docker.io"
+	registryTag := "docker.io"
 	splittedImage := strings.Split(tag, "/")
 
 	if len(splittedImage) == 1 {
