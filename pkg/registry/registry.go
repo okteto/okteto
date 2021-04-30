@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
-	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
@@ -110,60 +109,6 @@ func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string
 
 	tag = strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, namespace), 1)
 	return tag, nil
-}
-
-// IsTransientError returns true if err represents a transient registry error
-func IsTransientError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	switch {
-	case strings.Contains(err.Error(), "failed commit on ref") && strings.Contains(err.Error(), "500 Internal Server Error"),
-		strings.Contains(err.Error(), "transport is closing") && strings.Contains(err.Error(), "connect: connection refused"):
-		return true
-	default:
-		return false
-	}
-}
-
-func GetErrorMessage(err error, tag string) error {
-	if err == nil {
-		return nil
-	}
-	imageRegistry, imageTag := GetRegistryAndRepo(tag)
-	switch {
-	case IsLoggedIntoRegistryButDontHavePermissions(err):
-		err = okErrors.UserError{
-			E:    fmt.Errorf("You are not authorized to push image '%s'.", imageTag),
-			Hint: fmt.Sprintf("Please login into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
-		}
-	case IsNotLoggedIntoRegistry(err):
-		err = okErrors.UserError{
-			E:    fmt.Errorf("You are not authorized to push image '%s'.", imageTag),
-			Hint: fmt.Sprintf("Login into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
-		}
-	case IsBuildkitServiceUnavailable(err):
-		err = okErrors.UserError{
-			E:    fmt.Errorf("Buildkit service is not available at the moment."),
-			Hint: "Please try again later.",
-		}
-	}
-	return err
-}
-
-// IsLoggedIntoRegistryButDontHavePermissions returns true when the error is because the user is logged into the registry but doesn't have permissions to push the image
-func IsLoggedIntoRegistryButDontHavePermissions(err error) bool {
-	return strings.Contains(err.Error(), "insufficient_scope: authorization failed")
-}
-
-// IsNotLoggedIntoRegistry returns true when the error is because the user is not logged into the registry
-func IsNotLoggedIntoRegistry(err error) bool {
-	return strings.Contains(err.Error(), "failed to authorize: failed to fetch anonymous token")
-}
-
-func IsBuildkitServiceUnavailable(err error) bool {
-	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error")
 }
 
 // SplitRegistryAndImage returns image tag and the registry to push the image
