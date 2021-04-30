@@ -15,8 +15,10 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
@@ -25,6 +27,14 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
+
+type ImageInfo struct {
+	Config *ConfigInfo `json:"config"`
+}
+
+type ConfigInfo struct {
+	ExposedPorts *map[string]*interface{} `json:"ExposedPorts"`
+}
 
 //GetImageTagWithDigest returns the image tag digest
 func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (string, error) {
@@ -139,7 +149,7 @@ func IsNotLoggedIntoRegistry(err error) bool {
 // SplitRegistryAndImage returns image tag and the registry to push the image
 func GetRegistryAndRepo(tag string) (string, string) {
 	var imageTag string
-	registryTag := "docker.io"
+	registryTag := "https://docker.io"
 	splittedImage := strings.Split(tag, "/")
 
 	if len(splittedImage) == 1 {
@@ -151,4 +161,49 @@ func GetRegistryAndRepo(tag string) (string, string) {
 		registryTag = strings.Join(splittedImage[:len(splittedImage)-2], "/")
 	}
 	return registryTag, imageTag
+}
+
+func GetHiddenExposePorts(image string) []int32 {
+	exposedPorts := make([]int32, 0)
+	c, err := NewRegistryClient("https://registry.hub.docker.com", "", "")
+	if err != nil {
+		log.Infof("error creating registry client: %s", err.Error())
+		return exposedPorts
+	}
+
+	repoName, tag := GetRepoNameAndTag(image)
+	if !strings.Contains(repoName, "/") {
+		repoName = fmt.Sprintf("library/%s", repoName)
+	}
+
+	digest, err := c.ManifestV2(repoName, tag)
+	if err != nil {
+		log.Infof("error getting digest of %s/%s: %s", err.Error())
+		return exposedPorts
+	}
+
+	response, err := c.DownloadBlob(repoName, digest.Config.Digest)
+	if err != nil {
+		log.Infof("error getting digest of %s/%s: %s", err.Error())
+		return exposedPorts
+	}
+
+	info := ImageInfo{Config: &ConfigInfo{}}
+	decoder := json.NewDecoder(response)
+	decoder.Decode(&info)
+
+	if info.Config.ExposedPorts != nil {
+
+		for port := range *info.Config.ExposedPorts {
+			if strings.Contains(port, "/") {
+				port = port[:strings.Index(port, "/")]
+				portInt, err := strconv.Atoi(port)
+				if err != nil {
+					continue
+				}
+				exposedPorts = append(exposedPorts, int32(portInt))
+			}
+		}
+	}
+	return exposedPorts
 }

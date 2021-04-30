@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -49,6 +50,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		return err
 	}
 
+	addHiddenExposedPorts(s)
 	if err := translate(ctx, s, forceBuild, noCache); err != nil {
 		return err
 	}
@@ -272,4 +274,18 @@ func DisplayWarnings(s *model.Stack) {
 	for _, warning := range s.VolumeMountWarnings {
 		log.Warning(warning)
 	}
+}
+
+func addHiddenExposedPorts(s *model.Stack) {
+	for _, svc := range s.Services {
+		if svc.Image != "" {
+			exposedPorts := registry.GetHiddenExposePorts(svc.Image)
+			for _, port := range exposedPorts {
+				if !svc.IsAlreadyAdded(port) {
+					svc.Ports = append(svc.Ports, model.Port{Port: port, Protocol: apiv1.ProtocolTCP})
+				}
+			}
+		}
+	}
+
 }
