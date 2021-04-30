@@ -146,7 +146,7 @@ func GetErrorMessage(err error, tag string) error {
 	case IsBuildkitServiceUnavailable(err):
 		err = okErrors.UserError{
 			E:    fmt.Errorf("Buildkit service is not available at the moment."),
-			Hint: fmt.Sprintf("Please try again later."),
+			Hint: "Please try again later.",
 		}
 	}
 	return err
