@@ -204,7 +204,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
 							Resources:       translateResources(svc),
-							WorkingDir:      svc.WorkingDir,
+							WorkingDir:      svc.Workdir,
 						},
 					},
 				},
@@ -239,10 +239,10 @@ func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.Persis
 				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 				Resources: apiv1.ResourceRequirements{
 					Requests: apiv1.ResourceList{
-						"storage": volumeSpec.Storage.Size.Value,
+						"storage": volumeSpec.Size.Value,
 					},
 				},
-				StorageClassName: translateStorageClass(volumeSpec.Storage.Class),
+				StorageClassName: translateStorageClass(volumeSpec.Class),
 			},
 		}
 		result = append(result, pvc)
@@ -295,7 +295,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 							SecurityContext: translateSecurityContext(svc),
 							VolumeMounts:    translateVolumeMounts(name, svc),
 							Resources:       translateResources(svc),
-							WorkingDir:      svc.WorkingDir,
+							WorkingDir:      svc.Workdir,
 						},
 					},
 					Volumes: translateVolumes(name, svc),
@@ -327,10 +327,10 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 			if !addedDataVolume {
 				volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
 				if command == "" {
-					command = "chmod 777 /data/"
+					command = "chmod 777 /data/*"
 					addedDataVolume = true
 				} else {
-					command += " && chmod 777 /data/"
+					command += " && chmod 777 /data/*"
 				}
 			}
 		}

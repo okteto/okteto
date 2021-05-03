@@ -49,9 +49,9 @@ type ServiceRaw struct {
 	CapAdd                   []apiv1.Capability `yaml:"capAdd,omitempty"`
 	CapDropSneakCase         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	CapDrop                  []apiv1.Capability `yaml:"capDrop,omitempty"`
-	Command                  Args               `yaml:"command,omitempty"`
+	Command                  CommandStack       `yaml:"command,omitempty"`
 	Entrypoint               CommandStack       `yaml:"entrypoint,omitempty"`
-	Args                     Args               `yaml:"args,omitempty"`
+	Args                     ArgsStack          `yaml:"args,omitempty"`
 	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
 	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
 	Environment              *RawMessage        `yaml:"environment,omitempty"`
@@ -65,7 +65,7 @@ type ServiceRaw struct {
 	StopGracePeriod          *RawMessage        `yaml:"stopGracePeriod,omitempty"`
 	Volumes                  []StackVolume      `yaml:"volumes,omitempty"`
 	WorkingDirSneakCase      string             `yaml:"working_dir,omitempty"`
-	WorkingDir               string             `yaml:"workingDir,omitempty"`
+	Workdir                  string             `yaml:"workdir,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas"`
@@ -176,7 +176,8 @@ type VolumeTopLevel struct {
 	Labels      map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
-	Storage     StorageResource   `json:"storage,omitempty" yaml:"storage,omitempty"`
+	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
+	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
 
 	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
 	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
@@ -207,13 +208,9 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
 		if v == nil {
-			result.Name = sanitizeName(volumeName)
 			result.Labels = make(map[string]string)
 			result.Annotations = make(map[string]string)
 		} else {
-			if v.Name == "" {
-				result.Name = sanitizeName(volumeName)
-			}
 			if v.Labels == nil {
 				result.Labels = make(map[string]string)
 			}
@@ -334,9 +331,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		}
 	}
 
-	svc.WorkingDir = serviceRaw.WorkingDir
+	svc.Workdir = serviceRaw.Workdir
 	if serviceRaw.WorkingDirSneakCase != "" {
-		svc.WorkingDir = serviceRaw.WorkingDirSneakCase
+		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
 	return svc, nil
 }
@@ -947,6 +944,26 @@ func (c *CommandStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	} else {
 		c.Values = multi
+	}
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (a *ArgsStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var multi []string
+	err := unmarshal(&multi)
+	if err != nil {
+		var single string
+		err := unmarshal(&single)
+		if err != nil {
+			return err
+		}
+		a.Values, err = shellquote.Split(single)
+		if err != nil {
+			return err
+		}
+	} else {
+		a.Values = multi
 	}
 	return nil
 }
