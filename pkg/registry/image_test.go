@@ -290,6 +290,12 @@ func Test_GetResgistryAndRepo(t *testing.T) {
 			expectedRegistry: "okteto.dev",
 			expectedRepo:     "ubuntu",
 		},
+		{
+			name:             "official-with-registry",
+			image:            "docker.io/ubuntu",
+			expectedRegistry: "docker.io",
+			expectedRepo:     "ubuntu",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -155,7 +155,7 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	if len(splittedImage) == 1 {
 		imageTag = splittedImage[0]
 	} else if len(splittedImage) == 2 {
-		if splittedImage[0] == okteto.DevRegistry {
+		if strings.Contains(splittedImage[0], ".") {
 			return splittedImage[0], splittedImage[1]
 		}
 		imageTag = strings.Join(splittedImage[len(splittedImage)-2:], "/")
