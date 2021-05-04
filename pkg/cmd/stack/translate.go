@@ -26,6 +26,7 @@ import (
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
@@ -178,7 +179,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 				log.Information("Running your build in %s...", buildKitHost)
 			}
 			fromImage := svc.Image
-			if strings.HasPrefix(fromImage, "okteto.dev") {
+			if strings.HasPrefix(fromImage, okteto.DevRegistry) {
 				fromImage, err = registry.ExpandOktetoDevRegistry(ctx, s.Namespace, svc.Image)
 				if err != nil {
 					return hasAddedAnyVolumeMounts, err
