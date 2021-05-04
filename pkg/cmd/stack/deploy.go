@@ -50,7 +50,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		return err
 	}
 
-	addHiddenExposedPorts(s)
+	addHiddenExposedPorts(ctx, s)
 	if err := translate(ctx, s, forceBuild, noCache); err != nil {
 		return err
 	}
@@ -276,10 +276,10 @@ func DisplayWarnings(s *model.Stack) {
 	}
 }
 
-func addHiddenExposedPorts(s *model.Stack) {
+func addHiddenExposedPorts(ctx context.Context, s *model.Stack) {
 	for _, svc := range s.Services {
 		if svc.Image != "" {
-			exposedPorts := registry.GetHiddenExposePorts(svc.Image)
+			exposedPorts := registry.GetHiddenExposePorts(ctx, s.Namespace, svc.Image)
 			for _, port := range exposedPorts {
 				if !svc.IsAlreadyAdded(port) {
 					svc.Ports = append(svc.Ports, model.Port{Port: port, Protocol: apiv1.ProtocolTCP})

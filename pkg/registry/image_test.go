@@ -284,6 +284,12 @@ func Test_GetResgistryAndRepo(t *testing.T) {
 			expectedRegistry: "okteto.dev",
 			expectedRepo:     "test/ubuntu",
 		},
+		{
+			name:             "okteto-registry-only-two",
+			image:            "okteto.dev/ubuntu",
+			expectedRegistry: "okteto.dev",
+			expectedRepo:     "ubuntu",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

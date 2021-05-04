@@ -155,6 +155,9 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	if len(splittedImage) == 1 {
 		imageTag = splittedImage[0]
 	} else if len(splittedImage) == 2 {
+		if splittedImage[0] == okteto.DevRegistry {
+			return splittedImage[0], splittedImage[1]
+		}
 		imageTag = strings.Join(splittedImage[len(splittedImage)-2:], "/")
 	} else {
 		imageTag = strings.Join(splittedImage[len(splittedImage)-2:], "/")
@@ -163,15 +166,35 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	return registryTag, imageTag
 }
 
-func GetHiddenExposePorts(image string) []int32 {
+func GetHiddenExposePorts(ctx context.Context, namespace, image string) []int32 {
 	exposedPorts := make([]int32, 0)
-	c, err := NewRegistryClient("https://registry.hub.docker.com", "", "")
+	var err error
+	var username string
+	var token string
+	if strings.HasPrefix(image, okteto.DevRegistry) {
+		image, err = ExpandOktetoDevRegistry(ctx, namespace, image)
+		if err != nil {
+			log.Infof("Could not expand okteto dev registry: %s", err.Error())
+		}
+		username = okteto.GetUserID()
+		okToken, err := okteto.GetToken()
+		if err != nil {
+			log.Infof("Could not expand okteto dev registry: %s", err.Error())
+			return exposedPorts
+		}
+		token = okToken.Token
+	}
+
+	registry := getRegistryURL(ctx, namespace, image)
+
+	c, err := NewRegistryClient(registry, username, token)
 	if err != nil {
 		log.Infof("error creating registry client: %s", err.Error())
 		return exposedPorts
 	}
 
-	repoName, tag := GetRepoNameAndTag(image)
+	_, repo := GetRegistryAndRepo(image)
+	repoName, tag := GetRepoNameAndTag(repo)
 	if !strings.Contains(repoName, "/") {
 		repoName = fmt.Sprintf("library/%s", repoName)
 	}
@@ -206,4 +229,16 @@ func GetHiddenExposePorts(image string) []int32 {
 		}
 	}
 	return exposedPorts
+}
+
+func getRegistryURL(ctx context.Context, namespace, image string) string {
+	registry, _ := GetRegistryAndRepo(image)
+	if registry == "docker.io" {
+		return "https://registry.hub.docker.com"
+	} else {
+		if !strings.HasPrefix(registry, "https://") {
+			registry = fmt.Sprintf("https://%s", registry)
+		}
+		return registry
+	}
 }
