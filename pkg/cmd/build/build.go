@@ -15,10 +15,13 @@ package build
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -45,6 +48,12 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		defer os.Remove(dockerFile)
 	}
 
+	if tag != "" {
+		err = validateImage(tag)
+		if err != nil {
+			return err
+		}
+	}
 	tag, err = registry.ExpandOktetoDevRegistry(ctx, namespace, tag)
 	if err != nil {
 		return err
@@ -78,4 +87,14 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 	err = registry.GetErrorMessage(err, tag)
 
 	return err
+}
+
+func validateImage(imageTag string) error {
+	if strings.HasPrefix(imageTag, okteto.DevRegistry) && strings.Count(imageTag, "/") != 1 {
+		return okErrors.UserError{
+			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
+			Hint: "The syntax for using okteto registry is: 'okteto.dev/{image_name}'",
+		}
+	}
+	return nil
 }
