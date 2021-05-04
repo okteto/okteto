@@ -26,6 +26,7 @@ import (
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
@@ -127,7 +128,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		if !isOktetoCluster && svc.Image == "" {
 			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
 		}
-		if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
+		if isOktetoCluster && !strings.HasPrefix(svc.Image, okteto.DevRegistry) {
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !forceBuild {
