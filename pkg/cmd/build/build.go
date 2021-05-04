@@ -61,14 +61,14 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 	}
 
 	err = solveBuild(ctx, buildkitClient, opt, progress)
-	log.Errorf("error reading stack: %s", err.Error())
+	log.Errorf("Failed to build image: %s", err.Error())
 	if registry.IsTransientError(err) {
 		log.Yellow("Failed to push '%s' to the registry, retrying ...", tag)
 		success := true
 		err := solveBuild(ctx, buildkitClient, opt, progress)
 		if err != nil {
 			success = false
-			log.Errorf("error reading stack: %s", err.Error())
+			log.Errorf("Failed to build image: %s", err.Error())
 		}
 		err = registry.GetErrorMessage(err, tag)
 		analytics.TrackBuildTransientError(buildKitHost, success)
