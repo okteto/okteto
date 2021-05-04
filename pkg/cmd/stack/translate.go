@@ -122,7 +122,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 	if err != nil {
 		return err
 	}
-	hasAddedAnyVolumeMounts, err := addVolumeMountsToBuiltImage(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache)
+	hasAddedAnyVolumeMounts, err := addVolumeMountsToBuiltImage(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache, hasBuiltSomething)
 	if err != nil {
 		return err
 	}
@@ -168,12 +168,12 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 	return hasBuiltSomething, nil
 }
 
-func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache bool) (bool, error) {
+func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache, hasBuiltSomething bool) (bool, error) {
 	hasAddedAnyVolumeMounts := false
 	var err error
 	for name, svc := range s.Services {
 		if len(svc.VolumeMounts) != 0 {
-			if !hasAddedAnyVolumeMounts {
+			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
 				hasAddedAnyVolumeMounts = true
 				log.Information("Running your build in %s...", buildKitHost)
 			}
