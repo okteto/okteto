@@ -13,7 +13,11 @@
 
 package okteto
 
-import "testing"
+import (
+	"fmt"
+	"strings"
+	"testing"
+)
 
 func Test_membersToString(t *testing.T) {
 	expected := ""
@@ -35,5 +39,60 @@ func Test_membersToString(t *testing.T) {
 
 	if expected != got {
 		t.Errorf("got %s, expected %s", got, expected)
+	}
+}
+
+func Test_validateNamespaceName(t *testing.T) {
+	tests := []struct {
+		name          string
+		namespace     string
+		expectedError bool
+		errorMessage  string
+	}{
+		{
+			name:          "ok-namespace-starts-with-letter",
+			namespace:     "argo-yournamespace",
+			expectedError: false,
+			errorMessage:  "",
+		},
+		{
+			name:          "ok-namespace-starts-with-number",
+			namespace:     "1-argo-yournamespace",
+			expectedError: false,
+			errorMessage:  "",
+		},
+		{
+			name:          "wrong-namespace-starts-with-unsupported-character",
+			namespace:     "-argo-yournamespace",
+			expectedError: true,
+			errorMessage:  "Malformed namespace name",
+		},
+		{
+			name:          "wrong-namespace-unsupported-character",
+			namespace:     "argo/test-yournamespace",
+			expectedError: true,
+			errorMessage:  "Malformed namespace name",
+		},
+		{
+			name:          "wrong-namespace-exceeded-char-limit",
+			namespace:     fmt.Sprintf("%s-yournamespace", strings.Repeat("test", 20)),
+			expectedError: true,
+			errorMessage:  "Exceeded number of character",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateNamespace(tt.namespace)
+			if err != nil && !tt.expectedError {
+				t.Errorf("Expected error but no error found")
+			}
+			if err != nil && !tt.expectedError {
+				if !strings.Contains(err.Error(), tt.errorMessage) {
+					t.Errorf("Expected %s, but got %s", tt.errorMessage, err.Error())
+				}
+			}
+
+		})
 	}
 }
