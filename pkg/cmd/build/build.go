@@ -93,7 +93,7 @@ func validateImage(imageTag string) error {
 	if strings.HasPrefix(imageTag, okteto.DevRegistry) && strings.Count(imageTag, "/") != 1 {
 		return okErrors.UserError{
 			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
-			Hint: "The syntax for using okteto registry is: 'okteto.dev/{image_name}'",
+			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", okteto.DevRegistry),
 		}
 	}
 	return nil
