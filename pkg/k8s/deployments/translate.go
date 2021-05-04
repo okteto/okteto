@@ -458,7 +458,7 @@ func TranslatePodSecurityContext(spec *apiv1.PodSpec, s *model.SecurityContext) 
 	}
 }
 
-//TranslatePodServiceAccount translates the security accout the pod uses
+//TranslatePodServiceAccount translates the security account the pod uses
 func TranslatePodServiceAccount(spec *apiv1.PodSpec, sa string) {
 	if sa != "" {
 		spec.ServiceAccountName = sa
