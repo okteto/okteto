@@ -16,6 +16,14 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"regexp"
+
+	"github.com/okteto/okteto/pkg/errors"
+)
+
+const (
+	// Maximum number of characters allowed in a namespace name
+	MAX_ALLOWED_CHARS = 63
 )
 
 // CreateBody top body answer
@@ -41,6 +49,9 @@ type Namespace struct {
 
 // CreateNamespace creates a namespace
 func CreateNamespace(ctx context.Context, namespace string) (string, error) {
+	if err := validateNamespace(namespace); err != nil {
+		return "", err
+	}
 	q := fmt.Sprintf(`mutation{
 		createSpace(name: "%s"){
 			id
@@ -109,4 +120,21 @@ func DeleteNamespace(ctx context.Context, namespace string) error {
 
 	var body DeleteBody
 	return query(ctx, q, &body)
+}
+
+func validateNamespace(namespace string) error {
+	if len(namespace) > MAX_ALLOWED_CHARS {
+		return errors.UserError{
+			E:    fmt.Errorf("Failed to create namespace '%s': Exceeded number of character.", namespace),
+			Hint: "Please try to shorten namespace name.",
+		}
+	}
+	nameValidationRegex := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
+	if !nameValidationRegex.MatchString(namespace) {
+		return errors.UserError{
+			E:    fmt.Errorf("Failed to create namespace '%s': Malformed namespace name.", namespace),
+			Hint: "Namespace must start with an alphanumeric character and only supports lowercase and '-'",
+		}
+	}
+	return nil
 }
