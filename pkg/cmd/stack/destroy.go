@@ -186,6 +186,10 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		if _, ok := s.Endpoints[ingressesList[i].Name]; ok {
 			continue
 		}
+		if ingressesList[i].Labels[okLabels.StackEndpointNameLabel] == "" {
+			//ingress created with "public"
+			continue
+		}
 		if err := ingress.Destroy(ctx, ingressesList[i].Name, ingressesList[i].Namespace, c); err != nil {
 			return fmt.Errorf("error destroying ingress '%s': %s", ingressesList[i].Name, err)
 		}

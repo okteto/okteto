@@ -29,7 +29,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "none",
 			dev: &Dev{
-				WorkDir: "",
+				Workdir: "",
 				Volumes: []Volume{},
 				Sync: Sync{
 					Folders: []SyncFolder{},
@@ -37,7 +37,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 			},
 			result: &Dev{
 				Volumes: []Volume{},
-				WorkDir: "/okteto",
+				Workdir: "/okteto",
 				Sync: Sync{
 					Folders: []SyncFolder{
 						{
@@ -52,7 +52,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "workdir",
 			dev: &Dev{
-				WorkDir: "/workdir",
+				Workdir: "/workdir",
 				Volumes: []Volume{},
 				Sync: Sync{
 					Folders: []SyncFolder{},
@@ -96,7 +96,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "workdir-and-mountpath",
 			dev: &Dev{
-				WorkDir:   "/workdir",
+				Workdir:   "/workdir",
 				MountPath: "/mountpath",
 				Volumes:   []Volume{},
 				Sync: Sync{
@@ -119,7 +119,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "workdir-syncs",
 			dev: &Dev{
-				WorkDir: "/workdir",
+				Workdir: "/workdir",
 				Volumes: []Volume{},
 				Sync: Sync{
 					Folders: []SyncFolder{
@@ -177,7 +177,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "workdir-and-mountpath-syncs",
 			dev: &Dev{
-				WorkDir:   "/workdir",
+				Workdir:   "/workdir",
 				MountPath: "/mountpath",
 				Volumes:   []Volume{},
 				Sync: Sync{
@@ -209,7 +209,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "volumes-to-syncs",
 			dev: &Dev{
-				WorkDir:   "/workdir",
+				Workdir:   "/workdir",
 				MountPath: "/mountpath",
 				Volumes: []Volume{
 					{
@@ -241,14 +241,14 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "services-workdir",
 			dev: &Dev{
-				WorkDir: "/workdir1",
+				Workdir: "/workdir1",
 				Volumes: []Volume{},
 				Sync: Sync{
 					Folders: []SyncFolder{},
 				},
 				Services: []*Dev{
 					{
-						WorkDir: "/workdir2",
+						Workdir: "/workdir2",
 						Volumes: []Volume{},
 						Sync: Sync{
 							Folders: []SyncFolder{},
@@ -285,14 +285,14 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "services-workdir-subpath",
 			dev: &Dev{
-				WorkDir: "/workdir1",
+				Workdir: "/workdir1",
 				Volumes: []Volume{},
 				Sync: Sync{
 					Folders: []SyncFolder{},
 				},
 				Services: []*Dev{
 					{
-						WorkDir: "/workdir2",
+						Workdir: "/workdir2",
 						SubPath: "subpath",
 						Volumes: []Volume{},
 						Sync: Sync{
@@ -419,7 +419,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "services-workdir-error",
 			dev: &Dev{
-				WorkDir: "/workdir1",
+				Workdir: "/workdir1",
 				Sync: Sync{
 					Folders: []SyncFolder{
 						{
@@ -430,7 +430,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 				},
 				Services: []*Dev{
 					{
-						WorkDir: "/workdir1",
+						Workdir: "/workdir1",
 					},
 				},
 			},
@@ -440,7 +440,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "services-mountpath-error",
 			dev: &Dev{
-				WorkDir: "/mountpath1",
+				Workdir: "/mountpath1",
 				Sync: Sync{
 					Folders: []SyncFolder{
 						{
@@ -461,7 +461,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "services-workdir-syncs",
 			dev: &Dev{
-				WorkDir: "/workdir1",
+				Workdir: "/workdir1",
 				Volumes: []Volume{},
 				Sync: Sync{
 					Folders: []SyncFolder{
@@ -473,7 +473,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 				},
 				Services: []*Dev{
 					{
-						WorkDir: "/workdir2",
+						Workdir: "/workdir2",
 						Volumes: []Volume{},
 						Sync: Sync{
 							Folders: []SyncFolder{
@@ -577,7 +577,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "services-workdir-and-mountpath-syncs",
 			dev: &Dev{
-				WorkDir:   "/workdir1",
+				Workdir:   "/workdir1",
 				MountPath: "/mountpath1",
 				Volumes:   []Volume{},
 				Sync: Sync{
@@ -590,7 +590,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 				},
 				Services: []*Dev{
 					{
-						WorkDir:   "/workdir2",
+						Workdir:   "/workdir2",
 						MountPath: "/mountpath2",
 						Volumes:   []Volume{},
 						Sync: Sync{
@@ -641,7 +641,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 		{
 			name: "services-volumes-to-syncs",
 			dev: &Dev{
-				WorkDir: "/workdir1",
+				Workdir: "/workdir1",
 				Volumes: []Volume{
 					{
 						LocalPath:  "/local1",
@@ -653,7 +653,7 @@ func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
 				},
 				Services: []*Dev{
 					{
-						WorkDir: "/workdir2",
+						Workdir: "/workdir2",
 						Volumes: []Volume{
 							{
 								LocalPath:  "/local2",
