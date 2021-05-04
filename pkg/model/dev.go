@@ -133,7 +133,7 @@ type Dev struct {
 	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
 	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
-	WorkDir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
 	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
 	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
@@ -802,7 +802,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		ImagePullPolicy:  dev.ImagePullPolicy,
 		Environment:      dev.Environment,
 		Secrets:          dev.Secrets,
-		WorkDir:          dev.WorkDir,
+		WorkDir:          dev.Workdir,
 		PersistentVolume: main.PersistentVolumeEnabled(),
 		Volumes:          []VolumeMount{},
 		SecurityContext:  dev.SecurityContext,

@@ -23,8 +23,8 @@ import (
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
-	if dev.WorkDir == "" && dev.MountPath == "" && len(dev.Sync.Folders) == 0 {
-		dev.WorkDir = "/okteto"
+	if dev.Workdir == "" && dev.MountPath == "" && len(dev.Sync.Folders) == 0 {
+		dev.Workdir = "/okteto"
 	}
 	if err := dev.translateDeprecatedMountPath(nil); err != nil {
 		return err
@@ -70,19 +70,19 @@ func (dev *Dev) translateDeprecatedMountPath(main *Dev) error {
 }
 
 func (dev *Dev) translateDeprecatedWorkdir(main *Dev) error {
-	if dev.WorkDir == "" || len(dev.Sync.Folders) > 0 {
+	if dev.Workdir == "" || len(dev.Sync.Folders) > 0 {
 		return nil
 	}
 	if main != nil && main.MountPath == "" {
 		return fmt.Errorf("'workdir' is not supported to define your synchronized folders in 'services'. Use the field 'sync' instead (%s)", syncFieldDocsURL)
 	}
 
-	dev.MountPath = dev.WorkDir
+	dev.MountPath = dev.Workdir
 	dev.Sync.Folders = append(
 		dev.Sync.Folders,
 		SyncFolder{
 			LocalPath:  filepath.Join(".", dev.SubPath),
-			RemotePath: dev.WorkDir,
+			RemotePath: dev.Workdir,
 		},
 	)
 	return nil
