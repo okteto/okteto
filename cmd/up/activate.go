@@ -143,7 +143,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 				log.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
 			}
 		}
-		printDisplayContext(up.Dev)
+		printDisplayContext(ctx, up.Dev, up.Client)
 		up.CommandResult <- up.runCommand(ctx)
 	}()
 	prevError := up.waitUntilExitOrInterrupt()
@@ -216,12 +216,12 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 	}
 
 	for name := range trList {
-		if name == d.Name {
-			if err := deployments.Deploy(ctx, trList[name].Deployment, create, up.Client); err != nil {
+		if name == d.Name && create {
+			if err := deployments.Create(ctx, trList[name].Deployment, up.Client); err != nil {
 				return err
 			}
 		} else {
-			if err := deployments.Deploy(ctx, trList[name].Deployment, false, up.Client); err != nil {
+			if err := deployments.Update(ctx, trList[name].Deployment, up.Client); err != nil {
 				return err
 			}
 		}

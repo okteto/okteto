@@ -219,7 +219,7 @@ func (p *PortForwardManager) buildForwarder(namespace, pod string, ports []strin
 }
 
 func (p *PortForwardManager) buildForwarderToService(ctx context.Context, namespace, service string) (*active, *portforward.PortForwarder, error) {
-	svc, err := services.Get(ctx, namespace, service, p.client)
+	svc, err := services.Get(ctx, service, namespace, p.client)
 	if err != nil {
 		return nil, nil, err
 	}

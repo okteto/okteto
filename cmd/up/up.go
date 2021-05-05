@@ -29,19 +29,21 @@ import (
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	k8sClient "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
-
 	"github.com/okteto/okteto/pkg/syncthing"
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // ReconnectingMessage is the message shown when we are trying to reconnect
@@ -56,12 +58,11 @@ func Up() *cobra.Command {
 	var autoDeploy bool
 	var build bool
 	var forcePull bool
-	var resetSyncthing bool
+	var reset bool
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your development container",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if okteto.InDevContainer() {
 				return errors.ErrNotInDevContainer
 			}
@@ -133,7 +134,7 @@ func Up() *cobra.Command {
 			up := &upContext{
 				Dev:            dev,
 				Exit:           make(chan error, 1),
-				resetSyncthing: resetSyncthing,
+				resetSyncthing: reset,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -158,7 +159,7 @@ func Up() *cobra.Command {
 	cmd.Flags().MarkHidden("deploy")
 	cmd.Flags().BoolVarP(&build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
 	cmd.Flags().BoolVarP(&forcePull, "pull", "", false, "force dev image pull")
-	cmd.Flags().BoolVarP(&resetSyncthing, "reset", "", false, "reset the file synchronization database")
+	cmd.Flags().BoolVarP(&reset, "reset", "", false, "reset the file synchronization database")
 	return cmd
 }
 
@@ -212,10 +213,8 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 }
 
 func (up *upContext) start(autoDeploy, build bool) error {
-
 	var err error
-
-	up.Client, up.RestConfig, err = k8Client.GetLocalWithContext(up.Dev.Context)
+	up.Client, up.RestConfig, err = k8sClient.GetLocalWithContext(up.Dev.Context)
 	if err != nil {
 		kubecfg := config.GetKubeConfigFile()
 		log.Infof("failed to load local Kubeconfig: %s", err)
@@ -237,6 +236,10 @@ func (up *upContext) start(autoDeploy, build bool) error {
 
 	up.isOktetoNamespace = namespaces.IsOktetoNamespace(ns)
 
+	if err := diverts.Create(ctx, up.Dev, up.isOktetoNamespace, up.Client); err != nil {
+		return err
+	}
+
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
 		log.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
 		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
@@ -247,7 +250,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.RemoteModeEnabled())
+	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.Divert != nil)
 
 	go up.activateLoop(autoDeploy, build)
 
@@ -503,27 +506,38 @@ func (up *upContext) shutdown() {
 
 }
 
-func printDisplayContext(dev *model.Dev) {
+func printDisplayContext(ctx context.Context, dev *model.Dev, c kubernetes.Interface) {
 	if dev.Context != "" {
-		log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), dev.Context))
+		log.Println(fmt.Sprintf("    %s    %s", log.BlueString("Context:"), dev.Context))
 	}
-	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
-	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
+	log.Println(fmt.Sprintf("    %s  %s", log.BlueString("Namespace:"), dev.Namespace))
+	log.Println(fmt.Sprintf("    %s       %s", log.BlueString("Name:"), dev.Name))
 
 	if len(dev.Forward) > 0 {
 		for i := 0; i < len(dev.Forward); i++ {
 			if dev.Forward[i].Service {
-				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
+				log.Println(fmt.Sprintf("                %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
 				continue
 			}
-			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
+			log.Println(fmt.Sprintf("                %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
 		}
 	}
 
 	if len(dev.Reverse) > 0 {
-		log.Println(fmt.Sprintf("    %s   %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
+		log.Println(fmt.Sprintf("    %s      %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
 		for i := 1; i < len(dev.Reverse); i++ {
-			log.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
+			log.Println(fmt.Sprintf("                %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
+		}
+	}
+
+	if dev.Divert != nil {
+		username := okteto.GetSanitizedUsername()
+		name := diverts.DivertName(username, dev.Divert.Ingress)
+		i, err := ingressesv1.Get(ctx, name, dev.Namespace, c)
+		if err != nil {
+			log.Infof("error getting diverted ingress %s: %s", name, err.Error())
+		} else if len(i.Spec.Rules) > 0 {
+			log.Println(fmt.Sprintf("    %s %s", log.BlueString("Divert URL:"), i.Spec.Rules[0].Host))
 		}
 	}
 	fmt.Println()

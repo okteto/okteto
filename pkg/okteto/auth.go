@@ -21,6 +21,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/config"
@@ -31,6 +33,8 @@ import (
 const (
 	tokenFile = ".token.json"
 )
+
+var reg = regexp.MustCompile("[^A-Za-z0-9]+")
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
@@ -204,6 +208,16 @@ func GetUsername() string {
 	}
 
 	return t.Username
+}
+
+// GetSanitizedUsername returns the username of the authenticated user sanitized to be DNS compatible
+func GetSanitizedUsername() string {
+	t, err := GetToken()
+	if err != nil {
+		return ""
+	}
+
+	return reg.ReplaceAllString(strings.ToLower(t.Username), "-")
 }
 
 // GetMachineID returns the userID of the authenticated user

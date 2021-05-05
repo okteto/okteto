@@ -34,7 +34,7 @@ func TestGet(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset(svc)
-	s, err := Get(ctx, svc.GetNamespace(), svc.GetName(), clientset)
+	s, err := Get(ctx, svc.GetName(), svc.GetNamespace(), clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestGet(t *testing.T) {
 		t.Fatalf("wrong service. Got %s, expected %s", s.Name, svc.GetName())
 	}
 
-	_, err = Get(ctx, "missing", "test", clientset)
+	_, err = Get(ctx, "test", "missing", clientset)
 	if err == nil {
 		t.Fatal("expected error")
 	}

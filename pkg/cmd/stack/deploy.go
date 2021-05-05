@@ -99,7 +99,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 		}
 		if len(s.Services[name].Ports) > 0 {
 			svcK8s := translateService(name, s)
-			if err := services.Create(ctx, svcK8s, c); err != nil {
+			if err := services.Deploy(ctx, svcK8s, c); err != nil {
 				return err
 			}
 		}
@@ -150,12 +150,17 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 			deployments.RestoreDevModeFrom(d, old)
 		}
 	}
-	if err := deployments.Deploy(ctx, d, isNewDeployment, c); err != nil {
-		if isNewDeployment {
+
+	if isNewDeployment {
+		if err := deployments.Create(ctx, d, c); err != nil {
 			return fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
 		}
-		return fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+	} else {
+		if err := deployments.Update(ctx, d, c); err != nil {
+			return fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+		}
 	}
+
 	return nil
 }
 
@@ -227,9 +232,6 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *i
 
 	if i.GetLabels()[okLabels.StackNameLabel] == "" {
 		return fmt.Errorf("name collision: the ingress '%s' was running before deploying your stack", ingressName)
-	}
-	if i.GetLabels()[okLabels.StackNameLabel] != iModel.V1.Labels[okLabels.StackNameLabel] {
-		return fmt.Errorf("name collision: the ingress '%s' belongs to the stack '%s'", ingressName, i.GetLabels()[okLabels.StackNameLabel])
 	}
 	return c.Update(ctx, iModel)
 }

@@ -79,6 +79,10 @@ const (
 	OktetoRestartAnnotation = "dev.okteto.com/restart"
 	//OktetoStignoreAnnotation indicates the hash of the stignore files to force redeployment
 	OktetoStignoreAnnotation = "dev.okteto.com/stignore"
+	//OktetoDivertLabel indicates the object is a diverted version
+	OktetoDivertLabel = "dev.okteto.com/divert"
+	//OktetoDivertServiceModificationAnnotation indicates the service modification done by diverting a service
+	OktetoDivertServiceModificationAnnotation = "divert.okteto.com/modification"
 
 	//OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"
@@ -157,6 +161,7 @@ type Dev struct {
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
+	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
 }
 
 // Entrypoint represents the start command of a development container
@@ -292,6 +297,13 @@ type Probes struct {
 type Lifecycle struct {
 	PostStart bool `json:"postStart,omitempty" yaml:"postStart,omitempty"`
 	PostStop  bool `json:"postStop,omitempty" yaml:"postStop,omitempty"`
+}
+
+// Divert defines how to divert a given service
+type Divert struct {
+	Ingress string `yaml:"ingress,omitempty"`
+	Service string `yaml:"service,omitempty"`
+	Port    int    `yaml:"port,omitempty"`
 }
 
 // ResourceList is a set of (resource name, quantity) pairs.
