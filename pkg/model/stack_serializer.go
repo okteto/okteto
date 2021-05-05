@@ -54,7 +54,7 @@ type ServiceRaw struct {
 	Args                     ArgsStack          `yaml:"args,omitempty"`
 	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
 	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
-	Environment              *RawMessage        `yaml:"environment,omitempty"`
+	Environment              Environment        `yaml:"environment,omitempty"`
 	Expose                   *RawMessage        `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
 	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
@@ -287,10 +287,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.EnvFiles = serviceRaw.EnvFilesSneakCase
 	}
 
-	svc.Environment, err = unmarshalEnvs(serviceRaw.Environment)
-	if err != nil {
-		return nil, err
-	}
+	svc.Environment = serviceRaw.Environment
 
 	svc.Public = serviceRaw.Public
 
@@ -557,27 +554,6 @@ func unmarshalExpose(raw *RawMessage) ([]int32, error) {
 		exposeInInt = append(exposeInInt, int32(portInInt))
 	}
 	return exposeInInt, nil
-}
-
-func unmarshalEnvs(raw *RawMessage) ([]EnvVar, error) {
-	var envList []EnvVar
-	if raw == nil {
-		return envList, nil
-	}
-	err := raw.unmarshal(&envList)
-	if err == nil {
-		return envList, nil
-	}
-	var envMap map[string]string
-	err = raw.unmarshal(&envMap)
-	if err == nil {
-		for key, value := range envMap {
-			envList = append(envList, EnvVar{Name: key, Value: value})
-		}
-		return envList, nil
-	}
-
-	return envList, err
 }
 
 func unmarshalDuration(raw *RawMessage) (int64, error) {
