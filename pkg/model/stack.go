@@ -346,14 +346,14 @@ func (svc *Service) SetLastBuiltAnnotation() {
 //extendPorts adds the ports that are in expose field to the port list.
 func (svc *Service) extendPorts() {
 	for _, port := range svc.Expose {
-		if !svc.isAlreadyAdded(port) {
+		if !svc.IsAlreadyAdded(port) {
 			svc.Ports = append(svc.Ports, Port{Port: port, Protocol: apiv1.ProtocolTCP})
 		}
 	}
 }
 
 //isAlreadyAdded checks if a port is already on port list
-func (svc *Service) isAlreadyAdded(p int32) bool {
+func (svc *Service) IsAlreadyAdded(p int32) bool {
 	for _, port := range svc.Ports {
 		if port.Port == p {
 			return true
