@@ -139,9 +139,9 @@ type ServiceRaw struct {
 type DeployInfoRaw struct {
 	Replicas  int32        `yaml:"replicas,omitempty"`
 	Resources ResourcesRaw `yaml:"resources,omitempty"`
+	Labels    Labels       `yaml:"labels,omitempty"`
 
 	EndpointMode   *WarningType `yaml:"endpoint_mode,omitempty"`
-	Labels         *WarningType `yaml:"labels,omitempty"`
 	Mode           *WarningType `yaml:"mode,omitempty"`
 	Placement      *WarningType `yaml:"placement,omitempty"`
 	Constraints    *WarningType `yaml:"constraints,omitempty"`
@@ -309,7 +309,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		return nil, err
 	}
 
-	svc.Labels = serviceRaw.Labels
+	svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
 
 	svc.Annotations = serviceRaw.Annotations
 
@@ -339,6 +339,23 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.WorkingDir = serviceRaw.WorkingDirSneakCase
 	}
 	return svc, nil
+}
+
+func unmarshalLabels(labels Labels, deployInfo *DeployInfoRaw) Labels {
+	result := Labels{}
+	if deployInfo != nil {
+		if deployInfo.Labels != nil {
+			for key, value := range deployInfo.Labels {
+				result[key] = value
+			}
+		}
+	}
+	if labels != nil {
+		for key, value := range labels {
+			result[key] = value
+		}
+	}
+	return result
 }
 
 func (msg *RawMessage) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -882,9 +899,6 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 	}
 	if deploy.EndpointMode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.endpoint_mode", svcName))
-	}
-	if deploy.Labels != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.labels", svcName))
 	}
 	if deploy.Mode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.mode", svcName))

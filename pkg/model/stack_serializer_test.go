@@ -646,6 +646,47 @@ func Test_restartFile(t *testing.T) {
 	}
 }
 
+func Test_DeployLabels(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		labels   Labels
+	}{
+		{
+			name:     "deploy labels",
+			manifest: []byte("services:\n  app:\n    deploy:\n      labels:\n        env: production\n    image: okteto/vote:1"),
+			labels:   Labels{"env": "production"},
+		},
+		{
+			name:     "no labels",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1"),
+			labels:   Labels{},
+		},
+		{
+			name:     "labels on service",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      env: production"),
+			labels:   Labels{"env": "production"},
+		},
+		{
+			name:     "labels on deploy and service",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      app: main\n    deploy:\n      labels:\n        env: production\n"),
+			labels:   Labels{"env": "production", "app": "main"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(s.Services["app"].Labels) != len(tt.labels) {
+				t.Fatalf("Bad deployment labels")
+			}
+		})
+	}
+}
+
 func Test_endpoints(t *testing.T) {
 	tests := []struct {
 		name     string
