@@ -125,15 +125,15 @@ func DeleteNamespace(ctx context.Context, namespace string) error {
 func validateNamespace(namespace string) error {
 	if len(namespace) > MAX_ALLOWED_CHARS {
 		return errors.UserError{
-			E:    fmt.Errorf("Failed to create namespace '%s': Exceeded number of character.", namespace),
-			Hint: "Please try to shorten namespace name.",
+			E:    fmt.Errorf("Invalid namespace name."),
+			Hint: "Namespace name must be shorter than 63 characters.",
 		}
 	}
 	nameValidationRegex := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
 	if !nameValidationRegex.MatchString(namespace) {
 		return errors.UserError{
-			E:    fmt.Errorf("Failed to create namespace '%s': Malformed namespace name.", namespace),
-			Hint: "Namespace must start with an alphanumeric character and only supports lowercase and '-'",
+			E:    fmt.Errorf("Invalid namespace name."),
+			Hint: "Namespace name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character",
 		}
 	}
 	return nil
