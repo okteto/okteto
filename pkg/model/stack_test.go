@@ -223,6 +223,15 @@ services:
 	if len(s.Services["vote"].Environment) != 2 {
 		t.Errorf("'vote.env' was not parsed: %+v", s)
 	}
+	for _, env := range s.Services["vote"].Environment {
+		if env.Name == "OPTION_A" && env.Value == "Cats" {
+			continue
+		} else if env.Name == "OPTION_B" && env.Value == "Dogs" {
+			continue
+		} else {
+			t.Errorf("'vote.env' was not parsed correctly: %+v", s)
+		}
+	}
 	if s.Services["vote"].Environment[0].Name != "OPTION_A" || s.Services["vote"].Environment[0].Value != "Cats" {
 		t.Errorf("'vote.env[0]' was not parsed: %+v", s)
 	}
