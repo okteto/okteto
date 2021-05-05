@@ -865,3 +865,34 @@ func Test_validateEnvFiles(t *testing.T) {
 		})
 	}
 }
+
+func Test_Environment(t *testing.T) {
+	tests := []struct {
+		name        string
+		manifest    []byte
+		environment Environment
+	}{
+		{
+			name:        "envs",
+			manifest:    []byte("services:\n  app:\n    environment:\n        env: production\n    image: okteto/vote:1"),
+			environment: Environment{EnvVar{Name: "env", Value: "production"}},
+		},
+		{
+			name:        "noenvs",
+			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
+			environment: Environment{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(s.Services["app"].Environment) != len(tt.environment) {
+				t.Fatalf("Bad unmarshal of envs")
+			}
+		})
+	}
+}
