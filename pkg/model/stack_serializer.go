@@ -204,7 +204,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		delete(s.Endpoints, "")
 	}
 
-	volumes := make(map[string]*VolumeSpec, 0)
+	volumes := make(map[string]*VolumeSpec)
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
 		if v == nil {
@@ -344,10 +344,8 @@ func unmarshalLabels(labels Labels, deployInfo *DeployInfoRaw) Labels {
 			}
 		}
 	}
-	if labels != nil {
-		for key, value := range labels {
-			result[key] = value
-		}
+	for key, value := range labels {
+		result[key] = value
 	}
 	return result
 }
@@ -632,8 +630,8 @@ func getProtocol(protocolName string) (apiv1.Protocol, error) {
 }
 
 func sanitizeName(name string) string {
-	name = strings.Replace(name, " ", "-", -1)
-	name = strings.Replace(name, "_", "-", -1)
+	name = strings.ReplaceAll(name, " ", "-")
+	name = strings.ReplaceAll(name, "_", "-")
 	return name
 }
 
