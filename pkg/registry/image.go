@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 //GetRepoNameAndTag returns the image name without the tag and the tag
@@ -46,7 +47,7 @@ func GetRepoNameAndTag(name string) (string, string) {
 //GetImageTag returns the image tag to build for a given services
 func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
 	if oktetoRegistryURL != "" {
-		if strings.HasPrefix(image, "okteto.dev") {
+		if strings.HasPrefix(image, okteto.DevRegistry) {
 			return image
 		}
 		return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, namespace, service)

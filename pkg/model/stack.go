@@ -61,7 +61,7 @@ type Service struct {
 	Ports           []Port        `yaml:"ports,omitempty"`
 	StopGracePeriod int64         `yaml:"stop_grace_period,omitempty"`
 	Volumes         []StackVolume `yaml:"volumes,omitempty"`
-	WorkingDir      string        `yaml:"working_dir,omitempty"`
+	Workdir         string        `yaml:"workdir,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
@@ -76,10 +76,10 @@ type StackVolume struct {
 }
 
 type VolumeSpec struct {
-	Name        string            `yaml:"name,omitempty"`
 	Labels      map[string]string `yaml:"labels,omitempty"`
 	Annotations map[string]string `yaml:"annotations,omitempty"`
-	Storage     StorageResource   `json:"storage,omitempty" yaml:"storage,omitempty"`
+	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
+	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
 }
 type Envs struct {
 	List Environment
@@ -123,8 +123,13 @@ type Endpoint struct {
 	Rules       []EndpointRule `yaml:"rules,omitempty"`
 }
 
-//Endpoints represents an okteto stack command
+//CommandStack represents an okteto stack command
 type CommandStack struct {
+	Values []string
+}
+
+//ArgsStack represents an okteto stack args
+type ArgsStack struct {
 	Values []string
 }
 
@@ -230,8 +235,8 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 
 	}
 	for _, volume := range s.Volumes {
-		if volume.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
-			volume.Storage.Size.Value = resource.MustParse("1Gi")
+		if volume.Size.Value.Cmp(resource.MustParse("0")) == 0 {
+			volume.Size.Value = resource.MustParse("1Gi")
 		}
 	}
 	return s, nil
@@ -343,14 +348,14 @@ func (svc *Service) SetLastBuiltAnnotation() {
 //extendPorts adds the ports that are in expose field to the port list.
 func (svc *Service) extendPorts() {
 	for _, port := range svc.Expose {
-		if !svc.isAlreadyAdded(port) {
+		if !svc.IsAlreadyAdded(port) {
 			svc.Ports = append(svc.Ports, Port{Port: port, Protocol: apiv1.ProtocolTCP})
 		}
 	}
 }
 
 //isAlreadyAdded checks if a port is already on port list
-func (svc *Service) isAlreadyAdded(p int32) bool {
+func (svc *Service) IsAlreadyAdded(p int32) bool {
 	for _, port := range svc.Ports {
 		if port.Port == p {
 			return true
@@ -391,10 +396,6 @@ func GroupWarningsBySvc(fields []string) []string {
 }
 
 func isInVolumesTopLevelSection(volumeName string, s *Stack) bool {
-	for _, volume := range s.Volumes {
-		if volume.Name == volumeName {
-			return true
-		}
-	}
-	return false
+	_, ok := s.Volumes[volumeName]
+	return ok
 }

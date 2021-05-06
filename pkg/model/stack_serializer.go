@@ -49,12 +49,12 @@ type ServiceRaw struct {
 	CapAdd                   []apiv1.Capability `yaml:"capAdd,omitempty"`
 	CapDropSneakCase         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	CapDrop                  []apiv1.Capability `yaml:"capDrop,omitempty"`
-	Command                  Args               `yaml:"command,omitempty"`
+	Command                  CommandStack       `yaml:"command,omitempty"`
 	Entrypoint               CommandStack       `yaml:"entrypoint,omitempty"`
-	Args                     Args               `yaml:"args,omitempty"`
+	Args                     ArgsStack          `yaml:"args,omitempty"`
 	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
 	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
-	Environment              *RawMessage        `yaml:"environment,omitempty"`
+	Environment              Environment        `yaml:"environment,omitempty"`
 	Expose                   *RawMessage        `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
 	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
@@ -65,7 +65,7 @@ type ServiceRaw struct {
 	StopGracePeriod          *RawMessage        `yaml:"stopGracePeriod,omitempty"`
 	Volumes                  []StackVolume      `yaml:"volumes,omitempty"`
 	WorkingDirSneakCase      string             `yaml:"working_dir,omitempty"`
-	WorkingDir               string             `yaml:"workingDir,omitempty"`
+	Workdir                  string             `yaml:"workdir,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas"`
@@ -139,9 +139,9 @@ type ServiceRaw struct {
 type DeployInfoRaw struct {
 	Replicas  int32        `yaml:"replicas,omitempty"`
 	Resources ResourcesRaw `yaml:"resources,omitempty"`
+	Labels    Labels       `yaml:"labels,omitempty"`
 
 	EndpointMode   *WarningType `yaml:"endpoint_mode,omitempty"`
-	Labels         *WarningType `yaml:"labels,omitempty"`
 	Mode           *WarningType `yaml:"mode,omitempty"`
 	Placement      *WarningType `yaml:"placement,omitempty"`
 	Constraints    *WarningType `yaml:"constraints,omitempty"`
@@ -176,7 +176,8 @@ type VolumeTopLevel struct {
 	Labels      map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
-	Storage     StorageResource   `json:"storage,omitempty" yaml:"storage,omitempty"`
+	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
+	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
 
 	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
 	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
@@ -207,13 +208,9 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
 		if v == nil {
-			result.Name = sanitizeName(volumeName)
 			result.Labels = make(map[string]string)
 			result.Annotations = make(map[string]string)
 		} else {
-			if v.Name == "" {
-				result.Name = sanitizeName(volumeName)
-			}
 			if v.Labels == nil {
 				result.Labels = make(map[string]string)
 			}
@@ -290,10 +287,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.EnvFiles = serviceRaw.EnvFilesSneakCase
 	}
 
-	svc.Environment, err = unmarshalEnvs(serviceRaw.Environment)
-	if err != nil {
-		return nil, err
-	}
+	svc.Environment = serviceRaw.Environment
 
 	svc.Public = serviceRaw.Public
 
@@ -309,7 +303,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		return nil, err
 	}
 
-	svc.Labels = serviceRaw.Labels
+	svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
 
 	svc.Annotations = serviceRaw.Annotations
 
@@ -332,9 +326,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		}
 	}
 
-	svc.WorkingDir = serviceRaw.WorkingDir
+	svc.Workdir = serviceRaw.Workdir
 	if serviceRaw.WorkingDirSneakCase != "" {
-		svc.WorkingDir = serviceRaw.WorkingDirSneakCase
+		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
 	return svc, nil
 }
@@ -350,6 +344,23 @@ func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []Stack
 		}
 	}
 	return topLevelVolumes, mountedVolumes
+}
+
+func unmarshalLabels(labels Labels, deployInfo *DeployInfoRaw) Labels {
+	result := Labels{}
+	if deployInfo != nil {
+		if deployInfo.Labels != nil {
+			for key, value := range deployInfo.Labels {
+				result[key] = value
+			}
+		}
+	}
+	if labels != nil {
+		for key, value := range labels {
+			result[key] = value
+		}
+	}
+	return result
 }
 
 func (msg *RawMessage) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -554,27 +565,6 @@ func unmarshalExpose(raw *RawMessage) ([]int32, error) {
 		exposeInInt = append(exposeInInt, int32(portInInt))
 	}
 	return exposeInInt, nil
-}
-
-func unmarshalEnvs(raw *RawMessage) ([]EnvVar, error) {
-	var envList []EnvVar
-	if raw == nil {
-		return envList, nil
-	}
-	err := raw.unmarshal(&envList)
-	if err == nil {
-		return envList, nil
-	}
-	var envMap map[string]string
-	err = raw.unmarshal(&envMap)
-	if err == nil {
-		for key, value := range envMap {
-			envList = append(envList, EnvVar{Name: key, Value: value})
-		}
-		return envList, nil
-	}
-
-	return envList, err
 }
 
 func unmarshalDuration(raw *RawMessage) (int64, error) {
@@ -894,9 +884,6 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 	if deploy.EndpointMode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.endpoint_mode", svcName))
 	}
-	if deploy.Labels != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.labels", svcName))
-	}
 	if deploy.Mode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.mode", svcName))
 	}
@@ -958,6 +945,26 @@ func (c *CommandStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	} else {
 		c.Values = multi
+	}
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (a *ArgsStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var multi []string
+	err := unmarshal(&multi)
+	if err != nil {
+		var single string
+		err := unmarshal(&single)
+		if err != nil {
+			return err
+		}
+		a.Values, err = shellquote.Split(single)
+		if err != nil {
+			return err
+		}
+	} else {
+		a.Values = multi
 	}
 	return nil
 }
