@@ -549,7 +549,7 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 		{
 			name:     "not-public-port-but-with-assignation",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
-			isPublic: true,
+			isPublic: false,
 		},
 		{
 			name:     "mysql-port-forwarding",
@@ -892,6 +892,114 @@ func Test_Environment(t *testing.T) {
 			}
 			if len(s.Services["app"].Environment) != len(tt.environment) {
 				t.Fatalf("Bad unmarshal of envs")
+			}
+		})
+	}
+}
+
+func Test_MultipleEndpoints(t *testing.T) {
+	tests := []struct {
+		name          string
+		manifest      []byte
+		expectedStack *Stack
+	}{
+		{
+			name:     "no-ports",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1"),
+			expectedStack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto/vote:1"},
+				},
+			},
+		},
+		{
+			name:     "one-port-that-should-not-be-skipped",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080"),
+			expectedStack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto/vote:1"},
+				},
+				Endpoints: EndpointSpec{
+					"app-8080": Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: "app",
+								Port:    8080,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "one-port-that-should-be-skipped",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 3306:3306"),
+			expectedStack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto/vote:1"},
+				},
+			},
+		},
+		{
+			name:     "two-ports-one-skippable-and-one-not",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080\n    - 3306:3306"),
+			expectedStack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto/vote:1"},
+				},
+				Endpoints: EndpointSpec{
+					"app-8080": Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: "app",
+								Port:    8080,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "two-ports-not-skippable",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080\n    - 8001:8001"),
+			expectedStack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto/vote:1"},
+				},
+				Endpoints: EndpointSpec{
+					"app-8080": Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: "app",
+								Port:    8080,
+							},
+						},
+					},
+					"app-8081": Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: "app",
+								Port:    8081,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(s.Endpoints) != len(tt.expectedStack.Endpoints) {
+				t.Fatal("The endpoints have not been created properly")
 			}
 		})
 	}

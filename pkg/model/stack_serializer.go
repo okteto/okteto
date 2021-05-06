@@ -204,6 +204,9 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		delete(s.Endpoints, "")
 	}
 
+	if len(s.Endpoints) == 0 {
+		s.Endpoints = getEndpointsFromPorts(stackRaw.Services)
+	}
 	volumes := make(map[string]*VolumeSpec)
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
@@ -238,6 +241,27 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Warnings = stackRaw.Warnings
 	s.VolumeMountWarnings = make([]string, 0)
 	return nil
+}
+
+func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
+	endpoints := make(EndpointSpec)
+	for svcName, svc := range services {
+		for _, p := range svc.Ports {
+			if p.HostPort != 0 {
+				endpointName := fmt.Sprintf("%s-%d", svcName, p.HostPort)
+				endpoints[endpointName] = Endpoint{
+					Rules: []EndpointRule{
+						{
+							Path:    "/",
+							Service: svcName,
+							Port:    p.ContainerPort,
+						},
+					},
+				}
+			}
+		}
+	}
+	return endpoints
 }
 
 func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service, error) {
@@ -292,9 +316,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Public = serviceRaw.Public
 
 	for _, p := range serviceRaw.Ports {
-		if p.HostPort != 0 {
-			svc.Public = true
-		}
 		svc.Ports = append(svc.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
 	}
 
