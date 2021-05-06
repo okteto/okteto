@@ -348,5 +348,5 @@ func getPullingMessage(message, namespace string) string {
 		return message
 	}
 	toReplace := fmt.Sprintf("%s/%s", registry, namespace)
-	return strings.Replace(message, toReplace, "okteto.dev", 1)
+	return strings.Replace(message, toReplace, okteto.DevRegistry, 1)
 }

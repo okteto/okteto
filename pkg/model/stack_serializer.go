@@ -54,7 +54,7 @@ type ServiceRaw struct {
 	Args                     ArgsStack          `yaml:"args,omitempty"`
 	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
 	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
-	Environment              *RawMessage        `yaml:"environment,omitempty"`
+	Environment              Environment        `yaml:"environment,omitempty"`
 	Expose                   *RawMessage        `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
 	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
@@ -139,9 +139,9 @@ type ServiceRaw struct {
 type DeployInfoRaw struct {
 	Replicas  int32        `yaml:"replicas,omitempty"`
 	Resources ResourcesRaw `yaml:"resources,omitempty"`
+	Labels    Labels       `yaml:"labels,omitempty"`
 
 	EndpointMode   *WarningType `yaml:"endpoint_mode,omitempty"`
-	Labels         *WarningType `yaml:"labels,omitempty"`
 	Mode           *WarningType `yaml:"mode,omitempty"`
 	Placement      *WarningType `yaml:"placement,omitempty"`
 	Constraints    *WarningType `yaml:"constraints,omitempty"`
@@ -287,10 +287,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.EnvFiles = serviceRaw.EnvFilesSneakCase
 	}
 
-	svc.Environment, err = unmarshalEnvs(serviceRaw.Environment)
-	if err != nil {
-		return nil, err
-	}
+	svc.Environment = serviceRaw.Environment
 
 	svc.Public = serviceRaw.Public
 
@@ -306,7 +303,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		return nil, err
 	}
 
-	svc.Labels = serviceRaw.Labels
+	svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
 
 	svc.Annotations = serviceRaw.Annotations
 
@@ -336,6 +333,23 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
 	return svc, nil
+}
+
+func unmarshalLabels(labels Labels, deployInfo *DeployInfoRaw) Labels {
+	result := Labels{}
+	if deployInfo != nil {
+		if deployInfo.Labels != nil {
+			for key, value := range deployInfo.Labels {
+				result[key] = value
+			}
+		}
+	}
+	if labels != nil {
+		for key, value := range labels {
+			result[key] = value
+		}
+	}
+	return result
 }
 
 func (msg *RawMessage) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -540,27 +554,6 @@ func unmarshalExpose(raw *RawMessage) ([]int32, error) {
 		exposeInInt = append(exposeInInt, int32(portInInt))
 	}
 	return exposeInInt, nil
-}
-
-func unmarshalEnvs(raw *RawMessage) ([]EnvVar, error) {
-	var envList []EnvVar
-	if raw == nil {
-		return envList, nil
-	}
-	err := raw.unmarshal(&envList)
-	if err == nil {
-		return envList, nil
-	}
-	var envMap map[string]string
-	err = raw.unmarshal(&envMap)
-	if err == nil {
-		for key, value := range envMap {
-			envList = append(envList, EnvVar{Name: key, Value: value})
-		}
-		return envList, nil
-	}
-
-	return envList, err
 }
 
 func unmarshalDuration(raw *RawMessage) (int64, error) {
@@ -879,9 +872,6 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 	}
 	if deploy.EndpointMode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.endpoint_mode", svcName))
-	}
-	if deploy.Labels != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.labels", svcName))
 	}
 	if deploy.Mode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.mode", svcName))
