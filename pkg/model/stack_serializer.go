@@ -434,7 +434,9 @@ func IsSkippablePort(port int32) bool {
 		1433: "SQL Server", 1434: "SQL Server", 7210: "MaxDB", 7473: "Neo4j", 7474: "Neo4j", 8529: "ArangoDB",
 		7000: "Cassandra", 7001: "Cassandra", 9042: "Cassandra", 8086: "InfluxDB", 9200: "Elasticsearch", 9300: "Elasticsearch",
 		5984: "CouchDB", 27017: "MongoDB", 27018: "MongoDB", 27019: "MongoDB", 28017: "MongoDB", 6379: "Redis",
-		8087: "Riak", 8098: "Riak", 828015: "Rethink", 29015: "Rethink", 7574: "Solr", 8983: "Solr"}
+		8087: "Riak", 8098: "Riak", 828015: "Rethink", 29015: "Rethink", 7574: "Solr", 8983: "Solr",
+		2345: "Golang debugger", 5858: "Node debugger", 9229: "Node debugger", 5005: "Java debugger", 1234: "Ruby debugger",
+		4444: "Python pdb", 5678: "Python debugpy"}
 	if _, ok := skippablePorts[port]; ok {
 		return true
 	}
