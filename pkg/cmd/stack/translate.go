@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -56,22 +57,23 @@ const (
 )
 
 func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
-	if err := translateStackEnvVars(s); err != nil {
+	if err := translateStackEnvVars(ctx, s); err != nil {
 		return err
 	}
 
 	return translateBuildImages(ctx, s, forceBuild, noCache)
 }
 
-func translateStackEnvVars(s *model.Stack) error {
+func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 	var err error
+	isOktetoNamespace := namespaces.IsOktetoNamespaceFromName(ctx, s.Namespace)
 	for _, svc := range s.Services {
 		svc.Image, err = model.ExpandEnv(svc.Image)
 		if err != nil {
 			return err
 		}
 		for _, envFilepath := range svc.EnvFiles {
-			if err := translateServiceEnvFile(svc, envFilepath); err != nil {
+			if err := translateServiceEnvFile(ctx, svc, envFilepath, isOktetoNamespace); err != nil {
 				return err
 			}
 		}
@@ -83,17 +85,41 @@ func translateStackEnvVars(s *model.Stack) error {
 	return nil
 }
 
-func translateServiceEnvFile(svc *model.Service, filename string) error {
+func translateServiceEnvFile(ctx context.Context, svc *model.Service, filename string, isOktetoNamespace bool) error {
 	var err error
 	filename, err = model.ExpandEnv(filename)
 	if err != nil {
 		return err
 	}
 
+	if filename == ".env" && isOktetoNamespace {
+		log.Information("[%s]: Detected '.env' file but will be skipped. You can set environment variables from https://cloud.okteto.com/#/settings/secrets.")
+		envList, err := okteto.GetSecrets(ctx)
+		if err != nil {
+			return err
+		}
+		envMap := make(map[string]string)
+		for _, e := range envList {
+			envMap[e.Name] = e.Value
+		}
+		for _, e := range svc.Environment {
+			delete(envMap, e.Name)
+		}
+
+		for name, value := range envMap {
+			svc.Environment = append(
+				svc.Environment,
+				model.EnvVar{Name: name, Value: value},
+			)
+		}
+		return nil
+	}
+
 	f, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
+
 	defer f.Close()
 
 	envMap, err := gotenv.StrictParse(f)
