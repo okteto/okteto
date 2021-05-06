@@ -910,11 +910,22 @@ func Test_MultipleEndpoints(t *testing.T) {
 				Services: map[string]*Service{
 					"app": {Image: "okteto/vote:1"},
 				},
+				Endpoints: EndpointSpec{},
 			},
 		},
 		{
 			name:     "one-port-that-should-not-be-skipped",
 			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080"),
+			expectedStack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto/vote:1"},
+				},
+				Endpoints: EndpointSpec{},
+			},
+		},
+		{
+			name:     "two-port-that-should-not-be-skipped",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080\n    - 80:8081"),
 			expectedStack: &Stack{
 				Services: map[string]*Service{
 					"app": {Image: "okteto/vote:1"},
@@ -926,6 +937,15 @@ func Test_MultipleEndpoints(t *testing.T) {
 								Path:    "/",
 								Service: "app",
 								Port:    8080,
+							},
+						},
+					},
+					"app-80": Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: "app",
+								Port:    8081,
 							},
 						},
 					},
@@ -939,11 +959,22 @@ func Test_MultipleEndpoints(t *testing.T) {
 				Services: map[string]*Service{
 					"app": {Image: "okteto/vote:1"},
 				},
+				Endpoints: EndpointSpec{},
 			},
 		},
 		{
 			name:     "two-ports-one-skippable-and-one-not",
 			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080\n    - 3306:3306"),
+			expectedStack: &Stack{
+				Services: map[string]*Service{
+					"app": {Image: "okteto/vote:1"},
+				},
+				Endpoints: EndpointSpec{},
+			},
+		},
+		{
+			name:     "three-ports-one-skippable-and-two-not",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080\n    - 80:8081\n    - 3306:3306"),
 			expectedStack: &Stack{
 				Services: map[string]*Service{
 					"app": {Image: "okteto/vote:1"},
@@ -958,12 +989,21 @@ func Test_MultipleEndpoints(t *testing.T) {
 							},
 						},
 					},
+					"app-80": Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: "app",
+								Port:    8081,
+							},
+						},
+					},
 				},
 			},
 		},
 		{
 			name:     "two-ports-not-skippable",
-			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080\n    - 8001:8001"),
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    ports:\n    - 8080:8080\n    - 8081:8081"),
 			expectedStack: &Stack{
 				Services: map[string]*Service{
 					"app": {Image: "okteto/vote:1"},
@@ -999,6 +1039,9 @@ func Test_MultipleEndpoints(t *testing.T) {
 				t.Fatal(err)
 			}
 			if len(s.Endpoints) != len(tt.expectedStack.Endpoints) {
+				t.Fatal("The number of created endpoints is incorrect")
+			}
+			if !reflect.DeepEqual(s.Endpoints, tt.expectedStack.Endpoints) {
 				t.Fatal("The endpoints have not been created properly")
 			}
 		})

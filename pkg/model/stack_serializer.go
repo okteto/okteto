@@ -246,22 +246,35 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
 	endpoints := make(EndpointSpec)
 	for svcName, svc := range services {
-		for _, p := range svc.Ports {
-			if p.HostPort != 0 {
-				endpointName := fmt.Sprintf("%s-%d", svcName, p.HostPort)
-				endpoints[endpointName] = Endpoint{
-					Rules: []EndpointRule{
-						{
-							Path:    "/",
-							Service: svcName,
-							Port:    p.ContainerPort,
+		accessiblePorts := getAccessiblePorts(svc.Ports)
+		if len(accessiblePorts) >= 2 {
+			for _, p := range svc.Ports {
+				if p.HostPort != 0 {
+					endpointName := fmt.Sprintf("%s-%d", svcName, p.HostPort)
+					endpoints[endpointName] = Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: svcName,
+								Port:    p.ContainerPort,
+							},
 						},
-					},
+					}
 				}
 			}
 		}
 	}
 	return endpoints
+}
+
+func getAccessiblePorts(ports []PortRaw) []PortRaw {
+	accessiblePorts := make([]PortRaw, 0)
+	for _, p := range ports {
+		if p.HostPort != 0 && !IsSkippablePort(p.ContainerPort) {
+			accessiblePorts = append(accessiblePorts, p)
+		}
+	}
+	return accessiblePorts
 }
 
 func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service, error) {
