@@ -310,6 +310,10 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 				spinner.Start()
 			case "Killing":
 				return errors.ErrDevPodDeleted
+			case "Started":
+				if e.Message == "Started container okteto-init-data" {
+					spinner.Update("Initializing persistent volume content...")
+				}
 			case "Pulling":
 				message := getPullingMessage(e.Message, up.Dev.Namespace)
 				spinner.Update(fmt.Sprintf("%s...", message))
