@@ -97,7 +97,7 @@ jobs:
       - setup_remote_docker:
           version: "19.03.8"
       - run:
-          name: "build Docker container"
+          name: "Build Docker container"
           command: |
             export DOCKER_BUILDKIT=1
             docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
@@ -109,7 +109,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: upgrade golang
+          name: Upgrade Golang
           command: choco upgrade golang --version 1.16
       - restore_cache:
           keys:
@@ -211,7 +211,7 @@ jobs:
           at: ./artifacts
       - run: *init-gcloud
       - run:
-          name: upload latest binaries
+          name: Upload latest binaries
           command: |
             gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/master
 
