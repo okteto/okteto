@@ -67,13 +67,13 @@ func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) er
 func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 	var err error
 	isOktetoNamespace := namespaces.IsOktetoNamespaceFromName(ctx, s.Namespace)
-	for _, svc := range s.Services {
+	for svcName, svc := range s.Services {
 		svc.Image, err = model.ExpandEnv(svc.Image)
 		if err != nil {
 			return err
 		}
 		for _, envFilepath := range svc.EnvFiles {
-			if err := translateServiceEnvFile(ctx, svc, envFilepath, isOktetoNamespace); err != nil {
+			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath, isOktetoNamespace); err != nil {
 				return err
 			}
 		}
@@ -85,7 +85,7 @@ func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 	return nil
 }
 
-func translateServiceEnvFile(ctx context.Context, svc *model.Service, filename string, isOktetoNamespace bool) error {
+func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, filename string, isOktetoNamespace bool) error {
 	var err error
 	filename, err = model.ExpandEnv(filename)
 	if err != nil {
@@ -93,7 +93,7 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, filename s
 	}
 
 	if filename == ".env" && isOktetoNamespace {
-		log.Information("[%s]: Detected '.env' file but will be skipped. You can set environment variables from https://cloud.okteto.com/#/settings/secrets.")
+		log.Information("[%s]: Detected '.env' file but will be skipped. You can set environment variables from https://cloud.okteto.com/#/settings/secrets.", svcName)
 		envList, err := okteto.GetSecrets(ctx)
 		if err != nil {
 			return err
