@@ -86,11 +86,14 @@ services:
 	if len(s.Services["vote"].Environment) != 2 {
 		t.Errorf("'vote.env' was not parsed: %+v", s)
 	}
-	if s.Services["vote"].Environment[0].Name != "OPTION_A" || s.Services["vote"].Environment[0].Value != "Cats" {
-		t.Errorf("'vote.env[0]' was not parsed: %+v", s)
-	}
-	if s.Services["vote"].Environment[1].Name != "OPTION_B" || s.Services["vote"].Environment[1].Value != "Dogs" {
-		t.Errorf("'vote.env[1]' was not parsed: %+v", s)
+	for _, env := range s.Services["vote"].Environment {
+		if env.Name == "OPTION_A" && env.Value == "Cats" {
+			continue
+		} else if env.Name == "OPTION_B" && env.Value == "Dogs" {
+			continue
+		} else {
+			t.Errorf("'vote.env' was not parsed correctly: %+v", s.Services["vote"].Environment)
+		}
 	}
 	if len(s.Services["vote"].Ports) != 1 {
 		t.Errorf("'vote.ports' was not parsed: %+v", s)
@@ -229,14 +232,8 @@ services:
 		} else if env.Name == "OPTION_B" && env.Value == "Dogs" {
 			continue
 		} else {
-			t.Errorf("'vote.env' was not parsed correctly: %+v", s)
+			t.Errorf("'vote.env' was not parsed correctly: %+v", s.Services["vote"].Environment)
 		}
-	}
-	if s.Services["vote"].Environment[0].Name != "OPTION_A" || s.Services["vote"].Environment[0].Value != "Cats" {
-		t.Errorf("'vote.env[0]' was not parsed: %+v", s)
-	}
-	if s.Services["vote"].Environment[1].Name != "OPTION_B" || s.Services["vote"].Environment[1].Value != "Dogs" {
-		t.Errorf("'vote.env[1]' was not parsed: %+v", s)
 	}
 	if len(s.Services["vote"].Ports) != 1 {
 		t.Errorf("'vote.ports' was not parsed: %+v", s)
