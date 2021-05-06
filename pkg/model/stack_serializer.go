@@ -204,7 +204,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		delete(s.Endpoints, "")
 	}
 
-	volumes := make(map[string]*VolumeSpec, 0)
+	volumes := make(map[string]*VolumeSpec)
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
 		if v == nil {
@@ -319,12 +319,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		}
 	}
 
-	svc.Volumes = serviceRaw.Volumes
-	for idx, volume := range svc.Volumes {
-		if isInVolumesTopLevelSection(volume.LocalPath, stack) {
-			svc.Volumes[idx] = volume
-		} else if !strings.HasPrefix(volume.LocalPath, ".") && volume.LocalPath != "" {
-			return nil, fmt.Errorf("Named volume '%s' is used in service %s but no declaration was found in the volumes section.", volume.ToString(), svcName)
+	svc.Volumes, svc.VolumeMounts = splitVolumesByType(serviceRaw.Volumes, stack)
+	for _, volume := range svc.VolumeMounts {
+		if !strings.HasPrefix(volume.LocalPath, ".") && volume.LocalPath != "" {
+			return nil, fmt.Errorf("Named volume '%s' is used in service '%s' but no declaration was found in the volumes section.", volume.ToString(), svcName)
 		}
 	}
 
@@ -333,6 +331,19 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
 	return svc, nil
+}
+
+func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []StackVolume) {
+	topLevelVolumes := make([]StackVolume, 0)
+	mountedVolumes := make([]StackVolume, 0)
+	for _, volume := range volumes {
+		if volume.LocalPath == "" || isInVolumesTopLevelSection(volume.LocalPath, s) {
+			topLevelVolumes = append(topLevelVolumes, volume)
+		} else {
+			mountedVolumes = append(mountedVolumes, volume)
+		}
+	}
+	return topLevelVolumes, mountedVolumes
 }
 
 func unmarshalLabels(labels Labels, deployInfo *DeployInfoRaw) Labels {
@@ -630,8 +641,8 @@ func getProtocol(protocolName string) (apiv1.Protocol, error) {
 }
 
 func sanitizeName(name string) string {
-	name = strings.Replace(name, " ", "-", -1)
-	name = strings.Replace(name, "_", "-", -1)
+	name = strings.ReplaceAll(name, " ", "-")
+	name = strings.ReplaceAll(name, "_", "-")
 	return name
 }
 
