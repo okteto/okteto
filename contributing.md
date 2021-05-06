@@ -157,15 +157,24 @@ To update use `pre-commit autoupdate`
 - [Usage](https://pre-commit.com/#usage)
 - [pre-commit-autoupdate](https://pre-commit.com/#pre-commit-autoupdate)
 
-## Other Linters
+## Spell checking
+
+We are running [misspell](https://github.com/client9/misspell) which is mainly written in
+[Golang](https://golang.org/) to check spelling with [GitHub Actions](.github/workflows/lint.yml). Correct
+commonly misspelled English words quickly with `misspell`. `misspell` is different from most other spell checkers
+because it doesn't use a custom dictionary. You can run `misspell` locally against all files with:
+
+Notable `misspell` help options or flags are:
+
+- `-i` string: ignore the following corrections, comma separated
+- `-w`: Overwrite file with corrections (default is just to display)
+
+We also run [codespell](https://github.com/codespell-project/codespell) with `pre-commit` to check spelling and
+[codespell](https://pypi.org/project/codespell/) runs against a [small custom dictionary](codespell.txt).
+
+## Linting/Style
+
+We use `pre-commit` to lint our Markdown and YAML files, and we use:
 
 - [markdowlint-cli](https://github.com/igorshubovych/markdownlint-cli) - [npm](https://www.npmjs.com/package/markdownlint-cli) based and lints [Markdown](https://daringfireball.net/projects/markdown/) files using [markdownlint](https://github.com/DavidAnson/markdownlint)
 - [yamllint](https://yamllint.readthedocs.io/en/stable/index.html) - Lints [YAML](https://yaml.org/) files and is written in [Python](https://www.python.org/)
-
-```shell
-markdownlint -c .github/linters/.markdown-lint.yml .
-```
-
-```shell
-yamllint --strict -c .github/linters/.yaml-lint.yml .
-```

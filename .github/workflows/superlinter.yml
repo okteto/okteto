@@ -13,7 +13,5 @@ jobs:
           ERROR_ON_MISSING_EXEC_BIT: true
           VALIDATE_BASH: true
           VALIDATE_BASH_EXEC: true
-          VALIDATE_MARKDOWN: true
           VALIDATE_SHELL_SHFMT: true
-          VALIDATE_YAML: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
