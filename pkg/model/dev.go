@@ -96,7 +96,7 @@ const (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.2.27"
+	OktetoBinImageTag = "okteto/bin:1.2.28"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -188,6 +188,7 @@ type Volume struct {
 // Sync represents a sync info in the development container
 type Sync struct {
 	Compression    bool         `json:"compression" yaml:"compression"`
+	Verbose        bool         `json:"verbose" yaml:"verbose"`
 	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
 	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
 	LocalPath      string
@@ -884,6 +885,9 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		}
 		if reset {
 			rule.Args = append(rule.Args, "-e")
+		}
+		if dev.Sync.Verbose {
+			rule.Args = append(rule.Args, "-v")
 		}
 		for _, s := range rule.Secrets {
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
