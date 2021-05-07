@@ -262,17 +262,32 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 }
 
 func DisplayWarnings(s *model.Stack) {
-	if len(s.Warnings) > 0 {
-		if len(s.Warnings) == 1 {
-			log.Warning("'%s' field is not currently supported and will be ignored.", s.Warnings[0])
+	DisplayNotSupportedFieldsWarnings(model.GroupWarningsBySvc(s.Warnings.NotSupportedFields))
+	DisplayVolumeMountWarnings(s.Warnings.VolumeMountWarnings)
+	DisplaySanitizedServicesWarnings(s.Warnings.SanitizedServices)
+}
+
+func DisplayNotSupportedFieldsWarnings(warnings []string) {
+	if len(warnings) > 0 {
+		if len(warnings) == 1 {
+			log.Warning("'%s' field is not currently supported and will be ignored.", warnings[0])
 		} else {
-			notSupportedFields := strings.Join(model.GroupWarningsBySvc(s.Warnings), "\n  - ")
+			notSupportedFields := strings.Join(model.GroupWarningsBySvc(warnings), "\n  - ")
 			log.Warning("The following fields are not currently supported and will be ignored: \n  - %s", notSupportedFields)
 		}
 		log.Yellow("Help us to decide which fields to implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
 	}
-	for _, warning := range s.VolumeMountWarnings {
+}
+
+func DisplayVolumeMountWarnings(warnings []string) {
+	for _, warning := range warnings {
 		log.Warning(warning)
+	}
+}
+
+func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
+	for previousName, newName := range previousToNewNameMap {
+		log.Warning("Service '%s' has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
 	}
 }
 

@@ -38,7 +38,7 @@ type StackRaw struct {
 	Configs *WarningType `yaml:"configs,omitempty"`
 	Secrets *WarningType `yaml:"secrets,omitempty"`
 
-	Warnings []string
+	Warnings StackWarnings
 }
 
 //Service represents an okteto stack service
@@ -225,18 +225,24 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	for volumeName, volume := range volumes {
 		s.Volumes[sanitizeName(volumeName)] = volume
 	}
+
+	sanitizedServicesNames := make(map[string]string)
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
+		if shouldBeSanitized(svcName) {
+			newName := sanitizeName(svcName)
+			sanitizedServicesNames[svcName] = newName
+			svcName = newName
+		}
 		s.Services[svcName], err = svcRaw.ToService(svcName, s)
 		if err != nil {
 			return err
 		}
 	}
-	stackRaw.Warnings = make([]string, 0)
 
-	setWarnings(&stackRaw)
-	s.Warnings = stackRaw.Warnings
-	s.VolumeMountWarnings = make([]string, 0)
+	s.Warnings.NotSupportedFields = getNotSupportedFields(&stackRaw)
+	s.Warnings.SanitizedServices = sanitizedServicesNames
+	s.Warnings.VolumeMountWarnings = make([]string, 0)
 	return nil
 }
 
@@ -640,22 +646,28 @@ func getProtocol(protocolName string) (apiv1.Protocol, error) {
 	}
 }
 
+func shouldBeSanitized(name string) bool {
+	return strings.Contains(name, " ") || strings.Contains(name, "_")
+}
+
 func sanitizeName(name string) string {
 	name = strings.ReplaceAll(name, " ", "-")
 	name = strings.ReplaceAll(name, "_", "-")
 	return name
 }
 
-func setWarnings(s *StackRaw) {
-	s.Warnings = append(s.Warnings, getTopLevelNotSupportedFields(s)...)
+func getNotSupportedFields(s *StackRaw) []string {
+	notSupportedFields := make([]string, 0)
+	notSupportedFields = append(notSupportedFields, getTopLevelNotSupportedFields(s)...)
 	for name, svcInfo := range s.Services {
-		s.Warnings = append(s.Warnings, getServiceNotSupportedFields(name, svcInfo)...)
+		notSupportedFields = append(notSupportedFields, getServiceNotSupportedFields(name, svcInfo)...)
 	}
 	for name, volumeInfo := range s.Volumes {
 		if volumeInfo != nil {
-			s.Warnings = append(s.Warnings, getVolumesNotSupportedFields(name, volumeInfo)...)
+			notSupportedFields = append(notSupportedFields, getVolumesNotSupportedFields(name, volumeInfo)...)
 		}
 	}
+	return notSupportedFields
 }
 
 func getTopLevelNotSupportedFields(s *StackRaw) []string {
