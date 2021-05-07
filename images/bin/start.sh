@@ -16,13 +16,17 @@ fi
 
 remote=""
 reset=""
-while getopts ":s:re" opt; do
+verbose="--verbose=false"
+while getopts ":s:rev" opt; do
 	case $opt in
 	e)
 		reset="--reset"
 		;;
 	r)
 		remote="--remote"
+		;;
+	v)
+		verbose="--verbose"
 		;;
 	s)
 		sourceFILE="$(echo "$OPTARG" | cut -d':' -f1)"
@@ -50,5 +54,5 @@ log "Copying configuration files to $syncthingHome"
 cp /var/syncthing/secret/* $syncthingHome
 chmod 644 $syncthingHome/cert.pem $syncthingHome/config.xml $syncthingHome/key.pem
 
-log "Executing okteto-supervisor $remote $reset"
-exec /var/okteto/bin/okteto-supervisor $remote $reset
+log "Executing okteto-supervisor $remote $reset $verbose"
+exec /var/okteto/bin/okteto-supervisor $remote $reset $verbose

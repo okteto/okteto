@@ -63,7 +63,7 @@ services:
 		Image:             "web:latest",
 		ImagePullPolicy:   apiv1.PullNever,
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r"},
+		Args:              []string{"-r", "-v"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -183,7 +183,7 @@ initContainer:
 		OktetoBinImageTag: OktetoBinImageTag,
 		ImagePullPolicy:   apiv1.PullAlways,
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r"},
+		Args:              []string{"-r", "-v"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -263,7 +263,7 @@ persistentVolume:
 		ImagePullPolicy:   apiv1.PullAlways,
 		Image:             "dev-image",
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r"},
+		Args:              []string{"-r", "-v"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{

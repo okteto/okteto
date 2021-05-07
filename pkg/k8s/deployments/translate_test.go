@@ -194,7 +194,7 @@ services:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-s", "remote:/remote"},
+							Args:            []string{"-r", "-v", "-s", "remote:/remote"},
 							WorkingDir:      "/app",
 							Env: []apiv1.EnvVar{
 								{
@@ -505,7 +505,7 @@ persistentVolume:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-e"},
+							Args:            []string{"-r", "-e", "-v"},
 							WorkingDir:      "",
 							Env: []apiv1.EnvVar{
 								{
