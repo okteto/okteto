@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	giturls "github.com/whilp/git-urls"
@@ -51,17 +52,37 @@ type Space struct {
 	GitDeploys []PipelineRun `json:"gitDeploys"`
 }
 
-// DeployPipeline creates a pipeline
-func DeployPipeline(ctx context.Context, name, namespace, repository, branch string) (string, error) {
-	q := fmt.Sprintf(`mutation{
-		deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s"){
-			id,status
-		},
-	}`, name, repository, namespace, branch)
+// Variable represents a pipeline variable
+type Variable struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
 
+// DeployPipeline creates a pipeline
+func DeployPipeline(ctx context.Context, name, namespace, repository, branch string, variables []Variable) (string, error) {
 	var body DeployPipelineBody
-	if err := query(ctx, q, &body); err != nil {
-		return "", err
+	if len(variables) > 0 {
+		q := fmt.Sprintf(`mutation deployGitRepository($variables: [InputVariable]){
+			deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s", variables: $variables){
+				id,status
+			},
+		}`, name, repository, namespace, branch)
+		req := graphql.NewRequest(q)
+		req.Var("variables", variables)
+
+		if err := queryWithRequest(ctx, req, &body); err != nil {
+			return "", err
+		}
+	} else {
+		q := fmt.Sprintf(`mutation{
+			deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s"){
+				id,status
+			},
+		}`, name, repository, namespace, branch)
+
+		if err := query(ctx, q, &body); err != nil {
+			return "", err
+		}
 	}
 
 	return body.PipelineRun.Status, nil

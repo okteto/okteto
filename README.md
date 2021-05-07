@@ -25,7 +25,7 @@ In addition to that, `okteto up` will:
 1. Automatic local and remote port forwarding using [SSH](https://okteto.com/docs/reference/ssh-server), so you can access your cluster services via `localhost` or connect a remote debugger.
 1. Give you an interactive terminal to your development container, so you can build, test, and run your application as you would from a local terminal.
 
-All of this (and more) can be configured via a [simple yaml manifest](https://okteto.com/docs/reference/manifest).
+All of this (and more) can be configured via a [simple YAML manifest](https://okteto.com/docs/reference/manifest).
 
 The end result is that the remote cluster is seen by your IDE and tools as a local filesystem/environment. You keep writing your code on your local IDE and as soon as you save a file, the change goes to the development container, and your application instantly updates (taking advantage of any hot-reload mechanism you already have). This whole process happens in an instant. No docker images need to be created and no Kubernetes manifests need to be applied to the cluster.
 
@@ -81,9 +81,10 @@ We ❤️ contributions big or small. [See our guide](contributing.md) on how to
 ### Thanks to all our contributors!
 
 [//]: contributor-faces
-<a href="https://github.com/rberrelleza"><img src="https://avatars.githubusercontent.com/u/475313?v=4" title="rberrelleza" width="80" height="80"></a>
 <a href="https://github.com/pchico83"><img src="https://avatars.githubusercontent.com/u/7474696?v=4" title="pchico83" width="80" height="80"></a>
+<a href="https://github.com/rberrelleza"><img src="https://avatars.githubusercontent.com/u/475313?v=4" title="rberrelleza" width="80" height="80"></a>
 <a href="https://github.com/jLopezbarb"><img src="https://avatars.githubusercontent.com/u/25170843?v=4" title="jLopezbarb" width="80" height="80"></a>
+<a href="https://github.com/jbampton"><img src="https://avatars.githubusercontent.com/u/418747?v=4" title="jbampton" width="80" height="80"></a>
 <a href="https://github.com/rlamana"><img src="https://avatars.githubusercontent.com/u/237819?v=4" title="rlamana" width="80" height="80"></a>
 <a href="https://github.com/marco2704"><img src="https://avatars.githubusercontent.com/u/12150248?v=4" title="marco2704" width="80" height="80"></a>
 <a href="https://github.com/adhaamehab"><img src="https://avatars.githubusercontent.com/u/13816742?v=4" title="adhaamehab" width="80" height="80"></a>
@@ -103,7 +104,9 @@ We ❤️ contributions big or small. [See our guide](contributing.md) on how to
 <a href="https://github.com/thatnerdjosh"><img src="https://avatars.githubusercontent.com/u/5251847?v=4" title="thatnerdjosh" width="80" height="80"></a>
 <a href="https://github.com/freeman"><img src="https://avatars.githubusercontent.com/u/7547?v=4" title="freeman" width="80" height="80"></a>
 <a href="https://github.com/tommyto-whs"><img src="https://avatars.githubusercontent.com/u/59745049?v=4" title="tommyto-whs" width="80" height="80"></a>
+<a href="https://github.com/Wignesh"><img src="https://avatars.githubusercontent.com/u/26745858?v=4" title="Wignesh" width="80" height="80"></a>
 <a href="https://github.com/zdog234"><img src="https://avatars.githubusercontent.com/u/17930657?v=4" title="zdog234" width="80" height="80"></a>
+<a href="https://github.com/marov"><img src="https://avatars.githubusercontent.com/u/1968182?v=4" title="marov" width="80" height="80"></a>
 <a href="https://github.com/xinxinh2020"><img src="https://avatars.githubusercontent.com/u/13103635?v=4" title="xinxinh2020" width="80" height="80"></a>
 
 [//]: contributor-faces

@@ -26,6 +26,7 @@ import (
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
@@ -118,16 +119,31 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 	if err != nil {
 		return err
 	}
-	building := false
+	hasBuiltSomething, err := buildServices(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache)
+	if err != nil {
+		return err
+	}
+	hasAddedAnyVolumeMounts, err := addVolumeMountsToBuiltImage(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache, hasBuiltSomething)
+	if err != nil {
+		return err
+	}
+	if !hasBuiltSomething && !hasAddedAnyVolumeMounts && forceBuild {
+		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
+	}
 
+	return nil
+}
+
+func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache bool) (bool, error) {
+	hasBuiltSomething := false
 	for name, svc := range s.Services {
 		if svc.Build == nil {
 			continue
 		}
 		if !isOktetoCluster && svc.Image == "" {
-			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
+			return hasBuiltSomething, fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
 		}
-		if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
+		if isOktetoCluster && !strings.HasPrefix(svc.Image, okteto.DevRegistry) {
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !forceBuild {
@@ -137,8 +153,8 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 			}
 			log.Infof("image '%s' not found, building it", svc.Image)
 		}
-		if !building {
-			building = true
+		if !hasBuiltSomething {
+			hasBuiltSomething = true
 			log.Information("Running your build in %s...", buildKitHost)
 		}
 		log.Information("Building image for service '%s'...", name)
@@ -146,20 +162,53 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
 			if uErr, ok := err.(errors.UserError); ok {
 				uErr.E = fmt.Errorf("error building image for '%s': %s", name, uErr.E)
-				return uErr
+				return hasBuiltSomething, uErr
 			}
-			return fmt.Errorf("error building image for '%s': %s", name, err)
+			return hasBuiltSomething, fmt.Errorf("error building image for '%s': %s", name, err)
 		}
 		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
 		log.Success("Image for service '%s' successfully pushed", name)
 	}
+	return hasBuiltSomething, nil
+}
 
-	if !building && forceBuild {
-		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
+func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache, hasBuiltSomething bool) (bool, error) {
+	hasAddedAnyVolumeMounts := false
+	var err error
+	for name, svc := range s.Services {
+		if len(svc.VolumeMounts) != 0 {
+			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
+				hasAddedAnyVolumeMounts = true
+				log.Information("Running your build in %s...", buildKitHost)
+			}
+			fromImage := svc.Image
+			if strings.HasPrefix(fromImage, okteto.DevRegistry) {
+				fromImage, err = registry.ExpandOktetoDevRegistry(ctx, s.Namespace, svc.Image)
+				if err != nil {
+					return hasAddedAnyVolumeMounts, err
+				}
+			}
+			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, svc.VolumeMounts)
+			if err != nil {
+				return hasAddedAnyVolumeMounts, err
+			}
+			svc.Build = svcBuild
+			if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
+				tag := strings.Replace(svc.Image, ":", "-", 1)
+				svc.Image = fmt.Sprintf("okteto.dev/%s:okteto-with-volume-mounts", tag)
+			}
+			log.Information("Building image for service '%s' to include host volumes...", name)
+			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
+			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+				return hasAddedAnyVolumeMounts, fmt.Errorf("error building image for '%s': %s", name, err)
+			}
+			svc.SetLastBuiltAnnotation()
+			s.Services[name] = svc
+			log.Success("Image for service '%s' successfully pushed", name)
+		}
 	}
-
-	return nil
+	return hasAddedAnyVolumeMounts, nil
 }
 
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
@@ -208,7 +257,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
 							Resources:       translateResources(svc),
-							WorkingDir:      svc.WorkingDir,
+							WorkingDir:      svc.Workdir,
 						},
 					},
 				},
@@ -243,10 +292,10 @@ func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.Persis
 				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 				Resources: apiv1.ResourceRequirements{
 					Requests: apiv1.ResourceList{
-						"storage": volumeSpec.Storage.Size.Value,
+						"storage": volumeSpec.Size.Value,
 					},
 				},
-				StorageClassName: translateStorageClass(volumeSpec.Storage.Class),
+				StorageClassName: translateStorageClass(volumeSpec.Class),
 			},
 		}
 		result = append(result, pvc)
@@ -299,7 +348,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 							SecurityContext: translateSecurityContext(svc),
 							VolumeMounts:    translateVolumeMounts(name, svc),
 							Resources:       translateResources(svc),
-							WorkingDir:      svc.WorkingDir,
+							WorkingDir:      svc.Workdir,
 						},
 					},
 					Volumes: translateVolumes(name, svc),
@@ -331,10 +380,10 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 			if !addedDataVolume {
 				volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
 				if command == "" {
-					command = "chmod 777 /data/"
+					command = "chmod 777 /data/*"
 					addedDataVolume = true
 				} else {
-					command += " && chmod 777 /data/"
+					command += " && chmod 777 /data/*"
 				}
 			}
 		}
