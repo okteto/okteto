@@ -92,21 +92,26 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 		return err
 	}
 
-	if filename == ".env" && isOktetoNamespace {
-		log.Information("[%s]: Detected '.env' file but will be skipped. You can set environment variables from https://cloud.okteto.com/#/settings/secrets.", svcName)
+	secrets := make(map[string]string)
+	if isOktetoNamespace {
 		envList, err := okteto.GetSecrets(ctx)
 		if err != nil {
 			return err
 		}
-		envMap := make(map[string]string)
+
 		for _, e := range envList {
-			envMap[e.Name] = e.Value
+			secrets[e.Name] = e.Value
 		}
 		for _, e := range svc.Environment {
-			delete(envMap, e.Name)
+			delete(secrets, e.Name)
 		}
+	}
 
-		for name, value := range envMap {
+	f, err := os.Open(filename)
+	if err != nil && len(secrets) == 0 {
+		return err
+	} else if err != nil && len(secrets) != 0 {
+		for name, value := range secrets {
 			svc.Environment = append(
 				svc.Environment,
 				model.EnvVar{Name: name, Value: value},
@@ -114,12 +119,6 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 		}
 		return nil
 	}
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-
 	defer f.Close()
 
 	envMap, err := gotenv.StrictParse(f)
@@ -131,12 +130,24 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 		delete(envMap, e.Name)
 	}
 
+	for key := range envMap {
+		delete(secrets, key)
+	}
+
 	for name, value := range envMap {
 		svc.Environment = append(
 			svc.Environment,
 			model.EnvVar{Name: name, Value: value},
 		)
 	}
+
+	for name, value := range secrets {
+		svc.Environment = append(
+			svc.Environment,
+			model.EnvVar{Name: name, Value: value},
+		)
+	}
+
 	return nil
 }
 
