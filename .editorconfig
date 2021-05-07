@@ -1,0 +1,16 @@
+# About this file, see:
+#   Website: https://editorconfig.org/
+#   For Atom users: https://github.com/sindresorhus/atom-editorconfig#readme
+#   For Eclipse users: https://github.com/ncjones/editorconfig-eclipse#readme
+#   For Emacs users: https://github.com/editorconfig/editorconfig-emacs
+#   For Sublime users: https://github.com/sindresorhus/editorconfig-sublime#readme
+#   For Vim users: https://github.com/editorconfig/editorconfig-vim
+#   For Visual Studio Code users: https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+insert_final_newline = true

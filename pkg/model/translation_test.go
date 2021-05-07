@@ -63,7 +63,7 @@ services:
 		Image:             "web:latest",
 		ImagePullPolicy:   apiv1.PullNever,
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r"},
+		Args:              []string{"-r", "-v"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -113,9 +113,7 @@ services:
 				SubPath:   path.Join(SourceCodeSubPath, "sub"),
 			},
 		},
-		InitContainer: InitContainer{
-			Image: OktetoBinImageTag,
-		},
+		InitContainer: InitContainer{Image: OktetoBinImageTag},
 	}
 
 	marshalled1, _ := yaml.Marshal(rule1)
@@ -141,10 +139,7 @@ services:
 			RunAsGroup: &rootUser,
 			FSGroup:    &rootUser,
 		},
-		Resources: ResourceRequirements{
-			Limits:   ResourceList{},
-			Requests: ResourceList{},
-		},
+		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
 			{
@@ -159,6 +154,170 @@ services:
 	marshalled2OK, _ := yaml.Marshal(rule2OK)
 	if string(marshalled2) != string(marshalled2OK) {
 		t.Fatalf("Wrong rule2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
+	}
+}
+
+func TestDevToTranslationRuleInitContainer(t *testing.T) {
+	manifest := []byte(`name: web
+namespace: n
+sync:
+  - .:/app
+initContainer:
+  image: image
+  resources:
+    requests:
+      cpu: 1
+      memory: 1Gi
+    limits:
+      cpu: 2
+      memory: 2Gi`)
+
+	dev, err := Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rule := dev.ToTranslationRule(dev, false)
+	ruleOK := &TranslationRule{
+		Marker:            OktetoBinImageTag,
+		OktetoBinImageTag: OktetoBinImageTag,
+		ImagePullPolicy:   apiv1.PullAlways,
+		Command:           []string{"/var/okteto/bin/start.sh"},
+		Args:              []string{"-r", "-v"},
+		Probes:            &Probes{},
+		Lifecycle:         &Lifecycle{},
+		Environment: Environment{
+			{
+				Name:  "OKTETO_NAMESPACE",
+				Value: "n",
+			},
+			{
+				Name:  "OKTETO_NAME",
+				Value: "web",
+			},
+		},
+		SecurityContext: &SecurityContext{
+			RunAsUser:  &rootUser,
+			RunAsGroup: &rootUser,
+			FSGroup:    &rootUser,
+		},
+		Resources:        ResourceRequirements{},
+		PersistentVolume: true,
+		Volumes: []VolumeMount{
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: OktetoSyncthingMountPath,
+				SubPath:   SyncthingSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: RemoteMountPath,
+				SubPath:   RemoteSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/app",
+				SubPath:   SourceCodeSubPath,
+			},
+		},
+		InitContainer: InitContainer{
+			Image: "image",
+			Resources: ResourceRequirements{
+				Requests: map[apiv1.ResourceName]resource.Quantity{
+					apiv1.ResourceCPU:    resource.MustParse("1"),
+					apiv1.ResourceMemory: resource.MustParse("1Gi"),
+				},
+				Limits: map[apiv1.ResourceName]resource.Quantity{
+					apiv1.ResourceCPU:    resource.MustParse("2"),
+					apiv1.ResourceMemory: resource.MustParse("2Gi"),
+				},
+			},
+		},
+	}
+
+	marshalled, _ := yaml.Marshal(rule)
+	marshalledOK, _ := yaml.Marshal(ruleOK)
+	if string(marshalled) != string(marshalledOK) {
+		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
+	}
+}
+
+func TestDevToTranslationRuleInitFromImageContainer(t *testing.T) {
+	manifest := []byte(`name: web
+image: dev-image
+namespace: n
+sync:
+  - .:/app
+persistentVolume:
+  initFromImage: true`)
+
+	dev, err := Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rule := dev.ToTranslationRule(dev, false)
+	ruleOK := &TranslationRule{
+		Marker:            OktetoBinImageTag,
+		OktetoBinImageTag: OktetoBinImageTag,
+		ImagePullPolicy:   apiv1.PullAlways,
+		Image:             "dev-image",
+		Command:           []string{"/var/okteto/bin/start.sh"},
+		Args:              []string{"-r", "-v"},
+		Probes:            &Probes{},
+		Lifecycle:         &Lifecycle{},
+		Environment: Environment{
+			{
+				Name:  "OKTETO_NAMESPACE",
+				Value: "n",
+			},
+			{
+				Name:  "OKTETO_NAME",
+				Value: "web",
+			},
+		},
+		SecurityContext: &SecurityContext{
+			RunAsUser:  &rootUser,
+			RunAsGroup: &rootUser,
+			FSGroup:    &rootUser,
+		},
+		Resources:        ResourceRequirements{},
+		PersistentVolume: true,
+		Volumes: []VolumeMount{
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: OktetoSyncthingMountPath,
+				SubPath:   SyncthingSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: RemoteMountPath,
+				SubPath:   RemoteSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/app",
+				SubPath:   SourceCodeSubPath,
+			},
+		},
+		InitContainer: InitContainer{Image: OktetoBinImageTag},
+		InitFromImageContainer: &InitFromImageContainer{
+			Image:   "dev-image",
+			Command: []string{"sh", "-c", "echo initializing volume... && (cp -nRv /app/* /initSync-0 || true)"},
+			Volumes: []VolumeMount{
+				{
+					Name:      dev.GetVolumeName(),
+					MountPath: "/initSync-0",
+					SubPath:   SourceCodeSubPath,
+				},
+			},
+		},
+	}
+
+	marshalled, _ := yaml.Marshal(rule)
+	marshalledOK, _ := yaml.Marshal(ruleOK)
+	if string(marshalled) != string(marshalledOK) {
+		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
 	}
 }
 

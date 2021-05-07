@@ -92,6 +92,7 @@ type Syncthing struct {
 	LocalPort        int           `yaml:"-"`
 	Type             string        `yaml:"-"`
 	IgnoreDelete     bool          `yaml:"-"`
+	Verbose          bool          `yaml:"-"`
 	pid              int           `yaml:"-"`
 	RescanInterval   string        `yaml:"-"`
 	Compression      string        `yaml:"-"`
@@ -206,6 +207,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		RemotePort:       remotePort,
 		Type:             "sendonly",
 		IgnoreDelete:     true,
+		Verbose:          dev.Sync.Verbose,
 		Folders:          []*Folder{},
 		RescanInterval:   strconv.Itoa(dev.Sync.RescanInterval),
 		Compression:      compression,
@@ -284,9 +286,11 @@ func (s *Syncthing) Run(ctx context.Context) error {
 	cmdArgs := []string{
 		"-home", s.Home,
 		"-no-browser",
-		"-verbose",
 		"-logfile", s.LogPath,
 		"-log-max-old-files=0",
+	}
+	if s.Verbose {
+		cmdArgs = append(cmdArgs, "-verbose")
 	}
 
 	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec

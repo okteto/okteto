@@ -85,21 +85,42 @@ func query(ctx context.Context, query string, result interface{}) error {
 	return nil
 }
 
+func queryWithRequest(ctx context.Context, req *graphql.Request, result interface{}) error {
+	t, err := GetToken()
+	if err != nil {
+		log.Infof("couldn't get token: %s", err)
+		return errors.ErrNotLogged
+	}
+	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", t.Token))
+
+	c, err := getClient(t.URL)
+	if err != nil {
+		log.Infof("error getting the graphql client: %s", err)
+		return fmt.Errorf("internal server error")
+	}
+
+	if err := c.Run(ctx, req, result); err != nil {
+		return translateAPIErr(err)
+	}
+
+	return nil
+}
+
 func translateAPIErr(err error) error {
 	e := strings.TrimPrefix(err.Error(), "graphql: ")
 	switch e {
 	case "not-authorized":
 		return errors.ErrNotLogged
 	case "namespace-quota-exceeded":
-		return fmt.Errorf("you have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
+		return fmt.Errorf("You have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
 	case "namespace-quota-exceeded-onpremises":
-		return fmt.Errorf("you have exceeded your namespace quota, please contact your administrator to increase it")
+		return fmt.Errorf("You have exceeded your namespace quota, please contact your administrator to increase it")
 	case "users-limit-exceeded":
-		return fmt.Errorf("license limit exceeded. Contact your administrator to update your license and try again")
+		return fmt.Errorf("License limit exceeded. Contact your administrator to update your license and try again")
 	case "internal-server-error":
-		return fmt.Errorf("server temporarily unavailable, please try again")
+		return fmt.Errorf("Server temporarily unavailable, please try again")
 	default:
-		log.Infof("unrecognized API error: %s", err)
+		log.Infof("Unrecognized API error: %s", err)
 		return fmt.Errorf(e)
 	}
 

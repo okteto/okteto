@@ -96,7 +96,7 @@ const (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.2.27"
+	OktetoBinImageTag = "okteto/bin:1.2.28"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -188,6 +188,7 @@ type Volume struct {
 // Sync represents a sync info in the development container
 type Sync struct {
 	Compression    bool         `json:"compression" yaml:"compression"`
+	Verbose        bool         `json:"verbose" yaml:"verbose"`
 	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
 	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
 	LocalPath      string
@@ -209,14 +210,23 @@ type ExternalVolume struct {
 
 // PersistentVolumeInfo info about the persistent volume
 type PersistentVolumeInfo struct {
-	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	StorageClass string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
-	Size         string `json:"size,omitempty" yaml:"size,omitempty"`
+	Enabled       bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	InitFromImage bool   `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
+	StorageClass  string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
+	Size          string `json:"size,omitempty" yaml:"size,omitempty"`
 }
 
 // InitContainer represents the initial container
 type InitContainer struct {
 	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
+	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+}
+
+// InitContainer represents the initial container
+type InitFromImageContainer struct {
+	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
+	Command   []string             `json:"command,omitempty" yaml:"command,omitempty"`
+	Volumes   []VolumeMount        `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
@@ -332,6 +342,7 @@ func Read(bytes []byte) (*Dev, error) {
 		PersistentVolumeInfo: &PersistentVolumeInfo{Enabled: true},
 		Probes:               &Probes{},
 		Lifecycle:            &Lifecycle{},
+		InitContainer:        InitContainer{Image: OktetoBinImageTag},
 	}
 
 	if bytes != nil {
@@ -541,9 +552,6 @@ func (dev *Dev) setDefaults() error {
 		dev.Sync.RescanInterval = rescanInterval
 	} else if dev.Sync.RescanInterval == 0 {
 		dev.Sync.RescanInterval = DefaultSyncthingRescanInterval
-	}
-	if dev.InitContainer.Image == "" {
-		dev.InitContainer.Image = OktetoBinImageTag
 	}
 
 	for _, s := range dev.Services {
@@ -878,6 +886,9 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		if reset {
 			rule.Args = append(rule.Args, "-e")
 		}
+		if dev.Sync.Verbose {
+			rule.Args = append(rule.Args, "-v")
+		}
 		for _, s := range rule.Secrets {
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
 		}
@@ -907,6 +918,38 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				},
 			)
 		}
+	}
+
+	if main == dev && main.PersistentVolumeInitFromImage() {
+		rule.InitFromImageContainer = &InitFromImageContainer{
+			Image:     main.Image.Name,
+			Volumes:   []VolumeMount{},
+			Resources: main.InitContainer.Resources,
+		}
+		command := "echo initializing volume..."
+		for i := range dev.Volumes {
+			rule.InitFromImageContainer.Volumes = append(
+				rule.InitFromImageContainer.Volumes,
+				VolumeMount{
+					Name:      main.GetVolumeName(),
+					MountPath: fmt.Sprintf("/initData-%d", i),
+					SubPath:   getDataSubPath(dev.Volumes[i].RemotePath),
+				},
+			)
+			command = fmt.Sprintf("%s && (cp -nRv %s/* /initData-%d || true)", command, dev.Volumes[i].RemotePath, i)
+		}
+		for i := range dev.Sync.Folders {
+			rule.InitFromImageContainer.Volumes = append(
+				rule.InitFromImageContainer.Volumes,
+				VolumeMount{
+					Name:      main.GetVolumeName(),
+					MountPath: fmt.Sprintf("/initSync-%d", i),
+					SubPath:   main.getSourceSubPath(dev.Sync.Folders[i].LocalPath),
+				},
+			)
+			command = fmt.Sprintf("%s && (cp -nRv %s/* /initSync-%d || true)", command, dev.Sync.Folders[i].RemotePath, i)
+		}
+		rule.InitFromImageContainer.Command = []string{"sh", "-c", command}
 	}
 
 	for _, v := range dev.ExternalVolumes {

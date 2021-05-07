@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/pkg/errors"
 )
@@ -100,4 +101,34 @@ func translateCacheHandler(input, userID string) string {
 	}
 
 	return input
+}
+
+func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume) (*model.BuildInfo, error) {
+	build := &model.BuildInfo{}
+
+	ctx, err := filepath.Abs(".")
+	if err != nil {
+		return build, nil
+	}
+	build.Context = ctx
+	dockerfileTmpFolder := filepath.Join(config.GetOktetoHome(), ".dockerfile")
+	if err := os.MkdirAll(dockerfileTmpFolder, 0700); err != nil {
+		return build, fmt.Errorf("failed to create %s: %s", dockerfileTmpFolder, err)
+	}
+
+	tmpFile, err := ioutil.TempFile(dockerfileTmpFolder, "buildkit-")
+	if err != nil {
+		return build, err
+	}
+
+	datawriter := bufio.NewWriter(tmpFile)
+	defer datawriter.Flush()
+
+	_, _ = datawriter.Write([]byte(fmt.Sprintf("FROM %s\n", image)))
+	for _, volume := range volumes {
+		_, _ = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", volume.LocalPath, volume.RemotePath)))
+	}
+
+	build.Dockerfile = tmpFile.Name()
+	return build, nil
 }

@@ -204,6 +204,9 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		delete(s.Endpoints, "")
 	}
 
+	if len(s.Endpoints) == 0 {
+		s.Endpoints = getEndpointsFromPorts(stackRaw.Services)
+	}
 	volumes := make(map[string]*VolumeSpec)
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
@@ -238,6 +241,40 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Warnings = stackRaw.Warnings
 	s.VolumeMountWarnings = make([]string, 0)
 	return nil
+}
+
+func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
+	endpoints := make(EndpointSpec)
+	for svcName, svc := range services {
+		accessiblePorts := getAccessiblePorts(svc.Ports)
+		if len(accessiblePorts) >= 2 {
+			for _, p := range svc.Ports {
+				if p.HostPort != 0 {
+					endpointName := fmt.Sprintf("%s-%d", svcName, p.HostPort)
+					endpoints[endpointName] = Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: svcName,
+								Port:    p.ContainerPort,
+							},
+						},
+					}
+				}
+			}
+		}
+	}
+	return endpoints
+}
+
+func getAccessiblePorts(ports []PortRaw) []PortRaw {
+	accessiblePorts := make([]PortRaw, 0)
+	for _, p := range ports {
+		if p.HostPort != 0 && !IsSkippablePort(p.ContainerPort) {
+			accessiblePorts = append(accessiblePorts, p)
+		}
+	}
+	return accessiblePorts
 }
 
 func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service, error) {
@@ -292,9 +329,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Public = serviceRaw.Public
 
 	for _, p := range serviceRaw.Ports {
-		if p.HostPort != 0 {
-			svc.Public = true
-		}
 		svc.Ports = append(svc.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
 	}
 
@@ -319,12 +353,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		}
 	}
 
-	svc.Volumes = serviceRaw.Volumes
-	for idx, volume := range svc.Volumes {
-		if isInVolumesTopLevelSection(volume.LocalPath, stack) {
-			svc.Volumes[idx] = volume
-		} else if !strings.HasPrefix(volume.LocalPath, ".") && volume.LocalPath != "" {
-			return nil, fmt.Errorf("Named volume '%s' is used in service %s but no declaration was found in the volumes section.", volume.ToString(), svcName)
+	svc.Volumes, svc.VolumeMounts = splitVolumesByType(serviceRaw.Volumes, stack)
+	for _, volume := range svc.VolumeMounts {
+		if !strings.HasPrefix(volume.LocalPath, ".") && volume.LocalPath != "" {
+			return nil, fmt.Errorf("Named volume '%s' is used in service '%s' but no declaration was found in the volumes section.", volume.ToString(), svcName)
 		}
 	}
 
@@ -333,6 +365,19 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
 	return svc, nil
+}
+
+func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []StackVolume) {
+	topLevelVolumes := make([]StackVolume, 0)
+	mountedVolumes := make([]StackVolume, 0)
+	for _, volume := range volumes {
+		if volume.LocalPath == "" || isInVolumesTopLevelSection(volume.LocalPath, s) {
+			topLevelVolumes = append(topLevelVolumes, volume)
+		} else {
+			mountedVolumes = append(mountedVolumes, volume)
+		}
+	}
+	return topLevelVolumes, mountedVolumes
 }
 
 func unmarshalLabels(labels Labels, deployInfo *DeployInfoRaw) Labels {

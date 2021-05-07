@@ -25,7 +25,7 @@ In addition to that, `okteto up` will:
 1. Automatic local and remote port forwarding using [SSH](https://okteto.com/docs/reference/ssh-server), so you can access your cluster services via `localhost` or connect a remote debugger.
 1. Give you an interactive terminal to your development container, so you can build, test, and run your application as you would from a local terminal.
 
-All of this (and more) can be configured via a [simple yaml manifest](https://okteto.com/docs/reference/manifest).
+All of this (and more) can be configured via a [simple YAML manifest](https://okteto.com/docs/reference/manifest).
 
 The end result is that the remote cluster is seen by your IDE and tools as a local filesystem/environment. You keep writing your code on your local IDE and as soon as you save a file, the change goes to the development container, and your application instantly updates (taking advantage of any hot-reload mechanism you already have). This whole process happens in an instant. No docker images need to be created and no Kubernetes manifests need to be applied to the cluster.
 
@@ -34,6 +34,7 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 ## Why Okteto
 
 `okteto` has several advantages when compared to more traditional development approaches:
+
 - **Fast inner loop development**: build and run your application using your favorite tools directly from your development container. Native builds are always faster than the *docker build/redeploy* cycle.
 - **Realistic development environment**: your development container reuses the same variables, secrets, sidecars, volumes, etc... than your original Kubernetes deployment. Realistic environments eliminate integration issues.
 - **Replicability**: development containers eliminate the need to install your dependencies locally, everything is pre-configured in your development image.
