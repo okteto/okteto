@@ -213,7 +213,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 
 func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *kubernetes.Clientset) error {
 	ingressK8s := translateIngress(ingressName, s)
-	old, err := c.ExtensionsV1beta1().Ingresses(s.Namespace).Get(ctx, ingressName, metav1.GetOptions{})
+	old, err := c.NetworkingV1().Ingresses(s.Namespace).Get(ctx, ingressName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting ingress '%s': %s", ingressName, err.Error())
 	}

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	extensions "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,7 +18,7 @@ import (
 
 func TestCreate(t *testing.T) {
 	ctx := context.Background()
-	ingress := &extensions.Ingress{
+	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fake",
 			Namespace: "test",
@@ -30,7 +30,7 @@ func TestCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	retrieved, err := clientset.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(ctx, ingress.Name, metav1.GetOptions{})
+	retrieved, err := clientset.NetworkingV1().Ingresses(ingress.Namespace).Get(ctx, ingress.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestCreate(t *testing.T) {
 
 func TestList(t *testing.T) {
 	ctx := context.Background()
-	ingress := &extensions.Ingress{
+	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fake",
 			Namespace: "test",
@@ -65,13 +65,13 @@ func TestDestroy(t *testing.T) {
 		name        string
 		ingressName string
 		namespace   string
-		ingress     *extensions.Ingress
+		ingress     *networkingv1.Ingress
 	}{
 		{
 			name:        "existent-ingress",
 			ingressName: "ingress-test",
 			namespace:   "test",
-			ingress: &extensions.Ingress{
+			ingress: &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "ingress-test",
 					Namespace: "test",
@@ -82,7 +82,7 @@ func TestDestroy(t *testing.T) {
 			name:        "ingress-not-found",
 			ingressName: "ingress-test",
 			namespace:   "test",
-			ingress: &extensions.Ingress{
+			ingress: &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "non-existent-ingress",
 					Namespace: "another-space",
@@ -129,7 +129,7 @@ func TestDestroyWithError(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	ctx := context.Background()
 	labels := map[string]string{"key": "value"}
-	ingress := &extensions.Ingress{
+	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fake",
 			Namespace: "test",
@@ -140,7 +140,7 @@ func TestUpdate(t *testing.T) {
 	clientset := fake.NewSimpleClientset(ingress)
 
 	updatedLabels := map[string]string{"key": "value", "key2": "value2"}
-	updatedIngress := &extensions.Ingress{
+	updatedIngress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fake",
 			Namespace: "test",
@@ -152,7 +152,7 @@ func TestUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	retrieved, err := clientset.ExtensionsV1beta1().Ingresses(ingress.Namespace).Get(ctx, ingress.Name, metav1.GetOptions{})
+	retrieved, err := clientset.NetworkingV1().Ingresses(ingress.Namespace).Get(ctx, ingress.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

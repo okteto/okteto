@@ -31,7 +31,7 @@ import (
 	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -451,20 +451,20 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	}
 }
 
-func translateIngress(ingressName string, s *model.Stack) *extensions.Ingress {
+func translateIngress(ingressName string, s *model.Stack) *networkingv1.Ingress {
 	endpoints := s.Endpoints[ingressName]
-	return &extensions.Ingress{
+	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ingressName,
 			Namespace:   s.Namespace,
 			Labels:      translateIngressLabels(ingressName, s),
 			Annotations: translateIngressAnnotations(ingressName, s),
 		},
-		Spec: extensions.IngressSpec{
-			Rules: []extensions.IngressRule{
+		Spec: networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
 				{
-					IngressRuleValue: extensions.IngressRuleValue{
-						HTTP: &extensions.HTTPIngressRuleValue{
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: translateEndpoints(endpoints),
 						},
 					},
@@ -474,14 +474,18 @@ func translateIngress(ingressName string, s *model.Stack) *extensions.Ingress {
 	}
 }
 
-func translateEndpoints(endpoints model.Endpoint) []extensions.HTTPIngressPath {
-	paths := make([]extensions.HTTPIngressPath, 0)
+func translateEndpoints(endpoints model.Endpoint) []networkingv1.HTTPIngressPath {
+	paths := make([]networkingv1.HTTPIngressPath, 0)
 	for _, rule := range endpoints.Rules {
-		path := extensions.HTTPIngressPath{
+		path := networkingv1.HTTPIngressPath{
 			Path: rule.Path,
-			Backend: extensions.IngressBackend{
-				ServiceName: rule.Service,
-				ServicePort: intstr.IntOrString{IntVal: rule.Port},
+			Backend: networkingv1.IngressBackend{
+				Service: &networkingv1.IngressServiceBackend{
+					Name: rule.Service,
+					Port: networkingv1.ServiceBackendPort{
+						Number: rule.Port,
+					},
+				},
 			},
 		}
 		paths = append(paths, path)

@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
-	extensions "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 )
 
 const (
@@ -546,11 +546,15 @@ func Test_translateEndpoints(t *testing.T) {
 		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
 	}
 
-	paths := []extensions.HTTPIngressPath{
+	paths := []networkingv1.HTTPIngressPath{
 		{Path: "/",
-			Backend: extensions.IngressBackend{
-				ServiceName: "svcName",
-				ServicePort: intstr.IntOrString{IntVal: 80},
+			Backend: networkingv1.IngressBackend{
+				Service: &networkingv1.IngressServiceBackend{
+					Name: "svcName",
+					Port: networkingv1.ServiceBackendPort{
+						Number: 80,
+					},
+				},
 			},
 		},
 	}
