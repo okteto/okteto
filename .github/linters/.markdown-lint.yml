@@ -2,15 +2,35 @@
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
 # markdownlint -c .github/linters/.markdown-lint.yml .
 
+# MD007 ul-indent - Unordered list indentation
 MD007: false
-MD012: false
+
+# MD013 line-length - Line length
 MD013: false
+
+# MD022/blanks-around-headings/blanks-around-headers Headings should be surrounded by blank lines
 MD022: false
+
+# MD024 no-duplicate-heading/no-duplicate-header - Multiple headings with the same content
 MD024: false
+
+# MD025 single-title/single-h1 - Multiple top-level headings in the same document
 MD025: false
+
+# MD026 no-trailing-punctuation - Trailing punctuation in heading
 MD026: false
+
+# MD032/blanks-around-lists Lists should be surrounded by blank lines
 MD032: false
+
+# MD033 no-inline-html - Inline HTML
 MD033: false
+
+# MD040 fenced-code-language - Fenced code blocks should have a language specified
 MD040: false
+
+# MD041 first-line-heading/first-line-h1 - First line in a file should be a top-level heading
 MD041: false
+
+# MD047 single-trailing-newline - Files should end with a single newline character
 MD047: false

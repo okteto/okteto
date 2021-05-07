@@ -176,6 +176,14 @@ func (dev *Dev) PersistentVolumeEnabled() bool {
 	return dev.PersistentVolumeInfo.Enabled
 }
 
+// PersistentVolumeInitFromImage returns true if the persistent volume must be initialized from the image
+func (dev *Dev) PersistentVolumeInitFromImage() bool {
+	if dev.PersistentVolumeInfo == nil {
+		return false
+	}
+	return dev.PersistentVolumeInfo.InitFromImage
+}
+
 // PersistentVolumeSize returns the persistent volume size
 func (dev *Dev) PersistentVolumeSize() string {
 	if dev.PersistentVolumeInfo == nil {

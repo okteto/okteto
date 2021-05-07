@@ -1,10 +1,11 @@
-name: Superlinter
+# https://github.com/github/super-linter
+name: Super-Linter
 
 on: [pull_request]
 
 jobs:
   superlinter:
-    name: superlinter
+    name: Run GitHub Super-Linter
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

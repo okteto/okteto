@@ -121,6 +121,33 @@ func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string
 	return tag, nil
 }
 
+// IsTransientError returns true if err represents a transient registry error
+func IsTransientError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	switch {
+	case strings.Contains(err.Error(), "failed commit on ref") && strings.Contains(err.Error(), "500 Internal Server Error"),
+		strings.Contains(err.Error(), "transport is closing"):
+		return true
+	case strings.Contains(err.Error(), "failed to do request") && strings.Contains(err.Error(), "http: server closed idle connection"):
+		return true
+	default:
+		return false
+	}
+}
+
+// IsLoggedIntoRegistryButDontHavePermissions returns true when the error is because the user is logged into the registry but doesn't have permissions to push the image
+func IsLoggedIntoRegistryButDontHavePermissions(err error) bool {
+	return strings.Contains(err.Error(), "insufficient_scope: authorization failed")
+}
+
+// IsNotLoggedIntoRegistry returns true when the error is because the user is not logged into the registry
+func IsNotLoggedIntoRegistry(err error) bool {
+	return strings.Contains(err.Error(), "failed to authorize: failed to fetch anonymous token")
+}
+
 // SplitRegistryAndImage returns image tag and the registry to push the image
 func GetRegistryAndRepo(tag string) (string, string) {
 	var imageTag string
