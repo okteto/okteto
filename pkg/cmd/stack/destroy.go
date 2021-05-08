@@ -26,7 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/ingress"
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -178,23 +178,28 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		spinner.Start()
 	}
 
-	ingressesList, err := ingress.List(ctx, s.Namespace, s.GetLabelSelector(), c)
+	iClient, err := ingresses.GetClient(ctx, c)
+	if err != nil {
+		return fmt.Errorf("error getting ingress client: %s", err.Error())
+	}
+
+	iList, err := iClient.List(ctx, s.Namespace, s.GetLabelSelector())
 	if err != nil {
 		return err
 	}
-	for i := range ingressesList {
-		if _, ok := s.Endpoints[ingressesList[i].Name]; ok {
+	for i := range iList {
+		if _, ok := s.Endpoints[iList[i].GetName()]; ok {
 			continue
 		}
-		if ingressesList[i].Labels[okLabels.StackEndpointNameLabel] == "" {
+		if iList[i].GetLabels()[okLabels.StackEndpointNameLabel] == "" {
 			//ingress created with "public"
 			continue
 		}
-		if err := ingress.Destroy(ctx, ingressesList[i].Name, ingressesList[i].Namespace, c); err != nil {
-			return fmt.Errorf("error destroying ingress '%s': %s", ingressesList[i].Name, err)
+		if err := iClient.Destroy(ctx, iList[i].GetName(), iList[i].GetNamespace()); err != nil {
+			return fmt.Errorf("error destroying ingress '%s': %s", iList[i].GetName(), err)
 		}
 		spinner.Stop()
-		log.Success("Destroyed endpoint '%s'", ingressesList[i].Name)
+		log.Success("Destroyed endpoint '%s'", iList[i].GetName())
 		spinner.Start()
 	}
 

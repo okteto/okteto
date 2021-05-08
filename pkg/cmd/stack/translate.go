@@ -32,6 +32,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -451,7 +452,7 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	}
 }
 
-func translateIngress(ingressName string, s *model.Stack) *networkingv1.Ingress {
+func translateIngressV1(ingressName string, s *model.Stack) *networkingv1.Ingress {
 	endpoints := s.Endpoints[ingressName]
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -465,7 +466,7 @@ func translateIngress(ingressName string, s *model.Stack) *networkingv1.Ingress 
 				{
 					IngressRuleValue: networkingv1.IngressRuleValue{
 						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: translateEndpoints(endpoints),
+							Paths: translateEndpointsV1(endpoints),
 						},
 					},
 				},
@@ -474,11 +475,36 @@ func translateIngress(ingressName string, s *model.Stack) *networkingv1.Ingress 
 	}
 }
 
-func translateEndpoints(endpoints model.Endpoint) []networkingv1.HTTPIngressPath {
+func translateIngressV1Beta1(ingressName string, s *model.Stack) *networkingv1beta1.Ingress {
+	endpoints := s.Endpoints[ingressName]
+	return &networkingv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ingressName,
+			Namespace:   s.Namespace,
+			Labels:      translateIngressLabels(ingressName, s),
+			Annotations: translateIngressAnnotations(ingressName, s),
+		},
+		Spec: networkingv1beta1.IngressSpec{
+			Rules: []networkingv1beta1.IngressRule{
+				{
+					IngressRuleValue: networkingv1beta1.IngressRuleValue{
+						HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+							Paths: translateEndpointsV1Beta1(endpoints),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func translateEndpointsV1(endpoints model.Endpoint) []networkingv1.HTTPIngressPath {
 	paths := make([]networkingv1.HTTPIngressPath, 0)
+	pathType := networkingv1.PathTypeImplementationSpecific
 	for _, rule := range endpoints.Rules {
 		path := networkingv1.HTTPIngressPath{
-			Path: rule.Path,
+			Path:     rule.Path,
+			PathType: &pathType,
 			Backend: networkingv1.IngressBackend{
 				Service: &networkingv1.IngressServiceBackend{
 					Name: rule.Service,
@@ -486,6 +512,21 @@ func translateEndpoints(endpoints model.Endpoint) []networkingv1.HTTPIngressPath
 						Number: rule.Port,
 					},
 				},
+			},
+		}
+		paths = append(paths, path)
+	}
+	return paths
+}
+
+func translateEndpointsV1Beta1(endpoints model.Endpoint) []networkingv1beta1.HTTPIngressPath {
+	paths := make([]networkingv1beta1.HTTPIngressPath, 0)
+	for _, rule := range endpoints.Rules {
+		path := networkingv1beta1.HTTPIngressPath{
+			Path: rule.Path,
+			Backend: networkingv1beta1.IngressBackend{
+				ServiceName: rule.Service,
+				ServicePort: intstr.IntOrString{IntVal: rule.Port},
 			},
 		}
 		paths = append(paths, path)

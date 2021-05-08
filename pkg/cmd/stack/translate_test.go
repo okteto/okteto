@@ -30,6 +30,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 )
 
 const (
@@ -512,7 +513,7 @@ func Test_translateService(t *testing.T) {
 	}
 }
 
-func Test_translateEndpoints(t *testing.T) {
+func Test_translateEndpointsV1(t *testing.T) {
 	s := &model.Stack{
 		Name: "stackName",
 		Endpoints: map[string]model.Endpoint{
@@ -532,7 +533,7 @@ func Test_translateEndpoints(t *testing.T) {
 			},
 		},
 	}
-	result := translateIngress("endpoint1", s)
+	result := translateIngressV1("endpoint1", s)
 	if result.Name != "endpoint1" {
 		t.Errorf("Wrong service name: '%s'", result.Name)
 	}
@@ -546,8 +547,11 @@ func Test_translateEndpoints(t *testing.T) {
 		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
 	}
 
+	pathType := networkingv1.PathTypeImplementationSpecific
 	paths := []networkingv1.HTTPIngressPath{
-		{Path: "/",
+		{
+			Path:     "/",
+			PathType: &pathType,
 			Backend: networkingv1.IngressBackend{
 				Service: &networkingv1.IngressServiceBackend{
 					Name: "svcName",
@@ -555,6 +559,63 @@ func Test_translateEndpoints(t *testing.T) {
 						Number: 80,
 					},
 				},
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(result.Spec.Rules[0].HTTP.Paths, paths) {
+		t.Errorf("Wrong ingress: '%v'", result.Spec.Rules[0].HTTP.Paths)
+	}
+
+	labels := map[string]string{
+		okLabels.StackNameLabel:         "stackName",
+		okLabels.StackEndpointNameLabel: "endpoint1",
+		"label1":                        "value1",
+	}
+	if !reflect.DeepEqual(result.Labels, labels) {
+		t.Errorf("Wrong labels: '%s'", result.Labels)
+	}
+}
+
+func Test_translateEndpointsV1Beta1(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Endpoints: map[string]model.Endpoint{
+			"endpoint1": {
+				Labels:      model.Labels{"label1": "value1"},
+				Annotations: model.Annotations{"annotation1": "value1"},
+				Rules: []model.EndpointRule{
+					{Path: "/",
+						Service: "svcName",
+						Port:    80},
+				},
+			},
+		},
+		Services: map[string]*model.Service{
+			"svcName": {
+				Image: "image",
+			},
+		},
+	}
+	result := translateIngressV1Beta1("endpoint1", s)
+	if result.Name != "endpoint1" {
+		t.Errorf("Wrong service name: '%s'", result.Name)
+	}
+
+	annotations := map[string]string{
+		okLabels.OktetoIngressAutoGenerateHost: "true",
+		"annotation1":                          "value1",
+	}
+
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	}
+
+	paths := []networkingv1beta1.HTTPIngressPath{
+		{Path: "/",
+			Backend: networkingv1beta1.IngressBackend{
+				ServiceName: "svcName",
+				ServicePort: intstr.IntOrString{IntVal: 80},
 			},
 		},
 	}
