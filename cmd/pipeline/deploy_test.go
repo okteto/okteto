@@ -68,7 +68,7 @@ func Test_getRepositoryURL(t *testing.T) {
 			defer os.RemoveAll(dir)
 
 			if _, err := getRepositoryURL(context.TODO(), dir); err == nil {
-				t.Fatal("expected error when there's no github repo")
+				t.Fatal("expected error when there's no GitHub repo")
 			}
 
 			r, err := git.PlainInit(dir, true)

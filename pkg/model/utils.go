@@ -60,7 +60,7 @@ func CopyFile(from, to string) error {
 	return nil
 }
 
-//GetValidNameFromFolder returns a valid kubernetes name for a folder
+// GetValidNameFromFolder returns a valid kubernetes name for a folder
 func GetValidNameFromFolder(folder string) (string, error) {
 	dir, err := filepath.Abs(folder)
 	if err != nil {

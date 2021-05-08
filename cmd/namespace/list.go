@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//List all namespace in current context
+// List all namespace in current context
 func List(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
 		Use:   "namespace",

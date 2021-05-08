@@ -39,7 +39,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//Destroy destroys a stack
+// Destroy destroys a stack
 func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout time.Duration) error {
 	if s.Namespace == "" {
 		s.Namespace = client.GetContextNamespace("")

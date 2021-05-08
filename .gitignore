@@ -3,7 +3,7 @@
 # IDEs
 .vscode
 
-# golang binary
+# Golang binary
 cli
 .syncthing*
 bin/*

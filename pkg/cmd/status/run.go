@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
-//Run runs the "okteto status" sequence
+// Run runs the "okteto status" sequence
 func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64, error) {
 	progressLocal, err := getCompletionProgress(ctx, sy, true)
 	if err != nil {
@@ -71,7 +71,7 @@ func computeProgress(local, remote float64) float64 {
 	return (local + remote) / 2
 }
 
-//Wait waits for the okteto up sequence to finish
+// Wait waits for the okteto up sequence to finish
 func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()

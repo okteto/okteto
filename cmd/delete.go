@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Delete creates resources
+// Delete creates resources
 func Delete(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",

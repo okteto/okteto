@@ -39,7 +39,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//Deploy deploys a stack
+// Deploy deploys a stack
 func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool) error {
 	if s.Namespace == "" {
 		s.Namespace = client.GetContextNamespace("")

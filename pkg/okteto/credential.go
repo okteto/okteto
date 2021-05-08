@@ -27,7 +27,7 @@ type Credentials struct {
 	Credentials Credential
 }
 
-//Credential represents an Okteto Space k8s credentials
+// Credential represents an Okteto Space k8s credentials
 type Credential struct {
 	Server      string `json:"server" yaml:"server"`
 	Certificate string `json:"certificate" yaml:"certificate"`
@@ -55,7 +55,7 @@ func GetCredentials(ctx context.Context) (*Credential, error) {
 	return &cred.Credentials, nil
 }
 
-//GetClusterContext returns the k8s context names given an okteto URL
+// GetClusterContext returns the k8s context names given an okteto URL
 func GetClusterContext() string {
 	u, _ := url.Parse(GetURL())
 	return strings.ReplaceAll(u.Host, ".", "_")

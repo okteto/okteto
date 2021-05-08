@@ -92,7 +92,7 @@ const (
 	StackVolumeNameLabel = "stack.okteto.com/volume"
 )
 
-//TransformLabelsToSelector transforms a map of labels into a string k8s selector
+// TransformLabelsToSelector transforms a map of labels into a string k8s selector
 func TransformLabelsToSelector(labels map[string]string) string {
 	labelList := make([]string, 0)
 	for key, value := range labels {

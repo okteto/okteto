@@ -47,7 +47,7 @@ import (
 // ReconnectingMessage is the message shown when we are trying to reconnect
 const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
-//Up starts a development container
+// Up starts a development container
 func Up() *cobra.Command {
 	var devPath string
 	var namespace string

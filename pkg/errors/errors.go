@@ -134,7 +134,7 @@ func IsTransient(err error) bool {
 	}
 }
 
-//IsCredentialError need to refresh credentials
+// IsCredentialError need to refresh credentials
 func IsCredentialError(err error) bool {
 	if err == nil {
 		return false

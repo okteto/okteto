@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//List returns the list of services
+// List returns the list of services
 func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]apiv1.Service, error) {
 	svcList, err := c.CoreV1().Services(namespace).List(
 		ctx,
@@ -40,13 +40,13 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return svcList.Items, nil
 }
 
-//CreateDev deploys a default k8s service for a development container
+// CreateDev deploys a default k8s service for a development container
 func CreateDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	s := translate(dev)
 	return Create(ctx, s, c)
 }
 
-//Create creates a k8s service
+// Create creates a k8s service
 func Create(ctx context.Context, s *apiv1.Service, c *kubernetes.Clientset) error {
 	old, err := Get(ctx, s.Namespace, s.Name, c)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
@@ -75,12 +75,12 @@ func Create(ctx context.Context, s *apiv1.Service, c *kubernetes.Clientset) erro
 	return nil
 }
 
-//DestroyDev destroys the default service for a development container
+// DestroyDev destroys the default service for a development container
 func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	return Destroy(ctx, dev.Name, dev.Namespace, c)
 }
 
-//Destroy destroys a k8s service
+// Destroy destroys a k8s service
 func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
 	log.Infof("deleting service '%s'", name)
 	err := c.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
@@ -100,7 +100,7 @@ func Get(ctx context.Context, namespace, name string, c kubernetes.Interface) (*
 	return c.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-//GetPortsByPod returns the ports exposed via endpoint of a given pod
+// GetPortsByPod returns the ports exposed via endpoint of a given pod
 func GetPortsByPod(ctx context.Context, p *apiv1.Pod, c *kubernetes.Clientset) ([]int, error) {
 	eList, err := c.CoreV1().Endpoints(p.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -125,7 +125,7 @@ func GetPortsByPod(ctx context.Context, p *apiv1.Pod, c *kubernetes.Clientset) (
 	return result, nil
 }
 
-//GetServiceNameByLabel returns the name of the service with certain labels
+// GetServiceNameByLabel returns the name of the service with certain labels
 func GetServiceNameByLabel(ctx context.Context, namespace string, c kubernetes.Interface, labels string) (string, error) {
 	serviceList, err := c.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels})
 	if err != nil {

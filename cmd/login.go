@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Login starts the login handshake with github and okteto
+// Login starts the login handshake with GitHub and okteto
 func Login() *cobra.Command {
 	token := ""
 	cmd := &cobra.Command{

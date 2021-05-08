@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//GetDockerfile returns the dockerfile with the cache translations
+// GetDockerfile returns the dockerfile with the cache translations
 func GetDockerfile(path, dockerFile string) (string, error) {
 	fileWithCacheHandler, err := getDockerfileWithCacheHandler(dockerFile)
 	if err != nil {

@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//Run runs the "okteto down" sequence
+// Run runs the "okteto down" sequence
 func Run(dev *model.Dev, d *appsv1.Deployment, trList map[string]*model.Translation, wait bool, c *kubernetes.Clientset) error {
 	ctx := context.Background()
 	if len(trList) == 0 {

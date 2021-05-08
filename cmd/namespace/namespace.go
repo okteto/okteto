@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Namespace fetch credentials for a cluster namespace
+// Namespace fetch credentials for a cluster namespace
 func Namespace(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "namespace [name]",
@@ -51,7 +51,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-//RunNamespace starts the kubeconfig sequence
+// RunNamespace starts the kubeconfig sequence
 func RunNamespace(ctx context.Context, namespace string) error {
 	if !okteto.IsAuthenticated() {
 		if !askIfLogin() {
@@ -111,7 +111,7 @@ func askIfLogin() bool {
 	return result
 }
 
-//askOktetoURL prompts for okteto URL
+// askOktetoURL prompts for okteto URL
 func askOktetoURL() (string, error) {
 	var oktetoURL string
 

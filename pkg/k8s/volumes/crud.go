@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//List returns the list of volumes
+// List returns the list of volumes
 func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]apiv1.PersistentVolumeClaim, error) {
 	vList, err := c.CoreV1().PersistentVolumeClaims(namespace).List(
 		ctx,
@@ -44,7 +44,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return vList.Items, nil
 }
 
-//Create deploys the volume claim for a given development container
+// Create deploys the volume claim for a given development container
 func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvc := translate(dev)
@@ -111,12 +111,12 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 
 }
 
-//DestroyDev destroys the persistent volume claim for a given development container
+// DestroyDev destroys the persistent volume claim for a given development container
 func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	return Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout)
 }
 
-//Destroy destroys a persistent volume claim
+// Destroy destroys a persistent volume claim
 func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset, timeout time.Duration) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(namespace)
 	log.Infof("destroying volume '%s'", name)

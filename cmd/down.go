@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Down deactivates the development container
+// Down deactivates the development container
 func Down() *cobra.Command {
 	var devPath string
 	var namespace string

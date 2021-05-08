@@ -35,7 +35,7 @@ func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, err
 	return akt.T.RoundTrip(req)
 }
 
-//NewAPIClient returns a new syncthing api client configured to call the syncthing api
+// NewAPIClient returns a new syncthing api client configured to call the syncthing api
 func NewAPIClient() *http.Client {
 	return &http.Client{
 		Timeout:   60 * time.Second,

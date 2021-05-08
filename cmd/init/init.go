@@ -45,7 +45,7 @@ const (
 	defaultInitValues = "Use default values"
 )
 
-//Init automatically generates the manifest
+// Init automatically generates the manifest
 func Init() *cobra.Command {
 	var namespace string
 	var k8sContext string
@@ -257,7 +257,7 @@ func validateDevPath(devPath string, overwrite bool) (string, error) {
 	return devPath, nil
 }
 
-//GetLanguage returns the language of a given folder
+// GetLanguage returns the language of a given folder
 func GetLanguage(language, workDir string) (string, error) {
 	if language != "" {
 		return language, nil

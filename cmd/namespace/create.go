@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Create creates a namespace
+// Create creates a namespace
 func Create(ctx context.Context) *cobra.Command {
 	var members *[]string
 

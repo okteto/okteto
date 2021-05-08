@@ -36,7 +36,7 @@ type ConfigInfo struct {
 	ExposedPorts *map[string]*interface{} `json:"ExposedPorts"`
 }
 
-//GetImageTagWithDigest returns the image tag digest
+// GetImageTagWithDigest returns the image tag digest
 func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (string, error) {
 	registryURL, err := okteto.GetRegistry()
 	if err != nil {
@@ -89,7 +89,7 @@ func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (str
 	return fmt.Sprintf("%s@%s", repoName, digest.String()), nil
 }
 
-//ExpandOktetoDevRegistry translates okteto.dev
+// ExpandOktetoDevRegistry translates okteto.dev
 func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string, error) {
 	if !strings.HasPrefix(tag, okteto.DevRegistry) {
 		return tag, nil
