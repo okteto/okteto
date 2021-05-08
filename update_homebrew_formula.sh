@@ -6,18 +6,18 @@ SHA=$2
 SHA_ARM=$3
 
 if [ -z "$VERSION" ]; then
-	echo "missing version"
-	exit 1
+        echo "missing version"
+        exit 1
 fi
 
 if [ -z "$SHA" ]; then
-	echo "missing sha"
-	exit 1
+        echo "missing sha"
+        exit 1
 fi
 
 if [ -z "$SHA_ARM" ]; then
-	echo "missing sha for ARM"
-	exit 1
+        echo "missing sha for ARM"
+        exit 1
 fi
 
 rm -rf homebrew-cli

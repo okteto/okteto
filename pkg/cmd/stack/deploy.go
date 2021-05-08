@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/ingress"
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -113,10 +113,17 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 		return err
 	}
 
+	iClient, err := ingresses.GetClient(ctx, c)
+	if err != nil {
+		return fmt.Errorf("error getting ingress client: %s", err.Error())
+	}
 	for name := range s.Endpoints {
-		if err := deployIngress(ctx, name, s, c); err != nil {
+		if err := deployIngress(ctx, name, s, iClient); err != nil {
 			return err
 		}
+		spinner.Stop()
+		log.Success("Deployed endpoint '%s'", name)
+		spinner.Start()
 	}
 
 	if !wait {
@@ -211,25 +218,26 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 	return nil
 }
 
-func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *kubernetes.Clientset) error {
-	ingressK8s := translateIngress(ingressName, s)
-	old, err := c.ExtensionsV1beta1().Ingresses(s.Namespace).Get(ctx, ingressName, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("error getting ingress '%s': %s", ingressName, err.Error())
+func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *ingresses.Client) error {
+	iModel := &ingresses.Ingress{
+		V1:      translateIngressV1(ingressName, s),
+		V1Beta1: translateIngressV1Beta1(ingressName, s),
 	}
-	isNewIngress := old.Name == ""
-	if !isNewIngress {
-		if old.Labels[okLabels.StackNameLabel] == "" {
-			return fmt.Errorf("name collision: the ingress '%s' was running before deploying your stack", ingressName)
+	i, err := c.Get(ctx, ingressName, s.Namespace)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return fmt.Errorf("error getting ingress '%s': %s", ingressName, err.Error())
 		}
-		if ingressK8s.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
-			return fmt.Errorf("name collision: the ingress '%s' belongs to the stack '%s'", ingressName, old.Labels[okLabels.StackNameLabel])
-		}
-		ingress.Update(ctx, ingressK8s, c)
-	} else if err := ingress.Create(ctx, ingressK8s, c); err != nil {
-		return err
+		return c.Create(ctx, iModel)
 	}
-	return nil
+
+	if i.GetLabels()[okLabels.StackNameLabel] == "" {
+		return fmt.Errorf("name collision: the ingress '%s' was running before deploying your stack", ingressName)
+	}
+	if i.GetLabels()[okLabels.StackNameLabel] != iModel.V1.Labels[okLabels.StackNameLabel] {
+		return fmt.Errorf("name collision: the ingress '%s' belongs to the stack '%s'", ingressName, i.GetLabels()[okLabels.StackNameLabel])
+	}
+	return c.Update(ctx, iModel)
 }
 
 func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {
