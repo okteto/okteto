@@ -519,21 +519,6 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			manifest:      []byte("services:\n  app:\n    volumes: \n    - redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
 			expectedError: true,
 		},
-		{
-			name:          "volume-absolute-path",
-			manifest:      []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda/:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
-			expectedError: false,
-		},
-		{
-			name:          "volume-relative-path",
-			manifest:      []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
-			expectedError: false,
-		},
-		{
-			name:          "pv",
-			manifest:      []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda/data\n    image: okteto/vote:1\n"),
-			expectedError: false,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
