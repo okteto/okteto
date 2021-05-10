@@ -50,7 +50,6 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		return err
 	}
 
-	addHiddenExposedPorts(ctx, s)
 	if err := translate(ctx, s, forceBuild, noCache); err != nil {
 		return err
 	}
@@ -87,6 +86,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	spinner.Start()
 	defer spinner.Stop()
 
+	addHiddenExposedPorts(ctx, s)
 	for name := range s.Services {
 		if len(s.Services[name].Volumes) == 0 {
 			if err := deployDeployment(ctx, name, s, c); err != nil {
