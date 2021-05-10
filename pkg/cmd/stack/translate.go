@@ -210,7 +210,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 
 func getNewTagFromImage(image string) string {
 	tag := strings.Replace(image, ":", "-", 1)
-	tag = strings.Replace(tag, "/", "-", 1)
+	tag = strings.ReplaceAll(tag, "/", "-")
 	return tag
 }
 
