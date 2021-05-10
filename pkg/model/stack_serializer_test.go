@@ -564,7 +564,7 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 		{
 			name:     "not-public-port-but-with-assignation",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
-			isPublic: false,
+			isPublic: true,
 		},
 		{
 			name:     "mysql-port-forwarding",
@@ -917,6 +917,7 @@ func Test_MultipleEndpoints(t *testing.T) {
 		name          string
 		manifest      []byte
 		expectedStack *Stack
+		svcPublic     bool
 	}{
 		{
 			name:     "no-ports",
@@ -927,6 +928,7 @@ func Test_MultipleEndpoints(t *testing.T) {
 				},
 				Endpoints: EndpointSpec{},
 			},
+			svcPublic: false,
 		},
 		{
 			name:     "one-port-that-should-not-be-skipped",
@@ -937,6 +939,7 @@ func Test_MultipleEndpoints(t *testing.T) {
 				},
 				Endpoints: EndpointSpec{},
 			},
+			svcPublic: true,
 		},
 		{
 			name:     "two-port-that-should-not-be-skipped",
@@ -966,6 +969,7 @@ func Test_MultipleEndpoints(t *testing.T) {
 					},
 				},
 			},
+			svcPublic: false,
 		},
 		{
 			name:     "one-port-that-should-be-skipped",
@@ -976,6 +980,7 @@ func Test_MultipleEndpoints(t *testing.T) {
 				},
 				Endpoints: EndpointSpec{},
 			},
+			svcPublic: false,
 		},
 		{
 			name:     "two-ports-one-skippable-and-one-not",
@@ -986,6 +991,7 @@ func Test_MultipleEndpoints(t *testing.T) {
 				},
 				Endpoints: EndpointSpec{},
 			},
+			svcPublic: true,
 		},
 		{
 			name:     "three-ports-one-skippable-and-two-not",
@@ -1015,6 +1021,7 @@ func Test_MultipleEndpoints(t *testing.T) {
 					},
 				},
 			},
+			svcPublic: false,
 		},
 		{
 			name:     "two-ports-not-skippable",
@@ -1044,6 +1051,7 @@ func Test_MultipleEndpoints(t *testing.T) {
 					},
 				},
 			},
+			svcPublic: false,
 		},
 	}
 	for _, tt := range tests {
@@ -1058,6 +1066,9 @@ func Test_MultipleEndpoints(t *testing.T) {
 			}
 			if !reflect.DeepEqual(s.Endpoints, tt.expectedStack.Endpoints) {
 				t.Fatal("The endpoints have not been created properly")
+			}
+			if s.Services["app"].Public != tt.svcPublic {
+				t.Fatal("Public property was not set properly")
 			}
 		})
 	}

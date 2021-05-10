@@ -248,18 +248,16 @@ func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
 	for svcName, svc := range services {
 		accessiblePorts := getAccessiblePorts(svc.Ports)
 		if len(accessiblePorts) >= 2 {
-			for _, p := range svc.Ports {
-				if p.HostPort != 0 {
-					endpointName := fmt.Sprintf("%s-%d", svcName, p.HostPort)
-					endpoints[endpointName] = Endpoint{
-						Rules: []EndpointRule{
-							{
-								Path:    "/",
-								Service: svcName,
-								Port:    p.ContainerPort,
-							},
+			for _, p := range accessiblePorts {
+				endpointName := fmt.Sprintf("%s-%d", svcName, p.HostPort)
+				endpoints[endpointName] = Endpoint{
+					Rules: []EndpointRule{
+						{
+							Path:    "/",
+							Service: svcName,
+							Port:    p.ContainerPort,
 						},
-					}
+					},
 				}
 			}
 		}
@@ -327,7 +325,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Environment = serviceRaw.Environment
 
 	svc.Public = serviceRaw.Public
-
+	if !svc.Public && len(getAccessiblePorts(serviceRaw.Ports)) == 1 {
+		svc.Public = true
+	}
 	for _, p := range serviceRaw.Ports {
 		svc.Ports = append(svc.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
 	}
