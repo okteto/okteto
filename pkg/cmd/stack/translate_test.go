@@ -633,3 +633,41 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
 }
+
+func Test_ChangeImageName(t *testing.T) {
+	tests := []struct {
+		name     string
+		image    string
+		expected string
+	}{
+		{
+			name:     "official image",
+			image:    "ubuntu",
+			expected: "ubuntu",
+		},
+		{
+			name:     "user image",
+			image:    "user/ubuntu",
+			expected: "user-ubuntu",
+		},
+		{
+			name:     "official image with tag",
+			image:    "ubuntu:latest",
+			expected: "ubuntu-latest",
+		},
+		{
+			name:     "user image",
+			image:    "user/ubuntu:latest",
+			expected: "user-ubuntu-latest",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			newImage := getNewTagFromImage(tt.image)
+			if newImage != tt.expected {
+				t.Fatalf("Expected %s but got %s", tt.expected, newImage)
+			}
+		})
+	}
+}
