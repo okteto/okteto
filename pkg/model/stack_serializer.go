@@ -298,13 +298,23 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.CapDrop = serviceRaw.CapDropSneakCase
 	}
 
+	svc.Annotations = serviceRaw.Annotations
+
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'args'", svcName)
 		}
 		svc.Entrypoint.Values = serviceRaw.Entrypoint.Values
 		svc.Command.Values = serviceRaw.Command.Values
-	} else {
+
+		if svc.Annotations == nil {
+			svc.Annotations = make(Annotations)
+		}
+		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
+			svc.Annotations[key] = value
+		}
+
+	} else { // isOktetoStack
 		if len(serviceRaw.Entrypoint.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'entrypoint'", svcName)
 		}
@@ -315,6 +325,8 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 			}
 		}
 		svc.Command.Values = serviceRaw.Args.Values
+
+		svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
 	}
 
 	svc.EnvFiles = serviceRaw.EnvFiles
@@ -336,10 +348,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if err != nil {
 		return nil, err
 	}
-
-	svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
-
-	svc.Annotations = serviceRaw.Annotations
 
 	svc.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
 	if err != nil {
