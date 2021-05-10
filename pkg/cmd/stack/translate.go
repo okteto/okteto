@@ -174,7 +174,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 	hasAddedAnyVolumeMounts := false
 	var err error
 	for name, svc := range s.Services {
-		notSkippableVolumeMounts := getAccessibleVolumeMounts(svc.VolumeMounts)
+		notSkippableVolumeMounts := getAccessibleVolumeMounts(s, name)
 		if len(notSkippableVolumeMounts) != 0 {
 			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
 				hasAddedAnyVolumeMounts = true
@@ -208,11 +208,15 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 	return hasAddedAnyVolumeMounts, nil
 }
 
-func getAccessibleVolumeMounts(volumeMounts []model.StackVolume) []model.StackVolume {
+func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.StackVolume {
+
 	accessibleVolumeMounts := make([]model.StackVolume, 0)
-	for _, volume := range volumeMounts {
+	for _, volume := range stack.Services[svcName].VolumeMounts {
 		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
 			accessibleVolumeMounts = append(accessibleVolumeMounts, volume)
+		} else {
+			warning := fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. Could not find '%s'.", svcName, volume.LocalPath, volume.RemotePath, volume.LocalPath)
+			stack.VolumeMountWarnings = append(stack.Warnings, warning)
 		}
 	}
 	return accessibleVolumeMounts
