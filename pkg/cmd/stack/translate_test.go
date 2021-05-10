@@ -660,6 +660,11 @@ func Test_ChangeImageName(t *testing.T) {
 			image:    "user/ubuntu:latest",
 			expected: "user-ubuntu-latest",
 		},
+		{
+			name:     "external repository",
+			image:    "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:latest",
+			expected: "public.ecr.aws-cloudwatch-agent-cloudwatch-agent-latest",
+		},
 	}
 
 	for _, tt := range tests {
