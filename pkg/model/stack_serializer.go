@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +50,7 @@ type ServiceRaw struct {
 	CapAdd                   []apiv1.Capability `yaml:"capAdd,omitempty"`
 	CapDropSneakCase         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	CapDrop                  []apiv1.Capability `yaml:"capDrop,omitempty"`
+	ContainerName            string             `yaml:"container_name,omitempty"`
 	Command                  CommandStack       `yaml:"command,omitempty"`
 	Entrypoint               CommandStack       `yaml:"entrypoint,omitempty"`
 	Args                     ArgsStack          `yaml:"args,omitempty"`
@@ -83,7 +85,6 @@ type ServiceRaw struct {
 	Cpuset            *WarningType `yaml:"cpuset,omitempty"`
 	CgroupParent      *WarningType `yaml:"cgroup_parent,omitempty"`
 	Configs           *WarningType `yaml:"configs,omitempty"`
-	ContainerName     *WarningType `yaml:"container_name,omitempty"`
 	CredentialSpec    *WarningType `yaml:"credential_spec,omitempty"`
 	DependsOn         *WarningType `yaml:"depends_on,omitempty"`
 	DeviceCgroupRules *WarningType `yaml:"device_cgroup_rules,omitempty"`
@@ -298,6 +299,11 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.CapDrop = serviceRaw.CapDropSneakCase
 	}
 
+	if isValidName(serviceRaw.ContainerName) {
+		svc.ContainerName = sanitizeName(serviceRaw.ContainerName)
+	} else {
+		return nil, fmt.Errorf("'%s': Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-] are allowed", svcName, serviceRaw.ContainerName)
+	}
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'args'", svcName)
@@ -378,6 +384,17 @@ func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []Stack
 		}
 	}
 	return topLevelVolumes, mountedVolumes
+}
+
+func isValidName(name string) bool {
+	if name == "" {
+		return true
+	}
+	validateNameRegex, err := regexp.Compile("^[a-zA-Z0-9][a-zA-Z0-9_.-]*$")
+	if err != nil {
+		return false
+	}
+	return validateNameRegex.MatchString(name)
 }
 
 func unmarshalLabels(labels Labels, deployInfo *DeployInfoRaw) Labels {
@@ -747,9 +764,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	}
 	if svcInfo.Configs != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].configs", svcName))
-	}
-	if svcInfo.ContainerName != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].container_name", svcName))
 	}
 	if svcInfo.CredentialSpec != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].credential_spec", svcName))

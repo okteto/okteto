@@ -146,6 +146,7 @@ func Test_translateDeployment(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
+				ContainerName:   "svcName",
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
@@ -238,6 +239,7 @@ func Test_translateStatefulSet(t *testing.T) {
 		Name: "stackName",
 		Services: map[string]*model.Service{
 			"svcName": {
+				ContainerName: "svcName",
 				Labels: model.Labels{
 					"label1": "value1",
 					"label2": "value2",
@@ -428,7 +430,8 @@ func Test_translateService(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
-				Ports: []model.Port{p1, p2},
+				ContainerName: "svcName",
+				Ports:         []model.Port{p1, p2},
 			},
 		},
 	}

@@ -227,7 +227,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        svcName,
+			Name:        svc.ContainerName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
 			Annotations: translateAnnotations(svc),
@@ -307,7 +307,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
+			Name:        svc.ContainerName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(name, s),
 			Annotations: translateAnnotations(svc),
@@ -439,7 +439,7 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	}
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        svcName,
+			Name:        svc.ContainerName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
 			Annotations: annotations,
