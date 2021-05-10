@@ -920,7 +920,17 @@ func Test_MultipleEndpoints(t *testing.T) {
 				Services: map[string]*Service{
 					"app": {Image: "okteto/vote:1"},
 				},
-				Endpoints: EndpointSpec{},
+				Endpoints: EndpointSpec{
+					"app-8080": Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: "app",
+								Port:    8080,
+							},
+						},
+					},
+				},
 			},
 		},
 		{
@@ -969,7 +979,17 @@ func Test_MultipleEndpoints(t *testing.T) {
 				Services: map[string]*Service{
 					"app": {Image: "okteto/vote:1"},
 				},
-				Endpoints: EndpointSpec{},
+				Endpoints: EndpointSpec{
+					"app-8080": Endpoint{
+						Rules: []EndpointRule{
+							{
+								Path:    "/",
+								Service: "app",
+								Port:    8080,
+							},
+						},
+					},
+				},
 			},
 		},
 		{
