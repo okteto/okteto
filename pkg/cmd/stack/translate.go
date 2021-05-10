@@ -192,8 +192,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 			}
 			svc.Build = svcBuild
 			if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
-				tag := getNewTagFromImage(svc.Image)
-				svc.Image = fmt.Sprintf("okteto.dev/%s:okteto-with-volume-mounts", tag)
+				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
@@ -206,12 +205,6 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 		}
 	}
 	return hasAddedAnyVolumeMounts, nil
-}
-
-func getNewTagFromImage(image string) string {
-	tag := strings.Replace(image, ":", "-", 1)
-	tag = strings.ReplaceAll(tag, "/", "-")
-	return tag
 }
 
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
