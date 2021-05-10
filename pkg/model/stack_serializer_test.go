@@ -549,7 +549,7 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 		{
 			name:     "not-public-port-but-with-assignation",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
-			isPublic: false,
+			isPublic: true,
 		},
 		{
 			name:     "mysql-port-forwarding",
