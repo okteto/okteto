@@ -137,7 +137,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 
 func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
 	d := translateDeployment(svcName, s)
-	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
+	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, s.Services[svcName].ContainerName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting deployment of service '%s': %s", svcName, err.Error())
 	}
@@ -185,7 +185,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 	}
 
 	sfs := translateStatefulSet(svcName, s)
-	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
+	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, s.Services[svcName].ContainerName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
 	}

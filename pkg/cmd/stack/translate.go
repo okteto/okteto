@@ -256,7 +256,7 @@ func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.Stack
 			accessibleVolumeMounts = append(accessibleVolumeMounts, volume)
 		} else {
 			warning := fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. Could not find '%s'.", svcName, volume.LocalPath, volume.RemotePath, volume.LocalPath)
-			stack.VolumeMountWarnings = append(stack.Warnings, warning)
+			stack.Warnings.VolumeMountWarnings = append(stack.Warnings.VolumeMountWarnings, warning)
 		}
 	}
 	return accessibleVolumeMounts
@@ -281,7 +281,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        svcName,
+			Name:        svc.ContainerName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
 			Annotations: translateAnnotations(svc),
@@ -361,7 +361,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
+			Name:        svc.ContainerName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(name, s),
 			Annotations: translateAnnotations(svc),
@@ -493,7 +493,7 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	}
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        svcName,
+			Name:        svc.ContainerName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
 			Annotations: annotations,
