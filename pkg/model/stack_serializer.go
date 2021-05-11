@@ -211,14 +211,14 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
 		if v == nil {
-			result.Labels = make(map[string]string)
-			result.Annotations = make(map[string]string)
+			result.Labels = make(Labels)
+			result.Annotations = make(Annotations)
 		} else {
 			if v.Labels == nil {
-				result.Labels = make(map[string]string)
+				result.Labels = make(Labels)
 			}
 			if v.Annotations == nil {
-				result.Annotations = make(map[string]string)
+				result.Annotations = make(Annotations)
 			}
 		}
 		volumes[volumeName] = &result
