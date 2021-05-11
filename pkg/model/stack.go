@@ -33,25 +33,25 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Manifest            []byte                 `yaml:"-"`
-	Warnings            []string               `yaml:"-"`
-	VolumeMountWarnings []string               `yaml:"-"`
-	IsCompose           bool                   `yaml:"-"`
-	Name                string                 `yaml:"name"`
-	Volumes             map[string]*VolumeSpec `yaml:"volumes,omitempty"`
-	Namespace           string                 `yaml:"namespace,omitempty"`
-	Services            map[string]*Service    `yaml:"services,omitempty"`
-	Endpoints           EndpointSpec           `yaml:"endpoints,omitempty"`
+	Manifest  []byte                 `yaml:"-"`
+	Warnings  StackWarnings          `yaml:"-"`
+	IsCompose bool                   `yaml:"-"`
+	Name      string                 `yaml:"name"`
+	Volumes   map[string]*VolumeSpec `yaml:"volumes,omitempty"`
+	Namespace string                 `yaml:"namespace,omitempty"`
+	Services  map[string]*Service    `yaml:"services,omitempty"`
+	Endpoints EndpointSpec           `yaml:"endpoints,omitempty"`
 }
 
 //Service represents an okteto stack service
 type Service struct {
-	Build      *BuildInfo         `yaml:"build,omitempty"`
-	CapAdd     []apiv1.Capability `yaml:"cap_add,omitempty"`
-	CapDrop    []apiv1.Capability `yaml:"cap_drop,omitempty"`
-	Entrypoint Entrypoint         `yaml:"entrypoint,omitempty"`
-	Command    Command            `yaml:"command,omitempty"`
-	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
+	Build         *BuildInfo         `yaml:"build,omitempty"`
+	CapAdd        []apiv1.Capability `yaml:"cap_add,omitempty"`
+	CapDrop       []apiv1.Capability `yaml:"cap_drop,omitempty"`
+	Entrypoint    Entrypoint         `yaml:"entrypoint,omitempty"`
+	Command       Command            `yaml:"command,omitempty"`
+	EnvFiles      EnvFiles           `yaml:"env_file,omitempty"`
+	ContainerName string             `yaml:"container_name,omitempty"`
 
 	Environment     Environment   `yaml:"environment,omitempty"`
 	Expose          []int32       `yaml:"expose,omitempty"`
@@ -76,10 +76,10 @@ type StackVolume struct {
 }
 
 type VolumeSpec struct {
-	Labels      map[string]string `yaml:"labels,omitempty"`
-	Annotations map[string]string `yaml:"annotations,omitempty"`
-	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
-	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
+	Labels      Labels      `yaml:"labels,omitempty"`
+	Annotations Annotations `yaml:"annotations,omitempty"`
+	Size        Quantity    `json:"size,omitempty" yaml:"size,omitempty"`
+	Class       string      `json:"class,omitempty" yaml:"class,omitempty"`
 }
 type Envs struct {
 	List Environment
@@ -138,6 +138,12 @@ type EndpointRule struct {
 	Path    string `yaml:"path,omitempty"`
 	Service string `yaml:"service,omitempty"`
 	Port    int32  `yaml:"port,omitempty"`
+}
+
+type StackWarnings struct {
+	NotSupportedFields  []string          `yaml:"-"`
+	SanitizedServices   map[string]string `yaml:"-"`
+	VolumeMountWarnings []string          `yaml:"-"`
 }
 
 //GetStack returns an okteto stack object from a given file
@@ -209,7 +215,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		msg = strings.TrimSuffix(msg, "in type model.Stack")
 		return nil, errors.New(msg)
 	}
-	for _, svc := range s.Services {
+	for svcName, svc := range s.Services {
 		if svc.Build != nil {
 			if svc.Build.Name != "" {
 				svc.Build.Context = svc.Build.Name
@@ -232,7 +238,9 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		if len(svc.Expose) > 0 {
 			svc.extendPorts()
 		}
-
+		if svc.ContainerName == "" {
+			svc.ContainerName = svcName
+		}
 	}
 	for _, volume := range s.Volumes {
 		if volume.Size.Value.Cmp(resource.MustParse("0")) == 0 {
@@ -281,7 +289,7 @@ func (s *Stack) validate() error {
 
 		for _, v := range svc.VolumeMounts {
 			if strings.HasPrefix(v.LocalPath, "/") {
-				s.VolumeMountWarnings = append(s.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
+				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))

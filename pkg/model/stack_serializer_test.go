@@ -300,6 +300,16 @@ func Test_GroupNotSupportedFields(t *testing.T) {
 			input:    []string{"volumes", "networks", "service[app].cpus", "service[db].cpus"},
 			expected: []string{"volumes", "networks", "service[app, db].cpus"},
 		},
+		{
+			name:     "two-into-one",
+			input:    []string{"service[app].cpus", "service[db].cpus"},
+			expected: []string{"service[app, db].cpus"},
+		},
+		{
+			name:     "only-one",
+			input:    []string{"service[app].cpus"},
+			expected: []string{"service[app].cpus"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -699,8 +709,57 @@ func Test_restartFile(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(s.Warnings) == 0 && tt.isInList {
+			if len(s.Warnings.NotSupportedFields) == 0 && tt.isInList {
 				t.Fatalf("Expected to see a warning but there is no warning")
+			}
+		})
+	}
+}
+
+func Test_UnmarshalWarnings(t *testing.T) {
+	tests := []struct {
+		name            string
+		manifest        []byte
+		svcName         string
+		isSvcNameChange bool
+	}{
+		{
+			name:            "with underscore",
+			manifest:        []byte("services:\n  app_1:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
+			svcName:         "app-1",
+			isSvcNameChange: true,
+		},
+		{
+			name:            "with whitespace",
+			manifest:        []byte("services:\n  app 1:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
+			svcName:         "app-1",
+			isSvcNameChange: true,
+		},
+		{
+			name:            "with whitespace and underscore",
+			manifest:        []byte("services:\n  app_ 1:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
+			svcName:         "app--1",
+			isSvcNameChange: true,
+		},
+		{
+			name:            "without whitespace or underscore",
+			manifest:        []byte("services:\n  app:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
+			svcName:         "app",
+			isSvcNameChange: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := s.Services[tt.svcName]; !ok {
+				t.Fatal("Service name not sanitized")
+			}
+			if tt.isSvcNameChange && len(s.Warnings.SanitizedServices) == 0 {
+				t.Fatal("Warning have not been recovered")
 			}
 		})
 	}
@@ -1114,6 +1173,47 @@ func Test_MultipleEndpoints(t *testing.T) {
 			}
 			if s.Services["app"].Public != tt.svcPublic {
 				t.Fatal("Public property was not set properly")
+			}
+		})
+	}
+}
+
+func Test_validateContainerName(t *testing.T) {
+	tests := []struct {
+		name             string
+		stackManifest    []byte
+		containerName    string
+		shouldThrowError bool
+	}{
+		{
+			name:             "container_name set",
+			stackManifest:    []byte("services:\n  app:\n    container_name: app-spring\n    image: okteto/vote:1"),
+			containerName:    "app-spring",
+			shouldThrowError: false,
+		},
+		{
+			name:             "container_name not set",
+			stackManifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
+			containerName:    "app",
+			shouldThrowError: false,
+		},
+		{
+			name:             "container_name not valid name",
+			stackManifest:    []byte("services:\n  app:\n    container_name: app spring\n    image: okteto/vote:1"),
+			containerName:    "app",
+			shouldThrowError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			stack, err := ReadStack(tt.stackManifest, true)
+			if err == nil && tt.shouldThrowError {
+				t.Fatal("Error expected but none found.")
+			} else if err == nil && !tt.shouldThrowError {
+				if stack.Services["app"].ContainerName != tt.containerName {
+					t.Fatal("Error parsing container_name.")
+				}
 			}
 		})
 	}
