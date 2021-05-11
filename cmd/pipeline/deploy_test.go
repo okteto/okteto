@@ -68,6 +68,7 @@ func Test_getRepositoryURL(t *testing.T) {
 			defer os.RemoveAll(dir)
 
 			if _, err := GetRepositoryURL(context.TODO(), dir); err == nil {
+
 				t.Fatal("expected error when there's no github repo")
 			}
 
@@ -83,6 +84,7 @@ func Test_getRepositoryURL(t *testing.T) {
 			}
 
 			url, err := GetRepositoryURL(context.TODO(), dir)
+
 			if tt.expectError {
 				if err == nil {
 					t.Error("expected error when calling getRepositoryURL")
@@ -115,6 +117,7 @@ func Test_getBranch(t *testing.T) {
 	}
 
 	_, err = GetBranch(context.TODO(), dir)
+
 	if err == nil {
 		t.Fatal("expected no-branch error")
 	}
@@ -161,6 +164,7 @@ func Test_getBranch(t *testing.T) {
 	}
 
 	b, err := GetBranch(context.TODO(), dir)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,6 +180,7 @@ func Test_getBranch(t *testing.T) {
 	}
 
 	if _, err := GetBranch(context.TODO(), dir); err == nil {
+
 		t.Fatal("didn't fail when getting a non branch")
 	}
 }

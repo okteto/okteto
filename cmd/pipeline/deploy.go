@@ -68,7 +68,9 @@ func deploy(ctx context.Context) *cobra.Command {
 
 			if repository == "" {
 				log.Info("inferring git repository URL")
+
 				r, err := GetRepositoryURL(ctx, cwd)
+
 				if err != nil {
 					return err
 				}
@@ -80,6 +82,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			if branch == "" {
 				log.Info("inferring git repository branch")
 				b, err := GetBranch(ctx, cwd)
+
 				if err != nil {
 					return err
 				}
