@@ -15,12 +15,14 @@ package model
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/kballard/go-shellquote"
 	apiv1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
 //Stack represents an okteto stack
@@ -38,7 +40,7 @@ type StackRaw struct {
 	Configs *WarningType `yaml:"configs,omitempty"`
 	Secrets *WarningType `yaml:"secrets,omitempty"`
 
-	Warnings []string
+	Warnings StackWarnings
 }
 
 //Service represents an okteto stack service
@@ -49,6 +51,7 @@ type ServiceRaw struct {
 	CapAdd                   []apiv1.Capability `yaml:"capAdd,omitempty"`
 	CapDropSneakCase         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	CapDrop                  []apiv1.Capability `yaml:"capDrop,omitempty"`
+	ContainerName            string             `yaml:"container_name,omitempty"`
 	Command                  CommandStack       `yaml:"command,omitempty"`
 	Entrypoint               CommandStack       `yaml:"entrypoint,omitempty"`
 	Args                     ArgsStack          `yaml:"args,omitempty"`
@@ -83,7 +86,6 @@ type ServiceRaw struct {
 	Cpuset            *WarningType `yaml:"cpuset,omitempty"`
 	CgroupParent      *WarningType `yaml:"cgroup_parent,omitempty"`
 	Configs           *WarningType `yaml:"configs,omitempty"`
-	ContainerName     *WarningType `yaml:"container_name,omitempty"`
 	CredentialSpec    *WarningType `yaml:"credential_spec,omitempty"`
 	DependsOn         *WarningType `yaml:"depends_on,omitempty"`
 	DeviceCgroupRules *WarningType `yaml:"device_cgroup_rules,omitempty"`
@@ -173,15 +175,15 @@ type DeployComposeResources struct {
 }
 
 type VolumeTopLevel struct {
-	Labels      map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Labels      Labels            `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations Annotations       `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
 	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
 	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
+	DriverOpts  map[string]string `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
 
-	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
-	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
-	External   *WarningType `json:"external,omitempty" yaml:"external,omitempty"`
+	Driver   *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
+	External *WarningType `json:"external,omitempty" yaml:"external,omitempty"`
 }
 type RawMessage struct {
 	unmarshal func(interface{}) error
@@ -211,16 +213,35 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
 		if v == nil {
-			result.Labels = make(map[string]string)
-			result.Annotations = make(map[string]string)
+			result.Labels = make(Labels)
+			result.Annotations = make(Annotations)
 		} else {
 			if v.Labels == nil {
-				result.Labels = make(map[string]string)
+				result.Labels = make(Labels)
+			} else {
+				result.Labels = v.Labels
 			}
 			if v.Annotations == nil {
-				result.Annotations = make(map[string]string)
+				result.Annotations = make(Annotations)
+			} else {
+				result.Annotations = v.Annotations
+			}
+			if v.Size.Value.Cmp(resource.MustParse("0")) > 0 {
+				result.Size = v.Size
+			}
+			if v.DriverOpts != nil {
+				for key, value := range v.DriverOpts {
+					if key == "size" {
+						qK8s, err := resource.ParseQuantity(value)
+						if err != nil {
+							return err
+						}
+						result.Size.Value = qK8s
+					}
+				}
 			}
 		}
+
 		volumes[volumeName] = &result
 	}
 
@@ -228,18 +249,24 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	for volumeName, volume := range volumes {
 		s.Volumes[sanitizeName(volumeName)] = volume
 	}
+
+	sanitizedServicesNames := make(map[string]string)
 	s.Services = make(map[string]*Service)
 	for svcName, svcRaw := range stackRaw.Services {
+		if shouldBeSanitized(svcName) {
+			newName := sanitizeName(svcName)
+			sanitizedServicesNames[svcName] = newName
+			svcName = newName
+		}
 		s.Services[svcName], err = svcRaw.ToService(svcName, s)
 		if err != nil {
 			return err
 		}
 	}
-	stackRaw.Warnings = make([]string, 0)
 
-	setWarnings(&stackRaw)
-	s.Warnings = stackRaw.Warnings
-	s.VolumeMountWarnings = make([]string, 0)
+	s.Warnings.NotSupportedFields = getNotSupportedFields(&stackRaw)
+	s.Warnings.SanitizedServices = sanitizedServicesNames
+	s.Warnings.VolumeMountWarnings = make([]string, 0)
 	return nil
 }
 
@@ -298,13 +325,28 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.CapDrop = serviceRaw.CapDropSneakCase
 	}
 
+	if isValidName(serviceRaw.ContainerName) {
+		svc.ContainerName = sanitizeName(serviceRaw.ContainerName)
+	} else {
+		return nil, fmt.Errorf("'%s': Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-] are allowed", svcName, serviceRaw.ContainerName)
+	}
+	svc.Annotations = serviceRaw.Annotations
+
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'args'", svcName)
 		}
 		svc.Entrypoint.Values = serviceRaw.Entrypoint.Values
 		svc.Command.Values = serviceRaw.Command.Values
-	} else {
+
+		if svc.Annotations == nil {
+			svc.Annotations = make(Annotations)
+		}
+		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
+			svc.Annotations[key] = value
+		}
+
+	} else { // isOktetoStack
 		if len(serviceRaw.Entrypoint.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'entrypoint'", svcName)
 		}
@@ -315,6 +357,8 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 			}
 		}
 		svc.Command.Values = serviceRaw.Args.Values
+
+		svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
 	}
 
 	svc.EnvFiles = serviceRaw.EnvFiles
@@ -336,10 +380,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if err != nil {
 		return nil, err
 	}
-
-	svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
-
-	svc.Annotations = serviceRaw.Annotations
 
 	svc.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
 	if err != nil {
@@ -378,6 +418,17 @@ func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []Stack
 		}
 	}
 	return topLevelVolumes, mountedVolumes
+}
+
+func isValidName(name string) bool {
+	if name == "" {
+		return true
+	}
+	validateNameRegex, err := regexp.Compile("^[a-zA-Z0-9][a-zA-Z0-9_.-]*$")
+	if err != nil {
+		return false
+	}
+	return validateNameRegex.MatchString(name)
 }
 
 func unmarshalLabels(labels Labels, deployInfo *DeployInfoRaw) Labels {
@@ -674,22 +725,28 @@ func getProtocol(protocolName string) (apiv1.Protocol, error) {
 	}
 }
 
+func shouldBeSanitized(name string) bool {
+	return strings.Contains(name, " ") || strings.Contains(name, "_")
+}
+
 func sanitizeName(name string) string {
 	name = strings.ReplaceAll(name, " ", "-")
 	name = strings.ReplaceAll(name, "_", "-")
 	return name
 }
 
-func setWarnings(s *StackRaw) {
-	s.Warnings = append(s.Warnings, getTopLevelNotSupportedFields(s)...)
+func getNotSupportedFields(s *StackRaw) []string {
+	notSupportedFields := make([]string, 0)
+	notSupportedFields = append(notSupportedFields, getTopLevelNotSupportedFields(s)...)
 	for name, svcInfo := range s.Services {
-		s.Warnings = append(s.Warnings, getServiceNotSupportedFields(name, svcInfo)...)
+		notSupportedFields = append(notSupportedFields, getServiceNotSupportedFields(name, svcInfo)...)
 	}
 	for name, volumeInfo := range s.Volumes {
 		if volumeInfo != nil {
-			s.Warnings = append(s.Warnings, getVolumesNotSupportedFields(name, volumeInfo)...)
+			notSupportedFields = append(notSupportedFields, getVolumesNotSupportedFields(name, volumeInfo)...)
 		}
 	}
+	return notSupportedFields
 }
 
 func getTopLevelNotSupportedFields(s *StackRaw) []string {
@@ -747,9 +804,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	}
 	if svcInfo.Configs != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].configs", svcName))
-	}
-	if svcInfo.ContainerName != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].container_name", svcName))
 	}
 	if svcInfo.CredentialSpec != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].credential_spec", svcName))
@@ -950,8 +1004,13 @@ func getVolumesNotSupportedFields(volumeName string, volumeInfo *VolumeTopLevel)
 		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver", volumeName))
 	}
 	if volumeInfo.DriverOpts != nil {
-		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver_opts", volumeName))
+		for key := range volumeInfo.DriverOpts {
+			if key != "size" {
+				notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver_opts.%s", volumeName, key))
+			}
+		}
 	}
+
 	if volumeInfo.External != nil {
 		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].external", volumeName))
 	}

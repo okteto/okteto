@@ -178,6 +178,8 @@ services:
       cpu: 100m
       memory: 258Mi
       storage: 1Gi
+    labels:
+      - traeffick.routes=Path("/")
   db:
     image: postgres:9.4
     resources:
@@ -257,6 +259,17 @@ services:
 	storage := s.Services["vote"].Resources.Requests.Storage.Size.Value
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
 		t.Errorf("'vote.resources.storage' was not parsed: %+v", s)
+	}
+	for key, value := range s.Services["vote"].Annotations {
+		if key == "traeffick.routes" && value == `Path("/")` {
+			continue
+		} else {
+			t.Errorf("'vote.annotations' was not parsed correctly: %+v", s.Services["vote"].Annotations)
+		}
+	}
+
+	if len(s.Services["vote"].Labels) > 0 {
+		t.Errorf("'vote.labels' has labels inside")
 	}
 	if _, ok := s.Services["db"]; !ok {
 		t.Errorf("'db' was not parsed: %+v", s)

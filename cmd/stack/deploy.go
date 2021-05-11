@@ -68,7 +68,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			analytics.TrackStackWarnings(s.Warnings)
+			analytics.TrackStackWarnings(s.Warnings.VolumeMountWarnings)
 
 			if err := s.UpdateNamespace(namespace); err != nil {
 				return err
