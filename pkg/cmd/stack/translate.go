@@ -161,6 +161,10 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+			if uErr, ok := err.(errors.UserError); ok {
+				uErr.E = fmt.Errorf("error building image for '%s': %s", name, uErr.E)
+				return hasBuiltSomething, uErr
+			}
 			return hasBuiltSomething, fmt.Errorf("error building image for '%s': %s", name, err)
 		}
 		svc.SetLastBuiltAnnotation()
