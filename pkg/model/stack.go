@@ -33,15 +33,14 @@ var (
 
 //Stack represents an okteto stack
 type Stack struct {
-	Manifest            []byte                 `yaml:"-"`
-	Warnings            []string               `yaml:"-"`
-	VolumeMountWarnings []string               `yaml:"-"`
-	IsCompose           bool                   `yaml:"-"`
-	Name                string                 `yaml:"name"`
-	Volumes             map[string]*VolumeSpec `yaml:"volumes,omitempty"`
-	Namespace           string                 `yaml:"namespace,omitempty"`
-	Services            map[string]*Service    `yaml:"services,omitempty"`
-	Endpoints           EndpointSpec           `yaml:"endpoints,omitempty"`
+	Manifest  []byte                 `yaml:"-"`
+	Warnings  StackWarnings          `yaml:"-"`
+	IsCompose bool                   `yaml:"-"`
+	Name      string                 `yaml:"name"`
+	Volumes   map[string]*VolumeSpec `yaml:"volumes,omitempty"`
+	Namespace string                 `yaml:"namespace,omitempty"`
+	Services  map[string]*Service    `yaml:"services,omitempty"`
+	Endpoints EndpointSpec           `yaml:"endpoints,omitempty"`
 }
 
 //Service represents an okteto stack service
@@ -138,6 +137,12 @@ type EndpointRule struct {
 	Path    string `yaml:"path,omitempty"`
 	Service string `yaml:"service,omitempty"`
 	Port    int32  `yaml:"port,omitempty"`
+}
+
+type StackWarnings struct {
+	NotSupportedFields  []string          `yaml:"-"`
+	SanitizedServices   map[string]string `yaml:"-"`
+	VolumeMountWarnings []string          `yaml:"-"`
 }
 
 //GetStack returns an okteto stack object from a given file
@@ -281,7 +286,7 @@ func (s *Stack) validate() error {
 
 		for _, v := range svc.VolumeMounts {
 			if strings.HasPrefix(v.LocalPath, "/") {
-				s.VolumeMountWarnings = append(s.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
+				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
