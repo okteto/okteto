@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -57,22 +58,23 @@ const (
 )
 
 func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
-	if err := translateStackEnvVars(s); err != nil {
+	if err := translateStackEnvVars(ctx, s); err != nil {
 		return err
 	}
 
 	return translateBuildImages(ctx, s, forceBuild, noCache)
 }
 
-func translateStackEnvVars(s *model.Stack) error {
+func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 	var err error
-	for _, svc := range s.Services {
+	isOktetoNamespace := namespaces.IsOktetoNamespaceFromName(ctx, s.Namespace)
+	for svcName, svc := range s.Services {
 		svc.Image, err = model.ExpandEnv(svc.Image)
 		if err != nil {
 			return err
 		}
 		for _, envFilepath := range svc.EnvFiles {
-			if err := translateServiceEnvFile(svc, envFilepath); err != nil {
+			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath, isOktetoNamespace); err != nil {
 				return err
 			}
 		}
@@ -84,16 +86,39 @@ func translateStackEnvVars(s *model.Stack) error {
 	return nil
 }
 
-func translateServiceEnvFile(svc *model.Service, filename string) error {
+func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, filename string, isOktetoNamespace bool) error {
 	var err error
 	filename, err = model.ExpandEnv(filename)
 	if err != nil {
 		return err
 	}
 
+	secrets := make(map[string]string)
+	if isOktetoNamespace {
+		envList, err := okteto.GetSecrets(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, e := range envList {
+			secrets[e.Name] = e.Value
+		}
+		for _, e := range svc.Environment {
+			delete(secrets, e.Name)
+		}
+	}
+
 	f, err := os.Open(filename)
-	if err != nil {
+	if err != nil && len(secrets) == 0 {
 		return err
+	} else if err != nil && len(secrets) != 0 {
+		for name, value := range secrets {
+			svc.Environment = append(
+				svc.Environment,
+				model.EnvVar{Name: name, Value: value},
+			)
+		}
+		return nil
 	}
 	defer f.Close()
 
@@ -106,12 +131,24 @@ func translateServiceEnvFile(svc *model.Service, filename string) error {
 		delete(envMap, e.Name)
 	}
 
+	for key := range envMap {
+		delete(secrets, key)
+	}
+
 	for name, value := range envMap {
 		svc.Environment = append(
 			svc.Environment,
 			model.EnvVar{Name: name, Value: value},
 		)
 	}
+
+	for name, value := range secrets {
+		svc.Environment = append(
+			svc.Environment,
+			model.EnvVar{Name: name, Value: value},
+		)
+	}
+
 	return nil
 }
 

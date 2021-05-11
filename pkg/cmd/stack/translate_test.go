@@ -87,7 +87,8 @@ func Test_translateEnvVars(t *testing.T) {
 			},
 		},
 	}
-	translateStackEnvVars(stack)
+	ctx := context.Background()
+	translateStackEnvVars(ctx, stack)
 	if stack.Services["1"].Image != "image" {
 		t.Errorf("Wrong image: %s", stack.Services["1"].Image)
 	}
