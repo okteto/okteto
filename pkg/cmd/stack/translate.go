@@ -209,7 +209,6 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 }
 
 func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.StackVolume {
-
 	accessibleVolumeMounts := make([]model.StackVolume, 0)
 	for _, volume := range stack.Services[svcName].VolumeMounts {
 		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
