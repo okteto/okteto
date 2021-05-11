@@ -268,6 +268,9 @@ services:
 		}
 	}
 
+	if len(s.Services["vote"].Labels) > 0 {
+		t.Errorf("'vote.labels' has labels inside")
+	}
 	if _, ok := s.Services["db"]; !ok {
 		t.Errorf("'db' was not parsed: %+v", s)
 	}
