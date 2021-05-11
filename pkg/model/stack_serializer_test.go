@@ -592,6 +592,51 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 	}
 }
 
+func Test_unmarshalVolumes(t *testing.T) {
+	tests := []struct {
+		name           string
+		manifest       []byte
+		expectedVolume *VolumeSpec
+	}{
+		{
+			name:           "simple volume",
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n"),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
+		},
+		{
+			name:           "volume with size",
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    size: 2Gi"),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("2Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
+		},
+		{
+			name:           "volume with driver_opts.size",
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    driver_opts:\n      size: 2Gi"),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("2Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
+		},
+		{
+			name:           "volume with labels",
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    labels:\n      env: test"),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: map[string]string{"env": "test"}, Annotations: make(map[string]string)},
+		},
+		{
+			name:           "volume with annotations",
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    annotations:\n      env: test"),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Annotations: map[string]string{"env": "test"}, Labels: make(map[string]string)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatalf("Unmarshal failed: %s", err.Error())
+			}
+			if !reflect.DeepEqual(s.Volumes["v1"], tt.expectedVolume) {
+				t.Fatalf("Expected %v but got %v", tt.expectedVolume, s.Volumes["v1"])
+			}
+		})
+	}
+}
+
 func Test_sanitizeVolumeName(t *testing.T) {
 	tests := []struct {
 		name               string
@@ -609,7 +654,7 @@ func Test_sanitizeVolumeName(t *testing.T) {
 			expectedVolumeName: "db-postgres",
 		},
 		{
-			name:               "volume-name-with-space",
+			name:               "volume-name-with-whitespace",
 			volumeName:         "db postgres",
 			expectedVolumeName: "db-postgres",
 		},
