@@ -186,16 +186,6 @@ services:
 									MountPath: "/okteto/bin",
 								},
 							},
-							Resources: apiv1.ResourceRequirements{
-								Requests: map[apiv1.ResourceName]resource.Quantity{
-									apiv1.ResourceCPU:    OktetoUpInitContainerRequestsCPU,
-									apiv1.ResourceMemory: OktetoUpInitContainerRequestsMemory,
-								},
-								Limits: map[apiv1.ResourceName]resource.Quantity{
-									apiv1.ResourceCPU:    OktetoUpInitContainerLimitsCPU,
-									apiv1.ResourceMemory: OktetoUpInitContainerLimitsMemory,
-								},
-							},
 						},
 					},
 					Containers: []apiv1.Container{
@@ -204,7 +194,7 @@ services:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-s", "remote:/remote"},
+							Args:            []string{"-r", "-v", "-s", "remote:/remote"},
 							WorkingDir:      "/app",
 							Env: []apiv1.EnvVar{
 								{
@@ -507,16 +497,6 @@ persistentVolume:
 									MountPath: "/okteto/bin",
 								},
 							},
-							Resources: apiv1.ResourceRequirements{
-								Requests: map[apiv1.ResourceName]resource.Quantity{
-									apiv1.ResourceCPU:    OktetoUpInitContainerRequestsCPU,
-									apiv1.ResourceMemory: OktetoUpInitContainerRequestsMemory,
-								},
-								Limits: map[apiv1.ResourceName]resource.Quantity{
-									apiv1.ResourceCPU:    OktetoUpInitContainerLimitsCPU,
-									apiv1.ResourceMemory: OktetoUpInitContainerLimitsMemory,
-								},
-							},
 						},
 					},
 					Containers: []apiv1.Container{
@@ -525,7 +505,7 @@ persistentVolume:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-e"},
+							Args:            []string{"-r", "-e", "-v"},
 							WorkingDir:      "",
 							Env: []apiv1.EnvVar{
 								{

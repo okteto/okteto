@@ -1,4 +1,5 @@
 ---
+# https://pre-commit.com/
 default_stages: [commit, push]
 default_language_version:
   # force all unspecified Python hooks to run python3

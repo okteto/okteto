@@ -204,6 +204,9 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		delete(s.Endpoints, "")
 	}
 
+	if len(s.Endpoints) == 0 {
+		s.Endpoints = getEndpointsFromPorts(stackRaw.Services)
+	}
 	volumes := make(map[string]*VolumeSpec)
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
@@ -244,6 +247,38 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Warnings.SanitizedServices = sanitizedServicesNames
 	s.Warnings.VolumeMountWarnings = make([]string, 0)
 	return nil
+}
+
+func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
+	endpoints := make(EndpointSpec)
+	for svcName, svc := range services {
+		accessiblePorts := getAccessiblePorts(svc.Ports)
+		if len(accessiblePorts) >= 2 {
+			for _, p := range accessiblePorts {
+				endpointName := fmt.Sprintf("%s-%d", svcName, p.HostPort)
+				endpoints[endpointName] = Endpoint{
+					Rules: []EndpointRule{
+						{
+							Path:    "/",
+							Service: svcName,
+							Port:    p.ContainerPort,
+						},
+					},
+				}
+			}
+		}
+	}
+	return endpoints
+}
+
+func getAccessiblePorts(ports []PortRaw) []PortRaw {
+	accessiblePorts := make([]PortRaw, 0)
+	for _, p := range ports {
+		if p.HostPort != 0 && !IsSkippablePort(p.ContainerPort) {
+			accessiblePorts = append(accessiblePorts, p)
+		}
+	}
+	return accessiblePorts
 }
 
 func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service, error) {
@@ -296,11 +331,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Environment = serviceRaw.Environment
 
 	svc.Public = serviceRaw.Public
-
+	if !svc.Public && len(getAccessiblePorts(serviceRaw.Ports)) == 1 {
+		svc.Public = true
+	}
 	for _, p := range serviceRaw.Ports {
-		if p.HostPort != 0 {
-			svc.Public = true
-		}
 		svc.Ports = append(svc.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
 	}
 
@@ -327,7 +361,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	svc.Volumes, svc.VolumeMounts = splitVolumesByType(serviceRaw.Volumes, stack)
 	for _, volume := range svc.VolumeMounts {
-		if !strings.HasPrefix(volume.LocalPath, ".") && volume.LocalPath != "" {
+		if !strings.HasPrefix(volume.LocalPath, ".") && !strings.HasPrefix(volume.LocalPath, "/") && volume.LocalPath != "" {
 			return nil, fmt.Errorf("Named volume '%s' is used in service '%s' but no declaration was found in the volumes section.", volume.ToString(), svcName)
 		}
 	}
@@ -361,10 +395,8 @@ func unmarshalLabels(labels Labels, deployInfo *DeployInfoRaw) Labels {
 			}
 		}
 	}
-	if labels != nil {
-		for key, value := range labels {
-			result[key] = value
-		}
+	for key, value := range labels {
+		result[key] = value
 	}
 	return result
 }
@@ -451,7 +483,9 @@ func IsSkippablePort(port int32) bool {
 		1433: "SQL Server", 1434: "SQL Server", 7210: "MaxDB", 7473: "Neo4j", 7474: "Neo4j", 8529: "ArangoDB",
 		7000: "Cassandra", 7001: "Cassandra", 9042: "Cassandra", 8086: "InfluxDB", 9200: "Elasticsearch", 9300: "Elasticsearch",
 		5984: "CouchDB", 27017: "MongoDB", 27018: "MongoDB", 27019: "MongoDB", 28017: "MongoDB", 6379: "Redis",
-		8087: "Riak", 8098: "Riak", 828015: "Rethink", 29015: "Rethink", 7574: "Solr", 8983: "Solr"}
+		8087: "Riak", 8098: "Riak", 828015: "Rethink", 29015: "Rethink", 7574: "Solr", 8983: "Solr",
+		2345: "Golang debugger", 5858: "Node debugger", 9229: "Node debugger", 5005: "Java debugger", 1234: "Ruby debugger",
+		4444: "Python pdb", 5678: "Python debugpy"}
 	if _, ok := skippablePorts[port]; ok {
 		return true
 	}

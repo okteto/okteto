@@ -37,6 +37,7 @@ type buildInfoRaw struct {
 
 type syncRaw struct {
 	Compression    bool         `json:"compression" yaml:"compression"`
+	Verbose        bool         `json:"verbose" yaml:"verbose"`
 	RescanInterval int          `json:"rescanInterval,omitempty" yaml:"rescanInterval,omitempty"`
 	Folders        []SyncFolder `json:"folders,omitempty" yaml:"folders,omitempty"`
 	LocalPath      string
@@ -180,18 +181,21 @@ func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawFolders []SyncFolder
 	err := unmarshal(&rawFolders)
 	if err == nil {
+		sync.Verbose = true
 		sync.RescanInterval = DefaultSyncthingRescanInterval
 		sync.Folders = rawFolders
 		return nil
 	}
 
 	var rawSync syncRaw
+	rawSync.Verbose = true
 	err = unmarshal(&rawSync)
 	if err != nil {
 		return err
 	}
 
 	sync.Compression = rawSync.Compression
+	sync.Verbose = rawSync.Verbose
 	sync.RescanInterval = rawSync.RescanInterval
 	sync.Folders = rawSync.Folders
 	return nil
