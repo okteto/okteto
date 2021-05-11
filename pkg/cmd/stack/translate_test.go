@@ -634,3 +634,36 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
 }
+
+func Test_getAccessibleVolumeMounts(t *testing.T) {
+	existingPath := "./existing-folder"
+	missingPath := "./missing-folder"
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svcName": {
+				Image: "image",
+				VolumeMounts: []model.StackVolume{
+					{LocalPath: existingPath, RemotePath: "/data/logs"},
+					{LocalPath: missingPath, RemotePath: "/data/logs"},
+				},
+			},
+		},
+	}
+	err := os.Mkdir(existingPath, 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	volumes := getAccessibleVolumeMounts(s, "svcName")
+	err = os.Remove(existingPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(volumes) != 1 {
+		t.Fatal("Wrong number of accesible volumes")
+	}
+	if len(s.VolumeMountWarnings) != 1 {
+		t.Fatal("Wrong number of volumes warnings")
+	}
+
+}

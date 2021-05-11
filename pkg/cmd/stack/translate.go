@@ -215,7 +215,8 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 	hasAddedAnyVolumeMounts := false
 	var err error
 	for name, svc := range s.Services {
-		if len(svc.VolumeMounts) != 0 {
+		notSkippableVolumeMounts := getAccessibleVolumeMounts(s, name)
+		if len(notSkippableVolumeMounts) != 0 {
 			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
 				hasAddedAnyVolumeMounts = true
 				log.Information("Running your build in %s...", buildKitHost)
@@ -227,7 +228,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 					return hasAddedAnyVolumeMounts, err
 				}
 			}
-			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, svc.VolumeMounts)
+			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, notSkippableVolumeMounts)
 			if err != nil {
 				return hasAddedAnyVolumeMounts, err
 			}
@@ -246,6 +247,19 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 		}
 	}
 	return hasAddedAnyVolumeMounts, nil
+}
+
+func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.StackVolume {
+	accessibleVolumeMounts := make([]model.StackVolume, 0)
+	for _, volume := range stack.Services[svcName].VolumeMounts {
+		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
+			accessibleVolumeMounts = append(accessibleVolumeMounts, volume)
+		} else {
+			warning := fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. Could not find '%s'.", svcName, volume.LocalPath, volume.RemotePath, volume.LocalPath)
+			stack.VolumeMountWarnings = append(stack.Warnings, warning)
+		}
+	}
+	return accessibleVolumeMounts
 }
 
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
