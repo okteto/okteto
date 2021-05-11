@@ -22,6 +22,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	apiv1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
 //Stack represents an okteto stack
@@ -174,15 +175,15 @@ type DeployComposeResources struct {
 }
 
 type VolumeTopLevel struct {
-	Labels      Labels      `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Name        string      `json:"name,omitempty" yaml:"name,omitempty"`
-	Size        Quantity    `json:"size,omitempty" yaml:"size,omitempty"`
-	Class       string      `json:"class,omitempty" yaml:"class,omitempty"`
+	Labels      Labels            `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations Annotations       `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
+	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
+	DriverOpts  map[string]string `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
 
-	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
-	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
-	External   *WarningType `json:"external,omitempty" yaml:"external,omitempty"`
+	Driver   *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
+	External *WarningType `json:"external,omitempty" yaml:"external,omitempty"`
 }
 type RawMessage struct {
 	unmarshal func(interface{}) error
@@ -217,11 +218,30 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		} else {
 			if v.Labels == nil {
 				result.Labels = make(Labels)
+			} else {
+				result.Labels = v.Labels
 			}
 			if v.Annotations == nil {
 				result.Annotations = make(Annotations)
+			} else {
+				result.Annotations = v.Annotations
+			}
+			if v.Size.Value.Cmp(resource.MustParse("0")) > 0 {
+				result.Size = v.Size
+			}
+			if v.DriverOpts != nil {
+				for key, value := range v.DriverOpts {
+					if key == "size" {
+						qK8s, err := resource.ParseQuantity(value)
+						if err != nil {
+							return err
+						}
+						result.Size.Value = qK8s
+					}
+				}
 			}
 		}
+
 		volumes[volumeName] = &result
 	}
 
@@ -984,8 +1004,13 @@ func getVolumesNotSupportedFields(volumeName string, volumeInfo *VolumeTopLevel)
 		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver", volumeName))
 	}
 	if volumeInfo.DriverOpts != nil {
-		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver_opts", volumeName))
+		for key := range volumeInfo.DriverOpts {
+			if key != "size" {
+				notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver_opts.%s", volumeName, key))
+			}
+		}
 	}
+
 	if volumeInfo.External != nil {
 		notSupported = append(notSupported, fmt.Sprintf("volumes[%s].external", volumeName))
 	}
