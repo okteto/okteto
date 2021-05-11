@@ -173,11 +173,11 @@ type DeployComposeResources struct {
 }
 
 type VolumeTopLevel struct {
-	Labels      map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
-	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
-	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
+	Labels      Labels      `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Name        string      `json:"name,omitempty" yaml:"name,omitempty"`
+	Size        Quantity    `json:"size,omitempty" yaml:"size,omitempty"`
+	Class       string      `json:"class,omitempty" yaml:"class,omitempty"`
 
 	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
 	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
@@ -211,14 +211,14 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	for volumeName, v := range stackRaw.Volumes {
 		result := VolumeSpec{}
 		if v == nil {
-			result.Labels = make(map[string]string)
-			result.Annotations = make(map[string]string)
+			result.Labels = make(Labels)
+			result.Annotations = make(Annotations)
 		} else {
 			if v.Labels == nil {
-				result.Labels = make(map[string]string)
+				result.Labels = make(Labels)
 			}
 			if v.Annotations == nil {
-				result.Annotations = make(map[string]string)
+				result.Annotations = make(Annotations)
 			}
 		}
 		volumes[volumeName] = &result
@@ -304,13 +304,23 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.CapDrop = serviceRaw.CapDropSneakCase
 	}
 
+	svc.Annotations = serviceRaw.Annotations
+
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'args'", svcName)
 		}
 		svc.Entrypoint.Values = serviceRaw.Entrypoint.Values
 		svc.Command.Values = serviceRaw.Command.Values
-	} else {
+
+		if svc.Annotations == nil {
+			svc.Annotations = make(Annotations)
+		}
+		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
+			svc.Annotations[key] = value
+		}
+
+	} else { // isOktetoStack
 		if len(serviceRaw.Entrypoint.Values) > 0 {
 			return nil, fmt.Errorf("Unsupported field for services.%s: 'entrypoint'", svcName)
 		}
@@ -321,6 +331,8 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 			}
 		}
 		svc.Command.Values = serviceRaw.Args.Values
+
+		svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
 	}
 
 	svc.EnvFiles = serviceRaw.EnvFiles
@@ -342,10 +354,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if err != nil {
 		return nil, err
 	}
-
-	svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
-
-	svc.Annotations = serviceRaw.Annotations
 
 	svc.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
 	if err != nil {

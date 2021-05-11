@@ -75,10 +75,10 @@ type StackVolume struct {
 }
 
 type VolumeSpec struct {
-	Labels      map[string]string `yaml:"labels,omitempty"`
-	Annotations map[string]string `yaml:"annotations,omitempty"`
-	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
-	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
+	Labels      Labels      `yaml:"labels,omitempty"`
+	Annotations Annotations `yaml:"annotations,omitempty"`
+	Size        Quantity    `json:"size,omitempty" yaml:"size,omitempty"`
+	Class       string      `json:"class,omitempty" yaml:"class,omitempty"`
 }
 type Envs struct {
 	List Environment
