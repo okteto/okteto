@@ -264,7 +264,7 @@ services:
 		if key == "traeffick.routes" && value == `Path("/")` {
 			continue
 		} else {
-			t.Errorf("'vote.env' was not parsed correctly: %+v", s.Services["vote"].Environment)
+			t.Errorf("'vote.annotations' was not parsed correctly: %+v", s.Services["vote"].Annotations)
 		}
 	}
 
