@@ -173,11 +173,11 @@ type DeployComposeResources struct {
 }
 
 type VolumeTopLevel struct {
-	Labels      map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
-	Size        Quantity          `json:"size,omitempty" yaml:"size,omitempty"`
-	Class       string            `json:"class,omitempty" yaml:"class,omitempty"`
+	Labels      Labels      `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Name        string      `json:"name,omitempty" yaml:"name,omitempty"`
+	Size        Quantity    `json:"size,omitempty" yaml:"size,omitempty"`
+	Class       string      `json:"class,omitempty" yaml:"class,omitempty"`
 
 	Driver     *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
 	DriverOpts *WarningType `json:"driver_opts,omitempty" yaml:"driver_opts,omitempty"`
