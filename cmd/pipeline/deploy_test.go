@@ -12,7 +12,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 func Test_getRepositoryURL(t *testing.T) {
@@ -68,7 +68,8 @@ func Test_getRepositoryURL(t *testing.T) {
 			}
 			defer os.RemoveAll(dir)
 
-			if _, err := utils.GetRepositoryURL(context.TODO(), dir); err == nil {
+			if _, err := model.GetRepositoryURL(dir); err == nil {
+
 				t.Fatal("expected error when there's no github repo")
 			}
 
@@ -83,7 +84,8 @@ func Test_getRepositoryURL(t *testing.T) {
 				}
 			}
 
-			url, err := utils.GetRepositoryURL(context.TODO(), dir)
+			url, err := model.GetRepositoryURL(dir)
+
 			if tt.expectError {
 				if err == nil {
 					t.Error("expected error when calling getRepositoryURL")
@@ -115,7 +117,8 @@ func Test_getBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = utils.GetBranch(context.TODO(), dir)
+	_, err = GetBranch(context.TODO(), dir)
+
 	if err == nil {
 		t.Fatal("expected no-branch error")
 	}
@@ -161,7 +164,8 @@ func Test_getBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b, err := utils.GetBranch(context.TODO(), dir)
+	b, err := GetBranch(context.TODO(), dir)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +180,8 @@ func Test_getBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := utils.GetBranch(context.TODO(), dir); err == nil {
+	if _, err := GetBranch(context.TODO(), dir); err == nil {
+
 		t.Fatal("didn't fail when getting a non branch")
 	}
 }

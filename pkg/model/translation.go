@@ -53,6 +53,7 @@ type TranslationRule struct {
 	InitFromImageContainer *InitFromImageContainer `json:"initFromImage" yaml:"initFromImage"`
 	Probes                 *Probes                 `json:"probes" yaml:"probes"`
 	Lifecycle              *Lifecycle              `json:"lifecycle" yaml:"lifecycle"`
+	Docker                 DinDContainer           `json:"docker" yaml:"docker"`
 }
 
 // IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest

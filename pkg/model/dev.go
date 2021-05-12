@@ -47,7 +47,13 @@ const (
 	//OktetoUpCmd up command
 	OktetoUpCmd = "up"
 	//OktetoPushCmd push command
-	OktetoPushCmd = "push"
+	OktetoPushCmd                = "push"
+	DefaultDinDImage             = "docker:20-dind"
+	DefaultDockerHost            = "tcp://127.0.0.1:2376"
+	DefaultDockerCertDir         = "/certs"
+	DefaultDockerCacheDir        = "/var/lib/docker"
+	DefaultDockerCertDirSubPath  = "certs"
+	DefaultDockerCacheDirSubPath = "docker"
 
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
@@ -96,7 +102,7 @@ const (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.2.28"
+	OktetoBinImageTag = "okteto/bin:1.2.29"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -152,6 +158,7 @@ type Dev struct {
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 }
 
 // Entrypoint represents the start command of a development container
@@ -218,6 +225,13 @@ type PersistentVolumeInfo struct {
 
 // InitContainer represents the initial container
 type InitContainer struct {
+	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
+	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+}
+
+// DinDContainer represents the DinD container
+type DinDContainer struct {
+	Enabled   bool                 `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
@@ -554,6 +568,10 @@ func (dev *Dev) setDefaults() error {
 		dev.Sync.RescanInterval = DefaultSyncthingRescanInterval
 	}
 
+	if dev.Docker.Enabled && dev.Docker.Image == "" {
+		dev.Docker.Image = DefaultDinDImage
+	}
+
 	for _, s := range dev.Services {
 		if s.ImagePullPolicy == "" {
 			s.ImagePullPolicy = apiv1.PullAlways
@@ -680,6 +698,10 @@ func (dev *Dev) validate() error {
 		if err := s.validateVolumes(dev); err != nil {
 			return err
 		}
+	}
+
+	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
+		return fmt.Errorf("Persistent volume is required to enable Docker support")
 	}
 
 	return nil
@@ -812,6 +834,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		Secrets:          dev.Secrets,
 		WorkDir:          dev.Workdir,
 		PersistentVolume: main.PersistentVolumeEnabled(),
+		Docker:           main.Docker,
 		Volumes:          []VolumeMount{},
 		SecurityContext:  dev.SecurityContext,
 		ServiceAccount:   dev.ServiceAccount,
@@ -847,6 +870,36 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				Value: dev.Name,
 			},
 		)
+		if main.Docker.Enabled {
+			rule.Environment = append(
+				rule.Environment,
+				EnvVar{
+					Name:  "DOCKER_HOST",
+					Value: DefaultDockerHost,
+				},
+				EnvVar{
+					Name:  "DOCKER_CERT_PATH",
+					Value: "/certs/client",
+				},
+				EnvVar{
+					Name:  "DOCKER_TLS_VERIFY",
+					Value: "1",
+				},
+			)
+			rule.Volumes = append(
+				rule.Volumes,
+				VolumeMount{
+					Name:      main.GetVolumeName(),
+					MountPath: DefaultDockerCertDir,
+					SubPath:   DefaultDockerCertDirSubPath,
+				},
+				VolumeMount{
+					Name:      main.GetVolumeName(),
+					MountPath: DefaultDockerCacheDir,
+					SubPath:   DefaultDockerCacheDirSubPath,
+				},
+			)
+		}
 
 		// We want to minimize environment mutations, so only reconfigure the SSH
 		// server port if a non-default is specified.
