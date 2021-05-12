@@ -12,6 +12,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 func Test_getRepositoryURL(t *testing.T) {
@@ -67,7 +68,7 @@ func Test_getRepositoryURL(t *testing.T) {
 			}
 			defer os.RemoveAll(dir)
 
-			if _, err := GetRepositoryURL(context.TODO(), dir); err == nil {
+			if _, err := model.GetRepositoryURL(dir); err == nil {
 
 				t.Fatal("expected error when there's no github repo")
 			}
@@ -83,7 +84,7 @@ func Test_getRepositoryURL(t *testing.T) {
 				}
 			}
 
-			url, err := GetRepositoryURL(context.TODO(), dir)
+			url, err := model.GetRepositoryURL(dir)
 
 			if tt.expectError {
 				if err == nil {
