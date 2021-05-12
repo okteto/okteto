@@ -18,7 +18,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-//Translation represents the information for translating a deployment
+// Translation represents the information for translating a deployment
 type Translation struct {
 	Interactive bool               `json:"interactive"`
 	Name        string             `json:"name"`
@@ -30,7 +30,7 @@ type Translation struct {
 	Rules       []*TranslationRule `json:"rules"`
 }
 
-//TranslationRule represents how to apply a container translation in a deployment
+// TranslationRule represents how to apply a container translation in a deployment
 type TranslationRule struct {
 	Marker                 string                  `json:"marker"`
 	OktetoBinImageTag      string                  `json:"oktetoBinImageTag"`
@@ -55,19 +55,19 @@ type TranslationRule struct {
 	Lifecycle              *Lifecycle              `json:"lifecycle" yaml:"lifecycle"`
 }
 
-//IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest
+// IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest
 func (r *TranslationRule) IsMainDevContainer() bool {
 	return r.OktetoBinImageTag != ""
 }
 
-//VolumeMount represents a volume mount
+// VolumeMount represents a volume mount
 type VolumeMount struct {
 	Name      string `json:"name,omitempty"`
 	MountPath string `json:"mountpath,omitempty"`
 	SubPath   string `json:"subpath,omitempty"`
 }
 
-//IsSyncthing returns the volume mount is for syncthing
+// IsSyncthing returns the volume mount is for syncthing
 func (v *VolumeMount) IsSyncthing() bool {
 	return v.SubPath == SyncthingSubPath && v.MountPath == OktetoSyncthingMountPath
 }

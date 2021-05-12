@@ -31,7 +31,7 @@ var (
 	errBadStackName = "must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
 )
 
-//Stack represents an okteto stack
+// Stack represents an okteto stack
 type Stack struct {
 	Manifest  []byte                 `yaml:"-"`
 	Warnings  StackWarnings          `yaml:"-"`
@@ -43,7 +43,7 @@ type Stack struct {
 	Endpoints EndpointSpec           `yaml:"endpoints,omitempty"`
 }
 
-//Service represents an okteto stack service
+// Service represents an okteto stack service
 type Service struct {
 	Build         *BuildInfo         `yaml:"build,omitempty"`
 	CapAdd        []apiv1.Capability `yaml:"cap_add,omitempty"`
@@ -85,26 +85,26 @@ type Envs struct {
 	List Environment
 }
 
-//StackResources represents an okteto stack resources
+// StackResources represents an okteto stack resources
 type StackResources struct {
 	Limits   ServiceResources `json:"limits,omitempty" yaml:"limits,omitempty"`
 	Requests ServiceResources `json:"requests,omitempty" yaml:"requests,omitempty"`
 }
 
-//ServiceResources represents an okteto stack service resources
+// ServiceResources represents an okteto stack service resources
 type ServiceResources struct {
 	CPU     Quantity        `json:"cpu,omitempty" yaml:"cpu,omitempty"`
 	Memory  Quantity        `json:"memory,omitempty" yaml:"memory,omitempty"`
 	Storage StorageResource `json:"storage,omitempty" yaml:"storage,omitempty"`
 }
 
-//StorageResource represents an okteto stack service storage resource
+// StorageResource represents an okteto stack service storage resource
 type StorageResource struct {
 	Size  Quantity `json:"size,omitempty" yaml:"size,omitempty"`
 	Class string   `json:"class,omitempty" yaml:"class,omitempty"`
 }
 
-//Quantity represents an okteto stack service storage resource
+// Quantity represents an okteto stack service storage resource
 type Quantity struct {
 	Value resource.Quantity
 }
@@ -116,19 +116,19 @@ type Port struct {
 
 type EndpointSpec map[string]Endpoint
 
-//Endpoints represents an okteto stack ingress
+// Endpoints represents an okteto stack ingress
 type Endpoint struct {
 	Labels      Labels         `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations Annotations    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Rules       []EndpointRule `yaml:"rules,omitempty"`
 }
 
-//CommandStack represents an okteto stack command
+// CommandStack represents an okteto stack command
 type CommandStack struct {
 	Values []string
 }
 
-//ArgsStack represents an okteto stack args
+// ArgsStack represents an okteto stack args
 type ArgsStack struct {
 	Values []string
 }
@@ -146,7 +146,7 @@ type StackWarnings struct {
 	VolumeMountWarnings []string          `yaml:"-"`
 }
 
-//GetStack returns an okteto stack object from a given file
+// GetStack returns an okteto stack object from a given file
 func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 	b, err := ioutil.ReadFile(stackPath)
 	if err != nil {
@@ -189,7 +189,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 	return s, nil
 }
 
-//ReadStack reads an okteto stack
+// ReadStack reads an okteto stack
 func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	s := &Stack{
 		Manifest:  bytes,

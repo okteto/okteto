@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Restart restarts the pods of a given dev mode deployment
+// Restart restarts the pods of a given dev mode deployment
 func Restart() *cobra.Command {
 	var namespace string
 	var k8sContext string

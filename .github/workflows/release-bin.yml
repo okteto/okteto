@@ -1,3 +1,4 @@
+# https://docs.github.com/en/actions
 # This is a basic workflow that is manually triggered
 
 name: Release okteto/bin
@@ -33,7 +34,7 @@ jobs:
         qemu-version: latest
         buildx-version: latest
 
-    - name: "Push"
+    - name: Push
       working-directory: images/bin
       run: |
         docker buildx build \

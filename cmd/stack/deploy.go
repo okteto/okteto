@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Deploy deploys a stack
+// Deploy deploys a stack
 func Deploy(ctx context.Context) *cobra.Command {
 	var stackPath string
 	var name string

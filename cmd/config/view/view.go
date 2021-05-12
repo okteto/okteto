@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//View shows okteto configuration values of the authenticated user
+// View shows okteto configuration values of the authenticated user
 func View(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "view",

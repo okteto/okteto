@@ -1,16 +1,16 @@
 {
-	"version": "2.0.0",
-	"type": "shell",
-	"echoCommand": true,
-	"cwd": "${workspaceFolder}",
-	"tasks": [
-		{
-			"label": "build",
-			"command": "make build",
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
-		}
-	]
+    "version": "2.0.0",
+    "type": "shell",
+    "echoCommand": true,
+    "cwd": "${workspaceFolder}",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "make build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
 }

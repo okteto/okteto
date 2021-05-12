@@ -35,7 +35,7 @@ var (
 	componentLabels []string = []string{"app.kubernetes.io/component", "component", "app"}
 )
 
-//SetDevDefaultsFromDeployment sets dev defaults from a running deployment
+// SetDevDefaultsFromDeployment sets dev defaults from a running deployment
 func SetDevDefaultsFromDeployment(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, container string) error {
 	c, _, err := k8Client.GetLocalWithContext(dev.Context)
 	if err != nil {

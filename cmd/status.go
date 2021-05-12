@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Status returns the status of the synchronization process
+// Status returns the status of the synchronization process
 func Status() *cobra.Command {
 	var devPath string
 	var namespace string

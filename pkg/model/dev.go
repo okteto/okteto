@@ -113,7 +113,7 @@ var (
 	once sync.Once
 )
 
-//Dev represents a development container
+// Dev represents a development container
 type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
 	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
@@ -154,17 +154,17 @@ type Dev struct {
 	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
-//Entrypoint represents the start command of a development container
+// Entrypoint represents the start command of a development container
 type Entrypoint struct {
 	Values []string
 }
 
-//Command represents the start command of a development container
+// Command represents the start command of a development container
 type Command struct {
 	Values []string
 }
 
-//Args represents the args of a development container
+// Args represents the args of a development container
 type Args struct {
 	Values []string
 }
@@ -297,7 +297,7 @@ type Environment []EnvVar
 // EnvFiles is a list of environment files
 type EnvFiles []string
 
-//Get returns a Dev object from a given file
+// Get returns a Dev object from a given file
 func Get(devPath string) (*Dev, error) {
 	b, err := ioutil.ReadFile(devPath)
 	if err != nil {
@@ -326,7 +326,7 @@ func Get(devPath string) (*Dev, error) {
 	return dev, nil
 }
 
-//Read reads an okteto manifests
+// Read reads an okteto manifests
 func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
 		Image:       &BuildInfo{},
@@ -707,7 +707,7 @@ func validateSecrets(secrets []Secret) error {
 	return nil
 }
 
-//LoadRemote configures remote execution
+// LoadRemote configures remote execution
 func (dev *Dev) LoadRemote(pubKeyPath string) {
 	if dev.RemotePort == 0 {
 		p, err := GetAvailablePort(dev.Interface)

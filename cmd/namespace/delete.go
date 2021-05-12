@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Delete deletes a namespace
+// Delete deletes a namespace
 func Delete(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
 		Use:   "namespace <name>",

@@ -28,7 +28,7 @@ var (
 	deprecatedManifests     = []string{"stack.yml", "stack.yaml"}
 )
 
-//LoadStack loads an okteto stack manifest checking "yml" and "yaml"
+// LoadStack loads an okteto stack manifest checking "yml" and "yaml"
 func LoadStack(name, stackPath string) (*model.Stack, error) {
 	var isCompose bool
 	if model.FileExists(stackPath) {

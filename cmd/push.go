@@ -35,7 +35,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//Push builds, pushes and redeploys the target deployment
+// Push builds, pushes and redeploys the target deployment
 func Push(ctx context.Context) *cobra.Command {
 	var devPath string
 	var namespace string

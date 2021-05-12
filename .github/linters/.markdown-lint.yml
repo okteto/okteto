@@ -31,6 +31,3 @@ MD040: false
 
 # MD041 first-line-heading/first-line-h1 - First line in a file should be a top-level heading
 MD041: false
-
-# MD047 single-trailing-newline - Files should end with a single newline character
-MD047: false

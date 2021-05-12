@@ -35,7 +35,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Exec executes a command on the CND container
+// Exec executes a command on the CND container
 func Exec() *cobra.Command {
 	var devPath string
 	var namespace string

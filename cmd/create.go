@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Create creates resources
+// Create creates resources
 func Create(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",

@@ -29,12 +29,12 @@ const (
 	OktetoNotAllowedLabel = "dev.okteto.com/not-allowed"
 )
 
-//IsOktetoNamespace checks if this is a namespace created by okteto
+// IsOktetoNamespace checks if this is a namespace created by okteto
 func IsOktetoNamespace(ns *apiv1.Namespace) bool {
 	return ns.Labels[okLabels.DevLabel] == "true"
 }
 
-//IsOktetoAllowed checks if Okteto operationos are allowed in this namespace
+// IsOktetoAllowed checks if Okteto operationos are allowed in this namespace
 func IsOktetoAllowed(ns *apiv1.Namespace) bool {
 	if _, ok := ns.Labels[OktetoNotAllowedLabel]; ok {
 		return false

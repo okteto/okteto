@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Doctor generates a zip file with all okteto-related log files
+// Doctor generates a zip file with all okteto-related log files
 func Doctor() *cobra.Command {
 	var devPath string
 	var namespace string

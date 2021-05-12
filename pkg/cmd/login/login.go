@@ -52,7 +52,7 @@ func WithToken(ctx context.Context, url, token string) (*okteto.User, error) {
 	return okteto.AuthWithToken(ctx, url, token)
 }
 
-//WithBrowser authenticates the user with the browser
+// WithBrowser authenticates the user with the browser
 func WithBrowser(ctx context.Context, oktetoURL string) (*okteto.User, error) {
 	h, err := StartWithBrowser(ctx, oktetoURL)
 	if err != nil {

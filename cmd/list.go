@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//List lists resources
+// List lists resources
 func List(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",

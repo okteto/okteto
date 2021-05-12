@@ -49,7 +49,7 @@ func (s *SyncthingProgress) initProgressBar() {
 	)
 }
 
-//UpdateItemInSync updates the item in sync
+// UpdateItemInSync updates the item in sync
 func (s *SyncthingProgress) UpdateItemInSync(lastItem string) {
 	s.itemInSync = lastItem
 	if s.progressBar == nil {
@@ -57,7 +57,7 @@ func (s *SyncthingProgress) UpdateItemInSync(lastItem string) {
 	}
 }
 
-//SetCurrent sets current progress of the syncthing progress bar
+// SetCurrent sets current progress of the syncthing progress bar
 func (s *SyncthingProgress) SetCurrent(v int64) {
 	if s.progressBar == nil {
 		s.initProgressBar()
@@ -65,7 +65,7 @@ func (s *SyncthingProgress) SetCurrent(v int64) {
 	s.progressBar.SetCurrent(v)
 }
 
-//Finish finishes the progress bar
+// Finish finishes the progress bar
 func (s *SyncthingProgress) Finish() {
 	if s.progressBar != nil {
 		s.progressBar.SetCurrent(100)

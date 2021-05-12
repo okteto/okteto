@@ -27,7 +27,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-//UpState represents the state of the up command
+// UpState represents the state of the up command
 type UpState string
 
 const (
@@ -54,12 +54,12 @@ const (
 // VersionString the version of the cli
 var VersionString string
 
-//GetBinaryName returns the name of the binary
+// GetBinaryName returns the name of the binary
 func GetBinaryName() string {
 	return filepath.Base(GetBinaryFullPath())
 }
 
-//GetBinaryFullPath returns the name of the binary
+// GetBinaryFullPath returns the name of the binary
 func GetBinaryFullPath() string {
 	return os.Args[0]
 }
@@ -108,7 +108,7 @@ func GetDeploymentHome(namespace, name string) string {
 	return d
 }
 
-//UpdateStateFile updates the state file of a given dev environment
+// UpdateStateFile updates the state file of a given dev environment
 func UpdateStateFile(dev *model.Dev, state UpState) error {
 	if dev.Namespace == "" {
 		return fmt.Errorf("can't update state file, namespace is empty")
@@ -126,7 +126,7 @@ func UpdateStateFile(dev *model.Dev, state UpState) error {
 	return nil
 }
 
-//DeleteStateFile deletes the state file of a given dev environment
+// DeleteStateFile deletes the state file of a given dev environment
 func DeleteStateFile(dev *model.Dev) error {
 	if dev.Namespace == "" {
 		return fmt.Errorf("can't delete state file, namespace is empty")
@@ -140,7 +140,7 @@ func DeleteStateFile(dev *model.Dev) error {
 	return os.Remove(s)
 }
 
-//GetState returns the state of a given dev environment
+// GetState returns the state of a given dev environment
 func GetState(dev *model.Dev) (UpState, error) {
 	var result UpState
 	if dev.Namespace == "" {

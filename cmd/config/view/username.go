@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Username returns the username of the authenticated user
+// Username returns the username of the authenticated user
 func Username(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "username",

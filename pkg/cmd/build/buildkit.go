@@ -40,7 +40,7 @@ const (
 	frontend = "dockerfile.v0"
 )
 
-//GetBuildKitHost returns the buildkit url and if Okteto Build Service is configured, or an error
+// GetBuildKitHost returns the buildkit url and if Okteto Build Service is configured, or an error
 func GetBuildKitHost() (string, bool, error) {
 	buildKitHost := os.Getenv("BUILDKIT_HOST")
 	if buildKitHost != "" {
@@ -53,7 +53,7 @@ func GetBuildKitHost() (string, bool, error) {
 	return buildkitURL, true, nil
 }
 
-//getSolveOpt returns the buildkit solve options
+// getSolveOpt returns the buildkit solve options
 func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFrom, buildArgs, secrets []string) (*client.SolveOpt, error) {
 	if file == "" {
 		file = filepath.Join(buildCtx, "Dockerfile")

@@ -1,3 +1,4 @@
+# https://circleci.com/docs/2.0/configuration-reference/
 aliases:
  - &init-gcloud |
     echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
@@ -16,7 +17,7 @@ jobs:
           keys:
             - v3-pkg-cache-{{ checksum "go.sum" }}
       - run:
-          name: test
+          name: Test
           command: |
             make test
             bash <(curl -s https://codecov.io/bash)
@@ -50,7 +51,7 @@ jobs:
       - attach_workspace:
           at: ./artifacts
       - run:
-          name: prepare env
+          name: Prepare env
           command: |
             mkdir -p $HOME/.okteto
             touch $HOME/.okteto/.noanalytics
@@ -60,13 +61,13 @@ jobs:
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
             /usr/local/bin/okteto login --token ${API_TOKEN}
       - run:
-          name: integration tests (serverside)
+          name: Integration tests (serverside)
           environment:
             OKTETO_CLIENTSIDE_TRANSLATION: ''
             OKTETO_SKIP_CLEANUP: 'true'
           command: make integration
       - run:
-          name: integration tests (clientside)
+          name: Integration tests (clientside)
           environment:
             OKTETO_SKIP_CLEANUP: 'true'
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
@@ -89,7 +90,7 @@ jobs:
           fingerprints:
           - 94:5d:82:26:14:51:a6:99:79:c6:a7:d8:87:4a:64:3b
       - deploy:
-          name: "Update brew formula"
+          name: Update brew formula
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
@@ -97,7 +98,7 @@ jobs:
       - setup_remote_docker:
           version: "19.03.8"
       - run:
-          name: "Build Docker container"
+          name: Build Docker container
           command: |
             export DOCKER_BUILDKIT=1
             docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
@@ -115,24 +116,24 @@ jobs:
           keys:
             - v4-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
       - run:
-          name: test
+          name: Test
           command: |
             go mod download
             go version
             go test ./...
       - run:
-          name: upgrade kubectl
+          name: Upgrade kubectl
           command: choco install kubernetes-cli
       - attach_workspace:
           at: .\artifacts
       - run:
-          name: prepare env
+          name: Prepare env
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
             & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_TOKEN
       - run:
-          name: integration tests (serverside)
+          name: Integration tests (serverside)
           environment:
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
             OKTETO_SKIP_CLEANUP: 'true'
@@ -140,7 +141,7 @@ jobs:
           command: |
             go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
       - run:
-          name: integration tests (clientside)
+          name: Integration tests (clientside)
           environment:
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
@@ -164,21 +165,21 @@ jobs:
           at: ./artifacts
       - run: *init-gcloud
       - run:
-          name: upload release binaries
+          name: Upload release binaries
           command: |
             gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
             gsutil -m rsync -r gs://downloads.okteto.com/cli/${CIRCLE_TAG}/ gs://downloads.okteto.com/cli/
       - setup_remote_docker:
           version: "19.03.8"
       - run:
-          name: "Publish Docker container"
+          name: Publish Docker container
           command: |
             export DOCKER_BUILDKIT=1
             echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
             docker build -t okteto/okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_TAG .
             docker push okteto/okteto:${CIRCLE_TAG}
       - run:
-          name: "Publish Release on GitHub"
+          name: Publish Release on GitHub
           command: |
             go get -u github.com/tcnksm/ghr
             ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
@@ -186,7 +187,7 @@ jobs:
           fingerprints:
           - 94:5d:82:26:14:51:a6:99:79:c6:a7:d8:87:4a:64:3b
       - deploy:
-          name: "Update brew formula"
+          name: Update brew formula
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
@@ -201,7 +202,7 @@ jobs:
       - setup_remote_docker:
           version: "19.03.8"
       - run:
-          name: "Publish Docker container"
+          name: Publish Docker container
           command: |
             export DOCKER_BUILDKIT=1
             echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin

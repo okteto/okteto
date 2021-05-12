@@ -18,17 +18,29 @@ repos:
       - id: check-executables-have-shebangs
         exclude: ^scripts/windows\.sh$
       - id: check-merge-conflict
+      - id: check-toml
+      - id: check-vcs-permalinks
       - id: check-yaml
+      - id: detect-private-key
+        exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$
       - id: end-of-file-fixer
       - id: fix-byte-order-marker
       - id: mixed-line-ending
+      - id: pretty-format-json
+        args: [--autofix, --indent=4, --no-sort-keys]
       - id: trailing-whitespace
         exclude: ^\.github/pull_request_template\.md$
-  # - repo: git://github.com/Lucas-C/pre-commit-hooks
-  #  rev: v1.1.9
+      - id: check-json
+  # - repo: https://github.com/Lucas-C/pre-commit-hooks
+  #  rev: v1.1.10
   #  hooks:
   #    - id: forbid-tabs
   #    - id: remove-tabs
+  - repo: https://github.com/jumanjihouse/pre-commit-hooks
+    rev: 2.1.5
+    hooks:
+      - id: shellcheck
+      # - id: shfmt
   - repo: https://github.com/codespell-project/codespell
     rev: v2.0.0
     hooks:
