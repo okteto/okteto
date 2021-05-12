@@ -326,7 +326,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	initContainer := apiv1.Container{
 		Name:    fmt.Sprintf("init-%s", "svcName"),
 		Image:   "busybox",
-		Command: []string{"sh", "-c", "chmod 777 /data/*"},
+		Command: []string{"sh", "-c", "chmod 777 -R /data"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/data",
