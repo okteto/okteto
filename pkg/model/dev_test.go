@@ -841,6 +841,28 @@ func Test_validate(t *testing.T) {
       sshServerPort: -1`),
 			expectErr: true,
 		},
+		{
+			name: "docker-with-persistent-volume",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      docker:
+        enabled: true`),
+			expectErr: false,
+		},
+		{
+			name: "docker-without-persistent-volume",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      persistentVolume:
+        enabled: false
+      docker:
+        enabled: true`),
+			expectErr: true,
+		},
 	}
 
 	for _, tt := range tests {
