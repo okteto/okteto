@@ -79,7 +79,7 @@ func GetValidNameFromGitRepo(folder string) (string, error) {
 	var name string
 	repo, err := GetRepositoryURL(folder)
 	if err != nil {
-		return name, err
+		return "", err
 	}
 	repo = repo[strings.LastIndex(repo, "/")+1:]
 	name = ValidKubeNameRegex.ReplaceAllString(repo, "")
