@@ -29,7 +29,7 @@ jobs:
         password: '${{ secrets.DOCKER_PASS }}'
 
     - name: Set up Docker Buildx
-      uses: crazy-max/ghaction-docker-buildx@v3
+      uses: crazy-max/ghaction-docker-buildx@v3.3.1
       with:
         qemu-version: latest
         buildx-version: latest
