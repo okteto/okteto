@@ -134,8 +134,6 @@ type Dev struct {
 	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
 	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
-	MountPath            string                `json:"mountpath,omitempty" yaml:"mountpath,omitempty"`
-	SubPath              string                `json:"subpath,omitempty" yaml:"subpath,omitempty"`
 	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
@@ -639,10 +637,6 @@ func (dev *Dev) validate() error {
 
 	if strings.HasPrefix(dev.Name, "-") || strings.HasSuffix(dev.Name, "-") {
 		return errBadName
-	}
-
-	if dev.SubPath != "" {
-		return fmt.Errorf("'subpath' is not supported in the main dev container")
 	}
 
 	if err := validatePullPolicy(dev.ImagePullPolicy); err != nil {

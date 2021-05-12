@@ -815,15 +815,6 @@ func Test_validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "subpath-on-main-dev",
-			manifest: []byte(`
-          name: deployment
-          sync:
-            - .:/app
-          subpath: /app/docs`),
-			expectErr: true,
-		},
-		{
 			name: "valid-ssh-server-port",
 			manifest: []byte(`
       name: deployment
