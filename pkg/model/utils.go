@@ -76,14 +76,21 @@ func GetValidNameFromFolder(folder string) (string, error) {
 
 //GetValidNameFromFolder returns a valid kubernetes name for a folder
 func GetValidNameFromGitRepo(folder string) (string, error) {
-	var name string
 	repo, err := GetRepositoryURL(folder)
 	if err != nil {
 		return "", err
 	}
-	repo = repo[strings.LastIndex(repo, "/")+1:]
-	name = ValidKubeNameRegex.ReplaceAllString(repo, "")
+	name := translateURLToName(repo)
 	return name, nil
+}
+
+func translateURLToName(repo string) string {
+	repo = repo[strings.LastIndex(repo, "/")+1:]
+	if strings.HasSuffix(repo, ".git") {
+		repo = repo[:strings.LastIndex(repo, ".git")]
+	}
+	name := ValidKubeNameRegex.ReplaceAllString(repo, "-")
+	return name
 }
 
 func GetRepositoryURL(path string) (string, error) {
