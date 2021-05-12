@@ -643,11 +643,23 @@ func unmarshalExpose(raw *RawMessage) ([]int32, error) {
 	}
 
 	for _, expose := range exposeInString {
-		portInInt, err := strconv.Atoi(expose)
+		if strings.Contains(expose, "-") {
+			return exposeInInt, fmt.Errorf("Can not convert %s. Range ports are not supported.", expose)
+		}
+		parts := strings.Split(expose, ":")
+		var portString string
+		if len(parts) == 1 {
+			portString = parts[0]
+		} else if len(parts) <= 3 {
+			portString = parts[len(parts)-1]
+		} else {
+			return exposeInInt, fmt.Errorf(malformedPortForward, expose)
+		}
+		port, err := strconv.Atoi(portString)
 		if err != nil {
 			return exposeInInt, err
 		}
-		exposeInInt = append(exposeInInt, int32(portInInt))
+		exposeInInt = append(exposeInInt, int32(port))
 	}
 	return exposeInInt, nil
 }
