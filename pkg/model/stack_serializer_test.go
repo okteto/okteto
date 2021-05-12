@@ -14,6 +14,7 @@
 package model
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -517,36 +518,55 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name          string
 		manifest      []byte
+		create        bool
 		expectedError bool
 	}{
 		{
 			name:          "correct-volume",
 			manifest:      []byte("services:\n  app:\n    volumes: \n    - redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\nvolumes:\n  redpanda:\n"),
+			create:        false,
 			expectedError: false,
 		},
 		{
 			name:          "volume-not-declared-in-volumes-top-level-section",
 			manifest:      []byte("services:\n  app:\n    volumes: \n    - redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			create:        false,
 			expectedError: true,
 		},
 		{
 			name:          "volume-absolute-path",
 			manifest:      []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda/:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			create:        false,
 			expectedError: false,
 		},
 		{
-			name:          "volume-relative-path",
-			manifest:      []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			name:          "volume-relative-path-found",
+			manifest:      []byte("services:\n  app:\n    volumes: \n    - test-volume-relative-path-found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			create:        true,
+			expectedError: false,
+		},
+		{
+			name:          "volume-relative-path-not-found",
+			manifest:      []byte("services:\n  app:\n    volumes: \n    - test:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			create:        false,
 			expectedError: false,
 		},
 		{
 			name:          "pv",
 			manifest:      []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			create:        false,
 			expectedError: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.create {
+				err := os.Mkdir("test-volume-relative-path-found", 0755)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer os.RemoveAll("test-volume-relative-path-found")
+			}
 			_, err := ReadStack(tt.manifest, true)
 			if err != nil && !tt.expectedError {
 				t.Fatal(err)
