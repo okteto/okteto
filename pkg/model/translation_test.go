@@ -321,6 +321,99 @@ persistentVolume:
 	}
 }
 
+func TestDevToTranslationRuleDockerEnabled(t *testing.T) {
+	manifest := []byte(`name: web
+image: dev-image
+namespace: n
+sync:
+  - .:/app
+docker:
+  enabled: true`)
+
+	dev, err := Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rule := dev.ToTranslationRule(dev, false)
+	ruleOK := &TranslationRule{
+		Marker:            OktetoBinImageTag,
+		OktetoBinImageTag: OktetoBinImageTag,
+		ImagePullPolicy:   apiv1.PullAlways,
+		Image:             "dev-image",
+		Command:           []string{"/var/okteto/bin/start.sh"},
+		Args:              []string{"-r", "-v"},
+		Probes:            &Probes{},
+		Lifecycle:         &Lifecycle{},
+		Environment: Environment{
+			{
+				Name:  "OKTETO_NAMESPACE",
+				Value: "n",
+			},
+			{
+				Name:  "OKTETO_NAME",
+				Value: "web",
+			},
+			{
+				Name:  "DOCKER_HOST",
+				Value: DefaultDockerHost,
+			},
+			{
+				Name:  "DOCKER_CERT_PATH",
+				Value: "/certs/client",
+			},
+			{
+				Name:  "DOCKER_TLS_VERIFY",
+				Value: "1",
+			},
+		},
+		SecurityContext: &SecurityContext{
+			RunAsUser:  &rootUser,
+			RunAsGroup: &rootUser,
+			FSGroup:    &rootUser,
+		},
+		PersistentVolume: true,
+		Volumes: []VolumeMount{
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: DefaultDockerCertDir,
+				SubPath:   DefaultDockerCertDirSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: DefaultDockerCacheDir,
+				SubPath:   DefaultDockerCacheDirSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: OktetoSyncthingMountPath,
+				SubPath:   SyncthingSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: RemoteMountPath,
+				SubPath:   RemoteSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/app",
+				SubPath:   SourceCodeSubPath,
+			},
+		},
+		InitContainer: InitContainer{Image: OktetoBinImageTag},
+		Docker: DinDContainer{
+			Enabled: true,
+			Image:   DefaultDinDImage,
+		},
+	}
+
+	marshalled, _ := yaml.Marshal(rule)
+	marshalledOK, _ := yaml.Marshal(ruleOK)
+	if string(marshalled) != string(marshalledOK) {
+		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
+	}
+}
+
 func TestSSHServerPortTranslationRule(t *testing.T) {
 	tests := []struct {
 		name     string
