@@ -146,9 +146,6 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 		if old.Labels[okLabels.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
 		}
-		if d.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
-			return fmt.Errorf("name collision: the deployment '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
-		}
 		if deployments.IsDevModeOn(old) {
 			deployments.RestoreDevModeFrom(d, old)
 		}
@@ -196,9 +193,6 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 	} else {
 		if old.Labels[okLabels.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the statefulset '%s' was running before deploying your stack", svcName)
-		}
-		if sfs.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
-			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
 		}
 		if v, ok := old.Labels[okLabels.DeployedByLabel]; ok {
 			sfs.Labels[okLabels.DeployedByLabel] = v
