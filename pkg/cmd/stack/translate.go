@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -57,22 +58,23 @@ const (
 )
 
 func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
-	if err := translateStackEnvVars(s); err != nil {
+	if err := translateStackEnvVars(ctx, s); err != nil {
 		return err
 	}
 
 	return translateBuildImages(ctx, s, forceBuild, noCache)
 }
 
-func translateStackEnvVars(s *model.Stack) error {
+func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 	var err error
-	for _, svc := range s.Services {
+	isOktetoNamespace := namespaces.IsOktetoNamespaceFromName(ctx, s.Namespace)
+	for svcName, svc := range s.Services {
 		svc.Image, err = model.ExpandEnv(svc.Image)
 		if err != nil {
 			return err
 		}
 		for _, envFilepath := range svc.EnvFiles {
-			if err := translateServiceEnvFile(svc, envFilepath); err != nil {
+			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath, isOktetoNamespace); err != nil {
 				return err
 			}
 		}
@@ -84,16 +86,39 @@ func translateStackEnvVars(s *model.Stack) error {
 	return nil
 }
 
-func translateServiceEnvFile(svc *model.Service, filename string) error {
+func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, filename string, isOktetoNamespace bool) error {
 	var err error
 	filename, err = model.ExpandEnv(filename)
 	if err != nil {
 		return err
 	}
 
+	secrets := make(map[string]string)
+	if isOktetoNamespace {
+		envList, err := okteto.GetSecrets(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, e := range envList {
+			secrets[e.Name] = e.Value
+		}
+		for _, e := range svc.Environment {
+			delete(secrets, e.Name)
+		}
+	}
+
 	f, err := os.Open(filename)
-	if err != nil {
+	if err != nil && len(secrets) == 0 {
 		return err
+	} else if err != nil && len(secrets) != 0 {
+		for name, value := range secrets {
+			svc.Environment = append(
+				svc.Environment,
+				model.EnvVar{Name: name, Value: value},
+			)
+		}
+		return nil
 	}
 	defer f.Close()
 
@@ -106,12 +131,24 @@ func translateServiceEnvFile(svc *model.Service, filename string) error {
 		delete(envMap, e.Name)
 	}
 
+	for key := range envMap {
+		delete(secrets, key)
+	}
+
 	for name, value := range envMap {
 		svc.Environment = append(
 			svc.Environment,
 			model.EnvVar{Name: name, Value: value},
 		)
 	}
+
+	for name, value := range secrets {
+		svc.Environment = append(
+			svc.Environment,
+			model.EnvVar{Name: name, Value: value},
+		)
+	}
+
 	return nil
 }
 
@@ -161,6 +198,10 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+			if uErr, ok := err.(errors.UserError); ok {
+				uErr.E = fmt.Errorf("error building image for '%s': %s", name, uErr.E)
+				return hasBuiltSomething, uErr
+			}
 			return hasBuiltSomething, fmt.Errorf("error building image for '%s': %s", name, err)
 		}
 		svc.SetLastBuiltAnnotation()
@@ -174,7 +215,8 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 	hasAddedAnyVolumeMounts := false
 	var err error
 	for name, svc := range s.Services {
-		if len(svc.VolumeMounts) != 0 {
+		notSkippableVolumeMounts := getAccessibleVolumeMounts(s, name)
+		if len(notSkippableVolumeMounts) != 0 {
 			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
 				hasAddedAnyVolumeMounts = true
 				log.Information("Running your build in %s...", buildKitHost)
@@ -186,14 +228,13 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 					return hasAddedAnyVolumeMounts, err
 				}
 			}
-			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, svc.VolumeMounts)
+			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, notSkippableVolumeMounts)
 			if err != nil {
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.Build = svcBuild
 			if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
-				tag := strings.Replace(svc.Image, ":", "-", 1)
-				svc.Image = fmt.Sprintf("okteto.dev/%s:okteto-with-volume-mounts", tag)
+				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
@@ -206,6 +247,19 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 		}
 	}
 	return hasAddedAnyVolumeMounts, nil
+}
+
+func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.StackVolume {
+	accessibleVolumeMounts := make([]model.StackVolume, 0)
+	for _, volume := range stack.Services[svcName].VolumeMounts {
+		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
+			accessibleVolumeMounts = append(accessibleVolumeMounts, volume)
+		} else {
+			warning := fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. Could not find '%s'.", svcName, volume.LocalPath, volume.RemotePath, volume.LocalPath)
+			stack.Warnings.VolumeMountWarnings = append(stack.Warnings.VolumeMountWarnings, warning)
+		}
+	}
+	return accessibleVolumeMounts
 }
 
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
@@ -227,7 +281,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        svcName,
+			Name:        svc.ContainerName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
 			Annotations: translateAnnotations(svc),
@@ -307,7 +361,7 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
+			Name:        svc.ContainerName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(name, s),
 			Annotations: translateAnnotations(svc),
@@ -439,7 +493,7 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	}
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        svcName,
+			Name:        svc.ContainerName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
 			Annotations: annotations,

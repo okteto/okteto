@@ -936,7 +936,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 					SubPath:   getDataSubPath(dev.Volumes[i].RemotePath),
 				},
 			)
-			command = fmt.Sprintf("%s && (cp -nRv %s/* /initData-%d || true)", command, dev.Volumes[i].RemotePath, i)
+			command = fmt.Sprintf("%s && (cp -Rv %s/* /initData-%d || true)", command, dev.Volumes[i].RemotePath, i)
 		}
 		for i := range dev.Sync.Folders {
 			rule.InitFromImageContainer.Volumes = append(
@@ -947,7 +947,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 					SubPath:   main.getSourceSubPath(dev.Sync.Folders[i].LocalPath),
 				},
 			)
-			command = fmt.Sprintf("%s && (cp -nRv %s/* /initSync-%d || true)", command, dev.Sync.Folders[i].RemotePath, i)
+			command = fmt.Sprintf("%s && (cp -Rv %s/* /initSync-%d || true)", command, dev.Sync.Folders[i].RemotePath, i)
 		}
 		rule.InitFromImageContainer.Command = []string{"sh", "-c", command}
 	}

@@ -303,7 +303,7 @@ persistentVolume:
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
 		InitFromImageContainer: &InitFromImageContainer{
 			Image:   "dev-image",
-			Command: []string{"sh", "-c", "echo initializing volume... && (cp -nRv /app/* /initSync-0 || true)"},
+			Command: []string{"sh", "-c", "echo initializing volume... && (cp -Rv /app/* /initSync-0 || true)"},
 			Volumes: []VolumeMount{
 				{
 					Name:      dev.GetVolumeName(),
