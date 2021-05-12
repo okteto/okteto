@@ -663,7 +663,7 @@ func Test_getAccessibleVolumeMounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(volumes) != 1 {
-		t.Fatal("Wrong number of accesible volumes")
+		t.Fatal("Wrong number of accessible volumes")
 	}
 	if len(s.Warnings.VolumeMountWarnings) != 1 {
 		t.Fatal("Wrong number of volumes warnings")
