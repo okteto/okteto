@@ -21,11 +21,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-git/go-git/v5"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -67,7 +69,9 @@ func deploy(ctx context.Context) *cobra.Command {
 
 			if repository == "" {
 				log.Info("inferring git repository URL")
-				r, err := utils.GetRepositoryURL(ctx, cwd)
+
+				r, err := model.GetRepositoryURL(cwd)
+
 				if err != nil {
 					return err
 				}
@@ -78,7 +82,8 @@ func deploy(ctx context.Context) *cobra.Command {
 
 			if branch == "" {
 				log.Info("inferring git repository branch")
-				b, err := utils.GetBranch(ctx, cwd)
+				b, err := GetBranch(ctx, cwd)
+
 				if err != nil {
 					return err
 				}
@@ -210,4 +215,24 @@ func getCurrentNamespace(ctx context.Context) string {
 		return client.GetContextNamespace("")
 	}
 	return os.Getenv("OKTETO_NAMESPACE")
+}
+
+func GetBranch(ctx context.Context, path string) (string, error) {
+	repo, err := git.PlainOpen(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	branch := head.Name()
+	if !branch.IsBranch() {
+		return "", fmt.Errorf("git repo is not on a valid branch")
+	}
+
+	name := strings.TrimPrefix(branch.String(), "refs/heads/")
+	return name, nil
 }
