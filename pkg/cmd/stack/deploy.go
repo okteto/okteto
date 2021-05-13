@@ -183,7 +183,17 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 				return fmt.Errorf("name collision: the volume '%s' was running before deploying your stack", svcName)
 			}
 			if pvc.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
-				return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+				log.Infof("name collision: the volume '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+				timeout, err := model.GetTimeout()
+				if err != nil {
+					return err
+				}
+				if err := volumes.Destroy(ctx, svcName, s.Namespace, c, timeout); err != nil {
+					return fmt.Errorf("error destroying statefulset of previous stack '%s': %s", old.Labels[okLabels.StackNameLabel], err.Error())
+				}
+				if err := volumes.CreateFromPVC(ctx, &pvc, c); err != nil {
+					return fmt.Errorf("error creating volume of service '%s': %s", svcName, err.Error())
+				}
 			}
 		}
 	}
