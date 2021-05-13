@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
@@ -27,6 +28,7 @@ import (
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -122,6 +124,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(rule.InitContainer, &t.Deployment.Spec.Template.Spec)
 			TranslateOktetoInitFromImageContainer(rule.InitFromImageContainer, &t.Deployment.Spec.Template.Spec)
+			TranslateDinDContainer(&t.Deployment.Spec.Template.Spec, rule)
 			TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
 		}
 	}
@@ -214,6 +217,56 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	TranslateEnvVars(c, rule)
 	TranslateVolumeMounts(c, rule)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
+}
+
+//TranslateDinDContainer translates the DinD container
+func TranslateDinDContainer(spec *apiv1.PodSpec, rule *model.TranslationRule) {
+	if !rule.Docker.Enabled {
+		return
+	}
+	c := apiv1.Container{
+		Name:  "dind",
+		Image: rule.Docker.Image,
+		Env: []apiv1.EnvVar{
+			{
+				Name:  "DOCKER_TLS_CERTDIR",
+				Value: model.DefaultDockerCertDir,
+			},
+		},
+		VolumeMounts: []apiv1.VolumeMount{},
+		SecurityContext: &apiv1.SecurityContext{
+			Privileged: pointer.BoolPtr(true),
+		},
+	}
+
+	for _, v := range rule.Volumes {
+		if isDockerVolumeMount(v.SubPath) {
+			c.VolumeMounts = append(
+				c.VolumeMounts,
+				apiv1.VolumeMount{
+					Name:      v.Name,
+					MountPath: v.MountPath,
+					SubPath:   v.SubPath,
+				},
+			)
+		}
+	}
+
+	translateInitResources(&c, rule.Docker.Resources)
+
+	spec.Containers = append(spec.Containers, c)
+}
+
+func isDockerVolumeMount(subPath string) bool {
+	if strings.HasPrefix(subPath, model.SourceCodeSubPath) {
+		return true
+	}
+
+	if subPath == model.DefaultDockerCertDirSubPath {
+		return true
+	}
+
+	return subPath == model.DefaultDockerCacheDirSubPath
 }
 
 //TranslateProbes translates the probes attached to a container
@@ -317,6 +370,9 @@ func TranslateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 	}
 
 	for _, v := range rule.Volumes {
+		if v.SubPath == model.DefaultDockerCacheDirSubPath {
+			continue
+		}
 		c.VolumeMounts = append(
 			c.VolumeMounts,
 			apiv1.VolumeMount{

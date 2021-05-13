@@ -815,15 +815,6 @@ func Test_validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "subpath-on-main-dev",
-			manifest: []byte(`
-          name: deployment
-          sync:
-            - .:/app
-          subpath: /app/docs`),
-			expectErr: true,
-		},
-		{
 			name: "valid-ssh-server-port",
 			manifest: []byte(`
       name: deployment
@@ -839,6 +830,28 @@ func Test_validate(t *testing.T) {
       sync:
         - .:/app
       sshServerPort: -1`),
+			expectErr: true,
+		},
+		{
+			name: "docker-with-persistent-volume",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      docker:
+        enabled: true`),
+			expectErr: false,
+		},
+		{
+			name: "docker-without-persistent-volume",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      persistentVolume:
+        enabled: false
+      docker:
+        enabled: true`),
 			expectErr: true,
 		},
 	}

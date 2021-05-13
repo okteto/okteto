@@ -72,7 +72,7 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 	if up.Dev.PersistentVolumeEnabled() {
 		if userID != -1 && userID != *up.Dev.SecurityContext.RunAsUser {
 			return errors.UserError{
-				E: fmt.Errorf("User %d doesn't have write permissions for the %s directory", userID, up.Dev.MountPath),
+				E: fmt.Errorf("User %d doesn't have write permissions for synchronization paths", userID),
 				Hint: fmt.Sprintf(`Set 'securityContext.runAsUser: %d' in your okteto manifest.
     After that, run 'okteto down -v' to reset your development container and run 'okteto up' again`, userID),
 			}
