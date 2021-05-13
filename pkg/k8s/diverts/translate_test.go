@@ -15,7 +15,6 @@ import (
 )
 
 func Test_translateDeployment(t *testing.T) {
-	dev := &model.Dev{Name: "dev"}
 	original := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:             types.UID("id"),
@@ -40,10 +39,10 @@ func Test_translateDeployment(t *testing.T) {
 			},
 		},
 	}
-	translated := translateDeployment("cindy", dev, original)
+	translated := translateDeployment("cindy", original)
 	expected := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-dev",
+			Name:      "cindy-name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1":                    "value1",
@@ -54,15 +53,13 @@ func Test_translateDeployment(t *testing.T) {
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					model.OktetoDivertLabel:      "cindy",
-					okLabels.InteractiveDevLabel: "cindy-dev",
+					model.OktetoDivertLabel: "cindy",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						model.OktetoDivertLabel:      "cindy",
-						okLabels.InteractiveDevLabel: "cindy-dev",
+						model.OktetoDivertLabel: "cindy",
 					},
 				},
 			},
@@ -76,10 +73,9 @@ func Test_translateDeployment(t *testing.T) {
 }
 
 func Test_translateServiceNotDiverted(t *testing.T) {
-	dev := &model.Dev{Name: "dev"}
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cindy-dev",
+			Name: "cindy-name",
 		},
 	}
 	original := &apiv1.Service{
@@ -95,6 +91,7 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 			ResourceVersion: "version",
 		},
 		Spec: apiv1.ServiceSpec{
+			ClusterIP: "10.52.11.123",
 			Selector: map[string]string{
 				"app": "value",
 			},
@@ -106,13 +103,13 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 			},
 		},
 	}
-	translated, err := translateService("cindy", dev, d, original)
+	translated, err := translateService("cindy", d, original)
 	if err != nil {
 		t.Fatalf("error translating service: %s", err.Error())
 	}
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-dev",
+			Name:      "cindy-name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1": "value1",
@@ -122,7 +119,7 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
 				model.OktetoDivertLabel:      "cindy",
-				okLabels.InteractiveDevLabel: "cindy-dev",
+				okLabels.InteractiveDevLabel: "cindy-name",
 			},
 			Ports: []apiv1.ServicePort{
 				{
@@ -140,10 +137,9 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 }
 
 func Test_translateServiceDiverted(t *testing.T) {
-	dev := &model.Dev{Name: "dev"}
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cindy-dev",
+			Name: "cindy-name",
 		},
 	}
 	original := &apiv1.Service{
@@ -160,6 +156,7 @@ func Test_translateServiceDiverted(t *testing.T) {
 			ResourceVersion: "version",
 		},
 		Spec: apiv1.ServiceSpec{
+			ClusterIP: "10.52.11.123",
 			Selector: map[string]string{
 				"app": "value",
 			},
@@ -171,13 +168,13 @@ func Test_translateServiceDiverted(t *testing.T) {
 			},
 		},
 	}
-	translated, err := translateService("cindy", dev, d, original)
+	translated, err := translateService("cindy", d, original)
 	if err != nil {
 		t.Fatalf("error translating service: %s", err.Error())
 	}
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-dev",
+			Name:      "cindy-name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1": "value1",
@@ -187,12 +184,12 @@ func Test_translateServiceDiverted(t *testing.T) {
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
 				model.OktetoDivertLabel:      "cindy",
-				okLabels.InteractiveDevLabel: "cindy-dev",
+				okLabels.InteractiveDevLabel: "cindy-name",
 			},
 			Ports: []apiv1.ServicePort{
 				{
 					Port:       8080,
-					TargetPort: intstr.FromString("8080"),
+					TargetPort: intstr.FromInt(8080),
 				},
 			},
 		},
@@ -205,7 +202,6 @@ func Test_translateServiceDiverted(t *testing.T) {
 }
 
 func Test_translateIngressGenerateHostTrue(t *testing.T) {
-	dev := &model.Dev{Name: "dev"}
 	original := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:       types.UID("id"),
@@ -219,10 +215,10 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 			ResourceVersion: "version",
 		},
 	}
-	translated := translateIngress("cindy", dev, original)
+	translated := translateIngress("cindy", original)
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-dev",
+			Name:      "cindy-name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1":                          "value1",
@@ -239,7 +235,6 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 }
 
 func Test_translateIngressCustomGenerateHost(t *testing.T) {
-	dev := &model.Dev{Name: "dev"}
 	original := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:       types.UID("id"),
@@ -253,10 +248,10 @@ func Test_translateIngressCustomGenerateHost(t *testing.T) {
 			ResourceVersion: "version",
 		},
 	}
-	translated := translateIngress("cindy", dev, original)
+	translated := translateIngress("cindy", original)
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-dev",
+			Name:      "cindy-name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1":                          "value1",

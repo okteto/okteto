@@ -10,6 +10,8 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
@@ -143,7 +145,18 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 				log.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
 			}
 		}
-		printDisplayContext(ctx, up.Dev, up.Client)
+		divertURL := ""
+		if up.Dev.Divert != nil {
+			username := okteto.GetSanitizedUsername()
+			name := diverts.DivertName(username, up.Dev.Divert.Ingress)
+			i, err := ingressesv1.Get(ctx, name, up.Dev.Namespace, up.Client)
+			if err != nil {
+				log.Errorf("error getting diverted ingress %s: %s", name, err.Error())
+			} else if len(i.Spec.Rules) > 0 {
+				divertURL = i.Spec.Rules[0].Host
+			}
+		}
+		printDisplayContext(up.Dev, divertURL)
 		up.CommandResult <- up.runCommand(ctx)
 	}()
 	prevError := up.waitUntilExitOrInterrupt()

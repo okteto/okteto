@@ -20,10 +20,6 @@ import (
 )
 
 func Create(ctx context.Context, dev *model.Dev, isOktetoNamespace bool, c kubernetes.Interface) error {
-	if dev.Divert == nil {
-		return nil
-	}
-
 	if !isOktetoNamespace {
 		return errors.ErrDivertNotSupported
 	}
@@ -59,7 +55,7 @@ func divertDeployment(ctx context.Context, dev *model.Dev, username string, c ku
 		return nil, fmt.Errorf("error diverting deployment: %s", err.Error())
 	}
 
-	divertDeployment := translateDeployment(username, dev, d)
+	divertDeployment := translateDeployment(username, d)
 	if err := deployments.Deploy(ctx, divertDeployment, c); err != nil {
 		return nil, fmt.Errorf("error creating diver deployment '%s': %s", divertDeployment.Name, err.Error())
 	}
@@ -75,7 +71,7 @@ func divertService(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, us
 		return nil, fmt.Errorf("error getting divert service '%s': %s", dev.Divert.Service, err.Error())
 	}
 
-	divertService, err := translateService(username, dev, d, s)
+	divertService, err := translateService(username, d, s)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +90,7 @@ func divertIngress(ctx context.Context, dev *model.Dev, username string, c kuber
 		return nil, fmt.Errorf("error getting divert ingress '%s': %s", dev.Divert.Ingress, err.Error())
 	}
 
-	divertIngress := translateIngress(username, dev, i)
+	divertIngress := translateIngress(username, i)
 	if err := ingressesv1.Deploy(ctx, divertIngress, c); err != nil {
 		return nil, fmt.Errorf("error creating divert ingress '%s': %s", divertIngress.Name, err.Error())
 	}
@@ -139,10 +135,6 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 }
 
 func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	if dev.Divert == nil {
-		return nil
-	}
-
 	username := okteto.GetSanitizedUsername()
 
 	d, err := deployments.Get(ctx, dev, dev.Namespace, c)
@@ -182,7 +174,7 @@ func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 		return fmt.Errorf("error deleting divert service '%s': %s", sName, err.Error())
 	}
 
-	divertDeployment := translateDeployment(username, dev, d)
+	divertDeployment := translateDeployment(username, d)
 	translateDev(username, dev, divertDeployment)
 
 	return nil

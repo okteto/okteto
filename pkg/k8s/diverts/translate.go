@@ -3,6 +3,7 @@ package diverts
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -25,20 +26,18 @@ func DivertName(username, name string) string {
 	return fmt.Sprintf("%s-%s", username, name)
 }
 
-func translateDeployment(username string, dev *model.Dev, d *appsv1.Deployment) *appsv1.Deployment {
+func translateDeployment(username string, d *appsv1.Deployment) *appsv1.Deployment {
 	result := d.DeepCopy()
 	result.UID = ""
-	result.Name = DivertName(username, dev.Name)
+	result.Name = DivertName(username, d.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
 	result.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			model.OktetoDivertLabel:      username,
-			okLabels.InteractiveDevLabel: result.Name,
+			model.OktetoDivertLabel: username,
 		},
 	}
 	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel:      username,
-		okLabels.InteractiveDevLabel: result.Name,
+		model.OktetoDivertLabel: username,
 	}
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}
@@ -48,10 +47,10 @@ func translateDeployment(username string, dev *model.Dev, d *appsv1.Deployment) 
 	return result
 }
 
-func translateService(username string, dev *model.Dev, d *appsv1.Deployment, s *apiv1.Service) (*apiv1.Service, error) {
+func translateService(username string, d *appsv1.Deployment, s *apiv1.Service) (*apiv1.Service, error) {
 	result := s.DeepCopy()
 	result.UID = ""
-	result.Name = DivertName(username, dev.Name)
+	result.Name = DivertName(username, s.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
 	if s.Annotations != nil {
 		modification := s.Annotations[model.OktetoDivertServiceModificationAnnotation]
@@ -62,7 +61,11 @@ func translateService(username string, dev *model.Dev, d *appsv1.Deployment, s *
 			}
 			for i := range result.Spec.Ports {
 				if strings.Compare(fmt.Sprint(result.Spec.Ports[i].Port), dsm.OriginalPort) == 0 {
-					result.Spec.Ports[i].TargetPort = intstr.FromString(dsm.OriginalTargetPort)
+					portNumber, err := strconv.Atoi(dsm.OriginalTargetPort)
+					if err != nil {
+						return nil, fmt.Errorf("error parsing port number %s: %s", dsm.OriginalTargetPort, err.Error())
+					}
+					result.Spec.Ports[i].TargetPort = intstr.FromInt(portNumber)
 				}
 			}
 		}
@@ -74,13 +77,14 @@ func translateService(username string, dev *model.Dev, d *appsv1.Deployment, s *
 		okLabels.InteractiveDevLabel: d.Name,
 	}
 	result.ResourceVersion = ""
+	result.Spec.ClusterIP = ""
 	return result, nil
 }
 
-func translateIngress(username string, dev *model.Dev, i *networkingv1.Ingress) *networkingv1.Ingress {
+func translateIngress(username string, i *networkingv1.Ingress) *networkingv1.Ingress {
 	result := i.DeepCopy()
 	result.UID = ""
-	result.Name = DivertName(username, dev.Name)
+	result.Name = DivertName(username, i.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}

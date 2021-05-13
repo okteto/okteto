@@ -14,7 +14,6 @@
 package up
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -94,10 +93,9 @@ func Test_printDisplayContext(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			printDisplayContext(ctx, tt.dev, nil)
+			printDisplayContext(tt.dev, "")
 		})
 	}
 

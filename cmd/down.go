@@ -95,8 +95,10 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 		return err
 	}
 
-	if err := diverts.Delete(ctx, dev, client); err != nil {
-		return err
+	if dev.Divert != nil {
+		if err := diverts.Delete(ctx, dev, client); err != nil {
+			return err
+		}
 	}
 
 	d, err := deployments.Get(ctx, dev, dev.Namespace, client)
