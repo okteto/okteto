@@ -23,11 +23,8 @@ import (
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
-	if dev.Workdir == "" && dev.MountPath == "" && len(dev.Sync.Folders) == 0 {
+	if dev.Workdir == "" && len(dev.Sync.Folders) == 0 {
 		dev.Workdir = "/okteto"
-	}
-	if err := dev.translateDeprecatedMountPath(nil); err != nil {
-		return err
 	}
 	if err := dev.translateDeprecatedWorkdir(nil); err != nil {
 		return err
@@ -35,9 +32,6 @@ func (dev *Dev) translateDeprecatedVolumeFields() error {
 	dev.translateDeprecatedVolumes()
 
 	for _, s := range dev.Services {
-		if err := s.translateDeprecatedMountPath(dev); err != nil {
-			return err
-		}
 		if err := s.translateDeprecatedWorkdir(dev); err != nil {
 			return err
 		}
@@ -46,42 +40,17 @@ func (dev *Dev) translateDeprecatedVolumeFields() error {
 	return nil
 }
 
-func (dev *Dev) translateDeprecatedMountPath(main *Dev) error {
-	if dev.MountPath == "" {
-		return nil
-	}
-	if main != nil && main.MountPath == "" {
-		return fmt.Errorf("'mountpath' is not supported to define your synchronized folders in 'services'. Use the field 'sync' instead (%s)", syncFieldDocsURL)
-	}
-
-	warnMessage := func() {
-		log.Yellow("'mounthpath' is deprecated to define your synchronized folders. Use the field 'sync' instead (%s)", syncFieldDocsURL)
-	}
-
-	once.Do(warnMessage)
-	dev.Sync.Folders = append(
-		dev.Sync.Folders,
-		SyncFolder{
-			LocalPath:  filepath.Join(".", dev.SubPath),
-			RemotePath: dev.MountPath,
-		},
-	)
-	return nil
-}
-
 func (dev *Dev) translateDeprecatedWorkdir(main *Dev) error {
 	if dev.Workdir == "" || len(dev.Sync.Folders) > 0 {
 		return nil
 	}
-	if main != nil && main.MountPath == "" {
+	if main != nil {
 		return fmt.Errorf("'workdir' is not supported to define your synchronized folders in 'services'. Use the field 'sync' instead (%s)", syncFieldDocsURL)
 	}
-
-	dev.MountPath = dev.Workdir
 	dev.Sync.Folders = append(
 		dev.Sync.Folders,
 		SyncFolder{
-			LocalPath:  filepath.Join(".", dev.SubPath),
+			LocalPath:  ".",
 			RemotePath: dev.Workdir,
 		},
 	)
