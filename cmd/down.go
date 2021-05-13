@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -92,6 +93,12 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 	client, _, err := k8Client.GetLocalWithContext(dev.Context)
 	if err != nil {
 		return err
+	}
+
+	if dev.Divert != nil {
+		if err := diverts.Delete(ctx, dev, client); err != nil {
+			return err
+		}
 	}
 
 	d, err := deployments.Get(ctx, dev, dev.Namespace, client)

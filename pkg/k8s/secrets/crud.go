@@ -96,7 +96,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 }
 
 // Destroy deletes the syncthing config secret
-func Destroy(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+func Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	secretName := GetSecretName(dev)
 	err := c.CoreV1().Secrets(dev.Namespace).Delete(ctx, secretName, metav1.DeleteOptions{})
 	if err != nil {

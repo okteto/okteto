@@ -26,6 +26,46 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// CreateDev deploys a default k8s service for a development container
+func CreateDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+	s := translate(dev)
+	return Deploy(ctx, s, c)
+}
+
+// Deploy creates/updates a k8s service
+func Deploy(ctx context.Context, s *apiv1.Service, c kubernetes.Interface) error {
+	old, err := Get(ctx, s.Name, s.Namespace, c)
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("error getting kubernetes service: %s", err)
+	}
+
+	if old.Name == "" {
+		log.Infof("creating service '%s'", s.Name)
+		_, err = c.CoreV1().Services(s.Namespace).Create(ctx, s, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("error creating kubernetes service: %s", err)
+		}
+		log.Infof("created service '%s'", s.Name)
+	} else {
+		log.Infof("updating service '%s'", s.Name)
+		old.Annotations = s.Annotations
+		old.Labels = s.Labels
+		old.Spec.Ports = s.Spec.Ports
+		old.Spec.Selector = s.Spec.Selector
+		_, err = c.CoreV1().Services(s.Namespace).Update(ctx, old, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("error updating kubernetes service: %s", err)
+		}
+		log.Infof("updated service '%s'.", s.Name)
+	}
+	return nil
+}
+
+// Get returns a kubernetes service by the name, or an error if it doesn't exist
+func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*apiv1.Service, error) {
+	return c.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
 // List returns the list of services
 func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]apiv1.Service, error) {
 	svcList, err := c.CoreV1().Services(namespace).List(
@@ -40,48 +80,13 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return svcList.Items, nil
 }
 
-// CreateDev deploys a default k8s service for a development container
-func CreateDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
-	s := translate(dev)
-	return Create(ctx, s, c)
-}
-
-// Create creates a k8s service
-func Create(ctx context.Context, s *apiv1.Service, c *kubernetes.Clientset) error {
-	old, err := Get(ctx, s.Namespace, s.Name, c)
-	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return fmt.Errorf("error getting kubernetes service: %s", err)
-	}
-
-	sClient := c.CoreV1().Services(s.Namespace)
-
-	if old.Name == "" {
-		log.Infof("creating service '%s'", s.Name)
-		_, err = sClient.Create(ctx, s, metav1.CreateOptions{})
-		if err != nil {
-			return fmt.Errorf("error creating kubernetes service: %s", err)
-		}
-		log.Infof("created service '%s'", s.Name)
-	} else {
-		log.Infof("updating service '%s'", s.Name)
-		old.Spec.Ports = s.Spec.Ports
-		old.Annotations = s.Annotations
-		_, err = sClient.Update(ctx, old, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("error updating kubernetes service: %s", err)
-		}
-		log.Infof("updated service '%s'.", s.Name)
-	}
-	return nil
-}
-
 // DestroyDev destroys the default service for a development container
-func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return Destroy(ctx, dev.Name, dev.Namespace, c)
 }
 
 // Destroy destroys a k8s service
-func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
+func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	log.Infof("deleting service '%s'", name)
 	err := c.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
@@ -93,11 +98,6 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 	}
 	log.Infof("service '%s' deleted", name)
 	return nil
-}
-
-// Get returns a kubernetes service by the name, or an error if it doesn't exist
-func Get(ctx context.Context, namespace, name string, c kubernetes.Interface) (*apiv1.Service, error) {
-	return c.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 // GetPortsByPod returns the ports exposed via endpoint of a given pod

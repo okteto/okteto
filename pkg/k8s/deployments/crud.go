@@ -155,7 +155,7 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 }
 
 //GetTranslations fills all the deployments pointed by a development container
-func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, reset bool, c *kubernetes.Clientset) (map[string]*model.Translation, error) {
+func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, reset bool, c kubernetes.Interface) (map[string]*model.Translation, error) {
 	result := map[string]*model.Translation{}
 	if d != nil {
 		rule := dev.ToTranslationRule(dev, reset)
@@ -209,16 +209,47 @@ func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, re
 	return nil
 }
 
+func Create(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
+	_, err := c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func Update(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
+	d.ResourceVersion = ""
+	d.Status = appsv1.DeploymentStatus{}
+	_, err := c.AppsV1().Deployments(d.Namespace).Update(ctx, d, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 //Deploy creates or updates a deployment
-func Deploy(ctx context.Context, d *appsv1.Deployment, forceCreate bool, client *kubernetes.Clientset) error {
-	if forceCreate {
-		if err := create(ctx, d, client); err != nil {
-			return err
+func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
+	old, err := c.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("error getting deployment '%s'': %s", d.Name, err)
+	}
+
+	if old.Name == "" {
+		log.Infof("creating deployment '%s'", d.Name)
+		_, err = c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("error creating kubernetes deployment: %s", err)
 		}
+		log.Infof("created deployment '%s'", d.Name)
 	} else {
-		if err := update(ctx, d, client); err != nil {
-			return err
+		log.Infof("updating deployment '%s'", d.Name)
+		old.Annotations = d.Annotations
+		old.Labels = d.Labels
+		old.Spec = d.Spec
+		if err := Update(ctx, old, c); err != nil {
+			return fmt.Errorf("error updating kubernetes deployment: %s", err)
 		}
+		log.Infof("updated deployment '%s'.", d.Name)
 	}
 	return nil
 }
@@ -237,7 +268,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 		revision := updated.Annotations[revisionAnnotation]
 		if revision != "" {
 			d.Annotations[okLabels.RevisionAnnotation] = revision
-			return update(ctx, d, client)
+			return Update(ctx, d, client)
 		}
 
 		if time.Now().After(to) {
@@ -301,12 +332,12 @@ func HasBeenChanged(d *appsv1.Deployment) bool {
 }
 
 // UpdateDeployments update all deployments in the given translation list
-func UpdateDeployments(ctx context.Context, trList map[string]*model.Translation, c *kubernetes.Clientset) error {
+func UpdateDeployments(ctx context.Context, trList map[string]*model.Translation, c kubernetes.Interface) error {
 	for _, tr := range trList {
 		if tr.Deployment == nil {
 			continue
 		}
-		if err := update(ctx, tr.Deployment, c); err != nil {
+		if err := Update(ctx, tr.Deployment, c); err != nil {
 			return err
 		}
 	}
@@ -355,24 +386,6 @@ func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	return d, nil
 }
 
-func create(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	_, err := c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func update(ctx context.Context, d *appsv1.Deployment, c *kubernetes.Clientset) error {
-	d.ResourceVersion = ""
-	d.Status = appsv1.DeploymentStatus{}
-	_, err := c.AppsV1().Deployments(d.Namespace).Update(ctx, d, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func deleteUserAnnotations(annotations map[string]string, tr *model.Translation) error {
 	if tr.Annotations == nil {
 		return nil
@@ -384,12 +397,12 @@ func deleteUserAnnotations(annotations map[string]string, tr *model.Translation)
 }
 
 //DestroyDev destroys the k8s deployment of a dev environment
-func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return Destroy(ctx, dev.Name, dev.Namespace, c)
 }
 
 //Destroy destroys a k8s deployment
-func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
+func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	log.Infof("deleting deployment '%s'", name)
 	dClient := c.AppsV1().Deployments(namespace)
 	err := dClient.Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})

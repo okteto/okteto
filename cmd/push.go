@@ -209,7 +209,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 	if !exists {
 		d.Spec.Template.Spec.Containers[0].Image = imageTag
 		deployments.SetLastBuiltAnnotation(d)
-		return deployments.Deploy(ctx, d, true, c)
+		return deployments.Create(ctx, d, c)
 	}
 
 	for _, tr := range trList {

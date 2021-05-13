@@ -83,6 +83,9 @@ var (
 
 	// ErrDevPodDeleted raised if dev pod is deleted in the middle of the "okteto up" sequence
 	ErrDevPodDeleted = fmt.Errorf("development container has been removed")
+
+	//ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
+	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in namespaces managed by Okteto")
 )
 
 // IsNotFound returns true if err is of the type not found
