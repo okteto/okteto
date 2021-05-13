@@ -146,6 +146,13 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 		if old.Labels[okLabels.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
 		}
+		if d.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
+			log.Infof("name collision: the deployment '%s' belongs to the stack '%s'", s.Services[svcName].ContainerName, old.Labels[okLabels.StackNameLabel])
+			if err := deployments.Destroy(ctx, s.Services[svcName].ContainerName, s.Namespace, c); err != nil {
+				return fmt.Errorf("error destroying deployment of previous stack '%s': %s", old.Labels[okLabels.StackNameLabel], err.Error())
+			}
+			isNewDeployment = true
+		}
 		if deployments.IsDevModeOn(old) {
 			deployments.RestoreDevModeFrom(d, old)
 		}
@@ -191,11 +198,21 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 			return fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
 		}
 	} else {
+		if v, ok := old.Labels[okLabels.DeployedByLabel]; ok {
+			sfs.Labels[okLabels.DeployedByLabel] = v
+		}
 		if old.Labels[okLabels.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the statefulset '%s' was running before deploying your stack", svcName)
 		}
-		if v, ok := old.Labels[okLabels.DeployedByLabel]; ok {
-			sfs.Labels[okLabels.DeployedByLabel] = v
+		if sfs.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
+			log.Infof("name collision: the statefulset '%s' belongs to the stack '%s'", s.Services[svcName].ContainerName, old.Labels[okLabels.StackNameLabel])
+			if err := deployments.Destroy(ctx, s.Services[svcName].ContainerName, s.Namespace, c); err != nil {
+				return fmt.Errorf("error destroying statefulset of previous stack '%s': %s", old.Labels[okLabels.StackNameLabel], err.Error())
+			}
+			if err := statefulsets.Create(ctx, sfs, c); err != nil {
+				return fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
+			}
+			return nil
 		}
 		if err := statefulsets.Update(ctx, sfs, c); err != nil {
 			if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
