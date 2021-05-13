@@ -580,31 +580,49 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 		name     string
 		manifest []byte
 		isPublic bool
+		ports    []Port
 	}{
 		{
 			name:     "Public-service",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
 			isPublic: true,
+			ports:    []Port{{Port: 9213, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "not-public-service",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    image: okteto/vote:1"),
 			isPublic: false,
+			ports:    []Port{{Port: 9213, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "not-public-port-but-with-assignation",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
 			isPublic: true,
+			ports:    []Port{{Port: 9213, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "mysql-port-forwarding",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 3306:3306\n    image: okteto/vote:1"),
 			isPublic: false,
+			ports:    []Port{{Port: 3306, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "mysql-port-forwarding-and-public",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 3306:3306\n    image: okteto/vote:1\n    public: true"),
 			isPublic: true,
+			ports:    []Port{{Port: 3306, Protocol: v1.ProtocolTCP}},
+		},
+		{
+			name:     "mysql-expose-forwarding-and-public",
+			manifest: []byte("services:\n  app:\n    expose:\n    - 3306:3306\n    image: okteto/vote:1\n    public: true"),
+			isPublic: false,
+			ports:    []Port{{Port: 3306, Protocol: v1.ProtocolTCP}},
+		},
+		{
+			name:     "not-public-service-with-expose-and-ports",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    expose:\n    - 8213\n    image: okteto/vote:1"),
+			isPublic: false,
+			ports:    []Port{{Port: 9213, Protocol: v1.ProtocolTCP}, {Port: 8213, Protocol: v1.ProtocolTCP}},
 		},
 	}
 	for _, tt := range tests {
