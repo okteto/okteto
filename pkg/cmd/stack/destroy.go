@@ -145,7 +145,7 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		return err
 	}
 	for i := range dList {
-		if _, ok := s.Services[dList[i].Labels[okLabels.StackServiceNameLabel]]; ok {
+		if _, ok := s.Services[dList[i].Name]; ok {
 			continue
 		}
 		if err := deployments.Destroy(ctx, dList[i].Name, dList[i].Namespace, c); err != nil {
@@ -164,7 +164,7 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		return err
 	}
 	for i := range sfsList {
-		if _, ok := s.Services[sfsList[i].Labels[okLabels.StackServiceNameLabel]]; ok {
+		if _, ok := s.Services[sfsList[i].Name]; ok {
 			continue
 		}
 		if err := statefulsets.Destroy(ctx, sfsList[i].Name, sfsList[i].Namespace, c); err != nil {

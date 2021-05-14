@@ -44,8 +44,8 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return vList.Items, nil
 }
 
-// Create deploys the volume claim for a given development container
-func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+// CreateForDev deploys the volume claim for a given development container
+func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvc := translate(dev)
 	k8Volume, err := vClient.Get(ctx, pvc.Name, metav1.GetOptions{})
@@ -63,7 +63,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error 
 	return nil
 }
 
-func CreateFromPVC(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.Interface) error {
+func Create(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.Interface) error {
 	_, err := c.CoreV1().PersistentVolumeClaims(pvc.Namespace).Create(ctx, pvc, metav1.CreateOptions{})
 	if err != nil {
 		return err

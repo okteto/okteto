@@ -203,7 +203,7 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 	}
 
 	if up.Dev.PersistentVolumeEnabled() {
-		if err := volumes.Create(ctx, up.Dev, up.Client); err != nil {
+		if err := volumes.CreateForDev(ctx, up.Dev, up.Client); err != nil {
 			return err
 		}
 	}

@@ -45,13 +45,12 @@ type Stack struct {
 
 // Service represents an okteto stack service
 type Service struct {
-	Build         *BuildInfo         `yaml:"build,omitempty"`
-	CapAdd        []apiv1.Capability `yaml:"cap_add,omitempty"`
-	CapDrop       []apiv1.Capability `yaml:"cap_drop,omitempty"`
-	Entrypoint    Entrypoint         `yaml:"entrypoint,omitempty"`
-	Command       Command            `yaml:"command,omitempty"`
-	EnvFiles      EnvFiles           `yaml:"env_file,omitempty"`
-	ContainerName string             `yaml:"container_name,omitempty"`
+	Build      *BuildInfo         `yaml:"build,omitempty"`
+	CapAdd     []apiv1.Capability `yaml:"cap_add,omitempty"`
+	CapDrop    []apiv1.Capability `yaml:"cap_drop,omitempty"`
+	Entrypoint Entrypoint         `yaml:"entrypoint,omitempty"`
+	Command    Command            `yaml:"command,omitempty"`
+	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
 
 	Environment     Environment   `yaml:"environment,omitempty"`
 	Expose          []int32       `yaml:"expose,omitempty"`
@@ -218,7 +217,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		msg = strings.TrimSuffix(msg, "in type model.Stack")
 		return nil, errors.New(msg)
 	}
-	for svcName, svc := range s.Services {
+	for _, svc := range s.Services {
 		if svc.Build != nil {
 			if svc.Build.Name != "" {
 				svc.Build.Context = svc.Build.Name
@@ -240,9 +239,6 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 
 		if len(svc.Expose) > 0 {
 			svc.extendPorts()
-		}
-		if svc.ContainerName == "" {
-			svc.ContainerName = svcName
 		}
 	}
 	for _, volume := range s.Volumes {
