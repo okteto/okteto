@@ -109,10 +109,6 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 		spinner.Start()
 	}
 
-	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
-		return err
-	}
-
 	iClient, err := ingresses.GetClient(ctx, c)
 	if err != nil {
 		return fmt.Errorf("error getting ingress client: %s", err.Error())
@@ -122,12 +118,16 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 			return err
 		}
 		spinner.Stop()
-		log.Success("Deployed endpoint '%s'", name)
+		log.Success("Created endpoint '%s'", name)
 		spinner.Start()
 	}
 
 	if !wait {
 		return nil
+	}
+
+	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
+		return err
 	}
 
 	spinner.Update("Waiting for services to be ready...")
@@ -137,7 +137,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 
 func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
 	d := translateDeployment(svcName, s)
-	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, s.Services[svcName].ContainerName, metav1.GetOptions{})
+	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting deployment of service '%s': %s", svcName, err.Error())
 	}
@@ -145,6 +145,9 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 	if !isNewDeployment {
 		if old.Labels[okLabels.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
+		}
+		if old.Labels[okLabels.StackNameLabel] != s.Name {
+			return fmt.Errorf("name collision: the deployment '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
 		}
 		if deployments.IsDevModeOn(old) {
 			deployments.RestoreDevModeFrom(d, old)
@@ -173,21 +176,24 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 			return fmt.Errorf("error getting volume of service '%s': %s", svcName, err.Error())
 		}
 		if old.Name == "" {
-			if err := volumes.CreateFromPVC(ctx, &pvc, c); err != nil {
+			if err := volumes.Create(ctx, &pvc, c); err != nil {
 				return fmt.Errorf("error creating volume of service '%s': %s", svcName, err.Error())
 			}
 		} else {
 			if old.Labels[okLabels.StackNameLabel] == "" {
 				return fmt.Errorf("name collision: the volume '%s' was running before deploying your stack", svcName)
 			}
-			if pvc.Labels[okLabels.StackNameLabel] != old.Labels[okLabels.StackNameLabel] {
+			if old.Labels[okLabels.StackNameLabel] != s.Name {
 				return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+			}
+			if err := volumes.Update(ctx, &pvc, c); err != nil {
+				return fmt.Errorf("error updating volume of service '%s': %s", svcName, err.Error())
 			}
 		}
 	}
 
 	sfs := translateStatefulSet(svcName, s)
-	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, s.Services[svcName].ContainerName, metav1.GetOptions{})
+	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
 	}
@@ -198,6 +204,9 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 	} else {
 		if old.Labels[okLabels.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the statefulset '%s' was running before deploying your stack", svcName)
+		}
+		if old.Labels[okLabels.StackNameLabel] != s.Name {
+			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
 		}
 		if v, ok := old.Labels[okLabels.DeployedByLabel]; ok {
 			sfs.Labels[okLabels.DeployedByLabel] = v
@@ -222,7 +231,7 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *i
 		V1:      translateIngressV1(ingressName, s),
 		V1Beta1: translateIngressV1Beta1(ingressName, s),
 	}
-	i, err := c.Get(ctx, ingressName, s.Namespace)
+	old, err := c.Get(ctx, ingressName, s.Namespace)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return fmt.Errorf("error getting ingress '%s': %s", ingressName, err.Error())
@@ -230,9 +239,14 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *i
 		return c.Create(ctx, iModel)
 	}
 
-	if i.GetLabels()[okLabels.StackNameLabel] == "" {
+	if old.GetLabels()[okLabels.StackNameLabel] == "" {
 		return fmt.Errorf("name collision: the ingress '%s' was running before deploying your stack", ingressName)
 	}
+
+	if old.GetLabels()[okLabels.StackNameLabel] != s.Name {
+		return fmt.Errorf("name collision: the endpoint '%s' belongs to the stack '%s'", ingressName, old.GetLabels()[okLabels.StackNameLabel])
+	}
+
 	return c.Update(ctx, iModel)
 }
 

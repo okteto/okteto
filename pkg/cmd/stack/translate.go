@@ -281,7 +281,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        svc.ContainerName,
+			Name:        svcName,
 			Namespace:   s.Namespace,
 			Labels:      translateLabels(svcName, s),
 			Annotations: translateAnnotations(svc),
@@ -355,34 +355,34 @@ func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.Persis
 	return result
 }
 
-func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
-	svc := s.Services[name]
+func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
+	svc := s.Services[svcName]
 
 	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        svc.ContainerName,
+			Name:        svcName,
 			Namespace:   s.Namespace,
-			Labels:      translateLabels(name, s),
+			Labels:      translateLabels(svcName, s),
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:             pointer.Int32Ptr(svc.Replicas),
 			RevisionHistoryLimit: pointer.Int32Ptr(2),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: translateLabelSelector(name, s),
+				MatchLabels: translateLabelSelector(svcName, s),
 			},
-			ServiceName: name,
+			ServiceName: svcName,
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      translateLabels(name, s),
+					Labels:      translateLabels(svcName, s),
 					Annotations: translateAnnotations(svc),
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers: []apiv1.Container{
 						{
-							Name:         fmt.Sprintf("init-%s", name),
+							Name:         fmt.Sprintf("init-%s", svcName),
 							Image:        "busybox",
 							Command:      initContainerCommand,
 							VolumeMounts: initContainerVolumeMounts,
@@ -390,22 +390,22 @@ func translateStatefulSet(name string, s *model.Stack) *appsv1.StatefulSet {
 					},
 					Containers: []apiv1.Container{
 						{
-							Name:            name,
+							Name:            svcName,
 							Image:           svc.Image,
 							Command:         svc.Entrypoint.Values,
 							Args:            svc.Command.Values,
 							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
-							VolumeMounts:    translateVolumeMounts(name, svc),
+							VolumeMounts:    translateVolumeMounts(svcName, svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
 						},
 					},
-					Volumes: translateVolumes(name, svc),
+					Volumes: translateVolumes(svcName, svc),
 				},
 			},
-			VolumeClaimTemplates: translateVolumeClaimTemplates(name, s),
+			VolumeClaimTemplates: translateVolumeClaimTemplates(svcName, s),
 		},
 	}
 }
