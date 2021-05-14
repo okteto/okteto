@@ -662,6 +662,11 @@ func Test_unmarshalVolumes(t *testing.T) {
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("2Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
 		},
 		{
+			name:           "volume with driver_opts.class",
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    driver_opts:\n      class: standard"),
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Class: "standard", Labels: make(map[string]string), Annotations: make(map[string]string)},
+		},
+		{
 			name:           "volume with labels",
 			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    labels:\n      env: test"),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: map[string]string{"env": "test"}, Annotations: make(map[string]string)},
