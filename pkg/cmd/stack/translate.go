@@ -316,7 +316,28 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 		},
 	}
 }
-
+func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.PersistentVolumeClaim {
+	volumeSpec := s.Volumes[volumeName]
+	labels := translateVolumeLabels(volumeName, s)
+	pvc := apiv1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        volumeName,
+			Namespace:   s.Namespace,
+			Labels:      labels,
+			Annotations: volumeSpec.Annotations,
+		},
+		Spec: apiv1.PersistentVolumeClaimSpec{
+			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+			Resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					"storage": volumeSpec.Size.Value,
+				},
+			},
+			StorageClassName: translateStorageClass(volumeSpec.Class),
+		},
+	}
+	return pvc
+}
 func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.PersistentVolumeClaim {
 	svc := s.Services[name]
 	result := make([]apiv1.PersistentVolumeClaim, 0)

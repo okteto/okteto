@@ -87,6 +87,15 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	defer spinner.Stop()
 
 	addHiddenExposedPorts(ctx, s)
+
+	for name := range s.Volumes {
+		if err := deployVolume(ctx, name, s, c); err != nil {
+			return err
+		}
+		spinner.Stop()
+		log.Success("Created volume '%s'", name)
+		spinner.Start()
+	}
 	for name := range s.Services {
 		if len(s.Services[name].Volumes) == 0 {
 			if err := deployDeployment(ctx, name, s, c); err != nil {
@@ -168,30 +177,6 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 }
 
 func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
-
-	pvcList := translatePersistentVolumeClaims(svcName, s)
-	for _, pvc := range pvcList {
-		old, err := c.CoreV1().PersistentVolumeClaims(s.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
-		if err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("error getting volume of service '%s': %s", svcName, err.Error())
-		}
-		if old.Name == "" {
-			if err := volumes.Create(ctx, &pvc, c); err != nil {
-				return fmt.Errorf("error creating volume of service '%s': %s", svcName, err.Error())
-			}
-		} else {
-			if old.Labels[okLabels.StackNameLabel] == "" {
-				return fmt.Errorf("name collision: the volume '%s' was running before deploying your stack", svcName)
-			}
-			if old.Labels[okLabels.StackNameLabel] != s.Name {
-				return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
-			}
-			if err := volumes.Update(ctx, &pvc, c); err != nil {
-				return fmt.Errorf("error updating volume of service '%s': %s", svcName, err.Error())
-			}
-		}
-	}
-
 	sfs := translateStatefulSet(svcName, s)
 	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
@@ -221,6 +206,31 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 			if err := statefulsets.Create(ctx, sfs, c); err != nil {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
+		}
+	}
+	return nil
+}
+
+func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c *kubernetes.Clientset) error {
+	pvc := translatePersistentVolumeClaim(volumeName, s)
+
+	old, err := c.CoreV1().PersistentVolumeClaims(s.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("error getting volume '%s': %s", pvc.Name, err.Error())
+	}
+	if old.Name == "" {
+		if err := volumes.Create(ctx, &pvc, c); err != nil {
+			return fmt.Errorf("error creating volume '%s': %s", pvc.Name, err.Error())
+		}
+	} else {
+		if old.Labels[okLabels.StackNameLabel] == "" {
+			return fmt.Errorf("name collision: the volume '%s' was running before deploying your stack", pvc.Name)
+		}
+		if old.Labels[okLabels.StackNameLabel] != s.Name {
+			return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", pvc.Name, old.Labels[okLabels.StackNameLabel])
+		}
+		if err := volumes.Update(ctx, &pvc, c); err != nil {
+			return fmt.Errorf("error updating volume of service '%s': %s", pvc.Name, err.Error())
 		}
 	}
 	return nil
