@@ -32,28 +32,27 @@ type Translation struct {
 
 // TranslationRule represents how to apply a container translation in a deployment
 type TranslationRule struct {
-	Marker                 string                  `json:"marker"`
-	OktetoBinImageTag      string                  `json:"oktetoBinImageTag"`
-	Node                   string                  `json:"node,omitempty"`
-	Container              string                  `json:"container,omitempty"`
-	Image                  string                  `json:"image,omitempty"`
-	ImagePullPolicy        apiv1.PullPolicy        `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment            Environment             `json:"environment,omitempty"`
-	Secrets                []Secret                `json:"secrets,omitempty"`
-	Command                []string                `json:"command,omitempty"`
-	Args                   []string                `json:"args,omitempty"`
-	WorkDir                string                  `json:"workdir"`
-	Healthchecks           bool                    `json:"healthchecks" yaml:"healthchecks"`
-	PersistentVolume       bool                    `json:"persistentVolume" yaml:"persistentVolume"`
-	Volumes                []VolumeMount           `json:"volumes,omitempty"`
-	SecurityContext        *SecurityContext        `json:"securityContext,omitempty"`
-	ServiceAccount         string                  `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
-	Resources              ResourceRequirements    `json:"resources,omitempty"`
-	InitContainer          InitContainer           `json:"initContainers,omitempty"`
-	InitFromImageContainer *InitFromImageContainer `json:"initFromImage" yaml:"initFromImage"`
-	Probes                 *Probes                 `json:"probes" yaml:"probes"`
-	Lifecycle              *Lifecycle              `json:"lifecycle" yaml:"lifecycle"`
-	Docker                 DinDContainer           `json:"docker" yaml:"docker"`
+	Marker            string               `json:"marker"`
+	OktetoBinImageTag string               `json:"oktetoBinImageTag"`
+	Node              string               `json:"node,omitempty"`
+	Container         string               `json:"container,omitempty"`
+	Image             string               `json:"image,omitempty"`
+	ImagePullPolicy   apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	Environment       Environment          `json:"environment,omitempty"`
+	Secrets           []Secret             `json:"secrets,omitempty"`
+	Command           []string             `json:"command,omitempty"`
+	Args              []string             `json:"args,omitempty"`
+	WorkDir           string               `json:"workdir"`
+	Healthchecks      bool                 `json:"healthchecks" yaml:"healthchecks"`
+	PersistentVolume  bool                 `json:"persistentVolume" yaml:"persistentVolume"`
+	Volumes           []VolumeMount        `json:"volumes,omitempty"`
+	SecurityContext   *SecurityContext     `json:"securityContext,omitempty"`
+	ServiceAccount    string               `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
+	Resources         ResourceRequirements `json:"resources,omitempty"`
+	InitContainer     InitContainer        `json:"initContainers,omitempty"`
+	Probes            *Probes              `json:"probes" yaml:"probes"`
+	Lifecycle         *Lifecycle           `json:"lifecycle" yaml:"lifecycle"`
+	Docker            DinDContainer        `json:"docker" yaml:"docker"`
 }
 
 // IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest

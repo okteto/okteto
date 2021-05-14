@@ -161,6 +161,7 @@ type Dev struct {
 	Services             []*Dev                `json:"services,omitempty" yaml:"services,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
+	InitFromImage        bool                  `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
 	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
@@ -222,10 +223,9 @@ type ExternalVolume struct {
 
 // PersistentVolumeInfo info about the persistent volume
 type PersistentVolumeInfo struct {
-	Enabled       bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	InitFromImage bool   `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
-	StorageClass  string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
-	Size          string `json:"size,omitempty" yaml:"size,omitempty"`
+	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	StorageClass string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
+	Size         string `json:"size,omitempty" yaml:"size,omitempty"`
 }
 
 // InitContainer represents the initial container
@@ -238,14 +238,6 @@ type InitContainer struct {
 type DinDContainer struct {
 	Enabled   bool                 `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
-	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
-}
-
-// InitContainer represents the initial container
-type InitFromImageContainer struct {
-	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
-	Command   []string             `json:"command,omitempty" yaml:"command,omitempty"`
-	Volumes   []VolumeMount        `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
@@ -980,38 +972,6 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				},
 			)
 		}
-	}
-
-	if main == dev && main.PersistentVolumeInitFromImage() {
-		rule.InitFromImageContainer = &InitFromImageContainer{
-			Image:     main.Image.Name,
-			Volumes:   []VolumeMount{},
-			Resources: main.InitContainer.Resources,
-		}
-		command := "echo initializing volume..."
-		for i := range dev.Volumes {
-			rule.InitFromImageContainer.Volumes = append(
-				rule.InitFromImageContainer.Volumes,
-				VolumeMount{
-					Name:      main.GetVolumeName(),
-					MountPath: fmt.Sprintf("/initData-%d", i),
-					SubPath:   getDataSubPath(dev.Volumes[i].RemotePath),
-				},
-			)
-			command = fmt.Sprintf("%s && (cp -Rv %s/* /initData-%d || true)", command, dev.Volumes[i].RemotePath, i)
-		}
-		for i := range dev.Sync.Folders {
-			rule.InitFromImageContainer.Volumes = append(
-				rule.InitFromImageContainer.Volumes,
-				VolumeMount{
-					Name:      main.GetVolumeName(),
-					MountPath: fmt.Sprintf("/initSync-%d", i),
-					SubPath:   main.getSourceSubPath(dev.Sync.Folders[i].LocalPath),
-				},
-			)
-			command = fmt.Sprintf("%s && (cp -Rv %s/* /initSync-%d || true)", command, dev.Sync.Folders[i].RemotePath, i)
-		}
-		rule.InitFromImageContainer.Command = []string{"sh", "-c", command}
 	}
 
 	for _, v := range dev.ExternalVolumes {
