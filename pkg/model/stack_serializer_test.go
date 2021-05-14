@@ -664,7 +664,7 @@ func Test_unmarshalVolumes(t *testing.T) {
 		{
 			name:           "volume with labels",
 			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    labels:\n      env: test"),
-			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: map[string]string{"env": "test"}, Annotations: make(map[string]string)},
+			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{}, Annotations: Annotations{"env": "test"}},
 		},
 		{
 			name:           "volume with annotations",
@@ -805,29 +805,29 @@ func Test_UnmarshalWarnings(t *testing.T) {
 
 func Test_DeployLabels(t *testing.T) {
 	tests := []struct {
-		name     string
-		manifest []byte
-		labels   Labels
+		name        string
+		manifest    []byte
+		annotations Annotations
 	}{
 		{
-			name:     "deploy labels",
-			manifest: []byte("services:\n  app:\n    deploy:\n      labels:\n        env: production\n    image: okteto/vote:1"),
-			labels:   Labels{"env": "production"},
+			name:        "deploy labels",
+			manifest:    []byte("services:\n  app:\n    deploy:\n      labels:\n        env: production\n    image: okteto/vote:1"),
+			annotations: Annotations{"env": "production"},
 		},
 		{
-			name:     "no labels",
-			manifest: []byte("services:\n  app:\n    image: okteto/vote:1"),
-			labels:   Labels{},
+			name:        "no labels",
+			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
+			annotations: Annotations{},
 		},
 		{
-			name:     "labels on service",
-			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      env: production"),
-			labels:   Labels{"env": "production"},
+			name:        "labels on service",
+			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      env: production"),
+			annotations: Annotations{"env": "production"},
 		},
 		{
-			name:     "labels on deploy and service",
-			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      app: main\n    deploy:\n      labels:\n        env: production\n"),
-			labels:   Labels{"env": "production", "app": "main"},
+			name:        "labels on deploy and service",
+			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      app: main\n    deploy:\n      labels:\n        env: production\n"),
+			annotations: Annotations{"env": "production", "app": "main"},
 		},
 	}
 	for _, tt := range tests {
@@ -837,8 +837,8 @@ func Test_DeployLabels(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(s.Services["app"].Labels) != len(tt.labels) {
-				t.Fatalf("Bad deployment labels")
+			if len(s.Services["app"].Annotations) != len(tt.annotations) {
+				t.Fatalf("Bad deployment annotations")
 			}
 		})
 	}
@@ -898,7 +898,7 @@ endpoints:
 			expected: EndpointSpec{
 				"app": Endpoint{
 					Annotations: Annotations{"key": "value"},
-					Labels:      Labels{"key": "value"},
+					Labels:      Labels{},
 					Rules: []EndpointRule{
 						{
 							Service: "app",
@@ -918,8 +918,6 @@ services:
     - 9213
     image: okteto/vote:1
 endpoints:
-  annotations:
-    key: value
   labels:
     key: value
   rules:
@@ -929,7 +927,7 @@ endpoints:
 			expected: EndpointSpec{
 				"test": Endpoint{
 					Annotations: Annotations{"key": "value"},
-					Labels:      Labels{"key": "value"},
+					Labels:      Labels{},
 					Rules: []EndpointRule{
 						{
 							Service: "app",

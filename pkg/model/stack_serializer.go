@@ -216,16 +216,17 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			result.Labels = make(Labels)
 			result.Annotations = make(Annotations)
 		} else {
-			if v.Labels == nil {
-				result.Labels = make(Labels)
-			} else {
-				result.Labels = v.Labels
-			}
+			result.Labels = make(Labels)
 			if v.Annotations == nil {
 				result.Annotations = make(Annotations)
 			} else {
 				result.Annotations = v.Annotations
 			}
+
+			for key, value := range v.Labels {
+				result.Annotations[key] = value
+			}
+
 			if v.Size.Value.Cmp(resource.MustParse("0")) > 0 {
 				result.Size = v.Size
 			}
@@ -331,6 +332,12 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		return nil, fmt.Errorf("'%s': Invalid container name (%s), only [a-zA-Z0-9][a-zA-Z0-9_.-] are allowed", svcName, serviceRaw.ContainerName)
 	}
 	svc.Annotations = serviceRaw.Annotations
+	if svc.Annotations == nil {
+		svc.Annotations = make(Annotations)
+	}
+	for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
+		svc.Annotations[key] = value
+	}
 
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
@@ -338,13 +345,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		}
 		svc.Entrypoint.Values = serviceRaw.Entrypoint.Values
 		svc.Command.Values = serviceRaw.Command.Values
-
-		if svc.Annotations == nil {
-			svc.Annotations = make(Annotations)
-		}
-		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
-			svc.Annotations[key] = value
-		}
 
 	} else { // isOktetoStack
 		if len(serviceRaw.Entrypoint.Values) > 0 {
@@ -357,8 +357,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 			}
 		}
 		svc.Command.Values = serviceRaw.Args.Values
-
-		svc.Labels = unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy)
 	}
 
 	svc.EnvFiles = serviceRaw.EnvFiles

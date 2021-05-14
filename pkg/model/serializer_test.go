@@ -545,7 +545,20 @@ func TestEndpointUnmarshalling(t *testing.T) {
 			name: "full-endpoint",
 			data: []byte("labels:\n  key1: value1\nannotations:\n  key2: value2\nrules:\n- path: /\n  service: test\n  port: 8080"),
 			expected: Endpoint{
-				Labels:      Labels{"key1": "value1"},
+				Labels:      Labels{},
+				Annotations: Annotations{"key1": "value1", "key2": "value2"},
+				Rules: []EndpointRule{{
+					Path:    "/",
+					Service: "test",
+					Port:    8080,
+				}},
+			},
+		},
+		{
+			name: "full-endpoint without labels",
+			data: []byte("annotations:\n  key2: value2\nrules:\n- path: /\n  service: test\n  port: 8080"),
+			expected: Endpoint{
+				Labels:      Labels{},
 				Annotations: Annotations{"key2": "value2"},
 				Rules: []EndpointRule{{
 					Path:    "/",
