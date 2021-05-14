@@ -73,6 +73,8 @@ const (
 	DefaultSyncthingRescanInterval = 300
 	//RemoteSubPath subpath in the development container persistent volume for the remote data
 	RemoteSubPath = "okteto-remote"
+	//OktetoURLAnnotation indicates the okteto cluster public url
+	OktetoURLAnnotation = "dev.okteto.com/url"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
@@ -707,7 +709,8 @@ func (dev *Dev) validate() error {
 	}
 
 	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
-		return fmt.Errorf("Persistent volume is required to enable Docker support")
+		log.Information("https://okteto.com/docs/reference/manifest#docker-object-optional")
+		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 
 	return nil

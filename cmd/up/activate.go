@@ -88,6 +88,9 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		if errors.IsTransient(err) {
 			return err
 		}
+		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
+			return fmt.Errorf("Docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
+		}
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
 	}
 
