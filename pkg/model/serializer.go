@@ -593,10 +593,10 @@ func isDefaultProbes(d *Dev) bool {
 func (endpoint *Endpoint) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rules []EndpointRule
 	err := unmarshal(&rules)
+	endpoint.Labels = make(Labels)
 	if err == nil {
 		endpoint.Rules = rules
 		endpoint.Annotations = make(map[string]string)
-		endpoint.Labels = make(Labels)
 		return nil
 	}
 	type endpointType Endpoint // prevent recursion
@@ -605,9 +605,16 @@ func (endpoint *Endpoint) UnmarshalYAML(unmarshal func(interface{}) error) error
 	if err != nil {
 		return err
 	}
-	endpoint.Annotations = endpointRaw.Annotations
+
 	endpoint.Rules = endpointRaw.Rules
-	endpoint.Labels = endpointRaw.Labels
+	endpoint.Annotations = endpointRaw.Annotations
+	if endpoint.Annotations == nil {
+		endpoint.Annotations = make(Annotations)
+	}
+	for key, value := range endpointRaw.Labels {
+		endpoint.Annotations[key] = value
+	}
+
 	return nil
 }
 
