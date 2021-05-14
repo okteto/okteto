@@ -238,6 +238,9 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 						}
 						result.Size.Value = qK8s
 					}
+					if key == "class" {
+						result.Class = value
+					}
 				}
 			}
 		}
@@ -998,7 +1001,7 @@ func getVolumesNotSupportedFields(volumeName string, volumeInfo *VolumeTopLevel)
 	}
 	if volumeInfo.DriverOpts != nil {
 		for key := range volumeInfo.DriverOpts {
-			if key != "size" {
+			if key != "size" && key != "class" {
 				notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver_opts.%s", volumeName, key))
 			}
 		}
