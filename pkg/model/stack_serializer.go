@@ -387,7 +387,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	svc.Volumes, svc.VolumeMounts = splitVolumesByType(serviceRaw.Volumes, stack)
 	for _, volume := range svc.VolumeMounts {
-		if volume.LocalPath != "" && !(!FileExists(volume.LocalPath) || !strings.HasPrefix(volume.LocalPath, "/")) {
+		if !isNamedVolumeDeclared(volume) {
 			return nil, fmt.Errorf("Named volume '%s' is used in service '%s' but no declaration was found in the volumes section.", volume.ToString(), svcName)
 		}
 	}
@@ -397,6 +397,21 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
 	return svc, nil
+}
+
+func isNamedVolumeDeclared(volume StackVolume) bool {
+	if volume.LocalPath != "" {
+		if strings.HasPrefix(volume.LocalPath, "/") {
+			return true
+		}
+		if strings.HasPrefix(volume.LocalPath, "./") {
+			return true
+		}
+		if FileExists(volume.LocalPath) {
+			return true
+		}
+	}
+	return false
 }
 
 func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []StackVolume) {
