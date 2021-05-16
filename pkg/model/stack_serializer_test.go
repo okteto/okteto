@@ -540,6 +540,12 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name:          "absolute path",
+			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock"),
+			create:        false,
+			expectedError: false,
+		},
+		{
 			name:          "volume-relative-path-found",
 			manifest:      []byte("services:\n  app:\n    volumes: \n    - test-volume-relative-path-found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
 			create:        true,
@@ -549,7 +555,7 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			name:          "volume-relative-path-not-found",
 			manifest:      []byte("services:\n  app:\n    volumes: \n    - test:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
 			create:        false,
-			expectedError: false,
+			expectedError: true,
 		},
 		{
 			name:          "pv",
@@ -1210,44 +1216,6 @@ func Test_MultipleEndpoints(t *testing.T) {
 			if s.Services["app"].Public != tt.svcPublic {
 				t.Fatal("Public property was not set properly")
 			}
-		})
-	}
-}
-
-func Test_namedVolumesError(t *testing.T) {
-	tests := []struct {
-		name          string
-		manifest      []byte
-		expectedError bool
-	}{
-		{
-			name:          "absolute path",
-			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock"),
-			expectedError: false,
-		},
-		{
-			name:          "relative path",
-			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - ./docker.sock:/var/run/docker.sock"),
-			expectedError: false,
-		},
-		{
-			name:          "named volumes in top level section",
-			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - data:/usr/logs\nvolumes:\n  data:"),
-			expectedError: false,
-		},
-		{
-			name:          "named volume not declared",
-			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - data:/usr/logs\n"),
-			expectedError: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := ReadStack(tt.manifest, false)
-			if err != nil && !tt.expectedError {
-				t.Fatal(err)
-			}
-
 		})
 	}
 }
