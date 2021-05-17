@@ -51,6 +51,8 @@ type ServiceRaw struct {
 	CapDropSneakCase         []apiv1.Capability `yaml:"cap_drop,omitempty"`
 	CapDrop                  []apiv1.Capability `yaml:"capDrop,omitempty"`
 	Command                  CommandStack       `yaml:"command,omitempty"`
+	CpuCount                 Quantity           `yaml:"cpu_count,omitempty"`
+	Cpus                     Quantity           `yaml:"cpus,omitempty"`
 	Entrypoint               CommandStack       `yaml:"entrypoint,omitempty"`
 	Args                     ArgsStack          `yaml:"args,omitempty"`
 	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
@@ -60,6 +62,8 @@ type ServiceRaw struct {
 	Image                    string             `yaml:"image,omitempty"`
 	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations              Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	MemLimit                 Quantity           `yaml:"mem_limit,omitempty"`
+	MemReservation           Quantity           `yaml:"mem_reservation,omitempty"`
 	Ports                    []PortRaw          `yaml:"ports,omitempty"`
 	Scale                    int32              `yaml:"scale"`
 	StopGracePeriodSneakCase *RawMessage        `yaml:"stop_grace_period,omitempty"`
@@ -73,14 +77,12 @@ type ServiceRaw struct {
 	Resources *StackResources `yaml:"resources,omitempty"`
 
 	BlkioConfig       *WarningType `yaml:"blkio_config,omitempty"`
-	CpuCount          *WarningType `yaml:"cpu_count,omitempty"`
 	CpuPercent        *WarningType `yaml:"cpu_percent,omitempty"`
 	CpuShares         *WarningType `yaml:"cpu_shares,omitempty"`
 	CpuPeriod         *WarningType `yaml:"cpu_period,omitempty"`
 	CpuQuota          *WarningType `yaml:"cpu_quota,omitempty"`
 	CpuRtRuntime      *WarningType `yaml:"cpu_rt_runtime,omitempty"`
 	CpuRtPeriod       *WarningType `yaml:"cpu_rt_period,omitempty"`
-	Cpus              *WarningType `yaml:"cpus,omitempty"`
 	Cpuset            *WarningType `yaml:"cpuset,omitempty"`
 	CgroupParent      *WarningType `yaml:"cgroup_parent,omitempty"`
 	Configs           *WarningType `yaml:"configs,omitempty"`
@@ -107,8 +109,6 @@ type ServiceRaw struct {
 	Network_mode      *WarningType `yaml:"network_mode,omitempty"`
 	Networks          *WarningType `yaml:"networks,omitempty"`
 	MacAddress        *WarningType `yaml:"mac_address,omitempty"`
-	MemLimit          *WarningType `yaml:"mem_limit,omitempty"`
-	MemReservation    *WarningType `yaml:"mem_reservation,omitempty"`
 	MemSwappiness     *WarningType `yaml:"mem_swappiness,omitempty"`
 	MemswapLimit      *WarningType `yaml:"memswap_limit,omitempty"`
 	OomKillDisable    *WarningType `yaml:"oom_kill_disable,omitempty"`
@@ -238,6 +238,9 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 						}
 						result.Size.Value = qK8s
 					}
+					if key == "class" {
+						result.Class = value
+					}
 				}
 			}
 		}
@@ -305,7 +308,8 @@ func getAccessiblePorts(ports []PortRaw) []PortRaw {
 func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service, error) {
 	svc := &Service{}
 	var err error
-	svc.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources)
+
+	svc.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources, serviceRaw.CpuCount, serviceRaw.Cpus, serviceRaw.MemLimit, serviceRaw.MemReservation)
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +391,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	svc.Volumes, svc.VolumeMounts = splitVolumesByType(serviceRaw.Volumes, stack)
 	for _, volume := range svc.VolumeMounts {
-		if volume.LocalPath != "" && !(!FileExists(volume.LocalPath) || !strings.HasPrefix(volume.LocalPath, "/")) {
+		if !isNamedVolumeDeclared(volume) {
 			return nil, fmt.Errorf("Named volume '%s' is used in service '%s' but no declaration was found in the volumes section.", volume.ToString(), svcName)
 		}
 	}
@@ -397,6 +401,21 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
 	return svc, nil
+}
+
+func isNamedVolumeDeclared(volume StackVolume) bool {
+	if volume.LocalPath != "" {
+		if strings.HasPrefix(volume.LocalPath, "/") {
+			return true
+		}
+		if strings.HasPrefix(volume.LocalPath, "./") {
+			return true
+		}
+		if FileExists(volume.LocalPath) {
+			return true
+		}
+	}
+	return false
 }
 
 func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []StackVolume) {
@@ -523,13 +542,29 @@ func (p *Port) MarshalYAML() (interface{}, error) {
 	return Port{Port: p.Port, Protocol: p.Protocol}, nil
 }
 
-func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources) (*StackResources, error) {
+func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources, cpuCount, cpus, memLimit, memReservation Quantity) (*StackResources, error) {
 	if resources == nil {
 		resources = &StackResources{}
 	}
 	if deployInfo != nil {
 		resources.Limits = deployInfo.Resources.Limits.toServiceResources()
 		resources.Requests = deployInfo.Resources.Reservations.toServiceResources()
+	}
+
+	if resources.Limits.CPU.Value.IsZero() && !cpuCount.Value.IsZero() {
+		resources.Limits.CPU = cpuCount
+	}
+
+	if resources.Requests.CPU.Value.IsZero() && !cpus.Value.IsZero() {
+		resources.Requests.CPU = cpus
+	}
+
+	if resources.Limits.Memory.Value.IsZero() && !memLimit.Value.IsZero() {
+		resources.Limits.Memory = memLimit
+	}
+
+	if resources.Requests.Memory.Value.IsZero() && !memReservation.Value.IsZero() {
+		resources.Requests.Memory = memReservation
 	}
 
 	return resources, nil
@@ -765,9 +800,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	if svcInfo.BlkioConfig != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].blkio_config", svcName))
 	}
-	if svcInfo.CpuCount != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].cpu_count", svcName))
-	}
 	if svcInfo.CpuPercent != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].cpu_percent", svcName))
 	}
@@ -785,9 +817,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	}
 	if svcInfo.CpuRtPeriod != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].cpu_rt_period", svcName))
-	}
-	if svcInfo.Cpus != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].cpus", svcName))
 	}
 	if svcInfo.Cpuset != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].cpuset", svcName))
@@ -863,12 +892,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	}
 	if svcInfo.MacAddress != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].mac_address", svcName))
-	}
-	if svcInfo.MemLimit != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].mem_limit", svcName))
-	}
-	if svcInfo.MemReservation != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].mem_reservation", svcName))
 	}
 	if svcInfo.MemSwappiness != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].mem_swappiness", svcName))
@@ -998,7 +1021,7 @@ func getVolumesNotSupportedFields(volumeName string, volumeInfo *VolumeTopLevel)
 	}
 	if volumeInfo.DriverOpts != nil {
 		for key := range volumeInfo.DriverOpts {
-			if key != "size" {
+			if key != "size" && key != "class" {
 				notSupported = append(notSupported, fmt.Sprintf("volumes[%s].driver_opts.%s", volumeName, key))
 			}
 		}

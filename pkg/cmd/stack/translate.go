@@ -316,43 +316,27 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 		},
 	}
 }
-
-func translatePersistentVolumeClaims(name string, s *model.Stack) []apiv1.PersistentVolumeClaim {
-	svc := s.Services[name]
-	result := make([]apiv1.PersistentVolumeClaim, 0)
-	for _, volume := range svc.Volumes {
-		if volume.LocalPath == "" {
-			continue
-		}
-		volumeSpec := s.Volumes[volume.LocalPath]
-		labels := translateVolumeLabels(volume.LocalPath, s)
-		annotations := translateAnnotations(svc)
-		for key, value := range volumeSpec.Annotations {
-			annotations[key] = value
-		}
-
-		pvcName := getVolumeClaimName(&volume)
-		pvc := apiv1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        pvcName,
-				Namespace:   s.Namespace,
-				Labels:      labels,
-				Annotations: annotations,
-			},
-			Spec: apiv1.PersistentVolumeClaimSpec{
-				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
-				Resources: apiv1.ResourceRequirements{
-					Requests: apiv1.ResourceList{
-						"storage": volumeSpec.Size.Value,
-					},
+func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.PersistentVolumeClaim {
+	volumeSpec := s.Volumes[volumeName]
+	labels := translateVolumeLabels(volumeName, s)
+	pvc := apiv1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        volumeName,
+			Namespace:   s.Namespace,
+			Labels:      labels,
+			Annotations: volumeSpec.Annotations,
+		},
+		Spec: apiv1.PersistentVolumeClaimSpec{
+			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+			Resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					"storage": volumeSpec.Size.Value,
 				},
-				StorageClassName: translateStorageClass(volumeSpec.Class),
 			},
-		}
-		result = append(result, pvc)
+			StorageClassName: translateStorageClass(volumeSpec.Class),
+		},
 	}
-
-	return result
+	return pvc
 }
 
 func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
