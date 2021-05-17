@@ -540,6 +540,12 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name:          "absolute path",
+			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock"),
+			create:        false,
+			expectedError: false,
+		},
+		{
 			name:          "volume-relative-path-found",
 			manifest:      []byte("services:\n  app:\n    volumes: \n    - test-volume-relative-path-found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
 			create:        true,
@@ -549,7 +555,7 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			name:          "volume-relative-path-not-found",
 			manifest:      []byte("services:\n  app:\n    volumes: \n    - test:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
 			create:        false,
-			expectedError: false,
+			expectedError: true,
 		},
 		{
 			name:          "pv",
