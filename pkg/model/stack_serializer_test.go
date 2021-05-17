@@ -80,10 +80,14 @@ func Test_DeployReplicasUnmarshalling(t *testing.T) {
 
 func Test_DeployResourcesUnmarshalling(t *testing.T) {
 	tests := []struct {
-		name      string
-		deployRaw *DeployInfoRaw
-		resources *StackResources
-		expected  *StackResources
+		name           string
+		deployRaw      *DeployInfoRaw
+		resources      *StackResources
+		expected       *StackResources
+		cpu_count      Quantity
+		cpus           Quantity
+		memLimit       Quantity
+		memReservation Quantity
 	}{
 		{
 			name:      "both-nil",
@@ -147,10 +151,58 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "deprecated-volumes-not-set-if-they-already-set",
+			deployRaw: &DeployInfoRaw{Resources: ResourcesRaw{
+				Limits: DeployComposeResources{
+					Cpus:   Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Reservations: DeployComposeResources{
+					Cpus:   Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("2Gi")},
+				},
+			},
+			},
+			resources:      &StackResources{},
+			cpu_count:      Quantity{resource.MustParse("3")},
+			cpus:           Quantity{resource.MustParse("2")},
+			memLimit:       Quantity{resource.MustParse("2Gi")},
+			memReservation: Quantity{resource.MustParse("2Gi")},
+			expected: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+				Requests: ServiceResources{
+					CPU:    Quantity{resource.MustParse("1")},
+					Memory: Quantity{resource.MustParse("2Gi")},
+				},
+			},
+		},
+		{
+			name:           "set-deprecated-volumes-if-they-already-set",
+			deployRaw:      nil,
+			resources:      nil,
+			cpu_count:      Quantity{resource.MustParse("3")},
+			cpus:           Quantity{resource.MustParse("2")},
+			memLimit:       Quantity{resource.MustParse("2Gi")},
+			memReservation: Quantity{resource.MustParse("1Gi")},
+			expected: &StackResources{
+				Limits: ServiceResources{
+					CPU:    Quantity{resource.MustParse("3")},
+					Memory: Quantity{resource.MustParse("2Gi")},
+				},
+				Requests: ServiceResources{
+					CPU:    Quantity{resource.MustParse("2")},
+					Memory: Quantity{resource.MustParse("1Gi")},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resources, _ := unmarshalDeployResources(tt.deployRaw, tt.resources)
+			resources, _ := unmarshalDeployResources(tt.deployRaw, tt.resources, tt.cpu_count, tt.cpus, tt.memLimit, tt.memReservation)
 			if !reflect.DeepEqual(tt.expected, resources) {
 				t.Fatalf("expected %v but got %v", tt.expected, resources)
 			}
