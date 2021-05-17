@@ -178,3 +178,7 @@ func checkIfAttached(ctx context.Context, name, namespace string, c *kubernetes.
 
 	return nil
 }
+
+func IsEqual(one, another *apiv1.PersistentVolumeClaim) bool {
+	return one.Spec.Resources.Requests["storage"] == another.Spec.Resources.Requests["storage"]
+}
