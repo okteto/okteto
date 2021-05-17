@@ -57,6 +57,8 @@ func IsTransientError(err error) bool {
 		return true
 	case strings.Contains(err.Error(), "failed to do request") && strings.Contains(err.Error(), "http: server closed idle connection"):
 		return true
+	case strings.Contains(err.Error(), "failed to do request") && strings.Contains(err.Error(), "tls: use of closed connection"):
+		return true
 	default:
 		return false
 	}
