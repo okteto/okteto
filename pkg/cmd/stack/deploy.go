@@ -237,6 +237,9 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c *kub
 		for key, value := range pvc.Annotations {
 			old.Annotations[key] = value
 		}
+		if pvc.Spec.StorageClassName != nil {
+			old.Spec.StorageClassName = pvc.Spec.StorageClassName
+		}
 
 		if err := volumes.Update(ctx, old, c); err != nil {
 			return fmt.Errorf("error updating volume '%s': %s", old.Name, err.Error())
