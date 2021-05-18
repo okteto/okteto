@@ -335,6 +335,27 @@ func Test_translateStatefulSet(t *testing.T) {
 	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[0], initContainer) {
 		t.Errorf("Wrong statefulset init container: '%v' but expected '%v'", result.Spec.Template.Spec.InitContainers[0], initContainer)
 	}
+	initVolumeContainer := apiv1.Container{
+		Name:            fmt.Sprintf("init-volume-%s", "svcName"),
+		Image:           "image",
+		ImagePullPolicy: apiv1.PullIfNotPresent,
+		Command:         []string{"sh", "-c", "echo initializing volume... && (cp -Rv /volume1/. /init-volume-0 || true) && (cp -Rv /volume2/. /init-volume-1 || true)"},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				MountPath: "/init-volume-0",
+				Name:      pvcName,
+				SubPath:   "data-0",
+			},
+			{
+				MountPath: "/init-volume-1",
+				Name:      pvcName,
+				SubPath:   "data-1",
+			},
+		},
+	}
+	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[1], initVolumeContainer) {
+		t.Errorf("Wrong statefulset init container: '%v' but expected '%v'", result.Spec.Template.Spec.InitContainers[1], initVolumeContainer)
+	}
 	c := result.Spec.Template.Spec.Containers[0]
 	if c.Name != "svcName" {
 		t.Errorf("Wrong statefulset container.name: '%s'", c.Name)

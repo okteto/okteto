@@ -342,7 +342,8 @@ func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.Per
 func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
-	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
+	initContainers := getInitContainers(svcName, svc)
+
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -364,14 +365,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
-					InitContainers: []apiv1.Container{
-						{
-							Name:         fmt.Sprintf("init-%s", svcName),
-							Image:        "busybox",
-							Command:      initContainerCommand,
-							VolumeMounts: initContainerVolumeMounts,
-						},
-					},
+					InitContainers:                initContainers,
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -394,6 +388,59 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	}
 }
 
+func getInitContainers(svcName string, svc *model.Service) []apiv1.Container {
+	addPermissionsContainer := getAddPermissionsInitContainer(svcName, svc)
+	initContainers := []apiv1.Container{
+		addPermissionsContainer,
+	}
+	initializationContainer := getInitializeVolumeContentContainer(svcName, svc)
+	if initializationContainer != nil {
+		initContainers = append(initContainers, *initializationContainer)
+	}
+
+	return initContainers
+}
+
+func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Container {
+	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
+	initContainer := apiv1.Container{
+		Name:         fmt.Sprintf("init-%s", svcName),
+		Image:        "busybox",
+		Command:      initContainerCommand,
+		VolumeMounts: initContainerVolumeMounts,
+	}
+	return initContainer
+}
+
+func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *apiv1.Container {
+	c := &apiv1.Container{
+		Name:            fmt.Sprintf("init-volume-%s", svcName),
+		Image:           svc.Image,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
+		VolumeMounts:    []apiv1.VolumeMount{},
+	}
+	command := "echo initializing volume..."
+	for idx, v := range svc.Volumes {
+		subpath := fmt.Sprintf("data-%d", idx)
+		if v.LocalPath != "" {
+			subpath = v.LocalPath
+		}
+		c.VolumeMounts = append(
+			c.VolumeMounts,
+			apiv1.VolumeMount{
+				Name:      getVolumeClaimName(&v),
+				MountPath: fmt.Sprintf("/init-volume-%d", idx),
+				SubPath:   subpath,
+			},
+		)
+		command = fmt.Sprintf("%s && (cp -Rv %s/. /init-volume-%d || true)", command, v.RemotePath, idx)
+	}
+	if len(c.VolumeMounts) != 0 {
+		c.Command = []string{"sh", "-c", command}
+		return c
+	}
+	return nil
+}
 func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv1.VolumeMount) {
 	volumeMounts := make([]apiv1.VolumeMount, 0)
 
