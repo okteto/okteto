@@ -514,9 +514,15 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 
 	if len(dev.Forward) > 0 {
-		for i := 0; i < len(dev.Forward); i++ {
+		if dev.Forward[0].Service {
+			log.Println(fmt.Sprintf("    %s   %d -> %s:%d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].ServiceName, dev.Forward[0].Remote))
+		} else {
+			log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
+		}
+
+		for i := 1; i < len(dev.Forward); i++ {
 			if dev.Forward[i].Service {
-				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
+				log.Println(fmt.Sprintf("           %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
 				continue
 			}
 			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
@@ -524,7 +530,7 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 	}
 
 	if len(dev.Reverse) > 0 {
-		log.Println(fmt.Sprintf("    %s     %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
+		log.Println(fmt.Sprintf("    %s   %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
 		for i := 1; i < len(dev.Reverse); i++ {
 			log.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
 		}
