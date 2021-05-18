@@ -245,8 +245,10 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c *kub
 		}
 
 		if err := volumes.Update(ctx, old, c); err != nil {
+			if strings.Contains(err.Error(), "spec.resources.requests.storage: Forbidden: field can not be less than previous value") {
+				return fmt.Errorf("error updating volume '%s': Volume size can not be less than previous value", old.Name)
+			}
 			return fmt.Errorf("error updating volume '%s': %s", old.Name, err.Error())
-
 		}
 	}
 	return nil
