@@ -85,7 +85,7 @@ func GetValidNameFromGitRepo(folder string) (string, error) {
 }
 
 func translateURLToName(repo string) string {
-	repo = repo[strings.LastIndex(repo, "/")+1:]
+	repo = strings.ToLower(repo[strings.LastIndex(repo, "/")+1:])
 	if strings.HasSuffix(repo, ".git") {
 		repo = repo[:strings.LastIndex(repo, ".git")]
 	}
