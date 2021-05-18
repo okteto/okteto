@@ -88,6 +88,15 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 
 	addHiddenExposedPorts(ctx, s)
 
+	for name := range s.Services {
+		if len(s.Services[name].Ports) > 0 {
+			svcK8s := translateService(name, s)
+			if err := services.Deploy(ctx, svcK8s, c); err != nil {
+				return err
+			}
+		}
+	}
+
 	for name := range s.Volumes {
 		if err := deployVolume(ctx, name, s, c); err != nil {
 			return err
@@ -96,6 +105,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 		log.Success("Created volume '%s'", name)
 		spinner.Start()
 	}
+
 	for name := range s.Services {
 		if len(s.Services[name].Volumes) == 0 {
 			if err := deployDeployment(ctx, name, s, c); err != nil {
@@ -106,13 +116,6 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 				return err
 			}
 		}
-		if len(s.Services[name].Ports) > 0 {
-			svcK8s := translateService(name, s)
-			if err := services.Deploy(ctx, svcK8s, c); err != nil {
-				return err
-			}
-		}
-
 		spinner.Stop()
 		log.Success("Deployed service '%s'", name)
 		spinner.Start()
