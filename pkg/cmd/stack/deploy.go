@@ -229,8 +229,21 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c *kub
 		if old.Labels[okLabels.StackNameLabel] != s.Name {
 			return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", pvc.Name, old.Labels[okLabels.StackNameLabel])
 		}
-		if err := volumes.Update(ctx, &pvc, c); err != nil {
-			return fmt.Errorf("error updating volume of service '%s': %s", pvc.Name, err.Error())
+
+		old.Spec.Resources.Requests["storage"] = pvc.Spec.Resources.Requests["storage"]
+		for key, value := range pvc.Labels {
+			old.Labels[key] = value
+		}
+		for key, value := range pvc.Annotations {
+			old.Annotations[key] = value
+		}
+		if pvc.Spec.StorageClassName != nil {
+			old.Spec.StorageClassName = pvc.Spec.StorageClassName
+		}
+
+		if err := volumes.Update(ctx, old, c); err != nil {
+			return fmt.Errorf("error updating volume '%s': %s", old.Name, err.Error())
+
 		}
 	}
 	return nil

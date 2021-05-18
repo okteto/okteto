@@ -208,49 +208,13 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if len(s.Endpoints) == 0 {
 		s.Endpoints = getEndpointsFromPorts(stackRaw.Services)
 	}
-	volumes := make(map[string]*VolumeSpec)
-	for volumeName, v := range stackRaw.Volumes {
-		result := VolumeSpec{}
-		if v == nil {
-			result.Labels = make(Labels)
-			result.Annotations = make(Annotations)
-		} else {
-			result.Labels = make(Labels)
-			if v.Annotations == nil {
-				result.Annotations = make(Annotations)
-			} else {
-				result.Annotations = v.Annotations
-			}
-
-			for key, value := range v.Labels {
-				result.Annotations[key] = value
-			}
-
-			if v.Size.Value.Cmp(resource.MustParse("0")) > 0 {
-				result.Size = v.Size
-			}
-			if v.DriverOpts != nil {
-				for key, value := range v.DriverOpts {
-					if key == "size" {
-						qK8s, err := resource.ParseQuantity(value)
-						if err != nil {
-							return err
-						}
-						result.Size.Value = qK8s
-					}
-					if key == "class" {
-						result.Class = value
-					}
-				}
-			}
-		}
-
-		volumes[volumeName] = &result
-	}
-
 	s.Volumes = make(map[string]*VolumeSpec)
-	for volumeName, volume := range volumes {
-		s.Volumes[sanitizeName(volumeName)] = volume
+	for volumeName, volume := range stackRaw.Volumes {
+		volumeSpec, err := unmarshalVolume(volume)
+		if err != nil {
+			return err
+		}
+		s.Volumes[sanitizeName(volumeName)] = volumeSpec
 	}
 
 	sanitizedServicesNames := make(map[string]string)
@@ -271,6 +235,50 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Warnings.SanitizedServices = sanitizedServicesNames
 	s.Warnings.VolumeMountWarnings = make([]string, 0)
 	return nil
+}
+
+func unmarshalVolume(volume *VolumeTopLevel) (*VolumeSpec, error) {
+
+	result := &VolumeSpec{}
+	if volume == nil {
+		result.Labels = make(Labels)
+		result.Annotations = make(Annotations)
+	} else {
+		result.Labels = make(Labels)
+		if volume.Annotations == nil {
+			result.Annotations = make(Annotations)
+		} else {
+			result.Annotations = volume.Annotations
+		}
+
+		for key, value := range volume.Labels {
+			result.Annotations[key] = value
+		}
+
+		if volume.Size.Value.Cmp(resource.MustParse("0")) > 0 {
+			result.Size = volume.Size
+		}
+		if volume.DriverOpts != nil {
+			for key, value := range volume.DriverOpts {
+				if key == "size" {
+					qK8s, err := resource.ParseQuantity(value)
+					if err != nil {
+						return nil, err
+					}
+					result.Size.Value = qK8s
+				}
+				if key == "class" {
+					result.Class = value
+				}
+			}
+		}
+		if result.Class == "" {
+			result.Class = volume.Class
+		}
+	}
+
+	return result, nil
+
 }
 
 func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
