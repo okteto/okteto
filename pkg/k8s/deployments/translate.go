@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -601,7 +601,7 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 				SubPath:   v.SubPath,
 			},
 		)
-		mounPath := filepath.Join(v.MountPath, ".")
+		mounPath := path.Join(v.MountPath, ".")
 		command = fmt.Sprintf("%s && (cp -Rv %s/. /init-volume/%d || true)", command, mounPath, iVolume)
 		iVolume++
 	}
