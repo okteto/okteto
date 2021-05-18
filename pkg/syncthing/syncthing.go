@@ -404,7 +404,8 @@ func (s *Syncthing) WaitForConnected(ctx context.Context, dev *model.Dev) error 
 		}
 
 		if time.Now().After(to) {
-			return fmt.Errorf("remote syncthing connection not completed after %s, please try again", s.timeout.String())
+			log.Infof("remote syncthing connection not completed after %s, please try again", s.timeout.String())
+			return errors.ErrLostSyncthing
 		}
 
 		select {
