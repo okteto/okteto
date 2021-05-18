@@ -98,11 +98,9 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		return err
 	}
 
-	if !up.Dev.PersistentVolumeEnabled() || up.Dev.PersistentVolumeInitFromImage() {
-		if err := up.Sy.WaitForScanning(ctx, up.Dev, false); err != nil {
-			log.Infof("failed to wait for syncthing scanning: %s", err.Error())
-			return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
-		}
+	if err := up.Sy.WaitForScanning(ctx, up.Dev, false); err != nil {
+		log.Infof("failed to wait for syncthing scanning: %s", err.Error())
+		return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
 	}
 
 	return up.Sy.WaitForConnected(ctx, up.Dev)

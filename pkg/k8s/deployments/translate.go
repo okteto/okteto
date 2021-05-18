@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
@@ -37,8 +38,8 @@ const (
 	revisionAnnotation         = "deployment.kubernetes.io/revision"
 	//OktetoBinName name of the okteto bin init container
 	OktetoBinName = "okteto-bin"
-	//OktetoInitFromImage name of the okteto init from image container
-	OktetoInitDataName = "okteto-init-data"
+	//OktetoInitVolumeContainerName name of the okteto init container that initializes the persistent colume from image content
+	OktetoInitVolumeContainerName = "okteto-init-volume"
 
 	//syncthing
 	oktetoSyncSecretVolume = "okteto-sync-secret" // skipcq GSC-G101  not a secret
@@ -110,9 +111,6 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 
 		if rule.Image == "" {
 			rule.Image = devContainer.Image
-			if rule.InitFromImageContainer != nil {
-				rule.InitFromImageContainer.Image = devContainer.Image
-			}
 		}
 
 		TranslateDevContainer(devContainer, rule)
@@ -123,7 +121,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(rule.InitContainer, &t.Deployment.Spec.Template.Spec)
-			TranslateOktetoInitFromImageContainer(rule.InitFromImageContainer, &t.Deployment.Spec.Template.Spec)
+			TranslateOktetoInitFromImageContainer(&t.Deployment.Spec.Template.Spec, rule)
 			TranslateDinDContainer(&t.Deployment.Spec.Template.Spec, rule)
 			TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
 		}
@@ -574,35 +572,44 @@ func TranslateOktetoInitBinContainer(initContainer model.InitContainer, spec *ap
 }
 
 //TranslateOktetoInitFromImageContainer translates the init from image container of a pod
-func TranslateOktetoInitFromImageContainer(initContainer *model.InitFromImageContainer, spec *apiv1.PodSpec) {
-	if initContainer == nil {
+func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.TranslationRule) {
+	if !rule.PersistentVolume {
 		return
 	}
-	c := apiv1.Container{
-		Name:            OktetoInitDataName,
-		Image:           initContainer.Image,
-		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Command:         initContainer.Command,
-		VolumeMounts:    []apiv1.VolumeMount{},
-	}
-
-	for i := range initContainer.Volumes {
-		c.VolumeMounts = append(
-			c.VolumeMounts,
-			apiv1.VolumeMount{
-				Name:      initContainer.Volumes[i].Name,
-				MountPath: initContainer.Volumes[i].MountPath,
-				SubPath:   initContainer.Volumes[i].SubPath,
-			},
-		)
-	}
-
-	translateInitResources(&c, initContainer.Resources)
 
 	if spec.InitContainers == nil {
 		spec.InitContainers = []apiv1.Container{}
 	}
-	spec.InitContainers = append(spec.InitContainers, c)
+
+	c := &apiv1.Container{
+		Name:            OktetoInitVolumeContainerName,
+		Image:           rule.Image,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
+		VolumeMounts:    []apiv1.VolumeMount{},
+	}
+	command := "echo initializing volume..."
+	iVolume := 1
+	for _, v := range rule.Volumes {
+		if !strings.HasPrefix(v.SubPath, model.SourceCodeSubPath) && !strings.HasPrefix(v.SubPath, model.DataSubPath) {
+			continue
+		}
+		c.VolumeMounts = append(
+			c.VolumeMounts,
+			apiv1.VolumeMount{
+				Name:      v.Name,
+				MountPath: fmt.Sprintf("/init-volume/%d", iVolume),
+				SubPath:   v.SubPath,
+			},
+		)
+		mounPath := filepath.Join(v.MountPath, ".")
+		command = fmt.Sprintf("%s && (cp -Rv %s/. /init-volume/%d || true)", command, mounPath, iVolume)
+		iVolume++
+	}
+
+	c.Command = []string{"sh", "-c", command}
+	translateInitResources(c, rule.InitContainer.Resources)
+	TranslateContainerSecurityContext(c, rule.SecurityContext)
+	spec.InitContainers = append(spec.InitContainers, *c)
 }
 
 //TranslateOktetoSyncSecret translates the syncthing secret container of a pod

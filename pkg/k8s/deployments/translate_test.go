@@ -62,6 +62,9 @@ serviceAccount: sa
 sync:
   - .:/app
   - sub:/path
+volumes:
+  - /go/pkg/
+  - /root/.cache/go-build
 secrets:
   - %s:/remote
 resources:
@@ -188,6 +191,42 @@ services:
 								},
 							},
 						},
+						{
+							Name:            OktetoInitVolumeContainerName,
+							Image:           "web:latest",
+							ImagePullPolicy: apiv1.PullIfNotPresent,
+							Command:         []string{"sh", "-c", "echo initializing volume... && (cp -Rv /go/pkg/. /init-volume/1 || true) && (cp -Rv /root/.cache/go-build/. /init-volume/2 || true) && (cp -Rv /app/. /init-volume/3 || true) && (cp -Rv /path/. /init-volume/4 || true)"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  &runAsUser,
+								RunAsGroup: &runAsGroup,
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/init-volume/1",
+									SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/init-volume/2",
+									SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/init-volume/3",
+									SubPath:   model.SourceCodeSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/init-volume/4",
+									SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+								},
+							},
+						},
 					},
 					Containers: []apiv1.Container{
 						{
@@ -231,6 +270,18 @@ services:
 									ReadOnly:  false,
 									MountPath: model.RemoteMountPath,
 									SubPath:   model.RemoteSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/go/pkg/",
+									SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/root/.cache/go-build",
+									SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
 								},
 								{
 									Name:      dev.GetVolumeName(),
@@ -564,7 +615,6 @@ namespace: n
 image: web:latest
 sync:
   - .:/app
-  - sub:/path
 docker:
   enabled: true
   image: docker:19
@@ -656,6 +706,25 @@ docker:
 								},
 							},
 						},
+						{
+							Name:            OktetoInitVolumeContainerName,
+							Image:           "web:latest",
+							ImagePullPolicy: apiv1.PullIfNotPresent,
+							Command:         []string{"sh", "-c", "echo initializing volume... && (cp -Rv /app/. /init-volume/1 || true)"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:    &rootUser,
+								RunAsGroup:   &rootUser,
+								RunAsNonRoot: &falseBoolean,
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/init-volume/1",
+									SubPath:   model.SourceCodeSubPath,
+								},
+							},
+						},
 					},
 					Containers: []apiv1.Container{
 						{
@@ -717,12 +786,6 @@ docker:
 									SubPath:   model.SourceCodeSubPath,
 								},
 								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/path",
-									SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
-								},
-								{
 									Name:      oktetoSyncSecretVolume,
 									ReadOnly:  false,
 									MountPath: "/var/syncthing/secret/",
@@ -765,12 +828,6 @@ docker:
 									ReadOnly:  false,
 									MountPath: "/app",
 									SubPath:   model.SourceCodeSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/path",
-									SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
 								},
 							},
 							LivenessProbe:  nil,
