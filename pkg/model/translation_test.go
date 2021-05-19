@@ -180,7 +180,7 @@ initContainer:
 	rule := dev.ToTranslationRule(dev, false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
-		OktetoBinImageTag: OktetoBinImageTag,
+		OktetoBinImageTag: "image",
 		ImagePullPolicy:   apiv1.PullAlways,
 		Command:           []string{"/var/okteto/bin/start.sh"},
 		Args:              []string{"-r", "-v"},

@@ -859,7 +859,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	}
 	if main == dev {
 		rule.Marker = OktetoBinImageTag //for backward compatibility
-		rule.OktetoBinImageTag = OktetoBinImageTag
+		rule.OktetoBinImageTag = dev.InitContainer.Image
 		rule.Environment = append(
 			rule.Environment,
 			EnvVar{
