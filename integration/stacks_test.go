@@ -260,6 +260,19 @@ func TestCompose(t *testing.T) {
 	if err == nil {
 		t.Fatalf("'rabbitmq' statefulset not deleted after 'okteto stack destroy'")
 	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("error getting statefulset 'rabbitmq': %s", err.Error())
+	}
+
+	_, err = getVolume(ctx, namespace, "rabbitmq-data")
+	if err != nil {
+		t.Fatalf("'rabbitmq-data' volume deleted after 'okteto stack destroy'")
+	}
+
+	_, err = getVolume(ctx, namespace, "mongodb-data")
+	if err != nil {
+		t.Fatalf("'rabbitmq-data' volume deleted after 'okteto stack destroy'")
+	}
 
 	if !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("error getting statefulset 'rabbitmq': %s", err.Error())
