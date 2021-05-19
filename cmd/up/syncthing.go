@@ -90,6 +90,9 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 
 	if err := up.Sy.WaitForPing(ctx, false); err != nil {
 		log.Infof("failed to ping syncthing: %s", err.Error())
+		if errors.IsTransient(err) {
+			return err
+		}
 		return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
 	}
 
@@ -99,8 +102,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	}
 
 	if err := up.Sy.WaitForScanning(ctx, up.Dev, false); err != nil {
-		log.Infof("failed to wait for syncthing scanning: %s", err.Error())
-		return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
+		return err
 	}
 
 	return up.Sy.WaitForConnected(ctx, up.Dev)
