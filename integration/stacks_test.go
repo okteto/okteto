@@ -204,6 +204,12 @@ func TestCompose(t *testing.T) {
 		t.Fatal("Not the right response")
 	}
 
+	log.Println("Starting to redeploy stack")
+	if err := deployStack(ctx, oktetoPath, "docker-compose.yml", composeGitFolder); err != nil {
+		t.Fatal(err)
+	}
+	log.Println("Stack has been redeployed succesfully")
+
 	if err := destroyStack(ctx, oktetoPath, "docker-compose.yml", composeGitFolder); err != nil {
 		t.Fatal(err)
 	}
