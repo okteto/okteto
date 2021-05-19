@@ -157,6 +157,19 @@ func destroyStack(ctx context.Context, oktetoPath, stackManifest, dir string) er
 	return nil
 }
 
+func destroyStackWithVolumes(ctx context.Context, oktetoPath, stackManifest, dir string) error {
+	log.Printf("okteto stack destroy with volumes")
+	cmd := exec.Command(oktetoPath, "stack", "destroy", "-v", "-f", stackManifest)
+	cmd.Env = os.Environ()
+	cmd.Dir = dir
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("okteto stack destroy failed: %s - %s", string(o), err)
+	}
+	log.Printf("okteto stack destroy success")
+	return nil
+}
+
 func TestCompose(t *testing.T) {
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
@@ -224,6 +237,7 @@ func TestCompose(t *testing.T) {
 	if !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("error getting deployment 'api': %s", err.Error())
 	}
+
 	_, err = getDeployment(ctx, namespace, "producer")
 	if err == nil {
 		t.Fatalf("'producer' deployment not deleted after 'okteto stack destroy'")
@@ -231,6 +245,7 @@ func TestCompose(t *testing.T) {
 	if !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("error getting deployment 'producer': %s", err.Error())
 	}
+
 	_, err = getDeployment(ctx, namespace, "consumer")
 	if err == nil {
 		t.Fatalf("'consumer' deployment not deleted after 'okteto stack destroy'")
@@ -238,6 +253,7 @@ func TestCompose(t *testing.T) {
 	if !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("error getting deployment 'consumer': %s", err.Error())
 	}
+
 	_, err = getDeployment(ctx, namespace, "web-svc")
 	if err == nil {
 		t.Fatalf("'web-svc' deployment not deleted after 'okteto stack destroy'")
@@ -250,13 +266,11 @@ func TestCompose(t *testing.T) {
 	if err == nil {
 		t.Fatalf("'mongodb' statefulset not deleted after 'okteto stack destroy'")
 	}
-
 	if !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("error getting statefulset 'mongodb': %s", err.Error())
 	}
 
 	_, err = getStatefulset(ctx, namespace, "rabbitmq")
-
 	if err == nil {
 		t.Fatalf("'rabbitmq' statefulset not deleted after 'okteto stack destroy'")
 	}
@@ -274,9 +288,28 @@ func TestCompose(t *testing.T) {
 		t.Fatalf("'rabbitmq-data' volume deleted after 'okteto stack destroy'")
 	}
 
-	if !strings.Contains(err.Error(), "not found") {
-		t.Fatalf("error getting statefulset 'rabbitmq': %s", err.Error())
+	if err := destroyStackWithVolumes(ctx, oktetoPath, "docker-compose.yml", composeGitFolder); err != nil {
+		t.Fatal(err)
 	}
+
+	log.Println("destroyed stack and volumes")
+
+	_, err = getVolume(ctx, namespace, "rabbitmq-data")
+	if err != nil {
+		t.Fatalf("'rabbitmq-data' volume deleted after 'okteto stack destroy'")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("error getting volume 'rabbitmq-data': %s", err.Error())
+	}
+
+	_, err = getVolume(ctx, namespace, "mongodb-data")
+	if err == nil {
+		t.Fatalf("'rabbitmq-data' volume not deleted after 'okteto stack destroy'")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("error getting volume 'mongodb-data': %s", err.Error())
+	}
+
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
 		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 	}
