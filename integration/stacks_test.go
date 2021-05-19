@@ -295,19 +295,13 @@ func TestCompose(t *testing.T) {
 	log.Println("destroyed stack and volumes")
 
 	_, err = getVolume(ctx, namespace, "rabbitmq-data")
-	if err != nil {
-		t.Fatalf("'rabbitmq-data' volume deleted after 'okteto stack destroy'")
-	}
-	if !strings.Contains(err.Error(), "not found") {
-		t.Fatalf("error getting volume 'rabbitmq-data': %s", err.Error())
+	if err == nil {
+		t.Fatalf("'rabbitmq-data' volume not deleted after 'okteto stack destroy -v'")
 	}
 
 	_, err = getVolume(ctx, namespace, "mongodb-data")
 	if err == nil {
-		t.Fatalf("'rabbitmq-data' volume not deleted after 'okteto stack destroy'")
-	}
-	if !strings.Contains(err.Error(), "not found") {
-		t.Fatalf("error getting volume 'mongodb-data': %s", err.Error())
+		t.Fatalf("'rabbitmq-data' volume not deleted after 'okteto stack destroy -v'")
 	}
 
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
