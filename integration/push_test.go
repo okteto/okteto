@@ -50,7 +50,6 @@ func TestPush(t *testing.T) {
 	tName := fmt.Sprintf("TestPush-%s", runtime.GOOS)
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
-
 	t.Run(tName, func(t *testing.T) {
 		log.Printf("running %s \n", tName)
 		k8Client.Reset()
