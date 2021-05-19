@@ -201,6 +201,7 @@ func TestDownloadSyncthing(t *testing.T) {
 func TestAll(t *testing.T) {
 	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
 	ctx := context.Background()
+	previousNamespace := k8Client.GetContextNamespace("")
 	t.Run(tName, func(t *testing.T) {
 		oktetoPath, err := getOktetoPath(ctx)
 		if err != nil {
@@ -247,6 +248,7 @@ func TestAll(t *testing.T) {
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}
+		defer changeToPreviousNamespace(ctx, oktetoPath, previousNamespace)
 
 		if err := deploy(ctx, namespace, name, dPath); err != nil {
 			t.Fatal(err)
@@ -445,6 +447,22 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
 	}
 
+	return nil
+}
+
+func changeToPreviousNamespace(ctx context.Context, oktetoPath, namespace string) error {
+	log.Printf("Changing to namespace %s", namespace)
+	args := []string{"namespace", namespace}
+	cmd := exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
+	}
+	n := k8Client.GetContextNamespace("")
+	if namespace != n {
+		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
+	}
 	return nil
 }
 
