@@ -53,14 +53,12 @@ func TestStacks(t *testing.T) {
 	tName := fmt.Sprintf("TestStacks-%s", runtime.GOOS)
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
-	previousNamespace := k8Client.GetContextNamespace("")
 	t.Run(tName, func(t *testing.T) {
 		log.Printf("running %s \n", tName)
 		k8Client.Reset()
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}
-		defer changeToPreviousNamespace(ctx, oktetoPath, previousNamespace)
 
 		log.Printf("created namespace %s \n", namespace)
 
@@ -186,11 +184,9 @@ func TestCompose(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
-	previousNamespace := k8Client.GetContextNamespace("")
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 		t.Fatal(err)
 	}
-	defer changeToPreviousNamespace(ctx, oktetoPath, previousNamespace)
 
 	log.Printf("created namespace %s \n", namespace)
 
