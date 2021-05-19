@@ -108,7 +108,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 		return err
 	}
 
-	dev, err := linguist.GetDevDefaults(language, workDir, checkForDeployment)
+	dev, err := linguist.GetDevDefaults(language, workDir)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 			suffix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
-			err = initCMD.SetDevDefaultsFromDeployment(ctx, dev, d, container)
+			err = initCMD.SetDevDefaultsFromDeployment(ctx, dev, d, container, language)
 			spinner.Stop()
 			if err == nil {
 				log.Success(fmt.Sprintf("Deployment '%s' successfully analyzed", d.Name))
