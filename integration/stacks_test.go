@@ -172,10 +172,6 @@ func TestCompose(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
-	t.Run(tName, func(t *testing.T) {
-		log.Printf("running %s \n", tName)
-		k8Client.Reset()
-	})
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 		t.Fatal(err)
 	}
