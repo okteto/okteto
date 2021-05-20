@@ -101,9 +101,7 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 		}
 
 		for _, e := range envList {
-			if !strings.Contains(e.Name, ".") {
-				secrets[e.Name] = e.Value
-			}
+			secrets[e.Name] = e.Value
 		}
 		for _, e := range svc.Environment {
 			delete(secrets, e.Name)
