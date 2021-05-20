@@ -19,7 +19,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
 
-	cmd := "cat /var/okteto/bin/version.txt; cat /proc/sys/fs/inotify/max_user_watches; /var/okteto/bin/clean >/dev/null 2>&1"
+	cmd := "cat /var/okteto/bin/version.txt; cat /proc/sys/fs/inotify/max_user_watches; [ -f /var/okteto/cloudbin/start.sh ] && echo yes || echo no; /var/okteto/bin/clean >/dev/null 2>&1"
 
 	err := exec.Exec(
 		ctx,
@@ -42,14 +42,14 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 	up.cleaned <- out.String()
 }
 
-func (up *upContext) runCommand(ctx context.Context) error {
+func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
 	log.Infof("starting remote command")
 	if err := config.UpdateStateFile(up.Dev, config.Ready); err != nil {
 		return err
 	}
 
 	if up.Dev.RemoteModeEnabled() {
-		return ssh.Exec(ctx, up.Dev.Interface, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, up.Dev.Command.Values)
+		return ssh.Exec(ctx, up.Dev.Interface, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, cmd)
 	}
 
 	return exec.Exec(
@@ -63,7 +63,7 @@ func (up *upContext) runCommand(ctx context.Context) error {
 		os.Stdin,
 		os.Stdout,
 		os.Stderr,
-		up.Dev.Command.Values,
+		cmd,
 	)
 }
 

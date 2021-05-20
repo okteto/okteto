@@ -127,8 +127,9 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		log.Debugf("clean command output: %s", output)
 
 		outByCommand := strings.Split(strings.TrimSpace(output), "\n")
-		if len(outByCommand) >= 2 {
-			version, watches := outByCommand[0], outByCommand[1]
+		var version, watches, hook string
+		if len(outByCommand) >= 3 {
+			version, watches, hook = outByCommand[0], outByCommand[1], outByCommand[2]
 
 			if isWatchesConfigurationTooLow(watches) {
 				folder := config.GetNamespaceHome(up.Dev.Namespace)
@@ -147,6 +148,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 				log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
 				log.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
 			}
+
 		}
 		divertURL := ""
 		if up.Dev.Divert != nil {
@@ -160,7 +162,14 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			}
 		}
 		printDisplayContext(up.Dev, divertURL)
-		up.CommandResult <- up.runCommand(ctx)
+		if hook == "yes" {
+			log.Information("Running start.sh hook...")
+			if err := up.runCommand(ctx, []string{"/var/okteto/cloudbin/start.sh"}); err != nil {
+				up.CommandResult <- err
+				return
+			}
+		}
+		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
 	}()
 	prevError := up.waitUntilExitOrInterrupt()
 
