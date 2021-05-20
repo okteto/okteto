@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -62,6 +63,7 @@ func (r *reverse) start(ctx context.Context) {
 		log.Infof("%s -> done", r.String())
 	}()
 
+	tick := time.NewTicker(500 * time.Millisecond)
 	for {
 		r.setConnected()
 		remoteConn, err := remoteListener.Accept()
@@ -71,6 +73,7 @@ func (r *reverse) start(ctx context.Context) {
 			}
 
 			log.Infof("%s -> failed to accept connection: %v", r.String(), err)
+			<-tick.C
 			continue
 		}
 
