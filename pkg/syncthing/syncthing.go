@@ -681,6 +681,7 @@ func (s *Syncthing) HardTerminate() error {
 			return err
 		}
 
+		log.Infof("checking syncthing home '%s' with command '%s'", s.Home, cmdline)
 		if !strings.Contains(cmdline, fmt.Sprintf("-home %s", s.Home)) {
 			continue
 		}
