@@ -269,10 +269,10 @@ func (s *Stack) validate() error {
 
 	for endpointName, endpoint := range s.Endpoints {
 		for _, endpointRule := range endpoint.Rules {
-			if service, ok := s.Services[endpointRule.Service]; !ok {
-				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not exist.", endpointName, endpointRule.Service)
-			} else if !IsPortInService(endpointRule.Port, service.Ports) {
-				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpointRule.Service, endpointRule.Port)
+			if service, ok := s.Services[endpointRule.Service]; ok {
+				if !IsPortInService(endpointRule.Port, service.Ports) {
+					return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpointRule.Service, endpointRule.Port)
+				}
 			}
 		}
 	}
