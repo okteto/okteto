@@ -300,15 +300,6 @@ func (s *Stack) validate() error {
 	return nil
 }
 
-func IsPortInService(port int32, portList []Port) bool {
-	for _, p := range portList {
-		if p.Port == port {
-			return true
-		}
-	}
-	return false
-}
-
 func validateStackName(name string) error {
 	if name == "" {
 		return fmt.Errorf("name cannot be empty")
@@ -342,6 +333,15 @@ func (s *Stack) GetLabelSelector() string {
 //GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetConfigMapName() string {
 	return fmt.Sprintf("okteto-%s", s.Name)
+}
+
+func IsPortInService(port int32, ports []Port) bool {
+	for _, p := range ports {
+		if p.Port == port {
+			return true
+		}
+	}
+	return false
 }
 
 //SetLastBuiltAnnotation sets the dev timestamp
