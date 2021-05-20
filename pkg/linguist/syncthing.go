@@ -279,6 +279,9 @@ obj/Release
 core.*.*.*
 `)
 
+	stignore[Rust] = []byte(`.git
+`)
+
 }
 
 // GetSTIgnore returns a .stignore file for the specified language
