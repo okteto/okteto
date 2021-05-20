@@ -50,6 +50,10 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		return err
 	}
 
+	if err := validateEndpoints(ctx, s, c); err != nil {
+		return err
+	}
+
 	if err := translate(ctx, s, forceBuild, noCache); err != nil {
 		return err
 	}
@@ -349,4 +353,41 @@ func addHiddenExposedPorts(ctx context.Context, s *model.Stack) {
 		}
 	}
 
+}
+
+func validateEndpoints(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
+
+	for endpointName, endpoint := range s.Endpoints {
+		for _, endpointRule := range endpoint.Rules {
+			svc, _ := services.Get(ctx, endpointRule.Service, s.Namespace, c)
+			if service, ok := s.Services[endpointRule.Service]; !ok && svc == nil {
+				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not exist.", endpointName, endpointRule.Service)
+			} else if !IsPortInStackService(endpointRule.Port, service) && !IsPortInService(endpointRule.Port, svc) {
+				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpointRule.Service, endpointRule.Port)
+			}
+		}
+	}
+	return nil
+}
+
+func IsPortInStackService(port int32, svc *model.Service) bool {
+	if svc != nil {
+		for _, p := range svc.Ports {
+			if p.Port == port {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func IsPortInService(port int32, svc *apiv1.Service) bool {
+	if svc != nil {
+		for _, svcPort := range svc.Spec.Ports {
+			if svcPort.Port == port {
+				return true
+			}
+		}
+	}
+	return false
 }
