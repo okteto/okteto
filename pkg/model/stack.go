@@ -267,16 +267,6 @@ func (s *Stack) validate() error {
 		return fmt.Errorf("Invalid stack: 'services' cannot be empty")
 	}
 
-	for endpointName, endpoint := range s.Endpoints {
-		for _, endpointRule := range endpoint.Rules {
-			if service, ok := s.Services[endpointRule.Service]; !ok {
-				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not exist.", endpointName, endpointRule.Service)
-			} else if !IsPortInService(endpointRule.Port, service.Ports) {
-				return fmt.Errorf("Invalid endpoint '%s': service '%s' does not have port '%d'.", endpointName, endpointRule.Service, endpointRule.Port)
-			}
-		}
-	}
-
 	for name, svc := range s.Services {
 		if err := validateStackName(name); err != nil {
 			return fmt.Errorf("Invalid service name '%s': %s", name, err)
@@ -298,15 +288,6 @@ func (s *Stack) validate() error {
 	}
 
 	return nil
-}
-
-func IsPortInService(port int32, portList []Port) bool {
-	for _, p := range portList {
-		if p.Port == port {
-			return true
-		}
-	}
-	return false
 }
 
 func validateStackName(name string) error {
