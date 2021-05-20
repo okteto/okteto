@@ -33,17 +33,17 @@ func TestProcessDirectory(t *testing.T) {
 		},
 		{
 			name:  "gradle",
-			want:  gradle,
+			want:  Gradle,
 			files: []string{"build.gradle", "main.java"},
 		},
 		{
 			name:  "maven",
-			want:  maven,
+			want:  Maven,
 			files: []string{"pom.xml", "main.java"},
 		},
 		{
 			name:  "java-default",
-			want:  maven,
+			want:  Maven,
 			files: []string{"main.java"},
 		},
 		{
@@ -53,17 +53,17 @@ func TestProcessDirectory(t *testing.T) {
 		},
 		{
 			name:  "python",
-			want:  python,
+			want:  Python,
 			files: []string{"api.py"},
 		},
 		{
 			name:  "javascript",
-			want:  javascript,
+			want:  Javascript,
 			files: []string{"Package.json", "index.js"},
 		},
 		{
 			name:  "ruby",
-			want:  ruby,
+			want:  Ruby,
 			files: []string{"Gemfile", "Rakefile", "application_controller.rb"},
 		},
 	}

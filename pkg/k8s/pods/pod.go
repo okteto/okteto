@@ -177,6 +177,16 @@ func GetUserByPod(ctx context.Context, p *apiv1.Pod, container string, config *r
 	return userID, nil
 }
 
+//HasPackageJson returns if the container has node_modules
+func HasPackageJson(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) bool {
+	cmd := []string{"sh", "-c", "[ -f 'package.json' ] && echo 'package.json exists'"}
+	out, err := execCommandInPod(ctx, p, container, cmd, config, c)
+	if err != nil {
+		return false
+	}
+	return strings.Contains(out, "package.json exists")
+}
+
 //GetWorkdirByPod returns the workdir of a running pod
 func GetWorkdirByPod(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) (string, error) {
 	cmd := []string{"sh", "-c", "echo $PWD"}

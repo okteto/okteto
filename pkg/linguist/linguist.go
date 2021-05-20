@@ -128,22 +128,22 @@ func ProcessDirectory(root string) (string, error) {
 	}
 	chosen := strings.ToLower(sorted[0])
 
-	if chosen == java {
+	if chosen == Java {
 		return refineJavaChoice(root), nil
 	}
 
-	return normalizeLanguage(chosen), nil
+	return NormalizeLanguage(chosen), nil
 }
 
 func refineJavaChoice(root string) string {
 	p := filepath.Join(root, "build.gradle")
 	_, err := os.Stat(p)
 	if err == nil {
-		return gradle
+		return Gradle
 	}
 
 	log.Infof("didn't found %s : %s", p, err)
-	return maven
+	return Maven
 }
 
 func readFile(path string, limit int64) ([]byte, error) {
@@ -180,7 +180,7 @@ func sortLanguagesByUsage(fSummary map[string][]string) []string {
 	fileValues := make(map[string]float64)
 
 	for fType, files := range fSummary {
-		if normalizeLanguage(fType) == Unrecognized {
+		if NormalizeLanguage(fType) == Unrecognized {
 			continue
 		}
 		val := float64(len(files))
