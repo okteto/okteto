@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"strings"
 )
 
 //Secrets represents a list of secrets
@@ -40,6 +41,11 @@ func GetSecrets(ctx context.Context) ([]Secret, error) {
 	if err := query(ctx, q, &body); err != nil {
 		return nil, err
 	}
-
-	return body.Secrets, nil
+	secrets := make([]Secret, 0)
+	for _, secret := range body.Secrets {
+		if !strings.Contains(secret.Name, ".") {
+			secrets = append(secrets, secret)
+		}
+	}
+	return secrets, nil
 }
