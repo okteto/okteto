@@ -235,6 +235,13 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	return s, nil
 }
 
+func NewSyncthingWithHome(dev *model.Dev) *Syncthing {
+	s := &Syncthing{
+		Home: config.GetDeploymentHome(dev.Namespace, dev.Name),
+	}
+	return s
+}
+
 func (s *Syncthing) initConfig() error {
 	if err := os.MkdirAll(s.Home, 0700); err != nil {
 		return fmt.Errorf("failed to create %s: %s", s.Home, err)

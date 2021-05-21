@@ -308,6 +308,8 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 			up.Exit <- err
 			return
 		}
+		up.Sy = syncthing.NewSyncthingWithHome(up.Dev)
+		up.Sy.HardTerminate()
 		up.Exit <- nil
 		return
 	}
