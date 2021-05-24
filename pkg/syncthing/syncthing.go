@@ -656,7 +656,7 @@ func (s *Syncthing) HardTerminate() error {
 		if name == "" && runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
 			pr, err := gops.FindProcess(int(p.Pid))
 			if err != nil {
-				log.Infof("error getting process  %d: %s", p.Pid, err.Error())
+				log.Infof("error getting process %d: %s", p.Pid, err.Error())
 				continue
 			}
 
@@ -669,6 +669,7 @@ func (s *Syncthing) HardTerminate() error {
 		}
 
 		if name == "" {
+			log.Infof("ignoring pid %d with no name: %v", p.Pid, p)
 			continue
 		}
 
