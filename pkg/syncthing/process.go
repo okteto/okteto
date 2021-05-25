@@ -14,12 +14,37 @@
 package syncthing
 
 import (
+	"runtime"
 	"time"
 
 	"github.com/shirou/gopsutil/process"
 )
 
 func terminate(p *process.Process, wait bool) error {
+	if runtime.GOOS == "windows" {
+		children, err := p.Children()
+		if err != nil {
+			return err
+		}
+		err = terminateProccess(p, wait)
+		if err != nil {
+			return err
+		}
+		for _, child := range children {
+			err = terminateProccess(child, wait)
+			if err != nil {
+				return err
+			}
+		}
+		return err
+	}
+	err := terminateProccess(p, wait)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func terminateProccess(p *process.Process, wait bool) error {
 	if err := p.Terminate(); err != nil {
 		return err
 	}
