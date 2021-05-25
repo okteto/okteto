@@ -322,6 +322,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			}
 
 			optsWatchEvents.ResourceVersion = e.ResourceVersion
+			log.Infof("pod event: %s:%s", e.Reason, e.Message)
 			switch e.Reason {
 			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
 				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
