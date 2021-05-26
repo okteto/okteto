@@ -52,15 +52,16 @@ type Service struct {
 	Command    Command            `yaml:"command,omitempty"`
 	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
 
-	Environment     Environment   `yaml:"environment,omitempty"`
-	Expose          []int32       `yaml:"expose,omitempty"`
-	Image           string        `yaml:"image,omitempty"`
-	Labels          Labels        `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     Annotations   `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Ports           []Port        `yaml:"ports,omitempty"`
-	StopGracePeriod int64         `yaml:"stop_grace_period,omitempty"`
-	Volumes         []StackVolume `yaml:"volumes,omitempty"`
-	Workdir         string        `yaml:"workdir,omitempty"`
+	Environment     Environment         `yaml:"environment,omitempty"`
+	Expose          []int32             `yaml:"expose,omitempty"`
+	Image           string              `yaml:"image,omitempty"`
+	Labels          Labels              `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     Annotations         `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Ports           []Port              `yaml:"ports,omitempty"`
+	RestartPolicy   apiv1.RestartPolicy `yaml:"restart,omitempty"`
+	StopGracePeriod int64               `yaml:"stop_grace_period,omitempty"`
+	Volumes         []StackVolume       `yaml:"volumes,omitempty"`
+	Workdir         string              `yaml:"workdir,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
@@ -217,7 +218,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		msg = strings.TrimSuffix(msg, "in type model.Stack")
 		return nil, errors.New(msg)
 	}
-	for _, svc := range s.Services {
+	for svcName, svc := range s.Services {
 		if svc.Build != nil {
 			if svc.Build.Name != "" {
 				svc.Build.Context = svc.Build.Name
@@ -239,6 +240,17 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 
 		if len(svc.Expose) > 0 {
 			svc.extendPorts()
+		}
+		if svc.RestartPolicy != apiv1.RestartPolicyAlways {
+			for idx, volume := range svc.Volumes {
+				volumeName := fmt.Sprintf("pvc-%s-0", svcName)
+				if volume.LocalPath == "" {
+					volume.LocalPath = volumeName
+					s.Volumes[volumeName] = &VolumeSpec{Size: svc.Resources.Requests.Storage.Size}
+				}
+				svc.Volumes[idx] = volume
+
+			}
 		}
 	}
 	for _, volume := range s.Volumes {
