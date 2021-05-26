@@ -437,7 +437,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	for i := 0; ; i++ {
 		status, err := s.GetStatus(ctx, folder, local)
 		if err != nil && err != errors.ErrBusySyncthing {
-			return errors.ErrUnknownSyncError
+			return err
 		}
 
 		if status != nil {
