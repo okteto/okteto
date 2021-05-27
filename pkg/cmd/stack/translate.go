@@ -537,6 +537,9 @@ func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.Persi
 							Requests: apiv1.ResourceList{
 								"storage": svc.Resources.Requests.Storage.Size.Value,
 							},
+							Limits: apiv1.ResourceList{
+								"storage": svc.Resources.Limits.Storage.Size.Value,
+							},
 						},
 						StorageClassName: translateStorageClass(svc.Resources.Requests.Storage.Class),
 					},

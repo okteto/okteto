@@ -328,7 +328,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 			return err
 		}
 		for i := range podList {
-			if podList[i].Status.Phase == apiv1.PodRunning {
+			if podList[i].Status.Phase == apiv1.PodRunning || podList[i].Status.Phase == apiv1.PodSucceeded {
 				pendingPods--
 			}
 		}
