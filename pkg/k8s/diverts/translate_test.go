@@ -21,7 +21,7 @@ func Test_translateDeployment(t *testing.T) {
 			Name:            "name",
 			Namespace:       "namespace",
 			Annotations:     map[string]string{"annotation1": "value1"},
-			Labels:          map[string]string{"label1": "value1"},
+			Labels:          map[string]string{"label1": "value1", okLabels.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -48,7 +48,10 @@ func Test_translateDeployment(t *testing.T) {
 				"annotation1":                    "value1",
 				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
 			},
-			Labels: map[string]string{model.OktetoDivertLabel: "cindy"},
+			Labels: map[string]string{
+				okLabels.DeployedByLabel: "cindy",
+				model.OktetoDivertLabel:  "cindy",
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -87,7 +90,7 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 				"annotation1":                        "value1",
 				okLabels.OktetoAutoIngressAnnotation: "true",
 			},
-			Labels:          map[string]string{"label1": "value1"},
+			Labels:          map[string]string{"label1": "value1", okLabels.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 		Spec: apiv1.ServiceSpec{
@@ -114,7 +117,10 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 			Annotations: map[string]string{
 				"annotation1": "value1",
 			},
-			Labels: map[string]string{model.OktetoDivertLabel: "cindy"},
+			Labels: map[string]string{
+				okLabels.DeployedByLabel: "cindy",
+				model.OktetoDivertLabel:  "cindy",
+			},
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
@@ -211,7 +217,7 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 				"annotation1":                          "value1",
 				okLabels.OktetoIngressAutoGenerateHost: "true",
 			},
-			Labels:          map[string]string{"label1": "value1"},
+			Labels:          map[string]string{"label1": "value1", okLabels.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 	}
@@ -224,7 +230,10 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 				"annotation1":                          "value1",
 				okLabels.OktetoIngressAutoGenerateHost: "true",
 			},
-			Labels: map[string]string{model.OktetoDivertLabel: "cindy"},
+			Labels: map[string]string{
+				okLabels.DeployedByLabel: "cindy",
+				model.OktetoDivertLabel:  "cindy",
+			},
 		},
 	}
 	marshalled, _ := yaml.Marshal(translated.ObjectMeta)

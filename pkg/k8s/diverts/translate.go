@@ -31,6 +31,9 @@ func translateDeployment(username string, d *appsv1.Deployment) *appsv1.Deployme
 	result.UID = ""
 	result.Name = DivertName(username, d.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
+	if d.Labels != nil && d.Labels[okLabels.DeployedByLabel] != "" {
+		result.Labels[okLabels.DeployedByLabel] = d.Labels[okLabels.DeployedByLabel]
+	}
 	result.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			model.OktetoDivertLabel: username,
@@ -52,6 +55,9 @@ func translateService(username string, d *appsv1.Deployment, s *apiv1.Service) (
 	result.UID = ""
 	result.Name = DivertName(username, s.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
+	if s.Labels != nil && s.Labels[okLabels.DeployedByLabel] != "" {
+		result.Labels[okLabels.DeployedByLabel] = s.Labels[okLabels.DeployedByLabel]
+	}
 	if s.Annotations != nil {
 		modification := s.Annotations[model.OktetoDivertServiceModificationAnnotation]
 		if modification != "" {
@@ -86,6 +92,9 @@ func translateIngress(username string, i *networkingv1.Ingress) *networkingv1.In
 	result.UID = ""
 	result.Name = DivertName(username, i.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
+	if i.Labels != nil && i.Labels[okLabels.DeployedByLabel] != "" {
+		result.Labels[okLabels.DeployedByLabel] = i.Labels[okLabels.DeployedByLabel]
+	}
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}
 	}
@@ -101,7 +110,7 @@ func translateIngress(username string, i *networkingv1.Ingress) *networkingv1.In
 }
 
 func translateDivertCRD(username string, dev *model.Dev, s *apiv1.Service, i *networkingv1.Ingress) *Divert {
-	return &Divert{
+	result := &Divert{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Divert",
 			APIVersion: "weaver.okteto.com/v1",
@@ -132,6 +141,10 @@ func translateDivertCRD(username string, dev *model.Dev, s *apiv1.Service, i *ne
 			},
 		},
 	}
+	if s.Labels != nil && s.Labels[okLabels.DeployedByLabel] != "" {
+		result.Labels = map[string]string{okLabels.DeployedByLabel: s.Labels[okLabels.DeployedByLabel]}
+	}
+	return result
 }
 
 func translateDev(username string, dev *model.Dev, d *appsv1.Deployment) {
