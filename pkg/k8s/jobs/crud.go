@@ -33,10 +33,10 @@ func Create(ctx context.Context, job *batchv1.Job, c kubernetes.Interface) error
 }
 
 func Update(ctx context.Context, job *batchv1.Job, c kubernetes.Interface) error {
-	job.ResourceVersion = ""
-	job.Status = batchv1.JobStatus{}
-	_, err := c.BatchV1().Jobs(job.Namespace).Update(ctx, job, metav1.UpdateOptions{})
-	if err != nil {
+	if err := Destroy(ctx, job.Name, job.Namespace, c); err != nil {
+		return err
+	}
+	if err := Create(ctx, job, c); err != nil {
 		return err
 	}
 	return nil
