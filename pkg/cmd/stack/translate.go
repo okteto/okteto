@@ -402,8 +402,9 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: batchv1.JobSpec{
-			Completions: pointer.Int32Ptr(svc.Replicas),
-			Parallelism: pointer.Int32Ptr(1),
+			Completions:  pointer.Int32Ptr(svc.Replicas),
+			Parallelism:  pointer.Int32Ptr(1),
+			BackoffLimit: &svc.BackOffLimit,
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      translateLabels(svcName, s),

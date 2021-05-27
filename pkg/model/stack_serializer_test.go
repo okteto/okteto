@@ -1351,3 +1351,25 @@ services:
 	}
 
 }
+
+func Test_TestJobCreation(t *testing.T) {
+	manifest := []byte(`name: test
+services:
+  app:
+    image: okteto/vote:1
+    deploy:
+      restart_policy:
+        max_attempts: 3
+        condition: on-failure
+`)
+	s, err := ReadStack(manifest, true)
+	if err != nil {
+		t.Fatalf("Could not read stack: %s", err.Error())
+	}
+	if s.Services["app"].BackOffLimit != 3 {
+		t.Fatal("Could not read the job properly")
+	}
+	if s.Services["app"].RestartPolicy != apiv1.RestartPolicyOnFailure {
+		t.Fatal("Could not read the job properly")
+	}
+}

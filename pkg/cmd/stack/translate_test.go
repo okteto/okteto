@@ -467,6 +467,7 @@ func Test_translateJob(t *testing.T) {
 				CapAdd:        []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop:       []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				RestartPolicy: apiv1.RestartPolicyNever,
+				BackOffLimit:  5,
 				Volumes:       []model.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
 				Resources: &model.StackResources{
 					Limits: model.ServiceResources{
@@ -503,15 +504,14 @@ func Test_translateJob(t *testing.T) {
 	if !reflect.DeepEqual(result.Annotations, annotations) {
 		t.Errorf("Wrong job annotations: '%s'", result.Annotations)
 	}
-	if *result.Spec.Parallelism != 3 {
-		t.Errorf("Wrong job spec.replicas: '%d'", *result.Spec.Parallelism)
+	if *result.Spec.Completions != 3 {
+		t.Errorf("Wrong job spec.completions: '%d'", *result.Spec.Completions)
 	}
-	selector := map[string]string{
-		okLabels.StackNameLabel:        "stackName",
-		okLabels.StackServiceNameLabel: "svcName",
+	if *result.Spec.Parallelism != 1 {
+		t.Errorf("Wrong job spec.parallelism: '%d'", *result.Spec.Parallelism)
 	}
-	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
-		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector.MatchLabels)
+	if *result.Spec.BackoffLimit != 5 {
+		t.Errorf("Wrong job spec.max_attemps: '%d'", *result.Spec.BackoffLimit)
 	}
 	if !reflect.DeepEqual(result.Spec.Template.Labels, labels) {
 		t.Errorf("Wrong spec.template.labels: '%s'", result.Spec.Template.Labels)

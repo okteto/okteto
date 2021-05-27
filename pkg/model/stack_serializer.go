@@ -153,11 +153,11 @@ type DeployInfoRaw struct {
 }
 
 type RestartPolicyRaw struct {
-	Condition string `yaml:"condition,omitempty"`
+	Condition   string `yaml:"condition,omitempty"`
+	MaxAttempts int32  `yaml:"max_attempts,omitempty"`
 
-	Delay       *WarningType `yaml:"delay,omitempty"`
-	MaxAttempts *WarningType `yaml:"max_attempts,omitempty"`
-	Window      *WarningType `yaml:"window,omitempty"`
+	Delay  *WarningType `yaml:"delay,omitempty"`
+	Window *WarningType `yaml:"window,omitempty"`
 }
 type PortRaw struct {
 	ContainerPort int32
@@ -419,6 +419,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
 	if err != nil {
 		return nil, err
+	}
+	if serviceRaw.Deploy != nil && serviceRaw.Deploy.RestartPolicy != nil {
+		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
 	}
 	return svc, nil
 }
@@ -1023,9 +1026,6 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 	if deploy.RestartPolicy != nil {
 		if deploy.RestartPolicy.Delay != nil {
 			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.delay", svcName))
-		}
-		if deploy.RestartPolicy.MaxAttempts != nil {
-			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.max_attemps", svcName))
 		}
 		if deploy.RestartPolicy.Window != nil {
 			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.window", svcName))
