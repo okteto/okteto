@@ -404,10 +404,6 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 		Spec: batchv1.JobSpec{
 			Completions: pointer.Int32Ptr(svc.Replicas),
 			Parallelism: pointer.Int32Ptr(1),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: translateLabelSelector(svcName, s),
-			},
-			ManualSelector: pointer.BoolPtr(true),
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      translateLabels(svcName, s),

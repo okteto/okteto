@@ -21,7 +21,6 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -58,7 +57,8 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	log.Infof("deleting job '%s'", name)
-	err := c.BatchV1().Jobs(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	deletePropagation := metav1.DeletePropagationBackground
+	err := c.BatchV1().Jobs(namespace).Delete(ctx, name, metav1.DeleteOptions{PropagationPolicy: &deletePropagation})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil

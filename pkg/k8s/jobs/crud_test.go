@@ -90,6 +90,7 @@ func TestDestroy(t *testing.T) {
 		jobName   string
 		namespace string
 		job       *batchv1.Job
+		deleted   bool
 	}{
 		{
 			name:      "existent-job",
@@ -101,6 +102,7 @@ func TestDestroy(t *testing.T) {
 					Namespace: "test",
 				},
 			},
+			deleted: true,
 		},
 		{
 			name:      "job-not-found",
@@ -112,6 +114,7 @@ func TestDestroy(t *testing.T) {
 					Namespace: "another-space",
 				},
 			},
+			deleted: false,
 		},
 	}
 
@@ -124,6 +127,10 @@ func TestDestroy(t *testing.T) {
 
 			if err != nil {
 				t.Fatalf("unexpected error '%s'", err)
+			}
+
+			if list, _ := clientset.CoreV1().Pods(tt.namespace).List(ctx, v1.ListOptions{}); tt.deleted && len(list.Items) != 0 {
+				t.Fatal("Not deleted job pods")
 			}
 		})
 	}
