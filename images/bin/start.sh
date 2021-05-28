@@ -17,7 +17,8 @@ fi
 remote=""
 reset=""
 verbose="--verbose=false"
-while getopts ":s:rev" opt; do
+
+while getopts ":s:ervd" opt; do
         case $opt in
         e)
                 reset="--reset"
@@ -27,6 +28,19 @@ while getopts ":s:rev" opt; do
                 ;;
         v)
                 verbose="--verbose"
+                ;;
+        d)
+                if [ -z "${DOCKER_CONFIG}" ]; then
+                        DOCKER_CONFIG="$HOME"/.docker
+                fi
+                if [ ! -d "${DOCKER_CONFIG}" ]; then
+                        mkdir -p "${DOCKER_CONFIG}"
+                fi
+                if [ ! -f "${DOCKER_CONFIG}/config.json" ]; then
+                        PASSWD=$(echo "${OKTETO_USERNAME}:${OKTETO_TOKEN}" | tr -d '\n' | base64 -i -w 0)
+                        DOCKER_CONFIG_VALUE="{\n    \"auths\": {\n        \"${OKTETO_REGISTRY_URL}\": {\n            \"auth\": \"${PASSWD}\"\n        }\n    }\n}"
+                        echo "${DOCKER_CONFIG_VALUE}" >"${DOCKER_CONFIG}/config.json"
+                fi
                 ;;
         s)
                 sourceFILE="$(echo "$OPTARG" | cut -d':' -f1)"

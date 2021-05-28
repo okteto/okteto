@@ -170,6 +170,9 @@ func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, 
 			Replicas:    replicas,
 			Rules:       []*model.TranslationRule{rule},
 		}
+		if dev.Docker.Enabled {
+			result[d.Name].Annotations[model.OktetoInjectTokenAnnotation] = "true"
+		}
 	}
 
 	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {

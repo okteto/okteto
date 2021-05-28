@@ -631,6 +631,7 @@ docker:
 		t.Fatal(err)
 	}
 	dev.Username = "cindy"
+	dev.RegistryURL = "registry.okteto.dev"
 	d := dev.GevSandbox()
 	rule := dev.ToTranslationRule(dev, false)
 	tr := &model.Translation{
@@ -733,7 +734,7 @@ docker:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-v"},
+							Args:            []string{"-r", "-v", "-d"},
 							Env: []apiv1.EnvVar{
 								{
 									Name:  "OKTETO_NAMESPACE",
@@ -746,6 +747,10 @@ docker:
 								{
 									Name:  "OKTETO_USERNAME",
 									Value: "cindy",
+								},
+								{
+									Name:  "OKTETO_REGISTRY_URL",
+									Value: "registry.okteto.dev",
 								},
 								{
 									Name:  "DOCKER_HOST",
