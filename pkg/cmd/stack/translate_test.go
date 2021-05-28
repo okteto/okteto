@@ -867,3 +867,178 @@ func Test_getAccessibleVolumeMounts(t *testing.T) {
 	}
 
 }
+
+func Test_getWaitForSvcsInitContainer(t *testing.T) {
+	var tests = []struct {
+		name          string
+		svcName       string
+		stack         *model.Stack
+		initContainer *apiv1.Container
+	}{
+		{
+			name:    "depends_on job",
+			svcName: "svcName",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image: "image",
+						DependsOn: model.DependsOn{
+							"dependentJob": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceCompleted,
+							},
+						},
+					},
+					"dependentJob": {
+						Image:         "okteto.dev/svc",
+						RestartPolicy: apiv1.RestartPolicyNever,
+					},
+				},
+			},
+			initContainer: &apiv1.Container{
+				Name:    "wait-for-svcs",
+				Image:   "bitnami/kubectl",
+				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services... && kubectl wait --for=condition=complete job/dependentJob"},
+			},
+		},
+		{
+			name:    "depends_on service running",
+			svcName: "svcName",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image: "image",
+						DependsOn: model.DependsOn{
+							"dependentSvc": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceRunning,
+							},
+						},
+					},
+					"dependentSvc": {
+						Image: "okteto.dev/svc",
+					},
+				},
+			},
+			initContainer: &apiv1.Container{
+				Name:    "wait-for-svcs",
+				Image:   "bitnami/kubectl",
+				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services... && kubectl wait --for=condition=available deployment/dependentSvc"},
+			},
+		},
+		{
+			name:    "depends_on service running sfs",
+			svcName: "svcName",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image: "image",
+						DependsOn: model.DependsOn{
+							"dependentSvc": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceRunning,
+							},
+						},
+					},
+					"dependentSvc": {
+						Image: "okteto.dev/svc",
+						Volumes: []model.StackVolume{
+							{
+								LocalPath:  "/usr",
+								RemotePath: "/usr",
+							},
+						},
+					},
+				},
+			},
+			initContainer: &apiv1.Container{
+				Name:    "wait-for-svcs",
+				Image:   "bitnami/kubectl",
+				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services...kubectl rollout status --watch --timeout=600s statefulset/dependentSvc"},
+			},
+		},
+		{
+			name:    "depends_on service available",
+			svcName: "svcName",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image: "image",
+						DependsOn: model.DependsOn{
+							"dependentSvc": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceHealthy,
+							},
+						},
+					},
+					"dependentSvc": {
+						Image: "okteto.dev/svc",
+						Ports: []model.Port{
+							{
+								Port: 80,
+							},
+						},
+					},
+				},
+			},
+			initContainer: &apiv1.Container{
+				Name:    "wait-for-svcs",
+				Image:   "bitnami/kubectl",
+				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services... && echo waiting for dependentSvc && while [ $(curl -s -o /dev/null -w \"%{http_code}\" dependentSvc:80) != \"200\" ]; do sleep 5; done && echo dependentSvc is ready"},
+			},
+		},
+		{
+			name:    "one of each",
+			svcName: "svcName",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Image: "image",
+						DependsOn: model.DependsOn{
+							"dependentJob": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceCompleted,
+							},
+							"dependentSvc": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceRunning,
+							},
+							"dependentSvcAvailable": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceHealthy,
+							},
+						},
+					},
+					"dependentJob": {
+						Image:         "okteto.dev/svc",
+						RestartPolicy: apiv1.RestartPolicyNever,
+					},
+					"dependentSvc": {
+						Image: "okteto.dev/svc",
+					},
+					"dependentSvcAvailable": {
+						Image: "okteto.dev/svc",
+						Ports: []model.Port{
+							{
+								Port: 80,
+							},
+						},
+					},
+				},
+			},
+			initContainer: &apiv1.Container{
+				Name:    "wait-for-svcs",
+				Image:   "bitnami/kubectl",
+				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services... && kubectl wait --for=condition=complete job/dependentJob && kubectl wait --for=condition=available deployment/dependentSvc && echo waiting for dependentSvcAvailable && while [ $(curl -s -o /dev/null -w \"%{http_code}\" dependentSvcAvailable:80) != \"200\" ]; do sleep 5; done && echo dependentSvcAvailable is ready"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			container := getWaitForSvcsInitContainer(tt.svcName, tt.stack)
+			fmt.Println(container.Command[2])
+			if !reflect.DeepEqual(container, tt.initContainer) {
+				t.Fatalf("Expected %v but got %v", tt.initContainer, container)
+			}
+		})
+	}
+}
