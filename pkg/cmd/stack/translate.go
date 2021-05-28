@@ -279,6 +279,13 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 
 func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
+
+	initContainers := make([]apiv1.Container, 0)
+	waitForSvcInitContainer := getWaitForSvcsInitContainer(svcName, s)
+	if waitForSvcInitContainer != nil {
+		initContainers = append(initContainers, *waitForSvcInitContainer)
+	}
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -298,6 +305,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					InitContainers:                initContainers,
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -342,7 +350,12 @@ func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.Per
 func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
-	initContainers := getInitContainers(svcName, svc)
+	initContainers := getInitContainers(svcName, s)
+
+	waitForSvcInitContainer := getWaitForSvcsInitContainer(svcName, s)
+	if waitForSvcInitContainer != nil {
+		initContainers = append(initContainers, *waitForSvcInitContainer)
+	}
 
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -388,7 +401,8 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	}
 }
 
-func getInitContainers(svcName string, svc *model.Service) []apiv1.Container {
+func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
+	svc := s.Services[svcName]
 	addPermissionsContainer := getAddPermissionsInitContainer(svcName, svc)
 	initContainers := []apiv1.Container{
 		addPermissionsContainer,
@@ -410,6 +424,54 @@ func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Co
 		VolumeMounts: initContainerVolumeMounts,
 	}
 	return initContainer
+}
+
+func getWaitForSvcsInitContainer(svcName string, s *model.Stack) *apiv1.Container {
+	command := "echo Waiting for dependent services..."
+	for dependentSvc, condition := range s.Services[svcName].DependsOn {
+		if condition.Condition == model.DependsOnServiceHealthy {
+			if len(s.Services[dependentSvc].Ports) == 0 {
+				condition.Condition = model.DependsOnServiceRunning
+			}
+		}
+		command += getDependentCommand(condition, dependentSvc, s)
+	}
+
+	if command != "echo waiting for dependent services..." {
+		initContainer := &apiv1.Container{
+			Name:    fmt.Sprintf("wait-for-svcs"),
+			Image:   "bitnami/kubectl",
+			Command: []string{"/bin/bash", "-c", command},
+		}
+		return initContainer
+	}
+	return nil
+}
+
+func getDependentCommand(condition model.DependsOnConditionSpec, dependentSvcName string, s *model.Stack) string {
+	switch condition.Condition {
+	case model.DependsOnServiceCompleted:
+		return fmt.Sprintf(" && kubectl wait --for=condition=complete job/%s", dependentSvcName)
+	case model.DependsOnServiceRunning:
+		serviceRunningCommand := " && kubectl wait --for=condition=available %s/%s"
+		if isDeployment(s, dependentSvcName) {
+			return fmt.Sprintf(serviceRunningCommand, "deployment", dependentSvcName)
+		} else {
+			return fmt.Sprintf(serviceRunningCommand, "statefulset", dependentSvcName)
+		}
+	case model.DependsOnServiceHealthy:
+		isPortAvailableList := make([]string, 0)
+		for _, port := range s.Services[dependentSvcName].Ports {
+			isPortAvailableList = append(isPortAvailableList, fmt.Sprintf("$(curl -s -o /dev/null -w \"%%{http_code}\" %s:%d) != \"200\"", dependentSvcName, port.Port))
+		}
+		serviceHealthyCommand := fmt.Sprintf(" && echo waiting for %s && while [ %s ]; do sleep 5; done && echo %s is ready", dependentSvcName, strings.Join(isPortAvailableList, " || "), dependentSvcName)
+		return serviceHealthyCommand
+	}
+	return ""
+}
+
+func isDeployment(s *model.Stack, svcName string) bool {
+	return len(s.Services[svcName].Volumes) == 0
 }
 
 func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *apiv1.Container {

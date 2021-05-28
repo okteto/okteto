@@ -71,6 +71,7 @@ type ServiceRaw struct {
 	Volumes                  []StackVolume      `yaml:"volumes,omitempty"`
 	WorkingDirSneakCase      string             `yaml:"working_dir,omitempty"`
 	Workdir                  string             `yaml:"workdir,omitempty"`
+	DependsOn                DependsOn          `yaml:"depends_on,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas"`
@@ -88,7 +89,6 @@ type ServiceRaw struct {
 	Configs           *WarningType `yaml:"configs,omitempty"`
 	ContainerName     *WarningType `yaml:"container_name,omitempty"`
 	CredentialSpec    *WarningType `yaml:"credential_spec,omitempty"`
-	DependsOn         *WarningType `yaml:"depends_on,omitempty"`
 	DeviceCgroupRules *WarningType `yaml:"device_cgroup_rules,omitempty"`
 	Devices           *WarningType `yaml:"devices,omitempty"`
 	Dns               *WarningType `yaml:"dns,omitempty"`
@@ -229,6 +229,9 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
+	}
+	if err := validateDependsOn(s); err != nil {
+		return err
 	}
 
 	s.Warnings.NotSupportedFields = getNotSupportedFields(&stackRaw)
@@ -372,6 +375,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	svc.Environment = serviceRaw.Environment
 
+	svc.DependsOn = serviceRaw.DependsOn
 	svc.Public = serviceRaw.Public
 	if !svc.Public && len(getAccessiblePorts(serviceRaw.Ports)) == 1 {
 		svc.Public = true
@@ -470,6 +474,35 @@ func (warning *WarningType) UnmarshalYAML(unmarshal func(interface{}) error) err
 		warning.used = true
 	}
 	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (dependsOn *DependsOn) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	result := make(DependsOn)
+
+	type dependsOnSyntax DependsOn // prevent recursion
+	var d dependsOnSyntax
+	err := unmarshal(&d)
+	if err == nil {
+		for key, value := range d {
+			if value.Condition != DependsOnServiceRunning && value.Condition != DependsOnServiceHealthy && value.Condition != DependsOnServiceCompleted {
+				return fmt.Errorf("'%s' is unsupported. Condition must be one of '%s', '%s' or '%s'", value.Condition, DependsOnServiceRunning, DependsOnServiceHealthy, DependsOnServiceCompleted)
+			}
+			result[key] = value
+		}
+		*dependsOn = result
+		return nil
+	}
+	var dList []string
+	err = unmarshal(&dList)
+	if err == nil {
+		for _, svc := range dList {
+			result[svc] = DependsOnConditionSpec{Condition: DependsOnServiceRunning}
+		}
+		*dependsOn = result
+		return nil
+	}
+	return err
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -771,6 +804,26 @@ func sanitizeName(name string) string {
 	return name
 }
 
+func validateDependsOn(s *Stack) error {
+	for svcName, svc := range s.Services {
+		for dependentSvc := range svc.DependsOn {
+			if svcName == dependentSvc {
+				return fmt.Errorf(" Service '%s' depends can not depend of itself.", svcName)
+			}
+			if _, ok := s.Services[dependentSvc]; !ok {
+				return fmt.Errorf(" Service '%s' depends on service '%s' which is undefined.", svcName, dependentSvc)
+			}
+		}
+	}
+
+	dependencyCycle := getDependentCyclic(s)
+	if len(dependencyCycle) > 0 {
+		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(dependencyCycle[:len(dependencyCycle)-1], ", "), dependencyCycle[len(dependencyCycle)-1])
+		return fmt.Errorf(" There was a cyclic dependendecy between %s.", svcsDependents)
+	}
+	return nil
+}
+
 func getNotSupportedFields(s *StackRaw) []string {
 	notSupportedFields := make([]string, 0)
 	notSupportedFields = append(notSupportedFields, getTopLevelNotSupportedFields(s)...)
@@ -837,9 +890,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	}
 	if svcInfo.CredentialSpec != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].credential_spec", svcName))
-	}
-	if svcInfo.DependsOn != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].depends_on", svcName))
 	}
 	if svcInfo.DeviceCgroupRules != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].device_cgroup_rules", svcName))

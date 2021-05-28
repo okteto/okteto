@@ -51,6 +51,7 @@ type Service struct {
 	Entrypoint Entrypoint         `yaml:"entrypoint,omitempty"`
 	Command    Command            `yaml:"command,omitempty"`
 	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
+	DependsOn  DependsOn          `yaml:"depends_on,omitempty"`
 
 	Environment     Environment   `yaml:"environment,omitempty"`
 	Expose          []int32       `yaml:"expose,omitempty"`
@@ -144,6 +145,21 @@ type StackWarnings struct {
 	SanitizedServices   map[string]string `yaml:"-"`
 	VolumeMountWarnings []string          `yaml:"-"`
 }
+type DependsOn map[string]DependsOnConditionSpec
+
+type DependsOnConditionSpec struct {
+	Condition DependsOnCondition `json:"condition,omitempty" yaml:"condition,omitempty"`
+}
+
+type DependsOnCondition string
+
+const (
+	DependsOnServiceHealthy DependsOnCondition = "service_healthy"
+
+	DependsOnServiceRunning DependsOnCondition = "service_started"
+
+	DependsOnServiceCompleted DependsOnCondition = "service_completed_successfully"
+)
 
 // GetStack returns an okteto stack object from a given file
 func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {

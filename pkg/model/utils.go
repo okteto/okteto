@@ -121,3 +121,94 @@ func GetRepositoryURL(path string) (string, error) {
 
 	return remotes[0].Config().URLs[0], nil
 }
+
+func getDependentCyclic(s *Stack) []string {
+	visited := make(map[string]bool)
+	stack := make(map[string]bool)
+	cycle := make([]string, 0)
+	for svcName := range s.Services {
+		if dfs(s, svcName, visited, stack) {
+			for svc, isInStack := range stack {
+				if isInStack {
+					cycle = append(cycle, svc)
+				}
+			}
+			return cycle
+		}
+	}
+	return cycle
+}
+
+func dfs(s *Stack, svcName string, visited map[string]bool, stack map[string]bool) bool {
+	isVisited := visited[svcName]
+	if !isVisited {
+		visited[svcName] = true
+		stack[svcName] = true
+
+		svc := s.Services[svcName]
+		for dependentSvc := range svc.DependsOn {
+			if !visited[dependentSvc] && dfs(s, dependentSvc, visited, stack) {
+				return true
+			} else if value, ok := stack[dependentSvc]; ok && value {
+				return true
+			}
+		}
+	}
+	stack[svcName] = false
+	return false
+}
+
+// func getDependentCyclic2(s *Stack) []string {
+// 	visited := make(map[string]bool)
+// 	cycle := make([]string, 0)
+// 	for svcName := range s.Services {
+// 		if !visited[svcName] {
+// 			stack := make(map[string]int)
+// 			if dfs(s, svcName, visited, stack) {
+// 				for cyclicSvc := range stack {
+// 					cycle = append(cycle, cyclicSvc)
+// 				}
+// 				return cycle
+// 			}
+// 		}
+// 	}
+// 	return cycle
+// }
+
+// func dfs2(s *Stack, svcName string, visited map[string]bool, stack map[string]int) bool {
+// 	if visited[svcName] {
+// 		return false
+// 	}
+// 	visited[svcName] = true
+// 	if pos, ok := stack[svcName]; ok && pos != -1 {
+// 		toRemove := make([]string, 0)
+// 		for key, value := range stack {
+// 			if value < pos {
+// 				toRemove = append(toRemove, key)
+// 			}
+// 		}
+// 		for _, keyToRemove := range toRemove {
+// 			delete(stack, keyToRemove)
+// 		}
+// 		return true
+// 	}
+
+// 	pos := -1
+// 	for _, v := range stack {
+// 		if v > pos {
+// 			pos = v
+// 		}
+// 	}
+
+// 	stack[svcName] = pos + 1
+// 	svc := s.Services[svcName]
+// 	for dependentSvc := range svc.DependsOn {
+// 		if !visited[dependentSvc] {
+// 			if dfs(s, dependentSvc, visited, stack) {
+// 				return true
+// 			}
+// 		}
+// 	}
+
+// 	return false
+// }
