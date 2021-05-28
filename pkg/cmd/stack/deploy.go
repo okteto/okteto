@@ -331,6 +331,9 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 			if podList[i].Status.Phase == apiv1.PodRunning || podList[i].Status.Phase == apiv1.PodSucceeded {
 				pendingPods--
 			}
+			if podList[i].Status.Phase == apiv1.PodFailed {
+				return fmt.Errorf("Service '%s' has failed. Please check for errors and try again", podList[i].Labels[okLabels.StackServiceNameLabel])
+			}
 		}
 		if pendingPods == 0 {
 			return nil
