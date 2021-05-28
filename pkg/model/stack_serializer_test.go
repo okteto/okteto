@@ -1364,7 +1364,7 @@ func Test_validateDependsOn(t *testing.T) {
 		},
 		{
 			name:       "defined dependent service completed",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      test:\n        condition: service_completed_successfully\n  test:\n    image: okteto/vote:1"),
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      test:\n        condition: service_completed_successfully\n  test:\n    image: okteto/vote:1\n    restart: never"),
 			throwError: false,
 			dependsOn: DependsOn{
 				"test": DependsOnConditionSpec{Condition: DependsOnServiceCompleted},
