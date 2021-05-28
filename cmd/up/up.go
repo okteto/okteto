@@ -208,6 +208,9 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 	}
 
 	dev.Username = okteto.GetUsername()
+	if registryURL, err := okteto.GetRegistry(); err == nil {
+		dev.RegistryURL = registryURL
+	}
 
 	return nil
 }

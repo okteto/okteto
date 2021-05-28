@@ -256,6 +256,9 @@ docker:
 		t.Fatal(err)
 	}
 
+	dev.Username = "cindy"
+	dev.RegistryURL = "registry.okteto.dev"
+
 	rule := dev.ToTranslationRule(dev, false)
 	ruleOK := &TranslationRule{
 		Marker:            OktetoBinImageTag,
@@ -263,7 +266,7 @@ docker:
 		ImagePullPolicy:   apiv1.PullAlways,
 		Image:             "dev-image",
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r", "-v"},
+		Args:              []string{"-r", "-v", "-d"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -274,6 +277,14 @@ docker:
 			{
 				Name:  "OKTETO_NAME",
 				Value: "web",
+			},
+			{
+				Name:  "OKTETO_USERNAME",
+				Value: "cindy",
+			},
+			{
+				Name:  "OKTETO_REGISTRY_URL",
+				Value: "registry.okteto.dev",
 			},
 			{
 				Name:  "DOCKER_HOST",
