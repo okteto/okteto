@@ -840,12 +840,15 @@ func sanitizeName(name string) string {
 
 func validateDependsOn(s *Stack) error {
 	for svcName, svc := range s.Services {
-		for dependentSvc := range svc.DependsOn {
+		for dependentSvc, condition := range svc.DependsOn {
 			if svcName == dependentSvc {
 				return fmt.Errorf(" Service '%s' depends can not depend of itself.", svcName)
 			}
 			if _, ok := s.Services[dependentSvc]; !ok {
 				return fmt.Errorf(" Service '%s' depends on service '%s' which is undefined.", svcName, dependentSvc)
+			}
+			if condition.Condition == DependsOnServiceCompleted && s.Services[dependentSvc].RestartPolicy == apiv1.RestartPolicyAlways {
+				return fmt.Errorf(" Service '%s' is not a job. Please change the reset policy so that it is not always in service '%s' ", dependentSvc, dependentSvc)
 			}
 		}
 	}

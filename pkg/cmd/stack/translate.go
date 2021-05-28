@@ -406,6 +406,10 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
+	waitForSvcInitContainer := getWaitForSvcsInitContainer(svcName, s)
+	if waitForSvcInitContainer != nil {
+		initContainers = append(initContainers, *waitForSvcInitContainer)
+	}
 
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -500,11 +504,11 @@ func getDependentCommand(condition model.DependsOnConditionSpec, dependentSvcNam
 	case model.DependsOnServiceCompleted:
 		return fmt.Sprintf(" && kubectl wait --for=condition=complete job/%s", dependentSvcName)
 	case model.DependsOnServiceRunning:
-		serviceRunningCommand := " && kubectl wait --for=condition=available %s/%s"
 		if isDeployment(s, dependentSvcName) {
-			return fmt.Sprintf(serviceRunningCommand, "deployment", dependentSvcName)
+			return fmt.Sprintf(" && kubectl wait --for=condition=available deployment/%s", dependentSvcName)
 		} else {
-			return fmt.Sprintf(serviceRunningCommand, "statefulset", dependentSvcName)
+			// Workaround until https://github.com/kubernetes/kubernetes/issues/79606
+			return fmt.Sprintf("kubectl rollout status --watch --timeout=600s statefulset/%s", dependentSvcName)
 		}
 	case model.DependsOnServiceHealthy:
 		isPortAvailableList := make([]string, 0)
