@@ -171,7 +171,7 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 
 // InDevContainer returns true if running in an okteto dev container
 func InDevContainer() bool {
-	if v, ok := os.LookupEnv("OKTETO_NAMESPACE"); ok && v != "" {
+	if v, ok := os.LookupEnv("OKTETO_NAME"); ok && v != "" {
 		return true
 	}
 
