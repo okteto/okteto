@@ -61,7 +61,7 @@ var (
 	ErrSSHConnectError = fmt.Errorf("ssh start error")
 
 	// ErrNotInDevContainer is returned when an unsupported command is invoked from a dev container (e.g. okteto up)
-	ErrNotInDevContainer = fmt.Errorf("this command is not supported from inside an development container")
+	ErrNotInDevContainer = fmt.Errorf("'OKTETO_NAME' environment variable is defined. This command is not supported from inside a development container")
 
 	// ErrUnknownSyncError is returned when syncthing reports an unknown sync error
 	ErrUnknownSyncError = fmt.Errorf("unknown syncthing error")

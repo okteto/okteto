@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
+	"github.com/okteto/okteto/pkg/k8s/jobs"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -107,7 +108,11 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	}
 
 	for name := range s.Services {
-		if len(s.Services[name].Volumes) == 0 {
+		if s.Services[name].RestartPolicy != apiv1.RestartPolicyAlways {
+			if err := deployJob(ctx, name, s, c); err != nil {
+				return err
+			}
+		} else if len(s.Services[name].Volumes) == 0 {
 			if err := deployDeployment(ctx, name, s, c); err != nil {
 				return err
 			}
@@ -144,7 +149,6 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 
 	spinner.Update("Waiting for services to be ready...")
 	return waitForPodsToBeRunning(ctx, s, c)
-
 }
 
 func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
@@ -209,6 +213,34 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 			if err := statefulsets.Create(ctx, sfs, c); err != nil {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
+		}
+	}
+	return nil
+}
+
+func deployJob(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
+	job := translateJob(svcName, s)
+	old, err := c.BatchV1().Jobs(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("error getting job of service '%s': %s", svcName, err.Error())
+	}
+	isNewJob := old.Name == ""
+	if !isNewJob {
+		if old.Labels[okLabels.StackNameLabel] == "" {
+			return fmt.Errorf("name collision: the job '%s' was running before deploying your stack", svcName)
+		}
+		if old.Labels[okLabels.StackNameLabel] != s.Name {
+			return fmt.Errorf("name collision: the job '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+		}
+	}
+
+	if isNewJob {
+		if err := jobs.Create(ctx, job, c); err != nil {
+			return fmt.Errorf("error creating job of service '%s': %s", svcName, err.Error())
+		}
+	} else {
+		if err := jobs.Update(ctx, job, c); err != nil {
+			return fmt.Errorf("error updating job of service '%s': %s", svcName, err.Error())
 		}
 	}
 	return nil
@@ -296,8 +328,11 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 			return err
 		}
 		for i := range podList {
-			if podList[i].Status.Phase == apiv1.PodRunning {
+			if podList[i].Status.Phase == apiv1.PodRunning || podList[i].Status.Phase == apiv1.PodSucceeded {
 				pendingPods--
+			}
+			if podList[i].Status.Phase == apiv1.PodFailed {
+				return fmt.Errorf("Service '%s' has failed. Please check for errors and try again", podList[i].Labels[okLabels.StackServiceNameLabel])
 			}
 		}
 		if pendingPods == 0 {

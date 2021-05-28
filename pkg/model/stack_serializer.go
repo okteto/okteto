@@ -65,6 +65,7 @@ type ServiceRaw struct {
 	MemLimit                 Quantity           `yaml:"mem_limit,omitempty"`
 	MemReservation           Quantity           `yaml:"mem_reservation,omitempty"`
 	Ports                    []PortRaw          `yaml:"ports,omitempty"`
+	Restart                  string             `yaml:"restart,omitempty"`
 	Scale                    int32              `yaml:"scale"`
 	StopGracePeriodSneakCase *RawMessage        `yaml:"stop_grace_period,omitempty"`
 	StopGracePeriod          *RawMessage        `yaml:"stopGracePeriod,omitempty"`
@@ -120,7 +121,6 @@ type ServiceRaw struct {
 	Profiles          *WarningType `yaml:"profiles,omitempty"`
 	PullPolicy        *WarningType `yaml:"pull_policy,omitempty"`
 	ReadOnly          *WarningType `yaml:"read_only,omitempty"`
-	Restart           *string      `yaml:"restart,omitempty"`
 	Runtime           *WarningType `yaml:"runtime,omitempty"`
 	Secrets           *WarningType `yaml:"secrets,omitempty"`
 	SecurityOpt       *WarningType `yaml:"security_opt,omitempty"`
@@ -138,20 +138,27 @@ type ServiceRaw struct {
 }
 
 type DeployInfoRaw struct {
-	Replicas  int32        `yaml:"replicas,omitempty"`
-	Resources ResourcesRaw `yaml:"resources,omitempty"`
-	Labels    Labels       `yaml:"labels,omitempty"`
+	Replicas      int32             `yaml:"replicas,omitempty"`
+	Resources     ResourcesRaw      `yaml:"resources,omitempty"`
+	Labels        Labels            `yaml:"labels,omitempty"`
+	RestartPolicy *RestartPolicyRaw `yaml:"restart_policy,omitempty"`
 
 	EndpointMode   *WarningType `yaml:"endpoint_mode,omitempty"`
 	Mode           *WarningType `yaml:"mode,omitempty"`
 	Placement      *WarningType `yaml:"placement,omitempty"`
 	Constraints    *WarningType `yaml:"constraints,omitempty"`
 	Preferences    *WarningType `yaml:"preferences,omitempty"`
-	RestartPolicy  *WarningType `yaml:"restart_policy,omitempty"`
 	RollbackConfig *WarningType `yaml:"rollback_config,omitempty"`
 	UpdateConfig   *WarningType `yaml:"update_config,omitempty"`
 }
 
+type RestartPolicyRaw struct {
+	Condition   string `yaml:"condition,omitempty"`
+	MaxAttempts int32  `yaml:"max_attempts,omitempty"`
+
+	Delay  *WarningType `yaml:"delay,omitempty"`
+	Window *WarningType `yaml:"window,omitempty"`
+}
 type PortRaw struct {
 	ContainerPort int32
 	HostPort      int32
@@ -412,6 +419,14 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if serviceRaw.WorkingDirSneakCase != "" {
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
+
+	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
+	if err != nil {
+		return nil, err
+	}
+	if serviceRaw.Deploy != nil && serviceRaw.Deploy.RestartPolicy != nil {
+		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
+	}
 	return svc, nil
 }
 
@@ -583,6 +598,25 @@ func (p *Port) MarshalYAML() (interface{}, error) {
 	return Port{Port: p.Port, Protocol: p.Protocol}, nil
 }
 
+func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy string) (apiv1.RestartPolicy, error) {
+	var restart string
+	if deployInfo != nil && deployInfo.RestartPolicy != nil {
+		restart = deployInfo.RestartPolicy.Condition
+	}
+	if restart == "" {
+		restart = restartPolicy
+	}
+	switch restart {
+	case "none", "never", "no":
+		return apiv1.RestartPolicyNever, nil
+	case "always", "", "unless-stopped", "any":
+		return apiv1.RestartPolicyAlways, nil
+	case "on-failure":
+		return apiv1.RestartPolicyOnFailure, nil
+	default:
+		return apiv1.RestartPolicyAlways, fmt.Errorf("Cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
+	}
+}
 func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources, cpuCount, cpus, memLimit, memReservation Quantity) (*StackResources, error) {
 	if resources == nil {
 		resources = &StackResources{}
@@ -984,11 +1018,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	if svcInfo.ReadOnly != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].read_only", svcName))
 	}
-	if svcInfo.Restart != nil {
-		if *svcInfo.Restart != "always" {
-			notSupported = append(notSupported, fmt.Sprintf("services[%s].restart", svcName))
-		}
-	}
 	if svcInfo.Runtime != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].runtime", svcName))
 	}
@@ -1043,6 +1072,15 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 	if deploy.Resources.Reservations.Devices != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.resources.reservations.devices", svcName))
 	}
+
+	if deploy.RestartPolicy != nil {
+		if deploy.RestartPolicy.Delay != nil {
+			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.delay", svcName))
+		}
+		if deploy.RestartPolicy.Window != nil {
+			notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.window", svcName))
+		}
+	}
 	if deploy.EndpointMode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.endpoint_mode", svcName))
 	}
@@ -1057,9 +1095,6 @@ func getDeployNotSupportedFields(svcName string, deploy *DeployInfoRaw) []string
 	}
 	if deploy.Preferences != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.preferences", svcName))
-	}
-	if deploy.RestartPolicy != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.restart_policy", svcName))
 	}
 	if deploy.RollbackConfig != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].deploy.rollback_config", svcName))

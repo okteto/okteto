@@ -85,6 +85,8 @@ const (
 	OktetoDivertLabel = "dev.okteto.com/divert"
 	//OktetoDivertServiceModificationAnnotation indicates the service modification done by diverting a service
 	OktetoDivertServiceModificationAnnotation = "divert.okteto.com/modification"
+	//OktetoInjectTokenAnnotation annotation to inject the okteto token
+	OktetoInjectTokenAnnotation = "dev.okteto.com/inject-token"
 
 	//OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"
@@ -108,7 +110,7 @@ const (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.3.0"
+	OktetoBinImageTag = "okteto/bin:1.3.1"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -128,6 +130,8 @@ var (
 // Dev represents a development container
 type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
+	Username             string                `json:"-" yaml:"-"`
+	RegistryURL          string                `json:"-" yaml:"-"`
 	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -871,9 +875,22 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				Value: dev.Name,
 			},
 		)
-		if main.Docker.Enabled {
+		if dev.Username != "" {
 			rule.Environment = append(
 				rule.Environment,
+				EnvVar{
+					Name:  "OKTETO_USERNAME",
+					Value: dev.Username,
+				},
+			)
+		}
+		if dev.Docker.Enabled {
+			rule.Environment = append(
+				rule.Environment,
+				EnvVar{
+					Name:  "OKTETO_REGISTRY_URL",
+					Value: dev.RegistryURL,
+				},
 				EnvVar{
 					Name:  "DOCKER_HOST",
 					Value: DefaultDockerHost,
@@ -945,6 +962,9 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		}
 		for _, s := range rule.Secrets {
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
+		}
+		if dev.Docker.Enabled {
+			rule.Args = append(rule.Args, "-d")
 		}
 	} else if len(dev.Command.Values) > 0 {
 		rule.Command = dev.Command.Values

@@ -16,6 +16,7 @@ package ssh
 import (
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -55,6 +56,7 @@ func getSSHClientConfig() (*ssh.ClientConfig, error) {
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(keys),
 		},
+		Timeout: 10 * time.Second,
 	}
 
 	return clientConfig, nil

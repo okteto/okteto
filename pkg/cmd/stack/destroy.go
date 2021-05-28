@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
+	"github.com/okteto/okteto/pkg/k8s/jobs"
 	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -140,6 +141,26 @@ func destroyHelmRelease(ctx context.Context, spinner *utils.Spinner, s *model.St
 }
 
 func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
+	if err := destroyDeployments(ctx, spinner, s, c); err != nil {
+		return err
+	}
+
+	if err := destroyStatefulsets(ctx, spinner, s, c); err != nil {
+		return err
+	}
+
+	if err := destroyJobs(ctx, spinner, s, c); err != nil {
+		return err
+	}
+
+	if err := destroyIngresses(ctx, spinner, s, c); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func destroyDeployments(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
 	dList, err := deployments.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
@@ -158,7 +179,10 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		log.Success("Destroyed service '%s'", dList[i].Name)
 		spinner.Start()
 	}
+	return nil
+}
 
+func destroyStatefulsets(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
 	sfsList, err := statefulsets.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
@@ -177,7 +201,31 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		log.Success("Destroyed service '%s'", sfsList[i].Name)
 		spinner.Start()
 	}
+	return nil
+}
+func destroyJobs(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
+	jobsList, err := jobs.List(ctx, s.Namespace, s.GetLabelSelector(), c)
+	if err != nil {
+		return err
+	}
+	for i := range jobsList {
+		if _, ok := s.Services[jobsList[i].Name]; ok {
+			continue
+		}
+		if err := jobs.Destroy(ctx, jobsList[i].Name, jobsList[i].Namespace, c); err != nil {
+			return fmt.Errorf("error destroying job of service '%s': %s", jobsList[i].Name, err)
+		}
+		if err := services.Destroy(ctx, jobsList[i].Name, jobsList[i].Namespace, c); err != nil {
+			return fmt.Errorf("error destroying service '%s': %s", jobsList[i].Name, err)
+		}
+		spinner.Stop()
+		log.Success("Destroyed service '%s'", jobsList[i].Name)
+		spinner.Start()
+	}
+	return nil
+}
 
+func destroyIngresses(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
 	iClient, err := ingresses.GetClient(ctx, c)
 	if err != nil {
 		return fmt.Errorf("error getting ingress client: %s", err.Error())
@@ -202,7 +250,6 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		log.Success("Destroyed endpoint '%s'", iList[i].GetName())
 		spinner.Start()
 	}
-
 	return nil
 }
 
