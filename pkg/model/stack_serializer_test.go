@@ -859,9 +859,9 @@ func Test_UnmarshalRestart(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := ReadStack(tt.manifest, false)
 			if tt.throwErr && err == nil {
-				t.Fatal("Not throwed error")
+				t.Fatal("Not threw error")
 			} else if err != nil && !tt.throwErr {
-				t.Fatalf("Throwed error when no error needed: %s", err.Error())
+				t.Fatalf("Threw error when no error needed: %s", err.Error())
 			}
 			if err == nil && s.Services["app"].RestartPolicy != tt.result {
 				t.Fatal("Wrong unmarshal")
