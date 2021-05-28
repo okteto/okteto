@@ -207,6 +207,8 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 		dev.LoadForcePull()
 	}
 
+	dev.Username = okteto.GetUsername()
+
 	return nil
 }
 

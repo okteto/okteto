@@ -128,6 +128,7 @@ var (
 // Dev represents a development container
 type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
+	Username             string                `json:"-" yaml:"-"`
 	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -871,6 +872,15 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				Value: dev.Name,
 			},
 		)
+		if dev.Username != "" {
+			rule.Environment = append(
+				rule.Environment,
+				EnvVar{
+					Name:  "OKTETO_USERNAME",
+					Value: dev.Username,
+				},
+			)
+		}
 		if main.Docker.Enabled {
 			rule.Environment = append(
 				rule.Environment,

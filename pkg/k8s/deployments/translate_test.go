@@ -630,6 +630,7 @@ docker:
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev.Username = "cindy"
 	d := dev.GevSandbox()
 	rule := dev.ToTranslationRule(dev, false)
 	tr := &model.Translation{
@@ -741,6 +742,10 @@ docker:
 								{
 									Name:  "OKTETO_NAME",
 									Value: "web",
+								},
+								{
+									Name:  "OKTETO_USERNAME",
+									Value: "cindy",
 								},
 								{
 									Name:  "DOCKER_HOST",
