@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -384,6 +385,52 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 				},
 			},
 			VolumeClaimTemplates: translateVolumeClaimTemplates(svcName, s),
+		},
+	}
+}
+
+func translateJob(svcName string, s *model.Stack) *batchv1.Job {
+	svc := s.Services[svcName]
+
+	initContainers := getInitContainers(svcName, svc)
+
+	return &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        svcName,
+			Namespace:   s.Namespace,
+			Labels:      translateLabels(svcName, s),
+			Annotations: translateAnnotations(svc),
+		},
+		Spec: batchv1.JobSpec{
+			Completions:  pointer.Int32Ptr(svc.Replicas),
+			Parallelism:  pointer.Int32Ptr(1),
+			BackoffLimit: &svc.BackOffLimit,
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      translateLabels(svcName, s),
+					Annotations: translateAnnotations(svc),
+				},
+				Spec: apiv1.PodSpec{
+					RestartPolicy:                 svc.RestartPolicy,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					InitContainers:                initContainers,
+					Containers: []apiv1.Container{
+						{
+							Name:            svcName,
+							Image:           svc.Image,
+							Command:         svc.Entrypoint.Values,
+							Args:            svc.Command.Values,
+							Env:             translateServiceEnvironment(svc),
+							Ports:           translateContainerPorts(svc),
+							SecurityContext: translateSecurityContext(svc),
+							VolumeMounts:    translateVolumeMounts(svcName, svc),
+							Resources:       translateResources(svc),
+							WorkingDir:      svc.Workdir,
+						},
+					},
+					Volumes: translateVolumes(svcName, svc),
+				},
+			},
 		},
 	}
 }

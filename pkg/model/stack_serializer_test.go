@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	yaml "gopkg.in/yaml.v2"
+	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -786,43 +787,91 @@ func Test_sanitizeVolumeName(t *testing.T) {
 	}
 }
 
-func Test_restartFile(t *testing.T) {
+func Test_UnmarshalRestart(t *testing.T) {
 	tests := []struct {
 		name     string
 		manifest []byte
-		isInList bool
+		result   apiv1.RestartPolicy
+		throwErr bool
 	}{
 		{
-			name:     "no-restart-field",
-			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
-			isInList: false,
+			name:     "Not-supported-policy",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: always\n    deploy:\n      restart_policy:\n        condition: aaa"),
+			result:   apiv1.RestartPolicyAlways,
+			throwErr: true,
 		},
 		{
-			name:     "restart-field-always",
-			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    image: okteto/vote:1\n    restart: always"),
-			isInList: false,
+			name:     "restart-always",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: always"),
+			result:   apiv1.RestartPolicyAlways,
+			throwErr: false,
 		},
 		{
-			name:     "restart-field-not-always",
-			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1\n    restart: never"),
-			isInList: true,
+			name:     "restart-always-default",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1"),
+			result:   apiv1.RestartPolicyAlways,
+			throwErr: false,
+		},
+		{
+			name:     "restart-always-by-deploy",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    deploy:\n      restart_policy:\n        condition: any"),
+			result:   apiv1.RestartPolicyAlways,
+			throwErr: false,
+		},
+		{
+			name:     "restart-always",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: on-failure"),
+			result:   apiv1.RestartPolicyOnFailure,
+			throwErr: false,
+		},
+		{
+			name:     "restart-on-failure-by-deploy",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    deploy:\n      restart_policy:\n        condition: on-failure"),
+			result:   apiv1.RestartPolicyOnFailure,
+			throwErr: false,
+		},
+		{
+			name:     "restart-always",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: never"),
+			result:   apiv1.RestartPolicyNever,
+			throwErr: false,
+		},
+		{
+			name:     "restart-never-by-deploy",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    deploy:\n      restart_policy:\n        condition: no"),
+			result:   apiv1.RestartPolicyNever,
+			throwErr: false,
+		},
+		{
+			name:     "deploy over direct restart",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: always\n    deploy:\n      restart_policy:\n        condition: on-failure"),
+			result:   apiv1.RestartPolicyOnFailure,
+			throwErr: false,
+		},
+		{
+			name:     "Not-supported-policy",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    restart: always\n    deploy:\n      restart_policy:\n        condition: aaa"),
+			result:   apiv1.RestartPolicyAlways,
+			throwErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			s, err := ReadStack(tt.manifest, false)
-			if err != nil {
-				t.Fatal(err)
+			if tt.throwErr && err == nil {
+				t.Fatal("Not throwed error")
+			} else if err != nil && !tt.throwErr {
+				t.Fatalf("Throwed error when no error needed: %s", err.Error())
 			}
-			if len(s.Warnings.NotSupportedFields) == 0 && tt.isInList {
-				t.Fatalf("Expected to see a warning but there is no warning")
+			if err == nil && s.Services["app"].RestartPolicy != tt.result {
+				t.Fatal("Wrong unmarshal")
 			}
+
 		})
 	}
 }
 
-func Test_UnmarshalWarnings(t *testing.T) {
+func Test_UnmarshalSvcName(t *testing.T) {
 	tests := []struct {
 		name            string
 		manifest        []byte
@@ -1279,5 +1328,48 @@ func Test_MultipleEndpoints(t *testing.T) {
 				t.Fatal("Public property was not set properly")
 			}
 		})
+	}
+}
+
+func Test_CreateJobPVCs(t *testing.T) {
+	manifest := []byte(`name: test
+services:
+  app:
+    ports:
+      - 9213
+    image: okteto/vote:1
+    volumes:
+      - /usr/var/lib
+    restart: never
+`)
+	s, err := ReadStack(manifest, true)
+	if err != nil {
+		t.Fatal("Could not read stack")
+	}
+	if len(s.Volumes) == 0 {
+		t.Fatal("PVCs not created")
+	}
+
+}
+
+func Test_TestJobCreation(t *testing.T) {
+	manifest := []byte(`name: test
+services:
+  app:
+    image: okteto/vote:1
+    deploy:
+      restart_policy:
+        max_attempts: 3
+        condition: on-failure
+`)
+	s, err := ReadStack(manifest, true)
+	if err != nil {
+		t.Fatalf("Could not read stack: %s", err.Error())
+	}
+	if s.Services["app"].BackOffLimit != 3 {
+		t.Fatal("Could not read the job properly")
+	}
+	if s.Services["app"].RestartPolicy != apiv1.RestartPolicyOnFailure {
+		t.Fatal("Could not read the job properly")
 	}
 }

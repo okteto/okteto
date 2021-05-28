@@ -435,6 +435,185 @@ func Test_translateStatefulSet(t *testing.T) {
 	}
 }
 
+func Test_translateJob(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svcName": {
+				Labels: model.Labels{
+					"label1": "value1",
+					"label2": "value2",
+				},
+				Annotations: model.Annotations{
+					"annotation1": "value1",
+					"annotation2": "value2",
+				},
+				Image:           "image",
+				StopGracePeriod: 20,
+				Replicas:        3,
+				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:         model.Command{Values: []string{"args1", "args2"}},
+				Environment: []model.EnvVar{
+					{
+						Name:  "env1",
+						Value: "value1",
+					},
+					{
+						Name:  "env2",
+						Value: "value2",
+					},
+				},
+				Ports:         []model.Port{{Port: 80}, {Port: 90}},
+				CapAdd:        []apiv1.Capability{apiv1.Capability("CAP_ADD")},
+				CapDrop:       []apiv1.Capability{apiv1.Capability("CAP_DROP")},
+				RestartPolicy: apiv1.RestartPolicyNever,
+				BackOffLimit:  5,
+				Volumes:       []model.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
+				Resources: &model.StackResources{
+					Limits: model.ServiceResources{
+						CPU:    model.Quantity{Value: resource.MustParse("100m")},
+						Memory: model.Quantity{Value: resource.MustParse("1Gi")},
+					},
+					Requests: model.ServiceResources{
+						Storage: model.StorageResource{
+							Size:  model.Quantity{Value: resource.MustParse("20Gi")},
+							Class: "class-name",
+						},
+					},
+				},
+			},
+		},
+	}
+	result := translateJob("svcName", s)
+	if result.Name != "svcName" {
+		t.Errorf("Wrong job name: '%s'", result.Name)
+	}
+	labels := map[string]string{
+		"label1":                       "value1",
+		"label2":                       "value2",
+		okLabels.StackNameLabel:        "stackName",
+		okLabels.StackServiceNameLabel: "svcName",
+	}
+	if !reflect.DeepEqual(result.Labels, labels) {
+		t.Errorf("Wrong job labels: '%s'", result.Labels)
+	}
+	annotations := map[string]string{
+		"annotation1": "value1",
+		"annotation2": "value2",
+	}
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong job annotations: '%s'", result.Annotations)
+	}
+	if *result.Spec.Completions != 3 {
+		t.Errorf("Wrong job spec.completions: '%d'", *result.Spec.Completions)
+	}
+	if *result.Spec.Parallelism != 1 {
+		t.Errorf("Wrong job spec.parallelism: '%d'", *result.Spec.Parallelism)
+	}
+	if *result.Spec.BackoffLimit != 5 {
+		t.Errorf("Wrong job spec.max_attemps: '%d'", *result.Spec.BackoffLimit)
+	}
+	if !reflect.DeepEqual(result.Spec.Template.Labels, labels) {
+		t.Errorf("Wrong spec.template.labels: '%s'", result.Spec.Template.Labels)
+	}
+	if !reflect.DeepEqual(result.Spec.Template.Annotations, annotations) {
+		t.Errorf("Wrong spec.template.annotations: '%s'", result.Spec.Template.Annotations)
+	}
+	if *result.Spec.Template.Spec.TerminationGracePeriodSeconds != 20 {
+		t.Errorf("Wrong job spec.template.spec.termination_grade_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
+	}
+	initContainer := apiv1.Container{
+		Name:    fmt.Sprintf("init-%s", "svcName"),
+		Image:   "busybox",
+		Command: []string{"sh", "-c", "chmod 777 /data"},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				MountPath: "/data",
+				Name:      pvcName,
+			},
+		},
+	}
+	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[0], initContainer) {
+		t.Errorf("Wrong job init container: '%v' but expected '%v'", result.Spec.Template.Spec.InitContainers[0], initContainer)
+	}
+	initVolumeContainer := apiv1.Container{
+		Name:            fmt.Sprintf("init-volume-%s", "svcName"),
+		Image:           "image",
+		ImagePullPolicy: apiv1.PullIfNotPresent,
+		Command:         []string{"sh", "-c", "echo initializing volume... && (cp -Rv /volume1/. /init-volume-0 || true) && (cp -Rv /volume2/. /init-volume-1 || true)"},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				MountPath: "/init-volume-0",
+				Name:      pvcName,
+				SubPath:   "data-0",
+			},
+			{
+				MountPath: "/init-volume-1",
+				Name:      pvcName,
+				SubPath:   "data-1",
+			},
+		},
+	}
+	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[1], initVolumeContainer) {
+		t.Errorf("Wrong job init container: '%v' but expected '%v'", result.Spec.Template.Spec.InitContainers[1], initVolumeContainer)
+	}
+	c := result.Spec.Template.Spec.Containers[0]
+	if c.Name != "svcName" {
+		t.Errorf("Wrong job container.name: '%s'", c.Name)
+	}
+	if c.Image != "image" {
+		t.Errorf("Wrong job container.image: '%s'", c.Image)
+	}
+	if !reflect.DeepEqual(c.Command, []string{"command1", "command2"}) {
+		t.Errorf("Wrong container.command: '%v'", c.Command)
+	}
+	if !reflect.DeepEqual(c.Args, []string{"args1", "args2"}) {
+		t.Errorf("Wrong container.args: '%v'", c.Args)
+	}
+	env := []apiv1.EnvVar{{Name: "env1", Value: "value1"}, {Name: "env2", Value: "value2"}}
+	if !reflect.DeepEqual(c.Env, env) {
+		t.Errorf("Wrong container.env: '%v'", c.Env)
+	}
+	ports := []apiv1.ContainerPort{{ContainerPort: 80}, {ContainerPort: 90}}
+	if !reflect.DeepEqual(c.Ports, ports) {
+		t.Errorf("Wrong container.ports: '%v'", c.Ports)
+	}
+	securityContext := apiv1.SecurityContext{
+		Capabilities: &apiv1.Capabilities{
+			Add:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
+			Drop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
+		},
+	}
+	if !reflect.DeepEqual(*c.SecurityContext, securityContext) {
+		t.Errorf("Wrong job container.security_context: '%v'", c.SecurityContext)
+	}
+	resources := apiv1.ResourceRequirements{
+		Limits: apiv1.ResourceList{
+			apiv1.ResourceCPU:    resource.MustParse("100m"),
+			apiv1.ResourceMemory: resource.MustParse("1Gi"),
+		},
+	}
+	if !reflect.DeepEqual(c.Resources, resources) {
+		t.Errorf("Wrong container.resources: '%v'", c.Resources)
+	}
+	volumeMounts := []apiv1.VolumeMount{
+		{
+			MountPath: "/volume1",
+			Name:      pvcName,
+			SubPath:   "data-0",
+		},
+		{
+			MountPath: "/volume2",
+			Name:      pvcName,
+			SubPath:   "data-1",
+		},
+	}
+	if !reflect.DeepEqual(c.VolumeMounts, volumeMounts) {
+		t.Errorf("Wrong container.volume_mounts: '%v'", c.VolumeMounts)
+	}
+
+}
+
 func Test_translateService(t *testing.T) {
 	p1 := model.Port{Port: 80, Protocol: apiv1.ProtocolTCP}
 	p2 := model.Port{Port: 90, Protocol: apiv1.ProtocolTCP}

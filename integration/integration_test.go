@@ -42,6 +42,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -711,6 +712,15 @@ func getStatefulset(ctx context.Context, ns, name string) (*appsv1.StatefulSet, 
 	}
 
 	return client.AppsV1().StatefulSets(ns).Get(ctx, name, metav1.GetOptions{})
+}
+
+func getJob(ctx context.Context, ns, name string) (*batchv1.Job, error) {
+	client, _, err := k8Client.GetLocal()
+	if err != nil {
+		return nil, err
+	}
+
+	return client.BatchV1().Jobs(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
 func getVolume(ctx context.Context, ns, name string) (*corev1.PersistentVolumeClaim, error) {

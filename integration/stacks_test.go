@@ -201,8 +201,14 @@ func TestCompose(t *testing.T) {
 
 	log.Printf("deployed stack using %s \n", "docker-compose.yml")
 
+	jobEndpoint := fmt.Sprintf("https://nginx-%s.cloud.okteto.net/db/initialized", namespace)
+	content, err := getContent(jobEndpoint, 150)
+	if err != nil {
+		t.Fatalf("failed to get stack content: %s", err)
+	}
+
 	endpoint := fmt.Sprintf("https://nginx-%s.cloud.okteto.net/db", namespace)
-	content, err := getContent(endpoint, 150)
+	content, err = getContent(endpoint, 150)
 	if err != nil {
 		t.Fatalf("failed to get stack content: %s", err)
 	}
@@ -274,9 +280,27 @@ func TestCompose(t *testing.T) {
 		t.Fatalf("error getting statefulset 'rabbitmq': %s", err.Error())
 	}
 
+	_, err = getJob(ctx, namespace, "initialize-queue")
+	if err == nil {
+		t.Fatalf("'initialize-queue' job not deleted after 'okteto stack destroy'")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("error getting job 'initialize-queue': %s", err.Error())
+	}
+
 	_, err = getVolume(ctx, namespace, "rabbitmq-data")
 	if err != nil {
 		t.Fatalf("'rabbitmq-data' volume deleted after 'okteto stack destroy'")
+	}
+
+	_, err = getVolume(ctx, namespace, "job-libs")
+	if err != nil {
+		t.Fatalf("'job-libs' volume deleted after 'okteto stack destroy'")
+	}
+
+	_, err = getVolume(ctx, namespace, "pvc-initialize-queue-0")
+	if err != nil {
+		t.Fatalf("'pvc-initialize-queue-0' volume deleted after 'okteto stack destroy'")
 	}
 
 	_, err = getVolume(ctx, namespace, "mongodb-data")
@@ -298,6 +322,16 @@ func TestCompose(t *testing.T) {
 	_, err = getVolume(ctx, namespace, "mongodb-data")
 	if err == nil {
 		t.Fatalf("'rabbitmq-data' volume not deleted after 'okteto stack destroy -v'")
+	}
+
+	_, err = getVolume(ctx, namespace, "job-libs")
+	if err == nil {
+		t.Fatalf("'job-libs' volume not deleted after 'okteto stack destroy'")
+	}
+
+	_, err = getVolume(ctx, namespace, "pvc-initialize-queue-0")
+	if err == nil {
+		t.Fatalf("'pvc-initialize-queue-0' volume not deleted after 'okteto stack destroy'")
 	}
 
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
