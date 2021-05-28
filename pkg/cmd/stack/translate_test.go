@@ -511,7 +511,7 @@ func Test_translateJob(t *testing.T) {
 		t.Errorf("Wrong job spec.parallelism: '%d'", *result.Spec.Parallelism)
 	}
 	if *result.Spec.BackoffLimit != 5 {
-		t.Errorf("Wrong job spec.max_attemps: '%d'", *result.Spec.BackoffLimit)
+		t.Errorf("Wrong job spec.max_attempts: '%d'", *result.Spec.BackoffLimit)
 	}
 	if !reflect.DeepEqual(result.Spec.Template.Labels, labels) {
 		t.Errorf("Wrong spec.template.labels: '%s'", result.Spec.Template.Labels)

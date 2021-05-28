@@ -62,7 +62,7 @@ type Service struct {
 	StopGracePeriod int64               `yaml:"stop_grace_period,omitempty"`
 	Volumes         []StackVolume       `yaml:"volumes,omitempty"`
 	Workdir         string              `yaml:"workdir,omitempty"`
-	BackOffLimit    int32               `yaml:"max_attemps,omitempty"`
+	BackOffLimit    int32               `yaml:"max_attempts,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
