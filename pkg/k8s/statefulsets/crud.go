@@ -17,6 +17,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -47,7 +49,7 @@ func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*
 }
 
 //Create creates a statefulset
-func Create(ctx context.Context, sfs *appsv1.StatefulSet, c *kubernetes.Clientset) error {
+func Create(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) error {
 	_, err := c.AppsV1().StatefulSets(sfs.Namespace).Create(ctx, sfs, metav1.CreateOptions{})
 	if err != nil {
 		return err
@@ -56,7 +58,7 @@ func Create(ctx context.Context, sfs *appsv1.StatefulSet, c *kubernetes.Clientse
 }
 
 //Update updates a statefulset
-func Update(ctx context.Context, sfs *appsv1.StatefulSet, c *kubernetes.Clientset) error {
+func Update(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) error {
 	sfs.ResourceVersion = ""
 	sfs.Status = appsv1.StatefulSetStatus{}
 	_, err := c.AppsV1().StatefulSets(sfs.Namespace).Update(ctx, sfs, metav1.UpdateOptions{})
@@ -68,5 +70,12 @@ func Update(ctx context.Context, sfs *appsv1.StatefulSet, c *kubernetes.Clientse
 
 //Destroy removes a statefulset object given its name and namespace
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
-	return c.AppsV1().StatefulSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err := c.AppsV1().StatefulSets(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("error deleting kubernetes job: %s", err)
+	}
+	log.Infof("statefulset '%s' deleted", name)
+	return nil
 }
