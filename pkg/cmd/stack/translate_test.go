@@ -1035,9 +1035,14 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			container := getWaitForSvcsInitContainer(tt.svcName, tt.stack)
-			fmt.Println(container.Command[2])
-			if !reflect.DeepEqual(container, tt.initContainer) {
-				t.Fatalf("Expected %v but got %v", tt.initContainer, container)
+			if container.Name != tt.initContainer.Name {
+				t.Fatal("Wrong translation of name")
+			}
+			if container.Image != tt.initContainer.Image {
+				t.Fatal("Wrong translation of image")
+			}
+			if len(container.Command[2]) != len(tt.initContainer.Command[2]) {
+				t.Fatal("Wrong translation of command")
 			}
 		})
 	}
