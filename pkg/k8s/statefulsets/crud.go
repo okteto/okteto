@@ -76,6 +76,6 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 		}
 		return fmt.Errorf("error deleting kubernetes job: %s", err)
 	}
-	log.Infof("job '%s' deleted", name)
+	log.Infof("statefulset '%s' deleted", name)
 	return nil
 }
