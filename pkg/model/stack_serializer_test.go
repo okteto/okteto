@@ -1095,6 +1095,76 @@ endpoints:
 	}
 }
 
+func Test_validateExpandVariables(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		envs     map[string]string
+		stack    *Stack
+	}{
+		{
+			name:     "Image expandable",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:${IMAGE_TAG}"),
+			envs:     map[string]string{"IMAGE_TAG": "1"},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto/vote:1",
+					},
+				},
+			},
+		},
+		{
+			name:     "Port expandable",
+			manifest: []byte("services:\n  app:\n    image: okteto/db\n    ports:\n      - ${DB_PORT}:3306"),
+			envs:     map[string]string{"DB_PORT": "3306"},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto/db",
+						Ports: []Port{
+							{
+								Port: 3306,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "Port expandable",
+			manifest: []byte("services:\n  app:\n    image: okteto/db\n    working_dir: ${PROJECT}"),
+			envs:     map[string]string{"PROJECT": "/app/src"},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:   "okteto/db",
+						Workdir: "/app/src",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for key, value := range tt.envs {
+				os.Setenv(key, value)
+			}
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.stack.Services["app"].Image != s.Services["app"].Image {
+				t.Fatal("Wrong unmarshal for image")
+			}
+			if tt.stack.Services["app"].Workdir != s.Services["app"].Workdir {
+				t.Fatal("Wrong unmarshal for workdir")
+			}
+		})
+	}
+}
+
 func Test_validateEnvFiles(t *testing.T) {
 	tests := []struct {
 		name     string
