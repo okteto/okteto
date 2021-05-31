@@ -478,7 +478,7 @@ func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Co
 }
 
 func getWaitForSvcsInitContainer(svcName string, s *model.Stack) *apiv1.Container {
-	command := "echo Waiting for dependent services..."
+	command := "echo waiting for dependent services..."
 	for dependentSvc, condition := range s.Services[svcName].DependsOn {
 		if condition.Condition == model.DependsOnServiceHealthy {
 			if len(s.Services[dependentSvc].Ports) == 0 {

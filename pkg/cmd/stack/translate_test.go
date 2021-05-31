@@ -898,7 +898,7 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
 				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services... && kubectl wait --for=condition=complete job/dependentJob"},
+				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services... && kubectl wait --for=condition=complete job/dependentJob"},
 			},
 		},
 		{
@@ -923,7 +923,7 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
 				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services... && kubectl wait --for=condition=available deployment/dependentSvc"},
+				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services... && kubectl wait --for=condition=available deployment/dependentSvc"},
 			},
 		},
 		{
@@ -954,7 +954,7 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
 				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services...kubectl rollout status --watch --timeout=600s statefulset/dependentSvc"},
+				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services...kubectl rollout status --watch --timeout=600s statefulset/dependentSvc"},
 			},
 		},
 		{
@@ -984,7 +984,7 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
 				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services... && echo waiting for dependentSvc && while [ $(curl -s -o /dev/null -w \"%{http_code}\" dependentSvc:80) != \"200\" ]; do sleep 5; done && echo dependentSvc is ready"},
+				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services... && echo waiting for dependentSvc && while [ $(curl -s -o /dev/null -w \"%{http_code}\" dependentSvc:80) != \"200\" ]; do sleep 5; done && echo dependentSvc is ready"},
 			},
 		},
 		{
@@ -1027,7 +1027,7 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
 				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo Waiting for dependent services... && kubectl wait --for=condition=complete job/dependentJob && kubectl wait --for=condition=available deployment/dependentSvc && echo waiting for dependentSvcAvailable && while [ $(curl -s -o /dev/null -w \"%{http_code}\" dependentSvcAvailable:80) != \"200\" ]; do sleep 5; done && echo dependentSvcAvailable is ready"},
+				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services... && kubectl wait --for=condition=complete job/dependentJob && kubectl wait --for=condition=available deployment/dependentSvc && echo waiting for dependentSvcAvailable && while [ $(curl -s -o /dev/null -w \"%{http_code}\" dependentSvcAvailable:80) != \"200\" ]; do sleep 5; done && echo dependentSvcAvailable is ready"},
 			},
 		},
 	}
