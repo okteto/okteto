@@ -490,7 +490,7 @@ func getWaitForSvcsInitContainer(svcName string, s *model.Stack) *apiv1.Containe
 
 	if command != "echo waiting for dependent services..." {
 		initContainer := &apiv1.Container{
-			Name:    fmt.Sprintf("wait-for-svcs"),
+			Name:    "wait-for-svcs",
 			Image:   "bitnami/kubectl",
 			Command: []string{"/bin/bash", "-c", command},
 		}
