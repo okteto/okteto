@@ -139,12 +139,12 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 		spinner.Start()
 	}
 
-	if !wait {
-		return nil
-	}
-
 	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 		return err
+	}
+
+	if !wait {
+		return nil
 	}
 
 	spinner.Update("Waiting for services to be ready...")
