@@ -195,7 +195,7 @@ services:
 							Name:            OktetoInitVolumeContainerName,
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "([ -f initialized ] && (cp -Rv /go/pkg/. /init-volume/1 || true) && (cp -Rv /root/.cache/go-build/. /init-volume/2 || true) && (cp -Rv /app/. /init-volume/3 || true) && (cp -Rv /path/. /init-volume/4 || true) && touch initialized) || true"},
+							Command:         []string{"sh", "-c", "([ ! -f initialized ] && (cp -Rv /go/pkg/. /init-volume/1 || true) && (cp -Rv /root/.cache/go-build/. /init-volume/2 || true) && (cp -Rv /app/. /init-volume/3 || true) && (cp -Rv /path/. /init-volume/4 || true) && touch initialized) || true"},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:  &runAsUser,
 								RunAsGroup: &runAsGroup,
@@ -712,7 +712,7 @@ docker:
 							Name:            OktetoInitVolumeContainerName,
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "([ -f initialized ] && (cp -Rv /app/. /init-volume/1 || true) && touch initialized) || true"},
+							Command:         []string{"sh", "-c", "([ ! -f initialized ] && (cp -Rv /app/. /init-volume/1 || true) && touch initialized) || true"},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:    &rootUser,
 								RunAsGroup:   &rootUser,
