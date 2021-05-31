@@ -139,7 +139,7 @@ func getDependentCyclic(s *Stack) []string {
 	return cycle
 }
 
-func dfs(s *Stack, svcName string, visited map[string]bool, stack map[string]bool) bool {
+func dfs(s *Stack, svcName string, visited, stack map[string]bool) bool {
 	isVisited := visited[svcName]
 	if !isVisited {
 		visited[svcName] = true
