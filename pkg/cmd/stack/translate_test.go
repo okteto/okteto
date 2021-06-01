@@ -69,14 +69,13 @@ func Test_translateEnvVars(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpFile.Name())
 
-	os.Setenv("IMAGE", "image")
 	os.Setenv("B", "2")
 	os.Setenv("ENV_PATH", tmpFile.Name())
 	stack := &model.Stack{
 		Name: "name",
 		Services: map[string]*model.Service{
 			"1": {
-				Image:    "${IMAGE}",
+				Image:    "image",
 				EnvFiles: []string{"${ENV_PATH}"},
 				Environment: []model.EnvVar{
 					{

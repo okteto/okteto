@@ -67,13 +67,8 @@ func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) er
 }
 
 func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
-	var err error
 	isOktetoNamespace := namespaces.IsOktetoNamespaceFromName(ctx, s.Namespace)
 	for svcName, svc := range s.Services {
-		svc.Image, err = model.ExpandEnv(svc.Image)
-		if err != nil {
-			return err
-		}
 		for _, envFilepath := range svc.EnvFiles {
 			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath, isOktetoNamespace); err != nil {
 				return err

@@ -332,7 +332,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if err != nil {
 		return nil, err
 	}
-	svc.Image = serviceRaw.Image
+	svc.Image, err = ExpandEnv(serviceRaw.Image)
+	if err != nil {
+		return nil, err
+	}
 	svc.Build = serviceRaw.Build
 
 	svc.CapAdd = serviceRaw.CapAdd
@@ -414,6 +417,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Workdir = serviceRaw.Workdir
 	if serviceRaw.WorkingDirSneakCase != "" {
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
+	}
+	svc.Workdir, err = ExpandEnv(svc.Workdir)
+	if err != nil {
+		return nil, err
 	}
 
 	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
@@ -500,23 +507,26 @@ func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var hostPortString string
 	if len(parts) == 1 {
 		if strings.Contains(portString, "-") {
-			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
+			return fmt.Errorf("Can not convert '%s'. Range ports are not supported.", rawPort)
 		}
 
 		portString = parts[0]
 	} else if len(parts) <= 3 {
 		if strings.Contains(portString, "-") {
-			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
+			return fmt.Errorf("Can not convert '%s'. Range ports are not supported.", rawPort)
 		}
 
 		portString = parts[len(parts)-1]
 
 		hostPortString = strings.Join(parts[:len(parts)-1], ":")
 		parts := strings.Split(hostPortString, ":")
-		hostString := parts[len(parts)-1]
+		hostString, err := ExpandEnv(parts[len(parts)-1])
+		if err != nil {
+			return err
+		}
 		port, err := strconv.Atoi(hostString)
 		if err != nil {
-			return fmt.Errorf("Can not convert %s to a port.", hostString)
+			return fmt.Errorf("Can not convert '%s' to a port.", hostString)
 		}
 		p.HostPort = int32(port)
 		if IsSkippablePort(p.HostPort) {
@@ -533,13 +543,13 @@ func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if protocol, err := getProtocol(portAndProtocol[1]); err == nil {
 			p.Protocol = protocol
 		} else {
-			return fmt.Errorf("Can not convert %s. Only TCP ports are allowed.", portString)
+			return fmt.Errorf("Can not convert '%s'. Only TCP ports are allowed.", portString)
 		}
 	}
 
 	port, err := strconv.Atoi(portString)
 	if err != nil {
-		return fmt.Errorf("Can not convert %s to a port.", portString)
+		return fmt.Errorf("Can not convert '%s' to a port.", portString)
 	}
 	p.ContainerPort = int32(port)
 
@@ -753,7 +763,6 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
-
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		v.LocalPath, err = ExpandEnv(parts[0])
