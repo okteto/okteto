@@ -813,7 +813,7 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 				Protocol:   p.Protocol,
 			},
 		)
-		if p.HostPort != 0 {
+		if p.HostPort != 0 && p.ContainerPort != p.HostPort {
 			result = append(
 				result,
 				apiv1.ServicePort{
