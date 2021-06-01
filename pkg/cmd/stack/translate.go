@@ -239,7 +239,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "auto"); err != nil {
 				return hasAddedAnyVolumeMounts, fmt.Errorf("error building image for '%s': %s", name, err)
 			}
 			svc.SetLastBuiltAnnotation()
@@ -796,7 +796,7 @@ func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	result := []apiv1.ContainerPort{}
 	for _, p := range svc.Ports {
-		result = append(result, apiv1.ContainerPort{ContainerPort: p.Port})
+		result = append(result, apiv1.ContainerPort{ContainerPort: p.ContainerPort})
 	}
 	return result
 }
@@ -807,12 +807,23 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 		result = append(
 			result,
 			apiv1.ServicePort{
-				Name:       fmt.Sprintf("p-%d-%s", p.Port, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
-				Port:       int32(p.Port),
-				TargetPort: intstr.IntOrString{IntVal: p.Port},
+				Name:       fmt.Sprintf("p-%d-%s", p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
+				Port:       int32(p.ContainerPort),
+				TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
 				Protocol:   p.Protocol,
 			},
 		)
+		if p.HostPort != 0 {
+			result = append(
+				result,
+				apiv1.ServicePort{
+					Name:       fmt.Sprintf("p-%d-%s-alt", p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
+					Port:       int32(p.HostPort),
+					TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
+					Protocol:   p.Protocol,
+				},
+			)
+		}
 	}
 	return result
 }

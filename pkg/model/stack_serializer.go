@@ -58,7 +58,7 @@ type ServiceRaw struct {
 	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
 	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
 	Environment              Environment        `yaml:"environment,omitempty"`
-	Expose                   *RawMessage        `yaml:"expose,omitempty"`
+	Expose                   []PortRaw          `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
 	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations              Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -384,12 +384,11 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.Public = true
 	}
 	for _, p := range serviceRaw.Ports {
-		svc.Ports = append(svc.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
+		svc.Ports = append(svc.Ports, Port{HostPort: p.HostPort, ContainerPort: p.ContainerPort, Protocol: p.Protocol})
 	}
 
-	svc.Expose, err = unmarshalExpose(serviceRaw.Expose)
-	if err != nil {
-		return nil, err
+	for _, p := range serviceRaw.Expose {
+		svc.Expose = append(svc.Expose, Port{HostPort: p.HostPort, ContainerPort: p.ContainerPort, Protocol: p.Protocol})
 	}
 
 	svc.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
@@ -562,7 +561,7 @@ func IsSkippablePort(port int32) bool {
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (p *Port) MarshalYAML() (interface{}, error) {
-	return Port{Port: p.Port, Protocol: p.Protocol}, nil
+	return Port{ContainerPort: p.ContainerPort, Protocol: p.Protocol}, nil
 }
 
 func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy string) (apiv1.RestartPolicy, error) {
@@ -683,43 +682,6 @@ func (s *StackResources) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	s.Limits.Memory = resources.Memory
 	s.Requests.Storage = resources.Storage
 	return nil
-}
-
-func unmarshalExpose(raw *RawMessage) ([]int32, error) {
-	exposeInInt := make([]int32, 0)
-	if raw == nil {
-		return exposeInInt, nil
-	}
-	err := raw.unmarshal(&exposeInInt)
-	if err == nil {
-		return exposeInInt, nil
-	}
-	var exposeInString []string
-	err = raw.unmarshal(&exposeInString)
-	if err != nil {
-		return exposeInInt, err
-	}
-
-	for _, expose := range exposeInString {
-		if strings.Contains(expose, "-") {
-			return exposeInInt, fmt.Errorf("Can not convert %s. Range ports are not supported.", expose)
-		}
-		parts := strings.Split(expose, ":")
-		var portString string
-		if len(parts) == 1 {
-			portString = parts[0]
-		} else if len(parts) <= 3 {
-			portString = parts[len(parts)-1]
-		} else {
-			return exposeInInt, fmt.Errorf(malformedPortForward, expose)
-		}
-		port, err := strconv.Atoi(portString)
-		if err != nil {
-			return exposeInInt, err
-		}
-		exposeInInt = append(exposeInInt, int32(port))
-	}
-	return exposeInInt, nil
 }
 
 func unmarshalDuration(raw *RawMessage) (int64, error) {

@@ -53,7 +53,7 @@ type Service struct {
 	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
 
 	Environment     Environment         `yaml:"environment,omitempty"`
-	Expose          []int32             `yaml:"expose,omitempty"`
+	Expose          []Port              `yaml:"expose,omitempty"`
 	Image           string              `yaml:"image,omitempty"`
 	Labels          Labels              `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     Annotations         `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -111,8 +111,9 @@ type Quantity struct {
 }
 
 type Port struct {
-	Port     int32
-	Protocol apiv1.Protocol
+	HostPort      int32
+	ContainerPort int32
+	Protocol      apiv1.Protocol
 }
 
 type EndpointSpec map[string]Endpoint
@@ -182,7 +183,6 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 	}
 
 	for _, svc := range s.Services {
-		svc.extendPorts()
 		if svc.Build == nil {
 			continue
 		}
@@ -350,7 +350,7 @@ func (s *Stack) GetConfigMapName() string {
 
 func IsPortInService(port int32, ports []Port) bool {
 	for _, p := range ports {
-		if p.Port == port {
+		if p.ContainerPort == port {
 			return true
 		}
 	}
@@ -369,15 +369,15 @@ func (svc *Service) SetLastBuiltAnnotation() {
 func (svc *Service) extendPorts() {
 	for _, port := range svc.Expose {
 		if !svc.IsAlreadyAdded(port) {
-			svc.Ports = append(svc.Ports, Port{Port: port, Protocol: apiv1.ProtocolTCP})
+			svc.Ports = append(svc.Ports, port)
 		}
 	}
 }
 
 //isAlreadyAdded checks if a port is already on port list
-func (svc *Service) IsAlreadyAdded(p int32) bool {
+func (svc *Service) IsAlreadyAdded(p Port) bool {
 	for _, port := range svc.Ports {
-		if port.Port == p {
+		if port.ContainerPort == p.ContainerPort {
 			return true
 		}
 	}
