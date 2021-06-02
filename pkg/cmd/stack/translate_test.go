@@ -655,19 +655,19 @@ func Test_translateService(t *testing.T) {
 	}
 	ports := []apiv1.ServicePort{
 		{
-			Name:       "p-80-tcp",
+			Name:       "p-80-80-tcp",
 			Port:       80,
 			TargetPort: intstr.IntOrString{IntVal: 80},
 			Protocol:   apiv1.ProtocolTCP,
 		},
 		{
-			Name:       "p-80-tcp-alt",
+			Name:       "p-82-80-tcp",
 			Port:       82,
 			TargetPort: intstr.IntOrString{IntVal: 80},
 			Protocol:   apiv1.ProtocolTCP,
 		},
 		{
-			Name:       "p-90-tcp",
+			Name:       "p-90-90-tcp",
 			Port:       90,
 			TargetPort: intstr.IntOrString{IntVal: 90},
 			Protocol:   apiv1.ProtocolTCP,

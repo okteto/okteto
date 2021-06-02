@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -53,7 +54,6 @@ type Service struct {
 	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
 
 	Environment     Environment         `yaml:"environment,omitempty"`
-	Expose          []Port              `yaml:"expose,omitempty"`
 	Image           string              `yaml:"image,omitempty"`
 	Labels          Labels              `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     Annotations         `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -235,13 +235,6 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 			svc.Replicas = 1
 		}
 
-		if len(svc.Expose) > 0 && len(svc.Ports) == 0 {
-			svc.Public = false
-		}
-
-		if len(svc.Expose) > 0 {
-			svc.extendPorts()
-		}
 		if svc.RestartPolicy != apiv1.RestartPolicyAlways {
 			for idx, volume := range svc.Volumes {
 				volumeName := fmt.Sprintf("pvc-%s-0", svcName)
@@ -365,19 +358,21 @@ func (svc *Service) SetLastBuiltAnnotation() {
 	svc.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
 }
 
-//extendPorts adds the ports that are in expose field to the port list.
-func (svc *Service) extendPorts() {
-	for _, port := range svc.Expose {
-		if !svc.IsAlreadyAdded(port) {
-			svc.Ports = append(svc.Ports, port)
+//isAlreadyAdded checks if a port is already on port list
+func IsAlreadyAdded(p Port, ports []Port) bool {
+	for _, port := range ports {
+		if port.ContainerPort == p.ContainerPort {
+			log.Infof("Port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
+			return true
 		}
 	}
+	return false
 }
 
-//isAlreadyAdded checks if a port is already on port list
-func (svc *Service) IsAlreadyAdded(p Port) bool {
-	for _, port := range svc.Ports {
-		if port.ContainerPort == p.ContainerPort {
+func IsAlreadyAddedExpose(p Port, ports []Port) bool {
+	for _, port := range ports {
+		if port.ContainerPort == p.ContainerPort || port.ContainerPort == p.HostPort || port.HostPort == p.HostPort || port.HostPort == p.ContainerPort {
+			log.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
 			return true
 		}
 	}

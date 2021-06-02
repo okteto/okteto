@@ -379,16 +379,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	svc.Environment = serviceRaw.Environment
 
-	svc.Public = serviceRaw.Public
-	if !svc.Public && len(getAccessiblePorts(serviceRaw.Ports)) == 1 {
-		svc.Public = true
-	}
-	for _, p := range serviceRaw.Ports {
-		svc.Ports = append(svc.Ports, Port{HostPort: p.HostPort, ContainerPort: p.ContainerPort, Protocol: p.Protocol})
-	}
-
-	for _, p := range serviceRaw.Expose {
-		svc.Expose = append(svc.Expose, Port{HostPort: p.HostPort, ContainerPort: p.ContainerPort, Protocol: p.Protocol})
+	svc.Public, svc.Ports, err = getSvcPorts(serviceRaw.Public, serviceRaw.Ports, serviceRaw.Expose)
+	if err != nil {
+		return nil, err
 	}
 
 	svc.StopGracePeriod, err = unmarshalDuration(serviceRaw.StopGracePeriod)
@@ -423,6 +416,53 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
 	}
 	return svc, nil
+}
+
+func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
+	if !public && len(getAccessiblePorts(rawPorts)) == 1 {
+		public = true
+	}
+	if len(rawExpose) > 0 && len(rawPorts) == 0 {
+		public = false
+	}
+	ports := make([]Port, 0)
+	for _, p := range rawPorts {
+		if err := validatePort(p, ports); err == nil {
+			ports = append(ports, Port{HostPort: p.HostPort, ContainerPort: p.ContainerPort, Protocol: p.Protocol})
+		} else {
+			return false, ports, err
+		}
+	}
+
+	for _, p := range rawExpose {
+		newPort := Port{HostPort: p.HostPort, ContainerPort: p.ContainerPort, Protocol: p.Protocol}
+		if p.ContainerPort == 0 {
+			if !IsAlreadyAdded(newPort, ports) {
+				ports = append(ports, newPort)
+			}
+		} else {
+			if !IsAlreadyAddedExpose(newPort, ports) {
+				ports = append(ports, newPort)
+			}
+		}
+	}
+	return public, ports, nil
+}
+
+func validatePort(newPort PortRaw, ports []Port) error {
+	for _, p := range ports {
+		if newPort.ContainerPort == p.HostPort {
+			return fmt.Errorf("Container port '%d' is already declared as host port in port '%d:%d'", newPort.ContainerPort, p.HostPort, p.ContainerPort)
+		}
+		if newPort.HostPort == p.ContainerPort {
+			if p.HostPort == 0 {
+				return fmt.Errorf("Host port '%d' is already declared as container port in port '%d'", newPort.HostPort, p.ContainerPort)
+			} else {
+				return fmt.Errorf("Host port '%d' is already declared as container port in port '%d:%d'", newPort.HostPort, p.HostPort, p.ContainerPort)
+			}
+		}
+	}
+	return nil
 }
 
 func isNamedVolumeDeclared(volume StackVolume) bool {
