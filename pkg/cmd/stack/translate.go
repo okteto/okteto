@@ -351,9 +351,6 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
-				Type: appsv1.OnDeleteStatefulSetStrategyType,
-			},
 			Replicas:             pointer.Int32Ptr(svc.Replicas),
 			RevisionHistoryLimit: pointer.Int32Ptr(2),
 			Selector: &metav1.LabelSelector{
