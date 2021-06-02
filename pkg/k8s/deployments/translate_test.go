@@ -87,6 +87,10 @@ services:
 		t.Fatal(err)
 	}
 	d1 := dev.GevSandbox()
+	d1.Spec.Replicas = pointer.Int32Ptr(2)
+	d1.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RollingUpdateDeploymentStrategyType,
+	}
 	rule1 := dev.ToTranslationRule(dev, false)
 	tr1 := &model.Translation{
 		Interactive: true,
@@ -94,6 +98,10 @@ services:
 		Version:     model.TranslationVersion,
 		Deployment:  d1,
 		Rules:       []*model.TranslationRule{rule1},
+		Replicas:    2,
+		Strategy: appsv1.DeploymentStrategy{
+			Type: appsv1.RollingUpdateDeploymentStrategyType,
+		},
 		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{
 			{
@@ -346,6 +354,12 @@ services:
 	}
 	if d1Down.Spec.Template.Annotations["key"] != "" {
 		t.Fatalf("Wrong d1 pod annotations after down: '%s'", d1.Spec.Template.Annotations["key"])
+	}
+	if *d1Down.Spec.Replicas != 2 {
+		t.Fatalf("Wrong d1 replicas %d vs 2", *d1Down.Spec.Replicas)
+	}
+	if d1Down.Spec.Strategy.Type != appsv1.RollingUpdateDeploymentStrategyType {
+		t.Fatalf("Wrong d1 strategy %s", d1Down.Spec.Strategy.Type)
 	}
 
 	dev2 := dev.Services[0]

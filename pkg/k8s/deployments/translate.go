@@ -141,6 +141,9 @@ func commonTranslation(t *model.Translation) {
 	}
 
 	t.Deployment.Spec.Replicas = &devReplicas
+	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RecreateDeploymentStrategyType,
+	}
 }
 
 //GetDevContainer returns the dev container of a given deployment
