@@ -262,7 +262,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 	ticker := time.NewTicker(200 * time.Millisecond)
 	to := time.Now().Add(timeout * 2) // 60 seconds
 
-	for i := 0; ; i++ {
+	for retries := 0; ; retries++ {
 		updated, err := client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to get deployment %s/%s: %w", d.Namespace, d.Name, err)
@@ -274,7 +274,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 			return Update(ctx, d, client)
 		}
 
-		if time.Now().After(to) {
+		if time.Now().After(to) && retries >= 10 {
 			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", revisionAnnotation, d.Name)
 		}
 

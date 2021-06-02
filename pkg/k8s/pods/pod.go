@@ -95,7 +95,7 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	start := time.Now()
 	to := start.Add(dev.Timeout * 4) // 120 seconds
 
-	for i := 0; ; i++ {
+	for retries := 0; ; retries++ {
 		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)
 		if err != nil {
 			return nil, err
@@ -104,13 +104,13 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 			return pod, nil
 		}
 
-		if time.Now().After(to) {
+		if time.Now().After(to) && retries > 10 {
 			return nil, fmt.Errorf("kubernetes is taking too long to create your development container. Please check for errors and try again")
 		}
 
 		select {
 		case <-ticker.C:
-			if i%5 == 0 {
+			if retries%5 == 0 {
 				log.Info("development container is not ready yet, will retry")
 			}
 
@@ -254,7 +254,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) int64 {
 	devPodLogs, err := GetDevPodLogs(ctx, dev, false, c)
 	if err != nil {
-		log.Errorf("failed to access development container logs: %s", err)
+		log.Infof("failed to access development container logs: %s", err)
 		return -1
 	}
 	return parseUserID(devPodLogs)
