@@ -505,15 +505,13 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 					command += " && chmod 777 /volumes/*"
 				}
 			}
-		} else {
-			if !addedDataVolume {
-				volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
-				if command == "" {
-					command = "chmod 777 /data"
-					addedDataVolume = true
-				} else {
-					command += " && chmod 777 /data"
-				}
+		} else if !addedDataVolume {
+			volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
+			if command == "" {
+				command = "chmod 777 /data"
+				addedDataVolume = true
+			} else {
+				command += " && chmod 777 /data"
 			}
 		}
 	}
