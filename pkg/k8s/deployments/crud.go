@@ -158,8 +158,22 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, reset bool, c kubernetes.Interface) (map[string]*model.Translation, error) {
 	result := map[string]*model.Translation{}
 	if d != nil {
+		var replicas int32
+		var strategy appsv1.DeploymentStrategy
+		trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.TranslationAnnotation)
+		if trRulesJSON != "" {
+			trRules := &model.Translation{}
+			if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
+				return nil, fmt.Errorf("malformed tr rules: %s", err)
+			}
+			replicas = trRules.Replicas
+			strategy = trRules.Strategy
+		} else {
+			replicas = getPreviousDeploymentReplicas(d)
+			strategy = d.Spec.Strategy
+		}
+
 		rule := dev.ToTranslationRule(dev, reset)
-		replicas := getPreviousDeploymentReplicas(d)
 		result[d.Name] = &model.Translation{
 			Interactive: true,
 			Name:        dev.Name,
@@ -168,6 +182,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, 
 			Annotations: dev.Annotations,
 			Tolerations: dev.Tolerations,
 			Replicas:    replicas,
+			Strategy:    strategy,
 			Rules:       []*model.TranslationRule{rule},
 		}
 		if dev.Docker.Enabled {
@@ -367,6 +382,7 @@ func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 		return nil, fmt.Errorf("malformed tr rules: %s", err)
 	}
 	d.Spec.Replicas = &trRules.Replicas
+	d.Spec.Strategy = trRules.Strategy
 	annotations := d.GetObjectMeta().GetAnnotations()
 	delete(annotations, oktetoVersionAnnotation)
 	if err := deleteUserAnnotations(annotations, trRules); err != nil {
