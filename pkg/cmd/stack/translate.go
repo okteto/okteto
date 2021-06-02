@@ -500,15 +500,13 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 					command += " && chmod 777 /volumes/*"
 				}
 			}
-		} else {
-			if !addedDataVolume {
-				volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
-				if command == "" {
-					command = "chmod 777 /data"
-					addedDataVolume = true
-				} else {
-					command += " && chmod 777 /data"
-				}
+		} else if !addedDataVolume {
+			volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
+			if command == "" {
+				command = "chmod 777 /data"
+				addedDataVolume = true
+			} else {
+				command += " && chmod 777 /data"
 			}
 		}
 	}
@@ -791,7 +789,7 @@ func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	result := []apiv1.ContainerPort{}
 	for _, p := range svc.Ports {
-		result = append(result, apiv1.ContainerPort{ContainerPort: p.Port})
+		result = append(result, apiv1.ContainerPort{ContainerPort: p.ContainerPort})
 	}
 	return result
 }
@@ -799,17 +797,39 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
 	for _, p := range svc.Ports {
-		result = append(
-			result,
-			apiv1.ServicePort{
-				Name:       fmt.Sprintf("p-%d-%s", p.Port, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
-				Port:       int32(p.Port),
-				TargetPort: intstr.IntOrString{IntVal: p.Port},
-				Protocol:   p.Protocol,
-			},
-		)
+		if !isServicePortAdded(p.ContainerPort, result) {
+			result = append(
+				result,
+				apiv1.ServicePort{
+					Name:       fmt.Sprintf("p-%d-%d-%s", p.ContainerPort, p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
+					Port:       int32(p.ContainerPort),
+					TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
+					Protocol:   p.Protocol,
+				},
+			)
+		}
+		if p.HostPort != 0 && p.ContainerPort != p.HostPort && !isServicePortAdded(p.HostPort, result) {
+			result = append(
+				result,
+				apiv1.ServicePort{
+					Name:       fmt.Sprintf("p-%d-%d-%s", p.HostPort, p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
+					Port:       int32(p.HostPort),
+					TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
+					Protocol:   p.Protocol,
+				},
+			)
+		}
 	}
 	return result
+}
+
+func isServicePortAdded(newPort int32, existentPorts []apiv1.ServicePort) bool {
+	for _, p := range existentPorts {
+		if p.Port == newPort {
+			return true
+		}
+	}
+	return false
 }
 
 func translateResources(svc *model.Service) apiv1.ResourceRequirements {

@@ -161,7 +161,7 @@ func Test_translateDeployment(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports: []model.Port{{Port: 80}, {Port: 90}},
+				Ports: []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 			},
 		},
 	}
@@ -261,7 +261,7 @@ func Test_translateStatefulSet(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports:   []model.Port{{Port: 80}, {Port: 90}},
+				Ports:   []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 
@@ -462,7 +462,7 @@ func Test_translateJob(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports:         []model.Port{{Port: 80}, {Port: 90}},
+				Ports:         []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 				CapAdd:        []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop:       []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				RestartPolicy: apiv1.RestartPolicyNever,
@@ -614,8 +614,8 @@ func Test_translateJob(t *testing.T) {
 }
 
 func Test_translateService(t *testing.T) {
-	p1 := model.Port{Port: 80, Protocol: apiv1.ProtocolTCP}
-	p2 := model.Port{Port: 90, Protocol: apiv1.ProtocolTCP}
+	p1 := model.Port{HostPort: 82, ContainerPort: 80, Protocol: apiv1.ProtocolTCP}
+	p2 := model.Port{ContainerPort: 90, Protocol: apiv1.ProtocolTCP}
 	s := &model.Stack{
 		Name: "stackName",
 		Services: map[string]*model.Service{
@@ -654,13 +654,19 @@ func Test_translateService(t *testing.T) {
 	}
 	ports := []apiv1.ServicePort{
 		{
-			Name:       "p-80-tcp",
+			Name:       "p-80-80-tcp",
 			Port:       80,
 			TargetPort: intstr.IntOrString{IntVal: 80},
 			Protocol:   apiv1.ProtocolTCP,
 		},
 		{
-			Name:       "p-90-tcp",
+			Name:       "p-82-80-tcp",
+			Port:       82,
+			TargetPort: intstr.IntOrString{IntVal: 80},
+			Protocol:   apiv1.ProtocolTCP,
+		},
+		{
+			Name:       "p-90-90-tcp",
 			Port:       90,
 			TargetPort: intstr.IntOrString{IntVal: 90},
 			Protocol:   apiv1.ProtocolTCP,

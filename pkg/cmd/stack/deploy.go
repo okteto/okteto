@@ -377,8 +377,8 @@ func addHiddenExposedPorts(ctx context.Context, s *model.Stack) {
 		if svc.Image != "" {
 			exposedPorts := registry.GetHiddenExposePorts(ctx, s.Namespace, svc.Image)
 			for _, port := range exposedPorts {
-				if !svc.IsAlreadyAdded(port) {
-					svc.Ports = append(svc.Ports, model.Port{Port: port, Protocol: apiv1.ProtocolTCP})
+				if !model.IsAlreadyAdded(port, svc.Ports) {
+					svc.Ports = append(svc.Ports, port)
 				}
 			}
 		}
