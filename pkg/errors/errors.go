@@ -118,6 +118,7 @@ func IsTransient(err error) bool {
 	case strings.Contains(err.Error(), "operation time out"),
 		strings.Contains(err.Error(), "operation timed out"),
 		strings.Contains(err.Error(), "i/o timeout"),
+		strings.Contains(err.Error(), "unknown (get events)"),
 		strings.Contains(err.Error(), "Client.Timeout exceeded while awaiting headers"),
 		strings.Contains(err.Error(), "can't assign requested address"),
 		strings.Contains(err.Error(), "command exited without exit status or exit signal"),

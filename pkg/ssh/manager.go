@@ -108,8 +108,11 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 
 	ticker := time.NewTicker(200 * time.Millisecond)
 	to := time.Now().Add(10 * time.Second)
+	retries := 0
 
 	for {
+		retries++
+		log.Infof("SSH forward manager retry %d", retries)
 		if fm.pf != nil {
 			if err := fm.pf.Start(devPod, namespace); err != nil {
 				return fmt.Errorf("failed to start SSH port-forward: %w", err)
@@ -130,7 +133,7 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 			break
 		}
 		log.Infof("error starting SSH connection pool on %s: %s", fm.sshAddr, err.Error())
-		if time.Now().After(to) {
+		if time.Now().After(to) && retries > 10 {
 			return errors.ErrSSHConnectError
 		}
 

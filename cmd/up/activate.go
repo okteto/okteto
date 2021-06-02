@@ -316,6 +316,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			if !ok {
 				watcherEvents, err = up.Client.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
 				if err != nil {
+					log.Infof("error watching events: %s", err.Error())
 					return err
 				}
 				continue
@@ -352,6 +353,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			if !ok {
 				watcherPod, err = up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
 				if err != nil {
+					log.Infof("error watching pod events: %s", err.Error())
 					return err
 				}
 				continue
