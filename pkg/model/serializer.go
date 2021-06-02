@@ -16,6 +16,7 @@ package model
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -653,6 +654,9 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	for key, value := range result {
 		envs = append(envs, EnvVar{Name: key, Value: value})
 	}
+	sort.SliceStable(envs, func(i, j int) bool {
+		return strings.Compare(envs[i].Name, envs[j].Name) < 0
+	})
 	*e = envs
 	return nil
 }
