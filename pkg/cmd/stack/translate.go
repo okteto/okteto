@@ -287,6 +287,9 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      translateLabels(svcName, s),
@@ -348,6 +351,9 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 			Annotations: translateAnnotations(svc),
 		},
 		Spec: appsv1.StatefulSetSpec{
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.OnDeleteStatefulSetStrategyType,
+			},
 			Replicas:             pointer.Int32Ptr(svc.Replicas),
 			RevisionHistoryLimit: pointer.Int32Ptr(2),
 			Selector: &metav1.LabelSelector{
