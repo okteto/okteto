@@ -85,9 +85,5 @@ func IsSuccedded(ctx context.Context, namespace, svcName string, c kubernetes.In
 	if err != nil {
 		return false
 	}
-	fmt.Println(job.Status)
-	if job.Status.Succeeded == *job.Spec.Completions {
-		return true
-	}
-	return false
+	return job.Status.Succeeded == *job.Spec.Completions
 }

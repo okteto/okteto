@@ -51,6 +51,9 @@ func Wait(ctx context.Context, stackName, svcName, namespace string) error {
 	}
 
 	s, err := translateConfigMapToStack(configMap)
+	if err != nil {
+		return err
+	}
 
 	if svc, ok := s.Services[svcName]; ok {
 		addHiddenExposedPortsToDependentSvcs(ctx, s, svc)
