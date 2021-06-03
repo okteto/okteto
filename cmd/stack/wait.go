@@ -43,7 +43,8 @@ func Wait(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("Invalid command: service name is required.")
 			}
 
-			if err := stack.Wait(ctx, stackName, svcName, namespace); err != nil {
+			err := stack.Wait(ctx, stackName, svcName, namespace)
+			if err != nil {
 				return err
 			}
 

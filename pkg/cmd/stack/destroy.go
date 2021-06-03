@@ -153,7 +153,8 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		return err
 	}
 
-	if err := destroyIngresses(ctx, spinner, s, c); err != nil {
+	err := destroyIngresses(ctx, spinner, s, c)
+	if err != nil {
 		return err
 	}
 
