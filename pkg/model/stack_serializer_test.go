@@ -1124,7 +1124,8 @@ func Test_validateExpandVariables(t *testing.T) {
 						Image: "okteto/db",
 						Ports: []Port{
 							{
-								Port: 3306,
+								HostPort:      3306,
+								ContainerPort: 3306,
 							},
 						},
 					},
