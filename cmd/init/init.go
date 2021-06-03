@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
@@ -237,7 +236,7 @@ func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string
 	}
 
 	for i := range stClassList.Items {
-		if stClassList.Items[i].Annotations[okLabels.DefaultStorageClassAnnotation] == "true" {
+		if stClassList.Items[i].Annotations[model.DefaultStorageClassAnnotation] == "true" {
 			log.Infof("found default storage class '%s'", stClassList.Items[i].Name)
 			return true
 		}

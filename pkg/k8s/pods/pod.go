@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/exec"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -130,7 +129,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 		return nil, err
 	}
 
-	labels := fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name)
+	labels := fmt.Sprintf("%s=%s", model.InteractiveDevLabel, dev.Name)
 	rs, err := replicasets.GetReplicaSetByDeployment(ctx, d, labels, c)
 	if rs == nil {
 		if err == nil {
@@ -334,7 +333,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		ctx,
 		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name),
+			LabelSelector: fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name),
 		},
 	)
 	if err != nil {
@@ -362,7 +361,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	if !found {
 		return fmt.Errorf("Unable to find any service with the provided name")
 	}
-	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
+	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name), c)
 }
 
 func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubernetes.Clientset) error {

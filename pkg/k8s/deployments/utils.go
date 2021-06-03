@@ -16,7 +16,7 @@ package deployments
 import (
 	"encoding/json"
 
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,44 +27,18 @@ type stateBeforeSleeping struct {
 	Replicas int
 }
 
-func setLabel(o metav1.Object, key, value string) {
-	labels := o.GetLabels()
-	if labels == nil {
-		labels = map[string]string{}
-	}
-	labels[key] = value
-	o.SetLabels(labels)
-}
-
-func getAnnotation(o metav1.Object, key string) string {
-	annotations := o.GetAnnotations()
-	if annotations != nil {
-		return annotations[key]
-	}
-	return ""
-}
-
-func setAnnotation(o metav1.Object, key, value string) {
-	annotations := o.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-	annotations[key] = value
-	o.SetAnnotations(annotations)
-}
-
 func setTranslationAsAnnotation(o metav1.Object, tr *model.Translation) error {
 	translationBytes, err := json.Marshal(tr)
 	if err != nil {
 		return err
 	}
-	setAnnotation(o, okLabels.TranslationAnnotation, string(translationBytes))
+	annotations.Set(o, model.TranslationAnnotation, string(translationBytes))
 	return nil
 }
 
 func getTranslationFromAnnotation(annotations map[string]string) (model.Translation, error) {
 	tr := model.Translation{}
-	err := json.Unmarshal([]byte(annotations[okLabels.TranslationAnnotation]), &tr)
+	err := json.Unmarshal([]byte(annotations[model.TranslationAnnotation]), &tr)
 	if err != nil {
 		return model.Translation{}, err
 	}
@@ -73,7 +47,7 @@ func getTranslationFromAnnotation(annotations map[string]string) (model.Translat
 
 func getPreviousDeploymentReplicas(d *appsv1.Deployment) int32 {
 	replicas := *d.Spec.Replicas
-	previousState, ok := d.Annotations[okLabels.StateBeforeSleepingAnnontation]
+	previousState, ok := d.Annotations[model.StateBeforeSleepingAnnontation]
 	if !ok {
 		return replicas
 	}

@@ -12,7 +12,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -251,7 +250,7 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 			}
 		}
 
-		if trList[name].Deployment.Annotations[okLabels.DeploymentAnnotation] == "" {
+		if trList[name].Deployment.Annotations[model.DeploymentAnnotation] == "" {
 			continue
 		}
 

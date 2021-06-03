@@ -17,7 +17,6 @@ import (
 	"context"
 	"testing"
 
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +45,7 @@ annotations:
 	if err := setTranslationAsAnnotation(d.GetObjectMeta(), tr1); err != nil {
 		t.Fatal(err)
 	}
-	translationString := d.GetObjectMeta().GetAnnotations()[okLabels.TranslationAnnotation]
+	translationString := d.GetObjectMeta().GetAnnotations()[model.TranslationAnnotation]
 	if translationString == "" {
 		t.Fatal("Marshalled translation was not found in the deployment's annotations")
 	}
@@ -92,7 +91,7 @@ func Test_getPreviousDeploymentReplicas(t *testing.T) {
 			d: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: model.Annotations{
-						okLabels.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
+						model.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -106,7 +105,7 @@ func Test_getPreviousDeploymentReplicas(t *testing.T) {
 			d: &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: model.Annotations{
-						okLabels.StateBeforeSleepingAnnontation: "wrong",
+						model.StateBeforeSleepingAnnontation: "wrong",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{

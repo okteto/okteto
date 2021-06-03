@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/k8s/labels"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -160,7 +160,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, 
 	if d != nil {
 		var replicas int32
 		var strategy appsv1.DeploymentStrategy
-		trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.TranslationAnnotation)
+		trRulesJSON := annotations.Get(d.Spec.Template.GetObjectMeta(), model.TranslationAnnotation)
 		if trRulesJSON != "" {
 			trRules := &model.Translation{}
 			if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
@@ -285,7 +285,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 
 		revision := updated.Annotations[revisionAnnotation]
 		if revision != "" {
-			d.Annotations[okLabels.RevisionAnnotation] = revision
+			d.Annotations[model.RevisionAnnotation] = revision
 			return Update(ctx, d, client)
 		}
 
@@ -305,10 +305,7 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 
 //SetLastBuiltAnnotation sets the deployment timestacmp
 func SetLastBuiltAnnotation(d *appsv1.Deployment) {
-	if d.Spec.Template.Annotations == nil {
-		d.Spec.Template.Annotations = model.Annotations{}
-	}
-	d.Spec.Template.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+	annotations.Set(d.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))
 }
 
 //TranslateDevMode translates the deployment manifests to put them in dev mode
@@ -324,17 +321,12 @@ func TranslateDevMode(tr map[string]*model.Translation, c *kubernetes.Clientset,
 
 //IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
-	labels := d.GetObjectMeta().GetLabels()
-	if labels == nil {
-		return false
-	}
-	_, ok := labels[okLabels.DevLabel]
-	return ok
+	return labels.Get(d.GetObjectMeta(), model.DevLabel) != ""
 }
 
 //RestoreDevModeFrom restores labels an annotations from a deployment in dev mode
 func RestoreDevModeFrom(d, old *appsv1.Deployment) {
-	d.Labels[okLabels.DevLabel] = old.Labels[okLabels.DevLabel]
+	d.Labels[model.DevLabel] = old.Labels[model.DevLabel]
 	d.Spec.Replicas = old.Spec.Replicas
 	d.Annotations = old.Annotations
 	d.Spec.Template.Annotations = old.Spec.Template.Annotations
@@ -342,7 +334,7 @@ func RestoreDevModeFrom(d, old *appsv1.Deployment) {
 
 //HasBeenChanged returns if a deployment has been updated since the development container was activated
 func HasBeenChanged(d *appsv1.Deployment) bool {
-	oktetoRevision := d.Annotations[okLabels.RevisionAnnotation]
+	oktetoRevision := d.Annotations[model.RevisionAnnotation]
 	if oktetoRevision == "" {
 		return false
 	}
@@ -364,9 +356,9 @@ func UpdateDeployments(ctx context.Context, trList map[string]*model.Translation
 
 //TranslateDevModeOff reverses the dev mode translation
 func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
-	trRulesJSON := getAnnotation(d.Spec.Template.GetObjectMeta(), okLabels.TranslationAnnotation)
+	trRulesJSON := annotations.Get(d.Spec.Template.GetObjectMeta(), model.TranslationAnnotation)
 	if trRulesJSON == "" {
-		dManifest := getAnnotation(d.GetObjectMeta(), oktetoDeploymentAnnotation)
+		dManifest := annotations.Get(d.GetObjectMeta(), oktetoDeploymentAnnotation)
 		if dManifest == "" {
 			log.Infof("%s/%s is not a development container", d.Namespace, d.Name)
 			return d, nil
@@ -385,34 +377,28 @@ func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
 	d.Spec.Strategy = trRules.Strategy
 	annotations := d.GetObjectMeta().GetAnnotations()
 	delete(annotations, oktetoVersionAnnotation)
-	if err := deleteUserAnnotations(annotations, trRules); err != nil {
-		return nil, err
-	}
+	deleteUserAnnotations(annotations, trRules)
 	d.GetObjectMeta().SetAnnotations(annotations)
 	annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
-	delete(annotations, okLabels.TranslationAnnotation)
+	delete(annotations, model.TranslationAnnotation)
 	delete(annotations, model.OktetoRestartAnnotation)
 	d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
 	labels := d.GetObjectMeta().GetLabels()
-	delete(labels, okLabels.DevLabel)
-	delete(labels, okLabels.InteractiveDevLabel)
-	delete(labels, okLabels.DetachedDevLabel)
+	delete(labels, model.DevLabel)
+	delete(labels, model.InteractiveDevLabel)
+	delete(labels, model.DetachedDevLabel)
 	d.GetObjectMeta().SetLabels(labels)
 	labels = d.Spec.Template.GetObjectMeta().GetLabels()
-	delete(labels, okLabels.InteractiveDevLabel)
-	delete(labels, okLabels.DetachedDevLabel)
+	delete(labels, model.InteractiveDevLabel)
+	delete(labels, model.DetachedDevLabel)
 	d.Spec.Template.GetObjectMeta().SetLabels(labels)
 	return d, nil
 }
 
-func deleteUserAnnotations(annotations map[string]string, tr *model.Translation) error {
-	if tr.Annotations == nil {
-		return nil
-	}
+func deleteUserAnnotations(annotations map[string]string, tr *model.Translation) {
 	for key := range tr.Annotations {
 		delete(annotations, key)
 	}
-	return nil
 }
 
 //DestroyDev destroys the k8s deployment of a dev environment

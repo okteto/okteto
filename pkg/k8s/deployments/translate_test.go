@@ -22,7 +22,6 @@ import (
 	"reflect"
 	"testing"
 
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -393,7 +392,7 @@ services:
 								{
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											okLabels.InteractiveDevLabel: "web",
+											model.InteractiveDevLabel: "web",
 										},
 									},
 									TopologyKey: "kubernetes.io/hostname",
