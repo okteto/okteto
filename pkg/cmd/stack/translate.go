@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -45,10 +46,11 @@ import (
 const (
 	helmDriver = "secrets"
 
-	nameField   = "name"
-	statusField = "status"
-	yamlField   = "yaml"
-	outputField = "output"
+	NameField    = "name"
+	statusField  = "status"
+	YamlField    = "yaml"
+	ComposeField = "compose"
+	outputField  = "output"
 
 	progressingStatus = "progressing"
 	deployedStatus    = "deployed"
@@ -266,14 +268,15 @@ func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.Stack
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: s.GetConfigMapName(),
+			Name: model.GetStackConfigMapName(s.Name),
 			Labels: map[string]string{
 				okLabels.StackLabel: "true",
 			},
 		},
 		Data: map[string]string{
-			nameField: s.Name,
-			yamlField: base64.StdEncoding.EncodeToString(s.Manifest),
+			NameField:    s.Name,
+			YamlField:    base64.StdEncoding.EncodeToString(s.Manifest),
+			ComposeField: strconv.FormatBool(s.IsCompose),
 		},
 	}
 }
@@ -478,51 +481,15 @@ func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Co
 }
 
 func getWaitForSvcsInitContainer(svcName string, s *model.Stack) *apiv1.Container {
-	command := "echo waiting for dependent services..."
-	for dependentSvc, condition := range s.Services[svcName].DependsOn {
-		if condition.Condition == model.DependsOnServiceHealthy {
-			if len(s.Services[dependentSvc].Ports) == 0 {
-				condition.Condition = model.DependsOnServiceRunning
-			}
-		}
-		command += getDependentCommand(condition, dependentSvc, s)
-	}
-
-	if command != "echo waiting for dependent services..." {
+	if len(s.Services[svcName].DependsOn) != 0 {
 		initContainer := &apiv1.Container{
 			Name:    "wait-for-svcs",
-			Image:   "bitnami/kubectl",
-			Command: []string{"/bin/bash", "-c", command},
+			Image:   "okteto/okteto",
+			Command: []string{"okteto", "stack", "wait", "--stack", s.Name, "--service", svcName, "--namespace", s.Namespace},
 		}
 		return initContainer
 	}
 	return nil
-}
-
-func getDependentCommand(condition model.DependsOnConditionSpec, dependentSvcName string, s *model.Stack) string {
-	switch condition.Condition {
-	case model.DependsOnServiceCompleted:
-		return fmt.Sprintf(" && kubectl wait --for=condition=complete job/%s", dependentSvcName)
-	case model.DependsOnServiceRunning:
-		if isDeployment(s, dependentSvcName) {
-			return fmt.Sprintf(" && kubectl wait --for=condition=available deployment/%s", dependentSvcName)
-		} else {
-			// Workaround until https://github.com/kubernetes/kubernetes/issues/79606
-			return fmt.Sprintf("kubectl rollout status --watch --timeout=600s statefulset/%s", dependentSvcName)
-		}
-	case model.DependsOnServiceHealthy:
-		isPortAvailableList := make([]string, 0)
-		for _, port := range s.Services[dependentSvcName].Ports {
-			isPortAvailableList = append(isPortAvailableList, fmt.Sprintf("$(curl -s -o /dev/null -w \"%%{http_code}\" %s:%d) != \"200\"", dependentSvcName, port.Port))
-		}
-		serviceHealthyCommand := fmt.Sprintf(" && echo waiting for %s && while [ %s ]; do sleep 5; done && echo %s is ready", dependentSvcName, strings.Join(isPortAvailableList, " || "), dependentSvcName)
-		return serviceHealthyCommand
-	}
-	return ""
-}
-
-func isDeployment(s *model.Stack, svcName string) bool {
-	return len(s.Services[svcName].Volumes) == 0
 }
 
 func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *apiv1.Container {

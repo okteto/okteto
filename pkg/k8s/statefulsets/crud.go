@@ -70,3 +70,11 @@ func Update(ctx context.Context, sfs *appsv1.StatefulSet, c *kubernetes.Clientse
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	return c.AppsV1().StatefulSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
+
+func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Interface) bool {
+	d, err := c.AppsV1().StatefulSets(namespace).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil {
+		return false
+	}
+	return d.Status.ReadyReplicas > 0
+}

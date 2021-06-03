@@ -360,8 +360,8 @@ func (s *Stack) GetLabelSelector() string {
 }
 
 //GetLabelSelector returns the label selector for the stack name
-func (s *Stack) GetConfigMapName() string {
-	return fmt.Sprintf("okteto-%s", s.Name)
+func GetStackConfigMapName(stackName string) string {
+	return fmt.Sprintf("okteto-%s", stackName)
 }
 
 func IsPortInService(port int32, ports []Port) bool {

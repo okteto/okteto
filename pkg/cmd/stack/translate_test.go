@@ -125,12 +125,11 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Labels[okLabels.StackLabel] != "true" {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
-	if result.Data[nameField] != "stackName" {
-		t.Errorf("Wrong data.name: '%s'", result.Data[nameField])
+	if result.Data[NameField] != "stackName" {
+		t.Errorf("Wrong data.name: '%s'", result.Data[NameField])
 	}
-	if result.Data[yamlField] != base64.StdEncoding.EncodeToString(s.Manifest) {
-
-		t.Errorf("Wrong data.yaml: '%s'", result.Data[yamlField])
+	if result.Data[YamlField] != base64.StdEncoding.EncodeToString(s.Manifest) {
+		t.Errorf("Wrong data.yaml: '%s'", result.Data[YamlField])
 	}
 }
 
@@ -897,8 +896,8 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			},
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
-				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services... && kubectl wait --for=condition=complete job/dependentJob"},
+				Image:   "okteto/okteto",
+				Command: []string{"okteto", "stack", "wait", "-s", "stackName", "-svc", "svcName"},
 			},
 		},
 		{
@@ -922,8 +921,8 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			},
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
-				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services... && kubectl wait --for=condition=available deployment/dependentSvc"},
+				Image:   "okteto/okteto",
+				Command: []string{"okteto", "stack", "wait", "-s", "stackName", "-svc", "svcName"},
 			},
 		},
 		{
@@ -953,8 +952,8 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			},
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
-				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services...kubectl rollout status --watch --timeout=600s statefulset/dependentSvc"},
+				Image:   "okteto/okteto",
+				Command: []string{"okteto", "stack", "wait", "-s", "stackName", "-svc", "svcName"},
 			},
 		},
 		{
@@ -983,8 +982,8 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			},
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
-				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services... && echo waiting for dependentSvc && while [ $(curl -s -o /dev/null -w \"%{http_code}\" dependentSvc:80) != \"200\" ]; do sleep 5; done && echo dependentSvc is ready"},
+				Image:   "okteto/okteto",
+				Command: []string{"okteto", "stack", "wait", "-s", "stackName", "-svc", "svcName"},
 			},
 		},
 		{
@@ -1026,8 +1025,8 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 			},
 			initContainer: &apiv1.Container{
 				Name:    "wait-for-svcs",
-				Image:   "bitnami/kubectl",
-				Command: []string{"/bin/bash", "-c", "echo waiting for dependent services... && kubectl wait --for=condition=complete job/dependentJob && kubectl wait --for=condition=available deployment/dependentSvc && echo waiting for dependentSvcAvailable && while [ $(curl -s -o /dev/null -w \"%{http_code}\" dependentSvcAvailable:80) != \"200\" ]; do sleep 5; done && echo dependentSvcAvailable is ready"},
+				Image:   "okteto/okteto",
+				Command: []string{"okteto", "stack", "wait", "-s", "stackName", "-svc", "svcName"},
 			},
 		},
 	}

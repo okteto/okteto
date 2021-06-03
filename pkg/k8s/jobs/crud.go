@@ -68,3 +68,26 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	log.Infof("job '%s' deleted", name)
 	return nil
 }
+
+func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Interface) bool {
+	job, err := c.BatchV1().Jobs(namespace).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil {
+		return false
+	}
+	if job.Status.Active != 0 || job.Status.Succeeded != 0 {
+		return true
+	}
+	return false
+}
+
+func IsSuccedded(ctx context.Context, namespace, svcName string, c kubernetes.Interface) bool {
+	job, err := c.BatchV1().Jobs(namespace).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil {
+		return false
+	}
+	fmt.Println(job.Status)
+	if job.Status.Succeeded == *job.Spec.Completions {
+		return true
+	}
+	return false
+}

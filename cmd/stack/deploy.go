@@ -50,7 +50,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			analytics.TrackStackWarnings(s.Warnings.VolumeMountWarnings)
+			analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
 
 			if err := s.UpdateNamespace(namespace); err != nil {
 				return err

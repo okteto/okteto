@@ -27,5 +27,6 @@ func Stack(ctx context.Context) *cobra.Command {
 	}
 	cmd.AddCommand(Deploy(ctx))
 	cmd.AddCommand(Destroy(ctx))
+	cmd.AddCommand(Wait(ctx))
 	return cmd
 }

@@ -87,7 +87,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	spinner.Start()
 	defer spinner.Stop()
 
-	addHiddenExposedPorts(ctx, s)
+	addHiddenExposedPortsToStack(ctx, s)
 
 	for name := range s.Services {
 		if len(s.Services[name].Ports) > 0 {
@@ -372,16 +372,20 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addHiddenExposedPorts(ctx context.Context, s *model.Stack) {
+func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack) {
 	for _, svc := range s.Services {
-		if svc.Image != "" {
-			exposedPorts := registry.GetHiddenExposePorts(ctx, s.Namespace, svc.Image)
-			for _, port := range exposedPorts {
-				if !svc.IsAlreadyAdded(port) {
-					svc.Ports = append(svc.Ports, model.Port{Port: port, Protocol: apiv1.ProtocolTCP})
-				}
+		addHiddenExposedPortsToSvc(ctx, svc, s.Namespace)
+	}
+
+}
+
+func addHiddenExposedPortsToSvc(ctx context.Context, svc *model.Service, namespace string) {
+	if svc.Image != "" {
+		exposedPorts := registry.GetHiddenExposePorts(ctx, namespace, svc.Image)
+		for _, port := range exposedPorts {
+			if !svc.IsAlreadyAdded(port) {
+				svc.Ports = append(svc.Ports, model.Port{Port: port, Protocol: apiv1.ProtocolTCP})
 			}
 		}
 	}
-
 }
