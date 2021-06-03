@@ -23,7 +23,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -263,7 +262,7 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.GetConfigMapName(),
 			Labels: map[string]string{
-				okLabels.StackLabel: "true",
+				model.StackLabel: "true",
 			},
 		},
 		Data: map[string]string{
@@ -500,15 +499,13 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 					command += " && chmod 777 /volumes/*"
 				}
 			}
-		} else {
-			if !addedDataVolume {
-				volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
-				if command == "" {
-					command = "chmod 777 /data"
-					addedDataVolume = true
-				} else {
-					command += " && chmod 777 /data"
-				}
+		} else if !addedDataVolume {
+			volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: "/data"})
+			if command == "" {
+				command = "chmod 777 /data"
+				addedDataVolume = true
+			} else {
+				command += " && chmod 777 /data"
 			}
 		}
 	}
@@ -561,8 +558,8 @@ func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
 	annotations := translateAnnotations(svc)
-	if s.Services[svcName].Public && annotations[okLabels.OktetoAutoIngressAnnotation] == "" {
-		annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
+	if s.Services[svcName].Public && annotations[model.OktetoAutoIngressAnnotation] == "" {
+		annotations[model.OktetoAutoIngressAnnotation] = "true"
 	}
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -663,7 +660,7 @@ func translateEndpointsV1Beta1(endpoints model.Endpoint) []networkingv1beta1.HTT
 
 func translateIngressAnnotations(endpointName string, s *model.Stack) map[string]string {
 	endpoint := s.Endpoints[endpointName]
-	annotations := model.Annotations{okLabels.OktetoIngressAutoGenerateHost: "true"}
+	annotations := model.Annotations{model.OktetoIngressAutoGenerateHost: "true"}
 	for k := range endpoint.Annotations {
 		annotations[k] = endpoint.Annotations[k]
 	}
@@ -673,8 +670,8 @@ func translateIngressAnnotations(endpointName string, s *model.Stack) map[string
 func translateIngressLabels(endpointName string, s *model.Stack) map[string]string {
 	endpoint := s.Endpoints[endpointName]
 	labels := map[string]string{
-		okLabels.StackNameLabel:         s.Name,
-		okLabels.StackEndpointNameLabel: endpointName,
+		model.StackNameLabel:         s.Name,
+		model.StackEndpointNameLabel: endpointName,
 	}
 	for k := range endpoint.Labels {
 		labels[k] = endpoint.Labels[k]
@@ -685,8 +682,8 @@ func translateIngressLabels(endpointName string, s *model.Stack) map[string]stri
 func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string {
 	volume := s.Volumes[volumeName]
 	labels := map[string]string{
-		okLabels.StackNameLabel:       s.Name,
-		okLabels.StackVolumeNameLabel: volumeName,
+		model.StackNameLabel:       s.Name,
+		model.StackVolumeNameLabel: volumeName,
 	}
 	for k := range volume.Labels {
 		labels[k] = volume.Labels[k]
@@ -697,8 +694,8 @@ func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string 
 func translateLabels(svcName string, s *model.Stack) map[string]string {
 	svc := s.Services[svcName]
 	labels := map[string]string{
-		okLabels.StackNameLabel:        s.Name,
-		okLabels.StackServiceNameLabel: svcName,
+		model.StackNameLabel:        s.Name,
+		model.StackServiceNameLabel: svcName,
 	}
 	for k := range svc.Labels {
 		labels[k] = svc.Labels[k]
@@ -708,8 +705,8 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 
 func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 	labels := map[string]string{
-		okLabels.StackNameLabel:        s.Name,
-		okLabels.StackServiceNameLabel: svcName,
+		model.StackNameLabel:        s.Name,
+		model.StackServiceNameLabel: svcName,
 	}
 	return labels
 }
@@ -791,7 +788,7 @@ func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	result := []apiv1.ContainerPort{}
 	for _, p := range svc.Ports {
-		result = append(result, apiv1.ContainerPort{ContainerPort: p.Port})
+		result = append(result, apiv1.ContainerPort{ContainerPort: p.ContainerPort})
 	}
 	return result
 }
@@ -799,17 +796,39 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
 	for _, p := range svc.Ports {
-		result = append(
-			result,
-			apiv1.ServicePort{
-				Name:       fmt.Sprintf("p-%d-%s", p.Port, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
-				Port:       int32(p.Port),
-				TargetPort: intstr.IntOrString{IntVal: p.Port},
-				Protocol:   p.Protocol,
-			},
-		)
+		if !isServicePortAdded(p.ContainerPort, result) {
+			result = append(
+				result,
+				apiv1.ServicePort{
+					Name:       fmt.Sprintf("p-%d-%d-%s", p.ContainerPort, p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
+					Port:       int32(p.ContainerPort),
+					TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
+					Protocol:   p.Protocol,
+				},
+			)
+		}
+		if p.HostPort != 0 && p.ContainerPort != p.HostPort && !isServicePortAdded(p.HostPort, result) {
+			result = append(
+				result,
+				apiv1.ServicePort{
+					Name:       fmt.Sprintf("p-%d-%d-%s", p.HostPort, p.ContainerPort, strings.ToLower(fmt.Sprintf("%v", p.Protocol))),
+					Port:       int32(p.HostPort),
+					TargetPort: intstr.IntOrString{IntVal: p.ContainerPort},
+					Protocol:   p.Protocol,
+				},
+			)
+		}
 	}
 	return result
+}
+
+func isServicePortAdded(newPort int32, existentPorts []apiv1.ServicePort) bool {
+	for _, p := range existentPorts {
+		if p.Port == newPort {
+			return true
+		}
+	}
+	return false
 }
 
 func translateResources(svc *model.Service) apiv1.ResourceRequirements {

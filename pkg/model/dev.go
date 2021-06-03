@@ -28,84 +28,12 @@ import (
 
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	//Localhost localhost
-	Localhost                   = "localhost"
-	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
-	oktetoDefaultSSHServerPort  = 2222
-	//OktetoDefaultPVSize default volume size
-	OktetoDefaultPVSize = "2Gi"
-	//OktetoUpCmd up command
-	OktetoUpCmd = "up"
-	//OktetoPushCmd push command
-	OktetoPushCmd                = "push"
-	DefaultDinDImage             = "docker:20-dind"
-	DefaultDockerHost            = "tcp://127.0.0.1:2376"
-	DefaultDockerCertDir         = "/certs"
-	DefaultDockerCacheDir        = "/var/lib/docker"
-	DefaultDockerCertDirSubPath  = "certs"
-	DefaultDockerCacheDirSubPath = "docker"
-
-	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
-	DeprecatedOktetoVolumeName = "okteto"
-	//OktetoVolumeNameTemplate name template of the development container persistent volume
-	OktetoVolumeNameTemplate = "okteto-%s"
-	//DataSubPath subpath in the development container persistent volume for the data volumes
-	DataSubPath = "data"
-	//SourceCodeSubPath subpath in the development container persistent volume for the source code
-	SourceCodeSubPath = "src"
-	//OktetoSyncthingMountPath syncthing volume mount path
-	OktetoSyncthingMountPath = "/var/syncthing"
-	//RemoteMountPath remote volume mount path
-	RemoteMountPath = "/var/okteto/remote"
-	//SyncthingSubPath subpath in the development container persistent volume for the syncthing data
-	SyncthingSubPath = "syncthing"
-	//DefaultSyncthingRescanInterval default syncthing re-scan interval
-	DefaultSyncthingRescanInterval = 300
-	//RemoteSubPath subpath in the development container persistent volume for the remote data
-	RemoteSubPath = "okteto-remote"
-	//OktetoURLAnnotation indicates the okteto cluster public url
-	OktetoURLAnnotation = "dev.okteto.com/url"
-	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
-	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
-	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
-	OktetoRestartAnnotation = "dev.okteto.com/restart"
-	//OktetoStignoreAnnotation indicates the hash of the stignore files to force redeployment
-	OktetoStignoreAnnotation = "dev.okteto.com/stignore"
-	//OktetoDivertLabel indicates the object is a diverted version
-	OktetoDivertLabel = "dev.okteto.com/divert"
-	//OktetoDivertServiceModificationAnnotation indicates the service modification done by diverting a service
-	OktetoDivertServiceModificationAnnotation = "divert.okteto.com/modification"
-	//OktetoInjectTokenAnnotation annotation to inject the okteto token
-	OktetoInjectTokenAnnotation = "dev.okteto.com/inject-token"
-
-	//OktetoInitContainer name of the okteto init container
-	OktetoInitContainer = "okteto-init"
-
-	//DefaultImage default image for sandboxes
-	DefaultImage = "okteto/dev:latest"
-
-	//TranslationVersion version of the translation schema
-	TranslationVersion = "1.0"
-
-	//ResourceAMDGPU amd.com/gpu resource
-	ResourceAMDGPU apiv1.ResourceName = "amd.com/gpu"
-	//ResourceNVIDIAGPU nvidia.com/gpu resource
-	ResourceNVIDIAGPU apiv1.ResourceName = "nvidia.com/gpu"
-
-	// this path is expected by remote
-	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
-
-	syncFieldDocsURL = "https://okteto.com/docs/reference/manifest#sync-string-required"
 )
 
 var (
@@ -809,7 +737,7 @@ func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Annotations == nil {
 		dev.Annotations = Annotations{}
 	}
-	dev.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+	dev.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
 //GetVolumeName returns the okteto volume name for a given development container

@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -53,7 +53,6 @@ type Service struct {
 	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
 
 	Environment     Environment         `yaml:"environment,omitempty"`
-	Expose          []int32             `yaml:"expose,omitempty"`
 	Image           string              `yaml:"image,omitempty"`
 	Labels          Labels              `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     Annotations         `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -111,8 +110,9 @@ type Quantity struct {
 }
 
 type Port struct {
-	Port     int32
-	Protocol apiv1.Protocol
+	HostPort      int32
+	ContainerPort int32
+	Protocol      apiv1.Protocol
 }
 
 type EndpointSpec map[string]Endpoint
@@ -182,7 +182,6 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 	}
 
 	for _, svc := range s.Services {
-		svc.extendPorts()
 		if svc.Build == nil {
 			continue
 		}
@@ -235,13 +234,6 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 			svc.Replicas = 1
 		}
 
-		if len(svc.Expose) > 0 && len(svc.Ports) == 0 {
-			svc.Public = false
-		}
-
-		if len(svc.Expose) > 0 {
-			svc.extendPorts()
-		}
 		if svc.RestartPolicy != apiv1.RestartPolicyAlways {
 			for idx, volume := range svc.Volumes {
 				volumeName := fmt.Sprintf("pvc-%s-0", svcName)
@@ -340,7 +332,7 @@ func (s *Stack) UpdateNamespace(namespace string) error {
 
 //GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetLabelSelector() string {
-	return fmt.Sprintf("%s=%s", labels.StackNameLabel, s.Name)
+	return fmt.Sprintf("%s=%s", StackNameLabel, s.Name)
 }
 
 //GetLabelSelector returns the label selector for the stack name
@@ -350,7 +342,7 @@ func (s *Stack) GetConfigMapName() string {
 
 func IsPortInService(port int32, ports []Port) bool {
 	for _, p := range ports {
-		if p.Port == port {
+		if p.ContainerPort == port {
 			return true
 		}
 	}
@@ -362,22 +354,24 @@ func (svc *Service) SetLastBuiltAnnotation() {
 	if svc.Annotations == nil {
 		svc.Annotations = Annotations{}
 	}
-	svc.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
-}
-
-//extendPorts adds the ports that are in expose field to the port list.
-func (svc *Service) extendPorts() {
-	for _, port := range svc.Expose {
-		if !svc.IsAlreadyAdded(port) {
-			svc.Ports = append(svc.Ports, Port{Port: port, Protocol: apiv1.ProtocolTCP})
-		}
-	}
+	svc.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
 //isAlreadyAdded checks if a port is already on port list
-func (svc *Service) IsAlreadyAdded(p int32) bool {
-	for _, port := range svc.Ports {
-		if port.Port == p {
+func IsAlreadyAdded(p Port, ports []Port) bool {
+	for _, port := range ports {
+		if port.ContainerPort == p.ContainerPort {
+			log.Infof("Port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
+			return true
+		}
+	}
+	return false
+}
+
+func IsAlreadyAddedExpose(p Port, ports []Port) bool {
+	for _, port := range ports {
+		if port.ContainerPort == p.ContainerPort || port.ContainerPort == p.HostPort || port.HostPort == p.HostPort || port.HostPort == p.ContainerPort {
+			log.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
 			return true
 		}
 	}

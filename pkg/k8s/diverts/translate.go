@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -31,8 +31,8 @@ func translateDeployment(username string, d *appsv1.Deployment) *appsv1.Deployme
 	result.UID = ""
 	result.Name = DivertName(username, d.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if d.Labels != nil && d.Labels[okLabels.DeployedByLabel] != "" {
-		result.Labels[okLabels.DeployedByLabel] = d.Labels[okLabels.DeployedByLabel]
+	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
+		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
 	}
 	result.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: map[string]string{
@@ -42,10 +42,7 @@ func translateDeployment(username string, d *appsv1.Deployment) *appsv1.Deployme
 	result.Spec.Template.Labels = map[string]string{
 		model.OktetoDivertLabel: username,
 	}
-	if result.Annotations == nil {
-		result.Annotations = map[string]string{}
-	}
-	result.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoUpCmd
+	annotations.Set(result.GetObjectMeta(), model.OktetoAutoCreateAnnotation, model.OktetoUpCmd)
 	result.ResourceVersion = ""
 	return result
 }
@@ -55,8 +52,8 @@ func translateService(username string, d *appsv1.Deployment, s *apiv1.Service) (
 	result.UID = ""
 	result.Name = DivertName(username, s.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if s.Labels != nil && s.Labels[okLabels.DeployedByLabel] != "" {
-		result.Labels[okLabels.DeployedByLabel] = s.Labels[okLabels.DeployedByLabel]
+	if s.Labels != nil && s.Labels[model.DeployedByLabel] != "" {
+		result.Labels[model.DeployedByLabel] = s.Labels[model.DeployedByLabel]
 	}
 	if s.Annotations != nil {
 		modification := s.Annotations[model.OktetoDivertServiceModificationAnnotation]
@@ -76,11 +73,11 @@ func translateService(username string, d *appsv1.Deployment, s *apiv1.Service) (
 			}
 		}
 	}
-	delete(result.Annotations, okLabels.OktetoAutoIngressAnnotation)
+	delete(result.Annotations, model.OktetoAutoIngressAnnotation)
 	delete(result.Annotations, model.OktetoDivertServiceModificationAnnotation)
 	result.Spec.Selector = map[string]string{
-		model.OktetoDivertLabel:      username,
-		okLabels.InteractiveDevLabel: d.Name,
+		model.OktetoDivertLabel:   username,
+		model.InteractiveDevLabel: d.Name,
 	}
 	result.ResourceVersion = ""
 	result.Spec.ClusterIP = ""
@@ -92,18 +89,15 @@ func translateIngress(username string, i *networkingv1.Ingress) *networkingv1.In
 	result.UID = ""
 	result.Name = DivertName(username, i.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if i.Labels != nil && i.Labels[okLabels.DeployedByLabel] != "" {
-		result.Labels[okLabels.DeployedByLabel] = i.Labels[okLabels.DeployedByLabel]
+	if i.Labels != nil && i.Labels[model.DeployedByLabel] != "" {
+		result.Labels[model.DeployedByLabel] = i.Labels[model.DeployedByLabel]
 	}
-	if result.Annotations == nil {
-		result.Annotations = map[string]string{}
-	}
-	if host := result.Annotations[okLabels.OktetoIngressAutoGenerateHost]; host != "" {
+	if host := annotations.Get(result.GetObjectMeta(), model.OktetoIngressAutoGenerateHost); host != "" {
 		if host != "true" {
-			result.Annotations[okLabels.OktetoIngressAutoGenerateHost] = fmt.Sprintf("%s-%s", username, host)
+			annotations.Set(result.GetObjectMeta(), model.OktetoIngressAutoGenerateHost, fmt.Sprintf("%s-%s", username, host))
 		}
 	} else {
-		result.Annotations[okLabels.OktetoIngressAutoGenerateHost] = "true"
+		annotations.Set(result.GetObjectMeta(), model.OktetoIngressAutoGenerateHost, "true")
 	}
 	result.ResourceVersion = ""
 	return result
@@ -141,8 +135,8 @@ func translateDivertCRD(username string, dev *model.Dev, s *apiv1.Service, i *ne
 			},
 		},
 	}
-	if s.Labels != nil && s.Labels[okLabels.DeployedByLabel] != "" {
-		result.Labels = map[string]string{okLabels.DeployedByLabel: s.Labels[okLabels.DeployedByLabel]}
+	if s.Labels != nil && s.Labels[model.DeployedByLabel] != "" {
+		result.Labels = map[string]string{model.DeployedByLabel: s.Labels[model.DeployedByLabel]}
 	}
 	return result
 }

@@ -27,7 +27,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -159,11 +158,11 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 	}
 	isNewDeployment := old.Name == ""
 	if !isNewDeployment {
-		if old.Labels[okLabels.StackNameLabel] == "" {
+		if old.Labels[model.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
 		}
-		if old.Labels[okLabels.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the deployment '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+		if old.Labels[model.StackNameLabel] != s.Name {
+			return fmt.Errorf("name collision: the deployment '%s' belongs to the stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 		if deployments.IsDevModeOn(old) {
 			deployments.RestoreDevModeFrom(d, old)
@@ -194,14 +193,14 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 			return fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
 		}
 	} else {
-		if old.Labels[okLabels.StackNameLabel] == "" {
+		if old.Labels[model.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the statefulset '%s' was running before deploying your stack", svcName)
 		}
-		if old.Labels[okLabels.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+		if old.Labels[model.StackNameLabel] != s.Name {
+			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
-		if v, ok := old.Labels[okLabels.DeployedByLabel]; ok {
-			sfs.Labels[okLabels.DeployedByLabel] = v
+		if v, ok := old.Labels[model.DeployedByLabel]; ok {
+			sfs.Labels[model.DeployedByLabel] = v
 		}
 		if err := statefulsets.Update(ctx, sfs, c); err != nil {
 			if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
@@ -226,11 +225,11 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c *kubernete
 	}
 	isNewJob := old.Name == ""
 	if !isNewJob {
-		if old.Labels[okLabels.StackNameLabel] == "" {
+		if old.Labels[model.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the job '%s' was running before deploying your stack", svcName)
 		}
-		if old.Labels[okLabels.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the job '%s' belongs to the stack '%s'", svcName, old.Labels[okLabels.StackNameLabel])
+		if old.Labels[model.StackNameLabel] != s.Name {
+			return fmt.Errorf("name collision: the job '%s' belongs to the stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 	}
 
@@ -258,11 +257,11 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c *kub
 			return fmt.Errorf("error creating volume '%s': %s", pvc.Name, err.Error())
 		}
 	} else {
-		if old.Labels[okLabels.StackNameLabel] == "" {
+		if old.Labels[model.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the volume '%s' was running before deploying your stack", pvc.Name)
 		}
-		if old.Labels[okLabels.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", pvc.Name, old.Labels[okLabels.StackNameLabel])
+		if old.Labels[model.StackNameLabel] != s.Name {
+			return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", pvc.Name, old.Labels[model.StackNameLabel])
 		}
 
 		old.Spec.Resources.Requests["storage"] = pvc.Spec.Resources.Requests["storage"]
@@ -299,12 +298,12 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *i
 		return c.Create(ctx, iModel)
 	}
 
-	if old.GetLabels()[okLabels.StackNameLabel] == "" {
+	if old.GetLabels()[model.StackNameLabel] == "" {
 		return fmt.Errorf("name collision: the ingress '%s' was running before deploying your stack", ingressName)
 	}
 
-	if old.GetLabels()[okLabels.StackNameLabel] != s.Name {
-		return fmt.Errorf("name collision: the endpoint '%s' belongs to the stack '%s'", ingressName, old.GetLabels()[okLabels.StackNameLabel])
+	if old.GetLabels()[model.StackNameLabel] != s.Name {
+		return fmt.Errorf("name collision: the endpoint '%s' belongs to the stack '%s'", ingressName, old.GetLabels()[model.StackNameLabel])
 	}
 
 	return c.Update(ctx, iModel)
@@ -319,7 +318,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 	ticker := time.NewTicker(100 * time.Millisecond)
 	timeout := time.Now().Add(300 * time.Second)
 
-	selector := map[string]string{okLabels.StackNameLabel: s.Name}
+	selector := map[string]string{model.StackNameLabel: s.Name}
 	for time.Now().Before(timeout) {
 		<-ticker.C
 		pendingPods := numPods
@@ -332,7 +331,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 				pendingPods--
 			}
 			if podList[i].Status.Phase == apiv1.PodFailed {
-				return fmt.Errorf("Service '%s' has failed. Please check for errors and try again", podList[i].Labels[okLabels.StackServiceNameLabel])
+				return fmt.Errorf("Service '%s' has failed. Please check for errors and try again", podList[i].Labels[model.StackServiceNameLabel])
 			}
 		}
 		if pendingPods == 0 {
@@ -377,8 +376,8 @@ func addHiddenExposedPorts(ctx context.Context, s *model.Stack) {
 		if svc.Image != "" {
 			exposedPorts := registry.GetHiddenExposePorts(ctx, s.Namespace, svc.Image)
 			for _, port := range exposedPorts {
-				if !svc.IsAlreadyAdded(port) {
-					svc.Ports = append(svc.Ports, model.Port{Port: port, Protocol: apiv1.ProtocolTCP})
+				if !model.IsAlreadyAdded(port, svc.Ports) {
+					svc.Ports = append(svc.Ports, port)
 				}
 			}
 		}

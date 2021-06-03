@@ -25,7 +25,9 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	v1 "k8s.io/api/core/v1"
 )
 
 type ImageInfo struct {
@@ -141,8 +143,8 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	return registryTag, imageTag
 }
 
-func GetHiddenExposePorts(ctx context.Context, namespace, image string) []int32 {
-	exposedPorts := make([]int32, 0)
+func GetHiddenExposePorts(ctx context.Context, namespace, image string) []model.Port {
+	exposedPorts := make([]model.Port, 0)
 	var err error
 	var username string
 	var token string
@@ -199,7 +201,7 @@ func GetHiddenExposePorts(ctx context.Context, namespace, image string) []int32 
 				if err != nil {
 					continue
 				}
-				exposedPorts = append(exposedPorts, int32(portInt))
+				exposedPorts = append(exposedPorts, model.Port{ContainerPort: int32(portInt), Protocol: v1.ProtocolTCP})
 			}
 		}
 	}

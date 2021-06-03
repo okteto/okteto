@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -26,8 +25,8 @@ import (
 )
 
 func waitForDevPodsTermination(ctx context.Context, c kubernetes.Interface, d *model.Dev, t int) {
-	interactive := map[string]string{labels.InteractiveDevLabel: d.Name}
-	detached := map[string]string{labels.DetachedDevLabel: d.Name}
+	interactive := map[string]string{model.InteractiveDevLabel: d.Name}
+	detached := map[string]string{model.DetachedDevLabel: d.Name}
 
 	wg := &sync.WaitGroup{}
 

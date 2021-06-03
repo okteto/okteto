@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -58,7 +57,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 		ObjectMeta: metav1.ObjectMeta{
 			Name: secretName,
 			Labels: map[string]string{
-				labels.DevLabel: "true",
+				model.DevLabel: "true",
 			},
 		},
 		Type: v1.SecretTypeOpaque,
