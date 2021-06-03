@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -31,7 +31,7 @@ const (
 
 // IsOktetoNamespace checks if this is a namespace created by okteto
 func IsOktetoNamespace(ns *apiv1.Namespace) bool {
-	return ns.Labels[okLabels.DevLabel] == "true"
+	return ns.Labels[model.DevLabel] == "true"
 }
 
 // IsOktetoAllowed checks if Okteto operationos are allowed in this namespace

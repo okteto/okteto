@@ -20,7 +20,8 @@ import (
 	"path"
 	"strings"
 
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
+	"github.com/okteto/okteto/pkg/k8s/annotations"
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
@@ -62,7 +63,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		rule.Container = devContainer.Name
 	}
 
-	manifest := getAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation)
+	manifest := annotations.Get(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if manifest != "" {
 		dOrig := &appsv1.Deployment{}
 		if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
@@ -70,9 +71,9 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		}
 		t.Deployment = dOrig
 	}
-	annotations := t.Deployment.GetObjectMeta().GetAnnotations()
-	delete(annotations, revisionAnnotation)
-	t.Deployment.GetObjectMeta().SetAnnotations(annotations)
+	dAnnotations := t.Deployment.GetObjectMeta().GetAnnotations()
+	delete(dAnnotations, revisionAnnotation)
+	t.Deployment.GetObjectMeta().SetAnnotations(dAnnotations)
 
 	if c != nil && isOktetoNamespace {
 		c := os.Getenv("OKTETO_CLIENTSIDE_TRANSLATION")
@@ -90,10 +91,10 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 	if err != nil {
 		return err
 	}
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
+	annotations.Set(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 
 	commonTranslation(t)
-	setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DevLabel, "true")
+	labels.Set(t.Deployment.Spec.Template.GetObjectMeta(), model.DevLabel, "true")
 	TranslateDevAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
 	TranslateDevTolerations(&t.Deployment.Spec.Template.Spec, t.Tolerations)
 	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
@@ -131,13 +132,13 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 
 func commonTranslation(t *model.Translation) {
 	TranslateDevAnnotations(t.Deployment.GetObjectMeta(), t.Annotations)
-	setAnnotation(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, okLabels.Version)
-	setLabel(t.Deployment.GetObjectMeta(), okLabels.DevLabel, "true")
+	annotations.Set(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, model.Version)
+	labels.Set(t.Deployment.GetObjectMeta(), model.DevLabel, "true")
 
 	if t.Interactive {
-		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.InteractiveDevLabel, t.Name)
+		labels.Set(t.Deployment.Spec.Template.GetObjectMeta(), model.InteractiveDevLabel, t.Name)
 	} else {
-		setLabel(t.Deployment.Spec.Template.GetObjectMeta(), okLabels.DetachedDevLabel, t.Name)
+		labels.Set(t.Deployment.Spec.Template.GetObjectMeta(), model.DetachedDevLabel, t.Name)
 	}
 
 	t.Deployment.Spec.Replicas = &devReplicas
@@ -162,9 +163,9 @@ func GetDevContainer(spec *apiv1.PodSpec, name string) *apiv1.Container {
 }
 
 //TranslateDevAnnotations sets the user provided annotations
-func TranslateDevAnnotations(o metav1.Object, annotations map[string]string) {
-	for key, value := range annotations {
-		setAnnotation(o, key, value)
+func TranslateDevAnnotations(o metav1.Object, annotationsToAdd map[string]string) {
+	for key, value := range annotationsToAdd {
+		annotations.Set(o, key, value)
 	}
 }
 
@@ -189,7 +190,7 @@ func TranslatePodAffinity(spec *apiv1.PodSpec, name string) {
 		apiv1.PodAffinityTerm{
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					okLabels.InteractiveDevLabel: name,
+					model.InteractiveDevLabel: name,
 				},
 			},
 			TopologyKey: "kubernetes.io/hostname",

@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -333,7 +332,7 @@ func (s *Stack) UpdateNamespace(namespace string) error {
 
 //GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetLabelSelector() string {
-	return fmt.Sprintf("%s=%s", labels.StackNameLabel, s.Name)
+	return fmt.Sprintf("%s=%s", StackNameLabel, s.Name)
 }
 
 //GetLabelSelector returns the label selector for the stack name
@@ -355,7 +354,7 @@ func (svc *Service) SetLastBuiltAnnotation() {
 	if svc.Annotations == nil {
 		svc.Annotations = Annotations{}
 	}
-	svc.Annotations[labels.LastBuiltAnnotation] = time.Now().UTC().Format(labels.TimeFormat)
+	svc.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
 //isAlreadyAdded checks if a port is already on port list
