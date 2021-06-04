@@ -388,7 +388,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.DependsOn = serviceRaw.DependsOn
 
 	svc.Public, svc.Ports, err = getSvcPorts(serviceRaw.Public, serviceRaw.Ports, serviceRaw.Expose)
-
 	if err != nil {
 		return nil, err
 	}
