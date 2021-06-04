@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -53,7 +54,7 @@ func Test_translate(t *testing.T) {
 			},
 		},
 	}
-	if err := translate(ctx, stack, false, false); err == nil {
+	if err := translate(ctx, stack, false, false, utils.NewSpinner("")); err == nil {
 		t.Fatalf("An error should be returned")
 	}
 }

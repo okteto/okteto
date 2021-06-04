@@ -173,7 +173,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache bool, spinner *utils.Spinner) (bool, error) {
 	hasBuiltSomething := false
 	for name, svc := range s.Services {
-		spinner.Update(fmt.Sprintf("Checking image availability of '%s'", name))
+		spinner.Update(fmt.Sprintf("Checking the availability of '%s' image", name))
 		if svc.Build == nil {
 			continue
 		}
