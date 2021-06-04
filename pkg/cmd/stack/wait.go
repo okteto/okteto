@@ -32,14 +32,6 @@ import (
 )
 
 func Wait(ctx context.Context, stackName, svcName, namespace string) error {
-
-	if stackName == "" {
-		return fmt.Errorf("Invalid command: stack name must is required.")
-	}
-	if svcName == "" {
-		return fmt.Errorf("Invalid command: service name is required.")
-	}
-
 	c, _, err := client.GetLocal()
 	if err != nil {
 		return err
