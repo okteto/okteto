@@ -164,7 +164,7 @@ func waitForSvcHealthy(stack *model.Stack, svcName string) error {
 	for time.Now().Before(timeout) {
 		<-ticker.C
 		for _, p := range svcToWaitFor.Ports {
-			url := fmt.Sprintf("http://%s:%d/", svcName, p.Port)
+			url := fmt.Sprintf("http://%s:%d/", svcName, p.ContainerPort)
 			resp, err := http.Get(url)
 			if err != nil {
 				continue

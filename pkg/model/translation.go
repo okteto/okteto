@@ -20,14 +20,15 @@ import (
 
 // Translation represents the information for translating a deployment
 type Translation struct {
-	Interactive bool               `json:"interactive"`
-	Name        string             `json:"name"`
-	Version     string             `json:"version"`
-	Deployment  *appsv1.Deployment `json:"-"`
-	Annotations Annotations        `json:"annotations,omitempty"`
-	Tolerations []apiv1.Toleration `json:"tolerations,omitempty"`
-	Replicas    int32              `json:"replicas"`
-	Rules       []*TranslationRule `json:"rules"`
+	Interactive bool                      `json:"interactive"`
+	Name        string                    `json:"name"`
+	Version     string                    `json:"version"`
+	Deployment  *appsv1.Deployment        `json:"-"`
+	Annotations Annotations               `json:"annotations,omitempty"`
+	Tolerations []apiv1.Toleration        `json:"tolerations,omitempty"`
+	Replicas    int32                     `json:"replicas"`
+	Strategy    appsv1.DeploymentStrategy `json:"strategy"`
+	Rules       []*TranslationRule        `json:"rules"`
 }
 
 // TranslationRule represents how to apply a container translation in a deployment

@@ -3,7 +3,6 @@ package diverts
 import (
 	"testing"
 
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -21,7 +20,7 @@ func Test_translateDeployment(t *testing.T) {
 			Name:            "name",
 			Namespace:       "namespace",
 			Annotations:     map[string]string{"annotation1": "value1"},
-			Labels:          map[string]string{"label1": "value1", okLabels.DeployedByLabel: "cindy"},
+			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -49,8 +48,8 @@ func Test_translateDeployment(t *testing.T) {
 				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
 			},
 			Labels: map[string]string{
-				okLabels.DeployedByLabel: "cindy",
-				model.OktetoDivertLabel:  "cindy",
+				model.DeployedByLabel:   "cindy",
+				model.OktetoDivertLabel: "cindy",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -87,10 +86,10 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 			Name:      "name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                        "value1",
-				okLabels.OktetoAutoIngressAnnotation: "true",
+				"annotation1":                     "value1",
+				model.OktetoAutoIngressAnnotation: "true",
 			},
-			Labels:          map[string]string{"label1": "value1", okLabels.DeployedByLabel: "cindy"},
+			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 		Spec: apiv1.ServiceSpec{
@@ -118,14 +117,14 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 				"annotation1": "value1",
 			},
 			Labels: map[string]string{
-				okLabels.DeployedByLabel: "cindy",
-				model.OktetoDivertLabel:  "cindy",
+				model.DeployedByLabel:   "cindy",
+				model.OktetoDivertLabel: "cindy",
 			},
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
-				model.OktetoDivertLabel:      "cindy",
-				okLabels.InteractiveDevLabel: "cindy-name",
+				model.OktetoDivertLabel:   "cindy",
+				model.InteractiveDevLabel: "cindy-name",
 			},
 			Ports: []apiv1.ServicePort{
 				{
@@ -155,7 +154,7 @@ func Test_translateServiceDiverted(t *testing.T) {
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1":                                   "value1",
-				okLabels.OktetoAutoIngressAnnotation:            "true",
+				model.OktetoAutoIngressAnnotation:               "true",
 				model.OktetoDivertServiceModificationAnnotation: "{\"proxy_port\":\"1026\",\"original_port\":\"8080\",\"original_target_port\":\"8080\"}",
 			},
 			Labels:          map[string]string{"label1": "value1"},
@@ -189,8 +188,8 @@ func Test_translateServiceDiverted(t *testing.T) {
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
-				model.OktetoDivertLabel:      "cindy",
-				okLabels.InteractiveDevLabel: "cindy-name",
+				model.OktetoDivertLabel:   "cindy",
+				model.InteractiveDevLabel: "cindy-name",
 			},
 			Ports: []apiv1.ServicePort{
 				{
@@ -214,10 +213,10 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 			Name:      "name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                          "value1",
-				okLabels.OktetoIngressAutoGenerateHost: "true",
+				"annotation1":                       "value1",
+				model.OktetoIngressAutoGenerateHost: "true",
 			},
-			Labels:          map[string]string{"label1": "value1", okLabels.DeployedByLabel: "cindy"},
+			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 	}
@@ -227,12 +226,12 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 			Name:      "cindy-name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                          "value1",
-				okLabels.OktetoIngressAutoGenerateHost: "true",
+				"annotation1":                       "value1",
+				model.OktetoIngressAutoGenerateHost: "true",
 			},
 			Labels: map[string]string{
-				okLabels.DeployedByLabel: "cindy",
-				model.OktetoDivertLabel:  "cindy",
+				model.DeployedByLabel:   "cindy",
+				model.OktetoDivertLabel: "cindy",
 			},
 		},
 	}
@@ -250,8 +249,8 @@ func Test_translateIngressCustomGenerateHost(t *testing.T) {
 			Name:      "name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                          "value1",
-				okLabels.OktetoIngressAutoGenerateHost: "custom",
+				"annotation1":                       "value1",
+				model.OktetoIngressAutoGenerateHost: "custom",
 			},
 			Labels:          map[string]string{"label1": "value1"},
 			ResourceVersion: "version",
@@ -263,8 +262,8 @@ func Test_translateIngressCustomGenerateHost(t *testing.T) {
 			Name:      "cindy-name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                          "value1",
-				okLabels.OktetoIngressAutoGenerateHost: "cindy-custom",
+				"annotation1":                       "value1",
+				model.OktetoIngressAutoGenerateHost: "cindy-custom",
 			},
 			Labels: map[string]string{model.OktetoDivertLabel: "cindy"},
 		},

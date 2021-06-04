@@ -31,7 +31,7 @@ while getopts ":s:ervd" opt; do
                 ;;
         d)
                 if [ -z "${DOCKER_CONFIG}" ]; then
-                        DOCKER_CONFIG="$HOME"/.docker
+                        DOCKER_CONFIG="$HOME/.docker"
                 fi
                 if [ ! -d "${DOCKER_CONFIG}" ]; then
                         mkdir -p "${DOCKER_CONFIG}"

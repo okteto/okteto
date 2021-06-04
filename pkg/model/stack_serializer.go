@@ -58,7 +58,7 @@ type ServiceRaw struct {
 	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
 	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
 	Environment              Environment        `yaml:"environment,omitempty"`
-	Expose                   *RawMessage        `yaml:"expose,omitempty"`
+	Expose                   []PortRaw          `yaml:"expose,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
 	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations              Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -335,7 +335,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if err != nil {
 		return nil, err
 	}
-	svc.Image = serviceRaw.Image
+	svc.Image, err = ExpandEnv(serviceRaw.Image)
+	if err != nil {
+		return nil, err
+	}
 	svc.Build = serviceRaw.Build
 
 	svc.CapAdd = serviceRaw.CapAdd
@@ -383,15 +386,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Environment = serviceRaw.Environment
 
 	svc.DependsOn = serviceRaw.DependsOn
-	svc.Public = serviceRaw.Public
-	if !svc.Public && len(getAccessiblePorts(serviceRaw.Ports)) == 1 {
-		svc.Public = true
-	}
-	for _, p := range serviceRaw.Ports {
-		svc.Ports = append(svc.Ports, Port{Port: p.ContainerPort, Protocol: p.Protocol})
-	}
 
-	svc.Expose, err = unmarshalExpose(serviceRaw.Expose)
+	svc.Public, svc.Ports, err = getSvcPorts(serviceRaw.Public, serviceRaw.Ports, serviceRaw.Expose)
+
 	if err != nil {
 		return nil, err
 	}
@@ -419,6 +416,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if serviceRaw.WorkingDirSneakCase != "" {
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
+	svc.Workdir, err = ExpandEnv(svc.Workdir)
+	if err != nil {
+		return nil, err
+	}
 
 	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
 	if err != nil {
@@ -428,6 +429,53 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
 	}
 	return svc, nil
+}
+
+func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
+	if !public && len(getAccessiblePorts(rawPorts)) == 1 {
+		public = true
+	}
+	if len(rawExpose) > 0 && len(rawPorts) == 0 {
+		public = false
+	}
+	ports := make([]Port, 0)
+	for _, p := range rawPorts {
+		if err := validatePort(p, ports); err == nil {
+			ports = append(ports, Port{HostPort: p.HostPort, ContainerPort: p.ContainerPort, Protocol: p.Protocol})
+		} else {
+			return false, ports, err
+		}
+	}
+
+	for _, p := range rawExpose {
+		newPort := Port{HostPort: p.HostPort, ContainerPort: p.ContainerPort, Protocol: p.Protocol}
+		if p.ContainerPort == 0 {
+			if !IsAlreadyAdded(newPort, ports) {
+				ports = append(ports, newPort)
+			}
+		} else {
+			if !IsAlreadyAddedExpose(newPort, ports) {
+				ports = append(ports, newPort)
+			}
+		}
+	}
+	return public, ports, nil
+}
+
+func validatePort(newPort PortRaw, ports []Port) error {
+	for _, p := range ports {
+		if newPort.ContainerPort == p.HostPort {
+			return fmt.Errorf("Container port '%d' is already declared as host port in port '%d:%d'", newPort.ContainerPort, p.HostPort, p.ContainerPort)
+		}
+		if newPort.HostPort == p.ContainerPort {
+			if p.HostPort == 0 {
+				return fmt.Errorf("Host port '%d' is already declared as container port in port '%d'", newPort.HostPort, p.ContainerPort)
+			} else {
+				return fmt.Errorf("Host port '%d' is already declared as container port in port '%d:%d'", newPort.HostPort, p.HostPort, p.ContainerPort)
+			}
+		}
+	}
+	return nil
 }
 
 func isNamedVolumeDeclared(volume StackVolume) bool {
@@ -533,23 +581,26 @@ func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var hostPortString string
 	if len(parts) == 1 {
 		if strings.Contains(portString, "-") {
-			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
+			return fmt.Errorf("Can not convert '%s'. Range ports are not supported.", rawPort)
 		}
 
 		portString = parts[0]
 	} else if len(parts) <= 3 {
 		if strings.Contains(portString, "-") {
-			return fmt.Errorf("Can not convert %s. Range ports are not supported.", rawPort)
+			return fmt.Errorf("Can not convert '%s'. Range ports are not supported.", rawPort)
 		}
 
 		portString = parts[len(parts)-1]
 
 		hostPortString = strings.Join(parts[:len(parts)-1], ":")
 		parts := strings.Split(hostPortString, ":")
-		hostString := parts[len(parts)-1]
+		hostString, err := ExpandEnv(parts[len(parts)-1])
+		if err != nil {
+			return err
+		}
 		port, err := strconv.Atoi(hostString)
 		if err != nil {
-			return fmt.Errorf("Can not convert %s to a port.", hostString)
+			return fmt.Errorf("Can not convert '%s' to a port.", hostString)
 		}
 		p.HostPort = int32(port)
 		if IsSkippablePort(p.HostPort) {
@@ -566,13 +617,13 @@ func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if protocol, err := getProtocol(portAndProtocol[1]); err == nil {
 			p.Protocol = protocol
 		} else {
-			return fmt.Errorf("Can not convert %s. Only TCP ports are allowed.", portString)
+			return fmt.Errorf("Can not convert '%s'. Only TCP ports are allowed.", portString)
 		}
 	}
 
 	port, err := strconv.Atoi(portString)
 	if err != nil {
-		return fmt.Errorf("Can not convert %s to a port.", portString)
+		return fmt.Errorf("Can not convert '%s' to a port.", portString)
 	}
 	p.ContainerPort = int32(port)
 
@@ -595,7 +646,7 @@ func IsSkippablePort(port int32) bool {
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (p *Port) MarshalYAML() (interface{}, error) {
-	return Port{Port: p.Port, Protocol: p.Protocol}, nil
+	return Port{ContainerPort: p.ContainerPort, Protocol: p.Protocol}, nil
 }
 
 func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy string) (apiv1.RestartPolicy, error) {
@@ -718,43 +769,6 @@ func (s *StackResources) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	return nil
 }
 
-func unmarshalExpose(raw *RawMessage) ([]int32, error) {
-	exposeInInt := make([]int32, 0)
-	if raw == nil {
-		return exposeInInt, nil
-	}
-	err := raw.unmarshal(&exposeInInt)
-	if err == nil {
-		return exposeInInt, nil
-	}
-	var exposeInString []string
-	err = raw.unmarshal(&exposeInString)
-	if err != nil {
-		return exposeInInt, err
-	}
-
-	for _, expose := range exposeInString {
-		if strings.Contains(expose, "-") {
-			return exposeInInt, fmt.Errorf("Can not convert %s. Range ports are not supported.", expose)
-		}
-		parts := strings.Split(expose, ":")
-		var portString string
-		if len(parts) == 1 {
-			portString = parts[0]
-		} else if len(parts) <= 3 {
-			portString = parts[len(parts)-1]
-		} else {
-			return exposeInInt, fmt.Errorf(malformedPortForward, expose)
-		}
-		port, err := strconv.Atoi(portString)
-		if err != nil {
-			return exposeInInt, err
-		}
-		exposeInInt = append(exposeInInt, int32(port))
-	}
-	return exposeInInt, nil
-}
-
 func unmarshalDuration(raw *RawMessage) (int64, error) {
 	var duration int64
 	if raw == nil {
@@ -786,7 +800,6 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
-
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		v.LocalPath, err = ExpandEnv(parts[0])

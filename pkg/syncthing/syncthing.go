@@ -315,17 +315,17 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	to := time.Now().Add(s.timeout)
 
 	log.Infof("waiting for syncthing local=%t to be ready", local)
-	for i := 0; ; i++ {
+	for retries := 0; ; retries++ {
 		select {
 		case <-ticker.C:
 			if s.Ping(ctx, local) {
 				return nil
 			}
-			if i%5 == 0 {
+			if retries%5 == 0 {
 				log.Infof("syncthing local=%t is not ready yet", local)
 			}
 
-			if time.Now().After(to) {
+			if time.Now().After(to) && retries > 10 {
 				return fmt.Errorf("syncthing local=%t didn't respond after %s", local, s.timeout.String())
 			}
 
@@ -381,7 +381,7 @@ func (s *Syncthing) WaitForConnected(ctx context.Context, dev *model.Dev) error 
 	ticker := time.NewTicker(100 * time.Millisecond)
 	log.Info("waiting for remote device to be connected")
 	to := time.Now().Add(s.timeout)
-	for i := 0; ; i++ {
+	for retries := 0; ; retries++ {
 		connections := &Connections{}
 		body, err := s.APICall(ctx, "rest/system/connections", "GET", 200, nil, true, nil, true, 3)
 		if err != nil {
@@ -403,7 +403,7 @@ func (s *Syncthing) WaitForConnected(ctx context.Context, dev *model.Dev) error 
 			}
 		}
 
-		if time.Now().After(to) {
+		if time.Now().After(to) && retries > 10 {
 			log.Infof("remote syncthing connection not completed after %s, please try again", s.timeout.String())
 			return errors.ErrLostSyncthing
 		}
@@ -434,14 +434,14 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 
 	to := time.Now().Add(s.timeout * 10) // 5 minutes
 
-	for i := 0; ; i++ {
+	for retries := 0; ; retries++ {
 		status, err := s.GetStatus(ctx, folder, local)
 		if err != nil && err != errors.ErrBusySyncthing {
 			return err
 		}
 
 		if status != nil {
-			if i%100 == 0 {
+			if retries%100 == 0 {
 				// one log every 10 seconds
 				log.Infof("syncthing folder local=%t is '%s'", local, status.State)
 			}
@@ -451,7 +451,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 			}
 		}
 
-		if time.Now().After(to) {
+		if time.Now().After(to) && retries > 10 {
 			return fmt.Errorf("initial file scan not completed after %s, please try again", s.timeout.String())
 		}
 

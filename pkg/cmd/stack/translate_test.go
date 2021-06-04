@@ -22,7 +22,6 @@ import (
 	"reflect"
 	"testing"
 
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -69,14 +68,13 @@ func Test_translateEnvVars(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpFile.Name())
 
-	os.Setenv("IMAGE", "image")
 	os.Setenv("B", "2")
 	os.Setenv("ENV_PATH", tmpFile.Name())
 	stack := &model.Stack{
 		Name: "name",
 		Services: map[string]*model.Service{
 			"1": {
-				Image:    "${IMAGE}",
+				Image:    "image",
 				EnvFiles: []string{"${ENV_PATH}"},
 				Environment: []model.EnvVar{
 					{
@@ -122,7 +120,7 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Name != "okteto-stackName" {
 		t.Errorf("Wrong configmap name: '%s'", result.Name)
 	}
-	if result.Labels[okLabels.StackLabel] != "true" {
+	if result.Labels[model.StackLabel] != "true" {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
 	if result.Data[NameField] != "stackName" {
@@ -161,7 +159,7 @@ func Test_translateDeployment(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports: []model.Port{{Port: 80}, {Port: 90}},
+				Ports: []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 			},
 		},
 	}
@@ -170,10 +168,10 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong deployment name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                       "value1",
-		"label2":                       "value2",
-		okLabels.StackNameLabel:        "stackName",
-		okLabels.StackServiceNameLabel: "svcName",
+		"label1":                    "value1",
+		"label2":                    "value2",
+		model.StackNameLabel:        "stackName",
+		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong deployment labels: '%s'", result.Labels)
@@ -189,8 +187,8 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong deployment spec.replicas: '%d'", *result.Spec.Replicas)
 	}
 	selector := map[string]string{
-		okLabels.StackNameLabel:        "stackName",
-		okLabels.StackServiceNameLabel: "svcName",
+		model.StackNameLabel:        "stackName",
+		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
 		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector.MatchLabels)
@@ -261,7 +259,7 @@ func Test_translateStatefulSet(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports:   []model.Port{{Port: 80}, {Port: 90}},
+				Ports:   []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 
@@ -286,10 +284,10 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                       "value1",
-		"label2":                       "value2",
-		okLabels.StackNameLabel:        "stackName",
-		okLabels.StackServiceNameLabel: "svcName",
+		"label1":                    "value1",
+		"label2":                    "value2",
+		model.StackNameLabel:        "stackName",
+		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong statefulset labels: '%s'", result.Labels)
@@ -305,8 +303,8 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset spec.replicas: '%d'", *result.Spec.Replicas)
 	}
 	selector := map[string]string{
-		okLabels.StackNameLabel:        "stackName",
-		okLabels.StackServiceNameLabel: "svcName",
+		model.StackNameLabel:        "stackName",
+		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
 		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector.MatchLabels)
@@ -462,7 +460,7 @@ func Test_translateJob(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports:         []model.Port{{Port: 80}, {Port: 90}},
+				Ports:         []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 				CapAdd:        []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop:       []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				RestartPolicy: apiv1.RestartPolicyNever,
@@ -488,10 +486,10 @@ func Test_translateJob(t *testing.T) {
 		t.Errorf("Wrong job name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                       "value1",
-		"label2":                       "value2",
-		okLabels.StackNameLabel:        "stackName",
-		okLabels.StackServiceNameLabel: "svcName",
+		"label1":                    "value1",
+		"label2":                    "value2",
+		model.StackNameLabel:        "stackName",
+		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong job labels: '%s'", result.Labels)
@@ -510,7 +508,7 @@ func Test_translateJob(t *testing.T) {
 		t.Errorf("Wrong job spec.parallelism: '%d'", *result.Spec.Parallelism)
 	}
 	if *result.Spec.BackoffLimit != 5 {
-		t.Errorf("Wrong job spec.max_attemps: '%d'", *result.Spec.BackoffLimit)
+		t.Errorf("Wrong job spec.max_attempts: '%d'", *result.Spec.BackoffLimit)
 	}
 	if !reflect.DeepEqual(result.Spec.Template.Labels, labels) {
 		t.Errorf("Wrong spec.template.labels: '%s'", result.Spec.Template.Labels)
@@ -614,8 +612,8 @@ func Test_translateJob(t *testing.T) {
 }
 
 func Test_translateService(t *testing.T) {
-	p1 := model.Port{Port: 80, Protocol: apiv1.ProtocolTCP}
-	p2 := model.Port{Port: 90, Protocol: apiv1.ProtocolTCP}
+	p1 := model.Port{HostPort: 82, ContainerPort: 80, Protocol: apiv1.ProtocolTCP}
+	p2 := model.Port{ContainerPort: 90, Protocol: apiv1.ProtocolTCP}
 	s := &model.Stack{
 		Name: "stackName",
 		Services: map[string]*model.Service{
@@ -637,10 +635,10 @@ func Test_translateService(t *testing.T) {
 		t.Errorf("Wrong service name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                       "value1",
-		"label2":                       "value2",
-		okLabels.StackNameLabel:        "stackName",
-		okLabels.StackServiceNameLabel: "svcName",
+		"label1":                    "value1",
+		"label2":                    "value2",
+		model.StackNameLabel:        "stackName",
+		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong service labels: '%s'", result.Labels)
@@ -654,13 +652,19 @@ func Test_translateService(t *testing.T) {
 	}
 	ports := []apiv1.ServicePort{
 		{
-			Name:       "p-80-tcp",
+			Name:       "p-80-80-tcp",
 			Port:       80,
 			TargetPort: intstr.IntOrString{IntVal: 80},
 			Protocol:   apiv1.ProtocolTCP,
 		},
 		{
-			Name:       "p-90-tcp",
+			Name:       "p-82-80-tcp",
+			Port:       82,
+			TargetPort: intstr.IntOrString{IntVal: 80},
+			Protocol:   apiv1.ProtocolTCP,
+		},
+		{
+			Name:       "p-90-90-tcp",
 			Port:       90,
 			TargetPort: intstr.IntOrString{IntVal: 90},
 			Protocol:   apiv1.ProtocolTCP,
@@ -673,8 +677,8 @@ func Test_translateService(t *testing.T) {
 		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
 	}
 	selector := map[string]string{
-		okLabels.StackNameLabel:        "stackName",
-		okLabels.StackServiceNameLabel: "svcName",
+		model.StackNameLabel:        "stackName",
+		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Spec.Selector, selector) {
 		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector)
@@ -684,14 +688,14 @@ func Test_translateService(t *testing.T) {
 	svc.Public = true
 	s.Services["svcName"] = svc
 	result = translateService("svcName", s)
-	annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
+	annotations[model.OktetoAutoIngressAnnotation] = "true"
 	if !reflect.DeepEqual(result.Annotations, annotations) {
 		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
 	}
 	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
 		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
 	}
-	annotations[okLabels.OktetoAutoIngressAnnotation] = "true"
+	annotations[model.OktetoAutoIngressAnnotation] = "true"
 	if !reflect.DeepEqual(result.Annotations, annotations) {
 		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
 	}
@@ -701,10 +705,10 @@ func Test_translateService(t *testing.T) {
 
 	svc = s.Services["svcName"]
 	svc.Public = true
-	svc.Annotations[okLabels.OktetoAutoIngressAnnotation] = "private"
+	svc.Annotations[model.OktetoAutoIngressAnnotation] = "private"
 	s.Services["svcName"] = svc
 	result = translateService("svcName", s)
-	annotations[okLabels.OktetoAutoIngressAnnotation] = "private"
+	annotations[model.OktetoAutoIngressAnnotation] = "private"
 	if !reflect.DeepEqual(result.Annotations, annotations) {
 		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
 	}
@@ -739,8 +743,8 @@ func Test_translateEndpointsV1(t *testing.T) {
 	}
 
 	annotations := map[string]string{
-		okLabels.OktetoIngressAutoGenerateHost: "true",
-		"annotation1":                          "value1",
+		model.OktetoIngressAutoGenerateHost: "true",
+		"annotation1":                       "value1",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
@@ -768,9 +772,9 @@ func Test_translateEndpointsV1(t *testing.T) {
 	}
 
 	labels := map[string]string{
-		okLabels.StackNameLabel:         "stackName",
-		okLabels.StackEndpointNameLabel: "endpoint1",
-		"label1":                        "value1",
+		model.StackNameLabel:         "stackName",
+		model.StackEndpointNameLabel: "endpoint1",
+		"label1":                     "value1",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
@@ -803,8 +807,8 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 	}
 
 	annotations := map[string]string{
-		okLabels.OktetoIngressAutoGenerateHost: "true",
-		"annotation1":                          "value1",
+		model.OktetoIngressAutoGenerateHost: "true",
+		"annotation1":                       "value1",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
@@ -825,9 +829,9 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 	}
 
 	labels := map[string]string{
-		okLabels.StackNameLabel:         "stackName",
-		okLabels.StackEndpointNameLabel: "endpoint1",
-		"label1":                        "value1",
+		model.StackNameLabel:         "stackName",
+		model.StackEndpointNameLabel: "endpoint1",
+		"label1":                     "value1",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
@@ -974,7 +978,7 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 						Image: "okteto.dev/svc",
 						Ports: []model.Port{
 							{
-								Port: 80,
+								ContainerPort: 80,
 							},
 						},
 					},
@@ -1017,7 +1021,7 @@ func Test_getWaitForSvcsInitContainer(t *testing.T) {
 						Image: "okteto.dev/svc",
 						Ports: []model.Port{
 							{
-								Port: 80,
+								ContainerPort: 80,
 							},
 						},
 					},

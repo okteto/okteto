@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/exec"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -95,7 +94,7 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	start := time.Now()
 	to := start.Add(dev.Timeout * 4) // 120 seconds
 
-	for i := 0; ; i++ {
+	for retries := 0; ; retries++ {
 		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)
 		if err != nil {
 			return nil, err
@@ -104,13 +103,13 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 			return pod, nil
 		}
 
-		if time.Now().After(to) {
+		if time.Now().After(to) && retries > 10 {
 			return nil, fmt.Errorf("kubernetes is taking too long to create your development container. Please check for errors and try again")
 		}
 
 		select {
 		case <-ticker.C:
-			if i%5 == 0 {
+			if retries%5 == 0 {
 				log.Info("development container is not ready yet, will retry")
 			}
 
@@ -130,7 +129,7 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 		return nil, err
 	}
 
-	labels := fmt.Sprintf("%s=%s", okLabels.InteractiveDevLabel, dev.Name)
+	labels := fmt.Sprintf("%s=%s", model.InteractiveDevLabel, dev.Name)
 	rs, err := replicasets.GetReplicaSetByDeployment(ctx, d, labels, c)
 	if rs == nil {
 		if err == nil {
@@ -254,7 +253,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) int64 {
 	devPodLogs, err := GetDevPodLogs(ctx, dev, false, c)
 	if err != nil {
-		log.Errorf("failed to access development container logs: %s", err)
+		log.Infof("failed to access development container logs: %s", err)
 		return -1
 	}
 	return parseUserID(devPodLogs)
@@ -334,7 +333,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		ctx,
 		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name),
+			LabelSelector: fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name),
 		},
 	)
 	if err != nil {
@@ -362,7 +361,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	if !found {
 		return fmt.Errorf("Unable to find any service with the provided name")
 	}
-	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", okLabels.DetachedDevLabel, dev.Name), c)
+	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name), c)
 }
 
 func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubernetes.Clientset) error {

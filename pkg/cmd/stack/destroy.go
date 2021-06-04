@@ -28,7 +28,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -240,7 +239,7 @@ func destroyIngresses(ctx context.Context, spinner *utils.Spinner, s *model.Stac
 		if _, ok := s.Endpoints[iList[i].GetName()]; ok {
 			continue
 		}
-		if iList[i].GetLabels()[okLabels.StackEndpointNameLabel] == "" {
+		if iList[i].GetLabels()[model.StackEndpointNameLabel] == "" {
 			//ingress created with "public"
 			continue
 		}
@@ -298,7 +297,7 @@ func waitForPodsToBeDestroyed(ctx context.Context, s *model.Stack, c *kubernetes
 	ticker := time.NewTicker(100 * time.Millisecond)
 	timeout := time.Now().Add(300 * time.Second)
 
-	selector := map[string]string{okLabels.StackNameLabel: s.Name}
+	selector := map[string]string{model.StackNameLabel: s.Name}
 	for time.Now().Before(timeout) {
 		<-ticker.C
 		podList, err := pods.ListBySelector(ctx, s.Namespace, selector, c)
@@ -318,7 +317,7 @@ func destroyStackVolumes(ctx context.Context, spinner *utils.Spinner, s *model.S
 		return err
 	}
 	for _, v := range vList {
-		if v.Labels[okLabels.StackNameLabel] == s.Name {
+		if v.Labels[model.StackNameLabel] == s.Name {
 			if err := volumes.Destroy(ctx, v.Name, v.Namespace, c, timeout); err != nil {
 				return fmt.Errorf("error destroying volume '%s': %s", v.Name, err)
 			}

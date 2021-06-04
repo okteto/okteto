@@ -19,7 +19,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	okLabels "github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -173,7 +172,7 @@ func setNameAndLabelsFromDeployment(ctx context.Context, dev *model.Dev, d *apps
 }
 
 func setAnnotationsFromDeployment(dev *model.Dev, d *appsv1.Deployment) {
-	if v := d.Annotations[okLabels.FluxAnnotation]; v != "" {
+	if v := d.Annotations[model.FluxAnnotation]; v != "" {
 		dev.Annotations = map[string]string{"fluxcd.io/ignore": "true"}
 	}
 }

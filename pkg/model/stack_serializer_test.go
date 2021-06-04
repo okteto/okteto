@@ -645,43 +645,43 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 			name:     "Public-service",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
 			isPublic: true,
-			ports:    []Port{{Port: 9213, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "not-public-service",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    image: okteto/vote:1"),
 			isPublic: false,
-			ports:    []Port{{Port: 9213, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "not-public-port-but-with-assignation",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
 			isPublic: true,
-			ports:    []Port{{Port: 9213, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "mysql-port-forwarding",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 3306:3306\n    image: okteto/vote:1"),
 			isPublic: false,
-			ports:    []Port{{Port: 3306, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 3306, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "mysql-port-forwarding-and-public",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 3306:3306\n    image: okteto/vote:1\n    public: true"),
 			isPublic: true,
-			ports:    []Port{{Port: 3306, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 3306, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "mysql-expose-forwarding-and-public",
 			manifest: []byte("services:\n  app:\n    expose:\n    - 3306:3306\n    image: okteto/vote:1\n    public: true"),
 			isPublic: false,
-			ports:    []Port{{Port: 3306, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 3306, Protocol: v1.ProtocolTCP}},
 		},
 		{
 			name:     "not-public-service-with-expose-and-ports",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    expose:\n    - 8213\n    image: okteto/vote:1"),
 			isPublic: false,
-			ports:    []Port{{Port: 9213, Protocol: v1.ProtocolTCP}, {Port: 8213, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}, {ContainerPort: 8213, Protocol: v1.ProtocolTCP}},
 		},
 	}
 	for _, tt := range tests {
@@ -859,9 +859,9 @@ func Test_UnmarshalRestart(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := ReadStack(tt.manifest, false)
 			if tt.throwErr && err == nil {
-				t.Fatal("Not throwed error")
+				t.Fatal("Not threw error")
 			} else if err != nil && !tt.throwErr {
-				t.Fatalf("Throwed error when no error needed: %s", err.Error())
+				t.Fatalf("Threw error when no error needed: %s", err.Error())
 			}
 			if err == nil && s.Services["app"].RestartPolicy != tt.result {
 				t.Fatal("Wrong unmarshal")
@@ -1090,6 +1090,77 @@ endpoints:
 			}
 			if !reflect.DeepEqual(tt.expected, s.Endpoints) {
 				t.Fatalf("Expected %v, but got %v", tt.expected, s.Endpoints)
+			}
+		})
+	}
+}
+
+func Test_validateExpandVariables(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		envs     map[string]string
+		stack    *Stack
+	}{
+		{
+			name:     "Image expandable",
+			manifest: []byte("services:\n  app:\n    image: okteto/vote:${IMAGE_TAG}"),
+			envs:     map[string]string{"IMAGE_TAG": "1"},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto/vote:1",
+					},
+				},
+			},
+		},
+		{
+			name:     "Port expandable",
+			manifest: []byte("services:\n  app:\n    image: okteto/db\n    ports:\n      - ${DB_PORT}:3306"),
+			envs:     map[string]string{"DB_PORT": "3306"},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image: "okteto/db",
+						Ports: []Port{
+							{
+								HostPort:      3306,
+								ContainerPort: 3306,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "Port expandable",
+			manifest: []byte("services:\n  app:\n    image: okteto/db\n    working_dir: ${PROJECT}"),
+			envs:     map[string]string{"PROJECT": "/app/src"},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:   "okteto/db",
+						Workdir: "/app/src",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for key, value := range tt.envs {
+				os.Setenv(key, value)
+			}
+			s, err := ReadStack(tt.manifest, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.stack.Services["app"].Image != s.Services["app"].Image {
+				t.Fatal("Wrong unmarshal for image")
+			}
+			if tt.stack.Services["app"].Workdir != s.Services["app"].Workdir {
+				t.Fatal("Wrong unmarshal for workdir")
 			}
 		})
 	}
