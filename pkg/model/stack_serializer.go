@@ -159,9 +159,14 @@ type RestartPolicyRaw struct {
 	Delay  *WarningType `yaml:"delay,omitempty"`
 	Window *WarningType `yaml:"window,omitempty"`
 }
+
 type PortRaw struct {
 	ContainerPort int32
 	HostPort      int32
+	ContainerFrom int32
+	ContainerTo   int32
+	HostFrom      int32
+	HostTo        int32
 	Protocol      apiv1.Protocol
 }
 
@@ -426,12 +431,15 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 }
 
 func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
+	rawPorts = expandRangePorts(rawPorts)
+
 	if !public && len(getAccessiblePorts(rawPorts)) == 1 {
 		public = true
 	}
 	if len(rawExpose) > 0 && len(rawPorts) == 0 {
 		public = false
 	}
+
 	ports := make([]Port, 0)
 	for _, p := range rawPorts {
 		if err := validatePort(p, ports); err == nil {
@@ -440,7 +448,7 @@ func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, erro
 			return false, ports, err
 		}
 	}
-
+	rawExpose = expandRangePorts(rawExpose)
 	for _, p := range rawExpose {
 		newPort := Port{HostPort: p.HostPort, ContainerPort: p.ContainerPort, Protocol: p.Protocol}
 		if p.ContainerPort == 0 {
@@ -454,6 +462,33 @@ func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, erro
 		}
 	}
 	return public, ports, nil
+}
+
+func expandRangePorts(ports []PortRaw) []PortRaw {
+	newPortList := make([]PortRaw, 0)
+	for _, p := range ports {
+		if p.ContainerPort != 0 {
+			newPortList = append(newPortList, p)
+		} else {
+			portStart := p.ContainerFrom
+			portFinish := p.ContainerTo
+			aux := 0
+			for portStart+int32(aux) != portFinish+1 {
+				if p.HostFrom != 0 {
+					newPortList = append(newPortList, PortRaw{ContainerPort: p.ContainerFrom + int32(aux)})
+				} else {
+					newPortList = append(newPortList, PortRaw{ContainerPort: p.ContainerFrom + int32(aux), HostPort: 0})
+				}
+				if portStart > portFinish {
+					aux--
+				} else {
+					aux++
+				}
+
+			}
+		}
+	}
+	return newPortList
 }
 
 func validatePort(newPort PortRaw, ports []Port) error {
@@ -535,63 +570,139 @@ func (warning *WarningType) UnmarshalYAML(unmarshal func(interface{}) error) err
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (p *PortRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawPort string
-	err := unmarshal(&rawPort)
+	var rawPortString string
+	err := unmarshal(&rawPortString)
 	if err != nil {
 		return fmt.Errorf("Port field is only supported in short syntax")
 	}
 
-	parts := strings.Split(rawPort, ":")
-	var portString string
-	var hostPortString string
-	if len(parts) == 1 {
-		if strings.Contains(portString, "-") {
-			return fmt.Errorf("Can not convert '%s'. Range ports are not supported.", rawPort)
-		}
+	if !strings.Contains(rawPortString, ":") {
+		err = getPortWithoutMapping(p, rawPortString)
+	} else {
+		err = getPortWithMapping(p, rawPortString)
+	}
 
-		portString = parts[0]
-	} else if len(parts) <= 3 {
-		if strings.Contains(portString, "-") {
-			return fmt.Errorf("Can not convert '%s'. Range ports are not supported.", rawPort)
-		}
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-		portString = parts[len(parts)-1]
-
-		hostPortString = strings.Join(parts[:len(parts)-1], ":")
-		parts := strings.Split(hostPortString, ":")
-		hostString, err := ExpandEnv(parts[len(parts)-1])
+func getPortWithoutMapping(p *PortRaw, portString string) error {
+	var err error
+	p.ContainerFrom, p.ContainerTo, p.Protocol, err = getRangePorts(portString)
+	if err != nil {
+		return err
+	}
+	if p.ContainerFrom == 0 {
+		portDigit, protocol, err := getPortAndProtocol(portString, portString)
 		if err != nil {
 			return err
 		}
-		port, err := strconv.Atoi(hostString)
+		port, err := getPortFromString(portDigit, portString)
 		if err != nil {
-			return fmt.Errorf("Can not convert '%s' to a port.", hostString)
+			return err
 		}
-		p.HostPort = int32(port)
+		p.ContainerPort = port
+		p.Protocol = protocol
+	}
+	return nil
+}
+
+func getRangePorts(portString string) (int32, int32, apiv1.Protocol, error) {
+	if strings.Contains(portString, "-") {
+		rangeSplitted := strings.Split(portString, "-")
+		if len(rangeSplitted) != 2 {
+			return 0, 0, "", fmt.Errorf("Can not convert '%s' to a port.", portString)
+		}
+		fromString, toString := rangeSplitted[0], rangeSplitted[1]
+		toString, protocol, err := getPortAndProtocol(toString, portString)
+		fromPort, err := getPortFromString(fromString, portString)
+		if err != nil {
+			return 0, 0, "", err
+		}
+		toPort, err := getPortFromString(toString, portString)
+		if err != nil {
+			return 0, 0, "", err
+		}
+		return fromPort, toPort, protocol, nil
+	}
+	return 0, 0, "", nil
+}
+
+func getPortFromString(portString, originalPortString string) (int32, error) {
+	port, err := strconv.Atoi(portString)
+	if err != nil {
+		return 0, fmt.Errorf("Can not convert '%s' to a port: %s is not a number", originalPortString, portString)
+	}
+	return int32(port), nil
+}
+
+func getPortAndProtocol(portString, originalPortString string) (string, apiv1.Protocol, error) {
+	var err error
+	protocol := apiv1.ProtocolTCP
+	if strings.Contains(portString, "/") {
+		portProtocolSplitted := strings.Split(portString, "/")
+		if len(portProtocolSplitted) != 2 {
+			return "", protocol, fmt.Errorf("Can not convert '%s' to a port.", originalPortString)
+		}
+		portString = portProtocolSplitted[0]
+		protocol, err = getProtocol(portProtocolSplitted[1])
+		if err != nil {
+			return "", protocol, fmt.Errorf("Can not convert '%s' to a port: %s", originalPortString, err.Error())
+		}
+	}
+	return portString, protocol, nil
+}
+
+func getPortWithMapping(p *PortRaw, portString string) error {
+	localToContainer := strings.Split(portString, ":")
+	if len(localToContainer) > 3 {
+		return fmt.Errorf(malformedPortForward, portString)
+	}
+
+	containerPortString := localToContainer[len(localToContainer)-1]
+	var err error
+	p.ContainerFrom, p.ContainerTo, p.Protocol, err = getRangePorts(containerPortString)
+	if err != nil {
+		return err
+	}
+	hostPortString := strings.Join(localToContainer[:len(localToContainer)-1], ":")
+	p.HostFrom, p.HostTo, _, err = getRangePorts(hostPortString)
+	if err != nil {
+		return err
+	}
+	if (p.ContainerFrom - p.ContainerTo) != (p.HostFrom - p.HostTo) {
+		return fmt.Errorf("Can not convert '%s' to a port: Ranges must be of the same length", portString)
+	}
+
+	if p.ContainerFrom == 0 {
+		if strings.Contains(hostPortString, ":") {
+			return fmt.Errorf("Can not convert '%s' to a port: Host IP is not allowed", portString)
+		}
+		hostPortString, err = ExpandEnv(hostPortString)
+		if err != nil {
+			return err
+		}
+		p.HostPort, err = getPortFromString(hostPortString, portString)
+		if err != nil {
+			return err
+		}
 		if IsSkippablePort(p.HostPort) {
 			p.HostPort = 0
 		}
-	} else {
-		return fmt.Errorf(malformedPortForward, rawPort)
-	}
 
-	p.Protocol = apiv1.ProtocolTCP
-	if strings.Contains(portString, "/") {
-		portAndProtocol := strings.Split(portString, "/")
-		portString = portAndProtocol[0]
-		if protocol, err := getProtocol(portAndProtocol[1]); err == nil {
-			p.Protocol = protocol
-		} else {
-			return fmt.Errorf("Can not convert '%s'. Only TCP ports are allowed.", portString)
+		portDigit, protocol, err := getPortAndProtocol(containerPortString, portString)
+		if err != nil {
+			return err
 		}
+		port, err := getPortFromString(portDigit, portString)
+		if err != nil {
+			return err
+		}
+		p.ContainerPort = port
+		p.Protocol = protocol
 	}
-
-	port, err := strconv.Atoi(portString)
-	if err != nil {
-		return fmt.Errorf("Can not convert '%s' to a port.", portString)
-	}
-	p.ContainerPort = int32(port)
-
 	return nil
 }
 

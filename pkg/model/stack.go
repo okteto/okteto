@@ -370,7 +370,11 @@ func IsAlreadyAdded(p Port, ports []Port) bool {
 
 func IsAlreadyAddedExpose(p Port, ports []Port) bool {
 	for _, port := range ports {
-		if port.ContainerPort == p.ContainerPort || port.ContainerPort == p.HostPort || port.HostPort == p.HostPort || port.HostPort == p.ContainerPort {
+		if p.HostPort == 0 && (port.ContainerPort == p.ContainerPort || port.HostPort == p.ContainerPort) {
+			log.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
+			return true
+
+		} else if p.HostPort != 0 && (port.ContainerPort == p.ContainerPort || port.ContainerPort == p.HostPort || port.HostPort == p.HostPort || port.HostPort == p.ContainerPort) {
 			log.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
 			return true
 		}
