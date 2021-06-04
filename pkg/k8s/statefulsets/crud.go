@@ -81,9 +81,9 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 }
 
 func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Interface) bool {
-	d, err := c.AppsV1().StatefulSets(namespace).Get(ctx, svcName, metav1.GetOptions{})
+	sfs, err := c.AppsV1().StatefulSets(namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
-	return d.Status.ReadyReplicas > 0
+	return sfs.Status.ReadyReplicas > 0
 }
