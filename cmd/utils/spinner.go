@@ -38,6 +38,7 @@ func NewSpinner(suffix string) *Spinner {
 	s := sp.New(sp.CharSets[14], 100*time.Millisecond)
 	s.HideCursor = true
 	s.Suffix = fmt.Sprintf(" %s", suffix)
+	s.FinalMSG = ""
 	return &Spinner{
 		sp: s,
 	}

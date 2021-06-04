@@ -50,9 +50,12 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		return err
 	}
 
-	if err := translate(ctx, s, forceBuild, noCache); err != nil {
+	spinner := utils.NewSpinner("Checking image availability...")
+	spinner.Start()
+	if err := translate(ctx, s, forceBuild, noCache, spinner); err != nil {
 		return err
 	}
+	spinner.Stop()
 
 	cfg := translateConfigMap(s)
 	output := fmt.Sprintf("Deploying stack '%s'...", s.Name)

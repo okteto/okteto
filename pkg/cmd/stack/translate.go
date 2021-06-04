@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -57,12 +58,12 @@ const (
 	pvcName = "pvc"
 )
 
-func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
+func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool, spinner *utils.Spinner) error {
 	if err := translateStackEnvVars(ctx, s); err != nil {
 		return err
 	}
 
-	return translateBuildImages(ctx, s, forceBuild, noCache)
+	return translateBuildImages(ctx, s, forceBuild, noCache, spinner)
 }
 
 func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
@@ -147,15 +148,17 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	return nil
 }
 
-func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
+func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCache bool, spinner *utils.Spinner) error {
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return err
 	}
-	hasBuiltSomething, err := buildServices(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache)
+
+	hasBuiltSomething, err := buildServices(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache, spinner)
 	if err != nil {
 		return err
 	}
+
 	hasAddedAnyVolumeMounts, err := addVolumeMountsToBuiltImage(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache, hasBuiltSomething)
 	if err != nil {
 		return err
@@ -167,9 +170,10 @@ func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCac
 	return nil
 }
 
-func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache bool) (bool, error) {
+func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache bool, spinner *utils.Spinner) (bool, error) {
 	hasBuiltSomething := false
 	for name, svc := range s.Services {
+		spinner.Update(fmt.Sprintf("Checking image availability of '%s'", name))
 		if svc.Build == nil {
 			continue
 		}
@@ -186,6 +190,7 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 			}
 			log.Infof("image '%s' not found, building it", svc.Image)
 		}
+		spinner.Stop()
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
 			log.Information("Running your build in %s...", buildKitHost)
@@ -203,6 +208,7 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 		s.Services[name] = svc
 		log.Success("Image for service '%s' successfully pushed", name)
 	}
+	spinner.Stop()
 	return hasBuiltSomething, nil
 }
 

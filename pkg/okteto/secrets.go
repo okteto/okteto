@@ -29,23 +29,32 @@ type Secret struct {
 	Value string `json:"value,omitempty"`
 }
 
+var (
+	secrets          []Secret
+	retrievedSecrets bool
+)
+
 //GetSecrets returns the secrets from Okteto API
 func GetSecrets(ctx context.Context) ([]Secret, error) {
-	q := `query{
-		getGitDeploySecrets{
-			name,value
-		},
-	}`
+	if !retrievedSecrets {
+		q := `query{
+			getGitDeploySecrets{
+				name,value
+			},
+		}`
 
-	var body Secrets
-	if err := query(ctx, q, &body); err != nil {
-		return nil, err
-	}
-	secrets := make([]Secret, 0)
-	for _, secret := range body.Secrets {
-		if !strings.Contains(secret.Name, ".") {
-			secrets = append(secrets, secret)
+		var body Secrets
+		if err := query(ctx, q, &body); err != nil {
+			return nil, err
 		}
+		secrets = make([]Secret, 0)
+		for _, secret := range body.Secrets {
+			if !strings.Contains(secret.Name, ".") {
+				secrets = append(secrets, secret)
+			}
+		}
+		retrievedSecrets = true
+		return secrets, nil
 	}
 	return secrets, nil
 }
