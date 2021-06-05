@@ -85,14 +85,26 @@ func GetValidNameFromGitRepo(folder string) (string, error) {
 }
 
 func translateURLToName(repo string) string {
-	repo = strings.ToLower(repo[strings.LastIndex(repo, "/")+1:])
-	if strings.HasSuffix(repo, ".git") {
-		repo = repo[:strings.LastIndex(repo, ".git")]
+	repoName := findRepoName(repo)
+
+	if strings.HasSuffix(repoName, ".git") {
+		repoName = repoName[:strings.LastIndex(repoName, ".git")]
 	}
-	name := ValidKubeNameRegex.ReplaceAllString(repo, "-")
+	name := ValidKubeNameRegex.ReplaceAllString(repoName, "-")
 	return name
 }
-
+func findRepoName(repo string) string {
+	possibleName := strings.ToLower(repo[strings.LastIndex(repo, "/")+1:])
+	if possibleName == "" {
+		possibleName = repo
+		nthTrim := strings.Count(repo, "/")
+		for i := 0; i < nthTrim-1; i++ {
+			possibleName = strings.ToLower(possibleName[strings.Index(possibleName, "/")+1:])
+		}
+		possibleName = possibleName[:len(possibleName)-1]
+	}
+	return possibleName
+}
 func GetRepositoryURL(path string) (string, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
