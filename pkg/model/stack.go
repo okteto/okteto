@@ -164,7 +164,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 	}
 	if s.Name == "" {
 		s.Name, err = GetValidNameFromGitRepo(filepath.Dir(stackPath))
-		if err != nil {
+		if err != nil || s.Name == "" {
 			s.Name, err = GetValidNameFromFolder(filepath.Dir(stackPath))
 			if err != nil {
 				return nil, err
