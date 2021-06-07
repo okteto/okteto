@@ -159,18 +159,11 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	if name != "" {
-		s.Name = name
+	s.Name, err = getStackName(name, stackPath, s.Name)
+	if err != nil {
+		return nil, err
 	}
-	if s.Name == "" {
-		s.Name, err = GetValidNameFromGitRepo(filepath.Dir(stackPath))
-		if err != nil {
-			s.Name, err = GetValidNameFromFolder(filepath.Dir(stackPath))
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
+
 	if endpoint, ok := s.Endpoints[""]; ok {
 		s.Endpoints[s.Name] = endpoint
 		delete(s.Endpoints, "")
@@ -194,6 +187,23 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 
 	}
 	return s, nil
+}
+
+func getStackName(name, stackPath, actualStackName string) (string, error) {
+	if name != "" {
+		return name, nil
+	}
+	if actualStackName == "" {
+		name, err := GetValidNameFromGitRepo(filepath.Dir(stackPath))
+		if err != nil {
+			name, err = GetValidNameFromFolder(filepath.Dir(stackPath))
+			if err != nil {
+				return "", err
+			}
+		}
+		return name, nil
+	}
+	return actualStackName, nil
 }
 
 // ReadStack reads an okteto stack
