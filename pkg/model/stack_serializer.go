@@ -207,10 +207,6 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Namespace = stackRaw.Namespace
 
 	s.Endpoints = stackRaw.Endpoints
-	if endpoint, ok := s.Endpoints[""]; ok {
-		s.Endpoints[s.Name] = endpoint
-		delete(s.Endpoints, "")
-	}
 
 	if len(s.Endpoints) == 0 {
 		s.Endpoints = getEndpointsFromPorts(stackRaw.Services)

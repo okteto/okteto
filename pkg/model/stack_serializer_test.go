@@ -1042,7 +1042,7 @@ endpoints:
     service: app
     port: 9213`),
 			expected: EndpointSpec{
-				"test": Endpoint{
+				"": Endpoint{
 					Annotations: Annotations{"key": "value"},
 					Labels:      Labels{},
 					Rules: []EndpointRule{
@@ -1068,7 +1068,7 @@ endpoints:
     service: app
     port: 9213`),
 			expected: EndpointSpec{
-				"test": Endpoint{
+				"": Endpoint{
 					Annotations: make(Annotations),
 					Labels:      make(Labels),
 					Rules: []EndpointRule{
