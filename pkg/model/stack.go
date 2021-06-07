@@ -171,6 +171,10 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 			}
 		}
 	}
+	if endpoint, ok := s.Endpoints[""]; ok {
+		s.Endpoints[s.Name] = endpoint
+		delete(s.Endpoints, "")
+	}
 
 	if err := s.validate(); err != nil {
 		return nil, err
@@ -300,13 +304,6 @@ func (s *Stack) validate() error {
 			}
 		}
 		svc.IgnoreSyncVolumes(s)
-	}
-
-	for name, endpoint := range s.Endpoints {
-		if name == "" {
-			s.Endpoints[s.Name] = endpoint
-			delete(s.Endpoints, "")
-		}
 	}
 
 	return nil
