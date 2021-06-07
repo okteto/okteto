@@ -208,8 +208,8 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Endpoints = stackRaw.Endpoints
 	if endpoint, ok := s.Endpoints[""]; ok {
-		s.Endpoints[s.Name] = endpoint
 		delete(s.Endpoints, "")
+		s.Endpoints[s.Name] = endpoint
 	}
 
 	if len(s.Endpoints) == 0 {

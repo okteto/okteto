@@ -302,6 +302,13 @@ func (s *Stack) validate() error {
 		svc.IgnoreSyncVolumes(s)
 	}
 
+	for name, endpoint := range s.Endpoints {
+		if name == "" {
+			s.Endpoints[s.Name] = endpoint
+			delete(s.Endpoints, "")
+		}
+	}
+
 	return nil
 }
 
