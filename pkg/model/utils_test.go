@@ -116,7 +116,9 @@ func Test_GetValidNameFromGitRepo(t *testing.T) {
 		expected string
 	}{
 		{name: "https url", gitRepo: "https://github.com/okteto/stacks-getting-started", expected: "stacks-getting-started"},
+		{name: "https with slash at the end", gitRepo: "https://github.com/okteto/stacks-getting-started/", expected: "stacks-getting-started"},
 		{name: "ssh url", gitRepo: "git@github.com:okteto/stacks-getting-started.git", expected: "stacks-getting-started"},
+		{name: "ssh url with slash at the end", gitRepo: "git@github.com:okteto/stacks-getting-started.git/", expected: "stacks-getting-started"},
 		{name: "https with dots", gitRepo: "https://github.com/okteto/stacks.getting.started", expected: "stacks-getting-started"},
 		{name: "URL with uppers", gitRepo: "https://github.com/okteto/StacksGettingStarted", expected: "stacksgettingstarted"},
 	}
