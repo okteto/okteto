@@ -429,3 +429,13 @@ func isInVolumesTopLevelSection(volumeName string, s *Stack) bool {
 	_, ok := s.Volumes[volumeName]
 	return ok
 }
+
+func (svc *Service) IsDeployment() bool {
+	return len(svc.Volumes) == 0 && svc.RestartPolicy == apiv1.RestartPolicyAlways
+}
+func (svc *Service) IsStatefulset() bool {
+	return len(svc.Volumes) != 0 && svc.RestartPolicy == apiv1.RestartPolicyAlways
+}
+func (svc *Service) IsJob() bool {
+	return svc.RestartPolicy != apiv1.RestartPolicyAlways
+}

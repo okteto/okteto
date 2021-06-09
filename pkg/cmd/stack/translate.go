@@ -278,12 +278,6 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 
-	initContainers := make([]apiv1.Container, 0)
-	waitForSvcInitContainer := getWaitForSvcsInitContainer(svcName, s)
-	if waitForSvcInitContainer != nil {
-		initContainers = append(initContainers, *waitForSvcInitContainer)
-	}
-
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -303,7 +297,6 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
-					InitContainers:                initContainers,
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -349,11 +342,6 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
-
-	waitForSvcInitContainer := getWaitForSvcsInitContainer(svcName, s)
-	if waitForSvcInitContainer != nil {
-		initContainers = append(initContainers, *waitForSvcInitContainer)
-	}
 
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -403,11 +391,6 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
-	waitForSvcInitContainer := getWaitForSvcsInitContainer(svcName, s)
-	if waitForSvcInitContainer != nil {
-		initContainers = append(initContainers, *waitForSvcInitContainer)
-	}
-
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -472,18 +455,6 @@ func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Co
 		VolumeMounts: initContainerVolumeMounts,
 	}
 	return initContainer
-}
-
-func getWaitForSvcsInitContainer(svcName string, s *model.Stack) *apiv1.Container {
-	if len(s.Services[svcName].DependsOn) != 0 {
-		initContainer := &apiv1.Container{
-			Name:    "wait-for-svcs",
-			Image:   "okteto/okteto",
-			Command: []string{"okteto", "stack", "wait", "--stack", s.Name, "--service", svcName, "--namespace", s.Namespace},
-		}
-		return initContainer
-	}
-	return nil
 }
 
 func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *apiv1.Container {
