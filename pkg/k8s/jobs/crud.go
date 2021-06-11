@@ -80,10 +80,17 @@ func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Inte
 	return false
 }
 
-func IsSuccedded(ctx context.Context, namespace, svcName string, c kubernetes.Interface) bool {
-	job, err := c.BatchV1().Jobs(namespace).Get(ctx, svcName, metav1.GetOptions{})
+func IsSuccedded(ctx context.Context, namespace, jobName string, c kubernetes.Interface) bool {
+	job, err := c.BatchV1().Jobs(namespace).Get(ctx, jobName, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
 	return job.Status.Succeeded == *job.Spec.Completions
+}
+func IsFailed(ctx context.Context, namespace, jobName string, c kubernetes.Interface) bool {
+	job, err := c.BatchV1().Jobs(namespace).Get(ctx, jobName, metav1.GetOptions{})
+	if err != nil {
+		return false
+	}
+	return job.Status.Failed > 0 && job.Status.Failed >= *job.Spec.BackoffLimit
 }

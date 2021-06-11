@@ -101,6 +101,12 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 			}
 
 			if !canSvcBeDeployed(ctx, s, svcName, c, config) {
+				if failedJobs := getDependingFailedJobs(ctx, s, svcName, c, config); len(failedJobs) > 0 {
+					if len(failedJobs) == 1 {
+						return fmt.Errorf("Can not start %s: %s has failed", svcName, failedJobs[0])
+					}
+					return fmt.Errorf("Can not start %s: %s have failed", svcName, strings.Join(failedJobs, ", "))
+				}
 				continue
 			}
 			spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
