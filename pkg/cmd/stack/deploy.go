@@ -226,41 +226,7 @@ func isSvcReady(ctx context.Context, stack *model.Stack, dependentSvcName string
 	case model.DependsOnServiceRunning:
 		return isSvcRunning(ctx, svc, stack.Namespace, dependentSvcName, client)
 	case model.DependsOnServiceHealthy:
-		if isSvcRunning(ctx, svc, stack.Namespace, dependentSvcName, client) {
-			forwarder := forward.NewPortForwardManager(ctx, model.Localhost, config, client, stack.Namespace)
-			podName := getPodName(ctx, stack, dependentSvcName, client)
-			if podName == "" {
-				return false
-			}
-			portsToTest := make([]int, 0)
-			for _, p := range svc.Ports {
-				port, err := model.GetAvailablePort(model.Localhost)
-				if err != nil {
-					continue
-				}
-				portsToTest = append(portsToTest, port)
-				if err := forwarder.Add(model.Forward{Local: port, Remote: int(p.ContainerPort)}); err != nil {
-					continue
-				}
-			}
-			forwarder.Start(podName, stack.Namespace)
-			for _, port := range portsToTest {
-				url := fmt.Sprintf("http://%s:%d/", model.Localhost, port)
-				resp, err := http.Get(url)
-				if err != nil {
-					url := fmt.Sprintf("https://%s:%d/", model.Localhost, port)
-					resp, err = http.Get(url)
-					if err != nil {
-						continue
-					}
-				}
-				if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-					forwarder.Stop()
-					return true
-				}
-			}
-			forwarder.Stop()
-		}
+		return isSvcHealthy(ctx, svc, stack, dependentSvcName, client, config)
 	case model.DependsOnServiceCompleted:
 		if jobs.IsSuccedded(ctx, stack.Namespace, dependentSvcName, client) {
 			return true
@@ -294,6 +260,45 @@ func isSvcRunning(ctx context.Context, svc *model.Service, namespace, svcName st
 		if jobs.IsRunning(ctx, namespace, svcName, client) {
 			return true
 		}
+	}
+	return false
+}
+
+func isSvcHealthy(ctx context.Context, svc *model.Service, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
+	if isSvcRunning(ctx, svc, stack.Namespace, svcName, client) {
+		forwarder := forward.NewPortForwardManager(ctx, model.Localhost, config, client, stack.Namespace)
+		podName := getPodName(ctx, stack, svcName, client)
+		if podName == "" {
+			return false
+		}
+		portsToTest := make([]int, 0)
+		for _, p := range svc.Ports {
+			port, err := model.GetAvailablePort(model.Localhost)
+			if err != nil {
+				continue
+			}
+			portsToTest = append(portsToTest, port)
+			if err := forwarder.Add(model.Forward{Local: port, Remote: int(p.ContainerPort)}); err != nil {
+				continue
+			}
+		}
+		forwarder.Start(podName, stack.Namespace)
+		defer forwarder.Stop()
+		for _, port := range portsToTest {
+			url := fmt.Sprintf("http://%s:%d/", model.Localhost, port)
+			resp, err := http.Get(url)
+			if err != nil {
+				url := fmt.Sprintf("https://%s:%d/", model.Localhost, port)
+				resp, err = http.Get(url)
+				if err != nil {
+					continue
+				}
+			}
+			if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+				return true
+			}
+		}
+		forwarder.Stop()
 	}
 	return false
 }
