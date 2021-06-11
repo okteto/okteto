@@ -617,6 +617,9 @@ func getRangePorts(portString string) (int32, int32, apiv1.Protocol, error) {
 		}
 		fromString, toString := rangeSplitted[0], rangeSplitted[1]
 		toString, protocol, err := getPortAndProtocol(toString, portString)
+		if err != nil {
+			return 0, 0, "", err
+		}
 		fromPort, err := getPortFromString(fromString, portString)
 		if err != nil {
 			return 0, 0, "", err
