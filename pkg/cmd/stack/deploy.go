@@ -91,8 +91,23 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 
 	addHiddenExposedPortsToStack(ctx, s)
 
-	deployedSvcs := make([]string, 0)
-	deployedVolumes := make([]string, 0)
+	for name := range s.Services {
+		if len(s.Services[name].Ports) > 0 {
+			svcK8s := translateService(name, s)
+			if err := services.Deploy(ctx, svcK8s, c); err != nil {
+				return err
+			}
+		}
+	}
+
+	for name := range s.Volumes {
+		if err := deployVolume(ctx, name, s, c); err != nil {
+			return err
+		}
+		spinner.Stop()
+		log.Success("Created volume '%s'", name)
+		spinner.Start()
+	}
 
 	for len(deployedSvcs) != len(s.Services) {
 		for svcName := range s.Services {
@@ -110,7 +125,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 				continue
 			}
 			spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
-			err := deploySvc(ctx, s, svcName, deployedVolumes, c, spinner)
+			err := deploySvc(ctx, s, svcName, c, spinner)
 			if err != nil {
 				return err
 			}
@@ -144,24 +159,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	return waitForPodsToBeRunning(ctx, s, c)
 }
 
-func deploySvc(ctx context.Context, stack *model.Stack, svcName string, deployedVolumes []string, client kubernetes.Interface, spinner *utils.Spinner) error {
-	if len(stack.Services[svcName].Ports) > 0 {
-		svcK8s := translateService(svcName, stack)
-		if err := services.Deploy(ctx, svcK8s, client); err != nil {
-			return err
-		}
-	}
-	for _, volume := range stack.Services[svcName].Volumes {
-		if volume.LocalPath != "" && !isVolumeDeployed(volume.LocalPath, deployedVolumes) {
-			if err := deployVolume(ctx, volume.LocalPath, stack, client); err != nil {
-				return err
-			}
-			spinner.Stop()
-			log.Success("Created volume '%s'", volume.LocalPath)
-			spinner.Start()
-			deployedVolumes = append(deployedVolumes, volume.LocalPath)
-		}
-	}
+func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, spinner *utils.Spinner) error {
 	if stack.Services[svcName].RestartPolicy != apiv1.RestartPolicyAlways {
 		if err := deployJob(ctx, svcName, stack, client); err != nil {
 			return err
@@ -206,6 +204,23 @@ func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, c
 		}
 	}
 	return true
+}
+
+func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) []string {
+	svc := stack.Services[svcName]
+	dependingJobs := make([]string, 0)
+	for dependingSvc := range svc.DependsOn {
+		if stack.Services[dependingSvc].RestartPolicy != apiv1.RestartPolicyAlways {
+			dependingJobs = append(dependingJobs, dependingSvc)
+		}
+	}
+	failedJobs := make([]string, 0)
+	for _, jobName := range dependingJobs {
+		if jobs.IsFailed(ctx, stack.Namespace, jobName, client) {
+			failedJobs = append(failedJobs, jobName)
+		}
+	}
+	return failedJobs
 }
 
 func isSvcReady(ctx context.Context, stack *model.Stack, dependentSvcName string, condition model.DependsOnConditionSpec, client kubernetes.Interface, config *rest.Config) bool {
