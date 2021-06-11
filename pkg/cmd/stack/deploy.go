@@ -112,7 +112,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	deployedSvcs := make(map[string]bool)
 	for len(deployedSvcs) != len(s.Services) {
 		for svcName := range s.Services {
-			if isSvcDeployed(svcName, deployedSvcs) {
+			if deployedSvcs[svcName] {
 				continue
 			}
 
@@ -178,19 +178,6 @@ func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client k
 	log.Success("Deployed service '%s'", svcName)
 	spinner.Start()
 	return nil
-}
-
-func isVolumeDeployed(volumeName string, deployedVolumes []string) bool {
-	for _, deployedVolumeName := range deployedVolumes {
-		if deployedVolumeName == volumeName {
-			return true
-		}
-	}
-	return false
-}
-
-func isSvcDeployed(svcName string, deployedSvcs map[string]bool) bool {
-	return deployedSvcs[svcName]
 }
 
 func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
