@@ -511,7 +511,7 @@ func (up *upContext) shutdown() {
 
 }
 
-func printDisplayContext(dev *model.Dev, divertURL string) {
+func printDisplayContext(dev *model.Dev, urls []string) {
 	if dev.Context != "" {
 		log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), dev.Context))
 	}
@@ -541,8 +541,16 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 		}
 	}
 
-	if divertURL != "" {
-		log.Println(fmt.Sprintf("    %s       %s", log.BlueString("URL:"), divertURL))
+	if len(urls) > 0 {
+		if len(urls) == 1 {
+			log.Println(fmt.Sprintf("    %s       %s", log.BlueString("URL:"), urls[0]))
+		} else {
+			log.Println(fmt.Sprintf("    %s      %s", log.BlueString("URLs:"), urls[0]))
+		}
+
+		for i := 1; i < len(urls); i++ {
+			log.Println(fmt.Sprintf("               %s", urls[i]))
+		}
 	}
 	fmt.Println()
 }

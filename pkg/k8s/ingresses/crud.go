@@ -60,6 +60,30 @@ func (iClient *Client) Get(ctx context.Context, name, namespace string) (metav1.
 	return i.GetObjectMeta(), nil
 }
 
+func (iClient *Client) GetHosts(ctx context.Context, name, namespace string) ([]string, error) {
+	hosts := make([]string, 0)
+
+	if iClient.isV1 {
+		i, err := iClient.c.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, rule := range i.Spec.Rules {
+			hosts = append(hosts, rule.Host)
+		}
+		return hosts, nil
+	}
+
+	i, err := iClient.c.NetworkingV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for _, rule := range i.Spec.Rules {
+		hosts = append(hosts, rule.Host)
+	}
+	return hosts, nil
+}
+
 func (iClient *Client) Create(ctx context.Context, i *Ingress) error {
 	if iClient.isV1 {
 		_, err := iClient.c.NetworkingV1().Ingresses(i.V1.Namespace).Create(ctx, i.V1, metav1.CreateOptions{})

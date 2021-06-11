@@ -186,3 +186,32 @@ func TestDestroyWithError(t *testing.T) {
 		t.Fatalf("Got '%s' error but expected '%s'", err.Error(), kubernetesError)
 	}
 }
+func TestGetHosts(t *testing.T) {
+	ctx := context.Background()
+	i := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake",
+			Namespace: "test",
+		},
+		Spec: networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
+				{Host: "test.com"},
+			},
+		},
+	}
+
+	clientset := fake.NewSimpleClientset(i)
+	iClient := Client{
+		c:    clientset,
+		isV1: true,
+	}
+	iList, err := iClient.GetHosts(ctx, i.Name, i.Namespace)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(iList) != 1 {
+		t.Fatal(fmt.Errorf("Expected 1 ingress, found %d", len(iList)))
+	}
+
+}

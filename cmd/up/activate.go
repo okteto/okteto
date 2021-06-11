@@ -11,7 +11,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
-	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -149,18 +149,10 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			}
 
 		}
-		divertURL := ""
-		if up.Dev.Divert != nil {
-			username := okteto.GetSanitizedUsername()
-			name := diverts.DivertName(username, up.Dev.Divert.Ingress)
-			i, err := ingressesv1.Get(ctx, name, up.Dev.Namespace, up.Client)
-			if err != nil {
-				log.Errorf("error getting diverted ingress %s: %s", name, err.Error())
-			} else if len(i.Spec.Rules) > 0 {
-				divertURL = i.Spec.Rules[0].Host
-			}
-		}
-		printDisplayContext(up.Dev, divertURL)
+
+		urls := up.getUrls(ctx)
+
+		printDisplayContext(up.Dev, urls)
 		if hook == "yes" {
 			log.Information("Running start.sh hook...")
 			if err := up.runCommand(ctx, []string{"/var/okteto/cloudbin/start.sh"}); err != nil {
@@ -182,6 +174,51 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 
 	return prevError
+}
+
+func (up *upContext) getUrls(ctx context.Context) []string {
+	devUrls := make([]string, 0)
+	iClient, err := ingresses.GetClient(ctx, up.Client)
+	if err != nil {
+		log.Errorf("error getting ingress client: %s", err.Error())
+	}
+	if up.Dev.Divert != nil {
+		username := okteto.GetSanitizedUsername()
+		name := diverts.DivertName(username, up.Dev.Divert.Ingress)
+		hosts, err := iClient.GetHosts(ctx, name, up.Dev.Namespace)
+		if err != nil {
+			log.Errorf("error getting diverted ingress %s: %s", name, err.Error())
+		}
+		if len(hosts) > 0 {
+			devUrls = append(devUrls, fmt.Sprintf("https://%s", hosts[0]))
+			return devUrls
+		}
+	}
+
+	deployment, err := deployments.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
+	if err != nil {
+		log.Errorf("error getting deployment %s: %s", up.Dev.Name, err.Error())
+	}
+	if len(up.Dev.Forward) > 0 {
+		selector := deployment.Spec.Selector.MatchLabels
+		servicesWithLabelSelector, err := services.ListBySelector(ctx, up.Dev.Namespace, selector, up.Client)
+		if err != nil {
+			log.Errorf("error getting services with selector %s: %s", selector, err.Error())
+		}
+		for _, svc := range servicesWithLabelSelector {
+			ingressName := fmt.Sprintf("okteto-%s", svc.Name)
+			hosts, err := iClient.GetHosts(ctx, ingressName, up.Dev.Namespace)
+			if err != nil {
+				log.Errorf("error getting ingress %s: %s", ingressName, err.Error())
+			}
+			for _, host := range hosts {
+				devUrls = append(devUrls, fmt.Sprintf("https://%s", host))
+			}
+		}
+		return devUrls
+	}
+
+	return devUrls
 }
 
 func (up *upContext) shouldRetry(ctx context.Context, err error) bool {

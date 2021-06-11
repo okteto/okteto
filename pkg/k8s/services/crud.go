@@ -80,6 +80,31 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return svcList.Items, nil
 }
 
+// ListBySelector returns the list of services that matches a selector
+func ListBySelector(ctx context.Context, namespace string, labels map[string]string, c kubernetes.Interface) ([]apiv1.Service, error) {
+	svcList, err := c.CoreV1().Services(namespace).List(
+		ctx,
+		metav1.ListOptions{},
+	)
+	if err != nil {
+		return nil, err
+	}
+	servicesWithSelector := make([]apiv1.Service, 0)
+	for _, svc := range svcList.Items {
+		hasSelector := true
+		for key, value := range svc.Spec.Selector {
+			if val, ok := labels[key]; !ok || val != value {
+				hasSelector = false
+			}
+		}
+		if hasSelector {
+			servicesWithSelector = append(servicesWithSelector, svc)
+		}
+
+	}
+	return servicesWithSelector, nil
+}
+
 // DestroyDev destroys the default service for a development container
 func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return Destroy(ctx, dev.Name, dev.Namespace, c)
