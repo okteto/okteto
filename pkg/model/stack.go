@@ -264,7 +264,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 			svc.Replicas = 1
 		}
 
-		if svc.RestartPolicy != apiv1.RestartPolicyAlways {
+		if svc.IsJob() {
 			for idx, volume := range svc.Volumes {
 				volumeName := fmt.Sprintf("pvc-%s-0", svcName)
 				if volume.LocalPath == "" {
@@ -449,11 +449,11 @@ func isInVolumesTopLevelSection(volumeName string, s *Stack) bool {
 }
 
 func (svc *Service) IsDeployment() bool {
-	return len(svc.Volumes) == 0 && svc.RestartPolicy == apiv1.RestartPolicyAlways
+	return len(svc.Volumes) == 0 && (svc.RestartPolicy == apiv1.RestartPolicyAlways || (svc.RestartPolicy == apiv1.RestartPolicyOnFailure && svc.BackOffLimit == 0))
 }
 func (svc *Service) IsStatefulset() bool {
-	return len(svc.Volumes) != 0 && svc.RestartPolicy == apiv1.RestartPolicyAlways
+	return len(svc.Volumes) != 0 && (svc.RestartPolicy == apiv1.RestartPolicyAlways || (svc.RestartPolicy == apiv1.RestartPolicyOnFailure && svc.BackOffLimit == 0))
 }
 func (svc *Service) IsJob() bool {
-	return svc.RestartPolicy != apiv1.RestartPolicyAlways
+	return svc.RestartPolicy == apiv1.RestartPolicyNever || (svc.RestartPolicy == apiv1.RestartPolicyOnFailure && svc.BackOffLimit != 0)
 }

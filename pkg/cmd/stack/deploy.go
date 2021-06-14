@@ -161,7 +161,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 }
 
 func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, spinner *utils.Spinner) error {
-	if stack.Services[svcName].RestartPolicy != apiv1.RestartPolicyAlways {
+	if stack.Services[svcName].IsJob() {
 		if err := deployJob(ctx, svcName, stack, client); err != nil {
 			return err
 		}
@@ -193,7 +193,7 @@ func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName str
 	svc := stack.Services[svcName]
 	dependingJobs := make([]string, 0)
 	for dependingSvc := range svc.DependsOn {
-		if stack.Services[dependingSvc].RestartPolicy != apiv1.RestartPolicyAlways {
+		if stack.Services[dependingSvc].IsJob() {
 			dependingJobs = append(dependingJobs, dependingSvc)
 		}
 	}
