@@ -123,6 +123,11 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 					}
 					return fmt.Errorf("Service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
 				}
+				if failedServices := getServicesWithFailedProbes(ctx, s, svcName, c, config); len(failedServices) > 0 {
+					for key, value := range failedServices {
+						return fmt.Errorf("Service '%s' has failed his healthcheck probes: %s", key, value)
+					}
+				}
 				continue
 			}
 			spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
@@ -187,6 +192,24 @@ func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, c
 		}
 	}
 	return true
+}
+
+func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) map[string]string {
+	svc := stack.Services[svcName]
+	dependingServices := make([]string, 0)
+	for dependingSvc, condition := range svc.DependsOn {
+		if stack.Services[dependingSvc].Healtcheck != nil && condition.Condition == model.DependsOnServiceHealthy {
+			dependingServices = append(dependingServices, dependingSvc)
+		}
+	}
+	failedServices := make(map[string]string)
+	for _, dependingSvc := range dependingServices {
+
+		if healthcheckFailure := pods.GetHealthcheckFailure(ctx, stack.Namespace, dependingSvc, stack.Name, client); healthcheckFailure != "" {
+			failedServices[dependingSvc] = healthcheckFailure
+		}
+	}
+	return failedServices
 }
 
 func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) []string {
