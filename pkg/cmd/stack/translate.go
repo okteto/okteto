@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -44,10 +45,11 @@ import (
 const (
 	helmDriver = "secrets"
 
-	nameField   = "name"
-	statusField = "status"
-	yamlField   = "yaml"
-	outputField = "output"
+	NameField    = "name"
+	statusField  = "status"
+	YamlField    = "yaml"
+	ComposeField = "compose"
+	outputField  = "output"
 
 	progressingStatus = "progressing"
 	deployedStatus    = "deployed"
@@ -260,20 +262,22 @@ func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.Stack
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: s.GetConfigMapName(),
+			Name: model.GetStackConfigMapName(s.Name),
 			Labels: map[string]string{
 				model.StackLabel: "true",
 			},
 		},
 		Data: map[string]string{
-			nameField: s.Name,
-			yamlField: base64.StdEncoding.EncodeToString(s.Manifest),
+			NameField:    s.Name,
+			YamlField:    base64.StdEncoding.EncodeToString(s.Manifest),
+			ComposeField: strconv.FormatBool(s.IsCompose),
 		},
 	}
 }
 
 func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -340,7 +344,7 @@ func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.Per
 func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
-	initContainers := getInitContainers(svcName, svc)
+	initContainers := getInitContainers(svcName, s)
 
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -389,8 +393,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 	svc := s.Services[svcName]
 
-	initContainers := getInitContainers(svcName, svc)
-
+	initContainers := getInitContainers(svcName, s)
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -432,7 +435,8 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 	}
 }
 
-func getInitContainers(svcName string, svc *model.Service) []apiv1.Container {
+func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
+	svc := s.Services[svcName]
 	addPermissionsContainer := getAddPermissionsInitContainer(svcName, svc)
 	initContainers := []apiv1.Container{
 		addPermissionsContainer,

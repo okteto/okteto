@@ -96,7 +96,7 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 		}
 	}
 
-	return configmaps.Destroy(ctx, s.GetConfigMapName(), s.Namespace, c)
+	return configmaps.Destroy(ctx, model.GetStackConfigMapName(s.Name), s.Namespace, c)
 }
 
 func helmReleaseExist(c *action.List, name string) (bool, error) {
@@ -152,7 +152,8 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 		return err
 	}
 
-	if err := destroyIngresses(ctx, spinner, s, c); err != nil {
+	err := destroyIngresses(ctx, spinner, s, c)
+	if err != nil {
 		return err
 	}
 

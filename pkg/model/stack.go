@@ -51,6 +51,7 @@ type Service struct {
 	Entrypoint Entrypoint         `yaml:"entrypoint,omitempty"`
 	Command    Command            `yaml:"command,omitempty"`
 	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
+	DependsOn  DependsOn          `yaml:"depends_on,omitempty"`
 
 	Environment     Environment         `yaml:"environment,omitempty"`
 	Image           string              `yaml:"image,omitempty"`
@@ -146,6 +147,21 @@ type StackWarnings struct {
 	SanitizedServices   map[string]string `yaml:"-"`
 	VolumeMountWarnings []string          `yaml:"-"`
 }
+type DependsOn map[string]DependsOnConditionSpec
+
+type DependsOnConditionSpec struct {
+	Condition DependsOnCondition `json:"condition,omitempty" yaml:"condition,omitempty"`
+}
+
+type DependsOnCondition string
+
+const (
+	DependsOnServiceHealthy DependsOnCondition = "service_healthy"
+
+	DependsOnServiceRunning DependsOnCondition = "service_started"
+
+	DependsOnServiceCompleted DependsOnCondition = "service_completed_successfully"
+)
 
 // GetStack returns an okteto stack object from a given file
 func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
@@ -350,8 +366,8 @@ func (s *Stack) GetLabelSelector() string {
 }
 
 //GetLabelSelector returns the label selector for the stack name
-func (s *Stack) GetConfigMapName() string {
-	return fmt.Sprintf("okteto-%s", s.Name)
+func GetStackConfigMapName(stackName string) string {
+	return fmt.Sprintf("okteto-%s", stackName)
 }
 
 func IsPortInService(port int32, ports []Port) bool {
@@ -430,4 +446,14 @@ func GroupWarningsBySvc(fields []string) []string {
 func isInVolumesTopLevelSection(volumeName string, s *Stack) bool {
 	_, ok := s.Volumes[volumeName]
 	return ok
+}
+
+func (svc *Service) IsDeployment() bool {
+	return len(svc.Volumes) == 0 && svc.RestartPolicy == apiv1.RestartPolicyAlways
+}
+func (svc *Service) IsStatefulset() bool {
+	return len(svc.Volumes) != 0 && svc.RestartPolicy == apiv1.RestartPolicyAlways
+}
+func (svc *Service) IsJob() bool {
+	return svc.RestartPolicy != apiv1.RestartPolicyAlways
 }

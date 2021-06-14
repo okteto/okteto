@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -37,6 +39,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 // Deploy deploys a stack
@@ -45,7 +48,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		s.Namespace = client.GetContextNamespace("")
 	}
 
-	c, _, err := client.GetLocal()
+	c, config, err := client.GetLocal()
 	if err != nil {
 		return err
 	}
@@ -62,7 +65,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		return err
 	}
 
-	err = deploy(ctx, s, wait, c)
+	err = deploy(ctx, s, wait, c, config)
 	if err != nil {
 		output = fmt.Sprintf("%s\nStack '%s' deployment failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
@@ -80,13 +83,13 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 	return err
 }
 
-func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Clientset) error {
+func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Clientset, config *rest.Config) error {
 	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
 
-	addHiddenExposedPorts(ctx, s)
+	addHiddenExposedPortsToStack(ctx, s)
 
 	for name := range s.Services {
 		if len(s.Services[name].Ports) > 0 {
@@ -106,23 +109,30 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 		spinner.Start()
 	}
 
-	for name := range s.Services {
-		if s.Services[name].RestartPolicy != apiv1.RestartPolicyAlways {
-			if err := deployJob(ctx, name, s, c); err != nil {
+	deployedSvcs := make(map[string]bool)
+	for len(deployedSvcs) != len(s.Services) {
+		for svcName := range s.Services {
+			if deployedSvcs[svcName] {
+				continue
+			}
+
+			if !canSvcBeDeployed(ctx, s, svcName, c, config) {
+				if failedJobs := getDependingFailedJobs(ctx, s, svcName, c, config); len(failedJobs) > 0 {
+					if len(failedJobs) == 1 {
+						return fmt.Errorf("Service '%s' dependency '%s' failed", svcName, failedJobs[0])
+					}
+					return fmt.Errorf("Service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+				}
+				continue
+			}
+			spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
+			err := deploySvc(ctx, s, svcName, c, spinner)
+			if err != nil {
 				return err
 			}
-		} else if len(s.Services[name].Volumes) == 0 {
-			if err := deployDeployment(ctx, name, s, c); err != nil {
-				return err
-			}
-		} else {
-			if err := deployStatefulSet(ctx, name, s, c); err != nil {
-				return err
-			}
+			deployedSvcs[svcName] = true
+			spinner.Update("Waiting for services to be ready...")
 		}
-		spinner.Stop()
-		log.Success("Deployed service '%s'", name)
-		spinner.Start()
 	}
 
 	iClient, err := ingresses.GetClient(ctx, c)
@@ -150,13 +160,143 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	return waitForPodsToBeRunning(ctx, s, c)
 }
 
-func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
+func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, spinner *utils.Spinner) error {
+	if stack.Services[svcName].RestartPolicy != apiv1.RestartPolicyAlways {
+		if err := deployJob(ctx, svcName, stack, client); err != nil {
+			return err
+		}
+	} else if len(stack.Services[svcName].Volumes) == 0 {
+		if err := deployDeployment(ctx, svcName, stack, client); err != nil {
+			return err
+		}
+	} else {
+		if err := deployStatefulSet(ctx, svcName, stack, client); err != nil {
+			return err
+		}
+	}
+	spinner.Stop()
+	log.Success("Deployed service '%s'", svcName)
+	spinner.Start()
+	return nil
+}
+
+func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
+	for dependentSvc, condition := range stack.Services[svcName].DependsOn {
+		if !isSvcReady(ctx, stack, dependentSvc, condition, client, config) {
+			return false
+		}
+	}
+	return true
+}
+
+func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) []string {
+	svc := stack.Services[svcName]
+	dependingJobs := make([]string, 0)
+	for dependingSvc := range svc.DependsOn {
+		if stack.Services[dependingSvc].RestartPolicy != apiv1.RestartPolicyAlways {
+			dependingJobs = append(dependingJobs, dependingSvc)
+		}
+	}
+	failedJobs := make([]string, 0)
+	for _, jobName := range dependingJobs {
+		if jobs.IsFailed(ctx, stack.Namespace, jobName, client) {
+			failedJobs = append(failedJobs, jobName)
+		}
+	}
+	return failedJobs
+}
+
+func isSvcReady(ctx context.Context, stack *model.Stack, dependentSvcName string, condition model.DependsOnConditionSpec, client kubernetes.Interface, config *rest.Config) bool {
+	svc := stack.Services[dependentSvcName]
+
+	switch condition.Condition {
+	case model.DependsOnServiceRunning:
+		return isSvcRunning(ctx, svc, stack.Namespace, dependentSvcName, client)
+	case model.DependsOnServiceHealthy:
+		return isSvcHealthy(ctx, svc, stack, dependentSvcName, client, config)
+	case model.DependsOnServiceCompleted:
+		if jobs.IsSuccedded(ctx, stack.Namespace, dependentSvcName, client) {
+			return true
+		}
+	}
+	return false
+}
+
+func getPodName(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) string {
+	svcLabels := map[string]string{model.StackNameLabel: stack.Name, model.StackServiceNameLabel: svcName}
+
+	p, err := pods.GetBySelector(ctx, stack.Namespace, svcLabels, client)
+	if err != nil {
+		return ""
+	}
+	return p.Name
+}
+
+func isSvcRunning(ctx context.Context, svc *model.Service, namespace, svcName string, client kubernetes.Interface) bool {
+
+	switch {
+	case svc.IsDeployment():
+		if deployments.IsRunning(ctx, namespace, svcName, client) {
+			return true
+		}
+	case svc.IsStatefulset():
+		if statefulsets.IsRunning(ctx, namespace, svcName, client) {
+			return true
+		}
+	case svc.IsJob():
+		if jobs.IsRunning(ctx, namespace, svcName, client) {
+			return true
+		}
+	}
+	return false
+}
+
+func isSvcHealthy(ctx context.Context, svc *model.Service, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
+	if !isSvcRunning(ctx, svc, stack.Namespace, svcName, client) {
+		return false
+	}
+	forwarder := forward.NewPortForwardManager(ctx, model.Localhost, config, client, stack.Namespace)
+	podName := getPodName(ctx, stack, svcName, client)
+	if podName == "" {
+		return false
+	}
+	portsToTest := make([]int, 0)
+	for _, p := range svc.Ports {
+		port, err := model.GetAvailablePort(model.Localhost)
+		if err != nil {
+			continue
+		}
+		portsToTest = append(portsToTest, port)
+		if err := forwarder.Add(model.Forward{Local: port, Remote: int(p.ContainerPort)}); err != nil {
+			continue
+		}
+	}
+	forwarder.Start(podName, stack.Namespace)
+	defer forwarder.Stop()
+	for _, port := range portsToTest {
+		url := fmt.Sprintf("http://%s:%d/", model.Localhost, port)
+		resp, err := http.Get(url)
+		if err != nil {
+			url := fmt.Sprintf("https://%s:%d/", model.Localhost, port)
+			resp, err = http.Get(url)
+			if err != nil {
+				continue
+			}
+		}
+		if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+			return true
+		}
+	}
+	return false
+}
+
+func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) error {
 	d := translateDeployment(svcName, s)
 	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting deployment of service '%s': %s", svcName, err.Error())
 	}
-	isNewDeployment := old.Name == ""
+	isNewDeployment := old == nil || old.Name == ""
 	if !isNewDeployment {
 		if old.Labels[model.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
@@ -182,13 +322,13 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c *ku
 	return nil
 }
 
-func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
+func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) error {
 	sfs := translateStatefulSet(svcName, s)
 	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
 	}
-	if old.Name == "" {
+	if old == nil || old.Name == "" {
 		if err := statefulsets.Create(ctx, sfs, c); err != nil {
 			return fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
 		}
@@ -217,13 +357,13 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c *k
 	return nil
 }
 
-func deployJob(ctx context.Context, svcName string, s *model.Stack, c *kubernetes.Clientset) error {
+func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) error {
 	job := translateJob(svcName, s)
 	old, err := c.BatchV1().Jobs(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting job of service '%s': %s", svcName, err.Error())
 	}
-	isNewJob := old.Name == ""
+	isNewJob := old == nil || old.Name == ""
 	if !isNewJob {
 		if old.Labels[model.StackNameLabel] == "" {
 			return fmt.Errorf("name collision: the job '%s' was running before deploying your stack", svcName)
@@ -245,14 +385,14 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c *kubernete
 	return nil
 }
 
-func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c *kubernetes.Clientset) error {
+func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kubernetes.Interface) error {
 	pvc := translatePersistentVolumeClaim(volumeName, s)
 
 	old, err := c.CoreV1().PersistentVolumeClaims(s.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting volume '%s': %s", pvc.Name, err.Error())
 	}
-	if old.Name == "" {
+	if old == nil || old.Name == "" {
 		if err := volumes.Create(ctx, &pvc, c); err != nil {
 			return fmt.Errorf("error creating volume '%s': %s", pvc.Name, err.Error())
 		}
@@ -371,16 +511,20 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addHiddenExposedPorts(ctx context.Context, s *model.Stack) {
+func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack) {
 	for _, svc := range s.Services {
-		if svc.Image != "" {
-			exposedPorts := registry.GetHiddenExposePorts(ctx, s.Namespace, svc.Image)
-			for _, port := range exposedPorts {
-				if !model.IsAlreadyAdded(port, svc.Ports) {
-					svc.Ports = append(svc.Ports, port)
-				}
+		addHiddenExposedPortsToSvc(ctx, svc, s.Namespace)
+	}
+
+}
+
+func addHiddenExposedPortsToSvc(ctx context.Context, svc *model.Service, namespace string) {
+	if svc.Image != "" {
+		exposedPorts := registry.GetHiddenExposePorts(ctx, namespace, svc.Image)
+		for _, port := range exposedPorts {
+			if !model.IsAlreadyAdded(port, svc.Ports) {
+				svc.Ports = append(svc.Ports, port)
 			}
 		}
 	}
-
 }
