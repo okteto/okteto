@@ -63,6 +63,7 @@ type Service struct {
 	Volumes         []StackVolume       `yaml:"volumes,omitempty"`
 	Workdir         string              `yaml:"workdir,omitempty"`
 	BackOffLimit    int32               `yaml:"max_attempts,omitempty"`
+	Healtcheck      *HealthCheck        `yaml:"healthcheck,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
@@ -85,6 +86,22 @@ type VolumeSpec struct {
 type Envs struct {
 	List Environment
 }
+type HealthCheck struct {
+	HTTP        *HTTPHealtcheck `yaml:"http,omitempty"`
+	Test        HealtcheckTest  `yaml:"test,omitempty"`
+	Interval    time.Duration   `yaml:"interval,omitempty"`
+	Timeout     time.Duration   `yaml:"timeout,omitempty"`
+	Retries     int             `yaml:"retries,omitempty"`
+	StartPeriod time.Duration   `yaml:"start_period,omitempty"`
+	Disable     bool            `yaml:"disable,omitempty"`
+}
+
+type HTTPHealtcheck struct {
+	Path string `yaml:"path,omitempty"`
+	Port int32  `yaml:"port,omitempty"`
+}
+
+type HealtcheckTest []string
 
 // StackResources represents an okteto stack resources
 type StackResources struct {

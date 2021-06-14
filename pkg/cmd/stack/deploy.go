@@ -213,7 +213,7 @@ func isSvcReady(ctx context.Context, stack *model.Stack, dependentSvcName string
 	case model.DependsOnServiceRunning:
 		return isSvcRunning(ctx, svc, stack.Namespace, dependentSvcName, client)
 	case model.DependsOnServiceHealthy:
-		return isSvcHealthy(ctx, svc, stack, dependentSvcName, client, config)
+		return isSvcHealthy(ctx, stack, dependentSvcName, client, config)
 	case model.DependsOnServiceCompleted:
 		if jobs.IsSuccedded(ctx, stack.Namespace, dependentSvcName, client) {
 			return true
@@ -251,10 +251,19 @@ func isSvcRunning(ctx context.Context, svc *model.Service, namespace, svcName st
 	return false
 }
 
-func isSvcHealthy(ctx context.Context, svc *model.Service, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
+func isSvcHealthy(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
+	svc := stack.Services[svcName]
 	if !isSvcRunning(ctx, svc, stack.Namespace, svcName, client) {
 		return false
 	}
+	if svc.Healtcheck != nil {
+		return true
+	} else {
+		return isAnyPortAvailable(ctx, svc, stack, svcName, client, config)
+	}
+}
+
+func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
 	forwarder := forward.NewPortForwardManager(ctx, model.Localhost, config, client, stack.Namespace)
 	podName := getPodName(ctx, stack, svcName, client)
 	if podName == "" {

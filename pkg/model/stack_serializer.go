@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -59,6 +60,7 @@ type ServiceRaw struct {
 	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
 	Environment              Environment        `yaml:"environment,omitempty"`
 	Expose                   []PortRaw          `yaml:"expose,omitempty"`
+	Healthcheck              *HealthCheck       `yaml:"healthcheck,omitempty"`
 	Image                    string             `yaml:"image,omitempty"`
 	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations              Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -100,7 +102,6 @@ type ServiceRaw struct {
 	ExternalLinks     *WarningType `yaml:"external_links,omitempty"`
 	ExtraHosts        *WarningType `yaml:"extra_hosts,omitempty"`
 	GroupAdd          *WarningType `yaml:"group_add,omitempty"`
-	Healthcheck       *WarningType `yaml:"healthcheck,omitempty"`
 	Hostname          *WarningType `yaml:"hostname,omitempty"`
 	Init              *WarningType `yaml:"init,omitempty"`
 	Ipc               *WarningType `yaml:"ipc,omitempty"`
@@ -351,6 +352,14 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.CapDrop = serviceRaw.CapDropSneakCase
 	}
 
+	if err := validateHealthcheck(serviceRaw.Healthcheck); err != nil {
+		return nil, err
+	}
+	if serviceRaw.Healthcheck != nil && !serviceRaw.Healthcheck.Disable {
+		svc.Healtcheck = serviceRaw.Healthcheck
+		translateHealtcheckCurlToHTTP(svc.Healtcheck)
+	}
+
 	svc.Annotations = serviceRaw.Annotations
 	if svc.Annotations == nil {
 		svc.Annotations = make(Annotations)
@@ -429,6 +438,62 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.BackOffLimit = serviceRaw.Deploy.RestartPolicy.MaxAttempts
 	}
 	return svc, nil
+}
+
+func validateHealthcheck(healthcheck *HealthCheck) error {
+	if healthcheck != nil && len(healthcheck.Test) != 0 && healthcheck.Test[0] == "NONE" {
+		healthcheck.Test = make(HealtcheckTest, 0)
+		healthcheck.Disable = true
+	}
+	if healthcheck != nil && healthcheck.HTTP == nil && len(healthcheck.Test) == 0 && !healthcheck.Disable {
+		return fmt.Errorf("Healthcheck.test must be set")
+	}
+	if healthcheck != nil && healthcheck.HTTP != nil && len(healthcheck.Test) != 0 && !healthcheck.Disable {
+		return fmt.Errorf("healthcheck.test can not be set along with healthcheck.http")
+	}
+	return nil
+}
+
+func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
+	localPortTestRegex := `^curl ((-f|--fail) )?'?((http|https)://)?(localhost|0.0.0.0):\d+(\/\w*)?'?$`
+	regexp, err := regexp.Compile(localPortTestRegex)
+	if err != nil {
+		return
+	}
+	testString := strings.Join(healthcheck.Test, " ")
+	if regexp.MatchString(testString) {
+		var firstSlashIndex, portStart int
+		if strings.Contains(testString, "://") {
+			testStringCopy := testString
+			for i := 0; i < 3; i++ {
+				firstSlashIndex += strings.Index(testStringCopy[firstSlashIndex:], "/") + 1
+			}
+			testStringCopy = testString
+			for i := 0; i < 2; i++ {
+				portStart += strings.Index(testStringCopy[portStart:], ":") + 1
+			}
+			portStart--
+			firstSlashIndex--
+		} else {
+			firstSlashIndex = strings.Index(testString, "/")
+			portStart = strings.Index(testString, ":")
+		}
+
+		var port, path string
+		if firstSlashIndex != -1 {
+			port = testString[portStart+1 : firstSlashIndex]
+			path = testString[firstSlashIndex:]
+		} else {
+			port = testString[portStart+1:]
+			path = "/"
+		}
+		p, err := strconv.Atoi(port)
+		if err != nil {
+			return
+		}
+		healthcheck.HTTP = &HTTPHealtcheck{Path: path, Port: int32(p)}
+		healthcheck.Test = make(HealtcheckTest, 0)
+	}
 }
 
 func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
@@ -901,6 +966,60 @@ func unmarshalDuration(raw *RawMessage) (int64, error) {
 	return int64(seconds), nil
 
 }
+func (httpHealtcheck *HTTPHealtcheck) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type httpHealtCheck HTTPHealtcheck // prevent recursion
+	var healthcheck httpHealtCheck
+	err := unmarshal(&healthcheck)
+	if err != nil {
+		return err
+	}
+	if !strings.HasPrefix(healthcheck.Path, "/") {
+		return fmt.Errorf("HTTP path must start with '/'")
+	}
+
+	httpHealtcheck.Path = healthcheck.Path
+	httpHealtcheck.Port = healthcheck.Port
+	return nil
+}
+func (healthcheckTest *HealtcheckTest) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawList []string
+	err := unmarshal(&rawList)
+
+	if err == nil {
+		if len(rawList) == 0 {
+			return fmt.Errorf("healtcheck.test can not be an empty list")
+		}
+		switch rawList[0] {
+		case "NONE":
+			*healthcheckTest = rawList[:1]
+			return nil
+		case "CMD":
+			*healthcheckTest = rawList[1:]
+		case "CMD-SHELL":
+			if len(rawList) != 2 {
+				return fmt.Errorf("'CMD-SHELL' healtcheck.test must have exactly 2 elements")
+			}
+			*healthcheckTest, err = shellquote.Split(rawList[1])
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("when 'healtcheck.test' is a list the first item must be either 'NONE', 'CMD' or 'CMD-SHELL'")
+		}
+		return nil
+	}
+
+	var rawString string
+	err = unmarshal(&rawString)
+	if err != nil {
+		return err
+	}
+	*healthcheckTest, err = shellquote.Split(rawString)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -1079,9 +1198,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	}
 	if svcInfo.GroupAdd != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].group_add", svcName))
-	}
-	if svcInfo.Healthcheck != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].healthcheck", svcName))
 	}
 	if svcInfo.Hostname != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].hostname", svcName))
