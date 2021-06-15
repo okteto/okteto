@@ -288,24 +288,9 @@ func TestCompose(t *testing.T) {
 		t.Fatalf("error getting job 'initialize-queue': %s", err.Error())
 	}
 
-	_, err = getVolume(ctx, namespace, "rabbitmq-data")
+	_, err = getVolume(ctx, namespace, "volume")
 	if err != nil {
-		t.Fatalf("'rabbitmq-data' volume deleted after 'okteto stack destroy'")
-	}
-
-	_, err = getVolume(ctx, namespace, "job-libs")
-	if err != nil {
-		t.Fatalf("'job-libs' volume deleted after 'okteto stack destroy'")
-	}
-
-	_, err = getVolume(ctx, namespace, "pvc-initialize-queue-0")
-	if err != nil {
-		t.Fatalf("'pvc-initialize-queue-0' volume deleted after 'okteto stack destroy'")
-	}
-
-	_, err = getVolume(ctx, namespace, "mongodb-data")
-	if err != nil {
-		t.Fatalf("'rabbitmq-data' volume deleted after 'okteto stack destroy'")
+		t.Fatalf("'volume' volume deleted after 'okteto stack destroy'")
 	}
 
 	if err := destroyStackWithVolumes(ctx, oktetoPath, "docker-compose.yml", composeGitFolder); err != nil {
@@ -314,24 +299,9 @@ func TestCompose(t *testing.T) {
 
 	log.Println("destroyed stack and volumes")
 
-	_, err = getVolume(ctx, namespace, "rabbitmq-data")
+	_, err = getVolume(ctx, namespace, "volume")
 	if err == nil {
-		t.Fatalf("'rabbitmq-data' volume not deleted after 'okteto stack destroy -v'")
-	}
-
-	_, err = getVolume(ctx, namespace, "mongodb-data")
-	if err == nil {
-		t.Fatalf("'rabbitmq-data' volume not deleted after 'okteto stack destroy -v'")
-	}
-
-	_, err = getVolume(ctx, namespace, "job-libs")
-	if err == nil {
-		t.Fatalf("'job-libs' volume not deleted after 'okteto stack destroy'")
-	}
-
-	_, err = getVolume(ctx, namespace, "pvc-initialize-queue-0")
-	if err == nil {
-		t.Fatalf("'pvc-initialize-queue-0' volume not deleted after 'okteto stack destroy'")
+		t.Fatalf("'volume' volume not deleted after 'okteto stack destroy -v'")
 	}
 
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
