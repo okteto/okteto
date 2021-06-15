@@ -969,7 +969,7 @@ func validateDependsOn(s *Stack) error {
 			if _, ok := s.Services[dependentSvc]; !ok {
 				return fmt.Errorf(" Service '%s' depends on service '%s' which is undefined.", svcName, dependentSvc)
 			}
-			if condition.Condition == DependsOnServiceCompleted && s.Services[dependentSvc].RestartPolicy == apiv1.RestartPolicyAlways {
+			if condition.Condition == DependsOnServiceCompleted && !s.Services[dependentSvc].IsJob() {
 				return fmt.Errorf(" Service '%s' is not a job. Please change the reset policy so that it is not always in service '%s' ", dependentSvc, dependentSvc)
 			}
 		}
