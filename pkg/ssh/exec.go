@@ -15,7 +15,6 @@ package ssh
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -31,6 +30,9 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/terminal"
 )
+
+var lostCharacter = make(chan []byte, 1)
+var isAnotherCopyRunning = make(chan bool, 1)
 
 // Exec executes the command over SSH
 func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
@@ -136,11 +138,12 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		return fmt.Errorf("unable to setup stdin for session: %v", err)
 	}
 	go func() {
-		if _, err = io.Copy(stdin, inR); err != nil {
-			if !errors.Is(err, io.EOF) {
-				log.Infof("error while reading from stdIn: %s", err)
-			}
-		}
+		buf := make([]byte, 32*1024)
+		waitForOtherCopyToFinish(isAnotherCopyRunning)
+		isAnotherCopyRunning <- true
+		injectLostCharacter(stdin, lostCharacter)
+		copyFromLocalToRemote(inR, stdin, buf, lostCharacter)
+		isAnotherCopyRunning <- false
 	}()
 
 	stdout, err := session.StdoutPipe()
@@ -182,6 +185,60 @@ More information is available here: https://okteto.com/docs/reference/manifest#r
 	log.Infof("command failed: %s", err)
 
 	return err
+}
+
+func waitForOtherCopyToFinish(proccessRunningChannel chan bool) {
+	wasRunning := false
+Loop:
+	for {
+		select {
+		case isRunning := <-proccessRunningChannel:
+			if !isRunning {
+				break Loop
+			} else {
+				wasRunning = true
+			}
+		default:
+			if !wasRunning {
+				break Loop
+			}
+		}
+	}
+}
+
+func injectLostCharacter(remoteStdin io.WriteCloser, lostCharacterChannel chan []byte) {
+	select {
+	case char := <-lostCharacter:
+		remoteStdin.Write(char)
+	default:
+		break
+	}
+}
+
+func copyFromLocalToRemote(local io.Reader, remote io.WriteCloser, buf []byte, lostCharacterChannel chan []byte) {
+	for {
+		nr, er := local.Read(buf)
+		if nr > 0 {
+			nw, ew := remote.Write(buf[0:nr])
+			if nw < 0 || nr < nw {
+				nw = 0
+				if ew == nil {
+					lostCharacter <- buf
+					break
+				}
+			}
+			if nr != nw {
+				lostCharacter <- buf
+				break
+			}
+		}
+		if er != nil {
+			if er != io.EOF {
+				lostCharacter <- buf
+			}
+			break
+		}
+	}
 }
 
 func isTerminal(r io.Reader) (int, bool) {
