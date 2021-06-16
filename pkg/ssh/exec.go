@@ -139,10 +139,10 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 	go func() {
 		buf := make([]byte, 32*1024)
-		waitForOtherCopyToFinish(isAnotherCopyRunning)
+		waitForOtherCopyToFinish()
 		isAnotherCopyRunning <- true
-		injectLostCharacter(stdin, lostCharacter)
-		copyFromLocalToRemote(inR, stdin, buf, lostCharacter)
+		injectLostCharacter(stdin)
+		copyFromLocalToRemote(inR, stdin, buf)
 		isAnotherCopyRunning <- false
 	}()
 
@@ -187,12 +187,12 @@ More information is available here: https://okteto.com/docs/reference/manifest#r
 	return err
 }
 
-func waitForOtherCopyToFinish(proccessRunningChannel chan bool) {
+func waitForOtherCopyToFinish() {
 	wasRunning := false
 Loop:
 	for {
 		select {
-		case isRunning := <-proccessRunningChannel:
+		case isRunning := <-isAnotherCopyRunning:
 			if !isRunning {
 				break Loop
 			} else {
@@ -206,7 +206,7 @@ Loop:
 	}
 }
 
-func injectLostCharacter(remoteStdin io.WriteCloser, lostCharacterChannel chan []byte) {
+func injectLostCharacter(remoteStdin io.WriteCloser) {
 	select {
 	case char := <-lostCharacter:
 		remoteStdin.Write(char)
@@ -215,7 +215,7 @@ func injectLostCharacter(remoteStdin io.WriteCloser, lostCharacterChannel chan [
 	}
 }
 
-func copyFromLocalToRemote(local io.Reader, remote io.WriteCloser, buf []byte, lostCharacterChannel chan []byte) {
+func copyFromLocalToRemote(local io.Reader, remote io.WriteCloser, buf []byte) {
 	for {
 		nr, er := local.Read(buf)
 		if nr > 0 {
