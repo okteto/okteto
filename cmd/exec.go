@@ -54,7 +54,7 @@ func Exec() *cobra.Command {
 			}
 			t := time.NewTicker(1 * time.Second)
 			iter := 0
-			err = executeExec(ctx, dev, args)
+			err = executeExec(ctx, dev, args, iter)
 			for errors.IsTransient(err) {
 				if iter == 0 {
 					log.Yellow("Connection lost to your development container, reconnecting...")
@@ -62,7 +62,7 @@ func Exec() *cobra.Command {
 				iter++
 				iter = iter % 10
 				<-t.C
-				err = executeExec(ctx, dev, args)
+				err = executeExec(ctx, dev, args, iter)
 			}
 
 			analytics.TrackExec(err == nil)
@@ -91,7 +91,7 @@ func Exec() *cobra.Command {
 	return cmd
 }
 
-func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
+func executeExec(ctx context.Context, dev *model.Dev, args []string, iter int) error {
 
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
@@ -139,7 +139,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 
 		dev.LoadRemote(ssh.GetPublicKey())
 
-		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
+		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped, iter)
 	}
 
 	return exec.Exec(ctx, client, cfg, dev.Namespace, p.Name, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, wrapped)

@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (up *upContext) activate(autoDeploy, build bool) error {
+func (up *upContext) activate(autoDeploy, build bool, iter int) error {
 	log.Infof("activating development container retry=%t", up.isRetry)
 
 	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
@@ -163,12 +163,12 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		printDisplayContext(up.Dev, divertURL)
 		if hook == "yes" {
 			log.Information("Running start.sh hook...")
-			if err := up.runCommand(ctx, []string{"/var/okteto/cloudbin/start.sh"}); err != nil {
+			if err := up.runCommand(ctx, []string{"/var/okteto/cloudbin/start.sh"}, iter); err != nil {
 				up.CommandResult <- err
 				return
 			}
 		}
-		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
+		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values, iter)
 	}()
 	prevError := up.waitUntilExitOrInterrupt()
 

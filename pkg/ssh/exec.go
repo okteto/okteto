@@ -31,11 +31,11 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-var lostCharacter = make(chan []byte, 1)
-var isAnotherCopyRunning = make(chan bool, 1)
+var lostCharacter = make(chan []byte, 10)
+var iterInLoop = make(chan int, 10)
 
 // Exec executes the command over SSH
-func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
+func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string, retry int) error {
 	sshConfig, err := getSSHClientConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get SSH configuration: %s", err)
@@ -139,11 +139,18 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 	go func() {
 		buf := make([]byte, 32*1024)
-		waitForOtherCopyToFinish()
-		isAnotherCopyRunning <- true
-		injectLostCharacter(stdin)
+		if retry != 0 {
+			log.Infof("Retry %d turn", retry)
+			shouldExit := waitForTheirTurnToCopy(retry)
+			if shouldExit {
+				return
+			}
+			injectLostCharacters(stdin)
+			log.Infof("Inyected some characters")
+		}
+		log.Info("Copying from local to remote")
 		copyFromLocalToRemote(inR, stdin, buf)
-		isAnotherCopyRunning <- false
+		iterInLoop <- retry
 	}()
 
 	stdout, err := session.StdoutPipe()
@@ -187,31 +194,43 @@ More information is available here: https://okteto.com/docs/reference/manifest#r
 	return err
 }
 
-func waitForOtherCopyToFinish() {
-	wasRunning := false
-Loop:
+func waitForTheirTurnToCopy(retry int) bool {
 	for {
 		select {
-		case isRunning := <-isAnotherCopyRunning:
-			if !isRunning {
-				break Loop
-			} else {
-				wasRunning = true
+		case runningCopyIter := <-iterInLoop:
+			if runningCopyIter == retry-1 {
+				return false
+			} else if runningCopyIter > retry {
+				return true
 			}
+			iterInLoop <- runningCopyIter
 		default:
-			if !wasRunning {
-				break Loop
-			}
+			break
 		}
 	}
+
 }
 
-func injectLostCharacter(remoteStdin io.WriteCloser) {
-	select {
-	case char := <-lostCharacter:
-		remoteStdin.Write(char)
-	default:
-		break
+func injectLostCharacters(remoteStdin io.WriteCloser) {
+	lostCharacters := make([][]byte, 0)
+	shouldExit := false
+	for {
+
+		select {
+		case charToInject := <-lostCharacter:
+			_, err := remoteStdin.Write(charToInject)
+			if err != nil {
+				lostCharacters = append(lostCharacters, charToInject)
+			}
+		default:
+			shouldExit = true
+		}
+		if shouldExit {
+			for _, ch := range lostCharacters {
+				lostCharacter <- ch
+			}
+			return
+		}
 	}
 }
 
@@ -223,18 +242,18 @@ func copyFromLocalToRemote(local io.Reader, remote io.WriteCloser, buf []byte) {
 			if nw < 0 || nr < nw {
 				nw = 0
 				if ew == nil {
-					lostCharacter <- buf
+					lostCharacter <- buf[0:nr]
 					break
 				}
 			}
 			if nr != nw {
-				lostCharacter <- buf
+				lostCharacter <- buf[0:nr]
 				break
 			}
 		}
 		if er != nil {
 			if er != io.EOF {
-				lostCharacter <- buf
+				lostCharacter <- buf[0:nr]
 			}
 			break
 		}
