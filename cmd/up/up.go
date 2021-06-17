@@ -295,7 +295,7 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 				<-t.C
 			}
 		}
-		err := up.activate(autoDeploy, build, iter)
+		err := up.activate(autoDeploy, build)
 		if err != nil {
 			log.Infof("activate failed with: %s", err)
 

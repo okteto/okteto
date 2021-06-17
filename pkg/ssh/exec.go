@@ -31,11 +31,8 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-var lostCharacter = make(chan []byte, 10)
-var iterInLoop = make(chan int, 10)
-
 // Exec executes the command over SSH
-func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string, retry int) error {
+func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Reader, outW, errW io.Writer, command []string) error {
 	sshConfig, err := getSSHClientConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get SSH configuration: %s", err)
@@ -137,19 +134,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	if err != nil {
 		return fmt.Errorf("unable to setup stdin for session: %v", err)
 	}
-	go func() {
-		buf := make([]byte, 32*1024)
-		if retry != 0 {
-			shouldExit := waitForTheirTurnToCopy(retry)
-			if shouldExit {
-				log.Infof("retry %d have finished before user could press any button", retry)
-				return
-			}
-			injectLostCharacters(stdin)
-		}
-		copyFromLocalToRemote(inR, stdin, buf)
-		iterInLoop <- retry
-	}()
+	Copy(inR, stdin)
 
 	stdout, err := session.StdoutPipe()
 	if err != nil {
@@ -190,72 +175,6 @@ More information is available here: https://okteto.com/docs/reference/manifest#r
 	log.Infof("command failed: %s", err)
 
 	return err
-}
-
-func waitForTheirTurnToCopy(retry int) bool {
-	for {
-		select {
-		case runningCopyIter := <-iterInLoop:
-			if runningCopyIter == retry-1 {
-				return false
-			} else if runningCopyIter > retry {
-				return true
-			}
-			iterInLoop <- runningCopyIter
-		default:
-			break
-		}
-	}
-
-}
-
-func injectLostCharacters(remoteStdin io.WriteCloser) {
-	lostCharacters := make([][]byte, 0)
-	shouldExit := false
-	for {
-
-		select {
-		case charToInject := <-lostCharacter:
-			_, err := remoteStdin.Write(charToInject)
-			if err != nil {
-				lostCharacters = append(lostCharacters, charToInject)
-			}
-		default:
-			shouldExit = true
-		}
-		if shouldExit {
-			for _, ch := range lostCharacters {
-				lostCharacter <- ch
-			}
-			return
-		}
-	}
-}
-
-func copyFromLocalToRemote(local io.Reader, remote io.WriteCloser, buf []byte) {
-	for {
-		nr, er := local.Read(buf)
-		if nr > 0 {
-			nw, ew := remote.Write(buf[0:nr])
-			if nw < 0 || nr < nw {
-				nw = 0
-				if ew == nil {
-					lostCharacter <- buf[0:nr]
-					break
-				}
-			}
-			if nr != nw {
-				lostCharacter <- buf[0:nr]
-				break
-			}
-		}
-		if er != nil {
-			if er != io.EOF {
-				lostCharacter <- buf[0:nr]
-			}
-			break
-		}
-	}
 }
 
 func isTerminal(r io.Reader) (int, bool) {
