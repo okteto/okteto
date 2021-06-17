@@ -420,3 +420,11 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	log.Infof("deployment '%s' deleted", name)
 	return nil
 }
+
+func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Interface) bool {
+	d, err := c.AppsV1().Deployments(namespace).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil {
+		return false
+	}
+	return d.Status.ReadyReplicas > 0
+}

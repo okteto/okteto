@@ -123,12 +123,11 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Labels[model.StackLabel] != "true" {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
-	if result.Data[nameField] != "stackName" {
-		t.Errorf("Wrong data.name: '%s'", result.Data[nameField])
+	if result.Data[NameField] != "stackName" {
+		t.Errorf("Wrong data.name: '%s'", result.Data[NameField])
 	}
-	if result.Data[yamlField] != base64.StdEncoding.EncodeToString(s.Manifest) {
-
-		t.Errorf("Wrong data.yaml: '%s'", result.Data[yamlField])
+	if result.Data[YamlField] != base64.StdEncoding.EncodeToString(s.Manifest) {
+		t.Errorf("Wrong data.yaml: '%s'", result.Data[YamlField])
 	}
 }
 

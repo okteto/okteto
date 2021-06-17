@@ -133,3 +133,39 @@ func GetRepositoryURL(path string) (string, error) {
 
 	return remotes[0].Config().URLs[0], nil
 }
+
+func getDependentCyclic(s *Stack) []string {
+	visited := make(map[string]bool)
+	stack := make(map[string]bool)
+	cycle := make([]string, 0)
+	for svcName := range s.Services {
+		if dfs(s, svcName, visited, stack) {
+			for svc, isInStack := range stack {
+				if isInStack {
+					cycle = append(cycle, svc)
+				}
+			}
+			return cycle
+		}
+	}
+	return cycle
+}
+
+func dfs(s *Stack, svcName string, visited, stack map[string]bool) bool {
+	isVisited := visited[svcName]
+	if !isVisited {
+		visited[svcName] = true
+		stack[svcName] = true
+
+		svc := s.Services[svcName]
+		for dependentSvc := range svc.DependsOn {
+			if !visited[dependentSvc] && dfs(s, dependentSvc, visited, stack) {
+				return true
+			} else if value, ok := stack[dependentSvc]; ok && value {
+				return true
+			}
+		}
+	}
+	stack[svcName] = false
+	return false
+}

@@ -228,8 +228,8 @@ func Test_PortUnmarshalling(t *testing.T) {
 		{
 			name:          "singleRange",
 			portRaw:       "3000-3005",
-			expected:      PortRaw{ContainerPort: 0, Protocol: v1.ProtocolTCP},
-			expectedError: true,
+			expected:      PortRaw{ContainerFrom: 3000, ContainerTo: 3005, Protocol: v1.ProtocolTCP},
+			expectedError: false,
 		},
 		{
 			name:          "singlePortForwarding",
@@ -240,7 +240,13 @@ func Test_PortUnmarshalling(t *testing.T) {
 		{
 			name:          "RangeForwarding",
 			portRaw:       "9090-9091:8080-8081",
-			expected:      PortRaw{ContainerPort: 0, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerFrom: 8080, ContainerTo: 8081, HostFrom: 9090, HostTo: 9091, Protocol: v1.ProtocolTCP},
+			expectedError: false,
+		},
+		{
+			name:          "RangeForwardingNotSameLength",
+			portRaw:       "9090-9092:8080-8081",
+			expected:      PortRaw{ContainerFrom: 8080, ContainerTo: 8081, HostFrom: 9090, HostTo: 9091, Protocol: v1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
@@ -253,7 +259,7 @@ func Test_PortUnmarshalling(t *testing.T) {
 			name:          "LocalhostForwarding",
 			portRaw:       "127.0.0.1:8000:8001",
 			expected:      PortRaw{HostPort: 8000, ContainerPort: 8001, Protocol: v1.ProtocolTCP},
-			expectedError: false,
+			expectedError: true,
 		},
 		{
 			name:          "Localhost Range",
@@ -265,6 +271,18 @@ func Test_PortUnmarshalling(t *testing.T) {
 			name:          "Protocol",
 			portRaw:       "6060:6060/udp",
 			expected:      PortRaw{HostPort: 6060, ContainerPort: 6060, Protocol: v1.ProtocolUDP},
+			expectedError: false,
+		},
+		{
+			name:          "ProtocolWithoutMapping",
+			portRaw:       "6060/udp",
+			expected:      PortRaw{ContainerPort: 6060, Protocol: v1.ProtocolUDP},
+			expectedError: false,
+		},
+		{
+			name:          "RangeProtocol",
+			portRaw:       "6060-6061:6060-6061/udp",
+			expected:      PortRaw{ContainerFrom: 6060, ContainerTo: 6061, HostFrom: 6060, HostTo: 6061, Protocol: v1.ProtocolUDP},
 			expectedError: false,
 		},
 	}
@@ -642,10 +660,58 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 		ports    []Port
 	}{
 		{
+			name:     "expose-range-and-ports-range",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213-9215\n    expose:\n    - 8213-8215\n    image: okteto/vote:1"),
+			isPublic: false,
+			ports: []Port{
+				{ContainerPort: 9213, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9214, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9215, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 8213, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 8214, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 8215, Protocol: v1.ProtocolTCP},
+			},
+		},
+		{
+			name:     "not-public-service-with-expose-and-ports",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    expose:\n    - 8213\n    image: okteto/vote:1"),
+			isPublic: false,
+			ports: []Port{
+				{ContainerPort: 9213, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 8213, Protocol: v1.ProtocolTCP},
+			},
+		},
+		{
+			name:     "not-public-port-but-with-assignation",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
+			isPublic: true,
+			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
+		},
+		{
+			name:     "not-public-range-but-with-assignation",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213-9215:9213-9215\n    image: okteto/vote:1"),
+			isPublic: false,
+			ports: []Port{
+				{HostPort: 9213, ContainerPort: 9213, Protocol: v1.ProtocolTCP},
+				{HostPort: 9213, ContainerPort: 9214, Protocol: v1.ProtocolTCP},
+				{HostPort: 9213, ContainerPort: 9215, Protocol: v1.ProtocolTCP},
+			},
+		},
+		{
 			name:     "Public-service",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
 			isPublic: true,
 			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
+		},
+		{
+			name:     "Public-service-with-range",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213-9215\n    public: true\n    image: okteto/vote:1"),
+			isPublic: true,
+			ports: []Port{
+				{ContainerPort: 9213, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9214, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9215, Protocol: v1.ProtocolTCP},
+			},
 		},
 		{
 			name:     "not-public-service",
@@ -654,11 +720,16 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
 		},
 		{
-			name:     "not-public-port-but-with-assignation",
-			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
-			isPublic: true,
-			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
+			name:     "not-public-service",
+			manifest: []byte("services:\n  app:\n    ports:\n    - 9213-9215\n    image: okteto/vote:1"),
+			isPublic: false,
+			ports: []Port{
+				{ContainerPort: 9213, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9214, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9215, Protocol: v1.ProtocolTCP},
+			},
 		},
+
 		{
 			name:     "mysql-port-forwarding",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 3306:3306\n    image: okteto/vote:1"),
@@ -677,12 +748,6 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 			isPublic: false,
 			ports:    []Port{{ContainerPort: 3306, Protocol: v1.ProtocolTCP}},
 		},
-		{
-			name:     "not-public-service-with-expose-and-ports",
-			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    expose:\n    - 8213\n    image: okteto/vote:1"),
-			isPublic: false,
-			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}, {ContainerPort: 8213, Protocol: v1.ProtocolTCP}},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -694,6 +759,9 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 				if svc.Public != tt.isPublic {
 					t.Fatalf("Expected %v but got %v", tt.isPublic, svc.Public)
 				}
+			}
+			if len(tt.ports) != len(s.Services["app"].Ports) {
+				t.Fatalf("Not unmarshalled ports correctly")
 			}
 		})
 	}
@@ -1397,6 +1465,89 @@ func Test_MultipleEndpoints(t *testing.T) {
 			}
 			if s.Services["app"].Public != tt.svcPublic {
 				t.Fatal("Public property was not set properly")
+			}
+		})
+	}
+}
+
+func Test_validateDependsOn(t *testing.T) {
+	tests := []struct {
+		name       string
+		manifest   []byte
+		throwError bool
+		dependsOn  DependsOn
+	}{
+		{
+			name:       "defined dependent service",
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test\n  test:\n    image: okteto/vote:1"),
+			throwError: false,
+			dependsOn: DependsOn{
+				"test": DependsOnConditionSpec{Condition: DependsOnServiceRunning},
+			},
+		},
+		{
+			name:       "defined dependent service started",
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      test:\n        condition: service_started\n  test:\n    image: okteto/vote:1"),
+			throwError: false,
+			dependsOn: DependsOn{
+				"test": DependsOnConditionSpec{Condition: DependsOnServiceRunning},
+			},
+		},
+		{
+			name:       "defined dependent service healthy",
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      test:\n        condition: service_healthy\n  test:\n    image: okteto/vote:1"),
+			throwError: false,
+			dependsOn: DependsOn{
+				"test": DependsOnConditionSpec{Condition: DependsOnServiceHealthy},
+			},
+		},
+		{
+			name:       "defined dependent service completed",
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      test:\n        condition: service_completed_successfully\n  test:\n    image: okteto/vote:1\n    restart: never"),
+			throwError: false,
+			dependsOn: DependsOn{
+				"test": DependsOnConditionSpec{Condition: DependsOnServiceCompleted},
+			},
+		},
+		{
+			name:       "not defined dependent service",
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - ads"),
+			throwError: true,
+		},
+		{
+			name:       "self dependent service",
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - app"),
+			throwError: true,
+		},
+		{
+			name:       "circular dependency",
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test\n  test:\n    image: okteto/vote:1\n    depends_on:\n      - app"),
+			throwError: true,
+		},
+		{
+			name:       "circular dependency difficult",
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test\n  test:\n    image: okteto/vote:1\n    depends_on:\n      - test2\n  test1:\n    image: okteto/vote:1\n    depends_on:\n      - test2\n  test2:\n    image: okteto/vote:1\n    depends_on:\n      - app"),
+			throwError: true,
+		},
+		{
+			name:       "circular dependency not first",
+			manifest:   []byte("services:\n  test:\n    image: okteto/vote:1\n    depends_on:\n      - test2\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test\n  test1:\n    image: okteto/vote:1\n    depends_on:\n      - test2\n  test2:\n    image: okteto/vote:1\n    depends_on:\n      - app"),
+			throwError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, false)
+			if err == nil && tt.throwError {
+				t.Fatal("Expected error but not thrown")
+			}
+			if err != nil && !tt.throwError {
+				t.Fatal(err)
+			}
+			if err == nil && !tt.throwError {
+				if !reflect.DeepEqual(s.Services["app"].DependsOn, tt.dependsOn) {
+					t.Fatalf("Expected %v but got %v", tt.dependsOn, s.Services["app"].DependsOn)
+				}
 			}
 		})
 	}

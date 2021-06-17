@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/utils/pointer"
 )
 
 func TestCreate(t *testing.T) {
@@ -156,4 +157,81 @@ func TestList(t *testing.T) {
 		t.Fatal(fmt.Errorf("Expected 1 job, found %d", len(jobList)))
 	}
 
+}
+
+func TestIsSuccedded(t *testing.T) {
+	ctx := context.Background()
+
+	succeedjob := &batchv1.Job{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "succededtest",
+			Namespace: "test",
+		},
+		Spec: batchv1.JobSpec{
+			Completions: pointer.Int32Ptr(1),
+		},
+		Status: batchv1.JobStatus{
+			Succeeded: 1,
+		},
+	}
+	failedjob := &batchv1.Job{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "failedtest",
+			Namespace: "test",
+		},
+		Spec: batchv1.JobSpec{
+			Completions: pointer.Int32Ptr(2),
+		},
+		Status: batchv1.JobStatus{
+			Succeeded: 1,
+		},
+	}
+	clientset := fake.NewSimpleClientset(succeedjob, failedjob)
+
+	if !IsSuccedded(ctx, succeedjob.Namespace, succeedjob.Name, clientset) {
+		t.Fatal("failed to declare a successful job")
+	}
+	if IsSuccedded(ctx, failedjob.Namespace, failedjob.Name, clientset) {
+		t.Fatal("failed to declare a failed job")
+	}
+
+}
+
+func TestIsFailed(t *testing.T) {
+	ctx := context.Background()
+
+	succeedjob := &batchv1.Job{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "succededtest",
+			Namespace: "test",
+		},
+		Spec: batchv1.JobSpec{
+			Completions:  pointer.Int32Ptr(1),
+			BackoffLimit: pointer.Int32Ptr(0),
+		},
+		Status: batchv1.JobStatus{
+			Failed: 1,
+		},
+	}
+	failedjob := &batchv1.Job{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "failedtest",
+			Namespace: "test",
+		},
+		Spec: batchv1.JobSpec{
+			Completions:  pointer.Int32Ptr(2),
+			BackoffLimit: pointer.Int32Ptr(0),
+		},
+		Status: batchv1.JobStatus{
+			Failed: 0,
+		},
+	}
+	clientset := fake.NewSimpleClientset(succeedjob, failedjob)
+
+	if !IsFailed(ctx, succeedjob.Namespace, succeedjob.Name, clientset) {
+		t.Fatal("failed to declare successful job that has failed")
+	}
+	if IsFailed(ctx, failedjob.Namespace, failedjob.Name, clientset) {
+		t.Fatal("not failed job declared as failed")
+	}
 }

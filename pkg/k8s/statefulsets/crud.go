@@ -79,3 +79,11 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	log.Infof("statefulset '%s' deleted", name)
 	return nil
 }
+
+func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Interface) bool {
+	sfs, err := c.AppsV1().StatefulSets(namespace).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil {
+		return false
+	}
+	return sfs.Status.ReadyReplicas > 0
+}
