@@ -142,7 +142,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		if retry != 0 {
 			shouldExit := waitForTheirTurnToCopy(retry)
 			if shouldExit {
-				log.Info("retry %d have finished before user could press any button", retry)
+				log.Infof("retry %d have finished before user could press any button", retry)
 				return
 			}
 			injectLostCharacters(stdin)
