@@ -140,15 +140,13 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	go func() {
 		buf := make([]byte, 32*1024)
 		if retry != 0 {
-			log.Infof("Retry %d turn", retry)
 			shouldExit := waitForTheirTurnToCopy(retry)
 			if shouldExit {
+				log.Info("retry %d have finished before user could press any button", retry)
 				return
 			}
 			injectLostCharacters(stdin)
-			log.Infof("Inyected some characters")
 		}
-		log.Info("Copying from local to remote")
 		copyFromLocalToRemote(inR, stdin, buf)
 		iterInLoop <- retry
 	}()
