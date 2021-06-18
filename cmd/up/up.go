@@ -212,6 +212,63 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 		dev.RegistryURL = registryURL
 	}
 
+	exportOktetoEnvVars(dev)
+	return nil
+}
+
+func exportOktetoEnvVars(dev *model.Dev) error {
+	var err error
+	if err = os.Setenv("OKTETO_NAMESPACE", dev.Namespace); err != nil {
+		return err
+	}
+
+	if err := expandEnvVars(dev.Environment); err != nil {
+		return err
+	}
+	if err := expandImageArgs(dev.Image); err != nil {
+		return err
+	}
+
+	for _, svc := range dev.Services {
+		if err := expandEnvVars(svc.Environment); err != nil {
+			return err
+		}
+		if err := expandImageArgs(svc.Image); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func expandEnvVars(environments model.Environment) error {
+	var err error
+	for idx, env := range environments {
+		if env.Value == "" {
+			env.Value = os.Getenv(env.Name)
+		}
+		env.Value, err = model.ExpandEnv(env.Value)
+		if err != nil {
+			return err
+		}
+		environments[idx] = env
+	}
+	return nil
+}
+
+func expandImageArgs(buildInfo *model.BuildInfo) error {
+	if buildInfo != nil {
+		var err error
+		for idx, arg := range buildInfo.Args {
+			if arg.Value == "" {
+				arg.Value = os.Getenv(arg.Name)
+			}
+			arg.Value, err = model.ExpandEnv(arg.Value)
+			if err != nil {
+				return err
+			}
+			buildInfo.Args[idx] = arg
+		}
+	}
 	return nil
 }
 

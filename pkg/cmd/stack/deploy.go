@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -527,4 +528,44 @@ func addHiddenExposedPortsToSvc(ctx context.Context, svc *model.Service, namespa
 			}
 		}
 	}
+}
+
+func exportOktetoEnvVars(stack *model.Stack) error {
+	var err error
+	if err = os.Setenv("OKTETO_NAMESPACE", stack.Namespace); err != nil {
+		return err
+	}
+	for endpointName := range stack.Endpoints {
+		envVarName := fmt.Sprintf("OKTETO_ENDPOINT_%s", endpointName)
+		envVarValue := fmt.Sprintf("%s-%s", endpointName, stack.Namespace)
+		if err = os.Setenv(envVarName, envVarValue); err != nil {
+			return err
+		}
+	}
+
+	for _, svc := range stack.Services {
+		for idx, env := range svc.Environment {
+			if env.Value == "" {
+				env.Value = os.Getenv(env.Name)
+			}
+			env.Value, err = model.ExpandEnv(env.Value)
+			if err != nil {
+				return err
+			}
+			svc.Environment[idx] = env
+		}
+		if svc.Build != nil {
+			for idx, arg := range svc.Build.Args {
+				if arg.Value == "" {
+					arg.Value = os.Getenv(arg.Name)
+				}
+				arg.Value, err = model.ExpandEnv(arg.Value)
+				if err != nil {
+					return err
+				}
+				svc.Build.Args[idx] = arg
+			}
+		}
+	}
+	return nil
 }

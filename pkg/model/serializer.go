@@ -16,6 +16,7 @@ package model
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -74,19 +75,26 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", 2)
 	e.Name = parts[0]
 	if len(parts) == 2 {
-		e.Value, err = ExpandEnv(parts[1])
-		if err != nil {
-			return err
+		e.Value = parts[1]
+		if !isOktetoVariable(e.Value) {
+			e.Value, err = ExpandEnv(e.Value)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
-
 	e.Name, err = ExpandEnv(parts[0])
 	if err != nil {
 		return err
 	}
 	e.Value = os.Getenv(e.Name)
 	return nil
+}
+
+func isOktetoVariable(str string) bool {
+	re := regexp.MustCompile(`\${?OKTETO_`)
+	return re.Match([]byte(str))
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
@@ -678,7 +686,9 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = ExpandEnv(value)
+		if !isOktetoVariable(value) {
+			value, err = ExpandEnv(value)
+		}
 		if err != nil {
 			return nil, err
 		}
