@@ -23,7 +23,7 @@ import (
 
 	sp "github.com/briandowns/spinner"
 	"github.com/okteto/okteto/pkg/log"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 var spinnerSupport bool
@@ -41,7 +41,7 @@ func NewSpinner(suffix string) *Spinner {
 	s.Suffix = fmt.Sprintf(" %s", suffix)
 	s.FinalMSG = s.Suffix
 	s.PreUpdate = func(s *sp.Spinner) {
-		width, _, _ := terminal.GetSize(int(os.Stdout.Fd()))
+		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
 		if width > 4 && len(s.FinalMSG)+2 > width {
 			s.Suffix = s.FinalMSG[:width-5] + "..."
 		} else {
