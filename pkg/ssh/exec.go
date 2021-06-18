@@ -15,7 +15,6 @@ package ssh
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -135,13 +134,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	if err != nil {
 		return fmt.Errorf("unable to setup stdin for session: %v", err)
 	}
-	go func() {
-		if _, err = io.Copy(stdin, inR); err != nil {
-			if !errors.Is(err, io.EOF) {
-				log.Infof("error while reading from stdIn: %s", err)
-			}
-		}
-	}()
+	Copy(inR, stdin)
 
 	stdout, err := session.StdoutPipe()
 	if err != nil {
