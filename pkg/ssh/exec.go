@@ -29,7 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 // Exec executes the command over SSH
@@ -90,14 +90,14 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		var termFD int
 		var ok bool
 		if termFD, ok = isTerminal(inR); ok {
-			width, height, err = terminal.GetSize(int(os.Stdout.Fd()))
+			width, height, err = term.GetSize(int(os.Stdout.Fd()))
 			log.Infof("terminal width %d height %d", width, height)
 			if err != nil {
 				log.Infof("request for terminal size failed: %s", err)
 			}
 		}
 
-		state, err := terminal.MakeRaw(termFD)
+		state, err := term.MakeRaw(termFD)
 		if err != nil {
 			log.Infof("request for raw terminal failed: %s", err)
 		}
@@ -107,7 +107,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 				return
 			}
 
-			if err := terminal.Restore(termFD, state); err != nil {
+			if err := term.Restore(termFD, state); err != nil {
 				log.Infof("failed to restore terminal: %s", err)
 			}
 
@@ -187,7 +187,7 @@ More information is available here: https://okteto.com/docs/reference/manifest#r
 func isTerminal(r io.Reader) (int, bool) {
 	switch v := r.(type) {
 	case *os.File:
-		return int(v.Fd()), terminal.IsTerminal(int(v.Fd()))
+		return int(v.Fd()), term.IsTerminal(int(v.Fd()))
 	default:
 		return 0, false
 	}
