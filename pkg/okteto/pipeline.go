@@ -59,14 +59,18 @@ type Variable struct {
 }
 
 // DeployPipeline creates a pipeline
-func DeployPipeline(ctx context.Context, name, namespace, repository, branch string, variables []Variable) (string, error) {
+func DeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (string, error) {
+	filenameParameter := ""
+	if filename != "" {
+		filenameParameter = fmt.Sprintf(`, filename: "%s"`, filename)
+	}
 	var body DeployPipelineBody
 	if len(variables) > 0 {
 		q := fmt.Sprintf(`mutation deployGitRepository($variables: [InputVariable]){
-			deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s", variables: $variables){
+			deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s", variables: $variables%s){
 				id,status
 			},
-		}`, name, repository, namespace, branch)
+		}`, name, repository, namespace, branch, filenameParameter)
 		req := graphql.NewRequest(q)
 		req.Var("variables", variables)
 
@@ -75,10 +79,10 @@ func DeployPipeline(ctx context.Context, name, namespace, repository, branch str
 		}
 	} else {
 		q := fmt.Sprintf(`mutation{
-			deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s"){
+			deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s"%s){
 				id,status
 			},
-		}`, name, repository, namespace, branch)
+		}`, name, repository, namespace, branch, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
 			return "", err

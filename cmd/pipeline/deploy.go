@@ -41,6 +41,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	var skipIfExists bool
 	var timeout time.Duration
 	var variables []string
+	var filename string
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -111,7 +112,7 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if err := deployPipeline(ctx, name, namespace, repository, branch, wait, timeout, variables); err != nil {
+			if err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, timeout, variables); err != nil {
 				return err
 			}
 
@@ -133,10 +134,11 @@ func deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&skipIfExists, "skip-if-exists", "", false, "skip the pipeline deployment if the pipeline already exists in the namespace (defaults to false)")
 	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringArrayVarP(&variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
+	cmd.Flags().StringVarP(&filename, "filename", "f", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
 	return cmd
 }
 
-func deployPipeline(ctx context.Context, name, namespace, repository, branch string, wait bool, timeout time.Duration, variables []string) error {
+func deployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, wait bool, timeout time.Duration, variables []string) error {
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -152,8 +154,8 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch str
 			Value: kv[1],
 		})
 	}
-	log.Infof("deploy pipeline %s repository=%s branch=%s on namespace=%s", name, repository, branch, namespace)
-	_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch, varList)
+	log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
+	_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
 	if err != nil {
 		return fmt.Errorf("failed to deploy pipeline: %w", err)
 	}
