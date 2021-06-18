@@ -42,7 +42,7 @@ func NewSpinner(suffix string) *Spinner {
 	s.FinalMSG = s.Suffix
 	s.PreUpdate = func(s *sp.Spinner) {
 		width, _, _ := terminal.GetSize(int(os.Stdout.Fd()))
-		if width > 4 && len(s.FinalMSG) > width {
+		if width > 4 && len(s.FinalMSG)+2 > width {
 			s.Suffix = s.FinalMSG[:width-5] + "..."
 		} else {
 			s.Suffix = s.FinalMSG
