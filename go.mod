@@ -51,6 +51,7 @@ require (
 	golang.org/x/crypto v0.0.0-20201117144127-c1f2f97bffc9
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
+	golang.org/x/term v0.0.0-20201117132131-f5c789dd3221 // indirect
 	google.golang.org/grpc v1.29.1
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20180810215634-df19058c872c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
