@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
@@ -50,9 +52,35 @@ func LoadDev(devPath, namespace, k8sContext string) (*model.Dev, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	loadDevRc(dev)
 	loadContext(dev, k8sContext)
 	loadNamespace(dev, namespace)
 	return dev, nil
+}
+
+func loadDevRc(dev *model.Dev) {
+	defaultDevRcPath := filepath.Join(config.GetOktetoHome(), ".okteto.yml")
+	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), ".okteto.yaml")
+	var devRc *model.DevRC
+	var err error
+	if model.FileExists(defaultDevRcPath) {
+		devRc, err = model.GetRc(defaultDevRcPath)
+		if err != nil {
+			log.Infof("error while reading .dev file: %s", err.Error())
+		}
+	} else if model.FileExists(secondaryDevRcPath) {
+		devRc, err = model.GetRc(defaultDevRcPath)
+		if err != nil {
+			log.Infof("error while reading .dev file: %s", err.Error())
+		}
+	} else {
+		log.Info("developer level dev file not found")
+	}
+
+	if devRc != nil {
+		model.MergeDevWithDevRc(dev, devRc)
+	}
 }
 
 func loadContext(dev *model.Dev, k8sContext string) {
