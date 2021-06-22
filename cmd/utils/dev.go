@@ -70,7 +70,7 @@ func loadDevRc(dev *model.Dev) {
 			log.Infof("error while reading .dev file: %s", err.Error())
 		}
 	} else if model.FileExists(secondaryDevRcPath) {
-		devRc, err = model.GetRc(defaultDevRcPath)
+		devRc, err = model.GetRc(secondaryDevRcPath)
 		if err != nil {
 			log.Infof("error while reading .dev file: %s", err.Error())
 		}
