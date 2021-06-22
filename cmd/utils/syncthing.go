@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/vbauerster/mpb/v6"
-	decor "github.com/vbauerster/mpb/v6/decor"
+	"github.com/vbauerster/mpb/v7"
+	decor "github.com/vbauerster/mpb/v7/decor"
 )
 
 // SyncthingProgress tracks the progress of all the files syncthing
@@ -44,7 +44,7 @@ func (s *SyncthingProgress) initProgressBar() {
 			decor.OnComplete(decor.Name(" "), ""),
 			decor.OnComplete(s.ItemStartedDecorator(), ""),
 		),
-		mpb.BarExtender(NewLineBarFiller(mpb.NewBarFiller("[->_]"))),
+		mpb.BarExtender(mpb.NewBarFiller(mpb.BarStyle().Lbound("[").Filler("-").Tip(">").Padding("_").Rbound("]"))),
 		mpb.BarRemoveOnComplete(),
 	)
 }

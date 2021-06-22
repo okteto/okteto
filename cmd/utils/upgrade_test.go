@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package up
+package utils
 
 import (
 	"testing"
@@ -41,7 +41,7 @@ func Test_shouldNotify(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldNotify(tt.args.latest, tt.args.current); got != tt.want {
+			if got := ShouldNotify(tt.args.latest, tt.args.current); got != tt.want {
 				t.Errorf("shouldNotify() = %v, want %v", got, tt.want)
 			}
 		})
