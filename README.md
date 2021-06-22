@@ -11,7 +11,7 @@
 
 Kubernetes has made it very easy to deploy applications to the cloud at a higher scale than ever, but the development practices have not evolved at the same speed as application deployment patterns.
 
-Today, most developers try to either run parts of the infrastructure locally or just test these integrations directly in the cluster via CI jobs, or the *docker build/redeploy* cycle. It works, but this workflow is painful and incredibly slow.
+Today, most developers try to either run parts of the infrastructure locally or just test these integrations directly in the cluster via CI jobs, or the _docker build/redeploy_ cycle. It works, but this workflow is painful and incredibly slow.
 
 `okteto` accelerates the development workflow of Kubernetes applications. You write your code locally and `okteto` detects the changes and instantly updates your Kubernetes applications.
 
@@ -35,7 +35,7 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 
 `okteto` has several advantages when compared to more traditional development approaches:
 
-- **Fast inner loop development**: build and run your application using your favorite tools directly from your development container. Native builds are always faster than the *docker build/redeploy* cycle.
+- **Fast inner loop development**: build and run your application using your favorite tools directly from your development container. Native builds are always faster than the _docker build/redeploy_ cycle.
 - **Realistic development environment**: your development container reuses the same variables, secrets, sidecars, volumes, etc... than your original Kubernetes deployment. Realistic environments eliminate integration issues.
 - **Replicability**: development containers eliminate the need to install your dependencies locally, everything is pre-configured in your development image.
 - **Unlimited resources**: get access to the hardware and network of your cluster when developing your application.
@@ -82,6 +82,7 @@ We ❤️ contributions big or small. [See our guide](contributing.md) on how to
 ### Thanks to all our contributors!
 
 [//]: contributor-faces
+
 <a href="https://github.com/pchico83"><img src="https://avatars.githubusercontent.com/u/7474696?v=4" title="pchico83" width="80" height="80"></a>
 <a href="https://github.com/rberrelleza"><img src="https://avatars.githubusercontent.com/u/475313?v=4" title="rberrelleza" width="80" height="80"></a>
 <a href="https://github.com/jLopezbarb"><img src="https://avatars.githubusercontent.com/u/25170843?v=4" title="jLopezbarb" width="80" height="80"></a>
