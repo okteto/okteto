@@ -445,7 +445,7 @@ func TestStack_readImageContext(t *testing.T) {
 	}{
 		{
 			name: "context pointing to url",
-			manifest: []byte(`services: 
+			manifest: []byte(`services:
   test:
     build:
       context: https://github.com/okteto/okteto.git
@@ -456,7 +456,7 @@ func TestStack_readImageContext(t *testing.T) {
 		},
 		{
 			name: "context pointing to path",
-			manifest: []byte(`services: 
+			manifest: []byte(`services:
   test:
     build:
       context: .
