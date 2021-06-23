@@ -16,7 +16,7 @@ package up
 import (
 	"context"
 
-	"github.com/docker/docker/pkg/term"
+	"github.com/moby/term"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 	apiv1 "k8s.io/api/core/v1"
