@@ -14,6 +14,7 @@
 package model
 
 import (
+	"reflect"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -431,6 +432,50 @@ func Test_validateStackName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := validateStackName(tt.stackName); (err != nil) != tt.wantErr {
 				t.Errorf("Stack.validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestStack_readImageContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		expected *BuildInfo
+	}{
+		{
+			name: "context pointing to url",
+			manifest: []byte(`services: 
+  test:
+    build:
+      context: https://github.com/okteto/okteto.git
+`),
+			expected: &BuildInfo{
+				Context: "https://github.com/okteto/okteto.git",
+			},
+		},
+		{
+			name: "context pointing to path",
+			manifest: []byte(`services: 
+  test:
+    build:
+      context: .
+`),
+			expected: &BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stack, err := ReadStack(tt.manifest, true)
+			if err != nil {
+				t.Fatalf("Wrong unmarshalling: %s", err.Error())
+			}
+
+			if !reflect.DeepEqual(stack.Services["test"].Build, tt.expected) {
+				t.Fatalf("Expected %v but got %v", tt.expected, stack.Services["test"].Build)
 			}
 		})
 	}
