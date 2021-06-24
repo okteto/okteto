@@ -42,7 +42,7 @@ func GetRc(devPath string) (*DevRC, error) {
 
 	dev, err := ReadRC(b)
 	if err != nil {
-		log.Warning("there was an error with your developer level 'okteto.yml' and it will be ignored: %s", err.Error())
+		log.Warning("ignoring developer overwrites defined in %s: %s", devPath, err.Error())
 		return nil, err
 	}
 
