@@ -14,22 +14,15 @@ import (
 
 // Dev represents a development container
 type DevRC struct {
-	Autocreate           *bool                 `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
-	Healthchecks         *bool                 `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
-	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	Sync                 Sync                  `json:"sync,omitempty" yaml:"sync,omitempty"`
-	Interface            string                `json:"interface,omitempty" yaml:"interface,omitempty"`
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
-	InitFromImage        *bool                 `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
 	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
@@ -79,10 +72,6 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 }
 
 func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
-	if devRc.Autocreate != nil && !dev.Autocreate {
-		dev.Autocreate = *devRc.Autocreate
-	}
-
 	for labelKey, labelValue := range devRc.Labels {
 		if _, ok := dev.Labels[labelKey]; !ok {
 			dev.Labels[labelKey] = labelValue
@@ -103,10 +92,6 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 		dev.Namespace = devRc.Namespace
 	}
 
-	if devRc.ImagePullPolicy != "" && dev.ImagePullPolicy == "" {
-		dev.ImagePullPolicy = devRc.ImagePullPolicy
-	}
-
 	for _, env := range devRc.Environment {
 		if !isEnvOnDev(dev, env) {
 			dev.Environment = append(dev.Environment, env)
@@ -117,39 +102,6 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 		if !isSecretOnDev(dev, secret) {
 			dev.Secrets = append(dev.Secrets, secret)
 		}
-	}
-
-	if devRc.Healthchecks != nil && !dev.Healthchecks {
-		dev.Healthchecks = *devRc.Healthchecks
-	}
-
-	if devRc.SecurityContext != nil && dev.SecurityContext == nil {
-		dev.SecurityContext = devRc.SecurityContext
-	} else if devRc.SecurityContext != nil && dev.SecurityContext != nil {
-		if devRc.SecurityContext.FSGroup != nil && dev.SecurityContext.FSGroup == nil {
-			dev.SecurityContext.FSGroup = devRc.SecurityContext.FSGroup
-		}
-		if devRc.SecurityContext.RunAsGroup != nil && dev.SecurityContext.RunAsGroup == nil {
-			dev.SecurityContext.RunAsGroup = devRc.SecurityContext.RunAsGroup
-		}
-		if devRc.SecurityContext.RunAsUser != nil && dev.SecurityContext.RunAsUser == nil {
-			dev.SecurityContext.RunAsUser = devRc.SecurityContext.RunAsUser
-		}
-		for _, cap := range devRc.SecurityContext.Capabilities.Add {
-			if !isCapabilityInDev(dev.SecurityContext.Capabilities.Add, cap) {
-				dev.SecurityContext.Capabilities.Add = append(dev.SecurityContext.Capabilities.Add, cap)
-			}
-		}
-
-		for _, cap := range devRc.SecurityContext.Capabilities.Drop {
-			if !isCapabilityInDev(dev.SecurityContext.Capabilities.Drop, cap) {
-				dev.SecurityContext.Capabilities.Drop = append(dev.SecurityContext.Capabilities.Drop, cap)
-			}
-		}
-	}
-
-	if devRc.ServiceAccount != "" && dev.ServiceAccount == "" {
-		dev.ServiceAccount = devRc.ServiceAccount
 	}
 
 	if devRc.Sync.Compression && !dev.Sync.Compression {
@@ -168,10 +120,6 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 		if !isFolderSyncInDev(dev.Sync.Folders, folder) {
 			dev.Sync.Folders = append(dev.Sync.Folders, folder)
 		}
-	}
-
-	if devRc.Interface != "" && dev.Interface == "" {
-		dev.Interface = devRc.Interface
 	}
 
 	for resourceKey, resourceValue := range devRc.Resources.Limits {
@@ -195,13 +143,6 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 		if devRc.PersistentVolumeInfo.StorageClass != "" && dev.PersistentVolumeInfo.StorageClass == "" {
 			dev.PersistentVolumeInfo.StorageClass = devRc.PersistentVolumeInfo.StorageClass
 		}
-	}
-
-	if devRc.InitFromImage != nil && !dev.InitFromImage {
-		dev.InitFromImage = *devRc.InitFromImage
-	}
-	if devRc.InitFromImage != nil && !dev.InitFromImage {
-		dev.InitFromImage = *devRc.InitFromImage
 	}
 
 	if devRc.Timeout != 0 && dev.Timeout == 0 {

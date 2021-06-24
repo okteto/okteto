@@ -6,7 +6,6 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
 )
 
 func TestReadDevRC(t *testing.T) {
@@ -22,8 +21,7 @@ func TestReadDevRC(t *testing.T) {
 		},
 		{
 			name: "read",
-			manifest: []byte(`autocreate: true
-labels:
+			manifest: []byte(`labels:
   app: test
 annotations:
   db: mongodb
@@ -31,9 +29,6 @@ context: "test"
 namespace: test
 environment:
   OKTETO_HOME: /home/.okteto
-healthchecks: true
-securityContext:
-  runAsUser: 102
 sync:
   - /home/.vimrc:/home/.vimrc
 resources:
@@ -41,7 +36,6 @@ resources:
     memory: 500M
 `),
 			expected: &DevRC{
-				Autocreate:  pointer.BoolPtr(true),
 				Labels:      Labels{"app": "test"},
 				Annotations: Annotations{"db": "mongodb"},
 				Context:     "test",
@@ -51,10 +45,6 @@ resources:
 						Name:  "OKTETO_HOME",
 						Value: "/home/.okteto",
 					},
-				},
-				Healthchecks: pointer.BoolPtr(true),
-				SecurityContext: &SecurityContext{
-					RunAsUser: pointer.Int64Ptr(102),
 				},
 				Sync: Sync{
 					Verbose:        true,
@@ -84,55 +74,6 @@ resources:
 
 			if !reflect.DeepEqual(dev, tt.expected) {
 				t.Fatalf("Expected %v but got %v", tt.expected, dev)
-			}
-		})
-	}
-}
-
-func TestDevRCAutocreate(t *testing.T) {
-	var tests = []struct {
-		name     string
-		dev      *Dev
-		devRC    *DevRC
-		expected bool
-	}{
-		{
-			name:     "not overwrite",
-			dev:      &Dev{Autocreate: false},
-			devRC:    &DevRC{Autocreate: nil},
-			expected: false,
-		},
-		{
-			name:     "not overwrite2",
-			dev:      &Dev{Autocreate: false},
-			devRC:    &DevRC{Autocreate: pointer.BoolPtr(false)},
-			expected: false,
-		},
-		{
-			name:     "not overwrite3",
-			dev:      &Dev{Autocreate: true},
-			devRC:    &DevRC{Autocreate: nil},
-			expected: true,
-		},
-		{
-			name:     "not overwrite4",
-			dev:      &Dev{Autocreate: true},
-			devRC:    &DevRC{Autocreate: pointer.BoolPtr(false)},
-			expected: true,
-		},
-		{
-			name:     "overwrite",
-			dev:      &Dev{Autocreate: false},
-			devRC:    &DevRC{Autocreate: pointer.BoolPtr(true)},
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			MergeDevWithDevRc(tt.dev, tt.devRC)
-			if tt.dev.Autocreate != tt.expected {
-				t.Fatal("Wrong merging")
 			}
 		})
 	}
@@ -457,103 +398,6 @@ func TestDevRCSync(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			MergeDevWithDevRc(tt.dev, tt.devRC)
 			if reflect.DeepEqual(tt.dev, tt.expected) {
-				t.Fatal("Wrong merging")
-			}
-		})
-	}
-}
-func TestDevRCHealthchecks(t *testing.T) {
-	var tests = []struct {
-		name     string
-		dev      *Dev
-		devRC    *DevRC
-		expected bool
-	}{
-		{
-			name:     "not overwrite",
-			dev:      &Dev{Healthchecks: false},
-			devRC:    &DevRC{Healthchecks: nil},
-			expected: false,
-		},
-		{
-			name:     "not overwrite2",
-			dev:      &Dev{Healthchecks: false},
-			devRC:    &DevRC{Healthchecks: pointer.BoolPtr(false)},
-			expected: false,
-		},
-		{
-			name:     "not overwrite3",
-			dev:      &Dev{Healthchecks: true},
-			devRC:    &DevRC{Healthchecks: nil},
-			expected: true,
-		},
-		{
-			name:     "not overwrite4",
-			dev:      &Dev{Healthchecks: true},
-			devRC:    &DevRC{Healthchecks: pointer.BoolPtr(false)},
-			expected: true,
-		},
-		{
-			name:     "overwrite",
-			dev:      &Dev{Healthchecks: false},
-			devRC:    &DevRC{Healthchecks: pointer.BoolPtr(true)},
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			MergeDevWithDevRc(tt.dev, tt.devRC)
-			if tt.dev.Healthchecks != tt.expected {
-				t.Fatal("Wrong merging")
-			}
-		})
-	}
-}
-
-func TestDevRCInitFromImage(t *testing.T) {
-	var tests = []struct {
-		name     string
-		dev      *Dev
-		devRC    *DevRC
-		expected bool
-	}{
-		{
-			name:     "not overwrite",
-			dev:      &Dev{InitFromImage: false},
-			devRC:    &DevRC{InitFromImage: nil},
-			expected: false,
-		},
-		{
-			name:     "not overwrite2",
-			dev:      &Dev{InitFromImage: false},
-			devRC:    &DevRC{InitFromImage: pointer.BoolPtr(false)},
-			expected: false,
-		},
-		{
-			name:     "not overwrite3",
-			dev:      &Dev{InitFromImage: true},
-			devRC:    &DevRC{InitFromImage: nil},
-			expected: true,
-		},
-		{
-			name:     "not overwrite4",
-			dev:      &Dev{InitFromImage: true},
-			devRC:    &DevRC{InitFromImage: pointer.BoolPtr(false)},
-			expected: true,
-		},
-		{
-			name:     "overwrite",
-			dev:      &Dev{InitFromImage: false},
-			devRC:    &DevRC{InitFromImage: pointer.BoolPtr(true)},
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			MergeDevWithDevRc(tt.dev, tt.devRC)
-			if tt.dev.InitFromImage != tt.expected {
 				t.Fatal("Wrong merging")
 			}
 		})
