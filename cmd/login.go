@@ -31,6 +31,7 @@ func Login() *cobra.Command {
 	token := ""
 	cmd := &cobra.Command{
 		Use:   "login [url]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Log into Okteto",
 		Long: `Log into Okteto
 

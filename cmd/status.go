@@ -39,6 +39,7 @@ func Status() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Status of the synchronization process",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if okteto.InDevContainer() {

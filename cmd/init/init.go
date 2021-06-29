@@ -52,6 +52,7 @@ func Init() *cobra.Command {
 	var overwrite bool
 	cmd := &cobra.Command{
 		Use:   "init",
+		Args:  cobra.NoArgs,
 		Short: "Automatically generates your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			l := os.Getenv("OKTETO_LANGUAGE")

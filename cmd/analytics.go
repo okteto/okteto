@@ -24,6 +24,7 @@ import (
 func Analytics() *cobra.Command {
 	var disable bool
 	cmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "analytics",
 		Short: "Enable / Disable analytics",
 		RunE: func(cmd *cobra.Command, args []string) error {

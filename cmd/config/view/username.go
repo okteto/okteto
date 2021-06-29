@@ -28,6 +28,7 @@ import (
 func Username(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "username",
+		Args:  cobra.NoArgs,
 		Short: "Returns the username of the authenticated user",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			t, err := okteto.GetToken()

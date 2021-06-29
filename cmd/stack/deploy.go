@@ -36,6 +36,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deploy <name>",
 		Short: "Deploys a stack",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err

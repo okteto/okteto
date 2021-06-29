@@ -37,9 +37,7 @@ func List(ctx context.Context) *cobra.Command {
 			err := executeListNamespaces(ctx)
 			return err
 		},
-		Args: func(cmd *cobra.Command, args []string) error {
-			return nil
-		},
+		Args: cobra.NoArgs,
 	}
 }
 

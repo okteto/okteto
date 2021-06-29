@@ -33,6 +33,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
 		Short: "Destroys a stack",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := utils.LoadStack(name, stackPath)
 			if err != nil {
