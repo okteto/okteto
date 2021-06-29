@@ -9,7 +9,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/app"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -20,7 +20,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -45,19 +44,19 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	up.cleaned = make(chan string, 1)
 	up.hardTerminate = make(chan error, 1)
 
-	d, create, err := up.getCurrentDeployment(ctx, autoDeploy)
+	k8sObject, create, err := up.getCurrentK8sObject(ctx, autoDeploy)
 	if err != nil {
 		return err
 	}
 
-	if up.isRetry && !deployments.IsDevModeOn(d) {
+	if up.isRetry && !app.IsDevModeOn(k8sObject) {
 		log.Information("Development container has been deactivated")
 		return nil
 	}
 
-	if deployments.IsDevModeOn(d) && deployments.HasBeenChanged(d) {
+	if app.IsDevModeOn(k8sObject) && app.HasBeenChanged(k8sObject) {
 		return errors.UserError{
-			E: fmt.Errorf("Deployment '%s' has been modified while your development container was active", d.Name),
+			E: fmt.Errorf("Deployment '%s' has been modified while your development container was active", k8sObject.Name),
 			Hint: `Follow these steps:
 	  1. Execute 'okteto down'
 	  2. Apply your manifest changes again: 'kubectl apply'
@@ -72,18 +71,18 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 
 	if !up.isRetry && build {
-		if err := up.buildDevImage(ctx, d, create); err != nil {
+		if err := up.buildDevImage(ctx, k8sObject, create); err != nil {
 			return fmt.Errorf("error building dev image: %s", err)
 		}
 	}
 
 	go up.initializeSyncthing()
 
-	if err := up.setDevContainer(d); err != nil {
+	if err := up.setDevContainer(k8sObject); err != nil {
 		return err
 	}
 
-	if err := up.devMode(ctx, d, create); err != nil {
+	if err := up.devMode(ctx, k8sObject, create); err != nil {
 		if errors.IsTransient(err) {
 			return err
 		}
@@ -197,14 +196,14 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 	return false
 }
 
-func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create bool) error {
-	if err := up.createDevContainer(ctx, d, create); err != nil {
+func (up *upContext) devMode(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
+	if err := up.createDevContainer(ctx, k8sObject, create); err != nil {
 		return err
 	}
 	return up.waitUntilDevelopmentContainerIsRunning(ctx)
 }
 
-func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deployment, create bool) error {
+func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -220,12 +219,12 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	trList, err := deployments.GetTranslations(ctx, up.Dev, d, resetOnDevContainerStart, up.Client)
+	trList, err := app.GetTranslations(ctx, up.Dev, k8sObject, resetOnDevContainerStart, up.Client)
 	if err != nil {
 		return err
 	}
 
-	if err := deployments.TranslateDevMode(trList, up.Client, up.isOktetoNamespace); err != nil {
+	if err := app.TranslateDevMode(trList, up.Client, up.isOktetoNamespace); err != nil {
 		return err
 	}
 
@@ -240,21 +239,27 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 	}
 
 	for name := range trList {
-		if name == d.Name && create {
-			if err := deployments.Create(ctx, trList[name].Deployment, up.Client); err != nil {
+		if name == k8sObject.Name && create {
+			if err := app.Create(ctx, trList[name].K8sObject, up.Client); err != nil {
 				return err
 			}
 		} else {
-			if err := deployments.Update(ctx, trList[name].Deployment, up.Client); err != nil {
+			if err := app.Update(ctx, trList[name].K8sObject, up.Client); err != nil {
 				return err
 			}
 		}
 
-		if trList[name].Deployment.Annotations[model.DeploymentAnnotation] == "" {
-			continue
+		if trList[name].K8sObject.ObjectType == model.DeploymentObjectType {
+			if trList[name].K8sObject.GetAnnotation(model.DeploymentAnnotation) == "" {
+				continue
+			}
+		} else {
+			if trList[name].K8sObject.GetAnnotation(model.StatefulsetAnnotation) == "" {
+				continue
+			}
 		}
 
-		if err := deployments.UpdateOktetoRevision(ctx, trList[name].Deployment, up.Client, up.Dev.Timeout); err != nil {
+		if err := app.UpdateOktetoRevision(ctx, trList[name].K8sObject, up.Client, up.Dev.Timeout); err != nil {
 			return err
 		}
 

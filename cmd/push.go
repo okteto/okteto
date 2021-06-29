@@ -23,8 +23,8 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/app"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
@@ -120,7 +120,7 @@ func Push(ctx context.Context) *cobra.Command {
 
 func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
 	exists := true
-	d, err := deployments.Get(ctx, dev, dev.Namespace, c)
+	k8sObject, err := app.GetResource(ctx, dev, dev.Namespace, c)
 
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -140,8 +140,8 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 			return fmt.Errorf("'autocreate' cannot be used in combination with 'services'")
 		}
 
-		d = dev.GevSandbox()
-		d.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+		k8sObject.GetSandbox()
+		k8sObject.SetAnnotation(model.OktetoAutoCreateAnnotation, model.OktetoPushCmd)
 		exists = false
 
 		if imageTag == "" {
@@ -152,34 +152,34 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 		}
 	}
 
-	trList, err := deployments.GetTranslations(ctx, dev, d, false, c)
+	trList, err := app.GetTranslations(ctx, dev, k8sObject, false, c)
 	if err != nil {
 		return err
 	}
 
 	for _, tr := range trList {
-		if tr.Deployment == nil {
+		if tr.K8sObject == nil {
 			continue
 		}
 
 		if len(dev.Services) == 0 {
-			if tr.Deployment.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || tr.Deployment.Spec.Template.Spec.Containers[0].Name == "dev" {
-				tr.Deployment.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+			if tr.K8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoUpCmd || tr.K8sObject.PodTemplateSpec.Spec.Containers[0].Name == "dev" {
+				tr.K8sObject.SetAnnotation(model.OktetoAutoCreateAnnotation, model.OktetoPushCmd)
 			}
 		}
-		if *tr.Deployment.Spec.Replicas == 0 {
-			tr.Deployment.Spec.Replicas = &model.DevReplicas
+		if *tr.K8sObject.GetReplicas() == 0 {
+			tr.K8sObject.SetReplicas(&model.DevReplicas)
 		}
 
-		if tr.Deployment.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
+		if tr.K8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
 			for k, v := range tr.Annotations {
-				tr.Deployment.Annotations[k] = v
+				tr.K8sObject.SetAnnotation(k, v)
 			}
 		}
 	}
 
-	if d != nil && deployments.IsDevModeOn(d) {
-		if err := down.Run(dev, d, trList, false, c); err != nil {
+	if k8sObject != nil && app.IsDevModeOn(k8sObject) {
+		if err := down.Run(dev, k8sObject, trList, false, c); err != nil {
 			return err
 		}
 
@@ -200,33 +200,33 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 	spinner.Start()
 	defer spinner.Stop()
 
-	if d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
+	if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
 		if err := services.CreateDev(ctx, dev, c); err != nil {
 			return err
 		}
 	}
 
 	if !exists {
-		d.Spec.Template.Spec.Containers[0].Image = imageTag
-		deployments.SetLastBuiltAnnotation(d)
-		return deployments.Create(ctx, d, c)
+		k8sObject.PodTemplateSpec.Spec.Containers[0].Image = imageTag
+		app.SetLastBuiltAnnotation(k8sObject)
+		return app.Create(ctx, k8sObject, c)
 	}
 
 	for _, tr := range trList {
-		if tr.Deployment == nil {
+		if tr.K8sObject == nil {
 			continue
 		}
 		for _, rule := range tr.Rules {
-			devContainer := deployments.GetDevContainer(&tr.Deployment.Spec.Template.Spec, rule.Container)
+			devContainer := app.GetDevContainer(&tr.K8sObject.PodTemplateSpec.Spec, rule.Container)
 			if devContainer == nil {
-				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
+				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, k8sObject.Name)
 			}
-			deployments.SetLastBuiltAnnotation(tr.Deployment)
+			app.SetLastBuiltAnnotation(tr.K8sObject)
 			devContainer.Image = imageTag
 		}
 	}
 
-	return deployments.UpdateDeployments(ctx, trList, c)
+	return app.UpdateK8sObjects(ctx, trList, c)
 }
 
 func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
@@ -253,16 +253,16 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 func getImageFromDeployment(trList map[string]*model.Translation) (string, error) {
 	imageFromDeployment := ""
 	for _, tr := range trList {
-		if tr.Deployment == nil {
+		if tr.K8sObject == nil {
 			continue
 		}
-		if tr.Deployment.Annotations[model.OktetoAutoCreateAnnotation] != "" && len(trList) > 1 {
+		if tr.K8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) != "" && len(trList) > 1 {
 			continue
 		}
 		for _, rule := range tr.Rules {
-			devContainer := deployments.GetDevContainer(&tr.Deployment.Spec.Template.Spec, rule.Container)
+			devContainer := app.GetDevContainer(&tr.K8sObject.PodTemplateSpec.Spec, rule.Container)
 			if devContainer == nil {
-				return "", fmt.Errorf("container '%s' not found in deployment '%s'", rule.Container, tr.Deployment.Name)
+				return "", fmt.Errorf("container '%s' not found in deployment '%s'", rule.Container, tr.K8sObject.Name)
 			}
 			if imageFromDeployment == "" {
 				imageFromDeployment = devContainer.Image

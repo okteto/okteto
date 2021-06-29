@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployments
+package app
 
 import (
 	"encoding/json"
@@ -56,58 +56,85 @@ var (
 
 func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace bool) error {
 	for _, rule := range t.Rules {
-		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
+		devContainer := GetDevContainer(&t.K8sObject.PodTemplateSpec.Spec, rule.Container)
 		if devContainer == nil {
-			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.Deployment.Name)
+			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
 		}
 		rule.Container = devContainer.Name
 	}
 
-	manifest := annotations.Get(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation)
+	manifest := annotations.Get(t.K8sObject.GetObjectMeta(), oktetoDeploymentAnnotation)
 	if manifest != "" {
-		dOrig := &appsv1.Deployment{}
-		if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
-			return err
+		if t.K8sObject.ObjectType == model.DeploymentObjectType {
+			dOrig := &appsv1.Deployment{}
+			if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
+				return err
+			}
+			err := t.K8sObject.Deployment.Unmarshal([]byte(manifest))
+			if err != nil {
+				return err
+			}
+			t.K8sObject.Deployment = dOrig
+		} else {
+			dOrig := &appsv1.StatefulSet{}
+			if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
+				return err
+			}
+			err := t.K8sObject.StatefulSet.Unmarshal([]byte(manifest))
+			if err != nil {
+				return err
+			}
+			t.K8sObject.StatefulSet = dOrig
 		}
-		t.Deployment = dOrig
 	}
-	dAnnotations := t.Deployment.GetObjectMeta().GetAnnotations()
+	dAnnotations := t.K8sObject.GetObjectMeta().GetAnnotations()
 	delete(dAnnotations, revisionAnnotation)
-	t.Deployment.GetObjectMeta().SetAnnotations(dAnnotations)
+	t.K8sObject.GetObjectMeta().SetAnnotations(dAnnotations)
 
 	if c != nil && isOktetoNamespace {
 		c := os.Getenv("OKTETO_CLIENTSIDE_TRANSLATION")
 		if c == "" {
 			commonTranslation(t)
-			return setTranslationAsAnnotation(t.Deployment.Spec.Template.GetObjectMeta(), t)
+			return setTranslationAsAnnotation(t.K8sObject.PodTemplateSpec.GetObjectMeta(), t)
 		}
 
 		log.Infof("using clientside translation")
 	}
 
-	t.Deployment.Status = appsv1.DeploymentStatus{}
-	delete(t.Deployment.Annotations, oktetoDeploymentAnnotation)
-	manifestBytes, err := json.Marshal(t.Deployment)
-	if err != nil {
-		return err
+	if t.K8sObject.ObjectType == model.DeploymentObjectType {
+		t.K8sObject.Deployment.Status = appsv1.DeploymentStatus{}
+		delete(t.K8sObject.Deployment.Annotations, oktetoDeploymentAnnotation)
+		manifestBytes, err := json.Marshal(t.K8sObject.Deployment)
+		if err != nil {
+			return err
+		}
+		annotations.Set(t.K8sObject.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
+
+	} else {
+		t.K8sObject.StatefulSet.Status = appsv1.StatefulSetStatus{}
+		delete(t.K8sObject.StatefulSet.Annotations, oktetoDeploymentAnnotation)
+		manifestBytes, err := json.Marshal(t.K8sObject.StatefulSet)
+		if err != nil {
+			return err
+		}
+		annotations.Set(t.K8sObject.StatefulSet.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 	}
-	annotations.Set(t.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
 
 	commonTranslation(t)
-	labels.Set(t.Deployment.Spec.Template.GetObjectMeta(), model.DevLabel, "true")
-	TranslateDevAnnotations(t.Deployment.Spec.Template.GetObjectMeta(), t.Annotations)
-	TranslateDevTolerations(&t.Deployment.Spec.Template.Spec, t.Tolerations)
-	t.Deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
+	labels.Set(t.K8sObject.PodTemplateSpec.GetObjectMeta(), model.DevLabel, "true")
+	TranslateDevAnnotations(t.K8sObject.PodTemplateSpec.GetObjectMeta(), t.Annotations)
+	TranslateDevTolerations(&t.K8sObject.PodTemplateSpec.Spec, t.Tolerations)
+	t.K8sObject.PodTemplateSpec.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
 	if t.Interactive {
-		TranslateOktetoSyncSecret(&t.Deployment.Spec.Template.Spec, t.Name)
+		TranslateOktetoSyncSecret(&t.K8sObject.PodTemplateSpec.Spec, t.Name)
 	} else {
-		TranslatePodAffinity(&t.Deployment.Spec.Template.Spec, t.Name)
+		TranslatePodAffinity(&t.K8sObject.PodTemplateSpec.Spec, t.Name)
 	}
 	for _, rule := range t.Rules {
-		devContainer := GetDevContainer(&t.Deployment.Spec.Template.Spec, rule.Container)
+		devContainer := GetDevContainer(&t.K8sObject.PodTemplateSpec.Spec, rule.Container)
 		if devContainer == nil {
-			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.Deployment.Name)
+			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
 		}
 
 		if rule.Image == "" {
@@ -115,51 +142,40 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		}
 
 		TranslateDevContainer(devContainer, rule)
-		TranslateOktetoVolumes(&t.Deployment.Spec.Template.Spec, rule)
-		TranslatePodSecurityContext(&t.Deployment.Spec.Template.Spec, rule.SecurityContext)
-		TranslatePodServiceAccount(&t.Deployment.Spec.Template.Spec, rule.ServiceAccount)
-		TranslateOktetoDevSecret(&t.Deployment.Spec.Template.Spec, t.Name, rule.Secrets)
+		TranslateOktetoVolumes(&t.K8sObject.PodTemplateSpec.Spec, rule)
+		TranslatePodSecurityContext(&t.K8sObject.PodTemplateSpec.Spec, rule.SecurityContext)
+		TranslatePodServiceAccount(&t.K8sObject.PodTemplateSpec.Spec, rule.ServiceAccount)
+		TranslateOktetoDevSecret(&t.K8sObject.PodTemplateSpec.Spec, t.Name, rule.Secrets)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
-			TranslateOktetoInitBinContainer(rule.InitContainer, &t.Deployment.Spec.Template.Spec)
-			TranslateOktetoInitFromImageContainer(&t.Deployment.Spec.Template.Spec, rule)
-			TranslateDinDContainer(&t.Deployment.Spec.Template.Spec, rule)
-			TranslateOktetoBinVolume(&t.Deployment.Spec.Template.Spec)
+			TranslateOktetoInitBinContainer(rule.InitContainer, &t.K8sObject.PodTemplateSpec.Spec)
+			TranslateOktetoInitFromImageContainer(&t.K8sObject.PodTemplateSpec.Spec, rule)
+			TranslateDinDContainer(&t.K8sObject.PodTemplateSpec.Spec, rule)
+			TranslateOktetoBinVolume(&t.K8sObject.PodTemplateSpec.Spec)
 		}
 	}
 	return nil
 }
 
 func commonTranslation(t *model.Translation) {
-	TranslateDevAnnotations(t.Deployment.GetObjectMeta(), t.Annotations)
-	annotations.Set(t.Deployment.GetObjectMeta(), oktetoVersionAnnotation, model.Version)
-	labels.Set(t.Deployment.GetObjectMeta(), model.DevLabel, "true")
+	TranslateDevAnnotations(t.K8sObject.GetObjectMeta(), t.Annotations)
+	annotations.Set(t.K8sObject.GetObjectMeta(), oktetoVersionAnnotation, model.Version)
+	labels.Set(t.K8sObject.GetObjectMeta(), model.DevLabel, "true")
 
 	if t.Interactive {
-		labels.Set(t.Deployment.Spec.Template.GetObjectMeta(), model.InteractiveDevLabel, t.Name)
+		labels.Set(t.K8sObject.PodTemplateSpec.GetObjectMeta(), model.InteractiveDevLabel, t.Name)
 	} else {
-		labels.Set(t.Deployment.Spec.Template.GetObjectMeta(), model.DetachedDevLabel, t.Name)
+		labels.Set(t.K8sObject.PodTemplateSpec.GetObjectMeta(), model.DetachedDevLabel, t.Name)
 	}
 
-	t.Deployment.Spec.Replicas = &devReplicas
-	t.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{
-		Type: appsv1.RecreateDeploymentStrategyType,
-	}
-}
-
-//GetDevContainer returns the dev container of a given deployment
-func GetDevContainer(spec *apiv1.PodSpec, name string) *apiv1.Container {
-	if name == "" {
-		return &spec.Containers[0]
-	}
-
-	for i := range spec.Containers {
-		if spec.Containers[i].Name == name {
-			return &spec.Containers[i]
+	if t.K8sObject.ObjectType == model.DeploymentObjectType {
+		t.K8sObject.Deployment.Spec.Replicas = &devReplicas
+		t.K8sObject.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+			Type: appsv1.RecreateDeploymentStrategyType,
 		}
+	} else {
+		t.K8sObject.StatefulSet.Spec.Replicas = &devReplicas
 	}
-
-	return nil
 }
 
 //TranslateDevAnnotations sets the user provided annotations
@@ -691,4 +707,62 @@ func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []mode
 		)
 	}
 	spec.Volumes = append(spec.Volumes, v)
+}
+
+//TranslateDevModeOff reverses the dev mode translation
+func TranslateDevModeOff(k8sObject *model.K8sObject) (*model.K8sObject, error) {
+	trRulesJSON := annotations.Get(k8sObject.PodTemplateSpec.GetObjectMeta(), model.TranslationAnnotation)
+	if trRulesJSON == "" {
+		dManifest := annotations.Get(k8sObject.GetObjectMeta(), oktetoDeploymentAnnotation)
+		if dManifest == "" {
+			log.Infof("%s/%s is not a development container", k8sObject.Namespace, k8sObject.Name)
+			return k8sObject, nil
+		}
+		if k8sObject.ObjectType == model.DeploymentObjectType {
+			dOrig := &appsv1.Deployment{}
+			if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
+				return nil, fmt.Errorf("malformed manifest: %s", err)
+			}
+			k8sObject.UpdateDeployment(dOrig)
+		} else {
+			dOrig := &appsv1.StatefulSet{}
+			if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
+				return nil, fmt.Errorf("malformed manifest: %s", err)
+			}
+			k8sObject.UpdateStatefulset(dOrig)
+		}
+
+		return k8sObject, nil
+	}
+	trRules := &model.Translation{}
+	if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
+		return nil, fmt.Errorf("malformed tr rules: %s", err)
+	}
+	k8sObject.SetReplicas(&trRules.Replicas)
+	if k8sObject.ObjectType == model.DeploymentObjectType {
+		k8sObject.Deployment.Spec.Strategy = trRules.Strategy
+	}
+	annotations := k8sObject.GetObjectMeta().GetAnnotations()
+	delete(annotations, oktetoVersionAnnotation)
+	deleteUserAnnotations(annotations, trRules)
+	k8sObject.GetObjectMeta().SetAnnotations(annotations)
+
+	annotations = k8sObject.PodTemplateSpec.GetObjectMeta().GetAnnotations()
+	delete(annotations, model.TranslationAnnotation)
+	delete(annotations, model.OktetoRestartAnnotation)
+	k8sObject.PodTemplateSpec.GetObjectMeta().SetAnnotations(annotations)
+
+	labels := k8sObject.GetObjectMeta().GetLabels()
+	delete(labels, model.DevLabel)
+	delete(labels, model.InteractiveDevLabel)
+	delete(labels, model.DetachedDevLabel)
+	k8sObject.GetObjectMeta().SetLabels(labels)
+
+	labels = k8sObject.PodTemplateSpec.GetObjectMeta().GetLabels()
+	delete(labels, model.InteractiveDevLabel)
+	delete(labels, model.DetachedDevLabel)
+	k8sObject.PodTemplateSpec.GetObjectMeta().SetLabels(labels)
+
+	k8sObject.UpdateObjectMeta()
+	return k8sObject, nil
 }

@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/k8s/app"
+
 	"github.com/docker/docker/pkg/term"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
@@ -30,7 +32,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	k8sClient "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
@@ -41,7 +42,6 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 
 	"github.com/spf13/cobra"
-	appsv1 "k8s.io/api/apps/v1"
 )
 
 // ReconnectingMessage is the message shown when we are trying to reconnect
@@ -318,13 +318,13 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 	}
 }
 
-func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) (*appsv1.Deployment, bool, error) {
-	d, err := deployments.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
+func (up *upContext) getCurrentK8sObject(ctx context.Context, autoDeploy bool) (*model.K8sObject, bool, error) {
+	k8sObject, err := app.GetResource(ctx, up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
-		if d.Annotations[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
+		if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) != model.OktetoUpCmd {
 			up.isSwap = true
 		}
-		return d, false, nil
+		return k8sObject, false, nil
 	}
 
 	if !errors.IsNotFound(err) || up.isRetry {
@@ -349,8 +349,8 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) 
 		}
 		return nil, false, err
 	}
-
-	return up.Dev.GevSandbox(), true, nil
+	k8sObject.GetSandbox()
+	return k8sObject, true, nil
 }
 
 // waitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
@@ -382,7 +382,7 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, create bool) error {
+func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
 	oktetoRegistryURL := ""
 	if up.isOktetoNamespace {
 		var err error
@@ -397,7 +397,7 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	}
 
 	if up.Dev.Image.Name == "" {
-		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
+		devContainer := app.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
 		if devContainer == nil {
 			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 		}
@@ -428,8 +428,8 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	return nil
 }
 
-func (up *upContext) setDevContainer(d *appsv1.Deployment) error {
-	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
+func (up *upContext) setDevContainer(k8sObject *model.K8sObject) error {
+	devContainer := app.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
 	if devContainer == nil {
 		return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 	}

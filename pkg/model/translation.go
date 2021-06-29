@@ -23,7 +23,7 @@ type Translation struct {
 	Interactive bool                      `json:"interactive"`
 	Name        string                    `json:"name"`
 	Version     string                    `json:"version"`
-	Deployment  *appsv1.Deployment        `json:"-"`
+	K8sObject   *K8sObject                `json:"-"`
 	Annotations Annotations               `json:"annotations,omitempty"`
 	Tolerations []apiv1.Toleration        `json:"tolerations,omitempty"`
 	Replicas    int32                     `json:"replicas"`
