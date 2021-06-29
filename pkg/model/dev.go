@@ -48,8 +48,6 @@ var (
 	// DevReplicas is the number of dev replicas
 	DevReplicas int32 = 1
 
-	devTerminationGracePeriodSeconds int64
-
 	once sync.Once
 
 	// DeploymentKind is the resource for Deployments

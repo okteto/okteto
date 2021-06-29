@@ -27,23 +27,6 @@ type stateBeforeSleeping struct {
 	Replicas int
 }
 
-func setLabel(o metav1.Object, key, value string) {
-	labels := o.GetLabels()
-	if labels == nil {
-		labels = map[string]string{}
-	}
-	labels[key] = value
-	o.SetLabels(labels)
-}
-
-func getAnnotation(o metav1.Object, key string) string {
-	annotations := o.GetAnnotations()
-	if annotations != nil {
-		return annotations[key]
-	}
-	return ""
-}
-
 func setAnnotation(o metav1.Object, key, value string) {
 	annotations := o.GetAnnotations()
 	if annotations == nil {

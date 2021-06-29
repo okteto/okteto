@@ -283,12 +283,6 @@ func UpdateDeployments(ctx context.Context, trList map[string]*model.Translation
 	return nil
 }
 
-func deleteUserAnnotations(annotations map[string]string, tr *model.Translation) {
-	for key := range tr.Annotations {
-		delete(annotations, key)
-	}
-}
-
 //DestroyDev destroys the k8s deployment of a dev environment
 func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return Destroy(ctx, dev.Name, dev.Namespace, c)
