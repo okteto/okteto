@@ -1,13 +1,13 @@
 curators:
- - pchico83
- - rberrelleza
- - rlamana
+  - pchico83
+  - rberrelleza
+  - rlamana
 
 features:
- - dco_check
- - comments
- - pr_description_required
- - release_notes
- - hacktoberfest
+  - dco_check
+  - comments
+  - pr_description_required
+  - release_notes
+  - hacktoberfest
 
 contributing_url: https://github.com/okteto/okteto/blob/master/contributing.md
