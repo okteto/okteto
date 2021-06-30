@@ -348,11 +348,11 @@ func (dev *Dev) loadAbsPaths(devPath string) error {
 		return err
 	}
 
-	if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && uri.Scheme == "") {
+	if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
 		dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
 		dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
 	}
-	if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && uri.Scheme == "") {
+	if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
 		dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
 		dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
 	}
