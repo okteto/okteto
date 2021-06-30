@@ -55,20 +55,28 @@ func GetBuildKitHost() (string, bool, error) {
 
 // getSolveOpt returns the buildkit solve options
 func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFrom, buildArgs, secrets []string) (*client.SolveOpt, error) {
-	if file == "" {
-		file = filepath.Join(buildCtx, "Dockerfile")
-	}
-	if _, err := os.Stat(file); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Dockerfile '%s' does not exist", file)
-	}
-	localDirs := map[string]string{
-		"context":    buildCtx,
-		"dockerfile": filepath.Dir(file),
+	var localDirs map[string]string
+	var frontendAttrs map[string]string
+	if uri, err := url.ParseRequestURI(buildCtx); err != nil || (uri != nil && uri.Scheme == "") {
+		if file == "" {
+			file = filepath.Join(buildCtx, "Dockerfile")
+		}
+		if _, err := os.Stat(file); os.IsNotExist(err) {
+			return nil, fmt.Errorf("Dockerfile '%s' does not exist", file)
+		}
+		localDirs = map[string]string{
+			"context":    buildCtx,
+			"dockerfile": filepath.Dir(file),
+		}
+		frontendAttrs = map[string]string{
+			"filename": filepath.Base(file),
+		}
+	} else {
+		frontendAttrs = map[string]string{
+			"context": buildCtx,
+		}
 	}
 
-	frontendAttrs := map[string]string{
-		"filename": filepath.Base(file),
-	}
 	if target != "" {
 		frontendAttrs["target"] = target
 	}

@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -198,9 +199,13 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 		if svc.Build == nil {
 			continue
 		}
-		svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
-		svc.Build.Dockerfile = loadAbsPath(stackDir, svc.Build.Dockerfile)
 
+		if uri, err := url.ParseRequestURI(svc.Build.Context); err == nil || (uri != nil && uri.Scheme != "") {
+			svc.Build.Dockerfile = ""
+		} else {
+			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
+			svc.Build.Dockerfile = loadAbsPath(stackDir, svc.Build.Dockerfile)
+		}
 	}
 	return s, nil
 }
