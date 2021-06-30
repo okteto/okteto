@@ -199,7 +199,8 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 		if svc.Build == nil {
 			continue
 		}
-		if _, err := url.ParseRequestURI(svc.Build.Context); err == nil {
+
+		if uri, err := url.ParseRequestURI(svc.Build.Context); err == nil || (uri != nil && uri.Scheme != "") {
 			svc.Build.Dockerfile = ""
 		} else {
 			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)

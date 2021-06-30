@@ -57,7 +57,8 @@ func GetBuildKitHost() (string, bool, error) {
 func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFrom, buildArgs, secrets []string) (*client.SolveOpt, error) {
 	var localDirs map[string]string
 	var frontendAttrs map[string]string
-	if _, err := url.ParseRequestURI(buildCtx); err != nil {
+
+	if uri, err := url.ParseRequestURI(buildCtx); err != nil || (uri != nil && uri.Scheme == "") {
 		if file == "" {
 			file = filepath.Join(buildCtx, "Dockerfile")
 		}
