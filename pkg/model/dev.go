@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -346,10 +347,15 @@ func (dev *Dev) loadAbsPaths(devPath string) error {
 	if err != nil {
 		return err
 	}
-	dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
-	dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
-	dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
-	dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+	if _, err := url.ParseRequestURI(dev.Image.Context); err != nil {
+		dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
+		dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
+	}
+	if _, err := url.ParseRequestURI(dev.Push.Context); err != nil {
+		dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
+		dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+	}
+
 	dev.loadVolumeAbsPaths(devDir)
 	for _, s := range dev.Services {
 		s.loadVolumeAbsPaths(devDir)
@@ -545,7 +551,7 @@ func setBuildDefaults(build *BuildInfo) {
 	if build.Context == "" {
 		build.Context = "."
 	}
-	if build.Dockerfile == "" {
+	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
 		build.Dockerfile = filepath.Join(build.Context, "Dockerfile")
 	}
 }
