@@ -58,7 +58,8 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFro
 	var localDirs map[string]string
 	var frontendAttrs map[string]string
 
-	if uri, err := url.ParseRequestURI(buildCtx); err != nil || (uri != nil && uri.Scheme == "") {
+	if uri, err := url.ParseRequestURI(buildCtx); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+
 		if file == "" {
 			file = filepath.Join(buildCtx, "Dockerfile")
 		}
