@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -39,13 +38,8 @@ func Build(ctx context.Context) *cobra.Command {
 	var secrets []string
 
 	cmd := &cobra.Command{
-		Use: "build [PATH]",
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) >= 2 {
-				return errors.New("okteto build requires one or no argument")
-			}
-			return nil
-		},
+		Use:   "build [PATH]",
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
