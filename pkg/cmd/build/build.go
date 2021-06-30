@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -36,11 +35,7 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		return err
 	}
 
-	if dockerFile == "" {
-		dockerFile = filepath.Join(path, "Dockerfile")
-	}
-
-	if buildKitHost == okteto.CloudBuildKitURL {
+	if buildKitHost == okteto.CloudBuildKitURL && dockerFile != "" {
 		dockerFile, err = registry.GetDockerfile(path, dockerFile)
 		if err != nil {
 			return err
