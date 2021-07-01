@@ -17,7 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net/http"
+	"net"
 	"strings"
 	"time"
 
@@ -274,18 +274,12 @@ func isSvcHealthy(ctx context.Context, svc *model.Service, stack *model.Stack, s
 	forwarder.Start(podName, stack.Namespace)
 	defer forwarder.Stop()
 	for _, port := range portsToTest {
-		url := fmt.Sprintf("http://%s:%d/", model.Localhost, port)
-		resp, err := http.Get(url)
+		url := fmt.Sprintf("%s:%d", model.Localhost, port)
+		_, err := net.Dial("tcp", url)
 		if err != nil {
-			url := fmt.Sprintf("https://%s:%d/", model.Localhost, port)
-			resp, err = http.Get(url)
-			if err != nil {
-				continue
-			}
+			continue
 		}
-		if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-			return true
-		}
+		return true
 	}
 	return false
 }
