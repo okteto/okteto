@@ -24,6 +24,10 @@ import (
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
+const (
+	DefaultReplicasNumber = 1
+)
+
 //Stack represents an okteto stack
 type StackRaw struct {
 	Version   string                     `yaml:"version,omitempty"`
@@ -66,7 +70,7 @@ type ServiceRaw struct {
 	MemReservation           Quantity           `yaml:"mem_reservation,omitempty"`
 	Ports                    []PortRaw          `yaml:"ports,omitempty"`
 	Restart                  string             `yaml:"restart,omitempty"`
-	Scale                    int32              `yaml:"scale"`
+	Scale                    *int32             `yaml:"scale"`
 	StopGracePeriodSneakCase *RawMessage        `yaml:"stop_grace_period,omitempty"`
 	StopGracePeriod          *RawMessage        `yaml:"stopGracePeriod,omitempty"`
 	Volumes                  []StackVolume      `yaml:"volumes,omitempty"`
@@ -75,7 +79,7 @@ type ServiceRaw struct {
 	DependsOn                DependsOn          `yaml:"depends_on,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
-	Replicas  int32           `yaml:"replicas"`
+	Replicas  *int32          `yaml:"replicas"`
 	Resources *StackResources `yaml:"resources,omitempty"`
 
 	BlkioConfig       *WarningType `yaml:"blkio_config,omitempty"`
@@ -138,7 +142,7 @@ type ServiceRaw struct {
 }
 
 type DeployInfoRaw struct {
-	Replicas      int32             `yaml:"replicas,omitempty"`
+	Replicas      *int32            `yaml:"replicas,omitempty"`
 	Resources     ResourcesRaw      `yaml:"resources,omitempty"`
 	Labels        Labels            `yaml:"labels,omitempty"`
 	RestartPolicy *RestartPolicyRaw `yaml:"restart_policy,omitempty"`
@@ -805,22 +809,17 @@ func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResourc
 	return resources, nil
 }
 
-func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas int32) (int32, error) {
-	var finalReplicas int32
-	finalReplicas = 1
-	if deployInfo != nil {
-		if deployInfo.Replicas > replicas {
-			finalReplicas = deployInfo.Replicas
-		}
+func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas *int32) (int32, error) {
+	if replicas != nil {
+		return *replicas, nil
 	}
-	if scale > finalReplicas {
-		finalReplicas = scale
+	if deployInfo != nil && deployInfo.Replicas != nil {
+		return *deployInfo.Replicas, nil
 	}
-	if replicas > finalReplicas {
-		finalReplicas = replicas
+	if scale != nil {
+		return *scale, nil
 	}
-
-	return finalReplicas, nil
+	return DefaultReplicasNumber, nil
 }
 
 func (r DeployComposeResources) toServiceResources() ServiceResources {

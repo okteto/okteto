@@ -22,50 +22,65 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/pointer"
 )
 
 func Test_DeployReplicasUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name      string
 		deployRaw *DeployInfoRaw
-		scale     int32
-		replicas  int32
+		scale     *int32
+		replicas  *int32
 		expected  int32
 	}{
 		{
-			name:      "empty",
+			name:      "empty with other deploy values",
 			deployRaw: &DeployInfoRaw{},
-			scale:     0,
-			replicas:  0,
+			scale:     nil,
+			replicas:  nil,
+			expected:  1,
+		},
+		{
+			name:      "empty",
+			deployRaw: nil,
+			scale:     nil,
+			replicas:  nil,
 			expected:  1,
 		},
 		{
 			name:      "deploy-replicas-set",
-			deployRaw: &DeployInfoRaw{Replicas: 4},
-			scale:     0,
-			replicas:  0,
+			deployRaw: &DeployInfoRaw{Replicas: pointer.Int32Ptr(4)},
+			scale:     nil,
+			replicas:  nil,
 			expected:  4,
 		},
 		{
 			name:      "scale",
 			deployRaw: &DeployInfoRaw{},
-			scale:     3,
-			replicas:  0,
+			scale:     pointer.Int32Ptr(3),
+			replicas:  nil,
 			expected:  3,
 		},
 		{
 			name:      "replicas",
 			deployRaw: &DeployInfoRaw{},
-			scale:     0,
-			replicas:  2,
+			scale:     nil,
+			replicas:  pointer.Int32Ptr(2),
 			expected:  2,
 		},
 		{
-			name:      "replicas-and-deploy-replicas",
-			deployRaw: &DeployInfoRaw{Replicas: 3},
-			scale:     0,
-			replicas:  2,
+			name:      "replicas priority",
+			deployRaw: &DeployInfoRaw{Replicas: pointer.Int32Ptr(1)},
+			scale:     pointer.Int32Ptr(2),
+			replicas:  pointer.Int32Ptr(3),
 			expected:  3,
+		},
+		{
+			name:      "deploy priority",
+			deployRaw: &DeployInfoRaw{Replicas: pointer.Int32Ptr(1)},
+			scale:     pointer.Int32Ptr(2),
+			replicas:  nil,
+			expected:  1,
 		},
 	}
 	for _, tt := range tests {
