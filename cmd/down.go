@@ -41,7 +41,7 @@ func Down() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "down",
 		Short: "Deactivates your development container",
-		Args:  cobra.NoArgs,
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)

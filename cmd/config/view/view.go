@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -28,6 +29,7 @@ import (
 func View(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "view",
+		Args:  utils.NoArgsAccepted(""),
 		Short: "Shows okteto configuration values of the authenticated user",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			t, err := okteto.GetToken()
