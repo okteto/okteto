@@ -34,7 +34,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	var noCache bool
 
 	cmd := &cobra.Command{
-		Use:   "deploy <name>",
+		Use:   "deploy",
 		Short: "Deploys a stack",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#deploy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
