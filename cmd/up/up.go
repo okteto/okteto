@@ -383,6 +383,11 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 }
 
 func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, create bool) error {
+	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
+		log.Warning("Ignoring '--build' argument. There is not 'build' primitives in your manifest")
+		return nil
+	}
+
 	oktetoRegistryURL := ""
 	if up.isOktetoNamespace {
 		var err error
