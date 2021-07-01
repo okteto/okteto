@@ -265,10 +265,6 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 			svc.Resources.Requests.Storage.Size.Value = resource.MustParse("1Gi")
 		}
 
-		if svc.Replicas == 0 {
-			svc.Replicas = 1
-		}
-
 		if svc.IsJob() {
 			for idx, volume := range svc.Volumes {
 				volumeName := fmt.Sprintf("pvc-%s-0", svcName)
