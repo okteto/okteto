@@ -385,7 +385,7 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
 		return errors.UserError{
-			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile on cwd"),
+			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
 			Hint: "Try creating a Dockerfile or specify 'context' and 'dockerfile' fields.",
 		}
 	}
