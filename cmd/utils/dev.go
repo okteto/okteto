@@ -60,8 +60,8 @@ func LoadDev(devPath, namespace, k8sContext string) (*model.Dev, error) {
 }
 
 func loadDevRc(dev *model.Dev) {
-	defaultDevRcPath := filepath.Join(config.GetOktetoHome(), ".okteto.yml")
-	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), ".okteto.yaml")
+	defaultDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yml")
+	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yaml")
 	var devRc *model.DevRC
 	var err error
 	if model.FileExists(defaultDevRcPath) {
