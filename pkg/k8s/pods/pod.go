@@ -25,6 +25,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/events"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
@@ -443,4 +444,28 @@ func isRunning(p *apiv1.Pod) bool {
 	}
 
 	return false
+}
+
+func GetHealthcheckFailure(ctx context.Context, namespace, svcName, stackName string, c kubernetes.Interface) string {
+	selector := fmt.Sprintf("%s=%s,%s=%s", model.StackNameLabel, stackName, model.StackServiceNameLabel, svcName)
+	pods, err := c.CoreV1().Pods(namespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: selector,
+		},
+	)
+	if err != nil {
+		return ""
+	}
+	for _, pod := range pods.Items {
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if containerStatus.RestartCount > 0 {
+				if failureReason := events.GetUnhealthyEventFailure(ctx, namespace, pod.Name, c); failureReason != "" {
+					return failureReason
+				}
+			}
+		}
+
+	}
+	return ""
 }

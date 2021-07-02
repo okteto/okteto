@@ -17,6 +17,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -223,6 +224,187 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 				t.Fatalf("expected %v but got %v", tt.expected, resources)
 			}
 
+		})
+	}
+}
+
+func Test_HealthcheckUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name          string
+		manifest      []byte
+		expected      *HealthCheck
+		expectedError bool
+	}{
+		{
+			name:          "healthcheck http through test with https",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: curl https://0.0.0.0:8080/readiness\n    image: okteto/vote:1"),
+			expected:      &HealthCheck{HTTP: &HTTPHealtcheck{Path: "/readiness", Port: 8080}, Interval: 10 * time.Second, Timeout: 10 * time.Minute, Retries: 5, StartPeriod: 30 * time.Second, Test: []string{}},
+			expectedError: false,
+		},
+		{
+			name:          "healthcheck disable",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      disable: true\n      test: cat file.txt\n    image: okteto/vote:1"),
+			expected:      nil,
+			expectedError: false,
+		},
+		{
+			name:          "healthcheck none",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: [\"NONE\"]\n    image: okteto/vote:1"),
+			expected:      nil,
+			expectedError: false,
+		},
+		{
+			name:          "just healthcheck command",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      test: cat file.txt\n    image: okteto/vote:1"),
+			expected:      &HealthCheck{Test: []string{"cat", "file.txt"}},
+			expectedError: false,
+		},
+		{
+			name:          "normal healthcheck",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: cat file.txt\n    image: okteto/vote:1"),
+			expected:      &HealthCheck{Test: []string{"cat", "file.txt"}, Interval: 10 * time.Second, Timeout: 10 * time.Minute, Retries: 5, StartPeriod: 30 * time.Second},
+			expectedError: false,
+		},
+		{
+			name:          "healthcheck without test",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n    image: okteto/vote:1"),
+			expected:      nil,
+			expectedError: true,
+		},
+		{
+			name:          "healthcheck with test and http",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: cat file.txt\n      http:\n        path: /\n        port: 8080\n    image: okteto/vote:1"),
+			expected:      nil,
+			expectedError: true,
+		},
+		{
+			name:          "healthcheck http path not starting with /",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      http:\n        path: db\n        port: 8080\n    image: okteto/vote:1"),
+			expected:      nil,
+			expectedError: true,
+		},
+		{
+			name:          "healthcheck http",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      http:\n        path: /\n        port: 8080\n    image: okteto/vote:1"),
+			expected:      &HealthCheck{HTTP: &HTTPHealtcheck{Path: "/", Port: 8080}, Interval: 10 * time.Second, Timeout: 10 * time.Minute, Retries: 5, StartPeriod: 30 * time.Second},
+			expectedError: false,
+		},
+		{
+			name:          "healthcheck http through test without failing flag",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: curl 0.0.0.0:8080/readiness\n    image: okteto/vote:1"),
+			expected:      &HealthCheck{HTTP: &HTTPHealtcheck{Path: "/readiness", Port: 8080}, Interval: 10 * time.Second, Timeout: 10 * time.Minute, Retries: 5, StartPeriod: 30 * time.Second, Test: []string{}},
+			expectedError: false,
+		},
+		{
+			name:          "healthcheck http through test with -f",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: curl -f localhost:8080/\n    image: okteto/vote:1"),
+			expected:      &HealthCheck{HTTP: &HTTPHealtcheck{Path: "/", Port: 8080}, Interval: 10 * time.Second, Timeout: 10 * time.Minute, Retries: 5, StartPeriod: 30 * time.Second, Test: []string{}},
+			expectedError: false,
+		},
+		{
+			name:          "healthcheck http through test with --fail",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: curl --fail 0.0.0.0:8080/\n    image: okteto/vote:1"),
+			expected:      &HealthCheck{HTTP: &HTTPHealtcheck{Path: "/", Port: 8080}, Interval: 10 * time.Second, Timeout: 10 * time.Minute, Retries: 5, StartPeriod: 30 * time.Second, Test: []string{}},
+			expectedError: false,
+		},
+		{
+			name:          "healthcheck http through test without /",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: curl --fail 0.0.0.0:8080\n    image: okteto/vote:1"),
+			expected:      &HealthCheck{HTTP: &HTTPHealtcheck{Path: "/", Port: 8080}, Interval: 10 * time.Second, Timeout: 10 * time.Minute, Retries: 5, StartPeriod: 30 * time.Second, Test: []string{}},
+			expectedError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, true)
+			if err != nil && !tt.expectedError {
+				t.Fatal(err)
+			} else if err == nil && tt.expectedError {
+				t.Fatal("error not thrown")
+			}
+			if !tt.expectedError {
+				if !reflect.DeepEqual(s.Services["app"].Healtcheck, tt.expected) {
+					t.Fatalf("Expected %v, but got %v", tt.expected, s.Services["app"].Healtcheck)
+				}
+			}
+
+		})
+	}
+}
+func Test_HealthcheckTestUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name            string
+		healthcheckTest string
+		expected        HealtcheckTest
+		expectedError   bool
+	}{
+		{
+			name:            "empty list",
+			healthcheckTest: `[]`,
+			expected:        []string{},
+			expectedError:   true,
+		},
+		{
+			name:            "NONE simple",
+			healthcheckTest: `["NONE"]`,
+			expected:        []string{"NONE"},
+			expectedError:   false,
+		},
+		{
+			name:            "NONE with args",
+			healthcheckTest: `["NONE", "curl -f localhost:5000"]`,
+			expected:        []string{"NONE"},
+			expectedError:   false,
+		},
+		{
+			name:            "other than the three expected",
+			healthcheckTest: `["TEST", "curl -f localhost:5000"]`,
+			expected:        []string{},
+			expectedError:   true,
+		},
+		{
+			name:            "CMDSHELL",
+			healthcheckTest: `["CMD-SHELL", "curl -f localhost:5000"]`,
+			expected:        []string{"curl", "-f", "localhost:5000"},
+			expectedError:   false,
+		},
+		{
+			name:            "CMD",
+			healthcheckTest: `["CMD", "curl", "-f", "localhost:5000"]`,
+			expected:        []string{"curl", "-f", "localhost:5000"},
+			expectedError:   false,
+		},
+		{
+			name:            "direct",
+			healthcheckTest: `curl -f localhost:5000`,
+			expected:        []string{"curl", "-f", "localhost:5000"},
+			expectedError:   false,
+		},
+		{
+			name: "list",
+			healthcheckTest: `- CMD
+- curl
+- -f
+- localhost:5000`,
+			expected:      []string{"curl", "-f", "localhost:5000"},
+			expectedError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result HealtcheckTest
+			if err := yaml.Unmarshal([]byte(tt.healthcheckTest), &result); err != nil {
+				if !tt.expectedError {
+					t.Fatalf("unexpected error unmarshaling %s: %s", tt.name, err.Error())
+				}
+				return
+			}
+			if tt.expectedError {
+				t.Fatalf("expected error unmarshaling %s not thrown", tt.name)
+			}
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly healthcheck test. Actual %v, Expected %v", result, tt.expected)
+			}
 		})
 	}
 }
