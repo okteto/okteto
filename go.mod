@@ -13,7 +13,6 @@ require (
 	github.com/containerd/console v1.0.1
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
-	github.com/docker/docker v20.10.0-beta1.0.20201110211921-af34b94a78a1+incompatible
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
@@ -48,7 +47,7 @@ require (
 	github.com/subosito/gotenv v1.2.0
 	github.com/vbauerster/mpb/v6 v6.0.2
 	github.com/whilp/git-urls v1.0.0
-	golang.org/x/crypto v0.0.0-20201117144127-c1f2f97bffc9
+	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
