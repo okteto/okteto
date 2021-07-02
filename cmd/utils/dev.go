@@ -74,8 +74,6 @@ func loadDevRc(dev *model.Dev) {
 		if err != nil {
 			log.Infof("error while reading .dev file: %s", err.Error())
 		}
-	} else {
-		log.Info("developer level dev file not found")
 	}
 
 	if devRc != nil {
