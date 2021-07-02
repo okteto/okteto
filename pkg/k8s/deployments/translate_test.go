@@ -202,7 +202,7 @@ services:
 							Name:            OktetoInitVolumeContainerName,
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "([ ! -f initialized ] && (cp -Rv /go/pkg/. /init-volume/1 || true) && (cp -Rv /root/.cache/go-build/. /init-volume/2 || true) && (cp -Rv /app/. /init-volume/3 || true) && (cp -Rv /path/. /init-volume/4 || true) && touch initialized) || true"},
+							Command:         []string{"sh", "-c", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -Rv /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -Rv /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -Rv /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -Rv /path/. /init-volume/4 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:  &runAsUser,
 								RunAsGroup: &runAsGroup,
@@ -725,7 +725,7 @@ docker:
 							Name:            OktetoInitVolumeContainerName,
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "([ ! -f initialized ] && (cp -Rv /app/. /init-volume/1 || true) && touch initialized) || true"},
+							Command:         []string{"sh", "-c", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -Rv /app/. /init-volume/1 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:    &rootUser,
 								RunAsGroup:   &rootUser,
@@ -1295,7 +1295,7 @@ environment:
 							Name:            OktetoInitVolumeContainerName,
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "([ ! -f initialized ] && (cp -Rv /app/. /init-volume/1 || true) && touch initialized) || true"},
+							Command:         []string{"sh", "-c", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -Rv /app/. /init-volume/1 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:    &rootUser,
 								RunAsGroup:   &rootUser,
