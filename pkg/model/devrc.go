@@ -12,7 +12,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-// Dev represents a development container
+// DevRC represents the default properties for dev containers
 type DevRC struct {
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -53,7 +53,7 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 				_, _ = sb.WriteString("Invalid manifest:\n")
 				l := strings.Split(err.Error(), "\n")
 				for i := 1; i < len(l); i++ {
-					e := strings.TrimSuffix(l[i], "in type model.Dev")
+					e := strings.TrimSuffix(l[i], "in type model.DevRC")
 					e = strings.TrimSpace(e)
 					_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 				}
@@ -63,7 +63,7 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 			}
 
 			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid manifest:", 1)
-			msg = strings.TrimSuffix(msg, "in type model.Dev")
+			msg = strings.TrimSuffix(msg, "in type model.DevRC")
 			return nil, errors.New(msg)
 		}
 	}
