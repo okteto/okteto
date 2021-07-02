@@ -16,6 +16,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"time"
@@ -104,4 +105,12 @@ func ucFirst(str string) string {
 		return string(unicode.ToUpper(v)) + str[i+1:]
 	}
 	return ""
+}
+
+func StopSpinnerIfInterruptSignal(spinner *Spinner) {
+	stopChannel := make(chan os.Signal, 1)
+	signal.Notify(stopChannel, os.Interrupt)
+	<-stopChannel
+	spinner.Stop()
+	os.Exit(130)
 }

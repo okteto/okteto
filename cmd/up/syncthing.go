@@ -75,10 +75,11 @@ func (up *upContext) sync(ctx context.Context) error {
 func (up *upContext) startSyncthing(ctx context.Context) error {
 	spinner := utils.NewSpinner("Starting the file synchronization service...")
 	spinner.Start()
+	up.spinner = spinner
+	defer spinner.Stop()
 	if err := config.UpdateStateFile(up.Dev, config.StartingSync); err != nil {
 		return err
 	}
-	defer spinner.Stop()
 
 	if err := up.Sy.Run(ctx); err != nil {
 		return err
@@ -111,6 +112,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	spinner := utils.NewSpinner("Synchronizing your files...")
 	spinner.Start()
+	up.spinner = spinner
 	defer spinner.Stop()
 
 	progressBar := utils.NewSyncthingProgressBar(40)

@@ -73,6 +73,7 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	spinner := utils.NewSpinner("Restarting deployments...")
 	spinner.Start()
 	defer spinner.Stop()
+	go utils.StopSpinnerIfInterruptSignal(spinner)
 
 	return pods.Restart(ctx, dev, client, sn)
 }

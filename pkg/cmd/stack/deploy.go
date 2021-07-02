@@ -88,6 +88,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
+	go utils.StopSpinnerIfInterruptSignal(spinner)
 
 	addHiddenExposedPortsToStack(ctx, s)
 

@@ -207,6 +207,7 @@ func (up *upContext) devMode(ctx context.Context, d *appsv1.Deployment, create b
 func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deployment, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()
+	up.spinner = spinner
 	defer spinner.Stop()
 
 	if err := config.UpdateStateFile(up.Dev, config.Starting); err != nil {
@@ -286,6 +287,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 
 	spinner := utils.NewSpinner(msg)
 	spinner.Start()
+	up.spinner = spinner
 	defer spinner.Stop()
 
 	optsWatchPod := metav1.ListOptions{

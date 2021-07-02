@@ -199,6 +199,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 	spinner := utils.NewSpinner(fmt.Sprintf("Pushing source code to '%s'...", dev.Name))
 	spinner.Start()
 	defer spinner.Stop()
+	go utils.StopSpinnerIfInterruptSignal(spinner)
 
 	if d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
 		if err := services.CreateDev(ctx, dev, c); err != nil {

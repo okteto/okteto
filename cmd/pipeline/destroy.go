@@ -89,6 +89,7 @@ func deletePipeline(ctx context.Context, name, namespace string, wait, destroyVo
 	spinner := utils.NewSpinner("Destroying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
+	go utils.StopSpinnerIfInterruptSignal(spinner)
 
 	_, err := okteto.DeletePipeline(ctx, name, namespace, destroyVolumes)
 	if err != nil {

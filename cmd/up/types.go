@@ -17,6 +17,7 @@ import (
 	"context"
 
 	"github.com/moby/term"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 	apiv1 "k8s.io/api/core/v1"
@@ -47,6 +48,7 @@ type upContext struct {
 	inFd              uintptr
 	isTerm            bool
 	stateTerm         *term.State
+	spinner           *utils.Spinner
 }
 
 // Forwarder is an interface for the port-forwarding features

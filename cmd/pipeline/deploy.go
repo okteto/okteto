@@ -142,6 +142,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
+	go utils.StopSpinnerIfInterruptSignal(spinner)
 
 	varList := []okteto.Variable{}
 	for _, v := range variables {

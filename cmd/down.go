@@ -89,6 +89,7 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 	spinner := utils.NewSpinner("Deactivating your development container...")
 	spinner.Start()
 	defer spinner.Stop()
+	go utils.StopSpinnerIfInterruptSignal(spinner)
 
 	client, _, err := k8Client.GetLocalWithContext(dev.Context)
 	if err != nil {
@@ -123,6 +124,7 @@ func removeVolume(ctx context.Context, dev *model.Dev) error {
 	spinner := utils.NewSpinner("Removing persistent volume...")
 	spinner.Start()
 	defer spinner.Stop()
+	go utils.StopSpinnerIfInterruptSignal(spinner)
 
 	client, _, err := k8Client.GetLocalWithContext(dev.Context)
 	if err != nil {

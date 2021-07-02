@@ -76,6 +76,7 @@ func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) er
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()
 	defer spinner.Stop()
+	go utils.StopSpinnerIfInterruptSignal(spinner)
 
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {

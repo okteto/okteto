@@ -92,6 +92,7 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 	pbScaling := 0.30
 	spinner.Start()
 	defer spinner.Stop()
+	go utils.StopSpinnerIfInterruptSignal(spinner)
 
 	ticker := time.NewTicker(1000 * time.Millisecond)
 	for {
