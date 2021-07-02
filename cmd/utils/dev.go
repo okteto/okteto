@@ -53,13 +53,15 @@ func LoadDev(devPath, namespace, k8sContext string) (*model.Dev, error) {
 		return nil, err
 	}
 
-	loadDevRc(dev)
+	if err := loadDevRc(dev); err != nil {
+		return nil, err
+	}
 	loadContext(dev, k8sContext)
 	loadNamespace(dev, namespace)
 	return dev, nil
 }
 
-func loadDevRc(dev *model.Dev) {
+func loadDevRc(dev *model.Dev) error {
 	defaultDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yml")
 	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yaml")
 	var devRc *model.DevRC
@@ -67,18 +69,19 @@ func loadDevRc(dev *model.Dev) {
 	if model.FileExists(defaultDevRcPath) {
 		devRc, err = model.GetRc(defaultDevRcPath)
 		if err != nil {
-			log.Infof("error while reading %s file: %s", defaultDevRcPath, err.Error())
+			return fmt.Errorf("error while reading %s file: %s", defaultDevRcPath, err.Error())
 		}
 	} else if model.FileExists(secondaryDevRcPath) {
 		devRc, err = model.GetRc(secondaryDevRcPath)
 		if err != nil {
-			log.Infof("error while reading %s file: %s", secondaryDevRcPath, err.Error())
+			return fmt.Errorf("error while reading %s file: %s", defaultDevRcPath, err.Error())
 		}
 	}
 
 	if devRc != nil {
 		model.MergeDevWithDevRc(dev, devRc)
 	}
+	return nil
 }
 
 func loadContext(dev *model.Dev, k8sContext string) {

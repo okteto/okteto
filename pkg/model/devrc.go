@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -35,7 +34,6 @@ func GetRc(devPath string) (*DevRC, error) {
 
 	dev, err := ReadRC(b)
 	if err != nil {
-		log.Warning("ignoring developer overwrites defined in %s: %s", devPath, err.Error())
 		return nil, err
 	}
 
@@ -50,7 +48,7 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 		if err := yaml.UnmarshalStrict(bytes, dev); err != nil {
 			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 				var sb strings.Builder
-				_, _ = sb.WriteString("Invalid manifest:\n")
+				_, _ = sb.WriteString("Invalid developer level manifest:\n")
 				l := strings.Split(err.Error(), "\n")
 				for i := 1; i < len(l); i++ {
 					e := strings.TrimSuffix(l[i], "in type model.DevRC")
@@ -62,7 +60,7 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 				return nil, errors.New(sb.String())
 			}
 
-			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid manifest:", 1)
+			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid developer level manifest:", 1)
 			msg = strings.TrimSuffix(msg, "in type model.DevRC")
 			return nil, errors.New(msg)
 		}
