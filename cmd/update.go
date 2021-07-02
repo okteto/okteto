@@ -15,20 +15,13 @@ package cmd
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"os"
 	"runtime"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
-	"github.com/vbauerster/mpb/v7"
-	"github.com/vbauerster/mpb/v7/decor"
 )
 
 const (
@@ -43,11 +36,7 @@ func Update() *cobra.Command {
 		Short: "Updates okteto version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if isUpdateAvailable() {
-				err := updateVersion()
-				if err != nil {
-					return err
-				}
-				log.Success("The latest okteto version has been installed")
+				displayUpdateSteps()
 			} else {
 				log.Success("The latest okteto version is already installed")
 			}
@@ -86,105 +75,21 @@ func isUpdateAvailable() bool {
 	return false
 }
 
-//updateVersion updates the version of the current okteto binary
-func updateVersion() error {
-	url, err := getDownloadURL()
-	if err != nil {
-		return err
-	}
-
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return fmt.Errorf("failed to create temp download dir")
-	}
-	downloadPath := fmt.Sprintf("%s/okteto", tempDir)
-	defer os.Remove(tempDir)
-
-	if err != nil {
-		return err
-	}
-
-	err = downloadLatestVersion(url, downloadPath)
-	if err != nil {
-		return err
-	}
-
-	err = os.Rename(downloadPath, INSTALL_PATH)
-	if err != nil {
-		return err
-	}
-
-	err = os.Chmod(INSTALL_PATH, 0700)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-//getDownloadURL gets the valid url for the current OS/ARCH
-func getDownloadURL() (string, error) {
+func displayUpdateSteps() {
+	fmt.Println("You can update okteto with the following:")
 	switch {
-	case runtime.GOOS == "darwin":
-		switch {
-		case runtime.GOARCH == "x86_64" || runtime.GOARCH == "amd64":
-			return fmt.Sprintf("%s/okteto-Darwin-x86_64", LATEST_URL), nil
-		case runtime.GOARCH == "arm64":
-			return fmt.Sprintf("%s/okteto-Darwin-arm64", LATEST_URL), nil
-		default:
-			return "", fmt.Errorf("The architecture (%s) is not supported by this command. Please try installing it manually", runtime.GOARCH)
-		}
-	case runtime.GOOS == "linux":
-		switch {
-		case runtime.GOARCH == "x86_64":
-			return fmt.Sprintf("%s/okteto-Linux-x86_64", LATEST_URL), nil
-		case runtime.GOARCH == "amd64":
-			return fmt.Sprintf("%s/okteto-Linux-x86_64", LATEST_URL), nil
-		case runtime.GOARCH == "armv8":
-			return fmt.Sprintf("%s/okteto-Linux-arm64", LATEST_URL), nil
-		case runtime.GOARCH == "aarch64":
-			return fmt.Sprintf("%s/okteto-Linux-arm64", LATEST_URL), nil
-		default:
-			return "", fmt.Errorf("The architecture (%s) is not supported by this command. Please try installing it manually", runtime.GOARCH)
-		}
-	default:
-		return "", fmt.Errorf("The OS (%s) is not supported by this command. Please try installing it manually", runtime.GOOS)
+	case runtime.GOOS == "darwin" || runtime.GOOS == "linux":
+		fmt.Print(`# Using installation script:
+curl https://get.okteto.com -sSfL | sh
+
+# Using brew:
+brew upgrade okteto`)
+	case runtime.GOOS == "windows":
+		fmt.Print(`# Using manual installation:
+1.- Download https://downloads.okteto.com/cli/okteto.exe
+2.- Add downloaded file to your $PATH
+
+# Using scoop:
+scoop update okteto`)
 	}
-}
-
-//downloadLatestVersion downloads latest version from the url given into the dir given
-func downloadLatestVersion(url, dir string) error {
-	log.Infof("Downloading new okteto version from %s", url)
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	out, err := os.Create(dir)
-	if err != nil {
-		return err
-	}
-
-	p := mpb.New(
-		mpb.WithWidth(40),
-		mpb.WithRefreshRate(180*time.Millisecond),
-	)
-
-	bar := p.Add(resp.ContentLength,
-		mpb.NewBarFiller(mpb.BarStyle().Rbound("|").Tip(">").Filler("-").Padding("_")),
-		mpb.PrependDecorators(
-			decor.CountersKibiByte("% .2f / % .2f"),
-		),
-		mpb.AppendDecorators(
-			decor.EwmaETA(decor.ET_STYLE_GO, 90),
-			decor.Name(" ] "),
-			decor.EwmaSpeed(decor.UnitKiB, "% .2f", 60),
-		),
-	)
-	proxyReader := bar.ProxyReader(resp.Body)
-	defer proxyReader.Close()
-
-	io.Copy(out, proxyReader)
-	p.Wait()
-	return nil
 }
