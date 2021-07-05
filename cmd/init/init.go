@@ -293,7 +293,7 @@ func askForResource(ctx context.Context, namespace string, c *kubernetes.Clients
 	}
 	sfsList, err := statefulsets.List(ctx, namespace, "", c)
 	if err != nil {
-		log.Yellow("Failed to list deployments: %s", err)
+		log.Yellow("Failed to list statefulsets: %s", err)
 		return nil, nil
 	}
 	options := []string{}
