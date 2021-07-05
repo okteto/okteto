@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/app"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -154,7 +154,7 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	username := okteto.GetSanitizedUsername()
 
-	k8sObject, err := app.GetResource(ctx, dev, dev.Namespace, c)
+	k8sObject, err := apps.GetResource(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		k8sObject.ObjectMeta = metav1.ObjectMeta{
 			Name:      dev.Name,

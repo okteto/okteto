@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/app"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
@@ -124,7 +124,7 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 
 // GetDevPod returns the dev pod for a deployment
 func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
-	k8sObject, err := app.GetRevisionAnnotatedK8sObjectOrFailed(ctx, dev, c, waitUntilDeployed)
+	k8sObject, err := apps.GetRevisionAnnotatedK8sObjectOrFailed(ctx, dev, c, waitUntilDeployed)
 	if err != nil {
 		return nil, err
 	}

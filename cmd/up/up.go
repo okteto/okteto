@@ -22,8 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/k8s/app"
-
 	"github.com/docker/docker/pkg/term"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
@@ -31,6 +29,7 @@ import (
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	k8sClient "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -319,7 +318,7 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 }
 
 func (up *upContext) getCurrentK8sObject(ctx context.Context, autoDeploy bool) (*model.K8sObject, bool, error) {
-	k8sObject, err := app.GetResource(ctx, up.Dev, up.Dev.Namespace, up.Client)
+	k8sObject, err := apps.GetResource(ctx, up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
 		if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) != model.OktetoUpCmd {
 			up.isSwap = true
@@ -397,7 +396,7 @@ func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObje
 	}
 
 	if up.Dev.Image.Name == "" {
-		devContainer := app.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
+		devContainer := apps.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
 		if devContainer == nil {
 			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 		}
@@ -429,7 +428,7 @@ func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObje
 }
 
 func (up *upContext) setDevContainer(k8sObject *model.K8sObject) error {
-	devContainer := app.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
+	devContainer := apps.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
 	if devContainer == nil {
 		return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 	}

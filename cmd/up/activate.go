@@ -9,7 +9,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/app"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -49,12 +49,12 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		return err
 	}
 
-	if up.isRetry && !app.IsDevModeOn(k8sObject) {
+	if up.isRetry && !apps.IsDevModeOn(k8sObject) {
 		log.Information("Development container has been deactivated")
 		return nil
 	}
 
-	if app.IsDevModeOn(k8sObject) && app.HasBeenChanged(k8sObject) {
+	if apps.IsDevModeOn(k8sObject) && apps.HasBeenChanged(k8sObject) {
 		return errors.UserError{
 			E: fmt.Errorf("Deployment '%s' has been modified while your development container was active", k8sObject.Name),
 			Hint: `Follow these steps:
@@ -219,12 +219,12 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	trList, err := app.GetTranslations(ctx, up.Dev, k8sObject, resetOnDevContainerStart, up.Client)
+	trList, err := apps.GetTranslations(ctx, up.Dev, k8sObject, resetOnDevContainerStart, up.Client)
 	if err != nil {
 		return err
 	}
 
-	if err := app.TranslateDevMode(trList, up.Client, up.isOktetoNamespace); err != nil {
+	if err := apps.TranslateDevMode(trList, up.Client, up.isOktetoNamespace); err != nil {
 		return err
 	}
 
@@ -240,11 +240,11 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 
 	for name := range trList {
 		if name == k8sObject.Name && create {
-			if err := app.Create(ctx, trList[name].K8sObject, up.Client); err != nil {
+			if err := apps.Create(ctx, trList[name].K8sObject, up.Client); err != nil {
 				return err
 			}
 		} else {
-			if err := app.Update(ctx, trList[name].K8sObject, up.Client); err != nil {
+			if err := apps.Update(ctx, trList[name].K8sObject, up.Client); err != nil {
 				return err
 			}
 		}
@@ -259,7 +259,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 			}
 		}
 
-		if err := app.UpdateOktetoRevision(ctx, trList[name].K8sObject, up.Client, up.Dev.Timeout); err != nil {
+		if err := apps.UpdateOktetoRevision(ctx, trList[name].K8sObject, up.Client, up.Dev.Timeout); err != nil {
 			return err
 		}
 

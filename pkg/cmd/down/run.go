@@ -16,7 +16,7 @@ package down
 import (
 	"context"
 
-	"github.com/okteto/okteto/pkg/k8s/app"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
@@ -37,13 +37,13 @@ func Run(dev *model.Dev, k8sObject *model.K8sObject, trList map[string]*model.Tr
 		if tr.K8sObject == nil {
 			continue
 		}
-		dTmp, err := app.TranslateDevModeOff(tr.K8sObject)
+		dTmp, err := apps.TranslateDevModeOff(tr.K8sObject)
 		if err != nil {
 			return err
 		}
 		tr.K8sObject = dTmp
 	}
-	if err := app.UpdateK8sObjects(ctx, trList, c); err != nil {
+	if err := apps.UpdateK8sObjects(ctx, trList, c); err != nil {
 		return err
 	}
 
@@ -62,7 +62,7 @@ func Run(dev *model.Dev, k8sObject *model.K8sObject, trList map[string]*model.Tr
 	}
 
 	if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoUpCmd {
-		if err := app.DestroyDev(ctx, k8sObject, dev, c); err != nil {
+		if err := apps.DestroyDev(ctx, k8sObject, dev, c); err != nil {
 			return err
 		}
 

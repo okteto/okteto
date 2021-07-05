@@ -23,7 +23,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
-	"github.com/okteto/okteto/pkg/k8s/app"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -195,7 +195,7 @@ func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sO
 		return nil, "", nil
 	}
 
-	if app.IsDevModeOn(r) {
+	if apps.IsDevModeOn(r) {
 		return nil, "", fmt.Errorf("the deployment '%s' is in development mode", r.Name)
 	}
 
