@@ -135,7 +135,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 			err = initCMD.SetDevDefaultsFromResource(ctx, dev, r, container, language)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("Deployment '%s' successfully analyzed", r.Name))
+				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", r.ObjectType, r.Name))
 			} else {
 				log.Yellow(fmt.Sprintf("Analysis for deployment '%s' failed: %s", r.Name, err))
 				linguist.SetForwardDefaults(dev, language)
