@@ -20,15 +20,7 @@ import (
 
 // CreatePreviewBody top body answer
 type CreatePreviewBody struct {
-	Namespace Namespace `json:"createPreview" yaml:"createPreview"`
-}
-
-//PreviewRun represents an Okteto preview status
-type PreviewRun struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Repository string `json:"repository"`
-	Status     string `json:"status"`
+	PreviewEnviroment PreviewEnv `json:"createPreview" yaml:"createPreview"`
 }
 
 //Previews represents an Okteto list of spaces
@@ -60,7 +52,7 @@ func CreatePreview(ctx context.Context, name, previewType string) (string, error
 		return "", err
 	}
 
-	return body.Namespace.ID, nil
+	return body.PreviewEnviroment.ID, nil
 }
 
 // DestroyPreview destroy a preview environment

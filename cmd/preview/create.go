@@ -46,12 +46,12 @@ func Create(ctx context.Context) *cobra.Command {
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return errors.New("create namespace requires one argument")
+				return errors.New("'preview destroy' requires one argument")
 			}
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&previewType, "type", "t", "personal", "define the preview type that may be created")
+	cmd.Flags().StringVarP(&previewType, "type", "t", "personal", "define the preview environment type. Accepted values are ['personal', 'global']")
 
 	return cmd
 }
@@ -69,7 +69,7 @@ func executeCreatePreview(ctx context.Context, name, previewType string) error {
 		return err
 	}
 
-	log.Success("Namespace '%s' created", oktetoNS)
+	log.Success("Preview environment '%s' created", oktetoNS)
 
 	return nil
 }

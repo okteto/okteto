@@ -23,7 +23,7 @@ import (
 func Preview(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "preview",
-		Short: "Preview management commands",
+		Short: "Preview environment management commands",
 	}
 	cmd.AddCommand(Create(ctx))
 	cmd.AddCommand(Destroy(ctx))

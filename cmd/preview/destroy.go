@@ -29,7 +29,7 @@ import (
 func Destroy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
-		Short: "Creates a namespace",
+		Short: "Destroy a preview environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
@@ -41,7 +41,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return errors.New("create namespace requires one argument")
+				return errors.New("'preview destroy' requires one argument")
 			}
 			return nil
 		},
