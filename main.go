@@ -24,6 +24,7 @@ import (
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
+	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/cmd/utils"
@@ -100,6 +101,7 @@ func main() {
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
 	root.AddCommand(cmd.Exec())
+	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 
 	err := utils.RunWithRetry(root.Execute)

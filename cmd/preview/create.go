@@ -1,0 +1,75 @@
+// Copyright 2020 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package preview
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/cobra"
+)
+
+// Create creates a preview environment
+func Create(ctx context.Context) *cobra.Command {
+	var previewType string
+	cmd := &cobra.Command{
+		Use:   "create <name>",
+		Short: "Creates a preview environment",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := validatePreviewType(previewType); err != nil {
+				return err
+			}
+
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+				return err
+			}
+
+			err := executeCreatePreview(ctx, args[0], previewType)
+			analytics.TrackCreatePreview(err == nil)
+			return err
+		},
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return errors.New("create namespace requires one argument")
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&previewType, "type", "t", "personal", "define the preview type that may be created")
+
+	return cmd
+}
+
+func validatePreviewType(previewType string) error {
+	if !(previewType == "global" || previewType == "personal") {
+		return fmt.Errorf("Value '%s' is invalid for flag 'type'. Accepted values are ['global', 'personal']", previewType)
+	}
+	return nil
+}
+
+func executeCreatePreview(ctx context.Context, name, previewType string) error {
+	oktetoNS, err := okteto.CreatePreview(ctx, name, previewType)
+	if err != nil {
+		return err
+	}
+
+	log.Success("Namespace '%s' created", oktetoNS)
+
+	return nil
+}
