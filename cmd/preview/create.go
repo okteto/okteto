@@ -51,7 +51,7 @@ func Create(ctx context.Context) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&previewType, "type", "t", "personal", "define the preview environment type. Accepted values are ['personal', 'global']")
+	cmd.Flags().StringVarP(&previewType, "type", "t", "personal", "the type of preview environment to create. Accepted values are ['personal', 'global']")
 
 	return cmd
 }
