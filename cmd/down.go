@@ -129,5 +129,5 @@ func removeVolume(ctx context.Context, dev *model.Dev) error {
 		return err
 	}
 
-	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, client, dev.Timeout)
+	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, client, dev.Timeout.Default)
 }

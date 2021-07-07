@@ -127,7 +127,7 @@ services:
 	}
 
 	expected := (63 * time.Second)
-	if expected != main.Timeout {
+	if expected != main.Timeout.Default {
 		t.Errorf("the default timeout wasn't applied, got %s, expected %s", main.Timeout, expected)
 	}
 }
@@ -249,7 +249,7 @@ forward:
 			}
 
 			defaultTimeout, _ := GetTimeout()
-			if defaultTimeout != d.Timeout {
+			if defaultTimeout != d.Timeout.Default {
 				t.Errorf("the default timeout wasn't applied, got %s, expected %s", d.Timeout, defaultTimeout)
 			}
 		})
