@@ -336,7 +336,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 				}
 				if strings.Contains(e.Message, "Insufficient cpu") || strings.Contains(e.Message, "Insufficient memory") {
 					insufficientResourcesErr = fmt.Errorf(e.Message)
-					spinner.Update("Waiting for new resources to be available...")
+					spinner.Update("Insufficient cpu/memory in the cluster. Waiting for new nodes to come up...")
 					continue
 				}
 				return fmt.Errorf(e.Message)
