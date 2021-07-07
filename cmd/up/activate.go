@@ -310,9 +310,9 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 	}
 
 	to := time.Now().Add(up.Dev.Timeout.Resources)
-	inssuficientResourcesEvent := false
+	var insufficientResourcesErr error
 	for {
-		if time.Now().After(to) && err != nil {
+		if time.Now().After(to) && insufficientResourcesErr != nil {
 			return err
 		}
 		select {
@@ -335,13 +335,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 					continue
 				}
 				if strings.Contains(e.Message, "Insufficient cpu") || strings.Contains(e.Message, "Insufficient memory") {
-					if !inssuficientResourcesEvent {
-						spinner.Stop()
-						log.Yellow("%s", e.Message)
-						spinner.Start()
-						inssuficientResourcesEvent = true
-						err = fmt.Errorf(e.Message)
-					}
+					insufficientResourcesErr = fmt.Errorf(e.Message)
 					continue
 				}
 				return fmt.Errorf(e.Message)
