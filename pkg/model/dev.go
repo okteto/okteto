@@ -586,7 +586,7 @@ func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 
 func (dev *Dev) setTimeout() error {
 	if dev.Timeout.Resources == 0 {
-		dev.Timeout.Resources = dev.Timeout.Default * 4
+		dev.Timeout.Resources = 120 * time.Second
 	}
 	if dev.Timeout.Default != 0 {
 		return nil
@@ -598,9 +598,6 @@ func (dev *Dev) setTimeout() error {
 	}
 
 	dev.Timeout.Default = t
-	if dev.Timeout.Resources == 0 {
-		dev.Timeout.Resources = dev.Timeout.Default * 4
-	}
 	return nil
 }
 
