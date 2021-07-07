@@ -16,6 +16,9 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"strings"
+
+	"github.com/okteto/okteto/pkg/errors"
 )
 
 // CreatePreviewBody top body answer
@@ -49,6 +52,10 @@ func CreatePreview(ctx context.Context, name, previewType string) (string, error
 	}`, name, previewType)
 
 	if err := query(ctx, q, &body); err != nil {
+		if strings.Contains(err.Error(), "operation-not-permitted") {
+			return "", errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+				Hint: "Please log in with an administrator account or use a personal preview environment"}
+		}
 		return "", err
 	}
 
