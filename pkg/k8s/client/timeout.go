@@ -13,7 +13,7 @@ var tOnce sync.Once
 
 func getKubernetesTimeout() time.Duration {
 	tOnce.Do(func() {
-		timeout = 10 * time.Second
+		timeout = 30 * time.Second
 		t, ok := os.LookupEnv("OKTETO_KUBERNETES_TIMEOUT")
 		if !ok {
 			return
