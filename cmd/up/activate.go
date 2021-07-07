@@ -313,7 +313,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 	var insufficientResourcesErr error
 	for {
 		if time.Now().After(to) && insufficientResourcesErr != nil {
-			return err
+			return insufficientResourcesErr
 		}
 		select {
 		case event := <-watcherEvents.ResultChan():
@@ -336,6 +336,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 				}
 				if strings.Contains(e.Message, "Insufficient cpu") || strings.Contains(e.Message, "Insufficient memory") {
 					insufficientResourcesErr = fmt.Errorf(e.Message)
+					spinner.Update("Waiting for new resources to be available...")
 					continue
 				}
 				return fmt.Errorf(e.Message)
