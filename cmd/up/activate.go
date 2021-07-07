@@ -91,6 +91,9 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
 			return fmt.Errorf("Docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
 		}
+		if _, ok := err.(errors.UserError); ok {
+			return err
+		}
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
 	}
 
@@ -313,7 +316,8 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 	var insufficientResourcesErr error
 	for {
 		if time.Now().After(to) && insufficientResourcesErr != nil {
-			return insufficientResourcesErr
+			return errors.UserError{E: fmt.Errorf("Insufficient resources."),
+				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest#timeout"}
 		}
 		select {
 		case event := <-watcherEvents.ResultChan():
