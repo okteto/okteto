@@ -14,9 +14,65 @@
 package apps
 
 import (
+	"context"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/model"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestGetStatefulset(t *testing.T) {
+	ctx := context.Background()
+	sfs := &appsv1.StatefulSet{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "test",
+			Namespace: "test",
+		},
+	}
 
+	clientset := fake.NewSimpleClientset(sfs)
+
+	dev := &model.Dev{
+		Name:      "test",
+		Namespace: "test",
+		Image: &model.BuildInfo{
+			Name: "image",
+		},
+	}
+	resource, err := GetResource(ctx, dev, "test", clientset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resource.ObjectType != model.StatefulsetObjectType {
+		t.Fatal("not retrieved correctly ")
+	}
+}
+
+func TestGetDeployment(t *testing.T) {
+	ctx := context.Background()
+	d := &appsv1.Deployment{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "test",
+			Namespace: "test",
+		},
+	}
+
+	clientset := fake.NewSimpleClientset(d)
+
+	dev := &model.Dev{
+		Name:      "test",
+		Namespace: "test",
+		Image: &model.BuildInfo{
+			Name: "image",
+		},
+	}
+	resource, err := GetResource(ctx, dev, "test", clientset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resource.ObjectType != model.DeploymentObjectType {
+		t.Fatal("not retrieved correctly ")
+	}
 }
