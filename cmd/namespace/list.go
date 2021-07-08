@@ -49,7 +49,7 @@ func executeListNamespaces(ctx context.Context) error {
 		return fmt.Errorf("failed to get namespaces: %s", err)
 	}
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Namespace\tsleeping\n")
+	fmt.Fprintf(w, "Namespace\tSleeping\n")
 	for _, space := range spaces {
 		fmt.Fprintf(w, "%s\t%v\n", space.ID, space.Sleeping)
 	}
