@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -102,6 +103,9 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		}
 		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
 			return fmt.Errorf("Docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
+		}
+		if _, ok := err.(errors.UserError); ok {
+			return err
 		}
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
 	}
@@ -267,7 +271,7 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 			continue
 		}
 
-		if err := deployments.UpdateOktetoRevision(ctx, trList[name].Deployment, up.Client, up.Dev.Timeout); err != nil {
+		if err := deployments.UpdateOktetoRevision(ctx, trList[name].Deployment, up.Client, up.Dev.Timeout.Default); err != nil {
 			return err
 		}
 
@@ -321,7 +325,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 		return err
 	}
 
+	to := time.Now().Add(up.Dev.Timeout.Resources)
+	var insufficientResourcesErr error
 	for {
+		if time.Now().After(to) && insufficientResourcesErr != nil {
+			return errors.UserError{E: fmt.Errorf("Insufficient resources."),
+				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest#timeout"}
+		}
 		select {
 		case event := <-watcherEvents.ResultChan():
 			e, ok := event.Object.(*apiv1.Event)
@@ -339,6 +349,11 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			switch e.Reason {
 			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
 				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
+					continue
+				}
+				if strings.Contains(e.Message, "Insufficient cpu") || strings.Contains(e.Message, "Insufficient memory") {
+					insufficientResourcesErr = fmt.Errorf(e.Message)
+					spinner.Update("Insufficient cpu/memory in the cluster. Waiting for new nodes to come up...")
 					continue
 				}
 				return fmt.Errorf(e.Message)

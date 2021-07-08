@@ -93,7 +93,7 @@ func ListBySelector(ctx context.Context, namespace string, selector map[string]s
 func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	start := time.Now()
-	to := start.Add(dev.Timeout * 4) // 120 seconds
+	to := start.Add(dev.Timeout.Resources)
 
 	for retries := 0; ; retries++ {
 		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)

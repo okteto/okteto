@@ -95,7 +95,7 @@ type Dev struct {
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	InitFromImage        bool                  `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
-	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
 }
@@ -173,6 +173,15 @@ type DinDContainer struct {
 	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
+
+// Timeout represents the timeout for the command
+type Timeout struct {
+	Default   time.Duration `json:"default,omitempty" yaml:"default,omitempty"`
+	Resources time.Duration `json:"resources,omitempty" yaml:"resources,omitempty"`
+}
+
+// Duration represents a duration
+type Duration time.Duration
 
 // SecurityContext represents a pod security context
 type SecurityContext struct {
@@ -576,7 +585,10 @@ func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 }
 
 func (dev *Dev) setTimeout() error {
-	if dev.Timeout != 0 {
+	if dev.Timeout.Resources == 0 {
+		dev.Timeout.Resources = 120 * time.Second
+	}
+	if dev.Timeout.Default != 0 {
 		return nil
 	}
 
@@ -585,7 +597,7 @@ func (dev *Dev) setTimeout() error {
 		return err
 	}
 
-	dev.Timeout = t
+	dev.Timeout.Default = t
 	return nil
 }
 

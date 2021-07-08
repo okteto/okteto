@@ -140,7 +140,7 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 
 // DestroyDev destroys the persistent volume claim for a given development container
 func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
-	return Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout)
+	return Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout.Default)
 }
 
 // Destroy destroys a persistent volume claim
