@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,6 +21,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
@@ -869,4 +870,118 @@ func Test_getAccessibleVolumeMounts(t *testing.T) {
 		t.Fatal("Wrong number of volumes warnings")
 	}
 
+}
+
+func Test_translateSvcProbe(t *testing.T) {
+	tests := []struct {
+		name     string
+		svc      *model.Service
+		expected *apiv1.Probe
+	}{
+		{
+			name: "nil healthcheck",
+			svc: &model.Service{
+				Healtcheck: nil,
+			},
+			expected: nil,
+		},
+		{
+			name: "healthcheck http",
+			svc: &model.Service{
+				Healtcheck: &model.HealthCheck{
+					HTTP: &model.HTTPHealtcheck{
+						Path: "/",
+						Port: 8080,
+					},
+				},
+			},
+			expected: &apiv1.Probe{
+				Handler: apiv1.Handler{
+					HTTPGet: &apiv1.HTTPGetAction{
+						Path: "/",
+						Port: intstr.IntOrString{IntVal: 8080},
+					},
+				},
+			},
+		},
+
+		{
+			name: "healthcheck http with other fields",
+			svc: &model.Service{
+				Healtcheck: &model.HealthCheck{
+					HTTP: &model.HTTPHealtcheck{
+						Path: "/",
+						Port: 8080,
+					},
+					StartPeriod: 30 * time.Second,
+					Retries:     5,
+					Timeout:     5 * time.Minute,
+					Interval:    45 * time.Second,
+				},
+			},
+			expected: &apiv1.Probe{
+				Handler: apiv1.Handler{
+					HTTPGet: &apiv1.HTTPGetAction{
+						Path: "/",
+						Port: intstr.IntOrString{IntVal: 8080},
+					},
+				},
+				InitialDelaySeconds: 30,
+				FailureThreshold:    5,
+				TimeoutSeconds:      300,
+				PeriodSeconds:       45,
+			},
+		},
+		{
+			name: "healthcheck exec",
+			svc: &model.Service{
+				Healtcheck: &model.HealthCheck{
+					Test: model.HealtcheckTest{
+						"curl", "db-service:8080/readiness",
+					},
+				},
+			},
+			expected: &apiv1.Probe{
+				Handler: apiv1.Handler{
+					Exec: &apiv1.ExecAction{
+						Command: []string{"curl", "db-service:8080/readiness"},
+					},
+				},
+			},
+		},
+		{
+			name: "healthcheck exec with others fields",
+			svc: &model.Service{
+				Healtcheck: &model.HealthCheck{
+					Test: model.HealtcheckTest{
+						"curl", "db-service:8080/readiness",
+					},
+					StartPeriod: 30 * time.Second,
+					Retries:     5,
+					Timeout:     5 * time.Minute,
+					Interval:    45 * time.Second,
+				},
+			},
+			expected: &apiv1.Probe{
+				Handler: apiv1.Handler{
+					Exec: &apiv1.ExecAction{
+						Command: []string{"curl", "db-service:8080/readiness"},
+					},
+				},
+				InitialDelaySeconds: 30,
+				FailureThreshold:    5,
+				TimeoutSeconds:      300,
+				PeriodSeconds:       45,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			probe := getSvcProbe(tt.svc)
+			if !reflect.DeepEqual(tt.expected, probe) {
+				t.Fatal("Wrong translation")
+			}
+		})
+	}
 }

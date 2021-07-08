@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,10 +19,11 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
-	"github.com/docker/docker/pkg/term"
+	"github.com/moby/term"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -142,6 +143,7 @@ func Up() *cobra.Command {
 					log.Infof("failed to save the state of the terminal: %s", err.Error())
 					return fmt.Errorf("failed to save the state of the terminal")
 				}
+				log.Infof("Terminal: %v", up.stateTerm)
 			}
 
 			err = up.start(autoDeploy, build)
@@ -383,6 +385,13 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 }
 
 func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, create bool) error {
+	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
+		return errors.UserError{
+			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
+			Hint: "Try creating a Dockerfile or specify 'context' and 'dockerfile' fields.",
+		}
+	}
+
 	oktetoRegistryURL := ""
 	if up.isOktetoNamespace {
 		var err error
@@ -482,6 +491,7 @@ func (up *upContext) shutdown() {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			log.Infof("failed to restore terminal: %s", err.Error())
 		}
+		restoreCursor()
 	}
 
 	log.Infof("starting shutdown sequence")
@@ -509,6 +519,12 @@ func (up *upContext) shutdown() {
 	log.Info("completed shutdown sequence")
 	up.ShutdownCompleted <- true
 
+}
+
+func restoreCursor() {
+	if runtime.GOOS != "windows" {
+		fmt.Fprint(os.Stdin, "\033[?25h")
+	}
 }
 
 func printDisplayContext(dev *model.Dev, divertURL string) {

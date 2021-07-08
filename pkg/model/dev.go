@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -38,7 +39,7 @@ import (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.3.2"
+	OktetoBinImageTag = "okteto/bin:1.3.3"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -346,10 +347,16 @@ func (dev *Dev) loadAbsPaths(devPath string) error {
 	if err != nil {
 		return err
 	}
-	dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
-	dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
-	dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
-	dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+
+	if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+		dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
+		dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
+	}
+	if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+		dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
+		dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+	}
+
 	dev.loadVolumeAbsPaths(devDir)
 	for _, s := range dev.Services {
 		s.loadVolumeAbsPaths(devDir)
@@ -545,7 +552,7 @@ func setBuildDefaults(build *BuildInfo) {
 	if build.Context == "" {
 		build.Context = "."
 	}
-	if build.Dockerfile == "" {
+	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
 		build.Dockerfile = filepath.Join(build.Context, "Dockerfile")
 	}
 }

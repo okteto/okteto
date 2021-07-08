@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -509,6 +509,52 @@ func TestDev_validateName(t *testing.T) {
 			}
 			if err := dev.validate(); (err != nil) != tt.wantErr {
 				t.Errorf("Dev.validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestDev_readImageContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		expected *BuildInfo
+	}{
+		{
+			name: "context pointing to url",
+			manifest: []byte(`name: deployment
+image:
+  context: https://github.com/okteto/okteto.git
+`),
+			expected: &BuildInfo{
+				Context: "https://github.com/okteto/okteto.git",
+			},
+		},
+		{
+			name: "context pointing to path",
+			manifest: []byte(`name: deployment
+image:
+  context: .
+`),
+			expected: &BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev, err := Read(tt.manifest)
+			if err != nil {
+				t.Fatalf("Wrong unmarshalling: %s", err.Error())
+			}
+			// Since dev isn't being unmarshalled through Read, apply defaults
+			// before validating.
+			if err := dev.setDefaults(); err != nil {
+				t.Fatalf("error applying defaults: %v", err)
+			}
+			if !reflect.DeepEqual(dev.Image, tt.expected) {
+				t.Fatalf("Expected %v but got %v", tt.expected, dev.Image)
 			}
 		})
 	}

@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -278,6 +278,8 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 
+	healthcheckProbe := getSvcProbe(svc)
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -311,6 +313,8 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							SecurityContext: translateSecurityContext(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
+							ReadinessProbe:  healthcheckProbe,
+							LivenessProbe:   healthcheckProbe,
 						},
 					},
 				},
@@ -345,7 +349,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
-
+	healthcheckProbe := getSvcProbe(svc)
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -380,6 +384,8 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 							VolumeMounts:    translateVolumeMounts(svcName, svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
+							ReadinessProbe:  healthcheckProbe,
+							LivenessProbe:   healthcheckProbe,
 						},
 					},
 					Volumes: translateVolumes(svcName, svc),
@@ -394,6 +400,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
+	healthcheckProbe := getSvcProbe(svc)
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -426,6 +433,8 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 							VolumeMounts:    translateVolumeMounts(svcName, svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
+							ReadinessProbe:  healthcheckProbe,
+							LivenessProbe:   healthcheckProbe,
 						},
 					},
 					Volumes: translateVolumes(svcName, svc),
@@ -865,4 +874,32 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 		}
 	}
 	return result
+}
+
+func getSvcProbe(svc *model.Service) *apiv1.Probe {
+	if svc.Healtcheck != nil {
+		var handler apiv1.Handler
+		if len(svc.Healtcheck.Test) != 0 {
+			handler = apiv1.Handler{
+				Exec: &apiv1.ExecAction{
+					Command: svc.Healtcheck.Test,
+				},
+			}
+		} else {
+			handler = apiv1.Handler{
+				HTTPGet: &apiv1.HTTPGetAction{
+					Path: svc.Healtcheck.HTTP.Path,
+					Port: intstr.IntOrString{IntVal: svc.Healtcheck.HTTP.Port},
+				},
+			}
+		}
+		return &apiv1.Probe{
+			Handler:             handler,
+			TimeoutSeconds:      int32(svc.Healtcheck.Timeout.Seconds()),
+			PeriodSeconds:       int32(svc.Healtcheck.Interval.Seconds()),
+			FailureThreshold:    int32(svc.Healtcheck.Retries),
+			InitialDelaySeconds: int32(svc.Healtcheck.StartPeriod.Seconds()),
+		}
+	}
+	return nil
 }
