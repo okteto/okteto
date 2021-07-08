@@ -27,12 +27,12 @@ import (
 
 // Create creates a preview environment
 func Create(ctx context.Context) *cobra.Command {
-	var previewType string
+	var previewScope string
 	cmd := &cobra.Command{
 		Use:   "create <name>",
 		Short: "Creates a preview environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := validatePreviewType(previewType); err != nil {
+			if err := validatePreviewType(previewScope); err != nil {
 				return err
 			}
 
@@ -40,7 +40,7 @@ func Create(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err := executeCreatePreview(ctx, args[0], previewType)
+			err := executeCreatePreview(ctx, args[0], previewScope)
 			analytics.TrackCreatePreview(err == nil)
 			return err
 		},
@@ -51,7 +51,7 @@ func Create(ctx context.Context) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&previewType, "type", "t", "personal", "the type of preview environment to create. Accepted values are ['personal', 'global']")
+	cmd.Flags().StringVarP(&previewScope, "scope", "s", "personal", "the scope of preview environment to create. Accepted values are ['personal', 'global']")
 
 	return cmd
 }
@@ -63,8 +63,8 @@ func validatePreviewType(previewType string) error {
 	return nil
 }
 
-func executeCreatePreview(ctx context.Context, name, previewType string) error {
-	oktetoNS, err := okteto.CreatePreview(ctx, name, previewType)
+func executeCreatePreview(ctx context.Context, name, previewScope string) error {
+	oktetoNS, err := okteto.CreatePreview(ctx, name, previewScope)
 	if err != nil {
 		return err
 	}

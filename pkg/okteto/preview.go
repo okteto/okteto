@@ -39,7 +39,7 @@ type PreviewEnv struct {
 }
 
 // CreatePreview creates a preview environment
-func CreatePreview(ctx context.Context, name, previewType string) (string, error) {
+func CreatePreview(ctx context.Context, name, previewScope string) (string, error) {
 	if err := validateNamespace(name); err != nil {
 		return "", err
 	}
@@ -49,7 +49,7 @@ func CreatePreview(ctx context.Context, name, previewType string) (string, error
 		createPreview(name: "%s", type: %s){
 			id
 		},
-	}`, name, previewType)
+	}`, name, previewScope)
 
 	if err := query(ctx, q, &body); err != nil {
 		if strings.Contains(err.Error(), "operation-not-permitted") {
