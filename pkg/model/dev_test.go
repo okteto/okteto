@@ -1015,7 +1015,7 @@ func TestGetTimeout(t *testing.T) {
 		want    time.Duration
 		wantErr bool
 	}{
-		{name: "default value", want: 30 * time.Second},
+		{name: "default value", want: 60 * time.Second},
 		{name: "env var", want: 134 * time.Second, env: "134s"},
 		{name: "bad env var", wantErr: true, env: "bad value"},
 	}
