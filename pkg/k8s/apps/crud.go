@@ -37,24 +37,25 @@ func GetResource(ctx context.Context, dev *model.Dev, namespace string, c kubern
 	case model.DeploymentObjectType:
 		k8sObject.Deployment, err = deployments.Get(ctx, dev, namespace, c)
 		if err != nil {
-			return nil, err
+			return k8sObject, err
 		}
 		k8sObject.Name = k8sObject.Deployment.Name
 		k8sObject.ObjectMeta = k8sObject.Deployment.ObjectMeta
 		k8sObject.Replicas = k8sObject.Deployment.Spec.Replicas
 		k8sObject.Selector = k8sObject.Deployment.Spec.Selector
 		k8sObject.PodTemplateSpec = &k8sObject.Deployment.Spec.Template
-
+		return k8sObject, nil
 	case model.StatefulsetObjectType:
 		k8sObject.StatefulSet, err = statefulsets.Get(ctx, dev, namespace, c)
 		if err != nil {
-			return nil, err
+			return k8sObject, err
 		}
 		k8sObject.Name = k8sObject.StatefulSet.Name
 		k8sObject.ObjectMeta = k8sObject.StatefulSet.ObjectMeta
 		k8sObject.Replicas = k8sObject.StatefulSet.Spec.Replicas
 		k8sObject.Selector = k8sObject.StatefulSet.Spec.Selector
 		k8sObject.PodTemplateSpec = &k8sObject.StatefulSet.Spec.Template
+		return k8sObject, nil
 	}
 
 	return nil, fmt.Errorf("Could not retrieve '%s' resource.", dev.Name)
