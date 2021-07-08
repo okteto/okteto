@@ -45,7 +45,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/src-d/enry/v2 v2.1.0
 	github.com/subosito/gotenv v1.2.0
-	github.com/vbauerster/mpb/v6 v6.0.2
+	github.com/vbauerster/mpb/v7 v7.0.2
 	github.com/whilp/git-urls v1.0.0
 	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

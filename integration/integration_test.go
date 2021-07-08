@@ -36,7 +36,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	ps "github.com/mitchellh/go-ps"
-	upCmd "github.com/okteto/okteto/cmd/up"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -152,7 +152,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetVersion(t *testing.T) {
-	v, err := upCmd.GetLatestVersionFromGithub()
+	v, err := utils.GetLatestVersionFromGithub()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -101,6 +101,7 @@ func main() {
 	root.AddCommand(cmd.Doctor())
 	root.AddCommand(cmd.Exec())
 	root.AddCommand(cmd.Restart())
+	root.AddCommand(cmd.Update())
 
 	err := utils.RunWithRetry(root.Execute)
 

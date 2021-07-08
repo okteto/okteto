@@ -66,12 +66,12 @@ func Up() *cobra.Command {
 				return errors.ErrNotInDevContainer
 			}
 
-			u := upgradeAvailable()
+			u := utils.UpgradeAvailable()
 			if len(u) > 0 {
 				warningFolder := filepath.Join(config.GetOktetoHome(), ".warnings")
 				if utils.GetWarningState(warningFolder, "version") != u {
 					log.Yellow("Okteto %s is available. To upgrade:", u)
-					log.Yellow("    %s", getUpgradeCommand())
+					log.Yellow("    %s", utils.GetUpgradeCommand())
 					if err := utils.SetWarningState(warningFolder, "version", u); err != nil {
 						log.Infof("failed to set warning version state: %s", err.Error())
 					}
