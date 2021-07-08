@@ -33,9 +33,9 @@ type Previews struct {
 
 //PreviewEnv represents an Okteto preview environment
 type PreviewEnv struct {
-	ID          string `json:"id" yaml:"id"`
-	Sleeping    bool   `json:"sleeping" yaml:"sleeping"`
-	PreviewType string `json:"previewType" yaml:"previewType"`
+	ID       string `json:"id" yaml:"id"`
+	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
+	Scope    string `json:"previewType" yaml:"previewType"`
 }
 
 // CreatePreview creates a preview environment

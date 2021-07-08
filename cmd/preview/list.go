@@ -49,9 +49,9 @@ func executeListPreviews(ctx context.Context) error {
 		return fmt.Errorf("failed to get preview environments: %s", err)
 	}
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Name\ttype\tisActive\n")
+	fmt.Fprintf(w, "name\tscope\tsleeeping\n")
 	for _, space := range spaces {
-		fmt.Fprintf(w, "%s\t%s\t%v\n", space.ID, space.PreviewType, !space.Sleeping)
+		fmt.Fprintf(w, "%s\t%s\t%v\n", space.ID, space.Scope, space.Sleeping)
 	}
 
 	w.Flush()
