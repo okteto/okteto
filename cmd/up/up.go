@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/moby/term"
+	" github.com/moby/term"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
