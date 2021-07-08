@@ -35,7 +35,7 @@ type Previews struct {
 type PreviewEnv struct {
 	ID       string `json:"id" yaml:"id"`
 	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
-	Scope    string `json:"previewType" yaml:"previewType"`
+	Scope    string `json:"previewScope" yaml:"previewScope"`
 }
 
 // CreatePreview creates a preview environment
@@ -46,7 +46,7 @@ func CreatePreview(ctx context.Context, name, previewScope string) (string, erro
 
 	var body CreatePreviewBody
 	q := fmt.Sprintf(`mutation {
-		createPreview(name: "%s", type: %s){
+		createPreview(name: "%s", scope: %s){
 			id
 		},
 	}`, name, previewScope)
@@ -80,7 +80,7 @@ func ListPreviews(ctx context.Context) ([]PreviewEnv, error) {
 		previews{
 			id,
 			sleeping,
-			previewType
+			previewScope,
 		},
 	}`
 
