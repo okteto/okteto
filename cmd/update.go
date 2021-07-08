@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -80,10 +80,12 @@ func displayUpdateSteps() {
 	switch {
 	case runtime.GOOS == "darwin" || runtime.GOOS == "linux":
 		fmt.Print(`# Using installation script:
-curl https://get.okteto.com -sSfL | sh
-
+curl https://get.okteto.com -sSfL | sh`)
+		if runtime.GOOS == "darwin" {
+			fmt.Print(`
 # Using brew:
 brew upgrade okteto`)
+		}
 	case runtime.GOOS == "windows":
 		fmt.Print(`# Using manual installation:
 1.- Download https://downloads.okteto.com/cli/okteto.exe
