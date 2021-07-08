@@ -200,7 +200,7 @@ func (up *upContext) devMode(ctx context.Context, k8sObject *model.K8sObject, cr
 	if err := up.createDevContainer(ctx, k8sObject, create); err != nil {
 		return err
 	}
-	return up.waitUntilDevelopmentContainerIsRunning(ctx)
+	return up.waitUntilDevelopmentContainerIsRunning(ctx, k8sObject.ObjectType)
 }
 
 func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
@@ -280,7 +280,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 	return nil
 }
 
-func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context) error {
+func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context, objectType model.ObjectType) error {
 	msg := "Pulling images..."
 	if up.Dev.PersistentVolumeEnabled() {
 		msg = "Attaching persistent volume..."
@@ -313,9 +313,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 		return err
 	}
 
+	killing := false
 	for {
 		select {
 		case event := <-watcherEvents.ResultChan():
+			if killing {
+				continue
+			}
 			e, ok := event.Object.(*apiv1.Event)
 			if !ok {
 				watcherEvents, err = up.Client.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
@@ -340,6 +344,10 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 				spinner.Update("Pulling images...")
 				spinner.Start()
 			case "Killing":
+				if objectType == model.StatefulsetObjectType {
+					killing = true
+					continue
+				}
 				return errors.ErrDevPodDeleted
 			case "Started":
 				if e.Message == "Started container okteto-init-data" {
