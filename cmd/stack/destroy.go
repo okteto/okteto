@@ -33,6 +33,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
 		Short: "Destroys a stack",
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/index.html#destroy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := utils.LoadStack(name, stackPath)
 			if err != nil {

@@ -16,6 +16,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -25,6 +26,7 @@ func Version() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "View the version of the okteto binary",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#version"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("okteto version %s \n", config.VersionString)
 			return nil

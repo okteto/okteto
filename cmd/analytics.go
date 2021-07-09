@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
@@ -24,6 +25,7 @@ import (
 func Analytics() *cobra.Command {
 	var disable bool
 	cmd := &cobra.Command{
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#analytics"),
 		Use:   "analytics",
 		Short: "Enable / Disable analytics",
 		RunE: func(cmd *cobra.Command, args []string) error {

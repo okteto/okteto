@@ -19,6 +19,7 @@ import (
 	"os"
 	"text/tabwriter"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -37,9 +38,7 @@ func List(ctx context.Context) *cobra.Command {
 			err := executeListNamespaces(ctx)
 			return err
 		},
-		Args: func(cmd *cobra.Command, args []string) error {
-			return nil
-		},
+		Args: utils.NoArgsAccepted(""),
 	}
 }
 

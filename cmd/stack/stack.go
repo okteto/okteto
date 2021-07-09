@@ -16,6 +16,7 @@ package stack
 import (
 	"context"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +25,7 @@ func Stack(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stack",
 		Short: "Stack management commands",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#stack"),
 	}
 	cmd.AddCommand(Deploy(ctx))
 	cmd.AddCommand(Destroy(ctx))

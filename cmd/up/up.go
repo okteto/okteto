@@ -61,6 +61,7 @@ func Up() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your development container",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return errors.ErrNotInDevContainer
