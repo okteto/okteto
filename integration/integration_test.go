@@ -386,7 +386,7 @@ func TestAll(t *testing.T) {
 }
 
 func TestAllStatefulset(t *testing.T) {
-	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
+	tName := fmt.Sprintf("TestAllSfs-%s-%s", runtime.GOOS, mode)
 	ctx := context.Background()
 	t.Run(tName, func(t *testing.T) {
 		oktetoPath, err := getOktetoPath(ctx)
