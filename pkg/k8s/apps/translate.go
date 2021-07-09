@@ -70,21 +70,13 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 			if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
 				return err
 			}
-			err := t.K8sObject.Deployment.Unmarshal([]byte(manifest))
-			if err != nil {
-				return err
-			}
 			t.K8sObject.Deployment = dOrig
 		} else {
-			dOrig := &appsv1.StatefulSet{}
-			if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
+			sfsOrig := &appsv1.StatefulSet{}
+			if err := json.Unmarshal([]byte(manifest), sfsOrig); err != nil {
 				return err
 			}
-			err := t.K8sObject.StatefulSet.Unmarshal([]byte(manifest))
-			if err != nil {
-				return err
-			}
-			t.K8sObject.StatefulSet = dOrig
+			t.K8sObject.StatefulSet = sfsOrig
 		}
 	}
 	dAnnotations := t.K8sObject.GetObjectMeta().GetAnnotations()
@@ -739,9 +731,8 @@ func TranslateDevModeOff(k8sObject *model.K8sObject) (*model.K8sObject, error) {
 		return nil, fmt.Errorf("malformed tr rules: %s", err)
 	}
 	k8sObject.SetReplicas(&trRules.Replicas)
-	if k8sObject.ObjectType == model.DeploymentObjectType {
-		k8sObject.Deployment.Spec.Strategy = trRules.Strategy
-	}
+	k8sObject.UpdateStrategy(trRules.Strategy)
+
 	annotations := k8sObject.GetObjectMeta().GetAnnotations()
 	delete(annotations, oktetoVersionAnnotation)
 	deleteUserAnnotations(annotations, trRules)

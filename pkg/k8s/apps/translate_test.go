@@ -100,8 +100,10 @@ services:
 		K8sObject:   d1,
 		Rules:       []*model.TranslationRule{rule1},
 		Replicas:    2,
-		Strategy: appsv1.DeploymentStrategy{
-			Type: appsv1.RollingUpdateDeploymentStrategyType,
+		Strategy: model.K8sObjectStrategy{
+			DeploymentStrategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+			},
 		},
 		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{

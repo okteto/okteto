@@ -23,6 +23,11 @@ type K8sObject struct {
 	StatefulSet *appsv1.StatefulSet
 }
 
+type K8sObjectStrategy struct {
+	DeploymentStrategy  appsv1.DeploymentStrategy
+	StatefulsetStrategy appsv1.StatefulSetUpdateStrategy
+}
+
 func NewResource(dev *Dev) *K8sObject {
 	r := &K8sObject{}
 
@@ -234,6 +239,15 @@ func (r *K8sObject) UpdateDeployment(d *appsv1.Deployment) {
 	r.Selector = d.Spec.Selector
 }
 
+func (r *K8sObject) UpdateStrategy(strategy K8sObjectStrategy) {
+	switch r.ObjectType {
+	case DeploymentObjectType:
+		r.Deployment.Spec.Strategy = strategy.DeploymentStrategy
+	case StatefulsetObjectType:
+		r.StatefulSet.Spec.UpdateStrategy = strategy.StatefulsetStrategy
+	}
+}
+
 func (r *K8sObject) UpdateStatefulset(sfs *appsv1.StatefulSet) {
 	r.StatefulSet = sfs
 	r.Name = sfs.Name
@@ -242,4 +256,17 @@ func (r *K8sObject) UpdateStatefulset(sfs *appsv1.StatefulSet) {
 	r.PodTemplateSpec = &sfs.Spec.Template
 	r.Replicas = sfs.Spec.Replicas
 	r.Selector = sfs.Spec.Selector
+}
+
+func (s K8sObjectStrategy) SetStrategy(otherStrategy K8sObjectStrategy) {
+	s = otherStrategy
+}
+
+func (s K8sObjectStrategy) SetStrategyFromResource(resource *K8sObject) {
+	switch resource.ObjectType {
+	case DeploymentObjectType:
+		s.DeploymentStrategy = resource.Deployment.Spec.Strategy
+	case StatefulsetObjectType:
+		s.StatefulsetStrategy = resource.StatefulSet.Spec.UpdateStrategy
+	}
 }

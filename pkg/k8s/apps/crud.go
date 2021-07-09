@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
-	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -88,7 +87,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, k8sObject *model.K8sOb
 	result := map[string]*model.Translation{}
 	if k8sObject != nil {
 		var replicas int32
-		var strategy appsv1.DeploymentStrategy
+		var k8sObjectStrategy model.K8sObjectStrategy
 		trRulesJSON := annotations.Get(k8sObject.PodTemplateSpec.GetObjectMeta(), model.TranslationAnnotation)
 		if trRulesJSON != "" {
 			trRules := &model.Translation{}
@@ -96,15 +95,11 @@ func GetTranslations(ctx context.Context, dev *model.Dev, k8sObject *model.K8sOb
 				return nil, fmt.Errorf("malformed tr rules: %s", err)
 			}
 			replicas = trRules.Replicas
-			if k8sObject.ObjectType == model.DeploymentObjectType {
-				strategy = trRules.Strategy
-			}
+			k8sObjectStrategy.SetStrategy(trRules.Strategy)
 
 		} else {
 			replicas = getPreviousK8sObjectReplicas(k8sObject)
-			if k8sObject.ObjectType == model.DeploymentObjectType {
-				strategy = k8sObject.Deployment.Spec.Strategy
-			}
+			k8sObjectStrategy.SetStrategyFromResource(k8sObject)
 		}
 
 		rule := dev.ToTranslationRule(dev, reset)
@@ -116,7 +111,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, k8sObject *model.K8sOb
 			Annotations: dev.Annotations,
 			Tolerations: dev.Tolerations,
 			Replicas:    replicas,
-			Strategy:    strategy,
+			Strategy:    k8sObjectStrategy,
 			Rules:       []*model.TranslationRule{rule},
 		}
 	}
