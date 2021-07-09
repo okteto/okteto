@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -34,6 +34,7 @@ func Doctor() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Generates a zip file with the okteto logs",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting doctor command")
 

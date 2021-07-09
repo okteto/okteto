@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -127,7 +127,7 @@ services:
 	}
 
 	expected := (63 * time.Second)
-	if expected != main.Timeout {
+	if expected != main.Timeout.Default {
 		t.Errorf("the default timeout wasn't applied, got %s, expected %s", main.Timeout, expected)
 	}
 }
@@ -249,7 +249,7 @@ forward:
 			}
 
 			defaultTimeout, _ := GetTimeout()
-			if defaultTimeout != d.Timeout {
+			if defaultTimeout != d.Timeout.Default {
 				t.Errorf("the default timeout wasn't applied, got %s, expected %s", d.Timeout, defaultTimeout)
 			}
 		})
@@ -509,6 +509,52 @@ func TestDev_validateName(t *testing.T) {
 			}
 			if err := dev.validate(); (err != nil) != tt.wantErr {
 				t.Errorf("Dev.validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestDev_readImageContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		expected *BuildInfo
+	}{
+		{
+			name: "context pointing to url",
+			manifest: []byte(`name: deployment
+image:
+  context: https://github.com/okteto/okteto.git
+`),
+			expected: &BuildInfo{
+				Context: "https://github.com/okteto/okteto.git",
+			},
+		},
+		{
+			name: "context pointing to path",
+			manifest: []byte(`name: deployment
+image:
+  context: .
+`),
+			expected: &BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev, err := Read(tt.manifest)
+			if err != nil {
+				t.Fatalf("Wrong unmarshalling: %s", err.Error())
+			}
+			// Since dev isn't being unmarshalled through Read, apply defaults
+			// before validating.
+			if err := dev.setDefaults(); err != nil {
+				t.Fatalf("error applying defaults: %v", err)
+			}
+			if !reflect.DeepEqual(dev.Image, tt.expected) {
+				t.Fatalf("Expected %v but got %v", tt.expected, dev.Image)
 			}
 		})
 	}
@@ -969,7 +1015,7 @@ func TestGetTimeout(t *testing.T) {
 		want    time.Duration
 		wantErr bool
 	}{
-		{name: "default value", want: 30 * time.Second},
+		{name: "default value", want: 60 * time.Second},
 		{name: "env var", want: 134 * time.Second, env: "134s"},
 		{name: "bad env var", wantErr: true, env: "bad value"},
 	}

@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -39,6 +39,7 @@ func Build(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "build [PATH]",
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/index.html#build"),
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 

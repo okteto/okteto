@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -36,6 +36,7 @@ func Restart() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "restart",
 		Short: "Restarts the deployments listed in the services field of the okteto manifest",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#restart"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)

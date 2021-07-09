@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net/http"
+	"net"
 	"strings"
 	"time"
 
@@ -123,6 +123,11 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 					}
 					return fmt.Errorf("Service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
 				}
+				if failedServices := getServicesWithFailedProbes(ctx, s, svcName, c, config); len(failedServices) > 0 {
+					for key, value := range failedServices {
+						return fmt.Errorf("Service '%s' has failed his healthcheck probes: %s", key, value)
+					}
+				}
 				continue
 			}
 			spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
@@ -189,6 +194,24 @@ func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, c
 	return true
 }
 
+func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) map[string]string {
+	svc := stack.Services[svcName]
+	dependingServices := make([]string, 0)
+	for dependingSvc, condition := range svc.DependsOn {
+		if stack.Services[dependingSvc].Healtcheck != nil && condition.Condition == model.DependsOnServiceHealthy {
+			dependingServices = append(dependingServices, dependingSvc)
+		}
+	}
+	failedServices := make(map[string]string)
+	for _, dependingSvc := range dependingServices {
+
+		if healthcheckFailure := pods.GetHealthcheckFailure(ctx, stack.Namespace, dependingSvc, stack.Name, client); healthcheckFailure != "" {
+			failedServices[dependingSvc] = healthcheckFailure
+		}
+	}
+	return failedServices
+}
+
 func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) []string {
 	svc := stack.Services[svcName]
 	dependingJobs := make([]string, 0)
@@ -213,7 +236,7 @@ func isSvcReady(ctx context.Context, stack *model.Stack, dependentSvcName string
 	case model.DependsOnServiceRunning:
 		return isSvcRunning(ctx, svc, stack.Namespace, dependentSvcName, client)
 	case model.DependsOnServiceHealthy:
-		return isSvcHealthy(ctx, svc, stack, dependentSvcName, client, config)
+		return isSvcHealthy(ctx, stack, dependentSvcName, client, config)
 	case model.DependsOnServiceCompleted:
 		if jobs.IsSuccedded(ctx, stack.Namespace, dependentSvcName, client) {
 			return true
@@ -251,10 +274,19 @@ func isSvcRunning(ctx context.Context, svc *model.Service, namespace, svcName st
 	return false
 }
 
-func isSvcHealthy(ctx context.Context, svc *model.Service, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
+func isSvcHealthy(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
+	svc := stack.Services[svcName]
 	if !isSvcRunning(ctx, svc, stack.Namespace, svcName, client) {
 		return false
 	}
+	if svc.Healtcheck != nil {
+		return true
+	} else {
+		return isAnyPortAvailable(ctx, svc, stack, svcName, client, config)
+	}
+}
+
+func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
 	forwarder := forward.NewPortForwardManager(ctx, model.Localhost, config, client, stack.Namespace)
 	podName := getPodName(ctx, stack, svcName, client)
 	if podName == "" {
@@ -274,18 +306,12 @@ func isSvcHealthy(ctx context.Context, svc *model.Service, stack *model.Stack, s
 	forwarder.Start(podName, stack.Namespace)
 	defer forwarder.Stop()
 	for _, port := range portsToTest {
-		url := fmt.Sprintf("http://%s:%d/", model.Localhost, port)
-		resp, err := http.Get(url)
+		url := fmt.Sprintf("%s:%d", model.Localhost, port)
+		_, err := net.Dial("tcp", url)
 		if err != nil {
-			url := fmt.Sprintf("https://%s:%d/", model.Localhost, port)
-			resp, err = http.Get(url)
-			if err != nil {
-				continue
-			}
+			continue
 		}
-		if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-			return true
-		}
+		return true
 	}
 	return false
 }

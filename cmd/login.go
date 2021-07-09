@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -31,6 +31,7 @@ func Login() *cobra.Command {
 	token := ""
 	cmd := &cobra.Command{
 		Use:   "login [url]",
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/index.html#login"),
 		Short: "Log into Okteto",
 		Long: `Log into Okteto
 

@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package up
+package utils
 
 import (
 	"testing"
@@ -41,7 +41,7 @@ func Test_shouldNotify(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldNotify(tt.args.latest, tt.args.current); got != tt.want {
+			if got := ShouldNotify(tt.args.latest, tt.args.current); got != tt.want {
 				t.Errorf("shouldNotify() = %v, want %v", got, tt.want)
 			}
 		})

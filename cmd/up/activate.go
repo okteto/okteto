@@ -1,9 +1,23 @@
+// Copyright 2021 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package up
 
 import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -88,6 +102,9 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		}
 		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
 			return fmt.Errorf("Docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
+		}
+		if _, ok := err.(errors.UserError); ok {
+			return err
 		}
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
 	}
@@ -259,7 +276,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 			}
 		}
 
-		if err := apps.UpdateOktetoRevision(ctx, trList[name].K8sObject, up.Client, up.Dev.Timeout); err != nil {
+		if err := apps.UpdateOktetoRevision(ctx, trList[name].K8sObject, up.Client, up.Dev.Timeout.Default); err != nil {
 			return err
 		}
 
@@ -314,7 +331,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 	}
 
 	killing := false
+	to := time.Now().Add(up.Dev.Timeout.Resources)
+	var insufficientResourcesErr error
 	for {
+		if time.Now().After(to) && insufficientResourcesErr != nil {
+			return errors.UserError{E: fmt.Errorf("Insufficient resources."),
+				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest#timeout"}
+		}
 		select {
 		case event := <-watcherEvents.ResultChan():
 			if killing {
@@ -335,6 +358,11 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			switch e.Reason {
 			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
 				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
+					continue
+				}
+				if strings.Contains(e.Message, "Insufficient cpu") || strings.Contains(e.Message, "Insufficient memory") {
+					insufficientResourcesErr = fmt.Errorf(e.Message)
+					spinner.Update("Insufficient cpu/memory in the cluster. Waiting for new nodes to come up...")
 					continue
 				}
 				return fmt.Errorf(e.Message)

@@ -599,7 +599,7 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		VolumeMounts:    []apiv1.VolumeMount{},
 	}
-	command := "[ ! -f initialized ]"
+	command := "echo initializing"
 	iVolume := 1
 	for _, v := range rule.Volumes {
 		if !strings.HasPrefix(v.SubPath, model.SourceCodeSubPath) && !strings.HasPrefix(v.SubPath, model.DataSubPath) {
@@ -614,10 +614,9 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 			},
 		)
 		mounPath := path.Join(v.MountPath, ".")
-		command = fmt.Sprintf("%s && (cp -Rv %s/. /init-volume/%d || true)", command, mounPath, iVolume)
+		command = fmt.Sprintf("%s && ( [ \"$(ls -A /init-volume/%d)\" ] || cp -Rv %s/. /init-volume/%d || true)", command, iVolume, mounPath, iVolume)
 		iVolume++
 	}
-	command = fmt.Sprintf("(%s && touch initialized) || true", command)
 
 	c.Command = []string{"sh", "-c", command}
 	translateInitResources(c, rule.InitContainer.Resources)
