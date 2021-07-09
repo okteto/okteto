@@ -112,6 +112,16 @@ func (r *K8sObject) GetObjectMeta() metav1.Object {
 	return nil
 }
 
+func (r *K8sObject) GetPodTemplate() *apiv1.PodTemplateSpec {
+	switch r.ObjectType {
+	case DeploymentObjectType:
+		return &r.Deployment.Spec.Template
+	case StatefulsetObjectType:
+		return &r.StatefulSet.Spec.Template
+	}
+	return nil
+}
+
 func (r *K8sObject) UpdateObjectMeta() {
 	switch r.ObjectType {
 	case DeploymentObjectType:

@@ -325,7 +325,7 @@ func TestAll(t *testing.T) {
 
 		log.Println("getting synchronized content")
 
-		c, err := getContent(endpoint, 120)
+		c, err := getContent(endpoint, 150)
 		if err != nil {
 			t.Fatalf("failed to get content: %s", err)
 		}

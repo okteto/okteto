@@ -56,7 +56,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 
 	if apps.IsDevModeOn(k8sObject) && apps.HasBeenChanged(k8sObject) {
 		return errors.UserError{
-			E: fmt.Errorf("Deployment '%s' has been modified while your development container was active", k8sObject.Name),
+			E: fmt.Errorf("%v '%s' has been modified while your development container was active", k8sObject.ObjectType, k8sObject.Name),
 			Hint: `Follow these steps:
 	  1. Execute 'okteto down'
 	  2. Apply your manifest changes again: 'kubectl apply'

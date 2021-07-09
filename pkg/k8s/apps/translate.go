@@ -114,17 +114,17 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 
 	commonTranslation(t)
 	labels.Set(t.K8sObject.PodTemplateSpec.GetObjectMeta(), model.DevLabel, "true")
-	TranslateDevAnnotations(t.K8sObject.PodTemplateSpec.GetObjectMeta(), t.Annotations)
-	TranslateDevTolerations(&t.K8sObject.PodTemplateSpec.Spec, t.Tolerations)
+	TranslateDevAnnotations(t.K8sObject.GetPodTemplate().GetObjectMeta(), t.Annotations)
+	TranslateDevTolerations(&t.K8sObject.GetPodTemplate().Spec, t.Tolerations)
 	t.K8sObject.PodTemplateSpec.Spec.TerminationGracePeriodSeconds = &devTerminationGracePeriodSeconds
 
 	if t.Interactive {
-		TranslateOktetoSyncSecret(&t.K8sObject.PodTemplateSpec.Spec, t.Name)
+		TranslateOktetoSyncSecret(&t.K8sObject.GetPodTemplate().Spec, t.Name)
 	} else {
-		TranslatePodAffinity(&t.K8sObject.PodTemplateSpec.Spec, t.Name)
+		TranslatePodAffinity(&t.K8sObject.GetPodTemplate().Spec, t.Name)
 	}
 	for _, rule := range t.Rules {
-		devContainer := GetDevContainer(&t.K8sObject.PodTemplateSpec.Spec, rule.Container)
+		devContainer := GetDevContainer(&t.K8sObject.GetPodTemplate().Spec, rule.Container)
 		if devContainer == nil {
 			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
 		}
@@ -134,16 +134,16 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		}
 
 		TranslateDevContainer(devContainer, rule)
-		TranslateOktetoVolumes(&t.K8sObject.PodTemplateSpec.Spec, rule)
-		TranslatePodSecurityContext(&t.K8sObject.PodTemplateSpec.Spec, rule.SecurityContext)
-		TranslatePodServiceAccount(&t.K8sObject.PodTemplateSpec.Spec, rule.ServiceAccount)
-		TranslateOktetoDevSecret(&t.K8sObject.PodTemplateSpec.Spec, t.Name, rule.Secrets)
+		TranslateOktetoVolumes(&t.K8sObject.GetPodTemplate().Spec, rule)
+		TranslatePodSecurityContext(&t.K8sObject.GetPodTemplate().Spec, rule.SecurityContext)
+		TranslatePodServiceAccount(&t.K8sObject.GetPodTemplate().Spec, rule.ServiceAccount)
+		TranslateOktetoDevSecret(&t.K8sObject.GetPodTemplate().Spec, t.Name, rule.Secrets)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
-			TranslateOktetoInitBinContainer(rule.InitContainer, &t.K8sObject.PodTemplateSpec.Spec)
-			TranslateOktetoInitFromImageContainer(&t.K8sObject.PodTemplateSpec.Spec, rule)
-			TranslateDinDContainer(&t.K8sObject.PodTemplateSpec.Spec, rule)
-			TranslateOktetoBinVolume(&t.K8sObject.PodTemplateSpec.Spec)
+			TranslateOktetoInitBinContainer(rule.InitContainer, &t.K8sObject.GetPodTemplate().Spec)
+			TranslateOktetoInitFromImageContainer(&t.K8sObject.GetPodTemplate().Spec, rule)
+			TranslateDinDContainer(&t.K8sObject.GetPodTemplate().Spec, rule)
+			TranslateOktetoBinVolume(&t.K8sObject.GetPodTemplate().Spec)
 		}
 	}
 	return nil
@@ -155,9 +155,9 @@ func commonTranslation(t *model.Translation) {
 	labels.Set(t.K8sObject.GetObjectMeta(), model.DevLabel, "true")
 
 	if t.Interactive {
-		labels.Set(t.K8sObject.PodTemplateSpec.GetObjectMeta(), model.InteractiveDevLabel, t.Name)
+		labels.Set(t.K8sObject.GetPodTemplate().GetObjectMeta(), model.InteractiveDevLabel, t.Name)
 	} else {
-		labels.Set(t.K8sObject.PodTemplateSpec.GetObjectMeta(), model.DetachedDevLabel, t.Name)
+		labels.Set(t.K8sObject.GetPodTemplate().GetObjectMeta(), model.DetachedDevLabel, t.Name)
 	}
 
 	if t.K8sObject.ObjectType == model.DeploymentObjectType {
