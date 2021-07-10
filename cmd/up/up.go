@@ -425,7 +425,7 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
 	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, nil, "tty"); err != nil {
-		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
+		return err
 	}
 	for _, s := range up.Dev.Services {
 		if s.Image.Name == up.Dev.Image.Name {
