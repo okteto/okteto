@@ -37,6 +37,9 @@ const (
 	// DeploymentAnnotation indicates the original deployment manifest  when the development container was activated
 	DeploymentAnnotation = "dev.okteto.com/deployment"
 
+	// StatefulsetAnnotation indicates the original statefulset manifest  when the development container was activated
+	StatefulsetAnnotation = "dev.okteto.com/statefulset"
+
 	// LastBuiltAnnotation indicates the timestamp of an operation
 	LastBuiltAnnotation = "dev.okteto.com/last-built"
 

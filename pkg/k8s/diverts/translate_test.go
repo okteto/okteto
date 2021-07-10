@@ -118,7 +118,9 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 			},
 		},
 	}
-	translated, err := translateService("cindy", d, original)
+	k8sObject := &model.K8sObject{}
+	k8sObject.UpdateDeployment(d)
+	translated, err := translateService("cindy", k8sObject, original)
 	if err != nil {
 		t.Fatalf("error translating service: %s", err.Error())
 	}
@@ -211,7 +213,9 @@ func Test_translateServiceDiverted(t *testing.T) {
 	}
 
 	t.Run("IntServiceModValues", func(t *testing.T) {
-		translated, err := translateService("cindy", d, original)
+		k8sObject := &model.K8sObject{}
+		k8sObject.UpdateDeployment(d)
+		translated, err := translateService("cindy", k8sObject, original)
 		if err != nil {
 			t.Fatalf("error translating service: %s", err.Error())
 		}
@@ -226,7 +230,9 @@ func Test_translateServiceDiverted(t *testing.T) {
 		stringMod := "{\"proxy_port\":\"1026\",\"original_port\":\"8080\",\"original_target_port\":\"8080\"}"
 		original.ObjectMeta.Annotations[model.OktetoDivertServiceModificationAnnotation] = stringMod
 
-		translated, err := translateService("cindy", d, original)
+		k8sObject := &model.K8sObject{}
+		k8sObject.UpdateDeployment(d)
+		translated, err := translateService("cindy", k8sObject, original)
 		if err != nil {
 			t.Fatalf("error translating service: %s", err.Error())
 		}

@@ -21,8 +21,8 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
@@ -102,17 +102,17 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 		}
 	}
 
-	d, err := deployments.Get(ctx, dev, dev.Namespace, client)
+	k8sObject, err := apps.GetResource(ctx, dev, dev.Namespace, client)
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 
-	trList, err := deployments.GetTranslations(ctx, dev, d, false, client)
+	trList, err := apps.GetTranslations(ctx, dev, k8sObject, false, client)
 	if err != nil {
 		return err
 	}
 
-	err = down.Run(dev, d, trList, true, client)
+	err = down.Run(dev, k8sObject, trList, true, client)
 	if err != nil {
 		return err
 	}

@@ -11,15 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployments
+package apps
 
 import (
 	"encoding/json"
+	"strings"
 
-	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,12 +27,21 @@ type stateBeforeSleeping struct {
 	Replicas int
 }
 
+func setAnnotation(o metav1.Object, key, value string) {
+	annotations := o.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations[key] = value
+	o.SetAnnotations(annotations)
+}
+
 func setTranslationAsAnnotation(o metav1.Object, tr *model.Translation) error {
 	translationBytes, err := json.Marshal(tr)
 	if err != nil {
 		return err
 	}
-	annotations.Set(o, model.TranslationAnnotation, string(translationBytes))
+	setAnnotation(o, model.TranslationAnnotation, string(translationBytes))
 	return nil
 }
 
@@ -45,16 +54,40 @@ func getTranslationFromAnnotation(annotations map[string]string) (model.Translat
 	return tr, nil
 }
 
-func getPreviousDeploymentReplicas(d *appsv1.Deployment) int32 {
-	replicas := *d.Spec.Replicas
-	previousState, ok := d.Annotations[model.StateBeforeSleepingAnnontation]
-	if !ok {
-		return replicas
+func getPreviousK8sObjectReplicas(r *model.K8sObject) int32 {
+	replicas := r.GetReplicas()
+	previousState := r.GetAnnotation(model.StateBeforeSleepingAnnontation)
+	if previousState == "" {
+		return *replicas
 	}
 	var state stateBeforeSleeping
 	if err := json.Unmarshal([]byte(previousState), &state); err != nil {
-		log.Infof("error getting previous state of deployment '%s': %s", d.Name, err.Error())
+		log.Infof("error getting previous state of %s '%s': %s", strings.ToLower(string(r.ObjectType)), r.Name, err.Error())
 		return 1
 	}
 	return int32(state.Replicas)
+}
+
+func deleteUserAnnotations(annotations map[string]string, tr *model.Translation) error {
+	if tr.Annotations == nil {
+		return nil
+	}
+	for key := range tr.Annotations {
+		delete(annotations, key)
+	}
+	return nil
+}
+
+func GetDevContainer(spec *apiv1.PodSpec, containerName string) *apiv1.Container {
+	if containerName == "" {
+		return &spec.Containers[0]
+	}
+
+	for i := range spec.Containers {
+		if spec.Containers[i].Name == containerName {
+			return &spec.Containers[i]
+		}
+	}
+
+	return nil
 }
