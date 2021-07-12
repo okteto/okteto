@@ -166,6 +166,9 @@ func GetToken() (*Token, error) {
 	if currentToken == nil {
 		p := getTokenPath()
 
+		if _, err := os.Stat(p); err != nil {
+			return nil, err
+		}
 		b, err := ioutil.ReadFile(p)
 		if err != nil {
 			return nil, err
