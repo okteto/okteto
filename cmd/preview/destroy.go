@@ -11,48 +11,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package namespace
+package preview
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
-	"text/tabwriter"
 
-	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-// List all namespace in current context
-func List(ctx context.Context) *cobra.Command {
-	return &cobra.Command{
-		Use:   "namespace",
-		Short: "List namespaces managed by Okteto in your current context",
+// Destroy destroy a preview
+func Destroy(ctx context.Context) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "destroy <name>",
+		Short: "Destroy a preview environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
 			}
 
-			err := executeListNamespaces(ctx)
+			err := executeDeletePreview(ctx, args[0])
+			analytics.TrackDeletePreview(err == nil)
 			return err
 		},
-		Args: utils.NoArgsAccepted(""),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return errors.New("'preview destroy' requires one argument")
+			}
+			return nil
+		},
 	}
+
+	return cmd
 }
 
-func executeListNamespaces(ctx context.Context) error {
-	spaces, err := okteto.ListNamespaces(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get namespaces: %s", err)
-	}
-	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Namespace\tSleeping\n")
-	for _, space := range spaces {
-		fmt.Fprintf(w, "%s\t%v\n", space.ID, space.Sleeping)
+func executeDeletePreview(ctx context.Context, namespace string) error {
+	if err := okteto.DestroyPreview(ctx, namespace); err != nil {
+		return fmt.Errorf("failed to delete namespace: %s", err)
 	}
 
-	w.Flush()
+	log.Success("Preview environment '%s' deleted", namespace)
 	return nil
 }
