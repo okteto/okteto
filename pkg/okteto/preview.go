@@ -35,11 +35,11 @@ type Previews struct {
 type PreviewEnv struct {
 	ID       string `json:"id" yaml:"id"`
 	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
-	Scope    string `json:"previewScope" yaml:"previewScope"`
+	Scope    string `json:"scope" yaml:"scope"`
 }
 
 // CreatePreview creates a preview environment
-func CreatePreview(ctx context.Context, name, previewScope string) (string, error) {
+func CreatePreview(ctx context.Context, name, scope string) (string, error) {
 	if err := validateNamespace(name); err != nil {
 		return "", err
 	}
@@ -49,7 +49,7 @@ func CreatePreview(ctx context.Context, name, previewScope string) (string, erro
 		createPreview(name: "%s", scope: %s){
 			id
 		},
-	}`, name, previewScope)
+	}`, name, scope)
 
 	if err := query(ctx, q, &body); err != nil {
 		if strings.Contains(err.Error(), "operation-not-permitted") {
@@ -80,7 +80,7 @@ func ListPreviews(ctx context.Context) ([]PreviewEnv, error) {
 		previews{
 			id,
 			sleeping,
-			previewScope,
+			scope,
 		},
 	}`
 
