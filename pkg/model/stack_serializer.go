@@ -1027,13 +1027,13 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
+	raw, err = ExpandEnv(raw)
+	if err != nil {
+		return err
+	}
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		v.LocalPath, err = ExpandEnv(parts[0])
 		v.LocalPath = sanitizeName(v.LocalPath)
-		if err != nil {
-			return err
-		}
 		v.RemotePath = parts[1]
 	} else {
 		v.RemotePath = parts[0]
