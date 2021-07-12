@@ -35,7 +35,7 @@ type Previews struct {
 type PreviewEnv struct {
 	ID       string `json:"id" yaml:"id"`
 	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
-	Scope    string `json:"scope" yaml:"scope"`
+	Scope    string `json:"previewScope" yaml:"previewScope"`
 }
 
 // CreatePreview creates a preview environment
@@ -80,7 +80,7 @@ func ListPreviews(ctx context.Context) ([]PreviewEnv, error) {
 		previews{
 			id,
 			sleeping,
-			scope,
+			previewScope,
 		},
 	}`
 
