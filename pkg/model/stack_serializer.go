@@ -1033,7 +1033,7 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		v.LocalPath = sanitizeName(v.LocalPath)
+		v.LocalPath = sanitizeName(parts[0])
 		v.RemotePath = parts[1]
 	} else {
 		v.RemotePath = parts[0]
