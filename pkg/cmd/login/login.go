@@ -67,8 +67,8 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*okteto.User, error) {
 	if err := open.Start(authorizationURL); err != nil {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {
 			return nil, errors.UserError{
-				E:    fmt.Errorf("No browser could be found"),
-				Hint: "Check '--token' flag to run this command in server mode. More information can be found here: https://okteto.com/docs/reference/cli#login",
+				E:    fmt.Errorf("Coudn't locate a web browser in your $PATH"),
+				Hint: "Use the '--token' flag to run this command in headless mode. More information can be found here: https://okteto.com/docs/reference/cli#login",
 			}
 		}
 		log.Errorf("Something went wrong opening your browser: %s\n", err)
