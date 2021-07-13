@@ -4,24 +4,28 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"sort"
 	"strings"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
-	apiv1 "k8s.io/api/core/v1"
 )
 
 // DevRC represents the default properties for dev containers
 type DevRC struct {
-	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
+	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
+	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
+	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Sync                 Sync                  `json:"sync,omitempty" yaml:"sync,omitempty"`
-	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
-	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
@@ -70,116 +74,150 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 }
 
 func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
-	for labelKey, labelValue := range devRc.Labels {
-		if _, ok := dev.Labels[labelKey]; !ok {
-			dev.Labels[labelKey] = labelValue
-		}
-	}
-
 	for annotationKey, annotationValue := range devRc.Annotations {
-		if _, ok := dev.Annotations[annotationKey]; !ok {
-			dev.Annotations[annotationKey] = annotationValue
-		}
+		dev.Annotations[annotationKey] = annotationValue
 	}
 
-	if devRc.Context != "" && dev.Context == "" {
+	if devRc.Context != "" {
 		dev.Context = devRc.Context
 	}
 
-	if devRc.Namespace != "" && dev.Namespace == "" {
-		dev.Namespace = devRc.Namespace
+	if devRc.Docker.Enabled {
+		dev.Docker.Enabled = devRc.Docker.Enabled
+	}
+	if devRc.Docker.Image != "" {
+		dev.Docker.Image = devRc.Docker.Image
+	}
+	for resourceKey, resourceValue := range devRc.Docker.Resources.Limits {
+		dev.Docker.Resources.Limits[resourceKey] = resourceValue
+	}
+	for resourceKey, resourceValue := range devRc.Docker.Resources.Requests {
+		dev.Docker.Resources.Requests[resourceKey] = resourceValue
 	}
 
 	for _, env := range devRc.Environment {
-		if !isEnvOnDev(dev, env) {
+		idx := getEnvVarIdx(dev.Environment, env)
+		if idx != -1 {
+			dev.Environment[idx] = env
+		} else {
 			dev.Environment = append(dev.Environment, env)
 		}
-	}
 
-	for _, secret := range devRc.Secrets {
-		if !isSecretOnDev(dev, secret) {
-			dev.Secrets = append(dev.Secrets, secret)
+	}
+	sort.SliceStable(dev.Environment, func(i, j int) bool {
+		return strings.Compare(dev.Environment[i].Name, dev.Environment[j].Name) < 0
+	})
+
+	for _, fwd := range devRc.Forward {
+		idx := getForwardPortIdx(dev.Forward, fwd)
+		if idx != -1 {
+			dev.Forward[idx] = fwd
+		} else {
+			dev.Forward = append(dev.Forward, fwd)
 		}
+
+	}
+	sort.SliceStable(dev.Forward, func(i, j int) bool {
+		return dev.Forward[i].less(&dev.Forward[j])
+	})
+
+	if devRc.InitContainer.Image != "" {
+		dev.InitContainer.Image = devRc.InitContainer.Image
+	}
+	for resourceKey, resourceValue := range devRc.InitContainer.Resources.Limits {
+		dev.InitContainer.Resources.Limits[resourceKey] = resourceValue
+	}
+	for resourceKey, resourceValue := range devRc.InitContainer.Resources.Requests {
+		dev.InitContainer.Resources.Requests[resourceKey] = resourceValue
 	}
 
-	if devRc.Sync.Compression && !dev.Sync.Compression {
-		dev.Sync.Compression = devRc.Sync.Compression
+	for labelKey, labelValue := range devRc.Labels {
+		dev.Labels[labelKey] = labelValue
 	}
 
-	if devRc.Sync.Verbose && !dev.Sync.Verbose {
-		dev.Sync.Verbose = devRc.Sync.Verbose
-	}
-
-	if devRc.Sync.RescanInterval != 0 && dev.Sync.RescanInterval == 0 {
-		dev.Sync.RescanInterval = devRc.Sync.RescanInterval
-	}
-
-	for _, folder := range devRc.Sync.Folders {
-		if !isFolderSyncInDev(dev.Sync.Folders, folder) {
-			dev.Sync.Folders = append(dev.Sync.Folders, folder)
-		}
-	}
-
-	for resourceKey, resourceValue := range devRc.Resources.Limits {
-		if _, ok := dev.Resources.Limits[resourceKey]; !ok {
-			dev.Resources.Limits[resourceKey] = resourceValue
-		}
-	}
-
-	for resourceKey, resourceValue := range devRc.Resources.Requests {
-		if _, ok := dev.Resources.Requests[resourceKey]; !ok {
-			dev.Resources.Requests[resourceKey] = resourceValue
-		}
+	if devRc.Namespace != "" {
+		dev.Namespace = devRc.Namespace
 	}
 
 	if devRc.PersistentVolumeInfo != nil && dev.PersistentVolumeInfo == nil {
 		dev.PersistentVolumeInfo = devRc.PersistentVolumeInfo
 	} else if devRc.PersistentVolumeInfo != nil && dev.PersistentVolumeInfo != nil {
-		if devRc.PersistentVolumeInfo.Size != "" && dev.PersistentVolumeInfo.Size == "" {
+		if devRc.PersistentVolumeInfo.Size != "" {
 			dev.PersistentVolumeInfo.Size = devRc.PersistentVolumeInfo.Size
 		}
-		if devRc.PersistentVolumeInfo.StorageClass != "" && dev.PersistentVolumeInfo.StorageClass == "" {
+		if devRc.PersistentVolumeInfo.StorageClass != "" {
 			dev.PersistentVolumeInfo.StorageClass = devRc.PersistentVolumeInfo.StorageClass
 		}
 	}
 
-	if devRc.Timeout != 0 && dev.Timeout == 0 {
+	for resourceKey, resourceValue := range devRc.Resources.Limits {
+		dev.Resources.Limits[resourceKey] = resourceValue
+	}
+	for resourceKey, resourceValue := range devRc.Resources.Requests {
+		dev.Resources.Requests[resourceKey] = resourceValue
+	}
+
+	for _, rvs := range devRc.Reverse {
+		idx := getReversePortIdx(dev.Reverse, rvs)
+		if idx != -1 {
+			dev.Reverse[idx] = rvs
+		} else {
+			dev.Reverse = append(dev.Reverse, rvs)
+		}
+
+	}
+	sort.SliceStable(dev.Reverse, func(i, j int) bool {
+		return dev.Reverse[i].Local < dev.Reverse[j].Local
+	})
+
+	for _, secret := range devRc.Secrets {
+		dev.Secrets = append(dev.Secrets, secret)
+	}
+
+	if devRc.Sync.Compression {
+		dev.Sync.Compression = devRc.Sync.Compression
+	}
+	if devRc.Sync.Verbose {
+		dev.Sync.Verbose = devRc.Sync.Verbose
+	}
+	if devRc.Sync.RescanInterval != 0 {
+		dev.Sync.RescanInterval = devRc.Sync.RescanInterval
+	}
+	for _, folder := range devRc.Sync.Folders {
+		dev.Sync.Folders = append(dev.Sync.Folders, folder)
+	}
+
+	if devRc.Timeout != 0 {
 		dev.Timeout = devRc.Timeout
 	}
 }
 
-func isEnvOnDev(dev *Dev, env EnvVar) bool {
-	for _, devEnv := range dev.Environment {
-		if devEnv.Name == env.Name {
-			return true
+func getEnvVarIdx(environment Environment, envVar EnvVar) int {
+	idx := -1
+	for aux, env := range environment {
+		if env.Name == envVar.Name {
+			return aux
 		}
 	}
-	return false
+	return idx
 }
 
-func isSecretOnDev(dev *Dev, secret Secret) bool {
-	for _, devSecret := range dev.Secrets {
-		if devSecret.LocalPath == secret.LocalPath || devSecret.RemotePath == secret.RemotePath {
-			return true
+func getForwardPortIdx(forwardList []Forward, forward Forward) int {
+	idx := -1
+	for aux, fwd := range forwardList {
+		if fwd.Remote == forward.Remote {
+			return aux
 		}
 	}
-	return false
+	return idx
 }
 
-func isCapabilityInDev(devCapabilities []apiv1.Capability, cap apiv1.Capability) bool {
-	for _, devCap := range devCapabilities {
-		if devCap == cap {
-			return true
+func getReversePortIdx(reverseList []Reverse, reverse Reverse) int {
+	idx := -1
+	for aux, rvrs := range reverseList {
+		if rvrs.Remote == reverse.Remote {
+			return aux
 		}
 	}
-	return false
-}
-
-func isFolderSyncInDev(devSyncFolder []SyncFolder, folder SyncFolder) bool {
-	for _, devSyncFolder := range devSyncFolder {
-		if devSyncFolder.LocalPath == folder.LocalPath && devSyncFolder.RemotePath == folder.RemotePath {
-			return true
-		}
-	}
-	return false
+	return idx
 }

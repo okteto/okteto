@@ -99,10 +99,10 @@ func TestDevRCLabels(t *testing.T) {
 			expected: Labels{"app": "test", "test": "app"},
 		},
 		{
-			name:     "not overwrite2",
+			name:     "overwrite",
 			dev:      &Dev{Labels: Labels{"app": "test"}},
 			devRC:    &DevRC{Labels: Labels{"app": "dev"}},
-			expected: Labels{"app": "test"},
+			expected: Labels{"app": "dev"},
 		},
 	}
 
@@ -152,10 +152,10 @@ func TestDevRCAnnotations(t *testing.T) {
 			expected: Annotations{"app": "test", "test": "app"},
 		},
 		{
-			name:     "not overwrite2",
+			name:     "overwrite",
 			dev:      &Dev{Annotations: Annotations{"app": "test"}},
 			devRC:    &DevRC{Annotations: Annotations{"app": "dev"}},
-			expected: Annotations{"app": "test"},
+			expected: Annotations{"app": "dev"},
 		},
 	}
 
@@ -202,7 +202,7 @@ func TestDevRCContext(t *testing.T) {
 			name:     "not overwrite2",
 			dev:      &Dev{Context: "app"},
 			devRC:    &DevRC{Context: "test"},
-			expected: "app",
+			expected: "test",
 		},
 		{
 			name:     "not overwrite3",
@@ -245,7 +245,7 @@ func TestDevRCNamespace(t *testing.T) {
 			name:     "not overwrite2",
 			dev:      &Dev{Namespace: "app"},
 			devRC:    &DevRC{Namespace: "test"},
-			expected: "app",
+			expected: "test",
 		},
 		{
 			name:     "not overwrite3",
