@@ -76,7 +76,7 @@ func Exec() *cobra.Command {
 
 			return err
 		},
-		Args: utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/index.html#exec"),
+		Args: utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#exec/"),
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")

@@ -36,7 +36,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploys a stack",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#deploy-1"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#deploy-1/"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err

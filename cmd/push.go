@@ -49,7 +49,7 @@ func Push(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "push",
 		Short: "Builds, pushes and redeploys source code to the target deployment",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#push"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push/"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if err := utils.LoadEnvironment(ctx, true); err != nil {

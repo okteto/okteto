@@ -70,7 +70,7 @@ func (up *upContext) sync(ctx context.Context) error {
 		seconds := elapsed / time.Second
 		log.Warning(`File synchronization took %dm %ds
     Consider to update your '.stignore' to optimize the file synchronization
-    More information is available here: https://okteto.com/docs/reference/file-synchronization`, minutes, seconds)
+    More information is available here: https://okteto.com/docs/reference/file-synchronization/`, minutes, seconds)
 	}
 
 	up.Sy.Type = "sendreceive"
