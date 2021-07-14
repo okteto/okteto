@@ -341,7 +341,7 @@ func (s *Stack) validate() error {
 
 		for _, v := range svc.VolumeMounts {
 			if strings.HasPrefix(v.LocalPath, "/") {
-				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up/", name, v.LocalPath, v.RemotePath))
+				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))

@@ -652,7 +652,7 @@ func (dev *Dev) validate() error {
 	}
 
 	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
-		log.Information("https://okteto.com/docs/reference/manifest/#docker/")
+		log.Information("https://okteto.com/docs/reference/manifest/#docker-object-optional")
 		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 

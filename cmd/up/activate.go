@@ -76,7 +76,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	  1. Execute 'okteto down'
 	  2. Apply your manifest changes again: 'kubectl apply'
 	  3. Execute 'okteto up' again
-    More information is available here: https://okteto.com/docs/reference/known-issues/#kubectl-apply-changes-are-undone-by-okteto-up/`,
+    More information is available here: https://okteto.com/docs/reference/known-issues/#kubectl-apply-changes-are-undone-by-okteto-up`,
 		}
 	}
 
@@ -330,7 +330,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 	for {
 		if time.Now().After(to) && insufficientResourcesErr != nil {
 			return errors.UserError{E: fmt.Errorf("Insufficient resources."),
-				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout/"}
+				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
 		}
 		select {
 		case event := <-watcherEvents.ResultChan():
