@@ -37,6 +37,7 @@ const (
 
 	upEvent                  = "Up"
 	upErrorEvent             = "Up Error"
+	upElapsedTimeEvent       = "Up Time elapsed"
 	reconnectEvent           = "Reconnect"
 	syncErrorEvent           = "Sync Error"
 	syncResetDatabase        = "Sync Reset Database"
@@ -149,6 +150,14 @@ func TrackUpError(success, swap bool) {
 		"swap": swap,
 	}
 	track(upErrorEvent, success, props)
+}
+
+// TrackUp sends a tracking event to mixpanel when the user activates a development container
+func TrackElapsedTimeUp(elapsedTime time.Duration) {
+	props := map[string]interface{}{
+		"elapsed": elapsedTime,
+	}
+	track(upEvent, true, props)
 }
 
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
