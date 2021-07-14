@@ -176,20 +176,16 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			}
 		}
 		printDisplayContext(up.Dev, divertURL)
+		if !up.isRetry {
+			elapsedUpCommand := time.Since(up.StartTime)
+			analytics.TrackDurationTimeUp(elapsedUpCommand)
+		}
 		if hook == "yes" {
 			log.Information("Running start.sh hook...")
-			if !up.isRetry {
-				elapsedUpCommand := time.Since(up.StartTime)
-				analytics.TrackElapsedTimeUp(elapsedUpCommand)
-			}
 			if err := up.runCommand(ctx, []string{"/var/okteto/cloudbin/start.sh"}); err != nil {
 				up.CommandResult <- err
 				return
 			}
-		}
-		if !up.isRetry {
-			elapsedUpCommand := time.Since(up.StartTime)
-			analytics.TrackElapsedTimeUp(elapsedUpCommand)
 		}
 		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
 	}()

@@ -35,30 +35,30 @@ const (
 	// This is mixpanel's public token, is needed to send analytics to the project
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
-	upEvent                  = "Up"
-	upErrorEvent             = "Up Error"
-	upElapsedTimeEvent       = "Up Time elapsed"
-	reconnectEvent           = "Reconnect"
-	syncErrorEvent           = "Sync Error"
-	syncResetDatabase        = "Sync Reset Database"
-	downEvent                = "Down"
-	downVolumesEvent         = "DownVolumes"
-	pushEvent                = "Push"
-	statusEvent              = "Status"
-	doctorEvent              = "Doctor"
-	buildEvent               = "Build"
-	buildTransientErrorEvent = "BuildTransientError"
-	deployStackEvent         = "Deploy Stack"
-	destroyStackEvent        = "Destroy Stack"
-	loginEvent               = "Login"
-	initEvent                = "Create Manifest"
-	namespaceEvent           = "Namespace"
-	namespaceCreateEvent     = "CreateNamespace"
-	namespaceDeleteEvent     = "DeleteNamespace"
-	execEvent                = "Exec"
-	signupEvent              = "Signup"
-	disableEvent             = "Disable Analytics"
-	stackNotSupportedField   = "Stack Field Not Supported"
+	upEvent                   = "Up"
+	upErrorEvent              = "Up Error"
+	upActivationDurationEvent = "Up Duration Time"
+	reconnectEvent            = "Reconnect"
+	syncErrorEvent            = "Sync Error"
+	syncResetDatabase         = "Sync Reset Database"
+	downEvent                 = "Down"
+	downVolumesEvent          = "DownVolumes"
+	pushEvent                 = "Push"
+	statusEvent               = "Status"
+	doctorEvent               = "Doctor"
+	buildEvent                = "Build"
+	buildTransientErrorEvent  = "BuildTransientError"
+	deployStackEvent          = "Deploy Stack"
+	destroyStackEvent         = "Destroy Stack"
+	loginEvent                = "Login"
+	initEvent                 = "Create Manifest"
+	namespaceEvent            = "Namespace"
+	namespaceCreateEvent      = "CreateNamespace"
+	namespaceDeleteEvent      = "DeleteNamespace"
+	execEvent                 = "Exec"
+	signupEvent               = "Signup"
+	disableEvent              = "Disable Analytics"
+	stackNotSupportedField    = "Stack Field Not Supported"
 )
 
 var (
@@ -152,12 +152,12 @@ func TrackUpError(success, swap bool) {
 	track(upErrorEvent, success, props)
 }
 
-// TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackElapsedTimeUp(elapsedTime time.Duration) {
+// TrackDurationTimeUp sends a tracking event to mixpanel of the time that has elapsed in the execution of up
+func TrackDurationTimeUp(elapsedTime time.Duration) {
 	props := map[string]interface{}{
-		"elapsed": elapsedTime,
+		"duration": elapsedTime,
 	}
-	track(upEvent, true, props)
+	track(upActivationDurationEvent, true, props)
 }
 
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
