@@ -18,12 +18,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/errors"
 )
 
-// CreatePreviewBody top body answer
-type CreatePreviewBody struct {
-	PreviewEnviroment PreviewEnv `json:"createPreview" yaml:"createPreview"`
+// DeployPreviewBody top body answer
+type DeployPreviewBody struct {
+	PreviewEnviroment PreviewEnv `json:"deployPreview" yaml:"deployPreview"`
 }
 
 //Previews represents an Okteto list of spaces
@@ -39,24 +40,39 @@ type PreviewEnv struct {
 }
 
 // CreatePreview creates a preview environment
-func CreatePreview(ctx context.Context, name, scope string) (string, error) {
-	if err := validateNamespace(name); err != nil {
-		return "", err
+func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (string, error) {
+	var body DeployPreviewBody
+	filenameParameter := ""
+	if filename != "" {
+		filenameParameter = fmt.Sprintf(`, filename: "%s"`, filename)
 	}
 
-	var body CreatePreviewBody
-	q := fmt.Sprintf(`mutation {
-		createPreview(name: "%s", scope: %s){
-			id
-		},
-	}`, name, scope)
+	if len(variables) > 0 {
+		q := fmt.Sprintf(`mutation deployPreview($variables: [InputVariable]){
+			deployPreview(name: "%s", scope: %s, repository: "%s", branch: "%s", sourceUrl: "%s", variables: $variables%s){
+				id
+			},
+		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
 
-	if err := query(ctx, q, &body); err != nil {
-		if strings.Contains(err.Error(), "operation-not-permitted") {
-			return "", errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
-				Hint: "Please log in with an administrator account or use a personal preview environment"}
+		req := graphql.NewRequest(q)
+		req.Var("variables", variables)
+		if err := queryWithRequest(ctx, req, &body); err != nil {
+			if strings.Contains(err.Error(), "operation-not-permitted") {
+				return "", errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+					Hint: "Please log in with an administrator account or use a personal preview environment"}
+			}
+			return "", err
 		}
-		return "", err
+	} else {
+		q := fmt.Sprintf(`mutation{
+			deployPreview(name: "%s", scope: %s, repository: "%s", branch: "%s"%s){
+				id
+			},
+		}`, name, scope, repository, branch, filenameParameter)
+
+		if err := query(ctx, q, &body); err != nil {
+			return "", err
+		}
 	}
 
 	return body.PreviewEnviroment.ID, nil
