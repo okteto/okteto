@@ -61,7 +61,7 @@ func Up() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your development container",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#up"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return errors.ErrNotInDevContainer
@@ -100,7 +100,7 @@ func Up() *cobra.Command {
 			if autoDeploy {
 				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
-    More information is available here: https://okteto.com/docs/reference/cli#up`)
+    More information is available here: https://okteto.com/docs/reference/cli/#up`)
 			}
 
 			ctx := context.Background()
@@ -348,7 +348,7 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) 
 			E: fmt.Errorf("Deployment '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
 			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-    More information is available here: https://okteto.com/docs/reference/cli#up`,
+    More information is available here: https://okteto.com/docs/reference/cli/#up`,
 		}
 		return nil, false, err
 	}
@@ -474,14 +474,14 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 			E: err,
 			Hint: `Okteto volume is full.
     Increase your persistent volume size, run 'okteto down -v' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest#persistentvolume-object-optional`,
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`,
 		}
 	}
 	return errors.UserError{
 		E: err,
 		Hint: `The synchronization service is running out of space.
     Enable persistent volumes in your okteto manifest and try again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest#persistentvolume-object-optional`,
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`,
 	}
 
 }

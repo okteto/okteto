@@ -25,7 +25,7 @@ import (
 func Analytics() *cobra.Command {
 	var disable bool
 	cmd := &cobra.Command{
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#analytics"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#analytics"),
 		Use:   "analytics",
 		Short: "Enable / Disable analytics",
 		RunE: func(cmd *cobra.Command, args []string) error {

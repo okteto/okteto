@@ -317,7 +317,7 @@ func Read(bytes []byte) (*Dev, error) {
 					_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 				}
 
-				_, _ = sb.WriteString("    See https://okteto.com/docs/reference/manifest for details")
+				_, _ = sb.WriteString("    See https://okteto.com/docs/reference/manifest/ for details")
 				return nil, errors.New(sb.String())
 			}
 
@@ -652,7 +652,7 @@ func (dev *Dev) validate() error {
 	}
 
 	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
-		log.Information("https://okteto.com/docs/reference/manifest#docker-object-optional")
+		log.Information("https://okteto.com/docs/reference/manifest/#docker-object-optional")
 		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 

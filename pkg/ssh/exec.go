@@ -169,7 +169,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 	if strings.Contains(err.Error(), "exit code 137") || strings.Contains(err.Error(), "exit status 137") {
 		log.Yellow(`Insufficient memory. Please update your resources on your okteto manifest.
-More information is available here: https://okteto.com/docs/reference/manifest#resources-object-optional`)
+More information is available here: https://okteto.com/docs/reference/manifest/#resources-object-optional`)
 	}
 
 	log.Infof("command failed: %s", err)

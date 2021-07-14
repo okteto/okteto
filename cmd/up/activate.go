@@ -76,7 +76,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	  1. Execute 'okteto down'
 	  2. Apply your manifest changes again: 'kubectl apply'
 	  3. Execute 'okteto up' again
-    More information is available here: https://okteto.com/docs/reference/known-issues/index.html#kubectl-apply-changes-are-undone-by-okteto-up`,
+    More information is available here: https://okteto.com/docs/reference/known-issues/#kubectl-apply-changes-are-undone-by-okteto-up`,
 		}
 	}
 
@@ -152,7 +152,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 				if utils.GetWarningState(folder, ".remotewatcher") == "" {
 					log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 					log.Yellow("This can affect file synchronization performance.")
-					log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
+					log.Yellow("Visit https://okteto.com/docs/reference/known-issues/ for more information.")
 					if err := utils.SetWarningState(folder, ".remotewatcher", "true"); err != nil {
 						log.Infof("failed to set warning remotewatcher state: %s", err.Error())
 					}
@@ -330,7 +330,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 	for {
 		if time.Now().After(to) && insufficientResourcesErr != nil {
 			return errors.UserError{E: fmt.Errorf("Insufficient resources."),
-				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest#timeout"}
+				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
 		}
 		select {
 		case event := <-watcherEvents.ResultChan():
