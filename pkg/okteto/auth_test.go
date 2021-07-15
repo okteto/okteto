@@ -120,7 +120,7 @@ func TestSaveMachineID(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if tt.existing != nil {
+			if tt.existing == nil {
 				mid, err := getMachineIDFromMidFile()
 				if err != nil {
 					t.Fatal(err)
