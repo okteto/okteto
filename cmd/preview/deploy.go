@@ -18,10 +18,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/errors"
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -29,18 +31,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Deploy Create and deploy a preview environment
+// Deploy Deploy a preview environment
 func Deploy(ctx context.Context) *cobra.Command {
 	var branch string
 	var filename string
 	var repository string
 	var scope string
 	var sourceUrl string
+	var timeout time.Duration
 	var variables []string
+	var wait bool
 
 	cmd := &cobra.Command{
 		Use:   "deploy <name>",
-		Short: "Create and deploy a preview environment",
+		Short: "Deploy a preview environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
@@ -65,12 +69,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			name := ""
-			if len(args) == 0 {
-				name, err = getName(ctx, repository, branch)
-				if err != nil {
-					return err
-				}
-			} else {
+			if len(args) > 0 {
 				name = args[0]
 			}
 
@@ -86,8 +85,17 @@ func Deploy(ctx context.Context) *cobra.Command {
 				})
 			}
 
-			err = executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, varList)
+			name, err = executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, varList, wait, timeout)
 			analytics.TrackCreatePreview(err == nil)
+			if err != nil {
+				return err
+			}
+
+			if wait {
+				log.Success("Preview environment '%s' successfully deployed", name)
+			} else {
+				log.Success("Preview environment '%s' scheduled for deployment", name)
+			}
 			return err
 		},
 	}
@@ -96,7 +104,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&scope, "scope", "s", "personal", "the scope of preview environment to create. Accepted values are ['personal', 'global']")
 	cmd.Flags().StringVarP(&sourceUrl, "sourceUrl", "", "", "the pull request url to notify.")
+	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringArrayVarP(&variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
+	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the preview environment finishes (defaults to false)")
 
 	return cmd
 }
@@ -162,13 +172,57 @@ func getName(ctx context.Context, repo, branch string) (string, error) {
 	return name, nil
 }
 
-func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []okteto.Variable) error {
+func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []okteto.Variable, wait bool, timeout time.Duration) (string, error) {
+	spinner := utils.NewSpinner("Deploying your preview environment...")
+	spinner.Start()
+	defer spinner.Stop()
+
 	oktetoNS, err := okteto.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	log.Success("Preview environment '%s' created", oktetoNS)
+	if !wait {
+		return oktetoNS, nil
+	}
 
-	return nil
+	spinner.Update("Waiting for the preview environment to finish...")
+	if err := waitUntilRunning(ctx, oktetoNS, oktetoNS, timeout); err != nil {
+		return "", err
+	}
+	return oktetoNS, nil
+}
+
+func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+	t := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+	attempts := 0
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("preview environment '%s' didn't finish after 5 minutes", name)
+		case <-t.C:
+			p, err := okteto.GetPreviewEnvByName(ctx, name, namespace)
+			if err != nil {
+				if errors.IsNotFound(err) || errors.IsNotExist(err) {
+					return nil
+				}
+
+				return fmt.Errorf("failed to get preview environment '%s': %s", name, err)
+			}
+
+			switch p.Status {
+			case "deployed", "running":
+				return nil
+			case "error":
+				attempts++
+				if attempts > 30 {
+					return fmt.Errorf("preview environment '%s' failed", name)
+				}
+			default:
+				log.Infof("preview environment '%s' is '%s'", name, p.Status)
+			}
+		}
+	}
 }

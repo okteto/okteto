@@ -27,6 +27,16 @@ type DeployPreviewBody struct {
 	PreviewEnviroment PreviewEnv `json:"deployPreview" yaml:"deployPreview"`
 }
 
+// PreviewBody top body answer
+type PreviewBody struct {
+	Preview Preview `json:"preview"`
+}
+
+// Space represents the contents of an Okteto Cloud space
+type Preview struct {
+	GitDeploys []PipelineRun `json:"gitDeploys"`
+}
+
 //Previews represents an Okteto list of spaces
 type Previews struct {
 	Previews []PreviewEnv `json:"previews" yaml:"previews"`
@@ -106,4 +116,28 @@ func ListPreviews(ctx context.Context) ([]PreviewEnv, error) {
 	}
 
 	return body.Previews, nil
+}
+
+// GetPreviewEnvByName gets a preview environment given its name
+func GetPreviewEnvByName(ctx context.Context, name, namespace string) (*PipelineRun, error) {
+	q := fmt.Sprintf(`query{
+		preview(id: "%s"){
+			gitDeploys{
+				id,name,status
+			}
+		},
+	}`, namespace)
+
+	var body PreviewBody
+	if err := query(ctx, q, &body); err != nil {
+		return nil, err
+	}
+
+	for _, g := range body.Preview.GitDeploys {
+		if g.Name == name {
+			return &g, nil
+		}
+	}
+
+	return nil, errors.ErrNotFound
 }
