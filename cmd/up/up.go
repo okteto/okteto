@@ -135,6 +135,7 @@ func Up() *cobra.Command {
 				Dev:            dev,
 				Exit:           make(chan error, 1),
 				resetSyncthing: reset,
+				StartTime:      time.Now(),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -298,6 +299,7 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 				<-t.C
 			}
 		}
+
 		err := up.activate(autoDeploy, build)
 		if err != nil {
 			log.Infof("activate failed with: %s", err)

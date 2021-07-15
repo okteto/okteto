@@ -110,6 +110,10 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
 	}
 
+	if up.isRetry {
+		analytics.TrackReconnect(true, up.isSwap)
+	}
+
 	up.isRetry = true
 
 	if err := up.forwards(ctx); err != nil {
@@ -134,9 +138,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 
 	up.success = true
-	if up.isRetry {
-		analytics.TrackReconnect(true, up.isSwap)
-	}
 
 	go func() {
 		output := <-up.cleaned
@@ -178,6 +179,8 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			}
 		}
 		printDisplayContext(up.Dev, divertURL)
+		durationActivateUp := time.Since(up.StartTime)
+		analytics.TrackDurationActivateUp(durationActivateUp)
 		if hook == "yes" {
 			log.Information("Running start.sh hook...")
 			if err := up.runCommand(ctx, []string{"/var/okteto/cloudbin/start.sh"}); err != nil {
@@ -189,6 +192,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}()
 	prevError := up.waitUntilExitOrInterrupt()
 
+	up.isRetry = true
 	if up.shouldRetry(ctx, prevError) {
 		if !up.Dev.PersistentVolumeEnabled() {
 			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
