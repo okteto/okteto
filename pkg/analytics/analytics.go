@@ -363,11 +363,9 @@ func getMachineID() string {
 	}
 
 	mid = generateMachineID()
-	if okteto.GetUserID() != "" {
-		if err := okteto.SaveMachineID(mid); err != nil {
-			log.Info("failed to save the machine id")
-			mid = "na"
-		}
+	if err := okteto.SaveMachineID(mid); err != nil {
+		log.Info("failed to save the machine id")
+		mid = "na"
 	}
 
 	return mid

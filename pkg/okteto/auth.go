@@ -31,7 +31,8 @@ import (
 )
 
 const (
-	tokenFile = ".token.json"
+	tokenFile     = ".token.json"
+	machineIdFile = ".machine-id"
 )
 
 var reg = regexp.MustCompile("[^A-Za-z0-9]+")
@@ -225,12 +226,39 @@ func GetSanitizedUsername() string {
 
 // GetMachineID returns the userID of the authenticated user
 func GetMachineID() string {
-	t, err := GetToken()
-	if err != nil {
-		return ""
+	if mid, err := getMachineIDFromToken(); err == nil {
+		return mid
 	}
 
-	return t.MachineID
+	if mid, err := getMachineIDFromMidFile(); err == nil {
+		return mid
+	}
+
+	return ""
+}
+
+// getMachineIDFromToken returns the machineID of the authenticated user
+func getMachineIDFromToken() (string, error) {
+	t, err := GetToken()
+	if err != nil {
+		return "", err
+	}
+
+	return t.MachineID, nil
+}
+
+// getMachineIDFromMidFile returns the machineID of the authenticated user
+func getMachineIDFromMidFile() (string, error) {
+	p := getMachineIdPath()
+
+	if _, err := os.Stat(p); err != nil {
+		return "", err
+	}
+	b, err := ioutil.ReadFile(p)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 // GetURL returns the URL of the authenticated user
@@ -303,7 +331,12 @@ func SaveMachineID(machineID string) error {
 	}
 
 	t.MachineID = machineID
-	return save(t)
+	if t.ID != "" {
+		return save(t)
+	} else {
+		return saveMID(machineID)
+	}
+
 }
 
 // SaveID updates the token file with the userID value
@@ -342,6 +375,28 @@ func save(t *Token) error {
 	return nil
 }
 
+func saveMID(machineID string) error {
+	p := getMachineIdPath()
+
+	if _, err := os.Stat(p); err == nil {
+		err = os.Chmod(p, 0600)
+		if err != nil {
+			return fmt.Errorf("couldn't change token permissions: %s", err)
+		}
+	}
+
+	if err := ioutil.WriteFile(p, []byte(machineID), 0600); err != nil {
+		return fmt.Errorf("couldn't save authentication token: %s", err)
+	}
+
+	currentToken = nil
+	return nil
+}
+
 func getTokenPath() string {
 	return filepath.Join(config.GetOktetoHome(), tokenFile)
+}
+
+func getMachineIdPath() string {
+	return filepath.Join(config.GetOktetoHome(), machineIdFile)
 }
