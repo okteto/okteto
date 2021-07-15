@@ -110,6 +110,12 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
 	}
 
+	if up.isRetry {
+		analytics.TrackReconnect(true, up.isSwap)
+	}
+
+	up.isRetry = true
+
 	if err := up.forwards(ctx); err != nil {
 		if err == errors.ErrSSHConnectError {
 			err := up.checkOktetoStartError(ctx, "Failed to connect to your development container")
@@ -132,9 +138,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 
 	up.success = true
-	if up.isRetry {
-		analytics.TrackReconnect(true, up.isSwap)
-	}
 
 	go func() {
 		output := <-up.cleaned
@@ -176,10 +179,8 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			}
 		}
 		printDisplayContext(up.Dev, divertURL)
-		if !up.isRetry {
-			elapsedUpCommand := time.Since(up.StartTime)
-			analytics.TrackDurationTimeUp(elapsedUpCommand)
-		}
+		durationActivateUp := time.Since(up.StartTime)
+		analytics.TrackDurationActivateUp(durationActivateUp)
 		if hook == "yes" {
 			log.Information("Running start.sh hook...")
 			if err := up.runCommand(ctx, []string{"/var/okteto/cloudbin/start.sh"}); err != nil {
