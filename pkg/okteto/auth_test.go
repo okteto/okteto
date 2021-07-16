@@ -120,25 +120,14 @@ func TestSaveMachineID(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if tt.existing == nil {
-				mid, err := getMachineIDFromMidFile()
-				if err != nil {
-					t.Fatal(err)
-				}
-				if mid != tt.machineID {
-					t.Fatalf("\ngot:\n%+v\nexpected:\n%+v", mid, tt.expected.MachineID)
-				}
-			} else {
-				token, err := GetToken()
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if !reflect.DeepEqual(token, tt.expected) {
-					t.Fatalf("\ngot:\n%+v\nexpected:\n%+v", token, tt.expected)
-				}
+			token, err := GetToken()
+			if err != nil {
+				t.Fatal(err)
 			}
 
+			if !reflect.DeepEqual(token, tt.expected) {
+				t.Fatalf("\ngot:\n%+v\nexpected:\n%+v", token, tt.expected)
+			}
 		})
 	}
 }

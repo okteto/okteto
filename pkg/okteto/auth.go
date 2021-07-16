@@ -31,8 +31,7 @@ import (
 )
 
 const (
-	tokenFile     = ".token.json"
-	machineIdFile = ".machine-id"
+	tokenFile = ".token.json"
 )
 
 var reg = regexp.MustCompile("[^A-Za-z0-9]+")
@@ -167,9 +166,6 @@ func GetToken() (*Token, error) {
 	if currentToken == nil {
 		p := getTokenPath()
 
-		if _, err := os.Stat(p); err != nil {
-			return nil, err
-		}
 		b, err := ioutil.ReadFile(p)
 		if err != nil {
 			return nil, err
@@ -187,7 +183,7 @@ func GetToken() (*Token, error) {
 //IsAuthenticated returns if the user is authenticated
 func IsAuthenticated() bool {
 	t, err := GetToken()
-	if err != nil {
+	if err != nil || t.Username != "" {
 		log.Infof("error getting okteto token: %s", err)
 		return false
 	}
@@ -226,39 +222,12 @@ func GetSanitizedUsername() string {
 
 // GetMachineID returns the userID of the authenticated user
 func GetMachineID() string {
-	if mid, err := getMachineIDFromToken(); err == nil {
-		return mid
-	}
-
-	if mid, err := getMachineIDFromMidFile(); err == nil {
-		return mid
-	}
-
-	return ""
-}
-
-// getMachineIDFromToken returns the machineID of the authenticated user
-func getMachineIDFromToken() (string, error) {
 	t, err := GetToken()
 	if err != nil {
-		return "", err
+		return ""
 	}
 
-	return t.MachineID, nil
-}
-
-// getMachineIDFromMidFile returns the machineID of the authenticated user
-func getMachineIDFromMidFile() (string, error) {
-	p := getMachineIdPath()
-
-	if _, err := os.Stat(p); err != nil {
-		return "", err
-	}
-	b, err := ioutil.ReadFile(p)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
+	return t.MachineID
 }
 
 // GetURL returns the URL of the authenticated user
@@ -331,12 +300,7 @@ func SaveMachineID(machineID string) error {
 	}
 
 	t.MachineID = machineID
-	if t.ID != "" {
-		return save(t)
-	} else {
-		return saveMID(machineID)
-	}
-
+	return save(t)
 }
 
 // SaveID updates the token file with the userID value
@@ -375,28 +339,6 @@ func save(t *Token) error {
 	return nil
 }
 
-func saveMID(machineID string) error {
-	p := getMachineIdPath()
-
-	if _, err := os.Stat(p); err == nil {
-		err = os.Chmod(p, 0600)
-		if err != nil {
-			return fmt.Errorf("couldn't change token permissions: %s", err)
-		}
-	}
-
-	if err := ioutil.WriteFile(p, []byte(machineID), 0600); err != nil {
-		return fmt.Errorf("couldn't save authentication token: %s", err)
-	}
-
-	currentToken = nil
-	return nil
-}
-
 func getTokenPath() string {
 	return filepath.Join(config.GetOktetoHome(), tokenFile)
-}
-
-func getMachineIdPath() string {
-	return filepath.Join(config.GetOktetoHome(), machineIdFile)
 }
