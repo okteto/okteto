@@ -33,7 +33,7 @@ func Username(ctx context.Context) *cobra.Command {
 		Short: "Returns the username of the authenticated user",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			t, err := okteto.GetToken()
-			if err != nil {
+			if err != nil || t.Username != "" {
 				log.Infof("error getting okteto token: %s", err.Error())
 				return errors.ErrNotLogged
 			}
