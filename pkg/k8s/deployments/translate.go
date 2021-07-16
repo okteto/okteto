@@ -606,11 +606,11 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 			},
 		)
 		mounPath := path.Join(v.MountPath, ".")
-		command = fmt.Sprintf("%s && ( [ \"$(ls -A /init-volume/%d)\" ] || cp -Rv %s/. /init-volume/%d || true)", command, iVolume, mounPath, iVolume)
+		command = fmt.Sprintf("%s && ( [ \"$(ls -A /init-volume/%d)\" ] || cp -R %s/. /init-volume/%d || true)", command, iVolume, mounPath, iVolume)
 		iVolume++
 	}
 
-	c.Command = []string{"sh", "-c", command}
+	c.Command = []string{"sh", "-cx", command}
 	translateInitResources(c, rule.InitContainer.Resources)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
 	spec.InitContainers = append(spec.InitContainers, *c)
