@@ -177,7 +177,7 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	spinner.Start()
 	defer spinner.Stop()
 
-	oktetoNS, err := okteto.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+	oktetoNS, err := okteto.DeployPreview(ctx, scope, repository, branch, sourceUrl, filename, variables)
 	if err != nil {
 		return "", err
 	}
