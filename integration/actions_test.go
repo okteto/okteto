@@ -92,6 +92,25 @@ func TestApplyPipeline(t *testing.T) {
 		t.Skip("this test is not required for client-side translation")
 		return
 	}
+	command := "echo $HOME"
+
+	args := []string{}
+	cmd := exec.Command(command, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatal(fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o)))
+	}
+	command = "ls $HOME"
+
+	cmd = exec.Command(command, args...)
+	cmd.Env = os.Environ()
+	o, err = cmd.CombinedOutput()
+	if err != nil {
+		t.Fatal(fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o)))
+	}
+
+	log.Printf("create namespace output: \n%s\n", string(o))
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
