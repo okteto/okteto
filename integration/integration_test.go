@@ -224,7 +224,7 @@ func TestAll(t *testing.T) {
 		log.Printf("created tempdir: %s", dir)
 
 		dPath := filepath.Join(dir, "deployment.yaml")
-		if err := writeDeployment(name, dPath); err != nil {
+		if err := writeDeployment(deploymentTemplate, name, dPath); err != nil {
 			t.Fatal(err)
 		}
 
@@ -657,13 +657,13 @@ func deploy(ctx context.Context, namespace, name, path string) error {
 	return nil
 }
 
-func writeDeployment(name, path string) error {
+func writeDeployment(template *template.Template, name, path string) error {
 	dFile, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 
-	if err := deploymentTemplate.Execute(dFile, deployment{Name: name}); err != nil {
+	if err := template.Execute(dFile, deployment{Name: name}); err != nil {
 		return err
 	}
 	defer dFile.Close()
