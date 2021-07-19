@@ -183,7 +183,7 @@ func GetToken() (*Token, error) {
 //IsAuthenticated returns if the user is authenticated
 func IsAuthenticated() bool {
 	t, err := GetToken()
-	if err != nil {
+	if err != nil || t.Username != "" {
 		log.Infof("error getting okteto token: %s", err)
 		return false
 	}
