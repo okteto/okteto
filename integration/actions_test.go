@@ -117,12 +117,7 @@ func TestBuildActionPipeline(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
-	if err := executeLoginAction(ctx); err != nil {
-		t.Fatalf("Login action failed: %s", err.Error())
-	}
-	if err := executeChangeNamespaceAction(ctx, ""); err != nil {
-		t.Fatalf("Execute namespace action failed: %s", err.Error())
-	}
+
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
@@ -165,12 +160,7 @@ func TestNamespaceActionsPipeline(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
-	if err := executeLoginAction(ctx); err != nil {
-		t.Fatalf("Login action failed: %s", err.Error())
-	}
-	if err := executeChangeNamespaceAction(ctx, ""); err != nil {
-		t.Fatalf("Execute namespace action failed: %s", err.Error())
-	}
+
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
@@ -191,9 +181,7 @@ func TestLoginActionPipeline(t *testing.T) {
 	if err := executeLoginAction(ctx); err != nil {
 		t.Fatalf("Login action failed: %s", err.Error())
 	}
-	if err := executeChangeNamespaceAction(ctx, ""); err != nil {
-		t.Fatalf("Execute namespace action failed: %s", err.Error())
-	}
+
 }
 
 func TestPipelineActions(t *testing.T) {
@@ -204,12 +192,7 @@ func TestPipelineActions(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
-	if err := executeLoginAction(ctx); err != nil {
-		t.Fatalf("Login action failed: %s", err.Error())
-	}
-	if err := executeChangeNamespaceAction(ctx, ""); err != nil {
-		t.Fatalf("Execute namespace action failed: %s", err.Error())
-	}
+
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
@@ -239,12 +222,7 @@ func TestPushAction(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
-	if err := executeLoginAction(ctx); err != nil {
-		t.Fatalf("Login action failed: %s", err.Error())
-	}
-	if err := executeChangeNamespaceAction(ctx, ""); err != nil {
-		t.Fatalf("Execute namespace action failed: %s", err.Error())
-	}
+
 	user := okteto.GetUsername()
 	if user == "" {
 		t.Fatal("Could not detect any user")
@@ -275,12 +253,6 @@ func TestStacksActions(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
-	if err := executeLoginAction(ctx); err != nil {
-		t.Fatalf("Login action failed: %s", err.Error())
-	}
-	if err := executeChangeNamespaceAction(ctx, ""); err != nil {
-		t.Fatalf("Execute namespace action failed: %s", err.Error())
-	}
 
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
