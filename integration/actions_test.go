@@ -572,6 +572,13 @@ func executeDestroyStackAction(ctx context.Context, namespace, filePath string) 
 
 func executeLoginAction(ctx context.Context) error {
 	token := os.Getenv("API_TOKEN")
+	if token == "" {
+		t, err := okteto.GetToken()
+		if err != nil || t.Token == "" {
+			return fmt.Errorf("this test requires a token to login")
+		}
+		token = t.Token
+	}
 
 	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, loginPath)
 	actionFolder := strings.Split(loginPath, "/")[1]
