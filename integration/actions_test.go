@@ -95,12 +95,7 @@ func TestApplyPipeline(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
-	if err := executeLoginAction(ctx); err != nil {
-		t.Fatalf("Login action failed: %s", err.Error())
-	}
-	if err := executeChangeNamespaceAction(ctx, ""); err != nil {
-		t.Fatalf("Execute namespace action failed: %s", err.Error())
-	}
+
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
