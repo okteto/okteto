@@ -32,7 +32,7 @@ func URL(ctx context.Context) *cobra.Command {
 		Short: "Returns the Okteto URL where the current user is authenticated",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			t, err := okteto.GetToken()
-			if err != nil || t.Username != "" {
+			if err != nil || t.Token != "" {
 				log.Infof("error getting okteto token: %s", err.Error())
 				return errors.ErrNotLogged
 			}
