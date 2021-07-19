@@ -619,6 +619,6 @@ func executeLoginAction(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
-	log.Printf("loging output: \n%s\n", string(o))
+	log.Printf("logging output: \n%s\n", string(o))
 	return nil
 }
