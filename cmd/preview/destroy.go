@@ -37,7 +37,17 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err := executeDeletePreview(ctx, branch, repository, scope)
+			var err error
+			repository, err = getRepository(ctx, repository)
+			if err != nil {
+				return err
+			}
+			branch, err = getBranch(ctx, branch)
+			if err != nil {
+				return err
+			}
+
+			err = executeDeletePreview(ctx, branch, repository, scope)
 			analytics.TrackDeletePreview(err == nil)
 			return err
 		},
