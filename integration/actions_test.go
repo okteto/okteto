@@ -92,7 +92,14 @@ func TestApplyPipeline(t *testing.T) {
 		t.Skip("this test is not required for client-side translation")
 		return
 	}
+
+	ctx := context.Background()
+	namespace := getTestNamespace()
+
 	command := "echo $HOME"
+	if err := executeLoginAction(ctx); err != nil {
+		t.Fatalf("Login action failed: %s", err.Error())
+	}
 
 	args := []string{}
 	cmd := exec.Command(command, args...)
@@ -111,9 +118,6 @@ func TestApplyPipeline(t *testing.T) {
 	}
 
 	log.Printf("create namespace output: \n%s\n", string(o))
-
-	ctx := context.Background()
-	namespace := getTestNamespace()
 
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
