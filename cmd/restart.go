@@ -16,6 +16,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -73,7 +75,24 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	spinner := utils.NewSpinner("Restarting deployments...")
 	spinner.Start()
 	defer spinner.Stop()
-	go utils.StopSpinnerIfInterruptSignal(spinner)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
 
-	return pods.Restart(ctx, dev, client, sn)
+	go func() {
+		exit <- pods.Restart(ctx, dev, client, sn)
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
+			return err
+		}
+	}
+	return nil
 }

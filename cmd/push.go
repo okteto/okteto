@@ -16,6 +16,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -199,35 +201,52 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 	spinner := utils.NewSpinner(fmt.Sprintf("Pushing source code to '%s'...", dev.Name))
 	spinner.Start()
 	defer spinner.Stop()
-	go utils.StopSpinnerIfInterruptSignal(spinner)
 
-	if d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
-		if err := services.CreateDev(ctx, dev, c); err != nil {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+		if d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
+			if err := services.CreateDev(ctx, dev, c); err != nil {
+				exit <- err
+			}
+		}
+
+		if !exists {
+			d.Spec.Template.Spec.Containers[0].Image = imageTag
+			deployments.SetLastBuiltAnnotation(d)
+			exit <- deployments.Create(ctx, d, c)
+		}
+
+		for _, tr := range trList {
+			if tr.Deployment == nil {
+				continue
+			}
+			for _, rule := range tr.Rules {
+				devContainer := deployments.GetDevContainer(&tr.Deployment.Spec.Template.Spec, rule.Container)
+				if devContainer == nil {
+					exit <- fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
+				}
+				deployments.SetLastBuiltAnnotation(tr.Deployment)
+				devContainer.Image = imageTag
+			}
+		}
+
+		exit <- deployments.UpdateDeployments(ctx, trList, c)
+	}()
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
-
-	if !exists {
-		d.Spec.Template.Spec.Containers[0].Image = imageTag
-		deployments.SetLastBuiltAnnotation(d)
-		return deployments.Create(ctx, d, c)
-	}
-
-	for _, tr := range trList {
-		if tr.Deployment == nil {
-			continue
-		}
-		for _, rule := range tr.Rules {
-			devContainer := deployments.GetDevContainer(&tr.Deployment.Spec.Template.Spec, rule.Container)
-			if devContainer == nil {
-				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, d.GetName())
-			}
-			deployments.SetLastBuiltAnnotation(tr.Deployment)
-			devContainer.Image = imageTag
-		}
-	}
-
-	return deployments.UpdateDeployments(ctx, trList, c)
+	return nil
 }
 
 func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string, noCache bool, progress string) (string, error) {

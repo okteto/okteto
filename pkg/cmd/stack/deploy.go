@@ -18,6 +18,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -88,77 +90,96 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
-	go utils.StopSpinnerIfInterruptSignal(spinner)
 
-	addHiddenExposedPortsToStack(ctx, s)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
 
-	for name := range s.Services {
-		if len(s.Services[name].Ports) > 0 {
-			svcK8s := translateService(name, s)
-			if err := services.Deploy(ctx, svcK8s, c); err != nil {
-				return err
-			}
-		}
-	}
+	go func() {
 
-	for name := range s.Volumes {
-		if err := deployVolume(ctx, name, s, c); err != nil {
-			return err
-		}
-		spinner.Stop()
-		log.Success("Created volume '%s'", name)
-		spinner.Start()
-	}
+		addHiddenExposedPortsToStack(ctx, s)
 
-	deployedSvcs := make(map[string]bool)
-	for len(deployedSvcs) != len(s.Services) {
-		for svcName := range s.Services {
-			if deployedSvcs[svcName] {
-				continue
-			}
-
-			if !canSvcBeDeployed(ctx, s, svcName, c, config) {
-				if failedJobs := getDependingFailedJobs(ctx, s, svcName, c, config); len(failedJobs) > 0 {
-					if len(failedJobs) == 1 {
-						return fmt.Errorf("Service '%s' dependency '%s' failed", svcName, failedJobs[0])
-					}
-					return fmt.Errorf("Service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+		for name := range s.Services {
+			if len(s.Services[name].Ports) > 0 {
+				svcK8s := translateService(name, s)
+				if err := services.Deploy(ctx, svcK8s, c); err != nil {
+					exit <- err
 				}
-				continue
 			}
-			spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
-			err := deploySvc(ctx, s, svcName, c, spinner)
-			if err != nil {
-				return err
-			}
-			deployedSvcs[svcName] = true
-			spinner.Update("Waiting for services to be ready...")
 		}
-	}
 
-	iClient, err := ingresses.GetClient(ctx, c)
-	if err != nil {
-		return fmt.Errorf("error getting ingress client: %s", err.Error())
-	}
-	for name := range s.Endpoints {
-		if err := deployIngress(ctx, name, s, iClient); err != nil {
+		for name := range s.Volumes {
+			if err := deployVolume(ctx, name, s, c); err != nil {
+				exit <- err
+			}
+			spinner.Stop()
+			log.Success("Created volume '%s'", name)
+			spinner.Start()
+		}
+
+		deployedSvcs := make(map[string]bool)
+		for len(deployedSvcs) != len(s.Services) {
+			for svcName := range s.Services {
+				if deployedSvcs[svcName] {
+					continue
+				}
+
+				if !canSvcBeDeployed(ctx, s, svcName, c, config) {
+					if failedJobs := getDependingFailedJobs(ctx, s, svcName, c, config); len(failedJobs) > 0 {
+						if len(failedJobs) == 1 {
+							exit <- fmt.Errorf("Service '%s' dependency '%s' failed", svcName, failedJobs[0])
+						}
+						exit <- fmt.Errorf("Service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+					}
+					continue
+				}
+				spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
+				err := deploySvc(ctx, s, svcName, c, spinner)
+				if err != nil {
+					exit <- err
+				}
+				deployedSvcs[svcName] = true
+				spinner.Update("Waiting for services to be ready...")
+			}
+		}
+
+		iClient, err := ingresses.GetClient(ctx, c)
+		if err != nil {
+			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
+		}
+		for name := range s.Endpoints {
+			if err := deployIngress(ctx, name, s, iClient); err != nil {
+				exit <- err
+			}
+			spinner.Stop()
+			log.Success("Created endpoint '%s'", name)
+			spinner.Start()
+		}
+
+		if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
+			exit <- err
+		}
+
+		if !wait {
+			exit <- nil
+		}
+
+		spinner.Update("Waiting for services to be ready...")
+		exit <- waitForPodsToBeRunning(ctx, s, c)
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
-		spinner.Stop()
-		log.Success("Created endpoint '%s'", name)
-		spinner.Start()
 	}
-
-	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
-		return err
-	}
-
-	if !wait {
-		return nil
-	}
-
-	spinner.Update("Waiting for services to be ready...")
-	return waitForPodsToBeRunning(ctx, s, c)
+	return nil
 }
 
 func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, spinner *utils.Spinner) error {

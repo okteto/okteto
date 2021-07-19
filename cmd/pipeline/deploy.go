@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"time"
@@ -142,31 +143,49 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
-	go utils.StopSpinnerIfInterruptSignal(spinner)
 
-	varList := []okteto.Variable{}
-	for _, v := range variables {
-		kv := strings.SplitN(v, "=", 2)
-		if len(kv) != 2 {
-			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+		varList := []okteto.Variable{}
+		for _, v := range variables {
+			kv := strings.SplitN(v, "=", 2)
+			if len(kv) != 2 {
+				exit <- fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+			}
+			varList = append(varList, okteto.Variable{
+				Name:  kv[0],
+				Value: kv[1],
+			})
 		}
-		varList = append(varList, okteto.Variable{
-			Name:  kv[0],
-			Value: kv[1],
-		})
-	}
-	log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
-	_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
-	if err != nil {
-		return fmt.Errorf("failed to deploy pipeline: %w", err)
-	}
+		log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
+		_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
+		if err != nil {
+			exit <- fmt.Errorf("failed to deploy pipeline: %w", err)
+		}
 
-	if !wait {
-		return nil
-	}
+		if !wait {
+			exit <- nil
+		}
 
-	spinner.Update("Waiting for the pipeline to finish...")
-	return waitUntilRunning(ctx, name, namespace, timeout)
+		spinner.Update("Waiting for the pipeline to finish...")
+		exit <- waitUntilRunning(ctx, name, namespace, timeout)
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
+			return err
+		}
+	}
+	return nil
 }
 
 func getPipelineName() (string, error) {

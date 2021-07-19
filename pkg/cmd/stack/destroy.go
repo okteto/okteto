@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"time"
@@ -73,31 +74,46 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	spinner := utils.NewSpinner(fmt.Sprintf("Destroying stack '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
-	go utils.StopSpinnerIfInterruptSignal(spinner)
 
-	if err := destroyHelmRelease(ctx, spinner, s); err != nil {
-		return err
-	}
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
 
-	s.Services = nil
-	s.Endpoints = nil
-	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
-		return err
-	}
+	go func() {
+		if err := destroyHelmRelease(ctx, spinner, s); err != nil {
+			exit <- err
+		}
+		s.Services = nil
+		s.Endpoints = nil
+		if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
+			exit <- err
+		}
 
-	spinner.Update("Waiting for services to be destroyed...")
-	if err := waitForPodsToBeDestroyed(ctx, s, c); err != nil {
-		return err
-	}
+		spinner.Update("Waiting for services to be destroyed...")
+		if err := waitForPodsToBeDestroyed(ctx, s, c); err != nil {
+			exit <- err
+		}
+		if removeVolumes {
+			spinner.Update("Destroying volumes...")
+			if err := destroyStackVolumes(ctx, spinner, s, c, timeout); err != nil {
+				exit <- err
+			}
+		}
+		exit <- configmaps.Destroy(ctx, model.GetStackConfigMapName(s.Name), s.Namespace, c)
+	}()
 
-	if removeVolumes {
-		spinner.Update("Destroying volumes...")
-		if err := destroyStackVolumes(ctx, spinner, s, c, timeout); err != nil {
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
-
-	return configmaps.Destroy(ctx, model.GetStackConfigMapName(s.Name), s.Namespace, c)
+	return nil
 }
 
 func helmReleaseExist(c *action.List, name string) (bool, error) {

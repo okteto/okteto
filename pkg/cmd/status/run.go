@@ -16,6 +16,8 @@ package status
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -76,22 +78,41 @@ func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) er
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()
 	defer spinner.Stop()
-	go utils.StopSpinnerIfInterruptSignal(spinner)
 
-	ticker := time.NewTicker(500 * time.Millisecond)
-	for {
-		status, err := config.GetState(dev)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+
+		ticker := time.NewTicker(500 * time.Millisecond)
+		for {
+			status, err := config.GetState(dev)
+			if err != nil {
+				exit <- err
+			}
+			if status == config.Failed {
+				exit <- fmt.Errorf("your development container has failed")
+			}
+			for _, okStatus := range okStatusList {
+				if status == okStatus {
+					exit <- nil
+				}
+			}
+			<-ticker.C
+		}
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
 		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
-		if status == config.Failed {
-			return fmt.Errorf("your development container has failed")
-		}
-		for _, okStatus := range okStatusList {
-			if status == okStatus {
-				return nil
-			}
-		}
-		<-ticker.C
 	}
+	return nil
 }
