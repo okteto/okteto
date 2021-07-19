@@ -95,6 +95,9 @@ func TestApplyPipeline(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
+	if err := executeLoginAction(ctx); err != nil {
+		t.Fatalf("Login action failed: %s", err.Error())
+	}
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
@@ -116,6 +119,9 @@ func TestBuildActionPipeline(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
+	if err := executeLoginAction(ctx); err != nil {
+		t.Fatalf("Login action failed: %s", err.Error())
+	}
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
@@ -158,7 +164,9 @@ func TestNamespaceActionsPipeline(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
-
+	if err := executeLoginAction(ctx); err != nil {
+		t.Fatalf("Login action failed: %s", err.Error())
+	}
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
@@ -176,31 +184,9 @@ func TestLoginActionPipeline(t *testing.T) {
 		return
 	}
 	ctx := context.Background()
-
-	token, err := okteto.GetToken()
-	if err != nil || token.Token == "" {
-		t.Skip("this test does not have any usertoken to login")
+	if err := executeLoginAction(ctx); err != nil {
+		t.Fatalf("Login action failed: %s", err.Error())
 	}
-
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, loginPath)
-	actionFolder := strings.Split(loginPath, "/")[1]
-	log.Printf("cloning build action repository: %s", actionRepo)
-	if err := cloneGitRepo(ctx, actionRepo); err != nil {
-		t.Fatal(err)
-	}
-	log.Printf("cloned repo %s \n", actionRepo)
-	defer deleteGitRepo(ctx, actionFolder)
-
-	log.Printf("login into %s", cloudURL)
-	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
-	args := []string{token.Token, cloudURL}
-	cmd := exec.Command(command, args...)
-	cmd.Env = os.Environ()
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("%s %s: %s", command, strings.Join(args, " "), string(o))
-	}
-	log.Printf("loging output: \n%s\n", string(o))
 }
 
 func TestPipelineActions(t *testing.T) {
@@ -211,6 +197,9 @@ func TestPipelineActions(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
+	if err := executeLoginAction(ctx); err != nil {
+		t.Fatalf("Login action failed: %s", err.Error())
+	}
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
@@ -240,6 +229,9 @@ func TestPushAction(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
+	if err := executeLoginAction(ctx); err != nil {
+		t.Fatalf("Login action failed: %s", err.Error())
+	}
 	user := okteto.GetUsername()
 	if user == "" {
 		t.Fatal("Could not detect any user")
@@ -270,6 +262,9 @@ func TestStacksActions(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
+	if err := executeLoginAction(ctx); err != nil {
+		t.Fatalf("Login action failed: %s", err.Error())
+	}
 
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
@@ -572,5 +567,30 @@ func executeDestroyStackAction(ctx context.Context, namespace, filePath string) 
 	}
 
 	log.Printf("destroy stack output: \n%s\n", string(o))
+	return nil
+}
+
+func executeLoginAction(ctx context.Context) error {
+	token := os.Getenv("API_TOKEN")
+
+	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, loginPath)
+	actionFolder := strings.Split(loginPath, "/")[1]
+	log.Printf("cloning build action repository: %s", actionRepo)
+	if err := cloneGitRepo(ctx, actionRepo); err != nil {
+		return err
+	}
+	log.Printf("cloned repo %s \n", actionRepo)
+	defer deleteGitRepo(ctx, actionFolder)
+
+	log.Printf("login into %s", cloudURL)
+	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
+	args := []string{token, cloudURL}
+	cmd := exec.Command(command, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
+	}
+	log.Printf("loging output: \n%s\n", string(o))
 	return nil
 }
