@@ -194,7 +194,7 @@ jobs:
             turbolift foreach -- sed -iE 's_FROM\ okteto\/okteto\:\.\*_FROM\ okteto\/okteto\:"$CIRCLE_TAG"_' Dockerfile
             turbolift commit --message "Update to okteto/okteto:$CIRCLE_TAG"
             turbolift create-prs
-            turbolift foreach gh pr merge pchico83:update-actions-to-$CIRCLE_TAG -d 
+            turbolift foreach gh pr merge pchico83:update-actions-to-$CIRCLE_TAG -d
       - run:
           name: Publish Release on GitHub
           command: |
