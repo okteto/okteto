@@ -28,7 +28,7 @@ import (
 func List(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists all previews",
+		Short: "Lists all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
