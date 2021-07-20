@@ -181,13 +181,9 @@ jobs:
       - run:
           name: Auto-update-actions
           command: |
-            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg && sudo apt update && sudo apt install gh
             gh auth login --with-token $GITHUB_TOKEN
-            curl -s https://api.github.com/repos/skyscanner/turbolift/releases/latest | grep "browser_download_url.*Linux_x86" | cut -d : -f 2,3 | tr -d \" | wget -O turbolift.tar -qi - && tar -xf turbolift.tar turbolift && mv turbolift /usr/local/bin/turbolift
-            chmod +x /usr/local/bin/turbolift
             turbolift init --name update-actions-to-$CIRCLE_TAG
             cd update-actions-to-$CIRCLE_TAG
-            echo "#Update action to $CIRCLE_TAG" > README.md
             repos=("deploy-preview" "delete-namespace" "build" "destroy-preview" "deploy-stack" "namespace" "pipeline" "push" "destroy-pipeline" "create-namespace" "login" "apply")
             printf "okteto/%s\n" "${repos[@]}" > repos.txt
             turbolift clone
