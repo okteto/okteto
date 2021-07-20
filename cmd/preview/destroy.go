@@ -26,41 +26,27 @@ import (
 
 // Destroy destroy a preview
 func Destroy(ctx context.Context) *cobra.Command {
-	var branch string
-	var repository string
-	var scope string
+	var name string
+
 	cmd := &cobra.Command{
-		Use:   "destroy",
+		Use:   "destroy <name>",
 		Short: "Destroy a preview environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
 			}
 
-			var err error
-			repository, err = getRepository(ctx, repository)
-			if err != nil {
-				return err
-			}
-			branch, err = getBranch(ctx, branch)
-			if err != nil {
-				return err
-			}
-
-			err = executeDestroyPreview(ctx, branch, repository, scope)
+			err := executeDestroyPreview(ctx, name)
 			analytics.TrackPreviewDestroy(err == nil)
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
-	cmd.Flags().StringVarP(&repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
-	cmd.Flags().StringVarP(&scope, "scope", "s", "personal", "the scope of preview environment to create. Accepted values are ['personal', 'global']")
 
 	return cmd
 }
 
-func executeDestroyPreview(ctx context.Context, branch, repository, scope string) error {
-	if err := okteto.DestroyPreview(ctx, branch, repository, scope); err != nil {
+func executeDestroyPreview(ctx context.Context, name string) error {
+	if err := okteto.DestroyPreview(ctx, name); err != nil {
 		return fmt.Errorf("failed to delete namespace: %s", err)
 	}
 

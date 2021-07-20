@@ -50,7 +50,7 @@ type PreviewEnv struct {
 }
 
 // CreatePreview creates a preview environment
-func DeployPreview(ctx context.Context, scope, repository, branch, sourceUrl, filename string, variables []Variable) (string, error) {
+func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (string, error) {
 	var body DeployPreviewBody
 	filenameParameter := ""
 	if filename != "" {
@@ -59,10 +59,10 @@ func DeployPreview(ctx context.Context, scope, repository, branch, sourceUrl, fi
 
 	if len(variables) > 0 {
 		q := fmt.Sprintf(`mutation deployPreview($variables: [InputVariable]){
-			deployPreview(scope: %s, repository: "%s", branch: "%s", sourceUrl: "%s", variables: $variables%s){
+			deployPreview(name: "%s, "scope: %s, repository: "%s", branch: "%s", sourceUrl: "%s", variables: $variables%s){
 				id
 			},
-		}`, scope, repository, branch, sourceUrl, filenameParameter)
+		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
 
 		req := graphql.NewRequest(q)
 		req.Var("variables", variables)
@@ -75,10 +75,10 @@ func DeployPreview(ctx context.Context, scope, repository, branch, sourceUrl, fi
 		}
 	} else {
 		q := fmt.Sprintf(`mutation{
-			deployPreview(scope: %s, repository: "%s", branch: "%s"%s){
+			deployPreview(name: "%s", scope: %s, repository: "%s", branch: "%s"%s){
 				id
 			},
-		}`, scope, repository, branch, filenameParameter)
+		}`, name, scope, repository, branch, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
 			return "", err
@@ -89,12 +89,12 @@ func DeployPreview(ctx context.Context, scope, repository, branch, sourceUrl, fi
 }
 
 // DestroyPreview destroy a preview environment
-func DestroyPreview(ctx context.Context, branch, repository, scope string) error {
+func DestroyPreview(ctx context.Context, name string) error {
 	q := fmt.Sprintf(`mutation{
-		destroyPreview(scope: %s, repository: "%s", branch: "%s"){
+		destroyPreview(id: "%s"){
 			id
 		},
-	}`, scope, repository, branch)
+	}`, name)
 
 	var body DeleteBody
 	return query(ctx, q, &body)

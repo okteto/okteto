@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -35,6 +36,7 @@ import (
 func Deploy(ctx context.Context) *cobra.Command {
 	var branch string
 	var filename string
+	var name string
 	var repository string
 	var scope string
 	var sourceUrl string
@@ -68,8 +70,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			name := ""
-			if len(args) > 0 {
+			if len(args) == 0 {
+				name = namesgenerator.GetRandomName(-1)
+			} else {
 				name = args[0]
 			}
 
@@ -177,7 +180,7 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	spinner.Start()
 	defer spinner.Stop()
 
-	oktetoNS, err := okteto.DeployPreview(ctx, scope, repository, branch, sourceUrl, filename, variables)
+	oktetoNS, err := okteto.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 	if err != nil {
 		return "", err
 	}
