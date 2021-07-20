@@ -47,8 +47,8 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err = executeDeletePreview(ctx, branch, repository, scope)
-			analytics.TrackDeletePreview(err == nil)
+			err = executeDestroyPreview(ctx, branch, repository, scope)
+			analytics.TrackPreviewDestroy(err == nil)
 			return err
 		},
 	}
@@ -59,11 +59,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func executeDeletePreview(ctx context.Context, branch, repository, scope string) error {
+func executeDestroyPreview(ctx context.Context, branch, repository, scope string) error {
 	if err := okteto.DestroyPreview(ctx, branch, repository, scope); err != nil {
 		return fmt.Errorf("failed to delete namespace: %s", err)
 	}
 
-	log.Success("Preview environment deleted")
+	log.Success("Preview environment destroyed")
 	return nil
 }

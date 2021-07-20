@@ -54,9 +54,8 @@ const (
 	namespaceEvent           = "Namespace"
 	namespaceCreateEvent     = "CreateNamespace"
 	namespaceDeleteEvent     = "DeleteNamespace"
-	previewEvent             = "Preview"
-	previewCreateEvent       = "CreatePreview"
-	previewDeleteEvent       = "DeletePreview"
+	previewDeployEvent       = "DeployPreview"
+	previewDestroyEvent      = "DestroyPreview"
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
 	disableEvent             = "Disable Analytics"
@@ -116,19 +115,14 @@ func TrackDeleteNamespace(success bool) {
 	track(namespaceDeleteEvent, success, nil)
 }
 
-// TrackPreview sends a tracking event to mixpanel when the user changes a preview
-func TrackPreview(success bool) {
-	track(previewEvent, success, nil)
+// TrackPreviewDeploy sends a tracking event to mixpanel when the creates a preview environment
+func TrackPreviewDeploy(success bool) {
+	track(previewDeployEvent, success, nil)
 }
 
-// TrackCreatePreview sends a tracking event to mixpanel when the creates a preview environment
-func TrackCreatePreview(success bool) {
-	track(previewCreateEvent, success, nil)
-}
-
-// TrackDeletePreview sends a tracking event to mixpanel when the deletes a preview environment
-func TrackDeletePreview(success bool) {
-	track(previewDeleteEvent, success, nil)
+// TrackPreviewDestroy sends a tracking event to mixpanel when the deletes a preview environment
+func TrackPreviewDestroy(success bool) {
+	track(previewDestroyEvent, success, nil)
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect

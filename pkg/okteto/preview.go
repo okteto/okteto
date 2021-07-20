@@ -32,7 +32,7 @@ type PreviewBody struct {
 	Preview Preview `json:"preview"`
 }
 
-// Space represents the contents of an Okteto Cloud space
+// Preview represents the contents of an Okteto Cloud space
 type Preview struct {
 	GitDeploys []PipelineRun `json:"gitDeploys"`
 }

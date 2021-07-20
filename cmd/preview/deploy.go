@@ -86,7 +86,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			name, err = executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, varList, wait, timeout)
-			analytics.TrackCreatePreview(err == nil)
+			analytics.TrackPreviewDeploy(err == nil)
 			if err != nil {
 				return err
 			}
@@ -106,7 +106,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&sourceUrl, "sourceUrl", "", "", "the pull request url to notify.")
 	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringArrayVarP(&variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
-	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the preview environment finishes (defaults to false)")
+	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the preview environment deployment finishes (defaults to false)")
 
 	return cmd
 }
