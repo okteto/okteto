@@ -19,7 +19,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -522,12 +521,6 @@ func (up *upContext) shutdown() {
 	log.Info("completed shutdown sequence")
 	up.ShutdownCompleted <- true
 
-}
-
-func restoreCursor() {
-	if runtime.GOOS != "windows" {
-		fmt.Fprint(os.Stdin, "\033[?25h")
-	}
 }
 
 func printDisplayContext(dev *model.Dev, divertURL string) {
