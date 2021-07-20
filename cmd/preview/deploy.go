@@ -47,7 +47,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deploy <name>",
 		Short: "Deploy a preview environment",
-		Args:  utils.ExactArgsAccepted(1, ""),
+		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
@@ -72,7 +72,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if len(args) == 0 {
-				name = namesgenerator.GetRandomName(-1)
+				name = getRandomName(ctx, scope)
 			} else {
 				name = args[0]
 			}
@@ -159,21 +159,13 @@ func getBranch(ctx context.Context, branch string) (string, error) {
 	return branch, nil
 }
 
-func getName(ctx context.Context, repo, branch string) (string, error) {
-	username := okteto.GetUsername()
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get the current working directory: %w", err)
+func getRandomName(ctx context.Context, scope string) string {
+	name := strings.ReplaceAll(namesgenerator.GetRandomName(-1), "_", "-")
+	if scope == "personal" {
+		username := strings.ToLower(okteto.GetUsername())
+		name = fmt.Sprintf("%s-%s", name, username)
 	}
-	repo, err = model.GetValidNameFromGitRepo(cwd)
-	if err != nil {
-		return "", err
-	}
-	branch = model.ValidKubeNameRegex.ReplaceAllString(branch, "-")
-	name := strings.ToLower(fmt.Sprintf("%s-%s-%s", repo, branch, username))
-
-	return name, nil
+	return name
 }
 
 func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []okteto.Variable, wait bool, timeout time.Duration) (string, error) {
