@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -93,7 +93,7 @@ func ListBySelector(ctx context.Context, namespace string, selector map[string]s
 func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	start := time.Now()
-	to := start.Add(dev.Timeout * 4) // 120 seconds
+	to := start.Add(dev.Timeout.Resources)
 
 	for retries := 0; ; retries++ {
 		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)

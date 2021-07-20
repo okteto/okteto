@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -66,7 +66,7 @@ func getRequest(q, token string) *graphql.Request {
 
 func query(ctx context.Context, query string, result interface{}) error {
 	t, err := GetToken()
-	if err != nil {
+	if err != nil || t.Username == "" {
 		log.Infof("couldn't get token: %s", err)
 		return errors.ErrNotLogged
 	}
@@ -87,7 +87,7 @@ func query(ctx context.Context, query string, result interface{}) error {
 
 func queryWithRequest(ctx context.Context, req *graphql.Request, result interface{}) error {
 	t, err := GetToken()
-	if err != nil {
+	if err != nil || t.Username != "" {
 		log.Infof("couldn't get token: %s", err)
 		return errors.ErrNotLogged
 	}

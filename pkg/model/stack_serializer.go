@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -1027,13 +1027,13 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
+	raw, err = ExpandEnv(raw)
+	if err != nil {
+		return err
+	}
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		v.LocalPath, err = ExpandEnv(parts[0])
-		v.LocalPath = sanitizeName(v.LocalPath)
-		if err != nil {
-			return err
-		}
+		v.LocalPath = sanitizeName(parts[0])
 		v.RemotePath = parts[1]
 	} else {
 		v.RemotePath = parts[0]

@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -262,7 +262,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 				_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 			}
 
-			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/stacks for details")
+			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/stacks/ for details")
 			return nil, errors.New(sb.String())
 		}
 
@@ -341,7 +341,7 @@ func (s *Stack) validate() error {
 
 		for _, v := range svc.VolumeMounts {
 			if strings.HasPrefix(v.LocalPath, "/") {
-				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
+				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))

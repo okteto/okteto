@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -52,6 +52,7 @@ func Init() *cobra.Command {
 	var overwrite bool
 	cmd := &cobra.Command{
 		Use:   "init",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
 		Short: "Automatically generates your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			l := os.Getenv("OKTETO_LANGUAGE")
@@ -90,7 +91,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 
 	fmt.Println("This command walks you through creating an okteto manifest.")
 	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
-	fmt.Println("See https://okteto.com/docs/reference/manifest for the official documentation about the okteto manifest.")
+	fmt.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
 	ctx := context.Background()
 	devPath, err := validateDevPath(devPath, overwrite)
 	if err != nil {

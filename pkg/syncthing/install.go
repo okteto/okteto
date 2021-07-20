@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	syncthingVersion       = "1.17.0"
+	syncthingVersion       = "1.18.0"
 	syncthingVersionEnvVar = "OKTETO_SYNCTHING_VERSION"
 )
 

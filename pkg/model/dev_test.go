@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -127,7 +127,7 @@ services:
 	}
 
 	expected := (63 * time.Second)
-	if expected != main.Timeout {
+	if expected != main.Timeout.Default {
 		t.Errorf("the default timeout wasn't applied, got %s, expected %s", main.Timeout, expected)
 	}
 }
@@ -249,7 +249,7 @@ forward:
 			}
 
 			defaultTimeout, _ := GetTimeout()
-			if defaultTimeout != d.Timeout {
+			if defaultTimeout != d.Timeout.Default {
 				t.Errorf("the default timeout wasn't applied, got %s, expected %s", d.Timeout, defaultTimeout)
 			}
 		})
@@ -1015,7 +1015,7 @@ func TestGetTimeout(t *testing.T) {
 		want    time.Duration
 		wantErr bool
 	}{
-		{name: "default value", want: 30 * time.Second},
+		{name: "default value", want: 60 * time.Second},
 		{name: "env var", want: 134 * time.Second, env: "134s"},
 		{name: "bad env var", wantErr: true, env: "bad value"},
 	}

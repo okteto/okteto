@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -41,6 +41,7 @@ func Down() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "down",
 		Short: "Deactivates your development container",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
@@ -129,5 +130,5 @@ func removeVolume(ctx context.Context, dev *model.Dev) error {
 		return err
 	}
 
-	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, client, dev.Timeout)
+	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, client, dev.Timeout.Default)
 }

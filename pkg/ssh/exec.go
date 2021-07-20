@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -169,7 +169,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 	if strings.Contains(err.Error(), "exit code 137") || strings.Contains(err.Error(), "exit status 137") {
 		log.Yellow(`Insufficient memory. Please update your resources on your okteto manifest.
-More information is available here: https://okteto.com/docs/reference/manifest#resources-object-optional`)
+More information is available here: https://okteto.com/docs/reference/manifest/#resources-object-optional`)
 	}
 
 	log.Infof("command failed: %s", err)

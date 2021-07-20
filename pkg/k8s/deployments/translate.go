@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -606,11 +606,11 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 			},
 		)
 		mounPath := path.Join(v.MountPath, ".")
-		command = fmt.Sprintf("%s && ( [ \"$(ls -A /init-volume/%d)\" ] || cp -Rv %s/. /init-volume/%d || true)", command, iVolume, mounPath, iVolume)
+		command = fmt.Sprintf("%s && ( [ \"$(ls -A /init-volume/%d)\" ] || cp -R %s/. /init-volume/%d || true)", command, iVolume, mounPath, iVolume)
 		iVolume++
 	}
 
-	c.Command = []string{"sh", "-c", command}
+	c.Command = []string{"sh", "-cx", command}
 	translateInitResources(c, rule.InitContainer.Resources)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
 	spec.InitContainers = append(spec.InitContainers, *c)
