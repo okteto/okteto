@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/vbauerster/mpb/v6"
-	decor "github.com/vbauerster/mpb/v6/decor"
+	"github.com/vbauerster/mpb/v7"
+	decor "github.com/vbauerster/mpb/v7/decor"
 )
 
 // SyncthingProgress tracks the progress of all the files syncthing
@@ -44,7 +44,7 @@ func (s *SyncthingProgress) initProgressBar() {
 			decor.OnComplete(decor.Name(" "), ""),
 			decor.OnComplete(s.ItemStartedDecorator(), ""),
 		),
-		mpb.BarExtender(NewLineBarFiller(mpb.NewBarFiller("[->_]"))),
+		mpb.BarExtender(mpb.NewBarFiller(mpb.BarStyle().Lbound("[").Filler("-").Tip(">").Padding("_").Rbound("]"))),
 		mpb.BarRemoveOnComplete(),
 	)
 }

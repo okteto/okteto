@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -63,6 +64,7 @@ type Service struct {
 	Volumes         []StackVolume       `yaml:"volumes,omitempty"`
 	Workdir         string              `yaml:"workdir,omitempty"`
 	BackOffLimit    int32               `yaml:"max_attempts,omitempty"`
+	Healtcheck      *HealthCheck        `yaml:"healthcheck,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
@@ -85,6 +87,22 @@ type VolumeSpec struct {
 type Envs struct {
 	List Environment
 }
+type HealthCheck struct {
+	HTTP        *HTTPHealtcheck `yaml:"http,omitempty"`
+	Test        HealtcheckTest  `yaml:"test,omitempty"`
+	Interval    time.Duration   `yaml:"interval,omitempty"`
+	Timeout     time.Duration   `yaml:"timeout,omitempty"`
+	Retries     int             `yaml:"retries,omitempty"`
+	StartPeriod time.Duration   `yaml:"start_period,omitempty"`
+	Disable     bool            `yaml:"disable,omitempty"`
+}
+
+type HTTPHealtcheck struct {
+	Path string `yaml:"path,omitempty"`
+	Port int32  `yaml:"port,omitempty"`
+}
+
+type HealtcheckTest []string
 
 // StackResources represents an okteto stack resources
 type StackResources struct {
@@ -198,9 +216,13 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 		if svc.Build == nil {
 			continue
 		}
-		svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
-		svc.Build.Dockerfile = loadAbsPath(stackDir, svc.Build.Dockerfile)
 
+		if uri, err := url.ParseRequestURI(svc.Build.Context); err == nil || (uri != nil && (uri.Scheme != "" || uri.Host != "")) {
+			svc.Build.Dockerfile = ""
+		} else {
+			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
+			svc.Build.Dockerfile = loadAbsPath(stackDir, svc.Build.Dockerfile)
+		}
 	}
 	return s, nil
 }
@@ -240,7 +262,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 				_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 			}
 
-			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/stacks for details")
+			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/stacks/ for details")
 			return nil, errors.New(sb.String())
 		}
 
@@ -258,10 +280,6 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		}
 		if svc.Resources.Requests.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
 			svc.Resources.Requests.Storage.Size.Value = resource.MustParse("1Gi")
-		}
-
-		if svc.Replicas == 0 {
-			svc.Replicas = 1
 		}
 
 		if svc.IsJob() {
@@ -323,7 +341,7 @@ func (s *Stack) validate() error {
 
 		for _, v := range svc.VolumeMounts {
 			if strings.HasPrefix(v.LocalPath, "/") {
-				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/index.html#up", name, v.LocalPath, v.RemotePath))
+				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))

@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import (
 	"context"
 
 	"github.com/okteto/okteto/cmd/namespace"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +26,7 @@ func List(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List resources",
+		Args:  utils.NoArgsAccepted(""),
 	}
 	cmd.AddCommand(namespace.List(ctx))
 	return cmd

@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -38,7 +39,7 @@ import (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.3.2"
+	OktetoBinImageTag = "okteto/bin:1.3.3"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -94,7 +95,7 @@ type Dev struct {
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	InitFromImage        bool                  `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
-	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
 }
@@ -172,6 +173,15 @@ type DinDContainer struct {
 	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
+
+// Timeout represents the timeout for the command
+type Timeout struct {
+	Default   time.Duration `json:"default,omitempty" yaml:"default,omitempty"`
+	Resources time.Duration `json:"resources,omitempty" yaml:"resources,omitempty"`
+}
+
+// Duration represents a duration
+type Duration time.Duration
 
 // SecurityContext represents a pod security context
 type SecurityContext struct {
@@ -307,7 +317,7 @@ func Read(bytes []byte) (*Dev, error) {
 					_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 				}
 
-				_, _ = sb.WriteString("    See https://okteto.com/docs/reference/manifest for details")
+				_, _ = sb.WriteString("    See https://okteto.com/docs/reference/manifest/ for details")
 				return nil, errors.New(sb.String())
 			}
 
@@ -346,10 +356,16 @@ func (dev *Dev) loadAbsPaths(devPath string) error {
 	if err != nil {
 		return err
 	}
-	dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
-	dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
-	dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
-	dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+
+	if uri, err := url.ParseRequestURI(dev.Image.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+		dev.Image.Context = loadAbsPath(devDir, dev.Image.Context)
+		dev.Image.Dockerfile = loadAbsPath(devDir, dev.Image.Dockerfile)
+	}
+	if uri, err := url.ParseRequestURI(dev.Push.Context); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+		dev.Push.Context = loadAbsPath(devDir, dev.Push.Context)
+		dev.Push.Dockerfile = loadAbsPath(devDir, dev.Push.Dockerfile)
+	}
+
 	dev.loadVolumeAbsPaths(devDir)
 	for _, s := range dev.Services {
 		s.loadVolumeAbsPaths(devDir)
@@ -545,7 +561,7 @@ func setBuildDefaults(build *BuildInfo) {
 	if build.Context == "" {
 		build.Context = "."
 	}
-	if build.Dockerfile == "" {
+	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
 		build.Dockerfile = filepath.Join(build.Context, "Dockerfile")
 	}
 }
@@ -569,7 +585,10 @@ func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 }
 
 func (dev *Dev) setTimeout() error {
-	if dev.Timeout != 0 {
+	if dev.Timeout.Resources == 0 {
+		dev.Timeout.Resources = 120 * time.Second
+	}
+	if dev.Timeout.Default != 0 {
 		return nil
 	}
 
@@ -578,7 +597,7 @@ func (dev *Dev) setTimeout() error {
 		return err
 	}
 
-	dev.Timeout = t
+	dev.Timeout.Default = t
 	return nil
 }
 
@@ -633,7 +652,7 @@ func (dev *Dev) validate() error {
 	}
 
 	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
-		log.Information("https://okteto.com/docs/reference/manifest#docker-object-optional")
+		log.Information("https://okteto.com/docs/reference/manifest/#docker-object-optional")
 		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 
@@ -1037,7 +1056,7 @@ func ExpandEnv(value string) (string, error) {
 
 // GetTimeout returns the timeout override
 func GetTimeout() (time.Duration, error) {
-	defaultTimeout := (30 * time.Second)
+	defaultTimeout := (60 * time.Second)
 
 	t := os.Getenv("OKTETO_TIMEOUT")
 	if t == "" {

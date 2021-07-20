@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -51,6 +51,7 @@ func Push(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "push",
 		Short: "Builds, pushes and redeploys source code to the target deployment",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if err := utils.LoadEnvironment(ctx, true); err != nil {
@@ -264,7 +265,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
 	if err := build.Run(ctx, dev.Namespace, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, nil, progress); err != nil {
-		return "", fmt.Errorf("error building image '%s': %s", buildTag, err)
+		return "", err
 	}
 
 	return buildTag, nil

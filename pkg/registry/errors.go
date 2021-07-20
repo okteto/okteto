@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,18 +28,22 @@ func GetErrorMessage(err error, tag string) error {
 	switch {
 	case IsLoggedIntoRegistryButDontHavePermissions(err):
 		err = okErrors.UserError{
-			E:    fmt.Errorf("You are not authorized to push image '%s'.", imageTag),
+			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'.", tag, imageTag),
 			Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
 		}
 	case IsNotLoggedIntoRegistry(err):
 		err = okErrors.UserError{
-			E:    fmt.Errorf("You are not authorized to push image '%s'.", imageTag),
+			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'.", tag, imageTag),
 			Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
 		}
 	case IsBuildkitServiceUnavailable(err):
 		err = okErrors.UserError{
 			E:    fmt.Errorf("Buildkit service is not available at the moment."),
 			Hint: "Please try again later.",
+		}
+	default:
+		err = okErrors.UserError{
+			E: fmt.Errorf("error building image '%s': %s", tag, err.Error()),
 		}
 	}
 	return err

@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -36,11 +35,7 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		return err
 	}
 
-	if dockerFile == "" {
-		dockerFile = filepath.Join(path, "Dockerfile")
-	}
-
-	if buildKitHost == okteto.CloudBuildKitURL {
+	if buildKitHost == okteto.CloudBuildKitURL && dockerFile != "" {
 		dockerFile, err = registry.GetDockerfile(path, dockerFile)
 		if err != nil {
 			return err

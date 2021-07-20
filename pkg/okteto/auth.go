@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -183,7 +183,7 @@ func GetToken() (*Token, error) {
 //IsAuthenticated returns if the user is authenticated
 func IsAuthenticated() bool {
 	t, err := GetToken()
-	if err != nil {
+	if err != nil || t.Username != "" {
 		log.Infof("error getting okteto token: %s", err)
 		return false
 	}

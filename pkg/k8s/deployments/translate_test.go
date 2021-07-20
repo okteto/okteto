@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -202,7 +202,7 @@ services:
 							Name:            OktetoInitVolumeContainerName,
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "([ ! -f initialized ] && (cp -Rv /go/pkg/. /init-volume/1 || true) && (cp -Rv /root/.cache/go-build/. /init-volume/2 || true) && (cp -Rv /app/. /init-volume/3 || true) && (cp -Rv /path/. /init-volume/4 || true) && touch initialized) || true"},
+							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:  &runAsUser,
 								RunAsGroup: &runAsGroup,
@@ -725,7 +725,7 @@ docker:
 							Name:            OktetoInitVolumeContainerName,
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "([ ! -f initialized ] && (cp -Rv /app/. /init-volume/1 || true) && touch initialized) || true"},
+							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /app/. /init-volume/1 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:    &rootUser,
 								RunAsGroup:   &rootUser,
@@ -1295,7 +1295,7 @@ environment:
 							Name:            OktetoInitVolumeContainerName,
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "([ ! -f initialized ] && (cp -Rv /app/. /init-volume/1 || true) && touch initialized) || true"},
+							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /app/. /init-volume/1 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
 								RunAsUser:    &rootUser,
 								RunAsGroup:   &rootUser,

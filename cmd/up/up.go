@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -60,17 +61,18 @@ func Up() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your development container",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return errors.ErrNotInDevContainer
 			}
 
-			u := upgradeAvailable()
+			u := utils.UpgradeAvailable()
 			if len(u) > 0 {
 				warningFolder := filepath.Join(config.GetOktetoHome(), ".warnings")
 				if utils.GetWarningState(warningFolder, "version") != u {
 					log.Yellow("Okteto %s is available. To upgrade:", u)
-					log.Yellow("    %s", getUpgradeCommand())
+					log.Yellow("    %s", utils.GetUpgradeCommand())
 					if err := utils.SetWarningState(warningFolder, "version", u); err != nil {
 						log.Infof("failed to set warning version state: %s", err.Error())
 					}
@@ -98,7 +100,7 @@ func Up() *cobra.Command {
 			if autoDeploy {
 				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
-    More information is available here: https://okteto.com/docs/reference/cli#up`)
+    More information is available here: https://okteto.com/docs/reference/cli/#up`)
 			}
 
 			ctx := context.Background()
@@ -133,6 +135,7 @@ func Up() *cobra.Command {
 				Dev:            dev,
 				Exit:           make(chan error, 1),
 				resetSyncthing: reset,
+				StartTime:      time.Now(),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -296,6 +299,7 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 				<-t.C
 			}
 		}
+
 		err := up.activate(autoDeploy, build)
 		if err != nil {
 			log.Infof("activate failed with: %s", err)
@@ -346,7 +350,7 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) 
 			E: fmt.Errorf("Deployment '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
 			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-    More information is available here: https://okteto.com/docs/reference/cli#up`,
+    More information is available here: https://okteto.com/docs/reference/cli/#up`,
 		}
 		return nil, false, err
 	}
@@ -384,6 +388,13 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 }
 
 func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, create bool) error {
+	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
+		return errors.UserError{
+			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
+			Hint: "Try creating a Dockerfile or specify 'context' and 'dockerfile' fields.",
+		}
+	}
+
 	oktetoRegistryURL := ""
 	if up.isOktetoNamespace {
 		var err error
@@ -416,7 +427,7 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
 	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, nil, "tty"); err != nil {
-		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
+		return err
 	}
 	for _, s := range up.Dev.Services {
 		if s.Image.Name == up.Dev.Image.Name {
@@ -465,14 +476,14 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 			E: err,
 			Hint: `Okteto volume is full.
     Increase your persistent volume size, run 'okteto down -v' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest#persistentvolume-object-optional`,
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`,
 		}
 	}
 	return errors.UserError{
 		E: err,
 		Hint: `The synchronization service is running out of space.
     Enable persistent volumes in your okteto manifest and try again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest#persistentvolume-object-optional`,
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`,
 	}
 
 }
@@ -511,6 +522,12 @@ func (up *upContext) shutdown() {
 	log.Info("completed shutdown sequence")
 	up.ShutdownCompleted <- true
 
+}
+
+func restoreCursor() {
+	if runtime.GOOS != "windows" {
+		fmt.Fprint(os.Stdin, "\033[?25h")
+	}
 }
 
 func printDisplayContext(dev *model.Dev, divertURL string) {

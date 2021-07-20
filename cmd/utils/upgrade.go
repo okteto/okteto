@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package up
+package utils
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 )
 
-func upgradeAvailable() string {
+func UpgradeAvailable() string {
 	current, err := semver.NewVersion(config.VersionString)
 	if err != nil {
 		return ""
@@ -44,7 +44,7 @@ func upgradeAvailable() string {
 		}
 
 		// check if it's a minor or major change, we don't notify on revision
-		if shouldNotify(latest, current) {
+		if ShouldNotify(latest, current) {
 			return v
 		}
 	}
@@ -70,7 +70,7 @@ func GetLatestVersionFromGithub() (string, error) {
 	return "", fmt.Errorf("failed to find latest release")
 }
 
-func shouldNotify(latest, current *semver.Version) bool {
+func ShouldNotify(latest, current *semver.Version) bool {
 	if current.GreaterThan(latest) {
 		return false
 	}
@@ -87,7 +87,7 @@ func shouldNotify(latest, current *semver.Version) bool {
 	return false
 }
 
-func getUpgradeCommand() string {
+func GetUpgradeCommand() string {
 	if runtime.GOOS == "windows" {
 		return `https://github.com/okteto/okteto/releases/latest/download/okteto.exe`
 	}
