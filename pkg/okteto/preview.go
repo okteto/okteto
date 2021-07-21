@@ -75,10 +75,10 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 		}
 	} else {
 		q := fmt.Sprintf(`mutation{
-			deployPreview(name: "%s", scope: %s, repository: "%s", branch: "%s"%s){
+			deployPreview(name: "%s", scope: %s, repository: "%s", branch: "%s", sourceUrl: "%s",%s){
 				id
 			},
-		}`, name, scope, repository, branch, filenameParameter)
+		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
 			return "", err
