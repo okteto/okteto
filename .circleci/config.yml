@@ -184,8 +184,7 @@ jobs:
             echo $GITHUB_TOKEN | gh auth login --with-token
             turbolift init --name update-actions-to-$CIRCLE_TAG
             cd update-actions-to-$CIRCLE_TAG
-            repos=("deploy-preview" "delete-namespace" "build" "destroy-preview" "deploy-stack" "namespace" "pipeline" "push" "destroy-pipeline" "create-namespace" "login" "apply")
-            printf "okteto/%s\n" "${repos[@]}" > repos.txt
+            mv ../.circleci/repos.txt repos.txt
             turbolift clone
             turbolift foreach -- sed -iE 's_FROM\ okteto\/okteto\:\.\*_FROM\ okteto\/okteto\:"$CIRCLE_TAG"_' Dockerfile
             turbolift commit --message "Update to okteto/okteto:$CIRCLE_TAG"

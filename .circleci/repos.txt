@@ -1,0 +1,13 @@
+okteto/delete-namespace
+okteto/build
+okteto/destroy-preview
+okteto/deploy-preview
+okteto/deploy-stack
+okteto/namespace
+okteto/pipeline
+okteto/push
+okteto/destroy-pipeline
+okteto/create-namespace
+okteto/login
+okteto/destroy-stack
+okteto/apply
