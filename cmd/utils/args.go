@@ -78,7 +78,7 @@ func ExactArgsAccepted(n int, url string) cobra.PositionalArgs {
 		if url != "" {
 			hint = fmt.Sprintf("Visit %s for more information.", url)
 		}
-		if len(args) > n {
+		if len(args) != n {
 			return errors.UserError{
 				E:    fmt.Errorf("%q accepts %d arg(s), but received %d", cmd.CommandPath(), n, len(args)),
 				Hint: hint,
