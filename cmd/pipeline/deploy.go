@@ -179,7 +179,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 
 	err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
 	if err != nil {
-		return err
+		return fmt.Errorf("pipeline deployed with resource errors")
 	}
 	log.Success("Preview environment '%s' successfully deployed", name)
 	return nil

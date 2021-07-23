@@ -180,7 +180,7 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 
 	spinner.Update("Waiting for the preview environment to finish...")
 	if err := waitUntilRunning(ctx, oktetoNS, oktetoNS, timeout); err != nil {
-		return "", err
+		return "", fmt.Errorf("preview deployed with resource errors")
 	}
 	return oktetoNS, nil
 }
