@@ -193,8 +193,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 
 	err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
 	if err != nil {
-		log.Success("Preview environment '%s' successfully deployed with errors", name)
-		return nil
+		return err
 	}
 	log.Success("Preview environment '%s' successfully deployed", name)
 	return nil
