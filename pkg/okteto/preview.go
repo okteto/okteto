@@ -34,7 +34,25 @@ type PreviewBody struct {
 
 // Preview represents the contents of an Okteto Cloud space
 type Preview struct {
-	GitDeploys []PipelineRun `json:"gitDeploys"`
+	GitDeploys   []PipelineRun `json:"gitDeploys"`
+	Statefulsets []Statefulset `json:"statefulsets"`
+	Deployments  []Deployment  `json:"deployments"`
+}
+
+//Statefulset represents an Okteto statefulset
+type Statefulset struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Status     string `json:"status"`
+	DeployedBy string `json:"deployedBy"`
+}
+
+//Deployment represents an Okteto statefulset
+type Deployment struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Status     string `json:"status"`
+	DeployedBy string `json:"deployedBy"`
 }
 
 //Previews represents an Okteto list of spaces
@@ -140,4 +158,31 @@ func GetPreviewEnvByName(ctx context.Context, name, namespace string) (*Pipeline
 	}
 
 	return nil, errors.ErrNotFound
+}
+
+func GetResourcesStatusFromPreview(ctx context.Context, previewName string) (map[string]string, error) {
+	status := make(map[string]string)
+	q := fmt.Sprintf(`query{
+ 		preview(id: "%s"){
+ 			deployments{
+ 				name, status
+ 			},
+ 			statefulsets{
+ 				name, status
+ 			}
+ 		}
+ 	}`, previewName)
+	var body PreviewBody
+	if err := query(ctx, q, &body); err != nil {
+		return status, err
+	}
+
+	for _, d := range body.Preview.Deployments {
+		status[d.Name] = d.Status
+	}
+
+	for _, sfs := range body.Preview.Statefulsets {
+		status[sfs.Name] = sfs.Status
+	}
+	return status, nil
 }

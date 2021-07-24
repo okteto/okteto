@@ -115,13 +115,6 @@ func deploy(ctx context.Context) *cobra.Command {
 			if err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, timeout, variables); err != nil {
 				return err
 			}
-
-			if wait {
-				log.Success("Pipeline '%s' successfully deployed", name)
-			} else {
-				log.Success("Pipeline '%s' scheduled for deployment", name)
-			}
-
 			return nil
 		},
 	}
@@ -161,6 +154,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	}
 
 	if !wait {
+		log.Success("Pipeline '%s' scheduled for deployment", name)
 		return nil
 	}
 
@@ -178,6 +172,21 @@ func getPipelineName() (string, error) {
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+	err := waitToBeDeployed(ctx, name, namespace, timeout)
+	if err != nil {
+		return err
+	}
+
+	err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
+	if err != nil {
+		return fmt.Errorf("pipeline deployed with resource errors")
+	}
+	log.Success("Pipeline '%s' successfully deployed", name)
+	return nil
+}
+
+func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.Duration) error {
+
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	attempts := 0
@@ -209,6 +218,37 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 			}
 		}
 	}
+}
+
+func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, t time.Duration) error {
+	areAllRunning := false
+
+	ticker := time.NewTicker(5 * time.Second)
+	timeout := time.Now().Add(t)
+	errors := make(map[string]int)
+	for time.Now().Before(timeout) {
+		<-ticker.C
+		resourceStatus, err := okteto.GetResourcesStatusFromPipeline(ctx, name, namespace)
+		if err != nil {
+			return err
+		}
+		areAllRunning = true
+		for name, status := range resourceStatus {
+			if status != "running" {
+				areAllRunning = false
+			}
+			if status == "error" {
+				errors[name] = 1
+			}
+		}
+		if len(errors) > 0 {
+			return fmt.Errorf("Services with errors found")
+		}
+		if areAllRunning {
+			break
+		}
+	}
+	return nil
 }
 
 func getCurrentNamespace(ctx context.Context) string {

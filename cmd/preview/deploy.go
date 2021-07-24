@@ -95,11 +95,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if wait {
-				log.Success("Preview environment '%s' successfully deployed", name)
-			} else {
-				log.Success("Preview environment '%s' scheduled for deployment", name)
-			}
 			return err
 		},
 	}
@@ -179,17 +174,32 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	}
 
 	if !wait {
+		log.Success("Preview environment '%s' scheduled for deployment", name)
 		return oktetoNS, nil
 	}
 
 	spinner.Update("Waiting for the preview environment to finish...")
 	if err := waitUntilRunning(ctx, oktetoNS, oktetoNS, timeout); err != nil {
-		return "", err
+		return "", fmt.Errorf("preview deployed with resource errors")
 	}
 	return oktetoNS, nil
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+	err := waitToBeDeployed(ctx, name, namespace, timeout)
+	if err != nil {
+		return err
+	}
+
+	err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
+	if err != nil {
+		return err
+	}
+	log.Success("Preview environment '%s' successfully deployed", name)
+	return nil
+}
+
+func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	attempts := 0
@@ -221,4 +231,35 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 			}
 		}
 	}
+}
+
+func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, t time.Duration) error {
+	areAllRunning := false
+
+	ticker := time.NewTicker(5 * time.Second)
+	timeout := time.Now().Add(t)
+	errors := make(map[string]int)
+	for time.Now().Before(timeout) {
+		<-ticker.C
+		resourceStatus, err := okteto.GetResourcesStatusFromPreview(ctx, namespace)
+		if err != nil {
+			return err
+		}
+		areAllRunning = true
+		for name, status := range resourceStatus {
+			if status != "running" {
+				areAllRunning = false
+			}
+			if status == "error" {
+				errors[name] = 1
+			}
+		}
+		if len(errors) > 0 {
+			return fmt.Errorf("Services with errors found")
+		}
+		if areAllRunning {
+			break
+		}
+	}
+	return nil
 }
