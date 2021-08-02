@@ -241,6 +241,10 @@ func TestPreviewActions(t *testing.T) {
 	ctx := context.Background()
 	namespace := getTestNamespace()
 
+	if err := executeLoginAction(ctx); err != nil {
+		t.Fatalf("Login action failed: %s", err.Error())
+	}
+
 	if err := executeDeployPreviewAction(ctx, namespace); err != nil {
 		t.Fatalf("Deploy preview action failed: %s", err.Error())
 	}
@@ -317,7 +321,7 @@ func TestStacksActions(t *testing.T) {
 }
 
 func getTestNamespace() string {
-	tName := fmt.Sprintf("TestPush-%s", runtime.GOOS)
+	tName := fmt.Sprintf("TestAction-%s", runtime.GOOS)
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	return namespace
@@ -665,13 +669,21 @@ func executeDestroyPreviewAction(ctx context.Context, namespace string) error {
 	defer deleteGitRepo(ctx, actionFolder)
 
 	log.Printf("Deleting preview %s", namespace)
-	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
-	args := []string{namespace}
+	command := "chmod"
+	entrypointPath := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
+	args := []string{"+x", entrypointPath}
 	cmd := exec.Command(command, args...)
-	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
+	}
+
+	args = []string{namespace}
+	cmd = exec.Command(entrypointPath, args...)
+	cmd.Env = os.Environ()
+	o, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", entrypointPath, strings.Join(args, " "), string(o))
 	}
 
 	log.Printf("destroy preview output: \n%s\n", string(o))
