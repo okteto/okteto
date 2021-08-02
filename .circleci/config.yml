@@ -179,18 +179,6 @@ jobs:
             docker build -t okteto/okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_TAG .
             docker push okteto/okteto:${CIRCLE_TAG}
       - run:
-          name: Auto-update-actions
-          command: |
-            echo $GITHUB_TOKEN | gh auth login --with-token
-            turbolift init --name update-actions-to-$CIRCLE_TAG
-            cd update-actions-to-$CIRCLE_TAG
-            mv ../.circleci/repos.txt repos.txt
-            turbolift clone
-            turbolift foreach -- sed -iE 's_FROM\ okteto\/okteto\:\.\*_FROM\ okteto\/okteto\:"$CIRCLE_TAG"_' Dockerfile
-            turbolift commit --message "Update to okteto/okteto:$CIRCLE_TAG"
-            turbolift create-prs
-            turbolift foreach gh pr merge pchico83:update-actions-to-$CIRCLE_TAG -d
-      - run:
           name: Publish Release on GitHub
           command: |
             go get -u github.com/tcnksm/ghr
@@ -206,6 +194,11 @@ jobs:
             ./update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
             pushd homebrew-cli
             git push git@github.com:okteto/homebrew-cli.git master
+      - deploy:
+          name: Auto-update-actions
+          command: |
+            go get -u github.com/tcnksm/ghr
+            ./update_actions.sh $CIRCLE_TAG
   release-master:
     docker:
       - image: okteto/golang-ci:1.16

@@ -42,6 +42,7 @@ const (
 	deployStackPath     = "okteto/deploy-stack"
 	destroyPipelinePath = "okteto/destroy-pipeline"
 	deployPreviewPath   = "okteto/deploy-preview"
+	destroyPreviewPath  = "okteto/destroy-preview"
 	destroyStackPath    = "okteto/destroy-stack"
 	loginPath           = "okteto/login"
 	namespacePath       = "okteto/namespace"
@@ -233,8 +234,20 @@ func TestPipelineActions(t *testing.T) {
 }
 
 func TestPreviewActions(t *testing.T) {
-	t.Skip("this test is not required")
-	return
+	if mode == "client" {
+		t.Skip("this test is not required for client-side translation")
+	}
+
+	ctx := context.Background()
+	namespace := getTestNamespace()
+
+	if err := executeDeployPreviewAction(ctx, namespace); err != nil {
+		t.Fatalf("Deploy preview action failed: %s", err.Error())
+	}
+
+	if err := executeDestroyPreviewAction(ctx, namespace); err != nil {
+		t.Fatalf("Destroy preview action failed: %s", err.Error())
+	}
 }
 
 func TestPushAction(t *testing.T) {
@@ -610,5 +623,57 @@ func executeLoginAction(ctx context.Context) error {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
 	log.Printf("logging output: \n%s\n", string(o))
+	return nil
+}
+
+func executeDeployPreviewAction(ctx context.Context, namespace string) error {
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		return err
+	}
+	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, deployPreviewPath)
+	actionFolder := strings.Split(deployPreviewPath, "/")[1]
+	log.Printf("cloning destroy path repository: %s", actionRepo)
+	if err := cloneGitRepo(ctx, actionRepo); err != nil {
+		return err
+	}
+	log.Printf("cloned repo %s \n", actionRepo)
+	defer deleteGitRepo(ctx, actionFolder)
+
+	log.Printf("Deploying preview %s", namespace)
+	command := oktetoPath
+	args := []string{"preview", "deploy", namespace, "--scope", "personal", "--branch", "master", "--repository", fmt.Sprintf("%s/%s", githubUrl, pipelineRepo), "--wait"}
+	cmd := exec.Command(command, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
+	}
+
+	log.Printf("destroy preview output: \n%s\n", string(o))
+	return nil
+}
+
+func executeDestroyPreviewAction(ctx context.Context, namespace string) error {
+	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, destroyPreviewPath)
+	actionFolder := strings.Split(destroyPreviewPath, "/")[1]
+	log.Printf("cloning destroy path repository: %s", actionRepo)
+	if err := cloneGitRepo(ctx, actionRepo); err != nil {
+		return err
+	}
+	log.Printf("cloned repo %s \n", actionRepo)
+	defer deleteGitRepo(ctx, actionFolder)
+
+	log.Printf("Deleting preview %s", namespace)
+	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
+	args := []string{namespace}
+	cmd := exec.Command(command, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
+	}
+
+	log.Printf("destroy preview output: \n%s\n", string(o))
 	return nil
 }
