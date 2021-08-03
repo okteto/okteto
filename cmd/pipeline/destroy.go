@@ -95,16 +95,9 @@ func deletePipeline(ctx context.Context, name, namespace string, wait, destroyVo
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Infof("pipeline '%s' not found", name)
-			return nil
 		}
 
 		return fmt.Errorf("failed to delete pipeline '%s': %w", name, err)
 	}
-
-	if !wait {
-		return nil
-	}
-
-	// this will also run if it's not found
-	return waitUntilRunning(ctx, name, namespace, timeout)
+	return nil
 }

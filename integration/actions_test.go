@@ -97,29 +97,6 @@ func TestApplyPipeline(t *testing.T) {
 	ctx := context.Background()
 	namespace := getTestNamespace()
 
-	command := "echo $HOME"
-	if err := executeLoginAction(ctx); err != nil {
-		t.Fatalf("Login action failed: %s", err.Error())
-	}
-
-	args := []string{}
-	cmd := exec.Command(command, args...)
-	cmd.Env = os.Environ()
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatal(fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o)))
-	}
-	command = "ls $HOME"
-
-	cmd = exec.Command(command, args...)
-	cmd.Env = os.Environ()
-	o, err = cmd.CombinedOutput()
-	if err != nil {
-		t.Fatal(fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o)))
-	}
-
-	log.Printf("create namespace output: \n%s\n", string(o))
-
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
@@ -141,6 +118,10 @@ func TestBuildActionPipeline(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
+
+	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
+		t.Fatalf("Create namespace action failed: %s", err.Error())
+	}
 
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
@@ -433,6 +414,7 @@ func executeDeployPipelineAction(ctx context.Context, namespace string) error {
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
+	log.Printf("Deploy pipeline output: \n%s\n", string(o))
 
 	pipeline, err := okteto.GetPipelineByName(ctx, "movies", namespace)
 	if err != nil || pipeline == nil {
