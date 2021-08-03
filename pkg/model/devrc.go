@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
@@ -28,7 +27,7 @@ type DevRC struct {
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Sync                 Sync                  `json:"sync,omitempty" yaml:"sync,omitempty"`
-	Timeout              time.Duration         `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 // Get returns a Dev object from a given file
@@ -193,8 +192,11 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 		dev.Sync.Folders = append(dev.Sync.Folders, folder)
 	}
 
-	if devRc.Timeout != 0 {
-		dev.Timeout = devRc.Timeout
+	if devRc.Timeout.Default != 0 {
+		dev.Timeout.Default = devRc.Timeout.Default
+	}
+	if devRc.Timeout.Resources != 0 {
+		dev.Timeout.Resources = devRc.Timeout.Resources
 	}
 }
 
