@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -15,6 +16,7 @@ import (
 type DevRC struct {
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
+	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
 	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
@@ -80,6 +82,10 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 
 	if devRc.Context != "" {
 		dev.Context = devRc.Context
+	}
+	if len(devRc.Command.Values) != 0 {
+		log.Warning("Start command has been replaced with okteto developer file command")
+		dev.Command.Values = devRc.Command.Values
 	}
 
 	if devRc.Docker.Enabled {

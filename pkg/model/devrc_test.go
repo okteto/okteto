@@ -132,6 +132,37 @@ func TestDevRCLabels(t *testing.T) {
 	}
 }
 
+func TestDevRCCommand(t *testing.T) {
+	var tests = []struct {
+		name     string
+		dev      *Dev
+		devRC    *DevRC
+		expected Command
+	}{
+		{
+			name:     "not overwrite",
+			dev:      &Dev{Command: Command{Values: []string{"/bin/sh"}}},
+			devRC:    &DevRC{},
+			expected: Command{Values: []string{"/bin/sh"}},
+		},
+		{
+			name:     "overwrite",
+			dev:      &Dev{Command: Command{Values: []string{"/bin/sh"}}},
+			devRC:    &DevRC{Command: Command{Values: []string{"/bin/bash"}}},
+			expected: Command{Values: []string{"/bin/bash"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			MergeDevWithDevRc(tt.dev, tt.devRC)
+			if !reflect.DeepEqual(tt.dev.Command, tt.expected) {
+				t.Fatalf("Expected %v but got %v", tt.expected, tt.dev.Command)
+			}
+		})
+	}
+}
+
 func TestDevRCAnnotations(t *testing.T) {
 	var tests = []struct {
 		name     string
