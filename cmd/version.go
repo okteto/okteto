@@ -26,7 +26,7 @@ func Version() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "View the version of the okteto binary",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#version"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("okteto version %s \n", config.VersionString)
 			return nil

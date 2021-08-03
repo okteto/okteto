@@ -158,5 +158,5 @@ const (
 	// this path is expected by remote
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 
-	syncFieldDocsURL = "https://okteto.com/docs/reference/manifest#sync-string-required"
+	syncFieldDocsURL = "https://okteto.com/docs/reference/manifest/#sync-string-required"
 )

@@ -195,11 +195,7 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
-			if uErr, ok := err.(errors.UserError); ok {
-				uErr.E = fmt.Errorf("error building image for '%s': %s", name, uErr.E)
-				return hasBuiltSomething, uErr
-			}
-			return hasBuiltSomething, fmt.Errorf("error building image for '%s': %s", name, err)
+			return hasBuiltSomething, err
 		}
 		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
@@ -236,7 +232,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
-				return hasAddedAnyVolumeMounts, fmt.Errorf("error building image for '%s': %s", name, err)
+				return hasAddedAnyVolumeMounts, err
 			}
 			svc.SetLastBuiltAnnotation()
 			s.Services[name] = svc

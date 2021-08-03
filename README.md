@@ -17,15 +17,15 @@ Today, most developers try to either run parts of the infrastructure locally or 
 
 ## How it works
 
-Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can be any [docker image](https://okteto.com/docs/reference/development-environment). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
+Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can be any [docker image](https://okteto.com/docs/reference/development-environment/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
 
 In addition to that, `okteto up` will:
 
-1. Create a bidirectional file [synchronization service](https://okteto.com/docs/reference/file-synchronization) to keep your changes up to date between your local filesystem and your development container.
-1. Automatic local and remote port forwarding using [SSH](https://okteto.com/docs/reference/ssh-server), so you can access your cluster services via `localhost` or connect a remote debugger.
+1. Create a bidirectional file [synchronization service](https://okteto.com/docs/reference/file-synchronization/) to keep your changes up to date between your local filesystem and your development container.
+1. Automatic local and remote port forwarding using [SSH](https://okteto.com/docs/reference/ssh-server/), so you can access your cluster services via `localhost` or connect a remote debugger.
 1. Give you an interactive terminal to your development container, so you can build, test, and run your application as you would from a local terminal.
 
-All of this (and more) can be configured via a [simple YAML manifest](https://okteto.com/docs/reference/manifest).
+All of this (and more) can be configured via a [simple YAML manifest](https://okteto.com/docs/reference/manifest/).
 
 The end result is that the remote cluster is seen by your IDE and tools as a local filesystem/environment. You keep writing your code on your local IDE and as soon as you save a file, the change goes to the development container, and your application instantly updates (taking advantage of any hot-reload mechanism you already have). This whole process happens in an instant. No docker images need to be created and no Kubernetes manifests need to be applied to the cluster.
 
@@ -44,26 +44,26 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 
 ## Getting started
 
-All you need to get started is to [install the Okteto CLI](https://okteto.com/docs/getting-started/installation/index.html) and have access to a Kubernetes cluster.
+All you need to get started is to [install the Okteto CLI](https://okteto.com/docs/getting-started/installation/) and have access to a Kubernetes cluster.
 
 You can also use `okteto` with [Okteto Cloud](https://okteto.com/), a **Kubernetes Namespace as a Service** platform where you can deploy your Kubernetes applications and development containers for free.
 
 ### Super Quick Start
 
 - Deploy your application on Kubernetes.
-- Run `okteto init` from the root of your git repository to inspect your code and generate your [Okteto manifest](https://okteto.com/docs/reference/manifest). The Okteto manifest defines your development container.
+- Run `okteto init` from the root of your git repository to inspect your code and generate your [Okteto manifest](https://okteto.com/docs/reference/manifest/). The Okteto manifest defines your development container.
 - Run `okteto up` to deploy your development container.
 
 We created a [few guides to help you get started](https://github.com/okteto/samples) with `okteto` and your favorite programming language.
 
 ## Useful links
 
-- [Installation guides](https://okteto.com/docs/getting-started/installation/index.html)
+- [Installation guides](https://okteto.com/docs/getting-started/installation/)
 - [CLI reference](https://okteto.com/docs/reference/cli)
-- [Okteto manifest reference](https://okteto.com/docs/reference/manifest/index.html)
+- [Okteto manifest reference](https://okteto.com/docs/reference/manifest/)
 - [Samples](https://github.com/okteto/samples)
-- Frequently asked questions ([FAQs](https://okteto.com/docs/reference/faqs/index.html))
-- [Known issues](https://okteto.com/docs/reference/known-issues/index.html)
+- Frequently asked questions ([FAQs](https://okteto.com/docs/reference/faqs/))
+- [Known issues](https://okteto.com/docs/reference/known-issues/)
 
 ## Support and Community
 
@@ -92,7 +92,9 @@ We ❤️ contributions big or small. [See our guide](contributing.md) on how to
 <a href="https://github.com/adhaamehab"><img src="https://avatars.githubusercontent.com/u/13816742?v=4" title="adhaamehab" width="80" height="80"></a>
 <a href="https://github.com/danielhelfand"><img src="https://avatars.githubusercontent.com/u/34258252?v=4" title="danielhelfand" width="80" height="80"></a>
 <a href="https://github.com/glensc"><img src="https://avatars.githubusercontent.com/u/199095?v=4" title="glensc" width="80" height="80"></a>
+<a href="https://github.com/ifbyol"><img src="https://avatars.githubusercontent.com/u/3510171?v=4" title="ifbyol" width="80" height="80"></a>
 <a href="https://github.com/kivi"><img src="https://avatars.githubusercontent.com/u/366163?v=4" title="kivi" width="80" height="80"></a>
+<a href="https://github.com/aguthrie"><img src="https://avatars.githubusercontent.com/u/210097?v=4" title="aguthrie" width="80" height="80"></a>
 <a href="https://github.com/alanmbarr"><img src="https://avatars.githubusercontent.com/u/760506?v=4" title="alanmbarr" width="80" height="80"></a>
 <a href="https://github.com/AnesBenmerzoug"><img src="https://avatars.githubusercontent.com/u/27914730?v=4" title="AnesBenmerzoug" width="80" height="80"></a>
 <a href="https://github.com/borjaburgos"><img src="https://avatars.githubusercontent.com/u/3640206?v=4" title="borjaburgos" width="80" height="80"></a>
@@ -102,6 +104,8 @@ We ❤️ contributions big or small. [See our guide](contributing.md) on how to
 <a href="https://github.com/drodriguezhdez"><img src="https://avatars.githubusercontent.com/u/29516565?v=4" title="drodriguezhdez" width="80" height="80"></a>
 <a href="https://github.com/snitkdan"><img src="https://avatars.githubusercontent.com/u/15274429?v=4" title="snitkdan" width="80" height="80"></a>
 <a href="https://github.com/fermayo"><img src="https://avatars.githubusercontent.com/u/3635457?v=4" title="fermayo" width="80" height="80"></a>
+<a href="https://github.com/irespaldiza"><img src="https://avatars.githubusercontent.com/u/11633327?v=4" title="irespaldiza" width="80" height="80"></a>
+<a href="https://github.com/jmacelroy"><img src="https://avatars.githubusercontent.com/u/30531294?v=4" title="jmacelroy" width="80" height="80"></a>
 <a href="https://github.com/dekkers"><img src="https://avatars.githubusercontent.com/u/656182?v=4" title="dekkers" width="80" height="80"></a>
 <a href="https://github.com/thatnerdjosh"><img src="https://avatars.githubusercontent.com/u/5251847?v=4" title="thatnerdjosh" width="80" height="80"></a>
 <a href="https://github.com/freeman"><img src="https://avatars.githubusercontent.com/u/7547?v=4" title="freeman" width="80" height="80"></a>

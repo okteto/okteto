@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package namespace
+package preview
 
 import (
 	"context"
@@ -19,38 +19,39 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-// List all namespace in current context
+// List lists all the previews
 func List(ctx context.Context) *cobra.Command {
-	return &cobra.Command{
-		Use:   "namespace",
-		Short: "List namespaces managed by Okteto in your current context",
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "Lists all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
 			}
 
-			err := executeListNamespaces(ctx)
+			err := executeListPreviews(ctx)
 			return err
+
 		},
-		Args: utils.NoArgsAccepted(""),
 	}
+
+	return cmd
 }
 
-func executeListNamespaces(ctx context.Context) error {
-	spaces, err := okteto.ListNamespaces(ctx)
+func executeListPreviews(ctx context.Context) error {
+	previewList, err := okteto.ListPreviews(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get namespaces: %s", err)
+		return fmt.Errorf("failed to get preview environments: %s", err)
 	}
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Namespace\tSleeping\n")
-	for _, space := range spaces {
-		fmt.Fprintf(w, "%s\t%v\n", space.ID, space.Sleeping)
+	fmt.Fprintf(w, "Name\tScope\tSleeping\n")
+	for _, preview := range previewList {
+		fmt.Fprintf(w, "%s\t%s\t%v\n", preview.ID, preview.Scope, preview.Sleeping)
 	}
 
 	w.Flush()

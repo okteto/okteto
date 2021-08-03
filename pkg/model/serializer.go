@@ -444,13 +444,21 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	parts := strings.SplitN(raw, ":", 2)
+	parts := strings.Split(raw, ":")
 	if len(parts) == 2 {
 		s.LocalPath, err = ExpandEnv(parts[0])
 		if err != nil {
 			return err
 		}
 		s.RemotePath = parts[1]
+		return nil
+	} else if len(parts) == 3 {
+		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
+		s.LocalPath, err = ExpandEnv(windowsPath)
+		if err != nil {
+			return err
+		}
+		s.RemotePath = parts[2]
 		return nil
 	}
 

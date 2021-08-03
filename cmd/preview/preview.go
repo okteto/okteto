@@ -11,23 +11,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stack
+package preview
 
 import (
 	"context"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/spf13/cobra"
 )
 
-//Stack stack management commands
-func Stack(ctx context.Context) *cobra.Command {
+//Preview preview management commands
+func Preview(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "stack",
-		Short: "Stack management commands",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#stack"),
+		Use:   "preview",
+		Short: "Preview environment management commands",
 	}
-	cmd.AddCommand(Deploy(ctx))
-	cmd.AddCommand(Destroy(ctx))
+	deployCommand := Deploy(ctx)
+	deployCommand.Hidden = true
+
+	destroyCommand := Destroy(ctx)
+	destroyCommand.Hidden = true
+
+	listCommand := List(ctx)
+	listCommand.Hidden = true
+
+	cmd.AddCommand(deployCommand)
+	cmd.AddCommand(destroyCommand)
+	cmd.AddCommand(listCommand)
 	return cmd
 }

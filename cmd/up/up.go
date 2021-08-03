@@ -60,7 +60,7 @@ func Up() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your development container",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/index.html#up"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return errors.ErrNotInDevContainer
@@ -99,7 +99,7 @@ func Up() *cobra.Command {
 			if autoDeploy {
 				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
-    More information is available here: https://okteto.com/docs/reference/cli#up`)
+    More information is available here: https://okteto.com/docs/reference/cli/#up`)
 			}
 
 			ctx := context.Background()
@@ -134,6 +134,7 @@ func Up() *cobra.Command {
 				Dev:            dev,
 				Exit:           make(chan error, 1),
 				resetSyncthing: reset,
+				StartTime:      time.Now(),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -297,6 +298,7 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 				<-t.C
 			}
 		}
+
 		err := up.activate(autoDeploy, build)
 		if err != nil {
 			log.Infof("activate failed with: %s", err)
@@ -347,7 +349,7 @@ func (up *upContext) getCurrentK8sObject(ctx context.Context, autoDeploy bool) (
 			E: fmt.Errorf("Deployment '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
 			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-    More information is available here: https://okteto.com/docs/reference/cli#up`,
+    More information is available here: https://okteto.com/docs/reference/cli/#up`,
 		}
 		return nil, false, err
 	}
@@ -424,7 +426,7 @@ func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObje
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
 	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, nil, "tty"); err != nil {
-		return fmt.Errorf("error building dev image '%s': %s", imageTag, err)
+		return err
 	}
 	for _, s := range up.Dev.Services {
 		if s.Image.Name == up.Dev.Image.Name {
@@ -473,14 +475,14 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 			E: err,
 			Hint: `Okteto volume is full.
     Increase your persistent volume size, run 'okteto down -v' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest#persistentvolume-object-optional`,
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`,
 		}
 	}
 	return errors.UserError{
 		E: err,
 		Hint: `The synchronization service is running out of space.
     Enable persistent volumes in your okteto manifest and try again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest#persistentvolume-object-optional`,
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`,
 	}
 
 }
