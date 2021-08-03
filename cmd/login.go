@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -31,6 +31,7 @@ func Login() *cobra.Command {
 	token := ""
 	cmd := &cobra.Command{
 		Use:   "login [url]",
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#login"),
 		Short: "Log into Okteto",
 		Long: `Log into Okteto
 
@@ -51,7 +52,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 				return fmt.Errorf("this command is not supported without the '--token' flag from inside a pod")
 			}
 
-			oktetoURL := okteto.CloudURL
+			var oktetoURL string
 			if len(args) > 0 {
 				u, err := utils.ParseURL(args[0])
 				if err != nil {
@@ -66,8 +67,14 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 
 			if len(token) > 0 {
 				log.Infof("authenticating with an api token")
+				if oktetoURL == "" {
+					oktetoURL = okteto.CloudURL
+				}
 				u, err = login.WithToken(ctx, oktetoURL, token)
 			} else {
+				if len(args) == 0 {
+					oktetoURL = askForLoginURL(ctx)
+				}
 				u, err = login.WithBrowser(ctx, oktetoURL)
 			}
 
@@ -94,4 +101,14 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 
 	cmd.Flags().StringVarP(&token, "token", "t", "", "API token for authentication.  (optional)")
 	return cmd
+}
+
+func askForLoginURL(ctx context.Context) string {
+	url := okteto.GetURL()
+	if url == "" || url == "na" {
+		url = okteto.CloudURL
+	}
+	fmt.Print(fmt.Sprintf("What is the URL of your Okteto instance? [%s]: ", url))
+	fmt.Scanln(&url)
+	return url
 }

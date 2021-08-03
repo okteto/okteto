@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -822,6 +823,137 @@ func TestEnvFileUnmashalling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := make(EnvFiles, 0)
+
+			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDurationUnmashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected Duration
+	}{
+		{
+			name:     "No units",
+			data:     []byte(`10`),
+			expected: Duration(10 * time.Second),
+		},
+		{
+			name:     "Only one unit",
+			data:     []byte(`10s`),
+			expected: Duration(10 * time.Second),
+		},
+		{
+			name:     "Complex units",
+			data:     []byte(`1m10s`),
+			expected: Duration(70 * time.Second),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Duration(0)
+
+			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTimeoutUnmashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected Timeout
+	}{
+		{
+			name:     "Direct default",
+			data:     []byte(`10`),
+			expected: Timeout{Default: 10 * time.Second},
+		},
+		{
+			name: "only default ",
+			data: []byte(`
+default: 30s
+`),
+			expected: Timeout{Default: 30 * time.Second},
+		},
+		{
+			name: "only resources",
+			data: []byte(`
+resources: 30s
+`),
+			expected: Timeout{Resources: 30 * time.Second},
+		},
+		{
+			name: "both set",
+			data: []byte(`
+default: 10s
+resources: 30s
+`),
+			expected: Timeout{Default: 10 * time.Second, Resources: 30 * time.Second},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Timeout{}
+
+			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSyncFoldersUnmashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected SyncFolder
+	}{
+		{
+			name:     "same dir",
+			data:     []byte(`.:/usr/src/app`),
+			expected: SyncFolder{LocalPath: ".", RemotePath: "/usr/src/app"},
+		},
+		{
+			name:     "previous dir",
+			data:     []byte(`../:/usr/src/app`),
+			expected: SyncFolder{LocalPath: "../", RemotePath: "/usr/src/app"},
+		},
+		{
+			name:     "fullpath",
+			data:     []byte(`/usr/src/app:/usr/src/app`),
+			expected: SyncFolder{LocalPath: "/usr/src/app", RemotePath: "/usr/src/app"},
+		},
+		{
+			name:     "windows test",
+			data:     []byte(`C:/Users/src/test:/usr/src/app`),
+			expected: SyncFolder{LocalPath: "C:/Users/src/test", RemotePath: "/usr/src/app"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SyncFolder{}
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)

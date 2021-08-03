@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/log"
@@ -443,13 +444,21 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	parts := strings.SplitN(raw, ":", 2)
+	parts := strings.Split(raw, ":")
 	if len(parts) == 2 {
 		s.LocalPath, err = ExpandEnv(parts[0])
 		if err != nil {
 			return err
 		}
 		s.RemotePath = parts[1]
+		return nil
+	} else if len(parts) == 3 {
+		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
+		s.LocalPath, err = ExpandEnv(windowsPath)
+		if err != nil {
+			return err
+		}
+		s.RemotePath = parts[2]
 		return nil
 	}
 
@@ -705,5 +714,50 @@ func (envFiles *EnvFiles) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 	result = append(result, single)
 	*envFiles = result
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (t *Timeout) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type timeout Timeout // prevent recursion
+	var extendedNotation timeout
+	err := unmarshal(&extendedNotation)
+	if err != nil {
+		var reducedNotation Duration
+		err := unmarshal(&reducedNotation)
+		if err != nil {
+			return err
+		}
+		t.Default = time.Duration(reducedNotation)
+		return nil
+	}
+	t.Default = extendedNotation.Default
+	t.Resources = extendedNotation.Resources
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (d *Duration) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var durationString string
+	err := unmarshal(&durationString)
+	if err != nil {
+		return err
+	}
+	seconds, err := strconv.Atoi(durationString)
+	if err == nil {
+		duration, err := time.ParseDuration(fmt.Sprintf("%ds", seconds))
+		if err != nil {
+			return err
+		}
+		*d = Duration(duration)
+		return nil
+	}
+
+	var duration time.Duration
+	err = unmarshal(&duration)
+	if err != nil {
+		return err
+	}
+	*d = Duration(duration)
 	return nil
 }

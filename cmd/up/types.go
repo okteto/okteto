@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,8 +15,9 @@ package up
 
 import (
 	"context"
+	"time"
 
-	"github.com/docker/docker/pkg/term"
+	"github.com/moby/term"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 	apiv1 "k8s.io/api/core/v1"
@@ -47,6 +48,7 @@ type upContext struct {
 	inFd              uintptr
 	isTerm            bool
 	stateTerm         *term.State
+	StartTime         time.Time
 }
 
 // Forwarder is an interface for the port-forwarding features

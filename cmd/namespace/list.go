@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import (
 	"os"
 	"text/tabwriter"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -37,9 +38,7 @@ func List(ctx context.Context) *cobra.Command {
 			err := executeListNamespaces(ctx)
 			return err
 		},
-		Args: func(cmd *cobra.Command, args []string) error {
-			return nil
-		},
+		Args: utils.NoArgsAccepted(""),
 	}
 }
 
@@ -49,9 +48,9 @@ func executeListNamespaces(ctx context.Context) error {
 		return fmt.Errorf("failed to get namespaces: %s", err)
 	}
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Namespace\tisActive\n")
+	fmt.Fprintf(w, "Namespace\tSleeping\n")
 	for _, space := range spaces {
-		fmt.Fprintf(w, "%s\t%v\n", space.ID, !space.Sleeping)
+		fmt.Fprintf(w, "%s\t%v\n", space.ID, space.Sleeping)
 	}
 
 	w.Flush()

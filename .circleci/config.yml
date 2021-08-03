@@ -1,6 +1,6 @@
 # https://circleci.com/docs/2.0/configuration-reference/
 aliases:
- - &init-gcloud |
+  - &init-gcloud |
     echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
     gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
@@ -88,7 +88,7 @@ jobs:
           at: ./artifacts
       - add_ssh_keys:
           fingerprints:
-          - 94:5d:82:26:14:51:a6:99:79:c6:a7:d8:87:4a:64:3b
+            - 94:5d:82:26:14:51:a6:99:79:c6:a7:d8:87:4a:64:3b
       - deploy:
           name: Update brew formula
           command: |
@@ -96,7 +96,7 @@ jobs:
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
             ./update_homebrew_formula.sh 0.0.1 $sha $sha_arm
       - setup_remote_docker:
-          version: "19.03.8"
+          version: '19.03.8'
       - run:
           name: Build Docker container
           command: |
@@ -139,7 +139,7 @@ jobs:
             OKTETO_SKIP_CLEANUP: 'true'
             OKTETO_CLIENTSIDE_TRANSLATION: ''
           command: |
-            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
+            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 15m
       - run:
           name: Integration tests (clientside)
           environment:
@@ -147,7 +147,7 @@ jobs:
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
             OKTETO_SKIP_CLEANUP: 'true'
           command: |
-            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v
+            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 15m
       - save_cache:
           key: v4-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
           paths:
@@ -170,7 +170,7 @@ jobs:
             gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
             gsutil -m rsync -r gs://downloads.okteto.com/cli/${CIRCLE_TAG}/ gs://downloads.okteto.com/cli/
       - setup_remote_docker:
-          version: "19.03.8"
+          version: '19.03.8'
       - run:
           name: Publish Docker container
           command: |
@@ -185,7 +185,7 @@ jobs:
             ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
       - add_ssh_keys:
           fingerprints:
-          - 94:5d:82:26:14:51:a6:99:79:c6:a7:d8:87:4a:64:3b
+            - 94:5d:82:26:14:51:a6:99:79:c6:a7:d8:87:4a:64:3b
       - deploy:
           name: Update brew formula
           command: |
@@ -200,7 +200,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker:
-          version: "19.03.8"
+          version: '19.03.8'
       - run:
           name: Publish Docker container
           command: |

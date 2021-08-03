@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,10 +15,10 @@ package namespace
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/log"
@@ -42,12 +42,7 @@ func Create(ctx context.Context) *cobra.Command {
 			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return errors.New("create namespace requires one argument")
-			}
-			return nil
-		},
+		Args: utils.ExactArgsAccepted(1, ""),
 	}
 
 	members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the namespace, it can the username or email")

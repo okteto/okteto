@@ -1,10 +1,21 @@
+// Copyright 2021 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package diverts
 
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/model"
@@ -16,9 +27,43 @@ import (
 )
 
 type divertServiceModification struct {
-	ProxyProtocol      string `json:"proxy_port"`
-	OriginalPort       string `json:"original_port"`
-	OriginalTargetPort string `json:"original_target_port"`
+	ProxyPort          int `json:"proxy_port"`
+	OriginalPort       int `json:"original_port"`
+	OriginalTargetPort int `json:"original_target_port"`
+}
+
+func serviceModFromAnnotationValue(val string) (divertServiceModification, error) {
+	type modAnnotationValue struct {
+		ProxyPort          json.Number `json:"proxy_port"`
+		OriginalPort       json.Number `json:"original_port"`
+		OriginalTargetPort json.Number `json:"original_target_port"`
+	}
+
+	var modVal modAnnotationValue
+	if err := json.Unmarshal([]byte(val), &modVal); err != nil {
+		return divertServiceModification{}, err
+	}
+
+	proxyPort, err := modVal.ProxyPort.Int64()
+	if err != nil {
+		return divertServiceModification{}, err
+	}
+
+	originalPort, err := modVal.OriginalPort.Int64()
+	if err != nil {
+		return divertServiceModification{}, err
+	}
+
+	originalTargetPort, err := modVal.OriginalTargetPort.Int64()
+	if err != nil {
+		return divertServiceModification{}, err
+	}
+
+	return divertServiceModification{
+		ProxyPort:          int(proxyPort),
+		OriginalPort:       int(originalPort),
+		OriginalTargetPort: int(originalTargetPort),
+	}, nil
 }
 
 // DivertName returns the name of the diverted version of a given resource
@@ -58,17 +103,13 @@ func translateService(username string, d *appsv1.Deployment, s *apiv1.Service) (
 	if s.Annotations != nil {
 		modification := s.Annotations[model.OktetoDivertServiceModificationAnnotation]
 		if modification != "" {
-			var dsm divertServiceModification
-			if err := json.Unmarshal([]byte(modification), &dsm); err != nil {
+			mod, err := serviceModFromAnnotationValue(modification)
+			if err != nil {
 				return nil, fmt.Errorf("bad divert service modification: %s", modification)
 			}
 			for i := range result.Spec.Ports {
-				if strings.Compare(fmt.Sprint(result.Spec.Ports[i].Port), dsm.OriginalPort) == 0 {
-					portNumber, err := strconv.Atoi(dsm.OriginalTargetPort)
-					if err != nil {
-						return nil, fmt.Errorf("error parsing port number %s: %s", dsm.OriginalTargetPort, err.Error())
-					}
-					result.Spec.Ports[i].TargetPort = intstr.FromInt(portNumber)
+				if result.Spec.Ports[i].Port == int32(mod.OriginalPort) {
+					result.Spec.Ports[i].TargetPort = intstr.FromInt(int(mod.OriginalTargetPort))
 				}
 			}
 		}

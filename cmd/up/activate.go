@@ -1,9 +1,23 @@
+// Copyright 2021 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package up
 
 import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -62,7 +76,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	  1. Execute 'okteto down'
 	  2. Apply your manifest changes again: 'kubectl apply'
 	  3. Execute 'okteto up' again
-    More information is available here: https://okteto.com/docs/reference/known-issues/index.html#kubectl-apply-changes-are-undone-by-okteto-up`,
+    More information is available here: https://okteto.com/docs/reference/known-issues/#kubectl-apply-changes-are-undone-by-okteto-up`,
 		}
 	}
 
@@ -90,7 +104,14 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
 			return fmt.Errorf("Docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
 		}
+		if _, ok := err.(errors.UserError); ok {
+			return err
+		}
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
+	}
+
+	if up.isRetry {
+		analytics.TrackReconnect(true, up.isSwap)
 	}
 
 	up.isRetry = true
@@ -117,9 +138,6 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 
 	up.success = true
-	if up.isRetry {
-		analytics.TrackReconnect(true, up.isSwap)
-	}
 
 	go func() {
 		output := <-up.cleaned
@@ -135,7 +153,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 				if utils.GetWarningState(folder, ".remotewatcher") == "" {
 					log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 					log.Yellow("This can affect file synchronization performance.")
-					log.Yellow("Visit https://okteto.com/docs/reference/known-issues/index.html for more information.")
+					log.Yellow("Visit https://okteto.com/docs/reference/known-issues/ for more information.")
 					if err := utils.SetWarningState(folder, ".remotewatcher", "true"); err != nil {
 						log.Infof("failed to set warning remotewatcher state: %s", err.Error())
 					}
@@ -161,6 +179,8 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			}
 		}
 		printDisplayContext(up.Dev, divertURL)
+		durationActivateUp := time.Since(up.StartTime)
+		analytics.TrackDurationActivateUp(durationActivateUp)
 		if hook == "yes" {
 			log.Information("Running start.sh hook...")
 			if err := up.runCommand(ctx, []string{"/var/okteto/cloudbin/start.sh"}); err != nil {
@@ -172,6 +192,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}()
 	prevError := up.waitUntilExitOrInterrupt()
 
+	up.isRetry = true
 	if up.shouldRetry(ctx, prevError) {
 		if !up.Dev.PersistentVolumeEnabled() {
 			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
@@ -254,7 +275,7 @@ func (up *upContext) createDevContainer(ctx context.Context, d *appsv1.Deploymen
 			continue
 		}
 
-		if err := deployments.UpdateOktetoRevision(ctx, trList[name].Deployment, up.Client, up.Dev.Timeout); err != nil {
+		if err := deployments.UpdateOktetoRevision(ctx, trList[name].Deployment, up.Client, up.Dev.Timeout.Default); err != nil {
 			return err
 		}
 
@@ -308,7 +329,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 		return err
 	}
 
+	to := time.Now().Add(up.Dev.Timeout.Resources)
+	var insufficientResourcesErr error
 	for {
+		if time.Now().After(to) && insufficientResourcesErr != nil {
+			return errors.UserError{E: fmt.Errorf("Insufficient resources."),
+				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
+		}
 		select {
 		case event := <-watcherEvents.ResultChan():
 			e, ok := event.Object.(*apiv1.Event)
@@ -326,6 +353,11 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context)
 			switch e.Reason {
 			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
 				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
+					continue
+				}
+				if strings.Contains(e.Message, "Insufficient cpu") || strings.Contains(e.Message, "Insufficient memory") {
+					insufficientResourcesErr = fmt.Errorf(e.Message)
+					spinner.Update("Insufficient cpu/memory in the cluster. Waiting for new nodes to come up...")
 					continue
 				}
 				return fmt.Errorf(e.Message)

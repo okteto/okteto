@@ -1,4 +1,4 @@
-// Copyright 2020 The Okteto Authors
+// Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -24,6 +24,7 @@ import (
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
+	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/cmd/utils"
@@ -100,7 +101,12 @@ func main() {
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
 	root.AddCommand(cmd.Exec())
+
+	previewCommand := preview.Preview(ctx)
+	previewCommand.Hidden = true
+	root.AddCommand(previewCommand)
 	root.AddCommand(cmd.Restart())
+	root.AddCommand(cmd.Update())
 
 	err := utils.RunWithRetry(root.Execute)
 
