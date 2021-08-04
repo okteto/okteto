@@ -15,7 +15,6 @@ package deployments
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -32,6 +31,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const (
+	revisionAnnotation = "deployment.kubernetes.io/revision"
+)
+
 //List returns the list of deployments
 func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]appsv1.Deployment, error) {
 	dList, err := c.AppsV1().Deployments(namespace).List(
@@ -46,6 +49,16 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return dList.Items, nil
 }
 
+//GetDeploymentByName returns a deployment object if is created
+func GetDeploymentByName(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
+	d, err := c.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get deployment %s/%s: %w", namespace, name, err)
+	}
+
+	return d, nil
+}
+
 //Get returns a deployment object given its name and namespace
 func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	if namespace == "" {
@@ -58,7 +71,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 	if len(dev.Labels) == 0 {
 		d, err = c.AppsV1().Deployments(namespace).Get(ctx, dev.Name, metav1.GetOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("failed to get deployment %s/%s: %w", namespace, dev.Name, err)
+			return nil, err
 		}
 	} else {
 		deploys, err := c.AppsV1().Deployments(namespace).List(
@@ -83,7 +96,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 }
 
 //GetRevisionAnnotatedDeploymentOrFailed returns a deployment object if it is healthy and annotated with its revision or an error
-func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*appsv1.Deployment, error) {
+func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev, c kubernetes.Interface, waitUntilDeployed bool) (*appsv1.Deployment, error) {
 	d, err := Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		if waitUntilDeployed && errors.IsNotFound(err) {
@@ -152,79 +165,6 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 		errorToReturn += fmt.Sprintf("The value of resources.limits.memory in your okteto manifest (%s) exceeds the maximum memory limit per pod (%s). ", manifestMemory, maximumMemoryPerPod)
 	}
 	return fmt.Errorf(strings.TrimSpace(errorToReturn))
-}
-
-//GetTranslations fills all the deployments pointed by a development container
-func GetTranslations(ctx context.Context, dev *model.Dev, d *appsv1.Deployment, reset bool, c kubernetes.Interface) (map[string]*model.Translation, error) {
-	result := map[string]*model.Translation{}
-	if d != nil {
-		var replicas int32
-		var strategy appsv1.DeploymentStrategy
-		trRulesJSON := annotations.Get(d.Spec.Template.GetObjectMeta(), model.TranslationAnnotation)
-		if trRulesJSON != "" {
-			trRules := &model.Translation{}
-			if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
-				return nil, fmt.Errorf("malformed tr rules: %s", err)
-			}
-			replicas = trRules.Replicas
-			strategy = trRules.Strategy
-		} else {
-			replicas = getPreviousDeploymentReplicas(d)
-			strategy = d.Spec.Strategy
-		}
-
-		rule := dev.ToTranslationRule(dev, reset)
-		result[d.Name] = &model.Translation{
-			Interactive: true,
-			Name:        dev.Name,
-			Version:     model.TranslationVersion,
-			Deployment:  d,
-			Annotations: dev.Annotations,
-			Tolerations: dev.Tolerations,
-			Replicas:    replicas,
-			Strategy:    strategy,
-			Rules:       []*model.TranslationRule{rule},
-		}
-		if dev.Docker.Enabled {
-			result[d.Name].Annotations[model.OktetoInjectTokenAnnotation] = "true"
-		}
-	}
-
-	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, result map[string]*model.Translation, c kubernetes.Interface) error {
-	for _, s := range dev.Services {
-		d, err := Get(ctx, s, dev.Namespace, c)
-		if err != nil {
-			return err
-		}
-
-		rule := s.ToTranslationRule(dev, reset)
-
-		if _, ok := result[d.Name]; ok {
-			result[d.Name].Rules = append(result[d.Name].Rules, rule)
-			continue
-		}
-
-		result[d.Name] = &model.Translation{
-			Name:        dev.Name,
-			Interactive: false,
-			Version:     model.TranslationVersion,
-			Deployment:  d,
-			Annotations: dev.Annotations,
-			Tolerations: dev.Tolerations,
-			Replicas:    *d.Spec.Replicas,
-			Rules:       []*model.TranslationRule{rule},
-		}
-
-	}
-
-	return nil
 }
 
 func Create(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
@@ -308,17 +248,6 @@ func SetLastBuiltAnnotation(d *appsv1.Deployment) {
 	annotations.Set(d.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))
 }
 
-//TranslateDevMode translates the deployment manifests to put them in dev mode
-func TranslateDevMode(tr map[string]*model.Translation, c *kubernetes.Clientset, isOktetoNamespace bool) error {
-	for _, t := range tr {
-		err := translate(t, c, isOktetoNamespace)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 //IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
 	return labels.Get(d.GetObjectMeta(), model.DevLabel) != ""
@@ -344,61 +273,14 @@ func HasBeenChanged(d *appsv1.Deployment) bool {
 // UpdateDeployments update all deployments in the given translation list
 func UpdateDeployments(ctx context.Context, trList map[string]*model.Translation, c kubernetes.Interface) error {
 	for _, tr := range trList {
-		if tr.Deployment == nil {
+		if tr.K8sObject.Deployment == nil {
 			continue
 		}
-		if err := Update(ctx, tr.Deployment, c); err != nil {
+		if err := Update(ctx, tr.K8sObject.Deployment, c); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-//TranslateDevModeOff reverses the dev mode translation
-func TranslateDevModeOff(d *appsv1.Deployment) (*appsv1.Deployment, error) {
-	trRulesJSON := annotations.Get(d.Spec.Template.GetObjectMeta(), model.TranslationAnnotation)
-	if trRulesJSON == "" {
-		dManifest := annotations.Get(d.GetObjectMeta(), oktetoDeploymentAnnotation)
-		if dManifest == "" {
-			log.Infof("%s/%s is not a development container", d.Namespace, d.Name)
-			return d, nil
-		}
-		dOrig := &appsv1.Deployment{}
-		if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
-			return nil, fmt.Errorf("malformed manifest: %s", err)
-		}
-		return dOrig, nil
-	}
-	trRules := &model.Translation{}
-	if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
-		return nil, fmt.Errorf("malformed tr rules: %s", err)
-	}
-	d.Spec.Replicas = &trRules.Replicas
-	d.Spec.Strategy = trRules.Strategy
-	annotations := d.GetObjectMeta().GetAnnotations()
-	delete(annotations, oktetoVersionAnnotation)
-	deleteUserAnnotations(annotations, trRules)
-	d.GetObjectMeta().SetAnnotations(annotations)
-	annotations = d.Spec.Template.GetObjectMeta().GetAnnotations()
-	delete(annotations, model.TranslationAnnotation)
-	delete(annotations, model.OktetoRestartAnnotation)
-	d.Spec.Template.GetObjectMeta().SetAnnotations(annotations)
-	labels := d.GetObjectMeta().GetLabels()
-	delete(labels, model.DevLabel)
-	delete(labels, model.InteractiveDevLabel)
-	delete(labels, model.DetachedDevLabel)
-	d.GetObjectMeta().SetLabels(labels)
-	labels = d.Spec.Template.GetObjectMeta().GetLabels()
-	delete(labels, model.InteractiveDevLabel)
-	delete(labels, model.DetachedDevLabel)
-	d.Spec.Template.GetObjectMeta().SetLabels(labels)
-	return d, nil
-}
-
-func deleteUserAnnotations(annotations map[string]string, tr *model.Translation) {
-	for key := range tr.Annotations {
-		delete(annotations, key)
-	}
 }
 
 //DestroyDev destroys the k8s deployment of a dev environment
@@ -410,6 +292,7 @@ func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) err
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	log.Infof("deleting deployment '%s'", name)
 	dClient := c.AppsV1().Deployments(namespace)
+	var devTerminationGracePeriodSeconds int64
 	err := dClient.Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
 	if err != nil {
 		if errors.IsNotFound(err) {
