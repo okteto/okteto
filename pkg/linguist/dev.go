@@ -25,7 +25,7 @@ type languageDefault struct {
 	image           string
 	path            string
 	command         []string
-	environment     []model.EnvVar
+	variables       []model.EnvVar
 	volumes         []model.Volume
 	forward         []model.Forward
 	reverse         []model.Reverse
@@ -221,7 +221,7 @@ func init() {
 		image:   "okteto/dotnetcore:3",
 		path:    "/usr/src/app",
 		command: []string{"bash"},
-		environment: []model.EnvVar{
+		variables: []model.EnvVar{
 			{
 				Name:  "ASPNETCORE_ENVIRONMENT",
 				Value: "Development",
@@ -309,8 +309,8 @@ func GetDevDefaults(language, workdir string) (*model.Dev, error) {
 		Command: model.Command{
 			Values: vals.command,
 		},
-		Environment: vals.environment,
-		Volumes:     vals.volumes,
+		Variables: vals.variables,
+		Volumes:   vals.volumes,
 		Sync: model.Sync{
 			RescanInterval: model.DefaultSyncthingRescanInterval,
 			Folders: []model.SyncFolder{

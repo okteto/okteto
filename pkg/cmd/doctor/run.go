@@ -162,12 +162,12 @@ func generateManifestFile(ctx context.Context, devPath string) (string, error) {
 	}
 
 	dev := &model.Dev{
-		Image:       &model.BuildInfo{},
-		Push:        &model.BuildInfo{},
-		Environment: make([]model.EnvVar, 0),
-		Secrets:     make([]model.Secret, 0),
-		Forward:     make([]model.Forward, 0),
-		Volumes:     make([]model.Volume, 0),
+		Image:     &model.BuildInfo{},
+		Push:      &model.BuildInfo{},
+		Variables: make([]model.EnvVar, 0),
+		Secrets:   make([]model.Secret, 0),
+		Forward:   make([]model.Forward, 0),
+		Volumes:   make([]model.Volume, 0),
 		Sync: model.Sync{
 			Folders: make([]model.SyncFolder, 0),
 		},
@@ -178,7 +178,7 @@ func generateManifestFile(ctx context.Context, devPath string) (string, error) {
 		return "", err
 	}
 
-	dev.Environment = nil
+	dev.Variables = nil
 
 	if dev.Image != nil {
 		dev.Image.Args = nil
@@ -189,7 +189,7 @@ func generateManifestFile(ctx context.Context, devPath string) (string, error) {
 	}
 
 	for i := range dev.Services {
-		dev.Services[i].Environment = nil
+		dev.Services[i].Variables = nil
 
 		if dev.Services[i].Image != nil {
 			dev.Services[i].Image.Args = nil

@@ -73,6 +73,7 @@ type Dev struct {
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Variables            Variables             `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
 	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
@@ -117,12 +118,12 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
-	Name       string      `yaml:"name,omitempty"`
-	Context    string      `yaml:"context,omitempty"`
-	Dockerfile string      `yaml:"dockerfile,omitempty"`
-	CacheFrom  []string    `yaml:"cache_from,omitempty"`
-	Target     string      `yaml:"target,omitempty"`
-	Args       Environment `yaml:"args,omitempty"`
+	Name       string    `yaml:"name,omitempty"`
+	Context    string    `yaml:"context,omitempty"`
+	Dockerfile string    `yaml:"dockerfile,omitempty"`
+	CacheFrom  []string  `yaml:"cache_from,omitempty"`
+	Target     string    `yaml:"target,omitempty"`
+	Args       Variables `yaml:"args,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -254,6 +255,9 @@ type Annotations map[string]string
 // Environment is a list of environment variables (key, value pairs).
 type Environment []EnvVar
 
+// Variables is a list of environment variables (key, value pairs).
+type Variables []EnvVar
+
 // EnvFiles is a list of environment files
 type EnvFiles []string
 
@@ -289,12 +293,13 @@ func Get(devPath string) (*Dev, error) {
 // Read reads an okteto manifests
 func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
-		Image:       &BuildInfo{},
-		Push:        &BuildInfo{},
-		Environment: make(Environment, 0),
-		Secrets:     make([]Secret, 0),
-		Forward:     make([]Forward, 0),
-		Volumes:     make([]Volume, 0),
+		Image: &BuildInfo{},
+		Push:  &BuildInfo{},
+		// Environment: make(Environment, 0),
+		Variables: make(Variables, 0),
+		Secrets:   make([]Secret, 0),
+		Forward:   make([]Forward, 0),
+		Volumes:   make([]Volume, 0),
 		Sync: Sync{
 			Folders: make([]SyncFolder, 0),
 		},
@@ -330,10 +335,25 @@ func Read(bytes []byte) (*Dev, error) {
 	if err := dev.expandEnvVars(); err != nil {
 		return nil, err
 	}
+
+	if len(dev.Environment) > 0 {
+		log.Yellow("The use of 'environment' field is deprecated and will be removed in a future release. Please use the field 'variables' instead.")
+		for _, envVar := range dev.Environment {
+			dev.Variables = append(dev.Variables, envVar)
+		}
+	}
+
 	for _, s := range dev.Services {
 		if err := s.expandEnvVars(); err != nil {
 			return nil, err
 		}
+		if len(s.Environment) > 0 {
+			log.Yellow("The use of 'environment' field is deprecated and will be removed in a future release. Please use the field 'variables' instead.")
+			for _, envVar := range s.Environment {
+				s.Variables = append(s.Variables, envVar)
+			}
+		}
+
 	}
 
 	if err := dev.setDefaults(); err != nil {
@@ -740,7 +760,7 @@ func (dev *Dev) Save(path string) error {
 }
 
 //SerializeBuildArgs returns build  aaargs as a llist of strings
-func SerializeBuildArgs(buildArgs Environment) []string {
+func SerializeBuildArgs(buildArgs Variables) []string {
 	result := []string{}
 	for _, e := range buildArgs {
 		result = append(
@@ -782,7 +802,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	rule := &TranslationRule{
 		Container:        dev.Container,
 		ImagePullPolicy:  dev.ImagePullPolicy,
-		Environment:      dev.Environment,
+		Variables:        dev.Variables,
 		Secrets:          dev.Secrets,
 		WorkDir:          dev.Workdir,
 		PersistentVolume: main.PersistentVolumeEnabled(),
@@ -811,8 +831,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	if main == dev {
 		rule.Marker = OktetoBinImageTag //for backward compatibility
 		rule.OktetoBinImageTag = dev.InitContainer.Image
-		rule.Environment = append(
-			rule.Environment,
+		rule.Variables = append(
+			rule.Variables,
 			EnvVar{
 				Name:  "OKTETO_NAMESPACE",
 				Value: dev.Namespace,
@@ -823,8 +843,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			},
 		)
 		if dev.Username != "" {
-			rule.Environment = append(
-				rule.Environment,
+			rule.Variables = append(
+				rule.Variables,
 				EnvVar{
 					Name:  "OKTETO_USERNAME",
 					Value: dev.Username,
@@ -832,8 +852,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			)
 		}
 		if dev.Docker.Enabled {
-			rule.Environment = append(
-				rule.Environment,
+			rule.Variables = append(
+				rule.Variables,
 				EnvVar{
 					Name:  "OKTETO_REGISTRY_URL",
 					Value: dev.RegistryURL,
@@ -869,8 +889,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		// We want to minimize environment mutations, so only reconfigure the SSH
 		// server port if a non-default is specified.
 		if dev.SSHServerPort != oktetoDefaultSSHServerPort {
-			rule.Environment = append(
-				rule.Environment,
+			rule.Variables = append(
+				rule.Variables,
 				EnvVar{
 					Name:  oktetoSSHServerPortVariable,
 					Value: strconv.Itoa(dev.SSHServerPort),
