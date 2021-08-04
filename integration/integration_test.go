@@ -789,11 +789,10 @@ func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string,
 
 func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, oktetoPath string) (*os.Process, error) {
 	var out bytes.Buffer
-	var stderr bytes.Buffer
 	cmd := exec.Command(oktetoPath, "up", "-n", namespace, "-f", manifestPath)
 	cmd.Env = os.Environ()
 	cmd.Stdout = &out
-	cmd.Stderr = &stderr
+	cmd.Stderr = &out
 	log.Printf("up command: %s", cmd.String())
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("okteto up failed to start: %s", err)
@@ -805,7 +804,7 @@ func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, 
 		defer wg.Done()
 		if err := cmd.Wait(); err != nil {
 			if err != nil {
-				log.Printf("okteto up exited: %s.\nOutput:\n%sError:\n%s", err, out.String(), stderr.String())
+				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
 			}
 		}
 	}()
