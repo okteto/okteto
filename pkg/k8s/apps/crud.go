@@ -260,12 +260,15 @@ func UpdateK8sObjects(ctx context.Context, trList map[string]*model.Translation,
 }
 
 func GetResourceFromServiceName(ctx context.Context, resourceName, namespace string, c kubernetes.Interface) model.ObjectType {
+	fmt.Println("Get resource type")
 	d, err := deployments.GetDeploymentByName(ctx, resourceName, namespace, c)
 	if err == nil && d != nil {
+		fmt.Println("Got deployment")
 		return model.DeploymentObjectType
 	}
 	sfs, err := statefulsets.GetStatefulsetByName(ctx, resourceName, namespace, c)
 	if err == nil && sfs != nil {
+		fmt.Println("Got statefulset")
 		return model.StatefulsetObjectType
 	}
 	return model.DeploymentObjectType
@@ -275,7 +278,6 @@ func GetRevisionAnnotatedK8sObjectOrFailed(ctx context.Context, dev *model.Dev, 
 
 	objectType := GetResourceFromServiceName(ctx, dev.Name, dev.Namespace, c)
 	k8sObject := model.NewResource(dev)
-	k8sObject.ObjectType = objectType
 	switch objectType {
 	case model.DeploymentObjectType:
 		d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(ctx, dev, c, waitUntilDeployed)
