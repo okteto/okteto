@@ -252,6 +252,13 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		log.Printf("listing namespace")
+		args := []string{"list", "namespace"}
+		cmd := exec.Command(oktetoPath, args...)
+		cmd.Env = os.Environ()
+		o, err := cmd.CombinedOutput()
+		log.Println(string(o))
+
 		if _, err := exec.LookPath(kubectlBinary); err != nil {
 			t.Fatalf("kubectl is not in the path: %s", err)
 		}
