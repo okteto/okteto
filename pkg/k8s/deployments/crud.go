@@ -100,6 +100,7 @@ func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev,
 	d, err := Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		if waitUntilDeployed && errors.IsNotFound(err) {
+			fmt.Println("not found")
 			return nil, nil
 		}
 		return nil, err
