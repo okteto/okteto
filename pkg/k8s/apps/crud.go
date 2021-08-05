@@ -279,14 +279,14 @@ func GetRevisionAnnotatedK8sObjectOrFailed(ctx context.Context, dev *model.Dev, 
 	switch objectType {
 	case model.DeploymentObjectType:
 		d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(ctx, dev, c, waitUntilDeployed)
-		if err != nil {
+		if d == nil {
 			return nil, err
 		}
 		k8sObject.UpdateDeployment(d)
 		return k8sObject, nil
 	case model.StatefulsetObjectType:
 		sfs, err := statefulsets.GetRevisionAnnotatedStatefulsetOrFailed(ctx, dev, c, waitUntilDeployed)
-		if err != nil {
+		if sfs == nil {
 			return nil, err
 		}
 		k8sObject.UpdateStatefulset(sfs)
