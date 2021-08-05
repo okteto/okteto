@@ -341,26 +341,25 @@ func TestAll(t *testing.T) {
 		}
 	}
 
+	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case upError := <-upErrorChannel:
 		t.Fatal(upError)
 	default:
-		if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
-			t.Fatal(err)
-		}
-
 		if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
 			t.Fatal(err)
 		}
 	}
 
+	if err := killLocalSyncthing(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case upError := <-upErrorChannel:
 		t.Fatal(upError)
 	default:
-		if err := killLocalSyncthing(); err != nil {
-			t.Fatal(err)
-		}
 
 		if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
 			t.Fatal(err)
@@ -500,39 +499,39 @@ func TestAllStatefulset(t *testing.T) {
 		}
 	}
 
+	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case upError := <-upErrorChannel:
 		t.Fatal(upError)
 	default:
-		if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
-			t.Fatal(err)
-		}
 		if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := killLocalSyncthing(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := killLocalSyncthing(); err != nil {
+		t.Fatal(err)
 	}
 
 	select {
 	case upError := <-upErrorChannel:
 		t.Fatal(upError)
 	default:
-		if err := destroyPod(ctx, name, namespace); err != nil {
+		if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
 			t.Fatal(err)
 		}
+	}
 
+	if err := destroyPod(ctx, name, namespace); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case upError := <-upErrorChannel:
+		t.Fatal(upError)
+	default:
 		if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300); err != nil {
 			t.Fatal(err)
 		}
