@@ -126,11 +126,8 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 // GetDevPod returns the dev pod for a deployment
 func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
 	k8sObject, err := apps.GetRevisionAnnotatedK8sObjectOrFailed(ctx, dev, c, waitUntilDeployed)
-	if err != nil {
-		return nil, err
-	}
 
-	if k8sObject.Deployment == nil && k8sObject.StatefulSet == nil {
+	if k8sObject == nil {
 		return nil, err
 	}
 
