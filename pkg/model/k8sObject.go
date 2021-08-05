@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/json"
-	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -241,7 +240,6 @@ func (r *K8sObject) GetReplicas() *int32 {
 }
 
 func (r *K8sObject) UpdateDeployment(d *appsv1.Deployment) {
-	fmt.Println(d)
 	r.Deployment = d
 	r.Name = d.Name
 	r.Namespace = d.Namespace
