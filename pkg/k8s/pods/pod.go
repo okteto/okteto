@@ -130,6 +130,10 @@ func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, wai
 		return nil, err
 	}
 
+	if k8sObject.Deployment == nil && k8sObject.StatefulSet == nil {
+		return nil, err
+	}
+
 	labels := fmt.Sprintf("%s=%s", model.InteractiveDevLabel, dev.Name)
 
 	if k8sObject.ObjectType == model.DeploymentObjectType {
