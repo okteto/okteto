@@ -91,7 +91,6 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 		}
 		d = &deploys.Items[0]
 	}
-	log.Println(d)
 	return d, nil
 }
 
