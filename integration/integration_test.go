@@ -246,145 +246,143 @@ func TestDownloadSyncthing(t *testing.T) {
 func TestAll(t *testing.T) {
 	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
 	ctx := context.Background()
-	t.Run(tName, func(t *testing.T) {
-		oktetoPath, err := getOktetoPath(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		if _, err := exec.LookPath(kubectlBinary); err != nil {
-			t.Fatalf("kubectl is not in the path: %s", err)
-		}
+	if _, err := exec.LookPath(kubectlBinary); err != nil {
+		t.Fatalf("kubectl is not in the path: %s", err)
+	}
 
-		k8Client.Reset()
+	k8Client.Reset()
 
-		name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
-		namespace := fmt.Sprintf("%s-%s", name, user)
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	namespace := fmt.Sprintf("%s-%s", name, user)
 
-		dir, err := ioutil.TempDir("", tName)
-		if err != nil {
-			t.Fatal(err)
-		}
-		log.Printf("created tempdir: %s", dir)
+	dir, err := ioutil.TempDir("", tName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("created tempdir: %s", dir)
 
-		dPath := filepath.Join(dir, "deployment.yaml")
-		if err := writeDeployment(name, dPath); err != nil {
-			t.Fatal(err)
-		}
+	dPath := filepath.Join(dir, "deployment.yaml")
+	if err := writeDeployment(name, dPath); err != nil {
+		t.Fatal(err)
+	}
 
-		contentPath := filepath.Join(dir, "index.html")
-		if err := ioutil.WriteFile(contentPath, []byte(name), 0644); err != nil {
-			t.Fatal(err)
-		}
+	contentPath := filepath.Join(dir, "index.html")
+	if err := ioutil.WriteFile(contentPath, []byte(name), 0644); err != nil {
+		t.Fatal(err)
+	}
 
-		log.Printf("original content: %s", name)
+	log.Printf("original content: %s", name)
 
-		manifestPath := filepath.Join(dir, "okteto.yml")
-		if err := writeManifest(manifestPath, name); err != nil {
-			t.Fatal(err)
-		}
+	manifestPath := filepath.Join(dir, "okteto.yml")
+	if err := writeManifest(manifestPath, name); err != nil {
+		t.Fatal(err)
+	}
 
-		stignorePath := filepath.Join(dir, ".stignore")
-		if err := ioutil.WriteFile(stignorePath, []byte("venv"), 0600); err != nil {
-			t.Fatal(err)
-		}
+	stignorePath := filepath.Join(dir, ".stignore")
+	if err := ioutil.WriteFile(stignorePath, []byte("venv"), 0600); err != nil {
+		t.Fatal(err)
+	}
 
-		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
-			t.Fatal(err)
-		}
+	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
+		t.Fatal(err)
+	}
 
-		if err := deploy(ctx, namespace, name, dPath, true); err != nil {
-			t.Fatal(err)
-		}
+	if err := deploy(ctx, namespace, name, dPath, true); err != nil {
+		t.Fatal(err)
+	}
 
-		originalDeployment, err := getDeployment(ctx, namespace, name)
-		if err != nil {
-			t.Fatal(err)
-		}
+	originalDeployment, err := getDeployment(ctx, namespace, name)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations["deployment.kubernetes.io/revision"])
+	log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations["deployment.kubernetes.io/revision"])
 
-		//set bad server to test k8s credential refresh
-		kubeConfigFile := config.GetKubeConfigFile()
-		cred, err := okteto.GetCredentials(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cred.Server = "https://31.192.137.200:443"
-		if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), okteto.GetClusterContext(), false); err != nil {
-			t.Fatal(err)
-		}
+	//set bad server to test k8s credential refresh
+	kubeConfigFile := config.GetKubeConfigFile()
+	cred, err := okteto.GetCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cred.Server = "https://31.192.137.200:443"
+	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), okteto.GetClusterContext(), false); err != nil {
+		t.Fatal(err)
+	}
 
-		var wg sync.WaitGroup
-		p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
-		if err != nil {
-			t.Fatal(err)
-		}
+	var wg sync.WaitGroup
+	p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		waitForDeployment(ctx, namespace, name, 2, 120)
+	waitForDeployment(ctx, namespace, name, 2, 120)
 
-		log.Println("getting synchronized content")
+	log.Println("getting synchronized content")
 
-		c, err := getContent(endpoint, 150)
-		if err != nil {
-			t.Fatalf("failed to get content: %s", err)
-		}
+	c, err := getContent(endpoint, 150)
+	if err != nil {
+		t.Fatalf("failed to get content: %s", err)
+	}
 
-		log.Println("got synchronized content")
+	log.Println("got synchronized content")
 
-		if c != name {
-			t.Fatalf("expected synchronized content to be %s, got %s", name, c)
-		}
+	if c != name {
+		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
+	}
 
-		if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
-			t.Fatal(err)
-		}
+	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
+		t.Fatal(err)
+	}
 
-		if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
-			t.Fatal(err)
-		}
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
+		t.Fatal(err)
+	}
 
-		if err := killLocalSyncthing(); err != nil {
-			t.Fatal(err)
-		}
+	if err := killLocalSyncthing(); err != nil {
+		t.Fatal(err)
+	}
 
-		if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
+		t.Fatal(err)
+	}
 
-		if err := destroyPod(ctx, name, namespace); err != nil {
-			t.Fatal(err)
-		}
+	if err := destroyPod(ctx, name, namespace); err != nil {
+		t.Fatal(err)
+	}
 
-		if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300); err != nil {
+		t.Fatal(err)
+	}
 
-		d, err := getDeployment(ctx, namespace, name)
-		if err != nil {
-			t.Fatal(err)
-		}
+	d, err := getDeployment(ctx, namespace, name)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations["deployment.kubernetes.io/revision"])
+	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations["deployment.kubernetes.io/revision"])
 
-		if err := down(ctx, namespace, name, manifestPath, oktetoPath, true); err != nil {
-			t.Fatal(err)
-		}
+	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true); err != nil {
+		t.Fatal(err)
+	}
 
-		if err := checkIfUpFinished(ctx, p.Pid); err != nil {
-			t.Error(err)
-		}
+	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
+		t.Error(err)
+	}
 
-		if err := compareDeployment(ctx, originalDeployment); err != nil {
-			t.Error(err)
-		}
+	if err := compareDeployment(ctx, originalDeployment); err != nil {
+		t.Error(err)
+	}
 
-		if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
-			log.Printf("failed to delete namespace %s: %s\n", namespace, err)
-		}
-	})
+	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
+		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
+	}
+
 }
-
 func TestAllStatefulset(t *testing.T) {
 	tName := fmt.Sprintf("TestAllSfs-%s-%s", runtime.GOOS, mode)
 	ctx := context.Background()
