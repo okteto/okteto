@@ -278,6 +278,7 @@ func GetRevisionAnnotatedK8sObjectOrFailed(ctx context.Context, dev *model.Dev, 
 
 	objectType := GetResourceFromServiceName(ctx, dev.Name, dev.Namespace, c)
 	k8sObject := model.NewResource(dev)
+	k8sObject.ObjectType = objectType
 	switch objectType {
 	case model.DeploymentObjectType:
 		d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(ctx, dev, c, waitUntilDeployed)
