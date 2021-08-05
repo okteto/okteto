@@ -592,7 +592,6 @@ func getContent(endpoint string, timeout int) (string, error) {
 			if retries > 3 {
 				return "", fmt.Errorf("failed to get %s: %w", endpoint, err)
 			}
-
 			log.Printf("called %s, got %s, retrying", endpoint, err)
 			<-t.C
 			continue
@@ -673,6 +672,7 @@ func testUpdateContent(content, contentPath string, timeout int) error {
 	log.Printf("getting updated content from %s\n", endpoint)
 	tick := time.NewTicker(1 * time.Second)
 	gotUpdated := false
+	counter := 0
 	for i := 0; i < timeout; i++ {
 		<-tick.C
 		currentContent, err := getContent(endpoint, timeout)
@@ -682,7 +682,11 @@ func testUpdateContent(content, contentPath string, timeout int) error {
 		}
 
 		if currentContent != content {
-			log.Printf("expected updated content to be %s, got %s\n", content, currentContent)
+			counter++
+			if counter%5 == 0 {
+				log.Printf("expected updated content to be %s, got %s\n", content, currentContent)
+			}
+
 			continue
 		}
 

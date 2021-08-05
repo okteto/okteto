@@ -260,15 +260,12 @@ func UpdateK8sObjects(ctx context.Context, trList map[string]*model.Translation,
 }
 
 func GetResourceFromServiceName(ctx context.Context, resourceName, namespace string, c kubernetes.Interface) model.ObjectType {
-	fmt.Println("Get resource type")
 	d, err := deployments.GetDeploymentByName(ctx, resourceName, namespace, c)
 	if err == nil && d != nil {
-		fmt.Println("Got deployment")
 		return model.DeploymentObjectType
 	}
 	sfs, err := statefulsets.GetStatefulsetByName(ctx, resourceName, namespace, c)
 	if err == nil && sfs != nil {
-		fmt.Println("Got statefulset")
 		return model.StatefulsetObjectType
 	}
 	return model.DeploymentObjectType
