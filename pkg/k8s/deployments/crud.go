@@ -91,7 +91,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 		}
 		d = &deploys.Items[0]
 	}
-
+	log.Println(d)
 	return d, nil
 }
 
@@ -100,7 +100,6 @@ func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev,
 	d, err := Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		if waitUntilDeployed && errors.IsNotFound(err) {
-			fmt.Println("not found")
 			return nil, nil
 		}
 		return nil, err
