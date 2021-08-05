@@ -252,45 +252,6 @@ func TestAll(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		namespacesToDelete := []string{"testaction-linux-1627982927-cindylopez",
-			"testall-linux-client-1628000981-cindylopez",
-			"testall-linux-client-1628091904-cindylopez",
-			"testall-linux-server-1628070810-cindylopez",
-			"testall-linux-server-1628072645-cindylopez",
-			"testall-linux-server-1628085953-cindylopez",
-			"testall-linux-server-1628089877-cindylopez",
-			"testall-linux-server-1628149024-cindylopez",
-			"testall-linux-server-1628151433-cindylopez",
-			"testall-windows-server-1627945901-cindylopez",
-			"testall-windows-server-1627975585-cindylopez",
-			"testall-windows-server-1627976982-cindylopez",
-			"testall-windows-server-1627978339-cindylopez",
-			"testall-windows-server-1627979682-cindylopez",
-			"testall-windows-server-1627981336-cindylopez",
-			"testall-windows-server-1628000707-cindylopez",
-			"testall-windows-server-1628002082-cindylopez",
-			"testall-windows-server-1628071169-cindylopez",
-			"testall-windows-server-1628073000-cindylopez",
-			"testall-windows-server-1628086340-cindylopez",
-			"testallsfs-linux-server-1628088152-cindylopez",
-			"testallsfs-windows-server-1628071539-cindylopez",
-			"testallsfs-windows-server-1628073367-cindylopez",
-			"teststacks-linux-1627049861-cindylopez",
-			"teststacks-linux-1628072129-cindylopez",
-			"teststacks-linux-1628073863-cindylopez",
-			"teststacks-windows-1627946367-cindylopez",
-			"teststacks-windows-1627976076-cindylopez",
-			"teststacks-windows-1628002557-cindylopez"}
-
-		for _, namespace := range namespacesToDelete {
-			log.Printf("removing namespace")
-			args := []string{"delete", "namespace", namespace}
-			cmd := exec.Command(oktetoPath, args...)
-			cmd.Env = os.Environ()
-			o, _ := cmd.CombinedOutput()
-			log.Println(string(o))
-		}
-
 		if _, err := exec.LookPath(kubectlBinary); err != nil {
 			t.Fatalf("kubectl is not in the path: %s", err)
 		}
