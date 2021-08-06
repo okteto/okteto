@@ -26,7 +26,7 @@ actionsRepos=(delete-namespace
 for repo in "${actionsRepos[@]}"
 do
     echo "$repo"
-    git clone --depth 1 https://github.com/okteto/$repo.git
+    git clone --depth 1 git@github.com:okteto/$repo.git
     pushd $repo
     git config user.name "okteto"
     git config user.email "ci@okteto.com"
@@ -34,7 +34,7 @@ do
     sed -iE 's_FROM\ okteto\/okteto\:[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*_FROM\ okteto\/okteto\:'$VERSION'_' Dockerfile
     git add Dockerfile
     git commit -m "release $VERSION"
-    git push git@github.com:$repo.git master
+    git push git@github.com:okteto/$repo.git master
     git --no-pager log -1
     ghr -u ${CIRCLE_PROJECT_USERNAME} -token $GITHUB_TOKEN -replace $VERSION
     popd
