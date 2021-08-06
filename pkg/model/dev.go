@@ -293,13 +293,13 @@ func Get(devPath string) (*Dev, error) {
 // Read reads an okteto manifests
 func Read(bytes []byte) (*Dev, error) {
 	dev := &Dev{
-		Image: &BuildInfo{},
-		Push:  &BuildInfo{},
-		// Environment: make(Environment, 0),
-		Variables: make(Variables, 0),
-		Secrets:   make([]Secret, 0),
-		Forward:   make([]Forward, 0),
-		Volumes:   make([]Volume, 0),
+		Image:       &BuildInfo{},
+		Push:        &BuildInfo{},
+		Environment: make(Environment, 0),
+		Variables:   make(Variables, 0),
+		Secrets:     make([]Secret, 0),
+		Forward:     make([]Forward, 0),
+		Volumes:     make([]Volume, 0),
 		Sync: Sync{
 			Folders: make([]SyncFolder, 0),
 		},
