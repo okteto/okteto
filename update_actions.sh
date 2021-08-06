@@ -35,7 +35,7 @@ do
     sed -iE 's_FROM\ okteto\/okteto\:latest_FROM\ okteto\/okteto\:'$VERSION'_' Dockerfile
     sed -iE 's_FROM\ okteto\/okteto\:[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*_FROM\ okteto\/okteto\:'$VERSION'_' Dockerfile
     git add Dockerfile
-    git commit -m "$VERSION release"
+    git commit -m "release $VERSION"
     git push git@github.com:$repo.git master
     git --no-pager log -1
     ghr -u ${CIRCLE_PROJECT_USERNAME} -token $GITHUB_TOKEN -replace $VERSION
