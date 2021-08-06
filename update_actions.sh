@@ -9,27 +9,25 @@ if [ -z "$VERSION" ]; then
         exit 1
 fi
 
-actionsRepos=(okteto/delete-namespace
-              okteto/build
-              okteto/destroy-preview
-              okteto/deploy-preview
-              okteto/deploy-stack
-              okteto/namespace
-              okteto/pipeline
-              okteto/push
-              okteto/create-namespace
-              okteto/destroy-pipeline
-              okteto/login
-              okteto/destroy-stack
-              okteto/apply)
+actionsRepos=(delete-namespace
+              build
+              destroy-preview
+              deploy-preview
+              deploy-stack
+              namespace
+              pipeline
+              push
+              create-namespace
+              destroy-pipeline
+              login
+              destroy-stack
+              apply)
               
 for repo in "${actionsRepos[@]}"
 do
     echo "$repo"
-    git clone --depth 1 https://github.com/$repo.git
-    repoPath=${repo#"okteto/"}
-    echo $repoPath
-    pushd $repoPath
+    git clone --depth 1 https://github.com/okteto/$repo.git
+    pushd $repo
     git config user.name "okteto"
     git config user.email "ci@okteto.com"
     sed -iE 's_FROM\ okteto\/okteto\:latest_FROM\ okteto\/okteto\:'$VERSION'_' Dockerfile
