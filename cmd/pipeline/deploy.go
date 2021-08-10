@@ -249,7 +249,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, ti
 				return fmt.Errorf("pipeline '%s' deployed with resource errors", name)
 			}
 			if areAllRunning {
-				break
+				return nil
 			}
 		}
 	}
