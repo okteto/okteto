@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployments
+package apps
 
 import (
 	"fmt"
@@ -85,9 +85,11 @@ services:
 	if err != nil {
 		t.Fatal(err)
 	}
-	d1 := dev.GevSandbox()
-	d1.Spec.Replicas = pointer.Int32Ptr(2)
-	d1.Spec.Strategy = appsv1.DeploymentStrategy{
+
+	d1 := model.NewResource(dev)
+	d1.GetSandbox()
+	d1.SetReplicas(pointer.Int32Ptr(2))
+	d1.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
 	rule1 := dev.ToTranslationRule(dev, false)
@@ -95,11 +97,13 @@ services:
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		Deployment:  d1,
+		K8sObject:   d1,
 		Rules:       []*model.TranslationRule{rule1},
 		Replicas:    2,
-		Strategy: appsv1.DeploymentStrategy{
-			Type: appsv1.RollingUpdateDeploymentStrategyType,
+		Strategy: model.K8sObjectStrategy{
+			DeploymentStrategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+			},
 		},
 		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{
@@ -326,49 +330,49 @@ services:
 			},
 		},
 	}
-	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
+	marshalled1, _ := yaml.Marshal(d1.Deployment.Spec.Template.Spec)
 	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
 	if string(marshalled1) != string(marshalled1OK) {
 		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
 	}
-	if d1.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d1 annotations: '%s'", d1.Annotations["key"])
+	if d1.GetAnnotation("key") != "value" {
+		t.Fatalf("Wrong d1 annotations: '%s'", d1.GetAnnotation("key"))
 	}
-	if d1.Spec.Template.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.Spec.Template.Annotations["key"])
+	if d1.PodTemplateSpec.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.PodTemplateSpec.Annotations["key"])
 	}
 
 	d1Down, err := TranslateDevModeOff(d1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	d1Orig := dev.GevSandbox()
-	marshalled1Down, _ := yaml.Marshal(d1Down.Spec.Template.Spec)
-	marshalled1Orig, _ := yaml.Marshal(d1Orig.Spec.Template.Spec)
+
+	d1Orig := model.NewResource(dev)
+	d1Orig.GetSandbox()
+	marshalled1Down, _ := yaml.Marshal(d1Down.PodTemplateSpec.Spec)
+	marshalled1Orig, _ := yaml.Marshal(d1Orig.PodTemplateSpec.Spec)
 	if string(marshalled1Down) != string(marshalled1Orig) {
 		t.Fatalf("Wrong d1 down.\nActual %+v, \nExpected %+v", string(marshalled1Down), string(marshalled1Orig))
 	}
-	if d1Down.Annotations["key"] != "" {
-		t.Fatalf("Wrong d1 annotations after down: '%s'", d1.Annotations["key"])
+	if d1Down.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong d1 annotations after down: '%s'", d1.GetAnnotation("key"))
 	}
-	if d1Down.Spec.Template.Annotations["key"] != "" {
-		t.Fatalf("Wrong d1 pod annotations after down: '%s'", d1.Spec.Template.Annotations["key"])
+	if d1Down.PodTemplateSpec.Annotations["key"] != "" {
+		t.Fatalf("Wrong d1 pod annotations after down: '%s'", d1.PodTemplateSpec.Annotations["key"])
 	}
-	if *d1Down.Spec.Replicas != 2 {
-		t.Fatalf("Wrong d1 replicas %d vs 2", *d1Down.Spec.Replicas)
-	}
-	if d1Down.Spec.Strategy.Type != appsv1.RollingUpdateDeploymentStrategyType {
-		t.Fatalf("Wrong d1 strategy %s", d1Down.Spec.Strategy.Type)
+	if *d1Down.Replicas != 2 {
+		t.Fatalf("Wrong d1 replicas %d vs 2", *d1Down.Replicas)
 	}
 
 	dev2 := dev.Services[0]
-	d2 := dev2.GevSandbox()
+	d2 := model.NewResource(dev2)
+	d2.GetSandbox()
 	rule2 := dev2.ToTranslationRule(dev, false)
 	tr2 := &model.Translation{
 		Interactive: false,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		Deployment:  d2,
+		K8sObject:   d2,
 		Rules:       []*model.TranslationRule{rule2},
 		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{
@@ -450,33 +454,35 @@ services:
 			},
 		},
 	}
-	marshalled2, _ := yaml.Marshal(d2.Spec.Template.Spec)
+	marshalled2, _ := yaml.Marshal(d2.PodTemplateSpec.Spec)
 	marshalled2OK, _ := yaml.Marshal(d2OK.Spec.Template.Spec)
 	if string(marshalled2) != string(marshalled2OK) {
 		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
 	}
-	if d2.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d2 annotations: '%s'", d2.Annotations["key"])
+	if d2.GetAnnotation("key") != "value" {
+		t.Fatalf("Wrong d2 annotations: '%s'", d2.GetAnnotation("key"))
 	}
-	if d2.Spec.Template.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d2 pod annotations: '%s'", d2.Spec.Template.Annotations["key"])
+	if d2.PodTemplateSpec.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d2 pod annotations: '%s'", d2.PodTemplateSpec.Annotations["key"])
 	}
 
 	d2Down, err := TranslateDevModeOff(d2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	d2Orig := dev2.GevSandbox()
-	marshalled2Down, _ := yaml.Marshal(d2Down.Spec.Template.Spec)
-	marshalled2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
+
+	d2Orig := model.NewResource(dev2)
+	d2.GetSandbox()
+	marshalled2Down, _ := yaml.Marshal(d2Down.PodTemplateSpec.Spec)
+	marshalled2Orig, _ := yaml.Marshal(d2Orig.PodTemplateSpec.Spec)
 	if string(marshalled2Down) != string(marshalled2Orig) {
 		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
 	}
-	if d2Down.Annotations["key"] != "" {
-		t.Fatalf("Wrong d2 annotations after down: '%s'", d2.Annotations["key"])
+	if d2Down.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong d2 annotations after down: '%s'", d2.GetAnnotation("key"))
 	}
-	if d2Down.Spec.Template.Annotations["key"] != "" {
-		t.Fatalf("Wrong d2 pod annotations after down: '%s'", d2.Spec.Template.Annotations["key"])
+	if d2Down.PodTemplateSpec.Annotations["key"] != "" {
+		t.Fatalf("Wrong d2 pod annotations after down: '%s'", d2.PodTemplateSpec.Annotations["key"])
 	}
 }
 
@@ -493,13 +499,15 @@ persistentVolume:
 	if err != nil {
 		t.Fatal(err)
 	}
-	d1 := dev.GevSandbox()
+
+	d1 := model.NewResource(dev)
+	d1.GetSandbox()
 	rule1 := dev.ToTranslationRule(dev, true)
 	tr1 := &model.Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		Deployment:  d1,
+		K8sObject:   d1,
 		Rules:       []*model.TranslationRule{rule1},
 	}
 	err = translate(tr1, nil, false)
@@ -614,7 +622,7 @@ persistentVolume:
 			},
 		},
 	}
-	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
+	marshalled1, _ := yaml.Marshal(d1.PodTemplateSpec.Spec)
 	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
 
 	if string(marshalled1) != string(marshalled1OK) {
@@ -645,13 +653,15 @@ docker:
 	}
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
-	d := dev.GevSandbox()
+
+	d := model.NewResource(dev)
+	d.GetSandbox()
 	rule := dev.ToTranslationRule(dev, false)
 	tr := &model.Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		Deployment:  d,
+		K8sObject:   d,
 		Rules:       []*model.TranslationRule{rule},
 	}
 	err = translate(tr, nil, false)
@@ -871,7 +881,7 @@ docker:
 			},
 		},
 	}
-	marshalled, _ := yaml.Marshal(d.Spec.Template.Spec)
+	marshalled, _ := yaml.Marshal(d.PodTemplateSpec.Spec)
 	marshalledOK, _ := yaml.Marshal(dOK.Spec.Template.Spec)
 	if string(marshalled) != string(marshalledOK) {
 		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))
@@ -1215,13 +1225,15 @@ environment:
 	}
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
-	d := dev.GevSandbox()
+
+	d := model.NewResource(dev)
+	d.GetSandbox()
 	rule := dev.ToTranslationRule(dev, false)
 	tr := &model.Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		Deployment:  d,
+		K8sObject:   d,
 		Rules:       []*model.TranslationRule{rule},
 	}
 	err = translate(tr, nil, false)
@@ -1395,7 +1407,7 @@ environment:
 			},
 		},
 	}
-	marshalled, _ := yaml.Marshal(d.Spec.Template.Spec)
+	marshalled, _ := yaml.Marshal(d.PodTemplateSpec.Spec)
 	marshalledOK, _ := yaml.Marshal(dOK.Spec.Template.Spec)
 	if string(marshalled) != string(marshalledOK) {
 		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))

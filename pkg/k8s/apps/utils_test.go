@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployments
+package apps
 
 import (
 	"context"
@@ -36,7 +36,9 @@ annotations:
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := dev.GevSandbox()
+
+	d := model.NewResource(dev)
+	d.GetSandbox()
 	translations, err := GetTranslations(ctx, dev, d, false, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -70,46 +72,104 @@ annotations:
 func Test_getPreviousDeploymentReplicas(t *testing.T) {
 	var twoReplica int32 = 2
 	var tests = []struct {
-		name     string
-		d        *appsv1.Deployment
-		expected int32
+		name      string
+		k8sObject *model.K8sObject
+		expected  int32
 	}{
 		{
 			name: "ok",
-			d: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: nil,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &twoReplica,
+			k8sObject: &model.K8sObject{
+				ObjectType: model.DeploymentObjectType,
+				Deployment: &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: nil,
+					},
+					Spec: appsv1.DeploymentSpec{
+						Replicas: &twoReplica,
+					},
 				},
 			},
 			expected: 2,
 		},
 		{
 			name: "sleeping-state-ok",
-			d: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: model.Annotations{
-						model.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
+			k8sObject: &model.K8sObject{
+				ObjectType: model.DeploymentObjectType,
+				Deployment: &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: model.Annotations{
+							model.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
+						},
 					},
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &twoReplica,
+					Spec: appsv1.DeploymentSpec{
+						Replicas: &twoReplica,
+					},
 				},
 			},
 			expected: 3,
 		},
 		{
 			name: "sleeping-state-ko",
-			d: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: model.Annotations{
-						model.StateBeforeSleepingAnnontation: "wrong",
+			k8sObject: &model.K8sObject{
+				ObjectType: model.DeploymentObjectType,
+				Deployment: &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: model.Annotations{
+							model.StateBeforeSleepingAnnontation: "wrong",
+						},
+					},
+					Spec: appsv1.DeploymentSpec{
+						Replicas: &twoReplica,
 					},
 				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &twoReplica,
+			},
+			expected: 1,
+		},
+		{
+			name: "ok-sfs",
+			k8sObject: &model.K8sObject{
+				ObjectType: model.StatefulsetObjectType,
+				StatefulSet: &appsv1.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: nil,
+					},
+					Spec: appsv1.StatefulSetSpec{
+						Replicas: &twoReplica,
+					},
+				},
+			},
+			expected: 2,
+		},
+		{
+			name: "sleeping-state-ok-sfs",
+			k8sObject: &model.K8sObject{
+				ObjectType: model.StatefulsetObjectType,
+				StatefulSet: &appsv1.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: model.Annotations{
+							model.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
+						},
+					},
+					Spec: appsv1.StatefulSetSpec{
+						Replicas: &twoReplica,
+					},
+				},
+			},
+			expected: 3,
+		},
+		{
+			name: "sleeping-state-ko-sfs",
+			k8sObject: &model.K8sObject{
+				ObjectType: model.StatefulsetObjectType,
+				StatefulSet: &appsv1.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: model.Annotations{
+							model.StateBeforeSleepingAnnontation: "wrong",
+						},
+					},
+					Spec: appsv1.StatefulSetSpec{
+						Replicas: &twoReplica,
+					},
 				},
 			},
 			expected: 1,
@@ -118,7 +178,7 @@ func Test_getPreviousDeploymentReplicas(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getPreviousDeploymentReplicas(tt.d)
+			result := getPreviousK8sObjectReplicas(tt.k8sObject)
 			if result != tt.expected {
 				t.Errorf("Test '%s' failed: expected %d but got %d", tt.name, tt.expected, result)
 			}
