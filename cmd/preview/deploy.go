@@ -74,7 +74,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if len(args) == 0 {
 				name = getRandomName(ctx, scope)
 			} else {
-				name = args[0]
+				name = getExpandedName(args[0])
 			}
 
 			varList := []okteto.Variable{}
@@ -262,4 +262,14 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, t 
 		}
 	}
 	return nil
+}
+
+func getExpandedName(name string) string {
+	username := okteto.GetUsername()
+	os.Setenv("OKTETO_USERNAME", username)
+	expandedName, err := model.ExpandEnv(name)
+	if err != nil {
+		return name
+	}
+	return expandedName
 }
