@@ -246,13 +246,22 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, ti
 				}
 			}
 			if len(errors) > 0 {
-				return fmt.Errorf("pipeline '%s' deployed with errors", name)
+				previewEnvURL := getPreviewEnvURL(ctx, name)
+				return fmt.Errorf("pipeline '%s' deployed with errors. You can check %s for more information", name, previewEnvURL)
 			}
 			if areAllRunning {
 				return nil
 			}
 		}
 	}
+}
+
+func getPreviewEnvURL(ctx context.Context, name string) string {
+	url := okteto.GetURL()
+	if url == "na" {
+		return ""
+	}
+	return fmt.Sprintf("https://cloud.okteto.com/#/previews/%s", name)
 }
 
 func getCurrentNamespace(ctx context.Context) string {
