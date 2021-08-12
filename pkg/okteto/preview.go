@@ -41,18 +41,25 @@ type Preview struct {
 
 //Statefulset represents an Okteto statefulset
 type Statefulset struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Status     string `json:"status"`
-	DeployedBy string `json:"deployedBy"`
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Status     string     `json:"status"`
+	DeployedBy string     `json:"deployedBy"`
+	Endpoints  []Endpoint `json:"endpoints"`
 }
 
 //Deployment represents an Okteto statefulset
 type Deployment struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Status     string `json:"status"`
-	DeployedBy string `json:"deployedBy"`
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Status     string     `json:"status"`
+	DeployedBy string     `json:"deployedBy"`
+	Endpoints  []Endpoint `json:"endpoints"`
+}
+
+//Endpoint represents an okteto endpoint
+type Endpoint struct {
+	URL string `json:"url"`
 }
 
 //Previews represents an Okteto list of spaces
@@ -134,6 +141,42 @@ func ListPreviews(ctx context.Context) ([]PreviewEnv, error) {
 	}
 
 	return body.Previews, nil
+}
+
+func ListPreviewsEndpoints(ctx context.Context, previewName string) ([]string, error) {
+	endpoints := make([]string, 0)
+
+	q := fmt.Sprintf(`query{
+		preview(id: "%s"){
+			deployments{
+				endpoints{
+					url
+				}
+			},
+			statefulsets{
+				endpoints{
+					url
+				}
+			}
+		}
+	}`, previewName)
+	var body PreviewBody
+	if err := query(ctx, q, &body); err != nil {
+		return nil, err
+	}
+
+	for _, d := range body.Preview.Deployments {
+		for _, endpoint := range d.Endpoints {
+			endpoints = append(endpoints, endpoint.URL)
+		}
+	}
+
+	for _, sfs := range body.Preview.Statefulsets {
+		for _, endpoint := range sfs.Endpoints {
+			endpoints = append(endpoints, endpoint.URL)
+		}
+	}
+	return endpoints, nil
 }
 
 // GetPreviewEnvByName gets a preview environment given its name

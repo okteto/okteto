@@ -34,8 +34,12 @@ func Preview(ctx context.Context) *cobra.Command {
 	listCommand := List(ctx)
 	listCommand.Hidden = true
 
+	endpointsCommand := Endpoints(ctx)
+	endpointsCommand.Hidden = true
+
 	cmd.AddCommand(deployCommand)
 	cmd.AddCommand(destroyCommand)
 	cmd.AddCommand(listCommand)
+	cmd.AddCommand(endpointsCommand)
 	return cmd
 }
