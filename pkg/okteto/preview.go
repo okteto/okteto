@@ -99,11 +99,18 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
-			return "", err
+			return "", translatePreviewAPIErr(err, name)
 		}
 	}
 
 	return body.PreviewEnviroment.ID, nil
+}
+
+func translatePreviewAPIErr(err error, name string) error {
+	if err.Error() == "conflict" {
+		return fmt.Errorf("preview '%s' already exists with a different scope. Please try other name", name)
+	}
+	return err
 }
 
 // DestroyPreview destroy a preview environment
