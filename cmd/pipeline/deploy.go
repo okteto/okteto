@@ -246,7 +246,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, ti
 				}
 			}
 			if len(errors) > 0 {
-				return fmt.Errorf("pipeline '%s' deployed with resource errors", name)
+				return fmt.Errorf("pipeline '%s' deployed with errors", name)
 			}
 			if areAllRunning {
 				return nil
