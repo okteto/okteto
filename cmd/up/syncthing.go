@@ -63,6 +63,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	log.Success("Files synchronized")
 
 	elapsed := time.Since(start)
+	analytics.TrackDurationInitialSync(elapsed)
 	maxDuration := time.Duration(1) * time.Minute
 	if elapsed > maxDuration {
 		minutes := elapsed / time.Minute
