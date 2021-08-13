@@ -108,7 +108,7 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 
 func translatePreviewAPIErr(err error, name string) error {
 	if err.Error() == "conflict" {
-		return fmt.Errorf("preview '%s' already exists with a different scope. Please try other name", name)
+		return fmt.Errorf("preview '%s' already exists with a different scope. Please use a different name", name)
 	}
 	return err
 }
