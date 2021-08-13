@@ -324,59 +324,41 @@ func TestAll(t *testing.T) {
 
 	waitForDeployment(ctx, namespace, name, 2, 120)
 
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		log.Println("getting synchronized content")
+	log.Println("getting synchronized content")
 
-		c, err := getContent(endpoint, 150)
-		if err != nil {
-			t.Fatalf("failed to get content: %s", err)
-		}
+	c, err := getContent(endpoint, 150, upErrorChannel)
+	if err != nil {
+		t.Fatalf("failed to get content: %s", err)
+	}
 
-		log.Println("got synchronized content")
+	log.Println("got synchronized content")
 
-		if c != name {
-			t.Fatalf("expected synchronized content to be %s, got %s", name, c)
-		}
+	if c != name {
+		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
 	}
 
 	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
-			t.Fatal(err)
-		}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := killLocalSyncthing(); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
 
-		if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := destroyPod(ctx, name, namespace); err != nil {
-			t.Fatal(err)
-		}
 
-		if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := destroyPod(ctx, name, namespace); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	d, err := getDeployment(ctx, namespace, name)
@@ -485,57 +467,38 @@ func TestAllStatefulset(t *testing.T) {
 
 	log.Println("getting synchronized content")
 
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		c, err := getContent(endpoint, 120)
-		if err != nil {
-			t.Fatalf("failed to get content: %s", err)
-		}
-		log.Println("got synchronized content")
+	c, err := getContent(endpoint, 120, upErrorChannel)
+	if err != nil {
+		t.Fatalf("failed to get content: %s", err)
+	}
+	log.Println("got synchronized content")
 
-		if c != name {
-			t.Fatalf("expected synchronized content to be %s, got %s", name, c)
-		}
+	if c != name {
+		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
 	}
 
 	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
-			t.Fatal(err)
-		}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := killLocalSyncthing(); err != nil {
 		t.Fatal(err)
 	}
 
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := destroyPod(ctx, name, namespace); err != nil {
 		t.Fatal(err)
 	}
 
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	d, err := getStatefulset(ctx, namespace, name)
@@ -628,7 +591,7 @@ func waitForStatefulset(ctx context.Context, namespace, name string, timeout int
 	return fmt.Errorf("%s didn't rollout after %d seconds", name, timeout)
 }
 
-func getContent(endpoint string, timeout int) (string, error) {
+func getContent(endpoint string, timeout int, upErrorChannel chan error) (string, error) {
 	retries := 0
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < timeout; i++ {
@@ -653,6 +616,9 @@ func getContent(endpoint string, timeout int) (string, error) {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			return "", err
+		}
+		if !isUpRunning(upErrorChannel) {
+			return "", fmt.Errorf("Up command is no longer running")
 		}
 
 		return string(body), nil
@@ -707,7 +673,7 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	return nil
 }
 
-func testUpdateContent(content, contentPath string, timeout int) error {
+func testUpdateContent(content, contentPath string, timeout int, upErrorChannel chan error) error {
 	start := time.Now()
 	ioutil.WriteFile(contentPath, []byte(content), 0644)
 
@@ -721,7 +687,10 @@ func testUpdateContent(content, contentPath string, timeout int) error {
 	counter := 0
 	for i := 0; i < timeout; i++ {
 		<-tick.C
-		currentContent, err := getContent(endpoint, timeout)
+		if !isUpRunning(upErrorChannel) {
+			return fmt.Errorf("Up command is no longer running")
+		}
+		currentContent, err := getContent(endpoint, timeout, upErrorChannel)
 		if err != nil {
 			log.Printf("failed to get updated content: %s", err.Error())
 			continue
@@ -732,7 +701,6 @@ func testUpdateContent(content, contentPath string, timeout int) error {
 			if counter%5 == 0 {
 				log.Printf("expected updated content to be %s, got %s\n", content, currentContent)
 			}
-
 			continue
 		}
 
@@ -746,6 +714,18 @@ func testUpdateContent(content, contentPath string, timeout int) error {
 	}
 
 	return nil
+}
+
+func isUpRunning(upErrorChannel chan error) bool {
+	if upErrorChannel == nil {
+		return true
+	}
+	select {
+	case <-upErrorChannel:
+		return false
+	default:
+		return true
+	}
 }
 
 func testRemoteStignoreGenerated(ctx context.Context, namespace, name, manifestPath, oktetoPath string) error {
@@ -860,7 +840,7 @@ func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, 
 		}
 	}()
 
-	return cmd.Process, waitForReady(namespace, name)
+	return cmd.Process, waitForReady(namespace, name, upErrorChannel)
 }
 
 func waitForUpExit(wg *sync.WaitGroup) error {
@@ -878,13 +858,16 @@ func waitForUpExit(wg *sync.WaitGroup) error {
 	}
 }
 
-func waitForReady(namespace, name string) error {
+func waitForReady(namespace, name string, upErrorChannel chan error) error {
 	log.Println("waiting for okteto up to be ready")
 
 	state := path.Join(config.GetOktetoHome(), namespace, name, "okteto.state")
 
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < 360; i++ {
+		if !isUpRunning(upErrorChannel) {
+			return fmt.Errorf("Okteto up exited before completion")
+		}
 		c, err := ioutil.ReadFile(state)
 		if err != nil {
 			log.Printf("failed to read state file %s: %s", state, err)
