@@ -57,6 +57,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return okErrors.ErrNotLogged
 			}
 
+			if err := utils.SetOktetoUsernameEnv(); err != nil {
+				return err
+			}
+
 			if err := validatePreviewType(scope); err != nil {
 				return err
 			}
@@ -265,8 +269,6 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, t 
 }
 
 func getExpandedName(name string) string {
-	username := okteto.GetUsername()
-	os.Setenv("OKTETO_USERNAME", username)
 	expandedName, err := model.ExpandEnv(name)
 	if err != nil {
 		return name
