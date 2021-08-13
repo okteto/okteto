@@ -592,15 +592,10 @@ func waitForStatefulset(ctx context.Context, namespace, name string, timeout int
 }
 
 func getContent(endpoint string, timeout int, upErrorChannel chan error) (string, error) {
-	retries := 0
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < timeout; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
-			retries++
-			if retries > 10 {
-				return "", fmt.Errorf("failed to get %s: %w", endpoint, err)
-			}
 			log.Printf("called %s, got %s, retrying", endpoint, err)
 			<-t.C
 			continue
