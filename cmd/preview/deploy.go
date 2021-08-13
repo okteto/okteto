@@ -57,10 +57,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return okErrors.ErrNotLogged
 			}
 
-			if err := utils.SetOktetoUsernameEnv(); err != nil {
-				return err
-			}
-
 			if err := validatePreviewType(scope); err != nil {
 				return err
 			}

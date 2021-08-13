@@ -60,6 +60,7 @@ func init() {
 		model.OktetoBinImageTag = bin
 		log.Infof("using %s as the bin image", bin)
 	}
+	utils.SetOktetoUsernameEnv()
 }
 
 func main() {

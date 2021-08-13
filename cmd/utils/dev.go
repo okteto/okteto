@@ -219,10 +219,6 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 		}
 	}
 
-	if err := SetOktetoUsernameEnv(); err != nil {
-		return err
-	}
-
 	if !getSecrets {
 		return nil
 	}
