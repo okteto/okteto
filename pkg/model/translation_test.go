@@ -66,7 +66,7 @@ services:
 		Args:              []string{"-r", "-v"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
-		Variables: Variables{
+		Environment: Environment{
 			{
 				Name:  "OKTETO_NAMESPACE",
 				Value: "n",
@@ -133,7 +133,7 @@ services:
 		Healthchecks:    true,
 		Probes:          &Probes{Readiness: true, Liveness: true, Startup: true},
 		Lifecycle:       &Lifecycle{PostStart: true, PostStop: false},
-		Variables:       make(Variables, 0),
+		Environment:     make(Environment, 0),
 		SecurityContext: &SecurityContext{
 			RunAsUser:  &rootUser,
 			RunAsGroup: &rootUser,
@@ -186,7 +186,7 @@ initContainer:
 		Args:              []string{"-r", "-v"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
-		Variables: Variables{
+		Environment: Environment{
 			{
 				Name:  "OKTETO_NAMESPACE",
 				Value: "n",
@@ -269,7 +269,7 @@ docker:
 		Args:              []string{"-r", "-v", "-d"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
-		Variables: Variables{
+		Environment: Environment{
 			{
 				Name:  "OKTETO_NAMESPACE",
 				Value: "n",
@@ -350,7 +350,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	tests := []struct {
 		name     string
 		manifest *Dev
-		expected Variables
+		expected Environment
 	}{
 		{
 			name: "default",
@@ -358,7 +358,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				Image:         &BuildInfo{},
 				SSHServerPort: oktetoDefaultSSHServerPort,
 			},
-			expected: Variables{
+			expected: Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 			},
@@ -369,7 +369,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				Image:         &BuildInfo{},
 				SSHServerPort: 22220,
 			},
-			expected: Variables{
+			expected: Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},
@@ -379,7 +379,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 	for _, test := range tests {
 		t.Logf("test: %s", test.name)
 		rule := test.manifest.ToTranslationRule(test.manifest, false)
-		if e, a := test.expected, rule.Variables; !reflect.DeepEqual(e, a) {
+		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
 			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
 		}
 	}
