@@ -54,7 +54,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 
 func validateOutput(output string) error {
 	if output != "" && output != "json" {
-		return fmt.Errorf("Ouput format is not accepted. Accepted values must be one of: ['json']")
+		return fmt.Errorf("Output format is not accepted. Value must be one of: ['json']")
 	}
 	return nil
 }
