@@ -15,6 +15,7 @@ package preview
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -27,6 +28,7 @@ import (
 
 // Endpoints show all the endpoints of a preview environment
 func Endpoints(ctx context.Context) *cobra.Command {
+	var output string
 
 	cmd := &cobra.Command{
 		Use:   "endpoints <name>",
@@ -37,20 +39,40 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 			previewName := args[0]
-			err := executeListPreviewEndpoints(ctx, previewName)
+
+			if err := validateOutput(output); err != nil {
+
+			}
+			err := executeListPreviewEndpoints(ctx, previewName, output)
 			return err
 		},
 	}
+	cmd.Flags().StringVarP(&output, "output", "o", "", "output format. One of: ['json']")
 
 	return cmd
 }
 
-func executeListPreviewEndpoints(ctx context.Context, name string) error {
-	previewList, err := okteto.ListPreviewsEndpoints(ctx, name)
+func validateOutput(output string) error {
+	if output != "" && output != "json" {
+		return fmt.Errorf("Ouput format is not accepted. Accepted values must be one of: ['json']")
+	}
+	return nil
+}
+
+func executeListPreviewEndpoints(ctx context.Context, name, output string) error {
+	endpointList, err := okteto.ListPreviewsEndpoints(ctx, name)
 	if err != nil {
 		return fmt.Errorf("failed to get preview environments: %s", err)
 	}
 
+	switch output {
+	case "json":
+		bytes, err := json.MarshalIndent(endpointList, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(bytes))
+	default:
 		if len(endpointList) == 0 {
 			fmt.Printf("There are no available endpoints for preview '%s'\n", name)
 		} else {
