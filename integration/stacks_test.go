@@ -151,7 +151,7 @@ func destroyStack(ctx context.Context, oktetoPath, stackManifest, dir string) er
 	cmd.Dir = dir
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto staack destroy failed: %s - %s", string(o), err)
+		return fmt.Errorf("okteto stack destroy failed: %s - %s", string(o), err)
 	}
 	log.Printf("okteto stack destroy success")
 	return nil
