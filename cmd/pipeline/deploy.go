@@ -246,7 +246,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, ti
 				}
 			}
 			if len(errors) > 0 {
-				previewEnvURL := getPreviewEnvURL(ctx, name)
+				previewEnvURL := getNamespaceURL(ctx, name)
 				return fmt.Errorf("pipeline '%s' deployed with errors. You can check %s for more information", name, previewEnvURL)
 			}
 			if areAllRunning {
@@ -256,12 +256,12 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, ti
 	}
 }
 
-func getPreviewEnvURL(ctx context.Context, name string) string {
+func getNamespaceURL(ctx context.Context, name string) string {
 	url := okteto.GetURL()
 	if url == "na" {
 		return ""
 	}
-	return fmt.Sprintf("https://cloud.okteto.com/#/previews/%s", name)
+	return fmt.Sprintf("https://%s/#/spaces/%s", url, name)
 }
 
 func getCurrentNamespace(ctx context.Context) string {
