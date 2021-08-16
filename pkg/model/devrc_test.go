@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -11,16 +12,64 @@ import (
 func TestReadDevRC(t *testing.T) {
 	var tests = []struct {
 		name     string
+		logLevel string
 		manifest []byte
 		expected *DevRC
 	}{
 		{
 			name:     "none",
+			logLevel: "info",
 			manifest: []byte(``),
 			expected: &DevRC{},
 		},
 		{
-			name: "read",
+			name:     "read-info",
+			logLevel: "info",
+			manifest: []byte(`labels:
+  app: test
+annotations:
+  db: mongodb
+context: "test"
+namespace: test
+environment:
+  OKTETO_HOME: /home/.okteto
+sync:
+  - /home/.vimrc:/home/.vimrc
+resources:
+  limits:
+    memory: 500M
+`),
+			expected: &DevRC{
+				Labels:      Labels{"app": "test"},
+				Annotations: Annotations{"db": "mongodb"},
+				Context:     "test",
+				Namespace:   "test",
+				Environment: Environment{
+					EnvVar{
+						Name:  "OKTETO_HOME",
+						Value: "/home/.okteto",
+					},
+				},
+				Sync: Sync{
+					Verbose:        false,
+					RescanInterval: 300,
+					Folders: []SyncFolder{
+						{
+							LocalPath:  "/home/.vimrc",
+							RemotePath: "/home/.vimrc",
+						},
+					},
+				},
+				Resources: ResourceRequirements{
+					Limits: ResourceList{
+						v1.ResourceMemory: resource.MustParse("500M"),
+					},
+				},
+			},
+		},
+		{
+			name:     "read-debug",
+			logLevel: "debug",
 			manifest: []byte(`labels:
   app: test
 annotations:
@@ -65,8 +114,10 @@ resources:
 		},
 	}
 
+	defer log.SetLevel("info")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			log.SetLevel(tt.logLevel)
 			dev, err := ReadRC(tt.manifest)
 			if err != nil {
 				t.Fatalf("Parse readrc has failed: %s", err.Error())
