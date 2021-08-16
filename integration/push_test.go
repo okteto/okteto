@@ -53,6 +53,8 @@ func TestPush(t *testing.T) {
 	t.Run(tName, func(t *testing.T) {
 		log.Printf("running %s \n", tName)
 		k8Client.Reset()
+		startNamespace := getCurrentNamespace()
+		defer changeToNamespace(ctx, oktetoPath, startNamespace)
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}

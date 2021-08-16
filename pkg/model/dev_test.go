@@ -215,7 +215,7 @@ forward:
 				t.Errorf("command was parsed: %+v", d)
 			}
 
-			for _, env := range d.Variables {
+			for _, env := range d.Environment {
 				found := false
 				for _, expectedEnv := range tt.expectedEnvironment {
 					if env.Name == expectedEnv.Name && env.Value == expectedEnv.Value {
@@ -224,7 +224,7 @@ forward:
 					}
 				}
 				if !found {
-					t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Variables, tt.expectedEnvironment)
+					t.Errorf("environment was not parsed correctly:\n%+v\n%+v", d.Environment, tt.expectedEnvironment)
 				}
 			}
 
@@ -1159,8 +1159,8 @@ services:
 		t.Errorf("'tag' was not parsed: got %s, expected %s", main.Image.Name, "code/core:1.2")
 	}
 
-	if main.Variables[0].Value != "from-env-file" {
-		t.Errorf("'environment' was not parsed: got %s, expected %s", main.Variables[0].Value, "from-env-file")
+	if main.Environment[0].Value != "from-env-file" {
+		t.Errorf("'environment' was not parsed: got %s, expected %s", main.Environment[0].Value, "from-env-file")
 	}
 
 	if main.Services[0].Name != "deployment-secondary" {
@@ -1171,8 +1171,8 @@ services:
 		t.Errorf("'tag' was not parsed: got %s, expected %s", main.Services[0].Image.Name, "code/service:2.1")
 	}
 
-	if main.Services[0].Variables[0].Value != "from-env-file" {
-		t.Errorf("'variables' was not parsed: got %s, expected %s", main.Services[0].Variables[0].Value, "from-env-file")
+	if main.Services[0].Environment[0].Value != "from-env-file" {
+		t.Errorf("'environment' was not parsed: got %s, expected %s", main.Services[0].Environment[0].Value, "from-env-file")
 	}
 }
 

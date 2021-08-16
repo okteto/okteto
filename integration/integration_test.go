@@ -289,6 +289,8 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	startNamespace := getCurrentNamespace()
+	defer changeToNamespace(ctx, oktetoPath, startNamespace)
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 		t.Fatal(err)
 	}
@@ -303,17 +305,6 @@ func TestAll(t *testing.T) {
 	}
 
 	log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations["deployment.kubernetes.io/revision"])
-
-	//set bad server to test k8s credential refresh
-	kubeConfigFile := config.GetKubeConfigFile()
-	cred, err := okteto.GetCredentials(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cred.Server = "https://31.192.137.200:443"
-	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), okteto.GetClusterContext(), false); err != nil {
-		t.Fatal(err)
-	}
 
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
@@ -430,6 +421,8 @@ func TestAllStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	startNamespace := getCurrentNamespace()
+	defer changeToNamespace(ctx, oktetoPath, startNamespace)
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 		t.Fatal(err)
 	}
@@ -444,17 +437,6 @@ func TestAllStatefulset(t *testing.T) {
 	}
 
 	log.Printf("statefulset: %s, revision: %s", originalStatefulset.Name, originalStatefulset.Annotations["deployment.kubernetes.io/revision"])
-
-	//set bad server to test k8s credential refresh
-	kubeConfigFile := config.GetKubeConfigFile()
-	cred, err := okteto.GetCredentials(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cred.Server = "https://31.192.137.200:443"
-	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), okteto.GetClusterContext(), false); err != nil {
-		t.Fatal(err)
-	}
 
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
@@ -647,6 +629,26 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	}
 
 	log.Printf("create namespace output: \n%s\n", string(o))
+
+	n := k8Client.GetContextNamespace("")
+	if namespace != n {
+		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
+	}
+
+	return nil
+}
+
+func changeToNamespace(ctx context.Context, oktetoPath, namespace string) error {
+	log.Printf("changing to namespace %s", namespace)
+	args := []string{"namespace", namespace, "-l", "debug"}
+	cmd := exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
+	}
+
+	log.Printf("namespace output: \n%s\n", string(o))
 
 	n := k8Client.GetContextNamespace("")
 	if namespace != n {
@@ -1066,4 +1068,12 @@ func checkIfUpFinished(ctx context.Context, pid int) error {
 	}
 
 	return err
+}
+
+func getCurrentNamespace() string {
+	currentContext := k8Client.GetSessionContext("")
+	if okteto.GetClusterContext() == currentContext {
+		return k8Client.GetContextNamespace("")
+	}
+	return os.Getenv("OKTETO_NAMESPACE")
 }
