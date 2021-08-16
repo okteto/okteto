@@ -59,7 +59,9 @@ type Deployment struct {
 
 //Endpoint represents an okteto endpoint
 type Endpoint struct {
-	URL string `json:"url"`
+	URL     string `json:"url"`
+	Private bool   `json:"private"`
+	Divert  bool   `json:"divert"`
 }
 
 //Previews represents an Okteto list of spaces
@@ -143,8 +145,8 @@ func ListPreviews(ctx context.Context) ([]PreviewEnv, error) {
 	return body.Previews, nil
 }
 
-func ListPreviewsEndpoints(ctx context.Context, previewName string) ([]string, error) {
-	endpoints := make([]string, 0)
+func ListPreviewsEndpoints(ctx context.Context, previewName string) ([]Endpoint, error) {
+	endpoints := make([]Endpoint, 0)
 
 	q := fmt.Sprintf(`query{
 		preview(id: "%s"){
@@ -167,13 +169,13 @@ func ListPreviewsEndpoints(ctx context.Context, previewName string) ([]string, e
 
 	for _, d := range body.Preview.Deployments {
 		for _, endpoint := range d.Endpoints {
-			endpoints = append(endpoints, endpoint.URL)
+			endpoints = append(endpoints, endpoint)
 		}
 	}
 
 	for _, sfs := range body.Preview.Statefulsets {
 		for _, endpoint := range sfs.Endpoints {
-			endpoints = append(endpoints, endpoint.URL)
+			endpoints = append(endpoints, endpoint)
 		}
 	}
 	return endpoints, nil

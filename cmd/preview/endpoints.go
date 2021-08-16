@@ -16,6 +16,7 @@ package preview
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -50,10 +51,18 @@ func executeListPreviewEndpoints(ctx context.Context, name string) error {
 		return fmt.Errorf("failed to get preview environments: %s", err)
 	}
 
-	if len(previewList) == 0 {
-		fmt.Printf("There are no available endpoints for preview '%s'\n", name)
-	} else {
-		fmt.Printf("Available endpoints for preview '%s'\n  - %s\n", name, strings.Join(previewList, "\n  - "))
+		if len(endpointList) == 0 {
+			fmt.Printf("There are no available endpoints for preview '%s'\n", name)
+		} else {
+			endpoints := make([]string, 0)
+			for _, endpoint := range endpointList {
+				endpoints = append(endpoints, endpoint.URL)
+			}
+			sort.Slice(endpoints, func(i, j int) bool {
+				return len(endpoints[i]) < len(endpoints[j])
+			})
+			fmt.Printf("Available endpoints for preview '%s'\n  - %s\n", name, strings.Join(endpoints, "\n  - "))
+		}
 	}
 	return nil
 }
