@@ -420,7 +420,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 
 func areAllContainersReady(pod *apiv1.Pod) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if !containerStatus.Ready {
+		if !containerStatus.Ready || !*containerStatus.Started {
 			return false
 		}
 	}
