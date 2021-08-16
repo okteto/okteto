@@ -101,10 +101,7 @@ func main() {
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
 	root.AddCommand(cmd.Exec())
-
-	previewCommand := preview.Preview(ctx)
-	previewCommand.Hidden = true
-	root.AddCommand(previewCommand)
+	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.Update())
 

@@ -25,21 +25,10 @@ func Preview(ctx context.Context) *cobra.Command {
 		Use:   "preview",
 		Short: "Preview environment management commands",
 	}
-	deployCommand := Deploy(ctx)
-	deployCommand.Hidden = true
 
-	destroyCommand := Destroy(ctx)
-	destroyCommand.Hidden = true
-
-	listCommand := List(ctx)
-	listCommand.Hidden = true
-
-	endpointsCommand := Endpoints(ctx)
-	endpointsCommand.Hidden = true
-
-	cmd.AddCommand(deployCommand)
-	cmd.AddCommand(destroyCommand)
-	cmd.AddCommand(listCommand)
-	cmd.AddCommand(endpointsCommand)
+	cmd.AddCommand(Deploy(ctx))
+	cmd.AddCommand(Destroy(ctx))
+	cmd.AddCommand(List(ctx))
+	cmd.AddCommand(Endpoints(ctx))
 	return cmd
 }
