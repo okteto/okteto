@@ -101,7 +101,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			return err
 		}
 		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
-			return fmt.Errorf("Docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
+			return fmt.Errorf("docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
 		}
 		if _, ok := err.(errors.UserError); ok {
 			return err
@@ -339,7 +339,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 	var insufficientResourcesErr error
 	for {
 		if time.Now().After(to) && insufficientResourcesErr != nil {
-			return errors.UserError{E: fmt.Errorf("Insufficient resources."),
+			return errors.UserError{E: fmt.Errorf("insufficient resources"),
 				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
 		}
 		select {
@@ -402,8 +402,11 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 				continue
 			}
+			if up.Pod.UID != pod.UID {
+				continue
+			}
 			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
-			if pod.Status.Phase == apiv1.PodRunning && areAllContainersReady(pod) {
+			if pod.Status.Phase == apiv1.PodRunning {
 				spinner.Stop()
 				log.Success("Images successfully pulled")
 				return nil
@@ -416,15 +419,6 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			return ctx.Err()
 		}
 	}
-}
-
-func areAllContainersReady(pod *apiv1.Pod) bool {
-	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if !containerStatus.Ready || !*containerStatus.Started {
-			return false
-		}
-	}
-	return true
 }
 
 func getPullingMessage(message, namespace string) string {
