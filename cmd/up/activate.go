@@ -416,8 +416,15 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			if up.Pod.UID != pod.UID {
 				continue
 			}
+
+			podActualMoment, err := pods.GetDevPodInLoop(ctx, up.Dev, up.Client, true)
+			if err != nil {
+				continue
+			}
+			up.Pod = podActualMoment
+
 			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
-			if pod.Status.Phase == apiv1.PodRunning && areContainersReady(pod) {
+			if podActualMoment.Status.Phase == apiv1.PodRunning && areContainersReady(podActualMoment) {
 				spinner.Stop()
 				log.Success("Images successfully pulled")
 				return nil

@@ -582,9 +582,6 @@ func getContent(endpoint string, timeout int, upErrorChannel chan error) (string
 				return "", fmt.Errorf("Up command is no longer running")
 			}
 			log.Printf("called %s, got %s, retrying", endpoint, err)
-			if !isUpRunning(upErrorChannel) {
-				return "", fmt.Errorf("Up command is no longer running")
-			}
 			<-t.C
 			continue
 		}
@@ -702,6 +699,9 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		currentContent, err := getContent(endpoint, timeout, upErrorChannel)
 		if err != nil {
 			log.Printf("failed to get updated content: %s", err.Error())
+			if err == fmt.Errorf("Up command is no longer running") {
+				return err
+			}
 			continue
 		}
 
