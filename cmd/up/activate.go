@@ -413,9 +413,6 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 				continue
 			}
-			if up.Pod.UID != pod.UID {
-				continue
-			}
 
 			if objectType == model.StatefulsetObjectType {
 				podActualMoment, err := pods.GetDevPodInLoop(ctx, up.Dev, up.Client, true)
@@ -423,6 +420,9 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 					continue
 				}
 				up.Pod = podActualMoment
+				if up.Pod.UID != pod.UID {
+					continue
+				}
 			}
 
 			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
