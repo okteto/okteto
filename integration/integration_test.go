@@ -579,6 +579,9 @@ func getContent(endpoint string, timeout int, upErrorChannel chan error) (string
 		r, err := http.Get(endpoint)
 		if err != nil {
 			log.Printf("called %s, got %s, retrying", endpoint, err)
+			if !isUpRunning(upErrorChannel) {
+				return "", fmt.Errorf("Up command is no longer running")
+			}
 			<-t.C
 			continue
 		}
@@ -586,6 +589,9 @@ func getContent(endpoint string, timeout int, upErrorChannel chan error) (string
 		defer r.Body.Close()
 		if r.StatusCode != 200 {
 			log.Printf("called %s, got status %d, retrying", endpoint, r.StatusCode)
+			if !isUpRunning(upErrorChannel) {
+				return "", fmt.Errorf("Up command is no longer running")
+			}
 			<-t.C
 			continue
 		}
