@@ -173,15 +173,6 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	return ok
 }
 
-//HasBeenChanged returns if a statefulset has been updated since the development container was activated
-func HasBeenChanged(s *appsv1.StatefulSet) bool {
-	oktetoRevision := s.Annotations[model.RevisionAnnotation]
-	if oktetoRevision == "" {
-		return false
-	}
-	return oktetoRevision != s.Status.CurrentRevision
-}
-
 //SetLastBuiltAnnotation sets the deployment timestacmp
 func SetLastBuiltAnnotation(s *appsv1.StatefulSet) {
 	annotations.Set(s.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))
