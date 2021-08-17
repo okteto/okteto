@@ -110,7 +110,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 			return nil, fmt.Errorf("StatefulSet for labels '%s' not found", dev.LabelsSelector())
 		}
 		if len(statefulsets.Items) > 1 {
-			return nil, fmt.Errorf("Found '%d' statefulsets for labels '%s' instead of 1", len(statefulsets.Items), dev.LabelsSelector())
+			return nil, fmt.Errorf("found '%d' statefulsets for labels '%s' instead of 1", len(statefulsets.Items), dev.LabelsSelector())
 		}
 		s = &statefulsets.Items[0]
 	}
@@ -198,7 +198,7 @@ func UpdateOktetoRevision(ctx context.Context, s *appsv1.StatefulSet, client *ku
 			return fmt.Errorf("failed to get deployment %s/%s: %w", s.Namespace, s.Name, err)
 		}
 
-		revision := updated.Annotations["revisionAnnotation"]
+		revision := updated.Status.CurrentRevision
 		if revision != "" {
 			s.Annotations[model.RevisionAnnotation] = revision
 			return Update(ctx, s, client)
@@ -244,10 +244,10 @@ func checkConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
 			if strings.Contains(c.Message, "exceeded quota") {
 				log.Infof("%s: %s", errors.ErrQuota, c.Message)
 				if strings.Contains(c.Message, "requested: pods=") {
-					return fmt.Errorf("Quota exceeded, you have reached the maximum number of pods per namespace")
+					return fmt.Errorf("quota exceeded, you have reached the maximum number of pods per namespace")
 				}
 				if strings.Contains(c.Message, "requested: requests.storage=") {
-					return fmt.Errorf("Quota exceeded, you have reached the maximum storage per namespace")
+					return fmt.Errorf("quota exceeded, you have reached the maximum storage per namespace")
 				}
 				return errors.ErrQuota
 			} else if isResourcesRelatedError(c.Message) {
