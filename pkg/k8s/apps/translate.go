@@ -57,20 +57,23 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.K8sObject.PodTemplateSpec.Spec, rule.Container)
 		if devContainer == nil {
-			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
+			return fmt.Errorf("container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
 		}
 		rule.Container = devContainer.Name
 	}
 
-	manifest := annotations.Get(t.K8sObject.GetObjectMeta(), model.DeploymentAnnotation)
-	if manifest != "" {
-		if t.K8sObject.ObjectType == model.DeploymentObjectType {
+	if t.K8sObject.ObjectType == model.DeploymentObjectType {
+		manifest := annotations.Get(t.K8sObject.GetObjectMeta(), model.DeploymentAnnotation)
+		if manifest != "" {
 			dOrig := &appsv1.Deployment{}
 			if err := json.Unmarshal([]byte(manifest), dOrig); err != nil {
 				return err
 			}
 			t.K8sObject.Deployment = dOrig
-		} else {
+		}
+	} else {
+		manifest := annotations.Get(t.K8sObject.GetObjectMeta(), model.StatefulsetAnnotation)
+		if manifest != "" {
 			sfsOrig := &appsv1.StatefulSet{}
 			if err := json.Unmarshal([]byte(manifest), sfsOrig); err != nil {
 				return err
@@ -103,12 +106,12 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 
 	} else {
 		t.K8sObject.StatefulSet.Status = appsv1.StatefulSetStatus{}
-		delete(t.K8sObject.StatefulSet.Annotations, model.DeploymentAnnotation)
+		delete(t.K8sObject.StatefulSet.Annotations, model.StatefulsetAnnotation)
 		manifestBytes, err := json.Marshal(t.K8sObject.StatefulSet)
 		if err != nil {
 			return err
 		}
-		annotations.Set(t.K8sObject.StatefulSet.GetObjectMeta(), model.DeploymentAnnotation, string(manifestBytes))
+		annotations.Set(t.K8sObject.StatefulSet.GetObjectMeta(), model.StatefulsetAnnotation, string(manifestBytes))
 	}
 
 	commonTranslation(t)
@@ -125,7 +128,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.K8sObject.GetPodTemplate().Spec, rule.Container)
 		if devContainer == nil {
-			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
+			return fmt.Errorf("container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
 		}
 
 		if rule.Image == "" {
@@ -703,18 +706,24 @@ func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []mode
 func TranslateDevModeOff(k8sObject *model.K8sObject) (*model.K8sObject, error) {
 	trRulesJSON := annotations.Get(k8sObject.PodTemplateSpec.GetObjectMeta(), model.TranslationAnnotation)
 	if trRulesJSON == "" {
-		dManifest := annotations.Get(k8sObject.GetObjectMeta(), model.DeploymentAnnotation)
-		if dManifest == "" {
-			log.Infof("%s/%s is not a development container", k8sObject.Namespace, k8sObject.Name)
-			return k8sObject, nil
-		}
+
 		if k8sObject.ObjectType == model.DeploymentObjectType {
+			dManifest := annotations.Get(k8sObject.GetObjectMeta(), model.DeploymentAnnotation)
+			if dManifest == "" {
+				log.Infof("%s/%s is not a development container", k8sObject.Namespace, k8sObject.Name)
+				return k8sObject, nil
+			}
 			dOrig := &appsv1.Deployment{}
 			if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
 				return nil, fmt.Errorf("malformed manifest: %s", err)
 			}
 			k8sObject.UpdateDeployment(dOrig)
 		} else {
+			dManifest := annotations.Get(k8sObject.GetObjectMeta(), model.StatefulsetAnnotation)
+			if dManifest == "" {
+				log.Infof("%s/%s is not a development container", k8sObject.Namespace, k8sObject.Name)
+				return k8sObject, nil
+			}
 			dOrig := &appsv1.StatefulSet{}
 			if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
 				return nil, fmt.Errorf("malformed manifest: %s", err)
