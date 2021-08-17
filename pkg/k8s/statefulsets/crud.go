@@ -179,7 +179,7 @@ func HasBeenChanged(s *appsv1.StatefulSet) bool {
 	if oktetoRevision == "" {
 		return false
 	}
-	return oktetoRevision != s.Annotations["revisionAnnotation"]
+	return oktetoRevision != s.Status.CurrentRevision
 }
 
 //SetLastBuiltAnnotation sets the deployment timestacmp

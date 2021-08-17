@@ -272,7 +272,7 @@ func (s K8sObjectStrategy) SetStrategy(otherStrategy K8sObjectStrategy) {
 	s = otherStrategy
 }
 
-func (s K8sObjectStrategy) SetStrategyFromResource(resource *K8sObject) {
+func (s *K8sObjectStrategy) SetStrategyFromResource(resource *K8sObject) {
 	switch resource.ObjectType {
 	case DeploymentObjectType:
 		s.DeploymentStrategy = resource.Deployment.Spec.Strategy
