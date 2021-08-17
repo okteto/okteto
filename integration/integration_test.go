@@ -873,7 +873,7 @@ func waitForReady(namespace, name string, upErrorChannel chan error) error {
 	state := path.Join(config.GetOktetoHome(), namespace, name, "okteto.state")
 
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < 360; i++ {
+	for i := 0; i < 500; i++ {
 		if !isUpRunning(upErrorChannel) {
 			return fmt.Errorf("Okteto up exited before completion")
 		}
