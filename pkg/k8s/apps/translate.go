@@ -34,9 +34,8 @@ import (
 )
 
 const (
-	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
-	oktetoVersionAnnotation    = "dev.okteto.com/version"
-	revisionAnnotation         = "deployment.kubernetes.io/revision"
+	oktetoVersionAnnotation = "dev.okteto.com/version"
+	revisionAnnotation      = "deployment.kubernetes.io/revision"
 	//OktetoBinName name of the okteto bin init container
 	OktetoBinName = "okteto-bin"
 	//OktetoInitVolumeContainerName name of the okteto init container that initializes the persistent colume from image content
@@ -63,7 +62,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		rule.Container = devContainer.Name
 	}
 
-	manifest := annotations.Get(t.K8sObject.GetObjectMeta(), oktetoDeploymentAnnotation)
+	manifest := annotations.Get(t.K8sObject.GetObjectMeta(), model.DeploymentAnnotation)
 	if manifest != "" {
 		if t.K8sObject.ObjectType == model.DeploymentObjectType {
 			dOrig := &appsv1.Deployment{}
@@ -95,21 +94,21 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 
 	if t.K8sObject.ObjectType == model.DeploymentObjectType {
 		t.K8sObject.Deployment.Status = appsv1.DeploymentStatus{}
-		delete(t.K8sObject.Deployment.Annotations, oktetoDeploymentAnnotation)
+		delete(t.K8sObject.Deployment.Annotations, model.DeploymentAnnotation)
 		manifestBytes, err := json.Marshal(t.K8sObject.Deployment)
 		if err != nil {
 			return err
 		}
-		annotations.Set(t.K8sObject.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
+		annotations.Set(t.K8sObject.Deployment.GetObjectMeta(), model.DeploymentAnnotation, string(manifestBytes))
 
 	} else {
 		t.K8sObject.StatefulSet.Status = appsv1.StatefulSetStatus{}
-		delete(t.K8sObject.StatefulSet.Annotations, oktetoDeploymentAnnotation)
+		delete(t.K8sObject.StatefulSet.Annotations, model.DeploymentAnnotation)
 		manifestBytes, err := json.Marshal(t.K8sObject.StatefulSet)
 		if err != nil {
 			return err
 		}
-		annotations.Set(t.K8sObject.StatefulSet.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
+		annotations.Set(t.K8sObject.StatefulSet.GetObjectMeta(), model.DeploymentAnnotation, string(manifestBytes))
 	}
 
 	commonTranslation(t)
@@ -704,7 +703,7 @@ func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []mode
 func TranslateDevModeOff(k8sObject *model.K8sObject) (*model.K8sObject, error) {
 	trRulesJSON := annotations.Get(k8sObject.PodTemplateSpec.GetObjectMeta(), model.TranslationAnnotation)
 	if trRulesJSON == "" {
-		dManifest := annotations.Get(k8sObject.GetObjectMeta(), oktetoDeploymentAnnotation)
+		dManifest := annotations.Get(k8sObject.GetObjectMeta(), model.DeploymentAnnotation)
 		if dManifest == "" {
 			log.Infof("%s/%s is not a development container", k8sObject.Namespace, k8sObject.Name)
 			return k8sObject, nil
