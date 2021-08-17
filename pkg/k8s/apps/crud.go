@@ -188,7 +188,7 @@ func UpdateOktetoRevision(ctx context.Context, r *model.K8sObject, client *kuber
 	case model.DeploymentObjectType:
 		return deployments.UpdateOktetoRevision(ctx, r.Deployment, client, timeout)
 	case model.StatefulsetObjectType:
-		return statefulsets.UpdateOktetoRevision(ctx, r.StatefulSet, client, timeout)
+		return nil
 	}
 	return nil
 }

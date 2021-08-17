@@ -205,7 +205,7 @@ func UpdateOktetoRevision(ctx context.Context, s *appsv1.StatefulSet, client *ku
 		}
 
 		if time.Now().After(to) && retries >= 10 {
-			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", model.RevisionAnnotation, s.Name)
+			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the statefulset '%s'. Please check for errors and try again", model.RevisionAnnotation, s.Name)
 		}
 
 		select {
