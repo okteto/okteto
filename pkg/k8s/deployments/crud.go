@@ -224,8 +224,8 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 
 		revision := updated.Annotations[revisionAnnotation]
 		if revision != "" {
-			d.Annotations[model.RevisionAnnotation] = revision
-			return Update(ctx, d, client)
+			updated.Annotations[model.RevisionAnnotation] = revision
+			return Update(ctx, updated, client)
 		}
 
 		if time.Now().After(to) && retries >= 10 {

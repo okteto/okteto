@@ -76,7 +76,7 @@ func HasBeenChanged(k8sObject *model.K8sObject) bool {
 	case model.DeploymentObjectType:
 		return deployments.HasBeenChanged(k8sObject.Deployment)
 	case model.StatefulsetObjectType:
-		return false
+		return statefulsets.HasBeenChanged(k8sObject.StatefulSet)
 	default:
 		return false
 	}

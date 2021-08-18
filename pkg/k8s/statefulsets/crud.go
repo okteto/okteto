@@ -200,8 +200,8 @@ func UpdateOktetoRevision(ctx context.Context, s *appsv1.StatefulSet, client *ku
 
 		revision := updated.Status.UpdateRevision
 		if revision != "" {
-			s.Annotations[model.RevisionAnnotation] = revision
-			return Update(ctx, s, client)
+			updated.Annotations[model.RevisionAnnotation] = revision
+			return Update(ctx, updated, client)
 		}
 
 		if time.Now().After(to) && retries >= 10 {
