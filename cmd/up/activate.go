@@ -426,7 +426,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			}
 
 			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
-			if up.Pod.Status.Phase == apiv1.PodRunning && areContainersReady(pod) {
+			if pod.Status.Phase == apiv1.PodRunning {
 				spinner.Stop()
 				log.Success("Images successfully pulled")
 				return nil
@@ -439,15 +439,6 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			return ctx.Err()
 		}
 	}
-}
-
-func areContainersReady(pod *apiv1.Pod) bool {
-	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if !containerStatus.Ready {
-			return false
-		}
-	}
-	return true
 }
 
 func getPullingMessage(message, namespace string) string {
