@@ -562,7 +562,7 @@ func waitForStatefulset(ctx context.Context, namespace, name string, timeout int
 			continue
 		}
 
-		if strings.Contains(output, "partitioned roll out complete") {
+		if strings.Contains(output, "partitioned roll out complete") || strings.Contains(output, "rolling update complete") {
 			log.Println(output)
 			return nil
 		}
