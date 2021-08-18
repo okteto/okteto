@@ -39,6 +39,7 @@ import (
 
 const (
 	deploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
+	sfsRevisionLabel             = "controller-revision-hash"
 	maxRetriesPodRunning         = 300 //1min pod is created
 )
 
@@ -178,9 +179,11 @@ func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, labels st
 		return nil, err
 	}
 	for i := range podList.Items {
-		for _, or := range podList.Items[i].OwnerReferences {
-			if or.UID == sfs.UID {
-				return &podList.Items[i], nil
+		if sfs.Status.UpdateRevision == podList.Items[i].Labels[sfsRevisionLabel] {
+			for _, or := range podList.Items[i].OwnerReferences {
+				if or.UID == sfs.UID {
+					return &podList.Items[i], nil
+				}
 			}
 		}
 	}

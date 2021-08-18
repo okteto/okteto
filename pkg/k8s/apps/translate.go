@@ -170,6 +170,9 @@ func commonTranslation(t *model.Translation) {
 		}
 	} else {
 		t.K8sObject.StatefulSet.Spec.Replicas = &devReplicas
+		t.K8sObject.StatefulSet.Spec.UpdateStrategy = appsv1.StatefulSetUpdateStrategy{
+			Type: appsv1.RollingUpdateStatefulSetStrategyType,
+		}
 	}
 }
 
@@ -719,16 +722,16 @@ func TranslateDevModeOff(k8sObject *model.K8sObject) (*model.K8sObject, error) {
 			}
 			k8sObject.UpdateDeployment(dOrig)
 		} else {
-			dManifest := annotations.Get(k8sObject.GetObjectMeta(), model.StatefulsetAnnotation)
-			if dManifest == "" {
+			sfsManifest := annotations.Get(k8sObject.GetObjectMeta(), model.StatefulsetAnnotation)
+			if sfsManifest == "" {
 				log.Infof("%s/%s is not a development container", k8sObject.Namespace, k8sObject.Name)
 				return k8sObject, nil
 			}
-			dOrig := &appsv1.StatefulSet{}
-			if err := json.Unmarshal([]byte(dManifest), dOrig); err != nil {
+			sfsOrig := &appsv1.StatefulSet{}
+			if err := json.Unmarshal([]byte(sfsManifest), sfsOrig); err != nil {
 				return nil, fmt.Errorf("malformed manifest: %s", err)
 			}
-			k8sObject.UpdateStatefulset(dOrig)
+			k8sObject.UpdateStatefulset(sfsOrig)
 		}
 
 		return k8sObject, nil

@@ -179,7 +179,7 @@ func HasBeenChanged(s *appsv1.StatefulSet) bool {
 	if oktetoRevision == "" {
 		return false
 	}
-	return oktetoRevision != s.Annotations["revisionAnnotation"]
+	return oktetoRevision != s.Status.UpdateRevision
 }
 
 //SetLastBuiltAnnotation sets the deployment timestacmp
@@ -198,7 +198,7 @@ func UpdateOktetoRevision(ctx context.Context, s *appsv1.StatefulSet, client *ku
 			return fmt.Errorf("failed to get deployment %s/%s: %w", s.Namespace, s.Name, err)
 		}
 
-		revision := updated.Annotations["revisionAnnotation"]
+		revision := updated.Status.UpdateRevision
 		if revision != "" {
 			s.Annotations[model.RevisionAnnotation] = revision
 			return Update(ctx, s, client)
