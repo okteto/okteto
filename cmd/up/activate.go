@@ -260,7 +260,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 	}
 
 	for name := range trList {
-		if name == k8sObject.Name && create {
+		if name == trList[name].K8sObject.Name && create {
 			if err := apps.Create(ctx, trList[name].K8sObject, up.Client); err != nil {
 				return err
 			}

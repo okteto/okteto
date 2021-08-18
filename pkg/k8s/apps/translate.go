@@ -34,9 +34,8 @@ import (
 )
 
 const (
-	oktetoDeploymentAnnotation = "dev.okteto.com/deployment"
-	oktetoVersionAnnotation    = "dev.okteto.com/version"
-	revisionAnnotation         = "deployment.kubernetes.io/revision"
+	oktetoVersionAnnotation = "dev.okteto.com/version"
+	revisionAnnotation      = "deployment.kubernetes.io/revision"
 	//OktetoBinName name of the okteto bin init container
 	OktetoBinName = "okteto-bin"
 	//OktetoInitVolumeContainerName name of the okteto init container that initializes the persistent colume from image content
@@ -98,12 +97,12 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 
 	if t.K8sObject.ObjectType == model.DeploymentObjectType {
 		t.K8sObject.Deployment.Status = appsv1.DeploymentStatus{}
-		delete(t.K8sObject.Deployment.Annotations, oktetoDeploymentAnnotation)
+		delete(t.K8sObject.Deployment.Annotations, model.DeploymentAnnotation)
 		manifestBytes, err := json.Marshal(t.K8sObject.Deployment)
 		if err != nil {
 			return err
 		}
-		annotations.Set(t.K8sObject.Deployment.GetObjectMeta(), oktetoDeploymentAnnotation, string(manifestBytes))
+		annotations.Set(t.K8sObject.Deployment.GetObjectMeta(), model.DeploymentAnnotation, string(manifestBytes))
 
 	} else {
 		t.K8sObject.StatefulSet.Status = appsv1.StatefulSetStatus{}

@@ -292,5 +292,5 @@ func GetRevisionAnnotatedK8sObjectOrFailed(ctx context.Context, dev *model.Dev, 
 		k8sObject.UpdateStatefulset(sfs)
 		return k8sObject, nil
 	}
-	return nil, fmt.Errorf("Kubernetes object not found")
+	return nil, fmt.Errorf("kubernetes object not found")
 }
