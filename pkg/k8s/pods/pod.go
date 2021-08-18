@@ -179,7 +179,7 @@ func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, labels st
 		return nil, err
 	}
 	for i := range podList.Items {
-		if sfs.Status.CurrentReplicas == 0 {
+		if podList.Items[i].DeletionTimestamp != nil {
 			return nil, nil
 		}
 		if sfs.Status.UpdateRevision == podList.Items[i].Labels[sfsRevisionLabel] {
