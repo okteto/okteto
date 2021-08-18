@@ -130,7 +130,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 				container = r.PodTemplateSpec.Spec.Containers[0].Name
 			}
 
-			suffix := fmt.Sprintf("Analyzing deployment '%s'...", r.Name)
+			suffix := fmt.Sprintf("Analyzing %s '%s'...", r.ObjectType, r.Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
 			err = initCMD.SetDevDefaultsFromResource(ctx, dev, r, container, language)
@@ -138,7 +138,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 			if err == nil {
 				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", r.ObjectType, r.Name))
 			} else {
-				log.Yellow(fmt.Sprintf("Analysis for deployment '%s' failed: %s", r.Name, err))
+				log.Yellow(fmt.Sprintf("Analysis for %s '%s' failed: %s", r.ObjectType, r.Name, err))
 				linguist.SetForwardDefaults(dev, language)
 			}
 		}
@@ -197,7 +197,7 @@ func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sO
 	}
 
 	if apps.IsDevModeOn(r) {
-		return nil, "", fmt.Errorf("the deployment '%s' is in development mode", r.Name)
+		return nil, "", fmt.Errorf("the %s '%s' is in development mode", r.ObjectType, r.Name)
 	}
 
 	container := ""
@@ -307,7 +307,7 @@ func askForResource(ctx context.Context, namespace string, c *kubernetes.Clients
 	options = append(options, defaultInitValues)
 	option, err := askForOptions(
 		options,
-		"Select the deployment you want to develop:",
+		"Select the resource you want to develop:",
 	)
 	if err != nil {
 		return nil, err
@@ -341,7 +341,7 @@ func askForContainer(d *model.K8sObject) (string, error) {
 	}
 	return askForOptions(
 		options,
-		fmt.Sprintf("The deployment '%s' has %d containers. Select the container you want to replace with your development container:", d.Name, len(d.PodTemplateSpec.Spec.Containers)),
+		fmt.Sprintf("The %s '%s' has %d containers. Select the container you want to replace with your development container:", d.ObjectType, d.Name, len(d.PodTemplateSpec.Spec.Containers)),
 	)
 }
 
