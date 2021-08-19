@@ -105,7 +105,6 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		annotations.Set(t.K8sObject.Deployment.GetObjectMeta(), model.DeploymentAnnotation, string(manifestBytes))
 
 	} else {
-		t.K8sObject.StatefulSet.Status = appsv1.StatefulSetStatus{}
 		delete(t.K8sObject.StatefulSet.Annotations, model.StatefulsetAnnotation)
 		manifestBytes, err := json.Marshal(t.K8sObject.StatefulSet)
 		if err != nil {
