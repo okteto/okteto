@@ -699,7 +699,7 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		currentContent, err := getContent(endpoint, timeout, upErrorChannel)
 		if err != nil {
 			log.Printf("failed to get updated content: %s", err.Error())
-			if err == fmt.Errorf("Up command is no longer running") {
+			if strings.Contains(err.Error(), "Up command is no longer running") {
 				return err
 			}
 			continue
