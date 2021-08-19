@@ -219,10 +219,6 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 		}
 	}
 
-	if okteto.GetUsername() != "" {
-		os.Setenv("OKTETO_USERNAME", okteto.GetUsername())
-	}
-
 	if !getSecrets {
 		return nil
 	}
