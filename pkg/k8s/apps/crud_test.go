@@ -110,6 +110,9 @@ func TestValidateMountPaths(t *testing.T) {
 						},
 					},
 				},
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: true,
+				},
 			},
 			expectedError: false,
 		},
@@ -138,8 +141,43 @@ func TestValidateMountPaths(t *testing.T) {
 						},
 					},
 				},
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: true,
+				},
 			},
 			expectedError: true,
+		},
+
+		{
+			name: "Wrong validation",
+			k8sObject: &model.K8sObject{
+				PodTemplateSpec: &v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{
+								VolumeMounts: []v1.VolumeMount{
+									{
+										MountPath: "/data",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			dev: &model.Dev{
+				Sync: model.Sync{
+					Folders: []model.SyncFolder{
+						{
+							RemotePath: "/data",
+						},
+					},
+				},
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: false,
+				},
+			},
+			expectedError: false,
 		},
 	}
 

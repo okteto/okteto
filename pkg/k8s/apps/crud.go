@@ -84,6 +84,9 @@ func HasBeenChanged(k8sObject *model.K8sObject) bool {
 }
 
 func ValidateMountPaths(k8sObject *model.K8sObject, dev *model.Dev) error {
+	if !dev.PersistentVolumeInfo.Enabled {
+		return nil
+	}
 	devContainer := GetDevContainer(&k8sObject.PodTemplateSpec.Spec, dev.Container)
 
 	for _, vm := range devContainer.VolumeMounts {
