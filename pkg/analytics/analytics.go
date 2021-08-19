@@ -39,6 +39,7 @@ const (
 	upErrorEvent             = "Up Error"
 	durationActivateUpEvent  = "Up Duration Time"
 	reconnectEvent           = "Reconnect"
+	durationInitialSyncEvent = "Initial Sync Duration Time"
 	syncErrorEvent           = "Sync Error"
 	syncResetDatabase        = "Sync Reset Database"
 	downEvent                = "Down"
@@ -137,6 +138,14 @@ func TrackReconnect(success, swap bool) {
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
 func TrackSyncError() {
 	track(syncErrorEvent, false, nil)
+}
+
+// TrackSyncError sends a tracking event to mixpanel when the init sync fails
+func TrackDurationInitialSync(durationInitialSync time.Duration) {
+	props := map[string]interface{}{
+		"duration": durationInitialSync,
+	}
+	track(durationInitialSyncEvent, true, props)
 }
 
 // TrackResetDatabase sends a tracking event to mixpanel when the syncthing database is reset

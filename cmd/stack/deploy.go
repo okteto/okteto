@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -32,6 +33,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	var forceBuild bool
 	var wait bool
 	var noCache bool
+	var timeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -57,7 +59,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err = stack.Deploy(ctx, s, forceBuild, wait, noCache)
+			err = stack.Deploy(ctx, s, forceBuild, wait, noCache, timeout)
 			analytics.TrackDeployStack(err == nil, s.IsCompose)
 			if err == nil {
 				log.Success("Stack '%s' successfully deployed", s.Name)
@@ -71,5 +73,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&forceBuild, "build", "", false, "build images before starting any Stack service")
 	cmd.Flags().BoolVarP(&wait, "wait", "", false, "wait until a minimum number of containers are in a ready state for every service")
 	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
+	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (10 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	return cmd
 }

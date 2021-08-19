@@ -99,6 +99,11 @@ func SetLevel(level string) {
 	}
 }
 
+// IsDebug checks if the level of the main logger is DEBUG or TRACE
+func IsDebug() bool {
+	return log.out.GetLevel() >= logrus.DebugLevel
+}
+
 // Debug writes a debug-level log
 func Debug(args ...interface{}) {
 	log.out.Debug(args...)

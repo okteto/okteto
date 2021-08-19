@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -71,8 +72,16 @@ type q struct {
 var currentToken *Token
 
 // AuthWithToken authenticates in okteto with the provided token
-func AuthWithToken(ctx context.Context, url, token string) (*User, error) {
-	client, err := getClient(url)
+func AuthWithToken(ctx context.Context, u, token string) (*User, error) {
+	url, err := url.Parse(u)
+	if err != nil {
+		return nil, err
+	}
+	if url.Scheme == "" {
+		url.Scheme = "https"
+	}
+
+	client, err := getClient(url.String())
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +92,7 @@ func AuthWithToken(ctx context.Context, url, token string) (*User, error) {
 		return nil, fmt.Errorf("invalid API token")
 	}
 
-	if err := saveAuthData(&user.User, url); err != nil {
+	if err := saveAuthData(&user.User, url.String()); err != nil {
 		log.Infof("failed to save the login data: %s", err)
 		return nil, fmt.Errorf("failed to save the login data locally")
 	}

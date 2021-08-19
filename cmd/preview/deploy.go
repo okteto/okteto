@@ -74,7 +74,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if len(args) == 0 {
 				name = getRandomName(ctx, scope)
 			} else {
-				name = args[0]
+				name = getExpandedName(args[0])
 			}
 
 			varList := []okteto.Variable{}
@@ -95,7 +95,16 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			return err
+			if !wait {
+				log.Success("Preview environment '%s' scheduled for deployment", name)
+				return nil
+			}
+
+			if err := waitUntilRunning(ctx, name, name, timeout); err != nil {
+				return fmt.Errorf("preview deployed with resource errors")
+			}
+			log.Success("Preview environment '%s' successfully deployed", name)
+			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
@@ -172,20 +181,13 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	if err != nil {
 		return "", err
 	}
-
-	if !wait {
-		log.Success("Preview environment '%s' scheduled for deployment", name)
-		return oktetoNS, nil
-	}
-
-	spinner.Update("Waiting for the preview environment to finish...")
-	if err := waitUntilRunning(ctx, oktetoNS, oktetoNS, timeout); err != nil {
-		return "", fmt.Errorf("preview deployed with resource errors")
-	}
 	return oktetoNS, nil
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+	spinner := utils.NewSpinner("Waiting for the preview environment to finish...")
+	spinner.Start()
+	defer spinner.Stop()
 	err := waitToBeDeployed(ctx, name, namespace, timeout)
 	if err != nil {
 		return err
@@ -195,7 +197,6 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 	if err != nil {
 		return err
 	}
-	log.Success("Preview environment '%s' successfully deployed", name)
 	return nil
 }
 
@@ -262,4 +263,12 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, t 
 		}
 	}
 	return nil
+}
+
+func getExpandedName(name string) string {
+	expandedName, err := model.ExpandEnv(name)
+	if err != nil {
+		return name
+	}
+	return expandedName
 }

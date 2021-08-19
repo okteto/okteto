@@ -1753,6 +1753,14 @@ func Test_validateDependsOn(t *testing.T) {
 			},
 		},
 		{
+			name:       "defined dependent service needs to be sanitized",
+			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test_db\n  test_db:\n    image: okteto/vote:1"),
+			throwError: false,
+			dependsOn: DependsOn{
+				"test-db": DependsOnConditionSpec{Condition: DependsOnServiceRunning},
+			},
+		},
+		{
 			name:       "defined dependent service started",
 			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      test:\n        condition: service_started\n  test:\n    image: okteto/vote:1"),
 			throwError: false,

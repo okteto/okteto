@@ -289,6 +289,8 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	startNamespace := getCurrentNamespace()
+	defer changeToNamespace(ctx, oktetoPath, startNamespace)
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 		t.Fatal(err)
 	}
@@ -304,17 +306,6 @@ func TestAll(t *testing.T) {
 
 	log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations["deployment.kubernetes.io/revision"])
 
-	//set bad server to test k8s credential refresh
-	kubeConfigFile := config.GetKubeConfigFile()
-	cred, err := okteto.GetCredentials(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cred.Server = "https://31.192.137.200:443"
-	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), okteto.GetClusterContext(), false); err != nil {
-		t.Fatal(err)
-	}
-
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
 	p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath, upErrorChannel)
@@ -324,59 +315,41 @@ func TestAll(t *testing.T) {
 
 	waitForDeployment(ctx, namespace, name, 2, 120)
 
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		log.Println("getting synchronized content")
+	log.Println("getting synchronized content")
 
-		c, err := getContent(endpoint, 150)
-		if err != nil {
-			t.Fatalf("failed to get content: %s", err)
-		}
+	c, err := getContent(endpoint, 150, upErrorChannel)
+	if err != nil {
+		t.Fatalf("failed to get content: %s", err)
+	}
 
-		log.Println("got synchronized content")
+	log.Println("got synchronized content")
 
-		if c != name {
-			t.Fatalf("expected synchronized content to be %s, got %s", name, c)
-		}
+	if c != name {
+		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
 	}
 
 	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
-			t.Fatal(err)
-		}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := killLocalSyncthing(); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
 
-		if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := destroyPod(ctx, name, namespace); err != nil {
-			t.Fatal(err)
-		}
 
-		if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := destroyPod(ctx, name, namespace); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	d, err := getDeployment(ctx, namespace, name)
@@ -404,6 +377,11 @@ func TestAll(t *testing.T) {
 
 }
 func TestAllStatefulset(t *testing.T) {
+	if mode == "client" {
+		t.Skip("this test is not required for client-side translation")
+		return
+	}
+
 	tName := fmt.Sprintf("TestAllSfs-%s-%s", runtime.GOOS, mode)
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
@@ -448,6 +426,8 @@ func TestAllStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	startNamespace := getCurrentNamespace()
+	defer changeToNamespace(ctx, oktetoPath, startNamespace)
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 		t.Fatal(err)
 	}
@@ -463,17 +443,6 @@ func TestAllStatefulset(t *testing.T) {
 
 	log.Printf("statefulset: %s, revision: %s", originalStatefulset.Name, originalStatefulset.Annotations["deployment.kubernetes.io/revision"])
 
-	//set bad server to test k8s credential refresh
-	kubeConfigFile := config.GetKubeConfigFile()
-	cred, err := okteto.GetCredentials(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cred.Server = "https://31.192.137.200:443"
-	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), okteto.GetClusterContext(), false); err != nil {
-		t.Fatal(err)
-	}
-
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
 	p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath, upErrorChannel)
@@ -485,57 +454,38 @@ func TestAllStatefulset(t *testing.T) {
 
 	log.Println("getting synchronized content")
 
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		c, err := getContent(endpoint, 120)
-		if err != nil {
-			t.Fatalf("failed to get content: %s", err)
-		}
-		log.Println("got synchronized content")
+	c, err := getContent(endpoint, 120, upErrorChannel)
+	if err != nil {
+		t.Fatalf("failed to get content: %s", err)
+	}
+	log.Println("got synchronized content")
 
-		if c != name {
-			t.Fatalf("expected synchronized content to be %s, got %s", name, c)
-		}
+	if c != name {
+		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
 	}
 
 	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10); err != nil {
-			t.Fatal(err)
-		}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := killLocalSyncthing(); err != nil {
 		t.Fatal(err)
 	}
 
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := destroyPod(ctx, name, namespace); err != nil {
 		t.Fatal(err)
 	}
 
-	select {
-	case upError := <-upErrorChannel:
-		t.Fatal(upError)
-	default:
-		if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300); err != nil {
-			t.Fatal(err)
-		}
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	d, err := getStatefulset(ctx, namespace, name)
@@ -617,7 +567,7 @@ func waitForStatefulset(ctx context.Context, namespace, name string, timeout int
 			continue
 		}
 
-		if strings.Contains(output, "partitioned roll out complete") {
+		if strings.Contains(output, "partitioned roll out complete") || strings.Contains(output, "rolling update complete") {
 			log.Println(output)
 			return nil
 		}
@@ -628,15 +578,13 @@ func waitForStatefulset(ctx context.Context, namespace, name string, timeout int
 	return fmt.Errorf("%s didn't rollout after %d seconds", name, timeout)
 }
 
-func getContent(endpoint string, timeout int) (string, error) {
-	retries := 0
+func getContent(endpoint string, timeout int, upErrorChannel chan error) (string, error) {
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < timeout; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
-			retries++
-			if retries > 3 {
-				return "", fmt.Errorf("failed to get %s: %w", endpoint, err)
+			if !isUpRunning(upErrorChannel) {
+				return "", fmt.Errorf("Up command is no longer running")
 			}
 			log.Printf("called %s, got %s, retrying", endpoint, err)
 			<-t.C
@@ -645,7 +593,13 @@ func getContent(endpoint string, timeout int) (string, error) {
 
 		defer r.Body.Close()
 		if r.StatusCode != 200 {
+			if !isUpRunning(upErrorChannel) {
+				return "", fmt.Errorf("Up command is no longer running")
+			}
 			log.Printf("called %s, got status %d, retrying", endpoint, r.StatusCode)
+			if !isUpRunning(upErrorChannel) {
+				return "", fmt.Errorf("Up command is no longer running")
+			}
 			<-t.C
 			continue
 		}
@@ -653,6 +607,9 @@ func getContent(endpoint string, timeout int) (string, error) {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			return "", err
+		}
+		if !isUpRunning(upErrorChannel) {
+			return "", fmt.Errorf("Up command is no longer running")
 		}
 
 		return string(body), nil
@@ -695,6 +652,26 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	return nil
 }
 
+func changeToNamespace(ctx context.Context, oktetoPath, namespace string) error {
+	log.Printf("changing to namespace %s", namespace)
+	args := []string{"namespace", namespace, "-l", "debug"}
+	cmd := exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
+	}
+
+	log.Printf("namespace output: \n%s\n", string(o))
+
+	n := k8Client.GetContextNamespace("")
+	if namespace != n {
+		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
+	}
+
+	return nil
+}
+
 func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	log.Printf("okteto delete namespace %s", namespace)
 	deleteCMD := exec.Command(oktetoPath, "delete", "namespace", namespace)
@@ -707,7 +684,7 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	return nil
 }
 
-func testUpdateContent(content, contentPath string, timeout int) error {
+func testUpdateContent(content, contentPath string, timeout int, upErrorChannel chan error) error {
 	start := time.Now()
 	ioutil.WriteFile(contentPath, []byte(content), 0644)
 
@@ -721,9 +698,15 @@ func testUpdateContent(content, contentPath string, timeout int) error {
 	counter := 0
 	for i := 0; i < timeout; i++ {
 		<-tick.C
-		currentContent, err := getContent(endpoint, timeout)
+		if !isUpRunning(upErrorChannel) {
+			return fmt.Errorf("Up command is no longer running")
+		}
+		currentContent, err := getContent(endpoint, timeout, upErrorChannel)
 		if err != nil {
 			log.Printf("failed to get updated content: %s", err.Error())
+			if strings.Contains(err.Error(), "Up command is no longer running") {
+				return err
+			}
 			continue
 		}
 
@@ -732,7 +715,6 @@ func testUpdateContent(content, contentPath string, timeout int) error {
 			if counter%5 == 0 {
 				log.Printf("expected updated content to be %s, got %s\n", content, currentContent)
 			}
-
 			continue
 		}
 
@@ -746,6 +728,18 @@ func testUpdateContent(content, contentPath string, timeout int) error {
 	}
 
 	return nil
+}
+
+func isUpRunning(upErrorChannel chan error) bool {
+	if upErrorChannel == nil {
+		return true
+	}
+	select {
+	case <-upErrorChannel:
+		return false
+	default:
+		return true
+	}
 }
 
 func testRemoteStignoreGenerated(ctx context.Context, namespace, name, manifestPath, oktetoPath string) error {
@@ -860,7 +854,7 @@ func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, 
 		}
 	}()
 
-	return cmd.Process, waitForReady(namespace, name)
+	return cmd.Process, waitForReady(namespace, name, upErrorChannel)
 }
 
 func waitForUpExit(wg *sync.WaitGroup) error {
@@ -878,13 +872,16 @@ func waitForUpExit(wg *sync.WaitGroup) error {
 	}
 }
 
-func waitForReady(namespace, name string) error {
+func waitForReady(namespace, name string, upErrorChannel chan error) error {
 	log.Println("waiting for okteto up to be ready")
 
 	state := path.Join(config.GetOktetoHome(), namespace, name, "okteto.state")
 
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < 360; i++ {
+	for i := 0; i < 500; i++ {
+		if !isUpRunning(upErrorChannel) {
+			return fmt.Errorf("Okteto up exited before completion")
+		}
 		c, err := ioutil.ReadFile(state)
 		if err != nil {
 			log.Printf("failed to read state file %s: %s", state, err)
@@ -1088,4 +1085,12 @@ func checkIfUpFinished(ctx context.Context, pid int) error {
 	}
 
 	return err
+}
+
+func getCurrentNamespace() string {
+	currentContext := k8Client.GetSessionContext("")
+	if okteto.GetClusterContext() == currentContext {
+		return k8Client.GetContextNamespace("")
+	}
+	return os.Getenv("OKTETO_NAMESPACE")
 }
