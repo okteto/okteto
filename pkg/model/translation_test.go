@@ -21,6 +21,8 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDevToTranslationRule(t *testing.T) {
@@ -39,6 +41,18 @@ resources:
     memory: 1Gi
     nvidia.com/gpu: 1
     amd.com/gpu: 1
+nodeSelector:
+  disktype: ssd
+affinity:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: role
+          operator: In
+          values:
+          - web-server
+      topologyKey: kubernetes.io/hostname
 services:
   - name: worker
     container: dev
@@ -114,6 +128,29 @@ services:
 			},
 		},
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
+		NodeSelector: map[string]string{
+			"disktype": "ssd",
+		},
+		Affinity: &apiv1.Affinity{
+			PodAffinity: &apiv1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "role",
+									Operator: "In",
+									Values: []string{
+										"web-server",
+									},
+								},
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		},
 	}
 
 	marshalled1, _ := yaml.Marshal(rule1)

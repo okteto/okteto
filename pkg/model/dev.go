@@ -101,7 +101,7 @@ type Dev struct {
 	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
 	ObjectType           ObjectType            `json:"k8sObjectType,omitempty" yaml:"k8sObjectType,omitempty"`
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
-	Affinity             Affinity              `json:"affinity,omitempty" yaml:"affinity,omitempty"`
+	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 }
 
 type Affinity apiv1.Affinity
@@ -805,7 +805,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		Probes:           dev.Probes,
 		Lifecycle:        dev.Lifecycle,
 		NodeSelector:     dev.NodeSelector,
-		Affinity:         (*apiv1.Affinity)(&dev.Affinity),
+		Affinity:         (*apiv1.Affinity)(dev.Affinity),
 	}
 
 	if !dev.EmptyImage {

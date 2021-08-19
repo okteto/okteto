@@ -847,6 +847,8 @@ func (a *Affinity) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
+
 	*a = Affinity(*affinity)
+
 	return nil
 }
