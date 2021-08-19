@@ -135,7 +135,6 @@ func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) err
 //Update updates a statefulset
 func Update(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) error {
 	sfs.ResourceVersion = ""
-	sfs.Status = appsv1.StatefulSetStatus{}
 	_, err := c.AppsV1().StatefulSets(sfs.Namespace).Update(ctx, sfs, metav1.UpdateOptions{})
 	if err != nil {
 		return err
@@ -179,7 +178,7 @@ func HasBeenChanged(s *appsv1.StatefulSet) bool {
 	if oktetoRevision == "" {
 		return false
 	}
-	return oktetoRevision != s.Annotations["revisionAnnotation"]
+	return oktetoRevision != s.Status.UpdateRevision
 }
 
 //SetLastBuiltAnnotation sets the deployment timestacmp
@@ -195,17 +194,17 @@ func UpdateOktetoRevision(ctx context.Context, s *appsv1.StatefulSet, client *ku
 	for retries := 0; ; retries++ {
 		updated, err := client.AppsV1().StatefulSets(s.Namespace).Get(ctx, s.Name, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to get deployment %s/%s: %w", s.Namespace, s.Name, err)
+			return fmt.Errorf("failed to get statefulset %s/%s: %w", s.Namespace, s.Name, err)
 		}
 
-		revision := updated.Annotations["revisionAnnotation"]
+		revision := updated.Status.UpdateRevision
 		if revision != "" {
-			s.Annotations[model.RevisionAnnotation] = revision
-			return Update(ctx, s, client)
+			updated.Annotations[model.RevisionAnnotation] = revision
+			return Update(ctx, updated, client)
 		}
 
 		if time.Now().After(to) && retries >= 10 {
-			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", model.RevisionAnnotation, s.Name)
+			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the statefulset '%s'. Please check for errors and try again", model.RevisionAnnotation, s.Name)
 		}
 
 		select {

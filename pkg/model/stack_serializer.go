@@ -399,7 +399,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	svc.Environment = serviceRaw.Environment
 
-	svc.DependsOn = serviceRaw.DependsOn
+	svc.DependsOn = make(DependsOn)
+	for name, condition := range serviceRaw.DependsOn {
+		svc.DependsOn[sanitizeName(name)] = condition
+	}
 
 	svc.Public, svc.Ports, err = getSvcPorts(serviceRaw.Public, serviceRaw.Ports, serviceRaw.Expose)
 	if err != nil {

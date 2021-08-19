@@ -115,6 +115,15 @@ func deploy(ctx context.Context) *cobra.Command {
 			if err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, timeout, variables); err != nil {
 				return err
 			}
+			if !wait {
+				log.Success("Pipeline '%s' scheduled for deployment", name)
+				return nil
+			}
+
+			if waitUntilRunning(ctx, name, namespace, timeout); err != nil {
+				return err
+			}
+			log.Success("Pipeline '%s' successfully deployed", name)
 			return nil
 		},
 	}
@@ -153,13 +162,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 		return fmt.Errorf("failed to deploy pipeline: %w", err)
 	}
 
-	if !wait {
-		log.Success("Pipeline '%s' scheduled for deployment", name)
-		return nil
-	}
-
-	spinner.Update("Waiting for the pipeline to finish...")
-	return waitUntilRunning(ctx, name, namespace, timeout)
+	return nil
 }
 
 func getPipelineName() (string, error) {
@@ -172,6 +175,9 @@ func getPipelineName() (string, error) {
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+	spinner := utils.NewSpinner("Waiting for the pipeline to finish...")
+	spinner.Start()
+	defer spinner.Stop()
 	err := waitToBeDeployed(ctx, name, namespace, timeout)
 	if err != nil {
 		return err
@@ -181,7 +187,6 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 	if err != nil {
 		return err
 	}
-	log.Success("Pipeline '%s' successfully deployed", name)
 	return nil
 }
 

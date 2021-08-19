@@ -245,7 +245,7 @@ services:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-v", "-s", "remote:/remote"},
+							Args:            []string{"-r", "-s", "remote:/remote"},
 							WorkingDir:      "/app",
 							Env: []apiv1.EnvVar{
 								{
@@ -578,7 +578,7 @@ persistentVolume:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-e", "-v"},
+							Args:            []string{"-r", "-e"},
 							WorkingDir:      "",
 							Env: []apiv1.EnvVar{
 								{
@@ -757,7 +757,7 @@ docker:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-v", "-d"},
+							Args:            []string{"-r", "-d"},
 							Env: []apiv1.EnvVar{
 								{
 									Name:  "OKTETO_NAMESPACE",
@@ -1329,7 +1329,7 @@ environment:
 							Image:           "web:latest",
 							ImagePullPolicy: apiv1.PullAlways,
 							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-v"},
+							Args:            []string{"-r"},
 							Env: []apiv1.EnvVar{
 								{
 									Name:  "key1",

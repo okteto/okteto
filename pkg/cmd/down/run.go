@@ -57,7 +57,7 @@ func Run(dev *model.Dev, k8sObject *model.K8sObject, trList map[string]*model.Tr
 		log.Infof("failed to remove ssh entry: %s", err)
 	}
 
-	if k8sObject == nil {
+	if k8sObject.Deployment == nil && k8sObject.StatefulSet == nil {
 		return nil
 	}
 

@@ -183,14 +183,14 @@ func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawFolders []SyncFolder
 	err := unmarshal(&rawFolders)
 	if err == nil {
-		sync.Verbose = true
+		sync.Verbose = log.IsDebug()
 		sync.RescanInterval = DefaultSyncthingRescanInterval
 		sync.Folders = rawFolders
 		return nil
 	}
 
 	var rawSync syncRaw
-	rawSync.Verbose = true
+	rawSync.Verbose = log.IsDebug()
 	err = unmarshal(&rawSync)
 	if err != nil {
 		return err
