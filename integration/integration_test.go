@@ -26,7 +26,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -520,16 +519,6 @@ func waitForDeployment(ctx context.Context, namespace, name string, revision, ti
 		log.Printf("waitForDeployment output: %s", output)
 
 		if strings.Contains(output, "is different from the running revision") {
-			r := regexp.MustCompile("\\(\\d+\\)")
-			matches := r.FindAllString(output, -1)
-			if len(matches) == 2 {
-				desiredVersion := strings.ReplaceAll(strings.ReplaceAll(matches[0], "(", ""), ")", "")
-				runningVersion := strings.ReplaceAll(strings.ReplaceAll(matches[0], "(", ""), ")", "")
-				if desiredVersion <= runningVersion {
-					log.Println(output)
-					return nil
-				}
-			}
 			time.Sleep(1 * time.Second)
 			continue
 		}
