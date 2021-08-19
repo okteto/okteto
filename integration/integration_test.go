@@ -377,6 +377,11 @@ func TestAll(t *testing.T) {
 
 }
 func TestAllStatefulset(t *testing.T) {
+	if mode == "client" {
+		t.Skip("this test is not required for client-side translation")
+		return
+	}
+
 	tName := fmt.Sprintf("TestAllSfs-%s-%s", runtime.GOOS, mode)
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
