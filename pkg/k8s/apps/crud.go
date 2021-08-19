@@ -85,7 +85,7 @@ func HasBeenChanged(k8sObject *model.K8sObject) bool {
 //GetTranslations fills all the deployments pointed by a development container
 func GetTranslations(ctx context.Context, dev *model.Dev, k8sObject *model.K8sObject, reset bool, c kubernetes.Interface) (map[string]*model.Translation, error) {
 	result := map[string]*model.Translation{}
-	if k8sObject != nil {
+	if k8sObject.Deployment != nil || k8sObject.StatefulSet != nil {
 		var replicas int32
 		var k8sObjectStrategy model.K8sObjectStrategy
 		trRulesJSON := annotations.Get(k8sObject.PodTemplateSpec.GetObjectMeta(), model.TranslationAnnotation)
@@ -292,5 +292,5 @@ func GetRevisionAnnotatedK8sObjectOrFailed(ctx context.Context, dev *model.Dev, 
 		k8sObject.UpdateStatefulset(sfs)
 		return k8sObject, nil
 	}
-	return nil, fmt.Errorf("Kubernetes object not found")
+	return nil, fmt.Errorf("kubernetes object not found")
 }

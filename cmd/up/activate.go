@@ -101,7 +101,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 			return err
 		}
 		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
-			return fmt.Errorf("Docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
+			return fmt.Errorf("docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
 		}
 		if _, ok := err.(errors.UserError); ok {
 			return err
@@ -260,7 +260,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 	}
 
 	for name := range trList {
-		if name == k8sObject.Name && create {
+		if name == trList[name].K8sObject.Name && create {
 			if err := apps.Create(ctx, trList[name].K8sObject, up.Client); err != nil {
 				return err
 			}
@@ -339,7 +339,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 	var insufficientResourcesErr error
 	for {
 		if time.Now().After(to) && insufficientResourcesErr != nil {
-			return errors.UserError{E: fmt.Errorf("Insufficient resources."),
+			return errors.UserError{E: fmt.Errorf("insufficient resources"),
 				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
 		}
 		select {
@@ -356,7 +356,18 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 				continue
 			}
-
+			pod, ok := event.Object.(*apiv1.Pod)
+			if !ok {
+				watcherPod, err = up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
+				if err != nil {
+					log.Infof("error watching pod events: %s", err.Error())
+					return err
+				}
+				continue
+			}
+			if up.Pod.UID != pod.UID {
+				continue
+			}
 			optsWatchEvents.ResourceVersion = e.ResourceVersion
 			log.Infof("pod event: %s:%s", e.Reason, e.Message)
 			switch e.Reason {
@@ -402,6 +413,10 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 				continue
 			}
+			if pod.UID != up.Pod.UID {
+				continue
+			}
+
 			log.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
 			if pod.Status.Phase == apiv1.PodRunning {
 				spinner.Stop()

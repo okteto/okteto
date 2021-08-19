@@ -377,6 +377,11 @@ func TestAll(t *testing.T) {
 
 }
 func TestAllStatefulset(t *testing.T) {
+	if mode == "client" {
+		t.Skip("this test is not required for client-side translation")
+		return
+	}
+
 	tName := fmt.Sprintf("TestAllSfs-%s-%s", runtime.GOOS, mode)
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
@@ -562,7 +567,7 @@ func waitForStatefulset(ctx context.Context, namespace, name string, timeout int
 			continue
 		}
 
-		if strings.Contains(output, "partitioned roll out complete") {
+		if strings.Contains(output, "partitioned roll out complete") || strings.Contains(output, "rolling update complete") {
 			log.Println(output)
 			return nil
 		}
@@ -574,14 +579,12 @@ func waitForStatefulset(ctx context.Context, namespace, name string, timeout int
 }
 
 func getContent(endpoint string, timeout int, upErrorChannel chan error) (string, error) {
-	retries := 0
 	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < timeout; i++ {
 		r, err := http.Get(endpoint)
 		if err != nil {
-			retries++
-			if retries > 3 {
-				return "", fmt.Errorf("failed to get %s: %w", endpoint, err)
+			if !isUpRunning(upErrorChannel) {
+				return "", fmt.Errorf("Up command is no longer running")
 			}
 			log.Printf("called %s, got %s, retrying", endpoint, err)
 			<-t.C
@@ -590,7 +593,13 @@ func getContent(endpoint string, timeout int, upErrorChannel chan error) (string
 
 		defer r.Body.Close()
 		if r.StatusCode != 200 {
+			if !isUpRunning(upErrorChannel) {
+				return "", fmt.Errorf("Up command is no longer running")
+			}
 			log.Printf("called %s, got status %d, retrying", endpoint, r.StatusCode)
+			if !isUpRunning(upErrorChannel) {
+				return "", fmt.Errorf("Up command is no longer running")
+			}
 			<-t.C
 			continue
 		}
@@ -695,6 +704,9 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		currentContent, err := getContent(endpoint, timeout, upErrorChannel)
 		if err != nil {
 			log.Printf("failed to get updated content: %s", err.Error())
+			if strings.Contains(err.Error(), "Up command is no longer running") {
+				return err
+			}
 			continue
 		}
 
@@ -866,7 +878,7 @@ func waitForReady(namespace, name string, upErrorChannel chan error) error {
 	state := path.Join(config.GetOktetoHome(), namespace, name, "okteto.state")
 
 	t := time.NewTicker(1 * time.Second)
-	for i := 0; i < 360; i++ {
+	for i := 0; i < 500; i++ {
 		if !isUpRunning(upErrorChannel) {
 			return fmt.Errorf("Okteto up exited before completion")
 		}
