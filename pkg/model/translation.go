@@ -53,6 +53,8 @@ type TranslationRule struct {
 	Probes            *Probes              `json:"probes" yaml:"probes"`
 	Lifecycle         *Lifecycle           `json:"lifecycle" yaml:"lifecycle"`
 	Docker            DinDContainer        `json:"docker" yaml:"docker"`
+	NodeSelector      map[string]string    `json:"nodeSelector" yaml:"nodeSelector"`
+	Affinity          *apiv1.Affinity      `json:"affinity" yaml:"affinity"`
 }
 
 // IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest

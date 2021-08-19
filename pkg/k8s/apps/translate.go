@@ -58,7 +58,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.K8sObject.PodTemplateSpec.Spec, rule.Container)
 		if devContainer == nil {
-			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
+			return fmt.Errorf("container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
 		}
 		rule.Container = devContainer.Name
 	}
@@ -126,7 +126,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(&t.K8sObject.GetPodTemplate().Spec, rule.Container)
 		if devContainer == nil {
-			return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
+			return fmt.Errorf("container '%s' not found in deployment '%s'", rule.Container, t.K8sObject.Name)
 		}
 
 		if rule.Image == "" {
@@ -138,6 +138,8 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		TranslatePodSecurityContext(&t.K8sObject.GetPodTemplate().Spec, rule.SecurityContext)
 		TranslatePodServiceAccount(&t.K8sObject.GetPodTemplate().Spec, rule.ServiceAccount)
 		TranslateOktetoDevSecret(&t.K8sObject.GetPodTemplate().Spec, t.Name, rule.Secrets)
+		TranslateOktetoNodeSelector(&t.K8sObject.GetPodTemplate().Spec, rule.NodeSelector)
+		TranslateOktetoAffinity(&t.K8sObject.GetPodTemplate().Spec, rule.Affinity)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(rule.InitContainer, &t.K8sObject.GetPodTemplate().Spec)
@@ -698,6 +700,19 @@ func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []mode
 		)
 	}
 	spec.Volumes = append(spec.Volumes, v)
+}
+
+func TranslateOktetoNodeSelector(spec *apiv1.PodSpec, nodeSelector map[string]string) {
+	spec.NodeSelector = nodeSelector
+}
+
+func TranslateOktetoAffinity(spec *apiv1.PodSpec, affinity *apiv1.Affinity) {
+	if affinity != nil {
+		if affinity.NodeAffinity == nil && affinity.PodAffinity == nil && affinity.PodAntiAffinity == nil {
+			return
+		}
+		spec.Affinity = affinity
+	}
 }
 
 //TranslateDevModeOff reverses the dev mode translation

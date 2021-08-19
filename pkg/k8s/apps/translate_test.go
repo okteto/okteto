@@ -64,6 +64,18 @@ sync:
 volumes:
   - /go/pkg/
   - /root/.cache/go-build
+nodeSelector:
+  disktype: ssd
+affinity:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: role
+          operator: In
+          values:
+          - web-server
+      topologyKey: kubernetes.io/hostname
 secrets:
   - %s:/remote
 resources:
@@ -121,6 +133,29 @@ services:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
+					NodeSelector: map[string]string{
+						"disktype": "ssd",
+					},
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								{
+									LabelSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{
+											{
+												Key:      "role",
+												Operator: "In",
+												Values: []string{
+													"web-server",
+												},
+											},
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
 					Tolerations: []apiv1.Toleration{
 						{
 							Key:      "nvidia/cpu",
