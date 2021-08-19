@@ -19,14 +19,15 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestGetStatefulset(t *testing.T) {
 	ctx := context.Background()
 	sfs := &appsv1.StatefulSet{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 		},
@@ -53,7 +54,7 @@ func TestGetStatefulset(t *testing.T) {
 func TestGetDeployment(t *testing.T) {
 	ctx := context.Background()
 	d := &appsv1.Deployment{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 		},
@@ -75,4 +76,84 @@ func TestGetDeployment(t *testing.T) {
 	if resource.ObjectType != model.DeploymentObjectType {
 		t.Fatal("not retrieved correctly ")
 	}
+}
+
+func TestValidateMountPaths(t *testing.T) {
+	tests := []struct {
+		name          string
+		k8sObject     *model.K8sObject
+		dev           *model.Dev
+		expectedError bool
+	}{
+		{
+			name: "Correct validation sfs",
+			k8sObject: &model.K8sObject{
+				PodTemplateSpec: &v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{
+								VolumeMounts: []v1.VolumeMount{
+									{
+										MountPath: "/data",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			dev: &model.Dev{
+				Sync: model.Sync{
+					Folders: []model.SyncFolder{
+						{
+							RemotePath: "/data2",
+						},
+					},
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name: "Wrong validation",
+			k8sObject: &model.K8sObject{
+				PodTemplateSpec: &v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{
+								VolumeMounts: []v1.VolumeMount{
+									{
+										MountPath: "/data",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			dev: &model.Dev{
+				Sync: model.Sync{
+					Folders: []model.SyncFolder{
+						{
+							RemotePath: "/data",
+						},
+					},
+				},
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			err := ValidateMountPaths(tt.k8sObject, tt.dev)
+
+			if err == nil && tt.expectedError {
+				t.Fatalf("Didn't receive any error and it was expected")
+			} else if err != nil && !tt.expectedError {
+				t.Fatalf("Receive error and it was not expected")
+			}
+		})
+	}
+
 }
