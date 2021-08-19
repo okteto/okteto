@@ -90,8 +90,8 @@ func ValidateMountPaths(k8sObject *model.K8sObject, dev *model.Dev) error {
 		for _, syncVolume := range dev.Sync.Folders {
 			if vm.MountPath == syncVolume.RemotePath {
 				return errors.UserError{
-					E:    fmt.Errorf("remote path '%s' is already defined in %v %s", vm.MountPath, k8sObject.ObjectType, k8sObject.Name),
-					Hint: `Change the path on your okteto manifest and try again`}
+					E:    fmt.Errorf("'%s' is already defined as volume in %v %s", vm.MountPath, k8sObject.ObjectType, k8sObject.Name),
+					Hint: `Disable the okteto persistent volume (https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional) and try again`}
 			}
 		}
 	}
