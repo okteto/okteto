@@ -24,6 +24,7 @@ import (
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
+	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/cmd/utils"
@@ -59,6 +60,7 @@ func init() {
 		model.OktetoBinImageTag = bin
 		log.Infof("using %s as the bin image", bin)
 	}
+	utils.SetOktetoUsernameEnv()
 }
 
 func main() {
@@ -100,10 +102,11 @@ func main() {
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
 	root.AddCommand(cmd.Exec())
+	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.Update())
 
-	err := utils.RunWithRetry(root.Execute)
+	err := root.Execute()
 
 	if err != nil {
 		log.Fail(err.Error())

@@ -11,46 +11,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package view
+package preview
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-// Username returns the username of the authenticated user
-func Username(ctx context.Context) *cobra.Command {
+// Destroy destroy a preview
+func Destroy(ctx context.Context) *cobra.Command {
+	var name string
+
 	cmd := &cobra.Command{
-		Use:   "username",
-		Args:  utils.NoArgsAccepted(""),
-		Short: "Returns the username of the authenticated user",
+		Use:   "destroy <name>",
+		Short: "Destroy a preview environment",
+		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			t, err := okteto.GetToken()
-			if err != nil {
-				log.Infof("error getting okteto token: %s", err.Error())
-				return errors.ErrNotLogged
+			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+				return err
 			}
-			if t.Username != "" {
-				fmt.Println(t.Username)
-				return nil
-			}
-			log.Info("refreshing okteto token...")
-			u, err := login.WithToken(ctx, t.URL, t.Token)
-			if err != nil {
-				log.Infof("error refreshing okteto token: %s", err.Error())
-				return errors.ErrNotLogged
-			}
-			fmt.Println(u.ExternalID)
-			return nil
+
+			name = getExpandedName(args[0])
+			err := executeDestroyPreview(ctx, name)
+			analytics.TrackPreviewDestroy(err == nil)
+			return err
 		},
 	}
 
 	return cmd
+}
+
+func executeDestroyPreview(ctx context.Context, name string) error {
+	if err := okteto.DestroyPreview(ctx, name); err != nil {
+		return fmt.Errorf("failed to delete namespace: %s", err)
+	}
+
+	log.Success("Preview environment destroyed")
+	return nil
 }

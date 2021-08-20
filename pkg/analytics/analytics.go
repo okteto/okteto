@@ -39,6 +39,7 @@ const (
 	upErrorEvent             = "Up Error"
 	durationActivateUpEvent  = "Up Duration Time"
 	reconnectEvent           = "Reconnect"
+	durationInitialSyncEvent = "Initial Sync Duration Time"
 	syncErrorEvent           = "Sync Error"
 	syncResetDatabase        = "Sync Reset Database"
 	downEvent                = "Down"
@@ -55,6 +56,8 @@ const (
 	namespaceEvent           = "Namespace"
 	namespaceCreateEvent     = "CreateNamespace"
 	namespaceDeleteEvent     = "DeleteNamespace"
+	previewDeployEvent       = "DeployPreview"
+	previewDestroyEvent      = "DestroyPreview"
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
 	disableEvent             = "Disable Analytics"
@@ -114,6 +117,16 @@ func TrackDeleteNamespace(success bool) {
 	track(namespaceDeleteEvent, success, nil)
 }
 
+// TrackPreviewDeploy sends a tracking event to mixpanel when the creates a preview environment
+func TrackPreviewDeploy(success bool) {
+	track(previewDeployEvent, success, nil)
+}
+
+// TrackPreviewDestroy sends a tracking event to mixpanel when the deletes a preview environment
+func TrackPreviewDestroy(success bool) {
+	track(previewDestroyEvent, success, nil)
+}
+
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
 func TrackReconnect(success, swap bool) {
 	props := map[string]interface{}{
@@ -125,6 +138,14 @@ func TrackReconnect(success, swap bool) {
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
 func TrackSyncError() {
 	track(syncErrorEvent, false, nil)
+}
+
+// TrackSyncError sends a tracking event to mixpanel when the init sync fails
+func TrackDurationInitialSync(durationInitialSync time.Duration) {
+	props := map[string]interface{}{
+		"duration": durationInitialSync,
+	}
+	track(durationInitialSyncEvent, true, props)
 }
 
 // TrackResetDatabase sends a tracking event to mixpanel when the syncthing database is reset

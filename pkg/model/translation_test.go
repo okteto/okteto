@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -63,7 +64,7 @@ services:
 		Image:             "web:latest",
 		ImagePullPolicy:   apiv1.PullNever,
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r", "-v"},
+		Args:              []string{"-r"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -183,7 +184,7 @@ initContainer:
 		OktetoBinImageTag: "image",
 		ImagePullPolicy:   apiv1.PullAlways,
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r", "-v"},
+		Args:              []string{"-r"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -266,7 +267,7 @@ docker:
 		ImagePullPolicy:   apiv1.PullAlways,
 		Image:             "dev-image",
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r", "-v", "-d"},
+		Args:              []string{"-r", "-d"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -337,6 +338,73 @@ docker:
 			Enabled: true,
 			Image:   DefaultDinDImage,
 		},
+	}
+
+	marshalled, _ := yaml.Marshal(rule)
+	marshalledOK, _ := yaml.Marshal(ruleOK)
+	if string(marshalled) != string(marshalledOK) {
+		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
+	}
+}
+
+func TestDevToTranslationDebugEnabled(t *testing.T) {
+	log.SetLevel("debug")
+	defer log.SetLevel("info")
+	manifest := []byte(`name: web
+image: dev-image
+namespace: n
+sync:
+  - .:/app`)
+
+	dev, err := Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rule := dev.ToTranslationRule(dev, false)
+	ruleOK := &TranslationRule{
+		Marker:            OktetoBinImageTag,
+		OktetoBinImageTag: OktetoBinImageTag,
+		ImagePullPolicy:   apiv1.PullAlways,
+		Image:             "dev-image",
+		Command:           []string{"/var/okteto/bin/start.sh"},
+		Args:              []string{"-r", "-v"},
+		Probes:            &Probes{},
+		Lifecycle:         &Lifecycle{},
+		Environment: Environment{
+			{
+				Name:  "OKTETO_NAMESPACE",
+				Value: "n",
+			},
+			{
+				Name:  "OKTETO_NAME",
+				Value: "web",
+			},
+		},
+		SecurityContext: &SecurityContext{
+			RunAsUser:  &rootUser,
+			RunAsGroup: &rootUser,
+			FSGroup:    &rootUser,
+		},
+		PersistentVolume: true,
+		Volumes: []VolumeMount{
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: OktetoSyncthingMountPath,
+				SubPath:   SyncthingSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: RemoteMountPath,
+				SubPath:   RemoteSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/app",
+				SubPath:   SourceCodeSubPath,
+			},
+		},
+		InitContainer: InitContainer{Image: OktetoBinImageTag},
 	}
 
 	marshalled, _ := yaml.Marshal(rule)

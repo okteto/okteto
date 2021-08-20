@@ -56,6 +56,8 @@ func TestStacks(t *testing.T) {
 	t.Run(tName, func(t *testing.T) {
 		log.Printf("running %s \n", tName)
 		k8Client.Reset()
+		startNamespace := getCurrentNamespace()
+		defer changeToNamespace(ctx, oktetoPath, startNamespace)
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}
@@ -77,7 +79,7 @@ func TestStacks(t *testing.T) {
 		log.Printf("deployed stack using %s \n", stackManifest)
 
 		endpoint := fmt.Sprintf("https://vote-%s.cloud.okteto.net", namespace)
-		content, err := getContent(endpoint, 150)
+		content, err := getContent(endpoint, 150, nil)
 		if err != nil {
 			t.Fatalf("failed to get stack content: %s", err)
 		}
@@ -184,6 +186,8 @@ func TestCompose(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
+	startNamespace := getCurrentNamespace()
+	defer changeToNamespace(ctx, oktetoPath, startNamespace)
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 		t.Fatal(err)
 	}
@@ -202,13 +206,13 @@ func TestCompose(t *testing.T) {
 	log.Printf("deployed stack using %s \n", "docker-compose.yml")
 
 	jobEndpoint := fmt.Sprintf("https://nginx-%s.cloud.okteto.net/db/initialized", namespace)
-	content, err := getContent(jobEndpoint, 150)
+	content, err := getContent(jobEndpoint, 150, nil)
 	if err != nil {
 		t.Fatalf("failed to get stack content: %s", err)
 	}
 
 	endpoint := fmt.Sprintf("https://nginx-%s.cloud.okteto.net/db", namespace)
-	content, err = getContent(endpoint, 150)
+	content, err = getContent(endpoint, 150, nil)
 	if err != nil {
 		t.Fatalf("failed to get stack content: %s", err)
 	}

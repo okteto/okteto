@@ -26,7 +26,7 @@ import (
 	"github.com/mholt/archiver"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -232,7 +232,7 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	}
 	defer podFile.Close()
 
-	devContainer := deployments.GetDevContainer(&pod.Spec, dev.Container)
+	devContainer := apps.GetDevContainer(&pod.Spec, dev.Container)
 	cpu := "unlimited"
 	memory := "unlimited"
 	limits := devContainer.Resources.Limits

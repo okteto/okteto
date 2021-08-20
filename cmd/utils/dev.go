@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
@@ -50,9 +52,36 @@ func LoadDev(devPath, namespace, k8sContext string) (*model.Dev, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if err := loadDevRc(dev); err != nil {
+		return nil, err
+	}
 	loadContext(dev, k8sContext)
 	loadNamespace(dev, namespace)
 	return dev, nil
+}
+
+func loadDevRc(dev *model.Dev) error {
+	defaultDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yml")
+	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yaml")
+	var devRc *model.DevRC
+	var err error
+	if model.FileExists(defaultDevRcPath) {
+		devRc, err = model.GetRc(defaultDevRcPath)
+		if err != nil {
+			return fmt.Errorf("error while reading %s file: %s", defaultDevRcPath, err.Error())
+		}
+	} else if model.FileExists(secondaryDevRcPath) {
+		devRc, err = model.GetRc(secondaryDevRcPath)
+		if err != nil {
+			return fmt.Errorf("error while reading %s file: %s", defaultDevRcPath, err.Error())
+		}
+	}
+
+	if devRc != nil {
+		model.MergeDevWithDevRc(dev, devRc)
+	}
+	return nil
 }
 
 func loadContext(dev *model.Dev, k8sContext string) {
@@ -188,10 +217,6 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 		if err != nil {
 			log.Errorf("error loading .env file: %s", err.Error())
 		}
-	}
-
-	if okteto.GetUsername() != "" {
-		os.Setenv("OKTETO_USERNAME", okteto.GetUsername())
 	}
 
 	if !getSecrets {

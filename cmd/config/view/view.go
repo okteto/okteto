@@ -33,7 +33,7 @@ func View(ctx context.Context) *cobra.Command {
 		Short: "Shows okteto configuration values of the authenticated user",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			t, err := okteto.GetToken()
-			if err != nil || t.Username != "" {
+			if err != nil {
 				log.Infof("error getting okteto token: %s", err.Error())
 				return errors.ErrNotLogged
 			}

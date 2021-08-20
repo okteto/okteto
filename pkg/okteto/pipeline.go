@@ -182,3 +182,39 @@ func DeletePipeline(ctx context.Context, name, namespace string, destroyVolumes 
 	log.Infof("deleted pipeline: %+v", body.PipelineRun.Status)
 	return body.PipelineRun.Status, nil
 }
+
+func GetResourcesStatusFromPipeline(ctx context.Context, name, namespace string) (map[string]string, error) {
+	pipeline, err := GetPipelineByName(ctx, name, namespace)
+	if err != nil {
+		return nil, err
+	}
+	status := make(map[string]string)
+	q := fmt.Sprintf(`query{
+		space(id: "%s"){
+ 			deployments{
+ 				name, status, deployedBy
+ 			},
+ 			statefulsets{
+ 				name, status, deployedBy
+ 			}
+ 		}
+ 	}`, namespace)
+	var body PreviewBody
+	if err := query(ctx, q, &body); err != nil {
+		return status, err
+	}
+
+	for _, d := range body.Preview.Deployments {
+		if d.DeployedBy == pipeline.ID {
+			status[d.Name] = d.Status
+
+		}
+	}
+
+	for _, sfs := range body.Preview.Statefulsets {
+		if sfs.DeployedBy == pipeline.ID {
+			status[sfs.Name] = sfs.Status
+		}
+	}
+	return status, nil
+}

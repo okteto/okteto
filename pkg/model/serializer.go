@@ -183,14 +183,14 @@ func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawFolders []SyncFolder
 	err := unmarshal(&rawFolders)
 	if err == nil {
-		sync.Verbose = true
+		sync.Verbose = log.IsDebug()
 		sync.RescanInterval = DefaultSyncthingRescanInterval
 		sync.Folders = rawFolders
 		return nil
 	}
 
 	var rawSync syncRaw
-	rawSync.Verbose = true
+	rawSync.Verbose = log.IsDebug()
 	err = unmarshal(&rawSync)
 	if err != nil {
 		return err
@@ -444,13 +444,21 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	parts := strings.SplitN(raw, ":", 2)
+	parts := strings.Split(raw, ":")
 	if len(parts) == 2 {
 		s.LocalPath, err = ExpandEnv(parts[0])
 		if err != nil {
 			return err
 		}
 		s.RemotePath = parts[1]
+		return nil
+	} else if len(parts) == 3 {
+		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
+		s.LocalPath, err = ExpandEnv(windowsPath)
+		if err != nil {
+			return err
+		}
+		s.RemotePath = parts[2]
 		return nil
 	}
 
@@ -564,10 +572,10 @@ func checkFileAndNotDirectory(path string) error {
 	return fmt.Errorf("Secret '%s' is not a regular file", path)
 }
 
-func (d Dev) MarshalYAML() (interface{}, error) {
+func (d *Dev) MarshalYAML() (interface{}, error) {
 	type dev Dev // prevent recursion
-	toMarshall := dev(d)
-	if isDefaultProbes(&d) {
+	toMarshall := dev(*d)
+	if isDefaultProbes(d) {
 		toMarshall.Probes = nil
 	}
 	if areAllProbesEnabled(d.Probes) {

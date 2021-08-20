@@ -45,7 +45,7 @@ import (
 )
 
 // Deploy deploys a stack
-func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool) error {
+func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool, timeout time.Duration) error {
 	if s.Namespace == "" {
 		s.Namespace = client.GetContextNamespace("")
 	}
@@ -67,7 +67,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 		return err
 	}
 
-	err = deploy(ctx, s, wait, c, config)
+	err = deploy(ctx, s, wait, c, config, timeout)
 	if err != nil {
 		output = fmt.Sprintf("%s\nStack '%s' deployment failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
@@ -85,7 +85,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool)
 	return err
 }
 
-func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Clientset, config *rest.Config) error {
+func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Clientset, config *rest.Config, timeout time.Duration) error {
 	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
@@ -117,35 +117,8 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 			spinner.Start()
 		}
 
-		deployedSvcs := make(map[string]bool)
-		for len(deployedSvcs) != len(s.Services) {
-			for svcName := range s.Services {
-				if deployedSvcs[svcName] {
-					continue
-				}
-
-				if !canSvcBeDeployed(ctx, s, svcName, c, config) {
-					if failedJobs := getDependingFailedJobs(ctx, s, svcName, c, config); len(failedJobs) > 0 {
-						if len(failedJobs) == 1 {
-							exit <- fmt.Errorf("Service '%s' dependency '%s' failed", svcName, failedJobs[0])
-						}
-						exit <- fmt.Errorf("Service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
-					}
-					if failedServices := getServicesWithFailedProbes(ctx, s, svcName, c, config); len(failedServices) > 0 {
-						for key, value := range failedServices {
-							exit <- fmt.Errorf("Service '%s' has failed his healthcheck probes: %s", key, value)
-						}
-					}
-					continue
-				}
-				spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
-				err := deploySvc(ctx, s, svcName, c, spinner)
-				if err != nil {
-					exit <- err
-				}
-				deployedSvcs[svcName] = true
-				spinner.Update("Waiting for services to be ready...")
-			}
+		if err := deployServices(ctx, s, c, config, spinner, timeout); err != nil {
+			exit <- err
 		}
 
 		iClient, err := ingresses.GetClient(ctx, c)
@@ -185,6 +158,50 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 		}
 	}
 	return nil
+}
+
+func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernetes.Clientset, config *rest.Config, spinner *utils.Spinner, timeout time.Duration) error {
+	deployedSvcs := make(map[string]bool)
+	t := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("stack '%s' didn't finish after %s", stack.Name, timeout.String())
+		case <-t.C:
+			for len(deployedSvcs) != len(stack.Services) {
+				for svcName := range stack.Services {
+					if deployedSvcs[svcName] {
+						continue
+					}
+
+					if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
+						if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient, config); len(failedJobs) > 0 {
+							if len(failedJobs) == 1 {
+								return fmt.Errorf("Service '%s' dependency '%s' failed", svcName, failedJobs[0])
+							}
+							return fmt.Errorf("Service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+						}
+						if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient, config); len(failedServices) > 0 {
+							for key, value := range failedServices {
+								return fmt.Errorf("Service '%s' has failed his healthcheck probes: %s", key, value)
+							}
+						}
+						continue
+					}
+					spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
+					err := deploySvc(ctx, stack, svcName, k8sClient, spinner)
+					if err != nil {
+						return err
+					}
+					deployedSvcs[svcName] = true
+					spinner.Update("Waiting for services to be ready...")
+				}
+			}
+			return nil
+		}
+	}
 }
 
 func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, spinner *utils.Spinner) error {

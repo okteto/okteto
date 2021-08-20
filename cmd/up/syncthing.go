@@ -63,6 +63,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	log.Success("Files synchronized")
 
 	elapsed := time.Since(start)
+	analytics.TrackDurationInitialSync(elapsed)
 	maxDuration := time.Duration(1) * time.Minute
 	if elapsed > maxDuration {
 		minutes := elapsed / time.Minute
@@ -169,7 +170,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 			return up.getInsufficientSpaceError(err)
 		case errors.ErrNeedsResetSyncError:
 			return errors.UserError{
-				E:    fmt.Errorf("The synchronization service state is inconsistent"),
+				E:    fmt.Errorf("the synchronization service state is inconsistent"),
 				Hint: `Try running 'okteto up --reset' to reset the synchronization service`,
 			}
 		default:

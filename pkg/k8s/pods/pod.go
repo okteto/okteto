@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/events"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
@@ -39,6 +39,7 @@ import (
 
 const (
 	deploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
+	sfsRevisionLabel             = "controller-revision-hash"
 	maxRetriesPodRunning         = 300 //1min pod is created
 )
 
@@ -125,23 +126,28 @@ func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 
 // GetDevPod returns the dev pod for a deployment
 func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
-	d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(ctx, dev, c, waitUntilDeployed)
-	if d == nil {
+	k8sObject, err := apps.GetRevisionAnnotatedK8sObjectOrFailed(ctx, dev, c, waitUntilDeployed)
+
+	if k8sObject == nil {
 		return nil, err
 	}
 
 	labels := fmt.Sprintf("%s=%s", model.InteractiveDevLabel, dev.Name)
-	rs, err := replicasets.GetReplicaSetByDeployment(ctx, d, labels, c)
-	if rs == nil {
-		if err == nil {
-			log.Infof("didn't find replicaset with revision %v", d.Annotations[deploymentRevisionAnnotation])
-		} else {
-			log.Infof("failed to get replicaset with revision %v: %s ", d.Annotations[deploymentRevisionAnnotation], err)
-		}
-		return nil, err
-	}
 
-	return GetPodByReplicaSet(ctx, rs, labels, c)
+	if k8sObject.ObjectType == model.DeploymentObjectType {
+		rs, err := replicasets.GetReplicaSetByDeployment(ctx, k8sObject.Deployment, labels, c)
+		if rs == nil {
+			if err == nil {
+				log.Infof("didn't find replicaset with revision %v", k8sObject.GetAnnotation(deploymentRevisionAnnotation))
+			} else {
+				log.Infof("failed to get replicaset with revision %v: %s ", k8sObject.GetAnnotation(deploymentRevisionAnnotation), err)
+			}
+			return nil, err
+		}
+		return GetPodByReplicaSet(ctx, rs, labels, c)
+	} else {
+		return GetPodByStatefulSet(ctx, k8sObject.StatefulSet, labels, c)
+	}
 }
 
 //GetPodByReplicaSet returns a pod of a given replicaset
@@ -157,6 +163,30 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, labels strin
 		for _, or := range podList.Items[i].OwnerReferences {
 			if or.UID == rs.UID {
 				return &podList.Items[i], nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+//GetPodByReplicaSet returns a pod of a given replicaset
+func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, labels string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
+	podList, err := c.CoreV1().Pods(sfs.Namespace).List(
+		ctx,
+		metav1.ListOptions{LabelSelector: labels},
+	)
+	if err != nil {
+		return nil, err
+	}
+	for i := range podList.Items {
+		if podList.Items[i].DeletionTimestamp != nil {
+			continue
+		}
+		if sfs.Status.UpdateRevision == podList.Items[i].Labels[sfsRevisionLabel] {
+			for _, or := range podList.Items[i].OwnerReferences {
+				if or.UID == sfs.UID {
+					return &podList.Items[i], nil
+				}
 			}
 		}
 	}

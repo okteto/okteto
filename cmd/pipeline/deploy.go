@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
@@ -85,7 +84,7 @@ func deploy(ctx context.Context) *cobra.Command {
 
 			if branch == "" {
 				log.Info("inferring git repository branch")
-				b, err := GetBranch(ctx, cwd)
+				b, err := utils.GetBranch(ctx, cwd)
 
 				if err != nil {
 					return err
@@ -117,13 +116,15 @@ func deploy(ctx context.Context) *cobra.Command {
 			if err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, timeout, variables); err != nil {
 				return err
 			}
-
-			if wait {
-				log.Success("Pipeline '%s' successfully deployed", name)
-			} else {
+			if !wait {
 				log.Success("Pipeline '%s' scheduled for deployment", name)
+				return nil
 			}
 
+			if waitUntilRunning(ctx, name, namespace, timeout); err != nil {
+				return err
+			}
+			log.Success("Pipeline '%s' successfully deployed", name)
 			return nil
 		},
 	}
@@ -167,12 +168,6 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 			exit <- fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 
-		if !wait {
-			exit <- nil
-		}
-
-		spinner.Update("Waiting for the pipeline to finish...")
-		exit <- waitUntilRunning(ctx, name, namespace, timeout)
 	}()
 
 	select {
@@ -199,6 +194,44 @@ func getPipelineName() (string, error) {
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+	spinner := utils.NewSpinner("Waiting for the pipeline to finish...")
+	spinner.Start()
+	defer spinner.Stop()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+
+		err := waitToBeDeployed(ctx, name, namespace, timeout)
+		if err != nil {
+			exit <- err
+		}
+
+		err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
+		if err != nil {
+			exit <- err
+		}
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.Duration) error {
+
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	attempts := 0
@@ -206,7 +239,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("pipeline '%s' didn't finish after 5 minutes", name)
+			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
 			p, err := okteto.GetPipelineByName(ctx, name, namespace)
 			if err != nil {
@@ -232,30 +265,54 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 	}
 }
 
+func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+	areAllRunning := false
+
+	ticker := time.NewTicker(5 * time.Second)
+	to := time.NewTicker(timeout)
+	errors := make(map[string]int)
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
+		case <-ticker.C:
+			resourceStatus, err := okteto.GetResourcesStatusFromPipeline(ctx, name, namespace)
+			if err != nil {
+				return err
+			}
+			areAllRunning = true
+			for name, status := range resourceStatus {
+				if status != "running" {
+					areAllRunning = false
+				}
+				if status == "error" {
+					errors[name] = 1
+				}
+			}
+			if len(errors) > 0 {
+				previewEnvURL := getNamespaceURL(ctx, name)
+				return fmt.Errorf("pipeline '%s' deployed with errors. You can check %s for more information", name, previewEnvURL)
+			}
+			if areAllRunning {
+				return nil
+			}
+		}
+	}
+}
+
+func getNamespaceURL(ctx context.Context, name string) string {
+	url := okteto.GetURL()
+	if url == "na" {
+		return ""
+	}
+	return fmt.Sprintf("https://%s/#/spaces/%s", url, name)
+}
+
 func getCurrentNamespace(ctx context.Context) string {
 	currentContext := client.GetSessionContext("")
 	if okteto.GetClusterContext() == currentContext {
 		return client.GetContextNamespace("")
 	}
 	return os.Getenv("OKTETO_NAMESPACE")
-}
-
-func GetBranch(ctx context.Context, path string) (string, error) {
-	repo, err := git.PlainOpen(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-
-	head, err := repo.Head()
-	if err != nil {
-		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
-	}
-
-	branch := head.Name()
-	if !branch.IsBranch() {
-		return "", fmt.Errorf("git repo is not on a valid branch")
-	}
-
-	name := strings.TrimPrefix(branch.String(), "refs/heads/")
-	return name, nil
 }

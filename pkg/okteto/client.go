@@ -66,7 +66,7 @@ func getRequest(q, token string) *graphql.Request {
 
 func query(ctx context.Context, query string, result interface{}) error {
 	t, err := GetToken()
-	if err != nil || t.Username == "" {
+	if err != nil {
 		log.Infof("couldn't get token: %s", err)
 		return errors.ErrNotLogged
 	}
@@ -87,7 +87,7 @@ func query(ctx context.Context, query string, result interface{}) error {
 
 func queryWithRequest(ctx context.Context, req *graphql.Request, result interface{}) error {
 	t, err := GetToken()
-	if err != nil || t.Username != "" {
+	if err != nil {
 		log.Infof("couldn't get token: %s", err)
 		return errors.ErrNotLogged
 	}

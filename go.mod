@@ -13,6 +13,7 @@ require (
 	github.com/containerd/console v1.0.1
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
+	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e

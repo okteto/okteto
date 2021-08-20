@@ -511,7 +511,7 @@ func TestDevMarshalling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			marshalled, err := yaml.Marshal(tt.dev)
+			marshalled, err := yaml.Marshal(&tt.dev)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -911,6 +911,49 @@ resources: 30s
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := Timeout{}
+
+			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSyncFoldersUnmashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected SyncFolder
+	}{
+		{
+			name:     "same dir",
+			data:     []byte(`.:/usr/src/app`),
+			expected: SyncFolder{LocalPath: ".", RemotePath: "/usr/src/app"},
+		},
+		{
+			name:     "previous dir",
+			data:     []byte(`../:/usr/src/app`),
+			expected: SyncFolder{LocalPath: "../", RemotePath: "/usr/src/app"},
+		},
+		{
+			name:     "fullpath",
+			data:     []byte(`/usr/src/app:/usr/src/app`),
+			expected: SyncFolder{LocalPath: "/usr/src/app", RemotePath: "/usr/src/app"},
+		},
+		{
+			name:     "windows test",
+			data:     []byte(`C:/Users/src/test:/usr/src/app`),
+			expected: SyncFolder{LocalPath: "C:/Users/src/test", RemotePath: "/usr/src/app"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SyncFolder{}
 
 			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
 				t.Fatal(err)

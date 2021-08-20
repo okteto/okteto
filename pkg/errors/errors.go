@@ -140,38 +140,6 @@ func IsTransient(err error) bool {
 	}
 }
 
-// IsCredentialError need to refresh credentials
-func IsCredentialError(err error) bool {
-	if err == nil {
-		return false
-	}
-	if strings.Contains(err.Error(), "Unauthorized") {
-		return true
-	}
-	if strings.Contains(err.Error(), "connection refused") {
-		return true
-	}
-	if strings.Contains(err.Error(), "i/o timeout") {
-		return true
-	}
-	if strings.Contains(err.Error(), "Client.Timeout") {
-		return true
-	}
-	if strings.Contains(err.Error(), "context deadline exceeded") {
-		return true
-	}
-	if strings.Contains(err.Error(), "x509") {
-		return true
-	}
-	if strings.Contains(err.Error(), "no such host") {
-		return true
-	}
-	if strings.Contains(err.Error(), "after a period of time") {
-		return true
-	}
-	return false
-}
-
 // IsClosedNetwork returns true if the error is caused by a closed network connection
 func IsClosedNetwork(err error) bool {
 	if err == nil {
