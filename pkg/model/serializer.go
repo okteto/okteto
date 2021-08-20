@@ -832,6 +832,7 @@ func (d *Duration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+// Unmarshal into our yaml affinity to marshal it into json and unmarshal it with the apiv1.Affinity.
 func (a *Affinity) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var affinityRaw AffinityRaw
 	err := unmarshal(&affinityRaw)
