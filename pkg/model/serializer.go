@@ -572,10 +572,10 @@ func checkFileAndNotDirectory(path string) error {
 	return fmt.Errorf("Secret '%s' is not a regular file", path)
 }
 
-func (d Dev) MarshalYAML() (interface{}, error) {
+func (d *Dev) MarshalYAML() (interface{}, error) {
 	type dev Dev // prevent recursion
-	toMarshall := dev(d)
-	if isDefaultProbes(&d) {
+	toMarshall := dev(*d)
+	if isDefaultProbes(d) {
 		toMarshall.Probes = nil
 	}
 	if areAllProbesEnabled(d.Probes) {

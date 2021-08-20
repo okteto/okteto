@@ -185,7 +185,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 
 	err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
 	if err != nil {
-		return fmt.Errorf("pipeline deployed with resource errors")
+		return err
 	}
 	return nil
 }
@@ -199,7 +199,7 @@ func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("pipeline '%s' didn't finish after 5 minutes", name)
+			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
 			p, err := okteto.GetPipelineByName(ctx, name, namespace)
 			if err != nil {
@@ -225,35 +225,48 @@ func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.
 	}
 }
 
-func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, t time.Duration) error {
+func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
 	areAllRunning := false
 
 	ticker := time.NewTicker(5 * time.Second)
-	timeout := time.Now().Add(t)
+	to := time.NewTicker(timeout)
 	errors := make(map[string]int)
-	for time.Now().Before(timeout) {
-		<-ticker.C
-		resourceStatus, err := okteto.GetResourcesStatusFromPipeline(ctx, name, namespace)
-		if err != nil {
-			return err
-		}
-		areAllRunning = true
-		for name, status := range resourceStatus {
-			if status != "running" {
-				areAllRunning = false
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
+		case <-ticker.C:
+			resourceStatus, err := okteto.GetResourcesStatusFromPipeline(ctx, name, namespace)
+			if err != nil {
+				return err
 			}
-			if status == "error" {
-				errors[name] = 1
+			areAllRunning = true
+			for name, status := range resourceStatus {
+				if status != "running" {
+					areAllRunning = false
+				}
+				if status == "error" {
+					errors[name] = 1
+				}
 			}
-		}
-		if len(errors) > 0 {
-			return fmt.Errorf("Services with errors found")
-		}
-		if areAllRunning {
-			break
+			if len(errors) > 0 {
+				previewEnvURL := getNamespaceURL(ctx, name)
+				return fmt.Errorf("pipeline '%s' deployed with errors. You can check %s for more information", name, previewEnvURL)
+			}
+			if areAllRunning {
+				return nil
+			}
 		}
 	}
-	return nil
+}
+
+func getNamespaceURL(ctx context.Context, name string) string {
+	url := okteto.GetURL()
+	if url == "na" {
+		return ""
+	}
+	return fmt.Sprintf("https://%s/#/spaces/%s", url, name)
 }
 
 func getCurrentNamespace(ctx context.Context) string {
