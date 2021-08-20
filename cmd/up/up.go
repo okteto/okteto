@@ -332,7 +332,7 @@ func (up *upContext) getCurrentK8sObject(ctx context.Context, autoDeploy bool) (
 	}
 
 	if !errors.IsNotFound(err) || up.isRetry {
-		return nil, false, fmt.Errorf("couldn't get %s %s/%s, please try again: %s", k8sObject.ObjectType, up.Dev.Namespace, up.Dev.Name, err)
+		return nil, false, fmt.Errorf("couldn't get %s %s/%s, please try again: %s", strings.ToLower(string(k8sObject.ObjectType)), up.Dev.Namespace, up.Dev.Name, err)
 	}
 
 	if len(up.Dev.Labels) > 0 {

@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -130,15 +131,15 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 				container = r.PodTemplateSpec.Spec.Containers[0].Name
 			}
 
-			suffix := fmt.Sprintf("Analyzing %s '%s'...", r.ObjectType, r.Name)
+			suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(string(r.ObjectType)), r.Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
 			err = initCMD.SetDevDefaultsFromResource(ctx, dev, r, container, language)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", r.ObjectType, r.Name))
+				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(string(r.ObjectType)), r.Name))
 			} else {
-				log.Yellow(fmt.Sprintf("Analysis for %s '%s' failed: %s", r.ObjectType, r.Name, err))
+				log.Yellow(fmt.Sprintf("Analysis for %s '%s' failed: %s", strings.ToLower(string(r.ObjectType)), r.Name, err))
 				linguist.SetForwardDefaults(dev, language)
 			}
 		}
@@ -197,7 +198,7 @@ func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sO
 	}
 
 	if apps.IsDevModeOn(r) {
-		return nil, "", fmt.Errorf("the %s '%s' is in development mode", r.ObjectType, r.Name)
+		return nil, "", fmt.Errorf("the %s '%s' is in development mode", strings.ToLower(string(r.ObjectType)), r.Name)
 	}
 
 	container := ""
@@ -334,14 +335,14 @@ func askForResource(ctx context.Context, namespace string, c *kubernetes.Clients
 	return nil, nil
 }
 
-func askForContainer(d *model.K8sObject) (string, error) {
+func askForContainer(k8sObject *model.K8sObject) (string, error) {
 	options := []string{}
-	for i := range d.PodTemplateSpec.Spec.Containers {
-		options = append(options, d.PodTemplateSpec.Spec.Containers[i].Name)
+	for i := range k8sObject.PodTemplateSpec.Spec.Containers {
+		options = append(options, k8sObject.PodTemplateSpec.Spec.Containers[i].Name)
 	}
 	return askForOptions(
 		options,
-		fmt.Sprintf("The %s '%s' has %d containers. Select the container you want to replace with your development container:", d.ObjectType, d.Name, len(d.PodTemplateSpec.Spec.Containers)),
+		fmt.Sprintf("The %s '%s' has %d containers. Select the container you want to replace with your development container:", strings.ToLower(string(k8sObject.ObjectType)), k8sObject.Name, len(k8sObject.PodTemplateSpec.Spec.Containers)),
 	)
 }
 
