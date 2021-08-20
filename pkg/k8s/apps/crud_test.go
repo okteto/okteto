@@ -103,6 +103,7 @@ func TestValidateMountPaths(t *testing.T) {
 				},
 			},
 			dev: &model.Dev{
+				Name: "test",
 				Sync: model.Sync{
 					Folders: []model.SyncFolder{
 						{
@@ -134,6 +135,7 @@ func TestValidateMountPaths(t *testing.T) {
 				},
 			},
 			dev: &model.Dev{
+				Name: "test",
 				Sync: model.Sync{
 					Folders: []model.SyncFolder{
 						{
@@ -147,9 +149,8 @@ func TestValidateMountPaths(t *testing.T) {
 			},
 			expectedError: true,
 		},
-
 		{
-			name: "Wrong validation",
+			name: "Wrong validation pv disabled",
 			k8sObject: &model.K8sObject{
 				PodTemplateSpec: &v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
@@ -166,6 +167,7 @@ func TestValidateMountPaths(t *testing.T) {
 				},
 			},
 			dev: &model.Dev{
+				Name: "test",
 				Sync: model.Sync{
 					Folders: []model.SyncFolder{
 						{
@@ -175,6 +177,39 @@ func TestValidateMountPaths(t *testing.T) {
 				},
 				PersistentVolumeInfo: &model.PersistentVolumeInfo{
 					Enabled: false,
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name: "Wrong validation second up",
+			k8sObject: &model.K8sObject{
+				PodTemplateSpec: &v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{
+								VolumeMounts: []v1.VolumeMount{
+									{
+										Name:      "okteto-test",
+										MountPath: "/data",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			dev: &model.Dev{
+				Name: "test",
+				Sync: model.Sync{
+					Folders: []model.SyncFolder{
+						{
+							RemotePath: "/data",
+						},
+					},
+				},
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: true,
 				},
 			},
 			expectedError: false,
