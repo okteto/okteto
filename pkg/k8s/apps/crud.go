@@ -90,6 +90,9 @@ func ValidateMountPaths(k8sObject *model.K8sObject, dev *model.Dev) error {
 	devContainer := GetDevContainer(&k8sObject.PodTemplateSpec.Spec, dev.Container)
 
 	for _, vm := range devContainer.VolumeMounts {
+		if dev.GetVolumeName() == vm.Name {
+			continue
+		}
 		for _, syncVolume := range dev.Sync.Folders {
 			if vm.MountPath == syncVolume.RemotePath {
 				return errors.UserError{
