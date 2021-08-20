@@ -16,6 +16,8 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -91,20 +93,39 @@ func deletePipeline(ctx context.Context, name, namespace string, wait, destroyVo
 	spinner.Start()
 	defer spinner.Stop()
 
-	_, err := okteto.DeletePipeline(ctx, name, namespace, destroyVolumes)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			log.Infof("pipeline '%s' not found", name)
-			return nil
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+
+		_, err := okteto.DeletePipeline(ctx, name, namespace, destroyVolumes)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				log.Infof("pipeline '%s' not found", name)
+				exit <- nil
+			}
+
+			exit <- fmt.Errorf("failed to delete pipeline '%s': %w", name, err)
 		}
 
-		return fmt.Errorf("failed to delete pipeline '%s': %w", name, err)
-	}
+		if !wait {
+			exit <- nil
+		}
 
-	if !wait {
-		return nil
+		// this will also run if it's not found
+		exit <- waitUntilRunning(ctx, name, namespace, timeout)
+	}()
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
+			return err
+		}
 	}
-
-	// this will also run if it's not found
-	return waitUntilRunning(ctx, name, namespace, timeout)
+	return nil
 }

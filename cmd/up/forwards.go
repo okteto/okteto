@@ -28,6 +28,7 @@ import (
 func (up *upContext) forwards(ctx context.Context) error {
 	spinner := utils.NewSpinner("Configuring SSH tunnel to your development container...")
 	spinner.Start()
+	up.spinner = spinner
 	defer spinner.Stop()
 
 	if up.Dev.RemoteModeEnabled() {

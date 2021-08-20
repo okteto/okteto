@@ -16,6 +16,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -201,33 +203,53 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 	spinner.Start()
 	defer spinner.Stop()
 
-	if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
-		if err := services.CreateDev(ctx, dev, c); err != nil {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+		if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
+			if err := services.CreateDev(ctx, dev, c); err != nil {
+				exit <- err
+			}
+		}
+
+		if !exists {
+			k8sObject.PodTemplateSpec.Spec.Containers[0].Image = imageTag
+			apps.SetLastBuiltAnnotation(k8sObject)
+			exit <- apps.Create(ctx, k8sObject, c)
+		}
+
+		for _, tr := range trList {
+			if tr.K8sObject == nil {
+				continue
+			}
+			for _, rule := range tr.Rules {
+				devContainer := apps.GetDevContainer(&tr.K8sObject.PodTemplateSpec.Spec, rule.Container)
+				if devContainer == nil {
+					exit <- fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, k8sObject.Name)
+				}
+				apps.SetLastBuiltAnnotation(tr.K8sObject)
+				devContainer.Image = imageTag
+			}
+
+		}
+
+		exit <- apps.UpdateK8sObjects(ctx, trList, c)
+	}()
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
+	return nil
 
-	if !exists {
-		k8sObject.PodTemplateSpec.Spec.Containers[0].Image = imageTag
-		apps.SetLastBuiltAnnotation(k8sObject)
-		return apps.Create(ctx, k8sObject, c)
-	}
-
-	for _, tr := range trList {
-		if tr.K8sObject == nil {
-			continue
-		}
-		for _, rule := range tr.Rules {
-			devContainer := apps.GetDevContainer(&tr.K8sObject.PodTemplateSpec.Spec, rule.Container)
-			if devContainer == nil {
-				return fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, k8sObject.Name)
-			}
-			apps.SetLastBuiltAnnotation(tr.K8sObject)
-			devContainer.Image = imageTag
-		}
-	}
-
-	return apps.UpdateK8sObjects(ctx, trList, c)
 }
 
 func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string, noCache bool, progress string) (string, error) {

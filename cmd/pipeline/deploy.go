@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"time"
@@ -145,23 +146,41 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	spinner.Start()
 	defer spinner.Stop()
 
-	varList := []okteto.Variable{}
-	for _, v := range variables {
-		kv := strings.SplitN(v, "=", 2)
-		if len(kv) != 2 {
-			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
-		}
-		varList = append(varList, okteto.Variable{
-			Name:  kv[0],
-			Value: kv[1],
-		})
-	}
-	log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
-	_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
-	if err != nil {
-		return fmt.Errorf("failed to deploy pipeline: %w", err)
-	}
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
 
+	go func() {
+		varList := []okteto.Variable{}
+		for _, v := range variables {
+			kv := strings.SplitN(v, "=", 2)
+			if len(kv) != 2 {
+				exit <- fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+			}
+			varList = append(varList, okteto.Variable{
+				Name:  kv[0],
+				Value: kv[1],
+			})
+		}
+		log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
+		_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
+		if err != nil {
+			exit <- fmt.Errorf("failed to deploy pipeline: %w", err)
+		}
+
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
+			return err
+		}
+	}
 	return nil
 }
 
@@ -178,15 +197,36 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 	spinner := utils.NewSpinner("Waiting for the pipeline to finish...")
 	spinner.Start()
 	defer spinner.Stop()
-	err := waitToBeDeployed(ctx, name, namespace, timeout)
-	if err != nil {
-		return err
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+
+		err := waitToBeDeployed(ctx, name, namespace, timeout)
+		if err != nil {
+			exit <- err
+		}
+
+		err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
+		if err != nil {
+			exit <- err
+		}
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
+			return err
+		}
 	}
 
-	err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 

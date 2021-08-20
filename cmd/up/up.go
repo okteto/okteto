@@ -19,7 +19,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -493,7 +492,9 @@ func (up *upContext) shutdown() {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			log.Infof("failed to restore terminal: %s", err.Error())
 		}
-		restoreCursor()
+		if up.spinner != nil {
+			up.spinner.Stop()
+		}
 	}
 
 	log.Infof("starting shutdown sequence")
@@ -521,12 +522,6 @@ func (up *upContext) shutdown() {
 	log.Info("completed shutdown sequence")
 	up.ShutdownCompleted <- true
 
-}
-
-func restoreCursor() {
-	if runtime.GOOS != "windows" {
-		fmt.Fprint(os.Stdin, "\033[?25h")
-	}
 }
 
 func printDisplayContext(dev *model.Dev, divertURL string) {

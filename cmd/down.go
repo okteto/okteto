@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"os"
+	"os/signal"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -91,32 +92,51 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	client, _, err := k8Client.GetLocalWithContext(dev.Context)
-	if err != nil {
-		return err
-	}
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
 
-	if dev.Divert != nil {
-		if err := diverts.Delete(ctx, dev, client); err != nil {
+	go func() {
+		client, _, err := k8Client.GetLocalWithContext(dev.Context)
+		if err != nil {
+			exit <- err
+		}
+
+		if dev.Divert != nil {
+			if err := diverts.Delete(ctx, dev, client); err != nil {
+				exit <- err
+			}
+		}
+
+		k8sObject, err := apps.GetResource(ctx, dev, dev.Namespace, client)
+		if err != nil && !errors.IsNotFound(err) {
+			exit <- err
+		}
+
+		trList, err := apps.GetTranslations(ctx, dev, k8sObject, false, client)
+		if err != nil {
+			exit <- err
+		}
+
+		err = down.Run(dev, k8sObject, trList, true, client)
+		if err != nil {
+			exit <- err
+		}
+
+		exit <- nil
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
-
-	k8sObject, err := apps.GetResource(ctx, dev, dev.Namespace, client)
-	if err != nil && !errors.IsNotFound(err) {
-		return err
-	}
-
-	trList, err := apps.GetTranslations(ctx, dev, k8sObject, false, client)
-	if err != nil {
-		return err
-	}
-
-	err = down.Run(dev, k8sObject, trList, true, client)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

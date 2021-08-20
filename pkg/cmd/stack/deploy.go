@@ -18,6 +18,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -89,53 +91,73 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	spinner.Start()
 	defer spinner.Stop()
 
-	addHiddenExposedPortsToStack(ctx, s)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
 
-	for name := range s.Services {
-		if len(s.Services[name].Ports) > 0 {
-			svcK8s := translateService(name, s)
-			if err := services.Deploy(ctx, svcK8s, c); err != nil {
-				return err
+	go func() {
+
+		addHiddenExposedPortsToStack(ctx, s)
+
+		for name := range s.Services {
+			if len(s.Services[name].Ports) > 0 {
+				svcK8s := translateService(name, s)
+				if err := services.Deploy(ctx, svcK8s, c); err != nil {
+					exit <- err
+				}
 			}
 		}
-	}
 
-	for name := range s.Volumes {
-		if err := deployVolume(ctx, name, s, c); err != nil {
+		for name := range s.Volumes {
+			if err := deployVolume(ctx, name, s, c); err != nil {
+				exit <- err
+			}
+			spinner.Stop()
+			log.Success("Created volume '%s'", name)
+			spinner.Start()
+		}
+
+		if err := deployServices(ctx, s, c, config, spinner, timeout); err != nil {
+			exit <- err
+		}
+
+		iClient, err := ingresses.GetClient(ctx, c)
+		if err != nil {
+			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
+		}
+		for name := range s.Endpoints {
+			if err := deployIngress(ctx, name, s, iClient); err != nil {
+				exit <- err
+			}
+			spinner.Stop()
+			log.Success("Created endpoint '%s'", name)
+			spinner.Start()
+		}
+
+		if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
+			exit <- err
+		}
+
+		if !wait {
+			exit <- nil
+		}
+
+		spinner.Update("Waiting for services to be ready...")
+		exit <- waitForPodsToBeRunning(ctx, s, c)
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
-		spinner.Stop()
-		log.Success("Created volume '%s'", name)
-		spinner.Start()
 	}
-
-	if err := deployServices(ctx, s, c, config, spinner, timeout); err != nil {
-		return err
-	}
-
-	iClient, err := ingresses.GetClient(ctx, c)
-	if err != nil {
-		return fmt.Errorf("error getting ingress client: %s", err.Error())
-	}
-	for name := range s.Endpoints {
-		if err := deployIngress(ctx, name, s, iClient); err != nil {
-			return err
-		}
-		spinner.Stop()
-		log.Success("Created endpoint '%s'", name)
-		spinner.Start()
-	}
-
-	if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
-		return err
-	}
-
-	if !wait {
-		return nil
-	}
-
-	spinner.Update("Waiting for services to be ready...")
-	return waitForPodsToBeRunning(ctx, s, c)
+	return nil
 }
 
 func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernetes.Clientset, config *rest.Config, spinner *utils.Spinner, timeout time.Duration) error {
