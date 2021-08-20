@@ -63,6 +63,10 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		return err
 	}
 
+	if err := apps.ValidateMountPaths(k8sObject, up.Dev); err != nil {
+		return err
+	}
+
 	if up.isRetry && !apps.IsDevModeOn(k8sObject) {
 		log.Information("Development container has been deactivated")
 		return nil

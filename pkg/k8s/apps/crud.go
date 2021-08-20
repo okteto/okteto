@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -80,6 +81,24 @@ func HasBeenChanged(k8sObject *model.K8sObject) bool {
 	default:
 		return false
 	}
+}
+
+func ValidateMountPaths(k8sObject *model.K8sObject, dev *model.Dev) error {
+	if !dev.PersistentVolumeInfo.Enabled {
+		return nil
+	}
+	devContainer := GetDevContainer(&k8sObject.PodTemplateSpec.Spec, dev.Container)
+
+	for _, vm := range devContainer.VolumeMounts {
+		for _, syncVolume := range dev.Sync.Folders {
+			if vm.MountPath == syncVolume.RemotePath {
+				return errors.UserError{
+					E:    fmt.Errorf("'%s' is already defined as volume in %v %s", vm.MountPath, k8sObject.ObjectType, k8sObject.Name),
+					Hint: `Disable the okteto persistent volume (https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional) and try again`}
+			}
+		}
+	}
+	return nil
 }
 
 //GetTranslations fills all the deployments pointed by a development container
