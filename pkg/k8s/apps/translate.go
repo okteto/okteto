@@ -135,9 +135,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		}
 
 		TranslateDevContainer(devContainer, rule)
-		TranslateOktetoVolumes(&t.K8sObject.GetPodTemplate().Spec, rule)
-		TranslatePodSecurityContext(&t.K8sObject.GetPodTemplate().Spec, rule.SecurityContext)
-		TranslatePodServiceAccount(&t.K8sObject.GetPodTemplate().Spec, rule.ServiceAccount)
+		TranslatePodSpec(&t.K8sObject.GetPodTemplate().Spec, rule)
 		TranslateOktetoDevSecret(&t.K8sObject.GetPodTemplate().Spec, t.Name, rule.Secrets)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
@@ -231,6 +229,15 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	TranslateEnvVars(c, rule)
 	TranslateVolumeMounts(c, rule)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
+}
+
+func TranslatePodSpec(podSpec *apiv1.PodSpec, rule *model.TranslationRule) {
+	TranslateOktetoVolumes(podSpec, rule)
+	TranslatePodSecurityContext(podSpec, rule.SecurityContext)
+	TranslatePodServiceAccount(podSpec, rule.ServiceAccount)
+
+	TranslateOktetoNodeSelector(podSpec, rule.NodeSelector)
+	TranslateOktetoAffinity(podSpec, rule.Affinity)
 }
 
 //TranslateDinDContainer translates the DinD container
@@ -702,6 +709,19 @@ func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []mode
 		)
 	}
 	spec.Volumes = append(spec.Volumes, v)
+}
+
+func TranslateOktetoNodeSelector(spec *apiv1.PodSpec, nodeSelector map[string]string) {
+	spec.NodeSelector = nodeSelector
+}
+
+func TranslateOktetoAffinity(spec *apiv1.PodSpec, affinity *apiv1.Affinity) {
+	if affinity != nil {
+		if affinity.NodeAffinity == nil && affinity.PodAffinity == nil && affinity.PodAntiAffinity == nil {
+			return
+		}
+		spec.Affinity = affinity
+	}
 }
 
 //TranslateDevModeOff reverses the dev mode translation

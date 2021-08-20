@@ -100,7 +100,11 @@ type Dev struct {
 	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
 	ObjectType           ObjectType            `json:"k8sObjectType,omitempty" yaml:"k8sObjectType,omitempty"`
+	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 }
+
+type Affinity apiv1.Affinity
 
 //K8SObject defines the type of k8s object the up should look for
 type ObjectType string
@@ -800,6 +804,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		InitContainer:    dev.InitContainer,
 		Probes:           dev.Probes,
 		Lifecycle:        dev.Lifecycle,
+		NodeSelector:     dev.NodeSelector,
+		Affinity:         (*apiv1.Affinity)(dev.Affinity),
 	}
 
 	if !dev.EmptyImage {
