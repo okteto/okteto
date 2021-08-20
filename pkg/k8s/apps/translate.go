@@ -133,13 +133,11 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 			rule.Image = devContainer.Image
 		}
 
-		TranslateDevContainer(devContainer, rule)
+		TranslateDevContainer(devContainer, rule, &t.K8sObject.GetPodTemplate().Spec)
 		TranslateOktetoVolumes(&t.K8sObject.GetPodTemplate().Spec, rule)
 		TranslatePodSecurityContext(&t.K8sObject.GetPodTemplate().Spec, rule.SecurityContext)
 		TranslatePodServiceAccount(&t.K8sObject.GetPodTemplate().Spec, rule.ServiceAccount)
 		TranslateOktetoDevSecret(&t.K8sObject.GetPodTemplate().Spec, t.Name, rule.Secrets)
-		TranslateOktetoNodeSelector(&t.K8sObject.GetPodTemplate().Spec, rule.NodeSelector)
-		TranslateOktetoAffinity(&t.K8sObject.GetPodTemplate().Spec, rule.Affinity)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(rule.InitContainer, &t.K8sObject.GetPodTemplate().Spec)
@@ -209,7 +207,7 @@ func TranslatePodAffinity(spec *apiv1.PodSpec, name string) {
 }
 
 //TranslateDevContainer translates a dev container
-func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
+func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule, spec *apiv1.PodSpec) {
 	c.Image = rule.Image
 	c.ImagePullPolicy = rule.ImagePullPolicy
 
@@ -229,6 +227,8 @@ func TranslateDevContainer(c *apiv1.Container, rule *model.TranslationRule) {
 	TranslateEnvVars(c, rule)
 	TranslateVolumeMounts(c, rule)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
+	TranslateOktetoNodeSelector(spec, rule.NodeSelector)
+	TranslateOktetoAffinity(spec, rule.Affinity)
 }
 
 //TranslateDinDContainer translates the DinD container
