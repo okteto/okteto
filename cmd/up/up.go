@@ -545,7 +545,7 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 
 		for i := 1; i < len(dev.Forward); i++ {
 			if dev.Forward[i].Service {
-				log.Println(fmt.Sprintf("           %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
+				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
 				continue
 			}
 			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
