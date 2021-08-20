@@ -492,7 +492,9 @@ func (up *upContext) shutdown() {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			log.Infof("failed to restore terminal: %s", err.Error())
 		}
-		up.spinner.Stop()
+		if up.spinner != nil {
+			up.spinner.Stop()
+		}
 	}
 
 	log.Infof("starting shutdown sequence")
