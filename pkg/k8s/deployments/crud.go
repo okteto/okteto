@@ -112,6 +112,10 @@ func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev,
 		return nil, nil
 	}
 
+	if err := updateOktetoRevision(ctx, d, c, dev.Timeout.Default); err != nil {
+		return nil, err
+	}
+
 	return d, nil
 }
 
@@ -211,8 +215,7 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) e
 	return nil
 }
 
-//UpdateOktetoRevision updates the okteto version annotation
-func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kubernetes.Clientset, timeout time.Duration) error {
+func updateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client kubernetes.Interface, timeout time.Duration) error {
 	ticker := time.NewTicker(200 * time.Millisecond)
 	to := time.Now().Add(timeout * 2) // 60 seconds
 
@@ -224,6 +227,9 @@ func UpdateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client *kub
 
 		revision := updated.Annotations[revisionAnnotation]
 		if revision != "" {
+			if updated.Annotations[model.RevisionAnnotation] == revision {
+				return nil
+			}
 			updated.Annotations[model.RevisionAnnotation] = revision
 			return Update(ctx, updated, client)
 		}

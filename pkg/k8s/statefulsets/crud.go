@@ -186,37 +186,6 @@ func SetLastBuiltAnnotation(s *appsv1.StatefulSet) {
 	annotations.Set(s.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))
 }
 
-//UpdateOktetoRevision updates the okteto version annotation
-func UpdateOktetoRevision(ctx context.Context, s *appsv1.StatefulSet, client *kubernetes.Clientset, timeout time.Duration) error {
-	ticker := time.NewTicker(200 * time.Millisecond)
-	to := time.Now().Add(timeout * 2) // 60 seconds
-
-	for retries := 0; ; retries++ {
-		updated, err := client.AppsV1().StatefulSets(s.Namespace).Get(ctx, s.Name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to get statefulset %s/%s: %w", s.Namespace, s.Name, err)
-		}
-
-		revision := updated.Status.UpdateRevision
-		if revision != "" {
-			updated.Annotations[model.RevisionAnnotation] = revision
-			return Update(ctx, updated, client)
-		}
-
-		if time.Now().After(to) && retries >= 10 {
-			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the statefulset '%s'. Please check for errors and try again", model.RevisionAnnotation, s.Name)
-		}
-
-		select {
-		case <-ticker.C:
-			continue
-		case <-ctx.Done():
-			log.Info("call to deployments.UpdateOktetoRevision cancelled")
-			return ctx.Err()
-		}
-	}
-}
-
 func GetRevisionAnnotatedStatefulsetOrFailed(ctx context.Context, dev *model.Dev, c kubernetes.Interface, waitUntilDeployed bool) (*appsv1.StatefulSet, error) {
 	sfs, err := Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
@@ -234,7 +203,44 @@ func GetRevisionAnnotatedStatefulsetOrFailed(ctx context.Context, dev *model.Dev
 		return nil, nil
 	}
 
+	if err := updateOktetoRevision(ctx, sfs, c, dev.Timeout.Default); err != nil {
+		return nil, err
+	}
+
 	return sfs, nil
+}
+
+func updateOktetoRevision(ctx context.Context, s *appsv1.StatefulSet, client kubernetes.Interface, timeout time.Duration) error {
+	ticker := time.NewTicker(200 * time.Millisecond)
+	to := time.Now().Add(timeout * 2) // 60 seconds
+
+	for retries := 0; ; retries++ {
+		updated, err := client.AppsV1().StatefulSets(s.Namespace).Get(ctx, s.Name, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to get statefulset %s/%s: %w", s.Namespace, s.Name, err)
+		}
+
+		revision := updated.Status.UpdateRevision
+		if revision != "" {
+			if updated.Annotations[model.RevisionAnnotation] == revision {
+				return nil
+			}
+			updated.Annotations[model.RevisionAnnotation] = revision
+			return Update(ctx, updated, client)
+		}
+
+		if time.Now().After(to) && retries >= 10 {
+			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the statefulset '%s'. Please check for errors and try again", model.RevisionAnnotation, s.Name)
+		}
+
+		select {
+		case <-ticker.C:
+			continue
+		case <-ctx.Done():
+			log.Info("call to deployments.UpdateOktetoRevision cancelled")
+			return ctx.Err()
+		}
+	}
 }
 
 func checkConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
