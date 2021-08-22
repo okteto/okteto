@@ -274,21 +274,6 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 				return err
 			}
 		}
-
-		if trList[name].K8sObject.ObjectType == model.DeploymentObjectType {
-			if trList[name].K8sObject.GetAnnotation(model.DeploymentAnnotation) == "" {
-				continue
-			}
-		} else {
-			if trList[name].K8sObject.GetAnnotation(model.StatefulsetAnnotation) == "" {
-				continue
-			}
-		}
-
-		if err := apps.UpdateOktetoRevision(ctx, trList[name].K8sObject, up.Client, up.Dev.Timeout.Default); err != nil {
-			return err
-		}
-
 	}
 
 	if create {
@@ -303,6 +288,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 	}
 
 	up.Pod = pod
+
 	return nil
 }
 
@@ -364,11 +350,6 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			}
 			pod, ok := event.Object.(*apiv1.Pod)
 			if !ok {
-				watcherPod, err = up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
-				if err != nil {
-					log.Infof("error watching pod events: %s", err.Error())
-					return err
-				}
 				continue
 			}
 			if up.Pod.UID != pod.UID {

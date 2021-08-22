@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/annotations"
@@ -201,16 +200,6 @@ func Deploy(ctx context.Context, r *model.K8sObject, forceCreate bool, client *k
 		return deployments.Deploy(ctx, r.Deployment, client)
 	case model.StatefulsetObjectType:
 		return statefulsets.Deploy(ctx, r.StatefulSet, client)
-	}
-	return nil
-}
-
-func UpdateOktetoRevision(ctx context.Context, r *model.K8sObject, client *kubernetes.Clientset, timeout time.Duration) error {
-	switch r.ObjectType {
-	case model.DeploymentObjectType:
-		return deployments.UpdateOktetoRevision(ctx, r.Deployment, client, timeout)
-	case model.StatefulsetObjectType:
-		return statefulsets.UpdateOktetoRevision(ctx, r.StatefulSet, client, timeout)
 	}
 	return nil
 }
