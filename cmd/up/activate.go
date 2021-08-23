@@ -362,6 +362,9 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
 					continue
 				}
+				if strings.Contains(e.Message, "is in the cache, so can't be assumed") {
+					continue
+				}
 				if strings.Contains(e.Message, "Insufficient cpu") || strings.Contains(e.Message, "Insufficient memory") {
 					insufficientResourcesErr = fmt.Errorf(e.Message)
 					spinner.Update("Insufficient cpu/memory in the cluster. Waiting for new nodes to come up...")
