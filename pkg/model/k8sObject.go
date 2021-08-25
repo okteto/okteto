@@ -92,7 +92,7 @@ func (r *K8sObject) GetSandbox() {
 		r.StatefulSet = &appsv1.StatefulSet{ObjectMeta: r.ObjectMeta,
 			Spec: appsv1.StatefulSetSpec{Replicas: r.Replicas,
 				UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
-					Type: "RollingUpdate",
+					Type: appsv1.RollingUpdateStatefulSetStrategyType,
 				},
 				Selector: r.Selector,
 				Template: *r.PodTemplateSpec,

@@ -146,7 +146,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, k8sObject *model.K8sOb
 
 func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, result map[string]*model.Translation, c kubernetes.Interface) error {
 	for _, s := range dev.Services {
-		k8sObject, err := GetResource(ctx, dev, dev.Namespace, c)
+		k8sObject, err := GetResource(ctx, s, dev.Namespace, c)
 		if err != nil {
 			return err
 		}
