@@ -164,10 +164,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 		}
 		log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
 		_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
-		if err != nil {
-			exit <- fmt.Errorf("failed to deploy pipeline: %w", err)
-		}
-
+		exit <- err
 	}()
 
 	select {
@@ -209,10 +206,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 			exit <- err
 		}
 
-		err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
-		if err != nil {
-			exit <- err
-		}
+		exit <- waitForResourcesToBeRunning(ctx, name, namespace, timeout)
 	}()
 
 	select {

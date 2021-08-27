@@ -118,12 +118,7 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 			exit <- err
 		}
 
-		err = down.Run(dev, k8sObject, trList, true, client)
-		if err != nil {
-			exit <- err
-		}
-
-		exit <- nil
+		exit <- down.Run(dev, k8sObject, trList, true, client)
 	}()
 
 	select {
