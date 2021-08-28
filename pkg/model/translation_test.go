@@ -135,9 +135,9 @@ services:
 		Lifecycle:       &Lifecycle{PostStart: true, PostStop: false},
 		Environment:     make(Environment, 0),
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:    &rootUser,
+			RunAsGroup:   &rootUser,
+			FSGroup:      &rootUser,
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
@@ -197,9 +197,9 @@ initContainer:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:    &rootUser,
+			RunAsGroup:   &rootUser,
+			FSGroup:      &rootUser,
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
@@ -300,9 +300,9 @@ docker:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:    &rootUser,
+			RunAsGroup:   &rootUser,
+			FSGroup:      &rootUser,
 		},
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
@@ -383,4 +383,207 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
 		}
 	}
+}
+
+func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
+       manifest := []byte(`name: web
+namespace: n
+container: dev
+image: web:latest
+command: ["./run_web.sh"]
+sync:
+  - .:/app
+services:
+  - name: no-defaults
+    container: dev
+    image: worker:latest
+    securityContext:
+       runAsNonRoot: true
+    sync:
+      - worker:/src
+  - name: with-root-defaults
+    container: dev
+    image: worker:latest
+    securityContext:
+       runAsNonRoot: false
+    sync:
+      - worker:/src
+  - name: with-overrides
+    container: dev
+    image: worker:latest
+    securityContext:
+       runAsUser: 100
+       runAsGroup: 101
+       fsGroup: 102
+       runAsNonRoot: true
+    sync:
+      - worker:/src`)
+
+       dev, err := Read(manifest)
+       if err != nil {
+              t.Fatal(err)
+       }
+
+       rule1 := dev.ToTranslationRule(dev, false)
+       rule1OK := &TranslationRule{
+              Marker:            OktetoBinImageTag,
+              OktetoBinImageTag: OktetoBinImageTag,
+              Container:         "dev",
+              Image:             "web:latest",
+              ImagePullPolicy:   apiv1.PullAlways,
+              Command:           []string{"/var/okteto/bin/start.sh"},
+              Args:              []string{"-r", "-v"},
+              Probes:            &Probes{},
+              Lifecycle:         &Lifecycle{},
+              Environment: Environment{
+                     {
+                            Name:  "OKTETO_NAMESPACE",
+                            Value: "n",
+                     },
+                     {
+                            Name:  "OKTETO_NAME",
+                            Value: "web",
+                     },
+              },
+              SecurityContext: &SecurityContext{
+                     RunAsUser:  &rootUser,
+                     RunAsGroup: &rootUser,
+                     FSGroup:    &rootUser,
+              },
+              Resources: ResourceRequirements{},
+              PersistentVolume: true,
+              Volumes: []VolumeMount{
+                     {
+                            Name:      dev.GetVolumeName(),
+                            MountPath: OktetoSyncthingMountPath,
+                            SubPath:   SyncthingSubPath,
+                     },
+                     {
+                            Name:      dev.GetVolumeName(),
+                            MountPath: RemoteMountPath,
+                            SubPath:   RemoteSubPath,
+                     },
+                     {
+                            Name:      dev.GetVolumeName(),
+                            MountPath: "/app",
+                            SubPath:   SourceCodeSubPath,
+                     },
+              },
+              InitContainer: InitContainer{Image: OktetoBinImageTag},
+       }
+
+       var falseBoolean = false
+       var trueBoolean  = true
+
+       marshalled1, _ := yaml.Marshal(rule1)
+       marshalled1OK, _ := yaml.Marshal(rule1OK)
+       if string(marshalled1) != string(marshalled1OK) {
+              t.Fatalf("Wrong rule1 generation.\nActual %s, \nExpected %s", string(marshalled1), string(marshalled1OK))
+       }
+
+       dev2 := dev.Services[0]
+       rule2 := dev2.ToTranslationRule(dev, false)
+       rule2OK := &TranslationRule{
+              Container:       "dev",
+              Image:           "worker:latest",
+              ImagePullPolicy: apiv1.PullAlways,
+              Command:         nil,
+              Args:            nil,
+              Healthchecks:    false,
+              Probes:          &Probes{},
+              Lifecycle:       &Lifecycle{},
+              Environment:     make(Environment, 0),
+              SecurityContext: &SecurityContext{
+                     RunAsNonRoot: &trueBoolean,
+              },
+              Resources:        ResourceRequirements{},
+              PersistentVolume: true,
+              Volumes: []VolumeMount{
+                     {
+                            Name:      dev.GetVolumeName(),
+                            MountPath: "/src",
+                            SubPath:   path.Join(SourceCodeSubPath, "worker"),
+                     },
+              },
+       }
+
+       marshalled2, _ := yaml.Marshal(rule2)
+       marshalled2OK, _ := yaml.Marshal(rule2OK)
+       if string(marshalled2) != string(marshalled2OK) {
+              t.Fatalf("Wrong rule2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
+       }
+
+       dev3 := dev.Services[1]
+       rule3 := dev3.ToTranslationRule(dev, false)
+       rule3OK := &TranslationRule{
+              Container:       "dev",
+              Image:           "worker:latest",
+              ImagePullPolicy: apiv1.PullAlways,
+              Command:         nil,
+              Args:            nil,
+              Healthchecks:    false,
+              Probes:          &Probes{},
+              Lifecycle:       &Lifecycle{},
+              Environment:     make(Environment, 0),
+              SecurityContext: &SecurityContext{
+                     RunAsUser:  &rootUser,
+                     RunAsGroup: &rootUser,
+                     FSGroup:    &rootUser,
+                     RunAsNonRoot: &falseBoolean,
+              },
+              Resources:        ResourceRequirements{},
+              PersistentVolume: true,
+              Volumes: []VolumeMount{
+                     {
+                            Name:      dev.GetVolumeName(),
+                            MountPath: "/src",
+                            SubPath:   path.Join(SourceCodeSubPath, "worker"),
+                     },
+              },
+       }
+
+       marshalled3, _ := yaml.Marshal(rule3)
+       marshalled3OK, _ := yaml.Marshal(rule3OK)
+       if string(marshalled3) != string(marshalled3OK) {
+              t.Fatalf("Wrong rule3 generation.\nActual %s, \nExpected %s", string(marshalled3), string(marshalled3OK))
+       }
+
+       var runAsUser int64 = 100
+       var runAsGroup int64 = 101
+       var fsGroup int64 = 102
+
+       dev4 := dev.Services[2]
+       rule4 := dev4.ToTranslationRule(dev, false)
+       rule4OK := &TranslationRule{
+              Container:       "dev",
+              Image:           "worker:latest",
+              ImagePullPolicy: apiv1.PullAlways,
+              Command:         nil,
+              Args:            nil,
+              Healthchecks:    false,
+              Probes:          &Probes{},
+              Lifecycle:       &Lifecycle{},
+              Environment:     make(Environment, 0),
+              SecurityContext: &SecurityContext{
+                     RunAsUser:  &runAsUser,
+                     RunAsGroup: &runAsGroup,
+                     FSGroup:    &fsGroup,
+                     RunAsNonRoot: &trueBoolean,
+              },
+              Resources:        ResourceRequirements{},
+              PersistentVolume: true,
+              Volumes: []VolumeMount{
+                     {
+                            Name:      dev.GetVolumeName(),
+                            MountPath: "/src",
+                            SubPath:   path.Join(SourceCodeSubPath, "worker"),
+                     },
+              },
+       }
+
+       marshalled4, _ := yaml.Marshal(rule4)
+       marshalled4OK, _ := yaml.Marshal(rule4OK)
+       if string(marshalled4) != string(marshalled4OK) {
+              t.Fatalf("Wrong rule4 generation.\nActual %s, \nExpected %s", string(marshalled4), string(marshalled4OK))
+       }
 }
