@@ -14,6 +14,7 @@
 package apps
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -28,6 +29,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/pointer"
 )
 
@@ -402,22 +404,17 @@ services:
 	dev2 := dev.Services[0]
 	d2 := model.NewResource(dev2)
 	d2.GetSandbox()
-	rule2 := dev2.ToTranslationRule(dev, false)
-	tr2 := &model.Translation{
-		Interactive: false,
-		Name:        dev.Name,
-		Version:     model.TranslationVersion,
-		K8sObject:   d2,
-		Rules:       []*model.TranslationRule{rule2},
-		Annotations: model.Annotations{"key": "value"},
-		Tolerations: []apiv1.Toleration{
-			{
-				Key:      "nvidia/cpu",
-				Operator: apiv1.TolerationOpExists,
-			},
-		},
+	d2.Deployment.Namespace = dev.Namespace
+
+	translationRules := make(map[string]*model.Translation)
+	ctx := context.Background()
+
+	client := fake.NewSimpleClientset(d2.Deployment)
+	err = loadServiceTranslations(ctx, dev, false, translationRules, client)
+	if err != nil {
+		t.Fatal(err)
 	}
-	err = translate(tr2, nil, false)
+	err = translate(translationRules[dev2.Name], nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -437,12 +434,6 @@ services:
 									TopologyKey: "kubernetes.io/hostname",
 								},
 							},
-						},
-					},
-					Tolerations: []apiv1.Toleration{
-						{
-							Key:      "nvidia/cpu",
-							Operator: apiv1.TolerationOpExists,
 						},
 					},
 					SecurityContext: &apiv1.PodSecurityContext{
@@ -489,19 +480,13 @@ services:
 			},
 		},
 	}
-	marshalled2, _ := yaml.Marshal(d2.PodTemplateSpec.Spec)
+	marshalled2, _ := yaml.Marshal(translationRules[dev2.Name].K8sObject.GetPodTemplate().Spec)
 	marshalled2OK, _ := yaml.Marshal(d2OK.Spec.Template.Spec)
 	if string(marshalled2) != string(marshalled2OK) {
-		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
-	}
-	if d2.GetAnnotation("key") != "value" {
-		t.Fatalf("Wrong d2 annotations: '%s'", d2.GetAnnotation("key"))
-	}
-	if d2.PodTemplateSpec.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d2 pod annotations: '%s'", d2.PodTemplateSpec.Annotations["key"])
+		t.Fatalf("Wrong d2 generation.\nActual\n %s, \n---\nExpected \n%s", string(marshalled2), string(marshalled2OK))
 	}
 
-	d2Down, err := TranslateDevModeOff(d2)
+	d2Down, err := TranslateDevModeOff(translationRules[dev2.Name].K8sObject)
 	if err != nil {
 		t.Fatal(err)
 	}
