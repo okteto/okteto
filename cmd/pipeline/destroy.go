@@ -60,10 +60,7 @@ func destroy(ctx context.Context) *cobra.Command {
 					return err
 				}
 
-				name, err = getPipelineName(repo)
-				if err != nil {
-					return err
-				}
+				name = getPipelineName(repo)
 			}
 
 			if namespace == "" {

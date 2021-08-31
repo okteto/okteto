@@ -70,10 +70,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if name == "" {
-				name, err = getPipelineName(repository)
-				if err != nil {
-					return err
-				}
+				name = getPipelineName(repository)
 			}
 
 			if branch == "" {
@@ -175,8 +172,8 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	return nil
 }
 
-func getPipelineName(repository string) (string, error) {
-	return model.TranslateURLToName(repository), nil
+func getPipelineName(repository string) string {
+	return model.TranslateURLToName(repository)
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
