@@ -55,14 +55,6 @@ func deploy(ctx context.Context) *cobra.Command {
 				return errors.ErrNotLogged
 			}
 
-			var err error
-			if name == "" {
-				name, err = getPipelineName(repository)
-				if err != nil {
-					return err
-				}
-			}
-
 			cwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -71,14 +63,17 @@ func deploy(ctx context.Context) *cobra.Command {
 			if repository == "" {
 				log.Info("inferring git repository URL")
 
-				r, err := model.GetRepositoryURL(cwd)
-
+				repository, err = model.GetRepositoryURL(cwd)
 				if err != nil {
 					return err
 				}
+			}
 
-				repository = r
-
+			if name == "" {
+				name, err = getPipelineName(repository)
+				if err != nil {
+					return err
+				}
 			}
 
 			if branch == "" {
@@ -181,21 +176,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 }
 
 func getPipelineName(repository string) (string, error) {
-	if repository != "" {
-		return model.TranslateURLToName(repository), nil
-	}
-	workDir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	name, err := model.GetValidNameFromGitRepo(workDir)
-	if err != nil {
-		name, err = model.GetValidNameFromFolder(workDir)
-		if err != nil {
-			return "", err
-		}
-	}
-	return name, nil
+	return model.TranslateURLToName(repository), nil
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {

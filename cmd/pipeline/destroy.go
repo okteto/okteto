@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -49,9 +50,17 @@ func destroy(ctx context.Context) *cobra.Command {
 				return errors.ErrNotLogged
 			}
 
-			var err error
 			if name == "" {
-				name, err = getPipelineName("")
+				cwd, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get the current working directory: %w", err)
+				}
+				repo, err := model.GetRepositoryURL(cwd)
+				if err != nil {
+					return err
+				}
+
+				name, err = getPipelineName(repo)
 				if err != nil {
 					return err
 				}
