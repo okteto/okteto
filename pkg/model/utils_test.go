@@ -44,13 +44,13 @@ func TestCopyFile(t *testing.T) {
 		t.Fatalf("failed to copy from %s to %s: %s", from, to, err)
 	}
 
-	copy, err := ioutil.ReadFile(to)
+	copied, err := ioutil.ReadFile(to)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if string(content) != string(copy) {
-		t.Fatalf("got %s, expected %s", string(content), string(copy))
+	if string(content) != string(copied) {
+		t.Fatalf("got %s, expected %s", string(content), string(copied))
 	}
 
 	if err := CopyFile(from, to); err != nil {

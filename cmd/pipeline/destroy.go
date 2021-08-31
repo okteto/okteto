@@ -72,13 +72,17 @@ func destroy(ctx context.Context) *cobra.Command {
 				log.Information("Pipeline context: %s/%s", okteto.GetURL(), namespace)
 			}
 
-			if err := deletePipeline(ctx, name, namespace, wait, destroyVolumes, timeout); err != nil {
+			if err := deletePipeline(ctx, name, namespace, destroyVolumes, timeout); err != nil {
 				return err
 			}
 
 			if wait {
 				log.Success("Pipeline '%s' destroyed", name)
 			} else {
+				err := waitUntilRunning(ctx, name, namespace, timeout)
+				if err != nil {
+					return err
+				}
 				log.Success("Pipeline '%s' scheduled for destruction", name)
 			}
 
@@ -94,7 +98,7 @@ func destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func deletePipeline(ctx context.Context, name, namespace string, wait, destroyVolumes bool, timeout time.Duration) error {
+func deletePipeline(ctx context.Context, name, namespace string, destroyVolumes bool, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Destroying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -114,19 +118,11 @@ func deletePipeline(ctx context.Context, name, namespace string, wait, destroyVo
 
 			exit <- fmt.Errorf("failed to delete pipeline '%s': %w", name, err)
 		}
-
-		if !wait {
-			exit <- nil
-		}
-
-		// this will also run if it's not found
-		exit <- waitUntilRunning(ctx, name, namespace, timeout)
 	}()
 	select {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
