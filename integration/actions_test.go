@@ -49,7 +49,7 @@ const (
 	pipelinePath        = "okteto/pipeline"
 	pushPath            = "okteto/push"
 
-	actionManifestFormat = `
+	deploymentManifestFormat = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -70,7 +70,6 @@ spec:
         command: [ "sh", "-c", "--" ]
         args: [ "while true; do sleep 30; done;" ]
 `
-	cloudURL  = "https://cloud.okteto.com"
 	stackFile = `
 name: test
 services:
@@ -85,7 +84,7 @@ services:
 )
 
 var (
-	actionManifestTemplate = template.Must(template.New("deployment").Parse(actionManifestFormat))
+	actionManifestTemplate = template.Must(template.New("deployment").Parse(deploymentManifestFormat))
 )
 
 func TestApplyPipeline(t *testing.T) {
@@ -599,9 +598,9 @@ func executeLoginAction(ctx context.Context) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 
-	log.Printf("login into %s", cloudURL)
+	log.Printf("login into %s", okteto.CloudURL)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
-	args := []string{token, cloudURL}
+	args := []string{token, okteto.CloudURL}
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()

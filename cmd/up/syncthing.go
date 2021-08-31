@@ -125,9 +125,9 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	spinner := utils.NewSpinner("Synchronizing your files...")
-	spinner.Start()
 	up.spinner = spinner
-	defer spinner.Stop()
+	up.spinner.Start()
+	defer up.spinner.Stop()
 
 	progressBar := utils.NewSyncthingProgressBar(40)
 	defer progressBar.Finish()

@@ -114,7 +114,7 @@ func deletePipeline(ctx context.Context, name, namespace string, wait, destroyVo
 		}
 
 		// this will also run if it's not found
-		exit <- waitUntilRunning(ctx, name, namespace, timeout)
+		exit <- waitToBeDeployed(ctx, name, namespace, timeout)
 	}()
 	select {
 	case <-stop:
