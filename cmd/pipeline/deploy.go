@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -186,8 +185,14 @@ func getPipelineName() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	return filepath.Base(workDir), nil
+	name, err := model.GetValidNameFromGitRepo(workDir)
+	if err != nil {
+		name, err = model.GetValidNameFromFolder(workDir)
+		if err != nil {
+			return "", err
+		}
+	}
+	return name, nil
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
