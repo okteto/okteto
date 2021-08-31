@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"reflect"
@@ -42,7 +41,7 @@ var (
 func Test_translateWithVolumes(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 
@@ -1437,7 +1436,7 @@ environment:
 func Test_translateSfsWithVolumes(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 
