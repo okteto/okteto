@@ -57,7 +57,7 @@ func deploy(ctx context.Context) *cobra.Command {
 
 			var err error
 			if name == "" {
-				name, err = getPipelineName()
+				name, err = getPipelineName(repository)
 				if err != nil {
 					return err
 				}
@@ -180,7 +180,10 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	return nil
 }
 
-func getPipelineName() (string, error) {
+func getPipelineName(repository string) (string, error) {
+	if repository != "" {
+		return model.TranslateURLToName(repository), nil
+	}
 	workDir, err := os.Getwd()
 	if err != nil {
 		return "", err

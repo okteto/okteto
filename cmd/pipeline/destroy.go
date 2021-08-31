@@ -51,7 +51,7 @@ func destroy(ctx context.Context) *cobra.Command {
 
 			var err error
 			if name == "" {
-				name, err = getPipelineName()
+				name, err = getPipelineName("")
 				if err != nil {
 					return err
 				}

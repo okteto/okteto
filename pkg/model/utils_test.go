@@ -125,7 +125,7 @@ func Test_GetValidNameFromGitRepo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := translateURLToName(tt.gitRepo)
+			result := TranslateURLToName(tt.gitRepo)
 
 			if result != tt.expected {
 				t.Errorf("'%s' got '%s' expected '%s'", tt.name, result, tt.expected)
