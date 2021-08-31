@@ -63,6 +63,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	log.Success("Files synchronized")
 
 	elapsed := time.Since(start)
+	analytics.TrackDurationInitialSync(elapsed)
 	maxDuration := time.Duration(1) * time.Minute
 	if elapsed > maxDuration {
 		minutes := elapsed / time.Minute
@@ -88,10 +89,11 @@ func (up *upContext) sync(ctx context.Context) error {
 func (up *upContext) startSyncthing(ctx context.Context) error {
 	spinner := utils.NewSpinner("Starting the file synchronization service...")
 	spinner.Start()
+	up.spinner = spinner
+	defer spinner.Stop()
 	if err := config.UpdateStateFile(up.Dev, config.StartingSync); err != nil {
 		return err
 	}
-	defer spinner.Stop()
 
 	if err := up.Sy.Run(ctx); err != nil {
 		return err
@@ -124,6 +126,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	spinner := utils.NewSpinner("Synchronizing your files...")
 	spinner.Start()
+	up.spinner = spinner
 	defer spinner.Stop()
 
 	progressBar := utils.NewSyncthingProgressBar(40)
@@ -167,7 +170,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 			return up.getInsufficientSpaceError(err)
 		case errors.ErrNeedsResetSyncError:
 			return errors.UserError{
-				E:    fmt.Errorf("The synchronization service state is inconsistent"),
+				E:    fmt.Errorf("the synchronization service state is inconsistent"),
 				Hint: `Try running 'okteto up --reset' to reset the synchronization service`,
 			}
 		default:

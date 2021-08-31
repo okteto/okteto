@@ -74,7 +74,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if len(args) == 0 {
 				name = getRandomName(ctx, scope)
 			} else {
-				name = args[0]
+				name = getExpandedName(args[0])
 			}
 
 			varList := []okteto.Variable{}
@@ -95,7 +95,16 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			return err
+			if !wait {
+				log.Success("Preview environment '%s' scheduled for deployment", name)
+				return nil
+			}
+
+			if err := waitUntilRunning(ctx, name, name, timeout); err != nil {
+				return fmt.Errorf("preview deployed with resource errors")
+			}
+			log.Success("Preview environment '%s' successfully deployed", name)
+			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
@@ -172,20 +181,13 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	if err != nil {
 		return "", err
 	}
-
-	if !wait {
-		log.Success("Preview environment '%s' scheduled for deployment", name)
-		return oktetoNS, nil
-	}
-
-	spinner.Update("Waiting for the preview environment to finish...")
-	if err := waitUntilRunning(ctx, oktetoNS, oktetoNS, timeout); err != nil {
-		return "", fmt.Errorf("preview deployed with resource errors")
-	}
 	return oktetoNS, nil
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+	spinner := utils.NewSpinner("Waiting for the preview environment to finish...")
+	spinner.Start()
+	defer spinner.Stop()
 	err := waitToBeDeployed(ctx, name, namespace, timeout)
 	if err != nil {
 		return err
@@ -195,7 +197,6 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 	if err != nil {
 		return err
 	}
-	log.Success("Preview environment '%s' successfully deployed", name)
 	return nil
 }
 
@@ -207,7 +208,7 @@ func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("preview environment '%s' didn't finish after 5 minutes", name)
+			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
 			p, err := okteto.GetPreviewEnvByName(ctx, name, namespace)
 			if err != nil {
@@ -233,33 +234,45 @@ func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.
 	}
 }
 
-func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, t time.Duration) error {
+func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
 	areAllRunning := false
 
 	ticker := time.NewTicker(5 * time.Second)
-	timeout := time.Now().Add(t)
+	to := time.NewTicker(timeout)
 	errors := make(map[string]int)
-	for time.Now().Before(timeout) {
-		<-ticker.C
-		resourceStatus, err := okteto.GetResourcesStatusFromPreview(ctx, namespace)
-		if err != nil {
-			return err
-		}
-		areAllRunning = true
-		for name, status := range resourceStatus {
-			if status != "running" {
-				areAllRunning = false
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
+		case <-ticker.C:
+			resourceStatus, err := okteto.GetResourcesStatusFromPreview(ctx, namespace)
+			if err != nil {
+				return err
 			}
-			if status == "error" {
-				errors[name] = 1
+			areAllRunning = true
+			for name, status := range resourceStatus {
+				if status != "running" {
+					areAllRunning = false
+				}
+				if status == "error" {
+					errors[name] = 1
+				}
 			}
-		}
-		if len(errors) > 0 {
-			return fmt.Errorf("Services with errors found")
-		}
-		if areAllRunning {
-			break
+			if len(errors) > 0 {
+				return fmt.Errorf("preview environment '%s' deployed with resource errors", name)
+			}
+			if areAllRunning {
+				return nil
+			}
 		}
 	}
-	return nil
+}
+
+func getExpandedName(name string) string {
+	expandedName, err := model.ExpandEnv(name)
+	if err != nil {
+		return name
+	}
+	return expandedName
 }

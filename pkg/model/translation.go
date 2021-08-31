@@ -14,21 +14,20 @@
 package model
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 )
 
 // Translation represents the information for translating a deployment
 type Translation struct {
-	Interactive bool                      `json:"interactive"`
-	Name        string                    `json:"name"`
-	Version     string                    `json:"version"`
-	Deployment  *appsv1.Deployment        `json:"-"`
-	Annotations Annotations               `json:"annotations,omitempty"`
-	Tolerations []apiv1.Toleration        `json:"tolerations,omitempty"`
-	Replicas    int32                     `json:"replicas"`
-	Strategy    appsv1.DeploymentStrategy `json:"strategy"`
-	Rules       []*TranslationRule        `json:"rules"`
+	Interactive bool               `json:"interactive"`
+	Name        string             `json:"name"`
+	Version     string             `json:"version"`
+	K8sObject   *K8sObject         `json:"-"`
+	Annotations Annotations        `json:"annotations,omitempty"`
+	Tolerations []apiv1.Toleration `json:"tolerations,omitempty"`
+	Replicas    int32              `json:"replicas"`
+	Strategy    K8sObjectStrategy  `json:"strategy"`
+	Rules       []*TranslationRule `json:"rules"`
 }
 
 // TranslationRule represents how to apply a container translation in a deployment
@@ -54,6 +53,8 @@ type TranslationRule struct {
 	Probes            *Probes              `json:"probes" yaml:"probes"`
 	Lifecycle         *Lifecycle           `json:"lifecycle" yaml:"lifecycle"`
 	Docker            DinDContainer        `json:"docker" yaml:"docker"`
+	NodeSelector      map[string]string    `json:"nodeSelector" yaml:"nodeSelector"`
+	Affinity          *apiv1.Affinity      `json:"affinity" yaml:"affinity"`
 }
 
 // IsMainDevContainer returns true if the translation rule applies to the main dev container of the okteto manifest

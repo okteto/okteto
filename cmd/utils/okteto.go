@@ -11,24 +11,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package preview
+package utils
 
 import (
-	"context"
+	"os"
+	"strings"
 
-	"github.com/spf13/cobra"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
-//Preview preview management commands
-func Preview(ctx context.Context) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "preview",
-		Short: "Preview environment management commands",
+func SetOktetoUsernameEnv() error {
+	if username := os.Getenv("OKTETO_USERNAME"); username == "" {
+		username := strings.ToLower(okteto.GetUsername())
+		if err := os.Setenv("OKTETO_USERNAME", username); err != nil {
+			return err
+		}
 	}
-
-	cmd.AddCommand(Deploy(ctx))
-	cmd.AddCommand(Destroy(ctx))
-	cmd.AddCommand(List(ctx))
-	cmd.AddCommand(Endpoints(ctx))
-	return cmd
+	return nil
 }

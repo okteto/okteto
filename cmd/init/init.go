@@ -19,18 +19,20 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -116,28 +118,28 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	dev.Context = k8sContext
 
 	if checkForDeployment {
-		d, container, err := getDeployment(ctx, namespace, k8sContext)
+		r, container, err := getResource(ctx, namespace, k8sContext)
 		if err != nil {
 			return err
 		}
-		if d == nil {
+		if r == nil {
 			dev.Autocreate = true
 			linguist.SetForwardDefaults(dev, language)
 		} else {
 			dev.Container = container
 			if container == "" {
-				container = d.Spec.Template.Spec.Containers[0].Name
+				container = r.PodTemplateSpec.Spec.Containers[0].Name
 			}
 
-			suffix := fmt.Sprintf("Analyzing deployment '%s'...", d.Name)
+			suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(string(r.ObjectType)), r.Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
-			err = initCMD.SetDevDefaultsFromDeployment(ctx, dev, d, container, language)
+			err = initCMD.SetDevDefaultsFromResource(ctx, dev, r, container, language)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("Deployment '%s' successfully analyzed", d.Name))
+				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(string(r.ObjectType)), r.Name))
 			} else {
-				log.Yellow(fmt.Sprintf("Analysis for deployment '%s' failed: %s", d.Name, err))
+				log.Yellow(fmt.Sprintf("Analysis for %s '%s' failed: %s", strings.ToLower(string(r.ObjectType)), r.Name, err))
 				linguist.SetForwardDefaults(dev, language)
 			}
 		}
@@ -177,7 +179,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	return nil
 }
 
-func getDeployment(ctx context.Context, namespace, k8sContext string) (*appsv1.Deployment, string, error) {
+func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sObject, string, error) {
 	c, _, err := k8Client.GetLocalWithContext(k8sContext)
 	if err != nil {
 		log.Yellow("Failed to load your local Kubeconfig: %s", err)
@@ -187,27 +189,27 @@ func getDeployment(ctx context.Context, namespace, k8sContext string) (*appsv1.D
 		namespace = client.GetContextNamespace(k8sContext)
 	}
 
-	d, err := askForDeployment(ctx, namespace, c)
+	r, err := askForResource(ctx, namespace, c)
 	if err != nil {
 		return nil, "", err
 	}
-	if d == nil {
+	if r == nil {
 		return nil, "", nil
 	}
 
-	if deployments.IsDevModeOn(d) {
-		return nil, "", fmt.Errorf("the deployment '%s' is in development mode", d.Name)
+	if apps.IsDevModeOn(r) {
+		return nil, "", fmt.Errorf("the %s '%s' is in development mode", strings.ToLower(string(r.ObjectType)), r.Name)
 	}
 
 	container := ""
-	if len(d.Spec.Template.Spec.Containers) > 1 {
-		container, err = askForContainer(d)
+	if len(r.PodTemplateSpec.Spec.Containers) > 1 {
+		container, err = askForContainer(r)
 		if err != nil {
 			return nil, "", err
 		}
 	}
 
-	return d, container, nil
+	return r, container, nil
 }
 
 func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
@@ -285,20 +287,28 @@ func askForLanguage() (string, error) {
 	)
 }
 
-func askForDeployment(ctx context.Context, namespace string, c *kubernetes.Clientset) (*appsv1.Deployment, error) {
+func askForResource(ctx context.Context, namespace string, c *kubernetes.Clientset) (*model.K8sObject, error) {
 	dList, err := deployments.List(ctx, namespace, "", c)
 	if err != nil {
 		log.Yellow("Failed to list deployments: %s", err)
+		return nil, nil
+	}
+	sfsList, err := statefulsets.List(ctx, namespace, "", c)
+	if err != nil {
+		log.Yellow("Failed to list statefulsets: %s", err)
 		return nil, nil
 	}
 	options := []string{}
 	for i := range dList {
 		options = append(options, dList[i].Name)
 	}
+	for i := range sfsList {
+		options = append(options, sfsList[i].Name)
+	}
 	options = append(options, defaultInitValues)
 	option, err := askForOptions(
 		options,
-		"Select the deployment you want to develop:",
+		"Select the resource you want to develop:",
 	)
 	if err != nil {
 		return nil, err
@@ -306,22 +316,33 @@ func askForDeployment(ctx context.Context, namespace string, c *kubernetes.Clien
 	if option == defaultInitValues {
 		return nil, nil
 	}
+	k8sObject := &model.K8sObject{}
 	for i := range dList {
 		if dList[i].Name == option {
-			return &dList[i], nil
+			k8sObject.ObjectType = model.DeploymentObjectType
+			k8sObject.UpdateDeployment(&dList[i])
+			return k8sObject, nil
 		}
 	}
+	for i := range sfsList {
+		if sfsList[i].Name == option {
+			k8sObject.ObjectType = model.StatefulsetObjectType
+			k8sObject.UpdateStatefulset(&sfsList[i])
+			return k8sObject, nil
+		}
+	}
+
 	return nil, nil
 }
 
-func askForContainer(d *appsv1.Deployment) (string, error) {
+func askForContainer(k8sObject *model.K8sObject) (string, error) {
 	options := []string{}
-	for i := range d.Spec.Template.Spec.Containers {
-		options = append(options, d.Spec.Template.Spec.Containers[i].Name)
+	for i := range k8sObject.PodTemplateSpec.Spec.Containers {
+		options = append(options, k8sObject.PodTemplateSpec.Spec.Containers[i].Name)
 	}
 	return askForOptions(
 		options,
-		fmt.Sprintf("The deployment '%s' has %d containers. Select the container you want to replace with your development container:", d.Name, len(d.Spec.Template.Spec.Containers)),
+		fmt.Sprintf("The %s '%s' has %d containers. Select the container you want to replace with your development container:", strings.ToLower(string(k8sObject.ObjectType)), k8sObject.Name, len(k8sObject.PodTemplateSpec.Spec.Containers)),
 	)
 }
 

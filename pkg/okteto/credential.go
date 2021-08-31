@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-
-	"github.com/okteto/okteto/pkg/config"
 )
 
 // Credentials top body answer
@@ -59,19 +57,4 @@ func GetCredentials(ctx context.Context) (*Credential, error) {
 func GetClusterContext() string {
 	u, _ := url.Parse(GetURL())
 	return strings.ReplaceAll(u.Host, ".", "_")
-}
-
-//RefreshOktetoKubeconfig refreshes the k8s credentials
-func RefreshOktetoKubeconfig(ctx context.Context, namespace string) (string, string, error) {
-	kubeConfigFile := config.GetKubeConfigFile()
-	cred, err := GetCredentials(ctx)
-	if err != nil {
-		return "", "", err
-	}
-	err = SetKubeConfig(cred, kubeConfigFile, namespace, GetUserID(), GetClusterContext(), false)
-	if err != nil {
-		return "", "", err
-	}
-
-	return cred.Server, cred.Token, nil
 }

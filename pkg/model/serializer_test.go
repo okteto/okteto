@@ -511,7 +511,7 @@ func TestDevMarshalling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			marshalled, err := yaml.Marshal(tt.dev)
+			marshalled, err := yaml.Marshal(&tt.dev)
 			if err != nil {
 				t.Fatal(err)
 			}

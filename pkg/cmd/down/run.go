@@ -16,35 +16,34 @@ package down
 import (
 	"context"
 
-	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
-	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 // Run runs the "okteto down" sequence
-func Run(dev *model.Dev, d *appsv1.Deployment, trList map[string]*model.Translation, wait bool, c kubernetes.Interface) error {
+func Run(dev *model.Dev, k8sObject *model.K8sObject, trList map[string]*model.Translation, wait bool, c kubernetes.Interface) error {
 	ctx := context.Background()
 	if len(trList) == 0 {
 		log.Info("no translations available in the deployment")
 	}
 
 	for _, tr := range trList {
-		if tr.Deployment == nil {
+		if tr.K8sObject == nil {
 			continue
 		}
-		dTmp, err := deployments.TranslateDevModeOff(tr.Deployment)
+		dTmp, err := apps.TranslateDevModeOff(tr.K8sObject)
 		if err != nil {
 			return err
 		}
-		tr.Deployment = dTmp
+		tr.K8sObject = dTmp
 	}
-	if err := deployments.UpdateDeployments(ctx, trList, c); err != nil {
+	if err := apps.UpdateK8sObjects(ctx, trList, c); err != nil {
 		return err
 	}
 
@@ -58,14 +57,15 @@ func Run(dev *model.Dev, d *appsv1.Deployment, trList map[string]*model.Translat
 		log.Infof("failed to remove ssh entry: %s", err)
 	}
 
-	if d == nil {
+	if k8sObject.Deployment == nil && k8sObject.StatefulSet == nil {
 		return nil
 	}
 
-	if d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
-		if err := deployments.DestroyDev(ctx, dev, c); err != nil {
+	if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoUpCmd {
+		if err := apps.DestroyDev(ctx, k8sObject, dev, c); err != nil {
 			return err
 		}
+
 		if err := services.DestroyDev(ctx, dev, c); err != nil {
 			return err
 		}

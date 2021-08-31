@@ -15,6 +15,8 @@ package cmd
 
 import (
 	"context"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -94,22 +96,42 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 	spinner.Start()
 	defer spinner.Stop()
 
-	ticker := time.NewTicker(1000 * time.Millisecond)
-	for {
-		<-ticker.C
-		message := ""
-		progress, err := status.Run(ctx, dev, sy)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+		ticker := time.NewTicker(1000 * time.Millisecond)
+		for {
+			<-ticker.C
+			message := ""
+			progress, err := status.Run(ctx, dev, sy)
+			if err != nil {
+				log.Infof("error accessing status: %s", err)
+				continue
+			}
+			if progress == 100 {
+				message = "Files synchronized"
+			} else {
+				message = utils.RenderProgressBar(suffix, progress, pbScaling)
+			}
+			spinner.Update(message)
+			exit <- nil
+		}
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
 		if err != nil {
-			log.Infof("error accessing status: %s", err)
-			continue
+			log.Infof("exit signal received due to error: %s", err)
+			return err
 		}
-		if progress == 100 {
-			message = "Files synchronized"
-		} else {
-			message = utils.RenderProgressBar(suffix, progress, pbScaling)
-		}
-		spinner.Update(message)
 	}
+	return nil
 }
 
 func runWithoutWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {

@@ -77,7 +77,7 @@ func DeployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 		req.Var("variables", variables)
 
 		if err := queryWithRequest(ctx, req, &body); err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 	} else {
 		q := fmt.Sprintf(`mutation{
@@ -87,7 +87,7 @@ func DeployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 		}`, name, repository, namespace, branch, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 	}
 

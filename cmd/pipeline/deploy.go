@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"time"
@@ -115,6 +116,15 @@ func deploy(ctx context.Context) *cobra.Command {
 			if err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, timeout, variables); err != nil {
 				return err
 			}
+			if !wait {
+				log.Success("Pipeline '%s' scheduled for deployment", name)
+				return nil
+			}
+
+			if waitUntilRunning(ctx, name, namespace, timeout); err != nil {
+				return err
+			}
+			log.Success("Pipeline '%s' successfully deployed", name)
 			return nil
 		},
 	}
@@ -136,30 +146,39 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	spinner.Start()
 	defer spinner.Stop()
 
-	varList := []okteto.Variable{}
-	for _, v := range variables {
-		kv := strings.SplitN(v, "=", 2)
-		if len(kv) != 2 {
-			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+		varList := []okteto.Variable{}
+		for _, v := range variables {
+			kv := strings.SplitN(v, "=", 2)
+			if len(kv) != 2 {
+				exit <- fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+			}
+			varList = append(varList, okteto.Variable{
+				Name:  kv[0],
+				Value: kv[1],
+			})
 		}
-		varList = append(varList, okteto.Variable{
-			Name:  kv[0],
-			Value: kv[1],
-		})
-	}
-	log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
-	_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
-	if err != nil {
-		return fmt.Errorf("failed to deploy pipeline: %w", err)
-	}
+		log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
+		_, err := okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
+		exit <- err
+	}()
 
-	if !wait {
-		log.Success("Pipeline '%s' scheduled for deployment", name)
-		return nil
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
+			return err
+		}
 	}
-
-	spinner.Update("Waiting for the pipeline to finish...")
-	return waitUntilRunning(ctx, name, namespace, timeout)
+	return nil
 }
 
 func getPipelineName() (string, error) {
@@ -172,16 +191,36 @@ func getPipelineName() (string, error) {
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
-	err := waitToBeDeployed(ctx, name, namespace, timeout)
-	if err != nil {
-		return err
+	spinner := utils.NewSpinner("Waiting for the pipeline to finish...")
+	spinner.Start()
+	defer spinner.Stop()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+
+		err := waitToBeDeployed(ctx, name, namespace, timeout)
+		if err != nil {
+			exit <- err
+		}
+
+		exit <- waitForResourcesToBeRunning(ctx, name, namespace, timeout)
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
+			return err
+		}
 	}
 
-	err = waitForResourcesToBeRunning(ctx, name, namespace, timeout)
-	if err != nil {
-		return fmt.Errorf("pipeline deployed with resource errors")
-	}
-	log.Success("Pipeline '%s' successfully deployed", name)
 	return nil
 }
 
@@ -194,7 +233,7 @@ func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("pipeline '%s' didn't finish after 5 minutes", name)
+			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
 			p, err := okteto.GetPipelineByName(ctx, name, namespace)
 			if err != nil {
@@ -220,35 +259,48 @@ func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.
 	}
 }
 
-func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, t time.Duration) error {
+func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
 	areAllRunning := false
 
 	ticker := time.NewTicker(5 * time.Second)
-	timeout := time.Now().Add(t)
+	to := time.NewTicker(timeout)
 	errors := make(map[string]int)
-	for time.Now().Before(timeout) {
-		<-ticker.C
-		resourceStatus, err := okteto.GetResourcesStatusFromPipeline(ctx, name, namespace)
-		if err != nil {
-			return err
-		}
-		areAllRunning = true
-		for name, status := range resourceStatus {
-			if status != "running" {
-				areAllRunning = false
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
+		case <-ticker.C:
+			resourceStatus, err := okteto.GetResourcesStatusFromPipeline(ctx, name, namespace)
+			if err != nil {
+				return err
 			}
-			if status == "error" {
-				errors[name] = 1
+			areAllRunning = true
+			for name, status := range resourceStatus {
+				if status != "running" {
+					areAllRunning = false
+				}
+				if status == "error" {
+					errors[name] = 1
+				}
 			}
-		}
-		if len(errors) > 0 {
-			return fmt.Errorf("Services with errors found")
-		}
-		if areAllRunning {
-			break
+			if len(errors) > 0 {
+				previewEnvURL := getNamespaceURL(ctx, name)
+				return fmt.Errorf("pipeline '%s' deployed with errors. You can check %s for more information", name, previewEnvURL)
+			}
+			if areAllRunning {
+				return nil
+			}
 		}
 	}
-	return nil
+}
+
+func getNamespaceURL(ctx context.Context, name string) string {
+	url := okteto.GetURL()
+	if url == "na" {
+		return ""
+	}
+	return fmt.Sprintf("https://%s/#/spaces/%s", url, name)
 }
 
 func getCurrentNamespace(ctx context.Context) string {

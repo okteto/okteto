@@ -31,10 +31,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -51,9 +49,12 @@ var (
 	// DevReplicas is the number of dev replicas
 	DevReplicas int32 = 1
 
-	devTerminationGracePeriodSeconds int64
-
 	once sync.Once
+
+	// DeploymentKind is the resource for Deployments
+	DeploymentObjectType ObjectType = "Deployment"
+	// StatefulSet is the resource for Statefulsets
+	StatefulsetObjectType ObjectType = "StatefulSet"
 )
 
 // Dev represents a development container
@@ -98,7 +99,15 @@ type Dev struct {
 	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
+	ObjectType           ObjectType            `json:"k8sObjectType,omitempty" yaml:"k8sObjectType,omitempty"`
+	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 }
+
+type Affinity apiv1.Affinity
+
+//K8SObject defines the type of k8s object the up should look for
+type ObjectType string
 
 // Entrypoint represents the start command of a development container
 type Entrypoint struct {
@@ -795,6 +804,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		InitContainer:    dev.InitContainer,
 		Probes:           dev.Probes,
 		Lifecycle:        dev.Lifecycle,
+		NodeSelector:     dev.NodeSelector,
+		Affinity:         (*apiv1.Affinity)(dev.Affinity),
 	}
 
 	if !dev.EmptyImage {
@@ -967,52 +978,6 @@ func areAllProbesEnabled(probes *Probes) bool {
 		return probes.Liveness && probes.Readiness && probes.Startup
 	}
 	return false
-}
-
-//GevSandbox returns a deployment sandbox
-func (dev *Dev) GevSandbox() *appsv1.Deployment {
-	image := dev.Image.Name
-	if image == "" {
-		image = DefaultImage
-	}
-	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      dev.Name,
-			Namespace: dev.Namespace,
-			Annotations: Annotations{
-				OktetoAutoCreateAnnotation: OktetoUpCmd,
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &DevReplicas,
-			Strategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RecreateDeploymentStrategyType,
-			},
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": dev.Name,
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": dev.Name,
-					},
-				},
-				Spec: apiv1.PodSpec{
-					ServiceAccountName:            dev.ServiceAccount,
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
-					Containers: []apiv1.Container{
-						{
-							Name:            "dev",
-							Image:           image,
-							ImagePullPolicy: apiv1.PullAlways,
-						},
-					},
-				},
-			},
-		},
-	}
 }
 
 // RemoteModeEnabled returns true if remote is enabled

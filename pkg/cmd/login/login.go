@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -81,7 +82,7 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*okteto.User, error) {
 }
 
 // StartWithBrowser starts the authentication of the user with the IDP via a browser
-func StartWithBrowser(ctx context.Context, url string) (*Handler, error) {
+func StartWithBrowser(ctx context.Context, u string) (*Handler, error) {
 	state, err := randToken()
 	if err != nil {
 		log.Infof("couldn't generate random token: %s", err)
@@ -95,8 +96,16 @@ func StartWithBrowser(ctx context.Context, url string) (*Handler, error) {
 		return nil, fmt.Errorf("couldn't access the network")
 	}
 
+	url, err := url.Parse(u)
+	if err != nil {
+		return nil, err
+	}
+	if url.Scheme == "" {
+		url.Scheme = "https"
+	}
+
 	handler := &Handler{
-		baseURL:  url,
+		baseURL:  url.String(),
 		port:     port,
 		ctx:      context.Background(),
 		state:    state,

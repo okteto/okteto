@@ -19,7 +19,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -30,8 +29,8 @@ import (
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	k8sClient "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
@@ -42,7 +41,6 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 
 	"github.com/spf13/cobra"
-	appsv1 "k8s.io/api/apps/v1"
 )
 
 // ReconnectingMessage is the message shown when we are trying to reconnect
@@ -323,17 +321,17 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 	}
 }
 
-func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) (*appsv1.Deployment, bool, error) {
-	d, err := deployments.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
+func (up *upContext) getCurrentK8sObject(ctx context.Context, autoDeploy bool) (*model.K8sObject, bool, error) {
+	k8sObject, err := apps.GetResource(ctx, up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
-		if d.Annotations[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
+		if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) != model.OktetoUpCmd {
 			up.isSwap = true
 		}
-		return d, false, nil
+		return k8sObject, false, nil
 	}
 
 	if !errors.IsNotFound(err) || up.isRetry {
-		return nil, false, fmt.Errorf("couldn't get deployment %s/%s, please try again: %s", up.Dev.Namespace, up.Dev.Name, err)
+		return nil, false, fmt.Errorf("couldn't get %s %s/%s, please try again: %s", strings.ToLower(string(k8sObject.ObjectType)), up.Dev.Namespace, up.Dev.Name, err)
 	}
 
 	if len(up.Dev.Labels) > 0 {
@@ -354,8 +352,8 @@ func (up *upContext) getCurrentDeployment(ctx context.Context, autoDeploy bool) 
 		}
 		return nil, false, err
 	}
-
-	return up.Dev.GevSandbox(), true, nil
+	k8sObject.GetSandbox()
+	return k8sObject, true, nil
 }
 
 // waitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
@@ -387,7 +385,7 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, create bool) error {
+func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
 	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
 		return errors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
@@ -409,7 +407,7 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	}
 
 	if up.Dev.Image.Name == "" {
-		devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
+		devContainer := apps.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
 		if devContainer == nil {
 			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 		}
@@ -440,8 +438,8 @@ func (up *upContext) buildDevImage(ctx context.Context, d *appsv1.Deployment, cr
 	return nil
 }
 
-func (up *upContext) setDevContainer(d *appsv1.Deployment) error {
-	devContainer := deployments.GetDevContainer(&d.Spec.Template.Spec, up.Dev.Container)
+func (up *upContext) setDevContainer(k8sObject *model.K8sObject) error {
+	devContainer := apps.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
 	if devContainer == nil {
 		return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 	}
@@ -494,7 +492,9 @@ func (up *upContext) shutdown() {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			log.Infof("failed to restore terminal: %s", err.Error())
 		}
-		restoreCursor()
+		if up.spinner != nil {
+			up.spinner.Stop()
+		}
 	}
 
 	log.Infof("starting shutdown sequence")
@@ -524,12 +524,6 @@ func (up *upContext) shutdown() {
 
 }
 
-func restoreCursor() {
-	if runtime.GOOS != "windows" {
-		fmt.Fprint(os.Stdin, "\033[?25h")
-	}
-}
-
 func printDisplayContext(dev *model.Dev, divertURL string) {
 	if dev.Context != "" {
 		log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), dev.Context))
@@ -546,7 +540,7 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 
 		for i := 1; i < len(dev.Forward); i++ {
 			if dev.Forward[i].Service {
-				log.Println(fmt.Sprintf("           %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
+				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
 				continue
 			}
 			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))

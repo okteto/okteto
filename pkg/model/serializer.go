@@ -14,6 +14,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -25,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // BuildInfoRaw represents the build info for serialization
@@ -62,6 +64,73 @@ type probesRaw struct {
 type lifecycleRaw struct {
 	PostStart bool `json:"postStart,omitempty" yaml:"postStart,omitempty"`
 	PostStop  bool `json:"postStop,omitempty" yaml:"postStop,omitempty"`
+}
+
+type AffinityRaw struct {
+	NodeAffinity    *NodeAffinity    `yaml:"nodeAffinity,omitempty" json:"nodeAffinity,omitempty"`
+	PodAffinity     *PodAffinity     `yaml:"podAffinity,omitempty" json:"podAffinity,omitempty"`
+	PodAntiAffinity *PodAntiAffinity `yaml:"podAntiAffinity,omitempty" json:"podAntiAffinity,omitempty"`
+}
+
+// Describes node affinity scheduling rules for the pod.
+type NodeAffinity struct {
+	RequiredDuringSchedulingIgnoredDuringExecution  *NodeSelector             `yaml:"requiredDuringSchedulingIgnoredDuringExecution,omitempty" json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
+	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `yaml:"preferredDuringSchedulingIgnoredDuringExecution,omitempty" json:"preferredDuringSchedulingIgnoredDuringExecution,omitempty"`
+}
+
+type NodeSelector struct {
+	NodeSelectorTerms []NodeSelectorTerm `yaml:"nodeSelectorTerms" json:"nodeSelectorTerms"`
+}
+
+type NodeSelectorTerm struct {
+	MatchExpressions []NodeSelectorRequirement `yaml:"matchExpressions,omitempty" json:"matchExpressions,omitempty"`
+	MatchFields      []NodeSelectorRequirement `yaml:"matchFields,omitempty" json:"matchFields,omitempty"`
+}
+
+type NodeSelectorRequirement struct {
+	Key      string                     `yaml:"key" json:"key"`
+	Operator apiv1.NodeSelectorOperator `yaml:"operator" json:"operator`
+	Values   []string                   `yaml:"values,omitempty" json:"values,omitempty"`
+}
+
+type PreferredSchedulingTerm struct {
+	// Weight associated with matching the corresponding nodeSelectorTerm, in the range 1-100.
+	Weight int32 `yaml:"weight" json:"weight"`
+	// A node selector term, associated with the corresponding weight.
+	Preference NodeSelectorTerm `yaml:"preference" json:"preference"`
+}
+
+// Describes pod affinity scheduling rules (e.g. co-locate this pod in the same node, zone, etc. as some other pod(s)).
+type PodAffinity struct {
+	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `yaml:"requiredDuringSchedulingIgnoredDuringExecution,omitempty" json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
+	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `yaml:"preferredDuringSchedulingIgnoredDuringExecution,omitempty" json:"preferredDuringSchedulingIgnoredDuringExecution,omitempty"`
+}
+
+// Describes pod anti-affinity scheduling rules (e.g. avoid putting this pod in the same node, zone, etc. as some other pod(s)).
+type PodAntiAffinity struct {
+	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `yaml:"requiredDuringSchedulingIgnoredDuringExecution,omitempty" json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
+	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `yaml:"preferredDuringSchedulingIgnoredDuringExecution,omitempty" json:"preferredDuringSchedulingIgnoredDuringExecution,omitempty"`
+}
+
+type PodAffinityTerm struct {
+	LabelSelector *LabelSelector `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+	Namespaces    []string       `yaml:"namespaces,omitempty" json:"namespaces,omitempty"`
+	TopologyKey   string         `yaml:"topologyKey" json:"topologyKey"`
+}
+
+type LabelSelector struct {
+	MatchLabels      map[string]string          `yaml:"matchLabels,omitempty" json:"matchLabels,omitempty"`
+	MatchExpressions []LabelSelectorRequirement `yaml:"matchExpressions,omitempty" json:"matchExpressions,omitempty"`
+}
+type LabelSelectorRequirement struct {
+	Key      string                       `yaml:"key" json:"key"`
+	Operator metav1.LabelSelectorOperator `yaml:"operator" json:"operator"`
+	Values   []string                     `yaml:"values,omitempty" json:"values,omitempty"`
+}
+
+type WeightedPodAffinityTerm struct {
+	Weight          int32           `yaml:"weight" json:"weight"`
+	PodAffinityTerm PodAffinityTerm `yaml:"podAffinityTerm" json:"podAffinityTerm"`
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -183,14 +252,14 @@ func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawFolders []SyncFolder
 	err := unmarshal(&rawFolders)
 	if err == nil {
-		sync.Verbose = true
+		sync.Verbose = log.IsDebug()
 		sync.RescanInterval = DefaultSyncthingRescanInterval
 		sync.Folders = rawFolders
 		return nil
 	}
 
 	var rawSync syncRaw
-	rawSync.Verbose = true
+	rawSync.Verbose = log.IsDebug()
 	err = unmarshal(&rawSync)
 	if err != nil {
 		return err
@@ -572,10 +641,10 @@ func checkFileAndNotDirectory(path string) error {
 	return fmt.Errorf("Secret '%s' is not a regular file", path)
 }
 
-func (d Dev) MarshalYAML() (interface{}, error) {
+func (d *Dev) MarshalYAML() (interface{}, error) {
 	type dev Dev // prevent recursion
-	toMarshall := dev(d)
-	if isDefaultProbes(&d) {
+	toMarshall := dev(*d)
+	if isDefaultProbes(d) {
 		toMarshall.Probes = nil
 	}
 	if areAllProbesEnabled(d.Probes) {
@@ -759,5 +828,28 @@ func (d *Duration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	*d = Duration(duration)
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+// Unmarshal into our yaml affinity to marshal it into json and unmarshal it with the apiv1.Affinity.
+func (a *Affinity) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var affinityRaw AffinityRaw
+	err := unmarshal(&affinityRaw)
+	if err != nil {
+		return err
+	}
+	bytes, err := json.Marshal(affinityRaw)
+	if err != nil {
+		return err
+	}
+	affinity := &apiv1.Affinity{}
+	err = json.Unmarshal(bytes, affinity)
+	if err != nil {
+		return err
+	}
+
+	*a = Affinity(*affinity)
+
 	return nil
 }

@@ -38,7 +38,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			name = args[0]
+			name = getExpandedName(args[0])
 			err := executeDestroyPreview(ctx, name)
 			analytics.TrackPreviewDestroy(err == nil)
 			return err

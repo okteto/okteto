@@ -18,9 +18,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDevToTranslationRule(t *testing.T) {
@@ -39,6 +42,18 @@ resources:
     memory: 1Gi
     nvidia.com/gpu: 1
     amd.com/gpu: 1
+nodeSelector:
+  disktype: ssd
+affinity:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: role
+          operator: In
+          values:
+          - web-server
+      topologyKey: kubernetes.io/hostname
 services:
   - name: worker
     container: dev
@@ -63,7 +78,7 @@ services:
 		Image:             "web:latest",
 		ImagePullPolicy:   apiv1.PullNever,
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r", "-v"},
+		Args:              []string{"-r"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -114,6 +129,29 @@ services:
 			},
 		},
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
+		NodeSelector: map[string]string{
+			"disktype": "ssd",
+		},
+		Affinity: &apiv1.Affinity{
+			PodAffinity: &apiv1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "role",
+									Operator: "In",
+									Values: []string{
+										"web-server",
+									},
+								},
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		},
 	}
 
 	marshalled1, _ := yaml.Marshal(rule1)
@@ -183,7 +221,7 @@ initContainer:
 		OktetoBinImageTag: "image",
 		ImagePullPolicy:   apiv1.PullAlways,
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r", "-v"},
+		Args:              []string{"-r"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -266,7 +304,7 @@ docker:
 		ImagePullPolicy:   apiv1.PullAlways,
 		Image:             "dev-image",
 		Command:           []string{"/var/okteto/bin/start.sh"},
-		Args:              []string{"-r", "-v", "-d"},
+		Args:              []string{"-r", "-d"},
 		Probes:            &Probes{},
 		Lifecycle:         &Lifecycle{},
 		Environment: Environment{
@@ -337,6 +375,73 @@ docker:
 			Enabled: true,
 			Image:   DefaultDinDImage,
 		},
+	}
+
+	marshalled, _ := yaml.Marshal(rule)
+	marshalledOK, _ := yaml.Marshal(ruleOK)
+	if string(marshalled) != string(marshalledOK) {
+		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
+	}
+}
+
+func TestDevToTranslationDebugEnabled(t *testing.T) {
+	log.SetLevel("debug")
+	defer log.SetLevel("info")
+	manifest := []byte(`name: web
+image: dev-image
+namespace: n
+sync:
+  - .:/app`)
+
+	dev, err := Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rule := dev.ToTranslationRule(dev, false)
+	ruleOK := &TranslationRule{
+		Marker:            OktetoBinImageTag,
+		OktetoBinImageTag: OktetoBinImageTag,
+		ImagePullPolicy:   apiv1.PullAlways,
+		Image:             "dev-image",
+		Command:           []string{"/var/okteto/bin/start.sh"},
+		Args:              []string{"-r", "-v"},
+		Probes:            &Probes{},
+		Lifecycle:         &Lifecycle{},
+		Environment: Environment{
+			{
+				Name:  "OKTETO_NAMESPACE",
+				Value: "n",
+			},
+			{
+				Name:  "OKTETO_NAME",
+				Value: "web",
+			},
+		},
+		SecurityContext: &SecurityContext{
+			RunAsUser:  &rootUser,
+			RunAsGroup: &rootUser,
+			FSGroup:    &rootUser,
+		},
+		PersistentVolume: true,
+		Volumes: []VolumeMount{
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: OktetoSyncthingMountPath,
+				SubPath:   SyncthingSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: RemoteMountPath,
+				SubPath:   RemoteSubPath,
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/app",
+				SubPath:   SourceCodeSubPath,
+			},
+		},
+		InitContainer: InitContainer{Image: OktetoBinImageTag},
 	}
 
 	marshalled, _ := yaml.Marshal(rule)
