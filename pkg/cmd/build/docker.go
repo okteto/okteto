@@ -24,14 +24,13 @@ import (
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/urlutil"
-	"github.com/docker/docker/registry"
 	dockerRegistry "github.com/docker/docker/registry"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 	"github.com/pkg/errors"
 )
 
@@ -156,7 +155,7 @@ func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *c
 			configKey = dockerRegistry.IndexServer
 		}
 		if info.IndexServerAddress == "" {
-			configKey = registry.IndexServer
+			configKey = dockerRegistry.IndexServer
 		}
 		configKey = info.IndexServerAddress
 	}

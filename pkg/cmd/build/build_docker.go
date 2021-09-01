@@ -74,11 +74,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOption
 	switch {
 	case isLocalDir(buildOptions.Path):
 		contextDir = buildOptions.Path
-		if buildOptions.File != "" {
-			dockerfileDir = buildOptions.Path
-		} else {
-			dockerfileDir = buildOptions.Path
-		}
+		dockerfileDir = buildOptions.Path
 		remote = "client-session"
 	case isURL(buildOptions.Path):
 		remote = buildOptions.Path
