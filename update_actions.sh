@@ -31,10 +31,13 @@ for repo in "${actionsRepos[@]}"; do
         sed -iE 's_FROM\ okteto\/okteto\:latest_FROM\ okteto\/okteto\:'"$VERSION"'_' Dockerfile
         sed -iE 's_FROM\ okteto\/okteto\:[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*_FROM\ okteto\/okteto\:'"$VERSION"'_' Dockerfile
         git add Dockerfile
-        git commit -m "release $VERSION"
-        git push git@github.com:okteto/"$repo".git master
-        git --no-pager log -1
-        ghr -u "${CIRCLE_PROJECT_USERNAME}" -token "$GITHUB_TOKEN" -replace "$VERSION"
+        ret=0
+        git commit -m "release $VERSION" || ret=1
+        if [ $ret -ne 1]; then
+            git push git@github.com:okteto/"$repo".git master
+            git --no-pager log -1
+        fi
+        ghr -token "$GITHUB_TOKEN" -replace "$VERSION"
         popd
         rm -rf "$repo"
 done
