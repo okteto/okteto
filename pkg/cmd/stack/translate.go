@@ -194,7 +194,17 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 		}
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+		buildOptions := build.BuildOptions{
+			Path:       svc.Build.Context,
+			File:       svc.Build.Dockerfile,
+			Tag:        svc.Image,
+			Target:     svc.Build.Target,
+			NoCache:    noCache,
+			CacheFrom:  svc.Build.CacheFrom,
+			BuildArgs:  buildArgs,
+			OutputMode: "tty",
+		}
+		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, buildOptions); err != nil {
 			return hasBuiltSomething, err
 		}
 		svc.SetLastBuiltAnnotation()
@@ -231,7 +241,18 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+
+			buildOptions := build.BuildOptions{
+				Path:       svc.Build.Context,
+				File:       svc.Build.Dockerfile,
+				Tag:        svc.Image,
+				Target:     svc.Build.Target,
+				NoCache:    noCache,
+				CacheFrom:  svc.Build.CacheFrom,
+				BuildArgs:  buildArgs,
+				OutputMode: "tty",
+			}
+			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, buildOptions); err != nil {
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.SetLastBuiltAnnotation()

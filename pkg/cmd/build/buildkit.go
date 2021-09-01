@@ -54,38 +54,38 @@ func GetBuildKitHost() (string, bool, error) {
 }
 
 // getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFrom, buildArgs, secrets []string) (*client.SolveOpt, error) {
+func getSolveOpt(buildOptions BuildOptions) (*client.SolveOpt, error) {
 	var localDirs map[string]string
 	var frontendAttrs map[string]string
 
-	if uri, err := url.ParseRequestURI(buildCtx); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
+	if uri, err := url.ParseRequestURI(buildOptions.Path); err != nil || (uri != nil && (uri.Scheme == "" || uri.Host == "")) {
 
-		if file == "" {
-			file = filepath.Join(buildCtx, "Dockerfile")
+		if buildOptions.File == "" {
+			buildOptions.File = filepath.Join(buildOptions.Path, "Dockerfile")
 		}
-		if _, err := os.Stat(file); os.IsNotExist(err) {
-			return nil, fmt.Errorf("Dockerfile '%s' does not exist", file)
+		if _, err := os.Stat(buildOptions.File); os.IsNotExist(err) {
+			return nil, fmt.Errorf("Dockerfile '%s' does not exist", buildOptions.File)
 		}
 		localDirs = map[string]string{
-			"context":    buildCtx,
-			"dockerfile": filepath.Dir(file),
+			"context":    buildOptions.Path,
+			"dockerfile": filepath.Dir(buildOptions.File),
 		}
 		frontendAttrs = map[string]string{
-			"filename": filepath.Base(file),
+			"filename": filepath.Base(buildOptions.File),
 		}
 	} else {
 		frontendAttrs = map[string]string{
-			"context": buildCtx,
+			"context": buildOptions.Path,
 		}
 	}
 
-	if target != "" {
-		frontendAttrs["target"] = target
+	if buildOptions.Target != "" {
+		frontendAttrs["target"] = buildOptions.Target
 	}
-	if noCache {
+	if buildOptions.NoCache {
 		frontendAttrs["no-cache"] = ""
 	}
-	for _, buildArg := range buildArgs {
+	for _, buildArg := range buildOptions.BuildArgs {
 		kv := strings.SplitN(buildArg, "=", 2)
 		if len(kv) != 2 {
 			return nil, fmt.Errorf("invalid build-arg value %s", buildArg)
@@ -104,8 +104,8 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFro
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))
 	}
 
-	if len(secrets) > 0 {
-		secretProvider, err := build.ParseSecret(secrets)
+	if len(buildOptions.Secrets) > 0 {
+		secretProvider, err := build.ParseSecret(buildOptions.Secrets)
 		if err != nil {
 			return nil, err
 		}
@@ -119,18 +119,18 @@ func getSolveOpt(buildCtx, file, imageTag, target string, noCache bool, cacheFro
 		CacheImports:  []client.CacheOptionsEntry{},
 	}
 
-	if imageTag != "" {
+	if buildOptions.Tag != "" {
 		opt.Exports = []client.ExportEntry{
 			{
 				Type: "image",
 				Attrs: map[string]string{
-					"name": imageTag,
+					"name": buildOptions.Tag,
 					"push": "true",
 				},
 			},
 		}
 	}
-	for _, cacheFromImage := range cacheFrom {
+	for _, cacheFromImage := range buildOptions.CacheFrom {
 		opt.CacheImports = append(
 			opt.CacheImports,
 			client.CacheOptionsEntry{

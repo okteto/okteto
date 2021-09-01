@@ -424,7 +424,17 @@ func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObje
 	log.Infof("building dev image tag %s", imageTag)
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
-	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildKitHost, isOktetoCluster, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, nil, "tty"); err != nil {
+
+	buildOptions := buildCMD.BuildOptions{
+		Path:       up.Dev.Image.Context,
+		File:       up.Dev.Image.Dockerfile,
+		Tag:        imageTag,
+		Target:     up.Dev.Image.Target,
+		CacheFrom:  up.Dev.Image.CacheFrom,
+		BuildArgs:  buildArgs,
+		OutputMode: "tty",
+	}
+	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildKitHost, isOktetoCluster, buildOptions); err != nil {
 		return err
 	}
 	for _, s := range up.Dev.Services {

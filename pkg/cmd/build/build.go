@@ -19,6 +19,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/docker/docker/api/types/versions"
+	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/pkg/analytics"
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -27,63 +29,112 @@ import (
 	"github.com/pkg/errors"
 )
 
+//BuildOptions define the options available for build
+type BuildOptions struct {
+	BuildArgs    []string
+	BuildLocally bool
+	CacheFrom    []string
+	File         string
+	NoCache      bool
+	OutputMode   string
+	Path         string
+	Secrets      []string
+	Tag          string
+	Target       string
+}
+
 // Run runs the build sequence
-func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, cacheFrom, buildArgs, secrets []string, progress string) error {
+func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bool, buildOptions BuildOptions) error {
+	if (!isOktetoCluster && buildKitHost == "") || buildOptions.BuildLocally {
+		if err := buildWithDocker(ctx, buildOptions); err != nil {
+			return err
+		}
+	} else {
+		if err := buildWithOkteto(ctx, namespace, buildKitHost, isOktetoCluster, buildOptions); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func buildWithOkteto(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bool, buildOptions BuildOptions) error {
 	log.Infof("building your image on %s", buildKitHost)
 	buildkitClient, err := getBuildkitClient(ctx, isOktetoCluster, buildKitHost)
 	if err != nil {
 		return err
 	}
 
-	if buildKitHost == okteto.CloudBuildKitURL && dockerFile != "" {
-		dockerFile, err = registry.GetDockerfile(path, dockerFile)
+	if buildKitHost == okteto.CloudBuildKitURL && buildOptions.File != "" {
+		buildOptions.File, err = registry.GetDockerfile(buildOptions.Path, buildOptions.File)
 		if err != nil {
 			return err
 		}
-		defer os.Remove(dockerFile)
+		defer os.Remove(buildOptions.File)
 	}
 
-	if tag != "" {
-		err = validateImage(tag)
+	if buildOptions.Tag != "" {
+		err = validateImage(buildOptions.Tag)
 		if err != nil {
 			return err
 		}
 	}
-	tag, err = registry.ExpandOktetoDevRegistry(ctx, namespace, tag)
+	buildOptions.Tag, err = registry.ExpandOktetoDevRegistry(ctx, namespace, buildOptions.Tag)
 	if err != nil {
 		return err
 	}
-	for i := range cacheFrom {
-		cacheFrom[i], err = registry.ExpandOktetoDevRegistry(ctx, namespace, cacheFrom[i])
+	for i := range buildOptions.CacheFrom {
+		buildOptions.CacheFrom[i], err = registry.ExpandOktetoDevRegistry(ctx, namespace, buildOptions.CacheFrom[i])
 		if err != nil {
 			return err
 		}
 	}
-	opt, err := getSolveOpt(path, dockerFile, tag, target, noCache, cacheFrom, buildArgs, secrets)
+	opt, err := getSolveOpt(buildOptions)
 	if err != nil {
 		return errors.Wrap(err, "failed to create build solver")
 	}
 
-	err = solveBuild(ctx, buildkitClient, opt, progress)
+	err = solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 	if err != nil {
 		log.Infof("Failed to build image: %s", err.Error())
 	}
 	if registry.IsTransientError(err) {
-		log.Yellow("Failed to push '%s' to the registry, retrying ...", tag)
+		log.Yellow("Failed to push '%s' to the registry, retrying ...", buildOptions.Tag)
 		success := true
-		err := solveBuild(ctx, buildkitClient, opt, progress)
+		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 		if err != nil {
 			success = false
 			log.Infof("Failed to build image: %s", err.Error())
 		}
-		err = registry.GetErrorMessage(err, tag)
+		err = registry.GetErrorMessage(err, buildOptions.Tag)
 		analytics.TrackBuildTransientError(buildKitHost, success)
 		return err
 	}
 
-	err = registry.GetErrorMessage(err, tag)
-
+	err = registry.GetErrorMessage(err, buildOptions.Tag)
 	return err
+}
+
+func buildWithDocker(ctx context.Context, buildOptions BuildOptions) error {
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	if versions.GreaterThanOrEqualTo(cli.ClientVersion(), "1.39") {
+		err = buildWithDockerDaemonBuildkit(ctx, buildOptions, cli)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = buildWithDockerDaemon(ctx, buildOptions, cli)
+		if err != nil {
+			return err
+		}
+	}
+	if buildOptions.Tag != "" {
+		return pushImage(ctx, buildOptions.Tag, cli)
+	}
+	return nil
 }
 
 func validateImage(imageTag string) error {

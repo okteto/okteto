@@ -12,7 +12,8 @@ require (
 	github.com/cheggaaa/pb/v3 v3.0.5
 	github.com/containerd/console v1.0.1
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
+	github.com/docker/cli v20.10.8+incompatible
+	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
@@ -46,6 +47,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/src-d/enry/v2 v2.1.0
 	github.com/subosito/gotenv v1.2.0
+	github.com/theupdateframework/notary v0.7.0 // indirect
 	github.com/vbauerster/mpb/v7 v7.0.2
 	github.com/whilp/git-urls v1.0.0
 	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
