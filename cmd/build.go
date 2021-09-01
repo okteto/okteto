@@ -63,7 +63,7 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 			if buildKitHost == "" || options.BuildLocally {
-				log.Information("Running your build in docker...")
+				log.Information("Building your image using your local docker daemon")
 			} else {
 				log.Information("Running your build in %s...", buildKitHost)
 			}
