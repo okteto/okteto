@@ -104,7 +104,7 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, timeout, variables); err != nil {
+			if err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, variables); err != nil {
 				return err
 			}
 			if !wait {
@@ -132,7 +132,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func deployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, wait bool, timeout time.Duration, variables []string) error {
+func deployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, wait bool, variables []string) error {
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
