@@ -72,7 +72,7 @@ func destroy(ctx context.Context) *cobra.Command {
 				log.Information("Pipeline context: %s/%s", okteto.GetURL(), namespace)
 			}
 
-			if err := deletePipeline(ctx, name, namespace, destroyVolumes, timeout); err != nil {
+			if err := deletePipeline(ctx, name, namespace, destroyVolumes); err != nil {
 				return err
 			}
 
@@ -98,7 +98,7 @@ func destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func deletePipeline(ctx context.Context, name, namespace string, destroyVolumes bool, timeout time.Duration) error {
+func deletePipeline(ctx context.Context, name, namespace string, destroyVolumes bool) error {
 	spinner := utils.NewSpinner("Destroying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
