@@ -21,7 +21,7 @@ actionsRepos=(delete-namespace
         login
         destroy-stack
         apply)
-              
+
 for repo in "${actionsRepos[@]}"; do
         echo "$repo"
         git clone --depth 1 git@github.com:okteto/"$repo".git
