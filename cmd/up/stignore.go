@@ -102,7 +102,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
 		gitPath := filepath.Join(folder.LocalPath, ".git")
 		if !model.FileExists(stignorePath) {
-			if err := askIfCreateStignoreDefaults(folder.LocalPath, stignorePath, gitPath); err != nil {
+			if err := askIfCreateStignoreDefaults(folder.LocalPath, stignorePath); err != nil {
 				return err
 			}
 			continue
@@ -120,7 +120,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 	return nil
 }
 
-func askIfCreateStignoreDefaults(folder, stignorePath, gitPath string) error {
+func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 	log.Information("'.stignore' does not exist in folder '%s'. Okteto requires a '.stignore' file to ignore file patterns that help optimize the synchronization service.", folder)
 	stignoreDefaults, err := utils.AskYesNo("    Do you want to infer defaults for the '.stignore' file? (otherwise, it will be left blank) [y/n] ")
 	if err != nil {
