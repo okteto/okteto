@@ -10,7 +10,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: okteto/golang-ci:1.16
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
       - restore_cache:
@@ -81,7 +81,7 @@ jobs:
           path: /root/.okteto
   mock-release:
     docker:
-      - image: okteto/golang-ci:1.16
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
       - attach_workspace:
@@ -158,7 +158,7 @@ jobs:
           path: C:\Users\circleci\.okteto
   release:
     docker:
-      - image: okteto/golang-ci:1.16
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
       - attach_workspace:
@@ -196,7 +196,7 @@ jobs:
             git push git@github.com:okteto/homebrew-cli.git master
   release-master:
     docker:
-      - image: okteto/golang-ci:1.16
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
       - setup_remote_docker:
