@@ -36,7 +36,7 @@ type SpaceBody struct {
 
 // DestroyPipelineBody top body answer
 type DestroyPipelineBody struct {
-	PipelineRun PipelineRun `json:"deleteSpace"`
+	PipelineRun PipelineRun `json:"destroyGitRepository"`
 }
 
 //PipelineRun represents an Okteto pipeline status
@@ -156,9 +156,9 @@ func areSameRepository(repoA, repoB string) bool {
 	return repoPathA == repoPathB
 }
 
-// DeletePipeline deletes a pipeline
-func DeletePipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (string, error) {
-	log.Infof("delete pipeline: %s/%s", namespace, name)
+// DestroyPipeline destroys a pipeline
+func DestroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*PipelineRun, error) {
+	log.Infof("destroy pipeline: %s/%s", namespace, name)
 	q := ""
 	if destroyVolumes {
 		q = fmt.Sprintf(`mutation{
@@ -176,11 +176,11 @@ func DeletePipeline(ctx context.Context, name, namespace string, destroyVolumes 
 
 	var body DeployPipelineBody
 	if err := query(ctx, q, &body); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	log.Infof("deleted pipeline: %+v", body.PipelineRun.Status)
-	return body.PipelineRun.Status, nil
+	return &body.PipelineRun, nil
 }
 
 func GetResourcesStatusFromPipeline(ctx context.Context, name, namespace string) (map[string]string, error) {

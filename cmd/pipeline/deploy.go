@@ -111,7 +111,7 @@ func deploy(ctx context.Context) *cobra.Command {
 				return nil
 			}
 
-			if waitUntilRunning(ctx, name, namespace, pipeline, timeout); err != nil {
+			if waitUntilRunning(ctx, name, namespace, timeout); err != nil {
 				return err
 			}
 			log.Success("Pipeline '%s' successfully deployed", name)
@@ -177,8 +177,8 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func waitUntilRunning(ctx context.Context, name, namespace string, pipelineInfo *okteto.PipelineRun, timeout time.Duration) error {
-	spinner := utils.NewSpinner("Waiting for the pipeline to finish...")
+func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+	spinner := utils.NewSpinner("Waiting for the pipeline to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -193,7 +193,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string, pipelineInfo 
 			exit <- err
 		}
 
-		exit <- waitForResourcesToBeRunning(ctx, name, namespace, pipelineInfo, timeout)
+		exit <- waitForResourcesToBeRunning(ctx, name, namespace, timeout)
 	}()
 
 	select {
@@ -246,7 +246,7 @@ func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.
 	}
 }
 
-func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, pipelineInfo *okteto.PipelineRun, timeout time.Duration) error {
+func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
 	areAllRunning := false
 
 	ticker := time.NewTicker(5 * time.Second)
