@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -56,14 +55,6 @@ func deploy(ctx context.Context) *cobra.Command {
 				return errors.ErrNotLogged
 			}
 
-			var err error
-			if name == "" {
-				name, err = getPipelineName()
-				if err != nil {
-					return err
-				}
-			}
-
 			cwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -72,14 +63,14 @@ func deploy(ctx context.Context) *cobra.Command {
 			if repository == "" {
 				log.Info("inferring git repository URL")
 
-				r, err := model.GetRepositoryURL(cwd)
-
+				repository, err = model.GetRepositoryURL(cwd)
 				if err != nil {
 					return err
 				}
+			}
 
-				repository = r
-
+			if name == "" {
+				name = getPipelineName(repository)
 			}
 
 			if branch == "" {
@@ -113,7 +104,7 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, timeout, variables); err != nil {
+			if err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, variables); err != nil {
 				return err
 			}
 			if !wait {
@@ -129,7 +120,7 @@ func deploy(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "p", "", "name of the pipeline (defaults to the folder name)")
+	cmd.Flags().StringVarP(&name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed (defaults to the current namespace)")
 	cmd.Flags().StringVarP(&repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
@@ -141,7 +132,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func deployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, wait bool, timeout time.Duration, variables []string) error {
+func deployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, wait bool, variables []string) error {
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -181,13 +172,8 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	return nil
 }
 
-func getPipelineName() (string, error) {
-	workDir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Base(workDir), nil
+func getPipelineName(repository string) string {
+	return model.TranslateURLToName(repository)
 }
 
 func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {

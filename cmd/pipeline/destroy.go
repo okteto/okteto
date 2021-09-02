@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -49,12 +50,17 @@ func destroy(ctx context.Context) *cobra.Command {
 				return errors.ErrNotLogged
 			}
 
-			var err error
 			if name == "" {
-				name, err = getPipelineName()
+				cwd, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get the current working directory: %w", err)
+				}
+				repo, err := model.GetRepositoryURL(cwd)
 				if err != nil {
 					return err
 				}
+
+				name = getPipelineName(repo)
 			}
 
 			if namespace == "" {
@@ -66,13 +72,17 @@ func destroy(ctx context.Context) *cobra.Command {
 				log.Information("Pipeline context: %s/%s", okteto.GetURL(), namespace)
 			}
 
-			if err := deletePipeline(ctx, name, namespace, wait, destroyVolumes, timeout); err != nil {
+			if err := deletePipeline(ctx, name, namespace, destroyVolumes); err != nil {
 				return err
 			}
 
 			if wait {
 				log.Success("Pipeline '%s' destroyed", name)
 			} else {
+				err := waitUntilRunning(ctx, name, namespace, timeout)
+				if err != nil {
+					return err
+				}
 				log.Success("Pipeline '%s' scheduled for destruction", name)
 			}
 
@@ -80,7 +90,7 @@ func destroy(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "p", "", "name of the pipeline (defaults to the folder name)")
+	cmd.Flags().StringVarP(&name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed (defaults to the current namespace)")
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
 	cmd.Flags().BoolVarP(&destroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the pipeline (defaults to false)")
@@ -88,7 +98,7 @@ func destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func deletePipeline(ctx context.Context, name, namespace string, wait, destroyVolumes bool, timeout time.Duration) error {
+func deletePipeline(ctx context.Context, name, namespace string, destroyVolumes bool) error {
 	spinner := utils.NewSpinner("Destroying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -108,19 +118,11 @@ func deletePipeline(ctx context.Context, name, namespace string, wait, destroyVo
 
 			exit <- fmt.Errorf("failed to delete pipeline '%s': %w", name, err)
 		}
-
-		if !wait {
-			exit <- nil
-		}
-
-		// this will also run if it's not found
-		exit <- waitUntilRunning(ctx, name, namespace, timeout)
 	}()
 	select {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
