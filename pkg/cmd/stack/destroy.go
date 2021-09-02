@@ -46,7 +46,10 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout ti
 		s.Namespace = client.GetContextNamespace("")
 	}
 
-	c, _, _ := client.GetLocal()
+	c, _, err := client.GetLocal()
+	if err != nil {
+		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+	}
 
 	cfg := translateConfigMap(s)
 	output := fmt.Sprintf("Destroying stack '%s'...", s.Name)
@@ -56,7 +59,7 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout ti
 		return err
 	}
 
-	err := destroy(ctx, s, removeVolumes, c, timeout)
+	err = destroy(ctx, s, removeVolumes, c, timeout)
 	if err != nil {
 		output = fmt.Sprintf("%s\nStack '%s' destruction failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
