@@ -114,6 +114,7 @@ func buildWithOkteto(ctx context.Context, namespace, buildKitHost string, isOkte
 	return err
 }
 
+// https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
 func buildWithDocker(ctx context.Context, buildOptions BuildOptions) error {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())

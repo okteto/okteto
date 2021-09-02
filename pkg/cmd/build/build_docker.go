@@ -45,6 +45,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build_buildkit.go#L48
 func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOptions, cli *client.Client) error {
 	log.Infof("building your image with docker client v%s", cli.ClientVersion())
 	s, err := session.NewSession(context.Background(), buildOptions.Path, "")
@@ -151,6 +152,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOption
 	return eg.Wait()
 }
 
+// https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
 func buildWithDockerDaemon(ctx context.Context, buildOptions BuildOptions, cli *client.Client) error {
 	log.Infof("building your image with docker client v%s", cli.ClientVersion())
 
