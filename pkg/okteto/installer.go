@@ -43,7 +43,7 @@ func WaitforInstallerJobToFinish(ctx context.Context, name, jobName, namespace s
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
+			return fmt.Errorf("installer job '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
 			job, err := GetInstallerJob(ctx, jobName, namespace)
 			if err != nil {
@@ -54,7 +54,7 @@ func WaitforInstallerJobToFinish(ctx context.Context, name, jobName, namespace s
 			case "progressing", "queued":
 				log.Infof("installer job '%s' is '%s'", name, job.Status)
 			case "error":
-				return fmt.Errorf("pipeline '%s' failed", name)
+				return fmt.Errorf("installer job '%s' failed", name)
 			default:
 				return nil
 			}
