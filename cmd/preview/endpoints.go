@@ -41,7 +41,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			previewName := args[0]
 
 			if err := validateOutput(output); err != nil {
-
+				return err
 			}
 			err := executeListPreviewEndpoints(ctx, previewName, output)
 			return err
@@ -54,7 +54,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 
 func validateOutput(output string) error {
 	if output != "" && output != "json" {
-		return fmt.Errorf("Output format is not accepted. Value must be one of: ['json']")
+		return fmt.Errorf("output format is not accepted. Value must be one of: ['json']")
 	}
 	return nil
 }

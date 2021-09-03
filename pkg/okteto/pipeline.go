@@ -26,7 +26,7 @@ import (
 
 // DeployPipelineBody top body answer
 type DeployPipelineBody struct {
-	PipelineRun PipelineRun `json:"createSpace"`
+	PipelineRun PipelineRun `json:"deployGitRepository"`
 }
 
 // SpaceBody top body answer
@@ -36,7 +36,7 @@ type SpaceBody struct {
 
 // DestroyPipelineBody top body answer
 type DestroyPipelineBody struct {
-	PipelineRun PipelineRun `json:"deleteSpace"`
+	PipelineRun PipelineRun `json:"destroyGitRepository"`
 }
 
 //PipelineRun represents an Okteto pipeline status
@@ -61,7 +61,7 @@ type Variable struct {
 }
 
 // DeployPipeline creates a pipeline
-func DeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (string, error) {
+func DeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (*PipelineRun, error) {
 	filenameParameter := ""
 	if filename != "" {
 		filenameParameter = fmt.Sprintf(`, filename: "%s"`, filename)
@@ -77,7 +77,7 @@ func DeployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 		req.Var("variables", variables)
 
 		if err := queryWithRequest(ctx, req, &body); err != nil {
-			return "", fmt.Errorf("failed to deploy pipeline: %w", err)
+			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 	} else {
 		q := fmt.Sprintf(`mutation{
@@ -87,11 +87,11 @@ func DeployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 		}`, name, repository, namespace, branch, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
-			return "", fmt.Errorf("failed to deploy pipeline: %w", err)
+			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 	}
 
-	return body.PipelineRun.Status, nil
+	return &body.PipelineRun, nil
 }
 
 // GetPipelineByName gets a pipeline given its name
@@ -158,9 +158,9 @@ func areSameRepository(repoA, repoB string) bool {
 	return repoPathA == repoPathB
 }
 
-// DeletePipeline deletes a pipeline
-func DeletePipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (string, error) {
-	log.Infof("delete pipeline: %s/%s", namespace, name)
+// DestroyPipeline destroys a pipeline
+func DestroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*PipelineRun, error) {
+	log.Infof("destroy pipeline: %s/%s", namespace, name)
 	q := ""
 	if destroyVolumes {
 		q = fmt.Sprintf(`mutation{
@@ -178,11 +178,11 @@ func DeletePipeline(ctx context.Context, name, namespace string, destroyVolumes 
 
 	var body DestroyPipelineBody
 	if err := query(ctx, q, &body); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	log.Infof("deleted pipeline: %+v", body.PipelineRun.Status)
-	return body.PipelineRun.Status, nil
+	return &body.PipelineRun, nil
 }
 
 func GetResourcesStatusFromPipeline(ctx context.Context, name, namespace string) (map[string]string, error) {
