@@ -77,7 +77,7 @@ type PreviewEnv struct {
 }
 
 // CreatePreview creates a preview environment
-func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (string, error) {
+func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewEnv, error) {
 	var body DeployPreviewBody
 	filenameParameter := ""
 	if filename != "" {
@@ -95,10 +95,10 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 		req.Var("variables", variables)
 		if err := queryWithRequest(ctx, req, &body); err != nil {
 			if strings.Contains(err.Error(), "operation-not-permitted") {
-				return "", errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+				return nil, errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
 					Hint: "Please log in with an administrator account or use a personal preview environment"}
 			}
-			return "", err
+			return nil, err
 		}
 	} else {
 		q := fmt.Sprintf(`mutation{
@@ -108,11 +108,11 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
-			return "", translatePreviewAPIErr(err, name)
+			return nil, translatePreviewAPIErr(err, name)
 		}
 	}
 
-	return body.PreviewEnviroment.ID, nil
+	return &body.PreviewEnviroment, nil
 }
 
 func translatePreviewAPIErr(err error, name string) error {
