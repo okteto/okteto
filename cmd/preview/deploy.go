@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -100,7 +101,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return nil
 			}
 
-			if err := waitUntilRunning(ctx, name, name, previewEnv, timeout); err != nil {
+			if err := waitUntilRunning(ctx, name, previewEnv.Job, name, timeout); err != nil {
 				return err
 			}
 			log.Success("Preview environment '%s' successfully deployed", name)
@@ -184,19 +185,48 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	return previewEnv, nil
 }
 
-func waitUntilRunning(ctx context.Context, name, namespace string, previewEnv *okteto.PreviewEnv, timeout time.Duration) error {
-	spinner := utils.NewSpinner("Waiting for the preview environment to finish...")
+func waitUntilRunning(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
+	spinner := utils.NewSpinner("Waiting for preview environment to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()
 
-	if err := waitToBeDeployed(ctx, name, namespace, timeout); err != nil {
-		return err
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+
+		err := waitToBeDeployed(ctx, name, jobName, namespace, timeout)
+		if err != nil {
+			exit <- err
+		}
+
+		exit <- waitForResourcesToBeRunning(ctx, name, namespace, timeout)
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		spinner.Stop()
+		os.Exit(130)
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
+			return err
+		}
 	}
 
-	return waitForResourcesToBeRunning(ctx, name, namespace, previewEnv, timeout)
+	return nil
+}
+func waitToBeDeployed(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
+	if jobName == "" {
+		return deprecatedWaitToBeDeployed(ctx, name, namespace, timeout)
+	}
+	return okteto.WaitforInstallerJobToFinish(ctx, name, jobName, namespace, timeout)
 }
 
-func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.Duration) error {
+//TODO: remove when all users are in Okteto Enterprise >= 0.10.0
+func deprecatedWaitToBeDeployed(ctx context.Context, name, namespace string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	attempts := 0
@@ -230,7 +260,7 @@ func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.
 	}
 }
 
-func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, previewEnv *okteto.PreviewEnv, timeout time.Duration) error {
+func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
 	areAllRunning := false
 
 	ticker := time.NewTicker(5 * time.Second)

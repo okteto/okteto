@@ -76,7 +76,7 @@ func destroy(ctx context.Context) *cobra.Command {
 				return nil
 			}
 
-			if err := waitUntilDestroyed(ctx, name, namespace, timeout); err != nil {
+			if err := waitUntilDestroyed(ctx, name, pipeline.Job, namespace, timeout); err != nil {
 				log.Information("Pipeline URL: %s", getPipelineURL(namespace, pipeline))
 				return err
 			}
@@ -131,7 +131,7 @@ func destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes
 	return pipeline, nil
 }
 
-func waitUntilDestroyed(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func waitUntilDestroyed(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for the pipeline to be destroyed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -141,7 +141,7 @@ func waitUntilDestroyed(ctx context.Context, name, namespace string, timeout tim
 	exit := make(chan error, 1)
 
 	go func() {
-		exit <- waitToBeDestroyed(ctx, name, namespace, timeout)
+		exit <- waitToBeDestroyed(ctx, name, jobName, namespace, timeout)
 	}()
 
 	select {
@@ -159,7 +159,16 @@ func waitUntilDestroyed(ctx context.Context, name, namespace string, timeout tim
 	return nil
 }
 
-func waitToBeDestroyed(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func waitToBeDestroyed(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
+	if jobName == "" {
+		return deprecatedWaitToBeDestroyed(ctx, name, namespace, timeout)
+	}
+
+	return okteto.WaitforInstallerJobToFinish(ctx, name, jobName, namespace, timeout)
+}
+
+//TODO: remove when all users are in Okteto Enterprise >= 0.10.0
+func deprecatedWaitToBeDestroyed(ctx context.Context, name, namespace string, timeout time.Duration) error {
 
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)

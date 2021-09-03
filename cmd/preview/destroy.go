@@ -50,7 +50,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 func executeDestroyPreview(ctx context.Context, name string) error {
 	if err := okteto.DestroyPreview(ctx, name); err != nil {
-		return fmt.Errorf("failed to destroy preview: %s", err)
+		return fmt.Errorf("failed to destroy preview environment: %s", err)
 	}
 
 	log.Success("Preview environment destroyed")

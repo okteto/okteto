@@ -72,12 +72,62 @@ type Previews struct {
 //PreviewEnv represents an Okteto preview environment
 type PreviewEnv struct {
 	ID       string `json:"id" yaml:"id"`
+	Job      string `json:"job" yaml:"job"`
 	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
 	Scope    string `json:"scope" yaml:"scope"`
 }
 
 // CreatePreview creates a preview environment
 func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewEnv, error) {
+	var body DeployPreviewBody
+	filenameParameter := ""
+	if filename != "" {
+		filenameParameter = fmt.Sprintf(`, filename: "%s"`, filename)
+	}
+
+	if len(variables) > 0 {
+		q := fmt.Sprintf(`mutation deployPreview($variables: [InputVariable]){
+			deployPreview(name: "%s, "scope: %s, repository: "%s", branch: "%s", sourceUrl: "%s", variables: $variables%s){
+				id, job
+			},
+		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
+
+		req := graphql.NewRequest(q)
+		req.Var("variables", variables)
+		if err := queryWithRequest(ctx, req, &body); err != nil {
+			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"Preview\"") {
+				return deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+			}
+			if strings.Contains(err.Error(), "operation-not-permitted") {
+				return nil, errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+					Hint: "Please log in with an administrator account or use a personal preview environment"}
+			}
+			return nil, err
+		}
+	} else {
+		q := fmt.Sprintf(`mutation{
+			deployPreview(name: "%s", scope: %s, repository: "%s", branch: "%s", sourceUrl: "%s",%s){
+				id, job
+			},
+		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
+
+		if err := query(ctx, q, &body); err != nil {
+			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"Preview\"") {
+				return deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+			}
+			if strings.Contains(err.Error(), "operation-not-permitted") {
+				return nil, errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+					Hint: "Please log in with an administrator account or use a personal preview environment"}
+			}
+			return nil, translatePreviewAPIErr(err, name)
+		}
+	}
+
+	return &body.PreviewEnviroment, nil
+}
+
+//TODO: remove when all users are in Okteto Enterprise >= 0.10.0
+func deprecatedDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewEnv, error) {
 	var body DeployPreviewBody
 	filenameParameter := ""
 	if filename != "" {
