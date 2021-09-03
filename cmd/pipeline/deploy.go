@@ -110,13 +110,10 @@ func deploy(ctx context.Context) *cobra.Command {
 				log.Success("Pipeline '%s' scheduled for deployment", name)
 				return nil
 			}
-			spinner := utils.NewSpinner("Waiting for the pipeline to finish...")
-			spinner.Start()
-			defer spinner.Stop()
-			if waitUntilRunning(ctx, name, namespace, timeout); err != nil {
+
+			if waitUntilRunning(ctx, name, pipeline.Job, namespace, timeout); err != nil {
 				return err
 			}
-			spinner.Stop()
 			log.Success("Pipeline '%s' successfully deployed", name)
 			return nil
 		},
@@ -180,7 +177,7 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func waitUntilRunning(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for the pipeline to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -191,7 +188,7 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 
 	go func() {
 
-		err := waitToBeDeployed(ctx, name, namespace, timeout)
+		err := waitToBeDeployed(ctx, name, jobName, namespace, timeout)
 		if err != nil {
 			exit <- err
 		}
@@ -213,7 +210,15 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 	return nil
 }
 
-func waitToBeDeployed(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func waitToBeDeployed(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
+	if jobName == "" {
+		return deprecatedWaitToBeDeployed(ctx, name, namespace, timeout)
+	}
+	return okteto.WaitforInstallerJobToFinish(ctx, name, jobName, namespace, timeout)
+}
+
+//TODO: remove when all users are in Okteto Enterprise >= 0.10.0
+func deprecatedWaitToBeDeployed(ctx context.Context, name, namespace string, timeout time.Duration) error {
 
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
