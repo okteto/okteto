@@ -49,7 +49,9 @@ type PipelineRun struct {
 
 // Space represents the contents of an Okteto Cloud space
 type Space struct {
-	GitDeploys []PipelineRun `json:"gitDeploys"`
+	GitDeploys   []PipelineRun `json:"gitDeploys"`
+	Statefulsets []Statefulset `json:"statefulsets"`
+	Deployments  []Deployment  `json:"deployments"`
 }
 
 // Variable represents a pipeline variable
@@ -174,7 +176,7 @@ func DestroyPipeline(ctx context.Context, name, namespace string, destroyVolumes
 		}`, name, namespace)
 	}
 
-	var body DeployPipelineBody
+	var body DestroyPipelineBody
 	if err := query(ctx, q, &body); err != nil {
 		return nil, err
 	}
@@ -199,19 +201,19 @@ func GetResourcesStatusFromPipeline(ctx context.Context, name, namespace string)
  			}
  		}
  	}`, namespace)
-	var body PreviewBody
+	var body SpaceBody
 	if err := query(ctx, q, &body); err != nil {
 		return status, err
 	}
 
-	for _, d := range body.Preview.Deployments {
+	for _, d := range body.Space.Deployments {
 		if d.DeployedBy == pipeline.ID {
 			status[d.Name] = d.Status
 
 		}
 	}
 
-	for _, sfs := range body.Preview.Statefulsets {
+	for _, sfs := range body.Space.Statefulsets {
 		if sfs.DeployedBy == pipeline.ID {
 			status[sfs.Name] = sfs.Status
 		}

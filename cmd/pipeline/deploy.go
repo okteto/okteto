@@ -110,10 +110,13 @@ func deploy(ctx context.Context) *cobra.Command {
 				log.Success("Pipeline '%s' scheduled for deployment", name)
 				return nil
 			}
-
+			spinner := utils.NewSpinner("Waiting for the pipeline to finish...")
+			spinner.Start()
+			defer spinner.Stop()
 			if waitUntilRunning(ctx, name, namespace, timeout); err != nil {
 				return err
 			}
+			spinner.Stop()
 			log.Success("Pipeline '%s' successfully deployed", name)
 			return nil
 		},
@@ -199,7 +202,6 @@ func waitUntilRunning(ctx context.Context, name, namespace string, timeout time.
 	select {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
 		os.Exit(130)
 	case err := <-exit:
 		if err != nil {

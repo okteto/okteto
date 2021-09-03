@@ -121,6 +121,8 @@ func LoadDevOrDefault(devPath, name, namespace, k8sContext string) (*model.Dev, 
 			return nil, err
 		}
 		dev.Name = name
+		dev.Namespace = namespace
+		dev.Context = k8sContext
 		return dev, nil
 	}
 
