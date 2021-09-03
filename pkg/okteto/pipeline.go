@@ -26,7 +26,7 @@ import (
 
 // DeployPipelineBody top body answer
 type DeployPipelineBody struct {
-	PipelineRun PipelineRun `json:"createSpace"`
+	PipelineRun PipelineRun `json:"deployGitRepository"`
 }
 
 // SpaceBody top body answer
@@ -59,7 +59,7 @@ type Variable struct {
 }
 
 // DeployPipeline creates a pipeline
-func DeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (string, error) {
+func DeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (*PipelineRun, error) {
 	filenameParameter := ""
 	if filename != "" {
 		filenameParameter = fmt.Sprintf(`, filename: "%s"`, filename)
@@ -75,7 +75,7 @@ func DeployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 		req.Var("variables", variables)
 
 		if err := queryWithRequest(ctx, req, &body); err != nil {
-			return "", fmt.Errorf("failed to deploy pipeline: %w", err)
+			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 	} else {
 		q := fmt.Sprintf(`mutation{
@@ -85,11 +85,11 @@ func DeployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 		}`, name, repository, namespace, branch, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
-			return "", fmt.Errorf("failed to deploy pipeline: %w", err)
+			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 	}
 
-	return body.PipelineRun.Status, nil
+	return &body.PipelineRun, nil
 }
 
 // GetPipelineByName gets a pipeline given its name
