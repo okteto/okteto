@@ -88,6 +88,10 @@ var (
 )
 
 func TestApplyPipeline(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
 		return
@@ -110,6 +114,10 @@ func TestApplyPipeline(t *testing.T) {
 }
 
 func TestBuildActionPipeline(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
 		return
@@ -157,6 +165,10 @@ func TestBuildActionPipeline(t *testing.T) {
 }
 
 func TestNamespaceActionsPipeline(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
 		return
@@ -177,6 +189,10 @@ func TestNamespaceActionsPipeline(t *testing.T) {
 }
 
 func TestLoginActionPipeline(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
 		return
@@ -189,6 +205,10 @@ func TestLoginActionPipeline(t *testing.T) {
 }
 
 func TestPipelineActions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
 		return
@@ -214,6 +234,10 @@ func TestPipelineActions(t *testing.T) {
 }
 
 func TestPreviewActions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
 	}
@@ -235,6 +259,10 @@ func TestPreviewActions(t *testing.T) {
 }
 
 func TestPushAction(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
 		return
@@ -266,6 +294,11 @@ func TestPushAction(t *testing.T) {
 }
 
 func TestStacksActions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
+
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
 		return
