@@ -112,13 +112,15 @@ func translateAPIErr(err error) error {
 	case "not-authorized":
 		return errors.ErrNotLogged
 	case "namespace-quota-exceeded":
-		return fmt.Errorf("You have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
+		return fmt.Errorf("you have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
 	case "namespace-quota-exceeded-onpremises":
-		return fmt.Errorf("You have exceeded your namespace quota, please contact your administrator to increase it")
+		return fmt.Errorf("you have exceeded your namespace quota, please contact your administrator to increase it")
 	case "users-limit-exceeded":
-		return fmt.Errorf("License limit exceeded. Contact your administrator to update your license and try again")
+		return fmt.Errorf("license limit exceeded. Contact your administrator to update your license and try again")
 	case "internal-server-error":
-		return fmt.Errorf("Server temporarily unavailable, please try again")
+		return fmt.Errorf("server temporarily unavailable, please try again")
+	case "decoding response: EOF":
+		return fmt.Errorf("your api token is not valid. Please run okteto login and try again")
 	default:
 		log.Infof("Unrecognized API error: %s", err)
 		return fmt.Errorf(e)
