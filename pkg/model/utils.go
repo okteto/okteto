@@ -80,11 +80,11 @@ func GetValidNameFromGitRepo(folder string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	name := translateURLToName(repo)
+	name := TranslateURLToName(repo)
 	return name, nil
 }
 
-func translateURLToName(repo string) string {
+func TranslateURLToName(repo string) string {
 	repoName := findRepoName(repo)
 
 	if strings.HasSuffix(repoName, ".git") {

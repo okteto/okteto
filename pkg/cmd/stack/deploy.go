@@ -52,7 +52,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 
 	c, config, err := client.GetLocal()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}
 
 	if err := translate(ctx, s, forceBuild, noCache); err != nil {
