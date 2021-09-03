@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
 )
@@ -125,15 +126,22 @@ func DeleteNamespace(ctx context.Context, namespace string) error {
 func validateNamespace(namespace string) error {
 	if len(namespace) > MAX_ALLOWED_CHARS {
 		return errors.UserError{
-			E:    fmt.Errorf("Invalid namespace name."),
+			E:    fmt.Errorf("invalid namespace name"),
 			Hint: "Namespace name must be shorter than 63 characters.",
 		}
 	}
 	nameValidationRegex := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
 	if !nameValidationRegex.MatchString(namespace) {
 		return errors.UserError{
-			E:    fmt.Errorf("Invalid namespace name."),
+			E:    fmt.Errorf("invalid namespace name"),
 			Hint: "Namespace name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character",
+		}
+	}
+	username := GetUsername()
+	if !strings.HasSuffix(namespace, username) {
+		return errors.UserError{
+			E:    fmt.Errorf("invalid namespace name"),
+			Hint: fmt.Sprintf("Namespace name must end with -%s", username),
 		}
 	}
 	return nil
