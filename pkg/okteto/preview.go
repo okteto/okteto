@@ -79,6 +79,10 @@ type PreviewEnv struct {
 
 // CreatePreview creates a preview environment
 func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewEnv, error) {
+	if err := validateNamespace(name, "preview environment"); err != nil {
+		return nil, err
+	}
+
 	var body DeployPreviewBody
 	filenameParameter := ""
 	if filename != "" {

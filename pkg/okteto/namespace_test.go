@@ -83,7 +83,7 @@ func Test_validateNamespaceName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateNamespace(tt.namespace)
+			err := validateNamespace(tt.namespace, "namespace")
 			if err != nil && !tt.expectedError {
 				t.Errorf("Expected error but no error found")
 			}
