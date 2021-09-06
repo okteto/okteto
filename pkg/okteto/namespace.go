@@ -50,7 +50,7 @@ type Namespace struct {
 
 // CreateNamespace creates a namespace
 func CreateNamespace(ctx context.Context, namespace string) (string, error) {
-	if err := validateNamespace(namespace, false); err != nil {
+	if err := validateNamespace(namespace, "namespace"); err != nil {
 		return "", err
 	}
 	q := fmt.Sprintf(`mutation{
@@ -123,11 +123,7 @@ func DeleteNamespace(ctx context.Context, namespace string) error {
 	return query(ctx, q, &body)
 }
 
-func validateNamespace(namespace string, isPreviewEnv bool) error {
-	object := "namespace"
-	if isPreviewEnv {
-		object = "preview environment"
-	}
+func validateNamespace(namespace, object string) error {
 	if len(namespace) > MAX_ALLOWED_CHARS {
 		return errors.UserError{
 			E:    fmt.Errorf("invalid %s name", object),
