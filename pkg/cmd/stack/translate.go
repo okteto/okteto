@@ -92,7 +92,11 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 
 	secrets := make(map[string]string)
 	if isOktetoNamespace {
-		envList, err := okteto.GetSecrets(ctx)
+		oktetoClient, err := okteto.NewOktetoClient()
+		if err != nil {
+			return err
+		}
+		envList, err := oktetoClient.GetSecrets(ctx)
 		if err != nil {
 			return err
 		}

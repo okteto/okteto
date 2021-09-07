@@ -25,10 +25,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/shurcooL/graphql"
 )
 
 const (
@@ -61,14 +61,6 @@ type User struct {
 	Certificate string
 }
 
-type u struct {
-	Auth User
-}
-
-type q struct {
-	User User
-}
-
 var currentToken *Token
 
 // AuthWithToken authenticates in okteto with the provided token
@@ -80,45 +72,44 @@ func AuthWithToken(ctx context.Context, u, token string) (*User, error) {
 	if url.Scheme == "" {
 		url.Scheme = "https"
 	}
-
-	client, err := getClient(url.String())
+	oktetoClient, err := NewOktetoClientFromUrlAndToken(url.String(), token)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := queryUser(ctx, client, token)
+	user, err := oktetoClient.queryUser(ctx, token)
 	if err != nil {
 		log.Infof("failed to query the user with the existing token: %s", err)
 		return nil, fmt.Errorf("invalid API token")
 	}
 
-	if err := saveAuthData(&user.User, url.String()); err != nil {
+	if err := saveAuthData(user, url.String()); err != nil {
 		log.Infof("failed to save the login data: %s", err)
 		return nil, fmt.Errorf("failed to save the login data locally")
 	}
 
-	return &user.User, nil
+	return user, nil
 }
 
 // Auth authenticates in okteto with an OAuth code
 func Auth(ctx context.Context, code, url string) (*User, error) {
-	client, err := getClient(url)
+	oktetoClient, err := NewOktetoClientFromUrl(url)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := authUser(ctx, client, code)
+	user, err := oktetoClient.authUser(ctx, code)
 	if err != nil {
 		log.Infof("authentication error: %s", err)
 		return nil, fmt.Errorf("authentication error, please try again")
 	}
 
-	if err := saveAuthData(&user.Auth, url); err != nil {
+	if err := saveAuthData(user, url); err != nil {
 		log.Infof("failed to save the auth data: %s", err)
 		return nil, fmt.Errorf("failed to save your auth info locally, please try again")
 	}
 
-	return &user.Auth, nil
+	return user, nil
 
 }
 
@@ -139,35 +130,78 @@ func saveAuthData(user *User, url string) error {
 	return ioutil.WriteFile(GetCertificatePath(), d, 0600)
 }
 
-func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
-	var user q
-	q := `query {
-		user {
-			id,name,email,externalID,token,new,registry,buildkit,certificate
-		}}`
-
-	req := getRequest(q, token)
-
-	if err := client.Run(ctx, req, &user); err != nil {
-		return nil, err
+func (c *OktetoClient) queryUser(ctx context.Context, token string) (*User, error) {
+	var query struct {
+		User struct {
+			Id          graphql.String
+			Name        graphql.String
+			Email       graphql.String
+			ExternalID  graphql.String `graphql:"externalID"`
+			Token       graphql.String
+			New         graphql.Boolean
+			Registry    graphql.String
+			Buildkit    graphql.String
+			Certificate graphql.String
+		} `graphql:"user"`
 	}
 
-	return &user, nil
+	err := c.client.Query(ctx, &query, nil)
+	if err != nil {
+		return nil, translateAPIErr(err)
+	}
+	user := &User{
+		ID:          string(query.User.Id),
+		Name:        string(query.User.Name),
+		Email:       string(query.User.Email),
+		ExternalID:  string(query.User.ExternalID),
+		Token:       string(query.User.Token),
+		New:         bool(query.User.New),
+		Registry:    string(query.User.Registry),
+		Buildkit:    string(query.User.Buildkit),
+		Certificate: string(query.User.Certificate),
+	}
+
+	return user, nil
 }
 
-func authUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
-	var user u
-	q := fmt.Sprintf(`mutation {
-		auth(code: "%s", source: "cli") {
-			id,name,email,externalID,token,new,registry,buildkit,certificate
-		}}`, code)
-
-	req := graphql.NewRequest(q)
-	if err := client.Run(ctx, req, &user); err != nil {
-		return nil, err
+func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error) {
+	var mutation struct {
+		User struct {
+			Id          graphql.String
+			Name        graphql.String
+			Email       graphql.String
+			ExternalID  graphql.String `graphql:"externalID"`
+			Token       graphql.String
+			New         graphql.Boolean
+			Registry    graphql.String
+			Buildkit    graphql.String
+			Certificate graphql.String
+		} `graphql:"auth(code: $code, source: $source)"`
 	}
 
-	return &user, nil
+	queryVariables := map[string]interface{}{
+		"code":   graphql.String(code),
+		"source": graphql.String("cli"),
+	}
+
+	err := c.client.Mutate(ctx, &mutation, queryVariables)
+	if err != nil {
+		return nil, translateAPIErr(err)
+	}
+
+	user := &User{
+		ID:          string(mutation.User.Id),
+		Name:        string(mutation.User.Name),
+		Email:       string(mutation.User.Email),
+		ExternalID:  string(mutation.User.ExternalID),
+		Token:       string(mutation.User.Token),
+		New:         bool(mutation.User.New),
+		Registry:    string(mutation.User.Registry),
+		Buildkit:    string(mutation.User.Buildkit),
+		Certificate: string(mutation.User.Certificate),
+	}
+
+	return user, nil
 }
 
 //GetToken returns the token of the authenticated user
@@ -328,7 +362,7 @@ func save(t *Token) error {
 	marshalled, err := json.Marshal(t)
 	if err != nil {
 		log.Infof("failed to marshal token: %s", err)
-		return fmt.Errorf("Failed to generate your auth token")
+		return fmt.Errorf("failed to generate your auth token")
 	}
 
 	p := getTokenPath()

@@ -448,7 +448,11 @@ func executeDeployPipelineAction(ctx context.Context, namespace string) error {
 	}
 	log.Printf("Deploy pipeline output: \n%s\n", string(o))
 
-	pipeline, err := okteto.GetPipelineByName(ctx, "movies", namespace)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	pipeline, err := oktetoClient.GetPipelineByName(ctx, "movies", namespace)
 	if err != nil || pipeline == nil {
 		return fmt.Errorf("Could not get deployment %s", namespace)
 	}

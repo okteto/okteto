@@ -16,12 +16,9 @@ package okteto
 import (
 	"context"
 	"strings"
-)
 
-//Secrets represents a list of secrets
-type Secrets struct {
-	Secrets []Secret `json:"getGitDeploySecrets,omitempty"`
-}
+	"github.com/shurcooL/graphql"
+)
 
 //Secret represents a secret
 type Secret struct {
@@ -30,21 +27,26 @@ type Secret struct {
 }
 
 //GetSecrets returns the secrets from Okteto API
-func GetSecrets(ctx context.Context) ([]Secret, error) {
-	q := `query{
-		getGitDeploySecrets{
-			name,value
-		},
-	}`
-
-	var body Secrets
-	if err := query(ctx, q, &body); err != nil {
-		return nil, err
+func (c *OktetoClient) GetSecrets(ctx context.Context) ([]Secret, error) {
+	var query struct {
+		Secrets []struct {
+			Name  graphql.String
+			Value graphql.String
+		} `graphql:"getGitDeploySecrets"`
 	}
+
+	err := c.client.Query(ctx, &query, nil)
+	if err != nil {
+		return nil, translateAPIErr(err)
+	}
+
 	secrets := make([]Secret, 0)
-	for _, secret := range body.Secrets {
-		if !strings.Contains(secret.Name, ".") {
-			secrets = append(secrets, secret)
+	for _, secret := range query.Secrets {
+		if !strings.Contains(string(secret.Name), ".") {
+			secrets = append(secrets, Secret{
+				Name:  string(secret.Name),
+				Value: string(secret.Value),
+			})
 		}
 	}
 	return secrets, nil

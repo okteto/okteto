@@ -178,7 +178,11 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	spinner.Start()
 	defer spinner.Stop()
 
-	previewEnv, err := okteto.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
+	previewEnv, err := oktetoClient.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 	if err != nil {
 		return nil, err
 	}
@@ -230,13 +234,17 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name, namespace string, tim
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	attempts := 0
-
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
-			p, err := okteto.GetPreviewEnvByName(ctx, name, namespace)
+
+			p, err := oktetoClient.GetPreviewEnvByName(ctx, name)
 			if err != nil {
 				if okErrors.IsNotFound(err) || okErrors.IsNotExist(err) {
 					return nil
@@ -267,12 +275,17 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, ti
 	to := time.NewTicker(timeout)
 	errorsMap := make(map[string]int)
 
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := okteto.GetResourcesStatusFromPreview(ctx, namespace)
+			resourceStatus, err := oktetoClient.GetResourcesStatusFromPreview(ctx, namespace)
 			if err != nil {
 				return err
 			}

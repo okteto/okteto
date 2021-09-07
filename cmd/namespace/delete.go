@@ -44,7 +44,11 @@ func Delete(ctx context.Context) *cobra.Command {
 }
 
 func executeDeleteNamespace(ctx context.Context, namespace string) error {
-	if err := okteto.DeleteNamespace(ctx, namespace); err != nil {
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	if err := oktetoClient.DeleteNamespace(ctx, namespace); err != nil {
 		return fmt.Errorf("failed to delete namespace: %s", err)
 	}
 

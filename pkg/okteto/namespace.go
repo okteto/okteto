@@ -19,6 +19,7 @@ import (
 	"regexp"
 
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/shurcooL/graphql"
 )
 
 const (
@@ -26,113 +27,108 @@ const (
 	MAX_ALLOWED_CHARS = 63
 )
 
-// CreateBody top body answer
-type CreateBody struct {
-	Namespace Namespace `json:"createSpace" yaml:"createSpace"`
-}
-
-// DeleteBody top body answer
-type DeleteBody struct {
-	Namespace Namespace `json:"deleteSpace" yaml:"deleteSpace"`
-}
-
-//Spaces represents an Okteto list of spaces
-type Spaces struct {
-	Spaces []Namespace `json:"spaces" yaml:"spaces"`
-}
-
 //Namespace represents an Okteto k8s namespace
 type Namespace struct {
 	ID       string `json:"id" yaml:"id"`
 	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
 }
 
-// CreateNamespace creates a namespace
-func CreateNamespace(ctx context.Context, namespace string) (string, error) {
-	if err := validateNamespace(namespace); err != nil {
-		return "", err
+//CreateNamespace creates a new namespace calling Okteto API
+func (c *OktetoClient) CreateNamespace(ctx context.Context, namespace string) (string, error) {
+	var mutation struct {
+		Space struct {
+			Id graphql.String
+		} `graphql:"createSpace(name: $name)"`
 	}
-	q := fmt.Sprintf(`mutation{
-		createSpace(name: "%s"){
-			id
-		},
-	}`, namespace)
-
-	var body CreateBody
-	if err := query(ctx, q, &body); err != nil {
-		return "", err
+	variables := map[string]interface{}{
+		"name": graphql.String(namespace),
+	}
+	err := c.client.Mutate(ctx, &mutation, variables)
+	if err != nil {
+		return "", translateAPIErr(err)
 	}
 
-	return body.Namespace.ID, nil
+	return string(mutation.Space.Id), nil
 }
 
 // ListNamespaces list namespaces
-func ListNamespaces(ctx context.Context) ([]Namespace, error) {
-	q := `query{
-		spaces{
-			id,
-			sleeping
-		},
-	}`
-
-	var body Spaces
-	if err := query(ctx, q, &body); err != nil {
-		return nil, err
+func (c *OktetoClient) ListNamespaces(ctx context.Context) ([]Namespace, error) {
+	var query struct {
+		Spaces []struct {
+			Id       graphql.String
+			Sleeping graphql.Boolean
+		} `graphql:"spaces"`
 	}
 
-	return body.Spaces, nil
+	err := c.client.Query(ctx, &query, nil)
+	if err != nil {
+		return nil, translateAPIErr(err)
+	}
+
+	result := make([]Namespace, 0)
+	for _, space := range query.Spaces {
+		result = append(result, Namespace{
+			ID:       string(space.Id),
+			Sleeping: bool(space.Sleeping),
+		})
+	}
+
+	return result, nil
 }
 
 // AddNamespaceMembers adds members to a namespace
-func AddNamespaceMembers(ctx context.Context, namespace string, members []string) error {
-	m := membersToString(members)
-
-	q := fmt.Sprintf(`mutation{
-		updateSpace(id: "%s", members: [%s]){
-			id
-		},
-	}`, namespace, m)
-
-	var body CreateBody
-	return query(ctx, q, &body)
-}
-
-func membersToString(members []string) string {
-	m := ""
-	for _, mm := range members {
-		if len(m) > 0 {
-			m += ","
-		}
-
-		m += fmt.Sprintf(`"%s"`, mm)
+func (c *OktetoClient) AddNamespaceMembers(ctx context.Context, namespace string, members []string) error {
+	var mutation struct {
+		Space struct {
+			Id graphql.String
+		} `graphql:"updateSpace(id: $id, members: $members)"`
 	}
 
-	return m
+	membersVariable := make([]graphql.String, 0)
+	for _, m := range members {
+		membersVariable = append(membersVariable, graphql.String(m))
+	}
+	variables := map[string]interface{}{
+		"id":      graphql.String(namespace),
+		"members": membersVariable,
+	}
+	err := c.client.Mutate(ctx, &mutation, variables)
+	if err != nil {
+		return translateAPIErr(err)
+	}
+
+	return nil
 }
 
 // DeleteNamespace deletes a namespace
-func DeleteNamespace(ctx context.Context, namespace string) error {
-	q := fmt.Sprintf(`mutation{
-		deleteSpace(id: "%s"){
-			id
-		},
-	}`, namespace)
+func (c *OktetoClient) DeleteNamespace(ctx context.Context, namespace string) error {
+	var mutation struct {
+		Space struct {
+			Id graphql.String
+		} `graphql:"deleteSpace(id: $id)"`
+	}
+	variables := map[string]interface{}{
+		"id": graphql.String(namespace),
+	}
+	err := c.client.Mutate(ctx, &mutation, variables)
+	if err != nil {
+		return translateAPIErr(err)
+	}
 
-	var body DeleteBody
-	return query(ctx, q, &body)
+	return nil
 }
 
 func validateNamespace(namespace string) error {
 	if len(namespace) > MAX_ALLOWED_CHARS {
 		return errors.UserError{
-			E:    fmt.Errorf("Invalid namespace name."),
+			E:    fmt.Errorf("invalid namespace name"),
 			Hint: "Namespace name must be shorter than 63 characters.",
 		}
 	}
 	nameValidationRegex := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
 	if !nameValidationRegex.MatchString(namespace) {
 		return errors.UserError{
-			E:    fmt.Errorf("Invalid namespace name."),
+			E:    fmt.Errorf("invalid namespace name"),
 			Hint: "Namespace name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character",
 		}
 	}

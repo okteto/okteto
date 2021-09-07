@@ -20,23 +20,75 @@ import (
 	"os"
 	"strings"
 
-	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/shurcooL/graphql"
+	"golang.org/x/oauth2"
 
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-func getClient(oktetoURL string) (*graphql.Client, error) {
+//Client implementation to connect to Okteto API
+type OktetoClient struct {
+	client *graphql.Client
+}
 
-	u, err := parseOktetoURL(oktetoURL)
+//NewClient creates a new client to connect with Okteto API
+func NewOktetoClient() (*OktetoClient, error) {
+	t, err := GetToken()
+	if err != nil {
+		log.Infof("couldn't get token: %s", err)
+		return nil, errors.ErrNotLogged
+	}
+	u, err := parseOktetoURL(t.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	graphqlClient := graphql.NewClient(u)
-	return graphqlClient, nil
+	src := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: t.Token,
+			TokenType: "Bearer"},
+	)
+	httpClient := oauth2.NewClient(context.Background(), src)
+
+	client := &OktetoClient{
+		client: graphql.NewClient(u, httpClient),
+	}
+	return client, nil
+}
+
+//NewClient creates a new client to connect with Okteto API
+func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
+	u, err := parseOktetoURL(url)
+	if err != nil {
+		return nil, err
+	}
+
+	src := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token,
+			TokenType: "Bearer"},
+	)
+	httpClient := oauth2.NewClient(context.Background(), src)
+
+	client := &OktetoClient{
+		client: graphql.NewClient(u, httpClient),
+	}
+	return client, nil
+}
+
+//NewClient creates a new client to connect with Okteto API
+func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
+	u, err := parseOktetoURL(url)
+	if err != nil {
+		return nil, err
+	}
+
+	httpClient := oauth2.NewClient(context.Background(), nil)
+	client := &OktetoClient{
+		client: graphql.NewClient(u, httpClient),
+	}
+	return client, nil
 }
 
 func parseOktetoURL(u string) (string, error) {
@@ -56,54 +108,6 @@ func parseOktetoURL(u string) (string, error) {
 
 	parsed.Path = "graphql"
 	return parsed.String(), nil
-}
-
-func getRequest(q, token string) *graphql.Request {
-	req := graphql.NewRequest(q)
-	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", token))
-	return req
-}
-
-func query(ctx context.Context, query string, result interface{}) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("couldn't get token: %s", err)
-		return errors.ErrNotLogged
-	}
-
-	c, err := getClient(t.URL)
-	if err != nil {
-		log.Infof("error getting the graphql client: %s", err)
-		return fmt.Errorf("internal server error")
-	}
-
-	req := getRequest(query, t.Token)
-	if err := c.Run(ctx, req, result); err != nil {
-		return translateAPIErr(err)
-	}
-
-	return nil
-}
-
-func queryWithRequest(ctx context.Context, req *graphql.Request, result interface{}) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("couldn't get token: %s", err)
-		return errors.ErrNotLogged
-	}
-	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", t.Token))
-
-	c, err := getClient(t.URL)
-	if err != nil {
-		log.Infof("error getting the graphql client: %s", err)
-		return fmt.Errorf("internal server error")
-	}
-
-	if err := c.Run(ctx, req, result); err != nil {
-		return translateAPIErr(err)
-	}
-
-	return nil
 }
 
 func translateAPIErr(err error) error {
