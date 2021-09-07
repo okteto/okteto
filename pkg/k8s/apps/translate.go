@@ -139,7 +139,7 @@ func translate(t *model.Translation, c *kubernetes.Clientset, isOktetoNamespace 
 		TranslateOktetoDevSecret(&t.K8sObject.GetPodTemplate().Spec, t.Name, rule.Secrets)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
-			TranslateOktetoInitBinContainer(rule.InitContainer, &t.K8sObject.GetPodTemplate().Spec)
+			TranslateOktetoInitBinContainer(rule, &t.K8sObject.GetPodTemplate().Spec)
 			TranslateOktetoInitFromImageContainer(&t.K8sObject.GetPodTemplate().Spec, rule)
 			TranslateDinDContainer(&t.K8sObject.GetPodTemplate().Spec, rule)
 			TranslateOktetoBinVolume(&t.K8sObject.GetPodTemplate().Spec)
@@ -572,7 +572,8 @@ func translateInitResources(c *apiv1.Container, resources model.ResourceRequirem
 }
 
 //TranslateOktetoInitBinContainer translates the bin init container of a pod
-func TranslateOktetoInitBinContainer(initContainer model.InitContainer, spec *apiv1.PodSpec) {
+func TranslateOktetoInitBinContainer(rule *model.TranslationRule, spec *apiv1.PodSpec) {
+	initContainer := rule.InitContainer
 	c := apiv1.Container{
 		Name:            OktetoBinName,
 		Image:           initContainer.Image,
@@ -587,6 +588,7 @@ func TranslateOktetoInitBinContainer(initContainer model.InitContainer, spec *ap
 	}
 
 	translateInitResources(&c, initContainer.Resources)
+	TranslateContainerSecurityContext(&c, rule.SecurityContext)
 
 	if spec.InitContainers == nil {
 		spec.InitContainers = []apiv1.Container{}
