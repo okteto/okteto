@@ -26,12 +26,20 @@ import (
 
 // DeployPipelineBody top body answer
 type DeployPipelineBody struct {
-	PipelineRun PipelineRun `json:"deployGitRepository"`
+	Response GitDeployResponse `json:"deployGitRepository"`
 }
 
 // DestroyPipelineBody top body answer
 type DestroyPipelineBody struct {
-	PipelineRun PipelineRun `json:"destroyGitRepository"`
+	Response GitDeployResponse `json:"destroyGitRepository"`
+}
+
+type deprecatedDeployPipelineBody struct {
+	GitDeploy GitDeploy `json:"deployGitRepository"`
+}
+
+type deprecatedDestroyPipelineBody struct {
+	GitDeploy GitDeploy `json:"destroyGitRepository"`
 }
 
 // SpaceBody top body answer
@@ -39,18 +47,23 @@ type SpaceBody struct {
 	Space Space `json:"space"`
 }
 
-//PipelineRun represents an Okteto pipeline status
-type PipelineRun struct {
+//GitDeployResponse represents
+type GitDeployResponse struct {
+	Action    *Action    `json:"action"`
+	GitDeploy *GitDeploy `json:"gitDeploy"`
+}
+
+//GitDeploy represents an Okteto pipeline status
+type GitDeploy struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
-	Job        string `json:"job"`
 	Repository string `json:"repository"`
 	Status     string `json:"status"`
 }
 
 // Space represents the contents of an Okteto Cloud space
 type Space struct {
-	GitDeploys   []PipelineRun `json:"gitDeploys"`
+	GitDeploys   []GitDeploy   `json:"gitDeploys"`
 	Statefulsets []Statefulset `json:"statefulsets"`
 	Deployments  []Deployment  `json:"deployments"`
 }
@@ -62,7 +75,7 @@ type Variable struct {
 }
 
 // DeployPipeline creates a pipeline
-func DeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (*PipelineRun, error) {
+func DeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error) {
 	filenameParameter := ""
 	if filename != "" {
 		filenameParameter = fmt.Sprintf(`, filename: "%s"`, filename)
@@ -71,14 +84,19 @@ func DeployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	if len(variables) > 0 {
 		q := fmt.Sprintf(`mutation deployGitRepository($variables: [InputVariable]){
 			deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s", variables: $variables%s){
-				id,job,status
+				action {
+					id,name,status
+				},
+				gitDeploy {
+					id,name,repository,status
+				}
 			},
 		}`, name, repository, namespace, branch, filenameParameter)
 		req := graphql.NewRequest(q)
 		req.Var("variables", variables)
 
 		if err := queryWithRequest(ctx, req, &body); err != nil {
-			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"GitDeploy\"") {
+			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
 				return deprecatedDeployPipeline(ctx, name, namespace, repository, branch, filename, variables)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
@@ -86,28 +104,33 @@ func DeployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	} else {
 		q := fmt.Sprintf(`mutation{
 			deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s"%s){
-				id,job,status
+				action {
+					id,name,status
+				},
+				gitDeploy {
+					id,name,repository,status
+				}
 			},
 		}`, name, repository, namespace, branch, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
-			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"GitDeploy\"") {
+			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
 				return deprecatedDeployPipeline(ctx, name, namespace, repository, branch, filename, variables)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 	}
 
-	return &body.PipelineRun, nil
+	return &body.Response, nil
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func deprecatedDeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (*PipelineRun, error) {
+func deprecatedDeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error) {
 	filenameParameter := ""
 	if filename != "" {
 		filenameParameter = fmt.Sprintf(`, filename: "%s"`, filename)
 	}
-	var body DeployPipelineBody
+	var body deprecatedDeployPipelineBody
 	if len(variables) > 0 {
 		q := fmt.Sprintf(`mutation deployGitRepository($variables: [InputVariable]){
 			deployGitRepository(name: "%s", repository: "%s", space: "%s", branch: "%s", variables: $variables%s){
@@ -132,11 +155,13 @@ func deprecatedDeployPipeline(ctx context.Context, name, namespace, repository, 
 		}
 	}
 
-	return &body.PipelineRun, nil
+	return &GitDeployResponse{
+		GitDeploy: &body.GitDeploy,
+	}, nil
 }
 
 // GetPipelineByName gets a pipeline given its name
-func GetPipelineByName(ctx context.Context, name, namespace string) (*PipelineRun, error) {
+func GetPipelineByName(ctx context.Context, name, namespace string) (*GitDeploy, error) {
 	q := fmt.Sprintf(`query{
 		space(id: "%s"){
 			gitDeploys{
@@ -160,7 +185,7 @@ func GetPipelineByName(ctx context.Context, name, namespace string) (*PipelineRu
 }
 
 // GetPipelineByRepository gets a pipeline given its repo url
-func GetPipelineByRepository(ctx context.Context, namespace, repository string) (*PipelineRun, error) {
+func GetPipelineByRepository(ctx context.Context, namespace, repository string) (*GitDeploy, error) {
 	q := fmt.Sprintf(`query{
 		space(id: "%s"){
 			gitDeploys{
@@ -200,36 +225,46 @@ func areSameRepository(repoA, repoB string) bool {
 }
 
 // DestroyPipeline destroys a pipeline
-func DestroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*PipelineRun, error) {
+func DestroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error) {
 	log.Infof("destroy pipeline: %s/%s", namespace, name)
 	q := ""
 	if destroyVolumes {
 		q = fmt.Sprintf(`mutation{
 			destroyGitRepository(name: "%s", space: "%s", destroyVolumes: %t){
-				id,job,status
+				action {
+					id,name,status
+				},
+				gitDeploy {
+					id,status
+				}
 			},
 		}`, name, namespace, destroyVolumes)
 	} else {
 		q = fmt.Sprintf(`mutation{
 			destroyGitRepository(name: "%s", space: "%s"){
-				id,job,status
+				action {
+					id,name,status
+				},
+				gitDeploy {
+					id,status
+				}
 			},
 		}`, name, namespace)
 	}
 
 	var body DestroyPipelineBody
 	if err := query(ctx, q, &body); err != nil {
-		if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"GitDeploy\"") {
+		if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
 			return deprecatedDestroyPipeline(ctx, name, namespace, destroyVolumes)
 		}
 		return nil, err
 	}
 
-	log.Infof("destroy pipeline: %+v", body.PipelineRun.Status)
-	return &body.PipelineRun, nil
+	log.Infof("destroy pipeline: %+v", body.Response.GitDeploy.Status)
+	return &body.Response, nil
 }
 
-func deprecatedDestroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*PipelineRun, error) {
+func deprecatedDestroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error) {
 	log.Infof("destroy pipeline: %s/%s", namespace, name)
 	q := ""
 	if destroyVolumes {
@@ -246,13 +281,15 @@ func deprecatedDestroyPipeline(ctx context.Context, name, namespace string, dest
 		}`, name, namespace)
 	}
 
-	var body DestroyPipelineBody
+	var body deprecatedDestroyPipelineBody
 	if err := query(ctx, q, &body); err != nil {
 		return nil, err
 	}
 
-	log.Infof("destroy pipeline: %+v", body.PipelineRun.Status)
-	return &body.PipelineRun, nil
+	log.Infof("destroy pipeline: %+v", body.GitDeploy.Status)
+	return &GitDeployResponse{
+		GitDeploy: &body.GitDeploy,
+	}, nil
 }
 
 func GetResourcesStatusFromPipeline(ctx context.Context, name, namespace string) (map[string]string, error) {
