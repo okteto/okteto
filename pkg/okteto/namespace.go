@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
 )
@@ -135,13 +134,6 @@ func validateNamespace(namespace, object string) error {
 		return errors.UserError{
 			E:    fmt.Errorf("invalid %s name", object),
 			Hint: fmt.Sprintf("%s name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character", object),
-		}
-	}
-	username := GetUsername()
-	if !strings.HasSuffix(namespace, username) {
-		return errors.UserError{
-			E:    fmt.Errorf("invalid %s name", object),
-			Hint: fmt.Sprintf("%s name must end with -%s", object, username),
 		}
 	}
 	return nil
