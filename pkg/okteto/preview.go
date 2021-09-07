@@ -24,19 +24,16 @@ import (
 
 // DeployPreviewBody top body answer
 type DeployPreviewBody struct {
-	PreviewEnviroment PreviewEnv `json:"deployPreview" yaml:"deployPreview"`
+	PreviewResponse PreviewResponse `json:"deployPreview" yaml:"deployPreview"`
+}
+
+type deprecatedDeployPreviewBody struct {
+	Preview Preview `json:"deployPreview" yaml:"deployPreview"`
 }
 
 // PreviewBody top body answer
 type PreviewBody struct {
 	Preview Preview `json:"preview"`
-}
-
-// Preview represents the contents of an Okteto Cloud space
-type Preview struct {
-	GitDeploys   []PipelineRun `json:"gitDeploys"`
-	Statefulsets []Statefulset `json:"statefulsets"`
-	Deployments  []Deployment  `json:"deployments"`
 }
 
 //Statefulset represents an Okteto statefulset
@@ -66,19 +63,26 @@ type Endpoint struct {
 
 //Previews represents an Okteto list of spaces
 type Previews struct {
-	Previews []PreviewEnv `json:"previews" yaml:"previews"`
+	Previews []Preview `json:"previews" yaml:"previews"`
 }
 
-//PreviewEnv represents an Okteto preview environment
-type PreviewEnv struct {
-	ID       string `json:"id" yaml:"id"`
-	Job      string `json:"job" yaml:"job"`
-	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
-	Scope    string `json:"scope" yaml:"scope"`
+type PreviewResponse struct {
+	Action  *Action  `json:"action" yaml:"action"`
+	Preview *Preview `json:"preview" yaml:"preview"`
+}
+
+//Preview represents an Okteto preview environment
+type Preview struct {
+	ID           string        `json:"id" yaml:"id"`
+	Sleeping     bool          `json:"sleeping" yaml:"sleeping"`
+	Scope        string        `json:"scope" yaml:"scope"`
+	GitDeploys   []GitDeploy   `json:"gitDeploys"`
+	Statefulsets []Statefulset `json:"statefulsets"`
+	Deployments  []Deployment  `json:"deployments"`
 }
 
 // CreatePreview creates a preview environment
-func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewEnv, error) {
+func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewResponse, error) {
 	if err := validateNamespace(name, "preview environment"); err != nil {
 		return nil, err
 	}
@@ -92,14 +96,19 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 	if len(variables) > 0 {
 		q := fmt.Sprintf(`mutation deployPreview($variables: [InputVariable]){
 			deployPreview(name: "%s, "scope: %s, repository: "%s", branch: "%s", sourceUrl: "%s", variables: $variables%s){
-				id, job
+				action {
+					id,name,status
+				},
+				preview {
+					id
+				}
 			},
 		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
 
 		req := graphql.NewRequest(q)
 		req.Var("variables", variables)
 		if err := queryWithRequest(ctx, req, &body); err != nil {
-			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"Preview\"") {
+			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"Preview\"") {
 				return deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 			}
 			if strings.Contains(err.Error(), "operation-not-permitted") {
@@ -111,12 +120,17 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 	} else {
 		q := fmt.Sprintf(`mutation{
 			deployPreview(name: "%s", scope: %s, repository: "%s", branch: "%s", sourceUrl: "%s",%s){
-				id, job
+				action {
+					id,name,status
+				},
+				preview {
+					id
+				}
 			},
 		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
-			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"Preview\"") {
+			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"Preview\"") {
 				return deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 			}
 			if strings.Contains(err.Error(), "operation-not-permitted") {
@@ -127,12 +141,12 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 		}
 	}
 
-	return &body.PreviewEnviroment, nil
+	return &body.PreviewResponse, nil
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func deprecatedDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewEnv, error) {
-	var body DeployPreviewBody
+func deprecatedDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewResponse, error) {
+	var body deprecatedDeployPreviewBody
 	filenameParameter := ""
 	if filename != "" {
 		filenameParameter = fmt.Sprintf(`, filename: "%s"`, filename)
@@ -162,11 +176,17 @@ func deprecatedDeployPreview(ctx context.Context, name, scope, repository, branc
 		}`, name, scope, repository, branch, sourceUrl, filenameParameter)
 
 		if err := query(ctx, q, &body); err != nil {
+			if strings.Contains(err.Error(), "operation-not-permitted") {
+				return nil, errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+					Hint: "Please log in with an administrator account or use a personal preview environment"}
+			}
 			return nil, translatePreviewAPIErr(err, name)
 		}
 	}
 
-	return &body.PreviewEnviroment, nil
+	return &PreviewResponse{
+		Preview: &body.Preview,
+	}, nil
 }
 
 func translatePreviewAPIErr(err error, name string) error {
@@ -189,7 +209,7 @@ func DestroyPreview(ctx context.Context, name string) error {
 }
 
 // ListPreviews list preview environments
-func ListPreviews(ctx context.Context) ([]PreviewEnv, error) {
+func ListPreviews(ctx context.Context) ([]Preview, error) {
 	q := `query{
 		previews{
 			id,
@@ -243,7 +263,7 @@ func ListPreviewsEndpoints(ctx context.Context, previewName string) ([]Endpoint,
 }
 
 // GetPreviewEnvByName gets a preview environment given its name
-func GetPreviewEnvByName(ctx context.Context, name, namespace string) (*PipelineRun, error) {
+func GetPreviewEnvByName(ctx context.Context, name, namespace string) (*GitDeploy, error) {
 	q := fmt.Sprintf(`query{
 		preview(id: "%s"){
 			gitDeploys{

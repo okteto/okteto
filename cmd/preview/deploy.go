@@ -89,19 +89,19 @@ func Deploy(ctx context.Context) *cobra.Command {
 				})
 			}
 
-			previewEnv, err := executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, varList, wait, timeout)
+			resp, err := executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, varList, wait, timeout)
 			analytics.TrackPreviewDeploy(err == nil)
 			if err != nil {
 				return err
 			}
 
-			log.Information("Preview URL: %s", getPreviewURL(name, previewEnv))
+			log.Information("Preview URL: %s", getPreviewURL(name))
 			if !wait {
 				log.Success("Preview environment '%s' scheduled for deployment", name)
 				return nil
 			}
 
-			if err := waitUntilRunning(ctx, name, previewEnv.Job, name, timeout); err != nil {
+			if err := waitUntilRunning(ctx, name, resp.Action, name, timeout); err != nil {
 				return err
 			}
 			log.Success("Preview environment '%s' successfully deployed", name)
@@ -173,19 +173,19 @@ func getRandomName(ctx context.Context, scope string) string {
 	return name
 }
 
-func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []okteto.Variable, wait bool, timeout time.Duration) (*okteto.PreviewEnv, error) {
+func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []okteto.Variable, wait bool, timeout time.Duration) (*okteto.PreviewResponse, error) {
 	spinner := utils.NewSpinner("Deploying your preview environment...")
 	spinner.Start()
 	defer spinner.Stop()
 
-	previewEnv, err := okteto.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+	resp, err := okteto.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 	if err != nil {
 		return nil, err
 	}
-	return previewEnv, nil
+	return resp, nil
 }
 
-func waitUntilRunning(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
+func waitUntilRunning(ctx context.Context, name string, a *okteto.Action, namespace string, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for preview environment to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -196,7 +196,7 @@ func waitUntilRunning(ctx context.Context, name, jobName, namespace string, time
 
 	go func() {
 
-		err := waitToBeDeployed(ctx, name, jobName, namespace, timeout)
+		err := waitToBeDeployed(ctx, name, a, namespace, timeout)
 		if err != nil {
 			exit <- err
 		}
@@ -218,11 +218,11 @@ func waitUntilRunning(ctx context.Context, name, jobName, namespace string, time
 
 	return nil
 }
-func waitToBeDeployed(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
-	if jobName == "" {
+func waitToBeDeployed(ctx context.Context, name string, a *okteto.Action, namespace string, timeout time.Duration) error {
+	if a == nil {
 		return deprecatedWaitToBeDeployed(ctx, name, namespace, timeout)
 	}
-	return okteto.WaitforInstallerJobToFinish(ctx, name, jobName, namespace, timeout)
+	return okteto.WaitForActionToFinish(ctx, a.Name, namespace, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
@@ -303,7 +303,7 @@ func getExpandedName(name string) string {
 	return expandedName
 }
 
-func getPreviewURL(name string, previewEnv *okteto.PreviewEnv) string {
+func getPreviewURL(name string) string {
 	oktetoURL := okteto.GetURL()
 	previewURL := fmt.Sprintf("%s/#/previews/%s", oktetoURL, name)
 	return previewURL
