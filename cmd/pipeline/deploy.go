@@ -111,7 +111,7 @@ func deploy(ctx context.Context) *cobra.Command {
 				return nil
 			}
 
-			if waitUntilRunning(ctx, name, resp.Action, namespace, timeout); err != nil {
+			if err := waitUntilRunning(ctx, name, resp.Action, namespace, timeout); err != nil {
 				return err
 			}
 			log.Success("Pipeline '%s' successfully deployed", name)
