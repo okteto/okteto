@@ -88,7 +88,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	files := []string{summaryFilename}
 	files = append(files, stignoreFilenames...)
 
-	deploymentLogsPath := filepath.Join(config.GetDeploymentHome(dev.Namespace, dev.Name), "okteto.log")
+	deploymentLogsPath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), "okteto.log")
 	if model.FileExists(deploymentLogsPath) {
 		files = append(files, deploymentLogsPath)
 	}
@@ -212,7 +212,11 @@ func generateManifestFile(ctx context.Context, devPath string) (string, error) {
 }
 
 func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
-	pod, err := pods.GetDevPod(ctx, dev, c, false)
+	app, _, err := apps.Get(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return "", err
+	}
+	pod, err := app.GetRunningPod(ctx, c)
 	if err != nil {
 		return "", err
 	}
@@ -261,7 +265,16 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 }
 
 func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
-	remoteLogs, err := pods.GetDevPodLogs(ctx, dev, true, c)
+	app, _, err := apps.Get(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return "", err
+	}
+	pod, err := app.GetRunningPod(ctx, c)
+	if err != nil {
+		return "", err
+	}
+
+	remoteLogs, err := pods.ContainerLogs(ctx, dev.Container, pod.Name, dev.Namespace, false, c)
 	if err != nil {
 		return "", err
 	}

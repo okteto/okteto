@@ -15,60 +15,49 @@ package apps
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type stateBeforeSleeping struct {
 	Replicas int
 }
 
-func setAnnotation(o metav1.Object, key, value string) {
-	annotations := o.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-	annotations[key] = value
-	o.SetAnnotations(annotations)
-}
-
-func setTranslationAsAnnotation(o metav1.Object, tr *model.Translation) error {
+func setTranslationAsAnnotation(annotations map[string]string, tr *Translation) error {
 	translationBytes, err := json.Marshal(tr)
 	if err != nil {
 		return err
 	}
-	setAnnotation(o, model.TranslationAnnotation, string(translationBytes))
+	annotations[model.TranslationAnnotation] = string(translationBytes)
 	return nil
 }
 
-func getTranslationFromAnnotation(annotations map[string]string) (model.Translation, error) {
-	tr := model.Translation{}
+func getTranslationFromAnnotation(annotations map[string]string) (*Translation, error) {
+	tr := &Translation{}
 	err := json.Unmarshal([]byte(annotations[model.TranslationAnnotation]), &tr)
 	if err != nil {
-		return model.Translation{}, err
+		return nil, err
 	}
 	return tr, nil
 }
 
-func getPreviousK8sObjectReplicas(r *model.K8sObject) int32 {
-	replicas := r.GetReplicas()
-	previousState := r.GetAnnotation(model.StateBeforeSleepingAnnontation)
+func getPreviousAppReplicas(app App) int32 {
+	replicas := app.Replicas()
+	previousState := app.Annotations()[model.StateBeforeSleepingAnnontation]
 	if previousState == "" {
-		return *replicas
+		return replicas
 	}
 	var state stateBeforeSleeping
 	if err := json.Unmarshal([]byte(previousState), &state); err != nil {
-		log.Infof("error getting previous state of %s '%s': %s", strings.ToLower(string(r.ObjectType)), r.Name, err.Error())
+		log.Infof("error getting previous state of '%s': %s", app.Name(), err.Error())
 		return 1
 	}
 	return int32(state.Replicas)
 }
 
-func deleteUserAnnotations(annotations map[string]string, tr *model.Translation) error {
+func deleteUserAnnotations(annotations map[string]string, tr *Translation) error {
 	if tr.Annotations == nil {
 		return nil
 	}

@@ -36,7 +36,7 @@ func TestCreate(t *testing.T) {
 
 	clientset := fake.NewSimpleClientset()
 
-	err := Create(ctx, sfs, clientset)
+	_, err := Create(ctx, sfs, clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestUpdate(t *testing.T) {
 			Labels:    updatedLabels,
 		},
 	}
-	err := Update(ctx, updatedsfs, clientset)
+	_, err := Update(ctx, updatedsfs, clientset)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -22,6 +22,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/pointer"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -92,9 +93,9 @@ services:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		Resources: ResourceRequirements{
 			Limits: ResourceList{
@@ -173,9 +174,9 @@ services:
 		Lifecycle:       &Lifecycle{PostStart: true, PostStop: false},
 		Environment:     make(Environment, 0),
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
@@ -235,9 +236,9 @@ initContainer:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
@@ -338,9 +339,9 @@ docker:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
@@ -419,9 +420,9 @@ sync:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		PersistentVolume: true,
 		Volumes: []VolumeMount{

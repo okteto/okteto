@@ -31,6 +31,21 @@ func TestGetStatefulset(t *testing.T) {
 			Name:      "test",
 			Namespace: "test",
 		},
+		Spec: appsv1.StatefulSetSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							VolumeMounts: []v1.VolumeMount{
+								{
+									MountPath: "/data",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	clientset := fake.NewSimpleClientset(sfs)
@@ -41,13 +56,16 @@ func TestGetStatefulset(t *testing.T) {
 		Image: &model.BuildInfo{
 			Name: "image",
 		},
+		PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			Enabled: true,
+		},
 	}
-	resource, err := GetResource(ctx, dev, "test", clientset)
+	app, _, err := Get(ctx, dev, "test", clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resource.ObjectType != model.StatefulsetObjectType {
-		t.Fatal("not retrieved correctly ")
+	if app.Name() != "test" {
+		t.Fatal("not retrieved correctly")
 	}
 }
 
@@ -57,6 +75,21 @@ func TestGetDeployment(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							VolumeMounts: []v1.VolumeMount{
+								{
+									MountPath: "/data",
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -68,35 +101,34 @@ func TestGetDeployment(t *testing.T) {
 		Image: &model.BuildInfo{
 			Name: "image",
 		},
+		PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			Enabled: true,
+		},
 	}
-	resource, err := GetResource(ctx, dev, "test", clientset)
+	app, _, err := Get(ctx, dev, "test", clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resource.ObjectType != model.DeploymentObjectType {
-		t.Fatal("not retrieved correctly ")
+	if app.Name() != "test" {
+		t.Fatal("not retrieved correctly")
 	}
 }
 
 func TestValidateMountPaths(t *testing.T) {
 	tests := []struct {
 		name          string
-		k8sObject     *model.K8sObject
+		spec          *v1.PodSpec
 		dev           *model.Dev
 		expectedError bool
 	}{
 		{
 			name: "Correct validation sfs",
-			k8sObject: &model.K8sObject{
-				PodTemplateSpec: &v1.PodTemplateSpec{
-					Spec: v1.PodSpec{
-						Containers: []v1.Container{
+			spec: &v1.PodSpec{
+				Containers: []v1.Container{
+					{
+						VolumeMounts: []v1.VolumeMount{
 							{
-								VolumeMounts: []v1.VolumeMount{
-									{
-										MountPath: "/data",
-									},
-								},
+								MountPath: "/data",
 							},
 						},
 					},
@@ -119,16 +151,12 @@ func TestValidateMountPaths(t *testing.T) {
 		},
 		{
 			name: "Wrong validation",
-			k8sObject: &model.K8sObject{
-				PodTemplateSpec: &v1.PodTemplateSpec{
-					Spec: v1.PodSpec{
-						Containers: []v1.Container{
+			spec: &v1.PodSpec{
+				Containers: []v1.Container{
+					{
+						VolumeMounts: []v1.VolumeMount{
 							{
-								VolumeMounts: []v1.VolumeMount{
-									{
-										MountPath: "/data",
-									},
-								},
+								MountPath: "/data",
 							},
 						},
 					},
@@ -151,16 +179,12 @@ func TestValidateMountPaths(t *testing.T) {
 		},
 		{
 			name: "Wrong validation pv disabled",
-			k8sObject: &model.K8sObject{
-				PodTemplateSpec: &v1.PodTemplateSpec{
-					Spec: v1.PodSpec{
-						Containers: []v1.Container{
+			spec: &v1.PodSpec{
+				Containers: []v1.Container{
+					{
+						VolumeMounts: []v1.VolumeMount{
 							{
-								VolumeMounts: []v1.VolumeMount{
-									{
-										MountPath: "/data",
-									},
-								},
+								MountPath: "/data",
 							},
 						},
 					},
@@ -183,17 +207,13 @@ func TestValidateMountPaths(t *testing.T) {
 		},
 		{
 			name: "Wrong validation second up",
-			k8sObject: &model.K8sObject{
-				PodTemplateSpec: &v1.PodTemplateSpec{
-					Spec: v1.PodSpec{
-						Containers: []v1.Container{
+			spec: &v1.PodSpec{
+				Containers: []v1.Container{
+					{
+						VolumeMounts: []v1.VolumeMount{
 							{
-								VolumeMounts: []v1.VolumeMount{
-									{
-										Name:      "okteto-test",
-										MountPath: "/data",
-									},
-								},
+								Name:      "okteto-test",
+								MountPath: "/data",
 							},
 						},
 					},
@@ -219,7 +239,7 @@ func TestValidateMountPaths(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			err := ValidateMountPaths(tt.k8sObject, tt.dev)
+			err := ValidateMountPaths(tt.spec, tt.dev)
 
 			if err == nil && tt.expectedError {
 				t.Fatalf("Didn't receive any error and it was expected")

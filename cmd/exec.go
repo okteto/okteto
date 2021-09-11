@@ -24,13 +24,12 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/apps"
+	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/exec"
-	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
-
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 
 	"github.com/spf13/cobra"
 )
@@ -91,17 +90,25 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
 
-	client, cfg, err := k8Client.GetLocalWithContext(dev.Context)
+	c, cfg, err := k8Client.GetLocalWithContext(dev.Context)
 	if err != nil {
 		return err
 	}
 
-	p, err := pods.GetDevPod(ctx, dev, client, true)
+	app, create, err := apps.Get(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return err
+	}
+	if create {
+		return errors.ErrNotFound
+	}
+
+	pod, err := apps.GetRunningPodInLoop(ctx, dev, app, c, true)
 	if err != nil {
 		return err
 	}
 
-	if p == nil {
+	if pod == nil {
 		return errors.UserError{
 			E:    fmt.Errorf("development mode is not enabled"),
 			Hint: "Run 'okteto up' to enable it and try again",
@@ -114,7 +121,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	}
 
 	if dev.Container == "" {
-		dev.Container = p.Spec.Containers[0].Name
+		dev.Container = pod.Spec.Containers[0].Name
 	}
 
 	if dev.RemoteModeEnabled() {
@@ -137,5 +144,5 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
 
-	return exec.Exec(ctx, client, cfg, dev.Namespace, p.Name, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
+	return exec.Exec(ctx, c, cfg, dev.Namespace, pod.Name, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 }

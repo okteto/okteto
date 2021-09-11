@@ -195,7 +195,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		Client:           NewAPIClient(),
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("%s:%d", dev.Interface, guiPort),
-		Home:             config.GetDeploymentHome(dev.Namespace, dev.Name),
+		Home:             config.GetAppHome(dev.Namespace, dev.Name),
 		LogPath:          GetLogFile(dev.Namespace, dev.Name),
 		ListenAddress:    fmt.Sprintf("%s:%d", dev.Interface, listenPort),
 		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", dev.Interface, remotePort),
@@ -824,10 +824,10 @@ func GetFolderName(folder *Folder) string {
 }
 
 func getInfoFile(namespace, name string) string {
-	return filepath.Join(config.GetDeploymentHome(namespace, name), "syncthing.info")
+	return filepath.Join(config.GetAppHome(namespace, name), "syncthing.info")
 }
 
 // GetLogFile returns the path to the syncthing log file
 func GetLogFile(namespace, name string) string {
-	return filepath.Join(config.GetDeploymentHome(namespace, name), "syncthing.log")
+	return filepath.Join(config.GetAppHome(namespace, name), "syncthing.log")
 }
