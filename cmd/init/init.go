@@ -36,7 +36,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
@@ -281,7 +280,7 @@ func GetLanguage(language, workDir string) (string, error) {
 
 func askForLanguage() (string, error) {
 	supportedLanguages := linguist.GetSupportedLanguages()
-	return askForOptions(
+	return utils.AskForOptions(
 		supportedLanguages,
 		"Couldn't detect any language in the current folder. Pick your project's main language from the list below:",
 	)
@@ -306,7 +305,7 @@ func askForResource(ctx context.Context, namespace string, c *kubernetes.Clients
 		options = append(options, sfsList[i].Name)
 	}
 	options = append(options, defaultInitValues)
-	option, err := askForOptions(
+	option, err := utils.AskForOptions(
 		options,
 		"Select the resource you want to develop:",
 	)
@@ -340,33 +339,8 @@ func askForContainer(k8sObject *model.K8sObject) (string, error) {
 	for i := range k8sObject.PodTemplateSpec.Spec.Containers {
 		options = append(options, k8sObject.PodTemplateSpec.Spec.Containers[i].Name)
 	}
-	return askForOptions(
+	return utils.AskForOptions(
 		options,
 		fmt.Sprintf("The %s '%s' has %d containers. Select the container you want to replace with your development container:", strings.ToLower(string(k8sObject.ObjectType)), k8sObject.Name, len(k8sObject.PodTemplateSpec.Spec.Containers)),
 	)
-}
-
-func askForOptions(options []string, label string) (string, error) {
-	prompt := promptui.Select{
-		Label: label,
-		Items: options,
-		Size:  len(options),
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}",
-			Selected: " ✓  {{ . | oktetoblue }}",
-			Active:   fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect),
-			Inactive: "  {{ . | oktetoblue }}",
-			FuncMap:  promptui.FuncMap,
-		},
-	}
-
-	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
-
-	i, _, err := prompt.Run()
-	if err != nil {
-		log.Infof("invalid init option: %s", err)
-		return "", fmt.Errorf("invalid option")
-	}
-
-	return options[i], nil
 }

@@ -31,6 +31,12 @@ import (
 type UpState string
 
 const (
+	contextDir        = ".context"
+	contextConfigFile = "config.json"
+	kubeConfigFile    = "kubeConfig"
+)
+
+const (
 	oktetoFolderName = ".okteto"
 	//Activating up started
 	Activating UpState = "activating"
@@ -226,4 +232,16 @@ func splitKubeConfigEnv(value string) string {
 		return strings.Split(value, ";")[0]
 	}
 	return strings.Split(value, ":")[0]
+}
+
+func GetOktetoContextPath() string {
+	return filepath.Join(GetOktetoHome(), contextDir)
+}
+
+func GetContextConfigPath() string {
+	return filepath.Join(GetOktetoContextPath(), contextConfigFile)
+}
+
+func GetContextKubeconfigPath() string {
+	return filepath.Join(GetOktetoContextPath(), kubeConfigFile)
 }

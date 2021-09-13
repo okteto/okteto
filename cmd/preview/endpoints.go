@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +39,15 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
 			}
+
+			if !okteto.IsAuthenticated() {
+				return errors.ErrNotLogged
+			}
+
+			if !okteto.IsOktetoCluster() {
+				return errors.ErrNotOktetoCluster
+			}
+
 			previewName := args[0]
 
 			if err := validateOutput(output); err != nil {

@@ -221,12 +221,12 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	var err error
 	up.Client, up.RestConfig, err = k8sClient.GetLocalWithContext(up.Dev.Context)
 	if err != nil {
-		kubecfg := config.GetKubeConfigFile()
-		log.Infof("failed to load local Kubeconfig: %s", err)
+		kubecfg := config.GetContextKubeconfigPath()
+		log.Infof("failed to load okteto Kubeconfig: %s", err)
 		if up.Dev.Context == "" {
-			return fmt.Errorf("failed to load your local Kubeconfig %q", kubecfg)
+			return fmt.Errorf("failed to load your okteto Kubeconfig %q", kubecfg)
 		}
-		return fmt.Errorf("failed to load your local Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
+		return fmt.Errorf("failed to load your okteto Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
 	}
 
 	ctx := context.Background()

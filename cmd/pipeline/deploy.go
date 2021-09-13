@@ -55,6 +55,10 @@ func deploy(ctx context.Context) *cobra.Command {
 				return errors.ErrNotLogged
 			}
 
+			if !okteto.IsOktetoCluster() {
+				return errors.ErrNotOktetoCluster
+			}
+
 			cwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)

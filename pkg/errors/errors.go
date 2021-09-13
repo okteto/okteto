@@ -46,7 +46,10 @@ var (
 	ErrCommandFailed = errors.New("Command execution failed")
 
 	// ErrNotLogged is raised when we can't get the user token
-	ErrNotLogged = fmt.Errorf("please run 'okteto login [URL]' and try again")
+	ErrNotLogged = fmt.Errorf("Context is not set. Please run 'okteto ctx' and try again")
+
+	// ErrNotOktetoCluster is raised when we a command is only available on an okteto cluster
+	ErrNotOktetoCluster = fmt.Errorf("User is not logged on okteto cluster. Please run 'okteto ctx' and try again")
 
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
@@ -86,6 +89,9 @@ var (
 
 	//ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
 	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in namespaces managed by Okteto")
+
+	//ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
+	ContextIsNotOktetoCluster = fmt.Errorf("okteto context is not managed by okteto")
 )
 
 // IsNotFound returns true if err is of the type not found

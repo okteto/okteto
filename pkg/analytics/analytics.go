@@ -60,6 +60,7 @@ const (
 	previewDestroyEvent      = "DestroyPreview"
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
+	setContextEvent          = "SetContext"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
 )
@@ -281,6 +282,17 @@ func TrackSignup(success bool, userID string) {
 	}
 
 	track(signupEvent, success, nil)
+}
+
+// TrackContext sends a tracking event to mixpanel when the user use context in
+func TrackContextLogin(success, isOktetoCluster bool) {
+	if !isEnabled() {
+		return
+	}
+	props := map[string]interface{}{
+		"isOktetoCluster": isOktetoCluster,
+	}
+	track(setContextEvent, success, props)
 }
 
 func TrackStackWarnings(warnings []string) {

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	okContext "github.com/okteto/okteto/pkg/cmd/context"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -44,8 +45,15 @@ func WithEnvVarIfAvailable(ctx context.Context) error {
 	if oktetoURL == "" {
 		oktetoURL = okteto.CloudURL
 	}
+
 	if _, err := WithToken(ctx, oktetoURL, oktetoToken); err != nil {
 		return fmt.Errorf("error executing auto-login with 'OKTETO_TOKEN': %s", err)
+	}
+
+	okteto.SetIsOktetoCluster(true)
+
+	if err := okContext.SaveOktetoContext(ctx); err != nil {
+		return err
 	}
 	return nil
 }

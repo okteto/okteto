@@ -14,15 +14,9 @@
 package cmd
 
 import (
-	"context"
-	"fmt"
-
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/login"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -47,68 +41,15 @@ By default, this will log into cloud.okteto.com. If you want to log into your Ok
 to log in to a Okteto Enterprise instance running at okteto.example.com.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-			if token == "" && k8Client.InCluster() {
-				return fmt.Errorf("this command is not supported without the '--token' flag from inside a pod")
-			}
-
-			var oktetoURL string
-			if len(args) > 0 {
-				u, err := utils.ParseURL(args[0])
-				if err != nil {
-					return fmt.Errorf("malformed login URL")
-				}
-
-				oktetoURL = u
-			}
-
-			var u *okteto.User
-			var err error
-
-			if len(token) > 0 {
-				log.Infof("authenticating with an api token")
-				if oktetoURL == "" {
-					oktetoURL = okteto.CloudURL
-				}
-				u, err = login.WithToken(ctx, oktetoURL, token)
-			} else {
-				if len(args) == 0 {
-					oktetoURL = askForLoginURL(ctx)
-				}
-				u, err = login.WithBrowser(ctx, oktetoURL)
-			}
-
-			if err != nil {
-				analytics.TrackLogin(false, "", "", "", "")
-				return err
-			}
-
-			log.Infof("authenticated user %s", u.ID)
-
-			if oktetoURL == okteto.CloudURL {
-				log.Success("Logged in as %s", u.ExternalID)
-			} else {
-				log.Success("Logged in as %s @ %s", u.ExternalID, oktetoURL)
-			}
-			log.Hint("    Run `okteto namespace` to switch your context and download your Kubernetes credentials.")
-			if u.New {
-				analytics.TrackSignup(true, u.ID)
-			}
-			analytics.TrackLogin(true, u.Name, u.Email, u.ID, u.ExternalID)
-			return nil
+			log.Warning(`The 'login' command is deprecated and will be removed in a future release.
+    The 'login' command has been replaced by 'context' command.
+    More information is available here: https://okteto.com/docs/reference/cli#context`)
+			okCtx := contextCMD.Context()
+			okCtx.Flags().Set("token", token)
+			return okCtx.RunE(cmd, args)
 		},
 	}
 
 	cmd.Flags().StringVarP(&token, "token", "t", "", "API token for authentication.  (optional)")
 	return cmd
-}
-
-func askForLoginURL(ctx context.Context) string {
-	url := okteto.GetURL()
-	if url == "" || url == "na" {
-		url = okteto.CloudURL
-	}
-	fmt.Print(fmt.Sprintf("What is the URL of your Okteto instance? [%s]: ", url))
-	fmt.Scanln(&url)
-	return url
 }

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
@@ -146,6 +147,32 @@ func AskYesNo(q string) (bool, error) {
 	}
 
 	return answer == "y", nil
+}
+
+func AskForOptions(options []string, label string) (string, error) {
+
+	prompt := promptui.Select{
+		Label: label,
+		Items: options,
+		Size:  len(options),
+		Templates: &promptui.SelectTemplates{
+			Label:    "{{ . }}",
+			Selected: " ✓  {{ . | oktetoblue }}",
+			Active:   fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect),
+			Inactive: "  {{ . | oktetoblue }}",
+			FuncMap:  promptui.FuncMap,
+		},
+	}
+
+	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
+
+	i, _, err := prompt.Run()
+	if err != nil {
+		log.Infof("invalid init option: %s", err)
+		return "", fmt.Errorf("invalid option")
+	}
+
+	return options[i], nil
 }
 
 //AskIfOktetoInit asks if okteto init should be executed

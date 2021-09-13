@@ -44,6 +44,10 @@ func Namespace(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if !okteto.IsOktetoCluster() {
+				return errors.ErrNotOktetoCluster
+			}
+
 			err := RunNamespace(ctx, namespace)
 			analytics.TrackNamespace(err == nil)
 			return err
@@ -93,7 +97,7 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
 	}
 
-	kubeConfigFile := config.GetKubeConfigFile()
+	kubeConfigFile := config.GetContextKubeconfigPath()
 	clusterContext := okteto.GetClusterContext()
 
 	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterContext, true); err != nil {

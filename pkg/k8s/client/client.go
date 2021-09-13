@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
@@ -42,9 +43,24 @@ var (
 	localClusters  = []string{"127.", "172.", "192.", "169.", model.Localhost, "::1", "fe80::", "fc00::"}
 )
 
+func GetContextK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
+	kubeconfigPath := config.GetContextKubeconfigPath()
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	config.Timeout = getKubernetesTimeout()
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	return clientset, config, nil
+}
+
 // GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
 func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
-	return GetLocalWithContext(os.Getenv(OktetoContextVariableName))
+	return GetContextK8sClient()
 }
 
 // GetLocalWithContext returns a kubernetes client for a given context. It will detect if KUBECONFIG is defined.
@@ -69,8 +85,12 @@ func GetLocalWithContext(thisContext string) (*kubernetes.Clientset, *rest.Confi
 }
 
 func getClientConfig(k8sContext string) clientcmd.ClientConfig {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
+	loadingRules.ExplicitPath = config.GetContextKubeconfigPath()
+
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		clientcmd.NewDefaultClientConfigLoadingRules(),
+		loadingRules,
 		&clientcmd.ConfigOverrides{
 			CurrentContext: k8sContext,
 			ClusterInfo:    clientcmdapi.Cluster{Server: ""},

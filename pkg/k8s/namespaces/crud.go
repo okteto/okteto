@@ -53,6 +53,16 @@ func Get(ctx context.Context, ns string, c *kubernetes.Clientset) (*apiv1.Namesp
 	return n, nil
 }
 
+// List returns the namespace object of ns
+func List(ctx context.Context, c *kubernetes.Clientset) ([]apiv1.Namespace, error) {
+	namespaceList, err := c.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return namespaceList.Items, nil
+}
+
 func IsOktetoNamespaceFromName(ctx context.Context, namespace string) bool {
 	c, _, err := k8Client.GetLocal()
 	if err != nil {

@@ -21,9 +21,11 @@ import (
 	"strings"
 
 	"github.com/machinebox/graphql"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -65,7 +67,7 @@ func getRequest(q, token string) *graphql.Request {
 }
 
 func query(ctx context.Context, query string, result interface{}) error {
-	t, err := GetToken()
+	t, err := GetOktetoContextConfig()
 	if err != nil {
 		log.Infof("couldn't get token: %s", err)
 		return errors.ErrNotLogged
@@ -196,4 +198,48 @@ func getOrCreateKubeConfig(kubeConfigPath string) (*clientcmdapi.Config, error) 
 		}
 	}
 	return cfg, nil
+}
+
+func GetKubeConfig(kubeConfigPath string) (*clientcmdapi.Config, error) {
+	var cfg *clientcmdapi.Config
+	_, err := os.Stat(kubeConfigPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("kubeconfig not found")
+		}
+		return nil, err
+	} else {
+		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cfg, nil
+}
+
+func SetContextFromConfigFields(path, clusterName string, authInfo *clientcmdapi.AuthInfo, cluster *clientcmdapi.Cluster, context *clientcmdapi.Context, extension runtime.Object) error {
+	cfg, err := getOrCreateKubeConfig(config.GetContextConfigPath())
+	if err != nil {
+		return err
+	}
+
+	if cluster != nil {
+		cfg.Clusters[clusterName] = cluster
+	}
+
+	if authInfo != nil {
+		cfg.AuthInfos[clusterName] = authInfo
+	}
+
+	if context != nil {
+		cfg.Contexts[clusterName] = context
+	}
+
+	if extension != nil {
+		cfg.Extensions[clusterName] = extension
+	}
+
+	cfg.CurrentContext = clusterName
+
+	return clientcmd.WriteToFile(*cfg, path)
 }

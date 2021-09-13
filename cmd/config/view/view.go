@@ -32,9 +32,9 @@ func View(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted(""),
 		Short: "Shows okteto configuration values of the authenticated user",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			t, err := okteto.GetToken()
+			t, err := okteto.GetOktetoContextConfig()
 			if err != nil {
-				log.Infof("error getting okteto token: %s", err.Error())
+				log.Infof("error getting okteto context config: %s", err.Error())
 				return errors.ErrNotLogged
 			}
 			tBytes, err := json.MarshalIndent(t, "", "   ")
