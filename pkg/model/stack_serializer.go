@@ -38,6 +38,10 @@ type StackRaw struct {
 	Endpoints EndpointSpec               `yaml:"endpoints,omitempty"`
 	Volumes   map[string]*VolumeTopLevel `yaml:"volumes,omitempty"`
 
+	// Extensions
+
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
+
 	// Docker-compose not implemented
 	Networks *WarningType `yaml:"networks,omitempty"`
 
@@ -212,6 +216,9 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	if err := validateExtensions(stackRaw.Extensions); err != nil {
+		return err
+	}
 	s.Name = stackRaw.Name
 
 	s.Namespace = stackRaw.Namespace
@@ -1410,6 +1417,15 @@ func (a *ArgsStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	} else {
 		a.Values = multi
+	}
+	return nil
+}
+
+func validateExtensions(extensions map[string]interface{}) error {
+	for extension := range extensions {
+		if !strings.HasPrefix(extension, "x-") {
+			return fmt.Errorf("%s is not supported. More information is available here: https://okteto.com/docs/reference/stacks/", extension)
+		}
 	}
 	return nil
 }
