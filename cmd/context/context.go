@@ -30,6 +30,7 @@ import (
 
 type ContextOptions struct {
 	Token       string
+	Namespace   string
 	clusterType okteto.ClusterType
 }
 
@@ -102,6 +103,7 @@ to point okteto to 'mycluster'.
 	}
 
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication.")
+	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "Namespace to point to")
 	return cmd
 }
 

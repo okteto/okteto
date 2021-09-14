@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/kubeconfig"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -69,7 +70,7 @@ func executeCreateNamespace(ctx context.Context, namespace string, members *[]st
 		}
 	}
 
-	if err := RunNamespace(ctx, oktetoNS); err != nil {
+	if err := kubeconfig.RunKubeconfig(ctx, oktetoNS); err != nil {
 		return fmt.Errorf("failed to activate your new namespace: %s", err)
 	}
 

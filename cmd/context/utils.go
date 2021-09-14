@@ -64,12 +64,12 @@ func getCluster(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 
 func saveOktetoContext(ctx context.Context, cluster string, ctxOptions *ContextOptions) error {
 	if ctxOptions.clusterType == okteto.CloudCluster || ctxOptions.clusterType == okteto.EnterpriseCluster {
-		err := okContext.SaveOktetoContext(ctx, ctxOptions.clusterType)
+		err := okContext.SaveOktetoContext(ctx, ctxOptions.clusterType, ctxOptions.Namespace)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := okContext.SaveK8sContext(ctx, cluster, ctxOptions.clusterType)
+		err := okContext.SaveK8sContext(ctx, cluster, ctxOptions.clusterType, ctxOptions.Namespace)
 		if err != nil {
 			return err
 		}

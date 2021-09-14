@@ -52,7 +52,7 @@ func WithEnvVarIfAvailable(ctx context.Context) error {
 		return fmt.Errorf("error executing auto-login with 'OKTETO_TOKEN': %s", err)
 	}
 
-	if err := okContext.SaveOktetoContext(ctx, clusterType); err != nil {
+	if err := okContext.SaveOktetoContext(ctx, clusterType, ""); err != nil {
 		return err
 	}
 	return nil

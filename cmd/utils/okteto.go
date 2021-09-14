@@ -14,6 +14,7 @@
 package utils
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -28,4 +29,18 @@ func SetOktetoUsernameEnv() error {
 		}
 	}
 	return nil
+}
+
+func HasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
+	nList, err := okteto.ListNamespaces(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	for i := range nList {
+		if nList[i].ID == namespace {
+			return true, nil
+		}
+	}
+	return false, nil
 }

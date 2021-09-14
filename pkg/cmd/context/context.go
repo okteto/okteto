@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -40,14 +41,16 @@ func CopyK8sClusterConfigToOktetoContext(clusterName string) error {
 	return nil
 }
 
-func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType) error {
+func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType, namespace string) error {
 	cred, err := okteto.GetCredentials(ctx)
 	if err != nil {
 		return err
 	}
-	namespace := cred.Namespace
+	if namespace == "" {
+		namespace = cred.Namespace
+	}
 
-	hasAccess, err := hasAccessToNamespace(ctx, namespace)
+	hasAccess, err := utils.HasAccessToNamespace(ctx, namespace)
 	if err != nil {
 		return err
 	}
@@ -68,21 +71,7 @@ func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType) erro
 	return nil
 }
 
-func hasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
-	nList, err := okteto.ListNamespaces(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	for i := range nList {
-		if nList[i].ID == namespace {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func SaveK8sContext(ctx context.Context, clusterName string, clusterType okteto.ClusterType) error {
+func SaveK8sContext(ctx context.Context, clusterName string, clusterType okteto.ClusterType, namespace string) error {
 	kubeConfigFile := config.GetContextKubeconfigPath()
 	config, err := okteto.GetKubeConfig(kubeConfigFile)
 	if err != nil {
@@ -93,6 +82,10 @@ func SaveK8sContext(ctx context.Context, clusterName string, clusterType okteto.
 	cluster := config.Clusters[clusterName]
 	context := config.Contexts[clusterName]
 	extension := config.Extensions[clusterName]
+
+	if namespace == "" {
+		context.Namespace = namespace
+	}
 
 	err = okteto.SetContextFromConfigFields(kubeConfigFile, clusterName, authInfo, cluster, context, extension)
 	if err != nil {

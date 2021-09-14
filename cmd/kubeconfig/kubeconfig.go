@@ -11,15 +11,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package kubeconfig
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -27,7 +29,7 @@ import (
 // Kubeconfig fetch credentials for a cluster namespace
 func Kubeconfig(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "kubeconfig",
+		Use:   "kubeconfig [namespace]",
 		Short: "Downloads the k8s credentials of the current okteto context",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -36,7 +38,12 @@ func Kubeconfig(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err := RunKubeconfig(ctx)
+			namespace := ""
+			if len(args) > 0 {
+				namespace = args[0]
+			}
+
+			err := RunKubeconfig(ctx, namespace)
 			analytics.TrackNamespace(err == nil)
 			return err
 		},
@@ -45,7 +52,7 @@ func Kubeconfig(ctx context.Context) *cobra.Command {
 }
 
 // RunKubeconfig starts the kubeconfig sequence
-func RunKubeconfig(ctx context.Context) error {
+func RunKubeconfig(ctx context.Context, namespace string) error {
 	oktetoKubeConfigFile := config.GetContextKubeconfigPath()
 	oktetoKubeConfig, err := okteto.GetKubeConfig(oktetoKubeConfigFile)
 	if err != nil {
@@ -54,11 +61,32 @@ func RunKubeconfig(ctx context.Context) error {
 
 	ctxToCopy := oktetoKubeConfig.CurrentContext
 
-	userKubeConfigFile := config.GetKubeConfigFile()
+	if okteto.IsOktetoCluster() {
+		if namespace == "" {
+			namespace = oktetoKubeConfig.Contexts[ctxToCopy].Namespace
+		}
+		hasAccess, err := utils.HasAccessToNamespace(ctx, namespace)
+		if err != nil {
+			return err
+		}
+		if !hasAccess {
+			return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
+		}
+	}
+	if namespace != "" {
+		oktetoKubeConfig.Contexts[ctxToCopy].Namespace = namespace
+	}
 
+	err = okteto.SetContextFromConfigFields(oktetoKubeConfigFile, ctxToCopy, oktetoKubeConfig.AuthInfos[ctxToCopy], oktetoKubeConfig.Clusters[ctxToCopy], oktetoKubeConfig.Contexts[ctxToCopy], oktetoKubeConfig.Extensions[ctxToCopy])
+	if err != nil {
+		return err
+	}
+
+	userKubeConfigFile := config.GetKubeConfigFile()
 	err = okteto.SetContextFromConfigFields(userKubeConfigFile, ctxToCopy, oktetoKubeConfig.AuthInfos[ctxToCopy], oktetoKubeConfig.Clusters[ctxToCopy], oktetoKubeConfig.Contexts[ctxToCopy], oktetoKubeConfig.Extensions[ctxToCopy])
 	if err != nil {
 		return err
 	}
+	log.Success("Updated context '%s'", ctxToCopy)
 	return nil
 }
