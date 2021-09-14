@@ -16,6 +16,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -44,10 +45,10 @@ func Context() *cobra.Command {
 Run
     $ okteto context
 
-and this command will ask you for the cluster you want to operate in okteto.
+and this command this will ask you for the name of your kubernetes context.
 If an okteto cluster is selected it will open your browser to ask your authentication details and retrieve your API token. You can script it by using the --token parameter.
 
-By default, this will ask you for the cluster you want to operate. 
+By default, this will ask you for the kubernetes context you want to operate. 
 
 If you want to log into your Okteto Enterprise instance, specify a URL. For example, run
 
@@ -69,21 +70,26 @@ to point okteto to 'mycluster'.
 
 			var err error
 			if len(args) == 0 {
-				log.Infof("authenticating without context")
-				err = runInteractiveContext(ctx, ctxOptions)
-
+				oktetoURL := os.Getenv("OKTETO_URL")
+				if oktetoURL != "" {
+					log.Infof("authenticating with context arg")
+					err = runContextWithArgs(ctx, args[0], ctxOptions)
+				} else {
+					log.Infof("authenticating without context")
+					err = runInteractiveContext(ctx, ctxOptions)
+				}
 			} else {
 				log.Infof("authenticating with context arg")
 				err = runContextWithArgs(ctx, args[0], ctxOptions)
 			}
 
 			if err != nil {
-				analytics.TrackContextLogin(false, ctxOptions.isOktetoCluster)
+				analytics.TrackContext(false, ctxOptions.isOktetoCluster)
 				analytics.TrackLogin(false, "", "", "", "")
 				return err
 			}
 
-			analytics.TrackContextLogin(true, ctxOptions.isOktetoCluster)
+			analytics.TrackContext(true, ctxOptions.isOktetoCluster)
 			log.Success("Your context have been updated")
 			return nil
 		},
