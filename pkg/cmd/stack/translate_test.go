@@ -466,7 +466,6 @@ func Test_translateJob(t *testing.T) {
 				CapDrop:       []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				RestartPolicy: apiv1.RestartPolicyNever,
 				BackOffLimit:  5,
-				Volumes:       []model.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
 				Resources: &model.StackResources{
 					Limits: model.ServiceResources{
 						CPU:    model.Quantity{Value: resource.MustParse("100m")},
@@ -520,40 +519,8 @@ func Test_translateJob(t *testing.T) {
 	if *result.Spec.Template.Spec.TerminationGracePeriodSeconds != 20 {
 		t.Errorf("Wrong job spec.template.spec.termination_grade_period_seconds: '%d'", *result.Spec.Template.Spec.TerminationGracePeriodSeconds)
 	}
-	initContainer := apiv1.Container{
-		Name:    fmt.Sprintf("init-%s", "svcName"),
-		Image:   "busybox",
-		Command: []string{"sh", "-c", "chmod 777 /data"},
-		VolumeMounts: []apiv1.VolumeMount{
-			{
-				MountPath: "/data",
-				Name:      pvcName,
-			},
-		},
-	}
-	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[0], initContainer) {
-		t.Errorf("Wrong job init container: '%v' but expected '%v'", result.Spec.Template.Spec.InitContainers[0], initContainer)
-	}
-	initVolumeContainer := apiv1.Container{
-		Name:            fmt.Sprintf("init-volume-%s", "svcName"),
-		Image:           "image",
-		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Command:         []string{"sh", "-c", "echo initializing volume... && (cp -Rv /volume1/. /init-volume-0 || true) && (cp -Rv /volume2/. /init-volume-1 || true)"},
-		VolumeMounts: []apiv1.VolumeMount{
-			{
-				MountPath: "/init-volume-0",
-				Name:      pvcName,
-				SubPath:   "data-0",
-			},
-			{
-				MountPath: "/init-volume-1",
-				Name:      pvcName,
-				SubPath:   "data-1",
-			},
-		},
-	}
-	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[1], initVolumeContainer) {
-		t.Errorf("Wrong job init container: '%v' but expected '%v'", result.Spec.Template.Spec.InitContainers[1], initVolumeContainer)
+	if len(result.Spec.Template.Spec.InitContainers) > 0 {
+		t.Errorf("Wrong job spec.template.spec.initContainers: '%d'", len(result.Spec.Template.Spec.InitContainers))
 	}
 	c := result.Spec.Template.Spec.Containers[0]
 	if c.Name != "svcName" {
@@ -594,22 +561,9 @@ func Test_translateJob(t *testing.T) {
 	if !reflect.DeepEqual(c.Resources, resources) {
 		t.Errorf("Wrong container.resources: '%v'", c.Resources)
 	}
-	volumeMounts := []apiv1.VolumeMount{
-		{
-			MountPath: "/volume1",
-			Name:      pvcName,
-			SubPath:   "data-0",
-		},
-		{
-			MountPath: "/volume2",
-			Name:      pvcName,
-			SubPath:   "data-1",
-		},
+	if len(c.VolumeMounts) > 0 {
+		t.Errorf("Wrong c.VolumeMounts: '%d'", len(c.VolumeMounts))
 	}
-	if !reflect.DeepEqual(c.VolumeMounts, volumeMounts) {
-		t.Errorf("Wrong container.volume_mounts: '%v'", c.VolumeMounts)
-	}
-
 }
 
 func Test_translateService(t *testing.T) {
