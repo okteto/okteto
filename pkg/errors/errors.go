@@ -46,10 +46,10 @@ var (
 	ErrCommandFailed = errors.New("Command execution failed")
 
 	// ErrNotLogged is raised when we can't get the user token
-	ErrNotLogged = fmt.Errorf("Context is not set. Please run 'okteto ctx' and try again")
+	ErrNotLogged = fmt.Errorf("Okteto context isn't configured. Please run 'okteto context' and try again")
 
 	// ErrNotOktetoCluster is raised when we a command is only available on an okteto cluster
-	ErrNotOktetoCluster = fmt.Errorf("User is not logged on okteto cluster. Please run 'okteto ctx' and try again")
+	ErrNotOktetoCluster = fmt.Errorf("User is not logged on okteto cluster. Please run 'okteto context' and try again")
 
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
