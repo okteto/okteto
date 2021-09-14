@@ -39,14 +39,13 @@ var reg = regexp.MustCompile("[^A-Za-z0-9]+")
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	URL             string `json:"URL"`
-	Buildkit        string `json:"Buildkit"`
-	Registry        string `json:"Registry"`
-	ID              string `json:"ID"`
-	Username        string `json:"Username"`
-	Token           string `json:"Token"`
-	MachineID       string `json:"MachineID"`
-	IsOktetoCluster bool   `json:"IsOktetoCluster"`
+	URL       string `json:"URL"`
+	Buildkit  string `json:"Buildkit"`
+	Registry  string `json:"Registry"`
+	ID        string `json:"ID"`
+	Username  string `json:"Username"`
+	Token     string `json:"Token"`
+	MachineID string `json:"MachineID"`
 }
 
 // User contains the auth information of the logged in user
@@ -171,46 +170,10 @@ func authUser(ctx context.Context, client *graphql.Client, code string) (*u, err
 	return &user, nil
 }
 
-func GetOktetoContextConfig() (*Token, error) {
-	if currentToken == nil {
-		p := config.GetContextConfigPath()
-
-		b, err := ioutil.ReadFile(p)
-		if err != nil {
-			return nil, err
-		}
-
-		currentToken = &Token{}
-		if err := json.Unmarshal(b, currentToken); err != nil {
-			return nil, err
-		}
-	}
-
-	return currentToken, nil
-}
-
-func SetIsOktetoCluster(isOktetoCluster bool) error {
-	t, err := GetToken()
-	if err != nil {
-		return err
-	}
-	t.IsOktetoCluster = isOktetoCluster
-	save(t)
-	return nil
-}
-
-func IsOktetoCluster() bool {
-	t, err := GetToken()
-	if err != nil {
-		return false
-	}
-	return t.IsOktetoCluster
-}
-
 //GetToken returns the token of the authenticated user
 func GetToken() (*Token, error) {
 	if currentToken == nil {
-		p := config.GetContextConfigPath()
+		p := getTokenPath()
 
 		b, err := ioutil.ReadFile(p)
 		if err != nil {
@@ -322,7 +285,7 @@ func GetCertificatePath() string {
 }
 
 func saveToken(id, username, token, url, registry, buildkit string) error {
-	t, err := GetOktetoContextConfig()
+	t, err := GetToken()
 	if err != nil {
 		log.Infof("bad token, re-initializing: %s", err)
 		t = &Token{}
@@ -365,26 +328,26 @@ func save(t *Token) error {
 	marshalled, err := json.Marshal(t)
 	if err != nil {
 		log.Infof("failed to marshal token: %s", err)
-		return fmt.Errorf("failed to generate your auth token")
+		return fmt.Errorf("Failed to generate your auth token")
 	}
 
-	contextPath := config.GetOktetoContextPath()
-	if err := os.MkdirAll(contextPath, 0700); err != nil {
-		log.Fatalf("failed to create %s: %s", contextPath, err)
-	}
+	p := getTokenPath()
 
-	contextConfigPath := config.GetContextConfigPath()
-	if _, err := os.Stat(contextConfigPath); err == nil {
-		err = os.Chmod(contextConfigPath, 0600)
+	if _, err := os.Stat(p); err == nil {
+		err = os.Chmod(p, 0600)
 		if err != nil {
 			return fmt.Errorf("couldn't change token permissions: %s", err)
 		}
 	}
 
-	if err := ioutil.WriteFile(contextConfigPath, marshalled, 0600); err != nil {
+	if err := ioutil.WriteFile(p, marshalled, 0600); err != nil {
 		return fmt.Errorf("couldn't save authentication token: %s", err)
 	}
 
 	currentToken = nil
 	return nil
+}
+
+func getTokenPath() string {
+	return filepath.Join(config.GetOktetoHome(), tokenFile)
 }

@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
@@ -68,7 +67,7 @@ func SetDevDefaultsFromResource(ctx context.Context, dev *model.Dev, r *model.K8
 	setAnnotationsFromResource(dev, r)
 	setNameAndLabelsFromResource(ctx, dev, r)
 
-	if okteto.GetClusterContext() != client.GetSessionContext("") {
+	if okteto.GetClusterContext() != okteto.GetCurrentContext() {
 		setResourcesFromPod(dev, pod, container)
 	}
 

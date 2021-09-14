@@ -285,12 +285,12 @@ func TrackSignup(success bool, userID string) {
 }
 
 // TrackContext sends a tracking event to mixpanel when the user use context in
-func TrackContext(success, isOktetoCluster bool) {
+func TrackContext(success bool, clusterType string) {
 	if !isEnabled() {
 		return
 	}
 	props := map[string]interface{}{
-		"isOktetoCluster": isOktetoCluster,
+		"clusterType": clusterType,
 	}
 	track(contextEvent, success, props)
 }

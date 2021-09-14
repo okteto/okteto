@@ -97,7 +97,7 @@ func loadContext(dev *model.Dev, k8sContext string) {
 		dev.Context = os.Getenv(client.OktetoContextVariableName)
 		return
 	}
-	dev.Context = client.GetSessionContext("")
+	dev.Context = okteto.GetCurrentContext()
 }
 
 func loadNamespace(dev *model.Dev, namespace string) {
@@ -252,7 +252,7 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 		return nil
 	}
 
-	currentContext := client.GetSessionContext("")
+	currentContext := okteto.GetCurrentContext()
 	if okteto.GetClusterContext() == currentContext {
 		secrets, err := okteto.GetSecrets(ctx)
 		if err != nil {

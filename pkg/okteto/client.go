@@ -67,7 +67,7 @@ func getRequest(q, token string) *graphql.Request {
 }
 
 func query(ctx context.Context, query string, result interface{}) error {
-	t, err := GetOktetoContextConfig()
+	t, err := GetToken()
 	if err != nil {
 		log.Infof("couldn't get token: %s", err)
 		return errors.ErrNotLogged
@@ -218,7 +218,7 @@ func GetKubeConfig(kubeConfigPath string) (*clientcmdapi.Config, error) {
 }
 
 func SetContextFromConfigFields(path, clusterName string, authInfo *clientcmdapi.AuthInfo, cluster *clientcmdapi.Cluster, context *clientcmdapi.Context, extension runtime.Object) error {
-	cfg, err := getOrCreateKubeConfig(config.GetContextConfigPath())
+	cfg, err := getOrCreateKubeConfig(config.GetKubeConfigFile())
 	if err != nil {
 		return err
 	}

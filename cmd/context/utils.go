@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/manifoldco/promptui"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okContext "github.com/okteto/okteto/pkg/cmd/context"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -39,32 +39,37 @@ func getCluster(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 	}
 
 	if isOptionAnOktetoCluster(cluster) {
-		ctxOptions.isOktetoCluster = true
+
 		cluster = getOktetoClusterUrl(ctx, cluster)
+
+		if cluster == okteto.CloudURL || cluster == okteto.StagingURL {
+			ctxOptions.clusterType = okteto.CloudCluster
+		} else {
+			ctxOptions.clusterType = okteto.EnterpriseCluster
+		}
 		err := authenticateToOktetoCluster(ctx, cluster, ctxOptions.Token)
 		if err != nil {
 			return "", err
 		}
-		okteto.SetIsOktetoCluster(ctxOptions.isOktetoCluster)
 	} else {
-		ctxOptions.isOktetoCluster = false
+		ctxOptions.clusterType = okteto.VanillaCluster
+
 		err := okContext.CopyK8sClusterConfigToOktetoContext(cluster)
 		if err != nil {
 			return "", err
 		}
-		okteto.SetIsOktetoCluster(ctxOptions.isOktetoCluster)
 	}
 	return cluster, nil
 }
 
-func saveOktetoContext(ctx context.Context, cluster string) error {
-	if isOptionAnOktetoCluster(cluster) {
-		err := okContext.SaveOktetoContext(ctx)
+func saveOktetoContext(ctx context.Context, cluster string, ctxOptions *ContextOptions) error {
+	if ctxOptions.clusterType == okteto.CloudCluster || ctxOptions.clusterType == okteto.EnterpriseCluster {
+		err := okContext.SaveOktetoContext(ctx, ctxOptions.clusterType)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := okContext.SaveK8sContext(ctx, cluster)
+		err := okContext.SaveK8sContext(ctx, cluster, ctxOptions.clusterType)
 		if err != nil {
 			return err
 		}
@@ -118,68 +123,16 @@ func getClusterList() []string {
 }
 
 func selectCluster() (string, error) {
-	clusterList := getClusterListOptions()
-
-	prompt := promptui.Select{
-		Label: "Select the cluster you want to point to:",
-		Items: clusterList,
-		Size:  len(clusterList),
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ .Name }}",
-			Selected: "{{if .Enable}} ✓  {{ .Name | oktetoblue }}{{else}}{{ .Name | oktetoblue}}{{end}}",
-			Active:   fmt.Sprintf("{{if .Enable}}%s {{ .Name | oktetoblue }}{{else}}{{ .Name | oktetoblue}}{{end}}", promptui.IconSelect),
-			Inactive: "{{if .Enable}}  {{ .Name | oktetoblue}}{{else}}{{ .Name | oktetoblue}}{{end}}",
-			FuncMap:  promptui.FuncMap,
-		},
-	}
-
-	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
-
-	i, _, err := prompt.RunCursorAt(1, 0)
-	if err != nil {
-		log.Infof("invalid cluster: %s", err)
-		return "", fmt.Errorf("invalid cluster")
-	}
-	if clusterList[i].Name == "Okteto clusters:" || clusterList[i].Name == "Kubernetes clusters:" {
-		log.Infof("invalid cluster")
-		return "", fmt.Errorf("invalid cluster")
-	}
-	return clusterList[i].Name, nil
-}
-
-func getClusterListOptions() []SelectItem {
+	clusters := []string{"Okteto Cloud", "Okteto enterprise"}
 	k8sClusters := getClusterList()
-	clusterOptions := []SelectItem{
-		{
-			Name:   "Okteto clusters:",
-			Enable: false,
-		},
-		{
-			Name:   "Okteto cloud",
-			Enable: true,
-		},
-		{
-			Name:   "Okteto enterprise",
-			Enable: true,
-		},
-	}
-	if len(k8sClusters) > 0 {
-		clusterOptions = append(clusterOptions, SelectItem{
-			Name:   "Kubernetes clusters:",
-			Enable: false,
-		})
-	}
 	for _, k8sCluster := range k8sClusters {
-		clusterOptions = append(clusterOptions, SelectItem{
-			Name:   k8sCluster,
-			Enable: true,
-		})
+		clusters = append(clusters, k8sCluster)
 	}
-	return clusterOptions
+	return utils.AskForOptions(clusters, "Select the cluster you want to point to:")
 }
 
 func isOptionAnOktetoCluster(option string) bool {
-	return option == "Okteto cloud" || option == "Okteto enterprise" || isURL(option)
+	return option == "Okteto cloud" || option == "Okteto enterprise"
 }
 
 func getOktetoClusterUrl(ctx context.Context, option string) string {
@@ -196,13 +149,21 @@ func isURL(okContext string) bool {
 }
 
 func AskForLoginURL(ctx context.Context) string {
-	url := okteto.GetURL()
-	if url == "" || url == "na" {
-		url = okteto.CloudURL
+	clusterURL := okteto.GetURL()
+	if clusterURL == "" || clusterURL == "na" {
+		clusterURL = okteto.CloudURL
 	}
-	fmt.Printf("What is the URL of your Okteto instance? [%s]: ", url)
-	fmt.Scanln(&url)
-	return url
+	fmt.Printf("What is the URL of your Okteto instance? [%s]: ", clusterURL)
+	fmt.Scanln(&clusterURL)
+
+	url, err := url.Parse(clusterURL)
+	if err != nil {
+		return ""
+	}
+	if url.Scheme == "" {
+		url.Scheme = "https"
+	}
+	return url.String()
 }
 
 func isValidCluster(cluster string) bool {

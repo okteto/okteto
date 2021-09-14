@@ -24,12 +24,13 @@ import (
 	okContext "github.com/okteto/okteto/pkg/cmd/context"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
 type ContextOptions struct {
-	Token           string
-	isOktetoCluster bool
+	Token       string
+	clusterType okteto.ClusterType
 }
 
 // Context points okteto to a cluster.
@@ -68,6 +69,11 @@ to point okteto to 'mycluster'.
 				return fmt.Errorf("this command is not supported without the '--token' flag from inside a pod")
 			}
 
+			apiToken := os.Getenv("OKTETO_TOKEN")
+			if ctxOptions.Token == "" {
+				ctxOptions.Token = apiToken
+			}
+
 			var err error
 			if len(args) == 0 {
 				oktetoURL := os.Getenv("OKTETO_URL")
@@ -84,12 +90,12 @@ to point okteto to 'mycluster'.
 			}
 
 			if err != nil {
-				analytics.TrackContext(false, ctxOptions.isOktetoCluster)
+				analytics.TrackContext(false, string(ctxOptions.clusterType))
 				analytics.TrackLogin(false, "", "", "", "")
 				return err
 			}
 
-			analytics.TrackContext(true, ctxOptions.isOktetoCluster)
+			analytics.TrackContext(true, string(ctxOptions.clusterType))
 			log.Success("Your context have been updated")
 			return nil
 		},
@@ -106,7 +112,7 @@ func runInteractiveContext(ctx context.Context, ctxOptions *ContextOptions) erro
 		return err
 	}
 
-	err = saveOktetoContext(ctx, cluster)
+	err = saveOktetoContext(ctx, cluster, ctxOptions)
 	if err != nil {
 		return err
 	}
@@ -116,14 +122,17 @@ func runInteractiveContext(ctx context.Context, ctxOptions *ContextOptions) erro
 func runContextWithArgs(ctx context.Context, cluster string, ctxOptions *ContextOptions) error {
 
 	if isURL(cluster) {
-		ctxOptions.isOktetoCluster = true
+		if cluster == okteto.CloudURL || cluster == okteto.StagingURL {
+			ctxOptions.clusterType = okteto.CloudCluster
+		} else {
+			ctxOptions.clusterType = okteto.EnterpriseCluster
+		}
 		err := authenticateToOktetoCluster(ctx, cluster, ctxOptions.Token)
 		if err != nil {
 			return err
 		}
 	} else {
-		ctxOptions.isOktetoCluster = false
-
+		ctxOptions.clusterType = okteto.VanillaCluster
 		if !isValidCluster(cluster) {
 			return fmt.Errorf("'%s' is a invalid cluster. Select one from ['%s']", cluster, strings.Join(getClusterList(), "', '"))
 		}
@@ -133,7 +142,7 @@ func runContextWithArgs(ctx context.Context, cluster string, ctxOptions *Context
 		}
 	}
 
-	err := saveOktetoContext(ctx, cluster)
+	err := saveOktetoContext(ctx, cluster, ctxOptions)
 	if err != nil {
 		return err
 	}

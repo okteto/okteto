@@ -40,7 +40,7 @@ func CopyK8sClusterConfigToOktetoContext(clusterName string) error {
 	return nil
 }
 
-func SaveOktetoContext(ctx context.Context) error {
+func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType) error {
 	cred, err := okteto.GetCredentials(ctx)
 	if err != nil {
 		return err
@@ -62,6 +62,9 @@ func SaveOktetoContext(ctx context.Context) error {
 		return err
 	}
 
+	if err := okteto.SaveContext(clusterType, okteto.GetURL(), clusterContext); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -79,7 +82,7 @@ func hasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
 	return false, nil
 }
 
-func SaveK8sContext(ctx context.Context, clusterName string) error {
+func SaveK8sContext(ctx context.Context, clusterName string, clusterType okteto.ClusterType) error {
 	kubeConfigFile := config.GetContextKubeconfigPath()
 	config, err := okteto.GetKubeConfig(kubeConfigFile)
 	if err != nil {
@@ -93,6 +96,9 @@ func SaveK8sContext(ctx context.Context, clusterName string) error {
 
 	err = okteto.SetContextFromConfigFields(kubeConfigFile, clusterName, authInfo, cluster, context, extension)
 	if err != nil {
+		return err
+	}
+	if err := okteto.SaveContext(clusterType, "", clusterName); err != nil {
 		return err
 	}
 	return nil

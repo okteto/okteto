@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright 2021 The Okteto Authors
@@ -1088,7 +1089,7 @@ func checkIfUpFinished(ctx context.Context, pid int) error {
 }
 
 func getCurrentNamespace() string {
-	currentContext := k8Client.GetSessionContext("")
+	currentContext := okteto.GetCurrentContext()
 	if okteto.GetClusterContext() == currentContext {
 		return k8Client.GetContextNamespace("")
 	}

@@ -293,7 +293,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, ti
 }
 
 func getCurrentNamespace(ctx context.Context) string {
-	currentContext := client.GetSessionContext("")
+	currentContext := okteto.GetCurrentContext()
 	if okteto.GetClusterContext() == currentContext {
 		return client.GetContextNamespace("")
 	}
