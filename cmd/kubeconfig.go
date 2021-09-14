@@ -28,20 +28,15 @@ import (
 func Kubeconfig(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kubeconfig",
-		Short: "Downloads k8s credentials from current okteto context",
+		Short: "Downloads the k8s credentials of the current okteto context",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			namespace := ""
-			if len(args) > 0 {
-				namespace = args[0]
-			}
 
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
 			}
 
-			err := RunKubeconfig(ctx, namespace)
+			err := RunKubeconfig(ctx)
 			analytics.TrackNamespace(err == nil)
 			return err
 		},
@@ -50,7 +45,7 @@ func Kubeconfig(ctx context.Context) *cobra.Command {
 }
 
 // RunKubeconfig starts the kubeconfig sequence
-func RunKubeconfig(ctx context.Context, namespace string) error {
+func RunKubeconfig(ctx context.Context) error {
 	oktetoKubeConfigFile := config.GetContextKubeconfigPath()
 	oktetoKubeConfig, err := okteto.GetKubeConfig(oktetoKubeConfigFile)
 	if err != nil {
