@@ -442,9 +442,10 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 
 func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
 	svc := s.Services[svcName]
-	addPermissionsContainer := getAddPermissionsInitContainer(svcName, svc)
-	initContainers := []apiv1.Container{
-		addPermissionsContainer,
+	initContainers := []apiv1.Container{}
+	if len(svc.Volumes) > 0 {
+		addPermissionsContainer := getAddPermissionsInitContainer(svcName, svc)
+		initContainers = append(initContainers, addPermissionsContainer)
 	}
 	initializationContainer := getInitializeVolumeContentContainer(svcName, svc)
 	if initializationContainer != nil {
