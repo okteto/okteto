@@ -1444,7 +1444,9 @@ func (a *ArgsStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 func validateExtensions(stack StackRaw) error {
 	nonValidFields := make([]string, 0)
 	for extension := range stack.Extensions {
-		nonValidFields = append(nonValidFields, extension)
+		if !strings.HasPrefix(extension, "x-") {
+			nonValidFields = append(nonValidFields, extension)
+		}
 	}
 
 	for svcName, svc := range stack.Services {
