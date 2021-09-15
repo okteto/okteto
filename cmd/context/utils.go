@@ -86,6 +86,17 @@ func authenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) e
 		if err != nil {
 			return err
 		}
+	} else if okContext.HasBeenLogged(oktetoURL) {
+		log.Infof("re-authenticating with saved token")
+		token = okContext.GetApiToken(oktetoURL)
+		user, err = login.WithToken(ctx, oktetoURL, token)
+		if err != nil {
+			log.Infof("saved token is wrong. Authenticating with browser code")
+			user, err = login.WithBrowser(ctx, oktetoURL)
+			if err != nil {
+				return err
+			}
+		}
 	} else {
 		log.Infof("authenticating with browser code")
 		user, err = login.WithBrowser(ctx, oktetoURL)

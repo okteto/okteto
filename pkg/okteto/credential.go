@@ -55,6 +55,10 @@ func GetCredentials(ctx context.Context) (*Credential, error) {
 
 // GetClusterContext returns the k8s context names given an okteto URL
 func GetClusterContext() string {
-	u, _ := url.Parse(GetURL())
+	return UrlToContext(GetURL())
+}
+
+func UrlToContext(uri string) string {
+	u, _ := url.Parse(uri)
 	return strings.ReplaceAll(u.Host, ".", "_")
 }

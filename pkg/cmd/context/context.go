@@ -65,7 +65,11 @@ func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType, name
 		return err
 	}
 
-	if err := okteto.SaveContext(clusterType, okteto.GetURL(), clusterContext); err != nil {
+	token, err := okteto.GetToken()
+	if err != nil {
+		return err
+	}
+	if err := okteto.SaveContext(clusterType, okteto.GetURL(), clusterContext, token.Token); err != nil {
 		return err
 	}
 	return nil
@@ -91,8 +95,29 @@ func SaveK8sContext(ctx context.Context, clusterName string, clusterType okteto.
 	if err != nil {
 		return err
 	}
-	if err := okteto.SaveContext(clusterType, "", clusterName); err != nil {
+	if err := okteto.SaveContext(clusterType, "", clusterName, ""); err != nil {
 		return err
 	}
 	return nil
+}
+
+func HasBeenLogged(url string) bool {
+	cc, err := okteto.GetOktetoContextConfig()
+	if err != nil {
+		return false
+	}
+
+	context := okteto.GetClusterContext()
+	_, ok := cc.Contexts[context]
+	return ok
+}
+
+func GetApiToken(url string) string {
+	cc, err := okteto.GetOktetoContextConfig()
+	if err != nil {
+		return ""
+	}
+
+	context := okteto.UrlToContext(url)
+	return cc.Contexts[context].ApiToken
 }

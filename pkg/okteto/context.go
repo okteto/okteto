@@ -14,6 +14,7 @@
 package okteto
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -31,44 +32,60 @@ var (
 	VanillaCluster    ClusterType = "Vanilla"
 )
 
+type ContextConfig struct {
+	Contexts       map[string]Context `json:"Contexts"`
+	CurrentContext string             `json:"CurrentContext"`
+}
+
 // Token contains the auth token and the URL it belongs to
 type Context struct {
 	ClusterType ClusterType `json:"ClusterType"`
 	URL         string      `json:"URL"`
 	Name        string      `json:"Name"`
+	ApiToken    string      `json:"Token"`
 }
 
-func GetOktetoContextConfig() (*Context, error) {
+func GetOktetoContextConfig() (*ContextConfig, error) {
 	p := config.GetContextConfigPath()
 	b, err := ioutil.ReadFile(p)
 	if err != nil {
 		return nil, err
 	}
 
-	currentContext := &Context{}
-	if err := json.Unmarshal(b, currentContext); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.DisallowUnknownFields() // Force errors
+
+	currentContext := &ContextConfig{}
+	if err := dec.Decode(&currentContext); err != nil {
 		return nil, err
 	}
 
 	return currentContext, nil
 }
 
-func SaveContext(clusterType ClusterType, url, name string) error {
-	c, err := GetOktetoContextConfig()
+func SaveContext(clusterType ClusterType, url, name, token string) error {
+	cc, err := GetOktetoContextConfig()
 	if err != nil {
 		log.Infof("bad token, re-initializing: %s", err)
-		c = &Context{}
+		cc = &ContextConfig{
+			Contexts: make(map[string]Context),
+		}
 	}
 
-	c.ClusterType = clusterType
-	c.URL = url
-	c.Name = name
+	cc.Contexts[name] = Context{
+		ClusterType: clusterType,
+		URL:         url,
+		Name:        name,
+		ApiToken:    token,
+	}
 
-	return saveContext(c)
+	cc.CurrentContext = name
+
+	return saveContext(cc)
 }
 
-func saveContext(c *Context) error {
-	marshalled, err := json.Marshal(c)
+func saveContext(c *ContextConfig) error {
+	marshalled, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
 		log.Infof("failed to marshal context: %s", err)
 		return fmt.Errorf("failed to generate your context")
@@ -100,15 +117,16 @@ func GetCurrentContext() string {
 	if err != nil {
 		return ""
 	}
-	return c.Name
+	return c.CurrentContext
 }
 
 func IsOktetoCluster() bool {
-	c, err := GetOktetoContextConfig()
+	cc, err := GetOktetoContextConfig()
 	if err != nil {
 		return false
 	}
-	if c.ClusterType == CloudCluster || c.ClusterType == EnterpriseCluster {
+	context := cc.Contexts[cc.CurrentContext]
+	if context.ClusterType == CloudCluster || context.ClusterType == EnterpriseCluster {
 		return true
 	}
 	return false
