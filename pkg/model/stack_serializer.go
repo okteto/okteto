@@ -39,7 +39,6 @@ type StackRaw struct {
 	Volumes   map[string]*VolumeTopLevel `yaml:"volumes,omitempty"`
 
 	// Extensions
-
 	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 
 	// Docker-compose not implemented
@@ -144,6 +143,9 @@ type ServiceRaw struct {
 	User              *WarningType `yaml:"user,omitempty"`
 	UsernsMode        *WarningType `yaml:"userns_mode,omitempty"`
 	VolumesFrom       *WarningType `yaml:"volumes_from,omitempty"`
+
+	// Extensions
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 type DeployInfoRaw struct {
@@ -159,6 +161,9 @@ type DeployInfoRaw struct {
 	Preferences    *WarningType `yaml:"preferences,omitempty"`
 	RollbackConfig *WarningType `yaml:"rollback_config,omitempty"`
 	UpdateConfig   *WarningType `yaml:"update_config,omitempty"`
+
+	// Extensions
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 type RestartPolicyRaw struct {
@@ -167,6 +172,9 @@ type RestartPolicyRaw struct {
 
 	Delay  *WarningType `yaml:"delay,omitempty"`
 	Window *WarningType `yaml:"window,omitempty"`
+
+	// Extensions
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 type PortRaw struct {
@@ -177,6 +185,9 @@ type PortRaw struct {
 	HostFrom      int32
 	HostTo        int32
 	Protocol      apiv1.Protocol
+
+	// Extensions
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 type WarningType struct {
@@ -186,12 +197,18 @@ type WarningType struct {
 type ResourcesRaw struct {
 	Limits       DeployComposeResources `json:"limits,omitempty" yaml:"limits,omitempty"`
 	Reservations DeployComposeResources `json:"reservations,omitempty" yaml:"reservations,omitempty"`
+
+	// Extensions
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 type DeployComposeResources struct {
 	Cpus    Quantity     `json:"cpus,omitempty" yaml:"cpus,omitempty"`
 	Memory  Quantity     `json:"memory,omitempty" yaml:"memory,omitempty"`
 	Devices *WarningType `json:"devices,omitempty" yaml:"devices,omitempty"`
+
+	// Extensions
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 
 type VolumeTopLevel struct {
@@ -204,6 +221,9 @@ type VolumeTopLevel struct {
 
 	Driver   *WarningType `json:"driver,omitempty" yaml:"driver,omitempty"`
 	External *WarningType `json:"external,omitempty" yaml:"external,omitempty"`
+
+	// Extensions
+	Extensions map[string]interface{} `yaml:",inline" json:"-"`
 }
 type RawMessage struct {
 	unmarshal func(interface{}) error
@@ -216,7 +236,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	if err := validateExtensions(stackRaw.Extensions); err != nil {
+	if err := validateExtensions(stackRaw); err != nil {
 		return err
 	}
 	s.Name = stackRaw.Name
@@ -1421,11 +1441,28 @@ func (a *ArgsStack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func validateExtensions(extensions map[string]interface{}) error {
-	for extension := range extensions {
-		if !strings.HasPrefix(extension, "x-") {
-			return fmt.Errorf("%s is not supported. More information is available here: https://okteto.com/docs/reference/stacks/", extension)
+func validateExtensions(stack StackRaw) error {
+	nonValidFields := make([]string, 0)
+	for extension := range stack.Extensions {
+		nonValidFields = append(nonValidFields, extension)
+	}
+
+	for svcName, svc := range stack.Services {
+		for extension := range svc.Extensions {
+			nonValidFields = append(nonValidFields, fmt.Sprintf("services[%s].%s", svcName, extension))
 		}
+		if svc.Deploy != nil {
+			for extension := range svc.Deploy.Extensions {
+				nonValidFields = append(nonValidFields, fmt.Sprintf("services[%s].deploy.%s", svcName, extension))
+			}
+		}
+	}
+	if len(nonValidFields) == 1 {
+		return fmt.Errorf("Invalid stack manifest: Field '%s' is not supported.\n    More information is available here: https://okteto.com/docs/reference/stacks/", nonValidFields[0])
+	} else if len(nonValidFields) > 1 {
+		return fmt.Errorf(`Invalid stack manifest: The following fields are not supported.
+    - %s
+    More information is available here: https://okteto.com/docs/reference/stacks/`, strings.Join(nonValidFields, "\n    - "))
 	}
 	return nil
 }
