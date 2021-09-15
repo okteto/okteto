@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/cmd/kubeconfig"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -49,7 +48,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 				return errors.ErrNotOktetoCluster
 			}
 
-			err := kubeconfig.RunKubeconfig(ctx, namespace)
+			err := RunNamespace(ctx, namespace)
 			analytics.TrackNamespace(err == nil)
 			return err
 		},
