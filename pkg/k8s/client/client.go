@@ -65,12 +65,12 @@ func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
 
 // GetLocalWithContext returns a kubernetes client for a given context. It will detect if KUBECONFIG is defined.
 func GetLocalWithContext(thisContext string) (*kubernetes.Clientset, *rest.Config, error) {
-	thisContext = GetSessionContext(thisContext, config.GetKubeConfigFile())
-	clientConfig := getClientConfig(thisContext, config.GetKubeConfigFile())
+	thisContext = GetSessionContext(thisContext, config.GetContextKubeconfigPath())
+	clientConfig := getClientConfig(thisContext, config.GetContextKubeconfigPath())
 
 	cc, err := clientConfig.ClientConfig()
 	if err != nil {
-		clientConfig := getClientConfig(thisContext, config.GetContextKubeconfigPath())
+		clientConfig := getClientConfig(thisContext, config.GetKubeConfigFile())
 
 		cc, err = clientConfig.ClientConfig()
 		if err != nil {
