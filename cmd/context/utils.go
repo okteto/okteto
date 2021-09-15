@@ -123,7 +123,7 @@ func getClusterList() []string {
 }
 
 func selectCluster() (string, error) {
-	clusters := []string{"Okteto Cloud", "Okteto enterprise"}
+	clusters := []string{"Okteto Cloud", "Okteto Enterprise"}
 	k8sClusters := getClusterList()
 	for _, k8sCluster := range k8sClusters {
 		clusters = append(clusters, k8sCluster)
@@ -132,11 +132,11 @@ func selectCluster() (string, error) {
 }
 
 func isOptionAnOktetoCluster(option string) bool {
-	return option == "Okteto cloud" || option == "Okteto enterprise"
+	return option == "Okteto Cloud" || option == "Okteto Enterprise"
 }
 
 func getOktetoClusterUrl(ctx context.Context, option string) string {
-	if option == "Okteto cloud" {
+	if option == "Okteto Cloud" {
 		return okteto.CloudURL
 	}
 
