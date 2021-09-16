@@ -44,8 +44,23 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type StackDeployOptions struct {
+	StackPath        string
+	Name             string
+	Namespace        string
+	ForceBuild       bool
+	Wait             bool
+	NoCache          bool
+	Timeout          time.Duration
+	ServicesToDeploy []string
+}
+
 // Deploy deploys a stack
-func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool, timeout time.Duration) error {
+func Deploy(ctx context.Context, s *model.Stack, options StackDeployOptions) error {
+	if err := validateServicesToDeploy(s, options.ServicesToDeploy); err != nil {
+		return err
+	}
+
 	if s.Namespace == "" {
 		s.Namespace = client.GetContextNamespace("")
 	}
@@ -55,7 +70,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}
 
-	if err := translate(ctx, s, forceBuild, noCache); err != nil {
+	if err := translate(ctx, s, options); err != nil {
 		return err
 	}
 
@@ -67,7 +82,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 		return err
 	}
 
-	err = deploy(ctx, s, wait, c, config, timeout)
+	err = deploy(ctx, s, c, config, options)
 	if err != nil {
 		output = fmt.Sprintf("%s\nStack '%s' deployment failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
@@ -85,7 +100,7 @@ func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool,
 	return err
 }
 
-func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Clientset, config *rest.Config, timeout time.Duration) error {
+func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config *rest.Config, options StackDeployOptions) error {
 	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
@@ -97,9 +112,9 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 
 	go func() {
 
-		addHiddenExposedPortsToStack(ctx, s)
+		addHiddenExposedPortsToStack(ctx, s, options)
 
-		for name := range s.Services {
+		for _, name := range options.ServicesToDeploy {
 			if len(s.Services[name].Ports) > 0 {
 				svcK8s := translateService(name, s)
 				if err := services.Deploy(ctx, svcK8s, c); err != nil {
@@ -117,7 +132,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 			spinner.Start()
 		}
 
-		if err := deployServices(ctx, s, c, config, spinner, timeout); err != nil {
+		if err := deployServices(ctx, s, c, config, spinner, options); err != nil {
 			exit <- err
 		}
 
@@ -138,7 +153,7 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 			exit <- err
 		}
 
-		if !wait {
+		if !options.Wait {
 			exit <- nil
 		}
 
@@ -160,18 +175,18 @@ func deploy(ctx context.Context, s *model.Stack, wait bool, c *kubernetes.Client
 	return nil
 }
 
-func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernetes.Clientset, config *rest.Config, spinner *utils.Spinner, timeout time.Duration) error {
+func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernetes.Clientset, config *rest.Config, spinner *utils.Spinner, options StackDeployOptions) error {
 	deployedSvcs := make(map[string]bool)
 	t := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(timeout)
+	to := time.NewTicker(options.Timeout)
 
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("stack '%s' didn't finish after %s", stack.Name, timeout.String())
+			return fmt.Errorf("stack '%s' didn't finish after %s", stack.Name, options.Timeout.String())
 		case <-t.C:
-			for len(deployedSvcs) != len(stack.Services) {
-				for svcName := range stack.Services {
+			for len(deployedSvcs) != len(options.ServicesToDeploy) {
+				for _, svcName := range options.ServicesToDeploy {
 					if deployedSvcs[svcName] {
 						continue
 					}
@@ -576,8 +591,9 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack) {
-	for _, svc := range s.Services {
+func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack, options StackDeployOptions) {
+	for _, svcName := range options.ServicesToDeploy {
+		svc := s.Services[svcName]
 		addHiddenExposedPortsToSvc(ctx, svc, s.Namespace)
 	}
 
@@ -592,4 +608,48 @@ func addHiddenExposedPortsToSvc(ctx context.Context, svc *model.Service, namespa
 			}
 		}
 	}
+}
+
+func validateServicesToDeploy(s *model.Stack, servicesToDeploy []string) error {
+	if err := validateDefinedServices(s, servicesToDeploy); err != nil {
+		return err
+	}
+
+	if err := validateDependentServiceDeployed(s, servicesToDeploy); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
+	for _, svcToDeploy := range servicesToDeploy {
+		if _, ok := s.Services[svcToDeploy]; !ok {
+			definedSvcs := make([]string, 0)
+			for svcName := range s.Services {
+				definedSvcs = append(definedSvcs, svcName)
+			}
+			return fmt.Errorf("service '%s' is not defined. Defined services are: [%s]", svcToDeploy, strings.Join(definedSvcs, ", "))
+		}
+	}
+	return nil
+}
+
+func validateDependentServiceDeployed(s *model.Stack, servicesToDeploy []string) error {
+	for _, svcToDeploy := range servicesToDeploy {
+		for name := range s.Services[svcToDeploy].DependsOn {
+			if !isSvcToBeDeployed(servicesToDeploy, name) {
+				return fmt.Errorf("service '%s' depends on '%s' to be deployed but its not deployed", svcToDeploy, name)
+			}
+		}
+	}
+	return nil
+}
+
+func isSvcToBeDeployed(servicesToDeploy []string, svcName string) bool {
+	for _, svcToBeDeployedName := range servicesToDeploy {
+		if svcName == svcToBeDeployedName {
+			return true
+		}
+	}
+	return false
 }

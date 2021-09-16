@@ -59,12 +59,12 @@ const (
 	pvcName = "pvc"
 )
 
-func translate(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
+func translate(ctx context.Context, s *model.Stack, options StackDeployOptions) error {
 	if err := translateStackEnvVars(ctx, s); err != nil {
 		return err
 	}
 
-	return translateBuildImages(ctx, s, forceBuild, noCache)
+	return translateBuildImages(ctx, s, options)
 }
 
 func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
@@ -149,29 +149,30 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	return nil
 }
 
-func translateBuildImages(ctx context.Context, s *model.Stack, forceBuild, noCache bool) error {
+func translateBuildImages(ctx context.Context, s *model.Stack, options StackDeployOptions) error {
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return err
 	}
-	hasBuiltSomething, err := buildServices(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache)
+	hasBuiltSomething, err := buildServices(ctx, s, buildKitHost, isOktetoCluster, options)
 	if err != nil {
 		return err
 	}
-	hasAddedAnyVolumeMounts, err := addVolumeMountsToBuiltImage(ctx, s, buildKitHost, isOktetoCluster, forceBuild, noCache, hasBuiltSomething)
+	hasAddedAnyVolumeMounts, err := addVolumeMountsToBuiltImage(ctx, s, buildKitHost, isOktetoCluster, options, hasBuiltSomething)
 	if err != nil {
 		return err
 	}
-	if !hasBuiltSomething && !hasAddedAnyVolumeMounts && forceBuild {
+	if !hasBuiltSomething && !hasAddedAnyVolumeMounts && options.ForceBuild {
 		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
 	}
 
 	return nil
 }
 
-func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache bool) (bool, error) {
+func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster bool, options StackDeployOptions) (bool, error) {
 	hasBuiltSomething := false
-	for name, svc := range s.Services {
+	for _, name := range options.ServicesToDeploy {
+		svc := s.Services[name]
 		if svc.Build == nil {
 			continue
 		}
@@ -181,7 +182,7 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 		if isOktetoCluster && !strings.HasPrefix(svc.Image, okteto.DevRegistry) {
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
-		if !forceBuild {
+		if !options.ForceBuild {
 			if _, err := registry.GetImageTagWithDigest(ctx, s.Namespace, svc.Image); err != errors.ErrNotFound {
 				s.Services[name] = svc
 				continue
@@ -194,7 +195,7 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 		}
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+		if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, options.NoCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
 			return hasBuiltSomething, err
 		}
 		svc.SetLastBuiltAnnotation()
@@ -204,7 +205,7 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 	return hasBuiltSomething, nil
 }
 
-func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster, forceBuild, noCache, hasBuiltSomething bool) (bool, error) {
+func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster bool, options StackDeployOptions, hasBuiltSomething bool) (bool, error) {
 	hasAddedAnyVolumeMounts := false
 	var err error
 	for name, svc := range s.Services {
@@ -231,7 +232,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, noCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+			if err := build.Run(ctx, s.Namespace, buildKitHost, isOktetoCluster, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, options.NoCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.SetLastBuiltAnnotation()

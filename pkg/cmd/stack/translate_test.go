@@ -54,7 +54,7 @@ func Test_translate(t *testing.T) {
 			},
 		},
 	}
-	if err := translate(ctx, stack, false, false); err == nil {
+	if err := translate(ctx, stack, StackDeployOptions{ForceBuild: false, Wait: false}); err == nil {
 		t.Fatalf("An error should be returned")
 	}
 }
