@@ -24,13 +24,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Context points okteto to a cluster.
+// SetNamespace sets the namespace in current okteto context.
 func SetNamespace() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "set-namespace",
-		Aliases: []string{"ctx"},
-		Args:    utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
-		Short:   "Set namespace of current okteto context",
+		Use:   "set-namespace",
+		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
+		Short: "Set namespace of current okteto context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			namespace := args[0]
