@@ -213,3 +213,65 @@ func Test_deployJob(t *testing.T) {
 		t.Fatal("Not deployed correctly")
 	}
 }
+
+func Test_ValidateDeploySomeServices(t *testing.T) {
+
+	var tests = []struct {
+		name             string
+		stack            *model.Stack
+		svcsToBeDeployed []string
+		expectedErr      bool
+	}{
+		{
+			name: "not defined svc",
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"db": {},
+					"api": {DependsOn: model.DependsOn{
+						"db": model.DependsOnConditionSpec{},
+					}},
+				},
+			},
+			svcsToBeDeployed: []string{"nginx", "db"},
+			expectedErr:      true,
+		},
+		{
+			name: "not depending svc",
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"db": {},
+					"api": {DependsOn: model.DependsOn{
+						"db": model.DependsOnConditionSpec{},
+					}},
+				},
+			},
+			svcsToBeDeployed: []string{"api"},
+			expectedErr:      true,
+		},
+		{
+			name: "ok",
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"db": {},
+					"api": {DependsOn: model.DependsOn{
+						"db": model.DependsOnConditionSpec{},
+					}},
+				},
+			},
+			svcsToBeDeployed: []string{"api", "db"},
+			expectedErr:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateServicesToDeploy(tt.stack, tt.svcsToBeDeployed)
+			if err == nil && tt.expectedErr {
+				t.Fatal("Expected err but not thrown")
+			}
+			if err != nil && !tt.expectedErr {
+				t.Fatal("Not Expected err but not thrown")
+			}
+		})
+	}
+}

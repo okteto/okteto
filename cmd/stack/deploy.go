@@ -27,18 +27,11 @@ import (
 
 // Deploy deploys a stack
 func Deploy(ctx context.Context) *cobra.Command {
-	var stackPath string
-	var name string
-	var namespace string
-	var forceBuild bool
-	var wait bool
-	var noCache bool
-	var timeout time.Duration
+	options := stack.StackDeployOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "deploy",
+		Use:   "deploy [service...]",
 		Short: "Deploys a stack",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#deploy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
@@ -49,17 +42,27 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			s, err := utils.LoadStack(name, stackPath)
+			s, err := utils.LoadStack(options.Name, options.StackPath)
 			if err != nil {
 				return err
 			}
 			analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
 
-			if err := s.UpdateNamespace(namespace); err != nil {
+			if len(args) > 0 {
+				options.ServicesToDeploy = args
+			} else {
+				definedSvcs := make([]string, 0)
+				for svcName := range s.Services {
+					definedSvcs = append(definedSvcs, svcName)
+				}
+				options.ServicesToDeploy = definedSvcs
+			}
+
+			if err := s.UpdateNamespace(options.Namespace); err != nil {
 				return err
 			}
 
-			err = stack.Deploy(ctx, s, forceBuild, wait, noCache, timeout)
+			err = stack.Deploy(ctx, s, options)
 			analytics.TrackDeployStack(err == nil, s.IsCompose)
 			if err == nil {
 				log.Success("Stack '%s' successfully deployed", s.Name)
@@ -67,12 +70,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&stackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
-	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the stack name")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
-	cmd.Flags().BoolVarP(&forceBuild, "build", "", false, "build images before starting any Stack service")
-	cmd.Flags().BoolVarP(&wait, "wait", "", false, "wait until a minimum number of containers are in a ready state for every service")
-	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
-	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (10 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().StringVarP(&options.StackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
+	cmd.Flags().StringVarP(&options.Name, "name", "", "", "overwrites the stack name")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
+	cmd.Flags().BoolVarP(&options.ForceBuild, "build", "", false, "build images before starting any Stack service")
+	cmd.Flags().BoolVarP(&options.Wait, "wait", "", false, "wait until a minimum number of containers are in a ready state for every service")
+	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (10 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	return cmd
 }
