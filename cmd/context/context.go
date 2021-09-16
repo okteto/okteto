@@ -102,6 +102,7 @@ to point okteto to 'mycluster'.
 		},
 	}
 
+	cmd.AddCommand(SetNamespace())
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication.")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "Namespace to point to")
 	return cmd
