@@ -43,8 +43,6 @@ import (
 )
 
 const (
-	helmDriver = "secrets"
-
 	NameField    = "name"
 	statusField  = "status"
 	YamlField    = "yaml"
