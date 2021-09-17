@@ -19,6 +19,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/kubeconfig"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okContext "github.com/okteto/okteto/pkg/cmd/context"
@@ -98,6 +99,7 @@ to point okteto to 'mycluster'.
 
 			analytics.TrackContext(true, string(ctxOptions.clusterType))
 			log.Success("Your context have been updated")
+			kubeconfig.RunKubeconfig(ctx)
 			return nil
 		},
 	}
