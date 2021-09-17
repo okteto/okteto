@@ -56,8 +56,8 @@ func GetLocalWithContext(thisContext string) (*kubernetes.Clientset, *rest.Confi
 		clientConfig = getClientConfig(thisContext, config.GetContextKubeconfigPath())
 
 	} else {
-		thisContext = GetSessionContext(thisContext, config.GetKubeConfigFile())
-		clientConfig = getClientConfig(thisContext, config.GetKubeConfigFile())
+		thisContext = GetSessionContext(thisContext, "")
+		clientConfig = getClientConfig(thisContext, "")
 	}
 
 	config, err := clientConfig.ClientConfig()
@@ -114,8 +114,9 @@ func GetContextNamespace(k8sContext string) string {
 	}
 	namespace, _, err := getClientConfig(k8sContext, config.GetContextKubeconfigPath()).Namespace()
 	if err != nil {
-		namespace, _, err = getClientConfig(k8sContext, config.GetKubeConfigFile()).Namespace()
+		namespace, _, err = getClientConfig(k8sContext, "").Namespace()
 		if err != nil {
+
 			log.Fatalf("error accessing you kubeconfig file: %s", err.Error())
 		}
 	}
