@@ -69,7 +69,9 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		log.Infof("Failed to build image: %s", err.Error())
 	}
 	if registry.IsTransientError(err) {
-		log.Yellow("Failed to push '%s' to the registry, retrying ...", tag)
+		log.Yellow(`Failed to push '%s' to the registry:
+  %s,
+  Retrying ...`, tag, err.Error())
 		success := true
 		err := solveBuild(ctx, buildkitClient, opt, progress)
 		if err != nil {

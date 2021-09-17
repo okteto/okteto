@@ -104,18 +104,18 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			pipeline, err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, variables)
+			resp, err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, variables)
 			if err != nil {
 				return err
 			}
-			log.Information("Pipeline URL: %s", getPipelineURL(namespace, pipeline))
+			log.Information("Pipeline URL: %s", getPipelineURL(namespace, resp.GitDeploy))
 
 			if !wait {
 				log.Success("Pipeline '%s' scheduled for deployment", name)
 				return nil
 			}
 
-			if waitUntilRunning(ctx, name, pipeline.Job, namespace, timeout); err != nil {
+			if err := waitUntilRunning(ctx, name, resp.Action, namespace, timeout); err != nil {
 				return err
 			}
 			log.Success("Pipeline '%s' successfully deployed", name)
@@ -135,7 +135,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func deployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, wait bool, variables []string) (*okteto.PipelineRun, error) {
+func deployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, wait bool, variables []string) (*okteto.GitDeployResponse, error) {
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -145,7 +145,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 	exit := make(chan error, 1)
 
 	var err error
-	var pipeline *okteto.PipelineRun
+	var resp *okteto.GitDeployResponse
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 			})
 		}
 		log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
-		pipeline, err = oktetoClient.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
+		resp, err = okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
 		exit <- err
 	}()
 
@@ -178,14 +178,14 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 			return nil, err
 		}
 	}
-	return pipeline, nil
+	return resp, nil
 }
 
 func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func waitUntilRunning(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
+func waitUntilRunning(ctx context.Context, name string, action *okteto.Action, namespace string, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for the pipeline to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -195,7 +195,8 @@ func waitUntilRunning(ctx context.Context, name, jobName, namespace string, time
 	exit := make(chan error, 1)
 
 	go func() {
-		err := waitToBeDeployed(ctx, name, jobName, namespace, timeout)
+
+		err := waitToBeDeployed(ctx, name, action, namespace, timeout)
 		if err != nil {
 			exit <- err
 		}
@@ -217,11 +218,11 @@ func waitUntilRunning(ctx context.Context, name, jobName, namespace string, time
 	return nil
 }
 
-func waitToBeDeployed(ctx context.Context, name, jobName, namespace string, timeout time.Duration) error {
-	if jobName == "" {
+func waitToBeDeployed(ctx context.Context, name string, action *okteto.Action, namespace string, timeout time.Duration) error {
+	if action == nil {
 		return deprecatedWaitToBeDeployed(ctx, name, namespace, timeout)
 	}
-	return okteto.WaitforInstallerJobToFinish(ctx, name, jobName, namespace, timeout)
+	return okteto.WaitForActionToFinish(ctx, action.Name, namespace, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
@@ -311,8 +312,8 @@ func getCurrentNamespace(ctx context.Context) string {
 	return os.Getenv("OKTETO_NAMESPACE")
 }
 
-func getPipelineURL(namespace string, pipelineInfo *okteto.PipelineRun) string {
+func getPipelineURL(namespace string, gitDeploy *okteto.GitDeploy) string {
 	oktetoURL := okteto.GetURL()
-	pipelineURL := fmt.Sprintf("%s/#/spaces/%s?resourceId=%s", oktetoURL, namespace, pipelineInfo.ID)
+	pipelineURL := fmt.Sprintf("%s/#/spaces/%s?resourceId=%s", oktetoURL, namespace, gitDeploy.ID)
 	return pipelineURL
 }

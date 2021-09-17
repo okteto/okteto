@@ -22,11 +22,63 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
+// DeployPreviewBody top body answer
+type DeployPreviewBody struct {
+	PreviewResponse PreviewResponse `json:"deployPreview" yaml:"deployPreview"`
+}
+
+type deprecatedDeployPreviewBody struct {
+	Preview Preview `json:"deployPreview" yaml:"deployPreview"`
+}
+
+// PreviewBody top body answer
+type PreviewBody struct {
+	Preview Preview `json:"preview"`
+}
+
+//Statefulset represents an Okteto statefulset
+type Statefulset struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Status     string     `json:"status"`
+	DeployedBy string     `json:"deployedBy"`
+	Endpoints  []Endpoint `json:"endpoints"`
+}
+
+//Deployment represents an Okteto statefulset
+type Deployment struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Status     string     `json:"status"`
+	DeployedBy string     `json:"deployedBy"`
+	Endpoints  []Endpoint `json:"endpoints"`
+}
+
 //Endpoint represents an okteto endpoint
 type Endpoint struct {
 	URL     string `json:"url"`
 	Private bool   `json:"private"`
 	Divert  bool   `json:"divert"`
+}
+
+//Previews represents an Okteto list of spaces
+type Previews struct {
+	Previews []Preview `json:"previews" yaml:"previews"`
+}
+
+type PreviewResponse struct {
+	Action  *Action  `json:"action" yaml:"action"`
+	Preview *Preview `json:"preview" yaml:"preview"`
+}
+
+//Preview represents an Okteto preview environment
+type Preview struct {
+	ID           string        `json:"id" yaml:"id"`
+	Sleeping     bool          `json:"sleeping" yaml:"sleeping"`
+	Scope        string        `json:"scope" yaml:"scope"`
+	GitDeploys   []GitDeploy   `json:"gitDeploys"`
+	Statefulsets []Statefulset `json:"statefulsets"`
+	Deployments  []Deployment  `json:"deployments"`
 }
 
 //PreviewEnv represents an Okteto preview environment
@@ -45,9 +97,13 @@ type InputVariable struct {
 type PreviewScope graphql.String
 
 // DeployPreview creates a preview environment
-func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewEnv, error) {
-	if err := validateNamespace(name); err != nil {
+func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewResponse, error) {
+	if err := validateNamespace(name, "preview environment"); err != nil {
 		return nil, err
+	}
+
+	previewResponse := &PreviewResponse{}
+	if len(variables) > 0 {
 	}
 
 	previewEnv := &PreviewEnv{}
@@ -55,8 +111,17 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 	if len(variables) > 0 {
 		var mutation struct {
 			Preview struct {
-				Id  graphql.String
-				Job graphql.String
+				Action struct {
+					Id     graphql.String
+					Name   graphql.String
+					Status graphql.String
+				}
+				GitDeploy struct {
+					Id         graphql.String
+					Name       graphql.String
+					Status     graphql.String
+					Repository graphql.String
+				}
 			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
 		}
 
@@ -78,7 +143,7 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 		}
 		err := c.client.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
-			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"Preview\"") {
+			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"Preview\"") {
 				return c.deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 			}
 			return nil, translatePreviewAPIErr(err, name)
@@ -88,8 +153,17 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 	} else {
 		var mutation struct {
 			Preview struct {
-				Id  graphql.String
-				Job graphql.String
+				Action struct {
+					Id     graphql.String
+					Name   graphql.String
+					Status graphql.String
+				}
+				GitDeploy struct {
+					Id         graphql.String
+					Name       graphql.String
+					Status     graphql.String
+					Repository graphql.String
+				}
 			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, filename: $filename)"`
 		}
 
@@ -111,15 +185,11 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 		previewEnv.ID = string(mutation.Preview.Id)
 		previewEnv.Job = string(mutation.Preview.Job)
 	}
-
 	return previewEnv, nil
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func (c *OktetoClient) deprecatedDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewEnv, error) {
-	if err := validateNamespace(name); err != nil {
-		return nil, err
-	}
+func (c *OktetoClient) deprecatedDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewResponse, error) {
 
 	previewEnv := &PreviewEnv{}
 
@@ -174,7 +244,10 @@ func (c *OktetoClient) deprecatedDeployPreview(ctx context.Context, name, scope,
 		}
 		previewEnv.ID = string(mutation.Preview.Id)
 	}
-	return previewEnv, nil
+
+	return &PreviewResponse{
+		Preview: &body.Preview,
+	}, nil
 }
 
 // DestroyPreview destroy a preview environment
@@ -192,7 +265,7 @@ func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
 }
 
 // ListPreviews list preview environments
-func (c *OktetoClient) ListPreviews(ctx context.Context) ([]PreviewEnv, error) {
+func (c *OktetoClient) ListPreviews(ctx context.Context) ([]Preview, error) {
 	var query struct {
 		PreviewEnvs []struct {
 			Id       graphql.String
@@ -263,7 +336,7 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 }
 
 // GetPreviewEnvByName gets a preview environment given its name
-func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*PipelineRun, error) {
+func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*GitDeploy, error) {
 	var query struct {
 		Preview struct {
 			GitDeploys []struct {

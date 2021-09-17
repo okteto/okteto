@@ -33,13 +33,9 @@ type Namespace struct {
 	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
 }
 
-//CreateNamespace creates a new namespace calling Okteto API
+// CreateNamespace creates a namespace
 func (c *OktetoClient) CreateNamespace(ctx context.Context, namespace string) (string, error) {
-	var mutation struct {
-		Space struct {
-			Id graphql.String
-		} `graphql:"createSpace(name: $name)"`
-	}
+
 	variables := map[string]interface{}{
 		"name": graphql.String(namespace),
 	}
@@ -118,18 +114,18 @@ func (c *OktetoClient) DeleteNamespace(ctx context.Context, namespace string) er
 	return nil
 }
 
-func validateNamespace(namespace string) error {
+func validateNamespace(namespace, object string) error {
 	if len(namespace) > MAX_ALLOWED_CHARS {
 		return errors.UserError{
-			E:    fmt.Errorf("invalid namespace name"),
-			Hint: "Namespace name must be shorter than 63 characters.",
+			E:    fmt.Errorf("invalid %s name", object),
+			Hint: fmt.Sprintf("%s name must be shorter than 63 characters.", object),
 		}
 	}
 	nameValidationRegex := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
 	if !nameValidationRegex.MatchString(namespace) {
 		return errors.UserError{
-			E:    fmt.Errorf("invalid namespace name"),
-			Hint: "Namespace name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character",
+			E:    fmt.Errorf("invalid %s name", object),
+			Hint: fmt.Sprintf("%s name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character", object),
 		}
 	}
 	return nil

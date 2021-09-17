@@ -125,6 +125,7 @@ func translateAPIErr(err error) error {
 		return fmt.Errorf("server temporarily unavailable, please try again")
 	case "non-200 OK status code: 401 Unauthorized body: \"\"":
 		return fmt.Errorf("unauthorized. Please run okteto login and try again")
+
 	default:
 		log.Infof("Unrecognized API error: %s", err)
 		return fmt.Errorf(e)

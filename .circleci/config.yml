@@ -17,6 +17,8 @@ jobs:
           keys:
             - v3-pkg-cache-{{ checksum "go.sum" }}
       - run:
+          command: go mod tidy && git diff --exit-code go.sum > /dev/null
+      - run:
           name: Test
           command: |
             make test

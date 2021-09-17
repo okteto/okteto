@@ -348,11 +348,11 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 				continue
 			}
-			pod, ok := event.Object.(*apiv1.Pod)
+			podEvent, ok := event.Object.(*apiv1.Event)
 			if !ok {
 				continue
 			}
-			if up.Pod.UID != pod.UID {
+			if up.Pod.UID != podEvent.InvolvedObject.UID {
 				continue
 			}
 			optsWatchEvents.ResourceVersion = e.ResourceVersion

@@ -231,6 +231,10 @@ services:
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  &runAsUser,
+								RunAsGroup: &runAsGroup,
+							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      OktetoBinName,
@@ -743,6 +747,11 @@ docker:
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:    &rootUser,
+								RunAsGroup:   &rootUser,
+								RunAsNonRoot: pointer.BoolPtr(false),
+							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      OktetoBinName,
@@ -1314,7 +1323,12 @@ environment:
 							Name:            OktetoBinName,
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:    &rootUser,
+								RunAsGroup:   &rootUser,
+								RunAsNonRoot: pointer.BoolPtr(false),
+							},
+							Command: []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      OktetoBinName,
@@ -1629,7 +1643,11 @@ services:
 							Name:            OktetoBinName,
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  &runAsUser,
+								RunAsGroup: &runAsGroup,
+							},
+							Command: []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      OktetoBinName,
