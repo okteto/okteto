@@ -39,10 +39,6 @@ func List(ctx context.Context) *cobra.Command {
 				return errors.ErrNotLogged
 			}
 
-			if !okteto.IsOktetoCluster() {
-				return errors.ErrNotOktetoCluster
-			}
-
 			err := executeListPreviews(ctx)
 			return err
 

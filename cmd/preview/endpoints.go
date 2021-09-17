@@ -44,10 +44,6 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return errors.ErrNotLogged
 			}
 
-			if !okteto.IsOktetoCluster() {
-				return errors.ErrNotOktetoCluster
-			}
-
 			previewName := args[0]
 
 			if err := validateOutput(output); err != nil {

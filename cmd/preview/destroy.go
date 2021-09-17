@@ -43,10 +43,6 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return errors.ErrNotLogged
 			}
 
-			if !okteto.IsOktetoCluster() {
-				return errors.ErrNotOktetoCluster
-			}
-
 			name = getExpandedName(args[0])
 			err := executeDestroyPreview(ctx, name)
 			analytics.TrackPreviewDestroy(err == nil)

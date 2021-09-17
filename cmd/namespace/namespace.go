@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -42,10 +43,6 @@ func Namespace(ctx context.Context) *cobra.Command {
 
 			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
-			}
-
-			if !okteto.IsOktetoCluster() {
-				return errors.ErrNotOktetoCluster
 			}
 
 			err := RunNamespace(ctx, namespace)
@@ -97,14 +94,20 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
 	}
 
-	kubeConfigFile := config.GetContextKubeconfigPath()
+	var kubeConfigPath string
+	if client.IsContextDefined() {
+		kubeConfigPath = config.GetContextKubeconfigPath()
+	} else {
+		kubeConfigPath = config.GetKubeConfigFile()
+	}
+
 	clusterContext := okteto.GetClusterContext()
 
-	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterContext, true); err != nil {
+	if err := okteto.SetKubeConfig(cred, kubeConfigPath, namespace, okteto.GetUserID(), clusterContext, true); err != nil {
 		return err
 	}
 
-	log.Success("Updated context '%s' in '%s'", clusterContext, kubeConfigFile)
+	log.Success("Updated context '%s' in '%s'", clusterContext, kubeConfigPath)
 	return nil
 }
 

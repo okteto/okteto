@@ -49,10 +49,6 @@ func destroy(ctx context.Context) *cobra.Command {
 				return errors.ErrNotLogged
 			}
 
-			if !okteto.IsOktetoCluster() {
-				return errors.ErrNotOktetoCluster
-			}
-
 			if name == "" {
 				cwd, err := os.Getwd()
 				if err != nil {

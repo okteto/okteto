@@ -31,8 +31,8 @@ import (
 type UpState string
 
 const (
-	contextDir        = ".context"
-	contextConfigFile = "config.json"
+	configDir         = ".config"
+	contextConfigFile = "context.json"
 	kubeConfigFile    = "kubeConfig"
 )
 
@@ -234,14 +234,14 @@ func splitKubeConfigEnv(value string) string {
 	return strings.Split(value, ":")[0]
 }
 
-func GetOktetoContextPath() string {
-	return filepath.Join(GetOktetoHome(), contextDir)
+func GetOktetoConfigPath() string {
+	return filepath.Join(GetOktetoHome(), configDir)
 }
 
 func GetContextConfigPath() string {
-	return filepath.Join(GetOktetoContextPath(), contextConfigFile)
+	return filepath.Join(GetOktetoConfigPath(), contextConfigFile)
 }
 
 func GetContextKubeconfigPath() string {
-	return filepath.Join(GetOktetoContextPath(), kubeConfigFile)
+	return filepath.Join(GetOktetoConfigPath(), kubeConfigFile)
 }

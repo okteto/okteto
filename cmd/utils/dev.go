@@ -252,7 +252,13 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 		return nil
 	}
 
-	currentContext := okteto.GetCurrentContext()
+	var currentContext string
+	if client.IsContextDefined() {
+		currentContext = client.GetSessionContext("", config.GetContextKubeconfigPath())
+	} else {
+		currentContext = client.GetSessionContext("", config.GetKubeConfigFile())
+	}
+
 	if okteto.GetClusterContext() == currentContext {
 		secrets, err := okteto.GetSecrets(ctx)
 		if err != nil {

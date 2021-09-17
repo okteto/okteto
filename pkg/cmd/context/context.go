@@ -69,7 +69,7 @@ func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType, name
 	if err != nil {
 		return err
 	}
-	if err := okteto.SaveContext(clusterType, okteto.GetURL(), clusterContext, token.Token); err != nil {
+	if err := okteto.SaveContext(okteto.GetURL(), clusterContext, token.Token); err != nil {
 		return err
 	}
 	return nil
@@ -95,7 +95,7 @@ func SaveK8sContext(ctx context.Context, clusterName string, clusterType okteto.
 	if err != nil {
 		return err
 	}
-	if err := okteto.SaveContext(clusterType, "", clusterName, ""); err != nil {
+	if err := okteto.SaveContext("", clusterName, ""); err != nil {
 		return err
 	}
 	return nil

@@ -39,17 +39,20 @@ type ContextConfig struct {
 
 // Token contains the auth token and the URL it belongs to
 type Context struct {
-	ClusterType ClusterType `json:"ClusterType"`
-	URL         string      `json:"URL"`
-	Name        string      `json:"Name"`
-	ApiToken    string      `json:"Token"`
+	URL      string `json:"URL"`
+	Name     string `json:"Name"`
+	ApiToken string `json:"Token"`
 }
 
 func GetOktetoContextConfig() (*ContextConfig, error) {
 	p := config.GetContextConfigPath()
 	b, err := ioutil.ReadFile(p)
 	if err != nil {
-		return nil, err
+		p := config.GetKubeConfigFile()
+		b, err = ioutil.ReadFile(p)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	dec := json.NewDecoder(bytes.NewReader(b))
@@ -63,7 +66,7 @@ func GetOktetoContextConfig() (*ContextConfig, error) {
 	return currentContext, nil
 }
 
-func SaveContext(clusterType ClusterType, url, name, token string) error {
+func SaveContext(url, name, token string) error {
 	cc, err := GetOktetoContextConfig()
 	if err != nil {
 		log.Infof("bad token, re-initializing: %s", err)
@@ -73,10 +76,9 @@ func SaveContext(clusterType ClusterType, url, name, token string) error {
 	}
 
 	cc.Contexts[name] = Context{
-		ClusterType: clusterType,
-		URL:         url,
-		Name:        name,
-		ApiToken:    token,
+		URL:      url,
+		Name:     name,
+		ApiToken: token,
 	}
 
 	cc.CurrentContext = name
@@ -91,7 +93,7 @@ func saveContext(c *ContextConfig) error {
 		return fmt.Errorf("failed to generate your context")
 	}
 
-	contextPath := config.GetOktetoContextPath()
+	contextPath := config.GetOktetoConfigPath()
 	if err := os.MkdirAll(contextPath, 0700); err != nil {
 		log.Fatalf("failed to create %s: %s", contextPath, err)
 	}
@@ -126,8 +128,5 @@ func IsOktetoCluster() bool {
 		return false
 	}
 	context := cc.Contexts[cc.CurrentContext]
-	if context.ClusterType == CloudCluster || context.ClusterType == EnterpriseCluster {
-		return true
-	}
-	return false
+	return context.URL != ""
 }

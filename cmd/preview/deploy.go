@@ -57,10 +57,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return okErrors.ErrNotLogged
 			}
 
-			if !okteto.IsOktetoCluster() {
-				return okErrors.ErrNotOktetoCluster
-			}
-
 			if err := validatePreviewType(scope); err != nil {
 				return err
 			}

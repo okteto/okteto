@@ -43,50 +43,37 @@ var (
 	localClusters  = []string{"127.", "172.", "192.", "169.", model.Localhost, "::1", "fe80::", "fc00::"}
 )
 
-func GetContextK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
-	kubeconfigPath := config.GetContextKubeconfigPath()
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	if err != nil {
-		return nil, nil, err
-	}
-	config.Timeout = getKubernetesTimeout()
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, nil, err
-	}
-	return clientset, config, nil
-}
-
 // GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
 func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
-	return GetContextK8sClient()
+	return GetLocalWithContext(os.Getenv(OktetoContextVariableName))
 }
 
 // GetLocalWithContext returns a kubernetes client for a given context. It will detect if KUBECONFIG is defined.
 func GetLocalWithContext(thisContext string) (*kubernetes.Clientset, *rest.Config, error) {
-	thisContext = GetSessionContext(thisContext, config.GetContextKubeconfigPath())
-	clientConfig := getClientConfig(thisContext, config.GetContextKubeconfigPath())
+	var clientConfig clientcmd.ClientConfig
+	if IsContextDefined() {
+		thisContext = GetSessionContext(thisContext, config.GetContextKubeconfigPath())
+		clientConfig = getClientConfig(thisContext, config.GetContextKubeconfigPath())
 
-	cc, err := clientConfig.ClientConfig()
-	if err != nil {
-		clientConfig := getClientConfig(thisContext, config.GetKubeConfigFile())
-
-		cc, err = clientConfig.ClientConfig()
-		if err != nil {
-			return nil, nil, err
-		}
+	} else {
+		thisContext = GetSessionContext(thisContext, config.GetKubeConfigFile())
+		clientConfig = getClientConfig(thisContext, config.GetKubeConfigFile())
 	}
 
-	cc.Timeout = getKubernetesTimeout()
-
-	setAnalytics(sessionContext, cc.Host)
-
-	client, err := kubernetes.NewForConfig(cc)
+	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, nil, err
 	}
-	return client, cc, nil
+
+	config.Timeout = getKubernetesTimeout()
+
+	setAnalytics(sessionContext, config.Host)
+
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	return client, config, nil
 }
 
 func getClientConfig(k8sContext, kubeconfigPath string) clientcmd.ClientConfig {
@@ -104,14 +91,14 @@ func getClientConfig(k8sContext, kubeconfigPath string) clientcmd.ClientConfig {
 }
 
 // GetSessionContext sets the client config for the context in use
-func GetSessionContext(k8sContext, kubeConfigPath string) string {
+func GetSessionContext(k8sContext, kubePath string) string {
 	if k8sContext != "" {
 		return k8sContext
 	}
 	if sessionContext != "" {
 		return sessionContext
 	}
-	cc := getClientConfig("", kubeConfigPath)
+	cc := getClientConfig("", kubePath)
 	rawConfig, err := cc.RawConfig()
 	if err != nil {
 		log.Fatalf("error accessing you kubeconfig file: %s", err.Error())
@@ -125,9 +112,9 @@ func GetContextNamespace(k8sContext string) string {
 	if k8sContext == "" {
 		k8sContext = os.Getenv(OktetoContextVariableName)
 	}
-	namespace, _, err := getClientConfig(k8sContext, config.GetKubeConfigFile()).Namespace()
+	namespace, _, err := getClientConfig(k8sContext, config.GetContextKubeconfigPath()).Namespace()
 	if err != nil {
-		namespace, _, err = getClientConfig(k8sContext, config.GetContextKubeconfigPath()).Namespace()
+		namespace, _, err = getClientConfig(k8sContext, config.GetKubeConfigFile()).Namespace()
 		if err != nil {
 			log.Fatalf("error accessing you kubeconfig file: %s", err.Error())
 		}
@@ -167,4 +154,11 @@ func setAnalytics(clusterContext, clusterHost string) {
 		}
 	}
 	analytics.SetClusterType(remoteClusterType)
+}
+
+func IsContextDefined() bool {
+	if _, err := os.Stat(config.GetOktetoConfigPath()); !os.IsNotExist(err) {
+		return true
+	}
+	return false
 }

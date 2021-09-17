@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright 2021 The Okteto Authors
@@ -29,6 +30,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -198,8 +200,18 @@ func TestLoginActionPipeline(t *testing.T) {
 		return
 	}
 	ctx := context.Background()
+	var remove bool
+	if _, err := os.Stat(config.GetOktetoConfigPath()); err != nil {
+		remove = true
+	}
 	if err := executeLoginAction(ctx); err != nil {
 		t.Fatalf("Login action failed: %s", err.Error())
+	}
+
+	if remove {
+		if err := os.RemoveAll(config.GetOktetoConfigPath()); err != nil {
+			t.Fatalf("Removing failed: %s", err.Error())
+		}
 	}
 
 }
@@ -244,10 +256,6 @@ func TestPreviewActions(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
-
-	if err := executeLoginAction(ctx); err != nil {
-		t.Fatalf("Login action failed: %s", err.Error())
-	}
 
 	if err := executeDeployPreviewAction(ctx, namespace); err != nil {
 		t.Fatalf("Deploy preview action failed: %s", err.Error())
