@@ -35,7 +35,11 @@ type Namespace struct {
 
 // CreateNamespace creates a namespace
 func (c *OktetoClient) CreateNamespace(ctx context.Context, namespace string) (string, error) {
-
+	var mutation struct {
+		Space struct {
+			Id graphql.String
+		} `graphql:"createSpace(name: $name)"`
+	}
 	variables := map[string]interface{}{
 		"name": graphql.String(namespace),
 	}
