@@ -95,7 +95,7 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 				pipeline, err := oktetoClient.GetPipelineByRepository(ctx, namespace, repository)
 				if err == nil {
-					log.Information("Pipeline URL: %s", getPipelineURL(namespace, pipeline))
+					log.Information("Pipeline URL: %s", getPipelineURL(namespace, pipeline.GitDeploy))
 					log.Success("Pipeline '%s' was already deployed", name)
 					return nil
 				}
@@ -163,7 +163,8 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 			})
 		}
 		log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
-		resp, err = okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
+
+		resp, err = oktetoClient.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
 		exit <- err
 	}()
 
@@ -222,7 +223,11 @@ func waitToBeDeployed(ctx context.Context, name string, action *okteto.Action, n
 	if action == nil {
 		return deprecatedWaitToBeDeployed(ctx, name, namespace, timeout)
 	}
-	return okteto.WaitForActionToFinish(ctx, action.Name, namespace, timeout)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	return oktetoClient.WaitForActionToFinish(ctx, action.Name, namespace, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0

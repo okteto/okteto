@@ -227,7 +227,11 @@ func waitToBeDeployed(ctx context.Context, name string, a *okteto.Action, namesp
 	if a == nil {
 		return deprecatedWaitToBeDeployed(ctx, name, namespace, timeout)
 	}
-	return okteto.WaitForActionToFinish(ctx, a.Name, namespace, timeout)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	return oktetoClient.WaitForActionToFinish(ctx, a.Name, namespace, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0

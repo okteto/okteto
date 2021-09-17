@@ -168,8 +168,11 @@ func waitToBeDestroyed(ctx context.Context, name string, action *okteto.Action, 
 	if action == nil {
 		return deprecatedWaitToBeDestroyed(ctx, name, namespace, timeout)
 	}
-
-	return okteto.WaitForActionToFinish(ctx, action.Name, namespace, timeout)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	return oktetoClient.WaitForActionToFinish(ctx, action.Name, namespace, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
