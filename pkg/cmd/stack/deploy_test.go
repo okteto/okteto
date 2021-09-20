@@ -283,8 +283,8 @@ func Test_AddSomeServices(t *testing.T) {
 			Failed: 1,
 		},
 	}
-	jobSucceded := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{
-		Name:      "job-succeded",
+	jobSucceeded := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{
+		Name:      "job-succeeded",
 		Namespace: "default",
 	},
 		Status: batchv1.JobStatus{
@@ -307,7 +307,7 @@ func Test_AddSomeServices(t *testing.T) {
 			ReadyReplicas: 1,
 		},
 	}
-	fakeClient := fake.NewSimpleClientset(jobActive, jobSucceded, jobFailed, sfs, dep)
+	fakeClient := fake.NewSimpleClientset(jobActive, jobSucceeded, jobFailed, sfs, dep)
 
 	var tests = []struct {
 		name                     string
@@ -406,11 +406,11 @@ func Test_AddSomeServices(t *testing.T) {
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
-					"job-succeded": {
+					"job-succeeded": {
 						RestartPolicy: corev1.RestartPolicyNever,
 					},
 					"app": {DependsOn: model.DependsOn{
-						"job-succeded": model.DependsOnConditionSpec{},
+						"job-succeeded": model.DependsOnConditionSpec{},
 					}},
 				},
 			},
