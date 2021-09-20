@@ -634,10 +634,10 @@ func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 func addDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) {
 	added := make([]string, 0)
 	for _, svcToDeploy := range options.ServicesToDeploy {
-		for dependantSvc := range s.Services[svcToDeploy].DependsOn {
-			if !isSvcToBeDeployed(options.ServicesToDeploy, dependantSvc) && !isSvcRunning(ctx, s.Services[dependantSvc], s.Namespace, dependantSvc, c) {
-				options.ServicesToDeploy = append(options.ServicesToDeploy, dependantSvc)
-				added = append(added, dependantSvc)
+		for dependentSvc := range s.Services[svcToDeploy].DependsOn {
+			if !isSvcToBeDeployed(options.ServicesToDeploy, dependentSvc) && !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
+				options.ServicesToDeploy = append(options.ServicesToDeploy, dependentSvc)
+				added = append(added, dependentSvc)
 			}
 		}
 	}

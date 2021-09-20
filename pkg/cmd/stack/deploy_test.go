@@ -316,7 +316,7 @@ func Test_AddSomeServices(t *testing.T) {
 		expectedSvcsToBeDeployed []string
 	}{
 		{
-			name: "dependant service is job and not running",
+			name: "dependent service is job and not running",
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
@@ -332,7 +332,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app", "job-not-running"},
 		},
 		{
-			name: "dependant service is sfs and not running",
+			name: "dependent service is sfs and not running",
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
@@ -354,7 +354,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app", "sfs-not-running"},
 		},
 		{
-			name: "dependant service is deployment and not running",
+			name: "dependent service is deployment and not running",
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
@@ -370,7 +370,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app", "dep-not-running"},
 		},
 		{
-			name: "dependant service is job and running",
+			name: "dependent service is job and running",
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
@@ -386,7 +386,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app"},
 		},
 		{
-			name: "dependant service is job finished with errors",
+			name: "dependent service is job finished with errors",
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
@@ -402,7 +402,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app", "job-failed"},
 		},
 		{
-			name: "dependant service is job finished successful",
+			name: "dependent service is job finished successful",
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
@@ -418,7 +418,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app"},
 		},
 		{
-			name: "dependant service is sfs and running",
+			name: "dependent service is sfs and running",
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
@@ -440,7 +440,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app"},
 		},
 		{
-			name: "dependant service is deployment and running",
+			name: "dependent service is deployment and running",
 			stack: &model.Stack{
 				Namespace: "default",
 				Services: map[string]*model.Service{
@@ -456,7 +456,7 @@ func Test_AddSomeServices(t *testing.T) {
 			expectedSvcsToBeDeployed: []string{"app"},
 		},
 		{
-			name: "dependant service is already on to be deployed",
+			name: "dependent service is already on to be deployed",
 			stack: &model.Stack{
 				Services: map[string]*model.Service{
 					"db": {},
