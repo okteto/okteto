@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
+	okContext "github.com/okteto/okteto/pkg/cmd/context"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -39,7 +40,7 @@ func SetNamespace() *cobra.Command {
 					return err
 				}
 				if !hasAccess {
-					return fmt.Errorf("namespace '%s' not found. Please verify that the namespace exists and that you have access to it", namespace)
+					return fmt.Errorf(okContext.ErrNamespaceNotFound, namespace)
 				}
 			}
 			clusterName := okteto.GetCurrentContext()

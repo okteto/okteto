@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okContext "github.com/okteto/okteto/pkg/cmd/context"
+	"github.com/okteto/okteto/pkg/errors"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -42,8 +43,8 @@ func Context() *cobra.Command {
 		Use:     "context [url|k8s-context]",
 		Aliases: []string{"ctx"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
-		Short:   "Points okteto to a cluster",
-		Long: `Points okteto to a cluster
+		Short:   "Manage your okteto context",
+		Long: `Manage your okteto context
 
 Run
     $ okteto context
@@ -68,7 +69,7 @@ to point okteto to 'mycluster'.
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if ctxOptions.Token == "" && k8Client.InCluster() {
-				return fmt.Errorf("this command is not supported without the '--token' flag from inside a pod")
+				return okContext.ErrTokenFlagNeeded
 			}
 
 			apiToken := os.Getenv("OKTETO_TOKEN")
@@ -140,7 +141,10 @@ func runContextWithArgs(ctx context.Context, cluster string, ctxOptions *Context
 	} else {
 		ctxOptions.clusterType = okteto.VanillaCluster
 		if !isValidCluster(cluster) {
-			return fmt.Errorf("'%s' is a invalid cluster. Select one from ['%s']", cluster, strings.Join(getClusterList(), "', '"))
+			return errors.UserError{
+				E:    fmt.Errorf(okContext.ErrInvalidCluster, cluster),
+				Hint: fmt.Sprintf("Select one from ['%s']", strings.Join(getClusterList(), "', '")),
+			}
 		}
 		err := okContext.CopyK8sClusterConfigToOktetoContext(cluster)
 		if err != nil {

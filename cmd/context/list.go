@@ -15,6 +15,7 @@ package context
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -33,12 +34,19 @@ func List() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			contexts := make([]string, 0)
 			for name := range cc.Contexts {
 				if name == cc.CurrentContext {
-					fmt.Printf("* %s\n", name)
+					contexts = append(contexts, fmt.Sprintf("* %s", name))
 				} else {
-					fmt.Printf("  %s\n", name)
+					contexts = append(contexts, fmt.Sprintf("  %s", name))
 				}
+			}
+			sort.Slice(contexts, func(i, j int) bool {
+				return len(contexts[i]) < len(contexts[j])
+			})
+			for _, ctx := range contexts {
+				fmt.Println(ctx)
 			}
 
 			return nil

@@ -19,6 +19,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	okContext "github.com/okteto/okteto/pkg/cmd/context"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
@@ -91,7 +92,7 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		return err
 	}
 	if !hasAccess {
-		return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
+		return fmt.Errorf(okContext.ErrNamespaceNotFound, namespace)
 	}
 
 	var kubeConfigPath string

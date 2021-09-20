@@ -55,7 +55,7 @@ func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType, name
 		return err
 	}
 	if !hasAccess {
-		return fmt.Errorf("namespace '%s' not found. Please verify that the namespace exists and that you have access to it", namespace)
+		return fmt.Errorf(ErrNamespaceNotFound, namespace)
 	}
 
 	kubeConfigFile := config.GetContextKubeconfigPath()
