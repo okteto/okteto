@@ -57,7 +57,7 @@ const (
 	pvcName = "pvc"
 )
 
-func translate(ctx context.Context, s *model.Stack, options StackDeployOptions) error {
+func translate(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
 	if err := translateStackEnvVars(ctx, s); err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	return nil
 }
 
-func translateBuildImages(ctx context.Context, s *model.Stack, options StackDeployOptions) error {
+func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return err
@@ -167,7 +167,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options StackDepl
 	return nil
 }
 
-func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster bool, options StackDeployOptions) (bool, error) {
+func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster bool, options *StackDeployOptions) (bool, error) {
 	hasBuiltSomething := false
 	for _, name := range options.ServicesToDeploy {
 		svc := s.Services[name]
@@ -203,7 +203,7 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 	return hasBuiltSomething, nil
 }
 
-func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster bool, options StackDeployOptions, hasBuiltSomething bool) (bool, error) {
+func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHost string, isOktetoCluster bool, options *StackDeployOptions, hasBuiltSomething bool) (bool, error) {
 	hasAddedAnyVolumeMounts := false
 	var err error
 	for name, svc := range s.Services {

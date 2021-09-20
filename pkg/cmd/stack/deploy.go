@@ -56,11 +56,7 @@ type StackDeployOptions struct {
 }
 
 // Deploy deploys a stack
-func Deploy(ctx context.Context, s *model.Stack, options StackDeployOptions) error {
-	if err := validateServicesToDeploy(s, options.ServicesToDeploy); err != nil {
-		return err
-	}
-
+func Deploy(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
 	if s.Namespace == "" {
 		s.Namespace = client.GetContextNamespace("")
 	}
@@ -68,6 +64,10 @@ func Deploy(ctx context.Context, s *model.Stack, options StackDeployOptions) err
 	c, config, err := client.GetLocal()
 	if err != nil {
 		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+	}
+
+	if err := validateServicesToDeploy(ctx, s, options, c); err != nil {
+		return err
 	}
 
 	if err := translate(ctx, s, options); err != nil {
@@ -100,7 +100,7 @@ func Deploy(ctx context.Context, s *model.Stack, options StackDeployOptions) err
 	return err
 }
 
-func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config *rest.Config, options StackDeployOptions) error {
+func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config *rest.Config, options *StackDeployOptions) error {
 	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
@@ -175,7 +175,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 	return nil
 }
 
-func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernetes.Clientset, config *rest.Config, spinner *utils.Spinner, options StackDeployOptions) error {
+func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernetes.Clientset, config *rest.Config, spinner *utils.Spinner, options *StackDeployOptions) error {
 	deployedSvcs := make(map[string]bool)
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(options.Timeout)
@@ -591,7 +591,7 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack, options StackDeployOptions) {
+func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack, options *StackDeployOptions) {
 	for _, svcName := range options.ServicesToDeploy {
 		svc := s.Services[svcName]
 		addHiddenExposedPortsToSvc(ctx, svc, s.Namespace)
@@ -610,14 +610,11 @@ func addHiddenExposedPortsToSvc(ctx context.Context, svc *model.Service, namespa
 	}
 }
 
-func validateServicesToDeploy(s *model.Stack, servicesToDeploy []string) error {
-	if err := validateDefinedServices(s, servicesToDeploy); err != nil {
+func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) error {
+	if err := validateDefinedServices(s, options.ServicesToDeploy); err != nil {
 		return err
 	}
-
-	if err := validateDependentServiceDeployed(s, servicesToDeploy); err != nil {
-		return err
-	}
+	addDependentServicesIfNotPresent(ctx, s, options, c)
 	return nil
 }
 
@@ -634,15 +631,19 @@ func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	return nil
 }
 
-func validateDependentServiceDeployed(s *model.Stack, servicesToDeploy []string) error {
-	for _, svcToDeploy := range servicesToDeploy {
-		for name := range s.Services[svcToDeploy].DependsOn {
-			if !isSvcToBeDeployed(servicesToDeploy, name) {
-				return fmt.Errorf("service '%s' depends on '%s' to be deployed but its not deployed", svcToDeploy, name)
+func addDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) {
+	added := make([]string, 0)
+	for _, svcToDeploy := range options.ServicesToDeploy {
+		for dependantSvc := range s.Services[svcToDeploy].DependsOn {
+			if !isSvcToBeDeployed(options.ServicesToDeploy, dependantSvc) && !isSvcRunning(ctx, s.Services[dependantSvc], s.Namespace, dependantSvc, c) {
+				options.ServicesToDeploy = append(options.ServicesToDeploy, dependantSvc)
+				added = append(added, dependantSvc)
 			}
 		}
 	}
-	return nil
+	if len(added) > 0 {
+		log.Warning("The following services need to be deployed because the services passed as arguments depend on them: [%s]", strings.Join(added, ", "))
+	}
 }
 
 func isSvcToBeDeployed(servicesToDeploy []string, svcName string) bool {
