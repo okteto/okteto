@@ -60,7 +60,7 @@ func TestGetStatefulset(t *testing.T) {
 			Enabled: true,
 		},
 	}
-	app, _, err := Get(ctx, dev, "test", clientset)
+	app, err := Get(ctx, dev, "test", clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestGetDeployment(t *testing.T) {
 			Enabled: true,
 		},
 	}
-	app, _, err := Get(ctx, dev, "test", clientset)
+	app, err := Get(ctx, dev, "test", clientset)
 	if err != nil {
 		t.Fatal(err)
 	}

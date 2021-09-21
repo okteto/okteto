@@ -62,7 +62,7 @@ func Create(ctx context.Context, dev *model.Dev, isOktetoNamespace bool, c kuber
 }
 
 func divertApp(ctx context.Context, dev *model.Dev, username string, c kubernetes.Interface) (apps.App, error) {
-	app, _, err := apps.Get(ctx, dev, dev.Namespace, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	username := okteto.GetSanitizedUsername()
 
-	app, _, err := apps.Get(ctx, dev, dev.Namespace, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		return err
 	}

@@ -82,7 +82,7 @@ func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
 }
 
 func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) error {
-	app, _, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
+	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
 	if err != nil {
 		return err
 	}

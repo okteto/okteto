@@ -95,12 +95,9 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	app, create, err := apps.Get(ctx, dev, dev.Namespace, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		return err
-	}
-	if create {
-		return errors.ErrNotFound
 	}
 
 	pod, err := apps.GetRunningPodInLoop(ctx, dev, app, c, true)

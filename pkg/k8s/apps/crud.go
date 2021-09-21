@@ -31,38 +31,23 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, bool, error) {
+func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, error) {
 	d, err := deployments.GetByDev(ctx, dev, namespace, c)
 
 	if err == nil {
-		if err := ValidateMountPaths(&d.Spec.Template.Spec, dev); err != nil {
-			return nil, false, err
-		}
-		return &DeploymentApp{d: d}, false, nil
+		return &DeploymentApp{d: d}, nil
 	}
 
 	if !errors.IsNotFound(err) {
-		return nil, false, err
+		return nil, err
 	}
 
 	sfs, err := statefulsets.GetByDev(ctx, dev, namespace, c)
-	if err == nil {
-		if err := ValidateMountPaths(&sfs.Spec.Template.Spec, dev); err != nil {
-			return nil, false, err
-		}
-		return &StatefulSetApp{sfs: sfs}, false, nil
+	if err != nil {
+		return nil, err
 	}
 
-	if !errors.IsNotFound(err) {
-		return nil, false, err
-	}
-
-	if dev.Autocreate {
-		result := &DeploymentApp{d: GetDeploymentSandbox(dev)}
-		return result, true, nil
-	}
-
-	return nil, false, errors.ErrNotFound
+	return &StatefulSetApp{sfs: sfs}, nil
 }
 
 //GetDeploymentSandbox returns a base deployment when using "autocreate"
@@ -237,7 +222,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c
 
 func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, result map[string]*Translation, c kubernetes.Interface) error {
 	for _, s := range dev.Services {
-		app, _, err := Get(ctx, s, dev.Namespace, c)
+		app, err := Get(ctx, s, dev.Namespace, c)
 		if err != nil {
 			return err
 		}

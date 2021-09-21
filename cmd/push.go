@@ -123,12 +123,13 @@ func Push(ctx context.Context) *cobra.Command {
 
 func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
 	exists := true
-	app, create, err := apps.Get(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return err
-	}
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 
-	if create {
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+
 		if !dev.Autocreate {
 			return errors.UserError{
 				E: fmt.Errorf("Application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
@@ -141,6 +142,8 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 		if len(dev.Services) > 0 {
 			return fmt.Errorf("'autocreate' cannot be used in combination with 'services'")
 		}
+
+		app = apps.NewDeploymentApp(apps.GetDeploymentSandbox(dev))
 
 		app.Annotations()[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
 		exists = false

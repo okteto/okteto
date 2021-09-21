@@ -212,7 +212,7 @@ func generateManifestFile(ctx context.Context, devPath string) (string, error) {
 }
 
 func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
-	app, _, err := apps.Get(ctx, dev, dev.Namespace, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		return "", err
 	}
@@ -265,7 +265,7 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 }
 
 func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
-	app, _, err := apps.Get(ctx, dev, dev.Namespace, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		return "", err
 	}
