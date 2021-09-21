@@ -86,6 +86,9 @@ var (
 
 	//ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
 	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in namespaces managed by Okteto")
+
+	//ErrIntSig raised if the we get an interrupt signal in the middle of a command
+	ErrIntSig = fmt.Errorf("interrupt signal received")
 )
 
 // IsNotFound returns true if err is of the type not found
