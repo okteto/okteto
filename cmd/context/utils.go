@@ -69,7 +69,7 @@ func saveOktetoContext(ctx context.Context, cluster string, ctxOptions *ContextO
 			return err
 		}
 	} else {
-		err := okContext.SaveK8sContext(ctx, cluster, ctxOptions.clusterType, ctxOptions.Namespace)
+		err := okContext.SaveK8sContext(ctx, cluster, ctxOptions.Namespace)
 		if err != nil {
 			return err
 		}
@@ -136,9 +136,7 @@ func getClusterList() []string {
 func selectCluster() (string, error) {
 	clusters := []string{"Okteto Cloud", "Okteto Enterprise"}
 	k8sClusters := getClusterList()
-	for _, k8sCluster := range k8sClusters {
-		clusters = append(clusters, k8sCluster)
-	}
+	clusters = append(clusters, k8sClusters...)
 	return utils.AskForOptions(clusters, "Select the cluster you want to point to:")
 }
 

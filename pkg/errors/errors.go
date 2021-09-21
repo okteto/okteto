@@ -91,7 +91,7 @@ var (
 	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in namespaces managed by Okteto")
 
 	//ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
-	ContextIsNotOktetoCluster = fmt.Errorf("okteto context is not managed by okteto")
+	ErrContextIsNotOktetoCluster = fmt.Errorf("okteto context is not managed by okteto")
 )
 
 // IsNotFound returns true if err is of the type not found

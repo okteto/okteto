@@ -25,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -87,7 +86,7 @@ func Init() *cobra.Command {
 // Run runs the sequence to generate okteto.yml
 func Run(namespace, k8sContext, devPath, language, workDir string, overwrite bool) error {
 	if k8sContext == "" {
-		k8sContext = os.Getenv(client.OktetoContextVariableName)
+		k8sContext = os.Getenv(k8Client.OktetoContextVariableName)
 	}
 
 	fmt.Println("This command walks you through creating an okteto manifest.")
@@ -185,7 +184,7 @@ func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sO
 		return nil, "", nil
 	}
 	if namespace == "" {
-		namespace = client.GetContextNamespace(k8sContext)
+		namespace = k8Client.GetContextNamespace(k8sContext)
 	}
 
 	r, err := askForResource(ctx, namespace, c)
@@ -218,7 +217,7 @@ func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string
 		return false
 	}
 	if namespace == "" {
-		namespace = client.GetContextNamespace(k8sContext)
+		namespace = k8Client.GetContextNamespace(k8sContext)
 	}
 
 	ns, err := namespaces.Get(ctx, namespace, c)

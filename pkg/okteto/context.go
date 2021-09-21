@@ -83,10 +83,10 @@ func SaveContext(url, name, token string) error {
 
 	cc.CurrentContext = name
 
-	return saveContext(cc)
+	return saveContextInFile(cc)
 }
 
-func saveContext(c *ContextConfig) error {
+func saveContextInFile(c *ContextConfig) error {
 	marshalled, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
 		log.Infof("failed to marshal context: %s", err)

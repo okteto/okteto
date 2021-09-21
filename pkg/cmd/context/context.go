@@ -69,13 +69,10 @@ func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType, name
 	if err != nil {
 		return err
 	}
-	if err := okteto.SaveContext(okteto.GetURL(), clusterContext, token.Token); err != nil {
-		return err
-	}
-	return nil
+	return okteto.SaveContext(okteto.GetURL(), clusterContext, token.Token)
 }
 
-func SaveK8sContext(ctx context.Context, clusterName string, clusterType okteto.ClusterType, namespace string) error {
+func SaveK8sContext(ctx context.Context, clusterName string, namespace string) error {
 	kubeConfigFile := config.GetContextKubeconfigPath()
 	config, err := okteto.GetKubeConfig(kubeConfigFile)
 	if err != nil {
@@ -95,10 +92,7 @@ func SaveK8sContext(ctx context.Context, clusterName string, clusterType okteto.
 	if err != nil {
 		return err
 	}
-	if err := okteto.SaveContext("", clusterName, ""); err != nil {
-		return err
-	}
-	return nil
+	return okteto.SaveContext("", clusterName, "")
 }
 
 func HasBeenLogged(url string) bool {
@@ -106,8 +100,7 @@ func HasBeenLogged(url string) bool {
 	if err != nil {
 		return false
 	}
-
-	context := okteto.GetClusterContext()
+	context := okteto.UrlToContext(url)
 	_, ok := cc.Contexts[context]
 	return ok
 }

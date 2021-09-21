@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -59,9 +58,9 @@ func SetDevDefaultsFromResource(ctx context.Context, dev *model.Dev, r *model.K8
 
 	if updateImageFromPod {
 		dev.Image = nil
-		dev.SecurityContext = getSecurityContextFromPod(ctx, dev, pod, container, config, c)
+		dev.SecurityContext = getSecurityContextFromPod(ctx, pod, container, config, c)
 		dev.Sync.Folders[0].RemotePath = getWorkdirFromPod(ctx, dev, pod, container, config, c)
-		dev.Command.Values = getCommandFromPod(ctx, dev, pod, container, config, c)
+		dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
 	}
 
 	setAnnotationsFromResource(dev, r)
@@ -75,7 +74,7 @@ func SetDevDefaultsFromResource(ctx context.Context, dev *model.Dev, r *model.K8
 }
 
 func getRunningPod(ctx context.Context, r *model.K8sObject, container string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
-	var pod *v1.Pod
+	var pod *apiv1.Pod
 	var err error
 	if r.ObjectType == model.DeploymentObjectType {
 		rs, err := replicasets.GetReplicaSetByDeployment(ctx, r.Deployment, "", c)
@@ -109,7 +108,7 @@ func getRunningPod(ctx context.Context, r *model.K8sObject, container string, c 
 	return pod, nil
 }
 
-func getSecurityContextFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) *model.SecurityContext {
+func getSecurityContextFromPod(ctx context.Context, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) *model.SecurityContext {
 	userID, err := pods.GetUserByPod(ctx, pod, container, config, c)
 	if err != nil {
 		log.Infof("error getting user of the deployment: %s", err)
@@ -130,7 +129,7 @@ func getWorkdirFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, cont
 	return workdir
 }
 
-func getCommandFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) []string {
+func getCommandFromPod(ctx context.Context, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) []string {
 	if pods.CheckIfBashIsAvailable(ctx, pod, container, config, c) {
 		return []string{"bash"}
 	}

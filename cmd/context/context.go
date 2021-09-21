@@ -152,10 +152,6 @@ func runContextWithArgs(ctx context.Context, cluster string, ctxOptions *Context
 		}
 	}
 
-	err := saveOktetoContext(ctx, cluster, ctxOptions)
-	if err != nil {
-		return err
-	}
+	return saveOktetoContext(ctx, cluster, ctxOptions)
 
-	return nil
 }
