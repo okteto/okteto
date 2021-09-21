@@ -58,7 +58,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	up.cleaned = make(chan string, 1)
 	up.hardTerminate = make(chan error, 1)
 
-	k8sObject, create, err := up.getCurrentK8sObject(ctx, autoDeploy)
+	k8sObject, create, err := up.getCurrentK8sObject(ctx)
 	if err != nil {
 		return err
 	}

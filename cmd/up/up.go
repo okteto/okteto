@@ -321,7 +321,7 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 	}
 }
 
-func (up *upContext) getCurrentK8sObject(ctx context.Context, autoDeploy bool) (*model.K8sObject, bool, error) {
+func (up *upContext) getCurrentK8sObject(ctx context.Context) (*model.K8sObject, bool, error) {
 	k8sObject, err := apps.GetResource(ctx, up.Dev, up.Dev.Namespace, up.Client)
 	if err == nil {
 		if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) != model.OktetoUpCmd {

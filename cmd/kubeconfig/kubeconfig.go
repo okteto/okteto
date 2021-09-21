@@ -46,7 +46,7 @@ func Kubeconfig(ctx context.Context) *cobra.Command {
 }
 
 // RunKubeconfig starts the kubeconfig sequence
-func RunKubeconfig(ctx context.Context) error {
+func RunKubeconfig(_ context.Context) error {
 	oktetoKubeConfigFile := config.GetContextKubeconfigPath()
 	oktetoKubeConfig, err := okteto.GetKubeConfig(oktetoKubeConfigFile)
 	if err != nil {

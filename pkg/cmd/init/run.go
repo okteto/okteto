@@ -165,7 +165,7 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 	return nil
 }
 
-func setNameAndLabelsFromResource(ctx context.Context, dev *model.Dev, r *model.K8sObject) {
+func setNameAndLabelsFromResource(_ context.Context, dev *model.Dev, r *model.K8sObject) {
 	for _, l := range componentLabels {
 		component := r.GetLabel(l)
 		if component == "" {

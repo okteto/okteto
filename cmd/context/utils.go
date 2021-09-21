@@ -64,7 +64,7 @@ func getCluster(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 
 func saveOktetoContext(ctx context.Context, cluster string, ctxOptions *ContextOptions) error {
 	if ctxOptions.clusterType == okteto.CloudCluster || ctxOptions.clusterType == okteto.EnterpriseCluster {
-		err := okContext.SaveOktetoContext(ctx, ctxOptions.clusterType, ctxOptions.Namespace)
+		err := okContext.SaveOktetoContext(ctx, ctxOptions.Namespace)
 		if err != nil {
 			return err
 		}
@@ -157,7 +157,7 @@ func isURL(okContext string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-func AskForLoginURL(ctx context.Context) string {
+func AskForLoginURL(_ context.Context) string {
 	clusterURL := okteto.GetURL()
 	if clusterURL == "" || clusterURL == "na" {
 		clusterURL = okteto.CloudURL

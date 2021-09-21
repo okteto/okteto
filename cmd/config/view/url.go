@@ -25,7 +25,7 @@ import (
 )
 
 //URL returns the Okteto URL where the current user is authenticated
-func URL(ctx context.Context) *cobra.Command {
+func URL(_ context.Context) *cobra.Command {
 	return &cobra.Command{
 		Use:   "url",
 		Args:  utils.NoArgsAccepted(""),

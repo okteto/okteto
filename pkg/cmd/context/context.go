@@ -41,7 +41,7 @@ func CopyK8sClusterConfigToOktetoContext(clusterName string) error {
 	return nil
 }
 
-func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType, namespace string) error {
+func SaveOktetoContext(ctx context.Context, namespace string) error {
 	cred, err := okteto.GetCredentials(ctx)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func SaveOktetoContext(ctx context.Context, clusterType okteto.ClusterType, name
 	return okteto.SaveContext(okteto.GetURL(), clusterContext, token.Token)
 }
 
-func SaveK8sContext(ctx context.Context, clusterName string, namespace string) error {
+func SaveK8sContext(_ context.Context, clusterName, namespace string) error {
 	kubeConfigFile := config.GetContextKubeconfigPath()
 	config, err := okteto.GetKubeConfig(kubeConfigFile)
 	if err != nil {

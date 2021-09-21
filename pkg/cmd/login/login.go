@@ -41,21 +41,16 @@ func WithEnvVarIfAvailable(ctx context.Context) error {
 			return nil
 		}
 	}
-	clusterType := okteto.EnterpriseCluster
 	oktetoURL := os.Getenv("OKTETO_URL")
 	if oktetoURL == "" {
 		oktetoURL = okteto.CloudURL
-		clusterType = okteto.CloudCluster
 	}
 
 	if _, err := WithToken(ctx, oktetoURL, oktetoToken); err != nil {
 		return fmt.Errorf("error executing auto-login with 'OKTETO_TOKEN': %s", err)
 	}
 
-	if err := okContext.SaveOktetoContext(ctx, clusterType, ""); err != nil {
-		return err
-	}
-	return nil
+	return okContext.SaveOktetoContext(ctx, "")
 }
 
 // WithToken authenticates the user with an API token
