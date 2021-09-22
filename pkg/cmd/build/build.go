@@ -101,7 +101,7 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 }
 
 func validateImage(imageTag string) error {
-	if (strings.HasPrefix(imageTag, okteto.DevRegistry) || strings.HasPrefix(imageTag, okteto.GlobalRegistry)) && strings.Count(imageTag, "/") != 1 {
+	if (registry.IsDevRegistry(imageTag) || registry.IsGlobalRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
 		return okErrors.UserError{
 			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
 			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", okteto.DevRegistry),

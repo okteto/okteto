@@ -177,7 +177,7 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 		if !isOktetoCluster && svc.Image == "" {
 			return hasBuiltSomething, fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
 		}
-		if isOktetoCluster && !strings.HasPrefix(svc.Image, okteto.DevRegistry) {
+		if isOktetoCluster && !registry.IsDevRegistry(svc.Image) {
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !options.ForceBuild {
@@ -214,7 +214,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 				log.Information("Running your build in %s...", buildKitHost)
 			}
 			fromImage := svc.Image
-			if strings.HasPrefix(fromImage, okteto.DevRegistry) {
+			if registry.IsDevRegistry(fromImage) {
 				fromImage, err = registry.ExpandOktetoDevRegistry(ctx, s.Namespace, svc.Image)
 				if err != nil {
 					return hasAddedAnyVolumeMounts, err

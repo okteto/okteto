@@ -115,7 +115,7 @@ func ExpandOktetoGlobalRegistry(ctx context.Context, tag string) (string, error)
 
 // ExpandOktetoDevRegistry translates okteto.dev
 func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string, error) {
-	if !strings.HasPrefix(tag, okteto.DevRegistry) {
+	if !IsDevRegistry(tag) {
 		return tag, nil
 	}
 
@@ -170,7 +170,7 @@ func GetHiddenExposePorts(ctx context.Context, namespace, image string) []model.
 	var err error
 	var username string
 	var token string
-	if strings.HasPrefix(image, okteto.DevRegistry) {
+	if IsDevRegistry(image) {
 		image, err = ExpandOktetoDevRegistry(ctx, namespace, image)
 		if err != nil {
 			log.Infof("Could not expand okteto dev registry: %s", err.Error())
@@ -244,4 +244,8 @@ func getRegistryURL(ctx context.Context, namespace, image string) string {
 
 func IsGlobalRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.GlobalRegistry)
+}
+
+func IsDevRegistry(tag string) bool {
+	return strings.HasPrefix(tag, okteto.DevRegistry)
 }
