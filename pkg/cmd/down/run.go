@@ -52,7 +52,7 @@ func Run(dev *model.Dev, app apps.App, trList map[string]*apps.Translation, wait
 		log.Infof("failed to remove ssh entry: %s", err)
 	}
 
-	if app.Annotations()[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+	if app.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoUpCmd {
 		if err := app.DestroyDev(ctx, dev, c); err != nil {
 			return err
 		}

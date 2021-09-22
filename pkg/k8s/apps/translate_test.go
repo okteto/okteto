@@ -394,11 +394,11 @@ services:
 	if string(marshalled1Down) != string(marshalled1Orig) {
 		t.Fatalf("Wrong d1 down.\nActual %+v, \nExpected %+v", string(marshalled1Down), string(marshalled1Orig))
 	}
-	if tr1.App.Annotations()["key"] != "" {
-		t.Fatalf("Wrong d1 annotations after down: '%s'", tr1.App.Annotations()["key"])
+	if tr1.App.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong d1 annotations after down: '%s'", tr1.App.GetAnnotation("key"))
 	}
-	if tr1.App.PodAnnotations()["key"] != "" {
-		t.Fatalf("Wrong d1 pod annotations after down: '%s'", tr1.App.PodAnnotations()["key"])
+	if tr1.App.GetPodAnnotation("key") != "" {
+		t.Fatalf("Wrong d1 pod annotations after down: '%s'", tr1.App.GetPodAnnotation("key"))
 	}
 	if tr1.App.Replicas() != 2 {
 		t.Fatalf("Wrong d1 replicas %d vs 2", tr1.App.Replicas())
@@ -500,11 +500,11 @@ services:
 	if string(marshalled2Down) != string(marshalled2Orig) {
 		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
 	}
-	if app2.Annotations()["key"] != "" {
-		t.Fatalf("Wrong d2 annotations after down: '%s'", app2.Annotations()["key"])
+	if app2.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong d2 annotations after down: '%s'", app2.GetAnnotation("key"))
 	}
-	if app2.PodAnnotations()["key"] != "" {
-		t.Fatalf("Wrong d2 pod annotations after down: '%s'", app2.PodAnnotations()["key"])
+	if app2.GetPodAnnotation("key") != "" {
+		t.Fatalf("Wrong d2 pod annotations after down: '%s'", app2.GetPodAnnotation("key"))
 	}
 }
 
@@ -1787,11 +1787,11 @@ services:
 	if string(marshallesfs1Down) != string(marshallesfs1Orig) {
 		t.Fatalf("Wrong sfs1 down.\nActual %+v, \nExpected %+v", string(marshallesfs1Down), string(marshallesfs1Orig))
 	}
-	if tr1.App.Annotations()["key"] != "" {
-		t.Fatalf("Wrong sfs1 annotations after down: '%s'", tr1.App.Annotations()["key"])
+	if tr1.App.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong sfs1 annotations after down: '%s'", tr1.App.GetAnnotation("key"))
 	}
-	if tr1.App.PodAnnotations()["key"] != "" {
-		t.Fatalf("Wrong sfs1 pod annotations after down: '%s'", tr1.App.PodAnnotations()["key"])
+	if tr1.App.GetPodAnnotation("key") != "" {
+		t.Fatalf("Wrong sfs1 pod annotations after down: '%s'", tr1.App.GetPodAnnotation("key"))
 	}
 	if tr1.App.Replicas() != 2 {
 		t.Fatalf("Wrong sfs1 replicas %d vs 2", tr1.App.Replicas())
@@ -1893,11 +1893,11 @@ services:
 	if string(marshalled2Down) != string(marshalled2Orig) {
 		t.Fatalf("Wrong sfs2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
 	}
-	if app2.Annotations()["key"] != "" {
-		t.Fatalf("Wrong sfs2 annotations after down: '%s'", app2.Annotations()["key"])
+	if app2.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong sfs2 annotations after down: '%s'", app2.GetAnnotation("key"))
 	}
-	if app2.PodAnnotations()["key"] != "" {
-		t.Fatalf("Wrong sfs2 pod annotations after down: '%s'", app2.PodAnnotations()["key"])
+	if app2.GetPodAnnotation("key") != "" {
+		t.Fatalf("Wrong sfs2 pod annotations after down: '%s'", app2.GetPodAnnotation("key"))
 	}
 }
 

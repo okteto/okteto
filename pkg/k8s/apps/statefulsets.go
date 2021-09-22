@@ -50,32 +50,60 @@ func (i *StatefulSetApp) Replicas() int32 {
 	return *i.sfs.Spec.Replicas
 }
 
-func (i *StatefulSetApp) Labels() map[string]string {
+func (i *StatefulSetApp) GetLabel(key string) string {
+	if i.sfs.Labels == nil {
+		return ""
+	}
+	return i.sfs.Labels[key]
+}
+
+func (i *StatefulSetApp) GetPodLabel(key string) string {
+	if i.sfs.Spec.Template.Labels == nil {
+		return ""
+	}
+	return i.sfs.Spec.Template.Labels[key]
+}
+
+func (i *StatefulSetApp) GetAnnotation(key string) string {
+	if i.sfs.Annotations == nil {
+		return ""
+	}
+	return i.sfs.Annotations[key]
+}
+
+func (i *StatefulSetApp) GetPodAnnotation(key string) string {
+	if i.sfs.Spec.Template.Annotations == nil {
+		return ""
+	}
+	return i.sfs.Spec.Template.Annotations[key]
+}
+
+func (i *StatefulSetApp) SetLabel(key, value string) {
 	if i.sfs.Labels == nil {
 		i.sfs.Labels = map[string]string{}
 	}
-	return i.sfs.Labels
+	i.sfs.Labels[key] = value
 }
 
-func (i *StatefulSetApp) PodLabels() map[string]string {
+func (i *StatefulSetApp) SetPodLabel(key, value string) {
 	if i.sfs.Spec.Template.Labels == nil {
 		i.sfs.Spec.Template.Labels = map[string]string{}
 	}
-	return i.sfs.Spec.Template.Labels
+	i.sfs.Spec.Template.Labels[key] = value
 }
 
-func (i *StatefulSetApp) Annotations() map[string]string {
+func (i *StatefulSetApp) SetAnnotation(key, value string) {
 	if i.sfs.Annotations == nil {
 		i.sfs.Annotations = map[string]string{}
 	}
-	return i.sfs.Annotations
+	i.sfs.Annotations[key] = value
 }
 
-func (i *StatefulSetApp) PodAnnotations() map[string]string {
+func (i *StatefulSetApp) SetPodAnnotation(key, value string) {
 	if i.sfs.Spec.Template.Annotations == nil {
 		i.sfs.Spec.Template.Annotations = map[string]string{}
 	}
-	return i.sfs.Spec.Template.Annotations
+	i.sfs.Spec.Template.Annotations[key] = value
 }
 
 func (i *StatefulSetApp) PodSpec() *apiv1.PodSpec {
@@ -109,6 +137,18 @@ func (i *StatefulSetApp) DevModeOn() {
 func (i *StatefulSetApp) DevModeOff(t *Translation) {
 	i.sfs.Spec.Replicas = pointer.Int32Ptr(t.Replicas)
 	i.sfs.Spec.UpdateStrategy = t.StatefulsetStrategy
+
+	delete(i.sfs.Annotations, oktetoVersionAnnotation)
+	delete(i.sfs.Annotations, model.OktetoRevisionAnnotation)
+	deleteUserAnnotations(i.sfs.Annotations, t)
+
+	delete(i.sfs.Spec.Template.Annotations, model.TranslationAnnotation)
+	delete(i.sfs.Spec.Template.Annotations, model.OktetoRestartAnnotation)
+
+	delete(i.sfs.Labels, model.DevLabel)
+
+	delete(i.sfs.Spec.Template.Labels, model.InteractiveDevLabel)
+	delete(i.sfs.Spec.Template.Labels, model.DetachedDevLabel)
 }
 
 func (i *StatefulSetApp) CheckConditionErrors(dev *model.Dev) error {

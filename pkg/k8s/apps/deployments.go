@@ -51,32 +51,60 @@ func (i *DeploymentApp) Replicas() int32 {
 	return *i.d.Spec.Replicas
 }
 
-func (i *DeploymentApp) Labels() map[string]string {
+func (i *DeploymentApp) GetLabel(key string) string {
+	if i.d.Labels == nil {
+		return ""
+	}
+	return i.d.Labels[key]
+}
+
+func (i *DeploymentApp) GetPodLabel(key string) string {
+	if i.d.Spec.Template.Labels == nil {
+		return ""
+	}
+	return i.d.Spec.Template.Labels[key]
+}
+
+func (i *DeploymentApp) GetAnnotation(key string) string {
+	if i.d.Annotations == nil {
+		return ""
+	}
+	return i.d.Annotations[key]
+}
+
+func (i *DeploymentApp) GetPodAnnotation(key string) string {
+	if i.d.Spec.Template.Annotations == nil {
+		return ""
+	}
+	return i.d.Spec.Template.Annotations[key]
+}
+
+func (i *DeploymentApp) SetLabel(key, value string) {
 	if i.d.Labels == nil {
 		i.d.Labels = map[string]string{}
 	}
-	return i.d.Labels
+	i.d.Labels[key] = value
 }
 
-func (i *DeploymentApp) PodLabels() map[string]string {
+func (i *DeploymentApp) SetPodLabel(key, value string) {
 	if i.d.Spec.Template.Labels == nil {
 		i.d.Spec.Template.Labels = map[string]string{}
 	}
-	return i.d.Spec.Template.Labels
+	i.d.Spec.Template.Labels[key] = value
 }
 
-func (i *DeploymentApp) Annotations() map[string]string {
+func (i *DeploymentApp) SetAnnotation(key, value string) {
 	if i.d.Annotations == nil {
 		i.d.Annotations = map[string]string{}
 	}
-	return i.d.Annotations
+	i.d.Annotations[key] = value
 }
 
-func (i *DeploymentApp) PodAnnotations() map[string]string {
+func (i *DeploymentApp) SetPodAnnotation(key, value string) {
 	if i.d.Spec.Template.Annotations == nil {
 		i.d.Spec.Template.Annotations = map[string]string{}
 	}
-	return i.d.Spec.Template.Annotations
+	i.d.Spec.Template.Annotations[key] = value
 }
 
 func (i *DeploymentApp) PodSpec() *apiv1.PodSpec {
@@ -110,6 +138,18 @@ func (i *DeploymentApp) DevModeOn() {
 func (i *DeploymentApp) DevModeOff(t *Translation) {
 	i.d.Spec.Replicas = pointer.Int32Ptr(t.Replicas)
 	i.d.Spec.Strategy = t.DeploymentStrategy
+
+	delete(i.d.Annotations, oktetoVersionAnnotation)
+	delete(i.d.Annotations, model.OktetoRevisionAnnotation)
+	deleteUserAnnotations(i.d.Annotations, t)
+
+	delete(i.d.Spec.Template.Annotations, model.TranslationAnnotation)
+	delete(i.d.Spec.Template.Annotations, model.OktetoRestartAnnotation)
+
+	delete(i.d.Labels, model.DevLabel)
+
+	delete(i.d.Spec.Template.Labels, model.InteractiveDevLabel)
+	delete(i.d.Spec.Template.Labels, model.DetachedDevLabel)
 }
 
 func (i *DeploymentApp) CheckConditionErrors(dev *model.Dev) error {

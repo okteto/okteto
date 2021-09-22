@@ -154,7 +154,7 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 
 func setNameAndLabelsFromApp(ctx context.Context, dev *model.Dev, app apps.App) {
 	for _, l := range componentLabels {
-		component := app.Labels()[l]
+		component := app.GetLabel(l)
 		if component == "" {
 			continue
 		}
@@ -166,7 +166,7 @@ func setNameAndLabelsFromApp(ctx context.Context, dev *model.Dev, app apps.App) 
 }
 
 func setAnnotationsFromApp(dev *model.Dev, app apps.App) {
-	if v := app.Annotations()[model.FluxAnnotation]; v != "" {
+	if v := app.GetAnnotation(model.FluxAnnotation); v != "" {
 		dev.Annotations = map[string]string{"fluxcd.io/ignore": "true"}
 	}
 }

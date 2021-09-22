@@ -327,7 +327,7 @@ func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
 		return apps.NewDeploymentApp(apps.GetDeploymentSandbox(up.Dev)), true, errors.ErrNotFound
 	}
 	if err == nil {
-		if app.Annotations()[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
+		if app.GetAnnotation(model.OktetoAutoCreateAnnotation) != model.OktetoUpCmd {
 			up.isSwap = true
 		}
 		return app, false, nil

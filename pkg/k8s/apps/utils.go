@@ -25,12 +25,12 @@ type stateBeforeSleeping struct {
 	Replicas int
 }
 
-func setTranslationAsAnnotation(annotations map[string]string, tr *Translation) error {
+func setTranslationAsAnnotation(tr *Translation) error {
 	translationBytes, err := json.Marshal(tr)
 	if err != nil {
 		return err
 	}
-	annotations[model.TranslationAnnotation] = string(translationBytes)
+	tr.App.SetPodAnnotation(model.TranslationAnnotation, string(translationBytes))
 	return nil
 }
 
@@ -45,7 +45,7 @@ func getTranslationFromAnnotation(annotations map[string]string) (*Translation, 
 
 func getPreviousAppReplicas(app App) int32 {
 	replicas := app.Replicas()
-	previousState := app.Annotations()[model.StateBeforeSleepingAnnontation]
+	previousState := app.GetAnnotation(model.StateBeforeSleepingAnnontation)
 	if previousState == "" {
 		return replicas
 	}

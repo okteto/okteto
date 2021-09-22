@@ -54,7 +54,7 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 	ct := os.Getenv("OKTETO_CLIENTSIDE_TRANSLATION")
 	if ct == "" && isOktetoNamespace {
 		commonTranslation(t)
-		return setTranslationAsAnnotation(t.App.PodAnnotations(), t)
+		return setTranslationAsAnnotation(t)
 	}
 
 	if err := t.App.RestoreOriginal(); err != nil {
@@ -69,10 +69,10 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 
 	commonTranslation(t)
 	for k, v := range t.Annotations {
-		t.App.Annotations()[k] = v
-		t.App.PodAnnotations()[k] = v
+		t.App.SetAnnotation(k, v)
+		t.App.SetPodAnnotation(k, v)
 	}
-	t.App.PodLabels()[model.DevLabel] = "true"
+	t.App.SetPodLabel(model.DevLabel, "true")
 	TranslateDevTolerations(t.App.PodSpec(), t.Tolerations)
 	t.App.PodSpec().TerminationGracePeriodSeconds = pointer.Int64Ptr(0)
 
@@ -106,13 +106,13 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 }
 
 func commonTranslation(t *Translation) {
-	t.App.Annotations()[oktetoVersionAnnotation] = model.Version
-	t.App.Labels()[model.DevLabel] = "true"
+	t.App.SetAnnotation(oktetoVersionAnnotation, model.Version)
+	t.App.SetLabel(model.DevLabel, "true")
 
 	if t.Interactive {
-		t.App.PodLabels()[model.InteractiveDevLabel] = t.Name
+		t.App.SetPodLabel(model.InteractiveDevLabel, t.Name)
 	} else {
-		t.App.PodLabels()[model.DetachedDevLabel] = t.Name
+		t.App.SetPodLabel(model.DetachedDevLabel, t.Name)
 	}
 
 	t.App.DevModeOn()
@@ -665,7 +665,7 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, affinity *apiv1.Affinity) {
 
 //TranslateDevModeOff reverses the dev mode translation
 func TranslateDevModeOff(app App) error {
-	tJson := app.PodAnnotations()[model.TranslationAnnotation]
+	tJson := app.GetPodAnnotation(model.TranslationAnnotation)
 	if tJson == "" {
 		return app.RestoreOriginal()
 	}
@@ -674,17 +674,5 @@ func TranslateDevModeOff(app App) error {
 		return fmt.Errorf("malformed tr rules: %s", err)
 	}
 	app.DevModeOff(t)
-
-	delete(app.Annotations(), oktetoVersionAnnotation)
-	delete(app.Annotations(), model.OktetoRevisionAnnotation)
-	deleteUserAnnotations(app.Annotations(), t)
-
-	delete(app.PodAnnotations(), model.TranslationAnnotation)
-	delete(app.PodAnnotations(), model.OktetoRestartAnnotation)
-
-	delete(app.Labels(), model.DevLabel)
-
-	delete(app.PodLabels(), model.InteractiveDevLabel)
-	delete(app.PodLabels(), model.DetachedDevLabel)
 	return nil
 }

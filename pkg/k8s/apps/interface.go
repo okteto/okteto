@@ -26,10 +26,14 @@ type App interface {
 	Name() string
 	Kind() string
 	Replicas() int32
-	Labels() map[string]string
-	PodLabels() map[string]string
-	Annotations() map[string]string
-	PodAnnotations() map[string]string
+	GetLabel(key string) string
+	GetPodLabel(key string) string
+	GetAnnotation(key string) string
+	GetPodAnnotation(key string) string
+	SetLabel(key, value string)
+	SetPodLabel(key, value string)
+	SetAnnotation(key, value string)
+	SetPodAnnotation(key, value string)
 	PodSpec() *apiv1.PodSpec
 	NewTranslation(dev *model.Dev) *Translation
 	IsDevModeOn() bool

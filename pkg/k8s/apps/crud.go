@@ -196,7 +196,7 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
 	result := map[string]*Translation{}
 	t := app.NewTranslation(dev)
-	trRulesJSON := app.PodAnnotations()[model.TranslationAnnotation]
+	trRulesJSON := app.GetPodAnnotation(model.TranslationAnnotation)
 	if trRulesJSON != "" {
 		trRules := &Translation{}
 		if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {

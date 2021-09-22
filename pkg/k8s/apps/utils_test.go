@@ -44,14 +44,14 @@ annotations:
 		t.Fatal(err)
 	}
 	tr1 := translations[d.Name]
-	if err := setTranslationAsAnnotation(d.Annotations, tr1); err != nil {
+	if err := setTranslationAsAnnotation(tr1); err != nil {
 		t.Fatal(err)
 	}
-	translationString := d.Annotations[model.TranslationAnnotation]
+	translationString := d.Spec.Template.Annotations[model.TranslationAnnotation]
 	if translationString == "" {
 		t.Fatal("Marshalled translation was not found in the deployment's annotations")
 	}
-	tr2, err := getTranslationFromAnnotation(d.Annotations)
+	tr2, err := getTranslationFromAnnotation(d.Spec.Template.Annotations)
 	if err != nil {
 		t.Fatal(err)
 	}

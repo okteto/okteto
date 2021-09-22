@@ -145,7 +145,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 
 		app = apps.NewDeploymentApp(apps.GetDeploymentSandbox(dev))
 
-		app.Annotations()[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+		app.SetAnnotation(model.OktetoAutoCreateAnnotation, model.OktetoPushCmd)
 		exists = false
 
 		if imageTag == "" {
@@ -163,17 +163,17 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 
 	for _, tr := range trList {
 		if len(dev.Services) == 0 {
-			if tr.App.Annotations()[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || tr.App.PodSpec().Containers[0].Name == "dev" {
-				tr.App.Annotations()[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+			if tr.App.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoUpCmd || tr.App.PodSpec().Containers[0].Name == "dev" {
+				tr.App.SetAnnotation(model.OktetoAutoCreateAnnotation, model.OktetoPushCmd)
 			}
 		}
 		if tr.App.Replicas() == 0 {
 			tr.App.DevModeOff(tr)
 		}
 
-		if tr.App.Annotations()[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
+		if tr.App.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
 			for k, v := range tr.Annotations {
-				tr.App.Annotations()[k] = v
+				tr.App.SetAnnotation(k, v)
 			}
 		}
 	}
@@ -205,7 +205,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 	exit := make(chan error, 1)
 
 	go func() {
-		if app.Annotations()[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
+		if app.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
 			if err := services.CreateDev(ctx, dev, c); err != nil {
 				exit <- err
 				return
@@ -283,7 +283,7 @@ func getImageFromApp(trList map[string]*apps.Translation) (string, error) {
 		if tr.App == nil {
 			continue
 		}
-		if tr.App.Annotations()[model.OktetoAutoCreateAnnotation] != "" && len(trList) > 1 {
+		if tr.App.GetAnnotation(model.OktetoAutoCreateAnnotation) != "" && len(trList) > 1 {
 			continue
 		}
 		for _, rule := range tr.Rules {
