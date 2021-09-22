@@ -198,6 +198,7 @@ type SecurityContext struct {
 	RunAsGroup   *int64        `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
 	FSGroup      *int64        `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
 	Capabilities *Capabilities `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
+	RunAsNonRoot *bool         `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
 }
 
 // Capabilities sets the linux capabilities of a container
@@ -579,6 +580,9 @@ func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 	if !main.PersistentVolumeEnabled() {
 		return
 	}
+	if dev.RunAsNonRoot() {
+		return
+	}
 	if dev.SecurityContext == nil {
 		dev.SecurityContext = &SecurityContext{}
 	}
@@ -630,7 +634,9 @@ func (dev *Dev) validate() error {
 	if err := validateSecrets(dev.Secrets); err != nil {
 		return err
 	}
-
+	if err := dev.validateSecurityContext(); err != nil {
+		return err
+	}
 	if err := dev.validatePersistentVolume(); err != nil {
 		return err
 	}
@@ -686,6 +692,36 @@ func validateSecrets(secrets []Secret) error {
 			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
 		}
 		seen[s.GetFileName()] = true
+	}
+	return nil
+}
+
+// RunAsNonRoot returns true if the development container must run as a non-root user
+func (dev *Dev) RunAsNonRoot() bool {
+	if dev.SecurityContext == nil {
+		return false
+	}
+	if dev.SecurityContext.RunAsNonRoot == nil {
+		return false
+	}
+	return *dev.SecurityContext.RunAsNonRoot
+}
+
+// isRootUser returns true if a root user is specified
+func (dev *Dev) isRootUser() bool {
+	if dev.SecurityContext == nil {
+		return false
+	}
+	if dev.SecurityContext.RunAsUser == nil {
+		return false
+	}
+	return *dev.SecurityContext.RunAsUser == rootUser
+}
+
+// validateSecurityContext checks to see if a root user is specified with runAsNonRoot enabled
+func (dev *Dev) validateSecurityContext() error {
+	if dev.isRootUser() && dev.RunAsNonRoot() {
+		return fmt.Errorf("Running as the root user breaks runAsNonRoot constraint of the securityContext")
 	}
 	return nil
 }

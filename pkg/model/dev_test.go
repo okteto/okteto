@@ -900,6 +900,39 @@ func Test_validate(t *testing.T) {
         enabled: true`),
 			expectErr: true,
 		},
+		{
+			name: "runAsNonRoot-with-root-user",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 0`),
+			expectErr: true,
+		},
+		{
+			name: "runAsNonRoot-with-non-root-user",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101`),
+			expectErr: false,
+		},
+		{
+			name: "runAsNonRoot-with-root-group",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      securityContext:
+        runAsNonRoot: true
+        runAsGroup: 0`),
+			expectErr: false,
+		},
 	}
 
 	for _, tt := range tests {
