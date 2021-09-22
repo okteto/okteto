@@ -59,6 +59,18 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 			return err
 		}
 	}
+	if registry.IsGlobalRegistry(tag) {
+		tag, err = registry.ExpandOktetoGlobalRegistry(ctx, tag)
+		if err != nil {
+			return err
+		}
+		for i := range cacheFrom {
+			cacheFrom[i], err = registry.ExpandOktetoGlobalRegistry(ctx, cacheFrom[i])
+			if err != nil {
+				return err
+			}
+		}
+	}
 	opt, err := getSolveOpt(path, dockerFile, tag, target, noCache, cacheFrom, buildArgs, secrets)
 	if err != nil {
 		return errors.Wrap(err, "failed to create build solver")
@@ -89,7 +101,7 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 }
 
 func validateImage(imageTag string) error {
-	if strings.HasPrefix(imageTag, okteto.DevRegistry) && strings.Count(imageTag, "/") != 1 {
+	if (strings.HasPrefix(imageTag, okteto.DevRegistry) || strings.HasPrefix(imageTag, okteto.GlobalRegistry)) && strings.Count(imageTag, "/") != 1 {
 		return okErrors.UserError{
 			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
 			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", okteto.DevRegistry),

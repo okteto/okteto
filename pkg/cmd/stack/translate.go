@@ -220,6 +220,13 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 					return hasAddedAnyVolumeMounts, err
 				}
 			}
+			if registry.IsGlobalRegistry(fromImage) {
+				fromImage, err = registry.ExpandOktetoGlobalRegistry(ctx, svc.Image)
+				if err != nil {
+					return hasAddedAnyVolumeMounts, err
+				}
+			}
+
 			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, notSkippableVolumeMounts)
 			if err != nil {
 				return hasAddedAnyVolumeMounts, err

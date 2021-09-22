@@ -53,6 +53,13 @@ func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (str
 		log.Infof("error expanding okteto registry: %s", err.Error())
 		return imageTag, nil
 	}
+	if IsGlobalRegistry(imageTag) {
+		expandedTag, err = ExpandOktetoGlobalRegistry(ctx, imageTag)
+		if err != nil {
+			log.Infof("error expanding okteto.global registry: %s", err.Error())
+			return imageTag, nil
+		}
+	}
 	if !strings.HasPrefix(expandedTag, registryURL) {
 		return imageTag, nil
 	}
@@ -89,6 +96,21 @@ func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (str
 		return "", fmt.Errorf("error getting image tag digest: %s", err.Error())
 	}
 	return fmt.Sprintf("%s@%s", repoName, digest.String()), nil
+}
+
+// ExpandOktetoGlobalRegistry translates okteto.global
+func ExpandOktetoGlobalRegistry(ctx context.Context, tag string) (string, error) {
+	if !IsGlobalRegistry(tag) {
+		return tag, nil
+	}
+
+	oktetoRegistryURL, err := okteto.GetRegistry()
+	if err != nil {
+		return "", fmt.Errorf("cannot use the okteto.global container registry: unable to get okteto registry url: %s", err)
+	}
+
+	tag = strings.Replace(tag, okteto.GlobalRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, okteto.GlobalNamespace), 1)
+	return tag, nil
 }
 
 // ExpandOktetoDevRegistry translates okteto.dev
@@ -218,4 +240,8 @@ func getRegistryURL(ctx context.Context, namespace, image string) string {
 		}
 		return registry
 	}
+}
+
+func IsGlobalRegistry(tag string) bool {
+	return strings.HasPrefix(tag, okteto.GlobalRegistry)
 }
