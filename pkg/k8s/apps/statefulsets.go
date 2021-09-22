@@ -237,7 +237,7 @@ func (i *StatefulSetApp) Refresh(ctx context.Context, c kubernetes.Interface) er
 	return err
 }
 
-func (i *StatefulSetApp) Deploy(ctx context.Context, forceCreate bool, c kubernetes.Interface) error {
+func (i *StatefulSetApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
 	return statefulsets.Deploy(ctx, i.sfs, c)
 }
 

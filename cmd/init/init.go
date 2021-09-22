@@ -25,7 +25,6 @@ import (
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/client"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -179,7 +178,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 }
 
 func getRunningApp(ctx context.Context, namespace, k8sContext string) (apps.App, string, error) {
-	c, _, err := k8Client.GetLocalWithContext(k8sContext)
+	c, _, err := client.GetLocalWithContext(k8sContext)
 	if err != nil {
 		log.Yellow("Failed to load your local Kubeconfig: %s", err)
 		return nil, "", nil
@@ -212,7 +211,7 @@ func getRunningApp(ctx context.Context, namespace, k8sContext string) (apps.App,
 }
 
 func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
-	c, _, err := k8Client.GetLocalWithContext(k8sContext)
+	c, _, err := client.GetLocalWithContext(k8sContext)
 	if err != nil {
 		log.Infof("couldn't get kubernetes local client: %s", err.Error())
 		return false

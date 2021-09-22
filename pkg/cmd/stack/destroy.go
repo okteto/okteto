@@ -101,7 +101,6 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 			}
 		}
 		exit <- configmaps.Destroy(ctx, model.GetStackConfigMapName(s.Name), s.Namespace, c)
-		return
 	}()
 
 	select {

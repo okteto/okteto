@@ -118,7 +118,6 @@ func destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes
 			return
 		}
 		exit <- nil
-		return
 	}()
 	select {
 	case <-stop:
@@ -144,7 +143,6 @@ func waitUntilDestroyed(ctx context.Context, name string, action *okteto.Action,
 
 	go func() {
 		exit <- waitToBeDestroyed(ctx, name, action, namespace, timeout)
-		return
 	}()
 
 	select {

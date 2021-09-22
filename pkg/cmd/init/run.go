@@ -20,7 +20,6 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/client"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/linguist"
@@ -39,7 +38,7 @@ var (
 
 // SetDevDefaultsFromDeployment sets dev defaults from a running deployment
 func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, container, language string) error {
-	c, config, err := k8Client.GetLocalWithContext(dev.Context)
+	c, config, err := client.GetLocalWithContext(dev.Context)
 	if err != nil {
 		return err
 	}
@@ -62,11 +61,11 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 		dev.Image = nil
 		dev.SecurityContext = getSecurityContextFromPod(ctx, dev, pod, container, config, c)
 		dev.Sync.Folders[0].RemotePath = getWorkdirFromPod(ctx, dev, pod, container, config, c)
-		dev.Command.Values = getCommandFromPod(ctx, dev, pod, container, config, c)
+		dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
 	}
 
 	setAnnotationsFromApp(dev, app)
-	setNameAndLabelsFromApp(ctx, dev, app)
+	setNameAndLabelsFromApp(dev, app)
 
 	if okteto.GetClusterContext() != client.GetSessionContext("") {
 		setResourcesFromPod(dev, pod, container)
@@ -116,7 +115,7 @@ func getWorkdirFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, cont
 	return workdir
 }
 
-func getCommandFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) []string {
+func getCommandFromPod(ctx context.Context, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) []string {
 	if pods.CheckIfBashIsAvailable(ctx, pod, container, config, c) {
 		return []string{"bash"}
 	}
@@ -152,7 +151,7 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 	return nil
 }
 
-func setNameAndLabelsFromApp(ctx context.Context, dev *model.Dev, app apps.App) {
+func setNameAndLabelsFromApp(dev *model.Dev, app apps.App) {
 	for _, l := range componentLabels {
 		component := app.GetLabel(l)
 		if component == "" {

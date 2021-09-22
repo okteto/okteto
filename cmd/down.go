@@ -132,8 +132,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 
 		analytics.TrackDownVolumes(true)
 		exit <- nil
-		return
-
 	}()
 
 	select {

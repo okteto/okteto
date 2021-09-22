@@ -203,7 +203,6 @@ func waitUntilRunning(ctx context.Context, name string, a *okteto.Action, namesp
 		}
 
 		exit <- waitForResourcesToBeRunning(ctx, name, namespace, timeout)
-		return
 	}()
 
 	select {

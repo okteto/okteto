@@ -324,7 +324,7 @@ func (up *upContext) activateLoop(build bool) {
 func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
 	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
 	if errors.IsNotFound(err) && up.Dev.Autocreate {
-		return apps.NewDeploymentApp(apps.GetDeploymentSandbox(up.Dev)), true, errors.ErrNotFound
+		return apps.NewDeploymentApp(apps.GetDeploymentSandbox(up.Dev)), true, nil
 	}
 	if err == nil {
 		if app.GetAnnotation(model.OktetoAutoCreateAnnotation) != model.OktetoUpCmd {

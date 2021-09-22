@@ -28,7 +28,7 @@ import (
 )
 
 // Run runs the "okteto status" sequence
-func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64, error) {
+func Run(ctx context.Context, sy *syncthing.Syncthing) (float64, error) {
 	progressLocal, err := getCompletionProgress(ctx, sy, true)
 	if err != nil {
 		log.Infof("error accessing local syncthing status: %s", err)

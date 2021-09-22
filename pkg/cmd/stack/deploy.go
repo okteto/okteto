@@ -166,7 +166,6 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 
 		spinner.Update("Waiting for services to be ready...")
 		exit <- waitForPodsToBeRunning(ctx, s, c)
-		return
 	}()
 
 	select {

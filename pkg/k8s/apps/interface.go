@@ -48,7 +48,7 @@ type App interface {
 	HasBeenChanged() bool
 	SetLastBuiltAnnotation()
 	Refresh(ctx context.Context, c kubernetes.Interface) error
-	Deploy(ctx context.Context, forceCreate bool, c kubernetes.Interface) error
+	Deploy(ctx context.Context, c kubernetes.Interface) error
 	Create(ctx context.Context, c kubernetes.Interface) error
 	DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error
 	Update(ctx context.Context, c kubernetes.Interface) error

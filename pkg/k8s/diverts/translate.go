@@ -156,7 +156,7 @@ func translateDivertCRD(username string, dev *model.Dev, s *apiv1.Service, i *ne
 	return result
 }
 
-func translateDev(username string, dev *model.Dev, app apps.App) {
+func translateDev(dev *model.Dev, app apps.App) {
 	dev.Name = app.Name()
 	dev.Labels = nil
 }

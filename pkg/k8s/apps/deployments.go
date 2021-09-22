@@ -243,7 +243,7 @@ func (i *DeploymentApp) Refresh(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
-func (i *DeploymentApp) Deploy(ctx context.Context, forceDeploy bool, c kubernetes.Interface) error {
+func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
 	return deployments.Deploy(ctx, i.d, c)
 }
 

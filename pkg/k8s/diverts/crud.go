@@ -53,11 +53,11 @@ func Create(ctx context.Context, dev *model.Dev, isOktetoNamespace bool, c kuber
 		return err
 	}
 
-	if err := createDivertCRD(ctx, dev, username, i, s, c); err != nil {
+	if err := createDivertCRD(ctx, dev, username, i, s); err != nil {
 		return err
 	}
 
-	translateDev(username, dev, r)
+	translateDev(dev, r)
 	return nil
 }
 
@@ -104,7 +104,7 @@ func divertIngress(ctx context.Context, dev *model.Dev, username string, c kuber
 	return divertIngress, nil
 }
 
-func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *networkingv1.Ingress, s *apiv1.Service, c kubernetes.Interface) error {
+func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *networkingv1.Ingress, s *apiv1.Service) error {
 	dClient, err := GetClient(dev.Context)
 	if err != nil {
 		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
@@ -173,6 +173,6 @@ func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 		return fmt.Errorf("error deleting divert service '%s': %s", sName, err.Error())
 	}
 
-	translateDev(username, dev, app)
+	translateDev(dev, app)
 	return app.Update(ctx, c)
 }

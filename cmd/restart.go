@@ -82,7 +82,6 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 
 	go func() {
 		exit <- pods.Restart(ctx, dev, client, sn)
-		return
 	}()
 
 	select {
