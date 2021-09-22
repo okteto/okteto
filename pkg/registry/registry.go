@@ -48,10 +48,13 @@ func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (str
 		return imageTag, nil
 	}
 
-	expandedTag, err := ExpandOktetoDevRegistry(ctx, namespace, imageTag)
-	if err != nil {
-		log.Infof("error expanding okteto.dev registry: %s", err.Error())
-		return imageTag, nil
+	expandedTag := imageTag
+	if IsDevRegistry(imageTag) {
+		expandedTag, err = ExpandOktetoDevRegistry(ctx, namespace, imageTag)
+		if err != nil {
+			log.Infof("error expanding okteto.dev registry: %s", err.Error())
+			return imageTag, nil
+		}
 	}
 	if IsGlobalRegistry(imageTag) {
 		expandedTag, err = ExpandOktetoGlobalRegistry(ctx, imageTag)
@@ -100,10 +103,6 @@ func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (str
 
 // ExpandOktetoGlobalRegistry translates okteto.global
 func ExpandOktetoGlobalRegistry(ctx context.Context, tag string) (string, error) {
-	if !IsGlobalRegistry(tag) {
-		return tag, nil
-	}
-
 	oktetoRegistryURL, err := okteto.GetRegistry()
 	if err != nil {
 		return "", fmt.Errorf("cannot use the okteto.global container registry: unable to get okteto registry url: %s", err)
@@ -115,10 +114,6 @@ func ExpandOktetoGlobalRegistry(ctx context.Context, tag string) (string, error)
 
 // ExpandOktetoDevRegistry translates okteto.dev
 func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string, error) {
-	if !IsDevRegistry(tag) {
-		return tag, nil
-	}
-
 	c, _, err := client.GetLocal()
 	if err != nil {
 		return "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
