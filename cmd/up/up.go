@@ -257,7 +257,7 @@ func (up *upContext) start(build bool) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.Divert != nil)
+	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.Dev.Divert != nil)
 
 	go up.activateLoop(build)
 
@@ -327,9 +327,6 @@ func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
 		return apps.NewDeploymentApp(apps.GetDeploymentSandbox(up.Dev)), true, nil
 	}
 	if err == nil {
-		if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] != model.OktetoUpCmd {
-			up.isSwap = true
-		}
 		return app, false, nil
 	}
 
@@ -498,7 +495,7 @@ func (up *upContext) shutdown() {
 
 	log.Infof("starting shutdown sequence")
 	if !up.success {
-		analytics.TrackUpError(true, up.isSwap)
+		analytics.TrackUpError(true)
 	}
 
 	if up.Cancel != nil {

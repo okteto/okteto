@@ -113,7 +113,7 @@ func (up *upContext) activate(build bool) error {
 	}
 
 	if up.isRetry {
-		analytics.TrackReconnect(true, up.isSwap)
+		analytics.TrackReconnect(true)
 	}
 
 	up.isRetry = true
