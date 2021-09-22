@@ -184,6 +184,20 @@ func GetHiddenExposePorts(ctx context.Context, namespace, image string) []model.
 		token = okToken.Token
 	}
 
+	if IsGlobalRegistry(image) {
+		image, err = ExpandOktetoGlobalRegistry(ctx, image)
+		if err != nil {
+			log.Infof("Could not expand okteto global registry: %s", err.Error())
+		}
+		username = okteto.GetUserID()
+		okToken, err := okteto.GetToken()
+		if err != nil {
+			log.Infof("Could not expand okteto global registry: %s", err.Error())
+			return exposedPorts
+		}
+		token = okToken.Token
+	}
+
 	registry := getRegistryURL(ctx, namespace, image)
 
 	c, err := NewRegistryClient(registry, username, token)
