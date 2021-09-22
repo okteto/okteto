@@ -148,6 +148,7 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 			kv := strings.SplitN(v, "=", 2)
 			if len(kv) != 2 {
 				exit <- fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+				return
 			}
 			varList = append(varList, okteto.Variable{
 				Name:  kv[0],
@@ -191,6 +192,7 @@ func waitUntilRunning(ctx context.Context, name string, action *okteto.Action, n
 		err := waitToBeDeployed(ctx, name, action, namespace, timeout)
 		if err != nil {
 			exit <- err
+			return
 		}
 
 		exit <- waitForResourcesToBeRunning(ctx, name, namespace, timeout)

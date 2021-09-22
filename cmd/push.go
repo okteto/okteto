@@ -37,7 +37,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// Push builds, pushes and redeploys the target deployment
+// Push builds, pushes and redeploys the target app
 func Push(ctx context.Context) *cobra.Command {
 	var devPath string
 	var namespace string
@@ -45,26 +45,25 @@ func Push(ctx context.Context) *cobra.Command {
 	var imageTag string
 	var autoDeploy bool
 	var progress string
-	var deploymentName string
+	var appName string
 	var noCache bool
 
 	cmd := &cobra.Command{
 		Use:   "push",
-		Short: "Builds, pushes and redeploys source code to the target deployment",
+		Short: "Builds, pushes and redeploys source code to the target app",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
 			if err := utils.LoadEnvironment(ctx, true); err != nil {
 				return err
 			}
 
-			dev, err := utils.LoadDevOrDefault(devPath, deploymentName, namespace, k8sContext)
+			dev, err := utils.LoadDevOrDefault(devPath, appName, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
 
-			if len(deploymentName) > 0 && deploymentName != dev.Name {
-				return fmt.Errorf("deployment name provided does not match the name field in your okteto manifest")
+			if len(appName) > 0 && appName != dev.Name {
+				return fmt.Errorf("app name provided does not match the name field in your okteto manifest")
 			}
 
 			c, _, err := k8Client.GetLocalWithContext(dev.Context)
@@ -97,7 +96,7 @@ func Push(ctx context.Context) *cobra.Command {
 				dev.Autocreate = autoDeploy
 			}
 
-			if err := runPush(ctx, dev, autoDeploy, imageTag, oktetoRegistryURL, progress, noCache, c); err != nil {
+			if err := runPush(ctx, dev, imageTag, oktetoRegistryURL, progress, noCache, c); err != nil {
 				analytics.TrackPush(false, oktetoRegistryURL)
 				return err
 			}
@@ -114,16 +113,16 @@ func Push(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the push command is executed")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the push command is executed")
 	cmd.Flags().StringVarP(&imageTag, "tag", "t", "", "image tag to build, push and redeploy")
-	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
+	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when the app doesn't exist in a namespace")
 	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
-	cmd.Flags().StringVar(&deploymentName, "name", "", "name of the deployment to push to")
+	cmd.Flags().StringVar(&appName, "name", "", "name of the app to push to")
 	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
 	return cmd
 }
 
-func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
+func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
 	exists := true
-	k8sObject, err := apps.GetResource(ctx, dev, dev.Namespace, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -132,7 +131,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 
 		if !dev.Autocreate {
 			return errors.UserError{
-				E: fmt.Errorf("Deployment '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
+				E: fmt.Errorf("Application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
 				Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone deployment
     More information is available here: https://okteto.com/docs/reference/cli#up`,
@@ -143,8 +142,9 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 			return fmt.Errorf("'autocreate' cannot be used in combination with 'services'")
 		}
 
-		k8sObject.GetSandbox()
-		k8sObject.SetAnnotation(model.OktetoAutoCreateAnnotation, model.OktetoPushCmd)
+		app = apps.NewDeploymentApp(apps.GetDeploymentSandbox(dev))
+
+		app.SetAnnotation(model.OktetoAutoCreateAnnotation, model.OktetoPushCmd)
 		exists = false
 
 		if imageTag == "" {
@@ -155,46 +155,42 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 		}
 	}
 
-	trList, err := apps.GetTranslations(ctx, dev, k8sObject, false, c)
+	trList, err := apps.GetTranslations(ctx, dev, app, false, c)
 	if err != nil {
 		return err
 	}
 
 	for _, tr := range trList {
-		if tr.K8sObject == nil {
-			continue
-		}
-
 		if len(dev.Services) == 0 {
-			if tr.K8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoUpCmd || tr.K8sObject.PodTemplateSpec.Spec.Containers[0].Name == "dev" {
-				tr.K8sObject.SetAnnotation(model.OktetoAutoCreateAnnotation, model.OktetoPushCmd)
+			if tr.App.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoUpCmd || tr.App.PodSpec().Containers[0].Name == "dev" {
+				tr.App.SetAnnotation(model.OktetoAutoCreateAnnotation, model.OktetoPushCmd)
 			}
 		}
-		if *tr.K8sObject.GetReplicas() == 0 {
-			tr.K8sObject.SetReplicas(&model.DevReplicas)
+		if tr.App.Replicas() == 0 {
+			tr.App.DevModeOff(tr)
 		}
 
-		if tr.K8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
+		if tr.App.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
 			for k, v := range tr.Annotations {
-				tr.K8sObject.SetAnnotation(k, v)
+				tr.App.SetAnnotation(k, v)
 			}
 		}
 	}
 
-	if k8sObject != nil && apps.IsDevModeOn(k8sObject) {
-		if err := down.Run(dev, k8sObject, trList, false, c); err != nil {
+	if app != nil && app.IsDevModeOn() {
+		if err := down.Run(dev, app, trList, false, c); err != nil {
 			return err
 		}
 
 		log.Information("Development container deactivated")
 	}
 
-	imageFromDeployment, err := getImageFromDeployment(trList)
+	imageFromApp, err := getImageFromApp(trList)
 	if err != nil {
 		return err
 	}
 
-	imageTag, err = buildImage(ctx, dev, imageTag, imageFromDeployment, oktetoRegistryURL, noCache, progress)
+	imageTag, err = buildImage(ctx, dev, imageTag, imageFromApp, oktetoRegistryURL, noCache, progress)
 	if err != nil {
 		return err
 	}
@@ -208,34 +204,41 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 	exit := make(chan error, 1)
 
 	go func() {
-		if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
+		if app.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoPushCmd {
 			if err := services.CreateDev(ctx, dev, c); err != nil {
 				exit <- err
+				return
 			}
 		}
 
 		if !exists {
-			k8sObject.PodTemplateSpec.Spec.Containers[0].Image = imageTag
-			apps.SetLastBuiltAnnotation(k8sObject)
-			exit <- apps.Create(ctx, k8sObject, c)
+			app.PodSpec().Containers[0].Image = imageTag
+			app.SetLastBuiltAnnotation()
+			exit <- app.Create(ctx, c)
+			return
 		}
 
 		for _, tr := range trList {
-			if tr.K8sObject == nil {
+			if tr.App == nil {
 				continue
 			}
 			for _, rule := range tr.Rules {
-				devContainer := apps.GetDevContainer(&tr.K8sObject.PodTemplateSpec.Spec, rule.Container)
+				devContainer := apps.GetDevContainer(tr.App.PodSpec(), rule.Container)
 				if devContainer == nil {
-					exit <- fmt.Errorf("Container '%s' not found in deployment '%s'", rule.Container, k8sObject.Name)
+					exit <- fmt.Errorf("%s '%s': container '%s' not found", app.Kind(), app.Name(), rule.Container)
+					return
 				}
-				apps.SetLastBuiltAnnotation(tr.K8sObject)
+				app.SetLastBuiltAnnotation()
 				devContainer.Image = imageTag
 			}
 
+			if err := tr.App.Update(ctx, c); err != nil {
+				exit <- err
+				return
+			}
+			exit <- nil
+			return
 		}
-
-		exit <- apps.UpdateK8sObjects(ctx, trList, c)
 	}()
 	select {
 	case <-stop:
@@ -252,7 +255,7 @@ func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, okt
 
 }
 
-func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
+func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
 	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
 	if err != nil {
 		return "", err
@@ -262,7 +265,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 	if imageTag == "" {
 		imageTag = dev.Push.Name
 	}
-	buildTag := registry.GetDevImageTag(dev, imageTag, imageFromDeployment, oktetoRegistryURL)
+	buildTag := registry.GetDevImageTag(dev, imageTag, imageFromApp, oktetoRegistryURL)
 	log.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
@@ -273,27 +276,27 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromDeployme
 	return buildTag, nil
 }
 
-func getImageFromDeployment(trList map[string]*model.Translation) (string, error) {
-	imageFromDeployment := ""
+func getImageFromApp(trList map[string]*apps.Translation) (string, error) {
+	imageFromApp := ""
 	for _, tr := range trList {
-		if tr.K8sObject == nil {
+		if tr.App == nil {
 			continue
 		}
-		if tr.K8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) != "" && len(trList) > 1 {
+		if tr.App.GetAnnotation(model.OktetoAutoCreateAnnotation) != "" && len(trList) > 1 {
 			continue
 		}
 		for _, rule := range tr.Rules {
-			devContainer := apps.GetDevContainer(&tr.K8sObject.PodTemplateSpec.Spec, rule.Container)
+			devContainer := apps.GetDevContainer(tr.App.PodSpec(), rule.Container)
 			if devContainer == nil {
-				return "", fmt.Errorf("container '%s' not found in deployment '%s'", rule.Container, tr.K8sObject.Name)
+				return "", fmt.Errorf("%s '%s': container '%s' not found", tr.App.Kind(), tr.App.Name(), rule.Container)
 			}
-			if imageFromDeployment == "" {
-				imageFromDeployment = devContainer.Image
+			if imageFromApp == "" {
+				imageFromApp = devContainer.Image
 			}
-			if devContainer.Image != imageFromDeployment {
-				return "", fmt.Errorf("cannot push code: deployments referenced by okteto manifest use different images")
+			if devContainer.Image != imageFromApp {
+				return "", fmt.Errorf("cannot push code: application referenced by okteto manifest use different images")
 			}
 		}
 	}
-	return imageFromDeployment, nil
+	return imageFromApp, nil
 }

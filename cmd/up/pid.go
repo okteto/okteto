@@ -25,7 +25,7 @@ import (
 
 // createPIDFile creates a PID file to track Up state and existence
 func createPIDFile(ns, dpName string) error {
-	filePath := filepath.Join(config.GetDeploymentHome(ns, dpName), "okteto.pid")
+	filePath := filepath.Join(config.GetAppHome(ns, dpName), "okteto.pid")
 	file, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("unable to create PID file at %s", filePath)
@@ -39,7 +39,7 @@ func createPIDFile(ns, dpName string) error {
 
 // cleanPIDFile deletes PID file after Up finishes
 func cleanPIDFile(ns, dpName string) {
-	filePath := filepath.Join(config.GetDeploymentHome(ns, dpName), "okteto.pid")
+	filePath := filepath.Join(config.GetAppHome(ns, dpName), "okteto.pid")
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
 		log.Infof("unable to delete PID file at %s", filePath)
 	}

@@ -119,6 +119,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 				svcK8s := translateService(name, s)
 				if err := services.Deploy(ctx, svcK8s, c); err != nil {
 					exit <- err
+					return
 				}
 			}
 		}
@@ -126,6 +127,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 		for name := range s.Volumes {
 			if err := deployVolume(ctx, name, s, c); err != nil {
 				exit <- err
+				return
 			}
 			spinner.Stop()
 			log.Success("Created volume '%s'", name)
@@ -134,15 +136,18 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 
 		if err := deployServices(ctx, s, c, config, spinner, options); err != nil {
 			exit <- err
+			return
 		}
 
 		iClient, err := ingresses.GetClient(ctx, c)
 		if err != nil {
 			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
+			return
 		}
 		for name := range s.Endpoints {
 			if err := deployIngress(ctx, name, s, iClient); err != nil {
 				exit <- err
+				return
 			}
 			spinner.Stop()
 			log.Success("Created endpoint '%s'", name)
@@ -151,10 +156,12 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 
 		if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 			exit <- err
+			return
 		}
 
 		if !options.Wait {
 			exit <- nil
+			return
 		}
 
 		spinner.Update("Waiting for services to be ready...")
@@ -390,11 +397,11 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	if isNewDeployment {
-		if err := deployments.Create(ctx, d, c); err != nil {
+		if _, err := deployments.Create(ctx, d, c); err != nil {
 			return fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
 		}
 	} else {
-		if err := deployments.Update(ctx, d, c); err != nil {
+		if _, err := deployments.Update(ctx, d, c); err != nil {
 			return fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
 		}
 	}
@@ -409,7 +416,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 		return fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
 	}
 	if old == nil || old.Name == "" {
-		if err := statefulsets.Create(ctx, sfs, c); err != nil {
+		if _, err := statefulsets.Create(ctx, sfs, c); err != nil {
 			return fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
 		}
 	} else {
@@ -422,14 +429,14 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			sfs.Labels[model.DeployedByLabel] = v
 		}
-		if err := statefulsets.Update(ctx, sfs, c); err != nil {
+		if _, err := statefulsets.Update(ctx, sfs, c); err != nil {
 			if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
 			if err := statefulsets.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
-			if err := statefulsets.Create(ctx, sfs, c); err != nil {
+			if _, err := statefulsets.Create(ctx, sfs, c); err != nil {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
 		}

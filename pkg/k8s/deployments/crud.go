@@ -29,10 +29,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-)
-
-const (
-	revisionAnnotation = "deployment.kubernetes.io/revision"
+	"k8s.io/utils/pointer"
 )
 
 //List returns the list of deployments
@@ -49,77 +46,38 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return dList.Items, nil
 }
 
-//GetDeploymentByName returns a deployment object if is created
-func GetDeploymentByName(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
-	d, err := c.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get deployment %s/%s: %w", namespace, name, err)
-	}
-
-	return d, nil
+//Get returns a deployment object by name
+func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
+	return c.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-//Get returns a deployment object given its name and namespace
-func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
-	if namespace == "" {
-		return nil, fmt.Errorf("empty namespace")
-	}
-
-	var d *appsv1.Deployment
-	var err error
-
+//GetByDev returns a deployment object given a dev struct (by name or by label)
+func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	if len(dev.Labels) == 0 {
-		d, err = c.AppsV1().Deployments(namespace).Get(ctx, dev.Name, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		deploys, err := c.AppsV1().Deployments(namespace).List(
-			ctx,
-			metav1.ListOptions{
-				LabelSelector: dev.LabelsSelector(),
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-		if len(deploys.Items) == 0 {
-			return nil, fmt.Errorf("deployment for labels '%s' not found", dev.LabelsSelector())
-		}
-		if len(deploys.Items) > 1 {
-			return nil, fmt.Errorf("Found '%d' deployments for labels '%s' instead of 1", len(deploys.Items), dev.LabelsSelector())
-		}
-		d = &deploys.Items[0]
+		return Get(ctx, dev.Name, namespace, c)
 	}
-	return d, nil
-}
 
-//GetRevisionAnnotatedDeploymentOrFailed returns a deployment object if it is healthy and annotated with its revision or an error
-func GetRevisionAnnotatedDeploymentOrFailed(ctx context.Context, dev *model.Dev, c kubernetes.Interface, waitUntilDeployed bool) (*appsv1.Deployment, error) {
-	d, err := Get(ctx, dev, dev.Namespace, c)
+	dList, err := c.AppsV1().Deployments(namespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: dev.LabelsSelector(),
+		},
+	)
 	if err != nil {
-		if waitUntilDeployed && errors.IsNotFound(err) {
-			return nil, nil
-		}
 		return nil, err
 	}
-
-	if err = checkConditionErrors(d, dev); err != nil {
-		return nil, err
+	if len(dList.Items) == 0 {
+		return nil, errors.ErrNotFound
 	}
-
-	if d.Generation != d.Status.ObservedGeneration {
-		return nil, nil
+	if len(dList.Items) > 1 {
+		return nil, fmt.Errorf("Found '%d' deployments for labels '%s' instead of 1", len(dList.Items), dev.LabelsSelector())
 	}
-
-	if err := updateOktetoRevision(ctx, d, c, dev.Timeout.Default); err != nil {
-		return nil, err
-	}
-
-	return d, nil
+	d := dList.Items[0]
+	return &d, nil
 }
 
-func checkConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
+//CheckConditionErrors checks errors in conditions
+func CheckConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
 	for _, c := range deployment.Status.Conditions {
 		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
@@ -170,22 +128,14 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 	return fmt.Errorf(strings.TrimSpace(errorToReturn))
 }
 
-func Create(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
-	_, err := c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
+func Create(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (*appsv1.Deployment, error) {
+	return c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
 }
 
-func Update(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
+func Update(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	d.ResourceVersion = ""
 	d.Status = appsv1.DeploymentStatus{}
-	_, err := c.AppsV1().Deployments(d.Namespace).Update(ctx, d, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.AppsV1().Deployments(d.Namespace).Update(ctx, d, metav1.UpdateOptions{})
 }
 
 //Deploy creates or updates a deployment
@@ -207,45 +157,12 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) e
 		old.Annotations = d.Annotations
 		old.Labels = d.Labels
 		old.Spec = d.Spec
-		if err := Update(ctx, old, c); err != nil {
+		if _, err := Update(ctx, old, c); err != nil {
 			return fmt.Errorf("error updating kubernetes deployment: %s", err)
 		}
 		log.Infof("updated deployment '%s'.", d.Name)
 	}
 	return nil
-}
-
-func updateOktetoRevision(ctx context.Context, d *appsv1.Deployment, client kubernetes.Interface, timeout time.Duration) error {
-	ticker := time.NewTicker(200 * time.Millisecond)
-	to := time.Now().Add(timeout * 2) // 60 seconds
-
-	for retries := 0; ; retries++ {
-		updated, err := client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to get deployment %s/%s: %w", d.Namespace, d.Name, err)
-		}
-
-		revision := updated.Annotations[revisionAnnotation]
-		if revision != "" {
-			if updated.Annotations[model.RevisionAnnotation] == revision {
-				return nil
-			}
-			updated.Annotations[model.RevisionAnnotation] = revision
-			return Update(ctx, updated, client)
-		}
-
-		if time.Now().After(to) && retries >= 10 {
-			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the deployment '%s'. Please check for errors and try again", revisionAnnotation, d.Name)
-		}
-
-		select {
-		case <-ticker.C:
-			continue
-		case <-ctx.Done():
-			log.Info("call to deployments.UpdateOktetoRevision cancelled")
-			return ctx.Err()
-		}
-	}
 }
 
 //SetLastBuiltAnnotation sets the deployment timestacmp
@@ -268,24 +185,11 @@ func RestoreDevModeFrom(d, old *appsv1.Deployment) {
 
 //HasBeenChanged returns if a deployment has been updated since the development container was activated
 func HasBeenChanged(d *appsv1.Deployment) bool {
-	oktetoRevision := d.Annotations[model.RevisionAnnotation]
+	oktetoRevision := d.Annotations[model.OktetoRevisionAnnotation]
 	if oktetoRevision == "" {
 		return false
 	}
-	return oktetoRevision != d.Annotations[revisionAnnotation]
-}
-
-// UpdateDeployments update all deployments in the given translation list
-func UpdateDeployments(ctx context.Context, trList map[string]*model.Translation, c kubernetes.Interface) error {
-	for _, tr := range trList {
-		if tr.K8sObject.Deployment == nil {
-			continue
-		}
-		if err := Update(ctx, tr.K8sObject.Deployment, c); err != nil {
-			return err
-		}
-	}
-	return nil
+	return oktetoRevision != d.Annotations[model.DeploymentRevisionAnnotation]
 }
 
 //DestroyDev destroys the k8s deployment of a dev environment
@@ -297,8 +201,7 @@ func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) err
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	log.Infof("deleting deployment '%s'", name)
 	dClient := c.AppsV1().Deployments(namespace)
-	var devTerminationGracePeriodSeconds int64
-	err := dClient.Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+	err := dClient.Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: pointer.Int64Ptr(0)})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil

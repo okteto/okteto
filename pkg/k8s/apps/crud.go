@@ -17,125 +17,201 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/pointer"
 )
 
-func GetResource(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*model.K8sObject, error) {
-	var err error
-	k8sObject := model.NewResource(dev)
-	if k8sObject.ObjectType == "" {
-		k8sObject.ObjectType = GetResourceFromServiceName(ctx, dev.Name, dev.Namespace, c)
+func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, error) {
+	d, err := deployments.GetByDev(ctx, dev, namespace, c)
+
+	if err == nil {
+		return &DeploymentApp{d: d}, nil
 	}
-	switch k8sObject.ObjectType {
-	case model.DeploymentObjectType:
-		k8sObject.Deployment, err = deployments.Get(ctx, dev, namespace, c)
+
+	if !errors.IsNotFound(err) {
+		return nil, err
+	}
+
+	sfs, err := statefulsets.GetByDev(ctx, dev, namespace, c)
+	if err != nil {
+		return nil, err
+	}
+
+	return &StatefulSetApp{sfs: sfs}, nil
+}
+
+//GetDeploymentSandbox returns a base deployment when using "autocreate"
+func GetDeploymentSandbox(dev *model.Dev) *appsv1.Deployment {
+	image := dev.Image.Name
+	if image == "" {
+		image = model.DefaultImage
+	}
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name,
+			Namespace: dev.Namespace,
+			Labels:    model.Labels{},
+			Annotations: model.Annotations{
+				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: pointer.Int32Ptr(1),
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": dev.Name,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": dev.Name,
+					},
+				},
+				Spec: apiv1.PodSpec{
+					ServiceAccountName:            dev.ServiceAccount,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           image,
+							ImagePullPolicy: apiv1.PullAlways,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+//GetStatefulSetSandbox returns a base statefulset when using "autocreate"
+func GetStatefulSetSandbox(dev *model.Dev) *appsv1.StatefulSet {
+	image := dev.Image.Name
+	if image == "" {
+		image = model.DefaultImage
+	}
+	return &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name,
+			Namespace: dev.Namespace,
+			Labels:    model.Labels{},
+			Annotations: model.Annotations{
+				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+			},
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: pointer.Int32Ptr(1),
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": dev.Name,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": dev.Name,
+					},
+				},
+				Spec: apiv1.PodSpec{
+					ServiceAccountName:            dev.ServiceAccount,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           image,
+							ImagePullPolicy: apiv1.PullAlways,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// GetRunningPodInLoop returns the dev pod for an app and loops until it success
+func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kubernetes.Interface, isOktetoNamespace bool) (*apiv1.Pod, error) {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	start := time.Now()
+	to := start.Add(dev.Timeout.Resources)
+
+	for retries := 0; ; retries++ {
+		err := app.Refresh(ctx, c)
 		if err != nil {
-			return k8sObject, err
+			return nil, err
 		}
-		k8sObject.Name = k8sObject.Deployment.Name
-		k8sObject.ObjectMeta = k8sObject.Deployment.ObjectMeta
-		k8sObject.Replicas = k8sObject.Deployment.Spec.Replicas
-		k8sObject.Selector = k8sObject.Deployment.Spec.Selector
-		k8sObject.PodTemplateSpec = &k8sObject.Deployment.Spec.Template
-		return k8sObject, nil
-	case model.StatefulsetObjectType:
-		k8sObject.StatefulSet, err = statefulsets.Get(ctx, dev, namespace, c)
-		if err != nil {
-			return k8sObject, err
+		if err = app.CheckConditionErrors(dev); err != nil {
+			return nil, err
 		}
-		k8sObject.Name = k8sObject.StatefulSet.Name
-		k8sObject.ObjectMeta = k8sObject.StatefulSet.ObjectMeta
-		k8sObject.Replicas = k8sObject.StatefulSet.Spec.Replicas
-		k8sObject.Selector = k8sObject.StatefulSet.Spec.Selector
-		k8sObject.PodTemplateSpec = &k8sObject.StatefulSet.Spec.Template
-		return k8sObject, nil
-	}
 
-	return nil, fmt.Errorf("Could not retrieve '%s' resource.", dev.Name)
-}
+		pod, err := app.GetRunningPod(ctx, c)
 
-func IsDevModeOn(r *model.K8sObject) bool {
-	switch r.ObjectType {
-	case model.DeploymentObjectType:
-		return deployments.IsDevModeOn(r.Deployment)
-	case model.StatefulsetObjectType:
-		return statefulsets.IsDevModeOn(r.StatefulSet)
-	default:
-		return false
-	}
-}
-
-func HasBeenChanged(k8sObject *model.K8sObject) bool {
-	switch k8sObject.ObjectType {
-	case model.DeploymentObjectType:
-		return deployments.HasBeenChanged(k8sObject.Deployment)
-	case model.StatefulsetObjectType:
-		return statefulsets.HasBeenChanged(k8sObject.StatefulSet)
-	default:
-		return false
-	}
-}
-
-func ValidateMountPaths(k8sObject *model.K8sObject, dev *model.Dev) error {
-	if !dev.PersistentVolumeInfo.Enabled {
-		return nil
-	}
-	devContainer := GetDevContainer(&k8sObject.PodTemplateSpec.Spec, dev.Container)
-
-	for _, vm := range devContainer.VolumeMounts {
-		if dev.GetVolumeName() == vm.Name {
-			continue
-		}
-		for _, syncVolume := range dev.Sync.Folders {
-			if vm.MountPath == syncVolume.RemotePath {
-				return errors.UserError{
-					E:    fmt.Errorf("'%s' is already defined as volume in %v %s", vm.MountPath, k8sObject.ObjectType, k8sObject.Name),
-					Hint: `Disable the okteto persistent volume (https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional) and try again`}
+		if err == nil {
+			if !isOktetoNamespace {
+				app.SetOktetoRevision()
+				if err := app.Update(ctx, c); err != nil {
+					return nil, err
+				}
 			}
+			return pod, nil
+		}
+
+		if !errors.IsNotFound(err) {
+			return nil, err
+		}
+
+		if time.Now().After(to) && retries > 10 {
+			return nil, fmt.Errorf("kubernetes is taking too long to start your development container. Please check for errors and try again")
+		}
+
+		select {
+		case <-ticker.C:
+			if retries%5 == 0 {
+				log.Info("development container is not ready yet, will retry")
+			}
+			continue
+		case <-ctx.Done():
+			log.Debug("call to apps.GetRunningPodInLoop cancelled")
+			return nil, ctx.Err()
 		}
 	}
-	return nil
 }
 
 //GetTranslations fills all the deployments pointed by a development container
-func GetTranslations(ctx context.Context, dev *model.Dev, k8sObject *model.K8sObject, reset bool, c kubernetes.Interface) (map[string]*model.Translation, error) {
-	result := map[string]*model.Translation{}
-	if k8sObject.Deployment != nil || k8sObject.StatefulSet != nil {
-		var replicas int32
-		var k8sObjectStrategy model.K8sObjectStrategy
-		trRulesJSON := annotations.Get(k8sObject.PodTemplateSpec.GetObjectMeta(), model.TranslationAnnotation)
-		if trRulesJSON != "" {
-			trRules := &model.Translation{}
-			if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
-				return nil, fmt.Errorf("malformed tr rules: %s", err)
-			}
-			replicas = trRules.Replicas
-			k8sObjectStrategy.SetStrategy(trRules.Strategy)
-
-		} else {
-			replicas = getPreviousK8sObjectReplicas(k8sObject)
-			k8sObjectStrategy.SetStrategyFromResource(k8sObject)
+func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
+	result := map[string]*Translation{}
+	t := app.NewTranslation(dev)
+	trRulesJSON := app.GetPodAnnotation(model.TranslationAnnotation)
+	if trRulesJSON != "" {
+		trRules := &Translation{}
+		if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
+			return nil, fmt.Errorf("malformed tr rules: %s", err)
 		}
-
-		rule := dev.ToTranslationRule(dev, reset)
-		result[k8sObject.Name] = &model.Translation{
-			Interactive: true,
-			Name:        dev.Name,
-			Version:     model.TranslationVersion,
-			K8sObject:   k8sObject,
-			Annotations: dev.Annotations,
-			Tolerations: dev.Tolerations,
-			Replicas:    replicas,
-			Strategy:    k8sObjectStrategy,
-			Rules:       []*model.TranslationRule{rule},
-		}
+		t.Replicas = trRules.Replicas
+		t.DeploymentStrategy = trRules.DeploymentStrategy
+		t.StatefulsetStrategy = trRules.StatefulsetStrategy
+	} else {
+		t.Replicas = getPreviousAppReplicas(app)
 	}
+
+	rule := dev.ToTranslationRule(dev, reset)
+	t.Rules = []*model.TranslationRule{rule}
+	result[app.Name()] = t
 
 	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {
 		return nil, err
@@ -144,40 +220,33 @@ func GetTranslations(ctx context.Context, dev *model.Dev, k8sObject *model.K8sOb
 	return result, nil
 }
 
-func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, result map[string]*model.Translation, c kubernetes.Interface) error {
+func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, result map[string]*Translation, c kubernetes.Interface) error {
 	for _, s := range dev.Services {
-		k8sObject, err := GetResource(ctx, s, dev.Namespace, c)
+		app, err := Get(ctx, s, dev.Namespace, c)
 		if err != nil {
 			return err
 		}
 
 		rule := s.ToTranslationRule(dev, reset)
 
-		if _, ok := result[k8sObject.Name]; ok {
-			result[k8sObject.Name].Rules = append(result[k8sObject.Name].Rules, rule)
+		if _, ok := result[app.Name()]; ok {
+			result[app.Name()].Rules = append(result[app.Name()].Rules, rule)
 			continue
 		}
 
-		result[k8sObject.Name] = &model.Translation{
-			Name:        dev.Name,
-			Interactive: false,
-			Version:     model.TranslationVersion,
-			K8sObject:   k8sObject,
-			Annotations: dev.Annotations,
-			Tolerations: dev.Tolerations,
-			Replicas:    *k8sObject.Replicas,
-			Rules:       []*model.TranslationRule{rule},
-		}
-
+		t := app.NewTranslation(dev)
+		t.Interactive = false
+		t.Rules = []*model.TranslationRule{rule}
+		result[app.Name()] = t
 	}
 
 	return nil
 }
 
 //TranslateDevMode translates the deployment manifests to put them in dev mode
-func TranslateDevMode(tr map[string]*model.Translation, c *kubernetes.Clientset, isOktetoNamespace bool) error {
+func TranslateDevMode(tr map[string]*Translation, isOktetoNamespace bool) error {
 	for _, t := range tr {
-		err := translate(t, c, isOktetoNamespace)
+		err := translate(t, isOktetoNamespace)
 		if err != nil {
 			return err
 		}
@@ -185,123 +254,7 @@ func TranslateDevMode(tr map[string]*model.Translation, c *kubernetes.Clientset,
 	return nil
 }
 
-func SetLastBuiltAnnotation(r *model.K8sObject) {
-	switch r.ObjectType {
-	case model.DeploymentObjectType:
-		deployments.SetLastBuiltAnnotation(r.Deployment)
-	case model.StatefulsetObjectType:
-		statefulsets.SetLastBuiltAnnotation(r.StatefulSet)
-	}
-}
-
-func Deploy(ctx context.Context, r *model.K8sObject, forceCreate bool, client *kubernetes.Clientset) error {
-	switch r.ObjectType {
-	case model.DeploymentObjectType:
-		return deployments.Deploy(ctx, r.Deployment, client)
-	case model.StatefulsetObjectType:
-		return statefulsets.Deploy(ctx, r.StatefulSet, client)
-	}
-	return nil
-}
-
-func Create(ctx context.Context, r *model.K8sObject, client *kubernetes.Clientset) error {
-	switch r.ObjectType {
-	case model.DeploymentObjectType:
-		return deployments.Create(ctx, r.Deployment, client)
-	case model.StatefulsetObjectType:
-		return statefulsets.Create(ctx, r.StatefulSet, client)
-	}
-	return nil
-}
-
-func DestroyDev(ctx context.Context, r *model.K8sObject, dev *model.Dev, c kubernetes.Interface) error {
-	switch r.ObjectType {
-	case model.DeploymentObjectType:
-		return deployments.DestroyDev(ctx, dev, c)
-	case model.StatefulsetObjectType:
-		return statefulsets.DestroyDev(ctx, dev, c)
-	}
-	return nil
-}
-
-func Get(ctx context.Context, r *model.K8sObject, dev *model.Dev, client *kubernetes.Clientset) error {
-	switch r.ObjectType {
-	case model.DeploymentObjectType:
-		_, err := deployments.Get(ctx, dev, dev.Namespace, client)
-		return err
-	case model.StatefulsetObjectType:
-		_, err := statefulsets.Get(ctx, dev, dev.Namespace, client)
-		return err
-	}
-	return nil
-}
-
-func Update(ctx context.Context, r *model.K8sObject, client *kubernetes.Clientset) error {
-	switch r.ObjectType {
-	case model.DeploymentObjectType:
-		return deployments.Update(ctx, r.Deployment, client)
-	case model.StatefulsetObjectType:
-		return statefulsets.Update(ctx, r.StatefulSet, client)
-	}
-	return nil
-}
-
-// UpdateK8sObjects update all resources in the given translation list
-func UpdateK8sObjects(ctx context.Context, trList map[string]*model.Translation, c kubernetes.Interface) error {
-	for _, tr := range trList {
-		switch tr.K8sObject.ObjectType {
-		case model.DeploymentObjectType:
-			if tr.K8sObject.Deployment == nil {
-				continue
-			}
-			if err := deployments.Update(ctx, tr.K8sObject.Deployment, c); err != nil {
-				return err
-			}
-		case model.StatefulsetObjectType:
-			if tr.K8sObject.StatefulSet == nil {
-				continue
-			}
-			if err := statefulsets.Update(ctx, tr.K8sObject.StatefulSet, c); err != nil {
-				return err
-			}
-		}
-
-	}
-	return nil
-}
-
-func GetResourceFromServiceName(ctx context.Context, resourceName, namespace string, c kubernetes.Interface) model.ObjectType {
-	d, err := deployments.GetDeploymentByName(ctx, resourceName, namespace, c)
-	if err == nil && d != nil {
-		return model.DeploymentObjectType
-	}
-	sfs, err := statefulsets.GetStatefulsetByName(ctx, resourceName, namespace, c)
-	if err == nil && sfs != nil {
-		return model.StatefulsetObjectType
-	}
-	return model.DeploymentObjectType
-}
-
-func GetRevisionAnnotatedK8sObjectOrFailed(ctx context.Context, dev *model.Dev, c kubernetes.Interface, waitUntilDeployed bool) (*model.K8sObject, error) {
-
-	objectType := GetResourceFromServiceName(ctx, dev.Name, dev.Namespace, c)
-	k8sObject := model.NewResource(dev)
-	k8sObject.ObjectType = objectType
-	switch objectType {
-	case model.DeploymentObjectType:
-		d, err := deployments.GetRevisionAnnotatedDeploymentOrFailed(ctx, dev, c, waitUntilDeployed)
-		if d == nil {
-			return nil, err
-		}
-		k8sObject.UpdateDeployment(d)
-		return k8sObject, nil
-	case model.StatefulsetObjectType:
-		sfs, err := statefulsets.GetRevisionAnnotatedStatefulsetOrFailed(ctx, dev, c, waitUntilDeployed)
-		if sfs == nil {
-			return nil, err
-		}
-		k8sObject.UpdateStatefulset(sfs)
-		return k8sObject, nil
-	}
-	return nil, fmt.Errorf("kubernetes object not found")
+// DivertName returns the name of the diverted version of a given resource
+func DivertName(username, name string) string {
+	return fmt.Sprintf("%s-%s", username, name)
 }

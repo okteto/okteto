@@ -85,16 +85,19 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 		s.Endpoints = nil
 		if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 			exit <- err
+			return
 		}
 
 		spinner.Update("Waiting for services to be destroyed...")
 		if err := waitForPodsToBeDestroyed(ctx, s, c); err != nil {
 			exit <- err
+			return
 		}
 		if removeVolumes {
 			spinner.Update("Destroying volumes...")
 			if err := destroyStackVolumes(ctx, spinner, s, c, timeout); err != nil {
 				exit <- err
+				return
 			}
 		}
 		exit <- configmaps.Destroy(ctx, model.GetStackConfigMapName(s.Name), s.Namespace, c)

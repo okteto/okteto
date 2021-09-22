@@ -28,14 +28,14 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/pointer"
 )
 
 var (
-	rootUser int64
-	mode444  int32 = 0444
-	mode420  int32 = 420
+	mode444 int32 = 0444
+	mode420 int32 = 420
 )
 
 func Test_translateWithVolumes(t *testing.T) {
@@ -99,24 +99,21 @@ services:
 		t.Fatal(err)
 	}
 
-	d1 := model.NewResource(dev)
-	d1.GetSandbox()
-	d1.SetReplicas(pointer.Int32Ptr(2))
-	d1.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+	d1 := GetDeploymentSandbox(dev)
+	d1.Spec.Replicas = pointer.Int32Ptr(2)
+	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
 	rule1 := dev.ToTranslationRule(dev, false)
-	tr1 := &model.Translation{
+	tr1 := &Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		K8sObject:   d1,
+		App:         NewDeploymentApp(d1),
 		Rules:       []*model.TranslationRule{rule1},
 		Replicas:    2,
-		Strategy: model.K8sObjectStrategy{
-			DeploymentStrategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RollingUpdateDeploymentStrategyType,
-			},
+		DeploymentStrategy: appsv1.DeploymentStrategy{
+			Type: appsv1.RollingUpdateDeploymentStrategyType,
 		},
 		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{
@@ -126,7 +123,7 @@ services:
 			},
 		},
 	}
-	err = translate(tr1, nil, false)
+	err = translate(tr1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +164,7 @@ services:
 						FSGroup: &fsGroup,
 					},
 					ServiceAccountName:            "sa",
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					Volumes: []apiv1.Volume{
 						{
 							Name: oktetoSyncSecretVolume,
@@ -370,54 +367,58 @@ services:
 			},
 		},
 	}
-	marshalled1, _ := yaml.Marshal(d1.Deployment.Spec.Template.Spec)
+	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
 	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
 	if string(marshalled1) != string(marshalled1OK) {
 		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
 	}
-	if d1.GetAnnotation("key") != "value" {
-		t.Fatalf("Wrong d1 annotations: '%s'", d1.GetAnnotation("key"))
+	if d1.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d1 annotations: '%s'", d1.Annotations["key"])
 	}
-	if d1.PodTemplateSpec.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.PodTemplateSpec.Annotations["key"])
+	if d1.Spec.Template.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.Spec.Template.Annotations["key"])
 	}
 
-	d1Down, err := TranslateDevModeOff(d1)
-	if err != nil {
+	if err := TranslateDevModeOff(tr1.App); err != nil {
 		t.Fatal(err)
 	}
 
-	d1Orig := model.NewResource(dev)
-	d1Orig.GetSandbox()
-	marshalled1Down, _ := yaml.Marshal(d1Down.PodTemplateSpec.Spec)
-	marshalled1Orig, _ := yaml.Marshal(d1Orig.PodTemplateSpec.Spec)
+	d1Orig := GetDeploymentSandbox(dev)
+	d1Orig.Spec.Replicas = pointer.Int32Ptr(2)
+	d1Orig.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RollingUpdateDeploymentStrategyType,
+	}
+
+	marshalled1Down, _ := yaml.Marshal(tr1.App.PodSpec())
+	marshalled1Orig, _ := yaml.Marshal(d1Orig.Spec.Template.Spec)
 	if string(marshalled1Down) != string(marshalled1Orig) {
 		t.Fatalf("Wrong d1 down.\nActual %+v, \nExpected %+v", string(marshalled1Down), string(marshalled1Orig))
 	}
-	if d1Down.GetAnnotation("key") != "" {
-		t.Fatalf("Wrong d1 annotations after down: '%s'", d1.GetAnnotation("key"))
+	if tr1.App.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong d1 annotations after down: '%s'", tr1.App.GetAnnotation("key"))
 	}
-	if d1Down.PodTemplateSpec.Annotations["key"] != "" {
-		t.Fatalf("Wrong d1 pod annotations after down: '%s'", d1.PodTemplateSpec.Annotations["key"])
+	if tr1.App.GetPodAnnotation("key") != "" {
+		t.Fatalf("Wrong d1 pod annotations after down: '%s'", tr1.App.GetPodAnnotation("key"))
 	}
-	if *d1Down.Replicas != 2 {
-		t.Fatalf("Wrong d1 replicas %d vs 2", *d1Down.Replicas)
+	if tr1.App.Replicas() != 2 {
+		t.Fatalf("Wrong d1 replicas %d vs 2", tr1.App.Replicas())
 	}
+
+	//TODO: check update strategy!
 
 	dev2 := dev.Services[0]
-	d2 := model.NewResource(dev2)
-	d2.GetSandbox()
-	d2.Deployment.Namespace = dev.Namespace
+	d2 := GetDeploymentSandbox(dev2)
+	d2.Namespace = dev.Namespace
 
-	translationRules := make(map[string]*model.Translation)
+	translationRules := make(map[string]*Translation)
 	ctx := context.Background()
 
-	client := fake.NewSimpleClientset(d2.Deployment)
-	err = loadServiceTranslations(ctx, dev, false, translationRules, client)
+	c := fake.NewSimpleClientset(d2)
+	err = loadServiceTranslations(ctx, dev, false, translationRules, c)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = translate(translationRules[dev2.Name], nil, false)
+	err = translate(translationRules[dev2.Name], false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,10 +441,10 @@ services:
 						},
 					},
 					SecurityContext: &apiv1.PodSecurityContext{
-						FSGroup: &rootUser,
+						FSGroup: pointer.Int64Ptr(0),
 					},
 					ServiceAccountName:            "sa",
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					Volumes: []apiv1.Volume{
 						{
 							Name: dev.GetVolumeName(),
@@ -463,8 +464,8 @@ services:
 							Command:         []string{"./run_worker.sh"},
 							Args:            []string{},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &rootUser,
-								RunAsGroup: &rootUser,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -482,29 +483,28 @@ services:
 			},
 		},
 	}
-	marshalled2, _ := yaml.Marshal(translationRules[dev2.Name].K8sObject.GetPodTemplate().Spec)
+	marshalled2, _ := yaml.Marshal(translationRules[dev2.Name].App.PodSpec())
 	marshalled2OK, _ := yaml.Marshal(d2OK.Spec.Template.Spec)
 	if string(marshalled2) != string(marshalled2OK) {
 		t.Fatalf("Wrong d2 generation.\nActual\n %s, \n---\nExpected \n%s", string(marshalled2), string(marshalled2OK))
 	}
 
-	d2Down, err := TranslateDevModeOff(translationRules[dev2.Name].K8sObject)
-	if err != nil {
+	app2 := translationRules[dev2.Name].App
+	if err := TranslateDevModeOff(app2); err != nil {
 		t.Fatal(err)
 	}
 
-	d2Orig := model.NewResource(dev2)
-	d2.GetSandbox()
-	marshalled2Down, _ := yaml.Marshal(d2Down.PodTemplateSpec.Spec)
-	marshalled2Orig, _ := yaml.Marshal(d2Orig.PodTemplateSpec.Spec)
+	d2Orig := GetDeploymentSandbox(dev2)
+	marshalled2Down, _ := yaml.Marshal(app2.PodSpec())
+	marshalled2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
 	if string(marshalled2Down) != string(marshalled2Orig) {
 		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
 	}
-	if d2Down.GetAnnotation("key") != "" {
-		t.Fatalf("Wrong d2 annotations after down: '%s'", d2.GetAnnotation("key"))
+	if app2.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong d2 annotations after down: '%s'", app2.GetAnnotation("key"))
 	}
-	if d2Down.PodTemplateSpec.Annotations["key"] != "" {
-		t.Fatalf("Wrong d2 pod annotations after down: '%s'", d2.PodTemplateSpec.Annotations["key"])
+	if app2.GetPodAnnotation("key") != "" {
+		t.Fatalf("Wrong d2 pod annotations after down: '%s'", app2.GetPodAnnotation("key"))
 	}
 }
 
@@ -522,17 +522,16 @@ persistentVolume:
 		t.Fatal(err)
 	}
 
-	d1 := model.NewResource(dev)
-	d1.GetSandbox()
+	d1 := GetDeploymentSandbox(dev)
 	rule1 := dev.ToTranslationRule(dev, true)
-	tr1 := &model.Translation{
+	tr1 := &Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		K8sObject:   d1,
+		App:         NewDeploymentApp(d1),
 		Rules:       []*model.TranslationRule{rule1},
 	}
-	err = translate(tr1, nil, false)
+	err = translate(tr1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -540,7 +539,7 @@ persistentVolume:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					Volumes: []apiv1.Volume{
 						{
 							Name: oktetoSyncSecretVolume,
@@ -644,7 +643,7 @@ persistentVolume:
 			},
 		},
 	}
-	marshalled1, _ := yaml.Marshal(d1.PodTemplateSpec.Spec)
+	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
 	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
 
 	if string(marshalled1) != string(marshalled1OK) {
@@ -676,17 +675,16 @@ docker:
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
 
-	d := model.NewResource(dev)
-	d.GetSandbox()
+	d := GetDeploymentSandbox(dev)
 	rule := dev.ToTranslationRule(dev, false)
-	tr := &model.Translation{
+	tr := &Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		K8sObject:   d,
+		App:         NewDeploymentApp(d),
 		Rules:       []*model.TranslationRule{rule},
 	}
-	err = translate(tr, nil, false)
+	err = translate(tr, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -694,7 +692,7 @@ docker:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					SecurityContext: &apiv1.PodSecurityContext{
 						FSGroup: pointer.Int64Ptr(0),
 					},
@@ -747,8 +745,8 @@ docker:
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &rootUser,
-								RunAsGroup: &rootUser,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -763,8 +761,8 @@ docker:
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /app/. /init-volume/1 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &rootUser,
-								RunAsGroup: &rootUser,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -814,8 +812,8 @@ docker:
 								},
 							},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &rootUser,
-								RunAsGroup: &rootUser,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -905,7 +903,7 @@ docker:
 			},
 		},
 	}
-	marshalled, _ := yaml.Marshal(d.PodTemplateSpec.Spec)
+	marshalled, _ := yaml.Marshal(d.Spec.Template.Spec)
 	marshalledOK, _ := yaml.Marshal(dOK.Spec.Template.Spec)
 	if string(marshalled) != string(marshalledOK) {
 		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))
@@ -1250,17 +1248,16 @@ environment:
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
 
-	d := model.NewResource(dev)
-	d.GetSandbox()
+	d := GetDeploymentSandbox(dev)
 	rule := dev.ToTranslationRule(dev, false)
-	tr := &model.Translation{
+	tr := &Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		K8sObject:   d,
+		App:         NewDeploymentApp(d),
 		Rules:       []*model.TranslationRule{rule},
 	}
-	err = translate(tr, nil, false)
+	err = translate(tr, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1268,7 +1265,7 @@ environment:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					SecurityContext: &apiv1.PodSecurityContext{
 						FSGroup: pointer.Int64Ptr(0),
 					},
@@ -1320,8 +1317,8 @@ environment:
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &rootUser,
-								RunAsGroup: &rootUser,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							Command: []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
@@ -1337,8 +1334,8 @@ environment:
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /app/. /init-volume/1 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &rootUser,
-								RunAsGroup: &rootUser,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -1392,8 +1389,8 @@ environment:
 								},
 							},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &rootUser,
-								RunAsGroup: &rootUser,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -1433,7 +1430,7 @@ environment:
 			},
 		},
 	}
-	marshalled, _ := yaml.Marshal(d.PodTemplateSpec.Spec)
+	marshalled, _ := yaml.Marshal(d.Spec.Template.Spec)
 	marshalledOK, _ := yaml.Marshal(dOK.Spec.Template.Spec)
 	if string(marshalled) != string(marshalledOK) {
 		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))
@@ -1469,7 +1466,6 @@ volumes:
   - /root/.cache/go-build
 nodeSelector:
   disktype: ssd
-k8sObjectType: StatefulSet
 affinity:
   podAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
@@ -1490,7 +1486,6 @@ resources:
     amd.com/gpu: 1
 services:
   - name: worker
-    k8sObjectType: StatefulSet
     container: dev
     image: worker:latest
     command: ["./run_worker.sh"]
@@ -1503,26 +1498,19 @@ services:
 		t.Fatal(err)
 	}
 
-	sfs1 := model.NewResource(dev)
-	sfs1.ObjectType = model.StatefulsetObjectType
-	sfs1.GetSandbox()
-	sfs1.SetReplicas(pointer.Int32Ptr(2))
-	sfs1.StatefulSet.Spec.UpdateStrategy = appsv1.StatefulSetUpdateStrategy{
-		Type: appsv1.RollingUpdateStatefulSetStrategyType,
-	}
+	sfs1 := GetStatefulSetSandbox(dev)
+	sfs1.Spec.Replicas = pointer.Int32Ptr(2)
 
 	rule1 := dev.ToTranslationRule(dev, false)
-	tr1 := &model.Translation{
+	tr1 := &Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		K8sObject:   sfs1,
+		App:         NewStatefulSetApp(sfs1),
 		Rules:       []*model.TranslationRule{rule1},
 		Replicas:    2,
-		Strategy: model.K8sObjectStrategy{
-			DeploymentStrategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RollingUpdateDeploymentStrategyType,
-			},
+		StatefulsetStrategy: appsv1.StatefulSetUpdateStrategy{
+			Type: appsv1.RollingUpdateStatefulSetStrategyType,
 		},
 		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{
@@ -1532,7 +1520,7 @@ services:
 			},
 		},
 	}
-	err = translate(tr1, nil, false)
+	err = translate(tr1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1573,7 +1561,7 @@ services:
 						FSGroup: &fsGroup,
 					},
 					ServiceAccountName:            "sa",
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					Volumes: []apiv1.Volume{
 						{
 							Name: oktetoSyncSecretVolume,
@@ -1776,56 +1764,54 @@ services:
 			},
 		},
 	}
-	marshalled1, _ := yaml.Marshal(sfs1.StatefulSet.Spec.Template.Spec)
-	marshalled1OK, _ := yaml.Marshal(sfs1OK.Spec.Template.Spec)
-	if string(marshalled1) != string(marshalled1OK) {
-		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
+	marshalledsfs1, _ := yaml.Marshal(sfs1.Spec.Template.Spec)
+	marshallesfs1OK, _ := yaml.Marshal(sfs1OK.Spec.Template.Spec)
+	if string(marshalledsfs1) != string(marshallesfs1OK) {
+		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledsfs1), string(marshallesfs1OK))
 	}
-	if sfs1.GetAnnotation("key") != "value" {
-		t.Fatalf("Wrong d1 annotations: '%s'", sfs1.GetAnnotation("key"))
+	if sfs1.Annotations["key"] != "value" {
+		t.Fatalf("Wrong sfs1 annotations: '%s'", sfs1.Annotations["key"])
 	}
-	if sfs1.PodTemplateSpec.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d1 pod annotations: '%s'", sfs1.PodTemplateSpec.Annotations["key"])
+	if sfs1.Spec.Template.Annotations["key"] != "value" {
+		t.Fatalf("Wrong sfs1 pod annotations: '%s'", sfs1.Spec.Template.Annotations["key"])
 	}
 
-	sfs1Down, err := TranslateDevModeOff(sfs1)
-	if err != nil {
+	if err := TranslateDevModeOff(tr1.App); err != nil {
 		t.Fatal(err)
 	}
 
-	sfs1Orig := model.NewResource(dev)
-	sfs1Orig.ObjectType = model.StatefulsetObjectType
-	sfs1Orig.GetSandbox()
-	marshalled1Down, _ := yaml.Marshal(sfs1Down.PodTemplateSpec.Spec)
-	marshalled1Orig, _ := yaml.Marshal(sfs1Orig.PodTemplateSpec.Spec)
-	if string(marshalled1Down) != string(marshalled1Orig) {
-		t.Fatalf("Wrong d1 down.\nActual %+v, \nExpected %+v", string(marshalled1Down), string(marshalled1Orig))
+	sfs1Orig := GetStatefulSetSandbox(dev)
+	sfs1Orig.Spec.Replicas = pointer.Int32Ptr(1)
+	marshallesfs1Down, _ := yaml.Marshal(tr1.App.PodSpec())
+	marshallesfs1Orig, _ := yaml.Marshal(sfs1Orig.Spec.Template.Spec)
+	if string(marshallesfs1Down) != string(marshallesfs1Orig) {
+		t.Fatalf("Wrong sfs1 down.\nActual %+v, \nExpected %+v", string(marshallesfs1Down), string(marshallesfs1Orig))
 	}
-	if sfs1Down.GetAnnotation("key") != "" {
-		t.Fatalf("Wrong d1 annotations after down: '%s'", sfs1.GetAnnotation("key"))
+	if tr1.App.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong sfs1 annotations after down: '%s'", tr1.App.GetAnnotation("key"))
 	}
-	if sfs1Down.PodTemplateSpec.Annotations["key"] != "" {
-		t.Fatalf("Wrong d1 pod annotations after down: '%s'", sfs1.PodTemplateSpec.Annotations["key"])
+	if tr1.App.GetPodAnnotation("key") != "" {
+		t.Fatalf("Wrong sfs1 pod annotations after down: '%s'", tr1.App.GetPodAnnotation("key"))
 	}
-	if *sfs1Down.Replicas != 2 {
-		t.Fatalf("Wrong d1 replicas %d vs 2", *sfs1Down.Replicas)
+	if tr1.App.Replicas() != 2 {
+		t.Fatalf("Wrong sfs1 replicas %d vs 2", tr1.App.Replicas())
 	}
+
+	//TODO: check update strategy!
 
 	dev2 := dev.Services[0]
-	sfs2 := model.NewResource(dev2)
-	sfs2.ObjectType = model.StatefulsetObjectType
-	sfs2.GetSandbox()
-	sfs2.StatefulSet.Namespace = dev.Namespace
+	sfs2 := GetStatefulSetSandbox(dev2)
+	sfs2.Namespace = dev.Namespace
 
-	translationRules := make(map[string]*model.Translation)
+	translationRules := make(map[string]*Translation)
 	ctx := context.Background()
 
-	client := fake.NewSimpleClientset(sfs2.StatefulSet)
-	err = loadServiceTranslations(ctx, dev, false, translationRules, client)
+	c := fake.NewSimpleClientset(sfs2)
+	err = loadServiceTranslations(ctx, dev, false, translationRules, c)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = translate(translationRules[dev2.Name], nil, false)
+	err = translate(translationRules[dev2.Name], false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1848,10 +1834,10 @@ services:
 						},
 					},
 					SecurityContext: &apiv1.PodSecurityContext{
-						FSGroup: &rootUser,
+						FSGroup: pointer.Int64Ptr(0),
 					},
 					ServiceAccountName:            "sa",
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					Volumes: []apiv1.Volume{
 						{
 							Name: dev.GetVolumeName(),
@@ -1871,8 +1857,8 @@ services:
 							Command:         []string{"./run_worker.sh"},
 							Args:            []string{},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &rootUser,
-								RunAsGroup: &rootUser,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -1890,29 +1876,88 @@ services:
 			},
 		},
 	}
-	marshalled2, _ := yaml.Marshal(translationRules[dev2.Name].K8sObject.GetPodTemplate().Spec)
-	marshalled2OK, _ := yaml.Marshal(sfs2OK.Spec.Template.Spec)
-	if string(marshalled2) != string(marshalled2OK) {
-		t.Fatalf("Wrong d2 generation.\nActual\n %s, \n---\nExpected \n%s", string(marshalled2), string(marshalled2OK))
+	marshallesfs2, _ := yaml.Marshal(translationRules[dev2.Name].App.PodSpec())
+	marshallesfs2OK, _ := yaml.Marshal(sfs2OK.Spec.Template.Spec)
+	if string(marshallesfs2) != string(marshallesfs2OK) {
+		t.Fatalf("Wrong sfs2 generation.\nActual\n %s, \n---\nExpected \n%s", string(marshallesfs2), string(marshallesfs2OK))
 	}
 
-	sfs2Down, err := TranslateDevModeOff(translationRules[dev2.Name].K8sObject)
-	if err != nil {
+	app2 := translationRules[dev2.Name].App
+	if err := TranslateDevModeOff(app2); err != nil {
 		t.Fatal(err)
 	}
 
-	sfs2Orig := model.NewResource(dev2)
-	sfs2Orig.ObjectType = model.StatefulsetObjectType
-	sfs2.GetSandbox()
-	marshalled2Down, _ := yaml.Marshal(sfs2Down.PodTemplateSpec.Spec)
-	marshalled2Orig, _ := yaml.Marshal(sfs2Orig.PodTemplateSpec.Spec)
+	sfs2Orig := GetStatefulSetSandbox(dev2)
+	marshalled2Down, _ := yaml.Marshal(app2.PodSpec())
+	marshalled2Orig, _ := yaml.Marshal(sfs2Orig.Spec.Template.Spec)
 	if string(marshalled2Down) != string(marshalled2Orig) {
-		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
+		t.Fatalf("Wrong sfs2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
 	}
-	if sfs2Down.GetAnnotation("key") != "" {
-		t.Fatalf("Wrong d2 annotations after down: '%s'", sfs2.GetAnnotation("key"))
+	if app2.GetAnnotation("key") != "" {
+		t.Fatalf("Wrong sfs2 annotations after down: '%s'", app2.GetAnnotation("key"))
 	}
-	if sfs2Down.PodTemplateSpec.Annotations["key"] != "" {
-		t.Fatalf("Wrong d2 pod annotations after down: '%s'", sfs2.PodTemplateSpec.Annotations["key"])
+	if app2.GetPodAnnotation("key") != "" {
+		t.Fatalf("Wrong sfs2 pod annotations after down: '%s'", app2.GetPodAnnotation("key"))
+	}
+}
+
+func Test_translateDivertDeployment(t *testing.T) {
+	original := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:             types.UID("id"),
+			Name:            "name",
+			Namespace:       "namespace",
+			Annotations:     map[string]string{"annotation1": "value1"},
+			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
+			ResourceVersion: "version",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "value",
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "value",
+					},
+				},
+			},
+		},
+	}
+	translated := translateDivertDeployment("cindy", original)
+	expected := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cindy-name",
+			Namespace: "namespace",
+			Annotations: map[string]string{
+				"annotation1":                    "value1",
+				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+			},
+			Labels: map[string]string{
+				model.DeployedByLabel:   "cindy",
+				model.OktetoDivertLabel: "cindy",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					model.OktetoDivertLabel: "cindy",
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						model.OktetoDivertLabel: "cindy",
+					},
+				},
+			},
+		},
+	}
+	marshalled, _ := yaml.Marshal(translated)
+	marshalledExpected, _ := yaml.Marshal(expected)
+	if string(marshalled) != string(marshalledExpected) {
+		t.Fatalf("Wrong translation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledExpected))
 	}
 }

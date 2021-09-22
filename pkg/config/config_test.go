@@ -140,7 +140,7 @@ func TestGetDeploymentHome(t *testing.T) {
 
 	os.Setenv("OKTETO_FOLDER", dir)
 
-	got := GetDeploymentHome("ns", "dp")
+	got := GetAppHome("ns", "dp")
 	expected := filepath.Join(dir, "ns", "dp")
 	if got != expected {
 		t.Errorf("expected %s, got %s", expected, got)
