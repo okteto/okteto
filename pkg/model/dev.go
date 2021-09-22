@@ -571,7 +571,7 @@ func setBuildDefaults(build *BuildInfo) {
 		build.Context = "."
 	}
 	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
-		build.Dockerfile = filepath.Join(build.Context, "Dockerfile")
+		build.Dockerfile = "Dockerfile"
 	}
 }
 
