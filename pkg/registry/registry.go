@@ -50,7 +50,7 @@ func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (str
 
 	expandedTag, err := ExpandOktetoDevRegistry(ctx, namespace, imageTag)
 	if err != nil {
-		log.Infof("error expanding okteto registry: %s", err.Error())
+		log.Infof("error expanding okteto.dev registry: %s", err.Error())
 		return imageTag, nil
 	}
 	if IsGlobalRegistry(imageTag) {
