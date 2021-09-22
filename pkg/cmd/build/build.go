@@ -62,12 +62,12 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 		}
 	}
 	if registry.IsGlobalRegistry(tag) {
-		tag, err = registry.ExpandOktetoGlobalRegistry(ctx, tag)
+		tag, err = registry.ExpandOktetoGlobalRegistry(tag)
 		if err != nil {
 			return err
 		}
 		for i := range cacheFrom {
-			cacheFrom[i], err = registry.ExpandOktetoGlobalRegistry(ctx, cacheFrom[i])
+			cacheFrom[i], err = registry.ExpandOktetoGlobalRegistry(cacheFrom[i])
 			if err != nil {
 				return err
 			}

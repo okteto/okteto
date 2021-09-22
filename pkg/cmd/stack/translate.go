@@ -221,7 +221,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 				}
 			}
 			if registry.IsGlobalRegistry(fromImage) {
-				fromImage, err = registry.ExpandOktetoGlobalRegistry(ctx, svc.Image)
+				fromImage, err = registry.ExpandOktetoGlobalRegistry(svc.Image)
 				if err != nil {
 					return hasAddedAnyVolumeMounts, err
 				}
