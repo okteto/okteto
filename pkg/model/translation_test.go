@@ -519,9 +519,9 @@ namespace: n
 securityContext:
    runAsNonRoot: false`),
 			translated: SecurityContext{
-				RunAsUser:    &rootUser,
-				RunAsGroup:   &rootUser,
-				FSGroup:      &rootUser,
+				RunAsUser:    pointer.Int64Ptr(0),
+				RunAsGroup:   pointer.Int64Ptr(0),
+				FSGroup:      pointer.Int64Ptr(0),
 				RunAsNonRoot: &falseBoolean,
 			},
 		},
@@ -562,9 +562,9 @@ securityContext:
 image: worker:latest
 namespace: n`),
 			translated: SecurityContext{
-				RunAsUser:  &rootUser,
-				RunAsGroup: &rootUser,
-				FSGroup:    &rootUser,
+				RunAsUser:  pointer.Int64Ptr(0),
+				RunAsGroup: pointer.Int64Ptr(0),
+				FSGroup:    pointer.Int64Ptr(0),
 			},
 		},
 		{

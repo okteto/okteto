@@ -702,7 +702,7 @@ func (dev *Dev) isRootUser() bool {
 	if dev.SecurityContext.RunAsUser == nil {
 		return false
 	}
-	return *dev.SecurityContext.RunAsUser == rootUser
+	return *dev.SecurityContext.RunAsUser == 0
 }
 
 // validateSecurityContext checks to see if a root user is specified with runAsNonRoot enabled
