@@ -38,72 +38,32 @@ func NewStatefulSetApp(sfs *appsv1.StatefulSet) *StatefulSetApp {
 	return &StatefulSetApp{sfs: sfs}
 }
 
-func (i *StatefulSetApp) Name() string {
-	return i.sfs.Name
-}
-
-func (i *StatefulSetApp) Kind() string {
-	return i.sfs.Kind
-}
-
 func (i *StatefulSetApp) Replicas() int32 {
 	return *i.sfs.Spec.Replicas
 }
 
-func (i *StatefulSetApp) GetLabel(key string) string {
-	if i.sfs.Labels == nil {
-		return ""
-	}
-	return i.sfs.Labels[key]
+func (i *StatefulSetApp) TypeMeta() metav1.TypeMeta {
+	return i.sfs.TypeMeta
 }
 
-func (i *StatefulSetApp) GetPodLabel(key string) string {
-	if i.sfs.Spec.Template.Labels == nil {
-		return ""
+func (i *StatefulSetApp) ObjectMeta() metav1.ObjectMeta {
+	if i.sfs.ObjectMeta.Annotations == nil {
+		i.sfs.ObjectMeta.Annotations = map[string]string{}
 	}
-	return i.sfs.Spec.Template.Labels[key]
+	if i.sfs.ObjectMeta.Labels == nil {
+		i.sfs.ObjectMeta.Labels = map[string]string{}
+	}
+	return i.sfs.ObjectMeta
 }
 
-func (i *StatefulSetApp) GetAnnotation(key string) string {
-	if i.sfs.Annotations == nil {
-		return ""
+func (i *StatefulSetApp) TemplateObjectMeta() metav1.ObjectMeta {
+	if i.sfs.Spec.Template.ObjectMeta.Annotations == nil {
+		i.sfs.Spec.Template.ObjectMeta.Annotations = map[string]string{}
 	}
-	return i.sfs.Annotations[key]
-}
-
-func (i *StatefulSetApp) GetPodAnnotation(key string) string {
-	if i.sfs.Spec.Template.Annotations == nil {
-		return ""
+	if i.sfs.Spec.Template.ObjectMeta.Labels == nil {
+		i.sfs.Spec.Template.ObjectMeta.Labels = map[string]string{}
 	}
-	return i.sfs.Spec.Template.Annotations[key]
-}
-
-func (i *StatefulSetApp) SetLabel(key, value string) {
-	if i.sfs.Labels == nil {
-		i.sfs.Labels = map[string]string{}
-	}
-	i.sfs.Labels[key] = value
-}
-
-func (i *StatefulSetApp) SetPodLabel(key, value string) {
-	if i.sfs.Spec.Template.Labels == nil {
-		i.sfs.Spec.Template.Labels = map[string]string{}
-	}
-	i.sfs.Spec.Template.Labels[key] = value
-}
-
-func (i *StatefulSetApp) SetAnnotation(key, value string) {
-	if i.sfs.Annotations == nil {
-		i.sfs.Annotations = map[string]string{}
-	}
-	i.sfs.Annotations[key] = value
-}
-
-func (i *StatefulSetApp) SetPodAnnotation(key, value string) {
-	if i.sfs.Spec.Template.Annotations == nil {
-		i.sfs.Spec.Template.Annotations = map[string]string{}
-	}
-	i.sfs.Spec.Template.Annotations[key] = value
+	return i.sfs.Spec.Template.ObjectMeta
 }
 
 func (i *StatefulSetApp) PodSpec() *apiv1.PodSpec {

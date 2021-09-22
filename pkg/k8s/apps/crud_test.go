@@ -64,7 +64,7 @@ func TestGetStatefulset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if app.Name() != "test" {
+	if app.ObjectMeta().Name != "test" {
 		t.Fatal("not retrieved correctly")
 	}
 }
@@ -109,7 +109,7 @@ func TestGetDeployment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if app.Name() != "test" {
+	if app.ObjectMeta().Name != "test" {
 		t.Fatal("not retrieved correctly")
 	}
 }

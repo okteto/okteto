@@ -46,7 +46,7 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(t.App.PodSpec(), rule.Container)
 		if devContainer == nil {
-			return fmt.Errorf("%s '%s': container '%s' not found", t.App.Kind(), t.App.Name(), rule.Container)
+			return fmt.Errorf("%s '%s': container '%s' not found", t.App.TypeMeta().Kind, t.App.ObjectMeta().Name, rule.Container)
 		}
 		rule.Container = devContainer.Name
 	}
@@ -69,10 +69,10 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 
 	commonTranslation(t)
 	for k, v := range t.Annotations {
-		t.App.SetAnnotation(k, v)
-		t.App.SetPodAnnotation(k, v)
+		t.App.ObjectMeta().Annotations[k] = v
+		t.App.TemplateObjectMeta().Annotations[k] = v
 	}
-	t.App.SetPodLabel(model.DevLabel, "true")
+	t.App.TemplateObjectMeta().Labels[model.DevLabel] = "true"
 	TranslateDevTolerations(t.App.PodSpec(), t.Tolerations)
 	t.App.PodSpec().TerminationGracePeriodSeconds = pointer.Int64Ptr(0)
 
@@ -84,7 +84,7 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(t.App.PodSpec(), rule.Container)
 		if devContainer == nil {
-			return fmt.Errorf("container '%s' not found in '%s'", rule.Container, t.App.Name())
+			return fmt.Errorf("container '%s' not found in '%s'", rule.Container, t.App.ObjectMeta().Name)
 		}
 
 		if rule.Image == "" {
@@ -106,13 +106,13 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 }
 
 func commonTranslation(t *Translation) {
-	t.App.SetAnnotation(oktetoVersionAnnotation, model.Version)
-	t.App.SetLabel(model.DevLabel, "true")
+	t.App.ObjectMeta().Annotations[oktetoVersionAnnotation] = model.Version
+	t.App.ObjectMeta().Labels[model.DevLabel] = "true"
 
 	if t.Interactive {
-		t.App.SetPodLabel(model.InteractiveDevLabel, t.Name)
+		t.App.TemplateObjectMeta().Labels[model.InteractiveDevLabel] = t.Name
 	} else {
-		t.App.SetPodLabel(model.DetachedDevLabel, t.Name)
+		t.App.TemplateObjectMeta().Labels[model.DetachedDevLabel] = t.Name
 	}
 
 	t.App.DevModeOn()
@@ -665,7 +665,7 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, affinity *apiv1.Affinity) {
 
 //TranslateDevModeOff reverses the dev mode translation
 func TranslateDevModeOff(app App) error {
-	tJson := app.GetPodAnnotation(model.TranslationAnnotation)
+	tJson := app.TemplateObjectMeta().Annotations[model.TranslationAnnotation]
 	if tJson == "" {
 		return app.RestoreOriginal()
 	}

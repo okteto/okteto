@@ -129,15 +129,15 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 				container = app.PodSpec().Containers[0].Name
 			}
 
-			suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.Name())
+			suffix := fmt.Sprintf("Analyzing %s '%s'...", app.TypeMeta().Kind, app.ObjectMeta().Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
 			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.Kind(), app.Name()))
+				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.TypeMeta().Kind, app.ObjectMeta().Name))
 			} else {
-				log.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.Kind(), app.Name(), err))
+				log.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.TypeMeta().Kind, app.ObjectMeta().Name, err))
 				linguist.SetForwardDefaults(dev, language)
 			}
 		}
@@ -196,7 +196,7 @@ func getRunningApp(ctx context.Context, namespace, k8sContext string) (apps.App,
 	}
 
 	if app.IsDevModeOn() {
-		return nil, "", fmt.Errorf("%s '%s' is in development mode", app.Kind(), app.Name())
+		return nil, "", fmt.Errorf("%s '%s' is in development mode", app.TypeMeta().Kind, app.ObjectMeta().Name)
 	}
 
 	container := ""
@@ -335,7 +335,7 @@ func askForContainer(app apps.App) (string, error) {
 	}
 	return askForOptions(
 		options,
-		fmt.Sprintf("%s '%s' has %d containers. Select the container you want to replace with your development container:", app.Kind(), app.Name(), len(app.PodSpec().Containers)),
+		fmt.Sprintf("%s '%s' has %d containers. Select the container you want to replace with your development container:", app.TypeMeta().Kind, app.ObjectMeta().Name, len(app.PodSpec().Containers)),
 	)
 }
 

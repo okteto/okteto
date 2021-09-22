@@ -73,7 +73,7 @@ func (up *upContext) activate(build bool) error {
 
 	if app.IsDevModeOn() && app.HasBeenChanged() {
 		return errors.UserError{
-			E: fmt.Errorf("%s '%s' has been modified while your development container was active", app.Kind(), app.Name()),
+			E: fmt.Errorf("%s '%s' has been modified while your development container was active", app.TypeMeta().Kind, app.ObjectMeta().Name),
 			Hint: `Follow these steps:
 	  1. Execute 'okteto down'
 	  2. Apply your manifest changes again: 'kubectl apply'
@@ -264,7 +264,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	for name := range trList {
-		if name == trList[name].App.Name() && create {
+		if name == trList[name].App.ObjectMeta().Name && create {
 			if err := trList[name].App.Create(ctx, up.Client); err != nil {
 				return err
 			}
@@ -376,7 +376,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				spinner.Update("Pulling images...")
 				spinner.Start()
 			case "Killing":
-				if app.Kind() == model.StatefulSet {
+				if app.TypeMeta().Kind == model.StatefulSet {
 					killing = true
 					continue
 				}
