@@ -92,7 +92,7 @@ func translateService(username string, app apps.App, s *apiv1.Service) (*apiv1.S
 	delete(result.Annotations, model.OktetoDivertServiceModificationAnnotation)
 	result.Spec.Selector = map[string]string{
 		model.OktetoDivertLabel:   username,
-		model.InteractiveDevLabel: app.Name(),
+		model.InteractiveDevLabel: app.ObjectMeta().Name,
 	}
 	result.ResourceVersion = ""
 	result.Spec.ClusterIP = ""
@@ -157,6 +157,6 @@ func translateDivertCRD(username string, dev *model.Dev, s *apiv1.Service, i *ne
 }
 
 func translateDev(dev *model.Dev, app apps.App) {
-	dev.Name = app.Name()
+	dev.Name = app.ObjectMeta().Name
 	dev.Labels = nil
 }

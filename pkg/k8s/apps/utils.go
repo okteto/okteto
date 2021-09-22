@@ -30,7 +30,7 @@ func setTranslationAsAnnotation(tr *Translation) error {
 	if err != nil {
 		return err
 	}
-	tr.App.SetPodAnnotation(model.TranslationAnnotation, string(translationBytes))
+	tr.App.TemplateObjectMeta().Annotations[model.TranslationAnnotation] = string(translationBytes)
 	return nil
 }
 
@@ -45,13 +45,13 @@ func getTranslationFromAnnotation(annotations map[string]string) (*Translation, 
 
 func getPreviousAppReplicas(app App) int32 {
 	replicas := app.Replicas()
-	previousState := app.GetAnnotation(model.StateBeforeSleepingAnnontation)
+	previousState := app.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]
 	if previousState == "" {
 		return replicas
 	}
 	var state stateBeforeSleeping
 	if err := json.Unmarshal([]byte(previousState), &state); err != nil {
-		log.Infof("error getting previous state of '%s': %s", app.Name(), err.Error())
+		log.Infof("error getting previous state of '%s': %s", app.ObjectMeta().Name, err.Error())
 		return 1
 	}
 	return int32(state.Replicas)

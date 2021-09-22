@@ -39,72 +39,32 @@ func NewDeploymentApp(d *appsv1.Deployment) *DeploymentApp {
 	return &DeploymentApp{d: d}
 }
 
-func (i *DeploymentApp) Name() string {
-	return i.d.Name
+func (i *DeploymentApp) TypeMeta() metav1.TypeMeta {
+	return i.d.TypeMeta
 }
 
-func (i *DeploymentApp) Kind() string {
-	return i.d.Kind
+func (i *DeploymentApp) ObjectMeta() metav1.ObjectMeta {
+	if i.d.ObjectMeta.Annotations == nil {
+		i.d.ObjectMeta.Annotations = map[string]string{}
+	}
+	if i.d.ObjectMeta.Labels == nil {
+		i.d.ObjectMeta.Labels = map[string]string{}
+	}
+	return i.d.ObjectMeta
+}
+
+func (i *DeploymentApp) TemplateObjectMeta() metav1.ObjectMeta {
+	if i.d.Spec.Template.ObjectMeta.Annotations == nil {
+		i.d.Spec.Template.ObjectMeta.Annotations = map[string]string{}
+	}
+	if i.d.Spec.Template.ObjectMeta.Labels == nil {
+		i.d.Spec.Template.ObjectMeta.Labels = map[string]string{}
+	}
+	return i.d.Spec.Template.ObjectMeta
 }
 
 func (i *DeploymentApp) Replicas() int32 {
 	return *i.d.Spec.Replicas
-}
-
-func (i *DeploymentApp) GetLabel(key string) string {
-	if i.d.Labels == nil {
-		return ""
-	}
-	return i.d.Labels[key]
-}
-
-func (i *DeploymentApp) GetPodLabel(key string) string {
-	if i.d.Spec.Template.Labels == nil {
-		return ""
-	}
-	return i.d.Spec.Template.Labels[key]
-}
-
-func (i *DeploymentApp) GetAnnotation(key string) string {
-	if i.d.Annotations == nil {
-		return ""
-	}
-	return i.d.Annotations[key]
-}
-
-func (i *DeploymentApp) GetPodAnnotation(key string) string {
-	if i.d.Spec.Template.Annotations == nil {
-		return ""
-	}
-	return i.d.Spec.Template.Annotations[key]
-}
-
-func (i *DeploymentApp) SetLabel(key, value string) {
-	if i.d.Labels == nil {
-		i.d.Labels = map[string]string{}
-	}
-	i.d.Labels[key] = value
-}
-
-func (i *DeploymentApp) SetPodLabel(key, value string) {
-	if i.d.Spec.Template.Labels == nil {
-		i.d.Spec.Template.Labels = map[string]string{}
-	}
-	i.d.Spec.Template.Labels[key] = value
-}
-
-func (i *DeploymentApp) SetAnnotation(key, value string) {
-	if i.d.Annotations == nil {
-		i.d.Annotations = map[string]string{}
-	}
-	i.d.Annotations[key] = value
-}
-
-func (i *DeploymentApp) SetPodAnnotation(key, value string) {
-	if i.d.Spec.Template.Annotations == nil {
-		i.d.Spec.Template.Annotations = map[string]string{}
-	}
-	i.d.Spec.Template.Annotations[key] = value
 }
 
 func (i *DeploymentApp) PodSpec() *apiv1.PodSpec {

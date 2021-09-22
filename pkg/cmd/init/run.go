@@ -78,17 +78,17 @@ func getRunningPod(ctx context.Context, app apps.App, container string, c kubern
 	pod, err := app.GetRunningPod(ctx, c)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, fmt.Errorf("%s '%s': no pod is running", app.Kind(), app.Name())
+			return nil, fmt.Errorf("%s '%s': no pod is running", app.TypeMeta().Kind, app.ObjectMeta().Name)
 		}
 		return nil, err
 	}
 
 	if pod.Status.Phase != apiv1.PodRunning {
-		return nil, fmt.Errorf("%s '%s': no pod is running", app.Kind(), app.Name())
+		return nil, fmt.Errorf("%s '%s': no pod is running", app.TypeMeta().Kind, app.ObjectMeta().Name)
 	}
 	for _, containerstatus := range pod.Status.ContainerStatuses {
 		if containerstatus.Name == container && containerstatus.State.Running == nil {
-			return nil, fmt.Errorf("%s '%s': no pod is running", app.Kind(), app.Name())
+			return nil, fmt.Errorf("%s '%s': no pod is running", app.TypeMeta().Kind, app.ObjectMeta().Name)
 		}
 	}
 	return pod, nil
@@ -153,7 +153,7 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 
 func setNameAndLabelsFromApp(dev *model.Dev, app apps.App) {
 	for _, l := range componentLabels {
-		component := app.GetLabel(l)
+		component := app.ObjectMeta().Labels[l]
 		if component == "" {
 			continue
 		}
@@ -161,11 +161,11 @@ func setNameAndLabelsFromApp(dev *model.Dev, app apps.App) {
 		dev.Labels = map[string]string{l: component}
 		return
 	}
-	dev.Name = app.Name()
+	dev.Name = app.ObjectMeta().Name
 }
 
 func setAnnotationsFromApp(dev *model.Dev, app apps.App) {
-	if v := app.GetAnnotation(model.FluxAnnotation); v != "" {
+	if v := app.ObjectMeta().Annotations[model.FluxAnnotation]; v != "" {
 		dev.Annotations = map[string]string{"fluxcd.io/ignore": "true"}
 	}
 }

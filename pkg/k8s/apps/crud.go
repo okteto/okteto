@@ -196,7 +196,7 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
 	result := map[string]*Translation{}
 	t := app.NewTranslation(dev)
-	trRulesJSON := app.GetPodAnnotation(model.TranslationAnnotation)
+	trRulesJSON := app.TemplateObjectMeta().Annotations[model.TranslationAnnotation]
 	if trRulesJSON != "" {
 		trRules := &Translation{}
 		if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
@@ -211,7 +211,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c
 
 	rule := dev.ToTranslationRule(dev, reset)
 	t.Rules = []*model.TranslationRule{rule}
-	result[app.Name()] = t
+	result[app.ObjectMeta().Name] = t
 
 	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {
 		return nil, err
@@ -229,15 +229,15 @@ func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, re
 
 		rule := s.ToTranslationRule(dev, reset)
 
-		if _, ok := result[app.Name()]; ok {
-			result[app.Name()].Rules = append(result[app.Name()].Rules, rule)
+		if _, ok := result[app.ObjectMeta().Name]; ok {
+			result[app.ObjectMeta().Name].Rules = append(result[app.ObjectMeta().Name].Rules, rule)
 			continue
 		}
 
 		t := app.NewTranslation(dev)
 		t.Interactive = false
 		t.Rules = []*model.TranslationRule{rule}
-		result[app.Name()] = t
+		result[app.ObjectMeta().Name] = t
 	}
 
 	return nil

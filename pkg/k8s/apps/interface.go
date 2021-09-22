@@ -19,21 +19,16 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 type App interface {
-	Name() string
-	Kind() string
+	TypeMeta() metav1.TypeMeta
+	ObjectMeta() metav1.ObjectMeta
+	TemplateObjectMeta() metav1.ObjectMeta
+
 	Replicas() int32
-	GetLabel(key string) string
-	GetPodLabel(key string) string
-	GetAnnotation(key string) string
-	GetPodAnnotation(key string) string
-	SetLabel(key, value string)
-	SetPodLabel(key, value string)
-	SetAnnotation(key, value string)
-	SetPodAnnotation(key, value string)
 	PodSpec() *apiv1.PodSpec
 	NewTranslation(dev *model.Dev) *Translation
 	IsDevModeOn() bool
