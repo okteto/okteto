@@ -39,26 +39,28 @@ var reg = regexp.MustCompile("[^A-Za-z0-9]+")
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	URL       string `json:"URL"`
-	Buildkit  string `json:"Buildkit"`
-	Registry  string `json:"Registry"`
-	ID        string `json:"ID"`
-	Username  string `json:"Username"`
-	Token     string `json:"Token"`
-	MachineID string `json:"MachineID"`
+	URL             string `json:"URL"`
+	Buildkit        string `json:"Buildkit"`
+	Registry        string `json:"Registry"`
+	ID              string `json:"ID"`
+	Username        string `json:"Username"`
+	Token           string `json:"Token"`
+	MachineID       string `json:"MachineID"`
+	GlobalNamespace string `json:"GlobalNamespace"`
 }
 
 // User contains the auth information of the logged in user
 type User struct {
-	Name        string
-	Email       string
-	ExternalID  string
-	Token       string
-	ID          string
-	New         bool
-	Buildkit    string
-	Registry    string
-	Certificate string
+	Name            string
+	Email           string
+	ExternalID      string
+	Token           string
+	ID              string
+	New             bool
+	Buildkit        string
+	Registry        string
+	Certificate     string
+	GlobalNamespace string
 }
 
 type u struct {
@@ -127,7 +129,7 @@ func saveAuthData(user *User, url string) error {
 		return fmt.Errorf("empty response")
 	}
 
-	if err := saveToken(user.ID, user.ExternalID, user.Token, url, user.Registry, user.Buildkit); err != nil {
+	if err := saveToken(user.ID, user.ExternalID, user.Token, url, user.Registry, user.Buildkit, user.GlobalNamespace); err != nil {
 		return err
 	}
 
@@ -143,7 +145,7 @@ func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, e
 	var user q
 	q := `query {
 		user {
-			id,name,email,externalID,token,new,registry,buildkit,certificate
+			id,name,email,externalID,token,new,registry,buildkit,certificate,globalnamespace
 		}}`
 
 	req := getRequest(q, token)
@@ -159,7 +161,7 @@ func authUser(ctx context.Context, client *graphql.Client, code string) (*u, err
 	var user u
 	q := fmt.Sprintf(`mutation {
 		auth(code: "%s", source: "cli") {
-			id,name,email,externalID,token,new,registry,buildkit,certificate
+			id,name,email,externalID,token,new,registry,buildkit,certificate,globalnamespace
 		}}`, code)
 
 	req := graphql.NewRequest(q)
@@ -284,7 +286,7 @@ func GetCertificatePath() string {
 	return filepath.Join(config.GetOktetoHome(), ".ca.crt")
 }
 
-func saveToken(id, username, token, url, registry, buildkit string) error {
+func saveToken(id, username, token, url, registry, buildkit string, globalnamespace string) error {
 	t, err := GetToken()
 	if err != nil {
 		log.Infof("bad token, re-initializing: %s", err)
@@ -297,6 +299,7 @@ func saveToken(id, username, token, url, registry, buildkit string) error {
 	t.URL = url
 	t.Buildkit = buildkit
 	t.Registry = registry
+	t.GlobalNamespace = globalnamespace
 	return save(t)
 }
 
