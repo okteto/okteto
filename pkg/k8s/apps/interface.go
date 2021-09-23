@@ -26,10 +26,10 @@ import (
 type App interface {
 	TypeMeta() metav1.TypeMeta
 	ObjectMeta() metav1.ObjectMeta
-	TemplateObjectMeta() metav1.ObjectMeta
-
 	Replicas() int32
+	TemplateObjectMeta() metav1.ObjectMeta
 	PodSpec() *apiv1.PodSpec
+
 	NewTranslation(dev *model.Dev) *Translation
 	DevModeOn()
 	DevModeOff(t *Translation)
