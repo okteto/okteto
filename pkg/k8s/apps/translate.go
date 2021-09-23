@@ -658,6 +658,6 @@ func TranslateDevModeOff(app App) error {
 	if err := json.Unmarshal([]byte(tJson), t); err != nil {
 		return fmt.Errorf("malformed tr rules: %s", err)
 	}
-	app.DevModeOff(t)
+	t.DevModeOff()
 	return nil
 }

@@ -95,13 +95,13 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 
-		trList, err := apps.GetTranslations(ctx, dev, app, false, client)
+		tList, err := apps.GetTranslations(ctx, dev, app, false, client)
 		if err != nil {
 			exit <- err
 			return
 		}
 
-		if err := down.Run(dev, app, trList, true, client); err != nil {
+		if err := down.Run(dev, app, tList, true, client); err != nil {
 			exit <- err
 			return
 		}

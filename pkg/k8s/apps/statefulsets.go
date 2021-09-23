@@ -93,18 +93,6 @@ func (i *StatefulSetApp) DevModeOn() {
 func (i *StatefulSetApp) DevModeOff(t *Translation) {
 	i.sfs.Spec.Replicas = pointer.Int32Ptr(t.Replicas)
 	i.sfs.Spec.UpdateStrategy = t.StatefulsetStrategy
-
-	delete(i.sfs.Annotations, oktetoVersionAnnotation)
-	delete(i.sfs.Annotations, model.OktetoRevisionAnnotation)
-	deleteUserAnnotations(i.sfs.Annotations, t)
-
-	delete(i.sfs.Spec.Template.Annotations, model.TranslationAnnotation)
-	delete(i.sfs.Spec.Template.Annotations, model.OktetoRestartAnnotation)
-
-	delete(i.sfs.Labels, model.DevLabel)
-
-	delete(i.sfs.Spec.Template.Labels, model.InteractiveDevLabel)
-	delete(i.sfs.Spec.Template.Labels, model.DetachedDevLabel)
 }
 
 func (i *StatefulSetApp) CheckConditionErrors(dev *model.Dev) error {

@@ -55,6 +55,22 @@ func IsDevModeOn(app App) bool {
 	return app.ObjectMeta().Labels[model.DevLabel] == "true"
 }
 
+func (t *Translation) DevModeOff() {
+	t.App.DevModeOff(t)
+	delete(t.App.ObjectMeta().Annotations, oktetoVersionAnnotation)
+	delete(t.App.ObjectMeta().Annotations, model.OktetoRevisionAnnotation)
+	deleteUserAnnotations(t.App.ObjectMeta().Annotations, t)
+
+	delete(t.App.TemplateObjectMeta().Annotations, model.TranslationAnnotation)
+	delete(t.App.TemplateObjectMeta().Annotations, model.OktetoRestartAnnotation)
+
+	delete(t.App.ObjectMeta().Labels, model.DevLabel)
+
+	delete(t.App.TemplateObjectMeta().Labels, model.InteractiveDevLabel)
+	delete(t.App.TemplateObjectMeta().Labels, model.DetachedDevLabel)
+
+}
+
 //HasBeenChanged returns if an app has been updated since the development container was activated
 func HasBeenChanged(app App) bool {
 	oktetoRevision := app.ObjectMeta().Annotations[model.OktetoRevisionAnnotation]

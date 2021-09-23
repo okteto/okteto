@@ -94,18 +94,6 @@ func (i *DeploymentApp) DevModeOn() {
 func (i *DeploymentApp) DevModeOff(t *Translation) {
 	i.d.Spec.Replicas = pointer.Int32Ptr(t.Replicas)
 	i.d.Spec.Strategy = t.DeploymentStrategy
-
-	delete(i.d.Annotations, oktetoVersionAnnotation)
-	delete(i.d.Annotations, model.OktetoRevisionAnnotation)
-	deleteUserAnnotations(i.d.Annotations, t)
-
-	delete(i.d.Spec.Template.Annotations, model.TranslationAnnotation)
-	delete(i.d.Spec.Template.Annotations, model.OktetoRestartAnnotation)
-
-	delete(i.d.Labels, model.DevLabel)
-
-	delete(i.d.Spec.Template.Labels, model.InteractiveDevLabel)
-	delete(i.d.Spec.Template.Labels, model.DetachedDevLabel)
 }
 
 func (i *DeploymentApp) CheckConditionErrors(dev *model.Dev) error {

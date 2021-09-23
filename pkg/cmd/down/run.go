@@ -27,17 +27,17 @@ import (
 )
 
 // Run runs the "okteto down" sequence
-func Run(dev *model.Dev, app apps.App, trList map[string]*apps.Translation, wait bool, c kubernetes.Interface) error {
+func Run(dev *model.Dev, app apps.App, tList map[string]*apps.Translation, wait bool, c kubernetes.Interface) error {
 	ctx := context.Background()
-	if len(trList) == 0 {
+	if len(tList) == 0 {
 		log.Info("no translations available in the deployment")
 	}
 
-	for _, tr := range trList {
-		if err := apps.TranslateDevModeOff(tr.App); err != nil {
+	for _, t := range tList {
+		if err := apps.TranslateDevModeOff(t.App); err != nil {
 			return err
 		}
-		if err := tr.App.Update(ctx, c); err != nil {
+		if err := t.App.Update(ctx, c); err != nil {
 			return err
 		}
 	}
