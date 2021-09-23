@@ -1,10 +1,7 @@
 package registry
 
 import (
-	"fmt"
 	"testing"
-
-	"github.com/okteto/okteto/pkg/okteto"
 )
 
 func Test_IsGlobalRegistry(t *testing.T) {
@@ -147,35 +144,6 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 
 			if gotRT, gotIT := GetRegistryAndRepo(tt.tag); gotRT != tt.wantRegistryTag || gotIT != tt.wantImageTag {
 				t.Errorf("registry.GetRegistryAndRepo = %v, %v, want %v,%v", gotRT, gotIT, tt.wantRegistryTag, tt.wantImageTag)
-			}
-
-		})
-	}
-}
-
-func Test_ExpandOktetoGlobalRegistry(t *testing.T) {
-	var tests = []struct {
-		name      string
-		tag       string
-		wantTag   string
-		wantError error
-	}{
-		{
-			name:    "can-use-okteto-global-registry",
-			tag:     "okteto.global/image",
-			wantTag: "%v/okteto/image",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			url, err := okteto.GetRegistry()
-			if err != nil {
-				t.Errorf("error: unable to get registry url %v", err)
-			}
-			tt.wantTag = fmt.Sprintf(tt.wantTag, url)
-			if gotTag, gotError := ExpandOktetoGlobalRegistry(tt.tag); gotTag != tt.wantTag || gotError != tt.wantError {
-				t.Errorf("registry.ExpandOktetoGlobalRegistry = %v, %v, want %v,%v", gotTag, gotError, tt.wantTag, tt.wantError)
 			}
 
 		})
