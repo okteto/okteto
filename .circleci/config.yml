@@ -15,7 +15,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v3-pkg-cache-{{ checksum "go.sum" }}
+            - v3-pkg-cache-go-1-17-{{ checksum "go.sum" }}
       - run:
           command: go mod tidy && git diff --exit-code go.sum > /dev/null
       - run:
@@ -30,7 +30,7 @@ jobs:
           paths:
             - bin
       - save_cache:
-          key: v3-pkg-cache-{{ checksum "go.sum" }}
+          key: v3-pkg-cache-go-1-17-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
             - /go/pkg
@@ -49,7 +49,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v3-pkg-cache-{{ checksum "go.sum" }}
+            - v3-pkg-cache-go-1-17-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./artifacts
       - run:
@@ -75,7 +75,7 @@ jobs:
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
           command: make integration
       - save_cache:
-          key: v3-pkg-cache-{{ checksum "go.sum" }}
+          key: v3-pkg-cache-go-1-17-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
             - /go/pkg
@@ -113,7 +113,7 @@ jobs:
       - checkout
       - run:
           name: Upgrade Golang
-          command: choco upgrade golang --version 1.16
+          command: choco upgrade golang --version 1.17
       - restore_cache:
           keys:
             - v4-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
