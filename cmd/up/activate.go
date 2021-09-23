@@ -71,7 +71,7 @@ func (up *upContext) activate(build bool) error {
 		return nil
 	}
 
-	if apps.IsDevModeOn(app) && app.HasBeenChanged() {
+	if apps.IsDevModeOn(app) && apps.HasBeenChanged(app) {
 		return errors.UserError{
 			E: fmt.Errorf("%s '%s' has been modified while your development container was active", app.TypeMeta().Kind, app.ObjectMeta().Name),
 			Hint: `Follow these steps:

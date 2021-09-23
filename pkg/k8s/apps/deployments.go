@@ -183,10 +183,6 @@ func (i *DeploymentApp) RestoreOriginal() error {
 	return nil
 }
 
-func (i *DeploymentApp) HasBeenChanged() bool {
-	return deployments.HasBeenChanged(i.d)
-}
-
 func (i *DeploymentApp) SetLastBuiltAnnotation() {
 	deployments.SetLastBuiltAnnotation(i.d)
 }

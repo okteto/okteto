@@ -55,6 +55,15 @@ func IsDevModeOn(app App) bool {
 	return app.ObjectMeta().Labels[model.DevLabel] == "true"
 }
 
+//HasBeenChanged returns if an app has been updated since the development container was activated
+func HasBeenChanged(app App) bool {
+	oktetoRevision := app.ObjectMeta().Annotations[model.OktetoRevisionAnnotation]
+	if oktetoRevision == "" {
+		return false
+	}
+	return oktetoRevision != app.GetRevision()
+}
+
 //GetDeploymentSandbox returns a base deployment when using "autocreate"
 func GetDeploymentSandbox(dev *model.Dev) *appsv1.Deployment {
 	image := dev.Image.Name

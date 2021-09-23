@@ -183,15 +183,6 @@ func RestoreDevModeFrom(d, old *appsv1.Deployment) {
 	d.Spec.Template.Annotations = old.Spec.Template.Annotations
 }
 
-//HasBeenChanged returns if a deployment has been updated since the development container was activated
-func HasBeenChanged(d *appsv1.Deployment) bool {
-	oktetoRevision := d.Annotations[model.OktetoRevisionAnnotation]
-	if oktetoRevision == "" {
-		return false
-	}
-	return oktetoRevision != d.Annotations[model.DeploymentRevisionAnnotation]
-}
-
 //DestroyDev destroys the k8s deployment of a dev environment
 func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return Destroy(ctx, dev.Name, dev.Namespace, c)

@@ -39,7 +39,6 @@ type App interface {
 	Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error)
 	RestoreOriginal() error
 	SetOriginal() error
-	HasBeenChanged() bool
 	SetLastBuiltAnnotation()
 	Refresh(ctx context.Context, c kubernetes.Interface) error
 	Deploy(ctx context.Context, c kubernetes.Interface) error

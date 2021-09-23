@@ -155,15 +155,6 @@ func RestoreDevModeFrom(sfs, old *appsv1.StatefulSet) {
 	sfs.Spec.Template.Annotations = old.Spec.Template.Annotations
 }
 
-//HasBeenChanged returns if a statefulset has been updated since the development container was activated
-func HasBeenChanged(s *appsv1.StatefulSet) bool {
-	oktetoRevision := s.Annotations[model.OktetoRevisionAnnotation]
-	if oktetoRevision == "" {
-		return false
-	}
-	return oktetoRevision != s.Status.UpdateRevision
-}
-
 //SetLastBuiltAnnotation sets the deployment timestacmp
 func SetLastBuiltAnnotation(s *appsv1.StatefulSet) {
 	annotations.Set(s.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))

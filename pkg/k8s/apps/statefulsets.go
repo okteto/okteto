@@ -177,10 +177,6 @@ func (i *StatefulSetApp) RestoreOriginal() error {
 	return nil
 }
 
-func (i *StatefulSetApp) HasBeenChanged() bool {
-	return statefulsets.HasBeenChanged(i.sfs)
-}
-
 func (i *StatefulSetApp) SetLastBuiltAnnotation() {
 	statefulsets.SetLastBuiltAnnotation(i.sfs)
 }
