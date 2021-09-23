@@ -177,7 +177,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 		}
 	}
 
-	if app != nil && app.IsDevModeOn() {
+	if app != nil && apps.IsDevModeOn(app) {
 		if err := down.Run(dev, app, trList, false, c); err != nil {
 			return err
 		}

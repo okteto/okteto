@@ -84,10 +84,6 @@ func (i *DeploymentApp) NewTranslation(dev *model.Dev) *Translation {
 	}
 }
 
-func (i *DeploymentApp) IsDevModeOn() bool {
-	return deployments.IsDevModeOn(i.d)
-}
-
 func (i *DeploymentApp) DevModeOn() {
 	i.d.Spec.Replicas = pointer.Int32Ptr(1)
 	i.d.Spec.Strategy = appsv1.DeploymentStrategy{

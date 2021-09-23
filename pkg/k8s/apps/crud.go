@@ -50,6 +50,11 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 	return &StatefulSetApp{sfs: sfs}, nil
 }
 
+//IsDevModeOn returns if a statefulset is in devmode
+func IsDevModeOn(app App) bool {
+	return app.ObjectMeta().Labels[model.DevLabel] == "true"
+}
+
 //GetDeploymentSandbox returns a base deployment when using "autocreate"
 func GetDeploymentSandbox(dev *model.Dev) *appsv1.Deployment {
 	image := dev.Image.Name

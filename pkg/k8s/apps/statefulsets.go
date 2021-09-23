@@ -83,10 +83,6 @@ func (i *StatefulSetApp) NewTranslation(dev *model.Dev) *Translation {
 	}
 }
 
-func (i *StatefulSetApp) IsDevModeOn() bool {
-	return statefulsets.IsDevModeOn(i.sfs)
-}
-
 func (i *StatefulSetApp) DevModeOn() {
 	i.sfs.Spec.Replicas = pointer.Int32Ptr(1)
 	i.sfs.Spec.UpdateStrategy = appsv1.StatefulSetUpdateStrategy{

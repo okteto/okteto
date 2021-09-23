@@ -31,7 +31,6 @@ type App interface {
 	Replicas() int32
 	PodSpec() *apiv1.PodSpec
 	NewTranslation(dev *model.Dev) *Translation
-	IsDevModeOn() bool
 	DevModeOn()
 	DevModeOff(t *Translation)
 	CheckConditionErrors(dev *model.Dev) error

@@ -66,12 +66,12 @@ func (up *upContext) activate(build bool) error {
 		return err
 	}
 
-	if up.isRetry && !app.IsDevModeOn() {
+	if up.isRetry && !apps.IsDevModeOn(app) {
 		log.Information("Development container has been deactivated")
 		return nil
 	}
 
-	if app.IsDevModeOn() && app.HasBeenChanged() {
+	if apps.IsDevModeOn(app) && app.HasBeenChanged() {
 		return errors.UserError{
 			E: fmt.Errorf("%s '%s' has been modified while your development container was active", app.TypeMeta().Kind, app.ObjectMeta().Name),
 			Hint: `Follow these steps:

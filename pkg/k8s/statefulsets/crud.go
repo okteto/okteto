@@ -147,6 +147,14 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	return ok
 }
 
+//RestoreDevModeFrom restores labels an annotations from a statefulset in dev mode
+func RestoreDevModeFrom(sfs, old *appsv1.StatefulSet) {
+	sfs.Labels[model.DevLabel] = old.Labels[model.DevLabel]
+	sfs.Spec.Replicas = old.Spec.Replicas
+	sfs.Annotations = old.Annotations
+	sfs.Spec.Template.Annotations = old.Spec.Template.Annotations
+}
+
 //HasBeenChanged returns if a statefulset has been updated since the development container was activated
 func HasBeenChanged(s *appsv1.StatefulSet) bool {
 	oktetoRevision := s.Annotations[model.OktetoRevisionAnnotation]
