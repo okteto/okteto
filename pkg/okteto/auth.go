@@ -145,7 +145,27 @@ func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, e
 	var user q
 	q := `query {
 		user {
-			id,name,email,externalID,token,new,registry,buildkit,certificate,globalnamespace
+			id,name,email,externalID,token,new,registry,buildkit,certificate,globalNamespace
+		}}`
+
+	req := getRequest(q, token)
+
+	if err := client.Run(ctx, req, &user); err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
+			return deprecatedQueryUser(ctx, client, token)
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+//TODO: remove when all users are in Okteto Enterprise which supports globalNamespace
+func deprecatedQueryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
+	var user q
+	q := `query {
+		user {
+			id,name,email,externalID,token,new,registry,buildkit,certificate
 		}}`
 
 	req := getRequest(q, token)
@@ -161,7 +181,26 @@ func authUser(ctx context.Context, client *graphql.Client, code string) (*u, err
 	var user u
 	q := fmt.Sprintf(`mutation {
 		auth(code: "%s", source: "cli") {
-			id,name,email,externalID,token,new,registry,buildkit,certificate,globalnamespace
+			id,name,email,externalID,token,new,registry,buildkit,certificate,globalNamespace
+		}}`, code)
+
+	req := graphql.NewRequest(q)
+	if err := client.Run(ctx, req, &user); err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
+			return deprecatedAuthUser(ctx, client, code)
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+//TODO: remove when all users are in Okteto Enterprise which supports globalNamespace
+func deprecatedAuthUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
+	var user u
+	q := fmt.Sprintf(`mutation {
+		auth(code: "%s", source: "cli") {
+			id,name,email,externalID,token,new,registry,buildkit,certificate
 		}}`, code)
 
 	req := graphql.NewRequest(q)
@@ -286,7 +325,7 @@ func GetCertificatePath() string {
 	return filepath.Join(config.GetOktetoHome(), ".ca.crt")
 }
 
-func saveToken(id, username, token, url, registry, buildkit string, globalnamespace string) error {
+func saveToken(id, username, token, url, registry, buildkit string, globalNamespace string) error {
 	t, err := GetToken()
 	if err != nil {
 		log.Infof("bad token, re-initializing: %s", err)
@@ -299,7 +338,7 @@ func saveToken(id, username, token, url, registry, buildkit string, globalnamesp
 	t.URL = url
 	t.Buildkit = buildkit
 	t.Registry = registry
-	t.GlobalNamespace = globalnamespace
+	t.GlobalNamespace = globalNamespace
 	return save(t)
 }
 
