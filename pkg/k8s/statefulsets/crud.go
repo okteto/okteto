@@ -104,11 +104,6 @@ func Create(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface
 	return c.AppsV1().StatefulSets(sfs.Namespace).Create(ctx, sfs, metav1.CreateOptions{})
 }
 
-//DestroyDev destroys the k8s deployment of a dev environment
-func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return Destroy(ctx, dev.Name, dev.Namespace, c)
-}
-
 //Update updates a statefulset
 func Update(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	sfs.ResourceVersion = ""

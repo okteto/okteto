@@ -197,14 +197,14 @@ func (i *StatefulSetApp) Create(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
-func (i *StatefulSetApp) DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return statefulsets.DestroyDev(ctx, dev, c)
-}
-
 func (i *StatefulSetApp) Update(ctx context.Context, c kubernetes.Interface) error {
 	sfs, err := statefulsets.Update(ctx, i.sfs, c)
 	if err == nil {
 		i.sfs = sfs
 	}
 	return err
+}
+
+func (i *StatefulSetApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+	return statefulsets.Destroy(ctx, dev.Name, dev.Namespace, c)
 }

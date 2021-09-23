@@ -53,7 +53,7 @@ func Run(dev *model.Dev, app apps.App, trList map[string]*apps.Translation, wait
 	}
 
 	if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
-		if err := app.DestroyDev(ctx, dev, c); err != nil {
+		if err := app.Destroy(ctx, dev, c); err != nil {
 			return err
 		}
 

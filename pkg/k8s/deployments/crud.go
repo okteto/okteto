@@ -176,11 +176,6 @@ func RestoreDevModeFrom(d, old *appsv1.Deployment) {
 	d.Spec.Template.Annotations = old.Spec.Template.Annotations
 }
 
-//DestroyDev destroys the k8s deployment of a dev environment
-func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return Destroy(ctx, dev.Name, dev.Namespace, c)
-}
-
 //Destroy destroys a k8s deployment
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	log.Infof("deleting deployment '%s'", name)

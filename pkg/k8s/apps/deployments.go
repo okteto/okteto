@@ -203,14 +203,14 @@ func (i *DeploymentApp) Create(ctx context.Context, c kubernetes.Interface) erro
 	return err
 }
 
-func (i *DeploymentApp) DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return deployments.DestroyDev(ctx, dev, c)
-}
-
 func (i *DeploymentApp) Update(ctx context.Context, c kubernetes.Interface) error {
 	d, err := deployments.Update(ctx, i.d, c)
 	if err == nil {
 		i.d = d
 	}
 	return err
+}
+
+func (i *DeploymentApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+	return deployments.Destroy(ctx, dev.Name, dev.Namespace, c)
 }
