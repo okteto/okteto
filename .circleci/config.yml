@@ -45,6 +45,9 @@ jobs:
       - image: okteto/dev:latest
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./artifacts
       - run:
