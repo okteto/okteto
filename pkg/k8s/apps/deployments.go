@@ -191,10 +191,6 @@ func (i *DeploymentApp) Refresh(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
-func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
-	return deployments.Deploy(ctx, i.d, c)
-}
-
 func (i *DeploymentApp) Create(ctx context.Context, c kubernetes.Interface) error {
 	d, err := deployments.Create(ctx, i.d, c)
 	if err == nil {

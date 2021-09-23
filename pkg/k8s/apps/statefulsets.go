@@ -185,10 +185,6 @@ func (i *StatefulSetApp) Refresh(ctx context.Context, c kubernetes.Interface) er
 	return err
 }
 
-func (i *StatefulSetApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
-	return statefulsets.Deploy(ctx, i.sfs, c)
-}
-
 func (i *StatefulSetApp) Create(ctx context.Context, c kubernetes.Interface) error {
 	sfs, err := statefulsets.Create(ctx, i.sfs, c)
 	if err == nil {
