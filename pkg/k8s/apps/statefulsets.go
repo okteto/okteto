@@ -111,8 +111,8 @@ func (i *StatefulSetApp) CheckConditionErrors(dev *model.Dev) error {
 	return statefulsets.CheckConditionErrors(i.sfs, dev)
 }
 
-func (i *StatefulSetApp) SetOktetoRevision() {
-	i.sfs.Annotations[model.OktetoRevisionAnnotation] = i.sfs.Status.UpdateRevision
+func (i *StatefulSetApp) GetRevision() string {
+	return i.sfs.Status.UpdateRevision
 }
 
 func (i *StatefulSetApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {

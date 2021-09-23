@@ -168,7 +168,7 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 
 		if err == nil {
 			if !isOktetoNamespace {
-				app.SetOktetoRevision()
+				app.ObjectMeta().Annotations[model.OktetoRevisionAnnotation] = app.GetRevision()
 				if err := app.Update(ctx, c); err != nil {
 					return nil, err
 				}

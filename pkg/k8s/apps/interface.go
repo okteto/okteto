@@ -34,7 +34,7 @@ type App interface {
 	DevModeOn()
 	DevModeOff(t *Translation)
 	CheckConditionErrors(dev *model.Dev) error
-	SetOktetoRevision()
+	GetRevision() string
 	GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error)
 	Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error)
 	RestoreOriginal() error

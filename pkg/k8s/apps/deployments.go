@@ -112,8 +112,8 @@ func (i *DeploymentApp) CheckConditionErrors(dev *model.Dev) error {
 	return deployments.CheckConditionErrors(i.d, dev)
 }
 
-func (i *DeploymentApp) SetOktetoRevision() {
-	i.d.Annotations[model.OktetoRevisionAnnotation] = i.d.Annotations[model.DeploymentRevisionAnnotation]
+func (i *DeploymentApp) GetRevision() string {
+	return i.d.Annotations[model.DeploymentRevisionAnnotation]
 }
 
 func (i *DeploymentApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
