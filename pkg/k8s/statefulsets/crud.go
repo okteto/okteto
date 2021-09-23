@@ -18,12 +18,10 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -153,11 +151,6 @@ func RestoreDevModeFrom(sfs, old *appsv1.StatefulSet) {
 	sfs.Spec.Replicas = old.Spec.Replicas
 	sfs.Annotations = old.Annotations
 	sfs.Spec.Template.Annotations = old.Spec.Template.Annotations
-}
-
-//SetLastBuiltAnnotation sets the deployment timestacmp
-func SetLastBuiltAnnotation(s *appsv1.StatefulSet) {
-	annotations.Set(s.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))
 }
 
 //CheckConditionErrors checks errors in conditions

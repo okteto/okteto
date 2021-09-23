@@ -213,7 +213,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 
 		if !exists {
 			app.PodSpec().Containers[0].Image = imageTag
-			app.SetLastBuiltAnnotation()
+			apps.SetLastBuiltAnnotation(app)
 			exit <- app.Create(ctx, c)
 			return
 		}
@@ -228,7 +228,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 					exit <- fmt.Errorf("%s '%s': container '%s' not found", app.TypeMeta().Kind, app.ObjectMeta().Name, rule.Container)
 					return
 				}
-				app.SetLastBuiltAnnotation()
+				apps.SetLastBuiltAnnotation(app)
 				devContainer.Image = imageTag
 			}
 

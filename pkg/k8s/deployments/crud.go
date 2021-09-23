@@ -18,10 +18,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -163,11 +161,6 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) e
 		log.Infof("updated deployment '%s'.", d.Name)
 	}
 	return nil
-}
-
-//SetLastBuiltAnnotation sets the deployment timestacmp
-func SetLastBuiltAnnotation(d *appsv1.Deployment) {
-	annotations.Set(d.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))
 }
 
 //IsDevModeOn returns if a deployment is in devmode

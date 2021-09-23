@@ -177,10 +177,6 @@ func (i *StatefulSetApp) RestoreOriginal() error {
 	return nil
 }
 
-func (i *StatefulSetApp) SetLastBuiltAnnotation() {
-	statefulsets.SetLastBuiltAnnotation(i.sfs)
-}
-
 func (i *StatefulSetApp) Refresh(ctx context.Context, c kubernetes.Interface) error {
 	sfs, err := statefulsets.Get(ctx, i.sfs.Name, i.sfs.Namespace, c)
 	if err == nil {

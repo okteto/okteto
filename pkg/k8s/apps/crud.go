@@ -64,6 +64,11 @@ func HasBeenChanged(app App) bool {
 	return oktetoRevision != app.GetRevision()
 }
 
+//SetLastBuiltAnnotation sets the app timestamp
+func SetLastBuiltAnnotation(app App) {
+	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(model.TimeFormat)
+}
+
 //GetDeploymentSandbox returns a base deployment when using "autocreate"
 func GetDeploymentSandbox(dev *model.Dev) *appsv1.Deployment {
 	image := dev.Image.Name

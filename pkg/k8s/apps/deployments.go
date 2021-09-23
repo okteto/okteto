@@ -183,10 +183,6 @@ func (i *DeploymentApp) RestoreOriginal() error {
 	return nil
 }
 
-func (i *DeploymentApp) SetLastBuiltAnnotation() {
-	deployments.SetLastBuiltAnnotation(i.d)
-}
-
 func (i *DeploymentApp) Refresh(ctx context.Context, c kubernetes.Interface) error {
 	d, err := deployments.Get(ctx, i.d.Name, i.d.Namespace, c)
 	if err == nil {
