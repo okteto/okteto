@@ -544,6 +544,7 @@ func TestDivert(t *testing.T) {
 	if err := cloneGitRepo(ctx, divertGitRepo); err != nil {
 		t.Fatal(err)
 	}
+	defer deleteGitRepo(ctx, divertGitFolder)
 
 	log.Printf("cloned repo %s \n", divertGitRepo)
 
