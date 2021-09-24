@@ -18,12 +18,10 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -106,11 +104,6 @@ func Create(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface
 	return c.AppsV1().StatefulSets(sfs.Namespace).Create(ctx, sfs, metav1.CreateOptions{})
 }
 
-//DestroyDev destroys the k8s deployment of a dev environment
-func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return Destroy(ctx, dev.Name, dev.Namespace, c)
-}
-
 //Update updates a statefulset
 func Update(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	sfs.ResourceVersion = ""
@@ -147,18 +140,12 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	return ok
 }
 
-//HasBeenChanged returns if a statefulset has been updated since the development container was activated
-func HasBeenChanged(s *appsv1.StatefulSet) bool {
-	oktetoRevision := s.Annotations[model.OktetoRevisionAnnotation]
-	if oktetoRevision == "" {
-		return false
-	}
-	return oktetoRevision != s.Status.UpdateRevision
-}
-
-//SetLastBuiltAnnotation sets the deployment timestacmp
-func SetLastBuiltAnnotation(s *appsv1.StatefulSet) {
-	annotations.Set(s.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))
+//RestoreDevModeFrom restores labels an annotations from a statefulset in dev mode
+func RestoreDevModeFrom(sfs, old *appsv1.StatefulSet) {
+	sfs.Labels[model.DevLabel] = old.Labels[model.DevLabel]
+	sfs.Spec.Replicas = old.Spec.Replicas
+	sfs.Annotations = old.Annotations
+	sfs.Spec.Template.Annotations = old.Spec.Template.Annotations
 }
 
 //CheckConditionErrors checks errors in conditions

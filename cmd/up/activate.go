@@ -66,12 +66,12 @@ func (up *upContext) activate(build bool) error {
 		return err
 	}
 
-	if up.isRetry && !app.IsDevModeOn() {
+	if up.isRetry && !apps.IsDevModeOn(app) {
 		log.Information("Development container has been deactivated")
 		return nil
 	}
 
-	if app.IsDevModeOn() && app.HasBeenChanged() {
+	if apps.IsDevModeOn(app) && apps.HasBeenChanged(app) {
 		return errors.UserError{
 			E: fmt.Errorf("%s '%s' has been modified while your development container was active", app.TypeMeta().Kind, app.ObjectMeta().Name),
 			Hint: `Follow these steps:
@@ -113,7 +113,7 @@ func (up *upContext) activate(build bool) error {
 	}
 
 	if up.isRetry {
-		analytics.TrackReconnect(true, up.isSwap)
+		analytics.TrackReconnect(true)
 	}
 
 	up.isRetry = true
@@ -244,12 +244,12 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	trList, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
+	tList, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
 	if err != nil {
 		return err
 	}
 
-	if err := apps.TranslateDevMode(trList, up.isOktetoNamespace); err != nil {
+	if err := apps.TranslateDevMode(tList, up.isOktetoNamespace); err != nil {
 		return err
 	}
 
@@ -263,13 +263,13 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		return err
 	}
 
-	for name := range trList {
-		if name == trList[name].App.ObjectMeta().Name && create {
-			if err := trList[name].App.Create(ctx, up.Client); err != nil {
+	for name := range tList {
+		if name == tList[name].App.ObjectMeta().Name && create {
+			if err := tList[name].App.Create(ctx, up.Client); err != nil {
 				return err
 			}
 		} else {
-			if err := trList[name].App.Update(ctx, up.Client); err != nil {
+			if err := tList[name].App.Update(ctx, up.Client); err != nil {
 				return err
 			}
 		}

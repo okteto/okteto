@@ -84,10 +84,6 @@ func (i *DeploymentApp) NewTranslation(dev *model.Dev) *Translation {
 	}
 }
 
-func (i *DeploymentApp) IsDevModeOn() bool {
-	return deployments.IsDevModeOn(i.d)
-}
-
 func (i *DeploymentApp) DevModeOn() {
 	i.d.Spec.Replicas = pointer.Int32Ptr(1)
 	i.d.Spec.Strategy = appsv1.DeploymentStrategy{
@@ -98,26 +94,14 @@ func (i *DeploymentApp) DevModeOn() {
 func (i *DeploymentApp) DevModeOff(t *Translation) {
 	i.d.Spec.Replicas = pointer.Int32Ptr(t.Replicas)
 	i.d.Spec.Strategy = t.DeploymentStrategy
-
-	delete(i.d.Annotations, oktetoVersionAnnotation)
-	delete(i.d.Annotations, model.OktetoRevisionAnnotation)
-	deleteUserAnnotations(i.d.Annotations, t)
-
-	delete(i.d.Spec.Template.Annotations, model.TranslationAnnotation)
-	delete(i.d.Spec.Template.Annotations, model.OktetoRestartAnnotation)
-
-	delete(i.d.Labels, model.DevLabel)
-
-	delete(i.d.Spec.Template.Labels, model.InteractiveDevLabel)
-	delete(i.d.Spec.Template.Labels, model.DetachedDevLabel)
 }
 
 func (i *DeploymentApp) CheckConditionErrors(dev *model.Dev) error {
 	return deployments.CheckConditionErrors(i.d, dev)
 }
 
-func (i *DeploymentApp) SetOktetoRevision() {
-	i.d.Annotations[model.OktetoRevisionAnnotation] = i.d.Annotations[model.DeploymentRevisionAnnotation]
+func (i *DeploymentApp) GetRevision() string {
+	return i.d.Annotations[model.DeploymentRevisionAnnotation]
 }
 
 func (i *DeploymentApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
@@ -187,24 +171,12 @@ func (i *DeploymentApp) RestoreOriginal() error {
 	return nil
 }
 
-func (i *DeploymentApp) HasBeenChanged() bool {
-	return deployments.HasBeenChanged(i.d)
-}
-
-func (i *DeploymentApp) SetLastBuiltAnnotation() {
-	deployments.SetLastBuiltAnnotation(i.d)
-}
-
 func (i *DeploymentApp) Refresh(ctx context.Context, c kubernetes.Interface) error {
 	d, err := deployments.Get(ctx, i.d.Name, i.d.Namespace, c)
 	if err == nil {
 		i.d = d
 	}
 	return err
-}
-
-func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
-	return deployments.Deploy(ctx, i.d, c)
 }
 
 func (i *DeploymentApp) Create(ctx context.Context, c kubernetes.Interface) error {
@@ -215,14 +187,14 @@ func (i *DeploymentApp) Create(ctx context.Context, c kubernetes.Interface) erro
 	return err
 }
 
-func (i *DeploymentApp) DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return deployments.DestroyDev(ctx, dev, c)
-}
-
 func (i *DeploymentApp) Update(ctx context.Context, c kubernetes.Interface) error {
 	d, err := deployments.Update(ctx, i.d, c)
 	if err == nil {
 		i.d = d
 	}
 	return err
+}
+
+func (_ *DeploymentApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+	return deployments.Destroy(ctx, dev.Name, dev.Namespace, c)
 }

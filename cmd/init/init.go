@@ -195,7 +195,7 @@ func getRunningApp(ctx context.Context, namespace, k8sContext string) (apps.App,
 		return nil, "", nil
 	}
 
-	if app.IsDevModeOn() {
+	if apps.IsDevModeOn(app) {
 		return nil, "", fmt.Errorf("%s '%s' is in development mode", app.TypeMeta().Kind, app.ObjectMeta().Name)
 	}
 

@@ -43,13 +43,6 @@ const (
 )
 
 func translate(t *Translation, isOktetoNamespace bool) error {
-	for _, rule := range t.Rules {
-		devContainer := GetDevContainer(t.App.PodSpec(), rule.Container)
-		if devContainer == nil {
-			return fmt.Errorf("%s '%s': container '%s' not found", t.App.TypeMeta().Kind, t.App.ObjectMeta().Name, rule.Container)
-		}
-		rule.Container = devContainer.Name
-	}
 
 	ct := os.Getenv("OKTETO_CLIENTSIDE_TRANSLATION")
 	if ct == "" && isOktetoNamespace {
@@ -83,14 +76,6 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 	}
 	for _, rule := range t.Rules {
 		devContainer := GetDevContainer(t.App.PodSpec(), rule.Container)
-		if devContainer == nil {
-			return fmt.Errorf("container '%s' not found in '%s'", rule.Container, t.App.ObjectMeta().Name)
-		}
-
-		if rule.Image == "" {
-			rule.Image = devContainer.Image
-		}
-
 		TranslateDevContainer(devContainer, rule)
 		TranslatePodSpec(t.App.PodSpec(), rule)
 		TranslateOktetoDevSecret(t.App.PodSpec(), t.Name, rule.Secrets)
@@ -673,6 +658,6 @@ func TranslateDevModeOff(app App) error {
 	if err := json.Unmarshal([]byte(tJson), t); err != nil {
 		return fmt.Errorf("malformed tr rules: %s", err)
 	}
-	app.DevModeOff(t)
+	t.DevModeOff()
 	return nil
 }
