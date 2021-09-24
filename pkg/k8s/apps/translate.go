@@ -654,7 +654,9 @@ func TranslateDevModeOff(app App) error {
 	if tJson == "" {
 		return app.RestoreOriginal()
 	}
-	t := &Translation{}
+	t := &Translation{
+		App: app,
+	}
 	if err := json.Unmarshal([]byte(tJson), t); err != nil {
 		return fmt.Errorf("malformed tr rules: %s", err)
 	}
