@@ -27,7 +27,7 @@ type App interface {
 	TypeMeta() metav1.TypeMeta
 	ObjectMeta() metav1.ObjectMeta
 	TemplateObjectMeta() metav1.ObjectMeta
-
+	DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error
 	Replicas() int32
 	PodSpec() *apiv1.PodSpec
 	NewTranslation(dev *model.Dev) *Translation
