@@ -325,7 +325,7 @@ func GetCertificatePath() string {
 	return filepath.Join(config.GetOktetoHome(), ".ca.crt")
 }
 
-func saveToken(id, username, token, url, registry, buildkit string, globalNamespace string) error {
+func saveToken(id, username, token, url, registry, buildkit, globalNamespace string) error {
 	t, err := GetToken()
 	if err != nil {
 		log.Infof("bad token, re-initializing: %s", err)
