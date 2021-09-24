@@ -49,14 +49,28 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 			return err
 		}
 	}
-	tag, err = registry.ExpandOktetoDevRegistry(ctx, namespace, tag)
-	if err != nil {
-		return err
-	}
-	for i := range cacheFrom {
-		cacheFrom[i], err = registry.ExpandOktetoDevRegistry(ctx, namespace, cacheFrom[i])
+	if registry.IsDevRegistry(tag) {
+		tag, err = registry.ExpandOktetoDevRegistry(ctx, namespace, tag)
 		if err != nil {
 			return err
+		}
+		for i := range cacheFrom {
+			cacheFrom[i], err = registry.ExpandOktetoDevRegistry(ctx, namespace, cacheFrom[i])
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if registry.IsGlobalRegistry(tag) {
+		tag, err = registry.ExpandOktetoGlobalRegistry(tag)
+		if err != nil {
+			return err
+		}
+		for i := range cacheFrom {
+			cacheFrom[i], err = registry.ExpandOktetoGlobalRegistry(cacheFrom[i])
+			if err != nil {
+				return err
+			}
 		}
 	}
 	opt, err := getSolveOpt(path, dockerFile, tag, target, noCache, cacheFrom, buildArgs, secrets)
@@ -89,7 +103,7 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 }
 
 func validateImage(imageTag string) error {
-	if strings.HasPrefix(imageTag, okteto.DevRegistry) && strings.Count(imageTag, "/") != 1 {
+	if (registry.IsDevRegistry(imageTag) || registry.IsGlobalRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
 		return okErrors.UserError{
 			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
 			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", okteto.DevRegistry),
