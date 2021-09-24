@@ -296,6 +296,9 @@ func (up *upContext) activateLoop(build bool) {
 			if isTransientError {
 				<-t.C
 			}
+			if up.Dev.Divert != nil {
+				up.Dev.Name = strings.Replace(up.Dev.Name, fmt.Sprintf("%s", okteto.GetSanitizedUsername()), "", 1)
+			}
 		}
 
 		err := up.activate(build)
