@@ -142,32 +142,13 @@ func saveAuthData(user *User, url string) error {
 }
 
 func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
+	queryFields := queryAvailableFields(ctx, client, "me", `id,name,email,externalID,token,new,registry,buildkit,certificate,globalNamespace`)
+
 	var user q
-	q := `query {
+	q := fmt.Sprintf(`query {
 		user {
-			id,name,email,externalID,token,new,registry,buildkit,certificate,globalNamespace
-		}}`
-
-	req := getRequest(q, token)
-
-	if err := client.Run(ctx, req, &user); err != nil {
-		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
-			return deprecatedQueryUser(ctx, client, token)
-		}
-		return nil, err
-	}
-
-	return &user, nil
-}
-
-//TODO: remove when all users are in Okteto Enterprise which supports globalNamespace
-func deprecatedQueryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
-	var user q
-	q := `query {
-		user {
-			id,name,email,externalID,token,new,registry,buildkit,certificate
-		}}`
-
+			%v
+		}}`, strings.Join(queryFields, ","))
 	req := getRequest(q, token)
 
 	if err := client.Run(ctx, req, &user); err != nil {
@@ -178,30 +159,13 @@ func deprecatedQueryUser(ctx context.Context, client *graphql.Client, token stri
 }
 
 func authUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
+	mutationFields := queryAvailableFields(ctx, client, "me", `id,name,email,externalID,token,new,registry,buildkit,certificate,globalNamespace`)
+
 	var user u
 	q := fmt.Sprintf(`mutation {
 		auth(code: "%s", source: "cli") {
-			id,name,email,externalID,token,new,registry,buildkit,certificate,globalNamespace
-		}}`, code)
-
-	req := graphql.NewRequest(q)
-	if err := client.Run(ctx, req, &user); err != nil {
-		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
-			return deprecatedAuthUser(ctx, client, code)
-		}
-		return nil, err
-	}
-
-	return &user, nil
-}
-
-//TODO: remove when all users are in Okteto Enterprise which supports globalNamespace
-func deprecatedAuthUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
-	var user u
-	q := fmt.Sprintf(`mutation {
-		auth(code: "%s", source: "cli") {
-			id,name,email,externalID,token,new,registry,buildkit,certificate
-		}}`, code)
+			%v
+		}}`, code, strings.Join(mutationFields, ","))
 
 	req := graphql.NewRequest(q)
 	if err := client.Run(ctx, req, &user); err != nil {
