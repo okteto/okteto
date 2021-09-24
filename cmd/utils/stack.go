@@ -15,6 +15,7 @@ package utils
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -32,7 +33,7 @@ var (
 func LoadStack(name, stackPath string) (*model.Stack, error) {
 	var isCompose bool
 	if model.FileExists(stackPath) {
-		if strings.HasPrefix(stackPath, "docker-compose") {
+		if isPathAComposeFile(stackPath) {
 			isCompose = true
 		}
 		return model.GetStack(name, stackPath, isCompose)
@@ -44,7 +45,7 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 				if isDeprecatedExtension(secondaryStackManifest) {
 					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", stackPath)
 				}
-				if strings.HasPrefix(secondaryStackManifest, "docker-compose") {
+				if isPathAComposeFile(secondaryStackManifest) {
 					isCompose = true
 				}
 				return model.GetStack(name, secondaryStackManifest, isCompose)
@@ -53,7 +54,11 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 	}
 
 	return nil, fmt.Errorf("'%s' does not exist", stackPath)
+}
 
+func isPathAComposeFile(path string) bool {
+	base := filepath.Base(path)
+	return strings.HasPrefix(base, "docker-compose")
 }
 
 func isDeprecatedExtension(stackPath string) bool {
