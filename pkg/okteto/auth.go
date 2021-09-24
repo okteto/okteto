@@ -39,26 +39,28 @@ var reg = regexp.MustCompile("[^A-Za-z0-9]+")
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	URL       string `json:"URL"`
-	Buildkit  string `json:"Buildkit"`
-	Registry  string `json:"Registry"`
-	ID        string `json:"ID"`
-	Username  string `json:"Username"`
-	Token     string `json:"Token"`
-	MachineID string `json:"MachineID"`
+	URL             string `json:"URL"`
+	Buildkit        string `json:"Buildkit"`
+	Registry        string `json:"Registry"`
+	ID              string `json:"ID"`
+	Username        string `json:"Username"`
+	Token           string `json:"Token"`
+	MachineID       string `json:"MachineID"`
+	GlobalNamespace string `json:"GlobalNamespace"`
 }
 
 // User contains the auth information of the logged in user
 type User struct {
-	Name        string
-	Email       string
-	ExternalID  string
-	Token       string
-	ID          string
-	New         bool
-	Buildkit    string
-	Registry    string
-	Certificate string
+	Name            string
+	Email           string
+	ExternalID      string
+	Token           string
+	ID              string
+	New             bool
+	Buildkit        string
+	Registry        string
+	Certificate     string
+	GlobalNamespace string
 }
 
 type u struct {
@@ -127,7 +129,7 @@ func saveAuthData(user *User, url string) error {
 		return fmt.Errorf("empty response")
 	}
 
-	if err := saveToken(user.ID, user.ExternalID, user.Token, url, user.Registry, user.Buildkit); err != nil {
+	if err := saveToken(user.ID, user.ExternalID, user.Token, url, user.Registry, user.Buildkit, user.GlobalNamespace); err != nil {
 		return err
 	}
 
@@ -140,6 +142,26 @@ func saveAuthData(user *User, url string) error {
 }
 
 func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
+	var user q
+	q := `query {
+		user {
+			id,name,email,externalID,token,new,registry,buildkit,certificate,globalNamespace
+		}}`
+
+	req := getRequest(q, token)
+
+	if err := client.Run(ctx, req, &user); err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
+			return deprecatedQueryUser(ctx, client, token)
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+//TODO: remove when all users are in Okteto Enterprise which supports globalNamespace
+func deprecatedQueryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
 	var user q
 	q := `query {
 		user {
@@ -156,6 +178,25 @@ func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, e
 }
 
 func authUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
+	var user u
+	q := fmt.Sprintf(`mutation {
+		auth(code: "%s", source: "cli") {
+			id,name,email,externalID,token,new,registry,buildkit,certificate,globalNamespace
+		}}`, code)
+
+	req := graphql.NewRequest(q)
+	if err := client.Run(ctx, req, &user); err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
+			return deprecatedAuthUser(ctx, client, code)
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+//TODO: remove when all users are in Okteto Enterprise which supports globalNamespace
+func deprecatedAuthUser(ctx context.Context, client *graphql.Client, code string) (*u, error) {
 	var user u
 	q := fmt.Sprintf(`mutation {
 		auth(code: "%s", source: "cli") {
@@ -284,7 +325,7 @@ func GetCertificatePath() string {
 	return filepath.Join(config.GetOktetoHome(), ".ca.crt")
 }
 
-func saveToken(id, username, token, url, registry, buildkit string) error {
+func saveToken(id, username, token, url, registry, buildkit, globalNamespace string) error {
 	t, err := GetToken()
 	if err != nil {
 		log.Infof("bad token, re-initializing: %s", err)
@@ -297,6 +338,7 @@ func saveToken(id, username, token, url, registry, buildkit string) error {
 	t.URL = url
 	t.Buildkit = buildkit
 	t.Registry = registry
+	t.GlobalNamespace = globalNamespace
 	return save(t)
 }
 
