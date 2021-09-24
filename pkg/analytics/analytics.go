@@ -337,7 +337,7 @@ func getFlagPath() string {
 }
 
 // Disable disables analytics
-func Disable(version string) error {
+func Disable() error {
 	var _, err = os.Stat(getFlagPath())
 	trackDisable(true)
 	if os.IsNotExist(err) {
@@ -353,7 +353,7 @@ func Disable(version string) error {
 }
 
 // Enable enables analytics
-func Enable(version string) error {
+func Enable() error {
 	var _, err = os.Stat(getFlagPath())
 	if os.IsNotExist(err) {
 		return nil

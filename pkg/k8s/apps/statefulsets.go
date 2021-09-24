@@ -189,6 +189,6 @@ func (i *StatefulSetApp) Update(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
-func (i *StatefulSetApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+func (_ *StatefulSetApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return statefulsets.Destroy(ctx, dev.Name, dev.Namespace, c)
 }
