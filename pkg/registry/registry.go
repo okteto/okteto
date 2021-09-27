@@ -107,8 +107,12 @@ func ExpandOktetoGlobalRegistry(tag string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("cannot use the okteto.global container registry: unable to get okteto registry url: %s", err)
 	}
-
-	tag = strings.Replace(tag, okteto.GlobalRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, okteto.GlobalNamespace), 1)
+	globalNamespace := okteto.DefaultGlobalNamespace
+	t, _ := okteto.GetToken()
+	if t.GlobalNamespace != "" {
+		globalNamespace = t.GlobalNamespace
+	}
+	tag = strings.Replace(tag, okteto.GlobalRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, globalNamespace), 1)
 	return tag, nil
 }
 

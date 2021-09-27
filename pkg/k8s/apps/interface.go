@@ -26,27 +26,26 @@ import (
 type App interface {
 	TypeMeta() metav1.TypeMeta
 	ObjectMeta() metav1.ObjectMeta
-	TemplateObjectMeta() metav1.ObjectMeta
 	DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error
 	Replicas() int32
+	TemplateObjectMeta() metav1.ObjectMeta
 	PodSpec() *apiv1.PodSpec
+
 	NewTranslation(dev *model.Dev) *Translation
-	IsDevModeOn() bool
 	DevModeOn()
 	DevModeOff(t *Translation)
 	CheckConditionErrors(dev *model.Dev) error
-	SetOktetoRevision()
+	GetRevision() string
 	GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error)
 	Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error)
+
 	RestoreOriginal() error
 	SetOriginal() error
-	HasBeenChanged() bool
-	SetLastBuiltAnnotation()
+
 	Refresh(ctx context.Context, c kubernetes.Interface) error
-	Deploy(ctx context.Context, c kubernetes.Interface) error
 	Create(ctx context.Context, c kubernetes.Interface) error
-	DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error
 	Update(ctx context.Context, c kubernetes.Interface) error
+	Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error
 }
 
 // Translation represents the information for translating a deployment

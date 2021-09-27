@@ -155,37 +155,37 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 		}
 	}
 
-	trList, err := apps.GetTranslations(ctx, dev, app, false, c)
+	tList, err := apps.GetTranslations(ctx, dev, app, false, c)
 	if err != nil {
 		return err
 	}
 
-	for _, tr := range trList {
+	for _, t := range tList {
 		if len(dev.Services) == 0 {
-			if tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || tr.App.PodSpec().Containers[0].Name == "dev" {
-				tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+			if t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || t.App.PodSpec().Containers[0].Name == "dev" {
+				t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
 			}
 		}
-		if tr.App.Replicas() == 0 {
-			tr.App.DevModeOff(tr)
+		if t.App.Replicas() == 0 {
+			t.DevModeOff()
 		}
 
-		if tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
-			for k, v := range tr.Annotations {
-				tr.App.ObjectMeta().Annotations[k] = v
+		if t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
+			for k, v := range t.Annotations {
+				t.App.ObjectMeta().Annotations[k] = v
 			}
 		}
 	}
 
-	if app != nil && app.IsDevModeOn() {
-		if err := down.Run(dev, app, trList, false, c); err != nil {
+	if app != nil && apps.IsDevModeOn(app) {
+		if err := down.Run(dev, app, tList, false, c); err != nil {
 			return err
 		}
 
 		log.Information("Development container deactivated")
 	}
 
-	imageFromApp, err := getImageFromApp(trList)
+	imageFromApp, err := getImageFromApp(tList)
 	if err != nil {
 		return err
 	}
@@ -213,12 +213,12 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 
 		if !exists {
 			app.PodSpec().Containers[0].Image = imageTag
-			app.SetLastBuiltAnnotation()
+			apps.SetLastBuiltAnnotation(app)
 			exit <- app.Create(ctx, c)
 			return
 		}
 
-		for _, tr := range trList {
+		for _, tr := range tList {
 			if tr.App == nil {
 				continue
 			}
@@ -228,7 +228,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 					exit <- fmt.Errorf("%s '%s': container '%s' not found", app.TypeMeta().Kind, app.ObjectMeta().Name, rule.Container)
 					return
 				}
-				app.SetLastBuiltAnnotation()
+				apps.SetLastBuiltAnnotation(app)
 				devContainer.Image = imageTag
 			}
 
@@ -276,19 +276,19 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, okt
 	return buildTag, nil
 }
 
-func getImageFromApp(trList map[string]*apps.Translation) (string, error) {
+func getImageFromApp(tList map[string]*apps.Translation) (string, error) {
 	imageFromApp := ""
-	for _, tr := range trList {
-		if tr.App == nil {
+	for _, t := range tList {
+		if t.App == nil {
 			continue
 		}
-		if tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] != "" && len(trList) > 1 {
+		if t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] != "" && len(tList) > 1 {
 			continue
 		}
-		for _, rule := range tr.Rules {
-			devContainer := apps.GetDevContainer(tr.App.PodSpec(), rule.Container)
+		for _, rule := range t.Rules {
+			devContainer := apps.GetDevContainer(t.App.PodSpec(), rule.Container)
 			if devContainer == nil {
-				return "", fmt.Errorf("%s '%s': container '%s' not found", tr.App.TypeMeta().Kind, tr.App.ObjectMeta().Name, rule.Container)
+				return "", fmt.Errorf("%s '%s': container '%s' not found", t.App.TypeMeta().Kind, t.App.ObjectMeta().Name, rule.Container)
 			}
 			if imageFromApp == "" {
 				imageFromApp = devContainer.Image

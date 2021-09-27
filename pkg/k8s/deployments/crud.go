@@ -18,10 +18,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -165,11 +163,6 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) e
 	return nil
 }
 
-//SetLastBuiltAnnotation sets the deployment timestacmp
-func SetLastBuiltAnnotation(d *appsv1.Deployment) {
-	annotations.Set(d.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))
-}
-
 //IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
 	return labels.Get(d.GetObjectMeta(), model.DevLabel) != ""
@@ -181,20 +174,6 @@ func RestoreDevModeFrom(d, old *appsv1.Deployment) {
 	d.Spec.Replicas = old.Spec.Replicas
 	d.Annotations = old.Annotations
 	d.Spec.Template.Annotations = old.Spec.Template.Annotations
-}
-
-//HasBeenChanged returns if a deployment has been updated since the development container was activated
-func HasBeenChanged(d *appsv1.Deployment) bool {
-	oktetoRevision := d.Annotations[model.OktetoRevisionAnnotation]
-	if oktetoRevision == "" {
-		return false
-	}
-	return oktetoRevision != d.Annotations[model.DeploymentRevisionAnnotation]
-}
-
-//DestroyDev destroys the k8s deployment of a dev environment
-func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return Destroy(ctx, dev.Name, dev.Namespace, c)
 }
 
 //Destroy destroys a k8s deployment

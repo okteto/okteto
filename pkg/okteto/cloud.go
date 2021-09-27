@@ -20,8 +20,8 @@ const (
 	// GlobalRegistry fake url for okteto global registry
 	GlobalRegistry = "okteto.global"
 
-	// GlobalNamespace namespace where okteto app is running
-	GlobalNamespace = "okteto"
+	// DefaultGlobalNamespace namespace where okteto app is running
+	DefaultGlobalNamespace = "okteto"
 
 	// CloudURL is the default URL of okteto
 	CloudURL = "https://cloud.okteto.com"

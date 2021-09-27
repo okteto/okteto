@@ -50,6 +50,41 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 	return &StatefulSetApp{sfs: sfs}, nil
 }
 
+//IsDevModeOn returns if a statefulset is in devmode
+func IsDevModeOn(app App) bool {
+	return app.ObjectMeta().Labels[model.DevLabel] == "true"
+}
+
+func (t *Translation) DevModeOff() {
+	t.App.DevModeOff(t)
+	delete(t.App.ObjectMeta().Annotations, oktetoVersionAnnotation)
+	delete(t.App.ObjectMeta().Annotations, model.OktetoRevisionAnnotation)
+	deleteUserAnnotations(t.App.ObjectMeta().Annotations, t)
+
+	delete(t.App.TemplateObjectMeta().Annotations, model.TranslationAnnotation)
+	delete(t.App.TemplateObjectMeta().Annotations, model.OktetoRestartAnnotation)
+
+	delete(t.App.ObjectMeta().Labels, model.DevLabel)
+
+	delete(t.App.TemplateObjectMeta().Labels, model.InteractiveDevLabel)
+	delete(t.App.TemplateObjectMeta().Labels, model.DetachedDevLabel)
+
+}
+
+//HasBeenChanged returns if an app has been updated since the development container was activated
+func HasBeenChanged(app App) bool {
+	oktetoRevision := app.ObjectMeta().Annotations[model.OktetoRevisionAnnotation]
+	if oktetoRevision == "" {
+		return false
+	}
+	return oktetoRevision != app.GetRevision()
+}
+
+//SetLastBuiltAnnotation sets the app timestamp
+func SetLastBuiltAnnotation(app App) {
+	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(model.TimeFormat)
+}
+
 //GetDeploymentSandbox returns a base deployment when using "autocreate"
 func GetDeploymentSandbox(dev *model.Dev) *appsv1.Deployment {
 	image := dev.Image.Name
@@ -163,7 +198,7 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 
 		if err == nil {
 			if !isOktetoNamespace {
-				app.SetOktetoRevision()
+				app.ObjectMeta().Annotations[model.OktetoRevisionAnnotation] = app.GetRevision()
 				if err := app.Update(ctx, c); err != nil {
 					return nil, err
 				}
@@ -215,6 +250,17 @@ func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c
 
 	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {
 		return nil, err
+	}
+
+	for _, rule := range t.Rules {
+		devContainer := GetDevContainer(t.App.PodSpec(), rule.Container)
+		if devContainer == nil {
+			return nil, fmt.Errorf("%s '%s': container '%s' not found", t.App.TypeMeta().Kind, t.App.ObjectMeta().Name, rule.Container)
+		}
+		rule.Container = devContainer.Name
+		if rule.Image == "" {
+			rule.Image = devContainer.Image
+		}
 	}
 
 	return result, nil

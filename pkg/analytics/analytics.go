@@ -128,11 +128,8 @@ func TrackPreviewDestroy(success bool) {
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func TrackReconnect(success, swap bool) {
-	props := map[string]interface{}{
-		"swap": swap,
-	}
-	track(reconnectEvent, success, props)
+func TrackReconnect(success bool) {
+	track(reconnectEvent, success, nil)
 }
 
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
@@ -154,23 +151,19 @@ func TrackResetDatabase(success bool) {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, devName string, interactive, single, swap, divert bool) {
+func TrackUp(success bool, devName string, interactive, single, divert bool) {
 	props := map[string]interface{}{
 		"name":          devName,
 		"interactive":   interactive,
 		"singleService": single,
-		"swap":          swap,
 		"divert":        divert,
 	}
 	track(upEvent, success, props)
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
-func TrackUpError(success, swap bool) {
-	props := map[string]interface{}{
-		"swap": swap,
-	}
-	track(upErrorEvent, success, props)
+func TrackUpError(success bool) {
+	track(upErrorEvent, success, nil)
 }
 
 // TrackDurationActivateUp sends a tracking event to mixpanel of the time that has elapsed in the execution of up
@@ -344,7 +337,7 @@ func getFlagPath() string {
 }
 
 // Disable disables analytics
-func Disable(version string) error {
+func Disable() error {
 	var _, err = os.Stat(getFlagPath())
 	trackDisable(true)
 	if os.IsNotExist(err) {
@@ -360,7 +353,7 @@ func Disable(version string) error {
 }
 
 // Enable enables analytics
-func Enable(version string) error {
+func Enable() error {
 	var _, err = os.Stat(getFlagPath())
 	if os.IsNotExist(err) {
 		return nil

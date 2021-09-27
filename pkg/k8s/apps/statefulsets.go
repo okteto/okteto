@@ -83,10 +83,6 @@ func (i *StatefulSetApp) NewTranslation(dev *model.Dev) *Translation {
 	}
 }
 
-func (i *StatefulSetApp) IsDevModeOn() bool {
-	return statefulsets.IsDevModeOn(i.sfs)
-}
-
 func (i *StatefulSetApp) DevModeOn() {
 	i.sfs.Spec.Replicas = pointer.Int32Ptr(1)
 	i.sfs.Spec.UpdateStrategy = appsv1.StatefulSetUpdateStrategy{
@@ -97,26 +93,14 @@ func (i *StatefulSetApp) DevModeOn() {
 func (i *StatefulSetApp) DevModeOff(t *Translation) {
 	i.sfs.Spec.Replicas = pointer.Int32Ptr(t.Replicas)
 	i.sfs.Spec.UpdateStrategy = t.StatefulsetStrategy
-
-	delete(i.sfs.Annotations, oktetoVersionAnnotation)
-	delete(i.sfs.Annotations, model.OktetoRevisionAnnotation)
-	deleteUserAnnotations(i.sfs.Annotations, t)
-
-	delete(i.sfs.Spec.Template.Annotations, model.TranslationAnnotation)
-	delete(i.sfs.Spec.Template.Annotations, model.OktetoRestartAnnotation)
-
-	delete(i.sfs.Labels, model.DevLabel)
-
-	delete(i.sfs.Spec.Template.Labels, model.InteractiveDevLabel)
-	delete(i.sfs.Spec.Template.Labels, model.DetachedDevLabel)
 }
 
 func (i *StatefulSetApp) CheckConditionErrors(dev *model.Dev) error {
 	return statefulsets.CheckConditionErrors(i.sfs, dev)
 }
 
-func (i *StatefulSetApp) SetOktetoRevision() {
-	i.sfs.Annotations[model.OktetoRevisionAnnotation] = i.sfs.Status.UpdateRevision
+func (i *StatefulSetApp) GetRevision() string {
+	return i.sfs.Status.UpdateRevision
 }
 
 func (i *StatefulSetApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
@@ -194,24 +178,12 @@ func (i *StatefulSetApp) RestoreOriginal() error {
 	return nil
 }
 
-func (i *StatefulSetApp) HasBeenChanged() bool {
-	return statefulsets.HasBeenChanged(i.sfs)
-}
-
-func (i *StatefulSetApp) SetLastBuiltAnnotation() {
-	statefulsets.SetLastBuiltAnnotation(i.sfs)
-}
-
 func (i *StatefulSetApp) Refresh(ctx context.Context, c kubernetes.Interface) error {
 	sfs, err := statefulsets.Get(ctx, i.sfs.Name, i.sfs.Namespace, c)
 	if err == nil {
 		i.sfs = sfs
 	}
 	return err
-}
-
-func (i *StatefulSetApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
-	return statefulsets.Deploy(ctx, i.sfs, c)
 }
 
 func (i *StatefulSetApp) Create(ctx context.Context, c kubernetes.Interface) error {
@@ -222,14 +194,14 @@ func (i *StatefulSetApp) Create(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
-func (i *StatefulSetApp) DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return statefulsets.DestroyDev(ctx, dev, c)
-}
-
 func (i *StatefulSetApp) Update(ctx context.Context, c kubernetes.Interface) error {
 	sfs, err := statefulsets.Update(ctx, i.sfs, c)
 	if err == nil {
 		i.sfs = sfs
 	}
 	return err
+}
+
+func (_ *StatefulSetApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+	return statefulsets.Destroy(ctx, dev.Name, dev.Namespace, c)
 }
