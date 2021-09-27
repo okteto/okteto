@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -369,6 +370,10 @@ func validateStackName(name string) error {
 //UpdateNamespace updates the dev namespace
 func (s *Stack) UpdateNamespace(namespace string) error {
 	if namespace == "" {
+		envNamespace := os.Getenv("OKTETO_NAMESPACE")
+		if envNamespace != "" && s.Namespace != envNamespace {
+			return fmt.Errorf("the namespace in the okteto stack manifest '%s' does not match the environment variable OKTETO_NAMESPACE '%s'", s.Namespace, namespace)
+		}
 		return nil
 	}
 	if s.Namespace != "" && s.Namespace != namespace {
