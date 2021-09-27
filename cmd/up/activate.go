@@ -72,6 +72,7 @@ func (up *upContext) activate(build bool) error {
 	}
 
 	if apps.IsDevModeOn(app) && apps.HasBeenChanged(app) {
+		analytics.TrackManifestHasChanged(true)
 		return errors.UserError{
 			E: fmt.Errorf("%s '%s' has been modified while your development container was active", app.TypeMeta().Kind, app.ObjectMeta().Name),
 			Hint: `Follow these steps:
