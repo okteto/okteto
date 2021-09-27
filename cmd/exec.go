@@ -91,7 +91,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
 
-	client, cfg, err := k8Client.GetLocalWithContext(dev.Context)
+	client, cfg, err := k8Client.GetLocal()
 	if err != nil {
 		return err
 	}

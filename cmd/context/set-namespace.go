@@ -14,14 +14,7 @@
 package context
 
 import (
-	"context"
-	"fmt"
-
 	"github.com/okteto/okteto/cmd/utils"
-	okContext "github.com/okteto/okteto/pkg/cmd/context"
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -30,34 +23,33 @@ func SetNamespace() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-namespace",
 		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
-		Short: "Set namespace of current okteto context",
+		Short: "Set the namespace of current okteto context",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-			namespace := args[0]
-			if okteto.IsOktetoCluster() {
-				hasAccess, err := utils.HasAccessToNamespace(ctx, namespace)
-				if err != nil {
-					return err
-				}
-				if !hasAccess {
-					return fmt.Errorf(okContext.ErrNamespaceNotFound, namespace)
-				}
-			}
-			clusterName := okteto.GetCurrentContext()
-			kubeConfigFile := config.GetContextKubeconfigPath()
-			config, err := okteto.GetKubeConfig(kubeConfigFile)
-			if err != nil {
-				return err
-			}
+			// ctx := context.Background()
+			// namespace := args[0]
+			// oktetoContext := okteto.GetCurrentContext()
+			// if oktetoContext.IsOktetoCluster() {
+			// 	hasAccess, err := utils.HasAccessToNamespace(ctx, namespace)
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			// 	if !hasAccess {
+			// 		return fmt.Errorf(errors.ErrNamespaceNotFound, namespace)
+			// 	}
+			// }
+			// kubeconfigFile := config.GetKubeconfigFile()
+			// cfg, err := okteto.GetKubeconfig(kubeconfigFile)
+			// if err != nil {
+			// 	return err
+			// }
 
-			context := config.Contexts[clusterName]
-			context.Namespace = namespace
+			// cfg.CurrentNamespace = namespace
+			// //TODO: save kubeconfig
 
-			err = okteto.SetContextFromConfigFields(kubeConfigFile, clusterName, nil, nil, context, nil)
-			if err != nil {
-				return err
-			}
-			log.Success("Context '%s' namespace has been updated to '%s'", clusterName, namespace)
+			// oktetoContext.Namespace = namespace
+			// //TODO: save okteto context
+
+			// log.Success("Context '%s' namespace has been updated to '%s'", oktetoContext.Name, namespace)
 			return nil
 		},
 	}

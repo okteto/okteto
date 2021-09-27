@@ -201,7 +201,7 @@ func TestLoginActionPipeline(t *testing.T) {
 	}
 	ctx := context.Background()
 	var remove bool
-	if _, err := os.Stat(config.GetOktetoConfigPath()); err != nil {
+	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
 		remove = true
 	}
 	if err := executeLoginAction(ctx); err != nil {
@@ -209,7 +209,7 @@ func TestLoginActionPipeline(t *testing.T) {
 	}
 
 	if remove {
-		if err := os.RemoveAll(config.GetOktetoConfigPath()); err != nil {
+		if err := os.RemoveAll(config.GetOktetoContextFolder()); err != nil {
 			t.Fatalf("Removing failed: %s", err.Error())
 		}
 	}

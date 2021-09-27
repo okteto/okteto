@@ -18,115 +18,135 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 )
 
-type ClusterType string
-
-var (
-	CloudCluster      ClusterType = "OktetoCloud"
-	EnterpriseCluster ClusterType = "OktetoEnterprise"
-	VanillaCluster    ClusterType = "Vanilla"
-)
-
 type ContextConfig struct {
-	Contexts       map[string]Context `json:"Contexts"`
-	CurrentContext string             `json:"CurrentContext"`
+	Contexts       map[string]Context `json:"contexts"`
+	CurrentContext string             `json:"current-context"`
 }
 
-// Token contains the auth token and the URL it belongs to
+// Context contains the information related to an okteto context
 type Context struct {
-	URL      string `json:"URL"`
-	Name     string `json:"Name"`
-	ApiToken string `json:"Token"`
+	Name       string `json:"name,omitempty"`
+	ID         string `json:"id,omitempty"`
+	Username   string `json:"username,omitempty"`
+	Token      string `json:"token,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	Kubeconfig string `json:"kubeconfig,omitempty"`
+	Buildkit   string `json:"buildkit,omitempty"`
+	Registry   string `json:"registry,omitempty"`
 }
 
-func GetOktetoContextConfig() (*ContextConfig, error) {
-	p := config.GetContextConfigPath()
+//ContextExists checks if an okteto context has been created
+func ContextExists() bool {
+	if _, err := os.Stat(config.GetOktetoContextFolder()); !os.IsNotExist(err) {
+		return true
+	}
+	return false
+}
+
+// GetClusterContext returns the k8s context names given an okteto URL
+func GetClusterContext() string {
+	return UrlToContext(GetURL())
+}
+
+func UrlToContext(uri string) string {
+	u, _ := url.Parse(uri)
+	return strings.ReplaceAll(u.Host, ".", "_")
+}
+
+func IsOktetoCluster(name string) bool {
+	u, err := url.Parse(name)
+	return err == nil && u.Scheme != "" && u.Host != ""
+}
+
+func GetContextConfig() (*ContextConfig, error) {
+	p := config.GetOktetoContextsConfigPath()
 	b, err := ioutil.ReadFile(p)
 	if err != nil {
-		p := config.GetKubeConfigFile()
-		b, err = ioutil.ReadFile(p)
-		if err != nil {
-			return nil, err
-		}
+		return nil, errors.ErrNoActiveOktetoContexts
 	}
 
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields() // Force errors
 
-	currentContext := &ContextConfig{}
-	if err := dec.Decode(&currentContext); err != nil {
+	ctxConfig := &ContextConfig{}
+	if err := dec.Decode(&ctxConfig); err != nil {
 		return nil, err
 	}
 
-	return currentContext, nil
-}
-
-func SaveContext(url, name, token string) error {
-	cc, err := GetOktetoContextConfig()
-	if err != nil {
-		log.Infof("bad token, re-initializing: %s", err)
-		cc = &ContextConfig{
-			Contexts: make(map[string]Context),
-		}
-	}
-
-	cc.Contexts[name] = Context{
-		URL:      url,
-		Name:     name,
-		ApiToken: token,
-	}
-
-	cc.CurrentContext = name
-
-	return saveContextInFile(cc)
-}
-
-func saveContextInFile(c *ContextConfig) error {
-	marshalled, err := json.MarshalIndent(c, "", "\t")
-	if err != nil {
-		log.Infof("failed to marshal context: %s", err)
-		return fmt.Errorf("failed to generate your context")
-	}
-
-	contextPath := config.GetOktetoConfigPath()
-	if err := os.MkdirAll(contextPath, 0700); err != nil {
-		log.Fatalf("failed to create %s: %s", contextPath, err)
-	}
-
-	contextConfigPath := config.GetContextConfigPath()
-	if _, err := os.Stat(contextConfigPath); err == nil {
-		err = os.Chmod(contextConfigPath, 0600)
-		if err != nil {
-			return fmt.Errorf("couldn't change token permissions: %s", err)
-		}
-	}
-
-	if err := ioutil.WriteFile(contextConfigPath, marshalled, 0600); err != nil {
-		return fmt.Errorf("couldn't save authentication token: %s", err)
-	}
-
-	currentToken = nil
-	return nil
+	return ctxConfig, nil
 }
 
 func GetCurrentContext() string {
-	c, err := GetOktetoContextConfig()
+	c, err := GetContextConfig()
 	if err != nil {
 		return ""
 	}
 	return c.CurrentContext
 }
 
-func IsOktetoCluster() bool {
-	cc, err := GetOktetoContextConfig()
-	if err != nil {
-		return false
+func SetCurrentContext(name, userID, username, token, namespace, kubeconfig, buildkitURL, registryURL string) error {
+	var err error
+	var cc *ContextConfig
+	if ContextExists() {
+		cc, err = GetContextConfig()
+		if err != nil {
+			log.Infof("bad contexts, re-initializing: %s", err)
+		}
+	} else {
+		cc = &ContextConfig{
+			Contexts: make(map[string]Context),
+		}
 	}
-	context := cc.Contexts[cc.CurrentContext]
-	return context.URL != ""
+
+	cc.Contexts[name] = Context{
+		Name:       name,
+		ID:         userID,
+		Username:   username,
+		Token:      token,
+		Namespace:  namespace,
+		Kubeconfig: kubeconfig,
+		Buildkit:   buildkitURL,
+		Registry:   registryURL,
+	}
+
+	cc.CurrentContext = name
+
+	return saveContextConfigInFile(cc)
+}
+
+func saveContextConfigInFile(c *ContextConfig) error {
+	marshalled, err := json.MarshalIndent(c, "", "\t")
+	if err != nil {
+		log.Infof("failed to marshal context: %s", err)
+		return fmt.Errorf("failed to generate your context")
+	}
+
+	contextFolder := config.GetOktetoContextFolder()
+	if err := os.MkdirAll(contextFolder, 0700); err != nil {
+		log.Fatalf("failed to create %s: %s", contextFolder, err)
+	}
+
+	contextConfigPath := config.GetOktetoContextsConfigPath()
+	if _, err := os.Stat(contextConfigPath); err == nil {
+		err = os.Chmod(contextConfigPath, 0600)
+		if err != nil {
+			return fmt.Errorf("couldn't change context permissions: %s", err)
+		}
+	}
+
+	if err := ioutil.WriteFile(contextConfigPath, marshalled, 0600); err != nil {
+		return fmt.Errorf("couldn't save context: %s", err)
+	}
+
+	currentToken = nil
+	return nil
 }

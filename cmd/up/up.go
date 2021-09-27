@@ -115,7 +115,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			log.ConfigureFileLogger(config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
+			log.ConfigureFileLogger(config.GetAppHome(dev.Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
@@ -219,9 +219,9 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 
 func (up *upContext) start(autoDeploy, build bool) error {
 	var err error
-	up.Client, up.RestConfig, err = k8sClient.GetLocalWithContext(up.Dev.Context)
+	up.Client, up.RestConfig, err = k8sClient.GetLocal()
 	if err != nil {
-		kubecfg := config.GetContextKubeconfigPath()
+		kubecfg := config.GetOktetoContextKubeconfigPath()
 		log.Infof("failed to load okteto Kubeconfig: %s", err)
 		if up.Dev.Context == "" {
 			return fmt.Errorf("failed to load your okteto Kubeconfig %q", kubecfg)

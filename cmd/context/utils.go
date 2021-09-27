@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okContext "github.com/okteto/okteto/pkg/cmd/context"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -32,48 +31,18 @@ type SelectItem struct {
 	Enable bool
 }
 
-func getCluster(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
-	cluster, err := selectCluster()
-	if err != nil {
-		return "", err
-	}
-
-	if isOptionAnOktetoCluster(cluster) {
-
-		cluster = getOktetoClusterUrl(ctx, cluster)
-
-		if cluster == okteto.CloudURL || cluster == okteto.StagingURL {
-			ctxOptions.clusterType = okteto.CloudCluster
-		} else {
-			ctxOptions.clusterType = okteto.EnterpriseCluster
-		}
-		err := authenticateToOktetoCluster(ctx, cluster, ctxOptions.Token)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		ctxOptions.clusterType = okteto.VanillaCluster
-
-		err := okContext.CopyK8sClusterConfigToOktetoContext(cluster)
-		if err != nil {
-			return "", err
-		}
-	}
-	return cluster, nil
-}
-
-func saveOktetoContext(ctx context.Context, cluster string, ctxOptions *ContextOptions) error {
-	if ctxOptions.clusterType == okteto.CloudCluster || ctxOptions.clusterType == okteto.EnterpriseCluster {
-		err := okContext.SaveOktetoContext(ctx, ctxOptions.Namespace)
-		if err != nil {
-			return err
-		}
-	} else {
-		err := okContext.SaveK8sContext(ctx, cluster, ctxOptions.Namespace)
-		if err != nil {
-			return err
-		}
-	}
+func saveOktetoContext(ctx context.Context) error {
+	// if ctxOptions.clusterType == okteto.CloudContext || ctxOptions.clusterType == okteto.EnterpriseContext {
+	// 	err := okContext.SaveOktetoContext(ctx, ctxOptions.Namespace)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// } else {
+	// 	err := okContext.SaveK8sContext(ctx, cluster, ctxOptions.Namespace)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 
@@ -116,31 +85,26 @@ func authenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) e
 		log.Success("Logged in as %s @ %s", user.ExternalID, oktetoURL)
 	}
 
-	analytics.TrackLogin(true, user.Name, user.Email, user.ID, user.ExternalID)
 	return nil
 }
 
-func getClusterList() []string {
+func getKubernetesContextList() []string {
 	contextList := make([]string, 0)
-	kubeConfigFile := config.GetKubeConfigFile()
-	config, err := okteto.GetKubeConfig(kubeConfigFile)
+	kubeConfigFile := config.GetKubeconfigPath()
+	config, err := okteto.GetKubeconfig(kubeConfigFile)
 	if err != nil {
 		return contextList
 	}
 	for name := range config.Clusters {
+		if _, ok := config.Clusters[name].Extensions["okteto"]; ok {
+			continue
+		}
 		contextList = append(contextList, name)
 	}
 	return contextList
 }
 
-func selectCluster() (string, error) {
-	clusters := []string{"Okteto Cloud", "Okteto Enterprise"}
-	k8sClusters := getClusterList()
-	clusters = append(clusters, k8sClusters...)
-	return utils.AskForOptions(clusters, "Select the cluster you want to point to:")
-}
-
-func isOptionAnOktetoCluster(option string) bool {
+func isOktetoCluster(option string) bool {
 	return option == "Okteto Cloud" || option == "Okteto Enterprise"
 }
 
@@ -149,20 +113,16 @@ func getOktetoClusterUrl(ctx context.Context, option string) string {
 		return okteto.CloudURL
 	}
 
-	return AskForLoginURL(ctx)
+	return askForLoginURL(ctx)
 }
 
-func isURL(okContext string) bool {
-	u, err := url.Parse(okContext)
-	return err == nil && u.Scheme != "" && u.Host != ""
-}
-
-func AskForLoginURL(_ context.Context) string {
+func askForLoginURL(_ context.Context) string {
+	//TODO: migrate from token to context at the beginning of the main command!
 	clusterURL := okteto.GetURL()
 	if clusterURL == "" || clusterURL == "na" {
 		clusterURL = okteto.CloudURL
 	}
-	fmt.Printf("What is the URL of your Okteto instance? [%s]: ", clusterURL)
+	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", clusterURL)
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)
@@ -176,7 +136,7 @@ func AskForLoginURL(_ context.Context) string {
 }
 
 func isValidCluster(cluster string) bool {
-	for _, c := range getClusterList() {
+	for _, c := range getKubernetesContextList() {
 		if cluster == c {
 			return true
 		}

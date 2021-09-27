@@ -18,6 +18,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/config"
 )
 
 func Test_save(t *testing.T) {
@@ -114,7 +116,7 @@ func TestSaveMachineID(t *testing.T) {
 				}
 			}
 
-			t.Logf("saved token at %s", getTokenPath())
+			t.Logf("saved token at %s", config.GetTokenPath())
 
 			if err := SaveMachineID(tt.machineID); err != nil {
 				t.Fatal(err)
@@ -179,7 +181,7 @@ func TestSaveUserID(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			t.Logf("saved token at %s", getTokenPath())
+			t.Logf("saved token at %s", config.GetTokenPath())
 
 			token, err := GetToken()
 			if err != nil {

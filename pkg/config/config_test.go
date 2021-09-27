@@ -131,7 +131,7 @@ func TestGetOktetoHome(t *testing.T) {
 	}
 }
 
-func TestGetDeploymentHome(t *testing.T) {
+func TestGetAppHome(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +140,7 @@ func TestGetDeploymentHome(t *testing.T) {
 
 	os.Setenv("OKTETO_FOLDER", dir)
 
-	got := GetDeploymentHome("ns", "dp")
+	got := GetAppHome("ns", "dp")
 	expected := filepath.Join(dir, "ns", "dp")
 	if got != expected {
 		t.Errorf("expected %s, got %s", expected, got)

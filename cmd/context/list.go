@@ -28,9 +28,9 @@ func List() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
-		Short:   "Lists all the context managed by okteto",
+		Short:   "Lists okteto contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cc, err := okteto.GetOktetoContextConfig()
+			cc, err := okteto.GetContextConfig()
 			if err != nil {
 				return err
 			}

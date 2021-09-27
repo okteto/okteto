@@ -31,10 +31,6 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 )
 
-const (
-	tokenFile = ".token.json"
-)
-
 var reg = regexp.MustCompile("[^A-Za-z0-9]+")
 
 // Token contains the auth token and the URL it belongs to
@@ -173,7 +169,7 @@ func authUser(ctx context.Context, client *graphql.Client, code string) (*u, err
 //GetToken returns the token of the authenticated user
 func GetToken() (*Token, error) {
 	if currentToken == nil {
-		p := getTokenPath()
+		p := config.GetTokenPath()
 
 		b, err := ioutil.ReadFile(p)
 		if err != nil {
@@ -300,18 +296,6 @@ func saveToken(id, username, token, url, registry, buildkit string) error {
 	return save(t)
 }
 
-// SaveMachineID updates the token file with the machineID value
-func SaveMachineID(machineID string) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("bad token, re-initializing: %s", err)
-		t = &Token{}
-	}
-
-	t.MachineID = machineID
-	return save(t)
-}
-
 // SaveID updates the token file with the userID value
 func SaveID(userID string) error {
 	t, err := GetToken()
@@ -328,10 +312,10 @@ func save(t *Token) error {
 	marshalled, err := json.Marshal(t)
 	if err != nil {
 		log.Infof("failed to marshal token: %s", err)
-		return fmt.Errorf("Failed to generate your auth token")
+		return fmt.Errorf("failed to generate your auth token")
 	}
 
-	p := getTokenPath()
+	p := config.GetTokenPath()
 
 	if _, err := os.Stat(p); err == nil {
 		err = os.Chmod(p, 0600)
@@ -346,8 +330,4 @@ func save(t *Token) error {
 
 	currentToken = nil
 	return nil
-}
-
-func getTokenPath() string {
-	return filepath.Join(config.GetOktetoHome(), tokenFile)
 }

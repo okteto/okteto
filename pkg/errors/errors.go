@@ -43,13 +43,13 @@ func (u CommandError) Error() string {
 
 var (
 	// ErrCommandFailed is raised when the command execution failed
-	ErrCommandFailed = errors.New("Command execution failed")
+	ErrCommandFailed = errors.New("command execution failed")
 
 	// ErrNotLogged is raised when we can't get the user token
-	ErrNotLogged = fmt.Errorf("Okteto context isn't configured. Please run 'okteto context' and try again")
+	ErrNotLogged = fmt.Errorf("okteto context isn't configured. Please run 'okteto context' and try again")
 
 	// ErrNotOktetoCluster is raised when we a command is only available on an okteto cluster
-	ErrNotOktetoCluster = fmt.Errorf("User is not logged on okteto cluster. Please run 'okteto context' and try again")
+	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context' and try again")
 
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
@@ -58,7 +58,7 @@ var (
 	ErrInternalServerError = fmt.Errorf("internal server error, please try again")
 
 	// ErrQuota is returned when there aren't enough resources to enable dev mode
-	ErrQuota = fmt.Errorf("Quota exceeded, please free some resources and try again")
+	ErrQuota = fmt.Errorf("quota exceeded, please free some resources and try again")
 
 	// ErrSSHConnectError is returned when okteto cannot connect to ssh
 	ErrSSHConnectError = fmt.Errorf("ssh start error")
@@ -82,7 +82,7 @@ var (
 	ErrLostSyncthing = fmt.Errorf("synchronization service is disconnected")
 
 	// ErrNotInDevMode is raised when the deployment is not in dev mode
-	ErrNotInDevMode = fmt.Errorf("Deployment is not in development mode anymore")
+	ErrNotInDevMode = fmt.Errorf("deployment is not in development mode anymore")
 
 	// ErrDevPodDeleted raised if dev pod is deleted in the middle of the "okteto up" sequence
 	ErrDevPodDeleted = fmt.Errorf("development container has been removed")
@@ -92,6 +92,18 @@ var (
 
 	//ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
 	ErrContextIsNotOktetoCluster = fmt.Errorf("okteto context is not managed by okteto")
+
+	//ErrTokenFlagNeeded is raised when the command is executed from inside a pod
+	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
+
+	//ErrInvalidContext is raised when the Kubernetes context selected is not defined on your kubeconfig or is not an okteto cluster
+	ErrInvalidContext = "'%s' isn't a valid Kubernetes context"
+
+	//ErrNamespaceNotFound is raised when the namespace is not found on an okteto instance
+	ErrNamespaceNotFound = "namespace '%s' not found. Please verify that the namespace exists and that you have access to it"
+
+	//ErrNoActiveOktetoContexts returned if listing okteto contexts and there aren't okteto contexts defined yet
+	ErrNoActiveOktetoContexts = fmt.Errorf("there are no okteto contexts")
 )
 
 // IsNotFound returns true if err is of the type not found

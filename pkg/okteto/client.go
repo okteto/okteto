@@ -23,6 +23,7 @@ import (
 	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -130,18 +131,46 @@ func translateAPIErr(err error) error {
 
 }
 
-//SetKubeConfig updates a kubeconfig file with okteto cluster credentials
-func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string, setCurrent bool) error {
-	cfg, err := getOrCreateKubeConfig(kubeConfigPath)
-	if err != nil {
-		return err
+// InDevContainer returns true if running in an okteto dev container
+func InDevContainer() bool {
+	if v, ok := os.LookupEnv("OKTETO_NAME"); ok && v != "" {
+		return true
 	}
+
+	return false
+}
+
+func GetKubeconfig(kubeConfigPath string) (*clientcmdapi.Config, error) {
+	var cfg *clientcmdapi.Config
+	_, err := os.Stat(kubeConfigPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("kubeconfig not found")
+		}
+		return nil, err
+	} else {
+		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cfg, nil
+}
+
+//SetKubeconfig updates the current context of a kubeconfig file
+func SetKubeconfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
+	cfg := client.GetOrCreateKubeconfig(kubeConfigPath)
 
 	// create cluster
 	cluster, ok := cfg.Clusters[clusterName]
 	if !ok {
 		cluster = clientcmdapi.NewCluster()
 	}
+	if cluster.Extensions == nil {
+		cluster.Extensions = map[string]runtime.Object{}
+	}
+	//TODO: only if this is an okteto context
+	cluster.Extensions["okteto"] = nil
 
 	cluster.CertificateAuthorityData = []byte(cred.Certificate)
 	cluster.Server = cred.Server
@@ -166,80 +195,14 @@ func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	context.Namespace = namespace
 	cfg.Contexts[clusterName] = context
 
-	if setCurrent {
-		cfg.CurrentContext = clusterName
-	}
+	cfg.CurrentContext = clusterName
 
 	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }
 
-// InDevContainer returns true if running in an okteto dev container
-func InDevContainer() bool {
-	if v, ok := os.LookupEnv("OKTETO_NAME"); ok && v != "" {
-		return true
-	}
-
-	return false
-}
-
-func getOrCreateKubeConfig(kubeConfigPath string) (*clientcmdapi.Config, error) {
-	var cfg *clientcmdapi.Config
-	_, err := os.Stat(kubeConfigPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			cfg = clientcmdapi.NewConfig()
-		} else {
-			return nil, err
-		}
-	} else {
-		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return cfg, nil
-}
-
-func GetKubeConfig(kubeConfigPath string) (*clientcmdapi.Config, error) {
-	var cfg *clientcmdapi.Config
-	_, err := os.Stat(kubeConfigPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("kubeconfig not found")
-		}
-		return nil, err
-	} else {
-		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return cfg, nil
-}
-
-func SetContextFromConfigFields(path, clusterName string, authInfo *clientcmdapi.AuthInfo, cluster *clientcmdapi.Cluster, context *clientcmdapi.Context, extension runtime.Object) error {
-	cfg, err := getOrCreateKubeConfig(config.GetKubeConfigFile())
-	if err != nil {
-		return err
-	}
-
-	if cluster != nil {
-		cfg.Clusters[clusterName] = cluster
-	}
-
-	if authInfo != nil {
-		cfg.AuthInfos[clusterName] = authInfo
-	}
-
-	if context != nil {
-		cfg.Contexts[clusterName] = context
-	}
-
-	if extension != nil {
-		cfg.Extensions[clusterName] = extension
-	}
-
-	cfg.CurrentContext = clusterName
-
-	return clientcmd.WriteToFile(*cfg, path)
+//SaveOktetoContextKubeconfig stores a kubeconfig copy in the okteto context folder
+func SaveOktetoContextKubeconfig(cfg *clientcmdapi.Config) error {
+	oktetoContextKubeconfigFile := config.GetOktetoContextKubeconfigPath()
+	//TODO: clean what is not used!
+	return clientcmd.WriteToFile(*cfg, oktetoContextKubeconfigFile)
 }

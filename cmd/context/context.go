@@ -22,18 +22,16 @@ import (
 	"github.com/okteto/okteto/cmd/kubeconfig"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	okContext "github.com/okteto/okteto/pkg/cmd/context"
+	contextCmd "github.com/okteto/okteto/pkg/cmd/context"
 	"github.com/okteto/okteto/pkg/errors"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
 type ContextOptions struct {
-	Token       string
-	Namespace   string
-	clusterType okteto.ClusterType
+	Token     string
+	Namespace string
 }
 
 // Context points okteto to a cluster.
@@ -46,31 +44,35 @@ func Context() *cobra.Command {
 		Short:   "Manage your okteto context",
 		Long: `Manage your okteto context
 
-Run
-    $ okteto context
+	A context is a group of access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
+	The current context is the cluster that is currently the default for the Okteto CLI. All "okteto" commands run against that cluster.
 
-and this command this will ask you for the name of your kubernetes context.
-If an okteto cluster is selected it will open your browser to ask your authentication details and retrieve your API token. You can script it by using the --token parameter.
+	If you want to log into an Okteto Enterprise instance, specify a URL. For example, run
 
-By default, this will ask you for the kubernetes context you want to operate.
+		$ okteto context https://cloud.okteto.com
 
-If you want to log into your Okteto Enterprise instance, specify a URL. For example, run
+	to configure your context to acces Okteto Cloud.
 
-    $ okteto context https://okteto.example.com
+	Your browser will ask for your authentication to retrieve your API token.
 
-to log in to a Okteto Enterprise instance running at okteto.example.com and point okteto to it.
+	If you need to automate authentication or if you don't want to use browser-based authentication, use the "--token" parameter:
 
-If you want to log into your own cluster instance, specify a kubernetes context. For example, run
+		$ okteto context https://cloud.okteto.com --token ${OKTETO_TOKEN}
 
-    $ okteto context my_cluster
+	You can also specify the name of a Kubernetes context with:
 
-to point okteto to 'mycluster'.
+	    $ okteto context kubernetes_context_name
+
+	Or show a list of available options with:
+
+		$ okteto context
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if ctxOptions.Token == "" && k8Client.InCluster() {
-				return okContext.ErrTokenFlagNeeded
-			}
+			//TODO: fix this
+			// if ctxOptions.Token == "" && k8Client.InCluster() {
+			// 	return errors.ErrTokenFlagNeeded
+			// }
 
 			apiToken := os.Getenv("OKTETO_TOKEN")
 			if ctxOptions.Token == "" {
@@ -78,28 +80,28 @@ to point okteto to 'mycluster'.
 			}
 
 			var err error
+			oktetoContext := os.Getenv("OKTETO_URL")
 			if len(args) == 0 {
-				oktetoURL := os.Getenv("OKTETO_URL")
-				if oktetoURL != "" {
-					log.Infof("authenticating with context arg")
-					err = runContextWithArgs(ctx, args[0], ctxOptions)
+				if oktetoContext != "" {
+					log.Infof("authenticating with OKTETO_URL")
 				} else {
-					log.Infof("authenticating without context")
-					err = runInteractiveContext(ctx, ctxOptions)
+					log.Infof("authenticating with interactive context")
+					oktetoContext, err = getContext(ctx, ctxOptions)
+					if err != nil {
+						return err
+					}
 				}
 			} else {
-				log.Infof("authenticating with context arg")
-				err = runContextWithArgs(ctx, args[0], ctxOptions)
+				log.Infof("authenticating with context argument")
+				oktetoContext = args[0]
 			}
 
+			err = runContext(ctx, oktetoContext, ctxOptions)
+			analytics.TrackContext(err == nil)
 			if err != nil {
-				analytics.TrackContext(false, string(ctxOptions.clusterType))
-				analytics.TrackLogin(false, "", "", "", "")
 				return err
 			}
 
-			analytics.TrackContext(true, string(ctxOptions.clusterType))
-			log.Success("Your context have been updated")
 			kubeconfig.RunKubeconfig(ctx)
 			return nil
 		},
@@ -108,50 +110,48 @@ to point okteto to 'mycluster'.
 	cmd.AddCommand(SetNamespace())
 	cmd.AddCommand(List())
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication.")
-	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "Namespace to point to")
+	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	return cmd
 }
 
-func runInteractiveContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOptions) error {
 
-	cluster, err := getCluster(ctx, ctxOptions)
-	if err != nil {
-		return err
-	}
-
-	err = saveOktetoContext(ctx, cluster, ctxOptions)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func runContextWithArgs(ctx context.Context, cluster string, ctxOptions *ContextOptions) error {
-
-	if isURL(cluster) {
-		if cluster == okteto.CloudURL || cluster == okteto.StagingURL {
-			ctxOptions.clusterType = okteto.CloudCluster
-		} else {
-			ctxOptions.clusterType = okteto.EnterpriseCluster
-		}
-		err := authenticateToOktetoCluster(ctx, cluster, ctxOptions.Token)
+	if okteto.IsOktetoCluster(oktetoContext) {
+		err := authenticateToOktetoCluster(ctx, oktetoContext, ctxOptions.Token)
 		if err != nil {
 			return err
 		}
 	} else {
-		ctxOptions.clusterType = okteto.VanillaCluster
-		if !isValidCluster(cluster) {
+		if !isValidCluster(oktetoContext) {
 			return errors.UserError{
-				E:    fmt.Errorf(okContext.ErrInvalidCluster, cluster),
-				Hint: fmt.Sprintf("Select one from ['%s']", strings.Join(getClusterList(), "', '")),
+				E:    fmt.Errorf(errors.ErrInvalidContext, oktetoContext),
+				Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(), "\n      ")),
 			}
 		}
-		err := okContext.CopyK8sClusterConfigToOktetoContext(cluster)
+		err := contextCmd.CopyK8sClusterConfigToOktetoContext(oktetoContext)
 		if err != nil {
 			return err
 		}
 	}
 
-	return saveOktetoContext(ctx, cluster, ctxOptions)
+	//TODO: save namespace flag
+	return saveOktetoContext(ctx)
 
+}
+
+func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
+	clusters := []string{"Okteto Cloud", "Okteto Enterprise"}
+	k8sClusters := getKubernetesContextList()
+	clusters = append(clusters, k8sClusters...)
+	oktetoContext, err := utils.AskForOptions(clusters, "Select the context you want to activate:")
+
+	if err != nil {
+		return "", err
+	}
+
+	if isOktetoCluster(oktetoContext) {
+		oktetoContext = getOktetoClusterUrl(ctx, oktetoContext)
+	}
+
+	return oktetoContext, nil
 }

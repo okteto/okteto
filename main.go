@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/cmd"
-	configCMD "github.com/okteto/okteto/cmd/config"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -29,13 +28,14 @@ import (
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	// Load the different library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
@@ -55,13 +55,23 @@ func init() {
 		},
 	}
 
-	runtime.ErrorHandlers = errorHandlers
+	utilRuntime.ErrorHandlers = errorHandlers
 
 	if bin := os.Getenv("OKTETO_BIN"); bin != "" {
 		model.OktetoBinImageTag = bin
 		log.Infof("using %s as the bin image", bin)
 	}
+
+	if err := analytics.Init(); err != nil {
+		log.Infof("error initializing okteto analytics: %s", err)
+	}
+
 	utils.SetOktetoUsernameEnv()
+
+	// if err := utils.InitOktetoContext(); err != nil {
+	// 	log.Fatalf("error initializing okteto context: %s", err)
+	// }
+
 }
 
 func main() {
@@ -89,7 +99,6 @@ func main() {
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
 	root.AddCommand(contextCMD.Context())
-	root.AddCommand(configCMD.Config(ctx))
 	root.AddCommand(cmd.Build(ctx))
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.List(ctx))

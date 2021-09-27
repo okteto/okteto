@@ -37,7 +37,7 @@ var (
 
 // SetDevDefaultsFromDeployment sets dev defaults from a running deployment
 func SetDevDefaultsFromResource(ctx context.Context, dev *model.Dev, r *model.K8sObject, container, language string) error {
-	c, config, err := k8Client.GetLocalWithContext(dev.Context)
+	c, config, err := k8Client.GetLocal()
 	if err != nil {
 		return err
 	}

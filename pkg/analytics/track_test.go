@@ -56,21 +56,19 @@ func Test_getTrackID(t *testing.T) {
 
 			os.Setenv("OKTETO_HOME", dir)
 
-			if len(tt.machineID) > 0 {
-				if err := okteto.SaveMachineID(tt.machineID); err != nil {
-					t.Fatal(err)
-				}
+			a := get()
+			a.MachineID = tt.machineID
+			if err := a.save(); err != nil {
+				t.Fatal(err)
 			}
 
-			if len(tt.userID) > 0 {
-				if err := okteto.SaveID(tt.userID); err != nil {
-					t.Fatal(err)
-				}
+			if err := okteto.SetCurrentContext("test", tt.userID, "", "", "", "", "", ""); err != nil {
+				t.Fatal(err)
 			}
 
 			trackID := getTrackID()
 			if trackID == "" || trackID == "na" {
-				t.Fatalf("failed to get trackID: %s", trackID)
+				t.Fatalf("%s: failed to get trackID: %s", tt.name, trackID)
 			}
 
 			expected := ""
@@ -80,7 +78,7 @@ func Test_getTrackID(t *testing.T) {
 			case len(tt.machineID) > 0:
 				expected = tt.machineID
 			default:
-				expected = getMachineID()
+				expected = get().MachineID
 			}
 
 			if trackID != expected {

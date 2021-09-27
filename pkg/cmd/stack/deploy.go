@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -47,7 +48,7 @@ import (
 // Deploy deploys a stack
 func Deploy(ctx context.Context, s *model.Stack, forceBuild, wait, noCache bool, timeout time.Duration) error {
 	if s.Namespace == "" {
-		s.Namespace = client.GetContextNamespace("")
+		s.Namespace = client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
 	}
 
 	c, config, err := client.GetLocal()

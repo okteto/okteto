@@ -68,7 +68,7 @@ func Restart() *cobra.Command {
 
 func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	log.Infof("restarting services")
-	client, _, err := k8Client.GetLocalWithContext(dev.Context)
+	client, _, err := k8Client.GetLocal()
 	if err != nil {
 		return err
 	}

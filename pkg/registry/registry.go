@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -103,7 +104,7 @@ func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string
 	}
 
 	if namespace == "" {
-		namespace = client.GetContextNamespace("")
+		namespace = client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
 	}
 
 	n, err := namespaces.Get(ctx, namespace, c)

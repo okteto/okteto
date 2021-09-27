@@ -105,7 +105,7 @@ func loadNamespace(dev *model.Dev, namespace string) {
 		dev.Namespace = namespace
 	}
 	if dev.Namespace == "" {
-		dev.Namespace = client.GetContextNamespace(dev.Context)
+		dev.Namespace = client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
 	}
 }
 
@@ -252,12 +252,7 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 		return nil
 	}
 
-	var currentContext string
-	if client.IsContextDefined() {
-		currentContext = client.GetSessionContext("", config.GetContextKubeconfigPath())
-	} else {
-		currentContext = client.GetSessionContext("", "")
-	}
+	currentContext := client.GetCurrentContext(config.GetOktetoContextKubeconfigPath())
 
 	if okteto.GetClusterContext() == currentContext {
 		secrets, err := okteto.GetSecrets(ctx)

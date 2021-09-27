@@ -19,9 +19,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +26,7 @@ import (
 func Kubeconfig(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kubeconfig",
-		Short: "Downloads the k8s credentials of the current okteto context",
+		Short: "Update your kubeconfig file with the credentials of the current okteto context",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -38,7 +35,7 @@ func Kubeconfig(ctx context.Context) *cobra.Command {
 			}
 
 			err := RunKubeconfig(ctx)
-			analytics.TrackNamespace(err == nil)
+			analytics.TrackKubeconfig(err == nil)
 			return err
 		},
 	}
@@ -47,19 +44,19 @@ func Kubeconfig(ctx context.Context) *cobra.Command {
 
 // RunKubeconfig starts the kubeconfig sequence
 func RunKubeconfig(_ context.Context) error {
-	oktetoKubeConfigFile := config.GetContextKubeconfigPath()
-	oktetoKubeConfig, err := okteto.GetKubeConfig(oktetoKubeConfigFile)
-	if err != nil {
-		return err
-	}
 
-	ctxToCopy := oktetoKubeConfig.CurrentContext
+	// oktetoKubeConfig, err := getClientConfig.GetKubeconfig(config.GetKubeconfigFile())
+	// if err != nil {
+	// 	return err
+	// }
 
-	userKubeConfigFile := config.GetKubeConfigFile()
-	err = okteto.SetContextFromConfigFields(userKubeConfigFile, ctxToCopy, oktetoKubeConfig.AuthInfos[ctxToCopy], oktetoKubeConfig.Clusters[ctxToCopy], oktetoKubeConfig.Contexts[ctxToCopy], oktetoKubeConfig.Extensions[ctxToCopy])
-	if err != nil {
-		return err
-	}
-	log.Success("Updated context '%s'", ctxToCopy)
+	// ctxToCopy := oktetoKubeConfig.CurrentContext
+
+	// userKubeConfigFile := config.GetKubeConfigFile()
+	// err = okteto.SetContextFromConfigFields(userKubeConfigFile, ctxToCopy, oktetoKubeConfig.AuthInfos[ctxToCopy], oktetoKubeConfig.Clusters[ctxToCopy], oktetoKubeConfig.Contexts[ctxToCopy], oktetoKubeConfig.Extensions[ctxToCopy])
+	// if err != nil {
+	// 	return err
+	// }
+	// log.Success("Updated context '%s' in '%s'", ctxToCopy, userKubeConfigFile)
 	return nil
 }

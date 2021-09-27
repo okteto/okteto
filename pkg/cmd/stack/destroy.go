@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -43,7 +44,7 @@ import (
 // Destroy destroys a stack
 func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout time.Duration) error {
 	if s.Namespace == "" {
-		s.Namespace = client.GetContextNamespace("")
+		s.Namespace = client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
 	}
 
 	c, _, err := client.GetLocal()

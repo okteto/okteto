@@ -19,11 +19,9 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	okContext "github.com/okteto/okteto/pkg/cmd/context"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -92,19 +90,14 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		return err
 	}
 	if !hasAccess {
-		return fmt.Errorf(okContext.ErrNamespaceNotFound, namespace)
+		return fmt.Errorf(errors.ErrNamespaceNotFound, namespace)
 	}
 
-	var kubeConfigPath string
-	if client.IsContextDefined() {
-		kubeConfigPath = config.GetContextKubeconfigPath()
-	} else {
-		kubeConfigPath = config.GetKubeConfigFile()
-	}
+	kubeConfigPath := config.GetOktetoContextKubeconfigPath()
 
 	clusterContext := okteto.GetClusterContext()
 
-	if err := okteto.SetKubeConfig(cred, kubeConfigPath, namespace, okteto.GetUserID(), clusterContext, true); err != nil {
+	if err := okteto.SetKubeconfig(cred, kubeConfigPath, namespace, okteto.GetUserID(), clusterContext); err != nil {
 		return err
 	}
 
@@ -124,7 +117,7 @@ func askIfLogin() bool {
 func askOktetoURL() (string, error) {
 	var oktetoURL string
 
-	fmt.Print(fmt.Sprintf("What is the URL of your Okteto instance? [%s]: ", okteto.CloudURL))
+	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", okteto.CloudURL)
 	if _, err := fmt.Scanln(&oktetoURL); err != nil {
 		oktetoURL = okteto.CloudURL
 	}
