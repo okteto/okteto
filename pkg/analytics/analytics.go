@@ -37,6 +37,7 @@ const (
 
 	upEvent                  = "Up"
 	upErrorEvent             = "Up Error"
+	manifestHasChangedEvent  = "Manifest Has Changed"
 	durationActivateUpEvent  = "Up Duration Time"
 	reconnectEvent           = "Reconnect"
 	durationInitialSyncEvent = "Initial Sync Duration Time"
@@ -164,6 +165,11 @@ func TrackUp(success bool, devName string, interactive, single, divert bool) {
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
 func TrackUpError(success bool) {
 	track(upErrorEvent, success, nil)
+}
+
+// TrackManifestHasChanged sends a tracking event to mixpanel when the okteto up command fails because manifest has changed
+func TrackManifestHasChanged(success bool) {
+	track(manifestHasChangedEvent, success, nil)
 }
 
 // TrackDurationActivateUp sends a tracking event to mixpanel of the time that has elapsed in the execution of up
