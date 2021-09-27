@@ -363,7 +363,7 @@ func TestAll(t *testing.T) {
 
 	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[model.DeploymentRevisionAnnotation])
 
-	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true); err != nil {
+	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -499,7 +499,7 @@ func TestAllStatefulset(t *testing.T) {
 
 	log.Printf("statefulset: %s", d.Name)
 
-	if err := down(ctx, namespace, name, manifestPath, oktetoPath, false); err != nil {
+	if err := down(ctx, namespace, name, manifestPath, oktetoPath, false, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -518,7 +518,7 @@ func TestAllStatefulset(t *testing.T) {
 }
 
 func TestDivert(t *testing.T) {
-	tName := fmt.Sprintf("Test-")
+	tName := fmt.Sprintf("Test")
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
 	if err != nil {
@@ -564,7 +564,7 @@ func TestDivert(t *testing.T) {
 
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
-	_, err = up(ctx, &wg, namespace, fmt.Sprintf("%s-health-checker", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, upErrorChannel)
+	p, err := up(ctx, &wg, namespace, fmt.Sprintf("%s-health-checker", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, upErrorChannel)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -586,6 +586,19 @@ func TestDivert(t *testing.T) {
 
 	if originalContent == divertedContent {
 		t.Fatal("Contents are the same")
+	}
+
+	if err := down(ctx, namespace, fmt.Sprintf("%s-health-checker", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, false, true); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
+		t.Error(err)
+	}
+
+	_, err = getDeployment(ctx, namespace, fmt.Sprintf("%s-health-checker", user))
+	if err == nil {
+		t.Fatalf("'dev' deployment not deleted after 'okteto stack destroy'")
 	}
 
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
@@ -923,7 +936,7 @@ func destroyPod(ctx context.Context, name, namespace string) error {
 	return nil
 }
 
-func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string, isDeployment bool) error {
+func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string, isDeployment, skipComprobation bool) error {
 	downCMD := exec.Command(oktetoPath, "down", "-n", namespace, "-f", manifestPath, "-v")
 	downCMD.Env = os.Environ()
 	o, err := downCMD.CombinedOutput()
@@ -935,15 +948,17 @@ func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string,
 		return fmt.Errorf("okteto down failed: %s", err)
 	}
 
-	if isDeployment {
-		log.Println("waiting for the deployment to be restored")
-		if err := waitForDeployment(ctx, namespace, name, 3, 120); err != nil {
-			return err
-		}
-	} else {
-		log.Println("waiting for the statefulset to be restored")
-		if err := waitForStatefulset(ctx, namespace, name, 120); err != nil {
-			return err
+	if !skipComprobation {
+		if isDeployment {
+			log.Println("waiting for the deployment to be restored")
+			if err := waitForDeployment(ctx, namespace, name, 3, 120); err != nil {
+				return err
+			}
+		} else {
+			log.Println("waiting for the statefulset to be restored")
+			if err := waitForStatefulset(ctx, namespace, name, 120); err != nil {
+				return err
+			}
 		}
 	}
 
