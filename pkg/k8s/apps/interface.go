@@ -26,7 +26,6 @@ import (
 type App interface {
 	TypeMeta() metav1.TypeMeta
 	ObjectMeta() metav1.ObjectMeta
-	DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error
 	Replicas() int32
 	TemplateObjectMeta() metav1.ObjectMeta
 	PodSpec() *apiv1.PodSpec
@@ -46,6 +45,7 @@ type App interface {
 	Create(ctx context.Context, c kubernetes.Interface) error
 	Update(ctx context.Context, c kubernetes.Interface) error
 	Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error
+	DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error
 }
 
 // Translation represents the information for translating a deployment
