@@ -221,7 +221,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 			svc.Build.Dockerfile = ""
 		} else {
 			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
-			svc.Build.Dockerfile = loadAbsPath(stackDir, svc.Build.Dockerfile)
+			svc.Build.Dockerfile = loadAbsPath(svc.Build.Context, svc.Build.Dockerfile)
 		}
 	}
 	return s, nil

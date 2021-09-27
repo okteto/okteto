@@ -19,14 +19,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/client"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -100,9 +98,9 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 		return err
 	}
 
-	checkForDeployment := false
+	checkForRunningApp := false
 	if language == "" {
-		checkForDeployment = true
+		checkForRunningApp = true
 	}
 
 	language, err = GetLanguage(language, workDir)
@@ -117,29 +115,29 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 
 	dev.Context = k8sContext
 
-	if checkForDeployment {
-		r, container, err := getResource(ctx, namespace, k8sContext)
+	if checkForRunningApp {
+		app, container, err := getRunningApp(ctx, namespace, k8sContext)
 		if err != nil {
 			return err
 		}
-		if r == nil {
+		if app == nil {
 			dev.Autocreate = true
 			linguist.SetForwardDefaults(dev, language)
 		} else {
 			dev.Container = container
 			if container == "" {
-				container = r.PodTemplateSpec.Spec.Containers[0].Name
+				container = app.PodSpec().Containers[0].Name
 			}
 
-			suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(string(r.ObjectType)), r.Name)
+			suffix := fmt.Sprintf("Analyzing %s '%s'...", app.TypeMeta().Kind, app.ObjectMeta().Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
-			err = initCMD.SetDevDefaultsFromResource(ctx, dev, r, container, language)
+			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(string(r.ObjectType)), r.Name))
+				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.TypeMeta().Kind, app.ObjectMeta().Name))
 			} else {
-				log.Yellow(fmt.Sprintf("Analysis for %s '%s' failed: %s", strings.ToLower(string(r.ObjectType)), r.Name, err))
+				log.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.TypeMeta().Kind, app.ObjectMeta().Name, err))
 				linguist.SetForwardDefaults(dev, language)
 			}
 		}
@@ -179,8 +177,8 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	return nil
 }
 
-func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sObject, string, error) {
-	c, _, err := k8Client.GetLocalWithContext(k8sContext)
+func getRunningApp(ctx context.Context, namespace, k8sContext string) (apps.App, string, error) {
+	c, _, err := client.GetLocalWithContext(k8sContext)
 	if err != nil {
 		log.Yellow("Failed to load your local Kubeconfig: %s", err)
 		return nil, "", nil
@@ -189,31 +187,31 @@ func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sO
 		namespace = client.GetContextNamespace(k8sContext)
 	}
 
-	r, err := askForResource(ctx, namespace, c)
+	app, err := askForRunningApp(ctx, namespace, c)
 	if err != nil {
 		return nil, "", err
 	}
-	if r == nil {
+	if app == nil {
 		return nil, "", nil
 	}
 
-	if apps.IsDevModeOn(r) {
-		return nil, "", fmt.Errorf("the %s '%s' is in development mode", strings.ToLower(string(r.ObjectType)), r.Name)
+	if apps.IsDevModeOn(app) {
+		return nil, "", fmt.Errorf("%s '%s' is in development mode", app.TypeMeta().Kind, app.ObjectMeta().Name)
 	}
 
 	container := ""
-	if len(r.PodTemplateSpec.Spec.Containers) > 1 {
-		container, err = askForContainer(r)
+	if len(app.PodSpec().Containers) > 1 {
+		container, err = askForContainer(app)
 		if err != nil {
 			return nil, "", err
 		}
 	}
 
-	return r, container, nil
+	return app, container, nil
 }
 
 func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
-	c, _, err := k8Client.GetLocalWithContext(k8sContext)
+	c, _, err := client.GetLocalWithContext(k8sContext)
 	if err != nil {
 		log.Infof("couldn't get kubernetes local client: %s", err.Error())
 		return false
@@ -287,7 +285,7 @@ func askForLanguage() (string, error) {
 	)
 }
 
-func askForResource(ctx context.Context, namespace string, c *kubernetes.Clientset) (*model.K8sObject, error) {
+func askForRunningApp(ctx context.Context, namespace string, c kubernetes.Interface) (apps.App, error) {
 	dList, err := deployments.List(ctx, namespace, "", c)
 	if err != nil {
 		log.Yellow("Failed to list deployments: %s", err)
@@ -316,33 +314,28 @@ func askForResource(ctx context.Context, namespace string, c *kubernetes.Clients
 	if option == defaultInitValues {
 		return nil, nil
 	}
-	k8sObject := &model.K8sObject{}
 	for i := range dList {
 		if dList[i].Name == option {
-			k8sObject.ObjectType = model.DeploymentObjectType
-			k8sObject.UpdateDeployment(&dList[i])
-			return k8sObject, nil
+			return apps.NewDeploymentApp(&dList[i]), nil
 		}
 	}
 	for i := range sfsList {
 		if sfsList[i].Name == option {
-			k8sObject.ObjectType = model.StatefulsetObjectType
-			k8sObject.UpdateStatefulset(&sfsList[i])
-			return k8sObject, nil
+			return apps.NewStatefulSetApp(&sfsList[i]), nil
 		}
 	}
 
 	return nil, nil
 }
 
-func askForContainer(k8sObject *model.K8sObject) (string, error) {
+func askForContainer(app apps.App) (string, error) {
 	options := []string{}
-	for i := range k8sObject.PodTemplateSpec.Spec.Containers {
-		options = append(options, k8sObject.PodTemplateSpec.Spec.Containers[i].Name)
+	for _, c := range app.PodSpec().Containers {
+		options = append(options, c.Name)
 	}
 	return askForOptions(
 		options,
-		fmt.Sprintf("The %s '%s' has %d containers. Select the container you want to replace with your development container:", strings.ToLower(string(k8sObject.ObjectType)), k8sObject.Name, len(k8sObject.PodTemplateSpec.Spec.Containers)),
+		fmt.Sprintf("%s '%s' has %d containers. Select the container you want to replace with your development container:", app.TypeMeta().Kind, app.ObjectMeta().Name, len(app.PodSpec().Containers)),
 	)
 }
 

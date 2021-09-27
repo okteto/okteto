@@ -27,7 +27,7 @@ import (
 
 // Deploy deploys a stack
 func Deploy(ctx context.Context) *cobra.Command {
-	options := stack.StackDeployOptions{}
+	options := &stack.StackDeployOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",

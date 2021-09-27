@@ -204,6 +204,7 @@ func waitUntilRunning(ctx context.Context, name string, a *okteto.Action, namesp
 		err := waitToBeDeployed(ctx, name, a, namespace, timeout)
 		if err != nil {
 			exit <- err
+			return
 		}
 
 		exit <- waitForResourcesToBeRunning(ctx, name, namespace, timeout)

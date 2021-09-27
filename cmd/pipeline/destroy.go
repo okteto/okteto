@@ -118,8 +118,10 @@ func destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes
 			if errors.IsNotFound(err) {
 				log.Infof("pipeline '%s' not found", name)
 				exit <- nil
+				return
 			}
 			exit <- fmt.Errorf("failed to destroy pipeline '%s': %w", name, err)
+			return
 		}
 		exit <- nil
 	}()

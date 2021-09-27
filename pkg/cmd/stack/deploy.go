@@ -56,11 +56,7 @@ type StackDeployOptions struct {
 }
 
 // Deploy deploys a stack
-func Deploy(ctx context.Context, s *model.Stack, options StackDeployOptions) error {
-	if err := validateServicesToDeploy(s, options.ServicesToDeploy); err != nil {
-		return err
-	}
-
+func Deploy(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
 	if s.Namespace == "" {
 		s.Namespace = client.GetContextNamespace("")
 	}
@@ -68,6 +64,10 @@ func Deploy(ctx context.Context, s *model.Stack, options StackDeployOptions) err
 	c, config, err := client.GetLocal()
 	if err != nil {
 		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+	}
+
+	if err := validateServicesToDeploy(ctx, s, options, c); err != nil {
+		return err
 	}
 
 	if err := translate(ctx, s, options); err != nil {
@@ -100,7 +100,7 @@ func Deploy(ctx context.Context, s *model.Stack, options StackDeployOptions) err
 	return err
 }
 
-func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config *rest.Config, options StackDeployOptions) error {
+func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config *rest.Config, options *StackDeployOptions) error {
 	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
@@ -119,6 +119,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 				svcK8s := translateService(name, s)
 				if err := services.Deploy(ctx, svcK8s, c); err != nil {
 					exit <- err
+					return
 				}
 			}
 		}
@@ -126,6 +127,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 		for name := range s.Volumes {
 			if err := deployVolume(ctx, name, s, c); err != nil {
 				exit <- err
+				return
 			}
 			spinner.Stop()
 			log.Success("Created volume '%s'", name)
@@ -134,15 +136,18 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 
 		if err := deployServices(ctx, s, c, config, spinner, options); err != nil {
 			exit <- err
+			return
 		}
 
 		iClient, err := ingresses.GetClient(ctx, c)
 		if err != nil {
 			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
+			return
 		}
 		for name := range s.Endpoints {
 			if err := deployIngress(ctx, name, s, iClient); err != nil {
 				exit <- err
+				return
 			}
 			spinner.Stop()
 			log.Success("Created endpoint '%s'", name)
@@ -151,10 +156,12 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 
 		if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 			exit <- err
+			return
 		}
 
 		if !options.Wait {
 			exit <- nil
+			return
 		}
 
 		spinner.Update("Waiting for services to be ready...")
@@ -175,7 +182,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 	return nil
 }
 
-func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernetes.Clientset, config *rest.Config, spinner *utils.Spinner, options StackDeployOptions) error {
+func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernetes.Clientset, config *rest.Config, spinner *utils.Spinner, options *StackDeployOptions) error {
 	deployedSvcs := make(map[string]bool)
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(options.Timeout)
@@ -387,14 +394,17 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		if deployments.IsDevModeOn(old) {
 			deployments.RestoreDevModeFrom(d, old)
 		}
+		if v, ok := old.Labels[model.DeployedByLabel]; ok {
+			d.Labels[model.DeployedByLabel] = v
+		}
 	}
 
 	if isNewDeployment {
-		if err := deployments.Create(ctx, d, c); err != nil {
+		if _, err := deployments.Create(ctx, d, c); err != nil {
 			return fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
 		}
 	} else {
-		if err := deployments.Update(ctx, d, c); err != nil {
+		if _, err := deployments.Update(ctx, d, c); err != nil {
 			return fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
 		}
 	}
@@ -409,7 +419,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 		return fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
 	}
 	if old == nil || old.Name == "" {
-		if err := statefulsets.Create(ctx, sfs, c); err != nil {
+		if _, err := statefulsets.Create(ctx, sfs, c); err != nil {
 			return fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
 		}
 	} else {
@@ -419,17 +429,20 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 		if old.Labels[model.StackNameLabel] != s.Name {
 			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
+		if statefulsets.IsDevModeOn(old) {
+			statefulsets.RestoreDevModeFrom(sfs, old)
+		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			sfs.Labels[model.DeployedByLabel] = v
 		}
-		if err := statefulsets.Update(ctx, sfs, c); err != nil {
+		if _, err := statefulsets.Update(ctx, sfs, c); err != nil {
 			if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
 			if err := statefulsets.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
-			if err := statefulsets.Create(ctx, sfs, c); err != nil {
+			if _, err := statefulsets.Create(ctx, sfs, c); err != nil {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
 		}
@@ -591,7 +604,7 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack, options StackDeployOptions) {
+func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack, options *StackDeployOptions) {
 	for _, svcName := range options.ServicesToDeploy {
 		svc := s.Services[svcName]
 		addHiddenExposedPortsToSvc(ctx, svc, s.Namespace)
@@ -610,14 +623,11 @@ func addHiddenExposedPortsToSvc(ctx context.Context, svc *model.Service, namespa
 	}
 }
 
-func validateServicesToDeploy(s *model.Stack, servicesToDeploy []string) error {
-	if err := validateDefinedServices(s, servicesToDeploy); err != nil {
+func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) error {
+	if err := validateDefinedServices(s, options.ServicesToDeploy); err != nil {
 		return err
 	}
-
-	if err := validateDependentServiceDeployed(s, servicesToDeploy); err != nil {
-		return err
-	}
+	addDependentServicesIfNotPresent(ctx, s, options, c)
 	return nil
 }
 
@@ -634,15 +644,19 @@ func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	return nil
 }
 
-func validateDependentServiceDeployed(s *model.Stack, servicesToDeploy []string) error {
-	for _, svcToDeploy := range servicesToDeploy {
-		for name := range s.Services[svcToDeploy].DependsOn {
-			if !isSvcToBeDeployed(servicesToDeploy, name) {
-				return fmt.Errorf("service '%s' depends on '%s' to be deployed but its not deployed", svcToDeploy, name)
+func addDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) {
+	added := make([]string, 0)
+	for _, svcToDeploy := range options.ServicesToDeploy {
+		for dependentSvc := range s.Services[svcToDeploy].DependsOn {
+			if !isSvcToBeDeployed(options.ServicesToDeploy, dependentSvc) && !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
+				options.ServicesToDeploy = append(options.ServicesToDeploy, dependentSvc)
+				added = append(added, dependentSvc)
 			}
 		}
 	}
-	return nil
+	if len(added) > 0 {
+		log.Warning("The following services need to be deployed because the services passed as arguments depend on them: [%s]", strings.Join(added, ", "))
+	}
 }
 
 func isSvcToBeDeployed(servicesToDeploy []string, svcName string) bool {

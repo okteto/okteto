@@ -28,7 +28,7 @@ import (
 )
 
 // Run runs the "okteto status" sequence
-func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64, error) {
+func Run(ctx context.Context, sy *syncthing.Syncthing) (float64, error) {
 	progressLocal, err := getCompletionProgress(ctx, sy, true)
 	if err != nil {
 		log.Infof("error accessing local syncthing status: %s", err)
@@ -90,13 +90,16 @@ func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) er
 			status, err := config.GetState(dev)
 			if err != nil {
 				exit <- err
+				return
 			}
 			if status == config.Failed {
 				exit <- fmt.Errorf("your development container has failed")
+				return
 			}
 			for _, okStatus := range okStatusList {
 				if status == okStatus {
 					exit <- nil
+					return
 				}
 			}
 			<-ticker.C
