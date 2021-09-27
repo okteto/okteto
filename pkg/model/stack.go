@@ -371,7 +371,7 @@ func validateStackName(name string) error {
 func (s *Stack) UpdateNamespace(namespace string) error {
 	if namespace == "" {
 		envNamespace := os.Getenv("OKTETO_NAMESPACE")
-		if envNamespace != "" && s.Namespace != envNamespace {
+		if s.Namespace != "" && s.Namespace != envNamespace {
 			return fmt.Errorf("the namespace in the okteto stack manifest '%s' does not match the environment variable OKTETO_NAMESPACE '%s'", s.Namespace, namespace)
 		}
 		return nil
