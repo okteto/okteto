@@ -115,7 +115,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			log.ConfigureFileLogger(config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
+			log.ConfigureFileLogger(config.GetAppHome(dev.Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
@@ -146,7 +146,7 @@ func Up() *cobra.Command {
 				log.Infof("Terminal: %v", up.stateTerm)
 			}
 
-			err = up.start(autoDeploy, build)
+			err = up.start(build)
 			return err
 		},
 	}
@@ -217,7 +217,7 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 	return nil
 }
 
-func (up *upContext) start(autoDeploy, build bool) error {
+func (up *upContext) start(build bool) error {
 	var err error
 	up.Client, up.RestConfig, err = k8sClient.GetLocalWithContext(up.Dev.Context)
 	if err != nil {
@@ -257,9 +257,9 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.Divert != nil)
+	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.Dev.Divert != nil)
 
-	go up.activateLoop(autoDeploy, build)
+	go up.activateLoop(build)
 
 	select {
 	case <-stop:
@@ -276,7 +276,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 }
 
 // activateLoop activates the development container in a retry loop
-func (up *upContext) activateLoop(autoDeploy, build bool) {
+func (up *upContext) activateLoop(build bool) {
 	isTransientError := false
 	t := time.NewTicker(1 * time.Second)
 	iter := 0
@@ -298,7 +298,7 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 			}
 		}
 
-		err := up.activate(autoDeploy, build)
+		err := up.activate(build)
 		if err != nil {
 			log.Infof("activate failed with: %s", err)
 
@@ -321,39 +321,35 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 	}
 }
 
-func (up *upContext) getCurrentK8sObject(ctx context.Context, autoDeploy bool) (*model.K8sObject, bool, error) {
-	k8sObject, err := apps.GetResource(ctx, up.Dev, up.Dev.Namespace, up.Client)
+func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
+	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
+	if errors.IsNotFound(err) && up.Dev.Autocreate {
+		return apps.NewDeploymentApp(apps.GetDeploymentSandbox(up.Dev)), true, nil
+	}
 	if err == nil {
-		if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) != model.OktetoUpCmd {
-			up.isSwap = true
-		}
-		return k8sObject, false, nil
+		return app, false, nil
 	}
 
 	if !errors.IsNotFound(err) || up.isRetry {
-		return nil, false, fmt.Errorf("couldn't get %s %s/%s, please try again: %s", strings.ToLower(string(k8sObject.ObjectType)), up.Dev.Namespace, up.Dev.Name, err)
+		return nil, false, err
 	}
 
 	if len(up.Dev.Labels) > 0 {
 		if err == errors.ErrNotFound {
 			err = errors.UserError{
-				E:    fmt.Errorf("Didn't find a deployment in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
-				Hint: "Update your labels or use 'okteto namespace' to select a different namespace and try again"}
+				E:    fmt.Errorf("Didn't find an application in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
+				Hint: "Update the labels or point your context to a different namespace and try again"}
 		}
 		return nil, false, err
 	}
 
-	if !up.Dev.Autocreate {
-		err = errors.UserError{
-			E: fmt.Errorf("Deployment '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
-			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
-    Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-    More information is available here: https://okteto.com/docs/reference/cli/#up`,
-		}
-		return nil, false, err
+	err = errors.UserError{
+		E: fmt.Errorf("Application '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
+		Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
+More information is available here: https://okteto.com/docs/reference/cli/#up`,
 	}
-	k8sObject.GetSandbox()
-	return k8sObject, true, nil
+	return nil, false, err
 }
 
 // waitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
@@ -385,7 +381,7 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
+func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
 		return errors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
@@ -402,12 +398,12 @@ func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObje
 		}
 	}
 
-	if oktetoRegistryURL == "" && create && up.Dev.Image.Name == "" {
+	if oktetoRegistryURL == "" && up.Dev.Autocreate && up.Dev.Image.Name == "" {
 		return fmt.Errorf("no value for 'Image' has been provided in your okteto manifest")
 	}
 
 	if up.Dev.Image.Name == "" {
-		devContainer := apps.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
+		devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
 		if devContainer == nil {
 			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 		}
@@ -438,8 +434,8 @@ func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObje
 	return nil
 }
 
-func (up *upContext) setDevContainer(k8sObject *model.K8sObject) error {
-	devContainer := apps.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
+func (up *upContext) setDevContainer(app apps.App) error {
+	devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
 	if devContainer == nil {
 		return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 	}
@@ -499,7 +495,7 @@ func (up *upContext) shutdown() {
 
 	log.Infof("starting shutdown sequence")
 	if !up.success {
-		analytics.TrackUpError(true, up.isSwap)
+		analytics.TrackUpError(true)
 	}
 
 	if up.Cancel != nil {

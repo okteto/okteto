@@ -31,8 +31,11 @@ const (
 	// DetachedDevLabel indicates the detached dev pods
 	DetachedDevLabel = "detached.dev.okteto.com"
 
-	// RevisionAnnotation indicates the revision when the development container was activated
-	RevisionAnnotation = "dev.okteto.com/revision"
+	// DeploymentRevisionAnnotation indicates the revision when the development container was activated
+	DeploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
+
+	// OktetoRevisionAnnotation indicates the revision when the development container was activated
+	OktetoRevisionAnnotation = "dev.okteto.com/revision"
 
 	// DeploymentAnnotation indicates the original deployment manifest  when the development container was activated
 	DeploymentAnnotation = "dev.okteto.com/deployment"
@@ -90,6 +93,11 @@ const (
 
 	// StackVolumeNameLabel indicates the name of the stack volume an object belongs to
 	StackVolumeNameLabel = "stack.okteto.com/volume"
+
+	//Deployment k8s deployemnt kind
+	Deployment = "Deployment"
+	//StatefulSet k8s statefulset kind
+	StatefulSet = "StatefulSet"
 
 	//Localhost localhost
 	Localhost                   = "localhost"

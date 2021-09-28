@@ -14,7 +14,6 @@
 package doctor
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -78,7 +77,7 @@ func Test_generateManifestFile(t *testing.T) {
 				t.Fatal("Failed to write to temporary file", err)
 			}
 
-			_, err = generateManifestFile(context.TODO(), file.Name())
+			_, err = generateManifestFile(file.Name())
 			if err != nil {
 				t.Fatal(err)
 			}

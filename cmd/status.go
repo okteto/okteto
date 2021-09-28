@@ -116,6 +116,7 @@ func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 			}
 			spinner.Update(message)
 			exit <- nil
+			return
 		}
 	}()
 

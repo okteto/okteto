@@ -18,12 +18,10 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -50,7 +48,7 @@ func Deploy(ctx context.Context, s *appsv1.StatefulSet, c kubernetes.Interface) 
 		old.Annotations = s.Annotations
 		old.Labels = s.Labels
 		old.Spec = s.Spec
-		if err := Update(ctx, old, c); err != nil {
+		if _, err := Update(ctx, old, c); err != nil {
 			return fmt.Errorf("error updating kubernetes statefulset: %s", err)
 		}
 		log.Infof("updated statefulset '%s'.", s.Name)
@@ -72,74 +70,44 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return sfsList.Items, nil
 }
 
-//GetDeploymentByName returns a deployment object if is created
-func GetStatefulsetByName(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
-	sfs, err := c.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get statefulset %s/%s: %w", namespace, name, err)
-	}
-
-	return sfs, nil
+//Get returns a deployment object by name
+func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
+	return c.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-//Get returns a statefulset object given its name and namespace
-func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
-	if namespace == "" {
-		return nil, fmt.Errorf("empty namespace")
-	}
-
-	var s *appsv1.StatefulSet
-	var err error
-
+//GetByDev returns a statefulset object given a dev struct (by name or by labels)
+func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	if len(dev.Labels) == 0 {
-		s, err = GetStatefulsetByName(ctx, dev.Name, namespace, c)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		statefulsets, err := c.AppsV1().StatefulSets(namespace).List(
-			ctx,
-			metav1.ListOptions{
-				LabelSelector: dev.LabelsSelector(),
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-		if len(statefulsets.Items) == 0 {
-			return nil, fmt.Errorf("StatefulSet for labels '%s' not found", dev.LabelsSelector())
-		}
-		if len(statefulsets.Items) > 1 {
-			return nil, fmt.Errorf("Found '%d' statefulsets for labels '%s' instead of 1", len(statefulsets.Items), dev.LabelsSelector())
-		}
-		s = &statefulsets.Items[0]
+		return Get(ctx, dev.Name, namespace, c)
 	}
 
-	return s, nil
+	sfsList, err := c.AppsV1().StatefulSets(namespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: dev.LabelsSelector(),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(sfsList.Items) == 0 {
+		return nil, errors.ErrNotFound
+	}
+	if len(sfsList.Items) > 1 {
+		return nil, fmt.Errorf("found '%d' statefulsets for labels '%s' instead of 1", len(sfsList.Items), dev.LabelsSelector())
+	}
+	return &sfsList.Items[0], nil
 }
 
 //Create creates a statefulset
-func Create(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) error {
-	_, err := c.AppsV1().StatefulSets(sfs.Namespace).Create(ctx, sfs, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-//DestroyDev destroys the k8s deployment of a dev environment
-func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return Destroy(ctx, dev.Name, dev.Namespace, c)
+func Create(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
+	return c.AppsV1().StatefulSets(sfs.Namespace).Create(ctx, sfs, metav1.CreateOptions{})
 }
 
 //Update updates a statefulset
-func Update(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) error {
+func Update(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	sfs.ResourceVersion = ""
-	_, err := c.AppsV1().StatefulSets(sfs.Namespace).Update(ctx, sfs, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.AppsV1().StatefulSets(sfs.Namespace).Update(ctx, sfs, metav1.UpdateOptions{})
 }
 
 //Destroy removes a statefulset object given its name and namespace
@@ -172,78 +140,16 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	return ok
 }
 
-//HasBeenChanged returns if a statefulset has been updated since the development container was activated
-func HasBeenChanged(s *appsv1.StatefulSet) bool {
-	oktetoRevision := s.Annotations[model.RevisionAnnotation]
-	if oktetoRevision == "" {
-		return false
-	}
-	return oktetoRevision != s.Status.UpdateRevision
+//RestoreDevModeFrom restores labels an annotations from a statefulset in dev mode
+func RestoreDevModeFrom(sfs, old *appsv1.StatefulSet) {
+	sfs.Labels[model.DevLabel] = old.Labels[model.DevLabel]
+	sfs.Spec.Replicas = old.Spec.Replicas
+	sfs.Annotations = old.Annotations
+	sfs.Spec.Template.Annotations = old.Spec.Template.Annotations
 }
 
-//SetLastBuiltAnnotation sets the deployment timestacmp
-func SetLastBuiltAnnotation(s *appsv1.StatefulSet) {
-	annotations.Set(s.Spec.Template.GetObjectMeta(), model.LastBuiltAnnotation, time.Now().UTC().Format(model.TimeFormat))
-}
-
-func GetRevisionAnnotatedStatefulsetOrFailed(ctx context.Context, dev *model.Dev, c kubernetes.Interface, waitUntilDeployed bool) (*appsv1.StatefulSet, error) {
-	sfs, err := Get(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		if waitUntilDeployed && errors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	if err = checkConditionErrors(sfs, dev); err != nil {
-		return nil, err
-	}
-
-	if sfs.Generation != sfs.Status.ObservedGeneration {
-		return nil, nil
-	}
-
-	if err := updateOktetoRevision(ctx, sfs, c, dev.Timeout.Default); err != nil {
-		return nil, err
-	}
-
-	return sfs, nil
-}
-
-func updateOktetoRevision(ctx context.Context, s *appsv1.StatefulSet, client kubernetes.Interface, timeout time.Duration) error {
-	ticker := time.NewTicker(200 * time.Millisecond)
-	to := time.Now().Add(timeout * 2) // 60 seconds
-
-	for retries := 0; ; retries++ {
-		updated, err := client.AppsV1().StatefulSets(s.Namespace).Get(ctx, s.Name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to get statefulset %s/%s: %w", s.Namespace, s.Name, err)
-		}
-
-		revision := updated.Status.UpdateRevision
-		if revision != "" {
-			if updated.Annotations[model.RevisionAnnotation] == revision {
-				return nil
-			}
-			updated.Annotations[model.RevisionAnnotation] = revision
-			return Update(ctx, updated, client)
-		}
-
-		if time.Now().After(to) && retries >= 10 {
-			return fmt.Errorf("kubernetes is taking too long to update the '%s' annotation of the statefulset '%s'. Please check for errors and try again", model.RevisionAnnotation, s.Name)
-		}
-
-		select {
-		case <-ticker.C:
-			continue
-		case <-ctx.Done():
-			log.Info("call to deployments.UpdateOktetoRevision cancelled")
-			return ctx.Err()
-		}
-	}
-}
-
-func checkConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
+//CheckConditionErrors checks errors in conditions
+func CheckConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
 	for _, c := range sfs.Status.Conditions {
 		if c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {

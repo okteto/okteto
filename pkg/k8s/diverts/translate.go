@@ -18,8 +18,8 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/k8s/annotations"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,57 +66,10 @@ func serviceModFromAnnotationValue(val string) (divertServiceModification, error
 	}, nil
 }
 
-// DivertName returns the name of the diverted version of a given resource
-func DivertName(username, name string) string {
-	return fmt.Sprintf("%s-%s", username, name)
-}
-
-func translateDeployment(username string, d *appsv1.Deployment) *appsv1.Deployment {
-	result := d.DeepCopy()
-	result.UID = ""
-	result.Name = DivertName(username, d.Name)
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
-	}
-	result.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
-		},
-	}
-	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
-	}
-	annotations.Set(result.GetObjectMeta(), model.OktetoAutoCreateAnnotation, model.OktetoUpCmd)
-	result.ResourceVersion = ""
-	return result
-}
-
-func translateStatefulset(username string, d *appsv1.StatefulSet) *appsv1.StatefulSet {
-	result := d.DeepCopy()
-	result.UID = ""
-	result.Name = DivertName(username, d.Name)
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
-	}
-	result.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
-		},
-	}
-	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
-	}
-	annotations.Set(result.GetObjectMeta(), model.OktetoAutoCreateAnnotation, model.OktetoUpCmd)
-	result.ResourceVersion = ""
-	return result
-}
-
-func translateService(username string, r *model.K8sObject, s *apiv1.Service) (*apiv1.Service, error) {
+func translateService(username string, app apps.App, s *apiv1.Service) (*apiv1.Service, error) {
 	result := s.DeepCopy()
 	result.UID = ""
-	result.Name = DivertName(username, s.Name)
+	result.Name = apps.DivertName(username, s.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
 	if s.Labels != nil && s.Labels[model.DeployedByLabel] != "" {
 		result.Labels[model.DeployedByLabel] = s.Labels[model.DeployedByLabel]
@@ -139,7 +92,7 @@ func translateService(username string, r *model.K8sObject, s *apiv1.Service) (*a
 	delete(result.Annotations, model.OktetoDivertServiceModificationAnnotation)
 	result.Spec.Selector = map[string]string{
 		model.OktetoDivertLabel:   username,
-		model.InteractiveDevLabel: r.Name,
+		model.InteractiveDevLabel: app.ObjectMeta().Name,
 	}
 	result.ResourceVersion = ""
 	result.Spec.ClusterIP = ""
@@ -149,7 +102,7 @@ func translateService(username string, r *model.K8sObject, s *apiv1.Service) (*a
 func translateIngress(username string, i *networkingv1.Ingress) *networkingv1.Ingress {
 	result := i.DeepCopy()
 	result.UID = ""
-	result.Name = DivertName(username, i.Name)
+	result.Name = apps.DivertName(username, i.Name)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
 	if i.Labels != nil && i.Labels[model.DeployedByLabel] != "" {
 		result.Labels[model.DeployedByLabel] = i.Labels[model.DeployedByLabel]
@@ -203,7 +156,7 @@ func translateDivertCRD(username string, dev *model.Dev, s *apiv1.Service, i *ne
 	return result
 }
 
-func translateDev(username string, dev *model.Dev, k8sObject *model.K8sObject) {
-	dev.Name = k8sObject.Name
+func translateDev(dev *model.Dev, app apps.App) {
+	dev.Name = app.ObjectMeta().Name
 	dev.Labels = nil
 }

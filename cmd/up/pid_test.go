@@ -30,7 +30,7 @@ func TestCreatePIDFile(t *testing.T) {
 		t.Fatal("unable to create pid file")
 	}
 
-	filePath := filepath.Join(config.GetDeploymentHome(namespace, deploymentName), "okteto.pid")
+	filePath := filepath.Join(config.GetAppHome(namespace, deploymentName), "okteto.pid")
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		t.Fatal("didn't create pid file")
 	}

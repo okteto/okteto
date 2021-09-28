@@ -195,7 +195,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		Client:           NewAPIClient(),
 		FileWatcherDelay: DefaultFileWatcherDelay,
 		GUIAddress:       fmt.Sprintf("%s:%d", dev.Interface, guiPort),
-		Home:             config.GetDeploymentHome(dev.Namespace, dev.Name),
+		Home:             config.GetAppHome(dev.Namespace, dev.Name),
 		LogPath:          GetLogFile(dev.Namespace, dev.Name),
 		ListenAddress:    fmt.Sprintf("%s:%d", dev.Interface, listenPort),
 		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", dev.Interface, remotePort),
@@ -349,7 +349,7 @@ func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 }
 
 //Overwrite overwrites local changes to the remote syncthing
-func (s *Syncthing) Overwrite(ctx context.Context, dev *model.Dev) error {
+func (s *Syncthing) Overwrite(ctx context.Context) error {
 	for _, folder := range s.Folders {
 		log.Infof("overriding local changes to the remote syncthing path=%s", folder.LocalPath)
 		params := getFolderParameter(folder)
@@ -377,7 +377,7 @@ func (s *Syncthing) IsAllOverwritten() bool {
 }
 
 //WaitForConnected waits for local and remote syncthing to be connected
-func (s *Syncthing) WaitForConnected(ctx context.Context, dev *model.Dev) error {
+func (s *Syncthing) WaitForConnected(ctx context.Context) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	log.Info("waiting for remote device to be connected")
 	to := time.Now().Add(s.timeout)
@@ -419,7 +419,7 @@ func (s *Syncthing) WaitForConnected(ctx context.Context, dev *model.Dev) error 
 }
 
 //WaitForScanning waits for syncthing to finish initial scanning
-func (s *Syncthing) WaitForScanning(ctx context.Context, dev *model.Dev, local bool) error {
+func (s *Syncthing) WaitForScanning(ctx context.Context, local bool) error {
 	for _, folder := range s.Folders {
 		if err := s.waitForFolderScanning(ctx, folder, local); err != nil {
 			return err
@@ -824,10 +824,10 @@ func GetFolderName(folder *Folder) string {
 }
 
 func getInfoFile(namespace, name string) string {
-	return filepath.Join(config.GetDeploymentHome(namespace, name), "syncthing.info")
+	return filepath.Join(config.GetAppHome(namespace, name), "syncthing.info")
 }
 
 // GetLogFile returns the path to the syncthing log file
 func GetLogFile(namespace, name string) string {
-	return filepath.Join(config.GetDeploymentHome(namespace, name), "syncthing.log")
+	return filepath.Join(config.GetAppHome(namespace, name), "syncthing.log")
 }
