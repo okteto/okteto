@@ -27,17 +27,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-// GetDockerfile returns the dockerfile with the cache translations
-func GetDockerfile(dockerFile string) (string, error) {
-	fileWithCacheHandler, err := getDockerfileWithCacheHandler(dockerFile)
+// GetDockerfile returns the dockerfile with the cache and registry translations
+func GetDockerfile(dockerFile, namespace, buildKitHost string) (string, error) {
+	file, err := getTranslatedDockerFile(dockerFile, namespace, buildKitHost)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
 	}
 
-	return fileWithCacheHandler, nil
+	return file, nil
 }
 
-func getDockerfileWithCacheHandler(filename string) (string, error) {
+func getTranslatedDockerFile(filename, namespace, buildKitHost string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return "", err
@@ -63,9 +63,15 @@ func getDockerfileWithCacheHandler(filename string) (string, error) {
 	if userID == "" {
 		userID = "anonymous"
 	}
+
+	withCacheHandler := buildKitHost == okteto.CloudBuildKitURL
+
 	for scanner.Scan() {
 		line := scanner.Text()
-		translatedLine := translateCacheHandler(line, userID)
+		translatedLine := translateOktetoRegistryImage(line, namespace)
+		if withCacheHandler {
+			translatedLine = translateCacheHandler(translatedLine, userID)
+		}
 		_, _ = datawriter.WriteString(translatedLine + "\n")
 	}
 	if err := scanner.Err(); err != nil {
@@ -100,6 +106,26 @@ func translateCacheHandler(input, userID string) string {
 	}
 
 	return input
+}
+
+func translateOktetoRegistryImage(input, namespace string) string {
+
+	if strings.Contains(input, okteto.DevRegistry) {
+		tag := replaceRegistry(input, okteto.DevRegistry, namespace)
+		return tag
+	}
+
+	if strings.Contains(input, okteto.GlobalRegistry) {
+		globalNamespace := okteto.Context().GlobalNamespace
+		if globalNamespace != "" {
+			globalNamespace = okteto.DefaultGlobalNamespace
+		}
+		tag := replaceRegistry(input, okteto.GlobalRegistry, globalNamespace)
+		return tag
+	}
+
+	return input
+
 }
 
 func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume) (*model.BuildInfo, error) {
