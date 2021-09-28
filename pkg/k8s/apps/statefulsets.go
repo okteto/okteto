@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -104,6 +105,9 @@ func (i *StatefulSetApp) GetRevision() string {
 }
 
 func (i *StatefulSetApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
+	if i.sfs.Generation != i.sfs.Status.ObservedGeneration {
+		return nil, errors.ErrNotFound
+	}
 	return pods.GetPodByStatefulSet(ctx, i.sfs, c)
 }
 
@@ -189,6 +193,6 @@ func (i *StatefulSetApp) Update(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
-func (_ *StatefulSetApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+func (*StatefulSetApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return statefulsets.Destroy(ctx, dev.Name, dev.Namespace, c)
 }

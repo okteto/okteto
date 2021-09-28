@@ -50,10 +50,6 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 		return setTranslationAsAnnotation(t)
 	}
 
-	if err := t.App.RestoreOriginal(); err != nil {
-		return err
-	}
-
 	if err := t.App.SetOriginal(); err != nil {
 		return err
 	}
