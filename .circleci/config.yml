@@ -139,7 +139,7 @@ jobs:
             OKTETO_SKIP_CLEANUP: 'true'
             OKTETO_CLIENTSIDE_TRANSLATION: ''
           command: |
-            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 30m
+            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 45m
       - run:
           name: Integration tests (clientside)
           environment:
@@ -147,7 +147,7 @@ jobs:
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
             OKTETO_SKIP_CLEANUP: 'true'
           command: |
-            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 30m
+            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 45m
       - save_cache:
           key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
           paths:
