@@ -25,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
@@ -72,9 +71,9 @@ func Status() *cobra.Command {
 			}
 
 			if watch {
-				err = runWithWatch(ctx, dev, sy)
+				err = runWithWatch(ctx, sy)
 			} else {
-				err = runWithoutWatch(ctx, dev, sy)
+				err = runWithoutWatch(ctx, sy)
 			}
 
 			analytics.TrackStatus(err == nil, showInfo)
@@ -89,7 +88,7 @@ func Status() *cobra.Command {
 	return cmd
 }
 
-func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {
+func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 	suffix := "Synchronizing your files..."
 	spinner := utils.NewSpinner(suffix)
 	pbScaling := 0.30
@@ -105,7 +104,7 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 		for {
 			<-ticker.C
 			message := ""
-			progress, err := status.Run(ctx, dev, sy)
+			progress, err := status.Run(ctx, sy)
 			if err != nil {
 				log.Infof("error accessing status: %s", err)
 				continue
@@ -134,8 +133,8 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 	return nil
 }
 
-func runWithoutWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {
-	progress, err := status.Run(ctx, dev, sy)
+func runWithoutWatch(ctx context.Context, sy *syncthing.Syncthing) error {
+	progress, err := status.Run(ctx, sy)
 	if err != nil {
 		return err
 	}

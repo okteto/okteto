@@ -615,10 +615,7 @@ func validateServicesToDeploy(s *model.Stack, servicesToDeploy []string) error {
 		return err
 	}
 
-	if err := validateDependentServiceDeployed(s, servicesToDeploy); err != nil {
-		return err
-	}
-	return nil
+	return validateDependentServiceDeployed(s, servicesToDeploy)
 }
 
 func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {

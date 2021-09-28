@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
-	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -55,7 +54,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if !okteto.IsAuthenticated() {
-				return okErrors.ErrNotLogged
+				return errors.ErrNotLogged
 			}
 
 			if err := validatePreviewType(scope); err != nil {
@@ -239,7 +238,7 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name, namespace string, tim
 		case <-t.C:
 			p, err := okteto.GetPreviewEnvByName(ctx, name, namespace)
 			if err != nil {
-				if okErrors.IsNotFound(err) || okErrors.IsNotExist(err) {
+				if errors.IsNotFound(err) || errors.IsNotExist(err) {
 					return nil
 				}
 

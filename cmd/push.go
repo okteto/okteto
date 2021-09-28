@@ -53,7 +53,6 @@ func Push(ctx context.Context) *cobra.Command {
 		Short: "Builds, pushes and redeploys source code to the target deployment",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
 			if err := utils.LoadEnvironment(ctx, true); err != nil {
 				return err
 			}
@@ -97,7 +96,7 @@ func Push(ctx context.Context) *cobra.Command {
 				dev.Autocreate = autoDeploy
 			}
 
-			if err := runPush(ctx, dev, autoDeploy, imageTag, oktetoRegistryURL, progress, noCache, c); err != nil {
+			if err := runPush(ctx, dev, imageTag, oktetoRegistryURL, progress, noCache, c); err != nil {
 				analytics.TrackPush(false, oktetoRegistryURL)
 				return err
 			}
@@ -121,7 +120,7 @@ func Push(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func runPush(ctx context.Context, dev *model.Dev, autoDeploy bool, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
+func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, progress string, noCache bool, c *kubernetes.Clientset) error {
 	exists := true
 	k8sObject, err := apps.GetResource(ctx, dev, dev.Namespace, c)
 
