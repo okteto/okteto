@@ -15,6 +15,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -68,4 +69,11 @@ func isDeprecatedExtension(stackPath string) bool {
 		}
 	}
 	return false
+}
+
+func SetStackNamespace(namespace string) error {
+	if namespace != "" {
+		return os.Setenv("OKTETO_NAMESPACE", namespace)
+	}
+	return nil
 }

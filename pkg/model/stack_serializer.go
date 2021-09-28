@@ -29,6 +29,11 @@ const (
 	DefaultReplicasNumber = 1
 )
 
+//Stack represents the namespace on the stack
+type StackNamespace struct {
+	Namespace string `yaml:"namespace,omitempty"`
+}
+
 //Stack represents an okteto stack
 type StackRaw struct {
 	Version   string                     `yaml:"version,omitempty"`

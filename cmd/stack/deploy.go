@@ -42,6 +42,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if err := utils.SetStackNamespace(options.Namespace); err != nil {
+				return err
+			}
+
 			s, err := utils.LoadStack(options.Name, options.StackPath)
 			if err != nil {
 				return err

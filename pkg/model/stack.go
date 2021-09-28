@@ -247,6 +247,14 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 
 // ReadStack reads an okteto stack
 func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
+	sNamespace := &StackNamespace{}
+	yaml.Unmarshal(bytes, sNamespace)
+	if sNamespace.Namespace != "" {
+		if err := os.Setenv("OKTETO_NAMESPACE", sNamespace.Namespace); err != nil {
+			return nil, err
+		}
+	}
+
 	s := &Stack{
 		Manifest:  bytes,
 		IsCompose: isCompose,
