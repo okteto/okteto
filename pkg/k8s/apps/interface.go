@@ -45,6 +45,7 @@ type App interface {
 	Create(ctx context.Context, c kubernetes.Interface) error
 	Update(ctx context.Context, c kubernetes.Interface) error
 	Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error
+	DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error
 }
 
 // Translation represents the information for translating a deployment

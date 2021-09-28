@@ -96,6 +96,7 @@ func translateService(username string, app apps.App, s *apiv1.Service) (*apiv1.S
 	}
 	result.ResourceVersion = ""
 	result.Spec.ClusterIP = ""
+	result.Spec.ClusterIPs = []string{}
 	return result, nil
 }
 

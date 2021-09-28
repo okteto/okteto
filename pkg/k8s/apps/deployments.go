@@ -125,6 +125,19 @@ func (i *DeploymentApp) Divert(ctx context.Context, username string, dev *model.
 	return &DeploymentApp{d: divertDeployment}, nil
 }
 
+func (i *DeploymentApp) DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error {
+	d, err := deployments.GetByDev(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return fmt.Errorf("error diverting deployment: %s", err.Error())
+	}
+
+	divertDeploymentName := DivertName(username, d.Name)
+	if err := deployments.Destroy(ctx, divertDeploymentName, d.Namespace, c); err != nil {
+		return fmt.Errorf("error creating diver deployment '%s': %s", divertDeploymentName, err.Error())
+	}
+	return nil
+}
+
 func translateDivertDeployment(username string, d *appsv1.Deployment) *appsv1.Deployment {
 	result := d.DeepCopy()
 	result.UID = ""
