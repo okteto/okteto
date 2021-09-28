@@ -22,8 +22,9 @@ import (
 	"github.com/okteto/okteto/cmd/kubeconfig"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	contextCmd "github.com/okteto/okteto/pkg/cmd/context"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	k8sClient "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -69,10 +70,9 @@ func Context() *cobra.Command {
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			//TODO: fix this
-			// if ctxOptions.Token == "" && k8Client.InCluster() {
-			// 	return errors.ErrTokenFlagNeeded
-			// }
+			if ctxOptions.Token == "" && k8sClient.InCluster() {
+				return errors.ErrTokenFlagNeeded
+			}
 
 			apiToken := os.Getenv("OKTETO_TOKEN")
 			if ctxOptions.Token == "" {
@@ -86,7 +86,7 @@ func Context() *cobra.Command {
 					log.Infof("authenticating with OKTETO_URL")
 				} else {
 					log.Infof("authenticating with interactive context")
-					oktetoContext, err = getContext(ctx, ctxOptions)
+					oktetoContext, err = getContext(ctxOptions)
 					if err != nil {
 						return err
 					}
@@ -102,7 +102,7 @@ func Context() *cobra.Command {
 				return err
 			}
 
-			kubeconfig.RunKubeconfig(ctx)
+			kubeconfig.RunKubeconfig()
 			return nil
 		},
 	}
@@ -116,30 +116,45 @@ func Context() *cobra.Command {
 
 func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOptions) error {
 
-	if okteto.IsOktetoCluster(oktetoContext) {
-		err := authenticateToOktetoCluster(ctx, oktetoContext, ctxOptions.Token)
+	kubeconfigFile := config.GetKubeconfigPath()
+
+	if okteto.IsOktetoContext(oktetoContext) {
+		user, err := authenticateToOktetoCluster(ctx, oktetoContext, ctxOptions.Token)
 		if err != nil {
 			return err
 		}
-	} else {
-		if !isValidCluster(oktetoContext) {
-			return errors.UserError{
-				E:    fmt.Errorf(errors.ErrInvalidContext, oktetoContext),
-				Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(), "\n      ")),
-			}
-		}
-		err := contextCmd.CopyK8sClusterConfigToOktetoContext(oktetoContext)
+		cred, err := okteto.GetCredentials(ctx)
 		if err != nil {
 			return err
 		}
+
+		if ctxOptions.Namespace == "" {
+			ctxOptions.Namespace = cred.Namespace
+		}
+
+		cfg := k8sClient.GetKubeconfig(kubeconfigFile)
+		if err := okteto.SetCurrentContext(oktetoContext, user.ID, user.ExternalID, user.Token, cred.Namespace, cfg, user.Buildkit, user.Registry, user.Certificate); err != nil {
+			return fmt.Errorf("error configuring okteto context: %v", err)
+		}
+
+		return nil
 	}
 
-	//TODO: save namespace flag
-	return saveOktetoContext(ctx)
-
+	if !isValidCluster(oktetoContext) {
+		return errors.UserError{
+			E:    fmt.Errorf(errors.ErrInvalidContext, oktetoContext),
+			Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(), "\n      ")),
+		}
+	}
+	cfg := k8sClient.GetKubeconfig(kubeconfigFile)
+	cfg.CurrentContext = oktetoContext
+	if ctxOptions.Namespace != "" {
+		cfg.Contexts[oktetoContext].Namespace = ctxOptions.Namespace
+	}
+	return okteto.SetCurrentContext(oktetoContext, "", "", "", ctxOptions.Namespace, cfg, "", "", "")
 }
 
-func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
+func getContext(ctxOptions *ContextOptions) (string, error) {
 	clusters := []string{"Okteto Cloud", "Okteto Enterprise"}
 	k8sClusters := getKubernetesContextList()
 	clusters = append(clusters, k8sClusters...)
@@ -150,7 +165,7 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 	}
 
 	if isOktetoCluster(oktetoContext) {
-		oktetoContext = getOktetoClusterUrl(ctx, oktetoContext)
+		oktetoContext = getOktetoClusterUrl(oktetoContext)
 	}
 
 	return oktetoContext, nil

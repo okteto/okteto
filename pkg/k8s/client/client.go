@@ -30,9 +30,16 @@ const (
 	OktetoContextVariableName = "OKTETO_CONTEXT"
 )
 
+// InCluster returns true if Okteto is running on a Kubernetes cluster
+func InCluster() bool {
+	_, err := rest.InClusterConfig()
+	return err == nil
+}
+
 // GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
 func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
-	clientConfig := getClientConfig(config.GetOktetoContextKubeconfigPath(), "")
+	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
+	clientConfig := getClientConfig(kubeconfigFile, "")
 
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
@@ -62,33 +69,49 @@ func getClientConfig(kubeconfigPath, kubeContext string) clientcmd.ClientConfig 
 	)
 }
 
-//GetOrCreateKubeconfig retrieves a kubeconfig file
-func GetOrCreateKubeconfig(kubeconfigPath string) *clientcmdapi.Config {
+//CreateKubeconfig creates anew  kubeconfig file
+func CreateKubeconfig() *clientcmdapi.Config {
+	return clientcmdapi.NewConfig()
+}
+
+//GetKubeconfig retrieves a kubeconfig file
+func GetKubeconfig(kubeconfigPath string) *clientcmdapi.Config {
 	_, err := os.Stat(kubeconfigPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return clientcmdapi.NewConfig()
+			return nil
 		}
-		log.Fatalf("error accessing your KUBECONFIG file '%s': %s", kubeconfigPath, err)
+		log.Fatalf("error accessing your KUBECONFIG file '%s': %v", kubeconfigPath, err)
 	}
 
 	cfg, err := clientcmd.LoadFromFile(kubeconfigPath)
 	if err != nil {
-		log.Fatalf("error accessing your KUBECONFIG file '%s': %s", kubeconfigPath, err)
+		log.Fatalf("error accessing your KUBECONFIG file '%s': %v", kubeconfigPath, err)
 	}
 
 	return cfg
 }
 
+//SetKubeconfig stores a kubeconfig file
+func SetKubeconfig(cfg *clientcmdapi.Config, kubeconfigPath string) error {
+	return clientcmd.WriteToFile(*cfg, kubeconfigPath)
+}
+
 // GetCurrentContext returns the name of the current context
 func GetCurrentContext(kubeconfigPath string) string {
-	cfg := GetOrCreateKubeconfig(kubeconfigPath)
+	cfg := GetKubeconfig(kubeconfigPath)
+	if cfg == nil {
+		return ""
+	}
 	return cfg.CurrentContext
 }
 
 // GetCurrentNamespace returns the name of the namespace in use by a given context
 func GetCurrentNamespace(kubeconfigPath, kubeContext string) string {
-	cfg := GetOrCreateKubeconfig(kubeconfigPath)
+	cfg := GetKubeconfig(kubeconfigPath)
+	if cfg == nil {
+		return ""
+	}
 	if kubeContext == "" {
 		kubeContext = cfg.CurrentContext
 	}

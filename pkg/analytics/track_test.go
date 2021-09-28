@@ -18,6 +18,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -62,7 +63,8 @@ func Test_getTrackID(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := okteto.SetCurrentContext("test", tt.userID, "", "", "", "", "", ""); err != nil {
+			cfg := client.CreateKubeconfig()
+			if err := okteto.SetCurrentContext("test", tt.userID, "", "", "", cfg, "", "", ""); err != nil {
 				t.Fatal(err)
 			}
 

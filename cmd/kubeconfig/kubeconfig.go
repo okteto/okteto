@@ -15,11 +15,16 @@ package kubeconfig
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // Kubeconfig fetch credentials for a cluster namespace
@@ -34,7 +39,7 @@ func Kubeconfig(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err := RunKubeconfig(ctx)
+			err := RunKubeconfig()
 			analytics.TrackKubeconfig(err == nil)
 			return err
 		},
@@ -43,20 +48,25 @@ func Kubeconfig(ctx context.Context) *cobra.Command {
 }
 
 // RunKubeconfig starts the kubeconfig sequence
-func RunKubeconfig(_ context.Context) error {
+func RunKubeconfig() error {
+	occ, err := okteto.GetContexts()
+	if err != nil {
+		return err
+	}
 
-	// oktetoKubeConfig, err := getClientConfig.GetKubeconfig(config.GetKubeconfigFile())
-	// if err != nil {
-	// 	return err
-	// }
+	//TODO: index error (everywhere)
+	kubeconfigBase64 := occ.Contexts[occ.CurrentContext].Kubeconfig
+	var cfg clientcmdapi.Config
+	if err := json.Unmarshal([]byte(kubeconfigBase64), &cfg); err != nil {
+		return err
+	}
+	kubeconfigFile := config.GetKubeconfigPath()
+	k8sCfg := client.GetKubeconfig(kubeconfigFile)
+	currentContext := cfg.Contexts[cfg.CurrentContext]
+	k8sCfg.CurrentContext = cfg.CurrentContext
+	k8sCfg.AuthInfos[currentContext.AuthInfo] = cfg.AuthInfos[currentContext.AuthInfo]
+	k8sCfg.Contexts[cfg.CurrentContext] = cfg.Contexts[cfg.CurrentContext]
+	k8sCfg.Clusters[currentContext.Cluster] = cfg.Clusters[currentContext.Cluster]
 
-	// ctxToCopy := oktetoKubeConfig.CurrentContext
-
-	// userKubeConfigFile := config.GetKubeConfigFile()
-	// err = okteto.SetContextFromConfigFields(userKubeConfigFile, ctxToCopy, oktetoKubeConfig.AuthInfos[ctxToCopy], oktetoKubeConfig.Clusters[ctxToCopy], oktetoKubeConfig.Contexts[ctxToCopy], oktetoKubeConfig.Extensions[ctxToCopy])
-	// if err != nil {
-	// 	return err
-	// }
-	// log.Success("Updated context '%s' in '%s'", ctxToCopy, userKubeConfigFile)
-	return nil
+	return client.SetKubeconfig(&cfg, kubeconfigFile)
 }

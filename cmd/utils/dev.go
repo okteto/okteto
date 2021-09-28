@@ -254,7 +254,7 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 
 	currentContext := client.GetCurrentContext(config.GetOktetoContextKubeconfigPath())
 
-	if okteto.GetClusterContext() == currentContext {
+	if okteto.GetKubernetesContextFromToken() == currentContext {
 		secrets, err := okteto.GetSecrets(ctx)
 		if err != nil {
 			return fmt.Errorf("error loading Okteto Secrets: %s", err.Error())

@@ -20,7 +20,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/doctor"
 	"github.com/okteto/okteto/pkg/errors"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -47,7 +46,7 @@ func Doctor() *cobra.Command {
 				return err
 			}
 
-			c, _, err := k8Client.GetLocal()
+			c, _, err := okteto.GetK8sClient()
 			if err != nil {
 				return err
 			}

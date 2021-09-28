@@ -780,7 +780,7 @@ func killLocalSyncthing() error {
 
 func destroyPod(ctx context.Context, name, namespace string) error {
 	log.Printf("destroying pods of %s", name)
-	c, _, err := k8Client.GetLocal()
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
@@ -986,7 +986,7 @@ func getOktetoPath(ctx context.Context) (string, error) {
 }
 
 func getDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, error) {
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -995,7 +995,7 @@ func getDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, er
 }
 
 func getStatefulset(ctx context.Context, ns, name string) (*appsv1.StatefulSet, error) {
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1004,7 +1004,7 @@ func getStatefulset(ctx context.Context, ns, name string) (*appsv1.StatefulSet, 
 }
 
 func getJob(ctx context.Context, ns, name string) (*batchv1.Job, error) {
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1013,7 +1013,7 @@ func getJob(ctx context.Context, ns, name string) (*batchv1.Job, error) {
 }
 
 func getVolume(ctx context.Context, ns, name string) (*corev1.PersistentVolumeClaim, error) {
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return nil, err
 	}

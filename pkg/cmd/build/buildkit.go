@@ -27,6 +27,7 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
+	"github.com/okteto/okteto/pkg/config"
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -180,7 +181,7 @@ func getClientForOktetoCluster(ctx context.Context, buildKitHost string) (*clien
 		return nil, fmt.Errorf("auth token missing from token file")
 	}
 
-	creds := client.WithCredentials(b.Hostname(), okteto.GetCertificatePath(), "", "")
+	creds := client.WithCredentials(b.Hostname(), config.GetCertificatePath(), "", "")
 
 	oauthToken := &oauth2.Token{
 		AccessToken: okToken.Token,

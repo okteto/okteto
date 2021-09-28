@@ -23,11 +23,11 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 )
@@ -97,7 +97,7 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 	exit := make(chan error, 1)
 
 	go func() {
-		client, _, err := k8Client.GetLocal()
+		client, _, err := okteto.GetK8sClient()
 		if err != nil {
 			exit <- err
 		}
@@ -140,7 +140,7 @@ func removeVolume(ctx context.Context, dev *model.Dev) error {
 	spinner.Start()
 	defer spinner.Stop()
 
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}

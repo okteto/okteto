@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -61,6 +62,12 @@ func init() {
 		model.OktetoBinImageTag = bin
 		log.Infof("using %s as the bin image", bin)
 	}
+}
+
+func main() {
+	ctx := context.Background()
+	log.Init(logrus.WarnLevel)
+	var logLevel string
 
 	if err := analytics.Init(); err != nil {
 		log.Infof("error initializing okteto analytics: %s", err)
@@ -68,16 +75,15 @@ func init() {
 
 	utils.SetOktetoUsernameEnv()
 
-	// if err := utils.InitOktetoContext(); err != nil {
-	// 	log.Fatalf("error initializing okteto context: %s", err)
-	// }
-
-}
-
-func main() {
-	ctx := context.Background()
-	log.Init(logrus.WarnLevel)
-	var logLevel string
+	if err := okteto.InitContext(ctx); err != nil {
+		if err != errors.ErrNoActiveOktetoContexts {
+			log.Fatalf("error initializing okteto context: %v", err)
+		}
+		okCtx := contextCMD.Context()
+		if err := okCtx.RunE(nil, nil); err != nil {
+			log.Fatalf("error configuring okteto context: %v", err)
+		}
+	}
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),

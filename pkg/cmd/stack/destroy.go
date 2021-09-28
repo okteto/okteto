@@ -36,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"k8s.io/client-go/kubernetes"
@@ -47,7 +48,7 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout ti
 		s.Namespace = client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
 	}
 
-	c, _, err := client.GetLocal()
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}

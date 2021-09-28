@@ -327,7 +327,7 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["origin"] = origin
 	props["success"] = success
 
-	oktetoContext, err := okteto.GetContextConfig()
+	oktetoContext, err := okteto.GetContexts()
 	if err != nil {
 		log.Infof("error getting okteto context: %v", err)
 	} else {

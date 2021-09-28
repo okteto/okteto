@@ -19,8 +19,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -54,7 +54,7 @@ func Get(ctx context.Context, ns string, c *kubernetes.Clientset) (*apiv1.Namesp
 }
 
 func IsOktetoNamespaceFromName(ctx context.Context, namespace string) bool {
-	c, _, err := k8Client.GetLocal()
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return false
 	}

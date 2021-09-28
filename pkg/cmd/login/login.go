@@ -22,13 +22,14 @@ import (
 	"strings"
 	"time"
 
-	okContext "github.com/okteto/okteto/pkg/cmd/context"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/skratchdot/open-golang/open"
 )
+
+//TODO: reimplement login package
 
 // WithEnvVarIfAvailable authenticates the user with OKTETO_TOKEN value
 func WithEnvVarIfAvailable(ctx context.Context) error {
@@ -50,7 +51,7 @@ func WithEnvVarIfAvailable(ctx context.Context) error {
 		return fmt.Errorf("error executing auto-login with 'OKTETO_TOKEN': %s", err)
 	}
 
-	return okContext.SaveOktetoContext(ctx, "")
+	return nil
 }
 
 // WithToken authenticates the user with an API token

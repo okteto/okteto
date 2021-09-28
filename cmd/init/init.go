@@ -28,11 +28,11 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -86,10 +86,6 @@ func Init() *cobra.Command {
 
 // Run runs the sequence to generate okteto.yml
 func Run(namespace, k8sContext, devPath, language, workDir string, overwrite bool) error {
-	if k8sContext == "" {
-		k8sContext = os.Getenv(k8Client.OktetoContextVariableName)
-	}
-
 	fmt.Println("This command walks you through creating an okteto manifest.")
 	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	fmt.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
@@ -179,7 +175,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 }
 
 func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sObject, string, error) {
-	c, _, err := k8Client.GetLocal()
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		log.Yellow("Failed to load your local Kubeconfig: %s", err)
 		return nil, "", nil
@@ -212,23 +208,13 @@ func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sO
 }
 
 func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
-	c, _, err := k8Client.GetLocal()
+	if okteto.IsOktetoContext(okteto.GetCurrentContext()) {
+		return true
+	}
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		log.Infof("couldn't get kubernetes local client: %s", err.Error())
 		return false
-	}
-	if namespace == "" {
-		namespace = k8Client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
-	}
-
-	ns, err := namespaces.Get(ctx, namespace, c)
-	if err != nil {
-		log.Infof("failed to get the current namespace: %s", err.Error())
-		return false
-	}
-
-	if namespaces.IsOktetoNamespace(ns) {
-		return true
 	}
 
 	stClassList, err := c.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})

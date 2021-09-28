@@ -14,97 +14,26 @@
 package context
 
 import (
-	"context"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
-func CopyK8sClusterConfigToOktetoContext(clusterName string) error {
-	// kubeConfigFile := config.GetKubeConfigFile()
-	// config, err := okteto.GetKubeconfig(kubeConfigFile)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// return okteto.SetOktetoContextKubeconfig(config, clusterName)
-	// if err != nil {
-	// 	return err
-	// }
-	return nil
+func HasBeenLogged(oktetoURL string) bool {
+	cc, err := okteto.GetContexts()
+	if err != nil {
+		return false
+	}
+	_, ok := cc.Contexts[oktetoURL]
+	return ok
 }
 
-func SaveOktetoContext(ctx context.Context, namespace string) error {
-	// cred, err := okteto.GetCredentials(ctx)
-	// if err != nil {
-	// 	return err
-	// }
-	// if namespace == "" {
-	// 	namespace = cred.Namespace
-	// }
+func GetToken(oktetoURL string) string {
+	cc, err := okteto.GetContexts()
+	if err != nil {
+		return ""
+	}
 
-	// hasAccess, err := utils.HasAccessToNamespace(ctx, namespace)
-	// if err != nil {
-	// 	return err
-	// }
-	// if !hasAccess {
-	// 	return fmt.Errorf(errors.ErrNamespaceNotFound, namespace)
-	// }
-
-	// kubeConfigFile := config.GetOktetoContextKubeconfigFile()
-	// clusterContext := okteto.GetClusterContext()
-
-	// if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterContext, true); err != nil {
-	// 	return err
-	// }
-
-	// token, err := okteto.GetToken()
-	// if err != nil {
-	// 	return err
-	// }
-	// return okteto.SaveContext(okteto.GetURL(), clusterContext, token.Token)
-	return nil
-}
-
-func SaveK8sContext(_ context.Context, clusterName, namespace string) error {
-	// kubeConfigFile := config.GetOktetoContextKubeconfigFile()
-	// config, err := okteto.GetKubeconfig(kubeConfigFile)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// authInfo := config.AuthInfos[clusterName]
-	// cluster := config.Clusters[clusterName]
-	// context := config.Contexts[clusterName]
-	// extension := config.Extensions[clusterName]
-
-	// if namespace == "" {
-	// 	context.Namespace = namespace
-	// }
-
-	// err = okteto.SetContextFromConfigFields(kubeConfigFile, clusterName, authInfo, cluster, context, extension)
-	// if err != nil {
-	// 	return err
-	// }
-	// return okteto.SaveContext("", clusterName, "")
-	return nil
-}
-
-func HasBeenLogged(url string) bool {
-	// cc, err := okteto.GetOktetoContextConfig()
-	// if err != nil {
-	// 	return false
-	// }
-	// context := okteto.UrlToContext(url)
-	// _, ok := cc.Contexts[context]
-	// return ok
-	return true
-}
-
-func GetApiToken(url string) string {
-	// cc, err := okteto.GetOktetoContextConfig()
-	// if err != nil {
-	// 	return ""
-	// }
-
-	// context := okteto.UrlToContext(url)
-	// return cc.Contexts[context].ApiToken
-	return "token"
+	if octx, ok := cc.Contexts[oktetoURL]; ok {
+		return octx.Token
+	}
+	return ""
 }

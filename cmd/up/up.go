@@ -30,7 +30,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8sClient "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
@@ -219,7 +218,7 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 
 func (up *upContext) start(autoDeploy, build bool) error {
 	var err error
-	up.Client, up.RestConfig, err = k8sClient.GetLocal()
+	up.Client, up.RestConfig, err = okteto.GetK8sClient()
 	if err != nil {
 		kubecfg := config.GetOktetoContextKubeconfigPath()
 		log.Infof("failed to load okteto Kubeconfig: %s", err)
@@ -232,6 +231,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	ctx := context.Background()
 	ns, err := namespaces.Get(ctx, up.Dev.Namespace, up.Client)
 	if err != nil {
+		fmt.Println("ERROR", up.Dev.Namespace, err)
 		return err
 	}
 

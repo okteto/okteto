@@ -30,7 +30,7 @@ func List() *cobra.Command {
 		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
 		Short:   "Lists okteto contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cc, err := okteto.GetContextConfig()
+			cc, err := okteto.GetContexts()
 			if err != nil {
 				return err
 			}

@@ -22,8 +22,8 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/model"
 
 	"github.com/spf13/cobra"
@@ -68,7 +68,7 @@ func Restart() *cobra.Command {
 
 func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	log.Infof("restarting services")
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}

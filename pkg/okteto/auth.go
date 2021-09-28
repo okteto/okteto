@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -132,7 +131,7 @@ func saveAuthData(user *User, url string) error {
 		return fmt.Errorf("certificate decoding error: %w", err)
 	}
 
-	return ioutil.WriteFile(GetCertificatePath(), d, 0600)
+	return ioutil.WriteFile(config.GetCertificatePath(), d, 0600)
 }
 
 func queryUser(ctx context.Context, client *graphql.Client, token string) (*q, error) {
@@ -164,6 +163,16 @@ func authUser(ctx context.Context, client *graphql.Client, code string) (*u, err
 	}
 
 	return &user, nil
+}
+
+// GetKubernetesContextFromToken returns the k8s context names given an okteto URL
+func GetKubernetesContextFromToken() string {
+	return urlToContext(GetURL())
+}
+
+func urlToContext(uri string) string {
+	u, _ := url.Parse(uri)
+	return strings.ReplaceAll(u.Host, ".", "_")
 }
 
 //GetToken returns the token of the authenticated user
@@ -273,11 +282,6 @@ func GetBuildKit() (string, error) {
 		return "", errors.ErrNotLogged
 	}
 	return t.Buildkit, nil
-}
-
-// GetCertificatePath returns the path  to the certificate of the okteto buildkit
-func GetCertificatePath() string {
-	return filepath.Join(config.GetOktetoHome(), ".ca.crt")
 }
 
 func saveToken(id, username, token, url, registry, buildkit string) error {

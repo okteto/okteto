@@ -14,7 +14,15 @@
 package context
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -25,31 +33,38 @@ func SetNamespace() *cobra.Command {
 		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
 		Short: "Set the namespace of current okteto context",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// ctx := context.Background()
-			// namespace := args[0]
-			// oktetoContext := okteto.GetCurrentContext()
-			// if oktetoContext.IsOktetoCluster() {
-			// 	hasAccess, err := utils.HasAccessToNamespace(ctx, namespace)
-			// 	if err != nil {
-			// 		return err
-			// 	}
-			// 	if !hasAccess {
-			// 		return fmt.Errorf(errors.ErrNamespaceNotFound, namespace)
-			// 	}
-			// }
-			// kubeconfigFile := config.GetKubeconfigFile()
-			// cfg, err := okteto.GetKubeconfig(kubeconfigFile)
-			// if err != nil {
-			// 	return err
-			// }
+			ctx := context.Background()
+			namespace := args[0]
+			oktetoContextConfig, err := okteto.GetContexts()
+			if err != nil {
+				return err
+			}
+			if okteto.IsOktetoContext(oktetoContextConfig.CurrentContext) {
+				hasAccess, err := utils.HasAccessToNamespace(ctx, namespace)
+				if err != nil {
+					return err
+				}
+				if !hasAccess {
+					return fmt.Errorf(errors.ErrNamespaceNotFound, namespace)
+				}
+			}
+			kubeconfigFile := config.GetKubeconfigPath()
+			cfg := client.GetKubeconfig(kubeconfigFile)
+			if cfg == nil {
+				return errors.ErrNoActiveOktetoContexts
+			}
 
-			// cfg.CurrentNamespace = namespace
-			// //TODO: save kubeconfig
+			cfg.Contexts[cfg.CurrentContext].Namespace = namespace
+			if err := client.SetKubeconfig(cfg, kubeconfigFile); err != nil {
+				return err
+			}
 
-			// oktetoContext.Namespace = namespace
-			// //TODO: save okteto context
+			octx := oktetoContextConfig.Contexts[oktetoContextConfig.CurrentContext]
+			if err := okteto.SetCurrentContext(octx.Name, octx.ID, octx.Username, octx.Token, namespace, cfg, octx.Buildkit, octx.Registry, octx.Certificate); err != nil {
+				return err
+			}
 
-			// log.Success("Context '%s' namespace has been updated to '%s'", oktetoContext.Name, namespace)
+			log.Success("Context '%s' namespace has been updated to '%s'", octx.Name, namespace)
 			return nil
 		},
 	}

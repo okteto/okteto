@@ -54,27 +54,8 @@ func Namespace(ctx context.Context) *cobra.Command {
 
 // RunNamespace starts the kubeconfig sequence
 func RunNamespace(ctx context.Context, namespace string) error {
-	if !okteto.IsAuthenticated() {
-		if !askIfLogin() {
-			return errors.ErrNotLogged
-		}
-
-		oktetoURL, err := askOktetoURL()
-		if err != nil {
-			return err
-		}
-
-		u, err := login.WithBrowser(ctx, oktetoURL)
-		if err != nil {
-			return err
-		}
-		log.Infof("authenticated user %s", u.ID)
-
-		if oktetoURL == okteto.CloudURL {
-			log.Success("Logged in as %s", u.ExternalID)
-		} else {
-			log.Success("Logged in as %s @ %s", u.ExternalID, oktetoURL)
-		}
+	if !okteto.IsOktetoContext(okteto.GetCurrentContext()) {
+		return errors.ErrNotLogged
 	}
 
 	cred, err := okteto.GetCredentials(ctx)
@@ -95,7 +76,7 @@ func RunNamespace(ctx context.Context, namespace string) error {
 
 	kubeConfigPath := config.GetOktetoContextKubeconfigPath()
 
-	clusterContext := okteto.GetClusterContext()
+	clusterContext := okteto.GetKubernetesContextFromToken()
 
 	if err := okteto.SetKubeconfig(cred, kubeConfigPath, namespace, okteto.GetUserID(), clusterContext); err != nil {
 		return err
@@ -103,32 +84,6 @@ func RunNamespace(ctx context.Context, namespace string) error {
 
 	log.Success("Updated context '%s' in '%s'", clusterContext, kubeConfigPath)
 	return nil
-}
-
-func askIfLogin() bool {
-	result, err := utils.AskYesNo("Authentication required. Do you want to log into Okteto? [y/n]: ")
-	if err != nil {
-		return false
-	}
-	return result
-}
-
-// askOktetoURL prompts for okteto URL
-func askOktetoURL() (string, error) {
-	var oktetoURL string
-
-	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", okteto.CloudURL)
-	if _, err := fmt.Scanln(&oktetoURL); err != nil {
-		oktetoURL = okteto.CloudURL
-	}
-
-	u, err := utils.ParseURL(oktetoURL)
-	if err != nil {
-		return "", fmt.Errorf("malformed login URL")
-	}
-	oktetoURL = u
-
-	return oktetoURL, nil
 }
 
 func hasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {

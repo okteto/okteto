@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -37,7 +36,7 @@ var (
 
 // SetDevDefaultsFromDeployment sets dev defaults from a running deployment
 func SetDevDefaultsFromResource(ctx context.Context, dev *model.Dev, r *model.K8sObject, container, language string) error {
-	c, config, err := k8Client.GetLocal()
+	c, config, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
@@ -66,7 +65,7 @@ func SetDevDefaultsFromResource(ctx context.Context, dev *model.Dev, r *model.K8
 	setAnnotationsFromResource(dev, r)
 	setNameAndLabelsFromResource(ctx, dev, r)
 
-	if okteto.GetClusterContext() != okteto.GetCurrentContext() {
+	if okteto.GetKubernetesContextFromToken() != okteto.GetCurrentContext() {
 		setResourcesFromPod(dev, pod, container)
 	}
 

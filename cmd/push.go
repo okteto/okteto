@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
@@ -67,7 +66,7 @@ func Push(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("deployment name provided does not match the name field in your okteto manifest")
 			}
 
-			c, _, err := k8Client.GetLocal()
+			c, _, err := okteto.GetK8sClient()
 			if err != nil {
 				return err
 			}

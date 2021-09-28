@@ -291,7 +291,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, ti
 
 func getCurrentNamespace(ctx context.Context) string {
 	currentContext := okteto.GetCurrentContext()
-	if okteto.GetClusterContext() == currentContext {
+	if okteto.GetKubernetesContextFromToken() == currentContext {
 		return client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
 	}
 	return os.Getenv("OKTETO_NAMESPACE")

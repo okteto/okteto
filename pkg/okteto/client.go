@@ -21,14 +21,8 @@ import (
 	"strings"
 
 	"github.com/machinebox/graphql"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 func getClient(oktetoURL string) (*graphql.Client, error) {
@@ -138,71 +132,4 @@ func InDevContainer() bool {
 	}
 
 	return false
-}
-
-func GetKubeconfig(kubeConfigPath string) (*clientcmdapi.Config, error) {
-	var cfg *clientcmdapi.Config
-	_, err := os.Stat(kubeConfigPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("kubeconfig not found")
-		}
-		return nil, err
-	} else {
-		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return cfg, nil
-}
-
-//SetKubeconfig updates the current context of a kubeconfig file
-func SetKubeconfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
-	cfg := client.GetOrCreateKubeconfig(kubeConfigPath)
-
-	// create cluster
-	cluster, ok := cfg.Clusters[clusterName]
-	if !ok {
-		cluster = clientcmdapi.NewCluster()
-	}
-	if cluster.Extensions == nil {
-		cluster.Extensions = map[string]runtime.Object{}
-	}
-	//TODO: only if this is an okteto context
-	cluster.Extensions["okteto"] = nil
-
-	cluster.CertificateAuthorityData = []byte(cred.Certificate)
-	cluster.Server = cred.Server
-	cfg.Clusters[clusterName] = cluster
-
-	// create user
-	user, ok := cfg.AuthInfos[userName]
-	if !ok {
-		user = clientcmdapi.NewAuthInfo()
-	}
-	user.Token = cred.Token
-	cfg.AuthInfos[userName] = user
-
-	// create context
-	context, ok := cfg.Contexts[clusterName]
-	if !ok {
-		context = clientcmdapi.NewContext()
-	}
-
-	context.Cluster = clusterName
-	context.AuthInfo = userName
-	context.Namespace = namespace
-	cfg.Contexts[clusterName] = context
-
-	cfg.CurrentContext = clusterName
-
-	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
-}
-
-//SaveOktetoContextKubeconfig stores a kubeconfig copy in the okteto context folder
-func SaveOktetoContextKubeconfig(cfg *clientcmdapi.Config) error {
-	oktetoContextKubeconfigFile := config.GetOktetoContextKubeconfigPath()
-	//TODO: clean what is not used!
-	return clientcmd.WriteToFile(*cfg, oktetoContextKubeconfigFile)
 }

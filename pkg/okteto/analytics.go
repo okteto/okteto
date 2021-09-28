@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package analytics
+package okteto
 
 import (
 	"encoding/json"
@@ -19,10 +19,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/denisbrodbeck/machineid"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 )
 
 var (
@@ -38,78 +36,38 @@ type Analytics struct {
 	MachineID string `json:"machineID"`
 }
 
-func getContextType(oktetoContext string) string {
-	if okteto.IsOktetoContext(oktetoContext) {
+func ContextType(oktetoContext string) string {
+	if IsOktetoContext(oktetoContext) {
 		switch oktetoContext {
-		case okteto.CloudURL:
+		case CloudURL:
 			return CloudContext
-		case okteto.StagingURL:
+		case StagingURL:
 			return StagingContext
 		default:
 			return EnterpriseContext
 		}
 	}
 	return KubernetesContext
+
 }
 
-func Init() error {
-	if fileExists() {
-		return nil
-	}
-
-	a := Analytics{
-		Enabled:   true,
-		MachineID: generateMachineID(),
-	}
-
-	if deprecatedFileExists() {
-		defer os.RemoveAll(config.GetDeprecatedAnalyticsPath())
-		a.Enabled = false
-	}
-
-	return a.save()
-}
-
-func fileExists() bool {
+//AnalyticsExists checks if the analytics file has been created
+func AnalyticsExists() bool {
 	if _, err := os.Stat(config.GetAnalyticsPath()); !os.IsNotExist(err) {
 		return true
 	}
 	return false
 }
 
-func deprecatedFileExists() bool {
+//AnalyticsDeprecatedExists checks if the .noanalytics file has been created
+func AnalyticsDeprecatedExists() bool {
 	if _, err := os.Stat(config.GetDeprecatedAnalyticsPath()); !os.IsNotExist(err) {
 		return true
 	}
 	return false
 }
 
-//TODO: read just once
-func get() *Analytics {
-	if !fileExists() {
-		return &Analytics{Enabled: false, MachineID: ""}
-	}
-	p := config.GetAnalyticsPath()
-
-	b, err := ioutil.ReadFile(p)
-	if err != nil {
-		log.Debugf("error reading analytics file: %s", err)
-		return &Analytics{Enabled: false, MachineID: ""}
-	}
-
-	result := &Analytics{}
-	if err := json.Unmarshal(b, result); err != nil {
-		log.Debugf("error unmarshaling analytics: %s", err)
-		return &Analytics{Enabled: false, MachineID: ""}
-	}
-
-	return result
-}
-
-func (a *Analytics) save() error {
-	if a.MachineID == "" || a.MachineID == "na" {
-		a.MachineID = generateMachineID()
-	}
+func (a *Analytics) Save() error {
 	marshalled, err := json.MarshalIndent(a, "", "\t")
 	if err != nil {
 		return fmt.Errorf("failed to generate analytics file: %s", err)
@@ -135,40 +93,36 @@ func (a *Analytics) save() error {
 	return nil
 }
 
-// Disable disables analytics
-func Disable() error {
-	a := get()
-	a.Enabled = false
-	trackDisable(true)
-	return a.save()
-}
-
-// Enable enables analytics
-func Enable() error {
-	a := get()
-	a.Enabled = true
-	return a.save()
-}
-
-func getTrackID() string {
-	oktetoContextConfig, err := okteto.GetContexts()
-	if err == nil {
-		if oktetoContext, ok := oktetoContextConfig.Contexts[oktetoContextConfig.CurrentContext]; ok {
-			if oktetoContext.ID != "" {
-				return oktetoContext.ID
-			}
-		}
+//GetAnalytics returns the analytics configuration
+func GetAnalytics() *Analytics {
+	if !AnalyticsExists() {
+		return &Analytics{Enabled: true, MachineID: ""}
 	}
-	a := get()
-	return a.MachineID
-}
+	p := config.GetAnalyticsPath()
 
-func generateMachineID() string {
-	mid, err := machineid.ProtectedID("okteto")
+	b, err := ioutil.ReadFile(p)
 	if err != nil {
-		log.Infof("failed to generate a machine id: %v", err)
-		mid = "na"
+		log.Debug("error reading analytics file: %s", err)
+		return &Analytics{Enabled: false, MachineID: ""}
 	}
 
-	return mid
+	result := &Analytics{}
+	if err := json.Unmarshal(b, result); err != nil {
+		log.Debug("error unmarshaling analytics: %s", err)
+		return &Analytics{Enabled: false, MachineID: ""}
+	}
+
+	return result
+}
+
+// SaveMachineID updates the token file with the machineID value
+func SaveMachineID(machineID string) error {
+	t, err := GetToken()
+	if err != nil {
+		log.Infof("bad token, re-initializing: %s", err)
+		t = &Token{}
+	}
+
+	t.MachineID = machineID
+	return save(t)
 }

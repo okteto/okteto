@@ -28,9 +28,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
-
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 
 	"github.com/spf13/cobra"
 )
@@ -91,7 +90,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
 
-	client, cfg, err := k8Client.GetLocal()
+	client, cfg, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
