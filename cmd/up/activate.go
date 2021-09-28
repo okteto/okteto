@@ -270,6 +270,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 				return err
 			}
 		} else {
+			delete(tList[name].App.ObjectMeta().Annotations, model.DeploymentAnnotation)
 			if err := tList[name].App.Update(ctx, up.Client); err != nil {
 				return err
 			}

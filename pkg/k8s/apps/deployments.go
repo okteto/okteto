@@ -195,6 +195,6 @@ func (i *DeploymentApp) Update(ctx context.Context, c kubernetes.Interface) erro
 	return err
 }
 
-func (_ *DeploymentApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+func (*DeploymentApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return deployments.Destroy(ctx, dev.Name, dev.Namespace, c)
 }
