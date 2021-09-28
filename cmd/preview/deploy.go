@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
-	okErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -54,7 +54,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if !okteto.IsAuthenticated() {
-				return okErrors.ErrNotLogged
+				return errors.ErrNotLogged
 			}
 
 			if err := validatePreviewType(scope); err != nil {
@@ -209,7 +209,7 @@ func waitUntilRunning(ctx context.Context, name string, a *okteto.Action, namesp
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
@@ -239,7 +239,7 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name, namespace string, tim
 		case <-t.C:
 			p, err := okteto.GetPreviewEnvByName(ctx, name, namespace)
 			if err != nil {
-				if okErrors.IsNotFound(err) || okErrors.IsNotExist(err) {
+				if errors.IsNotFound(err) || errors.IsNotExist(err) {
 					return nil
 				}
 

@@ -25,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
@@ -72,7 +71,7 @@ func Status() *cobra.Command {
 			}
 
 			if watch {
-				err = runWithWatch(ctx, dev, sy)
+				err = runWithWatch(ctx, sy)
 			} else {
 				err = runWithoutWatch(ctx, sy)
 			}
@@ -89,7 +88,7 @@ func Status() *cobra.Command {
 	return cmd
 }
 
-func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {
+func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 	suffix := "Synchronizing your files..."
 	spinner := utils.NewSpinner(suffix)
 	pbScaling := 0.30
@@ -125,7 +124,7 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)

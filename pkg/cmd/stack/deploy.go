@@ -172,7 +172,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -107,7 +108,7 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
