@@ -177,7 +177,7 @@ func buildServices(ctx context.Context, s *model.Stack, buildKitHost string, isO
 		if !isOktetoCluster && svc.Image == "" {
 			return hasBuiltSomething, fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
 		}
-		if isOktetoCluster && !registry.IsDevRegistry(svc.Image) {
+		if isOktetoCluster && !registry.IsOktetoRegistry(svc.Image) {
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !options.ForceBuild {
@@ -232,7 +232,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, buildKitHo
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.Build = svcBuild
-			if isOktetoCluster && !strings.HasPrefix(svc.Image, "okteto.dev") {
+			if isOktetoCluster && !registry.IsOktetoRegistry(svc.Image) {
 				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
