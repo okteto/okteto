@@ -25,6 +25,7 @@ import (
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/apps"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/linguist"
@@ -179,7 +180,7 @@ func getRunningApp(ctx context.Context, namespace, k8sContext string) (apps.App,
 		return nil, "", nil
 	}
 	if namespace == "" {
-		namespace = k8Client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
+		namespace = client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
 	}
 
 	app, err := askForRunningApp(ctx, namespace, c)
