@@ -39,17 +39,17 @@ func TestGet(t *testing.T) {
 	dev := &model.Dev{Name: "fake"}
 
 	clientset := fake.NewSimpleClientset(deployment)
-	s, err := Get(ctx, dev, deployment.GetNamespace(), clientset)
+	d, err := GetByDev(ctx, dev, deployment.GetNamespace(), clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if s == nil {
-		t.Fatal("empty service")
+	if d == nil {
+		t.Fatal("empty deployment")
 	}
 
-	if s.Name != deployment.GetName() {
-		t.Fatalf("wrong service. Got %s, expected %s", s.Name, deployment.GetName())
+	if d.Name != deployment.GetName() {
+		t.Fatalf("wrong deployment. Got %s, expected %s", d.Name, deployment.GetName())
 	}
 }
 
@@ -177,7 +177,7 @@ func TestCheckConditionErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			err := checkConditionErrors(tt.deployment, tt.dev)
+			err := CheckConditionErrors(tt.deployment, tt.dev)
 
 			if err == nil {
 				t.Fatalf("Didn't receive any error. Expected %s", tt.expectedErr)

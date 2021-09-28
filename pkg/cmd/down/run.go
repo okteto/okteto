@@ -27,24 +27,19 @@ import (
 )
 
 // Run runs the "okteto down" sequence
-func Run(dev *model.Dev, k8sObject *model.K8sObject, trList map[string]*model.Translation, wait bool, c kubernetes.Interface) error {
+func Run(dev *model.Dev, app apps.App, tList map[string]*apps.Translation, wait bool, c kubernetes.Interface) error {
 	ctx := context.Background()
-	if len(trList) == 0 {
+	if len(tList) == 0 {
 		log.Info("no translations available in the deployment")
 	}
 
-	for _, tr := range trList {
-		if tr.K8sObject == nil {
-			continue
-		}
-		dTmp, err := apps.TranslateDevModeOff(tr.K8sObject)
-		if err != nil {
+	for _, t := range tList {
+		if err := apps.TranslateDevModeOff(t.App); err != nil {
 			return err
 		}
-		tr.K8sObject = dTmp
-	}
-	if err := apps.UpdateK8sObjects(ctx, trList, c); err != nil {
-		return err
+		if err := t.App.Update(ctx, c); err != nil {
+			return err
+		}
 	}
 
 	if err := secrets.Destroy(ctx, dev, c); err != nil {
@@ -57,12 +52,8 @@ func Run(dev *model.Dev, k8sObject *model.K8sObject, trList map[string]*model.Tr
 		log.Infof("failed to remove ssh entry: %s", err)
 	}
 
-	if k8sObject.Deployment == nil && k8sObject.StatefulSet == nil {
-		return nil
-	}
-
-	if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) == model.OktetoUpCmd {
-		if err := apps.DestroyDev(ctx, k8sObject, dev, c); err != nil {
+	if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+		if err := app.Destroy(ctx, dev, c); err != nil {
 			return err
 		}
 

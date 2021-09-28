@@ -17,60 +17,28 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-const (
-	deploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
-)
-
 // GetReplicaSetByDeployment given a deployment, returns its current replica set or an error
-func GetReplicaSetByDeployment(ctx context.Context, d *appsv1.Deployment, labels string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
-	rsList, err := c.AppsV1().ReplicaSets(d.Namespace).List(
-		ctx,
-		metav1.ListOptions{
-			LabelSelector: labels,
-		},
-	)
+func GetReplicaSetByDeployment(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (*appsv1.ReplicaSet, error) {
+	rsList, err := c.AppsV1().ReplicaSets(d.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get replicaset using %s: %s", labels, err)
+		return nil, fmt.Errorf("failed to get replicasets: %v", err)
 	}
 
 	for i := range rsList.Items {
 		for _, or := range rsList.Items[i].OwnerReferences {
 			if or.UID == d.UID {
-				if v, ok := rsList.Items[i].Annotations[deploymentRevisionAnnotation]; ok && v == d.Annotations[deploymentRevisionAnnotation] {
+				if v, ok := rsList.Items[i].Annotations[model.DeploymentRevisionAnnotation]; ok && v == d.Annotations[model.DeploymentRevisionAnnotation] {
 					return &rsList.Items[i], nil
 				}
 			}
 		}
 	}
-	return nil, nil
-}
-
-// GetReplicaSetByStatefulset given a statefulset, returns its current replica set or an error
-func GetReplicaSetByStatefulset(ctx context.Context, sfs *appsv1.StatefulSet, labels string, c *kubernetes.Clientset) (*appsv1.ReplicaSet, error) {
-	rsList, err := c.AppsV1().ReplicaSets(sfs.Namespace).List(
-		ctx,
-		metav1.ListOptions{
-			LabelSelector: labels,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get replicaset using %s: %s", labels, err)
-	}
-
-	for i := range rsList.Items {
-		for _, or := range rsList.Items[i].OwnerReferences {
-			if or.UID == sfs.UID {
-				return &rsList.Items[i], nil
-				// if v, ok := rsList.Items[i].Annotations[deploymentRevisionAnnotation]; ok && v == sfs.Annotations[deploymentRevisionAnnotation] {
-				// 	return &rsList.Items[i], nil
-				// }
-			}
-		}
-	}
-	return nil, nil
+	return nil, errors.ErrNotFound
 }

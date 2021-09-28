@@ -41,6 +41,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	appsv1 "k8s.io/api/apps/v1"
@@ -305,7 +306,7 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations["deployment.kubernetes.io/revision"])
+	log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations[model.DeploymentRevisionAnnotation])
 
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
@@ -358,7 +359,7 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations["deployment.kubernetes.io/revision"])
+	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[model.DeploymentRevisionAnnotation])
 
 	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true); err != nil {
 		t.Fatal(err)
@@ -442,7 +443,7 @@ func TestAllStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Printf("statefulset: %s, revision: %s", originalStatefulset.Name, originalStatefulset.Annotations["deployment.kubernetes.io/revision"])
+	log.Printf("statefulset: %s, revision: %s", originalStatefulset.Name, originalStatefulset.Labels[appsv1.StatefulSetRevisionLabel])
 
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
@@ -749,7 +750,7 @@ func testRemoteStignoreGenerated(ctx context.Context, namespace, name, manifestP
 	log.Printf("exec command: %s", cmd.String())
 	bytes, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto exec failed: %v", err)
+		return fmt.Errorf("okteto exec failed: %v - %s", err, string(bytes))
 	}
 	output := string(bytes)
 	if !strings.Contains(output, "venv") {

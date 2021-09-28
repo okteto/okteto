@@ -24,7 +24,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
@@ -38,7 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (up *upContext) activate(autoDeploy, build bool) error {
+func (up *upContext) activate(build bool) error {
 	log.Infof("activating development container retry=%t", up.isRetry)
 
 	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
@@ -58,23 +57,24 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	up.cleaned = make(chan string, 1)
 	up.hardTerminate = make(chan error, 1)
 
-	k8sObject, create, err := up.getCurrentK8sObject(ctx)
+	app, create, err := up.getApp(ctx)
 	if err != nil {
 		return err
 	}
 
-	if err := apps.ValidateMountPaths(k8sObject, up.Dev); err != nil {
+	if err := apps.ValidateMountPaths(app.PodSpec(), up.Dev); err != nil {
 		return err
 	}
 
-	if up.isRetry && !apps.IsDevModeOn(k8sObject) {
+	if up.isRetry && !apps.IsDevModeOn(app) {
 		log.Information("Development container has been deactivated")
 		return nil
 	}
 
-	if apps.IsDevModeOn(k8sObject) && apps.HasBeenChanged(k8sObject) {
+	if apps.IsDevModeOn(app) && apps.HasBeenChanged(app) {
+		analytics.TrackManifestHasChanged(true)
 		return errors.UserError{
-			E: fmt.Errorf("%s '%s' has been modified while your development container was active", strings.ToLower(string(k8sObject.ObjectType)), k8sObject.Name),
+			E: fmt.Errorf("%s '%s' has been modified while your development container was active", app.TypeMeta().Kind, app.ObjectMeta().Name),
 			Hint: `Follow these steps:
 	  1. Execute 'okteto down'
 	  2. Apply your manifest changes again: 'kubectl apply'
@@ -89,18 +89,18 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 
 	if !up.isRetry && build {
-		if err := up.buildDevImage(ctx, k8sObject, create); err != nil {
+		if err := up.buildDevImage(ctx, app); err != nil {
 			return fmt.Errorf("error building dev image: %s", err)
 		}
 	}
 
 	go up.initializeSyncthing()
 
-	if err := up.setDevContainer(k8sObject); err != nil {
+	if err := up.setDevContainer(app); err != nil {
 		return err
 	}
 
-	if err := up.devMode(ctx, k8sObject, create); err != nil {
+	if err := up.devMode(ctx, app, create); err != nil {
 		if errors.IsTransient(err) {
 			return err
 		}
@@ -114,7 +114,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 
 	if up.isRetry {
-		analytics.TrackReconnect(true, up.isSwap)
+		analytics.TrackReconnect(true)
 	}
 
 	up.isRetry = true
@@ -173,7 +173,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		divertURL := ""
 		if up.Dev.Divert != nil {
 			username := okteto.GetSanitizedUsername()
-			name := diverts.DivertName(username, up.Dev.Divert.Ingress)
+			name := apps.DivertName(username, up.Dev.Divert.Ingress)
 			i, err := ingressesv1.Get(ctx, name, up.Dev.Namespace, up.Client)
 			if err != nil {
 				log.Errorf("error getting diverted ingress %s: %s", name, err.Error())
@@ -221,14 +221,14 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 	return false
 }
 
-func (up *upContext) devMode(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
-	if err := up.createDevContainer(ctx, k8sObject, create); err != nil {
+func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) error {
+	if err := up.createDevContainer(ctx, app, create); err != nil {
 		return err
 	}
-	return up.waitUntilDevelopmentContainerIsRunning(ctx, k8sObject.ObjectType)
+	return up.waitUntilDevelopmentContainerIsRunning(ctx, app)
 }
 
-func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
+func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()
 	up.spinner = spinner
@@ -245,12 +245,12 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	trList, err := apps.GetTranslations(ctx, up.Dev, k8sObject, resetOnDevContainerStart, up.Client)
+	tList, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
 	if err != nil {
 		return err
 	}
 
-	if err := apps.TranslateDevMode(trList, up.Client, up.isOktetoNamespace); err != nil {
+	if err := apps.TranslateDevMode(tList, up.isOktetoNamespace); err != nil {
 		return err
 	}
 
@@ -264,13 +264,13 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 		return err
 	}
 
-	for name := range trList {
-		if name == trList[name].K8sObject.Name && create {
-			if err := apps.Create(ctx, trList[name].K8sObject, up.Client); err != nil {
+	for name := range tList {
+		if name == tList[name].App.ObjectMeta().Name && create {
+			if err := tList[name].App.Create(ctx, up.Client); err != nil {
 				return err
 			}
 		} else {
-			if err := apps.Update(ctx, trList[name].K8sObject, up.Client); err != nil {
+			if err := tList[name].App.Update(ctx, up.Client); err != nil {
 				return err
 			}
 		}
@@ -282,7 +282,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 		}
 	}
 
-	pod, err := pods.GetDevPodInLoop(ctx, up.Dev, up.Client, create)
+	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, app, up.Client, up.isOktetoNamespace)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 	return nil
 }
 
-func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context, objectType model.ObjectType) error {
+func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context, app apps.App) error {
 	msg := "Pulling images..."
 	if up.Dev.PersistentVolumeEnabled() {
 		msg = "Attaching persistent volume..."
@@ -348,11 +348,11 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 				continue
 			}
-			pod, ok := event.Object.(*apiv1.Pod)
+			podEvent, ok := event.Object.(*apiv1.Event)
 			if !ok {
 				continue
 			}
-			if up.Pod.UID != pod.UID {
+			if up.Pod.UID != podEvent.InvolvedObject.UID {
 				continue
 			}
 			optsWatchEvents.ResourceVersion = e.ResourceVersion
@@ -377,7 +377,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				spinner.Update("Pulling images...")
 				spinner.Start()
 			case "Killing":
-				if objectType == model.StatefulsetObjectType {
+				if app.TypeMeta().Kind == model.StatefulSet {
 					killing = true
 					continue
 				}

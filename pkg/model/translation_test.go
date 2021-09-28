@@ -22,6 +22,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/pointer"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -92,9 +93,9 @@ services:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		Resources: ResourceRequirements{
 			Limits: ResourceList{
@@ -173,9 +174,9 @@ services:
 		Lifecycle:       &Lifecycle{PostStart: true, PostStop: false},
 		Environment:     make(Environment, 0),
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
@@ -235,9 +236,9 @@ initContainer:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
@@ -338,9 +339,9 @@ docker:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
@@ -419,9 +420,9 @@ sync:
 			},
 		},
 		SecurityContext: &SecurityContext{
-			RunAsUser:  &rootUser,
-			RunAsGroup: &rootUser,
-			FSGroup:    &rootUser,
+			RunAsUser:  pointer.Int64Ptr(0),
+			RunAsGroup: pointer.Int64Ptr(0),
+			FSGroup:    pointer.Int64Ptr(0),
 		},
 		PersistentVolume: true,
 		Volumes: []VolumeMount{
@@ -488,4 +489,111 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
 		}
 	}
+}
+
+func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
+	var falseBoolean = false
+	var trueBoolean = true
+	var runAsUser int64 = 100
+	var runAsGroup int64 = 101
+	var fsGroup int64 = 102
+
+	tests := []struct {
+		manifest   []byte
+		translated SecurityContext
+	}{
+		{
+			manifest: []byte(`name: non-root-user-without-overrides
+image: worker:latest
+namespace: n
+securityContext:
+   runAsNonRoot: true`),
+			translated: SecurityContext{
+				RunAsNonRoot: &trueBoolean,
+			},
+		},
+		{
+			manifest: []byte(`name: root-user-with-defaults
+image: worker:latest
+namespace: n
+securityContext:
+   runAsNonRoot: false`),
+			translated: SecurityContext{
+				RunAsUser:    pointer.Int64Ptr(0),
+				RunAsGroup:   pointer.Int64Ptr(0),
+				FSGroup:      pointer.Int64Ptr(0),
+				RunAsNonRoot: &falseBoolean,
+			},
+		},
+		{
+			manifest: []byte(`name: non-root-user-with-overrides
+image: worker:latest
+namespace: n
+securityContext:
+   runAsUser: 100
+   runAsGroup: 101
+   fsGroup: 102
+   runAsNonRoot: true`),
+			translated: SecurityContext{
+				RunAsUser:    &runAsUser,
+				RunAsGroup:   &runAsGroup,
+				FSGroup:      &fsGroup,
+				RunAsNonRoot: &trueBoolean,
+			},
+		},
+		{
+			manifest: []byte(`name: root-user-with-overrides
+image: worker:latest
+namespace: n
+securityContext:
+   runAsUser: 100
+   runAsGroup: 101
+   fsGroup: 102
+   runAsNonRoot: false`),
+			translated: SecurityContext{
+				RunAsUser:    &runAsUser,
+				RunAsGroup:   &runAsGroup,
+				FSGroup:      &fsGroup,
+				RunAsNonRoot: &falseBoolean,
+			},
+		},
+		{
+			manifest: []byte(`name: no-security-context
+image: worker:latest
+namespace: n`),
+			translated: SecurityContext{
+				RunAsUser:  pointer.Int64Ptr(0),
+				RunAsGroup: pointer.Int64Ptr(0),
+				FSGroup:    pointer.Int64Ptr(0),
+			},
+		},
+		{
+			manifest: []byte(`name: no-run-as-non-root
+image: worker:latest
+namespace: n
+securityContext:
+   runAsUser: 100
+   runAsGroup: 101
+   fsGroup: 102`),
+			translated: SecurityContext{
+				RunAsUser:  &runAsUser,
+				RunAsGroup: &runAsGroup,
+				FSGroup:    &fsGroup,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		dev, err := Read(test.manifest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rule := dev.ToTranslationRule(dev, false)
+		marshalled, _ := yaml.Marshal(rule.SecurityContext)
+		marshalledOK, _ := yaml.Marshal(test.translated)
+		if string(marshalled) != string(marshalledOK) {
+			t.Fatalf("Wrong rule generation for %s.\nActual %s, \nExpected %s", dev.Name, string(marshalled), string(marshalledOK))
+		}
+	}
+
 }

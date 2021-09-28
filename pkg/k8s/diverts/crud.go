@@ -20,10 +20,8 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/services"
-	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -40,7 +38,7 @@ func Create(ctx context.Context, dev *model.Dev, isOktetoNamespace bool, c kuber
 
 	username := okteto.GetSanitizedUsername()
 
-	r, err := divertResource(ctx, dev, username, c)
+	r, err := divertApp(ctx, dev, username, c)
 	if err != nil {
 		return err
 	}
@@ -55,44 +53,23 @@ func Create(ctx context.Context, dev *model.Dev, isOktetoNamespace bool, c kuber
 		return err
 	}
 
-	if err := createDivertCRD(ctx, dev, username, i, s, c); err != nil {
+	if err := createDivertCRD(ctx, dev, username, i, s); err != nil {
 		return err
 	}
 
-	translateDev(username, dev, r)
+	translateDev(dev, r)
 	return nil
 }
 
-func divertResource(ctx context.Context, dev *model.Dev, username string, c kubernetes.Interface) (*model.K8sObject, error) {
-	r := model.NewResource(dev)
-	if r.ObjectType == model.DeploymentObjectType {
-		d, err := deployments.Get(ctx, dev, dev.Namespace, c)
-		if err != nil {
-			return nil, fmt.Errorf("error diverting deployment: %s", err.Error())
-		}
-
-		divertDeployment := translateDeployment(username, d)
-		if err := deployments.Deploy(ctx, divertDeployment, c); err != nil {
-			return nil, fmt.Errorf("error creating diver deployment '%s': %s", divertDeployment.Name, err.Error())
-		}
-		r.Deployment = divertDeployment
-		return r, nil
-	} else {
-		sfs, err := statefulsets.Get(ctx, dev, dev.Namespace, c)
-		if err != nil {
-			return nil, fmt.Errorf("error diverting deployment: %s", err.Error())
-		}
-
-		divertStatefulset := translateStatefulset(username, sfs)
-		if err := statefulsets.Deploy(ctx, divertStatefulset, c); err != nil {
-			return nil, fmt.Errorf("error creating diver deployment '%s': %s", divertStatefulset.Name, err.Error())
-		}
-		r.StatefulSet = divertStatefulset
-		return r, nil
+func divertApp(ctx context.Context, dev *model.Dev, username string, c kubernetes.Interface) (apps.App, error) {
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return nil, err
 	}
+	return app.Divert(ctx, username, dev, c)
 }
 
-func divertService(ctx context.Context, dev *model.Dev, r *model.K8sObject, username string, c kubernetes.Interface) (*apiv1.Service, error) {
+func divertService(ctx context.Context, dev *model.Dev, app apps.App, username string, c kubernetes.Interface) (*apiv1.Service, error) {
 	s, err := services.Get(ctx, dev.Divert.Service, dev.Namespace, c)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -101,7 +78,7 @@ func divertService(ctx context.Context, dev *model.Dev, r *model.K8sObject, user
 		return nil, fmt.Errorf("error getting divert service '%s': %s", dev.Divert.Service, err.Error())
 	}
 
-	divertService, err := translateService(username, r, s)
+	divertService, err := translateService(username, app, s)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +104,7 @@ func divertIngress(ctx context.Context, dev *model.Dev, username string, c kuber
 	return divertIngress, nil
 }
 
-func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *networkingv1.Ingress, s *apiv1.Service, c kubernetes.Interface) error {
+func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *networkingv1.Ingress, s *apiv1.Service) error {
 	dClient, err := GetClient(dev.Context)
 	if err != nil {
 		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
@@ -167,19 +144,16 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	username := okteto.GetSanitizedUsername()
 
-	k8sObject, err := apps.GetResource(ctx, dev, dev.Namespace, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
-		k8sObject.ObjectMeta = metav1.ObjectMeta{
-			Name:      dev.Name,
-			Namespace: dev.Name,
-		}
+		return err
 	}
 
 	dClient, err := GetClient(dev.Context)
 	if err != nil {
 		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
 	}
-	divertCRDName := DivertName(username, dev.Divert.Service)
+	divertCRDName := apps.DivertName(username, dev.Divert.Service)
 	if err := dClient.Diverts(dev.Namespace).Delete(ctx, divertCRDName, metav1.DeleteOptions{}); err != nil {
 		if strings.Contains(err.Error(), "the server could not find the requested resource") {
 			return errors.ErrDivertNotSupported
@@ -189,24 +163,16 @@ func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 		}
 	}
 
-	iName := DivertName(username, dev.Divert.Ingress)
+	iName := apps.DivertName(username, dev.Divert.Ingress)
 	if err := ingressesv1.Destroy(ctx, iName, dev.Namespace, c); err != nil {
 		return fmt.Errorf("error deleting divert ingress '%s': %s", iName, err.Error())
 	}
 
-	sName := DivertName(username, dev.Divert.Service)
+	sName := apps.DivertName(username, dev.Divert.Service)
 	if err := services.Destroy(ctx, sName, dev.Namespace, c); err != nil {
 		return fmt.Errorf("error deleting divert service '%s': %s", sName, err.Error())
 	}
 
-	if k8sObject.ObjectType == model.StatefulsetObjectType {
-		divertStatefulset := translateStatefulset(username, k8sObject.StatefulSet)
-		k8sObject.UpdateStatefulset(divertStatefulset)
-		translateDev(username, dev, k8sObject)
-	} else {
-		divertDeployment := translateDeployment(username, k8sObject.Deployment)
-		k8sObject.UpdateDeployment(divertDeployment)
-		translateDev(username, dev, k8sObject)
-	}
-	return nil
+	translateDev(dev, app)
+	return app.Update(ctx, c)
 }

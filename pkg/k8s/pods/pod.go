@@ -24,10 +24,8 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/events"
 	"github.com/okteto/okteto/pkg/k8s/exec"
-	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,17 +33,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-)
-
-const (
-	deploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
-	sfsRevisionLabel             = "controller-revision-hash"
-	maxRetriesPodRunning         = 300 //1min pod is created
+	"k8s.io/utils/pointer"
 )
 
 var (
-	devTerminationGracePeriodSeconds int64
-	limitBytes                       int64 = 5 * 1024 * 1024 // 5Mb
+	limitBytes int64 = 5 * 1024 * 1024 // 5Mb
 )
 
 // GetBySelector returns the first pod that matches the selector or error if not found
@@ -90,91 +82,9 @@ func ListBySelector(ctx context.Context, namespace string, selector map[string]s
 	return p.Items, nil
 }
 
-// GetDevPodInLoop returns the dev pod for a deployment and loops until it success
-func GetDevPodInLoop(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
-	ticker := time.NewTicker(500 * time.Millisecond)
-	start := time.Now()
-	to := start.Add(dev.Timeout.Resources)
-
-	for retries := 0; ; retries++ {
-		pod, err := GetDevPod(ctx, dev, c, waitUntilDeployed)
-		if err != nil {
-			return nil, err
-		}
-		if pod != nil {
-			return pod, nil
-		}
-
-		if time.Now().After(to) && retries > 10 {
-			return nil, fmt.Errorf("kubernetes is taking too long to create your development container. Please check for errors and try again")
-		}
-
-		select {
-		case <-ticker.C:
-			if retries%5 == 0 {
-				log.Info("development container is not ready yet, will retry")
-			}
-
-			continue
-		case <-ctx.Done():
-			log.Debug("call to pod.GetDevPodInLoop cancelled")
-			return nil, ctx.Err()
-		}
-	}
-
-}
-
-// GetDevPod returns the dev pod for a deployment
-func GetDevPod(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, waitUntilDeployed bool) (*apiv1.Pod, error) {
-	k8sObject, err := apps.GetRevisionAnnotatedK8sObjectOrFailed(ctx, dev, c, waitUntilDeployed)
-
-	if k8sObject == nil {
-		return nil, err
-	}
-
-	labels := fmt.Sprintf("%s=%s", model.InteractiveDevLabel, dev.Name)
-
-	if k8sObject.ObjectType == model.DeploymentObjectType {
-		rs, err := replicasets.GetReplicaSetByDeployment(ctx, k8sObject.Deployment, labels, c)
-		if rs == nil {
-			if err == nil {
-				log.Infof("didn't find replicaset with revision %v", k8sObject.GetAnnotation(deploymentRevisionAnnotation))
-			} else {
-				log.Infof("failed to get replicaset with revision %v: %s ", k8sObject.GetAnnotation(deploymentRevisionAnnotation), err)
-			}
-			return nil, err
-		}
-		return GetPodByReplicaSet(ctx, rs, labels, c)
-	} else {
-		return GetPodByStatefulSet(ctx, k8sObject.StatefulSet, labels, c)
-	}
-}
-
 //GetPodByReplicaSet returns a pod of a given replicaset
-func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, labels string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
-	podList, err := c.CoreV1().Pods(rs.Namespace).List(
-		ctx,
-		metav1.ListOptions{LabelSelector: labels},
-	)
-	if err != nil {
-		return nil, err
-	}
-	for i := range podList.Items {
-		for _, or := range podList.Items[i].OwnerReferences {
-			if or.UID == rs.UID {
-				return &podList.Items[i], nil
-			}
-		}
-	}
-	return nil, nil
-}
-
-//GetPodByReplicaSet returns a pod of a given replicaset
-func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, labels string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
-	podList, err := c.CoreV1().Pods(sfs.Namespace).List(
-		ctx,
-		metav1.ListOptions{LabelSelector: labels},
-	)
+func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes.Interface) (*apiv1.Pod, error) {
+	podList, err := c.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +92,26 @@ func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, labels st
 		if podList.Items[i].DeletionTimestamp != nil {
 			continue
 		}
-		if sfs.Status.UpdateRevision == podList.Items[i].Labels[sfsRevisionLabel] {
+		for _, or := range podList.Items[i].OwnerReferences {
+			if or.UID == rs.UID {
+				return &podList.Items[i], nil
+			}
+		}
+	}
+	return nil, errors.ErrNotFound
+}
+
+//GetPodByReplicaSet returns a pod of a given replicaset
+func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*apiv1.Pod, error) {
+	podList, err := c.CoreV1().Pods(sfs.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for i := range podList.Items {
+		if podList.Items[i].DeletionTimestamp != nil {
+			continue
+		}
+		if sfs.Status.UpdateRevision == podList.Items[i].Labels[appsv1.StatefulSetRevisionLabel] {
 			for _, or := range podList.Items[i].OwnerReferences {
 				if or.UID == sfs.UID {
 					return &podList.Items[i], nil
@@ -190,7 +119,7 @@ func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, labels st
 			}
 		}
 	}
-	return nil, nil
+	return nil, errors.ErrNotFound
 }
 
 //GetUserByPod returns the current user of a running pod
@@ -271,7 +200,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 		ctx,
 		podName,
 		metav1.DeleteOptions{
-			GracePeriodSeconds: &devTerminationGracePeriodSeconds,
+			GracePeriodSeconds: pointer.Int64Ptr(0),
 		},
 	)
 	if err != nil && !errors.IsNotFound(err) {
@@ -280,14 +209,14 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 	return nil
 }
 
-//GetDevPodUserID returns the user id running the dev pod
-func GetDevPodUserID(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) int64 {
-	devPodLogs, err := GetDevPodLogs(ctx, dev, false, c)
+//GetPodUserID returns the user id running the dev pod
+func GetPodUserID(ctx context.Context, podName, containerName, namespace string, c *kubernetes.Clientset) int64 {
+	podLogs, err := ContainerLogs(ctx, containerName, podName, namespace, false, c)
 	if err != nil {
 		log.Infof("failed to access development container logs: %s", err)
 		return -1
 	}
-	return parseUserID(devPodLogs)
+	return parseUserID(podLogs)
 }
 
 func parseUserID(output string) int64 {
@@ -322,28 +251,14 @@ func parseUserID(output string) int64 {
 	return result
 }
 
-//GetDevPodLogs returns the logs of the dev pod
-func GetDevPodLogs(ctx context.Context, dev *model.Dev, timestamps bool, c *kubernetes.Clientset) (string, error) {
-	p, err := GetDevPod(ctx, dev, c, false)
-	if err != nil {
-		return "", err
-	}
-	if p == nil {
-		return "", errors.ErrNotFound
-	}
-	if dev.Container == "" {
-		dev.Container = p.Spec.Containers[0].Name
-	}
-	return containerLogs(ctx, dev.Container, p, dev.Namespace, timestamps, c)
-}
-
-func containerLogs(ctx context.Context, container string, pod *apiv1.Pod, namespace string, timestamps bool, c kubernetes.Interface) (string, error) {
+//ContainerLogs retrieves the logs of a container in a pod
+func ContainerLogs(ctx context.Context, containerName, podName, namespace string, timestamps bool, c kubernetes.Interface) (string, error) {
 	podLogOpts := apiv1.PodLogOptions{
-		Container:  container,
+		Container:  containerName,
 		LimitBytes: &limitBytes,
 		Timestamps: timestamps,
 	}
-	req := c.CoreV1().Pods(namespace).GetLogs(pod.Name, &podLogOpts)
+	req := c.CoreV1().Pods(namespace).GetLogs(podName, &podLogOpts)
 	logsStream, err := req.Stream(ctx)
 	if err != nil {
 		return "", err
@@ -380,7 +295,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 			continue
 		}
 		found = true
-		err := c.CoreV1().Pods(dev.Namespace).Delete(ctx, pods.Items[i].Name, metav1.DeleteOptions{GracePeriodSeconds: &devTerminationGracePeriodSeconds})
+		err := c.CoreV1().Pods(dev.Namespace).Delete(ctx, pods.Items[i].Name, metav1.DeleteOptions{GracePeriodSeconds: pointer.Int64Ptr(0)})
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return nil

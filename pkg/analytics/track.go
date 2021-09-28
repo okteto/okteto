@@ -35,6 +35,7 @@ const (
 
 	upEvent                  = "Up"
 	upErrorEvent             = "Up Error"
+	manifestHasChangedEvent  = "Manifest Has Changed"
 	durationActivateUpEvent  = "Up Duration Time"
 	reconnectEvent           = "Reconnect"
 	durationInitialSyncEvent = "Initial Sync Duration Time"
@@ -121,11 +122,8 @@ func TrackPreviewDestroy(success bool) {
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func TrackReconnect(success, swap bool) {
-	props := map[string]interface{}{
-		"swap": swap,
-	}
-	track(reconnectEvent, success, props)
+func TrackReconnect(success bool) {
+	track(reconnectEvent, success, nil)
 }
 
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
@@ -147,23 +145,24 @@ func TrackResetDatabase(success bool) {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, devName string, interactive, single, swap, divert bool) {
+func TrackUp(success bool, devName string, interactive, single, divert bool) {
 	props := map[string]interface{}{
 		"name":          devName,
 		"interactive":   interactive,
 		"singleService": single,
-		"swap":          swap,
 		"divert":        divert,
 	}
 	track(upEvent, success, props)
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
-func TrackUpError(success, swap bool) {
-	props := map[string]interface{}{
-		"swap": swap,
-	}
-	track(upErrorEvent, success, props)
+func TrackUpError(success bool) {
+	track(upErrorEvent, success, nil)
+}
+
+// TrackManifestHasChanged sends a tracking event to mixpanel when the okteto up command fails because manifest has changed
+func TrackManifestHasChanged(success bool) {
+	track(manifestHasChangedEvent, success, nil)
 }
 
 // TrackDurationActivateUp sends a tracking event to mixpanel of the time that has elapsed in the execution of up

@@ -62,7 +62,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 
 	stignoreFilenames := generateStignoreFiles(dev)
 
-	manifestPath, err := generateManifestFile(ctx, devPath)
+	manifestPath, err := generateManifestFile(devPath)
 	if err != nil {
 		log.Infof("failed to get information for okteto manifest: %s", err)
 	}
@@ -144,7 +144,7 @@ func generateStignoreFiles(dev *model.Dev) []string {
 	return result
 }
 
-func generateManifestFile(ctx context.Context, devPath string) (string, error) {
+func generateManifestFile(devPath string) (string, error) {
 	tempdir, err := ioutil.TempDir("", "")
 	if err != nil {
 		return "", err
@@ -212,7 +212,11 @@ func generateManifestFile(ctx context.Context, devPath string) (string, error) {
 }
 
 func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
-	pod, err := pods.GetDevPod(ctx, dev, c, false)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return "", err
+	}
+	pod, err := app.GetRunningPod(ctx, c)
 	if err != nil {
 		return "", err
 	}
@@ -261,7 +265,16 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 }
 
 func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
-	remoteLogs, err := pods.GetDevPodLogs(ctx, dev, true, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return "", err
+	}
+	pod, err := app.GetRunningPod(ctx, c)
+	if err != nil {
+		return "", err
+	}
+
+	remoteLogs, err := pods.ContainerLogs(ctx, dev.Container, pod.Name, dev.Namespace, false, c)
 	if err != nil {
 		return "", err
 	}

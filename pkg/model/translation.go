@@ -17,19 +17,6 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-// Translation represents the information for translating a deployment
-type Translation struct {
-	Interactive bool               `json:"interactive"`
-	Name        string             `json:"name"`
-	Version     string             `json:"version"`
-	K8sObject   *K8sObject         `json:"-"`
-	Annotations Annotations        `json:"annotations,omitempty"`
-	Tolerations []apiv1.Toleration `json:"tolerations,omitempty"`
-	Replicas    int32              `json:"replicas"`
-	Strategy    K8sObjectStrategy  `json:"strategy"`
-	Rules       []*TranslationRule `json:"rules"`
-}
-
 // TranslationRule represents how to apply a container translation in a deployment
 type TranslationRule struct {
 	Marker            string               `json:"marker"`

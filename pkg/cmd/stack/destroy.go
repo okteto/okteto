@@ -37,8 +37,6 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/cli"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -85,23 +83,23 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	exit := make(chan error, 1)
 
 	go func() {
-		if err := destroyHelmRelease(ctx, spinner, s); err != nil {
-			exit <- err
-		}
 		s.Services = nil
 		s.Endpoints = nil
 		if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
 			exit <- err
+			return
 		}
 
 		spinner.Update("Waiting for services to be destroyed...")
 		if err := waitForPodsToBeDestroyed(ctx, s, c); err != nil {
 			exit <- err
+			return
 		}
 		if removeVolumes {
 			spinner.Update("Destroying volumes...")
 			if err := destroyStackVolumes(ctx, spinner, s, c, timeout); err != nil {
 				exit <- err
+				return
 			}
 		}
 		exit <- configmaps.Destroy(ctx, model.GetStackConfigMapName(s.Name), s.Namespace, c)
@@ -116,46 +114,6 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
 			return err
-		}
-	}
-	return nil
-}
-
-func helmReleaseExist(c *action.List, name string) (bool, error) {
-	c.AllNamespaces = false
-	results, err := c.Run()
-	if err != nil {
-		return false, err
-	}
-	for _, release := range results {
-		if release.Name == name {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func destroyHelmRelease(ctx context.Context, spinner *utils.Spinner, s *model.Stack) error {
-	settings := cli.New()
-	settings.KubeContext = os.Getenv(client.OktetoContextVariableName)
-
-	actionConfig := new(action.Configuration)
-
-	if err := actionConfig.Init(settings.RESTClientGetter(), s.Namespace, helmDriver, func(format string, v ...interface{}) {
-		message := strings.TrimSuffix(fmt.Sprintf(format, v...), "\n")
-		spinner.Update(fmt.Sprintf("%s...", message))
-	}); err != nil {
-		return fmt.Errorf("error initializing stack client: %s", err)
-	}
-
-	exists, err := helmReleaseExist(action.NewList(actionConfig), s.Name)
-	if err != nil {
-		return fmt.Errorf("error listing stacks: %s", err)
-	}
-	if exists {
-		uClient := action.NewUninstall(actionConfig)
-		if _, err := uClient.Run(s.Name); err != nil {
-			return fmt.Errorf("error destroying stack '%s': %s", s.Name, err.Error())
 		}
 	}
 	return nil

@@ -33,28 +33,19 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/pointer"
 )
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.3.3"
+	OktetoBinImageTag = "okteto/bin:1.3.4"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
 	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
 
-	rootUser int64
-
-	// DevReplicas is the number of dev replicas
-	DevReplicas int32 = 1
-
 	once sync.Once
-
-	// DeploymentKind is the resource for Deployments
-	DeploymentObjectType ObjectType = "Deployment"
-	// StatefulSet is the resource for Statefulsets
-	StatefulsetObjectType ObjectType = "StatefulSet"
 )
 
 // Dev represents a development container
@@ -99,15 +90,11 @@ type Dev struct {
 	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
-	ObjectType           ObjectType            `json:"k8sObjectType,omitempty" yaml:"k8sObjectType,omitempty"`
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 }
 
 type Affinity apiv1.Affinity
-
-//K8SObject defines the type of k8s object the up should look for
-type ObjectType string
 
 // Entrypoint represents the start command of a development container
 type Entrypoint struct {
@@ -198,6 +185,7 @@ type SecurityContext struct {
 	RunAsGroup   *int64        `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
 	FSGroup      *int64        `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
 	Capabilities *Capabilities `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
+	RunAsNonRoot *bool         `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
 }
 
 // Capabilities sets the linux capabilities of a container
@@ -571,7 +559,7 @@ func setBuildDefaults(build *BuildInfo) {
 		build.Context = "."
 	}
 	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
-		build.Dockerfile = filepath.Join(build.Context, "Dockerfile")
+		build.Dockerfile = "Dockerfile"
 	}
 }
 
@@ -579,11 +567,14 @@ func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 	if !main.PersistentVolumeEnabled() {
 		return
 	}
+	if dev.RunAsNonRoot() {
+		return
+	}
 	if dev.SecurityContext == nil {
 		dev.SecurityContext = &SecurityContext{}
 	}
 	if dev.SecurityContext.RunAsUser == nil {
-		dev.SecurityContext.RunAsUser = &rootUser
+		dev.SecurityContext.RunAsUser = pointer.Int64Ptr(0)
 	}
 	if dev.SecurityContext.RunAsGroup == nil {
 		dev.SecurityContext.RunAsGroup = dev.SecurityContext.RunAsUser
@@ -630,7 +621,9 @@ func (dev *Dev) validate() error {
 	if err := validateSecrets(dev.Secrets); err != nil {
 		return err
 	}
-
+	if err := dev.validateSecurityContext(); err != nil {
+		return err
+	}
 	if err := dev.validatePersistentVolume(); err != nil {
 		return err
 	}
@@ -686,6 +679,36 @@ func validateSecrets(secrets []Secret) error {
 			return fmt.Errorf("Secrets with the same basename '%s' are not supported", s.GetFileName())
 		}
 		seen[s.GetFileName()] = true
+	}
+	return nil
+}
+
+// RunAsNonRoot returns true if the development container must run as a non-root user
+func (dev *Dev) RunAsNonRoot() bool {
+	if dev.SecurityContext == nil {
+		return false
+	}
+	if dev.SecurityContext.RunAsNonRoot == nil {
+		return false
+	}
+	return *dev.SecurityContext.RunAsNonRoot
+}
+
+// isRootUser returns true if a root user is specified
+func (dev *Dev) isRootUser() bool {
+	if dev.SecurityContext == nil {
+		return false
+	}
+	if dev.SecurityContext.RunAsUser == nil {
+		return false
+	}
+	return *dev.SecurityContext.RunAsUser == 0
+}
+
+// validateSecurityContext checks to see if a root user is specified with runAsNonRoot enabled
+func (dev *Dev) validateSecurityContext() error {
+	if dev.isRootUser() && dev.RunAsNonRoot() {
+		return fmt.Errorf("Running as the root user breaks runAsNonRoot constraint of the securityContext")
 	}
 	return nil
 }

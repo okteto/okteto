@@ -17,8 +17,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
-	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
@@ -34,14 +35,14 @@ var (
 	componentLabels []string = []string{"app.kubernetes.io/component", "component", "app"}
 )
 
-// SetDevDefaultsFromDeployment sets dev defaults from a running deployment
-func SetDevDefaultsFromResource(ctx context.Context, dev *model.Dev, r *model.K8sObject, container, language string) error {
+// SetDevDefaultsFromApp sets dev defaults from a running app
+func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, container, language string) error {
 	c, config, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
 
-	pod, err := getRunningPod(ctx, r, container, c)
+	pod, err := getRunningPod(ctx, app, container, c)
 	if err != nil {
 		return err
 	}
@@ -62,8 +63,8 @@ func SetDevDefaultsFromResource(ctx context.Context, dev *model.Dev, r *model.K8
 		dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
 	}
 
-	setAnnotationsFromResource(dev, r)
-	setNameAndLabelsFromResource(ctx, dev, r)
+	setAnnotationsFromApp(dev, app)
+	setNameAndLabelsFromApp(dev, app)
 
 	if okteto.GetKubernetesContextFromToken() != okteto.GetCurrentContext() {
 		setResourcesFromPod(dev, pod, container)
@@ -72,36 +73,21 @@ func SetDevDefaultsFromResource(ctx context.Context, dev *model.Dev, r *model.K8
 	return setForwardsFromPod(ctx, dev, pod, c)
 }
 
-func getRunningPod(ctx context.Context, r *model.K8sObject, container string, c *kubernetes.Clientset) (*apiv1.Pod, error) {
-	var pod *apiv1.Pod
-	var err error
-	if r.ObjectType == model.DeploymentObjectType {
-		rs, err := replicasets.GetReplicaSetByDeployment(ctx, r.Deployment, "", c)
-		if err != nil {
-			return nil, err
+func getRunningPod(ctx context.Context, app apps.App, container string, c kubernetes.Interface) (*apiv1.Pod, error) {
+	pod, err := app.GetRunningPod(ctx, c)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, fmt.Errorf("%s '%s': no pod is running", app.TypeMeta().Kind, app.ObjectMeta().Name)
 		}
-		pod, err = pods.GetPodByReplicaSet(ctx, rs, "", c)
-
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		pod, err = pods.GetPodByStatefulSet(ctx, r.StatefulSet, "", c)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if pod == nil {
-		return nil, fmt.Errorf("no pod is running for deployment '%s'", r.Name)
+		return nil, err
 	}
 
 	if pod.Status.Phase != apiv1.PodRunning {
-		return nil, fmt.Errorf("no pod is running for deployment '%s'", r.Name)
+		return nil, fmt.Errorf("%s '%s': no pod is running", app.TypeMeta().Kind, app.ObjectMeta().Name)
 	}
 	for _, containerstatus := range pod.Status.ContainerStatuses {
 		if containerstatus.Name == container && containerstatus.State.Running == nil {
-			return nil, fmt.Errorf("no pod is running for deployment '%s'", r.Name)
+			return nil, fmt.Errorf("%s '%s': no pod is running", app.TypeMeta().Kind, app.ObjectMeta().Name)
 		}
 	}
 	return pod, nil
@@ -164,9 +150,9 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 	return nil
 }
 
-func setNameAndLabelsFromResource(_ context.Context, dev *model.Dev, r *model.K8sObject) {
+func setNameAndLabelsFromApp(dev *model.Dev, app apps.App) {
 	for _, l := range componentLabels {
-		component := r.GetLabel(l)
+		component := app.ObjectMeta().Labels[l]
 		if component == "" {
 			continue
 		}
@@ -174,11 +160,11 @@ func setNameAndLabelsFromResource(_ context.Context, dev *model.Dev, r *model.K8
 		dev.Labels = map[string]string{l: component}
 		return
 	}
-	dev.Name = r.Name
+	dev.Name = app.ObjectMeta().Name
 }
 
-func setAnnotationsFromResource(dev *model.Dev, r *model.K8sObject) {
-	if v := r.GetAnnotation(model.FluxAnnotation); v != "" {
+func setAnnotationsFromApp(dev *model.Dev, app apps.App) {
+	if v := app.ObjectMeta().Annotations[model.FluxAnnotation]; v != "" {
 		dev.Annotations = map[string]string{"fluxcd.io/ignore": "true"}
 	}
 }

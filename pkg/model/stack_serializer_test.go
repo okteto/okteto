@@ -331,6 +331,7 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 		})
 	}
 }
+
 func Test_HealthcheckTestUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -1868,5 +1869,60 @@ services:
 	}
 	if s.Services["app"].RestartPolicy != apiv1.RestartPolicyOnFailure {
 		t.Fatal("Could not read the job properly")
+	}
+}
+
+func Test_ExtensionUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name          string
+		manifest      []byte
+		expected      *Service
+		expectedError bool
+	}{
+		{
+			name:     "test anchors expansion",
+			manifest: []byte("x-env: &env\n  environment:\n  - SOME_ENV_VAR=123\nservices:\n  app:\n    <<: *env"),
+			expected: &Service{
+				Environment: Environment{
+					EnvVar{
+						Name:  "SOME_ENV_VAR",
+						Value: "123",
+					},
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name:     "extension not anchor result in no error",
+			manifest: []byte("x-endpoints:\n  path: /\n  port: 8080\n  service: app\nservices:\n  app:\n    command: bash"),
+			expected: &Service{
+				Command: Command{
+					Values: []string{"bash"},
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name:          "not valid first class field",
+			manifest:      []byte("test:\n  hello-world: echo\nservices:\n  app:\n    healthcheck:\n      interval: 10s\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: [\"NONE\"]\n    image: okteto/vote:1"),
+			expected:      nil,
+			expectedError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, true)
+			if err != nil && !tt.expectedError {
+				t.Fatal(err)
+			} else if err == nil && tt.expectedError {
+				t.Fatal("error not thrown")
+			}
+			if !tt.expectedError {
+				if !reflect.DeepEqual(s.Services["app"].Environment, tt.expected.Environment) {
+					t.Fatalf("Expected %v, but got %v", tt.expected, s.Services["app"])
+				}
+			}
+
+		})
 	}
 }

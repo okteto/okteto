@@ -21,14 +21,13 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestCreate(t *testing.T) {
 	ctx := context.Background()
 	sfs := &appsv1.StatefulSet{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 		},
@@ -36,7 +35,7 @@ func TestCreate(t *testing.T) {
 
 	clientset := fake.NewSimpleClientset()
 
-	err := Create(ctx, sfs, clientset)
+	_, err := Create(ctx, sfs, clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +52,7 @@ func TestUpdate(t *testing.T) {
 	ctx := context.Background()
 	labels := map[string]string{"key": "value"}
 	sfs := &appsv1.StatefulSet{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 			Labels:    labels,
@@ -64,13 +63,13 @@ func TestUpdate(t *testing.T) {
 
 	updatedLabels := map[string]string{"key": "value", "key2": "value2"}
 	updatedsfs := &appsv1.StatefulSet{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 			Labels:    updatedLabels,
 		},
 	}
-	err := Update(ctx, updatedsfs, clientset)
+	_, err := Update(ctx, updatedsfs, clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +143,7 @@ func TestList(t *testing.T) {
 	ctx := context.Background()
 
 	sfs := &appsv1.StatefulSet{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 		},
