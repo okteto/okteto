@@ -22,20 +22,6 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
-// DeployPreviewBody top body answer
-type DeployPreviewBody struct {
-	PreviewResponse PreviewResponse `json:"deployPreview" yaml:"deployPreview"`
-}
-
-type deprecatedDeployPreviewBody struct {
-	Preview Preview `json:"deployPreview" yaml:"deployPreview"`
-}
-
-// PreviewBody top body answer
-type PreviewBody struct {
-	Preview Preview `json:"preview"`
-}
-
 //Statefulset represents an Okteto statefulset
 type Statefulset struct {
 	ID         string     `json:"id"`
@@ -334,7 +320,7 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 }
 
 // GetPreviewEnvByName gets a preview environment given its name
-func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*GitDeploy, error) {
+func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name, namespace string) (*GitDeploy, error) {
 	var query struct {
 		Preview struct {
 			GitDeploys []struct {
@@ -346,7 +332,7 @@ func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*G
 	}
 
 	variables := map[string]interface{}{
-		"id": graphql.String(name),
+		"id": graphql.String(namespace),
 	}
 	err := c.client.Query(ctx, &query, variables)
 	if err != nil {

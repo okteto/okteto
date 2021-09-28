@@ -79,7 +79,7 @@ func AuthWithToken(ctx context.Context, u, token string) (*User, error) {
 		return nil, err
 	}
 
-	user, err := oktetoClient.queryUser(ctx, token)
+	user, err := oktetoClient.queryUser(ctx)
 	if err != nil {
 		log.Infof("failed to query the user with the existing token: %s", err)
 		return nil, fmt.Errorf("invalid API token")
@@ -132,7 +132,7 @@ func saveAuthData(user *User, url string) error {
 	return ioutil.WriteFile(GetCertificatePath(), d, 0600)
 }
 
-func (c *OktetoClient) queryUser(ctx context.Context, token string) (*User, error) {
+func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 	var query struct {
 		User struct {
 			Id              graphql.String
@@ -150,7 +150,7 @@ func (c *OktetoClient) queryUser(ctx context.Context, token string) (*User, erro
 	err := c.client.Query(ctx, &query, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
-			return c.deprecatedQueryUser(ctx, token)
+			return c.deprecatedQueryUser(ctx)
 		}
 		return nil, translateAPIErr(err)
 	}
@@ -171,7 +171,7 @@ func (c *OktetoClient) queryUser(ctx context.Context, token string) (*User, erro
 }
 
 //TODO: remove when all users are in Okteto Enterprise which supports globalNamespace
-func (c *OktetoClient) deprecatedQueryUser(ctx context.Context, token string) (*User, error) {
+func (c *OktetoClient) deprecatedQueryUser(ctx context.Context) (*User, error) {
 	var query struct {
 		User struct {
 			Id          graphql.String

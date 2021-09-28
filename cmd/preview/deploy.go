@@ -250,7 +250,7 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name, namespace string, tim
 			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
 
-			p, err := oktetoClient.GetPreviewEnvByName(ctx, name)
+			p, err := oktetoClient.GetPreviewEnvByName(ctx, name, namespace)
 			if err != nil {
 				if okErrors.IsNotFound(err) || okErrors.IsNotExist(err) {
 					return nil
