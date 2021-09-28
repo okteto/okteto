@@ -62,10 +62,6 @@ func (up *upContext) activate(build bool) error {
 		return err
 	}
 
-	if err := apps.ValidateMountPaths(app.PodSpec(), up.Dev); err != nil {
-		return err
-	}
-
 	if up.isRetry && !apps.IsDevModeOn(app) {
 		log.Information("Development container has been deactivated")
 		return nil
@@ -81,6 +77,14 @@ func (up *upContext) activate(build bool) error {
 	  3. Execute 'okteto up' again
     More information is available here: https://okteto.com/docs/reference/known-issues/#kubectl-apply-changes-are-undone-by-okteto-up`,
 		}
+	}
+
+	if err := app.RestoreOriginal(); err != nil {
+		return err
+	}
+
+	if err := apps.ValidateMountPaths(app.PodSpec(), up.Dev); err != nil {
+		return err
 	}
 
 	if _, err := registry.GetImageTagWithDigest(ctx, up.Dev.Namespace, up.Dev.Image.Name); err == errors.ErrNotFound {
@@ -270,7 +274,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 				return err
 			}
 		} else {
-			delete(tList[name].App.ObjectMeta().Annotations, model.DeploymentAnnotation)
+			delete(tList[name].App.ObjectMeta().Annotations, model.DeploymentRevisionAnnotation)
 			if err := tList[name].App.Update(ctx, up.Client); err != nil {
 				return err
 			}
