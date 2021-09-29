@@ -61,7 +61,11 @@ func Namespace(ctx context.Context) *cobra.Command {
 // RunNamespace starts the kubeconfig sequence
 func RunNamespace(ctx context.Context, namespace string) error {
 
-	cred, err := okteto.GetCredentials(ctx)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	cred, err := oktetoClient.GetCredentials(ctx)
 	if err != nil {
 		return err
 	}
@@ -106,13 +110,17 @@ func RunNamespace(ctx context.Context, namespace string) error {
 }
 
 func hasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
-	nList, err := okteto.ListNamespaces(ctx)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return false, err
+	}
+	spaces, err := oktetoClient.ListNamespaces(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	for i := range nList {
-		if nList[i].ID == namespace {
+	for i := range spaces {
+		if spaces[i].ID == namespace {
 			return true, nil
 		}
 	}

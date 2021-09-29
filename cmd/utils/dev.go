@@ -245,7 +245,11 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 	}
 
 	if okteto.IsOktetoContext() {
-		secrets, err := okteto.GetSecrets(ctx)
+		oktetoClient, err := okteto.NewOktetoClient()
+		if err != nil {
+			return err
+		}
+		secrets, err := oktetoClient.GetSecrets(ctx)
 		if err != nil {
 			return fmt.Errorf("error loading Okteto Secrets: %s", err.Error())
 		}

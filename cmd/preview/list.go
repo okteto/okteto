@@ -49,7 +49,11 @@ func List(ctx context.Context) *cobra.Command {
 }
 
 func executeListPreviews(ctx context.Context) error {
-	previewList, err := okteto.ListPreviews(ctx)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	previewList, err := oktetoClient.ListPreviews(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get preview environments: %s", err)
 	}

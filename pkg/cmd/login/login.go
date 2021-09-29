@@ -29,8 +29,6 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-//TODO: reimplement login package
-
 // WithEnvVarIfAvailable authenticates the user with OKTETO_TOKEN value
 func WithEnvVarIfAvailable(ctx context.Context) error {
 	oktetoToken := os.Getenv("OKTETO_TOKEN")

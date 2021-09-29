@@ -182,7 +182,12 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	spinner.Start()
 	defer spinner.Stop()
 
-	resp, err := okteto.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := oktetoClient.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +232,11 @@ func waitToBeDeployed(ctx context.Context, name string, a *okteto.Action, timeou
 	if a == nil {
 		return deprecatedWaitToBeDeployed(ctx, name, timeout)
 	}
-	return okteto.WaitForActionToFinish(ctx, a.Name, timeout)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	return oktetoClient.WaitForActionToFinish(ctx, a.Name, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
@@ -235,13 +244,17 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.D
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	attempts := 0
-
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
-			p, err := okteto.GetPreviewEnvByName(ctx, name)
+
+			p, err := oktetoClient.GetPreviewEnvByName(ctx, name)
 			if err != nil {
 				if errors.IsNotFound(err) || errors.IsNotExist(err) {
 					return nil
@@ -272,12 +285,17 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 	to := time.NewTicker(timeout)
 	errorsMap := make(map[string]int)
 
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := okteto.GetResourcesStatusFromPreview(ctx, name)
+			resourceStatus, err := oktetoClient.GetResourcesStatusFromPreview(ctx, name)
 			if err != nil {
 				return err
 			}

@@ -111,7 +111,12 @@ func InitContext(ctx context.Context) error {
 		}
 
 		if cfg == nil && certificate != "" {
-			cred, err := GetCredentials(ctx)
+			oktetoClient, err := NewOktetoClientFromUrl(token.URL)
+			if err != nil {
+				return err
+			}
+
+			cred, err := oktetoClient.GetCredentials(ctx)
 			if err == nil {
 				oktetoContext := UrlToContext(token.URL)
 

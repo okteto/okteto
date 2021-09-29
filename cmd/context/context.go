@@ -133,7 +133,11 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 			Token: user.Token,
 		}
 
-		cred, err := okteto.GetCredentials(ctx)
+		oktetoClient, err := okteto.NewOktetoClient()
+		if err != nil {
+			return err
+		}
+		cred, err := oktetoClient.GetCredentials(ctx)
 		if err != nil {
 			return err
 		}

@@ -54,7 +54,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 }
 
 func executeDestroyPreview(ctx context.Context, name string) error {
-	if err := okteto.DestroyPreview(ctx, name); err != nil {
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	if err := oktetoClient.DestroyPreview(ctx, name); err != nil {
 		return fmt.Errorf("failed to destroy preview environment: %s", err)
 	}
 

@@ -48,7 +48,11 @@ func List(ctx context.Context) *cobra.Command {
 }
 
 func executeListNamespaces(ctx context.Context) error {
-	spaces, err := okteto.ListNamespaces(ctx)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	spaces, err := oktetoClient.ListNamespaces(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get namespaces: %s", err)
 	}

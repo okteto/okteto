@@ -32,7 +32,11 @@ func SetOktetoUsernameEnv() error {
 }
 
 func HasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
-	nList, err := okteto.ListNamespaces(ctx)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return false, nil
+	}
+	nList, err := oktetoClient.ListNamespaces(ctx)
 	if err != nil {
 		return false, err
 	}

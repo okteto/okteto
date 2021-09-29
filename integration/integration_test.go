@@ -578,13 +578,7 @@ func TestDivert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	apiDivertedSvc := fmt.Sprintf("%s-%s", user, apiSvc)
-	divertedContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiDivertedSvc, namespace), 120, upErrorChannel)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if originalContent == divertedContent {
+	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 30); err != nil {
 		t.Fatal("Contents are the same")
 	}
 
@@ -643,6 +637,21 @@ func modifyDivertApp() error {
 		return err
 	}
 	return nil
+}
+
+func waitForDivertedContent(originalContent, namespace, apiSvc string, upErrorChannel chan error, timeout int) error {
+	for i := 0; i < timeout; i++ {
+		apiDivertedSvc := fmt.Sprintf("%s-%s", user, apiSvc)
+		divertedContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiDivertedSvc, namespace), 120, upErrorChannel)
+		if err != nil {
+			continue
+		}
+
+		if originalContent != divertedContent {
+			return nil
+		}
+	}
+	return fmt.Errorf("Content was not diverted")
 }
 
 func waitForDeployment(ctx context.Context, namespace, name string, revision, timeout int) error {
