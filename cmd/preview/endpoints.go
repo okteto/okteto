@@ -60,7 +60,11 @@ func validateOutput(output string) error {
 }
 
 func executeListPreviewEndpoints(ctx context.Context, name, output string) error {
-	endpointList, err := okteto.ListPreviewsEndpoints(ctx, name)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	endpointList, err := oktetoClient.ListPreviewsEndpoints(ctx, name)
 	if err != nil {
 		return fmt.Errorf("failed to get preview environments: %s", err)
 	}

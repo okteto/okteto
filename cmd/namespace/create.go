@@ -50,7 +50,11 @@ func Create(ctx context.Context) *cobra.Command {
 }
 
 func executeCreateNamespace(ctx context.Context, namespace string, members *[]string) error {
-	oktetoNS, err := okteto.CreateNamespace(ctx, namespace)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	oktetoNS, err := oktetoClient.CreateNamespace(ctx, namespace)
 	if err != nil {
 		return err
 	}
@@ -58,7 +62,7 @@ func executeCreateNamespace(ctx context.Context, namespace string, members *[]st
 	log.Success("Namespace '%s' created", oktetoNS)
 
 	if members != nil && len(*members) > 0 {
-		if err := okteto.AddNamespaceMembers(ctx, namespace, *members); err != nil {
+		if err := oktetoClient.AddNamespaceMembers(ctx, namespace, *members); err != nil {
 			return fmt.Errorf("failed to invite %s to the namespace: %s", strings.Join(*members, ", "), err)
 		}
 	}
