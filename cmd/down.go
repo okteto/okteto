@@ -88,8 +88,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 				exit <- err
 				return
 			}
-			exit <- nil
-			return
 		}
 
 		app, err := apps.Get(ctx, dev, dev.Namespace, client)
