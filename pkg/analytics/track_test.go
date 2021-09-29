@@ -18,9 +18,26 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/okteto"
 )
+
+func TestMain(m *testing.M) {
+	currentAnalytics = &Analytics{
+		Enabled:   false,
+		MachineID: "machine-id",
+	}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Name:      "test",
+				Namespace: "namespace",
+				UserID:    "user-id",
+			},
+		},
+	}
+	os.Exit(m.Run())
+}
 
 func Test_generatedMachineID(t *testing.T) {
 	m := generateMachineID()
@@ -59,19 +76,9 @@ func Test_getTrackID(t *testing.T) {
 
 			a := get()
 			a.MachineID = tt.machineID
-			if err := a.save(); err != nil {
-				t.Fatal(err)
-			}
-
-			cfg := client.CreateKubeconfig()
-			if err := okteto.SetCurrentContext("test", tt.userID, "", "", "", cfg, "", "", ""); err != nil {
-				t.Fatal(err)
-			}
+			okteto.Context().UserID = tt.userID
 
 			trackID := getTrackID()
-			if trackID == "" || trackID == "na" {
-				t.Fatalf("%s: failed to get trackID: %s", tt.name, trackID)
-			}
 
 			expected := ""
 			switch {
@@ -79,8 +86,6 @@ func Test_getTrackID(t *testing.T) {
 				expected = tt.userID
 			case len(tt.machineID) > 0:
 				expected = tt.machineID
-			default:
-				expected = get().MachineID
 			}
 
 			if trackID != expected {

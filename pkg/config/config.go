@@ -35,7 +35,7 @@ const (
 	analyticsFile           = "analytics.json"
 	tokenFile               = ".token.json"
 	contextDir              = "context"
-	contextsConfigFile      = "config.json"
+	contextsStoreFile       = "config.json"
 	kubeconfigFile          = "kubeconfig"
 
 	oktetoFolderName = ".okteto"
@@ -56,6 +56,9 @@ const (
 	//Failed up failed
 	Failed    UpState = "failed"
 	stateFile         = "okteto.state"
+
+	//OktetoContextVariableName defines the kubeconfig context of okteto commands
+	OktetoContextVariableName = "OKTETO_CONTEXT"
 )
 
 // VersionString the version of the cli
@@ -235,7 +238,7 @@ func splitKubeConfigEnv(value string) string {
 	return strings.Split(value, ":")[0]
 }
 
-func GetTokenPath() string {
+func GetTokenPathDeprecated() string {
 	return filepath.Join(GetOktetoHome(), tokenFile)
 }
 
@@ -251,8 +254,8 @@ func GetOktetoContextFolder() string {
 	return filepath.Join(GetOktetoHome(), contextDir)
 }
 
-func GetOktetoContextsConfigPath() string {
-	return filepath.Join(GetOktetoContextFolder(), contextsConfigFile)
+func GetOktetoContextsStorePath() string {
+	return filepath.Join(GetOktetoContextFolder(), contextsStoreFile)
 }
 
 func GetOktetoContextKubeconfigPath() string {

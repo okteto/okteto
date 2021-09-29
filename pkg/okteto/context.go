@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
@@ -35,22 +36,25 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-type ContextStore struct {
-	Contexts       map[string]Context `json:"contexts"`
-	CurrentContext string             `json:"current-context"`
+type OktetoContextStore struct {
+	Contexts       map[string]*OktetoContext `json:"contexts"`
+	CurrentContext string                    `json:"current-context"`
 }
 
-// Context contains the information related to an okteto context
-type Context struct {
-	Name        string `json:"name,omitempty"`
-	ID          string `json:"id,omitempty"`
-	Username    string `json:"username,omitempty"`
-	Token       string `json:"token,omitempty"`
-	Namespace   string `json:"namespace,omitempty"`
-	Kubeconfig  string `json:"kubeconfig,omitempty"`
-	Buildkit    string `json:"buildkit,omitempty"`
-	Registry    string `json:"registry,omitempty"`
-	Certificate string `json:"certificate,omitempty"`
+var CurrentStore *OktetoContextStore
+
+// OktetoContext contains the information related to an okteto context
+type OktetoContext struct {
+	Name            string `json:"name,omitempty"`
+	UserID          string `json:"userId,omitempty"`
+	Username        string `json:"username,omitempty"`
+	Token           string `json:"token,omitempty"`
+	Namespace       string `json:"namespace,omitempty"`
+	Kubeconfig      string `json:"kubeconfig,omitempty"`
+	Buildkit        string `json:"buildkit,omitempty"`
+	Registry        string `json:"registry,omitempty"`
+	Certificate     string `json:"certificate,omitempty"`
+	GlobalNamespace string `json:"globalNamespace,omitempty"`
 }
 
 func InitContext(ctx context.Context) error {
@@ -58,76 +62,94 @@ func InitContext(ctx context.Context) error {
 		return nil
 	}
 
-	defer os.RemoveAll(config.GetTokenPath())
-
-	kubeconfigPath := config.GetKubeconfigPath()
-	currentContext := os.Getenv(client.OktetoContextVariableName)
-	cfg := client.GetKubeconfig(kubeconfigPath)
-	if currentContext == "" {
-		currentContext = client.GetCurrentContext(kubeconfigPath)
-	}
+	defer os.RemoveAll(config.GetTokenPathDeprecated())
 
 	kubeconfigFile := config.GetKubeconfigPath()
+	currentContext := os.Getenv(config.OktetoContextVariableName)
+	cfg := client.GetKubeconfig(kubeconfigFile)
+	if currentContext == "" {
+		currentContext = client.GetCurrentKubernetesContext(kubeconfigFile)
+	}
+	namespace := client.GetCurrentNamespace(kubeconfigFile)
+
 	if IsAuthenticated() {
-		token, err := GetToken()
+		token, err := getTokenFromOktetoHome()
 		if err != nil {
-			log.Infof("error accessing okteto token '%s': %v", config.GetTokenPath(), err)
+			log.Infof("error accessing okteto token '%s': %v", config.GetTokenPathDeprecated(), err)
 		}
+		certificate := ""
 		certBytes, errCert := os.ReadFile(config.GetCertificatePath())
-		if err != nil {
-			log.Infof("error reading current okteto certificate: %v", err)
+		if errCert != nil {
+			log.Infof("error reading current okteto certificate: %v", errCert)
+		} else {
+			certificate = base64.StdEncoding.EncodeToString(certBytes)
 		}
 
-		if GetKubernetesContextFromToken() == currentContext && errCert == nil {
-			if cfg.Clusters[currentContext].Extensions == nil {
-				cfg.Clusters[currentContext].Extensions = map[string]runtime.Object{}
+		if UrlToContext(token.URL) == currentContext && certificate != "" {
+			if cfg.Contexts[currentContext].Extensions == nil {
+				cfg.Contexts[currentContext].Extensions = map[string]runtime.Object{}
 			}
-			cfg.Clusters[currentContext].Extensions[model.OktetoExtension] = nil
+			cfg.Contexts[currentContext].Extensions[model.OktetoExtension] = nil
 
 			if err := clientcmd.WriteToFile(*cfg, kubeconfigFile); err != nil {
 				return fmt.Errorf("error updating your KUBECONFIG file '%s': %v", kubeconfigFile, err)
 			}
-
-			cfg := client.GetKubeconfig(kubeconfigFile)
-			if err == nil {
-				if err := SetCurrentContext(token.URL, token.ID, token.Username, token.Token, cfg.Contexts[currentContext].Namespace, cfg, token.Buildkit, token.URL, string(certBytes)); err != nil {
-					return fmt.Errorf("error configuring okteto context: %v", err)
-				}
-				log.Information("Current context: %s\n    Run 'okteto context' to configure your context", token.URL)
-				return nil
+			u := &User{
+				ID:              token.ID,
+				ExternalID:      token.Username,
+				Token:           token.Token,
+				GlobalNamespace: token.GlobalNamespace,
+				Buildkit:        token.Buildkit,
+				Registry:        token.Registry,
+				Certificate:     certificate,
 			}
-			log.Infof("error reading current okteto certificate: %v", err)
+			if err := SaveOktetoClusterContext(token.URL, u, namespace, cfg); err != nil {
+				return fmt.Errorf("error configuring okteto context: %v", err)
+			}
+			log.Information("Current context: %s\n    Run 'okteto context' to configure your context", token.URL)
+			return nil
 		}
 
-		if cfg == nil && errCert == nil {
+		if cfg == nil && certificate != "" {
 			cred, err := GetCredentials(ctx)
 			if err == nil {
-				oktetoContext := GetKubernetesContextFromToken()
+				oktetoContext := UrlToContext(token.URL)
 
-				if err := SetKubeconfig(cred, kubeconfigFile, cred.Namespace, token.ID, oktetoContext); err != nil {
+				if err := SetKubeContext(cred, kubeconfigFile, cred.Namespace, token.ID, oktetoContext); err != nil {
 					return fmt.Errorf("error updating kubernetes context: %v", err)
 				}
 
 				cfg := client.GetKubeconfig(kubeconfigFile)
-				if err := SetCurrentContext(token.URL, token.ID, token.Username, token.Token, cred.Namespace, cfg, token.Buildkit, token.URL, string(certBytes)); err != nil {
+				u := &User{
+					ID:              token.ID,
+					ExternalID:      token.Username,
+					Token:           token.Token,
+					GlobalNamespace: token.GlobalNamespace,
+					Buildkit:        token.Buildkit,
+					Registry:        token.Registry,
+					Certificate:     certificate,
+				}
+				if err := SaveOktetoClusterContext(token.URL, u, cred.Namespace, cfg); err != nil {
 					return fmt.Errorf("error configuring okteto context: %v", err)
 				}
 
 				return nil
 			}
+			//TODO: start login sequence
 			log.Infof("error refreshing okteto credentials: %v", err)
 		}
 	}
 
 	if cfg == nil {
+		//TODO: start login sequence
 		return errors.ErrNoActiveOktetoContexts
 	}
 
-	if _, ok := cfg.Clusters[currentContext]; !ok {
+	if _, ok := cfg.Contexts[currentContext]; !ok {
 		return fmt.Errorf("current kubernetes context '%s' doesn't exist in '%s'", currentContext, kubeconfigFile)
 	}
 
-	if err := SetCurrentContext(currentContext, "", "", "", cfg.Contexts[currentContext].Namespace, cfg, "", "", ""); err != nil {
+	if err := SaveKubernetesClusterContext(currentContext, namespace, cfg, ""); err != nil {
 		return fmt.Errorf("error configuring okteto context: %v", err)
 	}
 	log.Information("Current context: %s\n    Run 'okteto context' if you need to change your context", currentContext)
@@ -137,81 +159,199 @@ func InitContext(ctx context.Context) error {
 
 //contextExists checks if an okteto context has been created
 func contextExists() bool {
-	if _, err := os.Stat(config.GetOktetoContextFolder()); !os.IsNotExist(err) {
-		return true
+	oktetoContextFolder := config.GetOktetoContextFolder()
+	if _, err := os.Stat(oktetoContextFolder); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		log.Fatalf("error accessing okteto context store '%s': %s", oktetoContextFolder, err)
 	}
-	return false
+	return true
 }
 
-func IsOktetoContext(name string) bool {
+func UrlToContext(uri string) string {
+	u, _ := url.Parse(uri)
+	return strings.ReplaceAll(u.Host, ".", "_")
+}
+
+func IsOktetoURL(name string) bool {
 	u, err := url.Parse(name)
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-func IsOktetoCurrentContext() bool {
-	return IsOktetoContext(GetCurrentContext())
+func IsOktetoContext() bool {
+	octx := Context()
+	return IsOktetoURL(octx.Name)
 }
 
-//TODO: read just once
-func GetContexts() (*ContextStore, error) {
-	p := config.GetOktetoContextsConfigPath()
-	b, err := ioutil.ReadFile(p)
+func ContextStore() *OktetoContextStore {
+	if CurrentStore != nil {
+		return CurrentStore
+	}
+
+	b, err := ioutil.ReadFile(config.GetOktetoContextsStorePath())
 	if err != nil {
-		return nil, errors.ErrNoActiveOktetoContexts
+		log.Errorf("error reading okteto contexts: %v", err)
+		log.Fatalf(errors.ErrCorruptedOktetoContexts)
 	}
 
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields() // Force errors
 
-	ctxConfig := &ContextStore{}
-	if err := dec.Decode(&ctxConfig); err != nil {
-		return nil, err
+	ctxStore := &OktetoContextStore{}
+	if err := dec.Decode(&ctxStore); err != nil {
+		log.Errorf("error decoding okteto contexts: %v", err)
+		log.Fatalf(errors.ErrCorruptedOktetoContexts)
 	}
 
-	return ctxConfig, nil
+	CurrentStore = ctxStore
+	return CurrentStore
 }
 
-func GetCurrentContext() string {
-	c, err := GetContexts()
-	if err != nil {
-		return ""
+func Context() *OktetoContext {
+	c := ContextStore()
+	if c.CurrentContext == "" {
+		log.Fatalf(errors.ErrCorruptedOktetoContexts)
 	}
-	return c.CurrentContext
+	octx, ok := c.Contexts[c.CurrentContext]
+	if !ok {
+		log.Fatalf(errors.ErrCorruptedOktetoContexts)
+	}
+
+	return octx
 }
 
-func SetCurrentContext(name, userID, username, token, namespace string, cfg *clientcmdapi.Config, buildkitURL, registryURL, certificate string) error {
-	var err error
-	var cc *ContextStore
-	if contextExists() {
-		cc, err = GetContexts()
-		if err != nil {
-			log.Infof("bad contexts, re-initializing: %s", err)
+func SetCurrentContext(oktetoContext, namespace string) error {
+	if oktetoContext == "" {
+		oktetoContext = os.Getenv(config.OktetoContextVariableName)
+	}
+
+	if namespace == "" {
+		namespace = os.Getenv("OKTETO_NAMESPACE")
+	}
+
+	octxStore := ContextStore()
+
+	if oktetoContext != "" {
+		if IsOktetoURL(oktetoContext) {
+			if _, ok := octxStore.Contexts[oktetoContext]; !ok {
+				//TODO: start login sequence
+				return fmt.Errorf(errors.ErrOktetoContextNotFound, oktetoContext, oktetoContext)
+			}
+		} else {
+			kubeconfigFile := config.GetKubeconfigPath()
+			cfg := client.GetKubeconfig(kubeconfigFile)
+			if _, ok := cfg.Contexts[oktetoContext]; !ok {
+				return fmt.Errorf(errors.ErrKubernetesContextNotFound, oktetoContext, kubeconfigFile)
+			}
+			if err := saveContextConfigInFile(CurrentStore); err != nil {
+				return err
+			}
 		}
+		octxStore.CurrentContext = oktetoContext
+	}
+
+	if namespace != "" {
+		octx := Context()
+		octx.Namespace = namespace
+	}
+
+	return nil
+}
+
+func HasBeenLogged(oktetoURL string) bool {
+	octxStore := ContextStore()
+	_, ok := octxStore.Contexts[oktetoURL]
+	return ok
+}
+
+func UpdateOktetoClusterContext(name string, u *User, namespace string, cfg *clientcmdapi.Config) error {
+	if contextExists() {
+		CurrentStore = ContextStore()
 	} else {
-		cc = &ContextStore{
-			Contexts: make(map[string]Context),
+		CurrentStore = &OktetoContextStore{
+			Contexts: map[string]*OktetoContext{},
 		}
 	}
 
 	kubeconfigBase64 := encodeOktetoKubeconfig(cfg)
-	cc.Contexts[name] = Context{
-		Name:        name,
-		ID:          userID,
-		Username:    username,
-		Token:       token,
-		Namespace:   namespace,
-		Kubeconfig:  kubeconfigBase64,
-		Buildkit:    buildkitURL,
-		Registry:    registryURL,
-		Certificate: base64.StdEncoding.EncodeToString([]byte(certificate)),
+	certificate := u.Certificate
+	if certificate != "" {
+		certificate = base64.StdEncoding.EncodeToString([]byte(u.Certificate))
+	}
+	CurrentStore.Contexts[name] = &OktetoContext{
+		Name:            name,
+		UserID:          u.ID,
+		Username:        u.ExternalID,
+		Token:           u.Token,
+		Namespace:       namespace,
+		GlobalNamespace: u.GlobalNamespace,
+		Kubeconfig:      kubeconfigBase64,
+		Buildkit:        u.Buildkit,
+		Registry:        u.Registry,
+		Certificate:     certificate,
 	}
 
-	cc.CurrentContext = name
-
-	return saveContextConfigInFile(cc)
+	CurrentStore.CurrentContext = name
+	return saveContextConfigInFile(CurrentStore)
 }
 
-func saveContextConfigInFile(c *ContextStore) error {
+func SaveOktetoClusterContext(name string, u *User, namespace string, cfg *clientcmdapi.Config) error {
+	if contextExists() {
+		CurrentStore = ContextStore()
+	} else {
+		CurrentStore = &OktetoContextStore{
+			Contexts: map[string]*OktetoContext{},
+		}
+	}
+
+	kubeconfigBase64 := ""
+	if cfg != nil {
+		kubeconfigBase64 = encodeOktetoKubeconfig(cfg)
+	}
+	CurrentStore.Contexts[name] = &OktetoContext{
+		Name:            name,
+		UserID:          u.ID,
+		Username:        u.ExternalID,
+		Token:           u.Token,
+		Namespace:       namespace,
+		GlobalNamespace: u.GlobalNamespace,
+		Kubeconfig:      kubeconfigBase64,
+		Buildkit:        u.Buildkit,
+		Registry:        u.Registry,
+		Certificate:     u.Certificate,
+	}
+
+	CurrentStore.CurrentContext = name
+	return saveContextConfigInFile(CurrentStore)
+}
+
+func SaveKubernetesClusterContext(name, namespace string, cfg *clientcmdapi.Config, buildkitURL string) error {
+	var err error
+	if contextExists() {
+		CurrentStore = ContextStore()
+		if err != nil {
+			log.Errorf("bad contexts, re-initializing: %s", err)
+		}
+	} else {
+		CurrentStore = &OktetoContextStore{
+			Contexts: map[string]*OktetoContext{},
+		}
+	}
+
+	kubeconfigBase64 := encodeOktetoKubeconfig(cfg)
+	CurrentStore.Contexts[name] = &OktetoContext{
+		Name:       name,
+		Namespace:  namespace,
+		Kubeconfig: kubeconfigBase64,
+		Buildkit:   buildkitURL,
+	}
+
+	CurrentStore.CurrentContext = name
+	return saveContextConfigInFile(CurrentStore)
+}
+
+func saveContextConfigInFile(c *OktetoContextStore) error {
 	marshalled, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
 		log.Infof("failed to marshal context: %s", err)
@@ -223,7 +363,7 @@ func saveContextConfigInFile(c *ContextStore) error {
 		log.Fatalf("failed to create %s: %s", contextFolder, err)
 	}
 
-	contextConfigPath := config.GetOktetoContextsConfigPath()
+	contextConfigPath := config.GetOktetoContextsStorePath()
 	if _, err := os.Stat(contextConfigPath); err == nil {
 		err = os.Chmod(contextConfigPath, 0600)
 		if err != nil {
@@ -235,12 +375,11 @@ func saveContextConfigInFile(c *ContextStore) error {
 		return fmt.Errorf("couldn't save context: %s", err)
 	}
 
-	currentToken = nil
 	return nil
 }
 
-//SetKubeconfig updates the current context of a kubeconfig file
-func SetKubeconfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
+//SetKubeContext updates the current context of a kubeconfig file
+func SetKubeContext(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
 	cfg := client.GetKubeconfig(kubeConfigPath)
 	if cfg == nil {
 		cfg = client.CreateKubeconfig()
@@ -251,10 +390,6 @@ func SetKubeconfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	if !ok {
 		cluster = clientcmdapi.NewCluster()
 	}
-	if cluster.Extensions == nil {
-		cluster.Extensions = map[string]runtime.Object{}
-	}
-	cluster.Extensions[model.OktetoExtension] = nil
 
 	cluster.CertificateAuthorityData = []byte(cred.Certificate)
 	cluster.Server = cred.Server
@@ -273,7 +408,10 @@ func SetKubeconfig(cred *Credential, kubeConfigPath, namespace, userName, cluste
 	if !ok {
 		context = clientcmdapi.NewContext()
 	}
-
+	if context.Extensions == nil {
+		context.Extensions = map[string]runtime.Object{}
+	}
+	context.Extensions[model.OktetoExtension] = nil
 	context.Cluster = clusterName
 	context.AuthInfo = userName
 	context.Namespace = namespace
@@ -317,23 +455,24 @@ func encodeOktetoKubeconfig(cfg *clientcmdapi.Config) string {
 }
 
 func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
-	occ, err := GetContexts()
+	octx := Context()
+	kubeconfigBytes, err := base64.StdEncoding.DecodeString(octx.Kubeconfig)
 	if err != nil {
-		return nil, nil, err
-	}
-	//TODO: out of bound index
-	kubeconfigBase64 := occ.Contexts[occ.CurrentContext].Kubeconfig
-	kubeconfigBytes, err := base64.StdEncoding.DecodeString(kubeconfigBase64)
-	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts)
 	}
 	var cfg clientcmdapi.Config
 	if err := json.Unmarshal(kubeconfigBytes, &cfg); err != nil {
 		return nil, nil, err
 	}
 	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
-	if err := client.SetKubeconfig(&cfg, kubeconfigFile); err != nil {
+	if err := client.WriteKubeconfig(&cfg, kubeconfigFile); err != nil {
 		return nil, nil, err
 	}
-	return client.GetLocal()
+	return client.Get(kubeconfigFile)
+}
+
+// GetSanitizedUsername returns the username of the authenticated user sanitized to be DNS compatible
+func GetSanitizedUsername() string {
+	octx := Context()
+	return reg.ReplaceAllString(strings.ToLower(octx.Username), "-")
 }

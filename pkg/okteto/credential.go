@@ -45,7 +45,7 @@ func GetCredentials(ctx context.Context) (*Credential, error) {
 	}
 
 	if cred.Credentials.Server == "" {
-		return nil, fmt.Errorf("%s is not available. Please, retry again in a few minutes", GetURL())
+		return nil, fmt.Errorf("%s is not available. Please, retry again in a few minutes", Context().Name)
 	}
 
 	return &cred.Credentials, nil

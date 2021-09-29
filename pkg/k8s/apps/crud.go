@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -180,7 +181,7 @@ func GetStatefulSetSandbox(dev *model.Dev) *appsv1.StatefulSet {
 }
 
 // GetRunningPodInLoop returns the dev pod for an app and loops until it success
-func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kubernetes.Interface, isOktetoNamespace bool) (*apiv1.Pod, error) {
+func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kubernetes.Interface) (*apiv1.Pod, error) {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	start := time.Now()
 	to := start.Add(dev.Timeout.Resources)
@@ -197,7 +198,7 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 		pod, err := app.GetRunningPod(ctx, c)
 
 		if err == nil {
-			if !isOktetoNamespace {
+			if !okteto.IsOktetoContext() {
 				app.ObjectMeta().Annotations[model.OktetoRevisionAnnotation] = app.GetRevision()
 				if err := app.Update(ctx, c); err != nil {
 					return nil, err
@@ -290,9 +291,9 @@ func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, re
 }
 
 //TranslateDevMode translates the deployment manifests to put them in dev mode
-func TranslateDevMode(tr map[string]*Translation, isOktetoNamespace bool) error {
+func TranslateDevMode(tr map[string]*Translation) error {
 	for _, t := range tr {
-		err := translate(t, isOktetoNamespace)
+		err := translate(t)
 		if err != nil {
 			return err
 		}

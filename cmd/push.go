@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -61,6 +60,10 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if err := okteto.SetCurrentContext(k8sContext, namespace); err != nil {
+				return err
+			}
+
 			if len(appName) > 0 && appName != dev.Name {
 				return fmt.Errorf("app name provided does not match the name field in your okteto manifest")
 			}
@@ -74,16 +77,12 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			oktetoRegistryURL := ""
-			n, err := namespaces.Get(ctx, dev.Namespace, c)
-			if err == nil {
-				if namespaces.IsOktetoNamespace(n) {
-					oktetoRegistryURL, err = okteto.GetRegistry()
-					if err != nil {
-						return err
-					}
-				}
+			if okteto.Context().Buildkit == "" {
+				log.Information(errors.ErrNoBuilderInContext)
+				return nil
 			}
+
+			oktetoRegistryURL := okteto.Context().Registry
 
 			if autoDeploy {
 				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
@@ -243,7 +242,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
@@ -255,11 +254,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 }
 
 func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
-	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
-	if err != nil {
-		return "", err
-	}
-	log.Information("Running your build in %s...", buildKitHost)
+	log.Information("Running your build in %s...", okteto.Context().Buildkit)
 
 	if imageTag == "" {
 		imageTag = dev.Push.Name
@@ -268,7 +263,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, okt
 	log.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	if err := build.Run(ctx, dev.Namespace, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, nil, progress); err != nil {
+	if err := build.Run(ctx, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, nil, progress); err != nil {
 		return "", err
 	}
 

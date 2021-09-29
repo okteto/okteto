@@ -20,6 +20,7 @@ import (
 	"os/signal"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -41,10 +42,16 @@ func Restart() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#restart"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
+
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
 			serviceName := ""
 			if len(args) > 0 {
 				serviceName = args[0]
@@ -88,7 +95,7 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)

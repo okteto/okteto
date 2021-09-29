@@ -19,7 +19,6 @@ import (
 	"net/url"
 
 	"github.com/okteto/okteto/pkg/analytics"
-	okContext "github.com/okteto/okteto/pkg/cmd/context"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/client"
@@ -42,9 +41,9 @@ func authenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (
 		if err != nil {
 			return nil, err
 		}
-	} else if okContext.HasBeenLogged(oktetoURL) {
+	} else if okteto.HasBeenLogged(oktetoURL) {
 		log.Infof("re-authenticating with saved token")
-		token = okContext.GetToken(oktetoURL)
+		token = okteto.ContextStore().Contexts[oktetoURL].Token
 		user, err = login.WithToken(ctx, oktetoURL, token)
 		if err != nil {
 			log.Infof("saved token is wrong. Authenticating with browser code")
@@ -82,8 +81,8 @@ func getKubernetesContextList() []string {
 	if cfg == nil {
 		return contextList
 	}
-	for name := range cfg.Clusters {
-		if _, ok := cfg.Clusters[name].Extensions[model.OktetoExtension]; ok {
+	for name := range cfg.Contexts {
+		if _, ok := cfg.Contexts[name].Extensions[model.OktetoExtension]; ok {
 			continue
 		}
 		contextList = append(contextList, name)
@@ -104,7 +103,8 @@ func getOktetoClusterUrl(option string) string {
 }
 
 func askForOktetoURL() string {
-	clusterURL := okteto.GetURL()
+	octx := okteto.Context()
+	clusterURL := octx.Name
 	if clusterURL == "" || clusterURL == "na" {
 		clusterURL = okteto.CloudURL
 	}

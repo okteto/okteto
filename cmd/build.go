@@ -22,7 +22,9 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -64,15 +66,15 @@ func Build(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("invalid Dockerfile: %s", err.Error())
 			}
 
-			buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
-			if err != nil {
-				return err
+			if okteto.Context().Buildkit == "" {
+				log.Information(errors.ErrNoBuilderInContext)
+				return nil
 			}
-			log.Information("Running your build in %s...", buildKitHost)
+			log.Information("Running your build in %s...", okteto.Context().Buildkit)
 
 			ctx := context.Background()
-			if err := build.Run(ctx, "", buildKitHost, isOktetoCluster, path, file, tag, target, noCache, cacheFrom, buildArgs, secrets, progress); err != nil {
-				analytics.TrackBuild(buildKitHost, false)
+			if err := build.Run(ctx, path, file, tag, target, noCache, cacheFrom, buildArgs, secrets, progress); err != nil {
+				analytics.TrackBuild(okteto.Context().Buildkit, false)
 				return err
 			}
 
@@ -83,7 +85,7 @@ func Build(ctx context.Context) *cobra.Command {
 				log.Success(fmt.Sprintf("Image '%s' successfully pushed", tag))
 			}
 
-			analytics.TrackBuild(buildKitHost, true)
+			analytics.TrackBuild(okteto.Context().Buildkit, true)
 			return nil
 		},
 	}

@@ -37,10 +37,8 @@ func WithEnvVarIfAvailable(ctx context.Context) error {
 	if oktetoToken == "" {
 		return nil
 	}
-	if u, err := okteto.GetToken(); err == nil {
-		if u.Token == oktetoToken {
-			return nil
-		}
+	if oktetoToken == okteto.Context().Token {
+		return nil
 	}
 	oktetoURL := os.Getenv("OKTETO_URL")
 	if oktetoURL == "" {

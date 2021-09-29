@@ -112,7 +112,7 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 				return deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 			}
 			if strings.Contains(err.Error(), "operation-not-permitted") {
-				return nil, errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+				return nil, errors.UserError{E: fmt.Errorf("you are not authorized to create a global preview env."),
 					Hint: "Please log in with an administrator account or use a personal preview environment"}
 			}
 			return nil, err
@@ -134,7 +134,7 @@ func DeployPreview(ctx context.Context, name, scope, repository, branch, sourceU
 				return deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 			}
 			if strings.Contains(err.Error(), "operation-not-permitted") {
-				return nil, errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+				return nil, errors.UserError{E: fmt.Errorf("you are not authorized to create a global preview env."),
 					Hint: "Please log in with an administrator account or use a personal preview environment"}
 			}
 			return nil, translatePreviewAPIErr(err, name)
@@ -163,7 +163,7 @@ func deprecatedDeployPreview(ctx context.Context, name, scope, repository, branc
 		req.Var("variables", variables)
 		if err := queryWithRequest(ctx, req, &body); err != nil {
 			if strings.Contains(err.Error(), "operation-not-permitted") {
-				return nil, errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+				return nil, errors.UserError{E: fmt.Errorf("you are not authorized to create a global preview env."),
 					Hint: "Please log in with an administrator account or use a personal preview environment"}
 			}
 			return nil, err
@@ -177,7 +177,7 @@ func deprecatedDeployPreview(ctx context.Context, name, scope, repository, branc
 
 		if err := query(ctx, q, &body); err != nil {
 			if strings.Contains(err.Error(), "operation-not-permitted") {
-				return nil, errors.UserError{E: fmt.Errorf("You are not authorized to create a global preview env."),
+				return nil, errors.UserError{E: fmt.Errorf("you are not authorized to create a global preview env."),
 					Hint: "Please log in with an administrator account or use a personal preview environment"}
 			}
 			return nil, translatePreviewAPIErr(err, name)
@@ -249,28 +249,24 @@ func ListPreviewsEndpoints(ctx context.Context, previewName string) ([]Endpoint,
 	}
 
 	for _, d := range body.Preview.Deployments {
-		for _, endpoint := range d.Endpoints {
-			endpoints = append(endpoints, endpoint)
-		}
+		endpoints = append(endpoints, d.Endpoints...)
 	}
 
 	for _, sfs := range body.Preview.Statefulsets {
-		for _, endpoint := range sfs.Endpoints {
-			endpoints = append(endpoints, endpoint)
-		}
+		endpoints = append(endpoints, sfs.Endpoints...)
 	}
 	return endpoints, nil
 }
 
 // GetPreviewEnvByName gets a preview environment given its name
-func GetPreviewEnvByName(ctx context.Context, name, namespace string) (*GitDeploy, error) {
+func GetPreviewEnvByName(ctx context.Context, name string) (*GitDeploy, error) {
 	q := fmt.Sprintf(`query{
 		preview(id: "%s"){
 			gitDeploys{
 				id,name,status
 			}
 		},
-	}`, namespace)
+	}`, name)
 
 	var body PreviewBody
 	if err := query(ctx, q, &body); err != nil {

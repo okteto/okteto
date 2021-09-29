@@ -60,7 +60,7 @@ func getDockerfileWithCacheHandler(filename string) (string, error) {
 	datawriter := bufio.NewWriter(tmpFile)
 	defer datawriter.Flush()
 
-	userID := okteto.GetUserID()
+	userID := okteto.Context().UserID
 	if userID == "" {
 		userID = "anonymous"
 	}

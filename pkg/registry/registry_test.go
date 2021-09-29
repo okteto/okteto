@@ -149,3 +149,37 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 		})
 	}
 }
+
+func Test_IsOktetoRegistry(t *testing.T) {
+	var tests = []struct {
+		name string
+		tag  string
+		want bool
+	}{
+		{
+			name: "is-dev-registry",
+			tag:  "okteto.dev/image",
+			want: true,
+		},
+		{
+			name: "is-not-dev-registry",
+			tag:  "okteto.global/image",
+			want: true,
+		},
+		{
+			name: "is-not-dev-registry",
+			tag:  "other-image/image",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if got := IsOktetoRegistry(tt.tag); got != tt.want {
+				t.Errorf("registry.IsOktetoRegistry = %v, want %v", got, tt.want)
+			}
+
+		})
+	}
+}

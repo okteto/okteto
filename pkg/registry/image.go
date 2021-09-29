@@ -46,7 +46,7 @@ func GetRepoNameAndTag(name string) (string, string) {
 // GetImageTag returns the image tag to build for a given services
 func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
 	if oktetoRegistryURL != "" {
-		if IsDevRegistry(image) {
+		if IsOktetoRegistry(image) {
 			return image
 		}
 		return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, namespace, service)

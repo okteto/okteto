@@ -46,6 +46,10 @@ func Doctor() *cobra.Command {
 				return err
 			}
 
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
 			c, _, err := okteto.GetK8sClient()
 			if err != nil {
 				return err

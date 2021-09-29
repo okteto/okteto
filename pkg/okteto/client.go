@@ -62,19 +62,13 @@ func getRequest(q, token string) *graphql.Request {
 }
 
 func query(ctx context.Context, query string, result interface{}) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("couldn't get token: %s", err)
-		return errors.ErrNotLogged
-	}
-
-	c, err := getClient(t.URL)
+	c, err := getClient(Context().Name)
 	if err != nil {
 		log.Infof("error getting the graphql client: %s", err)
 		return fmt.Errorf("internal server error")
 	}
 
-	req := getRequest(query, t.Token)
+	req := getRequest(query, Context().Token)
 	if err := c.Run(ctx, req, result); err != nil {
 		return translateAPIErr(err)
 	}
@@ -83,14 +77,9 @@ func query(ctx context.Context, query string, result interface{}) error {
 }
 
 func queryWithRequest(ctx context.Context, req *graphql.Request, result interface{}) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("couldn't get token: %s", err)
-		return errors.ErrNotLogged
-	}
-	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", t.Token))
+	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", Context().Token))
 
-	c, err := getClient(t.URL)
+	c, err := getClient(Context().Name)
 	if err != nil {
 		log.Infof("error getting the graphql client: %s", err)
 		return fmt.Errorf("internal server error")

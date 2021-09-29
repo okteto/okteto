@@ -45,8 +45,12 @@ func destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if !okteto.IsAuthenticated() {
-				return errors.ErrNotLogged
+			if !okteto.IsOktetoContext() {
+				return errors.ErrContextIsNotOktetoCluster
+			}
+
+			if err := okteto.SetCurrentContext("", namespace); err != nil {
+				return err
 			}
 
 			if name == "" {
@@ -62,11 +66,7 @@ func destroy(ctx context.Context) *cobra.Command {
 				name = getPipelineName(repo)
 			}
 
-			if namespace == "" {
-				namespace = getCurrentNamespace(ctx)
-			}
-
-			resp, err := destroyPipeline(ctx, name, namespace, destroyVolumes)
+			resp, err := destroyPipeline(ctx, name, destroyVolumes)
 			if err != nil {
 				return err
 			}
@@ -76,8 +76,8 @@ func destroy(ctx context.Context) *cobra.Command {
 				return nil
 			}
 
-			if err := waitUntilDestroyed(ctx, name, resp.Action, namespace, timeout); err != nil {
-				log.Information("Pipeline URL: %s", getPipelineURL(namespace, resp.GitDeploy))
+			if err := waitUntilDestroyed(ctx, name, resp.Action, timeout); err != nil {
+				log.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
 				return err
 			}
 
@@ -95,7 +95,7 @@ func destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*okteto.GitDeployResponse, error) {
+func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*okteto.GitDeployResponse, error) {
 	spinner := utils.NewSpinner("Destroying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -107,7 +107,7 @@ func destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes
 	var err error
 	var resp *okteto.GitDeployResponse
 	go func() {
-		resp, err = okteto.DestroyPipeline(ctx, name, namespace, destroyVolumes)
+		resp, err = okteto.DestroyPipeline(ctx, name, destroyVolumes)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				log.Infof("pipeline '%s' not found", name)
@@ -132,7 +132,7 @@ func destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes
 	return resp, nil
 }
 
-func waitUntilDestroyed(ctx context.Context, name string, action *okteto.Action, namespace string, timeout time.Duration) error {
+func waitUntilDestroyed(ctx context.Context, name string, action *okteto.Action, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for the pipeline to be destroyed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -142,14 +142,14 @@ func waitUntilDestroyed(ctx context.Context, name string, action *okteto.Action,
 	exit := make(chan error, 1)
 
 	go func() {
-		exit <- waitToBeDestroyed(ctx, name, action, namespace, timeout)
+		exit <- waitToBeDestroyed(ctx, name, action, timeout)
 	}()
 
 	select {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
@@ -160,16 +160,16 @@ func waitUntilDestroyed(ctx context.Context, name string, action *okteto.Action,
 	return nil
 }
 
-func waitToBeDestroyed(ctx context.Context, name string, action *okteto.Action, namespace string, timeout time.Duration) error {
+func waitToBeDestroyed(ctx context.Context, name string, action *okteto.Action, timeout time.Duration) error {
 	if action == nil {
-		return deprecatedWaitToBeDestroyed(ctx, name, namespace, timeout)
+		return deprecatedWaitToBeDestroyed(ctx, name, timeout)
 	}
 
-	return okteto.WaitForActionToFinish(ctx, action.Name, namespace, timeout)
+	return okteto.WaitForActionToFinish(ctx, action.Name, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func deprecatedWaitToBeDestroyed(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func deprecatedWaitToBeDestroyed(ctx context.Context, name string, timeout time.Duration) error {
 
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
@@ -179,7 +179,7 @@ func deprecatedWaitToBeDestroyed(ctx context.Context, name, namespace string, ti
 		case <-to.C:
 			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
-			p, err := okteto.GetPipelineByName(ctx, name, namespace)
+			p, err := okteto.GetPipelineByName(ctx, name)
 			if err != nil {
 				if errors.IsNotFound(err) || errors.IsNotExist(err) {
 					return nil

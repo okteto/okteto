@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -331,6 +332,8 @@ func GetDevDefaults(language, workdir string) (*model.Dev, error) {
 		return nil, err
 	}
 	dev.Name = name
+	dev.Context = okteto.Context().Name
+	dev.Namespace = okteto.Context().Namespace
 	return dev, nil
 }
 

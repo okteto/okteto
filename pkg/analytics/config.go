@@ -30,6 +30,7 @@ var (
 	StagingContext    = "Staging"
 	EnterpriseContext = "Enterprise"
 	KubernetesContext = "Kubernetes"
+	currentAnalytics  *Analytics
 )
 
 // Analytics contains the analytics configuration
@@ -39,7 +40,7 @@ type Analytics struct {
 }
 
 func getContextType(oktetoContext string) string {
-	if okteto.IsOktetoContext(oktetoContext) {
+	if okteto.IsOktetoContext() {
 		switch oktetoContext {
 		case okteto.CloudURL:
 			return CloudContext
@@ -71,10 +72,13 @@ func Init() error {
 }
 
 func fileExists() bool {
-	if _, err := os.Stat(config.GetAnalyticsPath()); !os.IsNotExist(err) {
-		return true
+	if _, err := os.Stat(config.GetAnalyticsPath()); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		log.Fatalf("error accessing okteto config folder '%s': %s", config.GetOktetoHome(), err)
 	}
-	return false
+	return true
 }
 
 func deprecatedFileExists() bool {
@@ -84,14 +88,16 @@ func deprecatedFileExists() bool {
 	return false
 }
 
-//TODO: read just once
 func get() *Analytics {
+	if currentAnalytics != nil {
+		return currentAnalytics
+	}
+
 	if !fileExists() {
 		return &Analytics{Enabled: false, MachineID: ""}
 	}
-	p := config.GetAnalyticsPath()
 
-	b, err := ioutil.ReadFile(p)
+	b, err := ioutil.ReadFile(config.GetAnalyticsPath())
 	if err != nil {
 		log.Debugf("error reading analytics file: %s", err)
 		return &Analytics{Enabled: false, MachineID: ""}
@@ -107,6 +113,9 @@ func get() *Analytics {
 }
 
 func (a *Analytics) save() error {
+	if currentAnalytics == nil {
+		currentAnalytics = a
+	}
 	if a.MachineID == "" || a.MachineID == "na" {
 		a.MachineID = generateMachineID()
 	}
@@ -151,13 +160,8 @@ func Enable() error {
 }
 
 func getTrackID() string {
-	oktetoContextConfig, err := okteto.GetContexts()
-	if err == nil {
-		if oktetoContext, ok := oktetoContextConfig.Contexts[oktetoContextConfig.CurrentContext]; ok {
-			if oktetoContext.ID != "" {
-				return oktetoContext.ID
-			}
-		}
+	if okteto.Context().UserID != "" {
+		return okteto.Context().UserID
 	}
 	a := get()
 	return a.MachineID

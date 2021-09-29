@@ -17,17 +17,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/okteto/okteto/pkg/config"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-)
-
-const (
-	//OktetoContextVariableName defines the kubeconfig context of okteto commands
-	OktetoContextVariableName = "OKTETO_CONTEXT"
 )
 
 // InCluster returns true if Okteto is running on a Kubernetes cluster
@@ -36,9 +30,8 @@ func InCluster() bool {
 	return err == nil
 }
 
-// GetLocal returns a kubernetes client with the local configuration. It will detect if KUBECONFIG is defined.
-func GetLocal() (*kubernetes.Clientset, *rest.Config, error) {
-	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
+// Get returns a kubernetes client for the current okteto context
+func Get(kubeconfigFile string) (*kubernetes.Clientset, *rest.Config, error) {
 	clientConfig := getClientConfig(kubeconfigFile, "")
 
 	config, err := clientConfig.ClientConfig()
@@ -92,13 +85,13 @@ func GetKubeconfig(kubeconfigPath string) *clientcmdapi.Config {
 	return cfg
 }
 
-//SetKubeconfig stores a kubeconfig file
-func SetKubeconfig(cfg *clientcmdapi.Config, kubeconfigPath string) error {
+//WriteKubeconfig stores a kubeconfig file
+func WriteKubeconfig(cfg *clientcmdapi.Config, kubeconfigPath string) error {
 	return clientcmd.WriteToFile(*cfg, kubeconfigPath)
 }
 
-// GetCurrentContext returns the name of the current context
-func GetCurrentContext(kubeconfigPath string) string {
+// GetCurrentKubernetesContext returns the name of the current context
+func GetCurrentKubernetesContext(kubeconfigPath string) string {
 	cfg := GetKubeconfig(kubeconfigPath)
 	if cfg == nil {
 		return ""
@@ -107,16 +100,13 @@ func GetCurrentContext(kubeconfigPath string) string {
 }
 
 // GetCurrentNamespace returns the name of the namespace in use by a given context
-func GetCurrentNamespace(kubeconfigPath, kubeContext string) string {
+func GetCurrentNamespace(kubeconfigPath string) string {
 	cfg := GetKubeconfig(kubeconfigPath)
 	if cfg == nil {
 		return ""
 	}
-	if kubeContext == "" {
-		kubeContext = cfg.CurrentContext
-	}
-	if currentContext, ok := cfg.Contexts[kubeContext]; ok {
+	if currentContext, ok := cfg.Contexts[cfg.CurrentContext]; ok {
 		return currentContext.Namespace
 	}
-	return ""
+	return "default"
 }

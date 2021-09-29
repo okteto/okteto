@@ -71,7 +71,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	podPath, err := generatePodFile(ctx, dev, c)
 	if err != nil {
 		log.Infof("failed to get information about the remote dev container: %s", err)
-		log.Yellow(errors.ErrNotInDevMode.Error())
+		log.Warning(errors.ErrNotInDevMode.Error())
 	} else {
 		defer os.RemoveAll(podPath)
 	}

@@ -21,7 +21,8 @@ type Action struct {
 }
 
 // GetAction gets a installer job given its name
-func GetAction(ctx context.Context, name, namespace string) (*Action, error) {
+func GetAction(ctx context.Context, name string) (*Action, error) {
+	namespace := Context().Namespace
 	q := fmt.Sprintf(`query{
 		action(name: "%s", space: "%s"){
 			id,name,status
@@ -36,7 +37,7 @@ func GetAction(ctx context.Context, name, namespace string) (*Action, error) {
 	return &body.Action, nil
 }
 
-func WaitForActionToFinish(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func WaitForActionToFinish(ctx context.Context, name string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
@@ -45,7 +46,7 @@ func WaitForActionToFinish(ctx context.Context, name, namespace string, timeout 
 		case <-to.C:
 			return fmt.Errorf("action '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
-			a, err := GetAction(ctx, name, namespace)
+			a, err := GetAction(ctx, name)
 			if err != nil {
 				return fmt.Errorf("failed to get action '%s': %s", name, err)
 			}

@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -104,6 +105,9 @@ func (i *StatefulSetApp) GetRevision() string {
 }
 
 func (i *StatefulSetApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
+	if i.sfs.Generation != i.sfs.Status.ObservedGeneration {
+		return nil, errors.ErrNotFound
+	}
 	return pods.GetPodByStatefulSet(ctx, i.sfs, c)
 }
 
@@ -117,6 +121,19 @@ func (i *StatefulSetApp) Divert(ctx context.Context, username string, dev *model
 		return nil, fmt.Errorf("error creating divert statefulset '%s': %s", divertStatefulset.Name, err.Error())
 	}
 	return &StatefulSetApp{sfs: divertStatefulset}, nil
+}
+
+func (i *StatefulSetApp) DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error {
+	d, err := statefulsets.GetByDev(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return fmt.Errorf("error diverting statefulset: %s", err.Error())
+	}
+
+	divertStatefulsetName := DivertName(username, d.Name)
+	if err := statefulsets.Destroy(ctx, divertStatefulsetName, d.Namespace, c); err != nil {
+		return fmt.Errorf("error creating divert statefulset '%s': %s", divertStatefulsetName, err.Error())
+	}
+	return nil
 }
 
 func translateStatefulset(username string, d *appsv1.StatefulSet) *appsv1.StatefulSet {
@@ -189,6 +206,6 @@ func (i *StatefulSetApp) Update(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
-func (_ *StatefulSetApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+func (*StatefulSetApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	return statefulsets.Destroy(ctx, dev.Name, dev.Namespace, c)
 }

@@ -31,8 +31,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func Create(ctx context.Context, dev *model.Dev, isOktetoNamespace bool, c kubernetes.Interface) error {
-	if !isOktetoNamespace {
+func Create(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+	if !okteto.IsOktetoContext() {
 		return errors.ErrDivertNotSupported
 	}
 
@@ -148,7 +148,6 @@ func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	if err != nil {
 		return err
 	}
-
 	dClient, err := GetClient(dev.Context)
 	if err != nil {
 		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
@@ -166,6 +165,10 @@ func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	iName := apps.DivertName(username, dev.Divert.Ingress)
 	if err := ingressesv1.Destroy(ctx, iName, dev.Namespace, c); err != nil {
 		return fmt.Errorf("error deleting divert ingress '%s': %s", iName, err.Error())
+	}
+
+	if err := app.DestroyDivert(ctx, username, dev, c); err != nil {
+		return fmt.Errorf("error deleting divert application: %s", err.Error())
 	}
 
 	sName := apps.DivertName(username, dev.Divert.Service)

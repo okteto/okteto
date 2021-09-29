@@ -243,27 +243,12 @@ func TrackDestroyStack(success bool) {
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(success bool, name, email, oktetoID, externalID string) {
+func TrackLogin(success bool, name, oktetoID string) {
 	if !get().Enabled {
 		return
 	}
 
 	track(loginEvent, success, nil)
-	if name == "" {
-		name = externalID
-	}
-
-	if err := mixpanelClient.Update(oktetoID, &mixpanel.Update{
-		Operation: "$set",
-		Properties: map[string]interface{}{
-			"$name":    name,
-			"$email":   email,
-			"oktetoId": oktetoID,
-			"githubId": externalID,
-		},
-	}); err != nil {
-		log.Infof("failed to update user: %s", err)
-	}
 }
 
 // TrackSignup sends a tracking event to mixpanel when the user signs up
@@ -321,18 +306,12 @@ func track(event string, success bool, props map[string]interface{}) {
 	}
 	props["$os"] = mpOS
 	props["version"] = config.VersionString
-	props["$referring_domain"] = okteto.GetURL()
+	props["$referring_domain"] = okteto.Context().Name
 	props["machine_id"] = get().MachineID
 	props["origin"] = origin
 	props["success"] = success
-
-	oktetoContext, err := okteto.GetContexts()
-	if err != nil {
-		log.Infof("error getting okteto context: %v", err)
-	} else {
-		props["contextType"] = getContextType(oktetoContext.CurrentContext)
-		props["context"] = oktetoContext.CurrentContext
-	}
+	props["contextType"] = getContextType(okteto.Context().Name)
+	props["context"] = okteto.Context().Name
 
 	e := &mixpanel.Event{Properties: props}
 	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {

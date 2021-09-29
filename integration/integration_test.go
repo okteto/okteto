@@ -164,6 +164,8 @@ forward:
   - 8080:8080
 workdir: /usr/src/app
 `
+	divertGitRepo   = "git@github.com:okteto/catalog.git"
+	divertGitFolder = "catalog"
 )
 
 var mode string
@@ -361,7 +363,7 @@ func TestAll(t *testing.T) {
 
 	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[model.DeploymentRevisionAnnotation])
 
-	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true); err != nil {
+	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -497,7 +499,7 @@ func TestAllStatefulset(t *testing.T) {
 
 	log.Printf("statefulset: %s", d.Name)
 
-	if err := down(ctx, namespace, name, manifestPath, oktetoPath, false); err != nil {
+	if err := down(ctx, namespace, name, manifestPath, oktetoPath, false, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -513,6 +515,134 @@ func TestAllStatefulset(t *testing.T) {
 		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 	}
 
+}
+
+func TestDivert(t *testing.T) {
+	tName := fmt.Sprintf("Test")
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := exec.LookPath(kubectlBinary); err != nil {
+		t.Fatalf("kubectl is not in the path: %s", err)
+	}
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	namespace := fmt.Sprintf("%s-%s", name, user)
+	log.Printf("running %s \n", tName)
+	k8Client.Reset()
+	startNamespace := getCurrentNamespace()
+	defer changeToNamespace(ctx, oktetoPath, startNamespace)
+
+	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("created namespace %s \n", namespace)
+
+	if err := cloneGitRepo(ctx, divertGitRepo); err != nil {
+		t.Fatal(err)
+	}
+	defer deleteGitRepo(ctx, divertGitFolder)
+
+	log.Printf("cloned repo %s \n", divertGitRepo)
+
+	defer deleteGitRepo(ctx, pushGitFolder)
+
+	if err := oktetoPipeline(ctx, oktetoPath, divertGitRepo, divertGitFolder); err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("pipeline using %s \n", divertGitRepo)
+
+	waitForDeployment(ctx, namespace, "health-checker", 1, 120)
+
+	if err := modifyDivertApp(); err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+	upErrorChannel := make(chan error, 1)
+	p, err := up(ctx, &wg, namespace, fmt.Sprintf("%s-health-checker", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, upErrorChannel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	divertedSvcName := fmt.Sprintf("%s-health-checker", user)
+	waitForDeployment(ctx, namespace, divertedSvcName, 2, 120)
+
+	apiSvc := "catalog-chart"
+	originalContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiSvc, namespace), 120, upErrorChannel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	apiDivertedSvc := fmt.Sprintf("%s-%s", user, apiSvc)
+	divertedContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiDivertedSvc, namespace), 120, upErrorChannel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if originalContent == divertedContent {
+		t.Fatal("Contents are the same")
+	}
+
+	if err := down(ctx, namespace, fmt.Sprintf("%s-health-checker", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, false, true); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
+		t.Error(err)
+	}
+
+	_, err = getDeployment(ctx, namespace, fmt.Sprintf("%s-health-checker", user))
+	if err == nil {
+		t.Fatalf("'dev' deployment not deleted after 'okteto stack destroy'")
+	}
+
+	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
+		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
+	}
+}
+
+func oktetoPipeline(ctx context.Context, oktetoPath, repo, folder string) error {
+	log.Printf("okteto pipeline --wait")
+	cmd := exec.Command(oktetoPath, "pipeline", "deploy", "--wait")
+	cmd.Env = os.Environ()
+	cmd.Dir = folder
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("okteto pipeline failed: %s - %s", string(o), err)
+	}
+	log.Printf("okteto pipeline %s success", repo)
+	return nil
+}
+
+func modifyDivertApp() error {
+
+	input, err := ioutil.ReadFile(filepath.Join(divertGitFolder, "health-checker", "cmd", "main.go"))
+	if err != nil {
+		return err
+	}
+
+	output := bytes.Replace(input, []byte("&health.SimpleHealthClient"), []byte("&health.AdvancedHealthClient"), 1)
+
+	if err = ioutil.WriteFile(filepath.Join(divertGitFolder, "health-checker", "cmd", "main.go"), output, 0666); err != nil {
+		return err
+	}
+
+	input, err = ioutil.ReadFile(filepath.Join(divertGitFolder, "health-checker", "okteto.yml"))
+	if err != nil {
+		return err
+	}
+
+	output = bytes.Replace(input, []byte("command: bash"), []byte("command: go run cmd/main.go"), 1)
+
+	if err = ioutil.WriteFile(filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), output, 0666); err != nil {
+		return err
+	}
+	return nil
 }
 
 func waitForDeployment(ctx context.Context, namespace, name string, revision, timeout int) error {
@@ -806,7 +936,7 @@ func destroyPod(ctx context.Context, name, namespace string) error {
 	return nil
 }
 
-func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string, isDeployment bool) error {
+func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string, isDeployment, skipComprobation bool) error {
 	downCMD := exec.Command(oktetoPath, "down", "-n", namespace, "-f", manifestPath, "-v")
 	downCMD.Env = os.Environ()
 	o, err := downCMD.CombinedOutput()
@@ -818,15 +948,17 @@ func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string,
 		return fmt.Errorf("okteto down failed: %s", err)
 	}
 
-	if isDeployment {
-		log.Println("waiting for the deployment to be restored")
-		if err := waitForDeployment(ctx, namespace, name, 3, 120); err != nil {
-			return err
-		}
-	} else {
-		log.Println("waiting for the statefulset to be restored")
-		if err := waitForStatefulset(ctx, namespace, name, 120); err != nil {
-			return err
+	if !skipComprobation {
+		if isDeployment {
+			log.Println("waiting for the deployment to be restored")
+			if err := waitForDeployment(ctx, namespace, name, 3, 120); err != nil {
+				return err
+			}
+		} else {
+			log.Println("waiting for the statefulset to be restored")
+			if err := waitForStatefulset(ctx, namespace, name, 120); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -850,8 +982,8 @@ func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, 
 		defer wg.Done()
 		if err := cmd.Wait(); err != nil {
 			if err != nil {
-				upErrorChannel <- fmt.Errorf("Okteto up exited before completion")
 				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
+				upErrorChannel <- fmt.Errorf("Okteto up exited before completion")
 			}
 		}
 	}()

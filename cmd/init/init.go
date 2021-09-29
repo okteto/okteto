@@ -23,9 +23,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/linguist"
@@ -55,13 +53,18 @@ func Init() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
 		Short: "Automatically generates your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if err := okteto.SetCurrentContext(k8sContext, namespace); err != nil {
+				return err
+			}
+
 			l := os.Getenv("OKTETO_LANGUAGE")
 			workDir, err := os.Getwd()
 			if err != nil {
 				return err
 			}
 
-			if err := Run(namespace, k8sContext, devPath, l, workDir, overwrite); err != nil {
+			if err := Run(devPath, l, workDir, overwrite); err != nil {
 				return err
 			}
 
@@ -84,7 +87,7 @@ func Init() *cobra.Command {
 }
 
 // Run runs the sequence to generate okteto.yml
-func Run(namespace, k8sContext, devPath, language, workDir string, overwrite bool) error {
+func Run(devPath, language, workDir string, overwrite bool) error {
 	fmt.Println("This command walks you through creating an okteto manifest.")
 	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	fmt.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
@@ -109,10 +112,8 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 		return err
 	}
 
-	dev.Context = k8sContext
-
 	if checkForRunningApp {
-		app, container, err := getRunningApp(ctx, namespace, k8sContext)
+		app, container, err := getRunningApp(ctx)
 		if err != nil {
 			return err
 		}
@@ -138,7 +139,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 			}
 		}
 
-		if !supportsPersistentVolumes(ctx, namespace, k8sContext) {
+		if !supportsPersistentVolumes(ctx) {
 			log.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
 			dev.Volumes = nil
 			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
@@ -152,6 +153,8 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 		}
 	}
 
+	dev.Namespace = ""
+	dev.Context = ""
 	if err := dev.Save(devPath); err != nil {
 		return err
 	}
@@ -173,17 +176,14 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	return nil
 }
 
-func getRunningApp(ctx context.Context, namespace, k8sContext string) (apps.App, string, error) {
+func getRunningApp(ctx context.Context) (apps.App, string, error) {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		log.Yellow("Failed to load your kubeconfig: %s", err)
 		return nil, "", nil
 	}
-	if namespace == "" {
-		namespace = client.GetCurrentNamespace(config.GetOktetoContextKubeconfigPath(), "")
-	}
 
-	app, err := askForRunningApp(ctx, namespace, c)
+	app, err := askForRunningApp(ctx, c)
 	if err != nil {
 		return nil, "", err
 	}
@@ -206,8 +206,8 @@ func getRunningApp(ctx context.Context, namespace, k8sContext string) (apps.App,
 	return app, container, nil
 }
 
-func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
-	if okteto.IsOktetoContext(okteto.GetCurrentContext()) {
+func supportsPersistentVolumes(ctx context.Context) bool {
+	if okteto.IsOktetoContext() {
 		return true
 	}
 	c, _, err := okteto.GetK8sClient()
@@ -271,7 +271,8 @@ func askForLanguage() (string, error) {
 	)
 }
 
-func askForRunningApp(ctx context.Context, namespace string, c kubernetes.Interface) (apps.App, error) {
+func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, error) {
+	namespace := okteto.Context().Namespace
 	dList, err := deployments.List(ctx, namespace, "", c)
 	if err != nil {
 		log.Yellow("Failed to list deployments: %s", err)

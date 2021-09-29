@@ -15,6 +15,7 @@ package namespace
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -22,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -44,6 +46,10 @@ func Namespace(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if !okteto.IsOktetoContext() {
+				return errors.ErrContextIsNotOktetoCluster
+			}
+
 			err := RunNamespace(ctx, namespace)
 			analytics.TrackNamespace(err == nil)
 			return err
@@ -54,9 +60,6 @@ func Namespace(ctx context.Context) *cobra.Command {
 
 // RunNamespace starts the kubeconfig sequence
 func RunNamespace(ctx context.Context, namespace string) error {
-	if !okteto.IsOktetoContext(okteto.GetCurrentContext()) {
-		return errors.ErrNotLogged
-	}
 
 	cred, err := okteto.GetCredentials(ctx)
 	if err != nil {
@@ -74,15 +77,31 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		return fmt.Errorf(errors.ErrNamespaceNotFound, namespace)
 	}
 
-	kubeConfigPath := config.GetOktetoContextKubeconfigPath()
-
-	clusterContext := okteto.GetKubernetesContextFromToken()
-
-	if err := okteto.SetKubeconfig(cred, kubeConfigPath, namespace, okteto.GetUserID(), clusterContext); err != nil {
+	octx := okteto.Context()
+	kubeconfigFile := config.GetKubeconfigPath()
+	if err := okteto.SetKubeContext(cred, kubeconfigFile, namespace, octx.UserID, okteto.UrlToContext(octx.Name)); err != nil {
 		return err
 	}
 
-	log.Success("Updated context '%s' in '%s'", clusterContext, kubeConfigPath)
+	cfg := client.GetKubeconfig(kubeconfigFile)
+	cert, err := base64.RawStdEncoding.DecodeString(octx.Certificate)
+	if err != nil {
+		return fmt.Errorf(errors.ErrCorruptedOktetoContexts)
+	}
+	u := &okteto.User{
+		ID:              octx.UserID,
+		ExternalID:      octx.Username,
+		Token:           octx.Token,
+		Buildkit:        octx.Buildkit,
+		Registry:        octx.Registry,
+		Certificate:     string(cert),
+		GlobalNamespace: octx.GlobalNamespace,
+	}
+	if err := okteto.SaveOktetoClusterContext(octx.Name, u, namespace, cfg); err != nil {
+		return err
+	}
+
+	log.Success("Updated context '%s': current namespace '%s'", octx.Name, namespace)
 	return nil
 }
 

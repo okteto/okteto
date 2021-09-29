@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/okteto/okteto/cmd"
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -73,8 +74,6 @@ func main() {
 		log.Infof("error initializing okteto analytics: %s", err)
 	}
 
-	utils.SetOktetoUsernameEnv()
-
 	if err := okteto.InitContext(ctx); err != nil {
 		if err != errors.ErrNoActiveOktetoContexts {
 			log.Fatalf("error initializing okteto context: %v", err)
@@ -84,6 +83,8 @@ func main() {
 			log.Fatalf("error configuring okteto context: %v", err)
 		}
 	}
+
+	utils.SetOktetoUsernameEnv()
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -126,7 +127,13 @@ func main() {
 	err := root.Execute()
 
 	if err != nil {
-		log.Fail(err.Error())
+		message := err.Error()
+		if len(message) > 0 {
+			tmp := []rune(message)
+			tmp[0] = unicode.ToUpper(tmp[0])
+			message = string(tmp)
+		}
+		log.Fail(message)
 		if uErr, ok := err.(errors.UserError); ok {
 			if len(uErr.Hint) > 0 {
 				log.Hint("    %s", uErr.Hint)

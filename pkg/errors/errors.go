@@ -91,7 +91,7 @@ var (
 	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in namespaces managed by Okteto")
 
 	//ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
-	ErrContextIsNotOktetoCluster = fmt.Errorf("okteto context is not managed by okteto")
+	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available for clusters managed by Okteto Enterprise")
 
 	//ErrTokenFlagNeeded is raised when the command is executed from inside a pod
 	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
@@ -102,8 +102,23 @@ var (
 	//ErrNamespaceNotFound is raised when the namespace is not found on an okteto instance
 	ErrNamespaceNotFound = "namespace '%s' not found. Please verify that the namespace exists and that you have access to it"
 
+	//ErrOktetoContextNotFound is raised when the context is not found in existing okteto contexts
+	ErrOktetoContextNotFound = "context '%s' not found. Run 'okteto context %s' to configure it"
+
+	//ErrKubernetesContextNotFound is raised when the kubernetes context is not found in kubeconfig
+	ErrKubernetesContextNotFound = "context '%s' not found in '%s'"
+
 	//ErrNoActiveOktetoContexts returned if listing okteto contexts and there aren't okteto contexts defined yet
 	ErrNoActiveOktetoContexts = fmt.Errorf("there are no okteto contexts")
+
+	//ErrIntSig raised if the we get an interrupt signal in the middle of a command
+	ErrIntSig = fmt.Errorf("interrupt signal received")
+
+	//ErrCorruptedOktetoContexts raised when the okteto context store is corrupted
+	ErrCorruptedOktetoContexts = "okteto context store is corrupted. Run 'okteto context' to recreate it"
+
+	//ErrNoBuilderInContext raised when there is no builder in the context
+	ErrNoBuilderInContext = "Your current context doesn't support builds.\n    Run 'okteto context'  with the ' --builder' flag to configure your build service"
 )
 
 // IsNotFound returns true if err is of the type not found

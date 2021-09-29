@@ -17,6 +17,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -42,10 +43,16 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			okCtx := contextCMD.Context()
-			okCtx.Flags().Set("token", token)
-			err := okCtx.RunE(cmd, args)
-			analytics.TrackLogin(err == nil, "user.Name", "user.Email", "user.ID", "user.ExternalID")
+			contextCommand := contextCMD.Context()
+			contextCommand.Flags().Set("token", token)
+			contextCommand.Flags().Set("okteto", "true")
+			err := contextCommand.RunE(cmd, args)
+			if err != nil {
+				analytics.TrackLogin(false, "user.Name", "user.ID")
+			} else {
+				octx := okteto.Context()
+				analytics.TrackLogin(true, octx.Username, octx.UserID)
+			}
 			return err
 
 		},

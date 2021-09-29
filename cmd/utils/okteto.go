@@ -23,7 +23,7 @@ import (
 
 func SetOktetoUsernameEnv() error {
 	if username := os.Getenv("OKTETO_USERNAME"); username == "" {
-		username := strings.ToLower(okteto.GetUsername())
+		username := strings.ToLower(okteto.Context().Username)
 		if err := os.Setenv("OKTETO_USERNAME", username); err != nil {
 			return err
 		}

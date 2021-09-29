@@ -30,13 +30,10 @@ func List() *cobra.Command {
 		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
 		Short:   "Lists okteto contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cc, err := okteto.GetContexts()
-			if err != nil {
-				return err
-			}
+			oCtxs := okteto.ContextStore()
 			contexts := make([]string, 0)
-			for name := range cc.Contexts {
-				if name == cc.CurrentContext {
+			for name := range oCtxs.Contexts {
+				if name == oCtxs.CurrentContext {
 					contexts = append(contexts, fmt.Sprintf("* %s", name))
 				} else {
 					contexts = append(contexts, fmt.Sprintf("  %s", name))

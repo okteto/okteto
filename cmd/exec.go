@@ -51,6 +51,11 @@ func Exec() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
 			t := time.NewTicker(1 * time.Second)
 			iter := 0
 			err = executeExec(ctx, dev, args)
@@ -100,7 +105,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	pod, err := apps.GetRunningPodInLoop(ctx, dev, app, c, true)
+	pod, err := apps.GetRunningPodInLoop(ctx, dev, app, c)
 	if err != nil {
 		return err
 	}
