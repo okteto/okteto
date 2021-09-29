@@ -20,7 +20,6 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -36,10 +35,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Deploys a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
-				return err
-			}
-
 			if !okteto.IsOktetoContext() {
 				return errors.ErrContextIsNotOktetoCluster
 			}

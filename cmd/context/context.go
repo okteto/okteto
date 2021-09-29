@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
@@ -83,6 +84,9 @@ func Context() *cobra.Command {
 
 			var err error
 			oktetoContext := os.Getenv("OKTETO_URL")
+			if oktetoContext == "" && ctxOptions.Token != "" {
+				oktetoContext = okteto.CloudURL
+			}
 			if len(args) == 0 {
 				if oktetoContext != "" {
 					log.Infof("authenticating with OKTETO_URL")
@@ -121,7 +125,7 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 	kubeconfigFile := config.GetKubeconfigPath()
 
 	if okteto.IsOktetoURL(oktetoContext) {
-		user, err := authenticateToOktetoCluster(ctx, oktetoContext, ctxOptions.Token)
+		user, err := login.AuthenticateToOktetoCluster(ctx, oktetoContext, ctxOptions.Token)
 		if err != nil {
 			return err
 		}

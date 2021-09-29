@@ -19,7 +19,6 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -31,9 +30,6 @@ func List(ctx context.Context) *cobra.Command {
 		Use:   "list",
 		Short: "Lists all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
-				return err
-			}
 
 			if !okteto.IsOktetoContext() {
 				return errors.ErrContextIsNotOktetoCluster

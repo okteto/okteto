@@ -266,13 +266,3 @@ func getTokenFromOktetoHome() (*Token, error) {
 
 	return currentToken, nil
 }
-
-//IsAuthenticated returns if the user is authenticated
-func IsAuthenticated() bool {
-	t, err := getTokenFromOktetoHome()
-	if err != nil {
-		log.Infof("error getting okteto token: %s", err)
-		return false
-	}
-	return t.Token != ""
-}

@@ -21,7 +21,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -44,10 +43,6 @@ func Build(ctx context.Context) *cobra.Command {
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#build"),
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
-				return err
-			}
 
 			path := "."
 			if len(args) == 1 {

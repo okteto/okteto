@@ -24,7 +24,6 @@ import (
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -49,9 +48,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy a preview environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
-				return err
-			}
 
 			if !okteto.IsOktetoContext() {
 				return errors.ErrContextIsNotOktetoCluster

@@ -20,7 +20,6 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
@@ -40,10 +39,6 @@ func Namespace(ctx context.Context) *cobra.Command {
 			namespace := ""
 			if len(args) > 0 {
 				namespace = args[0]
-			}
-
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
-				return err
 			}
 
 			if !okteto.IsOktetoContext() {

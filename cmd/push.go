@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -70,10 +69,6 @@ func Push(ctx context.Context) *cobra.Command {
 
 			c, _, err := okteto.GetK8sClient()
 			if err != nil {
-				return err
-			}
-
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
 				return err
 			}
 

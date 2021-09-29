@@ -79,8 +79,10 @@ func main() {
 			log.Fatalf("error initializing okteto context: %v", err)
 		}
 		okCtx := contextCMD.Context()
+		okCtx.Flags().Set("okteto", "true")
 		if err := okCtx.RunE(nil, nil); err != nil {
-			log.Fatalf("error configuring okteto context: %v", err)
+			log.Fail(err.Error())
+			os.Exit(1)
 		}
 	}
 

@@ -113,6 +113,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
+			fmt.Println("Configuring", dev.Context, dev.Namespace)
 			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
 				return err
 			}
@@ -502,9 +503,7 @@ func (up *upContext) shutdown() {
 }
 
 func printDisplayContext(dev *model.Dev, divertURL string) {
-	if dev.Context != "" {
-		log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), dev.Context))
-	}
+	log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), dev.Context))
 	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 

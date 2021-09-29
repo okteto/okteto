@@ -14,15 +14,11 @@
 package context
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 
-	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -30,48 +26,6 @@ import (
 type SelectItem struct {
 	Name   string
 	Enable bool
-}
-
-func authenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*okteto.User, error) {
-	var user *okteto.User
-	var err error
-	if len(token) > 0 {
-		log.Infof("authenticating with an api token")
-		user, err = login.WithToken(ctx, oktetoURL, token)
-		if err != nil {
-			return nil, err
-		}
-	} else if okteto.HasBeenLogged(oktetoURL) {
-		log.Infof("re-authenticating with saved token")
-		token = okteto.ContextStore().Contexts[oktetoURL].Token
-		user, err = login.WithToken(ctx, oktetoURL, token)
-		if err != nil {
-			log.Infof("saved token is wrong. Authenticating with browser code")
-			user, err = login.WithBrowser(ctx, oktetoURL)
-			if err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		log.Infof("authenticating with browser code")
-		user, err = login.WithBrowser(ctx, oktetoURL)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if user.New {
-		analytics.TrackSignup(true, user.ID)
-	}
-	log.Infof("authenticated user %s", user.ID)
-
-	if oktetoURL == okteto.CloudURL {
-		log.Success("Logged in as %s", user.ExternalID)
-	} else {
-		log.Success("Logged in as %s @ %s", user.ExternalID, oktetoURL)
-	}
-
-	return user, nil
 }
 
 func getKubernetesContextList() []string {
