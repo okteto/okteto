@@ -262,3 +262,7 @@ func IsGlobalRegistry(tag string) bool {
 func IsDevRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.DevRegistry)
 }
+
+func IsOktetoRegistry(tag string) bool {
+	return IsDevRegistry(tag) || IsGlobalRegistry(tag)
+}

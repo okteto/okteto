@@ -121,6 +121,14 @@ func Test_GetImageTag(t *testing.T) {
 			expected:          "okteto.dev/hello",
 		},
 		{
+			name:              "in-okteto-image-in-okteto",
+			image:             "okteto.global/hello",
+			service:           "service",
+			namespace:         "namespace",
+			oktetoRegistryURL: "okteto.global",
+			expected:          "okteto.global/hello",
+		},
+		{
 			name:              "in-okteto-image-not-in-okteto",
 			image:             "okteto/hello",
 			service:           "service",
