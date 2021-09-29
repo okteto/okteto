@@ -578,7 +578,7 @@ func TestDivert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 30); err != nil {
+	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 120); err != nil {
 		t.Fatal("Contents are the same")
 	}
 
