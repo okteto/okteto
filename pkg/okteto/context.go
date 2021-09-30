@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -44,16 +45,17 @@ var CurrentStore *OktetoContextStore
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
-	Name            string `json:"name,omitempty"`
-	UserID          string `json:"userId,omitempty"`
-	Username        string `json:"username,omitempty"`
-	Token           string `json:"token,omitempty"`
-	Namespace       string `json:"namespace,omitempty"`
-	Kubeconfig      string `json:"kubeconfig,omitempty"`
-	Buildkit        string `json:"buildkit,omitempty"`
-	Registry        string `json:"registry,omitempty"`
-	Certificate     string `json:"certificate,omitempty"`
-	GlobalNamespace string `json:"globalNamespace,omitempty"`
+	Name             string `json:"name,omitempty"`
+	UserID           string `json:"userId,omitempty"`
+	Username         string `json:"username,omitempty"`
+	Token            string `json:"token,omitempty"`
+	Namespace        string `json:"namespace,omitempty"`
+	Kubeconfig       string `json:"kubeconfig,omitempty"`
+	Buildkit         string `json:"buildkit,omitempty"`
+	Registry         string `json:"registry,omitempty"`
+	Certificate      string `json:"certificate,omitempty"`
+	GlobalNamespace  string `json:"globalNamespace,omitempty"`
+	TelemetryEnabled string `json:"telemetryEnabled,omitempty"`
 }
 
 func InitContextWithToken(ctx context.Context, oktetoUrl, oktetoToken string) error {
@@ -258,17 +260,19 @@ func UpdateOktetoClusterContext(name string, u *User, namespace string, cfg *cli
 	if certificate != "" {
 		certificate = base64.StdEncoding.EncodeToString([]byte(u.Certificate))
 	}
+	telemetryEnabled := strconv.FormatBool(u.TelemetryEnabled)
 	CurrentStore.Contexts[name] = &OktetoContext{
-		Name:            name,
-		UserID:          u.ID,
-		Username:        u.ExternalID,
-		Token:           u.Token,
-		Namespace:       namespace,
-		GlobalNamespace: u.GlobalNamespace,
-		Kubeconfig:      kubeconfigBase64,
-		Buildkit:        u.Buildkit,
-		Registry:        u.Registry,
-		Certificate:     certificate,
+		Name:             name,
+		UserID:           u.ID,
+		Username:         u.ExternalID,
+		Token:            u.Token,
+		Namespace:        namespace,
+		GlobalNamespace:  u.GlobalNamespace,
+		Kubeconfig:       kubeconfigBase64,
+		Buildkit:         u.Buildkit,
+		Registry:         u.Registry,
+		Certificate:      certificate,
+		TelemetryEnabled: telemetryEnabled,
 	}
 
 	CurrentStore.CurrentContext = name
@@ -288,17 +292,19 @@ func SaveOktetoClusterContext(name string, u *User, namespace string, cfg *clien
 	if cfg != nil {
 		kubeconfigBase64 = encodeOktetoKubeconfig(cfg)
 	}
+	telemetryEnabled := strconv.FormatBool(u.TelemetryEnabled)
 	CurrentStore.Contexts[name] = &OktetoContext{
-		Name:            name,
-		UserID:          u.ID,
-		Username:        u.ExternalID,
-		Token:           u.Token,
-		Namespace:       namespace,
-		GlobalNamespace: u.GlobalNamespace,
-		Kubeconfig:      kubeconfigBase64,
-		Buildkit:        u.Buildkit,
-		Registry:        u.Registry,
-		Certificate:     u.Certificate,
+		Name:             name,
+		UserID:           u.ID,
+		Username:         u.ExternalID,
+		Token:            u.Token,
+		Namespace:        namespace,
+		GlobalNamespace:  u.GlobalNamespace,
+		Kubeconfig:       kubeconfigBase64,
+		Buildkit:         u.Buildkit,
+		Registry:         u.Registry,
+		Certificate:      u.Certificate,
+		TelemetryEnabled: telemetryEnabled,
 	}
 
 	CurrentStore.CurrentContext = name
