@@ -29,7 +29,7 @@ import (
 )
 
 // GetDockerfile returns the dockerfile with the cache translations
-func GetDockerfile(path, dockerFile string) (string, error) {
+func GetDockerfile(dockerFile string) (string, error) {
 	fileWithCacheHandler, err := getDockerfileWithCacheHandler(dockerFile)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")

@@ -108,7 +108,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 
 	go func() {
 
-		addHiddenExposedPortsToStack(ctx, s, options)
+		addHiddenExposedPortsToStack(s, options)
 
 		for _, name := range options.ServicesToDeploy {
 			if len(s.Services[name].Ports) > 0 {
@@ -600,17 +600,17 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack, options *StackDeployOptions) {
+func addHiddenExposedPortsToStack(s *model.Stack, options *StackDeployOptions) {
 	for _, svcName := range options.ServicesToDeploy {
 		svc := s.Services[svcName]
-		addHiddenExposedPortsToSvc(ctx, svc)
+		addHiddenExposedPortsToSvc(svc)
 	}
 
 }
 
-func addHiddenExposedPortsToSvc(ctx context.Context, svc *model.Service) {
+func addHiddenExposedPortsToSvc(svc *model.Service) {
 	if svc.Image != "" {
-		exposedPorts := registry.GetHiddenExposePorts(ctx, svc.Image)
+		exposedPorts := registry.GetHiddenExposePorts(svc.Image)
 		for _, port := range exposedPorts {
 			if !model.IsAlreadyAdded(port, svc.Ports) {
 				svc.Ports = append(svc.Ports, port)

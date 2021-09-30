@@ -41,7 +41,6 @@ func Namespace(ctx context.Context) *cobra.Command {
 				namespace = args[0]
 			}
 
-			ctx := context.Background()
 			if err := contextCMD.Init(ctx); err != nil {
 				return err
 			}

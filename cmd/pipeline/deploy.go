@@ -104,7 +104,7 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			resp, err := deployPipeline(ctx, name, repository, branch, filename, wait, variables)
+			resp, err := deployPipeline(ctx, name, repository, branch, filename, variables)
 			if err != nil {
 				return err
 			}
@@ -135,7 +135,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func deployPipeline(ctx context.Context, name, repository, branch, filename string, wait bool, variables []string) (*okteto.GitDeployResponse, error) {
+func deployPipeline(ctx context.Context, name, repository, branch, filename string, variables []string) (*okteto.GitDeployResponse, error) {
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()

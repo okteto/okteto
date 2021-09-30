@@ -35,7 +35,7 @@ func Run(ctx context.Context, path, dockerFile, tag, target string, noCache bool
 	}
 
 	if okteto.Context().Buildkit == okteto.CloudBuildKitURL && dockerFile != "" {
-		dockerFile, err = registry.GetDockerfile(path, dockerFile)
+		dockerFile, err = registry.GetDockerfile(dockerFile)
 		if err != nil {
 			return err
 		}

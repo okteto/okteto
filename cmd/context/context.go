@@ -25,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/client"
-	k8sClient "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -55,7 +54,7 @@ func Context() *cobra.Command {
 
 		$ okteto context https://cloud.okteto.com
 
-	to configure your context to acces Okteto Cloud.
+	to configure your context to access Okteto Cloud.
 
 	Your browser will ask for your authentication to retrieve your API token.
 
@@ -73,7 +72,7 @@ func Context() *cobra.Command {
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if ctxOptions.Token == "" && k8sClient.InCluster() {
+			if ctxOptions.Token == "" && client.InCluster() {
 				return errors.ErrTokenFlagNeeded
 			}
 
@@ -162,7 +161,7 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 		}
 		log.Success("Updated kubernetes context: %s", okteto.UrlToContext(oktetoContext))
 
-		cfg := k8sClient.GetKubeconfig(kubeconfigFile)
+		cfg := client.GetKubeconfig(kubeconfigFile)
 		if err := okteto.SaveOktetoClusterContext(oktetoContext, user, ctxOptions.Namespace, cfg); err != nil {
 			return fmt.Errorf("error configuring okteto context: %v", err)
 		}
@@ -176,12 +175,12 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 			Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(), "\n      ")),
 		}
 	}
-	cfg := k8sClient.GetKubeconfig(kubeconfigFile)
+	cfg := client.GetKubeconfig(kubeconfigFile)
 	cfg.CurrentContext = oktetoContext
 	if ctxOptions.Namespace != "" {
 		cfg.Contexts[oktetoContext].Namespace = ctxOptions.Namespace
 	} else {
-		ctxOptions.Namespace = k8sClient.GetCurrentNamespace(kubeconfigFile)
+		ctxOptions.Namespace = client.GetCurrentNamespace(kubeconfigFile)
 	}
 	if err := client.WriteKubeconfig(cfg, kubeconfigFile); err != nil {
 		return err

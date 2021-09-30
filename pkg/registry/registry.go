@@ -14,7 +14,6 @@
 package registry
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -37,7 +36,7 @@ type ConfigInfo struct {
 }
 
 // GetImageTagWithDigest returns the image tag digest
-func GetImageTagWithDigest(ctx context.Context, imageTag string) (string, error) {
+func GetImageTagWithDigest(imageTag string) (string, error) {
 	if !okteto.IsOktetoContext() {
 		return imageTag, nil
 	}
@@ -110,7 +109,7 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	return registryTag, imageTag
 }
 
-func GetHiddenExposePorts(ctx context.Context, image string) []model.Port {
+func GetHiddenExposePorts(image string) []model.Port {
 	exposedPorts := make([]model.Port, 0)
 	var err error
 	var username string

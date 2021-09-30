@@ -93,7 +93,7 @@ func (up *upContext) activate(build bool) error {
 		return err
 	}
 
-	if _, err := registry.GetImageTagWithDigest(ctx, up.Dev.Image.Name); err == errors.ErrNotFound {
+	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == errors.ErrNotFound {
 		log.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		build = true
 	}

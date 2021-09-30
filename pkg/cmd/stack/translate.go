@@ -179,7 +179,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !options.ForceBuild {
-			if _, err := registry.GetImageTagWithDigest(ctx, svc.Image); err != errors.ErrNotFound {
+			if _, err := registry.GetImageTagWithDigest(svc.Image); err != errors.ErrNotFound {
 				s.Services[name] = svc
 				continue
 			}

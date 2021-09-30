@@ -17,7 +17,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -48,10 +47,9 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 			contextCommand.Flags().Set("okteto", "true")
 			err := contextCommand.RunE(cmd, args)
 			if err != nil {
-				analytics.TrackLogin(false, "user.Name", "user.ID")
+				analytics.TrackLogin(false)
 			} else {
-				octx := okteto.Context()
-				analytics.TrackLogin(true, octx.Username, octx.UserID)
+				analytics.TrackLogin(true)
 			}
 			return err
 

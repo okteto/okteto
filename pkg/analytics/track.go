@@ -243,7 +243,7 @@ func TrackDestroyStack(success bool) {
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(success bool, name, oktetoID string) {
+func TrackLogin(success bool) {
 	if !get().Enabled {
 		return
 	}
