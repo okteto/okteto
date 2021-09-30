@@ -35,7 +35,7 @@ func Run(ctx context.Context, path, dockerFile, tag, target string, noCache bool
 	}
 
 	if dockerFile != "" {
-		dockerFile, err = registry.GetDockerfile(dockerFile, okteto.Context().Namespace, okteto.Context().Buildkit)
+		dockerFile, err = registry.GetDockerfile(dockerFile)
 		if err != nil {
 			return err
 		}

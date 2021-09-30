@@ -28,8 +28,8 @@ import (
 )
 
 // GetDockerfile returns the dockerfile with the cache and registry translations
-func GetDockerfile(dockerFile, namespace, buildKitHost string) (string, error) {
-	file, err := getTranslatedDockerFile(dockerFile, namespace, buildKitHost)
+func GetDockerfile(dockerFile string) (string, error) {
+	file, err := getTranslatedDockerFile(dockerFile)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
 	}
@@ -37,7 +37,7 @@ func GetDockerfile(dockerFile, namespace, buildKitHost string) (string, error) {
 	return file, nil
 }
 
-func getTranslatedDockerFile(filename, namespace, buildKitHost string) (string, error) {
+func getTranslatedDockerFile(filename string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return "", err
@@ -64,11 +64,11 @@ func getTranslatedDockerFile(filename, namespace, buildKitHost string) (string, 
 		userID = "anonymous"
 	}
 
-	withCacheHandler := buildKitHost == okteto.CloudBuildKitURL
+	withCacheHandler := okteto.Context().Buildkit == okteto.CloudBuildKitURL
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		translatedLine := translateOktetoRegistryImage(line, namespace)
+		translatedLine := translateOktetoRegistryImage(line)
 		if withCacheHandler {
 			translatedLine = translateCacheHandler(translatedLine, userID)
 		}
@@ -108,10 +108,10 @@ func translateCacheHandler(input, userID string) string {
 	return input
 }
 
-func translateOktetoRegistryImage(input, namespace string) string {
+func translateOktetoRegistryImage(input string) string {
 
 	if strings.Contains(input, okteto.DevRegistry) {
-		tag := replaceRegistry(input, okteto.DevRegistry, namespace)
+		tag := replaceRegistry(input, okteto.DevRegistry, okteto.Context().Namespace)
 		return tag
 	}
 
