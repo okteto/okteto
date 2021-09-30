@@ -1,12 +1,8 @@
 package registry
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -226,17 +222,17 @@ func Test_translateRegistry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, err := ioutil.TempDir("", "")
-			if err != nil {
-				t.Fatal(err)
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				CurrentContext: "test",
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Name:      "test",
+						Namespace: tt.namespace,
+						UserID:    "user-id",
+						Registry:  tt.registry,
+					},
+				},
 			}
-			defer os.RemoveAll(dir)
-
-			os.Setenv("OKTETO_FOLDER", dir)
-
-			kubeconfigFile := config.GetKubeconfigPath()
-			cfg := client.GetKubeconfig(kubeconfigFile)
-			okteto.UpdateOktetoClusterContext("test-context", &okteto.User{Registry: tt.registry}, tt.namespace, cfg)
 
 			if got := replaceRegistry(tt.input, tt.registryType, tt.namespace); got != tt.want {
 				t.Errorf("registry.replaceRegistry = %v, want %v", got, tt.want)
