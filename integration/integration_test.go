@@ -260,8 +260,6 @@ func TestAll(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
-	k8Client.Reset()
-
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
@@ -397,8 +395,6 @@ func TestAllStatefulset(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
-	k8Client.Reset()
-
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
@@ -531,7 +527,6 @@ func TestDivert(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	log.Printf("running %s \n", tName)
-	k8Client.Reset()
 	startNamespace := getCurrentNamespace()
 	defer changeToNamespace(ctx, oktetoPath, startNamespace)
 
@@ -785,7 +780,7 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 
 	log.Printf("create namespace output: \n%s\n", string(o))
 
-	n := k8Client.GetContextNamespace("")
+	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -805,7 +800,7 @@ func changeToNamespace(ctx context.Context, oktetoPath, namespace string) error 
 
 	log.Printf("namespace output: \n%s\n", string(o))
 
-	n := k8Client.GetContextNamespace("")
+	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -1231,9 +1226,5 @@ func checkIfUpFinished(ctx context.Context, pid int) error {
 }
 
 func getCurrentNamespace() string {
-	currentContext := okteto.GetCurrentContext()
-	if okteto.GetClusterContext() == currentContext {
-		return k8Client.GetContextNamespace("")
-	}
-	return os.Getenv("OKTETO_NAMESPACE")
+	return k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 }

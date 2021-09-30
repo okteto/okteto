@@ -89,9 +89,13 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	}
 
 	cfg := client.GetKubeconfig(kubeconfigFile)
-	cert, err := base64.RawStdEncoding.DecodeString(octx.Certificate)
-	if err != nil {
-		return fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+	cert := []byte("")
+	if octx.Certificate != "" {
+		var err error
+		cert, err = base64.StdEncoding.DecodeString(octx.Certificate)
+		if err != nil {
+			return fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+		}
 	}
 	u := &okteto.User{
 		ID:              octx.UserID,

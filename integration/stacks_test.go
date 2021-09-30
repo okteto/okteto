@@ -27,8 +27,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 )
 
 const (
@@ -56,7 +54,6 @@ func TestStacks(t *testing.T) {
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	t.Run(tName, func(t *testing.T) {
 		log.Printf("running %s \n", tName)
-		k8Client.Reset()
 		startNamespace := getCurrentNamespace()
 		defer changeToNamespace(ctx, oktetoPath, startNamespace)
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {

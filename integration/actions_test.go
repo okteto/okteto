@@ -279,7 +279,7 @@ func TestPushAction(t *testing.T) {
 	ctx := context.Background()
 	namespace := getTestNamespace()
 
-	user := okteto.GetUsername()
+	user := okteto.Context().Username
 	if user == "" {
 		t.Fatal("Could not detect any user")
 	}
@@ -370,7 +370,7 @@ func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("create namespace output: \n%s\n", string(o))
-	n := k8Client.GetContextNamespace("")
+	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -399,7 +399,7 @@ func executeChangeNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("changing namespace output: \n%s\n", string(o))
-	n := k8Client.GetContextNamespace("")
+	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -460,7 +460,7 @@ func executeDeployPipelineAction(ctx context.Context, namespace string) error {
 	if err != nil {
 		return err
 	}
-	pipeline, err := oktetoClient.GetPipelineByName(ctx, "movies", namespace)
+	pipeline, err := oktetoClient.GetPipelineByName(ctx, "movies")
 	if err != nil || pipeline == nil {
 		return fmt.Errorf("Could not get deployment %s", namespace)
 	}
@@ -627,11 +627,7 @@ func executeDestroyStackAction(ctx context.Context, namespace, filePath string) 
 func executeLoginAction(ctx context.Context) error {
 	token := os.Getenv("API_TOKEN")
 	if token == "" {
-		t, err := okteto.GetToken()
-		if err != nil || t.Token == "" {
-			return fmt.Errorf("this test requires a token to login")
-		}
-		token = t.Token
+		token = okteto.Context().Token
 	}
 
 	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, loginPath)
