@@ -82,11 +82,18 @@ func Context() *cobra.Command {
 				ctxOptions.Token = apiToken
 			}
 
+			if err := okteto.InitContext(ctx, ctxOptions.Token); err != nil {
+				if err != errors.ErrNoActiveOktetoContexts {
+					return err
+				}
+			}
+
 			var err error
 			oktetoContext := os.Getenv("OKTETO_URL")
 			if oktetoContext == "" && ctxOptions.Token != "" {
 				oktetoContext = okteto.CloudURL
 			}
+
 			if len(args) == 0 {
 				if oktetoContext != "" {
 					log.Infof("authenticating with OKTETO_URL")
@@ -203,4 +210,16 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 	}
 
 	return oktetoContext, nil
+}
+
+func Init(ctx context.Context) error {
+	if err := okteto.InitContext(ctx, ""); err != nil {
+		if err != errors.ErrNoActiveOktetoContexts {
+			return err
+		}
+		okCtx := Context()
+		okCtx.Flags().Set("okteto", "true")
+		return okCtx.RunE(nil, nil)
+	}
+	return nil
 }

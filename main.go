@@ -28,13 +28,11 @@ import (
 	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -73,20 +71,6 @@ func main() {
 	if err := analytics.Init(); err != nil {
 		log.Infof("error initializing okteto analytics: %s", err)
 	}
-
-	if err := okteto.InitContext(ctx); err != nil {
-		if err != errors.ErrNoActiveOktetoContexts {
-			log.Fatalf("error initializing okteto context: %v", err)
-		}
-		okCtx := contextCMD.Context()
-		okCtx.Flags().Set("okteto", "true")
-		if err := okCtx.RunE(nil, nil); err != nil {
-			log.Fail(err.Error())
-			os.Exit(1)
-		}
-	}
-
-	utils.SetOktetoUsernameEnv()
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),

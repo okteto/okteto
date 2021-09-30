@@ -19,6 +19,7 @@ import (
 	"os"
 	"time"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
@@ -46,6 +47,10 @@ func Exec() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
 
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {

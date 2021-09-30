@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
@@ -53,6 +54,10 @@ func Init() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
 		Short: "Automatically generates your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
 
 			if err := okteto.SetCurrentContext(k8sContext, namespace); err != nil {
 				return err

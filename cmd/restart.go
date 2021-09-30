@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -42,6 +43,9 @@ func Restart() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#restart"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
 
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/moby/term"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -100,6 +101,11 @@ func Up() *cobra.Command {
 			}
 
 			ctx := context.Background()
+
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			if err := utils.LoadEnvironment(ctx, false); err != nil {
 				return err
 			}
@@ -113,7 +119,6 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			fmt.Println("Configuring", dev.Context, dev.Namespace)
 			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
 				return err
 			}

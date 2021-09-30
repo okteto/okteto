@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -50,6 +51,10 @@ func Push(ctx context.Context) *cobra.Command {
 		Short: "Builds, pushes and redeploys source code to the target app",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			if err := utils.LoadEnvironment(ctx, true); err != nil {
 				return err
 			}

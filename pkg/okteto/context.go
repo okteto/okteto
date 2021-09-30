@@ -83,14 +83,18 @@ func InitContextWithToken(ctx context.Context, oktetoUrl, oktetoToken string) er
 		return fmt.Errorf("error configuring okteto context: %v", err)
 	}
 	log.Information("Current context: %s\n    Run 'okteto context' if you need to change your context", UrlToContext(oktetoUrl))
+	os.Setenv("OKTETO_USERNAME", Context().Username)
+	os.Setenv("OKTETO_NAMESPACE", Context().Namespace)
 	return nil
 }
 
-func InitContext(ctx context.Context) error {
+func InitContext(ctx context.Context, oktetoToken string) error {
 	defer os.RemoveAll(config.GetTokenPathDeprecated())
 
 	currentContext := os.Getenv("OKTETO_URL")
-	oktetoToken := os.Getenv("OKTETO_TOKEN")
+	if oktetoToken == "" {
+		oktetoToken = os.Getenv("OKTETO_TOKEN")
+	}
 	if oktetoToken != "" {
 		if currentContext == "" {
 			currentContext = CloudURL
@@ -170,7 +174,7 @@ func ContextStore() *OktetoContextStore {
 	b, err := ioutil.ReadFile(config.GetOktetoContextsStorePath())
 	if err != nil {
 		log.Errorf("error reading okteto contexts: %v", err)
-		log.Fatalf(errors.ErrCorruptedOktetoContexts)
+		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
 	}
 
 	dec := json.NewDecoder(bytes.NewReader(b))
@@ -179,7 +183,7 @@ func ContextStore() *OktetoContextStore {
 	ctxStore := &OktetoContextStore{}
 	if err := dec.Decode(&ctxStore); err != nil {
 		log.Errorf("error decoding okteto contexts: %v", err)
-		log.Fatalf(errors.ErrCorruptedOktetoContexts)
+		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
 	}
 
 	CurrentStore = ctxStore
@@ -189,11 +193,11 @@ func ContextStore() *OktetoContextStore {
 func Context() *OktetoContext {
 	c := ContextStore()
 	if c.CurrentContext == "" {
-		log.Fatalf(errors.ErrCorruptedOktetoContexts)
+		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
 	}
 	octx, ok := c.Contexts[c.CurrentContext]
 	if !ok {
-		log.Fatalf(errors.ErrCorruptedOktetoContexts)
+		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
 	}
 
 	return octx
@@ -436,7 +440,7 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	octx := Context()
 	kubeconfigBytes, err := base64.StdEncoding.DecodeString(octx.Kubeconfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts)
+		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
 	}
 	var cfg clientcmdapi.Config
 	if err := json.Unmarshal(kubeconfigBytes, &cfg); err != nil {

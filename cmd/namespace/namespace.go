@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
@@ -39,6 +40,11 @@ func Namespace(ctx context.Context) *cobra.Command {
 			namespace := ""
 			if len(args) > 0 {
 				namespace = args[0]
+			}
+
+			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
 			}
 
 			if !okteto.IsOktetoContext() {
@@ -85,7 +91,7 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	cfg := client.GetKubeconfig(kubeconfigFile)
 	cert, err := base64.RawStdEncoding.DecodeString(octx.Certificate)
 	if err != nil {
-		return fmt.Errorf(errors.ErrCorruptedOktetoContexts)
+		return fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
 	}
 	u := &okteto.User{
 		ID:              octx.UserID,

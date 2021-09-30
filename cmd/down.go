@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/signal"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
@@ -45,6 +46,9 @@ func Down() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
 
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {

@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
@@ -34,6 +35,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Short: "Destroy a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			if !okteto.IsOktetoContext() {
 				return errors.ErrContextIsNotOktetoCluster
 			}

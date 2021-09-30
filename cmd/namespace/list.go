@@ -19,6 +19,7 @@ import (
 	"os"
 	"text/tabwriter"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -31,6 +32,10 @@ func List(ctx context.Context) *cobra.Command {
 		Use:   "namespace",
 		Short: "List namespaces managed by Okteto in your current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			if !okteto.IsOktetoContext() {
 				return errors.ErrContextIsNotOktetoCluster
 			}

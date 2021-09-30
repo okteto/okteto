@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/namesgenerator"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
@@ -48,6 +49,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy a preview environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
 
 			if !okteto.IsOktetoContext() {
 				return errors.ErrContextIsNotOktetoCluster

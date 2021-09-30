@@ -19,6 +19,7 @@ import (
 	"os"
 	"text/tabwriter"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -30,6 +31,10 @@ func List(ctx context.Context) *cobra.Command {
 		Use:   "list",
 		Short: "Lists all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
 
 			if !okteto.IsOktetoContext() {
 				return errors.ErrContextIsNotOktetoCluster
