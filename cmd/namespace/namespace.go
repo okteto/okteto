@@ -15,7 +15,6 @@ package namespace
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -89,21 +88,13 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	}
 
 	cfg := client.GetKubeconfig(kubeconfigFile)
-	cert := []byte("")
-	if octx.Certificate != "" {
-		var err error
-		cert, err = base64.StdEncoding.DecodeString(octx.Certificate)
-		if err != nil {
-			return fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
-		}
-	}
 	u := &okteto.User{
 		ID:              octx.UserID,
 		ExternalID:      octx.Username,
 		Token:           octx.Token,
 		Buildkit:        octx.Buildkit,
 		Registry:        octx.Registry,
-		Certificate:     string(cert),
+		Certificate:     octx.Certificate,
 		GlobalNamespace: octx.GlobalNamespace,
 	}
 	if err := okteto.SaveOktetoClusterContext(octx.Name, u, namespace, cfg); err != nil {
