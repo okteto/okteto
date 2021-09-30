@@ -14,7 +14,6 @@
 package registry
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -22,8 +21,6 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -39,46 +36,23 @@ type ConfigInfo struct {
 }
 
 // GetImageTagWithDigest returns the image tag digest
-func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (string, error) {
-	registryURL, err := okteto.GetRegistry()
-	if err != nil {
-		if err != errors.ErrNotLogged {
-			log.Infof("error accessing to okteto registry: %s", err.Error())
-		}
+func GetImageTagWithDigest(imageTag string) (string, error) {
+	if !okteto.IsOktetoContext() {
 		return imageTag, nil
 	}
 
+	var err error
 	expandedTag := imageTag
-	if IsDevRegistry(imageTag) {
-		expandedTag, err = ExpandOktetoDevRegistry(ctx, namespace, imageTag)
-		if err != nil {
-			log.Infof("error expanding okteto.dev registry: %s", err.Error())
-			return imageTag, nil
-		}
-	}
-	if IsGlobalRegistry(imageTag) {
-		expandedTag, err = ExpandOktetoGlobalRegistry(imageTag)
-		if err != nil {
-			log.Infof("error expanding okteto.global registry: %s", err.Error())
-			return imageTag, nil
-		}
-	}
-	if !strings.HasPrefix(expandedTag, registryURL) {
-		return imageTag, nil
-	}
-	username := okteto.GetUserID()
-	token, err := okteto.GetToken()
-	if err != nil {
-		log.Infof("error getting token: %s", err.Error())
-		return imageTag, nil
-	}
-	u, err := url.Parse(registryURL)
+	expandedTag = ExpandOktetoDevRegistry(expandedTag)
+	expandedTag = ExpandOktetoGlobalRegistry(expandedTag)
+	username := okteto.Context().UserID
+	u, err := url.Parse(okteto.Context().Registry)
 	if err != nil {
 		log.Infof("error parsing registry url: %s", err.Error())
 		return imageTag, nil
 	}
 	u.Scheme = "https"
-	c, err := NewRegistryClient(u.String(), username, token.Token)
+	c, err := NewRegistryClient(u.String(), username, okteto.Context().Token)
 	if err != nil {
 		log.Infof("error creating registry client: %s", err.Error())
 		return imageTag, nil
@@ -102,46 +76,17 @@ func GetImageTagWithDigest(ctx context.Context, namespace, imageTag string) (str
 }
 
 // ExpandOktetoGlobalRegistry translates okteto.global
-func ExpandOktetoGlobalRegistry(tag string) (string, error) {
-	oktetoRegistryURL, err := okteto.GetRegistry()
-	if err != nil {
-		return "", fmt.Errorf("cannot use the okteto.global container registry: unable to get okteto registry url: %s", err)
-	}
+func ExpandOktetoGlobalRegistry(tag string) string {
 	globalNamespace := okteto.DefaultGlobalNamespace
-	t, _ := okteto.GetToken()
-	if t.GlobalNamespace != "" {
-		globalNamespace = t.GlobalNamespace
+	if okteto.Context().GlobalNamespace != "" {
+		globalNamespace = okteto.Context().GlobalNamespace
 	}
-	tag = strings.Replace(tag, okteto.GlobalRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, globalNamespace), 1)
-	return tag, nil
+	return strings.Replace(tag, okteto.GlobalRegistry, fmt.Sprintf("%s/%s", okteto.Context().Registry, globalNamespace), 1)
 }
 
 // ExpandOktetoDevRegistry translates okteto.dev
-func ExpandOktetoDevRegistry(ctx context.Context, namespace, tag string) (string, error) {
-	c, _, err := client.GetLocal()
-	if err != nil {
-		return "", fmt.Errorf("failed to load your local Kubeconfig: %s", err)
-	}
-
-	if namespace == "" {
-		namespace = client.GetContextNamespace("")
-	}
-
-	n, err := namespaces.Get(ctx, namespace, c)
-	if err != nil {
-		return "", fmt.Errorf("failed to get your current namespace '%s': %s", namespace, err.Error())
-	}
-	if !namespaces.IsOktetoNamespace(n) {
-		return "", fmt.Errorf("cannot use the okteto.dev container registry: your current namespace '%s' is not managed by okteto", namespace)
-	}
-
-	oktetoRegistryURL, err := okteto.GetRegistry()
-	if err != nil {
-		return "", fmt.Errorf("cannot use the okteto.dev container registry: unable to get okteto registry url: %s", err)
-	}
-
-	tag = strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", oktetoRegistryURL, namespace), 1)
-	return tag, nil
+func ExpandOktetoDevRegistry(tag string) string {
+	return strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", okteto.Context().Registry, okteto.Context().Namespace), 1)
 }
 
 // SplitRegistryAndImage returns image tag and the registry to push the image
@@ -164,37 +109,16 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	return registryTag, imageTag
 }
 
-func GetHiddenExposePorts(ctx context.Context, namespace, image string) []model.Port {
+func GetHiddenExposePorts(image string) []model.Port {
 	exposedPorts := make([]model.Port, 0)
 	var err error
 	var username string
 	var token string
-	if IsDevRegistry(image) {
-		image, err = ExpandOktetoDevRegistry(ctx, namespace, image)
-		if err != nil {
-			log.Infof("Could not expand okteto dev registry: %s", err.Error())
-		}
-		username = okteto.GetUserID()
-		okToken, err := okteto.GetToken()
-		if err != nil {
-			log.Infof("Could not expand okteto dev registry: %s", err.Error())
-			return exposedPorts
-		}
-		token = okToken.Token
-	}
-
-	if IsGlobalRegistry(image) {
-		image, err = ExpandOktetoGlobalRegistry(image)
-		if err != nil {
-			log.Infof("Could not expand okteto global registry: %s", err.Error())
-		}
-		username = okteto.GetUserID()
-		okToken, err := okteto.GetToken()
-		if err != nil {
-			log.Infof("Could not expand okteto global registry: %s", err.Error())
-			return exposedPorts
-		}
-		token = okToken.Token
+	if okteto.IsOktetoContext() {
+		image = ExpandOktetoDevRegistry(image)
+		image = ExpandOktetoGlobalRegistry(image)
+		username = okteto.Context().UserID
+		token = okteto.Context().Token
 	}
 
 	registry := getRegistryURL(image)

@@ -15,24 +15,16 @@ package okteto
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/url"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/shurcooL/graphql"
-)
-
-const (
-	tokenFile = ".token.json"
 )
 
 var reg = regexp.MustCompile("[^A-Za-z0-9]+")
@@ -63,8 +55,6 @@ type User struct {
 	GlobalNamespace string
 }
 
-var currentToken *Token
-
 // AuthWithToken authenticates in okteto with the provided token
 func AuthWithToken(ctx context.Context, u, token string) (*User, error) {
 	url, err := url.Parse(u)
@@ -85,11 +75,6 @@ func AuthWithToken(ctx context.Context, u, token string) (*User, error) {
 		return nil, fmt.Errorf("invalid API token")
 	}
 
-	if err := saveAuthData(user, url.String()); err != nil {
-		log.Infof("failed to save the login data: %s", err)
-		return nil, fmt.Errorf("failed to save the login data locally")
-	}
-
 	return user, nil
 }
 
@@ -106,30 +91,7 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 		return nil, fmt.Errorf("authentication error, please try again")
 	}
 
-	if err := saveAuthData(user, url); err != nil {
-		log.Infof("failed to save the auth data: %s", err)
-		return nil, fmt.Errorf("failed to save your auth info locally, please try again")
-	}
-
 	return user, nil
-
-}
-
-func saveAuthData(user *User, url string) error {
-	if user.ExternalID == "" || user.Token == "" {
-		return fmt.Errorf("empty response")
-	}
-
-	if err := saveToken(user.ID, user.ExternalID, user.Token, url, user.Registry, user.Buildkit, user.GlobalNamespace); err != nil {
-		return err
-	}
-
-	d, err := base64.StdEncoding.DecodeString(user.Certificate)
-	if err != nil {
-		return fmt.Errorf("certificate decoding error: %w", err)
-	}
-
-	return ioutil.WriteFile(GetCertificatePath(), d, 0600)
 }
 
 func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
@@ -289,185 +251,18 @@ func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*Us
 	return user, nil
 }
 
-//GetToken returns the token of the authenticated user
-func GetToken() (*Token, error) {
-	if currentToken == nil {
-		p := getTokenPath()
+func getTokenFromOktetoHome() (*Token, error) {
+	p := config.GetTokenPathDeprecated()
 
-		b, err := ioutil.ReadFile(p)
-		if err != nil {
-			return nil, err
-		}
+	b, err := ioutil.ReadFile(p)
+	if err != nil {
+		return nil, err
+	}
 
-		currentToken = &Token{}
-		if err := json.Unmarshal(b, currentToken); err != nil {
-			return nil, err
-		}
+	currentToken := &Token{}
+	if err := json.Unmarshal(b, currentToken); err != nil {
+		return nil, err
 	}
 
 	return currentToken, nil
-}
-
-//IsAuthenticated returns if the user is authenticated
-func IsAuthenticated() bool {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("error getting okteto token: %s", err)
-		return false
-	}
-	return t.Token != ""
-}
-
-// GetUserID returns the userID of the authenticated user
-func GetUserID() string {
-	t, err := GetToken()
-	if err != nil {
-		return ""
-	}
-
-	return t.ID
-}
-
-// GetUsername returns the username of the authenticated user
-func GetUsername() string {
-	t, err := GetToken()
-	if err != nil {
-		return ""
-	}
-
-	return t.Username
-}
-
-// GetSanitizedUsername returns the username of the authenticated user sanitized to be DNS compatible
-func GetSanitizedUsername() string {
-	t, err := GetToken()
-	if err != nil {
-		return ""
-	}
-
-	return reg.ReplaceAllString(strings.ToLower(t.Username), "-")
-}
-
-// GetMachineID returns the userID of the authenticated user
-func GetMachineID() string {
-	t, err := GetToken()
-	if err != nil {
-		return ""
-	}
-
-	return t.MachineID
-}
-
-// GetURL returns the URL of the authenticated user
-func GetURL() string {
-	t, err := GetToken()
-	if err != nil {
-		return "na"
-	}
-
-	return t.URL
-}
-
-// GetRegistry returns the URL of the registry
-func GetRegistry() (string, error) {
-	t, err := GetToken()
-	if err != nil {
-		return "", errors.ErrNotLogged
-	}
-	if t.Registry == "" {
-		if GetURL() == CloudURL {
-			return CloudRegistryURL, nil
-		}
-		return "", errors.ErrNotLogged
-	}
-	return t.Registry, nil
-}
-
-// GetBuildKit returns the URL of the okteto buildkit
-func GetBuildKit() (string, error) {
-	t, err := GetToken()
-	if err != nil {
-		return "", errors.ErrNotLogged
-	}
-	if t.Buildkit == "" {
-		if GetURL() == CloudURL {
-			return CloudBuildKitURL, nil
-		}
-		return "", errors.ErrNotLogged
-	}
-	return t.Buildkit, nil
-}
-
-// GetCertificatePath returns the path  to the certificate of the okteto buildkit
-func GetCertificatePath() string {
-	return filepath.Join(config.GetOktetoHome(), ".ca.crt")
-}
-
-func saveToken(id, username, token, url, registry, buildkit, globalNamespace string) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("bad token, re-initializing: %s", err)
-		t = &Token{}
-	}
-
-	t.ID = id
-	t.Username = username
-	t.Token = token
-	t.URL = url
-	t.Buildkit = buildkit
-	t.Registry = registry
-	t.GlobalNamespace = globalNamespace
-	return save(t)
-}
-
-// SaveMachineID updates the token file with the machineID value
-func SaveMachineID(machineID string) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("bad token, re-initializing: %s", err)
-		t = &Token{}
-	}
-
-	t.MachineID = machineID
-	return save(t)
-}
-
-// SaveID updates the token file with the userID value
-func SaveID(userID string) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("bad token, re-initializing: %s", err)
-		t = &Token{}
-	}
-
-	t.ID = userID
-	return save(t)
-}
-
-func save(t *Token) error {
-	marshalled, err := json.Marshal(t)
-	if err != nil {
-		log.Infof("failed to marshal token: %s", err)
-		return fmt.Errorf("failed to generate your auth token")
-	}
-
-	p := getTokenPath()
-
-	if _, err := os.Stat(p); err == nil {
-		err = os.Chmod(p, 0600)
-		if err != nil {
-			return fmt.Errorf("couldn't change token permissions: %s", err)
-		}
-	}
-
-	if err := ioutil.WriteFile(p, marshalled, 0600); err != nil {
-		return fmt.Errorf("couldn't save authentication token: %s", err)
-	}
-
-	currentToken = nil
-	return nil
-}
-
-func getTokenPath() string {
-	return filepath.Join(config.GetOktetoHome(), tokenFile)
 }

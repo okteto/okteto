@@ -21,6 +21,24 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
+func TestMain(m *testing.M) {
+	currentAnalytics = &Analytics{
+		Enabled:   false,
+		MachineID: "machine-id",
+	}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Name:      "test",
+				Namespace: "namespace",
+				UserID:    "user-id",
+			},
+		},
+	}
+	os.Exit(m.Run())
+}
+
 func Test_generatedMachineID(t *testing.T) {
 	m := generateMachineID()
 	if m == "" || m == "na" {
@@ -56,22 +74,11 @@ func Test_getTrackID(t *testing.T) {
 
 			os.Setenv("OKTETO_HOME", dir)
 
-			if len(tt.machineID) > 0 {
-				if err := okteto.SaveMachineID(tt.machineID); err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			if len(tt.userID) > 0 {
-				if err := okteto.SaveID(tt.userID); err != nil {
-					t.Fatal(err)
-				}
-			}
+			a := get()
+			a.MachineID = tt.machineID
+			okteto.Context().UserID = tt.userID
 
 			trackID := getTrackID()
-			if trackID == "" || trackID == "na" {
-				t.Fatalf("failed to get trackID: %s", trackID)
-			}
 
 			expected := ""
 			switch {
@@ -79,8 +86,6 @@ func Test_getTrackID(t *testing.T) {
 				expected = tt.userID
 			case len(tt.machineID) > 0:
 				expected = tt.machineID
-			default:
-				expected = getMachineID()
 			}
 
 			if trackID != expected {

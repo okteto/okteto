@@ -71,7 +71,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	podPath, err := generatePodFile(ctx, dev, c)
 	if err != nil {
 		log.Infof("failed to get information about the remote dev container: %s", err)
-		log.Yellow(errors.ErrNotInDevMode.Error())
+		log.Warning(errors.ErrNotInDevMode.Error())
 	} else {
 		defer os.RemoveAll(podPath)
 	}
@@ -88,9 +88,9 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	files := []string{summaryFilename}
 	files = append(files, stignoreFilenames...)
 
-	deploymentLogsPath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), "okteto.log")
-	if model.FileExists(deploymentLogsPath) {
-		files = append(files, deploymentLogsPath)
+	appLogsPath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), "okteto.log")
+	if model.FileExists(appLogsPath) {
+		files = append(files, appLogsPath)
 	}
 
 	if model.FileExists(syncthing.GetLogFile(dev.Namespace, dev.Name)) {

@@ -18,16 +18,17 @@ import (
 	"os"
 	"os/signal"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 )
@@ -45,8 +46,16 @@ func Down() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
+				return err
+			}
+
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
 				return err
 			}
 
@@ -77,7 +86,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 	exit := make(chan error, 1)
 
 	go func() {
-		client, _, err := k8Client.GetLocalWithContext(dev.Context)
+		client, _, err := okteto.GetK8sClient()
 		if err != nil {
 			exit <- err
 			return
@@ -150,7 +159,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 }
 
 func removeVolume(ctx context.Context, dev *model.Dev) error {
-	c, _, err := k8Client.GetLocalWithContext(dev.Context)
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}

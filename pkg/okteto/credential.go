@@ -16,8 +16,6 @@ package okteto
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
 
 	"github.com/shurcooL/graphql"
 )
@@ -57,14 +55,8 @@ func (c *OktetoClient) GetCredentials(ctx context.Context) (*Credential, error) 
 	}
 
 	if cred.Server == "" {
-		return nil, fmt.Errorf("%s is not available. Please, retry again in a few minutes", GetURL())
+		return nil, fmt.Errorf("%s is not available. Please, retry again in a few minutes", Context().Name)
 	}
 
 	return cred, nil
-}
-
-// GetClusterContext returns the k8s context names given an okteto URL
-func GetClusterContext() string {
-	u, _ := url.Parse(GetURL())
-	return strings.ReplaceAll(u.Host, ".", "_")
 }

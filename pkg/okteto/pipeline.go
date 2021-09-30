@@ -57,7 +57,7 @@ type Variable struct {
 }
 
 // DeployPipeline creates a pipeline
-func (c *OktetoClient) DeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error) {
+func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error) {
 
 	gitDeployResponse := &GitDeployResponse{}
 	if len(variables) > 0 {
@@ -86,7 +86,7 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, namespace, repo
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(name),
 			"repository": graphql.String(repository),
-			"space":      graphql.String(namespace),
+			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
 			"variables":  variablesVariable,
 			"filename":   graphql.String(filename),
@@ -95,7 +95,7 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, namespace, repo
 		err := c.client.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDeployPipeline(ctx, name, namespace, repository, branch, filename, variables)
+				return c.deprecatedDeployPipeline(ctx, name, repository, branch, filename, variables)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", translateAPIErr(err))
 		}
@@ -131,7 +131,7 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, namespace, repo
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(name),
 			"repository": graphql.String(repository),
-			"space":      graphql.String(namespace),
+			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
 			"filename":   graphql.String(filename),
 		}
@@ -139,7 +139,7 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, namespace, repo
 		err := c.client.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDeployPipeline(ctx, name, namespace, repository, branch, filename, variables)
+				return c.deprecatedDeployPipeline(ctx, name, repository, branch, filename, variables)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", translateAPIErr(err))
 		}
@@ -160,7 +160,7 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, namespace, repo
 	return gitDeployResponse, nil
 }
 
-func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error) {
+func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error) {
 
 	gitDeployResponse := &GitDeployResponse{}
 	if len(variables) > 0 {
@@ -180,7 +180,7 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, names
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(name),
 			"repository": graphql.String(repository),
-			"space":      graphql.String(namespace),
+			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
 			"variables":  variablesVariable,
 			"filename":   graphql.String(filename),
@@ -208,7 +208,7 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, names
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(name),
 			"repository": graphql.String(repository),
-			"space":      graphql.String(namespace),
+			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
 			"filename":   graphql.String(filename),
 		}
@@ -226,7 +226,7 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, names
 }
 
 // GetPipelineByName gets a pipeline given its name
-func (c *OktetoClient) GetPipelineByName(ctx context.Context, name, namespace string) (*GitDeploy, error) {
+func (c *OktetoClient) GetPipelineByName(ctx context.Context, name string) (*GitDeploy, error) {
 	var query struct {
 		Space struct {
 			GitDeploys []struct {
@@ -237,7 +237,7 @@ func (c *OktetoClient) GetPipelineByName(ctx context.Context, name, namespace st
 		} `graphql:"space(id: $id)"`
 	}
 	variables := map[string]interface{}{
-		"id": graphql.String(namespace),
+		"id": graphql.String(Context().Namespace),
 	}
 	err := c.client.Query(ctx, &query, variables)
 	if err != nil {
@@ -257,7 +257,7 @@ func (c *OktetoClient) GetPipelineByName(ctx context.Context, name, namespace st
 }
 
 // GetPipelineByRepository gets a pipeline given its repo url
-func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, namespace, repository string) (*GitDeployResponse, error) {
+func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, repository string) (*GitDeployResponse, error) {
 	var query struct {
 		Pipeline struct {
 			GitDeploys []struct {
@@ -268,7 +268,7 @@ func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, namespace, r
 		} `graphql:"space(id: $id)"`
 	}
 	variables := map[string]interface{}{
-		"id": graphql.String(namespace),
+		"id": graphql.String(Context().Namespace),
 	}
 	err := c.client.Query(ctx, &query, variables)
 	if err != nil {
@@ -307,8 +307,8 @@ func areSameRepository(repoA, repoB string) bool {
 }
 
 // DestroyPipeline destroys a pipeline
-func (c *OktetoClient) DestroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error) {
-	log.Infof("destroy pipeline: %s/%s", namespace, name)
+func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*GitDeployResponse, error) {
+	log.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
 	gitDeployResponse := &GitDeployResponse{}
 	if destroyVolumes {
 		var mutation struct {
@@ -330,12 +330,12 @@ func (c *OktetoClient) DestroyPipeline(ctx context.Context, name, namespace stri
 		queryVariables := map[string]interface{}{
 			"name":           graphql.String(name),
 			"destroyVolumes": graphql.Boolean(destroyVolumes),
-			"space":          graphql.String(namespace),
+			"space":          graphql.String(Context().Namespace),
 		}
 		err := c.client.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroyPipeline(ctx, name, namespace, destroyVolumes)
+				return c.deprecatedDestroyPipeline(ctx, name, destroyVolumes)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", translateAPIErr(err))
 		}
@@ -369,12 +369,12 @@ func (c *OktetoClient) DestroyPipeline(ctx context.Context, name, namespace stri
 
 		queryVariables := map[string]interface{}{
 			"name":  graphql.String(name),
-			"space": graphql.String(namespace),
+			"space": graphql.String(Context().Namespace),
 		}
 		err := c.client.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroyPipeline(ctx, name, namespace, destroyVolumes)
+				return c.deprecatedDestroyPipeline(ctx, name, destroyVolumes)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", translateAPIErr(err))
 		}
@@ -395,8 +395,8 @@ func (c *OktetoClient) DestroyPipeline(ctx context.Context, name, namespace stri
 	return gitDeployResponse, nil
 }
 
-func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error) {
-	log.Infof("destroy pipeline: %s/%s", namespace, name)
+func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*GitDeployResponse, error) {
+	log.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
 	gitDeployResponse := &GitDeployResponse{}
 	if destroyVolumes {
 		var mutation struct {
@@ -409,7 +409,7 @@ func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name, name
 		queryVariables := map[string]interface{}{
 			"name":           graphql.String(name),
 			"destroyVolumes": graphql.Boolean(destroyVolumes),
-			"space":          graphql.String(namespace),
+			"space":          graphql.String(Context().Namespace),
 		}
 		err := c.client.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
@@ -429,12 +429,12 @@ func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name, name
 
 		queryVariables := map[string]interface{}{
 			"name":  graphql.String(name),
-			"space": graphql.String(namespace),
+			"space": graphql.String(Context().Namespace),
 		}
 		err := c.client.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroyPipeline(ctx, name, namespace, destroyVolumes)
+				return c.deprecatedDestroyPipeline(ctx, name, destroyVolumes)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", translateAPIErr(err))
 		}
@@ -448,8 +448,8 @@ func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name, name
 	return gitDeployResponse, nil
 }
 
-func (c *OktetoClient) GetResourcesStatusFromPipeline(ctx context.Context, name, namespace string) (map[string]string, error) {
-	pipeline, err := c.GetPipelineByName(ctx, name, namespace)
+func (c *OktetoClient) GetResourcesStatusFromPipeline(ctx context.Context, name string) (map[string]string, error) {
+	pipeline, err := c.GetPipelineByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -469,7 +469,7 @@ func (c *OktetoClient) GetResourcesStatusFromPipeline(ctx context.Context, name,
 		} `graphql:"space(id: $id)"`
 	}
 	variables := map[string]interface{}{
-		"id": graphql.String(namespace),
+		"id": graphql.String(Context().Namespace),
 	}
 
 	err = c.client.Query(ctx, &query, variables)

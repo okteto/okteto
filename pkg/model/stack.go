@@ -366,18 +366,6 @@ func validateStackName(name string) error {
 	return nil
 }
 
-//UpdateNamespace updates the dev namespace
-func (s *Stack) UpdateNamespace(namespace string) error {
-	if namespace == "" {
-		return nil
-	}
-	if s.Namespace != "" && s.Namespace != namespace {
-		return fmt.Errorf("the namespace in the okteto stack manifest '%s' does not match the namespace '%s'", s.Namespace, namespace)
-	}
-	s.Namespace = namespace
-	return nil
-}
-
 //GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetLabelSelector() string {
 	return fmt.Sprintf("%s=%s", StackNameLabel, s.Name)

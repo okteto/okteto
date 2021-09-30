@@ -123,7 +123,7 @@ services:
 			},
 		},
 	}
-	err = translate(tr1, false)
+	err = translate(tr1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +416,7 @@ services:
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = translate(translationRules[dev2.Name], false)
+	err = translate(translationRules[dev2.Name])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -529,7 +529,7 @@ persistentVolume:
 		App:         NewDeploymentApp(d1),
 		Rules:       []*model.TranslationRule{rule1},
 	}
-	err = translate(tr1, false)
+	err = translate(tr1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -682,7 +682,7 @@ docker:
 		App:         NewDeploymentApp(d),
 		Rules:       []*model.TranslationRule{rule},
 	}
-	err = translate(tr, false)
+	err = translate(tr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1255,7 +1255,7 @@ environment:
 		App:         NewDeploymentApp(d),
 		Rules:       []*model.TranslationRule{rule},
 	}
-	err = translate(tr, false)
+	err = translate(tr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1518,7 +1518,7 @@ services:
 			},
 		},
 	}
-	err = translate(tr1, false)
+	err = translate(tr1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1807,7 +1807,7 @@ services:
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = translate(translationRules[dev2.Name], false)
+	err = translate(translationRules[dev2.Name])
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -28,15 +28,14 @@ import (
 )
 
 // Run runs the build sequence
-func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bool, path, dockerFile, tag, target string, noCache bool, cacheFrom, buildArgs, secrets []string, progress string) error {
-	log.Infof("building your image on %s", buildKitHost)
-	buildkitClient, err := getBuildkitClient(ctx, isOktetoCluster, buildKitHost)
+func Run(ctx context.Context, path, dockerFile, tag, target string, noCache bool, cacheFrom, buildArgs, secrets []string, progress string) error {
+	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	if buildKitHost == okteto.CloudBuildKitURL && dockerFile != "" {
-		dockerFile, err = registry.GetDockerfile(path, dockerFile)
+	if okteto.Context().Buildkit == okteto.CloudBuildKitURL && dockerFile != "" {
+		dockerFile, err = registry.GetDockerfile(dockerFile)
 		if err != nil {
 			return err
 		}
@@ -49,28 +48,12 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 			return err
 		}
 	}
-	if registry.IsDevRegistry(tag) {
-		tag, err = registry.ExpandOktetoDevRegistry(ctx, namespace, tag)
-		if err != nil {
-			return err
-		}
+	if okteto.IsOktetoContext() {
+		tag = registry.ExpandOktetoDevRegistry(tag)
+		tag = registry.ExpandOktetoGlobalRegistry(tag)
 		for i := range cacheFrom {
-			cacheFrom[i], err = registry.ExpandOktetoDevRegistry(ctx, namespace, cacheFrom[i])
-			if err != nil {
-				return err
-			}
-		}
-	}
-	if registry.IsGlobalRegistry(tag) {
-		tag, err = registry.ExpandOktetoGlobalRegistry(tag)
-		if err != nil {
-			return err
-		}
-		for i := range cacheFrom {
-			cacheFrom[i], err = registry.ExpandOktetoGlobalRegistry(cacheFrom[i])
-			if err != nil {
-				return err
-			}
+			cacheFrom[i] = registry.ExpandOktetoDevRegistry(cacheFrom[i])
+			cacheFrom[i] = registry.ExpandOktetoGlobalRegistry(cacheFrom[i])
 		}
 	}
 	opt, err := getSolveOpt(path, dockerFile, tag, target, noCache, cacheFrom, buildArgs, secrets)
@@ -93,7 +76,7 @@ func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bo
 			log.Infof("Failed to build image: %s", err.Error())
 		}
 		err = registry.GetErrorMessage(err, tag)
-		analytics.TrackBuildTransientError(buildKitHost, success)
+		analytics.TrackBuildTransientError(okteto.Context().Buildkit, success)
 		return err
 	}
 

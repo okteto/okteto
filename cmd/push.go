@@ -19,15 +19,13 @@ import (
 	"os"
 	"os/signal"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -53,6 +51,10 @@ func Push(ctx context.Context) *cobra.Command {
 		Short: "Builds, pushes and redeploys source code to the target app",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			if err := utils.LoadEnvironment(ctx, true); err != nil {
 				return err
 			}
@@ -62,29 +64,25 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if err := okteto.SetCurrentContext(k8sContext, namespace); err != nil {
+				return err
+			}
+
 			if len(appName) > 0 && appName != dev.Name {
 				return fmt.Errorf("app name provided does not match the name field in your okteto manifest")
 			}
 
-			c, _, err := k8Client.GetLocalWithContext(dev.Context)
+			c, _, err := okteto.GetK8sClient()
 			if err != nil {
 				return err
 			}
 
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
-				return err
+			if okteto.Context().Buildkit == "" {
+				log.Information(errors.ErrNoBuilderInContext)
+				return nil
 			}
 
-			oktetoRegistryURL := ""
-			n, err := namespaces.Get(ctx, dev.Namespace, c)
-			if err == nil {
-				if namespaces.IsOktetoNamespace(n) {
-					oktetoRegistryURL, err = okteto.GetRegistry()
-					if err != nil {
-						return err
-					}
-				}
-			}
+			oktetoRegistryURL := okteto.Context().Registry
 
 			if autoDeploy {
 				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
@@ -256,11 +254,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 }
 
 func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
-	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
-	if err != nil {
-		return "", err
-	}
-	log.Information("Running your build in %s...", buildKitHost)
+	log.Information("Running your build in %s...", okteto.Context().Buildkit)
 
 	if imageTag == "" {
 		imageTag = dev.Push.Name
@@ -269,7 +263,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, okt
 	log.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	if err := build.Run(ctx, dev.Namespace, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, nil, progress); err != nil {
+	if err := build.Run(ctx, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, nil, progress); err != nil {
 		return "", err
 	}
 

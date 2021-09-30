@@ -38,6 +38,12 @@ import (
 )
 
 func (up *upContext) activate(build bool) error {
+
+	if build && okteto.Context().Buildkit == "" {
+		log.Information(errors.ErrNoBuilderInContext)
+		return nil
+	}
+
 	log.Infof("activating development container retry=%t", up.isRetry)
 
 	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
@@ -87,7 +93,7 @@ func (up *upContext) activate(build bool) error {
 		return err
 	}
 
-	if _, err := registry.GetImageTagWithDigest(ctx, up.Dev.Namespace, up.Dev.Image.Name); err == errors.ErrNotFound {
+	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == errors.ErrNotFound {
 		log.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		build = true
 	}
@@ -254,7 +260,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		return err
 	}
 
-	if err := apps.TranslateDevMode(tList, up.isOktetoNamespace); err != nil {
+	if err := apps.TranslateDevMode(tList); err != nil {
 		return err
 	}
 
@@ -287,7 +293,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		}
 	}
 
-	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, app, up.Client, up.isOktetoNamespace)
+	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, app, up.Client)
 	if err != nil {
 		return err
 	}
@@ -429,8 +435,8 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 }
 
 func getPullingMessage(message, namespace string) string {
-	registry, err := okteto.GetRegistry()
-	if err != nil {
+	registry := okteto.Context().Registry
+	if registry == "" {
 		return message
 	}
 	toReplace := fmt.Sprintf("%s/%s", registry, namespace)

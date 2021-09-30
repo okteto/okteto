@@ -24,9 +24,6 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
-
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 //Client implementation to connect to Okteto API
@@ -36,18 +33,17 @@ type OktetoClient struct {
 
 //NewClient creates a new client to connect with Okteto API
 func NewOktetoClient() (*OktetoClient, error) {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("couldn't get token: %s", err)
+	t := Context().Token
+	if t == "" {
 		return nil, errors.ErrNotLogged
 	}
-	u, err := parseOktetoURL(t.URL)
+	u, err := parseOktetoURL(Context().Name)
 	if err != nil {
 		return nil, err
 	}
 
 	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: t.Token,
+		&oauth2.Token{AccessToken: t,
 			TokenType: "Bearer"},
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
@@ -133,49 +129,6 @@ func translateAPIErr(err error) error {
 
 }
 
-//SetKubeConfig updates a kubeconfig file with okteto cluster credentials
-func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string, setCurrent bool) error {
-	cfg, err := getOrCreateKubeConfig(kubeConfigPath)
-	if err != nil {
-		return err
-	}
-
-	// create cluster
-	cluster, ok := cfg.Clusters[clusterName]
-	if !ok {
-		cluster = clientcmdapi.NewCluster()
-	}
-
-	cluster.CertificateAuthorityData = []byte(cred.Certificate)
-	cluster.Server = cred.Server
-	cfg.Clusters[clusterName] = cluster
-
-	// create user
-	user, ok := cfg.AuthInfos[userName]
-	if !ok {
-		user = clientcmdapi.NewAuthInfo()
-	}
-	user.Token = cred.Token
-	cfg.AuthInfos[userName] = user
-
-	// create context
-	context, ok := cfg.Contexts[clusterName]
-	if !ok {
-		context = clientcmdapi.NewContext()
-	}
-
-	context.Cluster = clusterName
-	context.AuthInfo = userName
-	context.Namespace = namespace
-	cfg.Contexts[clusterName] = context
-
-	if setCurrent {
-		cfg.CurrentContext = clusterName
-	}
-
-	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
-}
-
 // InDevContainer returns true if running in an okteto dev container
 func InDevContainer() bool {
 	if v, ok := os.LookupEnv("OKTETO_NAME"); ok && v != "" {
@@ -183,22 +136,4 @@ func InDevContainer() bool {
 	}
 
 	return false
-}
-
-func getOrCreateKubeConfig(kubeConfigPath string) (*clientcmdapi.Config, error) {
-	var cfg *clientcmdapi.Config
-	_, err := os.Stat(kubeConfigPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			cfg = clientcmdapi.NewConfig()
-		} else {
-			return nil, err
-		}
-	} else {
-		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return cfg, nil
 }

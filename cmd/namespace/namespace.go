@@ -17,11 +17,12 @@ import (
 	"context"
 	"fmt"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -40,8 +41,12 @@ func Namespace(ctx context.Context) *cobra.Command {
 				namespace = args[0]
 			}
 
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+			if err := contextCMD.Init(ctx); err != nil {
 				return err
+			}
+
+			if !okteto.IsOktetoContext() {
+				return errors.ErrContextIsNotOktetoCluster
 			}
 
 			err := RunNamespace(ctx, namespace)
@@ -54,28 +59,6 @@ func Namespace(ctx context.Context) *cobra.Command {
 
 // RunNamespace starts the kubeconfig sequence
 func RunNamespace(ctx context.Context, namespace string) error {
-	if !okteto.IsAuthenticated() {
-		if !askIfLogin() {
-			return errors.ErrNotLogged
-		}
-
-		oktetoURL, err := askOktetoURL()
-		if err != nil {
-			return err
-		}
-
-		u, err := login.WithBrowser(ctx, oktetoURL)
-		if err != nil {
-			return err
-		}
-		log.Infof("authenticated user %s", u.ID)
-
-		if oktetoURL == okteto.CloudURL {
-			log.Success("Logged in as %s", u.ExternalID)
-		} else {
-			log.Success("Logged in as %s @ %s", u.ExternalID, oktetoURL)
-		}
-	}
 
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
@@ -94,44 +77,31 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		return err
 	}
 	if !hasAccess {
-		return fmt.Errorf("Namespace '%s' not found. Please verify that the namespace exists and that you have access to it.", namespace)
+		return fmt.Errorf(errors.ErrNamespaceNotFound, namespace)
 	}
 
-	kubeConfigFile := config.GetKubeConfigFile()
-	clusterContext := okteto.GetClusterContext()
-
-	if err := okteto.SetKubeConfig(cred, kubeConfigFile, namespace, okteto.GetUserID(), clusterContext, true); err != nil {
+	octx := okteto.Context()
+	kubeconfigFile := config.GetKubeconfigPath()
+	if err := okteto.SetKubeContext(cred, kubeconfigFile, namespace, octx.UserID, okteto.UrlToContext(octx.Name)); err != nil {
 		return err
 	}
 
-	log.Success("Updated context '%s' in '%s'", clusterContext, kubeConfigFile)
+	cfg := client.GetKubeconfig(kubeconfigFile)
+	u := &okteto.User{
+		ID:              octx.UserID,
+		ExternalID:      octx.Username,
+		Token:           octx.Token,
+		Buildkit:        octx.Buildkit,
+		Registry:        octx.Registry,
+		Certificate:     octx.Certificate,
+		GlobalNamespace: octx.GlobalNamespace,
+	}
+	if err := okteto.SaveOktetoClusterContext(octx.Name, u, namespace, cfg); err != nil {
+		return err
+	}
+
+	log.Success("Updated context '%s': current namespace '%s'", octx.Name, namespace)
 	return nil
-}
-
-func askIfLogin() bool {
-	result, err := utils.AskYesNo("Authentication required. Do you want to log into Okteto? [y/n]: ")
-	if err != nil {
-		return false
-	}
-	return result
-}
-
-// askOktetoURL prompts for okteto URL
-func askOktetoURL() (string, error) {
-	var oktetoURL string
-
-	fmt.Print(fmt.Sprintf("What is the URL of your Okteto instance? [%s]: ", okteto.CloudURL))
-	if _, err := fmt.Scanln(&oktetoURL); err != nil {
-		oktetoURL = okteto.CloudURL
-	}
-
-	u, err := utils.ParseURL(oktetoURL)
-	if err != nil {
-		return "", fmt.Errorf("malformed login URL")
-	}
-	oktetoURL = u
-
-	return oktetoURL, nil
 }
 
 func hasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {

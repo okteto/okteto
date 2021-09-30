@@ -29,7 +29,7 @@ import (
 )
 
 // GetDockerfile returns the dockerfile with the cache translations
-func GetDockerfile(path, dockerFile string) (string, error) {
+func GetDockerfile(dockerFile string) (string, error) {
 	fileWithCacheHandler, err := getDockerfileWithCacheHandler(dockerFile)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
@@ -60,7 +60,7 @@ func getDockerfileWithCacheHandler(filename string) (string, error) {
 	datawriter := bufio.NewWriter(tmpFile)
 	defer datawriter.Flush()
 
-	userID := okteto.GetUserID()
+	userID := okteto.Context().UserID
 	if userID == "" {
 		userID = "anonymous"
 	}

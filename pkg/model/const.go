@@ -167,4 +167,7 @@ const (
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 
 	syncFieldDocsURL = "https://okteto.com/docs/reference/manifest/#sync-string-required"
+
+	//OktetoExtension identifies the okteto extension in kubeconfig files
+	OktetoExtension = "okteto"
 )

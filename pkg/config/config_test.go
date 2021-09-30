@@ -131,7 +131,7 @@ func TestGetOktetoHome(t *testing.T) {
 	}
 }
 
-func TestGetDeploymentHome(t *testing.T) {
+func TestGetAppHome(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)

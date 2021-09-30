@@ -11,43 +11,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package view
+package context
 
 import (
-	"context"
 	"fmt"
+	"sort"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/cmd/login"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-// Username returns the username of the authenticated user
-func Username(ctx context.Context) *cobra.Command {
+// Lists all contexts managed by okteto
+func List() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "username",
-		Args:  utils.NoArgsAccepted(""),
-		Short: "Returns the username of the authenticated user",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
+		Short:   "Lists okteto contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			t, err := okteto.GetToken()
-			if err != nil {
-				log.Infof("error getting okteto token: %s", err.Error())
-				return errors.ErrNotLogged
+			oCtxs := okteto.ContextStore()
+			contexts := make([]string, 0)
+			for name := range oCtxs.Contexts {
+				if name == oCtxs.CurrentContext {
+					contexts = append(contexts, fmt.Sprintf("* %s", name))
+				} else {
+					contexts = append(contexts, fmt.Sprintf("  %s", name))
+				}
 			}
-			if t.Username != "" {
-				fmt.Println(t.Username)
-				return nil
+			sort.Slice(contexts, func(i, j int) bool {
+				return len(contexts[i]) < len(contexts[j])
+			})
+			for _, ctx := range contexts {
+				fmt.Println(ctx)
 			}
-			log.Info("refreshing okteto token...")
-			u, err := login.WithToken(ctx, t.URL, t.Token)
-			if err != nil {
-				log.Infof("error refreshing okteto token: %s", err.Error())
-				return errors.ErrNotLogged
-			}
-			fmt.Println(u.ExternalID)
+
 			return nil
 		},
 	}

@@ -22,7 +22,8 @@ type Action struct {
 }
 
 // GetAction gets a installer job given its name
-func (c *OktetoClient) GetAction(ctx context.Context, name, namespace string) (*Action, error) {
+func (c *OktetoClient) GetAction(ctx context.Context, name string) (*Action, error) {
+	namespace := Context().Namespace
 	var query struct {
 		Action struct {
 			Id     graphql.String
@@ -48,7 +49,7 @@ func (c *OktetoClient) GetAction(ctx context.Context, name, namespace string) (*
 	return action, nil
 }
 
-func (c *OktetoClient) WaitForActionToFinish(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func (c *OktetoClient) WaitForActionToFinish(ctx context.Context, name string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
@@ -57,7 +58,7 @@ func (c *OktetoClient) WaitForActionToFinish(ctx context.Context, name, namespac
 		case <-to.C:
 			return fmt.Errorf("action '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
-			a, err := c.GetAction(ctx, name, namespace)
+			a, err := c.GetAction(ctx, name)
 			if err != nil {
 				return fmt.Errorf("failed to get action '%s': %s", name, err)
 			}
