@@ -83,8 +83,6 @@ func InitContextWithToken(ctx context.Context, oktetoUrl, oktetoToken string) er
 		return fmt.Errorf("error configuring okteto context: %v", err)
 	}
 	log.Information("Current context: %s\n    Run 'okteto context' if you need to change your context", UrlToContext(oktetoUrl))
-	os.Setenv("OKTETO_USERNAME", Context().Username)
-	os.Setenv("OKTETO_NAMESPACE", Context().Namespace)
 	return nil
 }
 

@@ -219,7 +219,11 @@ func Init(ctx context.Context) error {
 		}
 		okCtx := Context()
 		okCtx.Flags().Set("okteto", "true")
-		return okCtx.RunE(nil, nil)
+		if err := okCtx.RunE(nil, nil); err != nil {
+			return err
+		}
 	}
+	os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
+	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
 	return nil
 }
