@@ -116,6 +116,9 @@ func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 		}
 		return nil, translateAPIErr(err)
 	}
+
+	globalNamespace := getGlobalNamespace(string(query.User.GlobalNamespace))
+
 	user := &User{
 		ID:              string(query.User.Id),
 		Name:            string(query.User.Name),
@@ -126,7 +129,7 @@ func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 		Registry:        string(query.User.Registry),
 		Buildkit:        string(query.User.Buildkit),
 		Certificate:     string(query.User.Certificate),
-		GlobalNamespace: string(query.User.GlobalNamespace),
+		GlobalNamespace: globalNamespace,
 	}
 
 	return user, nil
@@ -195,6 +198,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 		return nil, translateAPIErr(err)
 	}
 
+	globalNamespace := getGlobalNamespace(string(mutation.User.GlobalNamespace))
 	user := &User{
 		ID:              string(mutation.User.Id),
 		Name:            string(mutation.User.Name),
@@ -205,7 +209,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 		Registry:        string(mutation.User.Registry),
 		Buildkit:        string(mutation.User.Buildkit),
 		Certificate:     string(mutation.User.Certificate),
-		GlobalNamespace: string(mutation.User.GlobalNamespace),
+		GlobalNamespace: globalNamespace,
 	}
 
 	return user, nil
@@ -265,4 +269,11 @@ func getTokenFromOktetoHome() (*Token, error) {
 	}
 
 	return currentToken, nil
+}
+
+func getGlobalNamespace(g string) string {
+	if g == "" {
+		return DefaultGlobalNamespace
+	}
+	return g
 }
