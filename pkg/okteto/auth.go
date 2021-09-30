@@ -20,9 +20,11 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/shurcooL/graphql"
 )
@@ -31,28 +33,30 @@ var reg = regexp.MustCompile("[^A-Za-z0-9]+")
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	URL             string `json:"URL"`
-	Buildkit        string `json:"Buildkit"`
-	Registry        string `json:"Registry"`
-	ID              string `json:"ID"`
-	Username        string `json:"Username"`
-	Token           string `json:"Token"`
-	MachineID       string `json:"MachineID"`
-	GlobalNamespace string `json:"GlobalNamespace"`
+	URL              string `json:"URL"`
+	Buildkit         string `json:"Buildkit"`
+	Registry         string `json:"Registry"`
+	ID               string `json:"ID"`
+	Username         string `json:"Username"`
+	Token            string `json:"Token"`
+	MachineID        string `json:"MachineID"`
+	GlobalNamespace  string `json:"GlobalNamespace"`
+	TelemetryEnabled string `json:"TelemetryEnabled"`
 }
 
 // User contains the auth information of the logged in user
 type User struct {
-	Name            string
-	Email           string
-	ExternalID      string
-	Token           string
-	ID              string
-	New             bool
-	Buildkit        string
-	Registry        string
-	Certificate     string
-	GlobalNamespace string
+	Name             string
+	Email            string
+	ExternalID       string
+	Token            string
+	ID               string
+	New              bool
+	Buildkit         string
+	Registry         string
+	Certificate      string
+	GlobalNamespace  string
+	TelemetryEnabled bool
 }
 
 // AuthWithToken authenticates in okteto with the provided token
@@ -97,21 +101,25 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 	var query struct {
 		User struct {
-			Id              graphql.String
-			Name            graphql.String
-			Email           graphql.String
-			ExternalID      graphql.String `graphql:"externalID"`
-			Token           graphql.String
-			New             graphql.Boolean
-			Registry        graphql.String
-			Buildkit        graphql.String
-			Certificate     graphql.String
-			GlobalNamespace graphql.String `graphql:"globalNamespace"`
+			Id               graphql.String
+			Name             graphql.String
+			Email            graphql.String
+			ExternalID       graphql.String `graphql:"externalID"`
+			Token            graphql.String
+			New              graphql.Boolean
+			Registry         graphql.String
+			Buildkit         graphql.String
+			Certificate      graphql.String
+			GlobalNamespace  graphql.String  `graphql:"globalNamespace"`
+			TelemetryEnabled graphql.Boolean `graphql:"telemetryEnabled"`
 		} `graphql:"user"`
 	}
 	err := c.client.Query(ctx, &query, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
+			return c.deprecatedQueryUser(ctx)
+		}
+		if strings.Contains(err.Error(), "Cannot query field \"telemetryEnabled\" on type \"me\"") {
 			return c.deprecatedQueryUser(ctx)
 		}
 		return nil, translateAPIErr(err)
@@ -120,16 +128,17 @@ func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 	globalNamespace := getGlobalNamespace(string(query.User.GlobalNamespace))
 
 	user := &User{
-		ID:              string(query.User.Id),
-		Name:            string(query.User.Name),
-		Email:           string(query.User.Email),
-		ExternalID:      string(query.User.ExternalID),
-		Token:           string(query.User.Token),
-		New:             bool(query.User.New),
-		Registry:        string(query.User.Registry),
-		Buildkit:        string(query.User.Buildkit),
-		Certificate:     string(query.User.Certificate),
-		GlobalNamespace: globalNamespace,
+		ID:               string(query.User.Id),
+		Name:             string(query.User.Name),
+		Email:            string(query.User.Email),
+		ExternalID:       string(query.User.ExternalID),
+		Token:            string(query.User.Token),
+		New:              bool(query.User.New),
+		Registry:         string(query.User.Registry),
+		Buildkit:         string(query.User.Buildkit),
+		Certificate:      string(query.User.Certificate),
+		GlobalNamespace:  globalNamespace,
+		TelemetryEnabled: bool(query.User.TelemetryEnabled),
 	}
 
 	return user, nil
@@ -172,16 +181,17 @@ func (c *OktetoClient) deprecatedQueryUser(ctx context.Context) (*User, error) {
 func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error) {
 	var mutation struct {
 		User struct {
-			Id              graphql.String
-			Name            graphql.String
-			Email           graphql.String
-			ExternalID      graphql.String `graphql:"externalID"`
-			Token           graphql.String
-			New             graphql.Boolean
-			Registry        graphql.String
-			Buildkit        graphql.String
-			Certificate     graphql.String
-			GlobalNamespace graphql.String `graphql:"globalNamespace"`
+			Id               graphql.String
+			Name             graphql.String
+			Email            graphql.String
+			ExternalID       graphql.String `graphql:"externalID"`
+			Token            graphql.String
+			New              graphql.Boolean
+			Registry         graphql.String
+			Buildkit         graphql.String
+			Certificate      graphql.String
+			GlobalNamespace  graphql.String  `graphql:"globalNamespace"`
+			TelemetryEnabled graphql.Boolean `graphql:"telemetryEnabled"`
 		} `graphql:"auth(code: $code, source: $source)"`
 	}
 
@@ -195,21 +205,25 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
 			return c.deprecatedAuthUser(ctx, code)
 		}
+		if strings.Contains(err.Error(), "Cannot query field \"telemetryEnabled\" on type \"me\"") {
+			return c.deprecatedAuthUser(ctx, code)
+		}
 		return nil, translateAPIErr(err)
 	}
 
 	globalNamespace := getGlobalNamespace(string(mutation.User.GlobalNamespace))
 	user := &User{
-		ID:              string(mutation.User.Id),
-		Name:            string(mutation.User.Name),
-		Email:           string(mutation.User.Email),
-		ExternalID:      string(mutation.User.ExternalID),
-		Token:           string(mutation.User.Token),
-		New:             bool(mutation.User.New),
-		Registry:        string(mutation.User.Registry),
-		Buildkit:        string(mutation.User.Buildkit),
-		Certificate:     string(mutation.User.Certificate),
-		GlobalNamespace: globalNamespace,
+		ID:               string(mutation.User.Id),
+		Name:             string(mutation.User.Name),
+		Email:            string(mutation.User.Email),
+		ExternalID:       string(mutation.User.ExternalID),
+		Token:            string(mutation.User.Token),
+		New:              bool(mutation.User.New),
+		Registry:         string(mutation.User.Registry),
+		Buildkit:         string(mutation.User.Buildkit),
+		Certificate:      string(mutation.User.Certificate),
+		GlobalNamespace:  globalNamespace,
+		TelemetryEnabled: bool(mutation.User.TelemetryEnabled),
 	}
 
 	return user, nil
@@ -276,4 +290,14 @@ func getGlobalNamespace(g string) string {
 		return DefaultGlobalNamespace
 	}
 	return g
+}
+
+// GetTelemetryEnabled returns the flag for telemetry
+func GetTelemetryEnabled() (bool, error) {
+	t, err := getTokenFromOktetoHome()
+	if err != nil {
+		return false, errors.ErrNotLogged
+	}
+
+	return strconv.ParseBool(t.TelemetryEnabled)
 }
