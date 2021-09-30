@@ -1,9 +1,12 @@
 package registry
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -12,53 +15,54 @@ func Test_translateOktetoRegistryImage(t *testing.T) {
 		name      string
 		input     string
 		namespace string
-		token     *okteto.Token
+		registry  string
 		want      string
 	}{
 		{
 			name:      "has-okteto-registry-image-dev",
 			input:     "FROM okteto.dev/image",
 			namespace: "cindy",
-			token:     &okteto.Token{Registry: "registry.url"},
+			registry:  "registry.url",
 			want:      "FROM registry.url/cindy/image",
 		},
 		{
 			name:      "has-okteto-registry-image-global",
 			input:     "FROM okteto.global/image",
 			namespace: "cindy",
-			token:     &okteto.Token{Registry: "registry.url"},
+			registry:  "registry.url",
 			want:      "FROM registry.url/okteto/image",
 		},
 		{
 			name:      "not-okteto-registry-image",
 			input:     "FROM image",
 			namespace: "cindy",
-			token:     &okteto.Token{Registry: "registry.url"},
+			registry:  "registry.url",
 			want:      "FROM image",
 		},
 		{
 			name:      "not-image-line",
 			input:     "RUN command",
 			namespace: "cindy",
-			token:     &okteto.Token{Registry: "registry.url"},
+			registry:  "registry.url",
 			want:      "RUN command",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, err := okteto.SetToken(tt.token)
+			dir, err := ioutil.TempDir("", "")
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer os.RemoveAll(dir)
 
-			defer func() {
-				if err := os.RemoveAll(dir); err != nil {
-					t.Logf("failed to remove %s: %s", dir, err)
-				}
-			}()
+			os.Setenv("OKTETO_FOLDER", dir)
 
-			if got := translateOktetoRegistryImage(tt.input, tt.namespace); got != tt.want {
+			kubeconfigFile := config.GetKubeconfigPath()
+			cfg := client.GetKubeconfig(kubeconfigFile)
+			okteto.UpdateOktetoClusterContext("test-context", &okteto.User{Registry: tt.registry}, tt.namespace, cfg)
+
+			if got := translateOktetoRegistryImage(tt.input); got != tt.want {
 				t.Errorf("registry.translateOktetoRegistryImage = %v,  want %v", got, tt.want)
 			}
 		})

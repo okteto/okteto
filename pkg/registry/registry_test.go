@@ -1,9 +1,12 @@
 package registry
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -192,7 +195,7 @@ func Test_translateRegistry(t *testing.T) {
 		input        string
 		registryType string
 		namespace    string
-		token        *okteto.Token
+		registry     string
 		want         string
 	}{
 		{
@@ -200,7 +203,7 @@ func Test_translateRegistry(t *testing.T) {
 			input:        "okteto.global/image",
 			registryType: okteto.GlobalRegistry,
 			namespace:    okteto.DefaultGlobalNamespace,
-			token:        &okteto.Token{Registry: "registry.url"},
+			registry:     "registry.url",
 			want:         "registry.url/okteto/image",
 		},
 		{
@@ -208,7 +211,7 @@ func Test_translateRegistry(t *testing.T) {
 			input:        "okteto.dev/image",
 			registryType: okteto.DevRegistry,
 			namespace:    "cindy",
-			token:        &okteto.Token{Registry: "registry.url"},
+			registry:     "registry.url",
 			want:         "registry.url/cindy/image",
 		},
 		{
@@ -216,25 +219,26 @@ func Test_translateRegistry(t *testing.T) {
 			input:        "docker.io/image",
 			registryType: okteto.DevRegistry,
 			namespace:    "cindy",
-			token:        &okteto.Token{Registry: "registry.url"},
+			registry:     "registry.url",
 			want:         "docker.io/image",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, err := okteto.SetToken(tt.token)
+			dir, err := ioutil.TempDir("", "")
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer os.RemoveAll(dir)
 
-			defer func() {
-				if err := os.RemoveAll(dir); err != nil {
-					t.Logf("failed to remove %s: %s", dir, err)
-				}
-			}()
+			os.Setenv("OKTETO_FOLDER", dir)
 
-			if got, _ := replaceRegistry(tt.input, tt.registryType, tt.namespace); got != tt.want {
+			kubeconfigFile := config.GetKubeconfigPath()
+			cfg := client.GetKubeconfig(kubeconfigFile)
+			okteto.UpdateOktetoClusterContext("test-context", &okteto.User{Registry: tt.registry}, tt.namespace, cfg)
+
+			if got := replaceRegistry(tt.input, tt.registryType, tt.namespace); got != tt.want {
 				t.Errorf("registry.replaceRegistry = %v, want %v", got, tt.want)
 			}
 		})
