@@ -116,9 +116,9 @@ func translateOktetoRegistryImage(input, namespace string) string {
 	}
 
 	if strings.Contains(input, okteto.GlobalRegistry) {
-		globalNamespace := okteto.Context().GlobalNamespace
-		if globalNamespace != "" {
-			globalNamespace = okteto.DefaultGlobalNamespace
+		globalNamespace := okteto.DefaultGlobalNamespace
+		if okteto.Context().GlobalNamespace != "" {
+			globalNamespace = okteto.Context().GlobalNamespace
 		}
 		tag := replaceRegistry(input, okteto.GlobalRegistry, globalNamespace)
 		return tag
