@@ -47,28 +47,28 @@ func Context() *cobra.Command {
 		Short:   "Manage your okteto context",
 		Long: `Manage your okteto context
 
-	A context is a group of access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
-	The current context is the cluster that is currently the default for the Okteto CLI. All "okteto" commands run against that cluster.
+A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
+The current context is the cluster that is currently the default for the Okteto CLI. All "okteto" commands run against that cluster.
 
-	If you want to log into an Okteto Enterprise instance, specify a URL. For example, run
+If you want to log into an Okteto Enterprise instance, specify a URL. For example, run:
 
-		$ okteto context https://cloud.okteto.com
+    $ okteto context https://cloud.okteto.com
 
-	to configure your context to access Okteto Cloud.
+to configure your context to access Okteto Cloud.
 
-	Your browser will ask for your authentication to retrieve your API token.
+Your browser will ask for your authentication to retrieve your API token.
 
-	If you need to automate authentication or if you don't want to use browser-based authentication, use the "--token" parameter:
+If you need to automate authentication or if you don't want to use browser-based authentication, use the "--token" parameter:
 
-		$ okteto context https://cloud.okteto.com --token ${OKTETO_TOKEN}
+    $ okteto context https://cloud.okteto.com --token ${OKTETO_TOKEN}
 
-	You can also specify the name of a Kubernetes context with:
+You can also specify the name of a Kubernetes context with:
 
-	    $ okteto context kubernetes_context_name
+    $ okteto context kubernetes_context_name
 
-	Or show a list of available options with:
+Or show a list of available options with:
 
-		$ okteto context
+    $ okteto context
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -119,7 +119,7 @@ func Context() *cobra.Command {
 	}
 
 	cmd.AddCommand(List())
-	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication.")
+	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
 	cmd.Flags().BoolVarP(&ctxOptions.OnlyOkteto, "okteto", "", false, "only shows okteto cluster options")
