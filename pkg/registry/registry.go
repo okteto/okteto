@@ -114,7 +114,7 @@ func GetHiddenExposePorts(image string) []model.Port {
 	var err error
 	var username string
 	var token string
-	if okteto.IsOktetoContext() && strings.HasPrefix(image, okteto.DevRegistry) {
+	if okteto.IsOktetoContext() && (strings.HasPrefix(image, okteto.DevRegistry) || strings.HasPrefix(image, okteto.GlobalRegistry)) {
 		image = ExpandOktetoDevRegistry(image)
 		image = ExpandOktetoGlobalRegistry(image)
 		username = okteto.Context().UserID
