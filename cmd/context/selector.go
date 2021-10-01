@@ -101,14 +101,12 @@ func AskForOptions(options []SelectorItem, label string) (string, error) {
 		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ .Label }}",
-			Selected: "{{if .Enable}} ✓  {{ .Label | oktetoblue }}{{else}}{{ .Label | oktetoblue}}{{end}}",
-			Active:   fmt.Sprintf("{{if .Enable}}%s {{ .Label | oktetoblue }}{{else}}{{ .Label | oktetoblue}}{{end}}", promptui.IconSelect),
-			Inactive: "{{if .Enable}}  {{ .Label | oktetoblue}}{{else}}{{ .Label | oktetoblue}}{{end}}",
+			Selected: "{{if .Enable}} ✓  {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}",
+			Active:   fmt.Sprintf("{{if .Enable}}%s {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}", promptui.IconSelect),
+			Inactive: "{{if .Enable}}  {{ .Label | blue}}{{else}}{{ .Label | blue}}{{end}}",
 			FuncMap:  promptui.FuncMap,
 		},
 	}
-
-	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
 
 	optionSelected, err := prompt.Run()
 	if err != nil {

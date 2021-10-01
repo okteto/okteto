@@ -149,14 +149,12 @@ func AskForOptions(options []string, label string) (string, error) {
 		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ . }}",
-			Selected: " ✓  {{ . | oktetoblue }}",
-			Active:   fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect),
-			Inactive: "  {{ . | oktetoblue }}",
+			Selected: " ✓  {{ . | blue }}",
+			Active:   fmt.Sprintf("%s {{ . | blue }}", promptui.IconSelect),
+			Inactive: "  {{ . | blue }}",
 			FuncMap:  promptui.FuncMap,
 		},
 	}
-
-	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
 
 	i, _, err := prompt.Run()
 	if err != nil {
