@@ -217,7 +217,48 @@ func Init(ctx context.Context) error {
 			return err
 		}
 	}
+	if okteto.IsOktetoContext() {
+		client, err := okteto.NewOktetoClient()
+		if err != nil {
+			return err
+		}
+		secretsAndKubeCredentials, err := client.GetSecretsAndKubeCredentials(ctx)
+		if err != nil {
+			return err
+		}
+
+		if err := updateContext(secretsAndKubeCredentials.Credentials); err != nil {
+			return err
+		}
+		setSecrets(secretsAndKubeCredentials.Secrets)
+	}
+
 	os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
 	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
+	return nil
+}
+
+func setSecrets(secrets []okteto.Secret) {
+	for _, secret := range secrets {
+		os.Setenv(secret.Name, secret.Value)
+	}
+}
+
+func updateContext(cred okteto.Credential) error {
+	octx := okteto.Context()
+	kubeconfigFile := config.GetKubeconfigPath()
+	cfg := client.GetKubeconfig(kubeconfigFile)
+	u := &okteto.User{
+		ID:              octx.UserID,
+		ExternalID:      octx.Username,
+		Token:           octx.Token,
+		Buildkit:        octx.Buildkit,
+		Registry:        octx.Registry,
+		Certificate:     octx.Certificate,
+		GlobalNamespace: octx.GlobalNamespace,
+	}
+	if err := okteto.SaveOktetoClusterContext(okteto.Context().Name, u, okteto.Context().Namespace, cfg); err != nil {
+		return err
+	}
 	return nil
 }

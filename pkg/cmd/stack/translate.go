@@ -86,36 +86,9 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 		return err
 	}
 
-	secrets := make(map[string]string)
-	if okteto.IsOktetoContext() {
-		oktetoClient, err := okteto.NewOktetoClient()
-		if err != nil {
-			return err
-		}
-		envList, err := oktetoClient.GetSecrets(ctx)
-		if err != nil {
-			return err
-		}
-
-		for _, e := range envList {
-			secrets[e.Name] = e.Value
-		}
-		for _, e := range svc.Environment {
-			delete(secrets, e.Name)
-		}
-	}
-
 	f, err := os.Open(filename)
-	if err != nil && len(secrets) == 0 {
+	if err != nil {
 		return err
-	} else if err != nil && len(secrets) != 0 {
-		for name, value := range secrets {
-			svc.Environment = append(
-				svc.Environment,
-				model.EnvVar{Name: name, Value: value},
-			)
-		}
-		return nil
 	}
 	defer f.Close()
 
@@ -128,18 +101,7 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 		delete(envMap, e.Name)
 	}
 
-	for key := range envMap {
-		delete(secrets, key)
-	}
-
 	for name, value := range envMap {
-		svc.Environment = append(
-			svc.Environment,
-			model.EnvVar{Name: name, Value: value},
-		)
-	}
-
-	for name, value := range secrets {
 		svc.Environment = append(
 			svc.Environment,
 			model.EnvVar{Name: name, Value: value},
