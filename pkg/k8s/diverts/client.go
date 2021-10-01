@@ -54,9 +54,8 @@ func NewForConfig(cfg *rest.Config) (*DivertV1Client, error) {
 }
 
 func GetClient(thisContext string) (*DivertV1Client, error) {
-	if okteto.IsOktetoContext() {
-		thisContext = okteto.UrlToContext(thisContext)
-	}
+	thisContext = okteto.UrlToContext(thisContext)
+
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		clientcmd.NewDefaultClientConfigLoadingRules(),
 		&clientcmd.ConfigOverrides{
