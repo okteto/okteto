@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -143,7 +142,7 @@ func getBuildkitClient(ctx context.Context) (*client.Client, error) {
 			return nil, fmt.Errorf("certificate decoding error: %w", err)
 		}
 
-		if err := ioutil.WriteFile(config.GetCertificatePath(), certBytes, 0600); err != nil {
+		if err := os.WriteFile(config.GetCertificatePath(), certBytes, 0600); err != nil {
 			return nil, err
 		}
 

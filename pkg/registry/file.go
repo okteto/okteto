@@ -16,7 +16,6 @@ package registry
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -52,7 +51,7 @@ func getDockerfileWithCacheHandler(filename string) (string, error) {
 		return "", fmt.Errorf("failed to create %s: %s", dockerfileTmpFolder, err)
 	}
 
-	tmpFile, err := ioutil.TempFile(dockerfileTmpFolder, "buildkit-")
+	tmpFile, err := os.CreateTemp(dockerfileTmpFolder, "buildkit-")
 	if err != nil {
 		return "", err
 	}
@@ -116,7 +115,7 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume)
 		return build, fmt.Errorf("failed to create %s: %s", dockerfileTmpFolder, err)
 	}
 
-	tmpFile, err := ioutil.TempFile(dockerfileTmpFolder, "buildkit-")
+	tmpFile, err := os.CreateTemp(dockerfileTmpFolder, "buildkit-")
 	if err != nil {
 		return build, err
 	}

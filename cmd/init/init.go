@@ -16,7 +16,6 @@ package init
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -172,7 +171,7 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 
 	if !model.FileExists(stignore) {
 		c := linguist.GetSTIgnore(language)
-		if err := ioutil.WriteFile(stignore, c, 0600); err != nil {
+		if err := os.WriteFile(stignore, c, 0600); err != nil {
 			log.Infof("failed to write stignore file: %s", err)
 		}
 	}

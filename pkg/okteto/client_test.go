@@ -14,7 +14,6 @@
 package okteto
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -22,7 +21,7 @@ import (
 )
 
 func TestSetKubeConfig(t *testing.T) {
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatal(err.Error())
 	}

@@ -15,7 +15,6 @@ package syncthing
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -61,7 +60,7 @@ func Install(p getter.ProgressTracker) error {
 		opts = []getter.ClientOption{getter.WithProgress(p)}
 	}
 
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return fmt.Errorf("failed to create temp download dir")
 	}

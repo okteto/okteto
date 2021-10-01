@@ -17,7 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"path"
 	"strings"
@@ -114,7 +114,7 @@ func (s *Syncthing) callWithRetry(ctx context.Context, url, method string, code 
 		return nil, nil
 	}
 
-	body, err = ioutil.ReadAll(resp.Body)
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response from syncthing [%s]: %w", url, err)
 	}

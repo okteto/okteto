@@ -14,7 +14,6 @@
 package ssh
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,7 +21,7 @@ import (
 
 func TestKeyExists(t *testing.T) {
 
-	dir, err := ioutil.TempDir("", t.Name())
+	dir, err := os.MkdirTemp("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +56,7 @@ func TestKeyExists(t *testing.T) {
 }
 
 func TestGenerateKeys(t *testing.T) {
-	dir, err := ioutil.TempDir("", t.Name())
+	dir, err := os.MkdirTemp("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

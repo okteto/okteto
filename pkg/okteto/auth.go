@@ -17,8 +17,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 
@@ -254,7 +254,7 @@ func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*Us
 func getTokenFromOktetoHome() (*Token, error) {
 	p := config.GetTokenPathDeprecated()
 
-	b, err := ioutil.ReadFile(p)
+	b, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err
 	}

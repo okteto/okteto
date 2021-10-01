@@ -15,7 +15,6 @@ package init
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -41,7 +40,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestRun(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +81,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunJustCreateNecessaryFields(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +93,7 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, _ := ioutil.ReadFile(p)
+	file, _ := os.ReadFile(p)
 	var result map[string]interface{}
 	yaml.Unmarshal([]byte(file), &result)
 

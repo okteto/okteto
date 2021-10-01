@@ -16,7 +16,6 @@ package analytics
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/denisbrodbeck/machineid"
@@ -97,7 +96,7 @@ func get() *Analytics {
 		return &Analytics{Enabled: false, MachineID: ""}
 	}
 
-	b, err := ioutil.ReadFile(config.GetAnalyticsPath())
+	b, err := os.ReadFile(config.GetAnalyticsPath())
 	if err != nil {
 		log.Debugf("error reading analytics file: %s", err)
 		return &Analytics{Enabled: false, MachineID: ""}
@@ -137,7 +136,7 @@ func (a *Analytics) save() error {
 		}
 	}
 
-	if err := ioutil.WriteFile(analyticsPath, marshalled, 0600); err != nil {
+	if err := os.WriteFile(analyticsPath, marshalled, 0600); err != nil {
 		return fmt.Errorf("couldn't save analytics: %s", err)
 	}
 

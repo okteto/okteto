@@ -19,7 +19,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -169,7 +168,7 @@ func ContextStore() *OktetoContextStore {
 		return CurrentStore
 	}
 
-	b, err := ioutil.ReadFile(config.GetOktetoContextsStorePath())
+	b, err := os.ReadFile(config.GetOktetoContextsStorePath())
 	if err != nil {
 		log.Errorf("error reading okteto contexts: %v", err)
 		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
@@ -351,7 +350,7 @@ func saveContextConfigInFile(c *OktetoContextStore) error {
 		}
 	}
 
-	if err := ioutil.WriteFile(contextConfigPath, marshalled, 0600); err != nil {
+	if err := os.WriteFile(contextConfigPath, marshalled, 0600); err != nil {
 		return fmt.Errorf("couldn't save context: %s", err)
 	}
 

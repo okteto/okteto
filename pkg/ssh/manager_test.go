@@ -16,7 +16,7 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -220,7 +220,7 @@ func callForwards(fm *ForwardManager) error {
 		}
 
 		defer r.Body.Close()
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			return fmt.Errorf("%s failed to read response: %w", f.String(), err)
 		}
@@ -248,7 +248,7 @@ func callReverseForwards(fm *ForwardManager) error {
 		}
 
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return fmt.Errorf("%s failed to read response: %w", r.String(), err)
 		}
