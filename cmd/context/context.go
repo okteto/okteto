@@ -193,13 +193,8 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 }
 
 func getContext(ctxOptions *ContextOptions) (string, error) {
-	clusters := []string{"Okteto Cloud", "Okteto Enterprise"}
-	if !ctxOptions.OnlyOkteto {
-		k8sClusters := getKubernetesContextList()
-		clusters = append(clusters, k8sClusters...)
-	}
-	oktetoContext, err := utils.AskForOptions(clusters, "Select the context you want to activate:")
-
+	ctxs := getContextsSelection(ctxOptions)
+	oktetoContext, err := AskForOptions(ctxs, "Select the context you want to activate:")
 	if err != nil {
 		return "", err
 	}
