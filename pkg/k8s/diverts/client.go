@@ -16,6 +16,7 @@ package diverts
 import (
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sScheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -53,6 +54,9 @@ func NewForConfig(cfg *rest.Config) (*DivertV1Client, error) {
 }
 
 func GetClient(thisContext string) (*DivertV1Client, error) {
+	if okteto.IsOktetoContext() {
+		thisContext = okteto.UrlToContext(thisContext)
+	}
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		clientcmd.NewDefaultClientConfigLoadingRules(),
 		&clientcmd.ConfigOverrides{
