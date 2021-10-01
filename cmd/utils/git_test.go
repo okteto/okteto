@@ -15,7 +15,6 @@ package utils
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -27,7 +26,7 @@ import (
 )
 
 func Test_getBranch(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +44,7 @@ func Test_getBranch(t *testing.T) {
 	}
 
 	filename := filepath.Join(dir, "example-git-file")
-	if err := ioutil.WriteFile(filename, []byte("hello world!"), 0644); err != nil {
+	if err := os.WriteFile(filename, []byte("hello world!"), 0644); err != nil {
 		t.Fatal(err)
 	}
 

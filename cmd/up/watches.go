@@ -14,7 +14,7 @@
 package up
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -36,7 +36,7 @@ func checkLocalWatchesConfiguration() {
 	}
 
 	w := "/proc/sys/fs/inotify/max_user_watches"
-	f, err := ioutil.ReadFile(w)
+	f, err := os.ReadFile(w)
 	if err != nil {
 		log.Infof("Fail to read %s: %s", w, err)
 		return

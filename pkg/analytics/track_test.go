@@ -14,7 +14,6 @@
 package analytics
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -66,7 +65,7 @@ func Test_getTrackID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, err := ioutil.TempDir("", "")
+			dir, err := os.MkdirTemp("", "")
 			if err != nil {
 				t.Fatal(err)
 			}

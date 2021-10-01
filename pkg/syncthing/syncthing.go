@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -244,11 +243,11 @@ func (s *Syncthing) initConfig() error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(s.Home, certFile), cert, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, certFile), cert, 0700); err != nil {
 		return fmt.Errorf("failed to write syncthing certificate: %w", err)
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(s.Home, keyFile), key, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, keyFile), key, 0700); err != nil {
 		return fmt.Errorf("failed to write syncthing key: %w", err)
 	}
 
@@ -262,7 +261,7 @@ func (s *Syncthing) UpdateConfig() error {
 		return fmt.Errorf("failed to write syncthing configuration template: %w", err)
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
 		return fmt.Errorf("failed to write syncthing configuration file: %w", err)
 	}
 
@@ -721,7 +720,7 @@ func (s *Syncthing) SaveConfig(dev *model.Dev) error {
 	}
 
 	syncthingInfoFile := getInfoFile(dev.Namespace, dev.Name)
-	if err := ioutil.WriteFile(syncthingInfoFile, marshalled, 0600); err != nil {
+	if err := os.WriteFile(syncthingInfoFile, marshalled, 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing info file: %w", err)
 	}
 
@@ -731,7 +730,7 @@ func (s *Syncthing) SaveConfig(dev *model.Dev) error {
 // Load loads the syncthing object from the dev home folder
 func Load(dev *model.Dev) (*Syncthing, error) {
 	syncthingInfoFile := getInfoFile(dev.Namespace, dev.Name)
-	b, err := ioutil.ReadFile(syncthingInfoFile)
+	b, err := os.ReadFile(syncthingInfoFile)
 	if err != nil {
 		return nil, err
 	}

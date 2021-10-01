@@ -14,7 +14,6 @@
 package doctor
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -62,7 +61,7 @@ func Test_generateManifestFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			file, err := ioutil.TempFile("", "okteto.yml")
+			file, err := os.CreateTemp("", "okteto.yml")
 			if err != nil {
 				t.Fatal(err)
 			}

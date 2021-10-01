@@ -14,7 +14,6 @@
 package linguist
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -70,7 +69,7 @@ func TestProcessDirectory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmp, err := ioutil.TempDir("", "")
+			tmp, err := os.MkdirTemp("", "")
 			if err != nil {
 				t.Fatal(err)
 			}

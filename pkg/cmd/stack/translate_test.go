@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -60,11 +59,11 @@ func Test_translate(t *testing.T) {
 }
 
 func Test_translateEnvVars(t *testing.T) {
-	tmpFile, err := ioutil.TempFile("", ".env")
+	tmpFile, err := os.CreateTemp("", ".env")
 	if err != nil {
 		t.Fatalf("failed to create dynamic env file: %s", err.Error())
 	}
-	if err := ioutil.WriteFile(tmpFile.Name(), []byte(env), 0600); err != nil {
+	if err := os.WriteFile(tmpFile.Name(), []byte(env), 0600); err != nil {
 		t.Fatalf("failed to write env file: %s", err.Error())
 	}
 	defer os.RemoveAll(tmpFile.Name())

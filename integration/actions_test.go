@@ -19,7 +19,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -132,14 +131,14 @@ func TestBuildActionPipeline(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Printf("created tempdir: %s", dir)
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
-	if err := ioutil.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -319,13 +318,13 @@ func TestStacksActions(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	dir, err := ioutil.TempDir("", namespace)
+	dir, err := os.MkdirTemp("", namespace)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Printf("created tempdir: %s", dir)
 	filePath := filepath.Join(dir, "okteto-stack.yaml")
-	if err := ioutil.WriteFile(filePath, []byte(stackFile), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(stackFile), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -493,7 +492,7 @@ func executeDestroyPipelineAction(ctx context.Context, namespace string) error {
 
 func executeApply(ctx context.Context, namespace string) error {
 
-	dir, err := ioutil.TempDir("", namespace)
+	dir, err := os.MkdirTemp("", namespace)
 	if err != nil {
 		return err
 	}
@@ -532,14 +531,14 @@ func executeApply(ctx context.Context, namespace string) error {
 }
 
 func executePushAction(ctx context.Context, namespace, user string) error {
-	dir, err := ioutil.TempDir("", namespace)
+	dir, err := os.MkdirTemp("", namespace)
 	if err != nil {
 		return err
 	}
 	log.Printf("created tempdir: %s", dir)
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
-	if err := ioutil.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
 		return err
 	}
 

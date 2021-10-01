@@ -17,7 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"runtime"
 	"time"
@@ -208,7 +208,7 @@ func (p *PortForwardManager) buildForwarder(namespace, pod string, ports []strin
 		ports,
 		a.stopChan,
 		a.readyChan,
-		ioutil.Discard,
+		io.Discard,
 		a.out)
 
 	if err != nil {

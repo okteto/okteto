@@ -15,7 +15,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -129,7 +128,7 @@ func UpdateStateFile(dev *model.Dev, state UpState) error {
 	}
 
 	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
-	if err := ioutil.WriteFile(s, []byte(state), 0644); err != nil {
+	if err := os.WriteFile(s, []byte(state), 0644); err != nil {
 		return fmt.Errorf("failed to update state file: %s", err)
 	}
 
@@ -162,7 +161,7 @@ func GetState(dev *model.Dev) (UpState, error) {
 	}
 
 	statePath := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
-	stateBytes, err := ioutil.ReadFile(statePath)
+	stateBytes, err := os.ReadFile(statePath)
 	if err != nil {
 		log.Infof("error reading state file: %s", err.Error())
 		return Failed, errors.UserError{

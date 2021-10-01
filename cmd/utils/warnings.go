@@ -14,7 +14,6 @@
 package utils
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -24,7 +23,7 @@ import (
 //GetWarningState returns the value associated to a given warning
 func GetWarningState(path, name string) string {
 	filePath := filepath.Join(path, name)
-	bytes, err := ioutil.ReadFile(filePath)
+	bytes, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Infof("failed to read warning file '%s': %s", filePath, err)
 		return ""
@@ -40,5 +39,5 @@ func SetWarningState(path, name, value string) error {
 	}
 	filePath := filepath.Join(path, name)
 
-	return ioutil.WriteFile(filePath, []byte(value), 0644)
+	return os.WriteFile(filePath, []byte(value), 0644)
 }
