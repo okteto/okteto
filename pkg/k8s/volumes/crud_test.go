@@ -150,7 +150,7 @@ func Test_checkPVCValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := checkPVCValues(tt.pvc, tt.dev)
+			err := checkPVCValues(tt.pvc, tt.dev, "")
 			if err == nil && tt.wantError {
 				t.Errorf("checkPVCValues in test '%s' did not fail", tt.name)
 			}
