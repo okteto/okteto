@@ -25,7 +25,6 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
@@ -36,16 +35,13 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
 )
 
 // Destroy destroys a stack
 func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout time.Duration) error {
-	if s.Namespace == "" {
-		s.Namespace = client.GetContextNamespace("")
-	}
-
-	c, _, err := client.GetLocal()
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}

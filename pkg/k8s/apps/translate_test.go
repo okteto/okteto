@@ -16,7 +16,6 @@ package apps
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
@@ -39,7 +38,7 @@ var (
 )
 
 func Test_translateWithVolumes(t *testing.T) {
-	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +122,7 @@ services:
 			},
 		},
 	}
-	err = translate(tr1, false)
+	err = translate(tr1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +415,7 @@ services:
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = translate(translationRules[dev2.Name], false)
+	err = translate(translationRules[dev2.Name])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -529,7 +528,7 @@ persistentVolume:
 		App:         NewDeploymentApp(d1),
 		Rules:       []*model.TranslationRule{rule1},
 	}
-	err = translate(tr1, false)
+	err = translate(tr1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -682,7 +681,7 @@ docker:
 		App:         NewDeploymentApp(d),
 		Rules:       []*model.TranslationRule{rule},
 	}
-	err = translate(tr, false)
+	err = translate(tr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1255,7 +1254,7 @@ environment:
 		App:         NewDeploymentApp(d),
 		Rules:       []*model.TranslationRule{rule},
 	}
-	err = translate(tr, false)
+	err = translate(tr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1436,7 +1435,7 @@ environment:
 }
 
 func Test_translateSfsWithVolumes(t *testing.T) {
-	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1518,7 +1517,7 @@ services:
 			},
 		},
 	}
-	err = translate(tr1, false)
+	err = translate(tr1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1807,7 +1806,7 @@ services:
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = translate(translationRules[dev2.Name], false)
+	err = translate(translationRules[dev2.Name])
 	if err != nil {
 		t.Fatal(err)
 	}

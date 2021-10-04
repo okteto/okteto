@@ -15,18 +15,32 @@ package init
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/okteto"
 	"gopkg.in/yaml.v2"
 )
 
+func TestMain(m *testing.M) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Name:      "test",
+				Namespace: "namespace",
+				UserID:    "user-id",
+			},
+		},
+	}
+	os.Exit(m.Run())
+}
+
 func TestRun(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +48,7 @@ func TestRun(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
-	if err := Run("", "", p, "golang", dir, false); err != nil {
+	if err := Run(p, "golang", dir, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -43,7 +57,7 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dev, err := utils.LoadDev(p, "namespace", "context")
+	dev, err := utils.LoadDev(p, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,11 +66,11 @@ func TestRun(t *testing.T) {
 		t.Errorf("got %s, expected %s", dev.Image, "okteto/golang:1")
 	}
 
-	if err := Run("", "", p, "ruby", dir, true); err != nil {
+	if err := Run(p, "ruby", dir, true); err != nil {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
-	dev, err = utils.LoadDev(p, "namespace", "context")
+	dev, err = utils.LoadDev(p, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +81,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunJustCreateNecessaryFields(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,21 +89,21 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
-	if err := Run("", "", p, "golang", dir, false); err != nil {
+	if err := Run(p, "golang", dir, false); err != nil {
 		t.Fatal(err)
 	}
 
-	file, _ := ioutil.ReadFile(p)
+	file, _ := os.ReadFile(p)
 	var result map[string]interface{}
 	yaml.Unmarshal([]byte(file), &result)
 
-	OptionalTags := [...]string{"annotations", "autocreate", "container", "context", "environment",
+	optionalFields := [...]string{"annotations", "autocreate", "container", "context", "environment",
 		"externalVolumes", "healthchecks", "interface", "imagePullPolicy", "labels", "namespace",
 		"push", "resources", "remote", "reverse", "secrets", "services", "subpath",
 		"tolerations", "workdir"}
-	for _, tag := range OptionalTags {
-		if _, ok := result[tag]; ok {
-			t.Fatal(fmt.Errorf("%s in manifest after running `okteto up` and its not necessary", tag))
+	for _, field := range optionalFields {
+		if _, ok := result[field]; ok {
+			t.Fatal(fmt.Errorf("field '%s' in manifest after running `okteto init` and its not necessary", field))
 		}
 	}
 

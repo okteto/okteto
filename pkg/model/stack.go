@@ -16,8 +16,8 @@ package model
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -183,7 +183,7 @@ const (
 
 // GetStack returns an okteto stack object from a given file
 func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
-	b, err := ioutil.ReadFile(stackPath)
+	b, err := os.ReadFile(stackPath)
 	if err != nil {
 		return nil, err
 	}
@@ -363,18 +363,6 @@ func validateStackName(name string) error {
 	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") {
 		return fmt.Errorf(errBadStackName)
 	}
-	return nil
-}
-
-//UpdateNamespace updates the dev namespace
-func (s *Stack) UpdateNamespace(namespace string) error {
-	if namespace == "" {
-		return nil
-	}
-	if s.Namespace != "" && s.Namespace != namespace {
-		return fmt.Errorf("the namespace in the okteto stack manifest '%s' does not match the namespace '%s'", s.Namespace, namespace)
-	}
-	s.Namespace = namespace
 	return nil
 }
 

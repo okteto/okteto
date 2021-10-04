@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -260,12 +260,10 @@ func TestAll(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
-	k8Client.Reset()
-
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
-	dir, err := ioutil.TempDir("", tName)
+	dir, err := os.MkdirTemp("", tName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +275,7 @@ func TestAll(t *testing.T) {
 	}
 
 	contentPath := filepath.Join(dir, "index.html")
-	if err := ioutil.WriteFile(contentPath, []byte(name), 0644); err != nil {
+	if err := os.WriteFile(contentPath, []byte(name), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -289,7 +287,7 @@ func TestAll(t *testing.T) {
 	}
 
 	stignorePath := filepath.Join(dir, ".stignore")
-	if err := ioutil.WriteFile(stignorePath, []byte("venv"), 0600); err != nil {
+	if err := os.WriteFile(stignorePath, []byte("venv"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -397,12 +395,10 @@ func TestAllStatefulset(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
-	k8Client.Reset()
-
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
-	dir, err := ioutil.TempDir("", tName)
+	dir, err := os.MkdirTemp("", tName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -414,7 +410,7 @@ func TestAllStatefulset(t *testing.T) {
 	}
 
 	contentPath := filepath.Join(dir, "index.html")
-	if err := ioutil.WriteFile(contentPath, []byte(name), 0644); err != nil {
+	if err := os.WriteFile(contentPath, []byte(name), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -426,7 +422,7 @@ func TestAllStatefulset(t *testing.T) {
 	}
 
 	stignorePath := filepath.Join(dir, ".stignore")
-	if err := ioutil.WriteFile(stignorePath, []byte("venv"), 0600); err != nil {
+	if err := os.WriteFile(stignorePath, []byte("venv"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -531,7 +527,6 @@ func TestDivert(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	log.Printf("running %s \n", tName)
-	k8Client.Reset()
 	startNamespace := getCurrentNamespace()
 	defer changeToNamespace(ctx, oktetoPath, startNamespace)
 
@@ -579,6 +574,7 @@ func TestDivert(t *testing.T) {
 	}
 
 	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 120); err != nil {
+
 		t.Fatal("Contents are the same")
 	}
 
@@ -615,25 +611,25 @@ func oktetoPipeline(ctx context.Context, oktetoPath, repo, folder string) error 
 
 func modifyDivertApp() error {
 
-	input, err := ioutil.ReadFile(filepath.Join(divertGitFolder, "health-checker", "cmd", "main.go"))
+	input, err := os.ReadFile(filepath.Join(divertGitFolder, "health-checker", "cmd", "main.go"))
 	if err != nil {
 		return err
 	}
 
 	output := bytes.Replace(input, []byte("&health.SimpleHealthClient"), []byte("&health.AdvancedHealthClient"), 1)
 
-	if err = ioutil.WriteFile(filepath.Join(divertGitFolder, "health-checker", "cmd", "main.go"), output, 0666); err != nil {
+	if err = os.WriteFile(filepath.Join(divertGitFolder, "health-checker", "cmd", "main.go"), output, 0666); err != nil {
 		return err
 	}
 
-	input, err = ioutil.ReadFile(filepath.Join(divertGitFolder, "health-checker", "okteto.yml"))
+	input, err = os.ReadFile(filepath.Join(divertGitFolder, "health-checker", "okteto.yml"))
 	if err != nil {
 		return err
 	}
 
 	output = bytes.Replace(input, []byte("command: bash"), []byte("command: go run cmd/main.go"), 1)
 
-	if err = ioutil.WriteFile(filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), output, 0666); err != nil {
+	if err = os.WriteFile(filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), output, 0666); err != nil {
 		return err
 	}
 	return nil
@@ -745,7 +741,7 @@ func getContent(endpoint string, timeout int, upErrorChannel chan error) (string
 			continue
 		}
 
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			return "", err
 		}
@@ -785,7 +781,7 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 
 	log.Printf("create namespace output: \n%s\n", string(o))
 
-	n := k8Client.GetContextNamespace("")
+	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -805,7 +801,7 @@ func changeToNamespace(ctx context.Context, oktetoPath, namespace string) error 
 
 	log.Printf("namespace output: \n%s\n", string(o))
 
-	n := k8Client.GetContextNamespace("")
+	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -827,9 +823,9 @@ func deleteNamespace(ctx context.Context, oktetoPath, namespace string) error {
 
 func testUpdateContent(content, contentPath string, timeout int, upErrorChannel chan error) error {
 	start := time.Now()
-	ioutil.WriteFile(contentPath, []byte(content), 0644)
+	os.WriteFile(contentPath, []byte(content), 0644)
 
-	if err := ioutil.WriteFile(contentPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(contentPath, []byte(content), 0644); err != nil {
 		return fmt.Errorf("failed to update %s: %s", contentPath, err.Error())
 	}
 
@@ -920,7 +916,7 @@ func killLocalSyncthing() error {
 
 func destroyPod(ctx context.Context, name, namespace string) error {
 	log.Printf("destroying pods of %s", name)
-	c, _, err := k8Client.GetLocal()
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
@@ -952,7 +948,7 @@ func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string,
 
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {
-		m, _ := ioutil.ReadFile(manifestPath)
+		m, _ := os.ReadFile(manifestPath)
 		log.Printf("manifest: \n%s\n", string(m))
 		return fmt.Errorf("okteto down failed: %s", err)
 	}
@@ -1025,7 +1021,7 @@ func waitForReady(namespace, name string, upErrorChannel chan error) error {
 		if !isUpRunning(upErrorChannel) {
 			return fmt.Errorf("Okteto up exited before completion")
 		}
-		c, err := ioutil.ReadFile(state)
+		c, err := os.ReadFile(state)
 		if err != nil {
 			log.Printf("failed to read state file %s: %s", state, err)
 			if !os.IsNotExist(err) {
@@ -1128,7 +1124,7 @@ func getOktetoPath(ctx context.Context) (string, error) {
 }
 
 func getDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, error) {
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1137,7 +1133,7 @@ func getDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, er
 }
 
 func getStatefulset(ctx context.Context, ns, name string) (*appsv1.StatefulSet, error) {
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1146,7 +1142,7 @@ func getStatefulset(ctx context.Context, ns, name string) (*appsv1.StatefulSet, 
 }
 
 func getJob(ctx context.Context, ns, name string) (*batchv1.Job, error) {
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1155,7 +1151,7 @@ func getJob(ctx context.Context, ns, name string) (*batchv1.Job, error) {
 }
 
 func getVolume(ctx context.Context, ns, name string) (*corev1.PersistentVolumeClaim, error) {
-	client, _, err := k8Client.GetLocal()
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1231,9 +1227,5 @@ func checkIfUpFinished(ctx context.Context, pid int) error {
 }
 
 func getCurrentNamespace() string {
-	currentContext := k8Client.GetSessionContext("")
-	if okteto.GetClusterContext() == currentContext {
-		return k8Client.GetContextNamespace("")
-	}
-	return os.Getenv("OKTETO_NAMESPACE")
+	return k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 }

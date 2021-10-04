@@ -19,7 +19,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/linguist"
@@ -36,9 +35,9 @@ var (
 	componentLabels []string = []string{"app.kubernetes.io/component", "component", "app"}
 )
 
-// SetDevDefaultsFromDeployment sets dev defaults from a running deployment
+// SetDevDefaultsFromApp sets dev defaults from a running app
 func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, container, language string) error {
-	c, config, err := client.GetLocalWithContext(dev.Context)
+	c, config, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
@@ -59,7 +58,7 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 
 	if updateImageFromPod {
 		dev.Image = nil
-		dev.SecurityContext = getSecurityContextFromPod(ctx, dev, pod, container, config, c)
+		dev.SecurityContext = getSecurityContextFromPod(ctx, pod, container, config, c)
 		dev.Sync.Folders[0].RemotePath = getWorkdirFromPod(ctx, dev, pod, container, config, c)
 		dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
 	}
@@ -67,7 +66,7 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 	setAnnotationsFromApp(dev, app)
 	setNameAndLabelsFromApp(dev, app)
 
-	if okteto.GetClusterContext() != client.GetSessionContext("") {
+	if !okteto.IsOktetoContext() {
 		setResourcesFromPod(dev, pod, container)
 	}
 
@@ -94,7 +93,7 @@ func getRunningPod(ctx context.Context, app apps.App, container string, c kubern
 	return pod, nil
 }
 
-func getSecurityContextFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) *model.SecurityContext {
+func getSecurityContextFromPod(ctx context.Context, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) *model.SecurityContext {
 	userID, err := pods.GetUserByPod(ctx, pod, container, config, c)
 	if err != nil {
 		log.Infof("error getting user of the deployment: %s", err)

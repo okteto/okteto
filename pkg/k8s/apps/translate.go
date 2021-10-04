@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -42,10 +43,10 @@ const (
 	oktetoSecretTemplate   = "okteto-%s"
 )
 
-func translate(t *Translation, isOktetoNamespace bool) error {
+func translate(t *Translation) error {
 
 	ct := os.Getenv("OKTETO_CLIENTSIDE_TRANSLATION")
-	if ct == "" && isOktetoNamespace {
+	if ct == "" && okteto.IsOktetoContext() {
 		commonTranslation(t)
 		return setTranslationAsAnnotation(t)
 	}

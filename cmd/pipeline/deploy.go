@@ -21,10 +21,9 @@ import (
 	"strings"
 	"time"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -47,12 +46,17 @@ func deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploys an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#deploy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+
+			if err := contextCMD.Init(ctx); err != nil {
 				return err
 			}
 
-			if !okteto.IsAuthenticated() {
-				return errors.ErrNotLogged
+			if !okteto.IsOktetoContext() {
+				return errors.ErrContextIsNotOktetoCluster
+			}
+
+			if err := okteto.SetCurrentContext("", namespace); err != nil {
+				return err
 			}
 
 			cwd, err := os.Getwd()
@@ -84,14 +88,14 @@ func deploy(ctx context.Context) *cobra.Command {
 				branch = b
 			}
 
-			if namespace == "" {
-				namespace = getCurrentNamespace(ctx)
-			}
-
 			if skipIfExists {
-				pipeline, err := okteto.GetPipelineByRepository(ctx, namespace, repository)
+				oktetoClient, err := okteto.NewOktetoClient()
+				if err != nil {
+					return err
+				}
+				pipeline, err := oktetoClient.GetPipelineByRepository(ctx, repository)
 				if err == nil {
-					log.Information("Pipeline URL: %s", getPipelineURL(namespace, pipeline))
+					log.Information("Pipeline URL: %s", getPipelineURL(pipeline.GitDeploy))
 					log.Success("Pipeline '%s' was already deployed", name)
 					return nil
 				}
@@ -100,18 +104,18 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			resp, err := deployPipeline(ctx, name, namespace, repository, branch, filename, wait, variables)
+			resp, err := deployPipeline(ctx, name, repository, branch, filename, variables)
 			if err != nil {
 				return err
 			}
-			log.Information("Pipeline URL: %s", getPipelineURL(namespace, resp.GitDeploy))
+			log.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
 
 			if !wait {
 				log.Success("Pipeline '%s' scheduled for deployment", name)
 				return nil
 			}
 
-			if err := waitUntilRunning(ctx, name, resp.Action, namespace, timeout); err != nil {
+			if err := waitUntilRunning(ctx, name, resp.Action, timeout); err != nil {
 				return err
 			}
 			log.Success("Pipeline '%s' successfully deployed", name)
@@ -131,7 +135,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func deployPipeline(ctx context.Context, name, namespace, repository, branch, filename string, wait bool, variables []string) (*okteto.GitDeployResponse, error) {
+func deployPipeline(ctx context.Context, name, repository, branch, filename string, variables []string) (*okteto.GitDeployResponse, error) {
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -142,6 +146,10 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 
 	var err error
 	var resp *okteto.GitDeployResponse
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
 	go func() {
 		varList := []okteto.Variable{}
 		for _, v := range variables {
@@ -155,8 +163,10 @@ func deployPipeline(ctx context.Context, name, namespace, repository, branch, fi
 				Value: kv[1],
 			})
 		}
+		namespace := okteto.Context().Namespace
 		log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, filename, repository, branch, namespace)
-		resp, err = okteto.DeployPipeline(ctx, name, namespace, repository, branch, filename, varList)
+
+		resp, err = oktetoClient.DeployPipeline(ctx, name, repository, branch, filename, varList)
 		exit <- err
 	}()
 
@@ -178,7 +188,7 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func waitUntilRunning(ctx context.Context, name string, action *okteto.Action, namespace string, timeout time.Duration) error {
+func waitUntilRunning(ctx context.Context, name string, action *okteto.Action, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for the pipeline to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -189,13 +199,13 @@ func waitUntilRunning(ctx context.Context, name string, action *okteto.Action, n
 
 	go func() {
 
-		err := waitToBeDeployed(ctx, name, action, namespace, timeout)
+		err := waitToBeDeployed(ctx, name, action, timeout)
 		if err != nil {
 			exit <- err
 			return
 		}
 
-		exit <- waitForResourcesToBeRunning(ctx, name, namespace, timeout)
+		exit <- waitForResourcesToBeRunning(ctx, name, timeout)
 	}()
 
 	select {
@@ -212,26 +222,34 @@ func waitUntilRunning(ctx context.Context, name string, action *okteto.Action, n
 	return nil
 }
 
-func waitToBeDeployed(ctx context.Context, name string, action *okteto.Action, namespace string, timeout time.Duration) error {
+func waitToBeDeployed(ctx context.Context, name string, action *okteto.Action, timeout time.Duration) error {
 	if action == nil {
-		return deprecatedWaitToBeDeployed(ctx, name, namespace, timeout)
+		return deprecatedWaitToBeDeployed(ctx, name, timeout)
 	}
-	return okteto.WaitForActionToFinish(ctx, action.Name, namespace, timeout)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	return oktetoClient.WaitForActionToFinish(ctx, action.Name, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func deprecatedWaitToBeDeployed(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.Duration) error {
 
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	attempts := 0
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
 
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
-			p, err := okteto.GetPipelineByName(ctx, name, namespace)
+			p, err := oktetoClient.GetPipelineByName(ctx, name)
 			if err != nil {
 				if errors.IsNotFound(err) || errors.IsNotExist(err) {
 					return nil
@@ -255,19 +273,23 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name, namespace string, tim
 	}
 }
 
-func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {
 	areAllRunning := false
 
 	ticker := time.NewTicker(5 * time.Second)
 	to := time.NewTicker(timeout)
 	errorsMap := make(map[string]int)
 
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := okteto.GetResourcesStatusFromPipeline(ctx, name, namespace)
+			resourceStatus, err := oktetoClient.GetResourcesStatusFromPipeline(ctx, name)
 			if err != nil {
 				return err
 			}
@@ -290,16 +312,8 @@ func waitForResourcesToBeRunning(ctx context.Context, name, namespace string, ti
 	}
 }
 
-func getCurrentNamespace(ctx context.Context) string {
-	currentContext := client.GetSessionContext("")
-	if okteto.GetClusterContext() == currentContext {
-		return client.GetContextNamespace("")
-	}
-	return os.Getenv("OKTETO_NAMESPACE")
-}
-
-func getPipelineURL(namespace string, gitDeploy *okteto.GitDeploy) string {
-	oktetoURL := okteto.GetURL()
-	pipelineURL := fmt.Sprintf("%s/#/spaces/%s?resourceId=%s", oktetoURL, namespace, gitDeploy.ID)
+func getPipelineURL(gitDeploy *okteto.GitDeploy) string {
+	octx := okteto.Context()
+	pipelineURL := fmt.Sprintf("%s/#/spaces/%s?resourceId=%s", octx.Name, octx.Namespace, gitDeploy.ID)
 	return pipelineURL
 }

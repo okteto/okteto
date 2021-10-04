@@ -16,14 +16,9 @@ package okteto
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
-)
 
-// Credentials top body answer
-type Credentials struct {
-	Credentials Credential
-}
+	"github.com/shurcooL/graphql"
+)
 
 // Credential represents an Okteto Space k8s credentials
 type Credential struct {
@@ -34,27 +29,34 @@ type Credential struct {
 }
 
 // GetCredentials returns the space config credentials
-func GetCredentials(ctx context.Context) (*Credential, error) {
-	q := `query{
-		credentials(space: ""){
-			server, certificate, token, namespace
-		},
-	}`
-
-	var cred Credentials
-	if err := query(ctx, q, &cred); err != nil {
-		return nil, err
+func (c *OktetoClient) GetCredentials(ctx context.Context) (*Credential, error) {
+	var query struct {
+		Space struct {
+			Server      graphql.String
+			Certificate graphql.String
+			Token       graphql.String
+			Namespace   graphql.String
+		} `graphql:"credentials(space: $cred)"`
 	}
 
-	if cred.Credentials.Server == "" {
-		return nil, fmt.Errorf("%s is not available. Please, retry again in a few minutes", GetURL())
+	variables := map[string]interface{}{
+		"cred": graphql.String(""),
+	}
+	err := c.client.Query(ctx, &query, variables)
+	if err != nil {
+		return nil, translateAPIErr(err)
 	}
 
-	return &cred.Credentials, nil
-}
+	cred := &Credential{
+		Server:      string(query.Space.Server),
+		Certificate: string(query.Space.Certificate),
+		Token:       string(query.Space.Token),
+		Namespace:   string(query.Space.Namespace),
+	}
 
-// GetClusterContext returns the k8s context names given an okteto URL
-func GetClusterContext() string {
-	u, _ := url.Parse(GetURL())
-	return strings.ReplaceAll(u.Host, ".", "_")
+	if cred.Server == "" {
+		return nil, fmt.Errorf("%s is not available. Please, retry again in a few minutes", Context().Name)
+	}
+
+	return cred, nil
 }

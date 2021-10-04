@@ -19,16 +19,17 @@ import (
 	"os"
 	"time"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 
 	"github.com/spf13/cobra"
@@ -47,10 +48,19 @@ func Exec() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
+
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
 			t := time.NewTicker(1 * time.Second)
 			iter := 0
 			err = executeExec(ctx, dev, args)
@@ -90,7 +100,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
 
-	c, cfg, err := k8Client.GetLocalWithContext(dev.Context)
+	c, cfg, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
@@ -100,7 +110,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	pod, err := apps.GetRunningPodInLoop(ctx, dev, app, c, true)
+	pod, err := apps.GetRunningPodInLoop(ctx, dev, app, c)
 	if err != nil {
 		return err
 	}

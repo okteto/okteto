@@ -31,8 +31,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func Create(ctx context.Context, dev *model.Dev, isOktetoNamespace bool, c kubernetes.Interface) error {
-	if !isOktetoNamespace {
+func Create(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+	if !okteto.IsOktetoContext() {
 		return errors.ErrDivertNotSupported
 	}
 

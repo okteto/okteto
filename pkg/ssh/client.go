@@ -15,7 +15,7 @@ package ssh
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -25,7 +25,7 @@ var clientConfig *ssh.ClientConfig
 
 func getPrivateKey() (ssh.Signer, error) {
 	_, private := getKeyPaths()
-	buf, err := ioutil.ReadFile(private)
+	buf, err := os.ReadFile(private)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load private key: %s", err)
 	}

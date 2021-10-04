@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -29,25 +29,46 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-// WithEnvVarIfAvailable authenticates the user with OKTETO_TOKEN value
-func WithEnvVarIfAvailable(ctx context.Context) error {
-	oktetoToken := os.Getenv("OKTETO_TOKEN")
-	if oktetoToken == "" {
-		return nil
-	}
-	if u, err := okteto.GetToken(); err == nil {
-		if u.Token == oktetoToken {
-			return nil
+func AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*okteto.User, error) {
+	var user *okteto.User
+	var err error
+	if len(token) > 0 {
+		log.Infof("authenticating with an api token")
+		user, err = WithToken(ctx, oktetoURL, token)
+		if err != nil {
+			return nil, err
+		}
+	} else if okteto.HasBeenLogged(oktetoURL) {
+		log.Infof("re-authenticating with saved token")
+		token = okteto.ContextStore().Contexts[oktetoURL].Token
+		user, err = WithToken(ctx, oktetoURL, token)
+		if err != nil {
+			log.Infof("saved token is wrong. Authenticating with browser code")
+			user, err = WithBrowser(ctx, oktetoURL)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		log.Infof("authenticating with browser code")
+		user, err = WithBrowser(ctx, oktetoURL)
+		if err != nil {
+			return nil, err
 		}
 	}
-	oktetoURL := os.Getenv("OKTETO_URL")
-	if oktetoURL == "" {
-		oktetoURL = okteto.CloudURL
+
+	if user.New {
+		analytics.TrackSignup(true, user.ID)
 	}
-	if _, err := WithToken(ctx, oktetoURL, oktetoToken); err != nil {
-		return fmt.Errorf("error executing auto-login with 'OKTETO_TOKEN': %s", err)
+	log.Infof("authenticated user %s", user.ID)
+
+	if oktetoURL == okteto.CloudURL {
+		log.Success("Logged in as %s", user.ExternalID)
+	} else {
+		log.Success("Logged in as %s @ %s", user.ExternalID, oktetoURL)
 	}
-	return nil
+
+	return user, nil
 }
 
 // WithToken authenticates the user with an API token

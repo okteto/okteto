@@ -19,12 +19,13 @@ import (
 	"os"
 	"os/signal"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/model"
 
 	"github.com/spf13/cobra"
@@ -42,10 +43,19 @@ func Restart() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#restart"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
+
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
 			serviceName := ""
 			if len(args) > 0 {
 				serviceName = args[0]
@@ -69,7 +79,7 @@ func Restart() *cobra.Command {
 
 func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	log.Infof("restarting services")
-	client, _, err := k8Client.GetLocalWithContext(dev.Context)
+	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}

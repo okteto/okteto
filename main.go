@@ -18,23 +18,24 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/okteto/okteto/cmd"
-	configCMD "github.com/okteto/okteto/cmd/config"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
-	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	// Load the different library for authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
@@ -54,19 +55,22 @@ func init() {
 		},
 	}
 
-	runtime.ErrorHandlers = errorHandlers
+	utilRuntime.ErrorHandlers = errorHandlers
 
 	if bin := os.Getenv("OKTETO_BIN"); bin != "" {
 		model.OktetoBinImageTag = bin
 		log.Infof("using %s as the bin image", bin)
 	}
-	utils.SetOktetoUsernameEnv()
 }
 
 func main() {
 	ctx := context.Background()
 	log.Init(logrus.WarnLevel)
 	var logLevel string
+
+	if err := analytics.Init(); err != nil {
+		log.Infof("error initializing okteto analytics: %s", err)
+	}
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
@@ -87,7 +91,7 @@ func main() {
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
-	root.AddCommand(configCMD.Config(ctx))
+	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Build(ctx))
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.List(ctx))
@@ -109,7 +113,13 @@ func main() {
 	err := root.Execute()
 
 	if err != nil {
-		log.Fail(err.Error())
+		message := err.Error()
+		if len(message) > 0 {
+			tmp := []rune(message)
+			tmp[0] = unicode.ToUpper(tmp[0])
+			message = string(tmp)
+		}
+		log.Fail(message)
 		if uErr, ok := err.(errors.UserError); ok {
 			if len(uErr.Hint) > 0 {
 				log.Hint("    %s", uErr.Hint)

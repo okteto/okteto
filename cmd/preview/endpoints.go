@@ -20,8 +20,9 @@ import (
 	"sort"
 	"strings"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -35,9 +36,14 @@ func Endpoints(ctx context.Context) *cobra.Command {
 		Short: "Show endpoints for a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+			if err := contextCMD.Init(ctx); err != nil {
 				return err
 			}
+
+			if !okteto.IsOktetoContext() {
+				return errors.ErrContextIsNotOktetoCluster
+			}
+
 			previewName := args[0]
 
 			if err := validateOutput(output); err != nil {
@@ -60,7 +66,11 @@ func validateOutput(output string) error {
 }
 
 func executeListPreviewEndpoints(ctx context.Context, name, output string) error {
-	endpointList, err := okteto.ListPreviewsEndpoints(ctx, name)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	endpointList, err := oktetoClient.ListPreviewsEndpoints(ctx, name)
 	if err != nil {
 		return fmt.Errorf("failed to get preview environments: %s", err)
 	}

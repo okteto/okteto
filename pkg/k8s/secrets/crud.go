@@ -16,7 +16,7 @@ package secrets
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -69,7 +69,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 	}
 
 	for _, s := range dev.Secrets {
-		content, err := ioutil.ReadFile(s.LocalPath)
+		content, err := os.ReadFile(s.LocalPath)
 		if err != nil {
 			return fmt.Errorf("error reading secret '%s': %s", s.LocalPath, err)
 		}

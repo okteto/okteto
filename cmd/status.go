@@ -19,6 +19,7 @@ import (
 	"os/signal"
 	"time"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
@@ -47,12 +48,20 @@ func Status() *cobra.Command {
 				return errors.ErrNotInDevContainer
 			}
 
+			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
 
-			ctx := context.Background()
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
 			waitForStates := []config.UpState{config.Synchronizing, config.Ready}
 			if err := status.Wait(ctx, dev, waitForStates); err != nil {
 				return err

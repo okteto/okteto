@@ -14,7 +14,6 @@
 package up
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -35,7 +34,7 @@ func TestCreatePIDFile(t *testing.T) {
 		t.Fatal("didn't create pid file")
 	}
 
-	filePID, err := ioutil.ReadFile(filePath)
+	filePID, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatal("pid file is corrupted")
 	}

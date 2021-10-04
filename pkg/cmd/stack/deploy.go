@@ -25,7 +25,6 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/forward"
@@ -37,6 +36,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,11 +57,7 @@ type StackDeployOptions struct {
 
 // Deploy deploys a stack
 func Deploy(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
-	if s.Namespace == "" {
-		s.Namespace = client.GetContextNamespace("")
-	}
-
-	c, config, err := client.GetLocal()
+	c, config, err := okteto.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
 	}
@@ -112,7 +108,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 
 	go func() {
 
-		addHiddenExposedPortsToStack(ctx, s, options)
+		addHiddenExposedPortsToStack(s, options)
 
 		for _, name := range options.ServicesToDeploy {
 			if len(s.Services[name].Ports) > 0 {
@@ -604,17 +600,17 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addHiddenExposedPortsToStack(ctx context.Context, s *model.Stack, options *StackDeployOptions) {
+func addHiddenExposedPortsToStack(s *model.Stack, options *StackDeployOptions) {
 	for _, svcName := range options.ServicesToDeploy {
 		svc := s.Services[svcName]
-		addHiddenExposedPortsToSvc(ctx, svc, s.Namespace)
+		addHiddenExposedPortsToSvc(svc)
 	}
 
 }
 
-func addHiddenExposedPortsToSvc(ctx context.Context, svc *model.Service, namespace string) {
+func addHiddenExposedPortsToSvc(svc *model.Service) {
 	if svc.Image != "" {
-		exposedPorts := registry.GetHiddenExposePorts(ctx, namespace, svc.Image)
+		exposedPorts := registry.GetHiddenExposePorts(svc.Image)
 		for _, port := range exposedPorts {
 			if !model.IsAlreadyAdded(port, svc.Ports) {
 				svc.Ports = append(svc.Ports, port)
