@@ -10,12 +10,12 @@ orbs:
 jobs:
   build:
     docker:
-      - image: okteto/golang-ci:1.16
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v3-pkg-cache-{{ checksum "go.sum" }}
+
+      - run:
+          command: go mod tidy && git diff --exit-code go.sum > /dev/null
       - run:
           name: Test
           command: |
@@ -28,7 +28,7 @@ jobs:
           paths:
             - bin
       - save_cache:
-          key: v3-pkg-cache-{{ checksum "go.sum" }}
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
             - /go/pkg
@@ -42,12 +42,12 @@ jobs:
     environment:
       OKTETO_USER: cindylopez
     docker:
-      - image: okteto/dev:latest
+      - image: okteto/dev:go1.17
     steps:
       - checkout
       - restore_cache:
           keys:
-            - v3-pkg-cache-{{ checksum "go.sum" }}
+            - v4-pkg-cache-{{ checksum "go.sum" }}
       - attach_workspace:
           at: ./artifacts
       - run:
@@ -73,7 +73,7 @@ jobs:
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
           command: make integration
       - save_cache:
-          key: v3-pkg-cache-{{ checksum "go.sum" }}
+          key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
             - /go/pkg
@@ -81,7 +81,7 @@ jobs:
           path: /root/.okteto
   mock-release:
     docker:
-      - image: okteto/golang-ci:1.16
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
       - attach_workspace:
@@ -111,10 +111,10 @@ jobs:
       - checkout
       - run:
           name: Upgrade Golang
-          command: choco upgrade golang --version 1.16
+          command: choco upgrade golang --version 1.17
       - restore_cache:
           keys:
-            - v4-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
       - run:
           name: Test
           command: |
@@ -139,7 +139,7 @@ jobs:
             OKTETO_SKIP_CLEANUP: 'true'
             OKTETO_CLIENTSIDE_TRANSLATION: ''
           command: |
-            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 30m
+            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 45m
       - run:
           name: Integration tests (clientside)
           environment:
@@ -147,9 +147,9 @@ jobs:
             OKTETO_CLIENTSIDE_TRANSLATION: 'true'
             OKTETO_SKIP_CLEANUP: 'true'
           command: |
-            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 30m
+            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 45m
       - save_cache:
-          key: v4-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+          key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
           paths:
             - C:\Users\circleci\AppData\Local\go-build
             - C:\Users\circleci\go\pkg
@@ -158,7 +158,7 @@ jobs:
           path: C:\Users\circleci\.okteto
   release:
     docker:
-      - image: okteto/golang-ci:1.16
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
       - attach_workspace:
@@ -194,9 +194,14 @@ jobs:
             ./update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
             pushd homebrew-cli
             git push git@github.com:okteto/homebrew-cli.git master
+      - deploy:
+          name: Auto-update-actions
+          command: |
+            go get -u github.com/tcnksm/ghr
+            ./update_actions.sh $CIRCLE_TAG
   release-master:
     docker:
-      - image: okteto/golang-ci:1.16
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
       - setup_remote_docker:

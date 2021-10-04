@@ -14,9 +14,8 @@
 package apps
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"reflect"
@@ -28,19 +27,20 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/pointer"
 )
 
 var (
-	rootUser int64
-	mode444  int32 = 0444
-	mode420  int32 = 420
+	mode444 int32 = 0444
+	mode420 int32 = 420
 )
 
 func Test_translateWithVolumes(t *testing.T) {
-	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 
@@ -98,24 +98,21 @@ services:
 		t.Fatal(err)
 	}
 
-	d1 := model.NewResource(dev)
-	d1.GetSandbox()
-	d1.SetReplicas(pointer.Int32Ptr(2))
-	d1.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+	d1 := GetDeploymentSandbox(dev)
+	d1.Spec.Replicas = pointer.Int32Ptr(2)
+	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
 	rule1 := dev.ToTranslationRule(dev, false)
-	tr1 := &model.Translation{
+	tr1 := &Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		K8sObject:   d1,
+		App:         NewDeploymentApp(d1),
 		Rules:       []*model.TranslationRule{rule1},
 		Replicas:    2,
-		Strategy: model.K8sObjectStrategy{
-			DeploymentStrategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RollingUpdateDeploymentStrategyType,
-			},
+		DeploymentStrategy: appsv1.DeploymentStrategy{
+			Type: appsv1.RollingUpdateDeploymentStrategyType,
 		},
 		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{
@@ -125,7 +122,7 @@ services:
 			},
 		},
 	}
-	err = translate(tr1, nil, false)
+	err = translate(tr1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +163,7 @@ services:
 						FSGroup: &fsGroup,
 					},
 					ServiceAccountName:            "sa",
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					Volumes: []apiv1.Volume{
 						{
 							Name: oktetoSyncSecretVolume,
@@ -230,6 +227,10 @@ services:
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  &runAsUser,
+								RunAsGroup: &runAsGroup,
+							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      OktetoBinName,
@@ -365,59 +366,56 @@ services:
 			},
 		},
 	}
-	marshalled1, _ := yaml.Marshal(d1.Deployment.Spec.Template.Spec)
+	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
 	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
 	if string(marshalled1) != string(marshalled1OK) {
 		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
 	}
-	if d1.GetAnnotation("key") != "value" {
-		t.Fatalf("Wrong d1 annotations: '%s'", d1.GetAnnotation("key"))
+	if d1.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d1 annotations: '%s'", d1.Annotations["key"])
 	}
-	if d1.PodTemplateSpec.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.PodTemplateSpec.Annotations["key"])
+	if d1.Spec.Template.Annotations["key"] != "value" {
+		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.Spec.Template.Annotations["key"])
 	}
 
-	d1Down, err := TranslateDevModeOff(d1)
-	if err != nil {
+	if err := TranslateDevModeOff(tr1.App); err != nil {
 		t.Fatal(err)
 	}
 
-	d1Orig := model.NewResource(dev)
-	d1Orig.GetSandbox()
-	marshalled1Down, _ := yaml.Marshal(d1Down.PodTemplateSpec.Spec)
-	marshalled1Orig, _ := yaml.Marshal(d1Orig.PodTemplateSpec.Spec)
+	d1Orig := GetDeploymentSandbox(dev)
+	d1Orig.Spec.Replicas = pointer.Int32Ptr(2)
+	d1Orig.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RollingUpdateDeploymentStrategyType,
+	}
+
+	marshalled1Down, _ := yaml.Marshal(tr1.App.PodSpec())
+	marshalled1Orig, _ := yaml.Marshal(d1Orig.Spec.Template.Spec)
 	if string(marshalled1Down) != string(marshalled1Orig) {
 		t.Fatalf("Wrong d1 down.\nActual %+v, \nExpected %+v", string(marshalled1Down), string(marshalled1Orig))
 	}
-	if d1Down.GetAnnotation("key") != "" {
-		t.Fatalf("Wrong d1 annotations after down: '%s'", d1.GetAnnotation("key"))
+	if tr1.App.ObjectMeta().Annotations["key"] != "" {
+		t.Fatalf("Wrong d1 annotations after down: '%s'", tr1.App.ObjectMeta().Annotations["key"])
 	}
-	if d1Down.PodTemplateSpec.Annotations["key"] != "" {
-		t.Fatalf("Wrong d1 pod annotations after down: '%s'", d1.PodTemplateSpec.Annotations["key"])
+	if tr1.App.TemplateObjectMeta().Annotations["key"] != "" {
+		t.Fatalf("Wrong d1 pod annotations after down: '%s'", tr1.App.TemplateObjectMeta().Annotations["key"])
 	}
-	if *d1Down.Replicas != 2 {
-		t.Fatalf("Wrong d1 replicas %d vs 2", *d1Down.Replicas)
+	if tr1.App.Replicas() != 2 {
+		t.Fatalf("Wrong d1 replicas %d vs 2", tr1.App.Replicas())
 	}
 
 	dev2 := dev.Services[0]
-	d2 := model.NewResource(dev2)
-	d2.GetSandbox()
-	rule2 := dev2.ToTranslationRule(dev, false)
-	tr2 := &model.Translation{
-		Interactive: false,
-		Name:        dev.Name,
-		Version:     model.TranslationVersion,
-		K8sObject:   d2,
-		Rules:       []*model.TranslationRule{rule2},
-		Annotations: model.Annotations{"key": "value"},
-		Tolerations: []apiv1.Toleration{
-			{
-				Key:      "nvidia/cpu",
-				Operator: apiv1.TolerationOpExists,
-			},
-		},
+	d2 := GetDeploymentSandbox(dev2)
+	d2.Namespace = dev.Namespace
+
+	translationRules := make(map[string]*Translation)
+	ctx := context.Background()
+
+	c := fake.NewSimpleClientset(d2)
+	err = loadServiceTranslations(ctx, dev, false, translationRules, c)
+	if err != nil {
+		t.Fatal(err)
 	}
-	err = translate(tr2, nil, false)
+	err = translate(translationRules[dev2.Name])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -439,17 +437,11 @@ services:
 							},
 						},
 					},
-					Tolerations: []apiv1.Toleration{
-						{
-							Key:      "nvidia/cpu",
-							Operator: apiv1.TolerationOpExists,
-						},
-					},
 					SecurityContext: &apiv1.PodSecurityContext{
-						FSGroup: &rootUser,
+						FSGroup: pointer.Int64Ptr(0),
 					},
 					ServiceAccountName:            "sa",
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					Volumes: []apiv1.Volume{
 						{
 							Name: dev.GetVolumeName(),
@@ -469,9 +461,8 @@ services:
 							Command:         []string{"./run_worker.sh"},
 							Args:            []string{},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -489,35 +480,28 @@ services:
 			},
 		},
 	}
-	marshalled2, _ := yaml.Marshal(d2.PodTemplateSpec.Spec)
+	marshalled2, _ := yaml.Marshal(translationRules[dev2.Name].App.PodSpec())
 	marshalled2OK, _ := yaml.Marshal(d2OK.Spec.Template.Spec)
 	if string(marshalled2) != string(marshalled2OK) {
-		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
-	}
-	if d2.GetAnnotation("key") != "value" {
-		t.Fatalf("Wrong d2 annotations: '%s'", d2.GetAnnotation("key"))
-	}
-	if d2.PodTemplateSpec.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d2 pod annotations: '%s'", d2.PodTemplateSpec.Annotations["key"])
+		t.Fatalf("Wrong d2 generation.\nActual\n %s, \n---\nExpected \n%s", string(marshalled2), string(marshalled2OK))
 	}
 
-	d2Down, err := TranslateDevModeOff(d2)
-	if err != nil {
+	app2 := translationRules[dev2.Name].App
+	if err := TranslateDevModeOff(app2); err != nil {
 		t.Fatal(err)
 	}
 
-	d2Orig := model.NewResource(dev2)
-	d2.GetSandbox()
-	marshalled2Down, _ := yaml.Marshal(d2Down.PodTemplateSpec.Spec)
-	marshalled2Orig, _ := yaml.Marshal(d2Orig.PodTemplateSpec.Spec)
+	d2Orig := GetDeploymentSandbox(dev2)
+	marshalled2Down, _ := yaml.Marshal(app2.PodSpec())
+	marshalled2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
 	if string(marshalled2Down) != string(marshalled2Orig) {
 		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
 	}
-	if d2Down.GetAnnotation("key") != "" {
-		t.Fatalf("Wrong d2 annotations after down: '%s'", d2.GetAnnotation("key"))
+	if app2.ObjectMeta().Annotations["key"] != "" {
+		t.Fatalf("Wrong d2 annotations after down: '%s'", app2.ObjectMeta().Annotations["key"])
 	}
-	if d2Down.PodTemplateSpec.Annotations["key"] != "" {
-		t.Fatalf("Wrong d2 pod annotations after down: '%s'", d2.PodTemplateSpec.Annotations["key"])
+	if app2.TemplateObjectMeta().Annotations["key"] != "" {
+		t.Fatalf("Wrong d2 pod annotations after down: '%s'", app2.TemplateObjectMeta().Annotations["key"])
 	}
 }
 
@@ -535,17 +519,16 @@ persistentVolume:
 		t.Fatal(err)
 	}
 
-	d1 := model.NewResource(dev)
-	d1.GetSandbox()
+	d1 := GetDeploymentSandbox(dev)
 	rule1 := dev.ToTranslationRule(dev, true)
-	tr1 := &model.Translation{
+	tr1 := &Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		K8sObject:   d1,
+		App:         NewDeploymentApp(d1),
 		Rules:       []*model.TranslationRule{rule1},
 	}
-	err = translate(tr1, nil, false)
+	err = translate(tr1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -553,7 +536,7 @@ persistentVolume:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					Volumes: []apiv1.Volume{
 						{
 							Name: oktetoSyncSecretVolume,
@@ -657,7 +640,7 @@ persistentVolume:
 			},
 		},
 	}
-	marshalled1, _ := yaml.Marshal(d1.PodTemplateSpec.Spec)
+	marshalled1, _ := yaml.Marshal(d1.Spec.Template.Spec)
 	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
 
 	if string(marshalled1) != string(marshalled1OK) {
@@ -689,17 +672,16 @@ docker:
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
 
-	d := model.NewResource(dev)
-	d.GetSandbox()
+	d := GetDeploymentSandbox(dev)
 	rule := dev.ToTranslationRule(dev, false)
-	tr := &model.Translation{
+	tr := &Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		K8sObject:   d,
+		App:         NewDeploymentApp(d),
 		Rules:       []*model.TranslationRule{rule},
 	}
-	err = translate(tr, nil, false)
+	err = translate(tr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -707,7 +689,7 @@ docker:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					SecurityContext: &apiv1.PodSecurityContext{
 						FSGroup: pointer.Int64Ptr(0),
 					},
@@ -759,6 +741,10 @@ docker:
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
+							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      OktetoBinName,
@@ -772,9 +758,8 @@ docker:
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /app/. /init-volume/1 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -824,9 +809,8 @@ docker:
 								},
 							},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -916,7 +900,7 @@ docker:
 			},
 		},
 	}
-	marshalled, _ := yaml.Marshal(d.PodTemplateSpec.Spec)
+	marshalled, _ := yaml.Marshal(d.Spec.Template.Spec)
 	marshalledOK, _ := yaml.Marshal(dOK.Spec.Template.Spec)
 	if string(marshalled) != string(marshalledOK) {
 		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))
@@ -1261,17 +1245,16 @@ environment:
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
 
-	d := model.NewResource(dev)
-	d.GetSandbox()
+	d := GetDeploymentSandbox(dev)
 	rule := dev.ToTranslationRule(dev, false)
-	tr := &model.Translation{
+	tr := &Translation{
 		Interactive: true,
 		Name:        dev.Name,
 		Version:     model.TranslationVersion,
-		K8sObject:   d,
+		App:         NewDeploymentApp(d),
 		Rules:       []*model.TranslationRule{rule},
 	}
-	err = translate(tr, nil, false)
+	err = translate(tr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1279,7 +1262,7 @@ environment:
 		Spec: appsv1.DeploymentSpec{
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 					SecurityContext: &apiv1.PodSecurityContext{
 						FSGroup: pointer.Int64Ptr(0),
 					},
@@ -1330,7 +1313,11 @@ environment:
 							Name:            OktetoBinName,
 							Image:           model.OktetoBinImageTag,
 							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
+							},
+							Command: []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      OktetoBinName,
@@ -1344,9 +1331,8 @@ environment:
 							ImagePullPolicy: apiv1.PullIfNotPresent,
 							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /app/. /init-volume/1 || true)"},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -1400,9 +1386,8 @@ environment:
 								},
 							},
 							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -1442,9 +1427,532 @@ environment:
 			},
 		},
 	}
-	marshalled, _ := yaml.Marshal(d.PodTemplateSpec.Spec)
+	marshalled, _ := yaml.Marshal(d.Spec.Template.Spec)
 	marshalledOK, _ := yaml.Marshal(dOK.Spec.Template.Spec)
 	if string(marshalled) != string(marshalledOK) {
 		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))
+	}
+}
+
+func Test_translateSfsWithVolumes(t *testing.T) {
+	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	var runAsUser int64 = 100
+	var runAsGroup int64 = 101
+	var fsGroup int64 = 102
+	manifest := []byte(fmt.Sprintf(`name: web
+namespace: n
+container: dev
+image: web:latest
+command: ["./run_web.sh"]
+workdir: /app
+securityContext:
+  runAsUser: 100
+  runAsGroup: 101
+  fsGroup: 102
+serviceAccount: sa
+sync:
+  - .:/app
+  - sub:/path
+volumes:
+  - /go/pkg/
+  - /root/.cache/go-build
+nodeSelector:
+  disktype: ssd
+affinity:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: role
+          operator: In
+          values:
+          - web-server
+      topologyKey: kubernetes.io/hostname
+secrets:
+  - %s:/remote
+resources:
+  limits:
+    cpu: 2
+    memory: 1Gi
+    nvidia.com/gpu: 1
+    amd.com/gpu: 1
+services:
+  - name: worker
+    container: dev
+    image: worker:latest
+    command: ["./run_worker.sh"]
+    serviceAccount: sa
+    sync:
+       - worker:/src`, file.Name()))
+
+	dev, err := model.Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sfs1 := GetStatefulSetSandbox(dev)
+	sfs1.Spec.Replicas = pointer.Int32Ptr(2)
+
+	rule1 := dev.ToTranslationRule(dev, false)
+	tr1 := &Translation{
+		Interactive: true,
+		Name:        dev.Name,
+		Version:     model.TranslationVersion,
+		App:         NewStatefulSetApp(sfs1),
+		Rules:       []*model.TranslationRule{rule1},
+		Replicas:    2,
+		StatefulsetStrategy: appsv1.StatefulSetUpdateStrategy{
+			Type: appsv1.RollingUpdateStatefulSetStrategyType,
+		},
+		Annotations: model.Annotations{"key": "value"},
+		Tolerations: []apiv1.Toleration{
+			{
+				Key:      "nvidia/cpu",
+				Operator: apiv1.TolerationOpExists,
+			},
+		},
+	}
+	err = translate(tr1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sfs1OK := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: apiv1.PodTemplateSpec{
+				Spec: apiv1.PodSpec{
+					NodeSelector: map[string]string{
+						"disktype": "ssd",
+					},
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								{
+									LabelSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{
+											{
+												Key:      "role",
+												Operator: "In",
+												Values: []string{
+													"web-server",
+												},
+											},
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
+					Tolerations: []apiv1.Toleration{
+						{
+							Key:      "nvidia/cpu",
+							Operator: apiv1.TolerationOpExists,
+						},
+					},
+					SecurityContext: &apiv1.PodSecurityContext{
+						FSGroup: &fsGroup,
+					},
+					ServiceAccountName:            "sa",
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+					Volumes: []apiv1.Volume{
+						{
+							Name: oktetoSyncSecretVolume,
+							VolumeSource: apiv1.VolumeSource{
+								Secret: &apiv1.SecretVolumeSource{
+									SecretName: "okteto-web",
+									Items: []apiv1.KeyToPath{
+										{
+											Key:  "config.xml",
+											Path: "config.xml",
+											Mode: &mode444,
+										},
+										{
+											Key:  "cert.pem",
+											Path: "cert.pem",
+											Mode: &mode444,
+										},
+										{
+											Key:  "key.pem",
+											Path: "key.pem",
+											Mode: &mode444,
+										},
+									},
+								},
+							},
+						},
+						{
+							Name: dev.GetVolumeName(),
+							VolumeSource: apiv1.VolumeSource{
+								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+									ClaimName: dev.GetVolumeName(),
+									ReadOnly:  false,
+								},
+							},
+						},
+						{
+							Name: oktetoDevSecretVolume,
+							VolumeSource: apiv1.VolumeSource{
+								Secret: &apiv1.SecretVolumeSource{
+									SecretName: "okteto-web",
+									Items: []apiv1.KeyToPath{
+										{
+											Key:  "dev-secret-remote",
+											Path: "remote",
+											Mode: &mode420,
+										},
+									},
+								},
+							},
+						},
+						{
+							Name: OktetoBinName,
+							VolumeSource: apiv1.VolumeSource{
+								EmptyDir: &apiv1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+					InitContainers: []apiv1.Container{
+						{
+							Name:            OktetoBinName,
+							Image:           model.OktetoBinImageTag,
+							ImagePullPolicy: apiv1.PullIfNotPresent,
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  &runAsUser,
+								RunAsGroup: &runAsGroup,
+							},
+							Command: []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      OktetoBinName,
+									MountPath: "/okteto/bin",
+								},
+							},
+						},
+						{
+							Name:            OktetoInitVolumeContainerName,
+							Image:           "web:latest",
+							ImagePullPolicy: apiv1.PullIfNotPresent,
+							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true)"},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  &runAsUser,
+								RunAsGroup: &runAsGroup,
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/init-volume/1",
+									SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/init-volume/2",
+									SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/init-volume/3",
+									SubPath:   model.SourceCodeSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/init-volume/4",
+									SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+								},
+							},
+						},
+					},
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           "web:latest",
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"/var/okteto/bin/start.sh"},
+							Args:            []string{"-r", "-s", "remote:/remote"},
+							WorkingDir:      "/app",
+							Env: []apiv1.EnvVar{
+								{
+									Name:  "OKTETO_NAMESPACE",
+									Value: "n",
+								},
+								{
+									Name:  "OKTETO_NAME",
+									Value: "web",
+								},
+							},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  &runAsUser,
+								RunAsGroup: &runAsGroup,
+							},
+							Resources: apiv1.ResourceRequirements{
+								Limits: apiv1.ResourceList{
+									"cpu":            resource.MustParse("2"),
+									"memory":         resource.MustParse("1Gi"),
+									"nvidia.com/gpu": resource.MustParse("1"),
+									"amd.com/gpu":    resource.MustParse("1"),
+								},
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/var/syncthing",
+									SubPath:   model.SyncthingSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: model.RemoteMountPath,
+									SubPath:   model.RemoteSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/go/pkg/",
+									SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/root/.cache/go-build",
+									SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/app",
+									SubPath:   model.SourceCodeSubPath,
+								},
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/path",
+									SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+								},
+								{
+									Name:      oktetoSyncSecretVolume,
+									ReadOnly:  false,
+									MountPath: "/var/syncthing/secret/",
+								},
+								{
+									Name:      oktetoDevSecretVolume,
+									ReadOnly:  false,
+									MountPath: "/var/okteto/secret/",
+								},
+								{
+									Name:      OktetoBinName,
+									ReadOnly:  false,
+									MountPath: "/var/okteto/bin",
+								},
+							},
+							LivenessProbe:  nil,
+							ReadinessProbe: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+	marshalledsfs1, _ := yaml.Marshal(sfs1.Spec.Template.Spec)
+	marshallesfs1OK, _ := yaml.Marshal(sfs1OK.Spec.Template.Spec)
+	if string(marshalledsfs1) != string(marshallesfs1OK) {
+		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledsfs1), string(marshallesfs1OK))
+	}
+	if sfs1.Annotations["key"] != "value" {
+		t.Fatalf("Wrong sfs1 annotations: '%s'", sfs1.Annotations["key"])
+	}
+	if sfs1.Spec.Template.Annotations["key"] != "value" {
+		t.Fatalf("Wrong sfs1 pod annotations: '%s'", sfs1.Spec.Template.Annotations["key"])
+	}
+
+	if err := TranslateDevModeOff(tr1.App); err != nil {
+		t.Fatal(err)
+	}
+
+	sfs1Orig := GetStatefulSetSandbox(dev)
+	sfs1Orig.Spec.Replicas = pointer.Int32Ptr(1)
+	marshallesfs1Down, _ := yaml.Marshal(tr1.App.PodSpec())
+	marshallesfs1Orig, _ := yaml.Marshal(sfs1Orig.Spec.Template.Spec)
+	if string(marshallesfs1Down) != string(marshallesfs1Orig) {
+		t.Fatalf("Wrong sfs1 down.\nActual %+v, \nExpected %+v", string(marshallesfs1Down), string(marshallesfs1Orig))
+	}
+	if tr1.App.ObjectMeta().Annotations["key"] != "" {
+		t.Fatalf("Wrong sfs1 annotations after down: '%s'", tr1.App.ObjectMeta().Annotations["key"])
+	}
+	if tr1.App.TemplateObjectMeta().Annotations["key"] != "" {
+		t.Fatalf("Wrong sfs1 pod annotations after down: '%s'", tr1.App.TemplateObjectMeta().Annotations["key"])
+	}
+	if tr1.App.Replicas() != 2 {
+		t.Fatalf("Wrong sfs1 replicas %d vs 2", tr1.App.Replicas())
+	}
+
+	dev2 := dev.Services[0]
+	sfs2 := GetStatefulSetSandbox(dev2)
+	sfs2.Namespace = dev.Namespace
+
+	translationRules := make(map[string]*Translation)
+	ctx := context.Background()
+
+	c := fake.NewSimpleClientset(sfs2)
+	err = loadServiceTranslations(ctx, dev, false, translationRules, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = translate(translationRules[dev2.Name])
+	if err != nil {
+		t.Fatal(err)
+	}
+	sfs2OK := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: apiv1.PodTemplateSpec{
+				Spec: apiv1.PodSpec{
+					Affinity: &apiv1.Affinity{
+						PodAffinity: &apiv1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+								{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											model.InteractiveDevLabel: "web",
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
+					SecurityContext: &apiv1.PodSecurityContext{
+						FSGroup: pointer.Int64Ptr(0),
+					},
+					ServiceAccountName:            "sa",
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+					Volumes: []apiv1.Volume{
+						{
+							Name: dev.GetVolumeName(),
+							VolumeSource: apiv1.VolumeSource{
+								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+									ClaimName: dev.GetVolumeName(),
+									ReadOnly:  false,
+								},
+							},
+						},
+					},
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           "worker:latest",
+							ImagePullPolicy: apiv1.PullAlways,
+							Command:         []string{"./run_worker.sh"},
+							Args:            []string{},
+							SecurityContext: &apiv1.SecurityContext{
+								RunAsUser:  pointer.Int64Ptr(0),
+								RunAsGroup: pointer.Int64Ptr(0),
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      dev.GetVolumeName(),
+									ReadOnly:  false,
+									MountPath: "/src",
+									SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+								},
+							},
+							LivenessProbe:  nil,
+							ReadinessProbe: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+	marshallesfs2, _ := yaml.Marshal(translationRules[dev2.Name].App.PodSpec())
+	marshallesfs2OK, _ := yaml.Marshal(sfs2OK.Spec.Template.Spec)
+	if string(marshallesfs2) != string(marshallesfs2OK) {
+		t.Fatalf("Wrong sfs2 generation.\nActual\n %s, \n---\nExpected \n%s", string(marshallesfs2), string(marshallesfs2OK))
+	}
+
+	app2 := translationRules[dev2.Name].App
+	if err := TranslateDevModeOff(app2); err != nil {
+		t.Fatal(err)
+	}
+
+	sfs2Orig := GetStatefulSetSandbox(dev2)
+	marshalled2Down, _ := yaml.Marshal(app2.PodSpec())
+	marshalled2Orig, _ := yaml.Marshal(sfs2Orig.Spec.Template.Spec)
+	if string(marshalled2Down) != string(marshalled2Orig) {
+		t.Fatalf("Wrong sfs2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
+	}
+	if app2.ObjectMeta().Annotations["key"] != "" {
+		t.Fatalf("Wrong sfs2 annotations after down: '%s'", app2.ObjectMeta().Annotations["key"])
+	}
+	if app2.TemplateObjectMeta().Annotations["key"] != "" {
+		t.Fatalf("Wrong sfs2 pod annotations after down: '%s'", app2.TemplateObjectMeta().Annotations["key"])
+	}
+}
+
+func Test_translateDivertDeployment(t *testing.T) {
+	original := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:             types.UID("id"),
+			Name:            "name",
+			Namespace:       "namespace",
+			Annotations:     map[string]string{"annotation1": "value1"},
+			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
+			ResourceVersion: "version",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "value",
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "value",
+					},
+				},
+			},
+		},
+	}
+	translated := translateDivertDeployment("cindy", original)
+	expected := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cindy-name",
+			Namespace: "namespace",
+			Annotations: map[string]string{
+				"annotation1":                    "value1",
+				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+			},
+			Labels: map[string]string{
+				model.DeployedByLabel:   "cindy",
+				model.OktetoDivertLabel: "cindy",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					model.OktetoDivertLabel: "cindy",
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						model.OktetoDivertLabel: "cindy",
+					},
+				},
+			},
+		},
+	}
+	marshalled, _ := yaml.Marshal(translated)
+	marshalledExpected, _ := yaml.Marshal(expected)
+	if string(marshalled) != string(marshalledExpected) {
+		t.Fatalf("Wrong translation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledExpected))
 	}
 }

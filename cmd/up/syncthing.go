@@ -112,22 +112,22 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	}
 
 	spinner.Update("Scanning file system...")
-	if err := up.Sy.WaitForScanning(ctx, up.Dev, true); err != nil {
+	if err := up.Sy.WaitForScanning(ctx, true); err != nil {
 		return err
 	}
 
-	if err := up.Sy.WaitForScanning(ctx, up.Dev, false); err != nil {
+	if err := up.Sy.WaitForScanning(ctx, false); err != nil {
 		return err
 	}
 
-	return up.Sy.WaitForConnected(ctx, up.Dev)
+	return up.Sy.WaitForConnected(ctx)
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	spinner := utils.NewSpinner("Synchronizing your files...")
-	spinner.Start()
 	up.spinner = spinner
-	defer spinner.Stop()
+	up.spinner.Start()
+	defer up.spinner.Stop()
 
 	progressBar := utils.NewSyncthingProgressBar(40)
 	defer progressBar.Finish()

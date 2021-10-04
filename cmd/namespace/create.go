@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"strings"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -34,8 +35,13 @@ func Create(ctx context.Context) *cobra.Command {
 		Use:   "namespace <name>",
 		Short: "Creates a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+
+			if err := contextCMD.Init(ctx); err != nil {
 				return err
+			}
+
+			if !okteto.IsOktetoContext() {
+				return errors.ErrContextIsNotOktetoCluster
 			}
 
 			err := executeCreateNamespace(ctx, args[0], members)
@@ -50,7 +56,11 @@ func Create(ctx context.Context) *cobra.Command {
 }
 
 func executeCreateNamespace(ctx context.Context, namespace string, members *[]string) error {
-	oktetoNS, err := okteto.CreateNamespace(ctx, namespace)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	oktetoNS, err := oktetoClient.CreateNamespace(ctx, namespace)
 	if err != nil {
 		return err
 	}
@@ -58,13 +68,13 @@ func executeCreateNamespace(ctx context.Context, namespace string, members *[]st
 	log.Success("Namespace '%s' created", oktetoNS)
 
 	if members != nil && len(*members) > 0 {
-		if err := okteto.AddNamespaceMembers(ctx, namespace, *members); err != nil {
+		if err := oktetoClient.AddNamespaceMembers(ctx, namespace, *members); err != nil {
 			return fmt.Errorf("failed to invite %s to the namespace: %s", strings.Join(*members, ", "), err)
 		}
 	}
 
 	if err := RunNamespace(ctx, oktetoNS); err != nil {
-		return fmt.Errorf("failed to activate your new namespace: %s", err)
+		return fmt.Errorf("failed to activate your new namespace %s: %s", oktetoNS, err)
 	}
 
 	return nil

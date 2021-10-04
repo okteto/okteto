@@ -22,13 +22,14 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
 // Run runs the "okteto status" sequence
-func Run(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) (float64, error) {
+func Run(ctx context.Context, sy *syncthing.Syncthing) (float64, error) {
 	progressLocal, err := getCompletionProgress(ctx, sy, true)
 	if err != nil {
 		log.Infof("error accessing local syncthing status: %s", err)
@@ -90,13 +91,16 @@ func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) er
 			status, err := config.GetState(dev)
 			if err != nil {
 				exit <- err
+				return
 			}
 			if status == config.Failed {
 				exit <- fmt.Errorf("your development container has failed")
+				return
 			}
 			for _, okStatus := range okStatusList {
 				if status == okStatus {
 					exit <- nil
+					return
 				}
 			}
 			<-ticker.C
@@ -107,7 +111,7 @@ func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) er
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)

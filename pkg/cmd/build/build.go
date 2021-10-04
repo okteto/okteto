@@ -44,28 +44,28 @@ type BuildOptions struct {
 }
 
 // Run runs the build sequence
-func Run(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bool, buildOptions BuildOptions) error {
-	if (!isOktetoCluster && buildKitHost == "") || buildOptions.BuildLocally {
+func Run(ctx context.Context, namespace string, buildOptions BuildOptions) error {
+	if (!okteto.IsOktetoContext() && okteto.Context().Buildkit == "") || buildOptions.BuildLocally {
 		if err := buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
-		if err := buildWithOkteto(ctx, namespace, buildKitHost, isOktetoCluster, buildOptions); err != nil {
+		if err := buildWithOkteto(ctx, namespace, buildOptions); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func buildWithOkteto(ctx context.Context, namespace, buildKitHost string, isOktetoCluster bool, buildOptions BuildOptions) error {
-	log.Infof("building your image on %s", buildKitHost)
-	buildkitClient, err := getBuildkitClient(ctx, isOktetoCluster, buildKitHost)
+func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOptions) error {
+	log.Infof("building your image on %s", okteto.Context().Buildkit)
+	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	if buildKitHost == okteto.CloudBuildKitURL && buildOptions.File != "" {
-		buildOptions.File, err = registry.GetDockerfile(buildOptions.Path, buildOptions.File)
+	if buildOptions.File != "" {
+		buildOptions.File, err = registry.GetDockerfile(buildOptions.File)
 		if err != nil {
 			return err
 		}
@@ -78,14 +78,13 @@ func buildWithOkteto(ctx context.Context, namespace, buildKitHost string, isOkte
 			return err
 		}
 	}
-	buildOptions.Tag, err = registry.ExpandOktetoDevRegistry(ctx, namespace, buildOptions.Tag)
-	if err != nil {
-		return err
-	}
-	for i := range buildOptions.CacheFrom {
-		buildOptions.CacheFrom[i], err = registry.ExpandOktetoDevRegistry(ctx, namespace, buildOptions.CacheFrom[i])
-		if err != nil {
-			return err
+
+	if okteto.IsOktetoContext() {
+		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
+		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)
+		for i := range buildOptions.CacheFrom {
+			buildOptions.CacheFrom[i] = registry.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
+			buildOptions.CacheFrom[i] = registry.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
 		}
 	}
 	opt, err := getSolveOpt(buildOptions)
@@ -98,7 +97,9 @@ func buildWithOkteto(ctx context.Context, namespace, buildKitHost string, isOkte
 		log.Infof("Failed to build image: %s", err.Error())
 	}
 	if registry.IsTransientError(err) {
-		log.Yellow("Failed to push '%s' to the registry, retrying ...", buildOptions.Tag)
+		log.Yellow(`Failed to push '%s' to the registry:
+  %s,
+  Retrying ...`, buildOptions.Tag, err.Error())
 		success := true
 		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 		if err != nil {
@@ -106,7 +107,7 @@ func buildWithOkteto(ctx context.Context, namespace, buildKitHost string, isOkte
 			log.Infof("Failed to build image: %s", err.Error())
 		}
 		err = registry.GetErrorMessage(err, buildOptions.Tag)
-		analytics.TrackBuildTransientError(buildKitHost, success)
+		analytics.TrackBuildTransientError(okteto.Context().Buildkit, success)
 		return err
 	}
 
@@ -139,10 +140,14 @@ func buildWithDocker(ctx context.Context, buildOptions BuildOptions) error {
 }
 
 func validateImage(imageTag string) error {
-	if strings.HasPrefix(imageTag, okteto.DevRegistry) && strings.Count(imageTag, "/") != 1 {
+	if (registry.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
+		prefix := okteto.DevRegistry
+		if registry.IsGlobalRegistry(imageTag) {
+			prefix = okteto.GlobalRegistry
+		}
 		return okErrors.UserError{
 			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
-			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", okteto.DevRegistry),
+			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", prefix),
 		}
 	}
 	return nil

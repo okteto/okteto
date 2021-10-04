@@ -18,16 +18,17 @@ import (
 	"os"
 	"os/signal"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 )
@@ -45,35 +46,23 @@ func Down() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
 
-			if err := runDown(ctx, dev); err != nil {
-				analytics.TrackDown(false)
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
 				return err
 			}
 
-			log.Success("Development container deactivated")
-
-			if rm {
-				if err := removeVolume(ctx, dev); err != nil {
-					analytics.TrackDownVolumes(false)
-					return err
-				}
-				log.Success("Persistent volume removed")
-
-				if os.Getenv("OKTETO_SKIP_CLEANUP") == "" {
-					if err := syncthing.RemoveFolder(dev); err != nil {
-						log.Infof("failed to delete existing syncthing folder")
-					}
-				}
-
-				analytics.TrackDownVolumes(true)
+			if err := runDown(ctx, dev, rm); err != nil {
+				analytics.TrackDown(false)
+				return err
 			}
-
-			log.Println()
 
 			analytics.TrackDown(true)
 			return nil
@@ -87,7 +76,7 @@ func Down() *cobra.Command {
 	return cmd
 }
 
-func runDown(ctx context.Context, dev *model.Dev) error {
+func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 	spinner := utils.NewSpinner("Deactivating your development container...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -97,35 +86,69 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 	exit := make(chan error, 1)
 
 	go func() {
-		client, _, err := k8Client.GetLocalWithContext(dev.Context)
+		client, _, err := okteto.GetK8sClient()
 		if err != nil {
 			exit <- err
+			return
 		}
 
 		if dev.Divert != nil {
 			if err := diverts.Delete(ctx, dev, client); err != nil {
 				exit <- err
+				return
 			}
 		}
 
-		k8sObject, err := apps.GetResource(ctx, dev, dev.Namespace, client)
-		if err != nil && !errors.IsNotFound(err) {
-			exit <- err
-		}
-
-		trList, err := apps.GetTranslations(ctx, dev, k8sObject, false, client)
+		app, err := apps.Get(ctx, dev, dev.Namespace, client)
 		if err != nil {
 			exit <- err
+			return
 		}
 
-		exit <- down.Run(dev, k8sObject, trList, true, client)
+		tList, err := apps.GetTranslations(ctx, dev, app, false, client)
+		if err != nil {
+			exit <- err
+			return
+		}
+
+		if err := down.Run(dev, app, tList, true, client); err != nil {
+			exit <- err
+			return
+		}
+
+		spinner.Stop()
+		log.Success("Development container deactivated")
+
+		if !rm {
+			exit <- nil
+			return
+		}
+
+		spinner.Update("Removing persistent volume...")
+		spinner.Start()
+		if err := removeVolume(ctx, dev); err != nil {
+			analytics.TrackDownVolumes(false)
+			exit <- err
+			return
+		}
+		spinner.Stop()
+		log.Success("Persistent volume removed")
+
+		if os.Getenv("OKTETO_SKIP_CLEANUP") == "" {
+			if err := syncthing.RemoveFolder(dev); err != nil {
+				log.Infof("failed to delete existing syncthing folder")
+			}
+		}
+
+		analytics.TrackDownVolumes(true)
+		exit <- nil
 	}()
 
 	select {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
@@ -136,14 +159,10 @@ func runDown(ctx context.Context, dev *model.Dev) error {
 }
 
 func removeVolume(ctx context.Context, dev *model.Dev) error {
-	spinner := utils.NewSpinner("Removing persistent volume...")
-	spinner.Start()
-	defer spinner.Stop()
-
-	client, _, err := k8Client.GetLocalWithContext(dev.Context)
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
 
-	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, client, dev.Timeout.Default)
+	return volumes.Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout.Default)
 }

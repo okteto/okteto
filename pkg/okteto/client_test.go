@@ -14,7 +14,6 @@
 package okteto
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -22,30 +21,30 @@ import (
 )
 
 func TestSetKubeConfig(t *testing.T) {
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 	defer os.Remove(file.Name())
 
 	c := &Credential{}
-	if err := SetKubeConfig(c, file.Name(), "", "123-123-123", "cloud-okteto-com", true); err != nil {
+	if err := SetKubeContext(c, file.Name(), "", "123-123-123", "cloud-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeConfig(c, file.Name(), "ns", "123-123-123", "cloud-okteto-com", true); err != nil {
+	if err := SetKubeContext(c, file.Name(), "ns", "123-123-123", "cloud-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeConfig(c, file.Name(), "ns-2", "123-123-123", "cloud-okteto-com", true); err != nil {
+	if err := SetKubeContext(c, file.Name(), "ns-2", "123-123-123", "cloud-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeConfig(c, file.Name(), "", "123-123-124", "sf-okteto-com", true); err != nil {
+	if err := SetKubeContext(c, file.Name(), "", "123-123-124", "sf-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeConfig(c, file.Name(), "ns-2", "123-123-124", "sf-okteto-com", true); err != nil {
+	if err := SetKubeContext(c, file.Name(), "ns-2", "123-123-124", "sf-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
@@ -72,11 +71,11 @@ func TestSetKubeConfig(t *testing.T) {
 
 	// add duplicated
 
-	if err := SetKubeConfig(c, file.Name(), "ns-2", "123-123-124", "sf-okteto-com", true); err != nil {
+	if err := SetKubeContext(c, file.Name(), "ns-2", "123-123-124", "sf-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeConfig(c, file.Name(), "ns-2", "123-123-123", "cloud-okteto-com", true); err != nil {
+	if err := SetKubeContext(c, file.Name(), "ns-2", "123-123-123", "cloud-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 

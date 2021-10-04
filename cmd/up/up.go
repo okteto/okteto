@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/moby/term"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -30,9 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8sClient "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -102,6 +101,11 @@ func Up() *cobra.Command {
 			}
 
 			ctx := context.Background()
+
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			if err := utils.LoadEnvironment(ctx, false); err != nil {
 				return err
 			}
@@ -115,7 +119,11 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			log.ConfigureFileLogger(config.GetDeploymentHome(dev.Namespace, dev.Name), config.VersionString)
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
+			log.ConfigureFileLogger(config.GetAppHome(dev.Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
 				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
@@ -146,7 +154,7 @@ func Up() *cobra.Command {
 				log.Infof("Terminal: %v", up.stateTerm)
 			}
 
-			err = up.start(autoDeploy, build)
+			err = up.start(build)
 			return err
 		},
 	}
@@ -163,8 +171,8 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
-	dev, err := utils.LoadDev(devPath, namespace, k8sContext)
+func loadDevOrInit(namespace, oktetoContext, devPath string) (*model.Dev, error) {
+	dev, err := utils.LoadDev(devPath, namespace, oktetoContext)
 
 	if err == nil {
 		return dev, nil
@@ -180,12 +188,12 @@ func loadDevOrInit(namespace, k8sContext, devPath string) (*model.Dev, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unknown current folder: %s", err)
 	}
-	if err := initCMD.Run(namespace, k8sContext, devPath, "", workDir, false); err != nil {
+	if err := initCMD.Run(devPath, "", workDir, false); err != nil {
 		return nil, err
 	}
 
 	log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
-	return utils.LoadDev(devPath, namespace, k8sContext)
+	return utils.LoadDev(devPath, namespace, oktetoContext)
 }
 
 func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy bool) error {
@@ -209,40 +217,28 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 		dev.LoadForcePull()
 	}
 
-	dev.Username = okteto.GetUsername()
-	if registryURL, err := okteto.GetRegistry(); err == nil {
-		dev.RegistryURL = registryURL
-	}
+	dev.Username = okteto.Context().Username
+	dev.RegistryURL = okteto.Context().Registry
 
 	return nil
 }
 
-func (up *upContext) start(autoDeploy, build bool) error {
+func (up *upContext) start(build bool) error {
 	var err error
-	up.Client, up.RestConfig, err = k8sClient.GetLocalWithContext(up.Dev.Context)
+	up.Client, up.RestConfig, err = okteto.GetK8sClient()
 	if err != nil {
-		kubecfg := config.GetKubeConfigFile()
-		log.Infof("failed to load local Kubeconfig: %s", err)
+		kubecfg := config.GetOktetoContextKubeconfigPath()
+		log.Infof("failed to load okteto Kubeconfig: %s", err)
 		if up.Dev.Context == "" {
-			return fmt.Errorf("failed to load your local Kubeconfig %q", kubecfg)
+			return fmt.Errorf("failed to load your okteto Kubeconfig %q", kubecfg)
 		}
-		return fmt.Errorf("failed to load your local Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
+		return fmt.Errorf("failed to load your okteto Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
 	}
 
 	ctx := context.Background()
-	ns, err := namespaces.Get(ctx, up.Dev.Namespace, up.Client)
-	if err != nil {
-		return err
-	}
-
-	if !namespaces.IsOktetoAllowed(ns) {
-		return fmt.Errorf("'okteto up' is not allowed in the current namespace")
-	}
-
-	up.isOktetoNamespace = namespaces.IsOktetoNamespace(ns)
 
 	if up.Dev.Divert != nil {
-		if err := diverts.Create(ctx, up.Dev, up.isOktetoNamespace, up.Client); err != nil {
+		if err := diverts.Create(ctx, up.Dev, up.Client); err != nil {
 			return err
 		}
 	}
@@ -257,9 +253,9 @@ func (up *upContext) start(autoDeploy, build bool) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.isSwap, up.Dev.Divert != nil)
+	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.Dev.Divert != nil)
 
-	go up.activateLoop(autoDeploy, build)
+	go up.activateLoop(build)
 
 	select {
 	case <-stop:
@@ -276,7 +272,7 @@ func (up *upContext) start(autoDeploy, build bool) error {
 }
 
 // activateLoop activates the development container in a retry loop
-func (up *upContext) activateLoop(autoDeploy, build bool) {
+func (up *upContext) activateLoop(build bool) {
 	isTransientError := false
 	t := time.NewTicker(1 * time.Second)
 	iter := 0
@@ -296,9 +292,12 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 			if isTransientError {
 				<-t.C
 			}
+			if up.Dev.Divert != nil {
+				up.Dev.Name = strings.Replace(up.Dev.Name, fmt.Sprintf("%s-", okteto.GetSanitizedUsername()), "", 1)
+			}
 		}
 
-		err := up.activate(autoDeploy, build)
+		err := up.activate(build)
 		if err != nil {
 			log.Infof("activate failed with: %s", err)
 
@@ -321,39 +320,35 @@ func (up *upContext) activateLoop(autoDeploy, build bool) {
 	}
 }
 
-func (up *upContext) getCurrentK8sObject(ctx context.Context, autoDeploy bool) (*model.K8sObject, bool, error) {
-	k8sObject, err := apps.GetResource(ctx, up.Dev, up.Dev.Namespace, up.Client)
+func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
+	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
+	if errors.IsNotFound(err) && up.Dev.Autocreate {
+		return apps.NewDeploymentApp(apps.GetDeploymentSandbox(up.Dev)), true, nil
+	}
 	if err == nil {
-		if k8sObject.GetAnnotation(model.OktetoAutoCreateAnnotation) != model.OktetoUpCmd {
-			up.isSwap = true
-		}
-		return k8sObject, false, nil
+		return app, false, nil
 	}
 
 	if !errors.IsNotFound(err) || up.isRetry {
-		return nil, false, fmt.Errorf("couldn't get %s %s/%s, please try again: %s", strings.ToLower(string(k8sObject.ObjectType)), up.Dev.Namespace, up.Dev.Name, err)
+		return nil, false, err
 	}
 
 	if len(up.Dev.Labels) > 0 {
 		if err == errors.ErrNotFound {
 			err = errors.UserError{
-				E:    fmt.Errorf("Didn't find a deployment in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
-				Hint: "Update your labels or use 'okteto namespace' to select a different namespace and try again"}
+				E:    fmt.Errorf("Didn't find an application in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
+				Hint: "Update the labels or point your context to a different namespace and try again"}
 		}
 		return nil, false, err
 	}
 
-	if !up.Dev.Autocreate {
-		err = errors.UserError{
-			E: fmt.Errorf("Deployment '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
-			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
-    Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-    More information is available here: https://okteto.com/docs/reference/cli/#up`,
-		}
-		return nil, false, err
+	err = errors.UserError{
+		E: fmt.Errorf("Application '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
+		Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
+More information is available here: https://okteto.com/docs/reference/cli/#up`,
 	}
-	k8sObject.GetSandbox()
-	return k8sObject, true, nil
+	return nil, false, err
 }
 
 // waitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
@@ -385,7 +380,7 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 	}
 }
 
-func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
+func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
 		return errors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
@@ -393,32 +388,20 @@ func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObje
 		}
 	}
 
-	oktetoRegistryURL := ""
-	if up.isOktetoNamespace {
-		var err error
-		oktetoRegistryURL, err = okteto.GetRegistry()
-		if err != nil {
-			return err
-		}
-	}
-
-	if oktetoRegistryURL == "" && create && up.Dev.Image.Name == "" {
-		return fmt.Errorf("no value for 'Image' has been provided in your okteto manifest")
+	oktetoRegistryURL := okteto.Context().Registry
+	if oktetoRegistryURL == "" && up.Dev.Autocreate && up.Dev.Image.Name == "" {
+		return fmt.Errorf("no value for 'image' has been provided in your okteto manifest")
 	}
 
 	if up.Dev.Image.Name == "" {
-		devContainer := apps.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
+		devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
 		if devContainer == nil {
 			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 		}
 		up.Dev.Image.Name = devContainer.Image
 	}
 
-	buildKitHost, isOktetoCluster, err := buildCMD.GetBuildKitHost()
-	if err != nil {
-		return err
-	}
-	log.Information("Running your build in %s...", buildKitHost)
+	log.Information("Running your build in %s...", okteto.Context().Buildkit)
 
 	imageTag := registry.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
 	log.Infof("building dev image tag %s", imageTag)
@@ -434,7 +417,7 @@ func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObje
 		BuildArgs:  buildArgs,
 		OutputMode: "tty",
 	}
-	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildKitHost, isOktetoCluster, buildOptions); err != nil {
+	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildOptions); err != nil {
 		return err
 	}
 	for _, s := range up.Dev.Services {
@@ -448,8 +431,8 @@ func (up *upContext) buildDevImage(ctx context.Context, k8sObject *model.K8sObje
 	return nil
 }
 
-func (up *upContext) setDevContainer(k8sObject *model.K8sObject) error {
-	devContainer := apps.GetDevContainer(&k8sObject.PodTemplateSpec.Spec, up.Dev.Container)
+func (up *upContext) setDevContainer(app apps.App) error {
+	devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
 	if devContainer == nil {
 		return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 	}
@@ -509,7 +492,7 @@ func (up *upContext) shutdown() {
 
 	log.Infof("starting shutdown sequence")
 	if !up.success {
-		analytics.TrackUpError(true, up.isSwap)
+		analytics.TrackUpError(true)
 	}
 
 	if up.Cancel != nil {
@@ -535,9 +518,7 @@ func (up *upContext) shutdown() {
 }
 
 func printDisplayContext(dev *model.Dev, divertURL string) {
-	if dev.Context != "" {
-		log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), dev.Context))
-	}
+	log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), dev.Context))
 	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 

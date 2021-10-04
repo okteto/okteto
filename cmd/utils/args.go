@@ -29,7 +29,7 @@ func NoArgsAccepted(url string) cobra.PositionalArgs {
 		}
 		if len(args) > 0 {
 			return errors.UserError{
-				E:    fmt.Errorf("Arguments are not supported for command %q.", cmd.CommandPath()),
+				E:    fmt.Errorf("arguments are not supported for command %q.", cmd.CommandPath()),
 				Hint: hint,
 			}
 		}

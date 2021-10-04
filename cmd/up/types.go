@@ -31,8 +31,6 @@ type upContext struct {
 	Cancel            context.CancelFunc
 	ShutdownCompleted chan bool
 	Dev               *model.Dev
-	isOktetoNamespace bool
-	isSwap            bool
 	isRetry           bool
 	Client            *kubernetes.Clientset
 	RestConfig        *rest.Config

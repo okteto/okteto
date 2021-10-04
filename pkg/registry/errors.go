@@ -28,17 +28,17 @@ func GetErrorMessage(err error, tag string) error {
 	switch {
 	case IsLoggedIntoRegistryButDontHavePermissions(err):
 		err = okErrors.UserError{
-			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'.", tag, imageTag),
+			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
 		}
 	case IsNotLoggedIntoRegistry(err):
 		err = okErrors.UserError{
-			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'.", tag, imageTag),
+			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
 		}
 	case IsBuildkitServiceUnavailable(err):
 		err = okErrors.UserError{
-			E:    fmt.Errorf("Buildkit service is not available at the moment."),
+			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
 	default:
@@ -58,6 +58,8 @@ func IsTransientError(err error) bool {
 	switch {
 	case strings.Contains(err.Error(), "failed commit on ref") && strings.Contains(err.Error(), "500 Internal Server Error"),
 		strings.Contains(err.Error(), "transport is closing"):
+		return true
+	case strings.Contains(err.Error(), "failed commit on ref") && strings.Contains(err.Error(), "400 Bad Request"):
 		return true
 	case strings.Contains(err.Error(), "failed to do request") && strings.Contains(err.Error(), "http: server closed idle connection"):
 		return true

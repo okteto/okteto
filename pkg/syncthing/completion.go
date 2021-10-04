@@ -62,7 +62,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 				}
 			}
 
-			if err := s.Overwrite(ctx, dev); err != nil {
+			if err := s.Overwrite(ctx); err != nil {
 				if err != errors.ErrBusySyncthing {
 					return err
 				}

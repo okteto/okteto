@@ -14,8 +14,6 @@
 package doctor
 
 import (
-	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -63,7 +61,7 @@ func Test_generateManifestFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			file, err := ioutil.TempFile("", "okteto.yml")
+			file, err := os.CreateTemp("", "okteto.yml")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -78,7 +76,7 @@ func Test_generateManifestFile(t *testing.T) {
 				t.Fatal("Failed to write to temporary file", err)
 			}
 
-			_, err = generateManifestFile(context.TODO(), file.Name())
+			_, err = generateManifestFile(file.Name())
 			if err != nil {
 				t.Fatal(err)
 			}
