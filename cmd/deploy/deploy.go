@@ -82,6 +82,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			// Generate a token for the requests done to the proxy
 			sessionToken := uuid.NewString()
 
 			c := &deployCommand{
@@ -119,7 +120,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd, name, filename stri
 		return err
 	}
 
-	// Read manifest file and execute commands
+	// Read manifest file with the commands to be executed
 	m, err := dc.getManifest(cwd, name, filename)
 	if err != nil {
 		log.Errorf("could not find manifest file to be executed: %s", err)
@@ -159,71 +160,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd, name, filename stri
 
 	return commandErr
 }
-
-/*func runDeploy(ctx context.Context, cwd, name, filename string, variables []string) error {
-	// Look for a free local port to start the proxy
-	port, err := model.GetAvailablePort("localhost")
-	if err != nil {
-		log.Fatalf("could not find a free port to start proxy server: %s", err)
-		return err
-	}
-	log.Debugf("found available port %d", port)
-
-	// TODO for now, using self-signed certificates
-	c, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		log.Fatalf("could not read certificate: %s", err)
-		return err
-	}
-
-	sessionToken := uuid.NewString()
-	clusterConfig, err := readKubeConfig()
-	if err != nil {
-		log.Errorf("could not build kube config: %s", err)
-		return err
-	}
-
-	p := newProxy(proxyConfig{
-		port:         port,
-		certificates: []tls.Certificate{c},
-		token:        sessionToken,
-	})
-
-	if err := p.startProxy(ctx, name, clusterConfig); err != nil {
-		log.Fatalf("could not start proxy server %s", err)
-		return err
-	}
-
-	modifyKubeconfig(ctx, port, sessionToken, clusterConfig)
-
-	// Get secrets from API
-	sList, err := getOktetoSecretsAsEnvironmenVariables(ctx)
-	if err != nil {
-		log.Errorf("could not load Okteto Secrets: %s", err.Error())
-		sList = []string{}
-	}
-
-	// Get variables
-	env := append(variables, sList...)
-	// Set KUBECONFIG environment variable to make sure it executes kubectl commands against the proxy
-	env = append(env, fmt.Sprintf("KUBECONFIG=%s", tempKubeConfig))
-
-	//Read pipeline file and execute commands
-	m, err := getManifest(cwd, name, filename)
-
-	for _, command := range m.Deploy {
-		if err := executeCommand(command, env); err != nil {
-			log.Errorf("error executing command '%s': %s", command, err.Error())
-			break
-		}
-	}
-
-	if err := p.shutdown(ctx); err != nil {
-		log.Fatalf("could not stop local server: %s", err)
-		return err
-	}
-	return nil
-}*/
 
 func getName(cwd string) string {
 	repo, err := model.GetRepositoryURL(cwd)

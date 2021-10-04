@@ -99,7 +99,7 @@ func (p *proxy) createProxyHandler(ctx context.Context, name string, clusterConf
 		// Set the right bearer token based on the original kubeconfig
 		r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", clusterConfig.BearerToken))
 
-		// Modify all resources updated or created to include the label. Probably this can be improved
+		// Modify all resources updated or created to include the label.
 		if r.Method == "PUT" || r.Method == "POST" {
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
