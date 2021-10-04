@@ -16,12 +16,11 @@ package diverts
 import (
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/client"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sScheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type DivertV1nterface interface {
@@ -54,19 +53,14 @@ func NewForConfig(cfg *rest.Config) (*DivertV1Client, error) {
 }
 
 func GetClient(thisContext string) (*DivertV1Client, error) {
-	thisContext = okteto.UrlToContext(thisContext)
+	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
+	clientConfig := client.GetClientConfig(kubeconfigFile, "")
 
-	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		clientcmd.NewDefaultClientConfigLoadingRules(),
-		&clientcmd.ConfigOverrides{
-			CurrentContext: thisContext,
-			ClusterInfo:    clientcmdapi.Cluster{Server: ""},
-		},
-	)
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
+
 	c, err := NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize diverts client: %s", err.Error())
