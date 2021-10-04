@@ -218,15 +218,11 @@ func Init(ctx context.Context) error {
 		}
 	}
 	if okteto.IsOktetoContext() {
-		client, err := okteto.NewOktetoClient()
-		if err != nil {
-			return err
-		}
-		secretsAndKubeCredentials, err := client.GetSecretsAndKubeCredentials(ctx)
-		if err != nil {
-			return err
-		}
 
+		secretsAndKubeCredentials, err := getSecretsAndCredentials(ctx)
+		if err != nil {
+			return err
+		}
 		if err := updateContext(secretsAndKubeCredentials.Credentials); err != nil {
 			return err
 		}
@@ -253,4 +249,26 @@ func updateContext(cred okteto.Credential) error {
 		return err
 	}
 	return nil
+}
+
+func getSecretsAndCredentials(ctx context.Context) (*okteto.SecretsAndCredentialToken, error) {
+	client, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
+	retries := 3
+	var secretsAndKubeCredentials *okteto.SecretsAndCredentialToken
+	for retries > 0 {
+		secretsAndKubeCredentials, err = client.GetSecretsAndKubeCredentials(ctx)
+		if err != nil {
+			retries -= 1
+		}
+		if err != nil {
+			log.Info(err)
+			retries -= 1
+		} else {
+			break
+		}
+	}
+	return secretsAndKubeCredentials, err
 }
