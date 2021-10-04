@@ -59,7 +59,7 @@ func getOktetoClusterUrl(option string) string {
 func askForOktetoURL() string {
 	octx := okteto.Context()
 	clusterURL := octx.Name
-	if clusterURL == "" || clusterURL == "na" {
+	if !okteto.IsOktetoURL(octx.Name) {
 		clusterURL = okteto.CloudURL
 	}
 	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", clusterURL)
