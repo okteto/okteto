@@ -27,17 +27,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-// GetDockerfile returns the dockerfile with the cache translations
+// GetDockerfile returns the dockerfile with the cache and registry translations
 func GetDockerfile(dockerFile string) (string, error) {
-	fileWithCacheHandler, err := getDockerfileWithCacheHandler(dockerFile)
+	file, err := getTranslatedDockerFile(dockerFile)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create temporary build folder")
 	}
 
-	return fileWithCacheHandler, nil
+	return file, nil
 }
 
-func getDockerfileWithCacheHandler(filename string) (string, error) {
+func getTranslatedDockerFile(filename string) (string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return "", err
@@ -63,9 +63,15 @@ func getDockerfileWithCacheHandler(filename string) (string, error) {
 	if userID == "" {
 		userID = "anonymous"
 	}
+
+	withCacheHandler := okteto.Context().Buildkit == okteto.CloudBuildKitURL
+
 	for scanner.Scan() {
 		line := scanner.Text()
-		translatedLine := translateCacheHandler(line, userID)
+		translatedLine := translateOktetoRegistryImage(line)
+		if withCacheHandler {
+			translatedLine = translateCacheHandler(translatedLine, userID)
+		}
 		_, _ = datawriter.WriteString(translatedLine + "\n")
 	}
 	if err := scanner.Err(); err != nil {
@@ -100,6 +106,26 @@ func translateCacheHandler(input, userID string) string {
 	}
 
 	return input
+}
+
+func translateOktetoRegistryImage(input string) string {
+
+	if strings.Contains(input, okteto.DevRegistry) {
+		tag := replaceRegistry(input, okteto.DevRegistry, okteto.Context().Namespace)
+		return tag
+	}
+
+	if strings.Contains(input, okteto.GlobalRegistry) {
+		globalNamespace := okteto.DefaultGlobalNamespace
+		if okteto.Context().GlobalNamespace != "" {
+			globalNamespace = okteto.Context().GlobalNamespace
+		}
+		tag := replaceRegistry(input, okteto.GlobalRegistry, globalNamespace)
+		return tag
+	}
+
+	return input
+
 }
 
 func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume) (*model.BuildInfo, error) {

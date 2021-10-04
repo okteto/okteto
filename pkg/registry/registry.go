@@ -81,12 +81,12 @@ func ExpandOktetoGlobalRegistry(tag string) string {
 	if okteto.Context().GlobalNamespace != "" {
 		globalNamespace = okteto.Context().GlobalNamespace
 	}
-	return strings.Replace(tag, okteto.GlobalRegistry, fmt.Sprintf("%s/%s", okteto.Context().Registry, globalNamespace), 1)
+	return replaceRegistry(tag, okteto.GlobalRegistry, globalNamespace)
 }
 
 // ExpandOktetoDevRegistry translates okteto.dev
 func ExpandOktetoDevRegistry(tag string) string {
-	return strings.Replace(tag, okteto.DevRegistry, fmt.Sprintf("%s/%s", okteto.Context().Registry, okteto.Context().Namespace), 1)
+	return replaceRegistry(tag, okteto.DevRegistry, okteto.Context().Namespace)
 }
 
 // SplitRegistryAndImage returns image tag and the registry to push the image
@@ -189,4 +189,8 @@ func IsDevRegistry(tag string) bool {
 
 func IsOktetoRegistry(tag string) bool {
 	return IsDevRegistry(tag) || IsGlobalRegistry(tag)
+}
+
+func replaceRegistry(input, registryType, namespace string) string {
+	return strings.Replace(input, registryType, fmt.Sprintf("%s/%s", okteto.Context().Registry, namespace), 1)
 }
