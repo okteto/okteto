@@ -30,6 +30,10 @@ var (
 		{"stack.yml"},
 		{"stack.yaml"},
 		{".okteto", "okteto-stack.yaml"},
+		{"docker-compose.yml"},
+		{"docker-compose.yaml"},
+		{".okteto", "docker-compose.yml"},
+		{".okteto", "docker-compose.yaml"},
 	}
 	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
 )
