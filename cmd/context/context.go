@@ -224,7 +224,7 @@ func Init(ctx context.Context) error {
 			return err
 		}
 		if err := updateContext(secretsAndKubeCredentials.Credentials); err != nil {
-			return err
+			log.Info(err)
 		}
 		setSecrets(secretsAndKubeCredentials.Secrets)
 	}
