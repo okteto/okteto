@@ -20,11 +20,9 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/shurcooL/graphql"
 )
@@ -290,14 +288,4 @@ func getGlobalNamespace(g string) string {
 		return DefaultGlobalNamespace
 	}
 	return g
-}
-
-// GetTelemetryEnabled returns the flag for telemetry
-func GetTelemetryEnabled() (bool, error) {
-	t, err := getTokenFromOktetoHome()
-	if err != nil {
-		return false, errors.ErrNotLogged
-	}
-
-	return strconv.ParseBool(t.TelemetryEnabled)
 }
