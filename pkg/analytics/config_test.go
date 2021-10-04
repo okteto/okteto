@@ -28,6 +28,16 @@ func Test_Get(t *testing.T) {
 			want: true,
 		},
 		{
+			name:             "is-currentAnalytics-enabled-is-context-disabled",
+			currentAnalytics: true,
+			enabled:          true,
+			context: &okteto.OktetoContext{
+				Name:             "test",
+				TelemetryEnabled: "false",
+			},
+			want: false,
+		},
+		{
 			name:             "is-currentAnalytics-disabled",
 			currentAnalytics: true,
 			enabled:          false,
@@ -67,9 +77,19 @@ func Test_Get(t *testing.T) {
 			want: false,
 		},
 		{
-			name:      "is-context-disabled",
+			name:      "is-currentAnalytics-nil-file-exists-disabled-is-context-disabled",
 			fileExits: true,
 			enabled:   false,
+			context: &okteto.OktetoContext{
+				Name:             "test",
+				TelemetryEnabled: "false",
+			},
+			want: false,
+		},
+		{
+			name:      "is-currentAnalytics-nil-file-exists-enabled-is-context-disabled",
+			fileExits: true,
+			enabled:   true,
 			context: &okteto.OktetoContext{
 				Name:             "test",
 				TelemetryEnabled: "false",

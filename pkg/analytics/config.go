@@ -88,11 +88,10 @@ func deprecatedFileExists() bool {
 }
 
 func get() *Analytics {
-	if !okteto.GetTelemetryEnabled() {
-		return &Analytics{Enabled: false, MachineID: ""}
-	}
-
 	if currentAnalytics != nil {
+		if !okteto.GetTelemetryEnabled() {
+			currentAnalytics.Enabled = false
+		}
 		return currentAnalytics
 	}
 
@@ -111,7 +110,9 @@ func get() *Analytics {
 		log.Debugf("error unmarshaling analytics: %s", err)
 		return &Analytics{Enabled: false, MachineID: ""}
 	}
-
+	if !okteto.GetTelemetryEnabled() {
+		result.Enabled = false
+	}
 	return result
 }
 
