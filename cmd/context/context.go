@@ -245,10 +245,7 @@ func updateContext(cred okteto.Credential) error {
 	kubeconfigFile := config.GetKubeconfigPath()
 	cfg := client.GetKubeconfig(kubeconfigFile)
 	u := octx.ToUser()
-	if err := okteto.SaveOktetoClusterContext(okteto.Context().Name, u, okteto.Context().Namespace, cfg); err != nil {
-		return err
-	}
-	return nil
+	return okteto.SaveOktetoClusterContext(okteto.Context().Name, u, okteto.Context().Namespace, cfg)
 }
 
 func getSecretsAndCredentials(ctx context.Context) (*okteto.SecretsAndCredentialToken, error) {
