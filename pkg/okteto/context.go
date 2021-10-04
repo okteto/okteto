@@ -474,5 +474,12 @@ func (okctx *OktetoContext) ToUser() *User {
 		GlobalNamespace: okctx.GlobalNamespace,
 	}
 	return u
+}
 
+func GetTelemetryEnabled() bool {
+	t, err := strconv.ParseBool(Context().TelemetryEnabled)
+	if err != nil {
+		return false
+	}
+	return t
 }
