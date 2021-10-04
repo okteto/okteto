@@ -227,10 +227,11 @@ func Init(ctx context.Context) error {
 			log.Info(err)
 		}
 		setSecrets(secretsAndKubeCredentials.Secrets)
+
+		os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
+		os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
 	}
 
-	os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
-	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
 	return nil
 }
 
@@ -245,6 +246,9 @@ func updateContext(cred okteto.Credential) error {
 	kubeconfigFile := config.GetKubeconfigPath()
 	cfg := client.GetKubeconfig(kubeconfigFile)
 	u := octx.ToUser()
+	u.Certificate = cred.Certificate
+	u.Token = cred.Token
+
 	return okteto.SaveOktetoClusterContext(okteto.Context().Name, u, okteto.Context().Namespace, cfg)
 }
 
