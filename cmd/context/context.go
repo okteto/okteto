@@ -230,9 +230,9 @@ func Init(ctx context.Context) error {
 		setSecrets(secretsAndKubeCredentials.Secrets)
 
 		os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
-		os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
 	}
 
+	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
 	return nil
 }
 
