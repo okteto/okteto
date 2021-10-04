@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type ContextOptions struct {
@@ -246,8 +247,15 @@ func updateContext(cred okteto.Credential) error {
 	kubeconfigFile := config.GetKubeconfigPath()
 	cfg := client.GetKubeconfig(kubeconfigFile)
 	u := octx.ToUser()
-	u.Certificate = cred.Certificate
-	u.Token = cred.Token
+
+	clusterName := okteto.UrlToContext(octx.Name)
+	cluster, ok := cfg.Clusters[clusterName]
+	if !ok {
+		cluster = clientcmdapi.NewCluster()
+	}
+
+	cluster.CertificateAuthorityData = []byte(cred.Certificate)
+	cluster.Server = cred.Server
 
 	return okteto.SaveOktetoClusterContext(okteto.Context().Name, u, okteto.Context().Namespace, cfg)
 }
