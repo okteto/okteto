@@ -130,37 +130,37 @@ resources:
 	}
 }
 
-func TestDevRCLabels(t *testing.T) {
+func TestDevRCSelector(t *testing.T) {
 	var tests = []struct {
 		name     string
 		dev      *Dev
 		devRC    *DevRC
-		expected Labels
+		expected Selector
 	}{
 		{
 			name:     "not overwrite",
-			dev:      &Dev{Labels: Labels{"app": "test"}},
+			dev:      &Dev{Selector: Selector{"app": "test"}},
 			devRC:    &DevRC{},
-			expected: Labels{"app": "test"},
+			expected: Selector{"app": "test"},
 		},
 		{
 			name:     "merge",
-			dev:      &Dev{Labels: Labels{"app": "test"}},
-			devRC:    &DevRC{Labels: Labels{"test": "app"}},
-			expected: Labels{"app": "test", "test": "app"},
+			dev:      &Dev{Selector: Selector{"app": "test"}},
+			devRC:    &DevRC{Selector: Selector{"test": "app"}},
+			expected: Selector{"app": "test", "test": "app"},
 		},
 		{
 			name:     "overwrite",
-			dev:      &Dev{Labels: Labels{"app": "test"}},
-			devRC:    &DevRC{Labels: Labels{"app": "dev"}},
-			expected: Labels{"app": "dev"},
+			dev:      &Dev{Selector: Selector{"app": "test"}},
+			devRC:    &DevRC{Selector: Selector{"app": "dev"}},
+			expected: Selector{"app": "dev"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			MergeDevWithDevRc(tt.dev, tt.devRC)
-			for key, value := range tt.dev.Labels {
+			for key, value := range tt.dev.Selector {
 				if val, ok := tt.expected[key]; ok {
 					if val != value {
 						t.Fatal("Not merged correctly")
@@ -171,7 +171,7 @@ func TestDevRCLabels(t *testing.T) {
 			}
 
 			for key, value := range tt.expected {
-				if val, ok := tt.dev.Labels[key]; ok {
+				if val, ok := tt.dev.Selector[key]; ok {
 					if val != value {
 						t.Fatal("Not merged correctly")
 					}
@@ -223,19 +223,19 @@ func TestDevRCAnnotations(t *testing.T) {
 	}{
 		{
 			name:     "not overwrite",
-			dev:      &Dev{Annotations: Annotations{"app": "test"}},
+			dev:      &Dev{Metadata: &Metadata{Annotations: Annotations{"app": "test"}}},
 			devRC:    &DevRC{},
 			expected: Annotations{"app": "test"},
 		},
 		{
 			name:     "merge",
-			dev:      &Dev{Annotations: Annotations{"app": "test"}},
+			dev:      &Dev{Metadata: &Metadata{Annotations: Annotations{"app": "test"}}},
 			devRC:    &DevRC{Annotations: Annotations{"test": "app"}},
 			expected: Annotations{"app": "test", "test": "app"},
 		},
 		{
 			name:     "overwrite",
-			dev:      &Dev{Annotations: Annotations{"app": "test"}},
+			dev:      &Dev{Metadata: &Metadata{Annotations: Annotations{"app": "test"}}},
 			devRC:    &DevRC{Annotations: Annotations{"app": "dev"}},
 			expected: Annotations{"app": "dev"},
 		},
@@ -244,7 +244,7 @@ func TestDevRCAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			MergeDevWithDevRc(tt.dev, tt.devRC)
-			for key, value := range tt.dev.Annotations {
+			for key, value := range tt.dev.Metadata.Annotations {
 				if val, ok := tt.expected[key]; ok {
 					if val != value {
 						t.Fatal("Not merged correctly")
@@ -255,7 +255,7 @@ func TestDevRCAnnotations(t *testing.T) {
 			}
 
 			for key, value := range tt.expected {
-				if val, ok := tt.dev.Annotations[key]; ok {
+				if val, ok := tt.dev.Metadata.Annotations[key]; ok {
 					if val != value {
 						t.Fatal("Not merged correctly")
 					}

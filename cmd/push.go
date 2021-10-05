@@ -174,6 +174,9 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 			for k, v := range t.Annotations {
 				t.App.ObjectMeta().Annotations[k] = v
 			}
+			for k, v := range t.Labels {
+				t.App.ObjectMeta().Labels[k] = v
+			}
 		}
 	}
 

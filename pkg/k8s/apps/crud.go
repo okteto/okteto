@@ -60,6 +60,7 @@ func (t *Translation) DevModeOff() {
 	delete(t.App.ObjectMeta().Annotations, oktetoVersionAnnotation)
 	delete(t.App.ObjectMeta().Annotations, model.OktetoRevisionAnnotation)
 	deleteUserAnnotations(t.App.ObjectMeta().Annotations, t)
+	deleteUserLabels(t.App.ObjectMeta().Labels, t)
 
 	delete(t.App.TemplateObjectMeta().Annotations, model.TranslationAnnotation)
 	delete(t.App.TemplateObjectMeta().Annotations, model.OktetoRestartAnnotation)

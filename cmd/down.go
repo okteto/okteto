@@ -89,11 +89,13 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			}
 		}
 
+		spinner.Stop()
 		app, err := apps.Get(ctx, dev, dev.Namespace, client)
 		if err != nil {
 			exit <- err
 			return
 		}
+		spinner.Start()
 
 		tList, err := apps.GetTranslations(ctx, dev, app, false, client)
 		if err != nil {

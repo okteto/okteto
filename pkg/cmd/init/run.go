@@ -158,7 +158,7 @@ func setNameAndLabelsFromApp(dev *model.Dev, app apps.App) {
 			continue
 		}
 		dev.Name = component
-		dev.Labels = map[string]string{l: component}
+		dev.Selector = map[string]string{l: component}
 		return
 	}
 	dev.Name = app.ObjectMeta().Name

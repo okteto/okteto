@@ -53,6 +53,9 @@ namespace: n
 container: dev
 image: web:latest
 command: ["./run_web.sh"]
+metadata:
+  labels:
+    app: web
 workdir: /app
 securityContext:
   runAsUser: 100
@@ -116,6 +119,7 @@ services:
 			Type: appsv1.RollingUpdateDeploymentStrategyType,
 		},
 		Annotations: model.Annotations{"key": "value"},
+		Labels:      model.Labels{"key": "value"},
 		Tolerations: []apiv1.Toleration{
 			{
 				Key:      "nvidia/cpu",
@@ -377,6 +381,9 @@ services:
 	}
 	if d1.Spec.Template.Annotations["key"] != "value" {
 		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.Spec.Template.Annotations["key"])
+	}
+	if d1.Labels["key"] != "value" {
+		t.Fatalf("Wrong d1 labels: '%s'", d1.Labels["key"])
 	}
 
 	if err := TranslateDevModeOff(tr1.App); err != nil {

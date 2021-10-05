@@ -54,6 +54,7 @@ type Translation struct {
 	Version             string             `json:"version"`
 	App                 App                `json:"-"`
 	Annotations         model.Annotations  `json:"annotations,omitempty"`
+	Labels              model.Labels       `json:"labels,omitempty"`
 	Tolerations         []apiv1.Toleration `json:"tolerations,omitempty"`
 	Replicas            int32              `json:"replicas"`
 	DeploymentStrategy  appsv1.DeploymentStrategy

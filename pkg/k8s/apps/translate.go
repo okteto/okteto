@@ -65,6 +65,11 @@ func translate(t *Translation, isOktetoNamespace bool) error {
 		t.App.ObjectMeta().Annotations[k] = v
 		t.App.TemplateObjectMeta().Annotations[k] = v
 	}
+	for k, v := range t.Labels {
+		t.App.ObjectMeta().Labels[k] = v
+		t.App.TemplateObjectMeta().Labels[k] = v
+	}
+
 	t.App.TemplateObjectMeta().Labels[model.DevLabel] = "true"
 	TranslateDevTolerations(t.App.PodSpec(), t.Tolerations)
 	t.App.PodSpec().TerminationGracePeriodSeconds = pointer.Int64Ptr(0)

@@ -67,6 +67,16 @@ func deleteUserAnnotations(annotations map[string]string, tr *Translation) error
 	return nil
 }
 
+func deleteUserLabels(labels map[string]string, tr *Translation) error {
+	if tr.Labels == nil {
+		return nil
+	}
+	for key := range tr.Labels {
+		delete(labels, key)
+	}
+	return nil
+}
+
 func GetDevContainer(spec *apiv1.PodSpec, containerName string) *apiv1.Container {
 	if containerName == "" {
 		return &spec.Containers[0]

@@ -158,5 +158,5 @@ func translateDivertCRD(username string, dev *model.Dev, s *apiv1.Service, i *ne
 
 func translateDev(dev *model.Dev, app apps.App) {
 	dev.Name = app.ObjectMeta().Name
-	dev.Labels = nil
+	dev.Selector = nil
 }

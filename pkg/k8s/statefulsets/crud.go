@@ -77,7 +77,7 @@ func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*
 
 //GetByDev returns a statefulset object given a dev struct (by name or by labels)
 func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
-	if len(dev.Labels) == 0 {
+	if len(dev.Selector) == 0 {
 		return Get(ctx, dev.Name, namespace, c)
 	}
 

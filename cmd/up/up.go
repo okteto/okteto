@@ -334,11 +334,11 @@ func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
 		return nil, false, err
 	}
 
-	if len(up.Dev.Labels) > 0 {
+	if len(up.Dev.Selector) > 0 {
 		if err == errors.ErrNotFound {
 			err = errors.UserError{
-				E:    fmt.Errorf("Didn't find an application in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
-				Hint: "Update the labels or point your context to a different namespace and try again"}
+				E:    fmt.Errorf("Didn't find an application in namespace %s that matches the selector in your Okteto manifest", up.Dev.Namespace),
+				Hint: "Update the selector or point your context to a different namespace and try again"}
 		}
 		return nil, false, err
 	}
