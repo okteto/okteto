@@ -407,9 +407,6 @@ func encodeOktetoKubeconfig(cfg *clientcmdapi.Config) string {
 	for name, cluster := range cfg.Clusters {
 		if name == currentCluster {
 			cluster.LocationOfOrigin = ""
-			if len(cluster.Extensions) > 0 {
-				cluster.Extensions = make(map[string]runtime.Object)
-			}
 			cfg.Clusters = map[string]*clientcmdapi.Cluster{name: cluster}
 			break
 		}
@@ -425,9 +422,6 @@ func encodeOktetoKubeconfig(cfg *clientcmdapi.Config) string {
 	for name, context := range cfg.Contexts {
 		if name == cfg.CurrentContext {
 			context.LocationOfOrigin = ""
-			if len(context.Extensions) > 0 {
-				context.Extensions = make(map[string]runtime.Object)
-			}
 			cfg.Contexts = map[string]*clientcmdapi.Context{name: context}
 			break
 		}
@@ -446,12 +440,13 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
 	}
-	var cfg clientcmdapi.Config
-	if err := json.Unmarshal(kubeconfigBytes, &cfg); err != nil {
+	cfg, err := clientcmd.Load(kubeconfigBytes)
+	if err != nil {
 		return nil, nil, err
 	}
 	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
-	if err := client.WriteKubeconfig(&cfg, kubeconfigFile); err != nil {
+
+	if err := client.WriteKubeconfig(cfg, kubeconfigFile); err != nil {
 		return nil, nil, err
 	}
 	return client.Get(kubeconfigFile)
