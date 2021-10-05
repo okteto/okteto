@@ -2,7 +2,7 @@ package okteto
 
 import "testing"
 
-func Test_GetTelemetryEnabled(t *testing.T) {
+func Test_IsTelemetryEnabled(t *testing.T) {
 	var tests = []struct {
 		name    string
 		context *OktetoContext
@@ -11,7 +11,6 @@ func Test_GetTelemetryEnabled(t *testing.T) {
 		{name: "is-enabled", context: &OktetoContext{TelemetryEnabled: "true"}, want: true},
 		{name: "is-disabled", context: &OktetoContext{TelemetryEnabled: "false"}, want: false},
 		{name: "is-empty", context: &OktetoContext{TelemetryEnabled: ""}, want: false},
-
 	}
 
 	for _, tt := range tests {
@@ -22,7 +21,7 @@ func Test_GetTelemetryEnabled(t *testing.T) {
 					"test": tt.context,
 				},
 			}
-			if got := GetTelemetryEnabled(); got != tt.want {
+			if got := IsTelemetryEnabled(); got != tt.want {
 				t.Errorf("GetTelemetryEnabled, got %v, want %v", got, tt.want)
 			}
 		})

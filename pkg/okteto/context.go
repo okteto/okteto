@@ -476,8 +476,9 @@ func (okctx *OktetoContext) ToUser() *User {
 	return u
 }
 
-func GetTelemetryEnabled() bool {
-	t, err := strconv.ParseBool(Context().TelemetryEnabled)
+func IsTelemetryEnabled() bool {
+	octx := Context()
+	t, err := strconv.ParseBool(octx.TelemetryEnabled)
 	if err != nil {
 		return false
 	}
