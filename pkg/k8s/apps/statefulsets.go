@@ -77,7 +77,7 @@ func (i *StatefulSetApp) PodSpec() *apiv1.PodSpec {
 func (i *StatefulSetApp) DevClone() App {
 	clone := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-okteto", i.sfs.Name),
+			Name:        model.DevCloneName(i.sfs.Name),
 			Namespace:   i.sfs.Namespace,
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
@@ -173,7 +173,7 @@ func (i *StatefulSetApp) Destroy(ctx context.Context, c kubernetes.Interface) er
 	return statefulsets.Destroy(ctx, i.sfs.Name, i.sfs.Namespace, c)
 }
 
-func (i *StatefulSetApp) DeployDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error) {
+func (i *StatefulSetApp) Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error) {
 	sfs, err := statefulsets.GetByDev(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		return nil, fmt.Errorf("error diverting statefulset: %s", err.Error())
@@ -184,17 +184,4 @@ func (i *StatefulSetApp) DeployDivert(ctx context.Context, username string, dev 
 		return nil, fmt.Errorf("error creating divert statefulset '%s': %s", divertStatefulset.Name, err.Error())
 	}
 	return &StatefulSetApp{sfs: result}, nil
-}
-
-func (i *StatefulSetApp) DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error {
-	d, err := statefulsets.GetByDev(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return fmt.Errorf("error diverting statefulset: %s", err.Error())
-	}
-
-	divertStatefulsetName := model.DivertName(d.Name, username)
-	if err := statefulsets.Destroy(ctx, divertStatefulsetName, d.Namespace, c); err != nil {
-		return fmt.Errorf("error creating divert statefulset '%s': %s", divertStatefulsetName, err.Error())
-	}
-	return nil
 }

@@ -78,7 +78,7 @@ func (i *DeploymentApp) PodSpec() *apiv1.PodSpec {
 func (i *DeploymentApp) DevClone() App {
 	clone := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-okteto", i.d.Name),
+			Name:        model.DevCloneName(i.d.Name),
 			Namespace:   i.d.Namespace,
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
@@ -155,7 +155,7 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 				}
 				continue
 			}
-			if d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
+			if d.Annotations[model.DeploymentRevisionAnnotation] != "" && d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
 				result <- errors.ErrApplyToApp
 				return
 			}
@@ -178,7 +178,7 @@ func (i *DeploymentApp) Destroy(ctx context.Context, c kubernetes.Interface) err
 	return deployments.Destroy(ctx, i.d.Name, i.d.Namespace, c)
 }
 
-func (i *DeploymentApp) DeployDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error) {
+func (i *DeploymentApp) Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error) {
 	d, err := deployments.GetByDev(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		return nil, fmt.Errorf("error diverting deployment: %s", err.Error())
@@ -190,17 +190,4 @@ func (i *DeploymentApp) DeployDivert(ctx context.Context, username string, dev *
 		return nil, fmt.Errorf("error creating diver deployment '%s': %s", divertDeployment.Name, err.Error())
 	}
 	return &DeploymentApp{d: result}, nil
-}
-
-func (i *DeploymentApp) DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error {
-	d, err := deployments.GetByDev(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return fmt.Errorf("error diverting deployment: %s", err.Error())
-	}
-
-	divertDeploymentName := model.DivertName(username, d.Name)
-	if err := deployments.Destroy(ctx, divertDeploymentName, d.Namespace, c); err != nil {
-		return fmt.Errorf("error creating diver deployment '%s': %s", divertDeploymentName, err.Error())
-	}
-	return nil
 }

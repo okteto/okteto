@@ -43,6 +43,5 @@ type App interface {
 	Deploy(ctx context.Context, c kubernetes.Interface) error
 	Destroy(ctx context.Context, c kubernetes.Interface) error
 
-	DeployDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error)
-	DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error
+	Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error)
 }

@@ -1062,3 +1062,8 @@ func GetTimeout() (time.Duration, error) {
 func DivertName(name, username string) string {
 	return fmt.Sprintf("%s-%s", name, username)
 }
+
+// DevCloneName returns the name of the mirrored version of a given resource
+func DevCloneName(name string) string {
+	return fmt.Sprintf("%s-okteto", name)
+}
