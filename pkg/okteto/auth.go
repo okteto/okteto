@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -54,7 +55,7 @@ type User struct {
 	Registry         string
 	Certificate      string
 	GlobalNamespace  string
-	TelemetryEnabled bool
+	TelemetryEnabled string
 }
 
 // AuthWithToken authenticates in okteto with the provided token
@@ -124,6 +125,7 @@ func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 	}
 
 	globalNamespace := getGlobalNamespace(string(query.User.GlobalNamespace))
+	telemetry := strconv.FormatBool(bool(query.User.TelemetryEnabled))
 
 	user := &User{
 		ID:               string(query.User.Id),
@@ -136,7 +138,7 @@ func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 		Buildkit:         string(query.User.Buildkit),
 		Certificate:      string(query.User.Certificate),
 		GlobalNamespace:  globalNamespace,
-		TelemetryEnabled: bool(query.User.TelemetryEnabled),
+		TelemetryEnabled: telemetry,
 	}
 
 	return user, nil
@@ -210,6 +212,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 	}
 
 	globalNamespace := getGlobalNamespace(string(mutation.User.GlobalNamespace))
+	telemetry := strconv.FormatBool(bool(mutation.User.TelemetryEnabled))
 	user := &User{
 		ID:               string(mutation.User.Id),
 		Name:             string(mutation.User.Name),
@@ -221,7 +224,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 		Buildkit:         string(mutation.User.Buildkit),
 		Certificate:      string(mutation.User.Certificate),
 		GlobalNamespace:  globalNamespace,
-		TelemetryEnabled: bool(mutation.User.TelemetryEnabled),
+		TelemetryEnabled: telemetry,
 	}
 
 	return user, nil

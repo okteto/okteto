@@ -260,7 +260,7 @@ func UpdateOktetoClusterContext(name string, u *User, namespace string, cfg *cli
 	if certificate != "" {
 		certificate = base64.StdEncoding.EncodeToString([]byte(u.Certificate))
 	}
-	telemetryEnabled := strconv.FormatBool(u.TelemetryEnabled)
+	telemetry := getTelemetry(u)
 	CurrentStore.Contexts[name] = &OktetoContext{
 		Name:             name,
 		UserID:           u.ID,
@@ -272,7 +272,7 @@ func UpdateOktetoClusterContext(name string, u *User, namespace string, cfg *cli
 		Buildkit:         u.Buildkit,
 		Registry:         u.Registry,
 		Certificate:      certificate,
-		TelemetryEnabled: telemetryEnabled,
+		TelemetryEnabled: telemetry,
 	}
 
 	CurrentStore.CurrentContext = name
@@ -292,7 +292,7 @@ func SaveOktetoClusterContext(name string, u *User, namespace string, cfg *clien
 	if cfg != nil {
 		kubeconfigBase64 = encodeOktetoKubeconfig(cfg)
 	}
-	telemetryEnabled := strconv.FormatBool(u.TelemetryEnabled)
+	telemetry := getTelemetry(u)
 	CurrentStore.Contexts[name] = &OktetoContext{
 		Name:             name,
 		UserID:           u.ID,
@@ -304,7 +304,7 @@ func SaveOktetoClusterContext(name string, u *User, namespace string, cfg *clien
 		Buildkit:         u.Buildkit,
 		Registry:         u.Registry,
 		Certificate:      u.Certificate,
-		TelemetryEnabled: telemetryEnabled,
+		TelemetryEnabled: telemetry,
 	}
 
 	CurrentStore.CurrentContext = name
@@ -488,3 +488,14 @@ func IsTelemetryEnabled() bool {
 	}
 	return t
 }
+
+func getTelemetry(u *User) string {
+	if u.TelemetryEnabled != "" {
+		return u.TelemetryEnabled
+	}
+	return DefaultTelemetryEnabled
+}
+
+const (
+	DefaultTelemetryEnabled = "true"
+)
