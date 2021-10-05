@@ -19,7 +19,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
@@ -35,7 +34,11 @@ func Update() *cobra.Command {
 		Use:   "update",
 		Short: "Updates okteto version",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if isUpdateAvailable() {
+			currentVersion, err := semver.NewVersion("1.14.0")
+			if err != nil {
+				return fmt.Errorf("could not retrieve version")
+			}
+			if isUpdateAvailable(currentVersion) {
 				displayUpdateSteps()
 			} else {
 				log.Success("The latest okteto version is already installed")
@@ -47,12 +50,7 @@ func Update() *cobra.Command {
 }
 
 //isUpdateAvailable checks if there is a new version available
-func isUpdateAvailable() bool {
-	current, err := semver.NewVersion(config.VersionString)
-	if err != nil {
-		return false
-	}
-
+func isUpdateAvailable(currentVersion *semver.Version) bool {
 	v, err := utils.GetLatestVersionFromGithub()
 	if err != nil {
 		log.Infof("failed to get latest version from github: %s", err)
@@ -66,7 +64,7 @@ func isUpdateAvailable() bool {
 			return false
 		}
 
-		if current.GreaterThan(latest) {
+		if latest.GreaterThan(currentVersion) {
 			log.Infof("Installing okteto version %s", latest)
 			return true
 		}
@@ -79,10 +77,12 @@ func displayUpdateSteps() {
 	fmt.Println("You can update okteto with the following:")
 	switch {
 	case runtime.GOOS == "darwin" || runtime.GOOS == "linux":
-		fmt.Print(`# Using installation script:
+		fmt.Print(`
+# Using installation script:
 curl https://get.okteto.com -sSfL | sh`)
 		if runtime.GOOS == "darwin" {
 			fmt.Print(`
+
 # Using brew:
 brew upgrade okteto`)
 		}
