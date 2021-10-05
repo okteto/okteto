@@ -19,6 +19,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +35,7 @@ func Update() *cobra.Command {
 		Use:   "update",
 		Short: "Updates okteto version",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			currentVersion, err := semver.NewVersion("1.14.0")
+			currentVersion, err := semver.NewVersion(config.VersionString)
 			if err != nil {
 				return fmt.Errorf("could not retrieve version")
 			}
