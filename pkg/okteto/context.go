@@ -476,7 +476,11 @@ func (okctx *OktetoContext) ToUser() *User {
 	return u
 }
 
+// IsTelemetryEnabled returns the boolean value of TelemetryEnabled config
 func IsTelemetryEnabled() bool {
+	if !IsOktetoContext() {
+		return true
+	}
 	octx := Context()
 	t, err := strconv.ParseBool(octx.TelemetryEnabled)
 	if err != nil {

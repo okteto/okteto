@@ -8,9 +8,10 @@ func Test_IsTelemetryEnabled(t *testing.T) {
 		context *OktetoContext
 		want    bool
 	}{
-		{name: "is-enabled", context: &OktetoContext{TelemetryEnabled: "true"}, want: true},
-		{name: "is-disabled", context: &OktetoContext{TelemetryEnabled: "false"}, want: false},
-		{name: "is-empty", context: &OktetoContext{TelemetryEnabled: ""}, want: false},
+		{name: "is-enabled", context: &OktetoContext{Name: "https://okteto.dev", TelemetryEnabled: "true"}, want: true},
+		{name: "is-disabled", context: &OktetoContext{Name: "https://okteto.dev", TelemetryEnabled: "false"}, want: false},
+		{name: "is-empty", context: &OktetoContext{Name: "https://okteto.dev", TelemetryEnabled: ""}, want: false},
+		{name: "is-not-okteto-context", context: &OktetoContext{Name: "not-okteto"}, want: true},
 	}
 
 	for _, tt := range tests {
