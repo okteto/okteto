@@ -61,7 +61,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if s.Namespace != "" {
-				if s.Namespace != options.Namespace {
+				if options.Namespace != "" && s.Namespace != options.Namespace {
 					return fmt.Errorf("the namespace in the okteto stack manifest '%s' does not match the namespace '%s'", s.Namespace, options.Namespace)
 				}
 				if err := okteto.SetCurrentContext("", s.Namespace); err != nil {

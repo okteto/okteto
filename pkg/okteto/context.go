@@ -427,7 +427,7 @@ func encodeOktetoKubeconfig(cfg *clientcmdapi.Config) string {
 		}
 	}
 
-	bytes, err := json.Marshal(cfg)
+	bytes, err := clientcmd.Write(*cfg)
 	if err != nil {
 		log.Fatalf("error marsahiling kubeconfig: %v", err)
 	}
@@ -445,7 +445,6 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 		return nil, nil, err
 	}
 	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
-
 	if err := client.WriteKubeconfig(cfg, kubeconfigFile); err != nil {
 		return nil, nil, err
 	}
