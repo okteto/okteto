@@ -39,8 +39,6 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/spf13/cobra"
 )
@@ -288,6 +286,7 @@ func (up *upContext) activateLoop(build bool) {
 			log.Infof("waiting for shutdown sequence to finish")
 			<-up.ShutdownCompleted
 			if iter == 0 {
+				//TODO: maybe show a better message if reapplying manifests
 				log.Yellow("Connection lost to your development container, reconnecting...")
 			}
 			iter++
@@ -381,44 +380,18 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 			return err
 
 		case err := <-up.applyToApps(ctx):
+			log.Infof("exiting by applyToAppsChan: %v", err)
 			return err
 		}
 	}
 }
 
 func (up *upContext) applyToApps(ctx context.Context) chan error {
-	var result chan error
+	result := make(chan error, 1)
 	for _, tr := range up.Translations {
-		go up.applyToApp(ctx, tr.App, result)
+		go tr.App.Watch(ctx, result, up.Client)
 	}
 	return result
-}
-
-func (up *upContext) applyToApp(ctx context.Context, app apps.App, c chan error) {
-	optsWatchApp := metav1.ListOptions{
-		Watch:         true,
-		FieldSelector: fmt.Sprintf("metadata.name=%s", app.ObjectMeta().Name),
-	}
-
-	watcherApp, err := up.Client.AppsV1().Deployments(app.ObjectMeta().Namespace).Watch(ctx, optsWatchApp)
-	if err != nil {
-		c <- err
-		return
-	}
-
-	for {
-		appEvent := <-watcherApp.ResultChan()
-		d, ok := appEvent.Object.(*appsv1.Deployment)
-		if !ok {
-			log.Infof("error watching app applies")
-			c <- errors.ErrApplyToApp
-			return
-		}
-		if d.Annotations[model.DeploymentRevisionAnnotation] != app.ObjectMeta().Annotations[model.DeploymentRevisionAnnotation] {
-			c <- errors.ErrApplyToApp
-			return
-		}
-	}
 }
 
 func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {

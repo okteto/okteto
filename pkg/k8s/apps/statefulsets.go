@@ -126,6 +126,41 @@ func (i *StatefulSetApp) Refresh(ctx context.Context, c kubernetes.Interface) er
 	return err
 }
 
+func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kubernetes.Interface) {
+	optsWatch := metav1.ListOptions{
+		Watch:         true,
+		FieldSelector: fmt.Sprintf("metadata.name=%s", i.sfs.Name),
+	}
+
+	watcher, err := c.AppsV1().StatefulSets(i.sfs.Namespace).Watch(ctx, optsWatch)
+	if err != nil {
+		result <- err
+		return
+	}
+
+	for {
+		select {
+		case e := <-watcher.ResultChan():
+			sfs, ok := e.Object.(*appsv1.Deployment)
+			if !ok {
+				watcher, err = c.AppsV1().StatefulSets(i.sfs.Namespace).Watch(ctx, optsWatch)
+				if err != nil {
+					result <- err
+					return
+				}
+				continue
+			}
+			if sfs.Generation != i.sfs.Generation {
+				result <- errors.ErrApplyToApp
+				return
+			}
+		case err := <-ctx.Done():
+			log.Debugf("call to up.applyToApp cancelled: %v", err)
+			return
+		}
+	}
+}
+
 func (i *StatefulSetApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
 	sfs, err := statefulsets.Deploy(ctx, i.sfs, c)
 	if err == nil {

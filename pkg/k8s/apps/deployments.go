@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
@@ -128,6 +129,41 @@ func (i *DeploymentApp) Refresh(ctx context.Context, c kubernetes.Interface) err
 		i.d = d
 	}
 	return err
+}
+
+func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernetes.Interface) {
+	optsWatch := metav1.ListOptions{
+		Watch:         true,
+		FieldSelector: fmt.Sprintf("metadata.name=%s", i.d.Name),
+	}
+
+	watcher, err := c.AppsV1().Deployments(i.d.Namespace).Watch(ctx, optsWatch)
+	if err != nil {
+		result <- err
+		return
+	}
+
+	for {
+		select {
+		case e := <-watcher.ResultChan():
+			d, ok := e.Object.(*appsv1.Deployment)
+			if !ok {
+				watcher, err = c.AppsV1().Deployments(i.d.Namespace).Watch(ctx, optsWatch)
+				if err != nil {
+					result <- err
+					return
+				}
+				continue
+			}
+			if d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
+				result <- errors.ErrApplyToApp
+				return
+			}
+		case err := <-ctx.Done():
+			log.Debugf("call to up.applyToApp cancelled: %v", err)
+			return
+		}
+	}
 }
 
 func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) error {

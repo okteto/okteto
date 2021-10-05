@@ -39,6 +39,7 @@ type App interface {
 	RestoreOriginal() error
 
 	Refresh(ctx context.Context, c kubernetes.Interface) error
+	Watch(ctx context.Context, result chan error, c kubernetes.Interface)
 	Deploy(ctx context.Context, c kubernetes.Interface) error
 	Destroy(ctx context.Context, c kubernetes.Interface) error
 

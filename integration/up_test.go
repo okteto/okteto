@@ -97,7 +97,7 @@ spec:
         command:
             - sh
             - -c
-            - "echo $VAR > var.html && python -m http.server 8080"
+            - "echo -n $VAR > var.html && python -m http.server 8080"
 ---
 apiVersion: v1
 kind: Service
@@ -142,7 +142,7 @@ spec:
         command:
             - sh
             - -c
-            - "echo $VAR > var.html && python -m http.server 8080"
+            - "echo -n $VAR > var.html && python -m http.server 8080"
 ---
 apiVersion: v1
 kind: Service
@@ -164,7 +164,7 @@ image: python:alpine
 command:
   - sh
   - -c
-  - "echo $VAR > var.html && python -m http.server 8080"
+  - "echo -n $VAR > var.html && python -m http.server 8080"
 forward:
   - 8080:8080
 workdir: /usr/src/app
@@ -884,7 +884,7 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		if currentContent != content {
 			counter++
 			if counter%5 == 0 {
-				log.Printf("expected updated content to be %s, got %s\n", content, currentContent)
+				log.Printf("expected updated index content to be %s, got %s\n", content, currentContent)
 			}
 			continue
 		}
@@ -898,7 +898,8 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		log.Println("got synchronized var content")
 
 		if currentContent != "value2" {
-			return fmt.Errorf("expected var content to be 'value2', got '%s'", currentContent)
+			log.Printf("expected updated var content to be 'value2', got %s\n", currentContent)
+			continue
 		}
 
 		gotUpdated = true

@@ -73,6 +73,10 @@ func (up *upContext) activate(build bool) error {
 		return nil
 	}
 
+	if err := apps.ValidateMountPaths(app.PodSpec(), up.Dev); err != nil {
+		return err
+	}
+
 	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == errors.ErrNotFound {
 		log.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		build = true
@@ -337,11 +341,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			}
 			e, ok := event.Object.(*apiv1.Event)
 			if !ok {
+				log.Infof("failed to cast event")
 				watcherEvents, err = up.Client.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
 				if err != nil {
 					log.Infof("error watching events: %s", err.Error())
 					return err
 				}
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 			podEvent, ok := event.Object.(*apiv1.Event)
@@ -392,11 +398,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 		case event := <-watcherPod.ResultChan():
 			pod, ok := event.Object.(*apiv1.Pod)
 			if !ok {
+				log.Infof("failed to cast pod event")
 				watcherPod, err = up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
 				if err != nil {
 					log.Infof("error watching pod events: %s", err.Error())
 					return err
 				}
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 			if pod.UID != up.Pod.UID {
