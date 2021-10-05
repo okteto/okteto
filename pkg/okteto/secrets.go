@@ -40,9 +40,9 @@ func (c *OktetoClient) GetSecrets(ctx context.Context) ([]Secret, error) {
 		} `graphql:"getGitDeploySecrets"`
 	}
 
-	err := c.client.Query(ctx, &query, nil)
+	err := c.Query(ctx, &query, nil)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	secrets := make([]Secret, 0)
@@ -74,9 +74,9 @@ func (c *OktetoClient) GetSecretsAndKubeCredentials(ctx context.Context) (*Secre
 	variables := map[string]interface{}{
 		"cred": graphql.String(""),
 	}
-	err := c.client.Query(ctx, &query, variables)
+	err := c.Query(ctx, &query, variables)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	secrets := make([]Secret, 0)

@@ -137,3 +137,25 @@ func InDevContainer() bool {
 
 	return false
 }
+
+func (c *OktetoClient) Query(ctx context.Context, query interface{}, variables map[string]interface{}) error {
+	err := c.client.Query(ctx, query, variables)
+	if err != nil {
+		if errors.IsTransient(err) {
+			err = c.client.Query(ctx, query, variables)
+		}
+		return translateAPIErr(err)
+	}
+	return nil
+}
+
+func (c *OktetoClient) Mutate(ctx context.Context, mutation interface{}, variables map[string]interface{}) error {
+	err := c.client.Mutate(ctx, mutation, variables)
+	if err != nil {
+		if errors.IsTransient(err) {
+			err = c.client.Mutate(ctx, mutation, variables)
+		}
+		return translateAPIErr(err)
+	}
+	return nil
+}

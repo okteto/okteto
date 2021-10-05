@@ -120,7 +120,7 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 			"variables":  variablesVariable,
 			"filename":   graphql.String(filename),
 		}
-		err := c.client.Mutate(ctx, &mutation, queryVariables)
+		err := c.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"Preview\"") {
 				return c.deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
@@ -157,7 +157,7 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 			"sourceURL":  graphql.String(sourceUrl),
 			"filename":   graphql.String(filename),
 		}
-		err := c.client.Mutate(ctx, &mutation, queryVariables)
+		err := c.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"Preview\"") {
 				return c.deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
@@ -204,7 +204,7 @@ func (c *OktetoClient) deprecatedDeployPreview(ctx context.Context, name, scope,
 			"variables":  variablesVariable,
 			"filename":   graphql.String(filename),
 		}
-		err := c.client.Mutate(ctx, &mutation, variables)
+		err := c.Mutate(ctx, &mutation, variables)
 		if err != nil {
 			return nil, translatePreviewAPIErr(err, name)
 		}
@@ -224,7 +224,7 @@ func (c *OktetoClient) deprecatedDeployPreview(ctx context.Context, name, scope,
 			"sourceURL":  graphql.String(sourceUrl),
 			"filename":   graphql.String(filename),
 		}
-		err := c.client.Mutate(ctx, &mutation, variables)
+		err := c.Mutate(ctx, &mutation, variables)
 		if err != nil {
 			return nil, translatePreviewAPIErr(err, name)
 		}
@@ -245,7 +245,7 @@ func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
 		"id": graphql.String(name),
 	}
 
-	return c.client.Mutate(ctx, &mutation, variables)
+	return c.Mutate(ctx, &mutation, variables)
 }
 
 // ListPreviews list preview environments
@@ -258,9 +258,9 @@ func (c *OktetoClient) ListPreviews(ctx context.Context) ([]Preview, error) {
 		} `graphql:"previews"`
 	}
 
-	err := c.client.Query(ctx, &query, nil)
+	err := c.Query(ctx, &query, nil)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	result := make([]Preview, 0)
@@ -296,9 +296,9 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 	}
 	endpoints := make([]Endpoint, 0)
 
-	err := c.client.Query(ctx, &query, variables)
+	err := c.Query(ctx, &query, variables)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	for _, d := range query.Preview.Deployments {
@@ -334,9 +334,9 @@ func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*G
 	variables := map[string]interface{}{
 		"id": graphql.String(Context().Namespace),
 	}
-	err := c.client.Query(ctx, &query, variables)
+	err := c.Query(ctx, &query, variables)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	for _, gitDeploy := range query.Preview.GitDeploys {
@@ -370,9 +370,9 @@ func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previe
 		"id": graphql.String(previewName),
 	}
 
-	err := c.client.Query(ctx, &query, variables)
+	err := c.Query(ctx, &query, variables)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	status := make(map[string]string)
@@ -395,5 +395,5 @@ func translatePreviewAPIErr(err error, name string) error {
 		return errors.UserError{E: fmt.Errorf("you are not authorized to create a global preview env"),
 			Hint: "Please log in with an administrator account or use a personal preview environment"}
 	}
-	return translateAPIErr(err)
+	return err
 }

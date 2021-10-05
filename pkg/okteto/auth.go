@@ -109,12 +109,12 @@ func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 			GlobalNamespace graphql.String `graphql:"globalNamespace"`
 		} `graphql:"user"`
 	}
-	err := c.client.Query(ctx, &query, nil)
+	err := c.Query(ctx, &query, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
 			return c.deprecatedQueryUser(ctx)
 		}
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 	user := &User{
 		ID:              string(query.User.Id),
@@ -147,9 +147,9 @@ func (c *OktetoClient) deprecatedQueryUser(ctx context.Context) (*User, error) {
 			Certificate graphql.String
 		} `graphql:"user"`
 	}
-	err := c.client.Query(ctx, &query, nil)
+	err := c.Query(ctx, &query, nil)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 	user := &User{
 		ID:          string(query.User.Id),
@@ -187,12 +187,12 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 		"source": graphql.String("cli"),
 	}
 
-	err := c.client.Mutate(ctx, &mutation, queryVariables)
+	err := c.Mutate(ctx, &mutation, queryVariables)
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
 			return c.deprecatedAuthUser(ctx, code)
 		}
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	user := &User{
@@ -231,9 +231,9 @@ func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*Us
 		"source": graphql.String("cli"),
 	}
 
-	err := c.client.Mutate(ctx, &mutation, queryVariables)
+	err := c.Mutate(ctx, &mutation, queryVariables)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	user := &User{
