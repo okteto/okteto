@@ -344,11 +344,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10, upErrorChannel); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 300, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -502,7 +498,7 @@ func TestUpStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 300, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
