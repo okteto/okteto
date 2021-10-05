@@ -66,7 +66,7 @@ func isUpdateAvailable(currentVersion *semver.Version) bool {
 		}
 
 		if latest.GreaterThan(currentVersion) {
-			log.Infof("Installing okteto version %s", latest)
+			log.Infof("new version available: %s -> %s", currentVersion.String(), latest)
 			return true
 		}
 	}
