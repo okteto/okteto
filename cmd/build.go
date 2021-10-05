@@ -22,7 +22,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -60,10 +59,6 @@ func Build(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("invalid Dockerfile: %s", err.Error())
 			}
 
-			if okteto.Context().Buildkit == "" {
-				log.Information(errors.ErrNoBuilderInContext)
-				return nil
-			}
 			if okteto.Context().Buildkit == "" || options.BuildLocally {
 				log.Information("Building your image using your local docker daemon")
 			} else {

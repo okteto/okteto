@@ -77,11 +77,6 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if okteto.Context().Buildkit == "" {
-				log.Information(errors.ErrNoBuilderInContext)
-				return nil
-			}
-
 			oktetoRegistryURL := okteto.Context().Registry
 
 			if autoDeploy {

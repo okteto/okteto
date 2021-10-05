@@ -39,11 +39,6 @@ import (
 
 func (up *upContext) activate(build bool) error {
 
-	if build && okteto.Context().Buildkit == "" {
-		log.Information(errors.ErrNoBuilderInContext)
-		return nil
-	}
-
 	log.Infof("activating development container retry=%t", up.isRetry)
 
 	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {

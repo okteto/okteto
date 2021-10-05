@@ -319,6 +319,7 @@ func SaveKubernetesClusterContext(name, namespace string, cfg *clientcmdapi.Conf
 	}
 
 	kubeconfigBase64 := encodeOktetoKubeconfig(cfg)
+
 	CurrentStore.Contexts[name] = &OktetoContext{
 		Name:       name,
 		Namespace:  namespace,
@@ -406,6 +407,9 @@ func encodeOktetoKubeconfig(cfg *clientcmdapi.Config) string {
 	for name, cluster := range cfg.Clusters {
 		if name == currentCluster {
 			cluster.LocationOfOrigin = ""
+			if len(cluster.Extensions) > 0 {
+				cluster.Extensions = make(map[string]runtime.Object)
+			}
 			cfg.Clusters = map[string]*clientcmdapi.Cluster{name: cluster}
 			break
 		}
@@ -421,6 +425,9 @@ func encodeOktetoKubeconfig(cfg *clientcmdapi.Config) string {
 	for name, context := range cfg.Contexts {
 		if name == cfg.CurrentContext {
 			context.LocationOfOrigin = ""
+			if len(context.Extensions) > 0 {
+				context.Extensions = make(map[string]runtime.Object)
+			}
 			cfg.Contexts = map[string]*clientcmdapi.Context{name: context}
 			break
 		}

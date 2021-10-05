@@ -116,10 +116,14 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 	if err != nil {
 		return err
 	}
-	hasAddedAnyVolumeMounts, err := addVolumeMountsToBuiltImage(ctx, s, options, hasBuiltSomething)
-	if err != nil {
-		return err
+	var hasAddedAnyVolumeMounts bool
+	if okteto.IsOktetoContext() {
+		hasAddedAnyVolumeMounts, err = addVolumeMountsToBuiltImage(ctx, s, options, hasBuiltSomething)
+		if err != nil {
+			return err
+		}
 	}
+
 	if !hasBuiltSomething && !hasAddedAnyVolumeMounts && options.ForceBuild {
 		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
 	}
@@ -149,7 +153,12 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
-			log.Information("Running your build in %s...", okteto.Context().Buildkit)
+			if okteto.Context().Buildkit != "" {
+				log.Information("Running your build in %s...", okteto.Context().Buildkit)
+			} else {
+				log.Information("Running your build in your locally")
+			}
+
 		}
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)

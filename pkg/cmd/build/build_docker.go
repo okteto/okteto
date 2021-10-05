@@ -83,7 +83,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOption
 	switch {
 	case isLocalDir(buildOptions.Path):
 		contextDir = buildOptions.Path
-		dockerfileDir = buildOptions.Path
+		dockerfileDir = filepath.Dir(buildOptions.File)
 		remote = "client-session"
 	case isURL(buildOptions.Path):
 		remote = buildOptions.Path
@@ -121,7 +121,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOption
 		dockerBuildOptions := types.ImageBuildOptions{
 			BuildID:       buildID,
 			Version:       types.BuilderBuildKit,
-			Dockerfile:    buildOptions.File,
+			Dockerfile:    filepath.Base(buildOptions.File),
 			RemoteContext: remote,
 			SessionID:     s.ID(),
 		}
