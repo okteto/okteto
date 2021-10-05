@@ -27,17 +27,19 @@ import (
 )
 
 // Run runs the "okteto down" sequence
-func Run(dev *model.Dev, app apps.App, tList map[string]*apps.Translation, wait bool, c kubernetes.Interface) error {
+func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait bool, c kubernetes.Interface) error {
 	ctx := context.Background()
-	if len(tList) == 0 {
+	if len(trMap) == 0 {
 		log.Info("no translations available in the deployment")
 	}
 
-	for _, t := range tList {
-		if err := apps.TranslateDevModeOff(t.App); err != nil {
+	for _, tr := range trMap {
+		tr.DevModeOff()
+		if err := tr.App.Deploy(ctx, c); err != nil {
 			return err
 		}
-		if err := t.App.Update(ctx, c); err != nil {
+		tr.DevApp = tr.App.DevClone()
+		if err := tr.DevApp.Destroy(ctx, c); err != nil {
 			return err
 		}
 	}
@@ -53,7 +55,7 @@ func Run(dev *model.Dev, app apps.App, tList map[string]*apps.Translation, wait 
 	}
 
 	if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
-		if err := app.Destroy(ctx, dev, c); err != nil {
+		if err := app.Destroy(ctx, c); err != nil {
 			return err
 		}
 

@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
@@ -53,6 +52,14 @@ func (i *DeploymentApp) ObjectMeta() metav1.ObjectMeta {
 	return i.d.ObjectMeta
 }
 
+func (i *DeploymentApp) Replicas() int32 {
+	return *i.d.Spec.Replicas
+}
+
+func (i *DeploymentApp) SetReplicas(n int32) {
+	i.d.Spec.Replicas = pointer.Int32Ptr(n)
+}
+
 func (i *DeploymentApp) TemplateObjectMeta() metav1.ObjectMeta {
 	if i.d.Spec.Template.ObjectMeta.Annotations == nil {
 		i.d.Spec.Template.ObjectMeta.Annotations = map[string]string{}
@@ -63,45 +70,34 @@ func (i *DeploymentApp) TemplateObjectMeta() metav1.ObjectMeta {
 	return i.d.Spec.Template.ObjectMeta
 }
 
-func (i *DeploymentApp) Replicas() int32 {
-	return *i.d.Spec.Replicas
-}
-
 func (i *DeploymentApp) PodSpec() *apiv1.PodSpec {
 	return &i.d.Spec.Template.Spec
 }
 
-func (i *DeploymentApp) NewTranslation(dev *model.Dev) *Translation {
-	return &Translation{
-		Interactive:        true,
-		Name:               dev.Name,
-		Version:            model.TranslationVersion,
-		Annotations:        dev.Annotations,
-		Tolerations:        dev.Tolerations,
-		Replicas:           i.Replicas(),
-		App:                i,
-		DeploymentStrategy: i.d.Spec.Strategy,
+func (i *DeploymentApp) DevClone() App {
+	clone := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        fmt.Sprintf("%s-okteto", i.d.Name),
+			Namespace:   i.d.Namespace,
+			Labels:      map[string]string{},
+			Annotations: map[string]string{},
+		},
+		Spec: *i.d.Spec.DeepCopy(),
 	}
-}
-
-func (i *DeploymentApp) DevModeOn() {
-	i.d.Spec.Replicas = pointer.Int32Ptr(1)
-	i.d.Spec.Strategy = appsv1.DeploymentStrategy{
+	for k, v := range i.d.Labels {
+		clone.Labels[k] = v
+	}
+	for k, v := range i.d.Annotations {
+		clone.Annotations[k] = v
+	}
+	clone.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RecreateDeploymentStrategyType,
 	}
-}
-
-func (i *DeploymentApp) DevModeOff(t *Translation) {
-	i.d.Spec.Replicas = pointer.Int32Ptr(t.Replicas)
-	i.d.Spec.Strategy = t.DeploymentStrategy
+	return NewDeploymentApp(clone)
 }
 
 func (i *DeploymentApp) CheckConditionErrors(dev *model.Dev) error {
 	return deployments.CheckConditionErrors(i.d, dev)
-}
-
-func (i *DeploymentApp) GetRevision() string {
-	return i.d.Annotations[model.DeploymentRevisionAnnotation]
 }
 
 func (i *DeploymentApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
@@ -110,64 +106,6 @@ func (i *DeploymentApp) GetRunningPod(ctx context.Context, c kubernetes.Interfac
 		return nil, err
 	}
 	return pods.GetPodByReplicaSet(ctx, rs, c)
-}
-
-func (i *DeploymentApp) Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error) {
-	d, err := deployments.GetByDev(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return nil, fmt.Errorf("error diverting deployment: %s", err.Error())
-	}
-
-	divertDeployment := translateDivertDeployment(username, d)
-	if err := deployments.Deploy(ctx, divertDeployment, c); err != nil {
-		return nil, fmt.Errorf("error creating diver deployment '%s': %s", divertDeployment.Name, err.Error())
-	}
-	return &DeploymentApp{d: divertDeployment}, nil
-}
-
-func (i *DeploymentApp) DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error {
-	d, err := deployments.GetByDev(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return fmt.Errorf("error diverting deployment: %s", err.Error())
-	}
-
-	divertDeploymentName := DivertName(username, d.Name)
-	if err := deployments.Destroy(ctx, divertDeploymentName, d.Namespace, c); err != nil {
-		return fmt.Errorf("error creating diver deployment '%s': %s", divertDeploymentName, err.Error())
-	}
-	return nil
-}
-
-func translateDivertDeployment(username string, d *appsv1.Deployment) *appsv1.Deployment {
-	result := d.DeepCopy()
-	result.UID = ""
-	result.Name = DivertName(username, d.Name)
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
-	}
-	result.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
-		},
-	}
-	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
-	}
-	annotations.Set(result.GetObjectMeta(), model.OktetoAutoCreateAnnotation, model.OktetoUpCmd)
-	result.ResourceVersion = ""
-	return result
-}
-
-func (i *DeploymentApp) SetOriginal() error {
-	delete(i.d.Annotations, model.DeploymentAnnotation)
-	i.d.Status = appsv1.DeploymentStatus{}
-	manifestBytes, err := json.Marshal(i.d)
-	if err != nil {
-		return err
-	}
-	i.d.Annotations[model.DeploymentAnnotation] = string(manifestBytes)
-	return nil
 }
 
 func (i *DeploymentApp) RestoreOriginal() error {
@@ -192,22 +130,41 @@ func (i *DeploymentApp) Refresh(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
-func (i *DeploymentApp) Create(ctx context.Context, c kubernetes.Interface) error {
-	d, err := deployments.Create(ctx, i.d, c)
+func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
+	d, err := deployments.Deploy(ctx, i.d, c)
 	if err == nil {
 		i.d = d
 	}
 	return err
 }
 
-func (i *DeploymentApp) Update(ctx context.Context, c kubernetes.Interface) error {
-	d, err := deployments.Update(ctx, i.d, c)
-	if err == nil {
-		i.d = d
-	}
-	return err
+func (i *DeploymentApp) Destroy(ctx context.Context, c kubernetes.Interface) error {
+	return deployments.Destroy(ctx, i.d.Name, i.d.Namespace, c)
 }
 
-func (*DeploymentApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return deployments.Destroy(ctx, dev.Name, dev.Namespace, c)
+func (i *DeploymentApp) DeployDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error) {
+	d, err := deployments.GetByDev(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return nil, fmt.Errorf("error diverting deployment: %s", err.Error())
+	}
+
+	divertDeployment := deployments.TranslateDivert(username, d)
+	result, err := deployments.Deploy(ctx, divertDeployment, c)
+	if err != nil {
+		return nil, fmt.Errorf("error creating diver deployment '%s': %s", divertDeployment.Name, err.Error())
+	}
+	return &DeploymentApp{d: result}, nil
+}
+
+func (i *DeploymentApp) DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error {
+	d, err := deployments.GetByDev(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		return fmt.Errorf("error diverting deployment: %s", err.Error())
+	}
+
+	divertDeploymentName := model.DivertName(username, d.Name)
+	if err := deployments.Destroy(ctx, divertDeploymentName, d.Namespace, c); err != nil {
+		return fmt.Errorf("error creating diver deployment '%s': %s", divertDeploymentName, err.Error())
+	}
+	return nil
 }

@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/k8s/annotations"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
@@ -69,7 +68,7 @@ func serviceModFromAnnotationValue(val string) (divertServiceModification, error
 func translateService(username string, app apps.App, s *apiv1.Service) (*apiv1.Service, error) {
 	result := s.DeepCopy()
 	result.UID = ""
-	result.Name = apps.DivertName(username, s.Name)
+	result.Name = model.DivertName(s.Name, username)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
 	if s.Labels != nil && s.Labels[model.DeployedByLabel] != "" {
 		result.Labels[model.DeployedByLabel] = s.Labels[model.DeployedByLabel]
@@ -103,17 +102,17 @@ func translateService(username string, app apps.App, s *apiv1.Service) (*apiv1.S
 func translateIngress(username string, i *networkingv1.Ingress) *networkingv1.Ingress {
 	result := i.DeepCopy()
 	result.UID = ""
-	result.Name = apps.DivertName(username, i.Name)
+	result.Name = model.DivertName(i.Name, username)
 	result.Labels = map[string]string{model.OktetoDivertLabel: username}
 	if i.Labels != nil && i.Labels[model.DeployedByLabel] != "" {
 		result.Labels[model.DeployedByLabel] = i.Labels[model.DeployedByLabel]
 	}
-	if host := annotations.Get(result.GetObjectMeta(), model.OktetoIngressAutoGenerateHost); host != "" {
+	if host := result.Annotations[model.OktetoIngressAutoGenerateHost]; host != "" {
 		if host != "true" {
-			annotations.Set(result.GetObjectMeta(), model.OktetoIngressAutoGenerateHost, fmt.Sprintf("%s-%s", username, host))
+			result.Annotations[model.OktetoIngressAutoGenerateHost] = fmt.Sprintf("%s-%s", username, host)
 		}
 	} else {
-		annotations.Set(result.GetObjectMeta(), model.OktetoIngressAutoGenerateHost, "true")
+		result.Annotations[model.OktetoIngressAutoGenerateHost] = "true"
 	}
 	result.ResourceVersion = ""
 	return result

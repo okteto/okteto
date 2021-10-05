@@ -61,16 +61,9 @@ jobs:
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
             /usr/local/bin/okteto login --token ${API_TOKEN}
       - run:
-          name: Integration tests (serverside)
-          environment:
-            OKTETO_CLIENTSIDE_TRANSLATION: ''
-            OKTETO_SKIP_CLEANUP: 'true'
-          command: make integration
-      - run:
-          name: Integration tests (clientside)
+          name: Integration tests
           environment:
             OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_CLIENTSIDE_TRANSLATION: 'true'
           command: make integration
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -133,18 +126,9 @@ jobs:
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
             & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_TOKEN
       - run:
-          name: Integration tests (serverside)
+          name: Integration tests
           environment:
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
-            OKTETO_SKIP_CLEANUP: 'true'
-            OKTETO_CLIENTSIDE_TRANSLATION: ''
-          command: |
-            go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 45m
-      - run:
-          name: Integration tests (clientside)
-          environment:
-            OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
-            OKTETO_CLIENTSIDE_TRANSLATION: 'true'
             OKTETO_SKIP_CLEANUP: 'true'
           command: |
             go test github.com/okteto/okteto/integration -tags=integration --count=1 -v -timeout 45m

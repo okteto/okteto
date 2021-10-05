@@ -73,26 +73,6 @@ func (up *upContext) activate(build bool) error {
 		return nil
 	}
 
-	if apps.IsDevModeOn(app) && apps.HasBeenChanged(app) {
-		analytics.TrackManifestHasChanged(true)
-		return errors.UserError{
-			E: fmt.Errorf("%s '%s' has been modified while your development container was active", app.TypeMeta().Kind, app.ObjectMeta().Name),
-			Hint: `Follow these steps:
-	  1. Execute 'okteto down'
-	  2. Apply your manifest changes again: 'kubectl apply'
-	  3. Execute 'okteto up' again
-    More information is available here: https://okteto.com/docs/reference/known-issues/#kubectl-apply-changes-are-undone-by-okteto-up`,
-		}
-	}
-
-	if err := app.RestoreOriginal(); err != nil {
-		return err
-	}
-
-	if err := apps.ValidateMountPaths(app.PodSpec(), up.Dev); err != nil {
-		return err
-	}
-
 	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == errors.ErrNotFound {
 		log.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		build = true
@@ -183,7 +163,7 @@ func (up *upContext) activate(build bool) error {
 		divertURL := ""
 		if up.Dev.Divert != nil {
 			username := okteto.GetSanitizedUsername()
-			name := apps.DivertName(username, up.Dev.Divert.Ingress)
+			name := model.DivertName(up.Dev.Divert.Ingress, username)
 			i, err := ingressesv1.Get(ctx, name, up.Dev.Namespace, up.Client)
 			if err != nil {
 				log.Errorf("error getting diverted ingress %s: %s", name, err.Error())
@@ -203,7 +183,8 @@ func (up *upContext) activate(build bool) error {
 		}
 		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
 	}()
-	prevError := up.waitUntilExitOrInterrupt()
+
+	prevError := up.waitUntilExitOrInterruptOrApply(ctx)
 
 	up.isRetry = true
 	if up.shouldRetry(ctx, prevError) {
@@ -226,6 +207,8 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 		return true
 	case errors.ErrCommandFailed:
 		return !up.Sy.Ping(ctx, false)
+	case errors.ErrApplyToApp:
+		return true
 	}
 
 	return false
@@ -255,12 +238,13 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	tList, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
+	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
 	if err != nil {
 		return err
 	}
+	up.Translations = trMap
 
-	if err := apps.TranslateDevMode(tList); err != nil {
+	if err := apps.TranslateDevMode(trMap); err != nil {
 		return err
 	}
 
@@ -274,16 +258,17 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		return err
 	}
 
-	for name := range tList {
-		if name == tList[name].App.ObjectMeta().Name && create {
-			if err := tList[name].App.Create(ctx, up.Client); err != nil {
-				return err
-			}
-		} else {
-			delete(tList[name].App.ObjectMeta().Annotations, model.DeploymentRevisionAnnotation)
-			if err := tList[name].App.Update(ctx, up.Client); err != nil {
-				return err
-			}
+	var devApp apps.App
+	for _, tr := range trMap {
+		delete(tr.DevApp.ObjectMeta().Annotations, model.DeploymentRevisionAnnotation)
+		if err := tr.DevApp.Deploy(ctx, up.Client); err != nil {
+			return err
+		}
+		if err := tr.App.Deploy(ctx, up.Client); err != nil {
+			return err
+		}
+		if tr.MainDev == tr.Dev {
+			devApp = tr.DevApp
 		}
 	}
 
@@ -293,7 +278,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		}
 	}
 
-	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, app, up.Client)
+	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, devApp, up.Client)
 	if err != nil {
 		return err
 	}

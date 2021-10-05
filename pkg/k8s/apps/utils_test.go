@@ -14,60 +14,12 @@
 package apps
 
 import (
-	"context"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func Test_set_translation_as_annotation_and_back(t *testing.T) {
-	ctx := context.Background()
-	manifest := []byte(`name: web
-container: dev
-image: web:latest
-command: ["./run_web.sh"]
-workdir: /app
-annotations:
-  key1: value1
-  key2: value2`)
-	dev, err := model.Read(manifest)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	d := GetDeploymentSandbox(dev)
-	app := NewDeploymentApp(d)
-	translations, err := GetTranslations(ctx, dev, app, false, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tr1 := translations[d.Name]
-	if err := setTranslationAsAnnotation(tr1); err != nil {
-		t.Fatal(err)
-	}
-	translationString := d.Spec.Template.Annotations[model.TranslationAnnotation]
-	if translationString == "" {
-		t.Fatal("Marshalled translation was not found in the deployment's annotations")
-	}
-	tr2, err := getTranslationFromAnnotation(d.Spec.Template.Annotations)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if tr1.Name != tr2.Name {
-		t.Fatal("Mismatching Name value between original and unmarshalled translation")
-	}
-	if tr1.Version != tr2.Version {
-		t.Fatal("Mismatching Version value between original and unmarshalled translation")
-	}
-	if tr1.Interactive != tr2.Interactive {
-		t.Fatal("Mismatching Interactive flag between original and unmarshalled translation")
-	}
-	if tr1.Replicas != tr2.Replicas {
-		t.Fatal("Mismatching Replicas count between original and unmarshalled translation")
-	}
-}
 
 func Test_getPreviousAppReplicas(t *testing.T) {
 	var twoReplica int32 = 2

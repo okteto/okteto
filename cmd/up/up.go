@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -38,6 +39,8 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/spf13/cobra"
 )
@@ -323,7 +326,7 @@ func (up *upContext) activateLoop(build bool) {
 func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
 	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
 	if errors.IsNotFound(err) && up.Dev.Autocreate {
-		return apps.NewDeploymentApp(apps.GetDeploymentSandbox(up.Dev)), true, nil
+		return apps.NewDeploymentApp(deployments.Sandbox(up.Dev)), true, nil
 	}
 	if err == nil {
 		return app, false, nil
@@ -336,14 +339,14 @@ func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
 	if len(up.Dev.Labels) > 0 {
 		if err == errors.ErrNotFound {
 			err = errors.UserError{
-				E:    fmt.Errorf("Didn't find an application in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
+				E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
 				Hint: "Update the labels or point your context to a different namespace and try again"}
 		}
 		return nil, false, err
 	}
 
 	err = errors.UserError{
-		E: fmt.Errorf("Application '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
+		E: fmt.Errorf("application '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
 		Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
 Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
 More information is available here: https://okteto.com/docs/reference/cli/#up`,
@@ -351,8 +354,8 @@ More information is available here: https://okteto.com/docs/reference/cli/#up`,
 	return nil, false, err
 }
 
-// waitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
-func (up *upContext) waitUntilExitOrInterrupt() error {
+// waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modify
+func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error {
 	for {
 		select {
 		case err := <-up.CommandResult:
@@ -376,6 +379,44 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 				return up.getInsufficientSpaceError(err)
 			}
 			return err
+
+		case err := <-up.applyToApps(ctx):
+			return err
+		}
+	}
+}
+
+func (up *upContext) applyToApps(ctx context.Context) chan error {
+	var result chan error
+	for _, tr := range up.Translations {
+		go up.applyToApp(ctx, tr.App, result)
+	}
+	return result
+}
+
+func (up *upContext) applyToApp(ctx context.Context, app apps.App, c chan error) {
+	optsWatchApp := metav1.ListOptions{
+		Watch:         true,
+		FieldSelector: fmt.Sprintf("metadata.name=%s", app.ObjectMeta().Name),
+	}
+
+	watcherApp, err := up.Client.AppsV1().Deployments(app.ObjectMeta().Namespace).Watch(ctx, optsWatchApp)
+	if err != nil {
+		c <- err
+		return
+	}
+
+	for {
+		appEvent := <-watcherApp.ResultChan()
+		d, ok := appEvent.Object.(*appsv1.Deployment)
+		if !ok {
+			log.Infof("error watching app applies")
+			c <- errors.ErrApplyToApp
+			return
+		}
+		if d.Annotations[model.DeploymentRevisionAnnotation] != app.ObjectMeta().Annotations[model.DeploymentRevisionAnnotation] {
+			c <- errors.ErrApplyToApp
+			return
 		}
 	}
 }

@@ -124,8 +124,6 @@ func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 				message = utils.RenderProgressBar(suffix, progress, pbScaling)
 			}
 			spinner.Update(message)
-			exit <- nil
-			return
 		}
 	}()
 

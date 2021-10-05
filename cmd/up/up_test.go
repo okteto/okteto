@@ -25,13 +25,13 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	up := upContext{}
 	up.CommandResult = make(chan error, 1)
 	up.CommandResult <- nil
-	err := up.waitUntilExitOrInterrupt()
+	err := up.waitUntilExitOrInterruptOrApply()
 	if err != nil {
 		t.Errorf("exited with error instead of nil: %s", err)
 	}
 
 	up.CommandResult <- fmt.Errorf("custom-error")
-	err = up.waitUntilExitOrInterrupt()
+	err = up.waitUntilExitOrInterruptOrApply()
 	if err == nil {
 		t.Errorf("didn't report proper error")
 	}
@@ -41,7 +41,7 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 
 	up.Disconnect = make(chan error, 1)
 	up.Disconnect <- errors.ErrLostSyncthing
-	err = up.waitUntilExitOrInterrupt()
+	err = up.waitUntilExitOrInterruptOrApply()
 	if err != errors.ErrLostSyncthing {
 		t.Errorf("exited with error %s instead of %s", err, errors.ErrLostSyncthing)
 	}

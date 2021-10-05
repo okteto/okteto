@@ -78,6 +78,9 @@ var (
 	// ErrBusySyncthing is raised when syncthing is busy
 	ErrBusySyncthing = fmt.Errorf("synchronization service is unresponsive")
 
+	// ErrApplyToApp is raised when the app is modified while running "okteto up"
+	ErrApplyToApp = fmt.Errorf("application has been modified")
+
 	// ErrLostSyncthing is raised when we lose connectivity with syncthing
 	ErrLostSyncthing = fmt.Errorf("synchronization service is disconnected")
 
@@ -119,6 +122,12 @@ var (
 
 	//ErrNoBuilderInContext raised when there is no builder in the context
 	ErrNoBuilderInContext = "Your current context doesn't support builds.\n    Run 'okteto context'  with the ' --builder' flag to configure your build service"
+
+	//ErrKubernetesLongTimeToCreateDevContainer raised when the creation of the dev container times out
+	ErrKubernetesLongTimeToCreateDevContainer = fmt.Errorf("kubernetes is taking too long to start your development container. Please check for errors and try again")
+
+	//ErrNoServicesinOktetoManifest raised when no services are defined in the okteto manifest
+	ErrNoServicesinOktetoManifest = fmt.Errorf("'okteto restart' is only supported when using the field 'services'")
 )
 
 // IsNotFound returns true if err is of the type not found

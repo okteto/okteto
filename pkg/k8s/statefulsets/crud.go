@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -29,31 +30,65 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+//Sandbox returns a default statefulset for a given dev
+func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
+	image := dev.Image.Name
+	if image == "" {
+		image = model.DefaultImage
+	}
+	return &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        dev.Name,
+			Namespace:   dev.Namespace,
+			Labels:      model.Labels{},
+			Annotations: model.Annotations{},
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: pointer.Int32Ptr(1),
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": dev.Name,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": dev.Name,
+					},
+					Annotations: map[string]string{},
+				},
+				Spec: apiv1.PodSpec{
+					ServiceAccountName:            dev.ServiceAccount,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           image,
+							ImagePullPolicy: apiv1.PullAlways,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 //Deploy creates or updates a statefulset
-func Deploy(ctx context.Context, s *appsv1.StatefulSet, c kubernetes.Interface) error {
-	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, s.Name, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("error getting statefulset '%s'': %s", s.Name, err)
+func Deploy(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
+	sfs.ResourceVersion = ""
+	result, err := c.AppsV1().StatefulSets(sfs.Namespace).Update(ctx, sfs, metav1.UpdateOptions{})
+	if err == nil {
+		return result, nil
 	}
 
-	if old.Name == "" {
-		log.Infof("creating statefulset '%s'", s.Name)
-		_, err = c.AppsV1().StatefulSets(s.Namespace).Create(ctx, s, metav1.CreateOptions{})
-		if err != nil {
-			return fmt.Errorf("error creating kubernetes statefulset: %s", err)
-		}
-		log.Infof("created statefulset '%s'", s.Name)
-	} else {
-		log.Infof("updating statefulset '%s'", s.Name)
-		old.Annotations = s.Annotations
-		old.Labels = s.Labels
-		old.Spec = s.Spec
-		if _, err := Update(ctx, old, c); err != nil {
-			return fmt.Errorf("error updating kubernetes statefulset: %s", err)
-		}
-		log.Infof("updated statefulset '%s'.", s.Name)
+	if !errors.IsNotFound(err) {
+		return nil, err
 	}
-	return nil
+
+	return c.AppsV1().StatefulSets(sfs.Namespace).Create(ctx, sfs, metav1.CreateOptions{})
 }
 
 //List returns the list of statefulsets
@@ -93,21 +128,16 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 	if len(sfsList.Items) == 0 {
 		return nil, errors.ErrNotFound
 	}
-	if len(sfsList.Items) > 1 {
+	validStatefulsets := []*appsv1.StatefulSet{}
+	for _, sfs := range sfsList.Items {
+		if sfs.Labels[model.DevCloneLabel] != "true" {
+			validStatefulsets = append(validStatefulsets, &sfs)
+		}
+	}
+	if len(validStatefulsets) > 1 {
 		return nil, fmt.Errorf("found '%d' statefulsets for labels '%s' instead of 1", len(sfsList.Items), dev.LabelsSelector())
 	}
-	return &sfsList.Items[0], nil
-}
-
-//Create creates a statefulset
-func Create(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
-	return c.AppsV1().StatefulSets(sfs.Namespace).Create(ctx, sfs, metav1.CreateOptions{})
-}
-
-//Update updates a statefulset
-func Update(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
-	sfs.ResourceVersion = ""
-	return c.AppsV1().StatefulSets(sfs.Namespace).Update(ctx, sfs, metav1.UpdateOptions{})
+	return validStatefulsets[0], nil
 }
 
 //Destroy removes a statefulset object given its name and namespace
@@ -140,14 +170,6 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	return ok
 }
 
-//RestoreDevModeFrom restores labels an annotations from a statefulset in dev mode
-func RestoreDevModeFrom(sfs, old *appsv1.StatefulSet) {
-	sfs.Labels[model.DevLabel] = old.Labels[model.DevLabel]
-	sfs.Spec.Replicas = old.Spec.Replicas
-	sfs.Annotations = old.Annotations
-	sfs.Spec.Template.Annotations = old.Spec.Template.Annotations
-}
-
 //CheckConditionErrors checks errors in conditions
 func CheckConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
 	for _, c := range sfs.Status.Conditions {
@@ -155,10 +177,10 @@ func CheckConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
 			if strings.Contains(c.Message, "exceeded quota") {
 				log.Infof("%s: %s", errors.ErrQuota, c.Message)
 				if strings.Contains(c.Message, "requested: pods=") {
-					return fmt.Errorf("Quota exceeded, you have reached the maximum number of pods per namespace")
+					return fmt.Errorf("quota exceeded, you have reached the maximum number of pods per namespace")
 				}
 				if strings.Contains(c.Message, "requested: requests.storage=") {
-					return fmt.Errorf("Quota exceeded, you have reached the maximum storage per namespace")
+					return fmt.Errorf("quota exceeded, you have reached the maximum storage per namespace")
 				}
 				return errors.ErrQuota
 			} else if isResourcesRelatedError(c.Message) {
@@ -198,4 +220,26 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 		errorToReturn += fmt.Sprintf("The value of resources.limits.memory in your okteto manifest (%s) exceeds the maximum memory limit per pod (%s). ", manifestMemory, maximumMemoryPerPod)
 	}
 	return fmt.Errorf(strings.TrimSpace(errorToReturn))
+}
+
+func TranslateDivert(username string, sfs *appsv1.StatefulSet) *appsv1.StatefulSet {
+	name := model.DivertName(sfs.Name, username)
+	result := sfs.DeepCopy()
+	result.UID = ""
+	result.Name = name
+	result.Labels = map[string]string{model.OktetoDivertLabel: username}
+	if sfs.Labels != nil && sfs.Labels[model.DeployedByLabel] != "" {
+		result.Labels[model.DeployedByLabel] = sfs.Labels[model.DeployedByLabel]
+	}
+	result.Spec.Selector = &metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			model.OktetoDivertLabel: username,
+		},
+	}
+	result.Spec.Template.Labels = map[string]string{
+		model.OktetoDivertLabel: username,
+	}
+
+	result.ResourceVersion = ""
+	return result
 }
