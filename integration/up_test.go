@@ -618,12 +618,12 @@ func TestDivert(t *testing.T) {
 	defer showUpLogs(name, namespace, t)
 
 	apiSvc := "catalog-chart"
-	originalContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiSvc, namespace), 120, upErrorChannel)
+	originalContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiSvc, namespace), 150, upErrorChannel)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 120); err != nil {
+	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 150); err != nil {
 
 		t.Fatal("Contents are the same")
 	}
@@ -699,7 +699,7 @@ func showUpLogs(name, namespace string, t *testing.T) {
 func waitForDivertedContent(originalContent, namespace, apiSvc string, upErrorChannel chan error, timeout int) error {
 	for i := 0; i < timeout; i++ {
 		apiDivertedSvc := fmt.Sprintf("%s-%s", apiSvc, user)
-		divertedContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiDivertedSvc, namespace), 120, upErrorChannel)
+		divertedContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiDivertedSvc, namespace), 3, upErrorChannel)
 		if err != nil {
 			continue
 		}
