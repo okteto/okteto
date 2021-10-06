@@ -156,7 +156,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			if okteto.Context().Buildkit != "" {
 				log.Information("Running your build in %s...", okteto.Context().Buildkit)
 			} else {
-				log.Information("Running your build in your locally")
+				log.Information("Running your build in docker")
 			}
 
 		}

@@ -59,7 +59,7 @@ func Build(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("invalid Dockerfile: %s", err.Error())
 			}
 
-			if okteto.Context().Buildkit == "" || options.BuildLocally {
+			if okteto.Context().Buildkit == "" {
 				log.Information("Building your image using your local docker daemon")
 			} else {
 				log.Information("Running your build in %s...", okteto.Context().Buildkit)
@@ -91,6 +91,5 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
-	cmd.Flags().BoolVarP(&options.BuildLocally, "local", "", false, "build the image on your local machine")
 	return cmd
 }

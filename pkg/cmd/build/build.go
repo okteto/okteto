@@ -31,21 +31,20 @@ import (
 
 //BuildOptions define the options available for build
 type BuildOptions struct {
-	BuildArgs    []string
-	BuildLocally bool
-	CacheFrom    []string
-	File         string
-	NoCache      bool
-	OutputMode   string
-	Path         string
-	Secrets      []string
-	Tag          string
-	Target       string
+	BuildArgs  []string
+	CacheFrom  []string
+	File       string
+	NoCache    bool
+	OutputMode string
+	Path       string
+	Secrets    []string
+	Tag        string
+	Target     string
 }
 
 // Run runs the build sequence
 func Run(ctx context.Context, namespace string, buildOptions BuildOptions) error {
-	if (!okteto.IsOktetoContext() && okteto.Context().Buildkit == "") || buildOptions.BuildLocally {
+	if okteto.Context().Buildkit == "" {
 		if err := buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
