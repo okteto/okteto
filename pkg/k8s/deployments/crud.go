@@ -116,13 +116,13 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 		return nil, errors.ErrNotFound
 	}
 	validDeployments := []*appsv1.Deployment{}
-	for _, d := range dList.Items {
+	for i, d := range dList.Items {
 		if d.Labels[model.DevCloneLabel] == "" {
-			validDeployments = append(validDeployments, &d)
+			validDeployments = append(validDeployments, &dList.Items[i])
 		}
 	}
 	if len(validDeployments) > 1 {
-		return nil, fmt.Errorf("found '%d' deployments for labels '%s' instead of 1", len(dList.Items), dev.LabelsSelector())
+		return nil, fmt.Errorf("found '%d' deployments for labels '%s' instead of 1", len(validDeployments), dev.LabelsSelector())
 	}
 	return validDeployments[0], nil
 }

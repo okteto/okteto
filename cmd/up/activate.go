@@ -73,6 +73,10 @@ func (up *upContext) activate(build bool) error {
 		return nil
 	}
 
+	if err := app.RestoreOriginal(); err != nil {
+		return err
+	}
+
 	if err := apps.ValidateMountPaths(app.PodSpec(), up.Dev); err != nil {
 		return err
 	}

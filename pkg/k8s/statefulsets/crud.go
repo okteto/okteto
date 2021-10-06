@@ -129,13 +129,13 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 		return nil, errors.ErrNotFound
 	}
 	validStatefulsets := []*appsv1.StatefulSet{}
-	for _, sfs := range sfsList.Items {
+	for i, sfs := range sfsList.Items {
 		if sfs.Labels[model.DevCloneLabel] == "" {
-			validStatefulsets = append(validStatefulsets, &sfs)
+			validStatefulsets = append(validStatefulsets, &sfsList.Items[i])
 		}
 	}
 	if len(validStatefulsets) > 1 {
-		return nil, fmt.Errorf("found '%d' statefulsets for labels '%s' instead of 1", len(sfsList.Items), dev.LabelsSelector())
+		return nil, fmt.Errorf("found '%d' statefulsets for labels '%s' instead of 1", len(validStatefulsets), dev.LabelsSelector())
 	}
 	return validStatefulsets[0], nil
 }
