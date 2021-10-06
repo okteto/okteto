@@ -122,7 +122,9 @@ const (
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
 	//OktetoVolumeNameTemplate name template of the development container persistent volume
-	OktetoVolumeNameTemplate = "okteto-%s"
+	OktetoVolumeNameTemplate = "%s-okteto"
+	//DeprecatedOktetoVolumeNameTemplate name template of the development container persistent volume
+	DeprecatedOktetoVolumeNameTemplate = "okteto-%s"
 	//DataSubPath subpath in the development container persistent volume for the data volumes
 	DataSubPath = "data"
 	//SourceCodeSubPath subpath in the development container persistent volume for the source code

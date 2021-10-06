@@ -57,7 +57,6 @@ func Create(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 		return err
 	}
 
-	translateDev(dev, app.ObjectMeta().Name)
 	return nil
 }
 
@@ -66,7 +65,7 @@ func divertApp(ctx context.Context, dev *model.Dev, username string, c kubernete
 	if err != nil {
 		return nil, err
 	}
-	return app.Divert(ctx, username, dev, c)
+	return app.Divert(username), nil
 }
 
 func divertService(ctx context.Context, dev *model.Dev, app apps.App, username string, c kubernetes.Interface) (*apiv1.Service, error) {
@@ -144,10 +143,6 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	username := okteto.GetSanitizedUsername()
 
-	app, err := apps.Get(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return err
-	}
 	dClient, err := GetClient(dev.Context)
 	if err != nil {
 		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
@@ -172,6 +167,5 @@ func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 		return fmt.Errorf("error deleting divert service '%s': %s", sName, err.Error())
 	}
 
-	translateDev(dev, model.DivertName(app.ObjectMeta().Name, username))
-	return app.Deploy(ctx, c)
+	return nil
 }

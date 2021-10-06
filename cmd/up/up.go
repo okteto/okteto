@@ -31,8 +31,8 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -156,6 +156,11 @@ func Up() *cobra.Command {
 			}
 
 			err = up.start(build)
+
+			if err := volumes.Destroy(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), dev.Namespace, up.Client, dev.Timeout.Default); err != nil {
+				log.Infof("error deleting deprecated volume")
+			}
+
 			return err
 		},
 	}
@@ -286,7 +291,6 @@ func (up *upContext) activateLoop(build bool) {
 			log.Infof("waiting for shutdown sequence to finish")
 			<-up.ShutdownCompleted
 			if iter == 0 {
-				//TODO: maybe show a better message if reapplying manifests
 				log.Yellow("Connection lost to your development container, reconnecting...")
 			}
 			iter++
@@ -317,37 +321,6 @@ func (up *upContext) activateLoop(build bool) {
 		up.Exit <- nil
 		return
 	}
-}
-
-func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
-	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
-	if errors.IsNotFound(err) && up.Dev.Autocreate {
-		return apps.NewDeploymentApp(deployments.Sandbox(up.Dev)), true, nil
-	}
-	if err == nil {
-		return app, false, nil
-	}
-
-	if !errors.IsNotFound(err) || up.isRetry {
-		return nil, false, err
-	}
-
-	if len(up.Dev.Labels) > 0 {
-		if err == errors.ErrNotFound {
-			err = errors.UserError{
-				E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
-				Hint: "Update the labels or point your context to a different namespace and try again"}
-		}
-		return nil, false, err
-	}
-
-	err = errors.UserError{
-		E: fmt.Errorf("application '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
-		Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
-Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-More information is available here: https://okteto.com/docs/reference/cli/#up`,
-	}
-	return nil, false, err
 }
 
 // waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modify

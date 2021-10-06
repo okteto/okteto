@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 
@@ -86,34 +87,38 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 	exit := make(chan error, 1)
 
 	go func() {
-		client, _, err := okteto.GetK8sClient()
+		c, _, err := okteto.GetK8sClient()
 		if err != nil {
 			exit <- err
 			return
 		}
 
 		if dev.Divert != nil {
-			if err := diverts.Delete(ctx, dev, client); err != nil {
+			if err := diverts.Delete(ctx, dev, c); err != nil {
 				exit <- err
 				return
 			}
 		}
 
-		app, err := apps.Get(ctx, dev, dev.Namespace, client)
+		app, _, err := utils.GetApp(ctx, dev, c)
 		if err != nil {
 			exit <- err
 			return
 		}
 
-		trMap, err := apps.GetTranslations(ctx, dev, app, false, client)
+		trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
 		if err != nil {
 			exit <- err
 			return
 		}
 
-		if err := down.Run(dev, app, trMap, true, client); err != nil {
+		if err := down.Run(dev, app, trMap, true, c); err != nil {
 			exit <- err
 			return
+		}
+
+		if err := volumes.Destroy(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), dev.Namespace, c, dev.Timeout.Default); err != nil {
+			log.Infof("error deleting deprecated volume")
 		}
 
 		spinner.Stop()

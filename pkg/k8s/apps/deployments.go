@@ -91,6 +91,7 @@ func (i *DeploymentApp) DevClone() App {
 	for k, v := range i.d.Annotations {
 		clone.Annotations[k] = v
 	}
+	delete(clone.Annotations, model.OktetoAutoCreateAnnotation)
 	clone.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RecreateDeploymentStrategyType,
 	}
@@ -167,6 +168,10 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 }
 
 func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
+	if string(i.d.UID) == "" && i.d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+		return nil
+	}
+
 	d, err := deployments.Deploy(ctx, i.d, c)
 	if err == nil {
 		i.d = d
@@ -178,16 +183,6 @@ func (i *DeploymentApp) Destroy(ctx context.Context, c kubernetes.Interface) err
 	return deployments.Destroy(ctx, i.d.Name, i.d.Namespace, c)
 }
 
-func (i *DeploymentApp) Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error) {
-	d, err := deployments.GetByDev(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return nil, fmt.Errorf("error diverting deployment: %s", err.Error())
-	}
-
-	divertDeployment := deployments.TranslateDivert(username, d)
-	result, err := deployments.Deploy(ctx, divertDeployment, c)
-	if err != nil {
-		return nil, fmt.Errorf("error creating diver deployment '%s': %s", divertDeployment.Name, err.Error())
-	}
-	return &DeploymentApp{d: result}, nil
+func (i *DeploymentApp) Divert(username string) App {
+	return &DeploymentApp{d: deployments.TranslateDivert(username, i.d)}
 }

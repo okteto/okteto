@@ -63,7 +63,7 @@ func (up *upContext) activate(build bool) error {
 	up.cleaned = make(chan string, 1)
 	up.hardTerminate = make(chan error, 1)
 
-	app, create, err := up.getApp(ctx)
+	app, create, err := utils.GetApp(ctx, up.Dev, up.Client)
 	if err != nil {
 		return err
 	}

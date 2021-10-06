@@ -402,7 +402,7 @@ services:
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{model.OktetoAutoCreateAnnotation: model.OktetoUpCmd, "key1": "value1"}
+	expectedAnnotations = map[string]string{"key1": "value1"}
 	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong dev d1 annotations: '%v'", tr1.DevApp.ObjectMeta().Annotations)
 	}

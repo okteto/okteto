@@ -34,10 +34,21 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 	}
 
 	for _, tr := range trMap {
-		tr.DevModeOff()
-		if err := tr.App.Deploy(ctx, c); err != nil {
-			return err
+		if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+			if err := app.Destroy(ctx, c); err != nil {
+				return err
+			}
+
+			if err := services.DestroyDev(ctx, dev, c); err != nil {
+				return err
+			}
+		} else {
+			tr.DevModeOff()
+			if err := tr.App.Deploy(ctx, c); err != nil {
+				return err
+			}
 		}
+
 		tr.DevApp = tr.App.DevClone()
 		if err := tr.DevApp.Destroy(ctx, c); err != nil {
 			return err
@@ -52,16 +63,6 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 
 	if err := ssh.RemoveEntry(dev.Name); err != nil {
 		log.Infof("failed to remove ssh entry: %s", err)
-	}
-
-	if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
-		if err := app.Destroy(ctx, c); err != nil {
-			return err
-		}
-
-		if err := services.DestroyDev(ctx, dev, c); err != nil {
-			return err
-		}
 	}
 
 	if !wait {

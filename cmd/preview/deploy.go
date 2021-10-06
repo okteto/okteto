@@ -172,7 +172,7 @@ func getBranch(ctx context.Context, branch string) (string, error) {
 func getRandomName(ctx context.Context, scope string) string {
 	name := strings.ReplaceAll(namesgenerator.GetRandomName(-1), "_", "-")
 	if scope == "personal" {
-		username := strings.ToLower(okteto.Context().Username)
+		username := strings.ToLower(okteto.GetSanitizedUsername())
 		name = fmt.Sprintf("%s-%s", name, username)
 	}
 	return name

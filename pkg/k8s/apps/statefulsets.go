@@ -173,15 +173,6 @@ func (i *StatefulSetApp) Destroy(ctx context.Context, c kubernetes.Interface) er
 	return statefulsets.Destroy(ctx, i.sfs.Name, i.sfs.Namespace, c)
 }
 
-func (i *StatefulSetApp) Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error) {
-	sfs, err := statefulsets.GetByDev(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return nil, fmt.Errorf("error diverting statefulset: %s", err.Error())
-	}
-	divertStatefulset := statefulsets.TranslateDivert(username, sfs)
-	result, err := statefulsets.Deploy(ctx, divertStatefulset, c)
-	if err != nil {
-		return nil, fmt.Errorf("error creating divert statefulset '%s': %s", divertStatefulset.Name, err.Error())
-	}
-	return &StatefulSetApp{sfs: result}, nil
+func (i *StatefulSetApp) Divert(username string) App {
+	return &StatefulSetApp{sfs: statefulsets.TranslateDivert(username, i.sfs)}
 }
