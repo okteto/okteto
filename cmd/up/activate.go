@@ -190,7 +190,6 @@ func (up *upContext) activate(build bool) error {
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)
 
-	up.isRetry = true
 	if up.shouldRetry(ctx, prevError) {
 		if !up.Dev.PersistentVolumeEnabled() {
 			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {

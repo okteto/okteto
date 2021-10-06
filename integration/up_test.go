@@ -76,6 +76,8 @@ metadata:
   name: {{ .Name }}
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: {{ .Name }}
@@ -168,6 +170,8 @@ command:
 forward:
   - 8080:8080
 workdir: /usr/src/app
+persistentVolume:
+  enabled: false
 `
 	divertGitRepo   = "git@github.com:okteto/catalog.git"
 	divertGitFolder = "catalog"
@@ -307,6 +311,8 @@ func TestUpDeployments(t *testing.T) {
 
 	waitForDeployment(ctx, namespace, name, 2, 120)
 
+	defer showUpLogs(name, namespace, t)
+
 	log.Println("getting synchronized content")
 
 	content, err := getContent(indexEndpoint, 150, upErrorChannel)
@@ -339,12 +345,17 @@ func TestUpDeployments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	d, err := getDeployment(ctx, namespace, name)
+	if err != nil {
+		t.Fatal(err)
+	}
 	originalDeployment.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
-	if _, err := deployments.Deploy(ctx, originalDeployment, c); err != nil {
+	d.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	if _, err := deployments.Deploy(ctx, d, c); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 300, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 150, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -352,7 +363,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 150, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -360,11 +371,11 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 150, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
-	d, err := getDeployment(ctx, namespace, name)
+	d, err = getDeployment(ctx, namespace, name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -462,6 +473,8 @@ func TestUpStatefulset(t *testing.T) {
 
 	waitForStatefulset(ctx, namespace, name, 120)
 
+	defer showUpLogs(name, namespace, t)
+
 	log.Println("getting synchronized content")
 
 	content, err := getContent(indexEndpoint, 120, upErrorChannel)
@@ -494,7 +507,12 @@ func TestUpStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 	originalStatefulset.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
-	if _, err := statefulsets.Deploy(ctx, originalStatefulset, c); err != nil {
+	sfs, err := getStatefulset(ctx, namespace, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sfs.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
 		t.Fatal(err)
 	}
 
@@ -518,7 +536,7 @@ func TestUpStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sfs, err := getStatefulset(ctx, namespace, name)
+	sfs, err = getStatefulset(ctx, namespace, name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -589,13 +607,15 @@ func TestDivert(t *testing.T) {
 
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
-	p, err := up(ctx, &wg, namespace, fmt.Sprintf("%s-health-checker", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, upErrorChannel)
+	p, err := up(ctx, &wg, namespace, fmt.Sprintf("health-checker-%s", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, upErrorChannel)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	divertedSvcName := fmt.Sprintf("%s-health-checker", user)
+	divertedSvcName := fmt.Sprintf("health-checker-%s", user)
 	waitForDeployment(ctx, namespace, divertedSvcName, 2, 120)
+
+	defer showUpLogs(name, namespace, t)
 
 	apiSvc := "catalog-chart"
 	originalContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiSvc, namespace), 120, upErrorChannel)
@@ -608,7 +628,7 @@ func TestDivert(t *testing.T) {
 		t.Fatal("Contents are the same")
 	}
 
-	if err := down(ctx, namespace, fmt.Sprintf("%s-health-checker", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, false, true); err != nil {
+	if err := down(ctx, namespace, fmt.Sprintf("health-checker-%s", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, false, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -616,7 +636,7 @@ func TestDivert(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = getDeployment(ctx, namespace, fmt.Sprintf("%s-health-checker", user))
+	_, err = getDeployment(ctx, namespace, fmt.Sprintf("health-checker-%s", user))
 	if err == nil {
 		t.Fatalf("'dev' deployment not deleted after 'okteto stack destroy'")
 	}
@@ -665,9 +685,20 @@ func modifyDivertApp() error {
 	return nil
 }
 
+func showUpLogs(name, namespace string, t *testing.T) {
+	if !t.Failed() {
+		return
+	}
+	logsPath := filepath.Join(config.GetAppHome(namespace, name), "okteto.log")
+	logBytes, err := os.ReadFile(logsPath)
+	if err == nil {
+		fmt.Println("up logs:", string(logBytes))
+	}
+}
+
 func waitForDivertedContent(originalContent, namespace, apiSvc string, upErrorChannel chan error, timeout int) error {
 	for i := 0; i < timeout; i++ {
-		apiDivertedSvc := fmt.Sprintf("%s-%s", user, apiSvc)
+		apiDivertedSvc := fmt.Sprintf("%s-%s", apiSvc, user)
 		divertedContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiDivertedSvc, namespace), 120, upErrorChannel)
 		if err != nil {
 			continue
@@ -868,7 +899,7 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		if !isUpRunning(upErrorChannel) {
 			return fmt.Errorf("Up command is no longer running")
 		}
-		currentContent, err := getContent(indexEndpoint, timeout, upErrorChannel)
+		currentContent, err := getContent(indexEndpoint, 3, upErrorChannel)
 		if err != nil {
 			log.Printf("failed to get updated content: %s", err.Error())
 			if strings.Contains(err.Error(), "Up command is no longer running") {
@@ -886,7 +917,7 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		}
 
 		log.Printf("got updated content after %v\n", time.Now().Sub(start))
-		currentContent, err = getContent(varEndpoint, 150, upErrorChannel)
+		currentContent, err = getContent(varEndpoint, 3, upErrorChannel)
 		if err != nil {
 			return err
 		}

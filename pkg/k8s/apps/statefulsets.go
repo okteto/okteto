@@ -141,7 +141,7 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 	for {
 		select {
 		case e := <-watcher.ResultChan():
-			sfs, ok := e.Object.(*appsv1.Deployment)
+			sfs, ok := e.Object.(*appsv1.StatefulSet)
 			if !ok {
 				watcher, err = c.AppsV1().StatefulSets(i.sfs.Namespace).Watch(ctx, optsWatch)
 				if err != nil {
