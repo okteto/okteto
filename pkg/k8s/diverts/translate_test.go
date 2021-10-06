@@ -30,7 +30,7 @@ import (
 func Test_translateServiceNotDiverted(t *testing.T) {
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cindy-name",
+			Name: "name-cindy",
 		},
 	}
 	original := &apiv1.Service{
@@ -65,7 +65,7 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 	}
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-name",
+			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1": "value1",
@@ -78,7 +78,7 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
 				model.OktetoDivertLabel:   "cindy",
-				model.InteractiveDevLabel: "cindy-name",
+				model.InteractiveDevLabel: "name-cindy",
 			},
 			Ports: []apiv1.ServicePort{
 				{
@@ -98,7 +98,7 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 func Test_translateServiceDiverted(t *testing.T) {
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cindy-name",
+			Name: "name-cindy",
 		},
 	}
 	original := &apiv1.Service{
@@ -130,7 +130,7 @@ func Test_translateServiceDiverted(t *testing.T) {
 
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-name",
+			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1": "value1",
@@ -140,7 +140,7 @@ func Test_translateServiceDiverted(t *testing.T) {
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
 				model.OktetoDivertLabel:   "cindy",
-				model.InteractiveDevLabel: "cindy-name",
+				model.InteractiveDevLabel: "name-cindy",
 			},
 			Ports: []apiv1.ServicePort{
 				{
@@ -198,7 +198,7 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 	translated := translateIngress("cindy", original)
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-name",
+			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1":                       "value1",
@@ -234,7 +234,7 @@ func Test_translateIngressCustomGenerateHost(t *testing.T) {
 	translated := translateIngress("cindy", original)
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-name",
+			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1":                       "value1",

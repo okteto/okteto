@@ -215,7 +215,11 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	if err != nil {
 		return "", err
 	}
-	pod, err := app.GetRunningPod(ctx, c)
+	devApp := app.DevClone()
+	if err := devApp.Refresh(ctx, c); err != nil {
+		return "", err
+	}
+	pod, err := devApp.GetRunningPod(ctx, c)
 	if err != nil {
 		return "", err
 	}
