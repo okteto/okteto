@@ -41,10 +41,9 @@ func getPreviousAppReplicas(app App) int32 {
 		rInt, err := strconv.ParseInt(rString, 10, 32)
 		if err != nil {
 			log.Infof("error parsing app replicas: %v", err)
-		} else {
-			return int32(rInt)
+			return 1
 		}
-		return 1
+		return int32(rInt)
 	}
 
 	return app.Replicas()

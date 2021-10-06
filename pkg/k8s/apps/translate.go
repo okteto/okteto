@@ -61,8 +61,6 @@ func (tr *Translation) translate() error {
 	tr.App.ObjectMeta().Labels[model.DevLabel] = "true"
 	tr.App.SetReplicas(0)
 
-	tr.DevApp.ObjectMeta().Labels[model.DevCloneLabel] = "true"
-
 	for k, v := range tr.Dev.Annotations {
 		tr.DevApp.ObjectMeta().Annotations[k] = v
 		tr.DevApp.TemplateObjectMeta().Annotations[k] = v

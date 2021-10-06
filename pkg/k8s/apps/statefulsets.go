@@ -84,6 +84,7 @@ func (i *StatefulSetApp) DevClone() App {
 		},
 		Spec: *i.sfs.Spec.DeepCopy(),
 	}
+	clone.Labels[model.DevCloneLabel] = string(i.sfs.UID)
 	for k, v := range i.sfs.Labels {
 		clone.Labels[k] = v
 	}

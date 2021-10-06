@@ -130,7 +130,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 	}
 	validStatefulsets := []*appsv1.StatefulSet{}
 	for _, sfs := range sfsList.Items {
-		if sfs.Labels[model.DevCloneLabel] != "true" {
+		if sfs.Labels[model.DevCloneLabel] == "" {
 			validStatefulsets = append(validStatefulsets, &sfs)
 		}
 	}
