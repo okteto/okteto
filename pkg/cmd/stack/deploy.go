@@ -536,7 +536,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 	}
 
 	ticker := time.NewTicker(100 * time.Millisecond)
-	timeout := time.Now().Add(300 * time.Second)
+	timeout := time.Now().Add(600 * time.Second)
 
 	selector := map[string]string{model.StackNameLabel: s.Name}
 	for time.Now().Before(timeout) {
