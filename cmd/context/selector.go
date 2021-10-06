@@ -150,7 +150,7 @@ func (s OktetoSelector) Run() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS != "windows" {
 		c.Stdout = &stdout{}
 	}
 
