@@ -150,6 +150,7 @@ func (s OktetoSelector) Run() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	c.Stdout = &stdout{}
 
 	c.Stdin = readline.NewCancelableStdin(c.Stdin)
 
@@ -410,4 +411,20 @@ func render(tpl *template.Template, data interface{}) []byte {
 		return []byte(fmt.Sprintf("%v", data))
 	}
 	return buf.Bytes()
+}
+
+type stdout struct{}
+
+// Write implements an io.WriterCloser over os.Stderr, but it skips the terminal
+// bell character.
+func (s *stdout) Write(b []byte) (int, error) {
+	if len(b) == 1 && b[0] == readline.CharBell {
+		return 0, nil
+	}
+	return os.Stderr.Write(b)
+}
+
+// Close implements an io.WriterCloser over os.Stderr.
+func (s *stdout) Close() error {
+	return os.Stderr.Close()
 }
