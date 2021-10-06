@@ -17,6 +17,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
+	"runtime"
 	"text/template"
 
 	"github.com/chzyer/readline"
@@ -64,7 +66,7 @@ type SelectorItem struct {
 func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	clusters := []SelectorItem{
 		{
-			Label:  "Okteto contexts",
+			Label:  "Okteto contexts:",
 			Enable: false,
 		},
 		{
@@ -80,7 +82,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 		k8sClusters := getKubernetesContextList()
 		if len(k8sClusters) > 0 {
 			clusters = append(clusters, SelectorItem{
-				Label:  "Kubernetes contexts",
+				Label:  "Kubernetes contexts:",
 				Enable: false,
 			})
 			for _, k8sCluster := range k8sClusters {
@@ -95,18 +97,29 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 }
 
 func AskForOptions(options []SelectorItem, label string) (string, error) {
+	selectedTemplate := "{{if .Enable}} ✓  {{ .Label | oktetoblue }}{{else}}{{ .Label | oktetoblue}}{{end}}"
+	activeTemplate := fmt.Sprintf("{{if .Enable}}  %s {{ .Label | oktetoblue }}{{else}}{{ .Label | oktetoblue}}{{end}}", promptui.IconSelect)
+	inactiveTemplate := "{{if .Enable}}    {{ .Label | oktetoblue}}{{else}}• {{ .Label }}{{end}}"
+	if runtime.GOOS == "windows" {
+		selectedTemplate = "{{if .Enable}} ✓  {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}"
+		activeTemplate = fmt.Sprintf("{{if .Enable}}  %s {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}", promptui.IconSelect)
+		inactiveTemplate = "{{if .Enable}}    {{ .Label | blue}}{{else}}• {{ .Label }}{{end}}"
+	}
+
 	prompt := OktetoSelector{
 		Label: label,
 		Items: options,
 		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ .Label }}",
-			Selected: "{{if .Enable}} ✓  {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}",
-			Active:   fmt.Sprintf("{{if .Enable}}%s {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}", promptui.IconSelect),
-			Inactive: "{{if .Enable}}  {{ .Label | blue}}{{else}}{{ .Label | blue}}{{end}}",
+			Selected: selectedTemplate,
+			Active:   activeTemplate,
+			Inactive: inactiveTemplate,
 			FuncMap:  promptui.FuncMap,
 		},
 	}
+
+	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
 
 	optionSelected, err := prompt.Run()
 	if err != nil {
