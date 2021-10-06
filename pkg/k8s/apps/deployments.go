@@ -27,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 )
@@ -152,18 +153,24 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 	for {
 		select {
 		case e := <-watcher.ResultChan():
-			d, ok := e.Object.(*appsv1.Deployment)
-			if !ok {
-				watcher, err = c.AppsV1().Deployments(i.d.Namespace).Watch(ctx, optsWatch)
-				if err != nil {
-					result <- err
+			switch e.Type {
+			case watch.Deleted:
+				result <- errors.ErrDeleteToApp
+				return
+			case watch.Modified:
+				d, ok := e.Object.(*appsv1.Deployment)
+				if !ok {
+					watcher, err = c.AppsV1().Deployments(i.d.Namespace).Watch(ctx, optsWatch)
+					if err != nil {
+						result <- err
+						return
+					}
+					continue
+				}
+				if d.Annotations[model.DeploymentRevisionAnnotation] != "" && d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
+					result <- errors.ErrApplyToApp
 					return
 				}
-				continue
-			}
-			if d.Annotations[model.DeploymentRevisionAnnotation] != "" && d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
-				result <- errors.ErrApplyToApp
-				return
 			}
 		case err := <-ctx.Done():
 			log.Debugf("call to up.applyToApp cancelled: %v", err)

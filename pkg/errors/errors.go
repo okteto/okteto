@@ -78,6 +78,9 @@ var (
 	// ErrBusySyncthing is raised when syncthing is busy
 	ErrBusySyncthing = fmt.Errorf("synchronization service is unresponsive")
 
+	// ErrDeleteToApp is raised when the app is deleted while running "okteto up"
+	ErrDeleteToApp = fmt.Errorf("application has been deleted. Run 'okteto down -v' to delete the resources created by your development container")
+
 	// ErrApplyToApp is raised when the app is modified while running "okteto up"
 	ErrApplyToApp = fmt.Errorf("application has been modified")
 

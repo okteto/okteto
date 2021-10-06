@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
@@ -103,8 +104,11 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 
 		app, _, err := utils.GetApp(ctx, dev, c)
 		if err != nil {
-			exit <- err
-			return
+			if !errors.IsNotFound(err) {
+				exit <- err
+				return
+			}
+			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 		}
 
 		trMap, err := apps.GetTranslations(ctx, dev, app, false, c)

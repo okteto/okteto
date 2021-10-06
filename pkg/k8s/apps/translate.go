@@ -50,9 +50,7 @@ type Translation struct {
 }
 
 func (tr *Translation) translate() error {
-	if err := tr.App.RestoreOriginal(); err != nil {
-		return err
-	}
+	tr.DevModeOff()
 
 	tr.DevApp = tr.App.DevClone()
 
@@ -94,7 +92,11 @@ func (tr *Translation) translate() error {
 	return nil
 }
 
-func (tr *Translation) DevModeOff() {
+func (tr *Translation) DevModeOff() error {
+
+	if err := tr.App.RestoreOriginal(); err != nil {
+		return err
+	}
 
 	delete(tr.App.ObjectMeta().Labels, model.DevLabel)
 	tr.App.SetReplicas(getPreviousAppReplicas(tr.App))
@@ -109,6 +111,7 @@ func (tr *Translation) DevModeOff() {
 	delete(tr.App.TemplateObjectMeta().Labels, model.InteractiveDevLabel)
 	delete(tr.App.TemplateObjectMeta().Labels, model.DetachedDevLabel)
 
+	return nil
 }
 
 //TranslateDevTolerations sets the user provided toleretions
