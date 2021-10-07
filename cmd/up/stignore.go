@@ -45,7 +45,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 		defer infile.Close()
 		reader := bufio.NewReader(infile)
 
-		stignoreName := fmt.Sprintf("stignore-%d", i+1)
+		stignoreName := fmt.Sprintf(".stignore-%d", i+1)
 		transformedStignorePath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), stignoreName)
 		outfile, err := os.OpenFile(transformedStignorePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
