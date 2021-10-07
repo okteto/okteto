@@ -78,11 +78,6 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if okteto.Context().Buildkit == "" {
-				log.Information(errors.ErrNoBuilderInContext)
-				return nil
-			}
-
 			oktetoRegistryURL := okteto.Context().Registry
 
 			if autoDeploy {
@@ -253,7 +248,17 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, okt
 	log.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	if err := build.Run(ctx, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, nil, progress); err != nil {
+	buildOptions := build.BuildOptions{
+		Path:       dev.Push.Context,
+		File:       dev.Push.Dockerfile,
+		Tag:        buildTag,
+		Target:     dev.Push.Target,
+		NoCache:    noCache,
+		CacheFrom:  dev.Push.CacheFrom,
+		BuildArgs:  buildArgs,
+		OutputMode: progress,
+	}
+	if err := build.Run(ctx, dev.Namespace, buildOptions); err != nil {
 		return "", err
 	}
 

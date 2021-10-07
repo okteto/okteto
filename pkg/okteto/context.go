@@ -319,6 +319,7 @@ func SaveKubernetesClusterContext(name, namespace string, cfg *clientcmdapi.Conf
 	}
 
 	kubeconfigBase64 := encodeOktetoKubeconfig(cfg)
+
 	CurrentStore.Contexts[name] = &OktetoContext{
 		Name:       name,
 		Namespace:  namespace,
@@ -426,7 +427,7 @@ func encodeOktetoKubeconfig(cfg *clientcmdapi.Config) string {
 		}
 	}
 
-	bytes, err := json.Marshal(cfg)
+	bytes, err := clientcmd.Write(*cfg)
 	if err != nil {
 		log.Fatalf("error marsahiling kubeconfig: %v", err)
 	}
@@ -439,12 +440,12 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
 	}
-	var cfg clientcmdapi.Config
-	if err := json.Unmarshal(kubeconfigBytes, &cfg); err != nil {
+	cfg, err := clientcmd.Load(kubeconfigBytes)
+	if err != nil {
 		return nil, nil, err
 	}
 	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
-	if err := client.WriteKubeconfig(&cfg, kubeconfigFile); err != nil {
+	if err := client.WriteKubeconfig(cfg, kubeconfigFile); err != nil {
 		return nil, nil, err
 	}
 	return client.Get(kubeconfigFile)

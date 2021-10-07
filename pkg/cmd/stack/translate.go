@@ -116,10 +116,14 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 	if err != nil {
 		return err
 	}
-	hasAddedAnyVolumeMounts, err := addVolumeMountsToBuiltImage(ctx, s, options, hasBuiltSomething)
-	if err != nil {
-		return err
+	var hasAddedAnyVolumeMounts bool
+	if okteto.IsOktetoContext() {
+		hasAddedAnyVolumeMounts, err = addVolumeMountsToBuiltImage(ctx, s, options, hasBuiltSomething)
+		if err != nil {
+			return err
+		}
 	}
+
 	if !hasBuiltSomething && !hasAddedAnyVolumeMounts && options.ForceBuild {
 		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
 	}
@@ -149,11 +153,26 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
-			log.Information("Running your build in %s...", okteto.Context().Buildkit)
+			if okteto.Context().Buildkit != "" {
+				log.Information("Running your build in %s...", okteto.Context().Buildkit)
+			} else {
+				log.Information("Running your build in docker")
+			}
+
 		}
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-		if err := build.Run(ctx, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, options.NoCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+		buildOptions := build.BuildOptions{
+			Path:       svc.Build.Context,
+			File:       svc.Build.Dockerfile,
+			Tag:        svc.Image,
+			Target:     svc.Build.Target,
+			NoCache:    options.NoCache,
+			CacheFrom:  svc.Build.CacheFrom,
+			BuildArgs:  buildArgs,
+			OutputMode: "tty",
+		}
+		if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
 			return hasBuiltSomething, err
 		}
 		svc.SetLastBuiltAnnotation()
@@ -188,7 +207,18 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-			if err := build.Run(ctx, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, options.NoCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+
+			buildOptions := build.BuildOptions{
+				Path:       svc.Build.Context,
+				File:       svc.Build.Dockerfile,
+				Tag:        svc.Image,
+				Target:     svc.Build.Target,
+				NoCache:    options.NoCache,
+				CacheFrom:  svc.Build.CacheFrom,
+				BuildArgs:  buildArgs,
+				OutputMode: "tty",
+			}
+			if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.SetLastBuiltAnnotation()
