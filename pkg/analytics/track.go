@@ -283,7 +283,10 @@ func TrackStackWarnings(warnings []string) {
 }
 
 func track(event string, success bool, props map[string]interface{}) {
-	if !get().Enabled || !okteto.IsTelemetryEnabled() {
+	if !get().Enabled {
+		return
+	}
+	if !okteto.IsTelemetryEnabled() && !okteto.IsOktetoCloud() {
 		return
 	}
 	mpOS := ""

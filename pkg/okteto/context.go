@@ -499,3 +499,8 @@ func getTelemetry(u *User) string {
 const (
 	DefaultTelemetryEnabled = "true"
 )
+
+func IsOktetoCloud() bool {
+	octx := Context()
+	return octx.Name == CloudURL
+}
