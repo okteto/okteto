@@ -17,7 +17,6 @@ import (
 	"compress/flate"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -71,7 +70,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	podPath, err := generatePodFile(ctx, dev, c)
 	if err != nil {
 		log.Infof("failed to get information about the remote dev container: %s", err)
-		log.Yellow(errors.ErrNotInDevMode.Error())
+		log.Warning(errors.ErrNotInDevMode.Error())
 	} else {
 		defer os.RemoveAll(podPath)
 	}
@@ -88,9 +87,9 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	files := []string{summaryFilename}
 	files = append(files, stignoreFilenames...)
 
-	deploymentLogsPath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), "okteto.log")
-	if model.FileExists(deploymentLogsPath) {
-		files = append(files, deploymentLogsPath)
+	appLogsPath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), "okteto.log")
+	if model.FileExists(appLogsPath) {
+		files = append(files, appLogsPath)
 	}
 
 	if model.FileExists(syncthing.GetLogFile(dev.Namespace, dev.Name)) {
@@ -114,7 +113,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 }
 
 func generateSummaryFile() (string, error) {
-	tempdir, _ := ioutil.TempDir("", "")
+	tempdir, _ := os.MkdirTemp("", "")
 	summaryPath := filepath.Join(tempdir, "okteto-summary.txt")
 	fileSummary, err := os.OpenFile(summaryPath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -145,7 +144,7 @@ func generateStignoreFiles(dev *model.Dev) []string {
 }
 
 func generateManifestFile(devPath string) (string, error) {
-	tempdir, err := ioutil.TempDir("", "")
+	tempdir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}
@@ -156,7 +155,7 @@ func generateManifestFile(devPath string) (string, error) {
 	}
 	defer manifestFile.Close()
 
-	b, err := ioutil.ReadFile(devPath)
+	b, err := os.ReadFile(devPath)
 	if err != nil {
 		return "", err
 	}
@@ -216,7 +215,11 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	if err != nil {
 		return "", err
 	}
-	pod, err := app.GetRunningPod(ctx, c)
+	devApp := app.DevClone()
+	if err := devApp.Refresh(ctx, c); err != nil {
+		return "", err
+	}
+	pod, err := devApp.GetRunningPod(ctx, c)
 	if err != nil {
 		return "", err
 	}
@@ -225,7 +228,7 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 		return "", errors.ErrNotFound
 	}
 
-	tempdir, err := ioutil.TempDir("", "")
+	tempdir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}
@@ -279,7 +282,7 @@ func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kub
 		return "", err
 	}
 
-	tempdir, _ := ioutil.TempDir("", "")
+	tempdir, _ := os.MkdirTemp("", "")
 	remoteLogsPath := filepath.Join(tempdir, "remote-syncthing.log")
 	fileRemoteLog, err := os.OpenFile(remoteLogsPath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {

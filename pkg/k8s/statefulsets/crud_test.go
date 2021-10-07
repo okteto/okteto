@@ -16,72 +16,12 @@ package statefulsets
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
-
-func TestCreate(t *testing.T) {
-	ctx := context.Background()
-	sfs := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "test",
-		},
-	}
-
-	clientset := fake.NewSimpleClientset()
-
-	_, err := Create(ctx, sfs, clientset)
-	if err != nil {
-		t.Fatal(err)
-	}
-	retrieved, err := clientset.AppsV1().StatefulSets(sfs.Namespace).Get(ctx, sfs.Name, metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(retrieved, sfs) {
-		t.Fatalf("Didn't created correctly")
-	}
-}
-
-func TestUpdate(t *testing.T) {
-	ctx := context.Background()
-	labels := map[string]string{"key": "value"}
-	sfs := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "test",
-			Labels:    labels,
-		},
-	}
-
-	clientset := fake.NewSimpleClientset(sfs)
-
-	updatedLabels := map[string]string{"key": "value", "key2": "value2"}
-	updatedsfs := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "test",
-			Labels:    updatedLabels,
-		},
-	}
-	_, err := Update(ctx, updatedsfs, clientset)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	retrieved, err := clientset.AppsV1().StatefulSets(sfs.Namespace).Get(ctx, sfs.Name, metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(retrieved, updatedsfs) {
-		t.Fatalf("Didn't updated correctly")
-	}
-}
 
 func TestDestroy(t *testing.T) {
 	var tests = []struct {

@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/k8s/annotations"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
@@ -27,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 )
@@ -53,6 +54,14 @@ func (i *DeploymentApp) ObjectMeta() metav1.ObjectMeta {
 	return i.d.ObjectMeta
 }
 
+func (i *DeploymentApp) Replicas() int32 {
+	return *i.d.Spec.Replicas
+}
+
+func (i *DeploymentApp) SetReplicas(n int32) {
+	i.d.Spec.Replicas = pointer.Int32Ptr(n)
+}
+
 func (i *DeploymentApp) TemplateObjectMeta() metav1.ObjectMeta {
 	if i.d.Spec.Template.ObjectMeta.Annotations == nil {
 		i.d.Spec.Template.ObjectMeta.Annotations = map[string]string{}
@@ -63,46 +72,40 @@ func (i *DeploymentApp) TemplateObjectMeta() metav1.ObjectMeta {
 	return i.d.Spec.Template.ObjectMeta
 }
 
-func (i *DeploymentApp) Replicas() int32 {
-	return *i.d.Spec.Replicas
-}
-
 func (i *DeploymentApp) PodSpec() *apiv1.PodSpec {
 	return &i.d.Spec.Template.Spec
 }
 
-func (i *DeploymentApp) NewTranslation(dev *model.Dev) *Translation {
-	return &Translation{
-		Interactive:        true,
-		Name:               dev.Name,
-		Version:            model.TranslationVersion,
-		Annotations:        dev.Metadata.Annotations,
-		Labels:             dev.Metadata.Labels,
-		Tolerations:        dev.Tolerations,
-		Replicas:           i.Replicas(),
-		App:                i,
-		DeploymentStrategy: i.d.Spec.Strategy,
+func (i *DeploymentApp) DevClone() App {
+	clone := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        model.DevCloneName(i.d.Name),
+			Namespace:   i.d.Namespace,
+			Labels:      map[string]string{},
+			Annotations: map[string]string{},
+		},
+		Spec: *i.d.Spec.DeepCopy(),
 	}
-}
-
-func (i *DeploymentApp) DevModeOn() {
-	i.d.Spec.Replicas = pointer.Int32Ptr(1)
-	i.d.Spec.Strategy = appsv1.DeploymentStrategy{
+	if i.d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+		clone.Labels[model.DevLabel] = "true"
+	} else {
+		clone.Labels[model.DevCloneLabel] = string(i.d.UID)
+	}
+	for k, v := range i.d.Labels {
+		clone.Labels[k] = v
+	}
+	for k, v := range i.d.Annotations {
+		clone.Annotations[k] = v
+	}
+	delete(clone.Annotations, model.OktetoAutoCreateAnnotation)
+	clone.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RecreateDeploymentStrategyType,
 	}
-}
-
-func (i *DeploymentApp) DevModeOff(t *Translation) {
-	i.d.Spec.Replicas = pointer.Int32Ptr(t.Replicas)
-	i.d.Spec.Strategy = t.DeploymentStrategy
+	return NewDeploymentApp(clone)
 }
 
 func (i *DeploymentApp) CheckConditionErrors(dev *model.Dev) error {
 	return deployments.CheckConditionErrors(i.d, dev)
-}
-
-func (i *DeploymentApp) GetRevision() string {
-	return i.d.Annotations[model.DeploymentRevisionAnnotation]
 }
 
 func (i *DeploymentApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
@@ -111,51 +114,6 @@ func (i *DeploymentApp) GetRunningPod(ctx context.Context, c kubernetes.Interfac
 		return nil, err
 	}
 	return pods.GetPodByReplicaSet(ctx, rs, c)
-}
-
-func (i *DeploymentApp) Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error) {
-	d, err := deployments.GetByDev(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return nil, fmt.Errorf("error diverting deployment: %s", err.Error())
-	}
-
-	divertDeployment := translateDivertDeployment(username, d)
-	if err := deployments.Deploy(ctx, divertDeployment, c); err != nil {
-		return nil, fmt.Errorf("error creating diver deployment '%s': %s", divertDeployment.Name, err.Error())
-	}
-	return &DeploymentApp{d: divertDeployment}, nil
-}
-
-func translateDivertDeployment(username string, d *appsv1.Deployment) *appsv1.Deployment {
-	result := d.DeepCopy()
-	result.UID = ""
-	result.Name = DivertName(username, d.Name)
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
-	}
-	result.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
-		},
-	}
-	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
-	}
-	annotations.Set(result.GetObjectMeta(), model.OktetoAutoCreateAnnotation, model.OktetoUpCmd)
-	result.ResourceVersion = ""
-	return result
-}
-
-func (i *DeploymentApp) SetOriginal() error {
-	delete(i.d.Annotations, model.DeploymentAnnotation)
-	i.d.Status = appsv1.DeploymentStatus{}
-	manifestBytes, err := json.Marshal(i.d)
-	if err != nil {
-		return err
-	}
-	i.d.Annotations[model.DeploymentAnnotation] = string(manifestBytes)
-	return nil
 }
 
 func (i *DeploymentApp) RestoreOriginal() error {
@@ -180,22 +138,63 @@ func (i *DeploymentApp) Refresh(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
-func (i *DeploymentApp) Create(ctx context.Context, c kubernetes.Interface) error {
-	d, err := deployments.Create(ctx, i.d, c)
+func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernetes.Interface) {
+	optsWatch := metav1.ListOptions{
+		Watch:         true,
+		FieldSelector: fmt.Sprintf("metadata.name=%s", i.d.Name),
+	}
+
+	watcher, err := c.AppsV1().Deployments(i.d.Namespace).Watch(ctx, optsWatch)
+	if err != nil {
+		result <- err
+		return
+	}
+
+	for {
+		select {
+		case e := <-watcher.ResultChan():
+			switch e.Type {
+			case watch.Deleted:
+				result <- errors.ErrDeleteToApp
+				return
+			case watch.Modified:
+				d, ok := e.Object.(*appsv1.Deployment)
+				if !ok {
+					watcher, err = c.AppsV1().Deployments(i.d.Namespace).Watch(ctx, optsWatch)
+					if err != nil {
+						result <- err
+						return
+					}
+					continue
+				}
+				if d.Annotations[model.DeploymentRevisionAnnotation] != "" && d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
+					result <- errors.ErrApplyToApp
+					return
+				}
+			}
+		case err := <-ctx.Done():
+			log.Debugf("call to up.applyToApp cancelled: %v", err)
+			return
+		}
+	}
+}
+
+func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
+	if string(i.d.UID) == "" && i.d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+		return nil
+	}
+
+	d, err := deployments.Deploy(ctx, i.d, c)
 	if err == nil {
 		i.d = d
 	}
 	return err
 }
 
-func (i *DeploymentApp) Update(ctx context.Context, c kubernetes.Interface) error {
-	d, err := deployments.Update(ctx, i.d, c)
-	if err == nil {
-		i.d = d
-	}
-	return err
+func (i *DeploymentApp) Destroy(ctx context.Context, c kubernetes.Interface) error {
+	return deployments.Destroy(ctx, i.d.Name, i.d.Namespace, c)
 }
 
-func (_ *DeploymentApp) Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	return deployments.Destroy(ctx, dev.Name, dev.Namespace, c)
+func (i *DeploymentApp) Divert(username string) App {
+	return &DeploymentApp{d: deployments.TranslateDivert(username, i.d)}
 }

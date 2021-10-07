@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -701,7 +700,7 @@ func Test_LoadForcePull(t *testing.T) {
 }
 
 func Test_validate(t *testing.T) {
-	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}

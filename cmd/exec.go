@@ -19,16 +19,17 @@ import (
 	"os"
 	"time"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 
 	"github.com/spf13/cobra"
@@ -47,10 +48,19 @@ func Exec() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
+
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
 			t := time.NewTicker(1 * time.Second)
 			iter := 0
 			err = executeExec(ctx, dev, args)
@@ -68,8 +78,8 @@ func Exec() *cobra.Command {
 
 			if errors.IsNotFound(err) {
 				return errors.UserError{
-					E:    fmt.Errorf("Development container not found in namespace %s", dev.Namespace),
-					Hint: "Run 'okteto up' to launch it or use 'okteto namespace' to select the correct namespace and try again",
+					E:    fmt.Errorf("development container not found in namespace '%s'", dev.Namespace),
+					Hint: "Run 'okteto up' to create your development container or use 'okteto context' to change your current context",
 				}
 			}
 
@@ -90,7 +100,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
 
-	c, cfg, err := k8Client.GetLocalWithContext(dev.Context)
+	c, cfg, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
@@ -100,20 +110,33 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	pod, err := apps.GetRunningPodInLoop(ctx, dev, app, c, true)
-	if err != nil {
-		return err
-	}
-
-	if pod == nil {
-		return errors.UserError{
-			E:    fmt.Errorf("development mode is not enabled"),
-			Hint: "Run 'okteto up' to enable it and try again",
+	retries := 0
+	ticker := time.NewTicker(500 * time.Millisecond)
+	for {
+		if apps.IsDevModeOn(app) {
+			break
 		}
+		retries++
+		if retries >= 10 {
+			return errors.UserError{
+				E:    fmt.Errorf("development mode is not enabled"),
+				Hint: "Run 'okteto up' to enable it and try again",
+			}
+		}
+		<-ticker.C
 	}
 
 	waitForStates := []config.UpState{config.Ready}
 	if err := status.Wait(ctx, dev, waitForStates); err != nil {
+		return err
+	}
+
+	devApp := app.DevClone()
+	if err := devApp.Refresh(ctx, c); err != nil {
+		return err
+	}
+	pod, err := devApp.GetRunningPod(ctx, c)
+	if err != nil {
 		return err
 	}
 
@@ -122,19 +145,17 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	}
 
 	if dev.RemoteModeEnabled() {
-		if dev.RemotePort == 0 {
-			p, err := ssh.GetPort(dev.Name)
-			if err != nil {
-				log.Infof("failed to get the SSH port for %s: %s", dev.Name, err)
-				return errors.UserError{
-					E:    fmt.Errorf("development mode is not enabled on your deployment"),
-					Hint: "Run 'okteto up' to enable it and try again",
-				}
+		p, err := ssh.GetPort(dev.Name)
+		if err != nil {
+			log.Infof("failed to get the SSH port for %s: %s", dev.Name, err)
+			return errors.UserError{
+				E:    fmt.Errorf("development mode is not enabled on your deployment"),
+				Hint: "Run 'okteto up' to enable it and try again",
 			}
-
-			dev.RemotePort = p
-			log.Infof("executing remote command over SSH port %d", dev.RemotePort)
 		}
+
+		dev.RemotePort = p
+		log.Infof("executing remote command over SSH port %d", dev.RemotePort)
 
 		dev.LoadRemote(ssh.GetPublicKey())
 

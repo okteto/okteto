@@ -15,20 +15,25 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Down deactivates the development container
@@ -44,8 +49,16 @@ func Down() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
+				return err
+			}
+
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
 				return err
 			}
 
@@ -76,36 +89,43 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 	exit := make(chan error, 1)
 
 	go func() {
-		client, _, err := k8Client.GetLocalWithContext(dev.Context)
+		c, _, err := okteto.GetK8sClient()
 		if err != nil {
 			exit <- err
 			return
 		}
 
 		if dev.Divert != nil {
-			if err := diverts.Delete(ctx, dev, client); err != nil {
+			if err := diverts.Delete(ctx, dev, c); err != nil {
 				exit <- err
 				return
 			}
 		}
 
 		spinner.Stop()
-		app, err := apps.Get(ctx, dev, dev.Namespace, client)
+		app, _, err := utils.GetApp(ctx, dev, c)
 		if err != nil {
-			exit <- err
-			return
+			if !errors.IsNotFound(err) {
+				exit <- err
+				return
+			}
+			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 		}
 		spinner.Start()
 
-		tList, err := apps.GetTranslations(ctx, dev, app, false, client)
+		trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
 		if err != nil {
 			exit <- err
 			return
 		}
 
-		if err := down.Run(dev, app, tList, true, client); err != nil {
+		if err := down.Run(dev, app, trMap, true, c); err != nil {
 			exit <- err
 			return
+		}
+
+		if err := c.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
+			log.Infof("error deleting deprecated volume: %v", err)
 		}
 
 		spinner.Stop()
@@ -140,7 +160,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
@@ -151,7 +171,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 }
 
 func removeVolume(ctx context.Context, dev *model.Dev) error {
-	c, _, err := k8Client.GetLocalWithContext(dev.Context)
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}

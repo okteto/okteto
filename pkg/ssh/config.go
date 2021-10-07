@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -131,7 +130,7 @@ func parse(r io.Reader) (*sshConfig, error) {
 		h *host
 	)
 
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +240,7 @@ func (config *sshConfig) writeToFilepath(p string) error {
 	}
 
 	dir := filepath.Dir(p)
-	temp, err := ioutil.TempFile(dir, "")
+	temp, err := os.CreateTemp(dir, "")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary config file: %s", err)
 	}

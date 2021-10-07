@@ -30,6 +30,54 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+//GSandbox returns a base deployment for a dev
+func Sandbox(dev *model.Dev) *appsv1.Deployment {
+	image := dev.Image.Name
+	if image == "" {
+		image = model.DefaultImage
+	}
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name,
+			Namespace: dev.Namespace,
+			Labels:    model.Labels{},
+			Annotations: model.Annotations{
+				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: pointer.Int32Ptr(1),
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": dev.Name,
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": dev.Name,
+					},
+					Annotations: map[string]string{},
+				},
+				Spec: apiv1.PodSpec{
+					ServiceAccountName:            dev.ServiceAccount,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+					Containers: []apiv1.Container{
+						{
+							Name:            "dev",
+							Image:           image,
+							ImagePullPolicy: apiv1.PullAlways,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 //List returns the list of deployments
 func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]appsv1.Deployment, error) {
 	dList, err := c.AppsV1().Deployments(namespace).List(
@@ -67,11 +115,16 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 	if len(dList.Items) == 0 {
 		return nil, errors.ErrNotFound
 	}
-	if len(dList.Items) > 1 {
-		return nil, fmt.Errorf("Found '%d' deployments for labels '%s' instead of 1", len(dList.Items), dev.LabelsSelector())
+	validDeployments := []*appsv1.Deployment{}
+	for i, d := range dList.Items {
+		if d.Labels[model.DevCloneLabel] == "" {
+			validDeployments = append(validDeployments, &dList.Items[i])
+		}
 	}
-	d := dList.Items[0]
-	return &d, nil
+	if len(validDeployments) > 1 {
+		return nil, fmt.Errorf("found '%d' deployments for labels '%s' instead of 1", len(validDeployments), dev.LabelsSelector())
+	}
+	return validDeployments[0], nil
 }
 
 //CheckConditionErrors checks errors in conditions
@@ -81,10 +134,10 @@ func CheckConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
 			if strings.Contains(c.Message, "exceeded quota") {
 				log.Infof("%s: %s", errors.ErrQuota, c.Message)
 				if strings.Contains(c.Message, "requested: pods=") {
-					return fmt.Errorf("Quota exceeded, you have reached the maximum number of pods per namespace")
+					return fmt.Errorf("quota exceeded, you have reached the maximum number of pods per namespace")
 				}
 				if strings.Contains(c.Message, "requested: requests.storage=") {
-					return fmt.Errorf("Quota exceeded, you have reached the maximum storage per namespace")
+					return fmt.Errorf("quota exceeded, you have reached the maximum storage per namespace")
 				}
 				return errors.ErrQuota
 			} else if isResourcesRelatedError(c.Message) {
@@ -126,54 +179,24 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 	return fmt.Errorf(strings.TrimSpace(errorToReturn))
 }
 
-func Create(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (*appsv1.Deployment, error) {
-	return c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
-}
-
-func Update(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (*appsv1.Deployment, error) {
-	d.ResourceVersion = ""
-	d.Status = appsv1.DeploymentStatus{}
-	return c.AppsV1().Deployments(d.Namespace).Update(ctx, d, metav1.UpdateOptions{})
-}
-
 //Deploy creates or updates a deployment
-func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
-	old, err := c.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("error getting deployment '%s'': %s", d.Name, err)
+func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (*appsv1.Deployment, error) {
+	d.ResourceVersion = ""
+	result, err := c.AppsV1().Deployments(d.Namespace).Update(ctx, d, metav1.UpdateOptions{})
+	if err == nil {
+		return result, nil
 	}
 
-	if old.Name == "" {
-		log.Infof("creating deployment '%s'", d.Name)
-		_, err = c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
-		if err != nil {
-			return fmt.Errorf("error creating kubernetes deployment: %s", err)
-		}
-		log.Infof("created deployment '%s'", d.Name)
-	} else {
-		log.Infof("updating deployment '%s'", d.Name)
-		old.Annotations = d.Annotations
-		old.Labels = d.Labels
-		old.Spec = d.Spec
-		if _, err := Update(ctx, old, c); err != nil {
-			return fmt.Errorf("error updating kubernetes deployment: %s", err)
-		}
-		log.Infof("updated deployment '%s'.", d.Name)
+	if !errors.IsNotFound(err) {
+		return nil, err
 	}
-	return nil
+
+	return c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
 }
 
 //IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
 	return labels.Get(d.GetObjectMeta(), model.DevLabel) != ""
-}
-
-//RestoreDevModeFrom restores labels an annotations from a deployment in dev mode
-func RestoreDevModeFrom(d, old *appsv1.Deployment) {
-	d.Labels[model.DevLabel] = old.Labels[model.DevLabel]
-	d.Spec.Replicas = old.Spec.Replicas
-	d.Annotations = old.Annotations
-	d.Spec.Template.Annotations = old.Spec.Template.Annotations
 }
 
 //Destroy destroys a k8s deployment
@@ -197,4 +220,29 @@ func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Inte
 		return false
 	}
 	return d.Status.ReadyReplicas > 0
+}
+
+func TranslateDivert(username string, d *appsv1.Deployment) *appsv1.Deployment {
+	name := model.DivertName(d.Name, username)
+	result := d.DeepCopy()
+	result.UID = ""
+	result.Name = name
+	if result.Annotations == nil {
+		result.Annotations = map[string]string{}
+	}
+	result.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoUpCmd
+	result.Labels = map[string]string{model.OktetoDivertLabel: username}
+	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
+		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
+	}
+	result.Spec.Selector = &metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			model.OktetoDivertLabel: username,
+		},
+	}
+	result.Spec.Template.Labels = map[string]string{
+		model.OktetoDivertLabel: username,
+	}
+	result.ResourceVersion = ""
+	return result
 }

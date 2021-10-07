@@ -14,13 +14,11 @@
 package apps
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path"
+	"strconv"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -42,70 +40,83 @@ const (
 	oktetoSecretTemplate   = "okteto-%s"
 )
 
-func translate(t *Translation, isOktetoNamespace bool) error {
+// Translation represents the information for translating an application
+type Translation struct {
+	MainDev *model.Dev
+	Dev     *model.Dev
+	App     App
+	DevApp  App
+	Rules   []*model.TranslationRule
+}
 
-	ct := os.Getenv("OKTETO_CLIENTSIDE_TRANSLATION")
-	if ct == "" && isOktetoNamespace {
-		commonTranslation(t)
-		return setTranslationAsAnnotation(t)
+func (tr *Translation) translate() error {
+	tr.DevModeOff()
+
+	tr.DevApp = tr.App.DevClone()
+
+	replicas := getPreviousAppReplicas(tr.App)
+	tr.App.ObjectMeta().Annotations[model.AppReplicasAnnotation] = strconv.Itoa(int(replicas))
+	tr.App.ObjectMeta().Labels[model.DevLabel] = "true"
+	tr.App.SetReplicas(0)
+
+	for k, v := range tr.Dev.Annotations {
+		tr.DevApp.ObjectMeta().Annotations[k] = v
+		tr.DevApp.TemplateObjectMeta().Annotations[k] = v
+	}
+	for k, v := range tr.Dev.Labels {
+		tr.DevApp.ObjectMeta().Labels[k] = v
+		tr.DevApp.TemplateObjectMeta().Labels[k] = v
 	}
 
-	if err := t.App.RestoreOriginal(); err != nil {
-		return err
-	}
+	TranslateDevTolerations(tr.DevApp.PodSpec(), tr.Dev.Tolerations)
 
-	if err := t.App.SetOriginal(); err != nil {
-		return err
-	}
-
-	log.Infof("using clientside translation")
-
-	commonTranslation(t)
-	for k, v := range t.Annotations {
-		t.App.ObjectMeta().Annotations[k] = v
-		t.App.TemplateObjectMeta().Annotations[k] = v
-	}
-	for k, v := range t.Labels {
-		t.App.ObjectMeta().Labels[k] = v
-		t.App.TemplateObjectMeta().Labels[k] = v
-	}
-
-	t.App.TemplateObjectMeta().Labels[model.DevLabel] = "true"
-	TranslateDevTolerations(t.App.PodSpec(), t.Tolerations)
-	t.App.PodSpec().TerminationGracePeriodSeconds = pointer.Int64Ptr(0)
-
-	if t.Interactive {
-		TranslateOktetoSyncSecret(t.App.PodSpec(), t.Name)
+	if tr.MainDev == tr.Dev {
+		tr.DevApp.SetReplicas(1)
+		tr.DevApp.TemplateObjectMeta().Labels[model.InteractiveDevLabel] = tr.Dev.Name
+		TranslateOktetoSyncSecret(tr.DevApp.PodSpec(), tr.Dev.Name)
 	} else {
-		TranslatePodAffinity(t.App.PodSpec(), t.Name)
+		tr.DevApp.TemplateObjectMeta().Labels[model.DetachedDevLabel] = tr.Dev.Name
+		TranslatePodAffinity(tr.DevApp.PodSpec(), tr.MainDev.Name)
 	}
-	for _, rule := range t.Rules {
-		devContainer := GetDevContainer(t.App.PodSpec(), rule.Container)
+
+	tr.DevApp.PodSpec().TerminationGracePeriodSeconds = pointer.Int64Ptr(0)
+
+	for _, rule := range tr.Rules {
+		devContainer := GetDevContainer(tr.DevApp.PodSpec(), rule.Container)
 		TranslateDevContainer(devContainer, rule)
-		TranslatePodSpec(t.App.PodSpec(), rule)
-		TranslateOktetoDevSecret(t.App.PodSpec(), t.Name, rule.Secrets)
+		TranslatePodSpec(tr.DevApp.PodSpec(), rule)
+		TranslateOktetoDevSecret(tr.DevApp.PodSpec(), tr.Dev.Name, rule.Secrets)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
-			TranslateOktetoInitBinContainer(rule, t.App.PodSpec())
-			TranslateOktetoInitFromImageContainer(t.App.PodSpec(), rule)
-			TranslateDinDContainer(t.App.PodSpec(), rule)
-			TranslateOktetoBinVolume(t.App.PodSpec())
+			TranslateOktetoInitBinContainer(rule, tr.DevApp.PodSpec())
+			TranslateOktetoInitFromImageContainer(tr.DevApp.PodSpec(), rule)
+			TranslateDinDContainer(tr.DevApp.PodSpec(), rule)
+			TranslateOktetoBinVolume(tr.DevApp.PodSpec())
 		}
 	}
 	return nil
 }
 
-func commonTranslation(t *Translation) {
-	t.App.ObjectMeta().Annotations[oktetoVersionAnnotation] = model.Version
-	t.App.ObjectMeta().Labels[model.DevLabel] = "true"
+func (tr *Translation) DevModeOff() error {
 
-	if t.Interactive {
-		t.App.TemplateObjectMeta().Labels[model.InteractiveDevLabel] = t.Name
-	} else {
-		t.App.TemplateObjectMeta().Labels[model.DetachedDevLabel] = t.Name
+	if err := tr.App.RestoreOriginal(); err != nil {
+		return err
 	}
 
-	t.App.DevModeOn()
+	delete(tr.App.ObjectMeta().Labels, model.DevLabel)
+	tr.App.SetReplicas(getPreviousAppReplicas(tr.App))
+
+	//TODO: this is for backward compatibility: remove when people is on CLI >= 1.14
+	delete(tr.App.ObjectMeta().Annotations, oktetoVersionAnnotation)
+	delete(tr.App.ObjectMeta().Annotations, model.OktetoRevisionAnnotation)
+
+	delete(tr.App.TemplateObjectMeta().Annotations, model.TranslationAnnotation)
+	delete(tr.App.TemplateObjectMeta().Annotations, model.OktetoRestartAnnotation)
+
+	delete(tr.App.TemplateObjectMeta().Labels, model.InteractiveDevLabel)
+	delete(tr.App.TemplateObjectMeta().Labels, model.DetachedDevLabel)
+
+	return nil
 }
 
 //TranslateDevTolerations sets the user provided toleretions
@@ -651,20 +662,4 @@ func TranslateOktetoAffinity(spec *apiv1.PodSpec, affinity *apiv1.Affinity) {
 		}
 		spec.Affinity = affinity
 	}
-}
-
-//TranslateDevModeOff reverses the dev mode translation
-func TranslateDevModeOff(app App) error {
-	tJson := app.TemplateObjectMeta().Annotations[model.TranslationAnnotation]
-	if tJson == "" {
-		return app.RestoreOriginal()
-	}
-	t := &Translation{
-		App: app,
-	}
-	if err := json.Unmarshal([]byte(tJson), t); err != nil {
-		return fmt.Errorf("malformed tr rules: %s", err)
-	}
-	t.DevModeOff()
-	return nil
 }

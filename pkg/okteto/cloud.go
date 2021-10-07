@@ -65,4 +65,7 @@ const (
 	pE1wqLC3rK2TKzt2dCd4rEEg+WaUckoaALIRonUr7QI=
 	-----END CERTIFICATE-----
 	`
+
+	// StagingURL is the default URL of okteto
+	StagingURL = "https://staging.okteto.dev"
 )

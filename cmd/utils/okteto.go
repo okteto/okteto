@@ -14,6 +14,7 @@
 package utils
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -22,10 +23,28 @@ import (
 
 func SetOktetoUsernameEnv() error {
 	if username := os.Getenv("OKTETO_USERNAME"); username == "" {
-		username := strings.ToLower(okteto.GetUsername())
+		username := strings.ToLower(okteto.Context().Username)
 		if err := os.Setenv("OKTETO_USERNAME", username); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func HasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return false, nil
+	}
+	nList, err := oktetoClient.ListNamespaces(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	for i := range nList {
+		if nList[i].ID == namespace {
+			return true, nil
+		}
+	}
+	return false, nil
 }

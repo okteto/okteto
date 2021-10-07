@@ -15,14 +15,30 @@ package apps
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+func TestMain(m *testing.M) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Name:      "test",
+				Namespace: "namespace",
+				UserID:    "user-id",
+			},
+		},
+	}
+	os.Exit(m.Run())
+}
 
 func TestGetStatefulset(t *testing.T) {
 	ctx := context.Background()
@@ -212,7 +228,7 @@ func TestValidateMountPaths(t *testing.T) {
 					{
 						VolumeMounts: []v1.VolumeMount{
 							{
-								Name:      "okteto-test",
+								Name:      "test-okteto",
 								MountPath: "/data",
 							},
 						},

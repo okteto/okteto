@@ -31,19 +31,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func Create(ctx context.Context, dev *model.Dev, isOktetoNamespace bool, c kubernetes.Interface) error {
-	if !isOktetoNamespace {
+func Create(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+	if !okteto.IsOktetoContext() {
 		return errors.ErrDivertNotSupported
 	}
 
 	username := okteto.GetSanitizedUsername()
 
-	r, err := divertApp(ctx, dev, username, c)
+	app, err := divertApp(ctx, dev, username, c)
 	if err != nil {
 		return err
 	}
 
-	s, err := divertService(ctx, dev, r, username, c)
+	s, err := divertService(ctx, dev, app, username, c)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,6 @@ func Create(ctx context.Context, dev *model.Dev, isOktetoNamespace bool, c kuber
 		return err
 	}
 
-	translateDev(dev, r)
 	return nil
 }
 
@@ -66,7 +65,7 @@ func divertApp(ctx context.Context, dev *model.Dev, username string, c kubernete
 	if err != nil {
 		return nil, err
 	}
-	return app.Divert(ctx, username, dev, c)
+	return app.Divert(username), nil
 }
 
 func divertService(ctx context.Context, dev *model.Dev, app apps.App, username string, c kubernetes.Interface) (*apiv1.Service, error) {
@@ -144,16 +143,11 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	username := okteto.GetSanitizedUsername()
 
-	app, err := apps.Get(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return err
-	}
-
 	dClient, err := GetClient(dev.Context)
 	if err != nil {
 		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
 	}
-	divertCRDName := apps.DivertName(username, dev.Divert.Service)
+	divertCRDName := model.DivertName(dev.Divert.Service, username)
 	if err := dClient.Diverts(dev.Namespace).Delete(ctx, divertCRDName, metav1.DeleteOptions{}); err != nil {
 		if strings.Contains(err.Error(), "the server could not find the requested resource") {
 			return errors.ErrDivertNotSupported
@@ -163,16 +157,15 @@ func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 		}
 	}
 
-	iName := apps.DivertName(username, dev.Divert.Ingress)
+	iName := model.DivertName(dev.Divert.Ingress, username)
 	if err := ingressesv1.Destroy(ctx, iName, dev.Namespace, c); err != nil {
 		return fmt.Errorf("error deleting divert ingress '%s': %s", iName, err.Error())
 	}
 
-	sName := apps.DivertName(username, dev.Divert.Service)
+	sName := model.DivertName(dev.Divert.Service, username)
 	if err := services.Destroy(ctx, sName, dev.Namespace, c); err != nil {
 		return fmt.Errorf("error deleting divert service '%s': %s", sName, err.Error())
 	}
 
-	translateDev(dev, app)
-	return app.Update(ctx, c)
+	return nil
 }

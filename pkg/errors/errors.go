@@ -43,10 +43,13 @@ func (u CommandError) Error() string {
 
 var (
 	// ErrCommandFailed is raised when the command execution failed
-	ErrCommandFailed = errors.New("Command execution failed")
+	ErrCommandFailed = errors.New("command execution failed")
 
 	// ErrNotLogged is raised when we can't get the user token
-	ErrNotLogged = fmt.Errorf("please run 'okteto login [URL]' and try again")
+	ErrNotLogged = fmt.Errorf("okteto context isn't configured. Please run 'okteto context' and try again")
+
+	// ErrNotOktetoCluster is raised when we a command is only available on an okteto cluster
+	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context' and try again")
 
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
@@ -55,7 +58,7 @@ var (
 	ErrInternalServerError = fmt.Errorf("internal server error, please try again")
 
 	// ErrQuota is returned when there aren't enough resources to enable dev mode
-	ErrQuota = fmt.Errorf("Quota exceeded, please free some resources and try again")
+	ErrQuota = fmt.Errorf("quota exceeded, please free some resources and try again")
 
 	// ErrSSHConnectError is returned when okteto cannot connect to ssh
 	ErrSSHConnectError = fmt.Errorf("ssh start error")
@@ -75,22 +78,64 @@ var (
 	// ErrBusySyncthing is raised when syncthing is busy
 	ErrBusySyncthing = fmt.Errorf("synchronization service is unresponsive")
 
+	// ErrDeleteToApp is raised when the app is deleted while running "okteto up"
+	ErrDeleteToApp = fmt.Errorf("application has been deleted. Run 'okteto down -v' to delete the resources created by your development container")
+
+	// ErrApplyToApp is raised when the app is modified while running "okteto up"
+	ErrApplyToApp = fmt.Errorf("application has been modified")
+
 	// ErrLostSyncthing is raised when we lose connectivity with syncthing
 	ErrLostSyncthing = fmt.Errorf("synchronization service is disconnected")
 
 	// ErrNotInDevMode is raised when the deployment is not in dev mode
-	ErrNotInDevMode = fmt.Errorf("Deployment is not in development mode anymore")
+	ErrNotInDevMode = fmt.Errorf("deployment is not in development mode anymore")
 
 	// ErrDevPodDeleted raised if dev pod is deleted in the middle of the "okteto up" sequence
 	ErrDevPodDeleted = fmt.Errorf("development container has been removed")
 
 	//ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
 	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in namespaces managed by Okteto")
+
+	//ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
+	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available for clusters managed by Okteto Enterprise")
+
+	//ErrTokenFlagNeeded is raised when the command is executed from inside a pod
+	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
+
+	//ErrInvalidContext is raised when the Kubernetes context selected is not defined on your kubeconfig or is not an okteto cluster
+	ErrInvalidContext = "'%s' isn't a valid Kubernetes context"
+
+	//ErrNamespaceNotFound is raised when the namespace is not found on an okteto instance
+	ErrNamespaceNotFound = "namespace '%s' not found. Please verify that the namespace exists and that you have access to it"
+
+	//ErrOktetoContextNotFound is raised when the context is not found in existing okteto contexts
+	ErrOktetoContextNotFound = "context '%s' not found. Run 'okteto context %s' to configure it"
+
+	//ErrKubernetesContextNotFound is raised when the kubernetes context is not found in kubeconfig
+	ErrKubernetesContextNotFound = "context '%s' not found in '%s'"
+
+	//ErrNoActiveOktetoContexts returned if listing okteto contexts and there aren't okteto contexts defined yet
+	ErrNoActiveOktetoContexts = fmt.Errorf("there are no okteto contexts")
+
+	//ErrIntSig raised if the we get an interrupt signal in the middle of a command
+	ErrIntSig = fmt.Errorf("interrupt signal received")
+
+	//ErrCorruptedOktetoContexts raised when the okteto context store is corrupted
+	ErrCorruptedOktetoContexts = "okteto context store is corrupted. Delete the folder %s and try again"
+
+	//ErrNoBuilderInContext raised when there is no builder in the context
+	ErrNoBuilderInContext = "Your current context doesn't support builds.\n    Run 'okteto context'  with the ' --builder' flag to configure your build service"
+
+	//ErrKubernetesLongTimeToCreateDevContainer raised when the creation of the dev container times out
+	ErrKubernetesLongTimeToCreateDevContainer = fmt.Errorf("kubernetes is taking too long to start your development container. Please check for errors and try again")
+
+	//ErrNoServicesinOktetoManifest raised when no services are defined in the okteto manifest
+	ErrNoServicesinOktetoManifest = fmt.Errorf("'okteto restart' is only supported when using the field 'services'")
 )
 
 // IsNotFound returns true if err is of the type not found
 func IsNotFound(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "not found")
+	return err != nil && (strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "doesn't exist"))
 }
 
 // IsNotExist returns true if err is of the type does not exist

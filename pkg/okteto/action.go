@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/shurcooL/graphql"
 )
 
 // ActionBody top body answer
@@ -21,22 +22,34 @@ type Action struct {
 }
 
 // GetAction gets a installer job given its name
-func GetAction(ctx context.Context, name, namespace string) (*Action, error) {
-	q := fmt.Sprintf(`query{
-		action(name: "%s", space: "%s"){
-			id,name,status
-		},
-	}`, name, namespace)
-
-	var body ActionBody
-	if err := query(ctx, q, &body); err != nil {
-		return nil, err
+func (c *OktetoClient) GetAction(ctx context.Context, name string) (*Action, error) {
+	namespace := Context().Namespace
+	var query struct {
+		Action struct {
+			Id     graphql.String
+			Name   graphql.String
+			Status graphql.String
+		} `graphql:"action(name: $name, space: $space)"`
+	}
+	variables := map[string]interface{}{
+		"name":  graphql.String(name),
+		"space": graphql.String(namespace),
 	}
 
-	return &body.Action, nil
+	err := c.client.Query(ctx, &query, variables)
+	if err != nil {
+		return nil, translateAPIErr(err)
+	}
+	action := &Action{
+		ID:     string(query.Action.Id),
+		Name:   string(query.Action.Name),
+		Status: string(query.Action.Status),
+	}
+
+	return action, nil
 }
 
-func WaitForActionToFinish(ctx context.Context, name, namespace string, timeout time.Duration) error {
+func (c *OktetoClient) WaitForActionToFinish(ctx context.Context, name string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
@@ -45,7 +58,7 @@ func WaitForActionToFinish(ctx context.Context, name, namespace string, timeout 
 		case <-to.C:
 			return fmt.Errorf("action '%s' didn't finish after %s", name, timeout.String())
 		case <-t.C:
-			a, err := GetAction(ctx, name, namespace)
+			a, err := c.GetAction(ctx, name)
 			if err != nil {
 				return fmt.Errorf("failed to get action '%s': %s", name, err)
 			}

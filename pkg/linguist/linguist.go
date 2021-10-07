@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -148,7 +147,7 @@ func refineJavaChoice(root string) string {
 
 func readFile(path string, limit int64) ([]byte, error) {
 	if limit <= 0 {
-		return ioutil.ReadFile(path)
+		return os.ReadFile(path)
 	}
 
 	f, err := os.Open(path)

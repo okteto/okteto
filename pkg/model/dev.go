@@ -16,7 +16,6 @@ package model
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -266,7 +265,7 @@ type EnvFiles []string
 
 // Get returns a Dev object from a given file
 func Get(devPath string) (*Dev, error) {
-	b, err := ioutil.ReadFile(devPath)
+	b, err := os.ReadFile(devPath)
 	if err != nil {
 		return nil, err
 	}
@@ -795,7 +794,7 @@ func (dev *Dev) Save(path string) error {
 		return fmt.Errorf("Failed to generate your manifest")
 	}
 
-	if err := ioutil.WriteFile(path, marshalled, 0600); err != nil {
+	if err := os.WriteFile(path, marshalled, 0600); err != nil {
 		log.Infof("failed to write okteto manifest at %s: %s", path, err)
 		return fmt.Errorf("Failed to write your manifest")
 	}
@@ -1121,4 +1120,14 @@ func (dev *Dev) translateDeprecatedMetadataFields() error {
 		}
 	}
 	return nil
+}
+
+// DivertName returns the name of the diverted version of a given resource
+func DivertName(name, username string) string {
+	return fmt.Sprintf("%s-%s", name, username)
+}
+
+// DevCloneName returns the name of the mirrored version of a given resource
+func DevCloneName(name string) string {
+	return fmt.Sprintf("%s-okteto", name)
 }

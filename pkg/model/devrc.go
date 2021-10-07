@@ -3,7 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sort"
 	"strings"
 
@@ -34,7 +34,7 @@ type DevRC struct {
 
 // Get returns a Dev object from a given file
 func GetRc(devPath string) (*DevRC, error) {
-	b, err := ioutil.ReadFile(devPath)
+	b, err := os.ReadFile(devPath)
 	if err != nil {
 		return nil, err
 	}

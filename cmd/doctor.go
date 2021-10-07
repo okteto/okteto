@@ -16,11 +16,11 @@ package cmd
 import (
 	"context"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/doctor"
 	"github.com/okteto/okteto/pkg/errors"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -37,6 +37,10 @@ func Doctor() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting doctor command")
+			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
 
 			if okteto.InDevContainer() {
 				return errors.ErrNotInDevContainer
@@ -47,12 +51,15 @@ func Doctor() *cobra.Command {
 				return err
 			}
 
-			c, _, err := k8Client.GetLocalWithContext(dev.Context)
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
+			c, _, err := okteto.GetK8sClient()
 			if err != nil {
 				return err
 			}
 
-			ctx := context.Background()
 			filename, err := doctor.Run(ctx, dev, devPath, c)
 			if err == nil {
 				log.Information("Your doctor file is available at %s", filename)

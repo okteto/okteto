@@ -15,7 +15,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -88,7 +87,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 				return
 			}
 
-			f, err := ioutil.TempFile("", "")
+			f, err := os.CreateTemp("", "")
 			if err != nil {
 				t.Fatal(err)
 			}

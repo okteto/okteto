@@ -38,6 +38,12 @@ import (
 )
 
 func (up *upContext) activate(build bool) error {
+
+	if build && okteto.Context().Buildkit == "" {
+		log.Information(errors.ErrNoBuilderInContext)
+		return nil
+	}
+
 	log.Infof("activating development container retry=%t", up.isRetry)
 
 	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
@@ -57,12 +63,8 @@ func (up *upContext) activate(build bool) error {
 	up.cleaned = make(chan string, 1)
 	up.hardTerminate = make(chan error, 1)
 
-	app, create, err := up.getApp(ctx)
+	app, create, err := utils.GetApp(ctx, up.Dev, up.Client)
 	if err != nil {
-		return err
-	}
-
-	if err := apps.ValidateMountPaths(app.PodSpec(), up.Dev); err != nil {
 		return err
 	}
 
@@ -71,18 +73,15 @@ func (up *upContext) activate(build bool) error {
 		return nil
 	}
 
-	if apps.IsDevModeOn(app) && apps.HasBeenChanged(app) {
-		return errors.UserError{
-			E: fmt.Errorf("%s '%s' has been modified while your development container was active", app.TypeMeta().Kind, app.ObjectMeta().Name),
-			Hint: `Follow these steps:
-	  1. Execute 'okteto down'
-	  2. Apply your manifest changes again: 'kubectl apply'
-	  3. Execute 'okteto up' again
-    More information is available here: https://okteto.com/docs/reference/known-issues/#kubectl-apply-changes-are-undone-by-okteto-up`,
-		}
+	if err := app.RestoreOriginal(); err != nil {
+		return err
 	}
 
-	if _, err := registry.GetImageTagWithDigest(ctx, up.Dev.Namespace, up.Dev.Image.Name); err == errors.ErrNotFound {
+	if err := apps.ValidateMountPaths(app.PodSpec(), up.Dev); err != nil {
+		return err
+	}
+
+	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == errors.ErrNotFound {
 		log.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		build = true
 	}
@@ -172,7 +171,7 @@ func (up *upContext) activate(build bool) error {
 		divertURL := ""
 		if up.Dev.Divert != nil {
 			username := okteto.GetSanitizedUsername()
-			name := apps.DivertName(username, up.Dev.Divert.Ingress)
+			name := model.DivertName(up.Dev.Divert.Ingress, username)
 			i, err := ingressesv1.Get(ctx, name, up.Dev.Namespace, up.Client)
 			if err != nil {
 				log.Errorf("error getting diverted ingress %s: %s", name, err.Error())
@@ -192,9 +191,9 @@ func (up *upContext) activate(build bool) error {
 		}
 		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
 	}()
-	prevError := up.waitUntilExitOrInterrupt()
 
-	up.isRetry = true
+	prevError := up.waitUntilExitOrInterruptOrApply(ctx)
+
 	if up.shouldRetry(ctx, prevError) {
 		if !up.Dev.PersistentVolumeEnabled() {
 			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
@@ -215,6 +214,8 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 		return true
 	case errors.ErrCommandFailed:
 		return !up.Sy.Ping(ctx, false)
+	case errors.ErrApplyToApp:
+		return true
 	}
 
 	return false
@@ -244,12 +245,13 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	tList, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
+	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
 	if err != nil {
 		return err
 	}
+	up.Translations = trMap
 
-	if err := apps.TranslateDevMode(tList, up.isOktetoNamespace); err != nil {
+	if err := apps.TranslateDevMode(trMap); err != nil {
 		return err
 	}
 
@@ -263,15 +265,17 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		return err
 	}
 
-	for name := range tList {
-		if name == tList[name].App.ObjectMeta().Name && create {
-			if err := tList[name].App.Create(ctx, up.Client); err != nil {
-				return err
-			}
-		} else {
-			if err := tList[name].App.Update(ctx, up.Client); err != nil {
-				return err
-			}
+	var devApp apps.App
+	for _, tr := range trMap {
+		delete(tr.DevApp.ObjectMeta().Annotations, model.DeploymentRevisionAnnotation)
+		if err := tr.DevApp.Deploy(ctx, up.Client); err != nil {
+			return err
+		}
+		if err := tr.App.Deploy(ctx, up.Client); err != nil {
+			return err
+		}
+		if tr.MainDev == tr.Dev {
+			devApp = tr.DevApp
 		}
 	}
 
@@ -281,7 +285,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 		}
 	}
 
-	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, app, up.Client, up.isOktetoNamespace)
+	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, devApp, up.Client)
 	if err != nil {
 		return err
 	}
@@ -340,11 +344,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			}
 			e, ok := event.Object.(*apiv1.Event)
 			if !ok {
+				log.Infof("failed to cast event")
 				watcherEvents, err = up.Client.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
 				if err != nil {
 					log.Infof("error watching events: %s", err.Error())
 					return err
 				}
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 			podEvent, ok := event.Object.(*apiv1.Event)
@@ -395,11 +401,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 		case event := <-watcherPod.ResultChan():
 			pod, ok := event.Object.(*apiv1.Pod)
 			if !ok {
+				log.Infof("failed to cast pod event")
 				watcherPod, err = up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
 				if err != nil {
 					log.Infof("error watching pod events: %s", err.Error())
 					return err
 				}
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 			if pod.UID != up.Pod.UID {
@@ -423,8 +431,8 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 }
 
 func getPullingMessage(message, namespace string) string {
-	registry, err := okteto.GetRegistry()
-	if err != nil {
+	registry := okteto.Context().Registry
+	if registry == "" {
 		return message
 	}
 	toReplace := fmt.Sprintf("%s/%s", registry, namespace)

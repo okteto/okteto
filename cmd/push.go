@@ -19,15 +19,14 @@ import (
 	"os"
 	"os/signal"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
-	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -53,6 +52,10 @@ func Push(ctx context.Context) *cobra.Command {
 		Short: "Builds, pushes and redeploys source code to the target app",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			if err := utils.LoadEnvironment(ctx, true); err != nil {
 				return err
 			}
@@ -62,29 +65,25 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if err := okteto.SetCurrentContext(k8sContext, namespace); err != nil {
+				return err
+			}
+
 			if len(appName) > 0 && appName != dev.Name {
 				return fmt.Errorf("app name provided does not match the name field in your okteto manifest")
 			}
 
-			c, _, err := k8Client.GetLocalWithContext(dev.Context)
+			c, _, err := okteto.GetK8sClient()
 			if err != nil {
 				return err
 			}
 
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
-				return err
+			if okteto.Context().Buildkit == "" {
+				log.Information(errors.ErrNoBuilderInContext)
+				return nil
 			}
 
-			oktetoRegistryURL := ""
-			n, err := namespaces.Get(ctx, dev.Namespace, c)
-			if err == nil {
-				if namespaces.IsOktetoNamespace(n) {
-					oktetoRegistryURL, err = okteto.GetRegistry()
-					if err != nil {
-						return err
-					}
-				}
-			}
+			oktetoRegistryURL := okteto.Context().Registry
 
 			if autoDeploy {
 				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
@@ -142,7 +141,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 			return fmt.Errorf("'autocreate' cannot be used in combination with 'services'")
 		}
 
-		app = apps.NewDeploymentApp(apps.GetDeploymentSandbox(dev))
+		app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 
 		app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
 		exists = false
@@ -155,40 +154,12 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 		}
 	}
 
-	tList, err := apps.GetTranslations(ctx, dev, app, false, c)
+	trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
 	if err != nil {
 		return err
 	}
 
-	for _, t := range tList {
-		if len(dev.Services) == 0 {
-			if t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || t.App.PodSpec().Containers[0].Name == "dev" {
-				t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
-			}
-		}
-		if t.App.Replicas() == 0 {
-			t.DevModeOff()
-		}
-
-		if t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
-			for k, v := range t.Annotations {
-				t.App.ObjectMeta().Annotations[k] = v
-			}
-			for k, v := range t.Labels {
-				t.App.ObjectMeta().Labels[k] = v
-			}
-		}
-	}
-
-	if app != nil && apps.IsDevModeOn(app) {
-		if err := down.Run(dev, app, tList, false, c); err != nil {
-			return err
-		}
-
-		log.Information("Development container deactivated")
-	}
-
-	imageFromApp, err := getImageFromApp(tList)
+	imageFromApp, err := getImageFromApp(trMap)
 	if err != nil {
 		return err
 	}
@@ -206,6 +177,20 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 
+	for _, tr := range trMap {
+		if len(dev.Services) == 0 {
+			if tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || tr.App.PodSpec().Containers[0].Name == "dev" {
+				tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+			}
+		}
+		if apps.IsDevModeOn(tr.App) {
+			if err := down.Run(dev, app, trMap, false, c); err != nil {
+				return err
+			}
+			log.Information("Development container deactivated")
+		}
+	}
+
 	go func() {
 		if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
 			if err := services.CreateDev(ctx, dev, c); err != nil {
@@ -217,11 +202,11 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 		if !exists {
 			app.PodSpec().Containers[0].Image = imageTag
 			apps.SetLastBuiltAnnotation(app)
-			exit <- app.Create(ctx, c)
+			exit <- app.Deploy(ctx, c)
 			return
 		}
 
-		for _, tr := range tList {
+		for _, tr := range trMap {
 			if tr.App == nil {
 				continue
 			}
@@ -235,7 +220,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 				devContainer.Image = imageTag
 			}
 
-			if err := tr.App.Update(ctx, c); err != nil {
+			if err := tr.App.Deploy(ctx, c); err != nil {
 				exit <- err
 				return
 			}
@@ -247,7 +232,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
@@ -259,11 +244,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 }
 
 func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
-	buildKitHost, isOktetoCluster, err := build.GetBuildKitHost()
-	if err != nil {
-		return "", err
-	}
-	log.Information("Running your build in %s...", buildKitHost)
+	log.Information("Running your build in %s...", okteto.Context().Buildkit)
 
 	if imageTag == "" {
 		imageTag = dev.Push.Name
@@ -272,26 +253,26 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, okt
 	log.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	if err := build.Run(ctx, dev.Namespace, buildKitHost, isOktetoCluster, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, nil, progress); err != nil {
+	if err := build.Run(ctx, dev.Push.Context, dev.Push.Dockerfile, buildTag, dev.Push.Target, noCache, dev.Push.CacheFrom, buildArgs, nil, progress); err != nil {
 		return "", err
 	}
 
 	return buildTag, nil
 }
 
-func getImageFromApp(tList map[string]*apps.Translation) (string, error) {
+func getImageFromApp(trMap map[string]*apps.Translation) (string, error) {
 	imageFromApp := ""
-	for _, t := range tList {
-		if t.App == nil {
+	for _, tr := range trMap {
+		if tr.App == nil {
 			continue
 		}
-		if t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] != "" && len(tList) > 1 {
+		if tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] != "" && len(trMap) > 1 {
 			continue
 		}
-		for _, rule := range t.Rules {
-			devContainer := apps.GetDevContainer(t.App.PodSpec(), rule.Container)
+		for _, rule := range tr.Rules {
+			devContainer := apps.GetDevContainer(tr.App.PodSpec(), rule.Container)
 			if devContainer == nil {
-				return "", fmt.Errorf("%s '%s': container '%s' not found", t.App.TypeMeta().Kind, t.App.ObjectMeta().Name, rule.Container)
+				return "", fmt.Errorf("%s '%s': container '%s' not found", tr.App.TypeMeta().Kind, tr.App.ObjectMeta().Name, rule.Container)
 			}
 			if imageFromApp == "" {
 				imageFromApp = devContainer.Image

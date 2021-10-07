@@ -14,7 +14,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,7 +25,7 @@ func TestGetUserHomeDir(t *testing.T) {
 		t.Fatal("got an empty home value")
 	}
 
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +113,7 @@ func Test_homedirWindows(t *testing.T) {
 }
 
 func TestGetOktetoHome(t *testing.T) {
-	dir, err := ioutil.TempDir("", t.Name())
+	dir, err := os.MkdirTemp("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,8 +130,8 @@ func TestGetOktetoHome(t *testing.T) {
 	}
 }
 
-func TestGetDeploymentHome(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+func TestGetAppHome(t *testing.T) {
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}

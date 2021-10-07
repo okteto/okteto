@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright 2021 The Okteto Authors
@@ -18,7 +19,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -29,6 +29,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -130,14 +131,14 @@ func TestBuildActionPipeline(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Printf("created tempdir: %s", dir)
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
-	if err := ioutil.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -198,8 +199,18 @@ func TestLoginActionPipeline(t *testing.T) {
 		return
 	}
 	ctx := context.Background()
+	var remove bool
+	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
+		remove = true
+	}
 	if err := executeLoginAction(ctx); err != nil {
 		t.Fatalf("Login action failed: %s", err.Error())
+	}
+
+	if remove {
+		if err := os.RemoveAll(config.GetOktetoContextFolder()); err != nil {
+			t.Fatalf("Removing failed: %s", err.Error())
+		}
 	}
 
 }
@@ -245,10 +256,6 @@ func TestPreviewActions(t *testing.T) {
 	ctx := context.Background()
 	namespace := getTestNamespace()
 
-	if err := executeLoginAction(ctx); err != nil {
-		t.Fatalf("Login action failed: %s", err.Error())
-	}
-
 	if err := executeDeployPreviewAction(ctx, namespace); err != nil {
 		t.Fatalf("Deploy preview action failed: %s", err.Error())
 	}
@@ -271,7 +278,7 @@ func TestPushAction(t *testing.T) {
 	ctx := context.Background()
 	namespace := getTestNamespace()
 
-	user := okteto.GetUsername()
+	user := okteto.Context().Username
 	if user == "" {
 		t.Fatal("Could not detect any user")
 	}
@@ -311,13 +318,13 @@ func TestStacksActions(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	dir, err := ioutil.TempDir("", namespace)
+	dir, err := os.MkdirTemp("", namespace)
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Printf("created tempdir: %s", dir)
 	filePath := filepath.Join(dir, "okteto-stack.yaml")
-	if err := ioutil.WriteFile(filePath, []byte(stackFile), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(stackFile), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -362,7 +369,7 @@ func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("create namespace output: \n%s\n", string(o))
-	n := k8Client.GetContextNamespace("")
+	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -391,7 +398,7 @@ func executeChangeNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("changing namespace output: \n%s\n", string(o))
-	n := k8Client.GetContextNamespace("")
+	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -448,7 +455,12 @@ func executeDeployPipelineAction(ctx context.Context, namespace string) error {
 	}
 	log.Printf("Deploy pipeline output: \n%s\n", string(o))
 
-	pipeline, err := okteto.GetPipelineByName(ctx, "movies", namespace)
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	okteto.Context().Namespace = namespace
+	pipeline, err := oktetoClient.GetPipelineByName(ctx, "movies")
 	if err != nil || pipeline == nil {
 		return fmt.Errorf("Could not get deployment %s", namespace)
 	}
@@ -481,7 +493,7 @@ func executeDestroyPipelineAction(ctx context.Context, namespace string) error {
 
 func executeApply(ctx context.Context, namespace string) error {
 
-	dir, err := ioutil.TempDir("", namespace)
+	dir, err := os.MkdirTemp("", namespace)
 	if err != nil {
 		return err
 	}
@@ -520,14 +532,14 @@ func executeApply(ctx context.Context, namespace string) error {
 }
 
 func executePushAction(ctx context.Context, namespace, user string) error {
-	dir, err := ioutil.TempDir("", namespace)
+	dir, err := os.MkdirTemp("", namespace)
 	if err != nil {
 		return err
 	}
 	log.Printf("created tempdir: %s", dir)
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
-	if err := ioutil.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
 		return err
 	}
 
@@ -615,11 +627,7 @@ func executeDestroyStackAction(ctx context.Context, namespace, filePath string) 
 func executeLoginAction(ctx context.Context) error {
 	token := os.Getenv("API_TOKEN")
 	if token == "" {
-		t, err := okteto.GetToken()
-		if err != nil || t.Token == "" {
-			return fmt.Errorf("this test requires a token to login")
-		}
-		token = t.Token
+		token = okteto.Context().Token
 	}
 
 	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, loginPath)

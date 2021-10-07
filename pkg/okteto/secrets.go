@@ -16,12 +16,9 @@ package okteto
 import (
 	"context"
 	"strings"
-)
 
-//Secrets represents a list of secrets
-type Secrets struct {
-	Secrets []Secret `json:"getGitDeploySecrets,omitempty"`
-}
+	"github.com/shurcooL/graphql"
+)
 
 //Secret represents a secret
 type Secret struct {
@@ -29,23 +26,76 @@ type Secret struct {
 	Value string `json:"value,omitempty"`
 }
 
-//GetSecrets returns the secrets from Okteto API
-func GetSecrets(ctx context.Context) ([]Secret, error) {
-	q := `query{
-		getGitDeploySecrets{
-			name,value
-		},
-	}`
+type SecretsAndCredentialToken struct {
+	Secrets     []Secret   `json:"secrets,omitempty"`
+	Credentials Credential `json:"credentials,omitempty"`
+}
 
-	var body Secrets
-	if err := query(ctx, q, &body); err != nil {
-		return nil, err
+//GetSecrets returns the secrets from Okteto API
+func (c *OktetoClient) GetSecrets(ctx context.Context) ([]Secret, error) {
+	var query struct {
+		Secrets []struct {
+			Name  graphql.String
+			Value graphql.String
+		} `graphql:"getGitDeploySecrets"`
 	}
+
+	err := c.client.Query(ctx, &query, nil)
+	if err != nil {
+		return nil, translateAPIErr(err)
+	}
+
 	secrets := make([]Secret, 0)
-	for _, secret := range body.Secrets {
-		if !strings.Contains(secret.Name, ".") {
-			secrets = append(secrets, secret)
+	for _, secret := range query.Secrets {
+		if !strings.Contains(string(secret.Name), ".") {
+			secrets = append(secrets, Secret{
+				Name:  string(secret.Name),
+				Value: string(secret.Value),
+			})
 		}
 	}
 	return secrets, nil
+}
+
+//GetSecrets returns the secrets from Okteto API
+func (c *OktetoClient) GetSecretsAndKubeCredentials(ctx context.Context) (*SecretsAndCredentialToken, error) {
+	var query struct {
+		Secrets []struct {
+			Name  graphql.String
+			Value graphql.String
+		} `graphql:"getGitDeploySecrets"`
+		Space struct {
+			Server      graphql.String
+			Certificate graphql.String
+			Token       graphql.String
+			Namespace   graphql.String
+		} `graphql:"credentials(space: $cred)"`
+	}
+	variables := map[string]interface{}{
+		"cred": graphql.String(""),
+	}
+	err := c.client.Query(ctx, &query, variables)
+	if err != nil {
+		return nil, translateAPIErr(err)
+	}
+
+	secrets := make([]Secret, 0)
+	for _, secret := range query.Secrets {
+		if !strings.Contains(string(secret.Name), ".") {
+			secrets = append(secrets, Secret{
+				Name:  string(secret.Name),
+				Value: string(secret.Value),
+			})
+		}
+	}
+	result := &SecretsAndCredentialToken{
+		Secrets: secrets,
+		Credentials: Credential{
+			Server:      string(query.Space.Server),
+			Certificate: string(query.Space.Certificate),
+			Token:       string(query.Space.Token),
+			Namespace:   string(query.Space.Namespace),
+		},
+	}
+	return result, nil
 }

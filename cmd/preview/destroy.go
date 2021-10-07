@@ -17,9 +17,10 @@ import (
 	"context"
 	"fmt"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -34,8 +35,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Short: "Destroy a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := login.WithEnvVarIfAvailable(ctx); err != nil {
+			if err := contextCMD.Init(ctx); err != nil {
 				return err
+			}
+
+			if !okteto.IsOktetoContext() {
+				return errors.ErrContextIsNotOktetoCluster
 			}
 
 			name = getExpandedName(args[0])
@@ -49,7 +54,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 }
 
 func executeDestroyPreview(ctx context.Context, name string) error {
-	if err := okteto.DestroyPreview(ctx, name); err != nil {
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	if err := oktetoClient.DestroyPreview(ctx, name); err != nil {
 		return fmt.Errorf("failed to destroy preview environment: %s", err)
 	}
 
