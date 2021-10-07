@@ -292,6 +292,7 @@ func GetDownCommand(devPath string) string {
 	}
 	return okDownCommandHint
 }
+
 func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (apps.App, bool, error) {
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
