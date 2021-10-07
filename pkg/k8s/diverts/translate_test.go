@@ -16,6 +16,7 @@ package diverts
 import (
 	"testing"
 
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,71 +27,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func Test_translateDeployment(t *testing.T) {
-	original := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			UID:             types.UID("id"),
-			Name:            "name",
-			Namespace:       "namespace",
-			Annotations:     map[string]string{"annotation1": "value1"},
-			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
-			ResourceVersion: "version",
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "value",
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "value",
-					},
-				},
-			},
-		},
-	}
-	translated := translateDeployment("cindy", original)
-	expected := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-name",
-			Namespace: "namespace",
-			Annotations: map[string]string{
-				"annotation1":                    "value1",
-				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
-			},
-			Labels: map[string]string{
-				model.DeployedByLabel:   "cindy",
-				model.OktetoDivertLabel: "cindy",
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					model.OktetoDivertLabel: "cindy",
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						model.OktetoDivertLabel: "cindy",
-					},
-				},
-			},
-		},
-	}
-	marshalled, _ := yaml.Marshal(translated)
-	marshalledExpected, _ := yaml.Marshal(expected)
-	if string(marshalled) != string(marshalledExpected) {
-		t.Fatalf("Wrong translation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledExpected))
-	}
-}
-
 func Test_translateServiceNotDiverted(t *testing.T) {
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cindy-name",
+			Name: "name-cindy",
 		},
 	}
 	original := &apiv1.Service{
@@ -118,15 +58,14 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 			},
 		},
 	}
-	k8sObject := &model.K8sObject{}
-	k8sObject.UpdateDeployment(d)
-	translated, err := translateService("cindy", k8sObject, original)
+	app := apps.NewDeploymentApp(d)
+	translated, err := translateService("cindy", app, original)
 	if err != nil {
 		t.Fatalf("error translating service: %s", err.Error())
 	}
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-name",
+			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1": "value1",
@@ -139,7 +78,7 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
 				model.OktetoDivertLabel:   "cindy",
-				model.InteractiveDevLabel: "cindy-name",
+				model.InteractiveDevLabel: "name-cindy",
 			},
 			Ports: []apiv1.ServicePort{
 				{
@@ -159,7 +98,7 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 func Test_translateServiceDiverted(t *testing.T) {
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cindy-name",
+			Name: "name-cindy",
 		},
 	}
 	original := &apiv1.Service{
@@ -191,7 +130,7 @@ func Test_translateServiceDiverted(t *testing.T) {
 
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-name",
+			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1": "value1",
@@ -201,7 +140,7 @@ func Test_translateServiceDiverted(t *testing.T) {
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
 				model.OktetoDivertLabel:   "cindy",
-				model.InteractiveDevLabel: "cindy-name",
+				model.InteractiveDevLabel: "name-cindy",
 			},
 			Ports: []apiv1.ServicePort{
 				{
@@ -213,9 +152,8 @@ func Test_translateServiceDiverted(t *testing.T) {
 	}
 
 	t.Run("IntServiceModValues", func(t *testing.T) {
-		k8sObject := &model.K8sObject{}
-		k8sObject.UpdateDeployment(d)
-		translated, err := translateService("cindy", k8sObject, original)
+		app := apps.NewDeploymentApp(d)
+		translated, err := translateService("cindy", app, original)
 		if err != nil {
 			t.Fatalf("error translating service: %s", err.Error())
 		}
@@ -230,9 +168,8 @@ func Test_translateServiceDiverted(t *testing.T) {
 		stringMod := "{\"proxy_port\":\"1026\",\"original_port\":\"8080\",\"original_target_port\":\"8080\"}"
 		original.ObjectMeta.Annotations[model.OktetoDivertServiceModificationAnnotation] = stringMod
 
-		k8sObject := &model.K8sObject{}
-		k8sObject.UpdateDeployment(d)
-		translated, err := translateService("cindy", k8sObject, original)
+		app := apps.NewDeploymentApp(d)
+		translated, err := translateService("cindy", app, original)
 		if err != nil {
 			t.Fatalf("error translating service: %s", err.Error())
 		}
@@ -261,7 +198,7 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 	translated := translateIngress("cindy", original)
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-name",
+			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1":                       "value1",
@@ -297,7 +234,7 @@ func Test_translateIngressCustomGenerateHost(t *testing.T) {
 	translated := translateIngress("cindy", original)
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cindy-name",
+			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
 				"annotation1":                       "value1",

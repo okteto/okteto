@@ -19,6 +19,7 @@ import (
 
 	"github.com/moby/term"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 	apiv1 "k8s.io/api/core/v1"
@@ -31,8 +32,7 @@ type upContext struct {
 	Cancel            context.CancelFunc
 	ShutdownCompleted chan bool
 	Dev               *model.Dev
-	isOktetoNamespace bool
-	isSwap            bool
+	Translations      map[string]*apps.Translation
 	isRetry           bool
 	Client            *kubernetes.Clientset
 	RestConfig        *rest.Config

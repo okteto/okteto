@@ -18,7 +18,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -46,8 +45,8 @@ func addStignoreSecrets(dev *model.Dev) error {
 		defer infile.Close()
 		reader := bufio.NewReader(infile)
 
-		stignoreName := fmt.Sprintf(".stignore-%d", i+1)
-		transformedStignorePath := filepath.Join(config.GetDeploymentHome(dev.Namespace, dev.Name), stignoreName)
+		stignoreName := fmt.Sprintf("stignore-%d", i+1)
+		transformedStignorePath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), stignoreName)
 		outfile, err := os.OpenFile(transformedStignorePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			return err
@@ -113,7 +112,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 			continue
 		}
 
-		if err := askIfUpdatingStignore(folder.LocalPath, stignorePath, gitPath); err != nil {
+		if err := askIfUpdatingStignore(folder.LocalPath, stignorePath); err != nil {
 			return err
 		}
 	}
@@ -129,7 +128,7 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 
 	if !stignoreDefaults {
 		stignoreContent := ""
-		if err := ioutil.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
+		if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
 			return fmt.Errorf("failed to create empty '%s': %s", stignorePath, err.Error())
 		}
 		return nil
@@ -140,14 +139,14 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 		return fmt.Errorf("failed to get language for '%s': %s", folder, err.Error())
 	}
 	c := linguist.GetSTIgnore(language)
-	if err := ioutil.WriteFile(stignorePath, c, 0600); err != nil {
+	if err := os.WriteFile(stignorePath, c, 0600); err != nil {
 		return fmt.Errorf("failed to write stignore file for '%s': %s", folder, err.Error())
 	}
 	return nil
 }
 
-func askIfUpdatingStignore(folder, stignorePath, gitPath string) error {
-	stignoreBytes, err := ioutil.ReadFile(stignorePath)
+func askIfUpdatingStignore(folder, stignorePath string) error {
+	stignoreBytes, err := os.ReadFile(stignorePath)
 	if err != nil {
 		return fmt.Errorf("failed to read '%s': %s", stignorePath, err.Error())
 	}
@@ -167,7 +166,7 @@ func askIfUpdatingStignore(folder, stignorePath, gitPath string) error {
 	} else {
 		stignoreContent = fmt.Sprintf("// .git\n%s", stignoreContent)
 	}
-	if err := ioutil.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
+	if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
 		return fmt.Errorf("failed to update '%s': %s", stignorePath, err.Error())
 	}
 	return nil

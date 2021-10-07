@@ -3,7 +3,7 @@
 FROM bitnami/kubectl:1.17.4 as kubectl
 FROM alpine/helm:3.3.0 as helm
 
-FROM golang:1.14-buster as builder
+FROM golang:1.17-buster as builder
 WORKDIR /okteto
 
 ENV CGO_ENABLED=0

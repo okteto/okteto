@@ -19,7 +19,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -72,11 +72,11 @@ func generateKeys(public, private string, bitSize int) error {
 
 	privateKeyBytes := encodePrivateKeyToPEM(privateKey)
 
-	if err := ioutil.WriteFile(public, publicKeyBytes, 0600); err != nil {
+	if err := os.WriteFile(public, publicKeyBytes, 0600); err != nil {
 		return fmt.Errorf("failed to write public SSH key: %s", err)
 	}
 
-	if err := ioutil.WriteFile(private, privateKeyBytes, 0600); err != nil {
+	if err := os.WriteFile(private, privateKeyBytes, 0600); err != nil {
 		return fmt.Errorf("failed to write private SSH key: %s", err)
 	}
 

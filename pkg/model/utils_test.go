@@ -14,14 +14,13 @@
 package model
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestCopyFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", t.Name())
+	dir, err := os.MkdirTemp("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +35,7 @@ func TestCopyFile(t *testing.T) {
 	}
 
 	content := []byte("hello-world")
-	if err := ioutil.WriteFile(from, content, 0600); err != nil {
+	if err := os.WriteFile(from, content, 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -44,13 +43,13 @@ func TestCopyFile(t *testing.T) {
 		t.Fatalf("failed to copy from %s to %s: %s", from, to, err)
 	}
 
-	copy, err := ioutil.ReadFile(to)
+	copied, err := os.ReadFile(to)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if string(content) != string(copy) {
-		t.Fatalf("got %s, expected %s", string(content), string(copy))
+	if string(content) != string(copied) {
+		t.Fatalf("got %s, expected %s", string(content), string(copied))
 	}
 
 	if err := CopyFile(from, to); err != nil {
@@ -60,7 +59,7 @@ func TestCopyFile(t *testing.T) {
 }
 
 func TestFileExists(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +71,7 @@ func TestFileExists(t *testing.T) {
 		t.Errorf("fail to detect non-existing file")
 	}
 
-	if err := ioutil.WriteFile(p, []byte("hello-world"), 0600); err != nil {
+	if err := os.WriteFile(p, []byte("hello-world"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -125,7 +124,7 @@ func Test_GetValidNameFromGitRepo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := translateURLToName(tt.gitRepo)
+			result := TranslateURLToName(tt.gitRepo)
 
 			if result != tt.expected {
 				t.Errorf("'%s' got '%s' expected '%s'", tt.name, result, tt.expected)

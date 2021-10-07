@@ -14,33 +14,35 @@
 package apps
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/pointer"
 )
 
 var (
-	rootUser int64
-	mode444  int32 = 0444
-	mode420  int32 = 420
+	mode444 int32 = 0444
+	mode420 int32 = 420
 )
 
 func Test_translateWithVolumes(t *testing.T) {
-	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 
@@ -51,6 +53,8 @@ func Test_translateWithVolumes(t *testing.T) {
 namespace: n
 container: dev
 image: web:latest
+annotations:
+  key1: value1
 command: ["./run_web.sh"]
 workdir: /app
 securityContext:
@@ -64,6 +68,9 @@ sync:
 volumes:
   - /go/pkg/
   - /root/.cache/go-build
+tolerations:
+  - key: nvidia/gpu
+    operator: Exists
 nodeSelector:
   disktype: ssd
 affinity:
@@ -89,435 +96,472 @@ services:
     container: dev
     image: worker:latest
     command: ["./run_worker.sh"]
+    annotations:
+      key2: value2
     serviceAccount: sa
     sync:
        - worker:/src`, file.Name()))
 
-	dev, err := model.Read(manifest)
+	dev1, err := model.Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	d1 := model.NewResource(dev)
-	d1.GetSandbox()
-	d1.SetReplicas(pointer.Int32Ptr(2))
-	d1.Deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+	d1 := deployments.Sandbox(dev1)
+	d1.UID = types.UID("deploy1")
+	delete(d1.Annotations, model.OktetoAutoCreateAnnotation)
+	d1.Spec.Replicas = pointer.Int32Ptr(2)
+	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
-	rule1 := dev.ToTranslationRule(dev, false)
-	tr1 := &model.Translation{
-		Interactive: true,
-		Name:        dev.Name,
-		Version:     model.TranslationVersion,
-		K8sObject:   d1,
-		Rules:       []*model.TranslationRule{rule1},
-		Replicas:    2,
-		Strategy: model.K8sObjectStrategy{
-			DeploymentStrategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RollingUpdateDeploymentStrategyType,
-			},
-		},
-		Annotations: model.Annotations{"key": "value"},
-		Tolerations: []apiv1.Toleration{
-			{
-				Key:      "nvidia/cpu",
-				Operator: apiv1.TolerationOpExists,
-			},
-		},
+	rule1 := dev1.ToTranslationRule(dev1, false)
+	tr1 := &Translation{
+		MainDev: dev1,
+		Dev:     dev1,
+		App:     NewDeploymentApp(d1),
+		Rules:   []*model.TranslationRule{rule1},
 	}
-	err = translate(tr1, nil, false)
-	if err != nil {
+	if err := tr1.translate(); err != nil {
 		t.Fatal(err)
 	}
-	d1OK := &appsv1.Deployment{
-		Spec: appsv1.DeploymentSpec{
-			Template: apiv1.PodTemplateSpec{
-				Spec: apiv1.PodSpec{
-					NodeSelector: map[string]string{
-						"disktype": "ssd",
-					},
-					Affinity: &apiv1.Affinity{
-						PodAffinity: &apiv1.PodAffinity{
-							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+	dDevPod1OK := apiv1.PodSpec{
+		NodeSelector: map[string]string{
+			"disktype": "ssd",
+		},
+		Affinity: &apiv1.Affinity{
+			PodAffinity: &apiv1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{
-									LabelSelector: &metav1.LabelSelector{
-										MatchExpressions: []metav1.LabelSelectorRequirement{
-											{
-												Key:      "role",
-												Operator: "In",
-												Values: []string{
-													"web-server",
-												},
-											},
-										},
-									},
-									TopologyKey: "kubernetes.io/hostname",
-								},
-							},
-						},
-					},
-					Tolerations: []apiv1.Toleration{
-						{
-							Key:      "nvidia/cpu",
-							Operator: apiv1.TolerationOpExists,
-						},
-					},
-					SecurityContext: &apiv1.PodSecurityContext{
-						FSGroup: &fsGroup,
-					},
-					ServiceAccountName:            "sa",
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
-					Volumes: []apiv1.Volume{
-						{
-							Name: oktetoSyncSecretVolume,
-							VolumeSource: apiv1.VolumeSource{
-								Secret: &apiv1.SecretVolumeSource{
-									SecretName: "okteto-web",
-									Items: []apiv1.KeyToPath{
-										{
-											Key:  "config.xml",
-											Path: "config.xml",
-											Mode: &mode444,
-										},
-										{
-											Key:  "cert.pem",
-											Path: "cert.pem",
-											Mode: &mode444,
-										},
-										{
-											Key:  "key.pem",
-											Path: "key.pem",
-											Mode: &mode444,
-										},
+									Key:      "role",
+									Operator: "In",
+									Values: []string{
+										"web-server",
 									},
 								},
 							},
 						},
-						{
-							Name: dev.GetVolumeName(),
-							VolumeSource: apiv1.VolumeSource{
-								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: dev.GetVolumeName(),
-									ReadOnly:  false,
-								},
-							},
-						},
-						{
-							Name: oktetoDevSecretVolume,
-							VolumeSource: apiv1.VolumeSource{
-								Secret: &apiv1.SecretVolumeSource{
-									SecretName: "okteto-web",
-									Items: []apiv1.KeyToPath{
-										{
-											Key:  "dev-secret-remote",
-											Path: "remote",
-											Mode: &mode420,
-										},
-									},
-								},
-							},
-						},
-						{
-							Name: OktetoBinName,
-							VolumeSource: apiv1.VolumeSource{
-								EmptyDir: &apiv1.EmptyDirVolumeSource{},
-							},
-						},
-					},
-					InitContainers: []apiv1.Container{
-						{
-							Name:            OktetoBinName,
-							Image:           model.OktetoBinImageTag,
-							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      OktetoBinName,
-									MountPath: "/okteto/bin",
-								},
-							},
-						},
-						{
-							Name:            OktetoInitVolumeContainerName,
-							Image:           "web:latest",
-							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true)"},
-							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &runAsUser,
-								RunAsGroup: &runAsGroup,
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/init-volume/1",
-									SubPath:   path.Join(model.DataSubPath, "go/pkg"),
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/init-volume/2",
-									SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/init-volume/3",
-									SubPath:   model.SourceCodeSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/init-volume/4",
-									SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
-								},
-							},
-						},
-					},
-					Containers: []apiv1.Container{
-						{
-							Name:            "dev",
-							Image:           "web:latest",
-							ImagePullPolicy: apiv1.PullAlways,
-							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-s", "remote:/remote"},
-							WorkingDir:      "/app",
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "OKTETO_NAMESPACE",
-									Value: "n",
-								},
-								{
-									Name:  "OKTETO_NAME",
-									Value: "web",
-								},
-							},
-							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  &runAsUser,
-								RunAsGroup: &runAsGroup,
-							},
-							Resources: apiv1.ResourceRequirements{
-								Limits: apiv1.ResourceList{
-									"cpu":            resource.MustParse("2"),
-									"memory":         resource.MustParse("1Gi"),
-									"nvidia.com/gpu": resource.MustParse("1"),
-									"amd.com/gpu":    resource.MustParse("1"),
-								},
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/var/syncthing",
-									SubPath:   model.SyncthingSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: model.RemoteMountPath,
-									SubPath:   model.RemoteSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/go/pkg/",
-									SubPath:   path.Join(model.DataSubPath, "go/pkg"),
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/root/.cache/go-build",
-									SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/app",
-									SubPath:   model.SourceCodeSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/path",
-									SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
-								},
-								{
-									Name:      oktetoSyncSecretVolume,
-									ReadOnly:  false,
-									MountPath: "/var/syncthing/secret/",
-								},
-								{
-									Name:      oktetoDevSecretVolume,
-									ReadOnly:  false,
-									MountPath: "/var/okteto/secret/",
-								},
-								{
-									Name:      OktetoBinName,
-									ReadOnly:  false,
-									MountPath: "/var/okteto/bin",
-								},
-							},
-							LivenessProbe:  nil,
-							ReadinessProbe: nil,
-						},
+						TopologyKey: "kubernetes.io/hostname",
 					},
 				},
 			},
 		},
-	}
-	marshalled1, _ := yaml.Marshal(d1.Deployment.Spec.Template.Spec)
-	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
-	if string(marshalled1) != string(marshalled1OK) {
-		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
-	}
-	if d1.GetAnnotation("key") != "value" {
-		t.Fatalf("Wrong d1 annotations: '%s'", d1.GetAnnotation("key"))
-	}
-	if d1.PodTemplateSpec.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d1 pod annotations: '%s'", d1.PodTemplateSpec.Annotations["key"])
-	}
-
-	d1Down, err := TranslateDevModeOff(d1)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	d1Orig := model.NewResource(dev)
-	d1Orig.GetSandbox()
-	marshalled1Down, _ := yaml.Marshal(d1Down.PodTemplateSpec.Spec)
-	marshalled1Orig, _ := yaml.Marshal(d1Orig.PodTemplateSpec.Spec)
-	if string(marshalled1Down) != string(marshalled1Orig) {
-		t.Fatalf("Wrong d1 down.\nActual %+v, \nExpected %+v", string(marshalled1Down), string(marshalled1Orig))
-	}
-	if d1Down.GetAnnotation("key") != "" {
-		t.Fatalf("Wrong d1 annotations after down: '%s'", d1.GetAnnotation("key"))
-	}
-	if d1Down.PodTemplateSpec.Annotations["key"] != "" {
-		t.Fatalf("Wrong d1 pod annotations after down: '%s'", d1.PodTemplateSpec.Annotations["key"])
-	}
-	if *d1Down.Replicas != 2 {
-		t.Fatalf("Wrong d1 replicas %d vs 2", *d1Down.Replicas)
-	}
-
-	dev2 := dev.Services[0]
-	d2 := model.NewResource(dev2)
-	d2.GetSandbox()
-	rule2 := dev2.ToTranslationRule(dev, false)
-	tr2 := &model.Translation{
-		Interactive: false,
-		Name:        dev.Name,
-		Version:     model.TranslationVersion,
-		K8sObject:   d2,
-		Rules:       []*model.TranslationRule{rule2},
-		Annotations: model.Annotations{"key": "value"},
 		Tolerations: []apiv1.Toleration{
 			{
-				Key:      "nvidia/cpu",
+				Key:      "nvidia/gpu",
 				Operator: apiv1.TolerationOpExists,
 			},
 		},
-	}
-	err = translate(tr2, nil, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	d2OK := &appsv1.Deployment{
-		Spec: appsv1.DeploymentSpec{
-			Template: apiv1.PodTemplateSpec{
-				Spec: apiv1.PodSpec{
-					Affinity: &apiv1.Affinity{
-						PodAffinity: &apiv1.PodAffinity{
-							RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-								{
-									LabelSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											model.InteractiveDevLabel: "web",
-										},
-									},
-									TopologyKey: "kubernetes.io/hostname",
-								},
+		SecurityContext: &apiv1.PodSecurityContext{
+			FSGroup: &fsGroup,
+		},
+		ServiceAccountName:            "sa",
+		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+		Volumes: []apiv1.Volume{
+			{
+				Name: oktetoSyncSecretVolume,
+				VolumeSource: apiv1.VolumeSource{
+					Secret: &apiv1.SecretVolumeSource{
+						SecretName: "okteto-web",
+						Items: []apiv1.KeyToPath{
+							{
+								Key:  "config.xml",
+								Path: "config.xml",
+								Mode: &mode444,
 							},
-						},
-					},
-					Tolerations: []apiv1.Toleration{
-						{
-							Key:      "nvidia/cpu",
-							Operator: apiv1.TolerationOpExists,
-						},
-					},
-					SecurityContext: &apiv1.PodSecurityContext{
-						FSGroup: &rootUser,
-					},
-					ServiceAccountName:            "sa",
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
-					Volumes: []apiv1.Volume{
-						{
-							Name: dev.GetVolumeName(),
-							VolumeSource: apiv1.VolumeSource{
-								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: dev.GetVolumeName(),
-									ReadOnly:  false,
-								},
+							{
+								Key:  "cert.pem",
+								Path: "cert.pem",
+								Mode: &mode444,
 							},
-						},
-					},
-					Containers: []apiv1.Container{
-						{
-							Name:            "dev",
-							Image:           "worker:latest",
-							ImagePullPolicy: apiv1.PullAlways,
-							Command:         []string{"./run_worker.sh"},
-							Args:            []string{},
-							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
+							{
+								Key:  "key.pem",
+								Path: "key.pem",
+								Mode: &mode444,
 							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/src",
-									SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
-								},
-							},
-							LivenessProbe:  nil,
-							ReadinessProbe: nil,
 						},
 					},
 				},
 			},
+			{
+				Name: dev1.GetVolumeName(),
+				VolumeSource: apiv1.VolumeSource{
+					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+						ClaimName: dev1.GetVolumeName(),
+						ReadOnly:  false,
+					},
+				},
+			},
+			{
+				Name: oktetoDevSecretVolume,
+				VolumeSource: apiv1.VolumeSource{
+					Secret: &apiv1.SecretVolumeSource{
+						SecretName: "okteto-web",
+						Items: []apiv1.KeyToPath{
+							{
+								Key:  "dev-secret-remote",
+								Path: "remote",
+								Mode: &mode420,
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: OktetoBinName,
+				VolumeSource: apiv1.VolumeSource{
+					EmptyDir: &apiv1.EmptyDirVolumeSource{},
+				},
+			},
+		},
+		InitContainers: []apiv1.Container{
+			{
+				Name:            OktetoBinName,
+				Image:           model.OktetoBinImageTag,
+				ImagePullPolicy: apiv1.PullIfNotPresent,
+				Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  &runAsUser,
+					RunAsGroup: &runAsGroup,
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      OktetoBinName,
+						MountPath: "/okteto/bin",
+					},
+				},
+			},
+			{
+				Name:            OktetoInitVolumeContainerName,
+				Image:           "web:latest",
+				ImagePullPolicy: apiv1.PullIfNotPresent,
+				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true)"},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  &runAsUser,
+					RunAsGroup: &runAsGroup,
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/init-volume/1",
+						SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/init-volume/2",
+						SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/init-volume/3",
+						SubPath:   model.SourceCodeSubPath,
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/init-volume/4",
+						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+					},
+				},
+			},
+		},
+		Containers: []apiv1.Container{
+			{
+				Name:            "dev",
+				Image:           "web:latest",
+				ImagePullPolicy: apiv1.PullAlways,
+				Command:         []string{"/var/okteto/bin/start.sh"},
+				Args:            []string{"-r", "-s", "remote:/remote"},
+				WorkingDir:      "/app",
+				Env: []apiv1.EnvVar{
+					{
+						Name:  "OKTETO_NAMESPACE",
+						Value: "n",
+					},
+					{
+						Name:  "OKTETO_NAME",
+						Value: "web",
+					},
+				},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  &runAsUser,
+					RunAsGroup: &runAsGroup,
+				},
+				Resources: apiv1.ResourceRequirements{
+					Limits: apiv1.ResourceList{
+						"cpu":            resource.MustParse("2"),
+						"memory":         resource.MustParse("1Gi"),
+						"nvidia.com/gpu": resource.MustParse("1"),
+						"amd.com/gpu":    resource.MustParse("1"),
+					},
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/var/syncthing",
+						SubPath:   model.SyncthingSubPath,
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: model.RemoteMountPath,
+						SubPath:   model.RemoteSubPath,
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/go/pkg/",
+						SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/root/.cache/go-build",
+						SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/app",
+						SubPath:   model.SourceCodeSubPath,
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/path",
+						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+					},
+					{
+						Name:      oktetoSyncSecretVolume,
+						ReadOnly:  false,
+						MountPath: "/var/syncthing/secret/",
+					},
+					{
+						Name:      oktetoDevSecretVolume,
+						ReadOnly:  false,
+						MountPath: "/var/okteto/secret/",
+					},
+					{
+						Name:      OktetoBinName,
+						ReadOnly:  false,
+						MountPath: "/var/okteto/bin",
+					},
+				},
+				LivenessProbe:  nil,
+				ReadinessProbe: nil,
+			},
 		},
 	}
-	marshalled2, _ := yaml.Marshal(d2.PodTemplateSpec.Spec)
-	marshalled2OK, _ := yaml.Marshal(d2OK.Spec.Template.Spec)
-	if string(marshalled2) != string(marshalled2OK) {
-		t.Fatalf("Wrong d2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
-	}
-	if d2.GetAnnotation("key") != "value" {
-		t.Fatalf("Wrong d2 annotations: '%s'", d2.GetAnnotation("key"))
-	}
-	if d2.PodTemplateSpec.Annotations["key"] != "value" {
-		t.Fatalf("Wrong d2 pod annotations: '%s'", d2.PodTemplateSpec.Annotations["key"])
+
+	//checking d1 state
+	d1App := tr1.App.(*DeploymentApp)
+	if !reflect.DeepEqual(d1App.d.Spec.Strategy, appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}) {
+		t.Fatalf("d1 wrong strategy %v", d1App.d.Spec.Strategy)
 	}
 
-	d2Down, err := TranslateDevModeOff(d2)
-	if err != nil {
+	d1Orig := deployments.Sandbox(dev1)
+	if tr1.App.Replicas() != 0 {
+		t.Fatalf("d1 is running %d replicas", tr1.App.Replicas())
+	}
+	expectedLabels := map[string]string{model.DevLabel: "true"}
+	if !reflect.DeepEqual(tr1.App.ObjectMeta().Labels, expectedLabels) {
+		t.Fatalf("Wrong d1 labels: '%v'", tr1.App.ObjectMeta().Labels)
+	}
+	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Labels, d1Orig.Spec.Template.Labels) {
+		t.Fatalf("Wrong d1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
+	}
+	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2"}
+	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
+		t.Fatalf("Wrong d1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
+	}
+	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, d1.Spec.Template.Annotations) {
+		t.Fatalf("Wrong d1 pod annotations: '%v'", tr1.App.TemplateObjectMeta().Annotations)
+	}
+	marshalledD1, _ := yaml.Marshal(tr1.App.PodSpec())
+	marshalledD1Orig, _ := yaml.Marshal(d1Orig.Spec.Template.Spec)
+	if string(marshalledD1) != string(marshalledD1Orig) {
+		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledD1), string(marshalledD1Orig))
+	}
+
+	//checking dev d1 state
+	devD1App := tr1.DevApp.(*DeploymentApp)
+	if !reflect.DeepEqual(devD1App.d.Spec.Strategy, appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}) {
+		t.Fatalf("dev d1 wrong strategy %v", d1App.d.Spec.Strategy)
+	}
+	if tr1.DevApp.Replicas() != 1 {
+		t.Fatalf("dev d1 is running %d replicas", tr1.DevApp.Replicas())
+	}
+	expectedLabels = map[string]string{model.DevCloneLabel: "deploy1"}
+	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Labels, expectedLabels) {
+		t.Fatalf("Wrong dev d1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
+	}
+	expectedPodLabels := map[string]string{"app": "web", model.InteractiveDevLabel: dev1.Name}
+	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
+		t.Fatalf("Wrong dev d1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
+	}
+	expectedAnnotations = map[string]string{"key1": "value1"}
+	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Annotations, expectedAnnotations) {
+		t.Fatalf("Wrong dev d1 annotations: '%v'", tr1.DevApp.ObjectMeta().Annotations)
+	}
+	expectedPodAnnotations := map[string]string{"key1": "value1"}
+	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Annotations, expectedPodAnnotations) {
+		t.Fatalf("Wrong dev d1 pod annotations: '%v'", tr1.DevApp.TemplateObjectMeta().Annotations)
+	}
+	marshalledDevD1, _ := yaml.Marshal(tr1.DevApp.PodSpec())
+	marshalledDevD1OK, _ := yaml.Marshal(dDevPod1OK)
+	if string(marshalledDevD1) != string(marshalledDevD1OK) {
+		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
+	}
+
+	tr1.DevModeOff()
+
+	if _, ok := tr1.App.ObjectMeta().Labels[model.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	}
+
+	if tr1.App.Replicas() != 2 {
+		t.Fatalf("d1 is running %d replicas after 'okteto down'", tr1.App.Replicas())
+	}
+
+	dev2 := dev1.Services[0]
+	d2 := deployments.Sandbox(dev2)
+	d2.UID = types.UID("deploy2")
+	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
+	d2.Spec.Replicas = pointer.Int32Ptr(3)
+	d2.Namespace = dev1.Namespace
+
+	translationRules := make(map[string]*Translation)
+	ctx := context.Background()
+
+	c := fake.NewSimpleClientset(d2)
+	if err := loadServiceTranslations(ctx, dev1, false, translationRules, c); err != nil {
 		t.Fatal(err)
 	}
+	tr2 := translationRules[dev2.Name]
+	if err := tr2.translate(); err != nil {
+		t.Fatal(err)
+	}
+	d2DevPodOK := apiv1.PodSpec{
+		Affinity: &apiv1.Affinity{
+			PodAffinity: &apiv1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								model.InteractiveDevLabel: "web",
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		},
+		SecurityContext: &apiv1.PodSecurityContext{
+			FSGroup: pointer.Int64Ptr(0),
+		},
+		ServiceAccountName:            "sa",
+		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+		Volumes: []apiv1.Volume{
+			{
+				Name: dev1.GetVolumeName(),
+				VolumeSource: apiv1.VolumeSource{
+					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+						ClaimName: dev1.GetVolumeName(),
+						ReadOnly:  false,
+					},
+				},
+			},
+		},
+		Containers: []apiv1.Container{
+			{
+				Name:            "dev",
+				Image:           "worker:latest",
+				ImagePullPolicy: apiv1.PullAlways,
+				Command:         []string{"./run_worker.sh"},
+				Args:            []string{},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  pointer.Int64Ptr(0),
+					RunAsGroup: pointer.Int64Ptr(0),
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/src",
+						SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+					},
+				},
+				LivenessProbe:  nil,
+				ReadinessProbe: nil,
+			},
+		},
+	}
 
-	d2Orig := model.NewResource(dev2)
-	d2.GetSandbox()
-	marshalled2Down, _ := yaml.Marshal(d2Down.PodTemplateSpec.Spec)
-	marshalled2Orig, _ := yaml.Marshal(d2Orig.PodTemplateSpec.Spec)
-	if string(marshalled2Down) != string(marshalled2Orig) {
-		t.Fatalf("Wrong d2 down.\nActual %+v, \nExpected %+v", string(marshalled2Down), string(marshalled2Orig))
+	//checking d2 state
+	d2Orig := deployments.Sandbox(dev2)
+	if tr2.App.Replicas() != 0 {
+		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
 	}
-	if d2Down.GetAnnotation("key") != "" {
-		t.Fatalf("Wrong d2 annotations after down: '%s'", d2.GetAnnotation("key"))
+	expectedLabels = map[string]string{model.DevLabel: "true"}
+	if !reflect.DeepEqual(tr2.App.ObjectMeta().Labels, expectedLabels) {
+		t.Fatalf("Wrong d2 labels: '%v'", tr2.App.ObjectMeta().Labels)
 	}
-	if d2Down.PodTemplateSpec.Annotations["key"] != "" {
-		t.Fatalf("Wrong d2 pod annotations after down: '%s'", d2.PodTemplateSpec.Annotations["key"])
+	if !reflect.DeepEqual(tr2.App.TemplateObjectMeta().Labels, d2Orig.Spec.Template.Labels) {
+		t.Fatalf("Wrong d2 pod labels: '%v'", tr2.App.TemplateObjectMeta().Labels)
+	}
+	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3"}
+	if !reflect.DeepEqual(tr2.App.ObjectMeta().Annotations, expectedAnnotations) {
+		t.Fatalf("Wrong d2 annotations: '%v'", tr2.App.ObjectMeta().Annotations)
+	}
+	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, d2Orig.Spec.Template.Annotations) {
+		t.Fatalf("Wrong d2 pod annotations: '%v'", tr2.App.TemplateObjectMeta().Annotations)
+	}
+	marshalledD2, _ := yaml.Marshal(tr2.App.PodSpec())
+	marshalledD2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	if string(marshalledD2) != string(marshalledD2Orig) {
+		t.Fatalf("Wrong d2 generation.\nActual %+v, \nExpected %+v", string(marshalledD2), string(marshalledD2Orig))
+	}
+
+	//checking dev d2 state
+	if tr2.DevApp.Replicas() != 3 {
+		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
+	}
+	expectedLabels = map[string]string{model.DevCloneLabel: "deploy2"}
+	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Labels, expectedLabels) {
+		t.Fatalf("Wrong dev d2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
+	}
+	expectedPodLabels = map[string]string{"app": "worker", model.DetachedDevLabel: dev2.Name}
+	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
+		t.Fatalf("Wrong dev d2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
+	}
+	expectedAnnotations = map[string]string{"key2": "value2"}
+	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Annotations, expectedAnnotations) {
+		t.Fatalf("Wrong dev d2 annotations: '%v'", tr2.DevApp.ObjectMeta().Annotations)
+	}
+	expectedPodAnnotations = map[string]string{"key2": "value2"}
+	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Annotations, expectedPodAnnotations) {
+		t.Fatalf("Wrong dev d2 pod annotations: '%v'", tr2.DevApp.TemplateObjectMeta().Annotations)
+	}
+	marshalledDevD2, _ := yaml.Marshal(tr2.DevApp.PodSpec())
+	marshalledDevD2OK, _ := yaml.Marshal(d2DevPodOK)
+	if string(marshalledDevD2) != string(marshalledDevD2OK) {
+		t.Fatalf("Wrong dev d2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD2), string(marshalledDevD2OK))
+	}
+
+	tr2.DevModeOff()
+
+	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	}
+
+	if tr2.App.Replicas() != 3 {
+		t.Fatalf("d2 is running %d replicas after 'okteto down'", tr2.App.Replicas())
 	}
 }
 
@@ -535,133 +579,124 @@ persistentVolume:
 		t.Fatal(err)
 	}
 
-	d1 := model.NewResource(dev)
-	d1.GetSandbox()
-	rule1 := dev.ToTranslationRule(dev, true)
-	tr1 := &model.Translation{
-		Interactive: true,
-		Name:        dev.Name,
-		Version:     model.TranslationVersion,
-		K8sObject:   d1,
-		Rules:       []*model.TranslationRule{rule1},
+	d := deployments.Sandbox(dev)
+	rule := dev.ToTranslationRule(dev, true)
+	tr := &Translation{
+		MainDev: dev,
+		Dev:     dev,
+		App:     NewDeploymentApp(d),
+		Rules:   []*model.TranslationRule{rule},
 	}
-	err = translate(tr1, nil, false)
-	if err != nil {
+	if err := tr.translate(); err != nil {
 		t.Fatal(err)
 	}
-	d1OK := &appsv1.Deployment{
-		Spec: appsv1.DeploymentSpec{
-			Template: apiv1.PodTemplateSpec{
-				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
-					Volumes: []apiv1.Volume{
-						{
-							Name: oktetoSyncSecretVolume,
-							VolumeSource: apiv1.VolumeSource{
-								Secret: &apiv1.SecretVolumeSource{
-									SecretName: "okteto-web",
-									Items: []apiv1.KeyToPath{
-										{
-											Key:  "config.xml",
-											Path: "config.xml",
-											Mode: &mode444,
-										},
-										{
-											Key:  "cert.pem",
-											Path: "cert.pem",
-											Mode: &mode444,
-										},
-										{
-											Key:  "key.pem",
-											Path: "key.pem",
-											Mode: &mode444,
-										},
-									},
-								},
+	dDevPodOK := &apiv1.PodSpec{
+		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+		Volumes: []apiv1.Volume{
+			{
+				Name: oktetoSyncSecretVolume,
+				VolumeSource: apiv1.VolumeSource{
+					Secret: &apiv1.SecretVolumeSource{
+						SecretName: "okteto-web",
+						Items: []apiv1.KeyToPath{
+							{
+								Key:  "config.xml",
+								Path: "config.xml",
+								Mode: &mode444,
 							},
-						},
-						{
-							Name: dev.GetVolumeName(),
-							VolumeSource: apiv1.VolumeSource{
-								EmptyDir: &apiv1.EmptyDirVolumeSource{},
+							{
+								Key:  "cert.pem",
+								Path: "cert.pem",
+								Mode: &mode444,
 							},
-						},
-						{
-							Name: OktetoBinName,
-							VolumeSource: apiv1.VolumeSource{
-								EmptyDir: &apiv1.EmptyDirVolumeSource{},
+							{
+								Key:  "key.pem",
+								Path: "key.pem",
+								Mode: &mode444,
 							},
-						},
-					},
-					InitContainers: []apiv1.Container{
-						{
-							Name:            OktetoBinName,
-							Image:           model.OktetoBinImageTag,
-							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      OktetoBinName,
-									MountPath: "/okteto/bin",
-								},
-							},
-						},
-					},
-					Containers: []apiv1.Container{
-						{
-							Name:            "dev",
-							Image:           "web:latest",
-							ImagePullPolicy: apiv1.PullAlways,
-							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-e"},
-							WorkingDir:      "",
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "OKTETO_NAMESPACE",
-									Value: "n",
-								},
-								{
-									Name:  "OKTETO_NAME",
-									Value: "web",
-								},
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/var/syncthing",
-									SubPath:   model.SyncthingSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: model.RemoteMountPath,
-									SubPath:   model.RemoteSubPath,
-								},
-								{
-									Name:      oktetoSyncSecretVolume,
-									ReadOnly:  false,
-									MountPath: "/var/syncthing/secret/",
-								},
-								{
-									Name:      OktetoBinName,
-									ReadOnly:  false,
-									MountPath: "/var/okteto/bin",
-								},
-							},
-							LivenessProbe:  nil,
-							ReadinessProbe: nil,
 						},
 					},
 				},
 			},
+			{
+				Name: dev.GetVolumeName(),
+				VolumeSource: apiv1.VolumeSource{
+					EmptyDir: &apiv1.EmptyDirVolumeSource{},
+				},
+			},
+			{
+				Name: OktetoBinName,
+				VolumeSource: apiv1.VolumeSource{
+					EmptyDir: &apiv1.EmptyDirVolumeSource{},
+				},
+			},
+		},
+		InitContainers: []apiv1.Container{
+			{
+				Name:            OktetoBinName,
+				Image:           model.OktetoBinImageTag,
+				ImagePullPolicy: apiv1.PullIfNotPresent,
+				Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      OktetoBinName,
+						MountPath: "/okteto/bin",
+					},
+				},
+			},
+		},
+		Containers: []apiv1.Container{
+			{
+				Name:            "dev",
+				Image:           "web:latest",
+				ImagePullPolicy: apiv1.PullAlways,
+				Command:         []string{"/var/okteto/bin/start.sh"},
+				Args:            []string{"-r", "-e"},
+				WorkingDir:      "",
+				Env: []apiv1.EnvVar{
+					{
+						Name:  "OKTETO_NAMESPACE",
+						Value: "n",
+					},
+					{
+						Name:  "OKTETO_NAME",
+						Value: "web",
+					},
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/var/syncthing",
+						SubPath:   model.SyncthingSubPath,
+					},
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: model.RemoteMountPath,
+						SubPath:   model.RemoteSubPath,
+					},
+					{
+						Name:      oktetoSyncSecretVolume,
+						ReadOnly:  false,
+						MountPath: "/var/syncthing/secret/",
+					},
+					{
+						Name:      OktetoBinName,
+						ReadOnly:  false,
+						MountPath: "/var/okteto/bin",
+					},
+				},
+				LivenessProbe:  nil,
+				ReadinessProbe: nil,
+			},
 		},
 	}
-	marshalled1, _ := yaml.Marshal(d1.PodTemplateSpec.Spec)
-	marshalled1OK, _ := yaml.Marshal(d1OK.Spec.Template.Spec)
+	marshalledDev, _ := yaml.Marshal(tr.DevApp.PodSpec())
+	marshalledDevOK, _ := yaml.Marshal(dDevPodOK)
 
-	if string(marshalled1) != string(marshalled1OK) {
-		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalled1), string(marshalled1OK))
+	if string(marshalledDev) != string(marshalledDevOK) {
+		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDev), string(marshalledDevOK))
 	}
 }
 
@@ -689,235 +724,228 @@ docker:
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
 
-	d := model.NewResource(dev)
-	d.GetSandbox()
+	d := deployments.Sandbox(dev)
 	rule := dev.ToTranslationRule(dev, false)
-	tr := &model.Translation{
-		Interactive: true,
-		Name:        dev.Name,
-		Version:     model.TranslationVersion,
-		K8sObject:   d,
-		Rules:       []*model.TranslationRule{rule},
+	tr := &Translation{
+		MainDev: dev,
+		Dev:     dev,
+		App:     NewDeploymentApp(d),
+		Rules:   []*model.TranslationRule{rule},
 	}
-	err = translate(tr, nil, false)
-	if err != nil {
+	if err := tr.translate(); err != nil {
 		t.Fatal(err)
 	}
-	dOK := &appsv1.Deployment{
-		Spec: appsv1.DeploymentSpec{
-			Template: apiv1.PodTemplateSpec{
-				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
-					SecurityContext: &apiv1.PodSecurityContext{
-						FSGroup: pointer.Int64Ptr(0),
-					},
-					Volumes: []apiv1.Volume{
-						{
-							Name: oktetoSyncSecretVolume,
-							VolumeSource: apiv1.VolumeSource{
-								Secret: &apiv1.SecretVolumeSource{
-									SecretName: "okteto-web",
-									Items: []apiv1.KeyToPath{
-										{
-											Key:  "config.xml",
-											Path: "config.xml",
-											Mode: &mode444,
-										},
-										{
-											Key:  "cert.pem",
-											Path: "cert.pem",
-											Mode: &mode444,
-										},
-										{
-											Key:  "key.pem",
-											Path: "key.pem",
-											Mode: &mode444,
-										},
-									},
-								},
+	dDevPodOK := apiv1.PodSpec{
+		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+		SecurityContext: &apiv1.PodSecurityContext{
+			FSGroup: pointer.Int64Ptr(0),
+		},
+		Volumes: []apiv1.Volume{
+			{
+				Name: oktetoSyncSecretVolume,
+				VolumeSource: apiv1.VolumeSource{
+					Secret: &apiv1.SecretVolumeSource{
+						SecretName: "okteto-web",
+						Items: []apiv1.KeyToPath{
+							{
+								Key:  "config.xml",
+								Path: "config.xml",
+								Mode: &mode444,
 							},
-						},
-						{
-							Name: dev.GetVolumeName(),
-							VolumeSource: apiv1.VolumeSource{
-								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: dev.GetVolumeName(),
-									ReadOnly:  false,
-								},
+							{
+								Key:  "cert.pem",
+								Path: "cert.pem",
+								Mode: &mode444,
 							},
-						},
-						{
-							Name: OktetoBinName,
-							VolumeSource: apiv1.VolumeSource{
-								EmptyDir: &apiv1.EmptyDirVolumeSource{},
-							},
-						},
-					},
-					InitContainers: []apiv1.Container{
-						{
-							Name:            OktetoBinName,
-							Image:           model.OktetoBinImageTag,
-							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      OktetoBinName,
-									MountPath: "/okteto/bin",
-								},
-							},
-						},
-						{
-							Name:            OktetoInitVolumeContainerName,
-							Image:           "web:latest",
-							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /app/. /init-volume/1 || true)"},
-							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/init-volume/1",
-									SubPath:   model.SourceCodeSubPath,
-								},
-							},
-						},
-					},
-					Containers: []apiv1.Container{
-						{
-							Name:            "dev",
-							Image:           "web:latest",
-							ImagePullPolicy: apiv1.PullAlways,
-							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r", "-d"},
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "OKTETO_NAMESPACE",
-									Value: "n",
-								},
-								{
-									Name:  "OKTETO_NAME",
-									Value: "web",
-								},
-								{
-									Name:  "OKTETO_USERNAME",
-									Value: "cindy",
-								},
-								{
-									Name:  "OKTETO_REGISTRY_URL",
-									Value: "registry.okteto.dev",
-								},
-								{
-									Name:  "DOCKER_HOST",
-									Value: model.DefaultDockerHost,
-								},
-								{
-									Name:  "DOCKER_CERT_PATH",
-									Value: "/certs/client",
-								},
-								{
-									Name:  "DOCKER_TLS_VERIFY",
-									Value: "1",
-								},
-							},
-							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: model.DefaultDockerCertDir,
-									SubPath:   model.DefaultDockerCertDirSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/var/syncthing",
-									SubPath:   model.SyncthingSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: model.RemoteMountPath,
-									SubPath:   model.RemoteSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/app",
-									SubPath:   model.SourceCodeSubPath,
-								},
-								{
-									Name:      oktetoSyncSecretVolume,
-									ReadOnly:  false,
-									MountPath: "/var/syncthing/secret/",
-								},
-								{
-									Name:      OktetoBinName,
-									ReadOnly:  false,
-									MountPath: "/var/okteto/bin",
-								},
-							},
-							LivenessProbe:  nil,
-							ReadinessProbe: nil,
-						},
-						{
-							Name:  "dind",
-							Image: "docker:19",
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "DOCKER_TLS_CERTDIR",
-									Value: model.DefaultDockerCertDir,
-								},
-							},
-							SecurityContext: &apiv1.SecurityContext{
-								Privileged: pointer.BoolPtr(true),
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: model.DefaultDockerCertDir,
-									SubPath:   model.DefaultDockerCertDirSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									MountPath: model.DefaultDockerCacheDir,
-									SubPath:   model.DefaultDockerCacheDirSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/app",
-									SubPath:   model.SourceCodeSubPath,
-								},
-							},
-							LivenessProbe:  nil,
-							ReadinessProbe: nil,
-							Resources: apiv1.ResourceRequirements{
-								Requests: apiv1.ResourceList{
-									"cpu":    resource.MustParse("500"),
-									"memory": resource.MustParse("2Gi"),
-								},
-								Limits: apiv1.ResourceList{
-									"cpu":    resource.MustParse("2"),
-									"memory": resource.MustParse("4Gi"),
-								},
+							{
+								Key:  "key.pem",
+								Path: "key.pem",
+								Mode: &mode444,
 							},
 						},
 					},
 				},
 			},
+			{
+				Name: dev.GetVolumeName(),
+				VolumeSource: apiv1.VolumeSource{
+					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+						ClaimName: dev.GetVolumeName(),
+						ReadOnly:  false,
+					},
+				},
+			},
+			{
+				Name: OktetoBinName,
+				VolumeSource: apiv1.VolumeSource{
+					EmptyDir: &apiv1.EmptyDirVolumeSource{},
+				},
+			},
+		},
+		InitContainers: []apiv1.Container{
+			{
+				Name:            OktetoBinName,
+				Image:           model.OktetoBinImageTag,
+				ImagePullPolicy: apiv1.PullIfNotPresent,
+				Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  pointer.Int64Ptr(0),
+					RunAsGroup: pointer.Int64Ptr(0),
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      OktetoBinName,
+						MountPath: "/okteto/bin",
+					},
+				},
+			},
+			{
+				Name:            OktetoInitVolumeContainerName,
+				Image:           "web:latest",
+				ImagePullPolicy: apiv1.PullIfNotPresent,
+				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /app/. /init-volume/1 || true)"},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  pointer.Int64Ptr(0),
+					RunAsGroup: pointer.Int64Ptr(0),
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/init-volume/1",
+						SubPath:   model.SourceCodeSubPath,
+					},
+				},
+			},
+		},
+		Containers: []apiv1.Container{
+			{
+				Name:            "dev",
+				Image:           "web:latest",
+				ImagePullPolicy: apiv1.PullAlways,
+				Command:         []string{"/var/okteto/bin/start.sh"},
+				Args:            []string{"-r", "-d"},
+				Env: []apiv1.EnvVar{
+					{
+						Name:  "OKTETO_NAMESPACE",
+						Value: "n",
+					},
+					{
+						Name:  "OKTETO_NAME",
+						Value: "web",
+					},
+					{
+						Name:  "OKTETO_USERNAME",
+						Value: "cindy",
+					},
+					{
+						Name:  "OKTETO_REGISTRY_URL",
+						Value: "registry.okteto.dev",
+					},
+					{
+						Name:  "DOCKER_HOST",
+						Value: model.DefaultDockerHost,
+					},
+					{
+						Name:  "DOCKER_CERT_PATH",
+						Value: "/certs/client",
+					},
+					{
+						Name:  "DOCKER_TLS_VERIFY",
+						Value: "1",
+					},
+				},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  pointer.Int64Ptr(0),
+					RunAsGroup: pointer.Int64Ptr(0),
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: model.DefaultDockerCertDir,
+						SubPath:   model.DefaultDockerCertDirSubPath,
+					},
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/var/syncthing",
+						SubPath:   model.SyncthingSubPath,
+					},
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: model.RemoteMountPath,
+						SubPath:   model.RemoteSubPath,
+					},
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/app",
+						SubPath:   model.SourceCodeSubPath,
+					},
+					{
+						Name:      oktetoSyncSecretVolume,
+						ReadOnly:  false,
+						MountPath: "/var/syncthing/secret/",
+					},
+					{
+						Name:      OktetoBinName,
+						ReadOnly:  false,
+						MountPath: "/var/okteto/bin",
+					},
+				},
+				LivenessProbe:  nil,
+				ReadinessProbe: nil,
+			},
+			{
+				Name:  "dind",
+				Image: "docker:19",
+				Env: []apiv1.EnvVar{
+					{
+						Name:  "DOCKER_TLS_CERTDIR",
+						Value: model.DefaultDockerCertDir,
+					},
+				},
+				SecurityContext: &apiv1.SecurityContext{
+					Privileged: pointer.BoolPtr(true),
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: model.DefaultDockerCertDir,
+						SubPath:   model.DefaultDockerCertDirSubPath,
+					},
+					{
+						Name:      dev.GetVolumeName(),
+						MountPath: model.DefaultDockerCacheDir,
+						SubPath:   model.DefaultDockerCacheDirSubPath,
+					},
+					{
+						Name:      dev.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/app",
+						SubPath:   model.SourceCodeSubPath,
+					},
+				},
+				LivenessProbe:  nil,
+				ReadinessProbe: nil,
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						"cpu":    resource.MustParse("500"),
+						"memory": resource.MustParse("2Gi"),
+					},
+					Limits: apiv1.ResourceList{
+						"cpu":    resource.MustParse("2"),
+						"memory": resource.MustParse("4Gi"),
+					},
+				},
+			},
 		},
 	}
-	marshalled, _ := yaml.Marshal(d.PodTemplateSpec.Spec)
-	marshalledOK, _ := yaml.Marshal(dOK.Spec.Template.Spec)
+	marshalled, _ := yaml.Marshal(tr.DevApp.PodSpec())
+	marshalledOK, _ := yaml.Marshal(dDevPodOK)
 	if string(marshalled) != string(marshalledOK) {
 		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))
 	}
@@ -1259,192 +1287,570 @@ environment:
 		t.Fatal(err)
 	}
 	dev.Username = "cindy"
-	dev.RegistryURL = "registry.okteto.dev"
 
-	d := model.NewResource(dev)
-	d.GetSandbox()
+	d := deployments.Sandbox(dev)
 	rule := dev.ToTranslationRule(dev, false)
-	tr := &model.Translation{
-		Interactive: true,
-		Name:        dev.Name,
-		Version:     model.TranslationVersion,
-		K8sObject:   d,
-		Rules:       []*model.TranslationRule{rule},
+	tr := &Translation{
+		MainDev: dev,
+		Dev:     dev,
+		App:     NewDeploymentApp(d),
+		Rules:   []*model.TranslationRule{rule},
 	}
-	err = translate(tr, nil, false)
+	if err := tr.translate(); err != nil {
+		t.Fatal(err)
+	}
+	envOK := []apiv1.EnvVar{
+		{
+			Name:  "key1",
+			Value: "value1",
+		},
+		{
+			Name:  "key2",
+			Value: "value2",
+		},
+		{
+			Name:  "key3",
+			Value: "value3",
+		},
+		{
+			Name:  "key4",
+			Value: "value4",
+		},
+		{
+			Name:  "key5",
+			Value: "value5",
+		},
+		{
+			Name:  "OKTETO_NAMESPACE",
+			Value: "n",
+		},
+		{
+			Name:  "OKTETO_NAME",
+			Value: "web",
+		},
+		{
+			Name:  "OKTETO_USERNAME",
+			Value: "cindy",
+		},
+	}
+	if !reflect.DeepEqual(envOK, tr.DevApp.PodSpec().Containers[0].Env) {
+		t.Fatalf("Wrong env generation %+v", tr.DevApp.PodSpec().Containers[0].Env)
+	}
+}
+
+func Test_translateSfsWithVolumes(t *testing.T) {
+	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	dOK := &appsv1.Deployment{
-		Spec: appsv1.DeploymentSpec{
-			Template: apiv1.PodTemplateSpec{
-				Spec: apiv1.PodSpec{
-					TerminationGracePeriodSeconds: &devTerminationGracePeriodSeconds,
-					SecurityContext: &apiv1.PodSecurityContext{
-						FSGroup: pointer.Int64Ptr(0),
-					},
-					Volumes: []apiv1.Volume{
-						{
-							Name: oktetoSyncSecretVolume,
-							VolumeSource: apiv1.VolumeSource{
-								Secret: &apiv1.SecretVolumeSource{
-									SecretName: "okteto-web",
-									Items: []apiv1.KeyToPath{
-										{
-											Key:  "config.xml",
-											Path: "config.xml",
-											Mode: &mode444,
-										},
-										{
-											Key:  "cert.pem",
-											Path: "cert.pem",
-											Mode: &mode444,
-										},
-										{
-											Key:  "key.pem",
-											Path: "key.pem",
-											Mode: &mode444,
-										},
+	defer os.Remove(file.Name())
+
+	var runAsUser int64 = 100
+	var runAsGroup int64 = 101
+	var fsGroup int64 = 102
+	manifest := []byte(fmt.Sprintf(`name: web
+namespace: n
+container: dev
+image: web:latest
+command: ["./run_web.sh"]
+workdir: /app
+annotations:
+  key1: value1
+tolerations:
+- key: nvidia/gpu
+  operator: Exists
+securityContext:
+  runAsUser: 100
+  runAsGroup: 101
+  fsGroup: 102
+serviceAccount: sa
+sync:
+  - .:/app
+  - sub:/path
+volumes:
+  - /go/pkg/
+  - /root/.cache/go-build
+nodeSelector:
+  disktype: ssd
+affinity:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: role
+          operator: In
+          values:
+          - web-server
+      topologyKey: kubernetes.io/hostname
+secrets:
+  - %s:/remote
+resources:
+  limits:
+    cpu: 2
+    memory: 1Gi
+    nvidia.com/gpu: 1
+    amd.com/gpu: 1
+services:
+  - name: worker
+    container: dev
+    image: worker:latest
+    annotations:
+      key2: value2
+    command: ["./run_worker.sh"]
+    serviceAccount: sa
+    sync:
+       - worker:/src`, file.Name()))
+
+	dev1, err := model.Read(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sfs1 := statefulsets.Sandbox(dev1)
+	sfs1.UID = types.UID("sfs1")
+	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
+	sfs1.Spec.Replicas = pointer.Int32Ptr(2)
+
+	rule1 := dev1.ToTranslationRule(dev1, false)
+	tr1 := &Translation{
+		MainDev: dev1,
+		Dev:     dev1,
+		App:     NewStatefulSetApp(sfs1),
+		Rules:   []*model.TranslationRule{rule1},
+	}
+	err = tr1.translate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sfs1PodDev := apiv1.PodSpec{
+		NodeSelector: map[string]string{
+			"disktype": "ssd",
+		},
+		Affinity: &apiv1.Affinity{
+			PodAffinity: &apiv1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "role",
+									Operator: "In",
+									Values: []string{
+										"web-server",
 									},
 								},
 							},
 						},
-						{
-							Name: dev.GetVolumeName(),
-							VolumeSource: apiv1.VolumeSource{
-								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: dev.GetVolumeName(),
-									ReadOnly:  false,
-								},
-							},
-						},
-						{
-							Name: OktetoBinName,
-							VolumeSource: apiv1.VolumeSource{
-								EmptyDir: &apiv1.EmptyDirVolumeSource{},
-							},
-						},
-					},
-					InitContainers: []apiv1.Container{
-						{
-							Name:            OktetoBinName,
-							Image:           model.OktetoBinImageTag,
-							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      OktetoBinName,
-									MountPath: "/okteto/bin",
-								},
-							},
-						},
-						{
-							Name:            OktetoInitVolumeContainerName,
-							Image:           "web:latest",
-							ImagePullPolicy: apiv1.PullIfNotPresent,
-							Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /app/. /init-volume/1 || true)"},
-							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/init-volume/1",
-									SubPath:   model.SourceCodeSubPath,
-								},
-							},
-						},
-					},
-					Containers: []apiv1.Container{
-						{
-							Name:            "dev",
-							Image:           "web:latest",
-							ImagePullPolicy: apiv1.PullAlways,
-							Command:         []string{"/var/okteto/bin/start.sh"},
-							Args:            []string{"-r"},
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "key1",
-									Value: "value1",
-								},
-								{
-									Name:  "key2",
-									Value: "value2",
-								},
-								{
-									Name:  "key3",
-									Value: "value3",
-								},
-								{
-									Name:  "key4",
-									Value: "value4",
-								},
-								{
-									Name:  "key5",
-									Value: "value5",
-								},
-								{
-									Name:  "OKTETO_NAMESPACE",
-									Value: "n",
-								},
-								{
-									Name:  "OKTETO_NAME",
-									Value: "web",
-								},
-								{
-									Name:  "OKTETO_USERNAME",
-									Value: "cindy",
-								},
-							},
-							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:    &rootUser,
-								RunAsGroup:   &rootUser,
-								RunAsNonRoot: &falseBoolean,
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/var/syncthing",
-									SubPath:   model.SyncthingSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: model.RemoteMountPath,
-									SubPath:   model.RemoteSubPath,
-								},
-								{
-									Name:      dev.GetVolumeName(),
-									ReadOnly:  false,
-									MountPath: "/app",
-									SubPath:   model.SourceCodeSubPath,
-								},
-								{
-									Name:      oktetoSyncSecretVolume,
-									ReadOnly:  false,
-									MountPath: "/var/syncthing/secret/",
-								},
-								{
-									Name:      OktetoBinName,
-									ReadOnly:  false,
-									MountPath: "/var/okteto/bin",
-								},
-							},
-							LivenessProbe:  nil,
-							ReadinessProbe: nil,
-						},
+						TopologyKey: "kubernetes.io/hostname",
 					},
 				},
 			},
 		},
+		Tolerations: []apiv1.Toleration{
+			{
+				Key:      "nvidia/gpu",
+				Operator: apiv1.TolerationOpExists,
+			},
+		},
+		SecurityContext: &apiv1.PodSecurityContext{
+			FSGroup: &fsGroup,
+		},
+		ServiceAccountName:            "sa",
+		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+		Volumes: []apiv1.Volume{
+			{
+				Name: oktetoSyncSecretVolume,
+				VolumeSource: apiv1.VolumeSource{
+					Secret: &apiv1.SecretVolumeSource{
+						SecretName: "okteto-web",
+						Items: []apiv1.KeyToPath{
+							{
+								Key:  "config.xml",
+								Path: "config.xml",
+								Mode: &mode444,
+							},
+							{
+								Key:  "cert.pem",
+								Path: "cert.pem",
+								Mode: &mode444,
+							},
+							{
+								Key:  "key.pem",
+								Path: "key.pem",
+								Mode: &mode444,
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: dev1.GetVolumeName(),
+				VolumeSource: apiv1.VolumeSource{
+					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+						ClaimName: dev1.GetVolumeName(),
+						ReadOnly:  false,
+					},
+				},
+			},
+			{
+				Name: oktetoDevSecretVolume,
+				VolumeSource: apiv1.VolumeSource{
+					Secret: &apiv1.SecretVolumeSource{
+						SecretName: "okteto-web",
+						Items: []apiv1.KeyToPath{
+							{
+								Key:  "dev-secret-remote",
+								Path: "remote",
+								Mode: &mode420,
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: OktetoBinName,
+				VolumeSource: apiv1.VolumeSource{
+					EmptyDir: &apiv1.EmptyDirVolumeSource{},
+				},
+			},
+		},
+		InitContainers: []apiv1.Container{
+			{
+				Name:            OktetoBinName,
+				Image:           model.OktetoBinImageTag,
+				ImagePullPolicy: apiv1.PullIfNotPresent,
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  &runAsUser,
+					RunAsGroup: &runAsGroup,
+				},
+				Command: []string{"sh", "-c", "cp /usr/local/bin/* /okteto/bin"},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      OktetoBinName,
+						MountPath: "/okteto/bin",
+					},
+				},
+			},
+			{
+				Name:            OktetoInitVolumeContainerName,
+				Image:           "web:latest",
+				ImagePullPolicy: apiv1.PullIfNotPresent,
+				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true)"},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  &runAsUser,
+					RunAsGroup: &runAsGroup,
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/init-volume/1",
+						SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/init-volume/2",
+						SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/init-volume/3",
+						SubPath:   model.SourceCodeSubPath,
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/init-volume/4",
+						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+					},
+				},
+			},
+		},
+		Containers: []apiv1.Container{
+			{
+				Name:            "dev",
+				Image:           "web:latest",
+				ImagePullPolicy: apiv1.PullAlways,
+				Command:         []string{"/var/okteto/bin/start.sh"},
+				Args:            []string{"-r", "-s", "remote:/remote"},
+				WorkingDir:      "/app",
+				Env: []apiv1.EnvVar{
+					{
+						Name:  "OKTETO_NAMESPACE",
+						Value: "n",
+					},
+					{
+						Name:  "OKTETO_NAME",
+						Value: "web",
+					},
+				},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  &runAsUser,
+					RunAsGroup: &runAsGroup,
+				},
+				Resources: apiv1.ResourceRequirements{
+					Limits: apiv1.ResourceList{
+						"cpu":            resource.MustParse("2"),
+						"memory":         resource.MustParse("1Gi"),
+						"nvidia.com/gpu": resource.MustParse("1"),
+						"amd.com/gpu":    resource.MustParse("1"),
+					},
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/var/syncthing",
+						SubPath:   model.SyncthingSubPath,
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: model.RemoteMountPath,
+						SubPath:   model.RemoteSubPath,
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/go/pkg/",
+						SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/root/.cache/go-build",
+						SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/app",
+						SubPath:   model.SourceCodeSubPath,
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/path",
+						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+					},
+					{
+						Name:      oktetoSyncSecretVolume,
+						ReadOnly:  false,
+						MountPath: "/var/syncthing/secret/",
+					},
+					{
+						Name:      oktetoDevSecretVolume,
+						ReadOnly:  false,
+						MountPath: "/var/okteto/secret/",
+					},
+					{
+						Name:      OktetoBinName,
+						ReadOnly:  false,
+						MountPath: "/var/okteto/bin",
+					},
+				},
+				LivenessProbe:  nil,
+				ReadinessProbe: nil,
+			},
+		},
 	}
-	marshalled, _ := yaml.Marshal(d.PodTemplateSpec.Spec)
-	marshalledOK, _ := yaml.Marshal(dOK.Spec.Template.Spec)
-	if string(marshalled) != string(marshalledOK) {
-		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))
+
+	//checking sfs1 state
+	sfs1Orig := statefulsets.Sandbox(dev1)
+	if tr1.App.Replicas() != 0 {
+		t.Fatalf("sfs1 is running %d replicas", tr1.App.Replicas())
+	}
+	expectedLabels := map[string]string{model.DevLabel: "true"}
+	if !reflect.DeepEqual(tr1.App.ObjectMeta().Labels, expectedLabels) {
+		t.Fatalf("Wrong sfs1 labels: '%v'", tr1.App.ObjectMeta().Labels)
+	}
+	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Labels, sfs1Orig.Spec.Template.Labels) {
+		t.Fatalf("Wrong sfs1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
+	}
+	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2"}
+	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
+		t.Fatalf("Wrong sfs1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
+	}
+	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, sfs1Orig.Spec.Template.Annotations) {
+		t.Fatalf("Wrong sfs1 pod annotations: '%v'", tr1.App.TemplateObjectMeta().Annotations)
+	}
+	marshalledSfs1, _ := yaml.Marshal(tr1.App.PodSpec())
+	marshalledSfs1Orig, _ := yaml.Marshal(sfs1Orig.Spec.Template.Spec)
+	if string(marshalledSfs1) != string(marshalledSfs1Orig) {
+		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs1), string(marshalledSfs1Orig))
+	}
+
+	//checking dev sfs1 state
+	if tr1.DevApp.Replicas() != 1 {
+		t.Fatalf("dev sfs1 is running %d replicas", tr1.DevApp.Replicas())
+	}
+	expectedLabels = map[string]string{model.DevCloneLabel: "sfs1"}
+	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Labels, expectedLabels) {
+		t.Fatalf("Wrong dev sfs1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
+	}
+	expectedPodLabels := map[string]string{"app": "web", model.InteractiveDevLabel: dev1.Name}
+	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
+		t.Fatalf("Wrong dev sfs1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
+	}
+	expectedAnnotations = map[string]string{"key1": "value1"}
+	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Annotations, expectedAnnotations) {
+		t.Fatalf("Wrong dev sfs1 annotations: '%v'", tr1.DevApp.ObjectMeta().Annotations)
+	}
+	expectedPodAnnotations := map[string]string{"key1": "value1"}
+	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Annotations, expectedPodAnnotations) {
+		t.Fatalf("Wrong dev sfs1 pod annotations: '%v'", tr1.DevApp.TemplateObjectMeta().Annotations)
+	}
+	marshalledDevSfs1, _ := yaml.Marshal(tr1.DevApp.PodSpec())
+	marshalledDevSfs1OK, _ := yaml.Marshal(sfs1PodDev)
+	if string(marshalledDevSfs1) != string(marshalledDevSfs1OK) {
+		t.Fatalf("Wrong dev sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs1), string(marshalledDevSfs1OK))
+	}
+
+	tr1.DevModeOff()
+
+	if _, ok := tr1.App.ObjectMeta().Labels[model.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	}
+
+	if tr1.App.Replicas() != 2 {
+		t.Fatalf("sfs1 is running %d replicas after 'okteto down'", tr1.App.Replicas())
+	}
+
+	dev2 := dev1.Services[0]
+	sfs2 := statefulsets.Sandbox(dev2)
+	sfs2.Spec.Replicas = pointer.Int32Ptr(3)
+	sfs2.UID = types.UID("sfs2")
+	delete(sfs2.Annotations, model.OktetoAutoCreateAnnotation)
+	sfs2.Namespace = dev1.Namespace
+
+	trMap := make(map[string]*Translation)
+	ctx := context.Background()
+	c := fake.NewSimpleClientset(sfs2)
+	err = loadServiceTranslations(ctx, dev1, false, trMap, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr2 := trMap[dev2.Name]
+	err = tr2.translate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sfs2DevPod := apiv1.PodSpec{
+		Affinity: &apiv1.Affinity{
+			PodAffinity: &apiv1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								model.InteractiveDevLabel: "web",
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		},
+		SecurityContext: &apiv1.PodSecurityContext{
+			FSGroup: pointer.Int64Ptr(0),
+		},
+		ServiceAccountName:            "sa",
+		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
+		Volumes: []apiv1.Volume{
+			{
+				Name: dev1.GetVolumeName(),
+				VolumeSource: apiv1.VolumeSource{
+					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+						ClaimName: dev1.GetVolumeName(),
+						ReadOnly:  false,
+					},
+				},
+			},
+		},
+		Containers: []apiv1.Container{
+			{
+				Name:            "dev",
+				Image:           "worker:latest",
+				ImagePullPolicy: apiv1.PullAlways,
+				Command:         []string{"./run_worker.sh"},
+				Args:            []string{},
+				SecurityContext: &apiv1.SecurityContext{
+					RunAsUser:  pointer.Int64Ptr(0),
+					RunAsGroup: pointer.Int64Ptr(0),
+				},
+				VolumeMounts: []apiv1.VolumeMount{
+					{
+						Name:      dev1.GetVolumeName(),
+						ReadOnly:  false,
+						MountPath: "/src",
+						SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+					},
+				},
+				LivenessProbe:  nil,
+				ReadinessProbe: nil,
+			},
+		},
+	}
+
+	//checking sfs2 state
+	sfs2Orig := statefulsets.Sandbox(dev2)
+	if tr2.App.Replicas() != 0 {
+		t.Fatalf("sfs2 is running %d replicas", tr2.App.Replicas())
+	}
+	expectedLabels = map[string]string{model.DevLabel: "true"}
+	if !reflect.DeepEqual(tr2.App.ObjectMeta().Labels, expectedLabels) {
+		t.Fatalf("Wrong sfs2 labels: '%v'", tr2.App.ObjectMeta().Labels)
+	}
+	if !reflect.DeepEqual(tr2.App.TemplateObjectMeta().Labels, sfs2Orig.Spec.Template.Labels) {
+		t.Fatalf("Wrong sfs2 pod labels: '%v'", tr2.App.TemplateObjectMeta().Labels)
+	}
+	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3"}
+	if !reflect.DeepEqual(tr2.App.ObjectMeta().Annotations, expectedAnnotations) {
+		t.Fatalf("Wrong sfs2 annotations: '%v'", tr2.App.ObjectMeta().Annotations)
+	}
+	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, sfs2Orig.Spec.Template.Annotations) {
+		t.Fatalf("Wrong sfs2 pod annotations: '%v'", tr2.App.TemplateObjectMeta().Annotations)
+	}
+	marshalledSfs2, _ := yaml.Marshal(tr2.App.PodSpec())
+	marshalledSfs2Orig, _ := yaml.Marshal(sfs2Orig.Spec.Template.Spec)
+	if string(marshalledSfs2) != string(marshalledSfs2Orig) {
+		t.Fatalf("Wrong sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs2), string(marshalledSfs2Orig))
+	}
+
+	//checking dev sfs2 state
+	if tr2.DevApp.Replicas() != 3 {
+		t.Fatalf("dev sfs2 is running %d replicas", tr2.DevApp.Replicas())
+	}
+	expectedLabels = map[string]string{model.DevCloneLabel: "sfs2"}
+	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Labels, expectedLabels) {
+		t.Fatalf("Wrong dev sfs2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
+	}
+	expectedPodLabels = map[string]string{"app": "worker", model.DetachedDevLabel: dev2.Name}
+	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
+		t.Fatalf("Wrong dev sfs2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
+	}
+	expectedAnnotations = map[string]string{"key2": "value2"}
+	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Annotations, expectedAnnotations) {
+		t.Fatalf("Wrong dev sfs2 annotations: '%v'", tr2.DevApp.ObjectMeta().Annotations)
+	}
+	expectedPodAnnotations = map[string]string{"key2": "value2"}
+	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Annotations, expectedPodAnnotations) {
+		t.Fatalf("Wrong dev sfs2 pod annotations: '%v'", tr2.DevApp.TemplateObjectMeta().Annotations)
+	}
+	marshalledDevSfs2, _ := yaml.Marshal(tr2.DevApp.PodSpec())
+	marshalledDevSfs2OK, _ := yaml.Marshal(sfs2DevPod)
+	if string(marshalledDevSfs2) != string(marshalledDevSfs2OK) {
+		t.Fatalf("Wrong dev sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs2), string(marshalledDevSfs2OK))
+	}
+
+	tr2.DevModeOff()
+
+	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	}
+
+	if tr2.App.Replicas() != 3 {
+		t.Fatalf("sfs2 is running %d replicas after 'okteto down'", tr2.App.Replicas())
 	}
 }

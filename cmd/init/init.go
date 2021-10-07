@@ -16,27 +16,23 @@ package init
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/client"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
@@ -57,13 +53,22 @@ func Init() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
 		Short: "Automatically generates your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
+			if err := okteto.SetCurrentContext(k8sContext, namespace); err != nil {
+				return err
+			}
+
 			l := os.Getenv("OKTETO_LANGUAGE")
 			workDir, err := os.Getwd()
 			if err != nil {
 				return err
 			}
 
-			if err := Run(namespace, k8sContext, devPath, l, workDir, overwrite); err != nil {
+			if err := Run(devPath, l, workDir, overwrite); err != nil {
 				return err
 			}
 
@@ -86,11 +91,7 @@ func Init() *cobra.Command {
 }
 
 // Run runs the sequence to generate okteto.yml
-func Run(namespace, k8sContext, devPath, language, workDir string, overwrite bool) error {
-	if k8sContext == "" {
-		k8sContext = os.Getenv(client.OktetoContextVariableName)
-	}
-
+func Run(devPath, language, workDir string, overwrite bool) error {
 	fmt.Println("This command walks you through creating an okteto manifest.")
 	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	fmt.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
@@ -100,9 +101,9 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 		return err
 	}
 
-	checkForDeployment := false
+	checkForRunningApp := false
 	if language == "" {
-		checkForDeployment = true
+		checkForRunningApp = true
 	}
 
 	language, err = GetLanguage(language, workDir)
@@ -115,36 +116,34 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 		return err
 	}
 
-	dev.Context = k8sContext
-
-	if checkForDeployment {
-		r, container, err := getResource(ctx, namespace, k8sContext)
+	if checkForRunningApp {
+		app, container, err := getRunningApp(ctx)
 		if err != nil {
 			return err
 		}
-		if r == nil {
+		if app == nil {
 			dev.Autocreate = true
 			linguist.SetForwardDefaults(dev, language)
 		} else {
 			dev.Container = container
 			if container == "" {
-				container = r.PodTemplateSpec.Spec.Containers[0].Name
+				container = app.PodSpec().Containers[0].Name
 			}
 
-			suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(string(r.ObjectType)), r.Name)
+			suffix := fmt.Sprintf("Analyzing %s '%s'...", app.TypeMeta().Kind, app.ObjectMeta().Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
-			err = initCMD.SetDevDefaultsFromResource(ctx, dev, r, container, language)
+			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(string(r.ObjectType)), r.Name))
+				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.TypeMeta().Kind, app.ObjectMeta().Name))
 			} else {
-				log.Yellow(fmt.Sprintf("Analysis for %s '%s' failed: %s", strings.ToLower(string(r.ObjectType)), r.Name, err))
+				log.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.TypeMeta().Kind, app.ObjectMeta().Name, err))
 				linguist.SetForwardDefaults(dev, language)
 			}
 		}
 
-		if !supportsPersistentVolumes(ctx, namespace, k8sContext) {
+		if !supportsPersistentVolumes(ctx) {
 			log.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
 			dev.Volumes = nil
 			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
@@ -158,6 +157,8 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 		}
 	}
 
+	dev.Namespace = ""
+	dev.Context = ""
 	if err := dev.Save(devPath); err != nil {
 		return err
 	}
@@ -170,7 +171,7 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 
 	if !model.FileExists(stignore) {
 		c := linguist.GetSTIgnore(language)
-		if err := ioutil.WriteFile(stignore, c, 0600); err != nil {
+		if err := os.WriteFile(stignore, c, 0600); err != nil {
 			log.Infof("failed to write stignore file: %s", err)
 		}
 	}
@@ -179,57 +180,44 @@ func Run(namespace, k8sContext, devPath, language, workDir string, overwrite boo
 	return nil
 }
 
-func getResource(ctx context.Context, namespace, k8sContext string) (*model.K8sObject, string, error) {
-	c, _, err := k8Client.GetLocalWithContext(k8sContext)
+func getRunningApp(ctx context.Context) (apps.App, string, error) {
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
-		log.Yellow("Failed to load your local Kubeconfig: %s", err)
+		log.Yellow("Failed to load your kubeconfig: %s", err)
 		return nil, "", nil
 	}
-	if namespace == "" {
-		namespace = client.GetContextNamespace(k8sContext)
-	}
 
-	r, err := askForResource(ctx, namespace, c)
+	app, err := askForRunningApp(ctx, c)
 	if err != nil {
 		return nil, "", err
 	}
-	if r == nil {
+	if app == nil {
 		return nil, "", nil
 	}
 
-	if apps.IsDevModeOn(r) {
-		return nil, "", fmt.Errorf("the %s '%s' is in development mode", strings.ToLower(string(r.ObjectType)), r.Name)
+	if apps.IsDevModeOn(app) {
+		return nil, "", fmt.Errorf("%s '%s' is in development mode", app.TypeMeta().Kind, app.ObjectMeta().Name)
 	}
 
 	container := ""
-	if len(r.PodTemplateSpec.Spec.Containers) > 1 {
-		container, err = askForContainer(r)
+	if len(app.PodSpec().Containers) > 1 {
+		container, err = askForContainer(app)
 		if err != nil {
 			return nil, "", err
 		}
 	}
 
-	return r, container, nil
+	return app, container, nil
 }
 
-func supportsPersistentVolumes(ctx context.Context, namespace, k8sContext string) bool {
-	c, _, err := k8Client.GetLocalWithContext(k8sContext)
+func supportsPersistentVolumes(ctx context.Context) bool {
+	if okteto.IsOktetoContext() {
+		return true
+	}
+	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		log.Infof("couldn't get kubernetes local client: %s", err.Error())
 		return false
-	}
-	if namespace == "" {
-		namespace = client.GetContextNamespace(k8sContext)
-	}
-
-	ns, err := namespaces.Get(ctx, namespace, c)
-	if err != nil {
-		log.Infof("failed to get the current namespace: %s", err.Error())
-		return false
-	}
-
-	if namespaces.IsOktetoNamespace(ns) {
-		return true
 	}
 
 	stClassList, err := c.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
@@ -281,13 +269,14 @@ func GetLanguage(language, workDir string) (string, error) {
 
 func askForLanguage() (string, error) {
 	supportedLanguages := linguist.GetSupportedLanguages()
-	return askForOptions(
+	return utils.AskForOptions(
 		supportedLanguages,
 		"Couldn't detect any language in the current folder. Pick your project's main language from the list below:",
 	)
 }
 
-func askForResource(ctx context.Context, namespace string, c *kubernetes.Clientset) (*model.K8sObject, error) {
+func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, error) {
+	namespace := okteto.Context().Namespace
 	dList, err := deployments.List(ctx, namespace, "", c)
 	if err != nil {
 		log.Yellow("Failed to list deployments: %s", err)
@@ -306,7 +295,7 @@ func askForResource(ctx context.Context, namespace string, c *kubernetes.Clients
 		options = append(options, sfsList[i].Name)
 	}
 	options = append(options, defaultInitValues)
-	option, err := askForOptions(
+	option, err := utils.AskForOptions(
 		options,
 		"Select the resource you want to develop:",
 	)
@@ -316,57 +305,27 @@ func askForResource(ctx context.Context, namespace string, c *kubernetes.Clients
 	if option == defaultInitValues {
 		return nil, nil
 	}
-	k8sObject := &model.K8sObject{}
 	for i := range dList {
 		if dList[i].Name == option {
-			k8sObject.ObjectType = model.DeploymentObjectType
-			k8sObject.UpdateDeployment(&dList[i])
-			return k8sObject, nil
+			return apps.NewDeploymentApp(&dList[i]), nil
 		}
 	}
 	for i := range sfsList {
 		if sfsList[i].Name == option {
-			k8sObject.ObjectType = model.StatefulsetObjectType
-			k8sObject.UpdateStatefulset(&sfsList[i])
-			return k8sObject, nil
+			return apps.NewStatefulSetApp(&sfsList[i]), nil
 		}
 	}
 
 	return nil, nil
 }
 
-func askForContainer(k8sObject *model.K8sObject) (string, error) {
+func askForContainer(app apps.App) (string, error) {
 	options := []string{}
-	for i := range k8sObject.PodTemplateSpec.Spec.Containers {
-		options = append(options, k8sObject.PodTemplateSpec.Spec.Containers[i].Name)
+	for _, c := range app.PodSpec().Containers {
+		options = append(options, c.Name)
 	}
-	return askForOptions(
+	return utils.AskForOptions(
 		options,
-		fmt.Sprintf("The %s '%s' has %d containers. Select the container you want to replace with your development container:", strings.ToLower(string(k8sObject.ObjectType)), k8sObject.Name, len(k8sObject.PodTemplateSpec.Spec.Containers)),
+		fmt.Sprintf("%s '%s' has %d containers. Select the container you want to replace with your development container:", app.TypeMeta().Kind, app.ObjectMeta().Name, len(app.PodSpec().Containers)),
 	)
-}
-
-func askForOptions(options []string, label string) (string, error) {
-	prompt := promptui.Select{
-		Label: label,
-		Items: options,
-		Size:  len(options),
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}",
-			Selected: " ✓  {{ . | oktetoblue }}",
-			Active:   fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect),
-			Inactive: "  {{ . | oktetoblue }}",
-			FuncMap:  promptui.FuncMap,
-		},
-	}
-
-	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
-
-	i, _, err := prompt.Run()
-	if err != nil {
-		log.Infof("invalid init option: %s", err)
-		return "", fmt.Errorf("invalid option")
-	}
-
-	return options[i], nil
 }

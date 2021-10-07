@@ -19,29 +19,6 @@ import (
 	"testing"
 )
 
-func Test_membersToString(t *testing.T) {
-	expected := ""
-	got := membersToString([]string{})
-
-	if expected != got {
-		t.Errorf("got %s, expected %s", got, expected)
-	}
-
-	expected = `"cindylopez"`
-	got = membersToString([]string{"cindylopez"})
-
-	if expected != got {
-		t.Errorf("got %s, expected %s", got, expected)
-	}
-
-	expected = `"cindylopez","otheruser"`
-	got = membersToString([]string{"cindylopez", "otheruser"})
-
-	if expected != got {
-		t.Errorf("got %s, expected %s", got, expected)
-	}
-}
-
 func Test_validateNamespaceName(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -83,7 +60,7 @@ func Test_validateNamespaceName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateNamespace(tt.namespace)
+			err := validateNamespace(tt.namespace, "namespace")
 			if err != nil && !tt.expectedError {
 				t.Errorf("Expected error but no error found")
 			}

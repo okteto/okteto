@@ -15,6 +15,7 @@ package utils
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -24,15 +25,24 @@ import (
 var (
 	//DefaultStackManifest default okteto stack manifest file
 	DefaultStackManifest    = "okteto-stack.yml"
-	secondaryStackManifests = []string{"okteto-stack.yaml", "stack.yml", "stack.yaml", "docker-compose.yml", "docker-compose.yaml"}
-	deprecatedManifests     = []string{"stack.yml", "stack.yaml"}
+	secondaryStackManifests = [][]string{
+		{"okteto-stack.yaml"},
+		{"stack.yml"},
+		{"stack.yaml"},
+		{".okteto", "okteto-stack.yaml"},
+		{"docker-compose.yml"},
+		{"docker-compose.yaml"},
+		{".okteto", "docker-compose.yml"},
+		{".okteto", "docker-compose.yaml"},
+	}
+	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
 )
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
 func LoadStack(name, stackPath string) (*model.Stack, error) {
 	var isCompose bool
 	if model.FileExists(stackPath) {
-		if strings.HasPrefix(stackPath, "docker-compose") {
+		if isPathAComposeFile(stackPath) {
 			isCompose = true
 		}
 		return model.GetStack(name, stackPath, isCompose)
@@ -40,25 +50,32 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 
 	if stackPath == DefaultStackManifest {
 		for _, secondaryStackManifest := range secondaryStackManifests {
-			if model.FileExists(secondaryStackManifest) {
-				if isDeprecatedExtension(secondaryStackManifest) {
-					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", stackPath)
+			manifestPath := filepath.Join(secondaryStackManifest...)
+			if model.FileExists(manifestPath) {
+				if isDeprecatedExtension(manifestPath) {
+					deprecatedFile := filepath.Base(manifestPath)
+					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
 				}
-				if strings.HasPrefix(secondaryStackManifest, "docker-compose") {
+				if isPathAComposeFile(manifestPath) {
 					isCompose = true
 				}
-				return model.GetStack(name, secondaryStackManifest, isCompose)
+				return model.GetStack(name, manifestPath, isCompose)
 			}
 		}
 	}
 
 	return nil, fmt.Errorf("'%s' does not exist", stackPath)
+}
 
+func isPathAComposeFile(path string) bool {
+	base := filepath.Base(path)
+	return strings.HasPrefix(base, "docker-compose")
 }
 
 func isDeprecatedExtension(stackPath string) bool {
+	base := filepath.Base(stackPath)
 	for _, deprecatedManifest := range deprecatedManifests {
-		if deprecatedManifest == stackPath {
+		if deprecatedManifest == base {
 			return true
 		}
 	}

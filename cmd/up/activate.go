@@ -24,7 +24,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
@@ -38,7 +37,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (up *upContext) activate(autoDeploy, build bool) error {
+func (up *upContext) activate(build bool) error {
+
+	if build && okteto.Context().Buildkit == "" {
+		log.Information(errors.ErrNoBuilderInContext)
+		return nil
+	}
+
 	log.Infof("activating development container retry=%t", up.isRetry)
 
 	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
@@ -58,49 +63,42 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	up.cleaned = make(chan string, 1)
 	up.hardTerminate = make(chan error, 1)
 
-	k8sObject, create, err := up.getCurrentK8sObject(ctx, autoDeploy)
+	app, create, err := utils.GetApp(ctx, up.Dev, up.Client)
 	if err != nil {
 		return err
 	}
 
-	if err := apps.ValidateMountPaths(k8sObject, up.Dev); err != nil {
-		return err
-	}
-
-	if up.isRetry && !apps.IsDevModeOn(k8sObject) {
+	if up.isRetry && !apps.IsDevModeOn(app) {
 		log.Information("Development container has been deactivated")
 		return nil
 	}
 
-	if apps.IsDevModeOn(k8sObject) && apps.HasBeenChanged(k8sObject) {
-		return errors.UserError{
-			E: fmt.Errorf("%s '%s' has been modified while your development container was active", strings.ToLower(string(k8sObject.ObjectType)), k8sObject.Name),
-			Hint: `Follow these steps:
-	  1. Execute 'okteto down'
-	  2. Apply your manifest changes again: 'kubectl apply'
-	  3. Execute 'okteto up' again
-    More information is available here: https://okteto.com/docs/reference/known-issues/#kubectl-apply-changes-are-undone-by-okteto-up`,
-		}
+	if err := app.RestoreOriginal(); err != nil {
+		return err
 	}
 
-	if _, err := registry.GetImageTagWithDigest(ctx, up.Dev.Namespace, up.Dev.Image.Name); err == errors.ErrNotFound {
+	if err := apps.ValidateMountPaths(app.PodSpec(), up.Dev); err != nil {
+		return err
+	}
+
+	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == errors.ErrNotFound {
 		log.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		build = true
 	}
 
 	if !up.isRetry && build {
-		if err := up.buildDevImage(ctx, k8sObject, create); err != nil {
+		if err := up.buildDevImage(ctx, app); err != nil {
 			return fmt.Errorf("error building dev image: %s", err)
 		}
 	}
 
 	go up.initializeSyncthing()
 
-	if err := up.setDevContainer(k8sObject); err != nil {
+	if err := up.setDevContainer(app); err != nil {
 		return err
 	}
 
-	if err := up.devMode(ctx, k8sObject, create); err != nil {
+	if err := up.devMode(ctx, app, create); err != nil {
 		if errors.IsTransient(err) {
 			return err
 		}
@@ -114,7 +112,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 	}
 
 	if up.isRetry {
-		analytics.TrackReconnect(true, up.isSwap)
+		analytics.TrackReconnect(true)
 	}
 
 	up.isRetry = true
@@ -173,7 +171,7 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		divertURL := ""
 		if up.Dev.Divert != nil {
 			username := okteto.GetSanitizedUsername()
-			name := diverts.DivertName(username, up.Dev.Divert.Ingress)
+			name := model.DivertName(up.Dev.Divert.Ingress, username)
 			i, err := ingressesv1.Get(ctx, name, up.Dev.Namespace, up.Client)
 			if err != nil {
 				log.Errorf("error getting diverted ingress %s: %s", name, err.Error())
@@ -193,9 +191,9 @@ func (up *upContext) activate(autoDeploy, build bool) error {
 		}
 		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
 	}()
-	prevError := up.waitUntilExitOrInterrupt()
 
-	up.isRetry = true
+	prevError := up.waitUntilExitOrInterruptOrApply(ctx)
+
 	if up.shouldRetry(ctx, prevError) {
 		if !up.Dev.PersistentVolumeEnabled() {
 			if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
@@ -216,19 +214,21 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 		return true
 	case errors.ErrCommandFailed:
 		return !up.Sy.Ping(ctx, false)
+	case errors.ErrApplyToApp:
+		return true
 	}
 
 	return false
 }
 
-func (up *upContext) devMode(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
-	if err := up.createDevContainer(ctx, k8sObject, create); err != nil {
+func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) error {
+	if err := up.createDevContainer(ctx, app, create); err != nil {
 		return err
 	}
-	return up.waitUntilDevelopmentContainerIsRunning(ctx, k8sObject.ObjectType)
+	return up.waitUntilDevelopmentContainerIsRunning(ctx, app)
 }
 
-func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8sObject, create bool) error {
+func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()
 	up.spinner = spinner
@@ -245,12 +245,13 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	trList, err := apps.GetTranslations(ctx, up.Dev, k8sObject, resetOnDevContainerStart, up.Client)
+	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
 	if err != nil {
 		return err
 	}
+	up.Translations = trMap
 
-	if err := apps.TranslateDevMode(trList, up.Client, up.isOktetoNamespace); err != nil {
+	if err := apps.TranslateDevMode(trMap); err != nil {
 		return err
 	}
 
@@ -264,15 +265,17 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 		return err
 	}
 
-	for name := range trList {
-		if name == trList[name].K8sObject.Name && create {
-			if err := apps.Create(ctx, trList[name].K8sObject, up.Client); err != nil {
-				return err
-			}
-		} else {
-			if err := apps.Update(ctx, trList[name].K8sObject, up.Client); err != nil {
-				return err
-			}
+	var devApp apps.App
+	for _, tr := range trMap {
+		delete(tr.DevApp.ObjectMeta().Annotations, model.DeploymentRevisionAnnotation)
+		if err := tr.DevApp.Deploy(ctx, up.Client); err != nil {
+			return err
+		}
+		if err := tr.App.Deploy(ctx, up.Client); err != nil {
+			return err
+		}
+		if tr.MainDev == tr.Dev {
+			devApp = tr.DevApp
 		}
 	}
 
@@ -282,7 +285,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 		}
 	}
 
-	pod, err := pods.GetDevPodInLoop(ctx, up.Dev, up.Client, create)
+	pod, err := apps.GetRunningPodInLoop(ctx, up.Dev, devApp, up.Client)
 	if err != nil {
 		return err
 	}
@@ -292,7 +295,7 @@ func (up *upContext) createDevContainer(ctx context.Context, k8sObject *model.K8
 	return nil
 }
 
-func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context, objectType model.ObjectType) error {
+func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context, app apps.App) error {
 	msg := "Pulling images..."
 	if up.Dev.PersistentVolumeEnabled() {
 		msg = "Attaching persistent volume..."
@@ -341,18 +344,20 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			}
 			e, ok := event.Object.(*apiv1.Event)
 			if !ok {
+				log.Infof("failed to cast event")
 				watcherEvents, err = up.Client.CoreV1().Events(up.Dev.Namespace).Watch(ctx, optsWatchEvents)
 				if err != nil {
 					log.Infof("error watching events: %s", err.Error())
 					return err
 				}
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
-			pod, ok := event.Object.(*apiv1.Pod)
+			podEvent, ok := event.Object.(*apiv1.Event)
 			if !ok {
 				continue
 			}
-			if up.Pod.UID != pod.UID {
+			if up.Pod.UID != podEvent.InvolvedObject.UID {
 				continue
 			}
 			optsWatchEvents.ResourceVersion = e.ResourceVersion
@@ -377,7 +382,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				spinner.Update("Pulling images...")
 				spinner.Start()
 			case "Killing":
-				if objectType == model.StatefulsetObjectType {
+				if app.TypeMeta().Kind == model.StatefulSet {
 					killing = true
 					continue
 				}
@@ -396,11 +401,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 		case event := <-watcherPod.ResultChan():
 			pod, ok := event.Object.(*apiv1.Pod)
 			if !ok {
+				log.Infof("failed to cast pod event")
 				watcherPod, err = up.Client.CoreV1().Pods(up.Dev.Namespace).Watch(ctx, optsWatchPod)
 				if err != nil {
 					log.Infof("error watching pod events: %s", err.Error())
 					return err
 				}
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 			if pod.UID != up.Pod.UID {
@@ -424,8 +431,8 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 }
 
 func getPullingMessage(message, namespace string) string {
-	registry, err := okteto.GetRegistry()
-	if err != nil {
+	registry := okteto.Context().Registry
+	if registry == "" {
 		return message
 	}
 	toReplace := fmt.Sprintf("%s/%s", registry, namespace)

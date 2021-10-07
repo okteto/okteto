@@ -19,15 +19,19 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/apps"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -37,11 +41,11 @@ const (
 )
 
 //LoadDev loads an okteto manifest checking "yml" and "yaml"
-func LoadDev(devPath, namespace, k8sContext string) (*model.Dev, error) {
+func LoadDev(devPath, namespace, oktetoContext string) (*model.Dev, error) {
 	if !model.FileExists(devPath) {
 		if devPath == DefaultDevManifest {
 			if model.FileExists(secondaryDevManifest) {
-				return LoadDev(secondaryDevManifest, namespace, k8sContext)
+				return LoadDev(secondaryDevManifest, namespace, oktetoContext)
 			}
 		}
 
@@ -56,8 +60,25 @@ func LoadDev(devPath, namespace, k8sContext string) (*model.Dev, error) {
 	if err := loadDevRc(dev); err != nil {
 		return nil, err
 	}
-	loadContext(dev, k8sContext)
-	loadNamespace(dev, namespace)
+	if dev.Namespace == "" {
+		dev.Namespace = namespace
+	}
+	if namespace != "" && namespace != dev.Namespace {
+		return nil, fmt.Errorf("the namespace in the okteto manifest '%s' does not match the namespace '%s'", dev.Namespace, namespace)
+	}
+	if dev.Namespace == "" {
+		dev.Namespace = okteto.Context().Namespace
+	}
+	if dev.Context == "" {
+		dev.Context = oktetoContext
+	}
+	if oktetoContext != "" && oktetoContext != dev.Context {
+		return nil, fmt.Errorf("the context in the okteto manifest '%s' does not match the context '%s'", dev.Context, oktetoContext)
+	}
+	if dev.Context == "" {
+		dev.Context = okteto.Context().Name
+	}
+
 	return dev, nil
 }
 
@@ -84,30 +105,6 @@ func loadDevRc(dev *model.Dev) error {
 	return nil
 }
 
-func loadContext(dev *model.Dev, k8sContext string) {
-	if k8sContext != "" {
-		dev.Context = k8sContext
-		return
-	}
-	if dev.Context != "" {
-		return
-	}
-	if os.Getenv(client.OktetoContextVariableName) != "" {
-		dev.Context = os.Getenv(client.OktetoContextVariableName)
-		return
-	}
-	dev.Context = client.GetSessionContext("")
-}
-
-func loadNamespace(dev *model.Dev, namespace string) {
-	if namespace != "" {
-		dev.Namespace = namespace
-	}
-	if dev.Namespace == "" {
-		dev.Namespace = client.GetContextNamespace(dev.Context)
-	}
-}
-
 //LoadDevOrDefault loads an okteto manifest or a default one if does not exist
 func LoadDevOrDefault(devPath, name, namespace, k8sContext string) (*model.Dev, error) {
 	dev, err := LoadDev(devPath, namespace, k8sContext)
@@ -121,6 +118,8 @@ func LoadDevOrDefault(devPath, name, namespace, k8sContext string) (*model.Dev, 
 			return nil, err
 		}
 		dev.Name = name
+		dev.Namespace = namespace
+		dev.Context = k8sContext
 		return dev, nil
 	}
 
@@ -146,6 +145,39 @@ func AskYesNo(q string) (bool, error) {
 	return answer == "y", nil
 }
 
+func AskForOptions(options []string, label string) (string, error) {
+	selectedTemplate := " ✓  {{ . | oktetoblue }}"
+	activeTemplate := fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect)
+	inactiveTemplate := "  {{ . | oktetoblue }}"
+	if runtime.GOOS == "windows" {
+		selectedTemplate = " ✓  {{ . | blue }}"
+		activeTemplate = fmt.Sprintf("%s {{ . | blue }}", promptui.IconSelect)
+		inactiveTemplate = "  {{ . | blue }}"
+	}
+
+	prompt := promptui.Select{
+		Label: label,
+		Items: options,
+		Size:  len(options),
+		Templates: &promptui.SelectTemplates{
+			Label:    "{{ . }}",
+			Selected: selectedTemplate,
+			Active:   activeTemplate,
+			Inactive: inactiveTemplate,
+			FuncMap:  promptui.FuncMap,
+		},
+	}
+	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
+
+	i, _, err := prompt.Run()
+	if err != nil {
+		log.Infof("invalid init option: %s", err)
+		return "", fmt.Errorf("invalid option")
+	}
+
+	return options[i], nil
+}
+
 //AskIfOktetoInit asks if okteto init should be executed
 func AskIfOktetoInit(devPath string) bool {
 	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it? [y/n] ", devPath))
@@ -163,7 +195,7 @@ func AskIfDeploy(name, namespace string) error {
 	}
 	if !deploy {
 		return errors.UserError{
-			E:    fmt.Errorf("Deployment %s doesn't exist in namespace %s", name, namespace),
+			E:    fmt.Errorf("deployment %s doesn't exist in namespace %s", name, namespace),
 			Hint: "Deploy your application first or use 'okteto namespace' to select a different namespace and try again",
 		}
 	}
@@ -223,9 +255,12 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 		return nil
 	}
 
-	currentContext := client.GetSessionContext("")
-	if okteto.GetClusterContext() == currentContext {
-		secrets, err := okteto.GetSecrets(ctx)
+	if okteto.IsOktetoContext() {
+		oktetoClient, err := okteto.NewOktetoClient()
+		if err != nil {
+			return err
+		}
+		secrets, err := oktetoClient.GetSecrets(ctx)
 		if err != nil {
 			return fmt.Errorf("error loading Okteto Secrets: %s", err.Error())
 		}
@@ -248,4 +283,35 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 	}
 
 	return nil
+}
+
+func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (apps.App, bool, error) {
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return nil, false, err
+		}
+		if dev.Autocreate {
+			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
+		}
+		if len(dev.Labels) > 0 {
+			if err == errors.ErrNotFound {
+				err = errors.UserError{
+					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", dev.Namespace),
+					Hint: "Update the labels or point your context to a different namespace and try again"}
+			}
+			return nil, false, err
+		}
+		return nil, false, errors.UserError{
+			E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
+			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+    Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
+    More information is available here: https://okteto.com/docs/reference/cli/#up`,
+		}
+	}
+	if dev.Divert != nil {
+		dev.Name = model.DivertName(dev.Name, okteto.GetSanitizedUsername())
+		return app.Divert(okteto.GetSanitizedUsername()), false, nil
+	}
+	return app, false, nil
 }

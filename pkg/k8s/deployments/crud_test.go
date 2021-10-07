@@ -20,10 +20,12 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -39,17 +41,17 @@ func TestGet(t *testing.T) {
 	dev := &model.Dev{Name: "fake"}
 
 	clientset := fake.NewSimpleClientset(deployment)
-	s, err := Get(ctx, dev, deployment.GetNamespace(), clientset)
+	d, err := GetByDev(ctx, dev, deployment.GetNamespace(), clientset)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if s == nil {
-		t.Fatal("empty service")
+	if d == nil {
+		t.Fatal("empty deployment")
 	}
 
-	if s.Name != deployment.GetName() {
-		t.Fatalf("wrong service. Got %s, expected %s", s.Name, deployment.GetName())
+	if d.Name != deployment.GetName() {
+		t.Fatalf("wrong deployment. Got %s, expected %s", d.Name, deployment.GetName())
 	}
 }
 
@@ -177,7 +179,7 @@ func TestCheckConditionErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			err := checkConditionErrors(tt.deployment, tt.dev)
+			err := CheckConditionErrors(tt.deployment, tt.dev)
 
 			if err == nil {
 				t.Fatalf("Didn't receive any error. Expected %s", tt.expectedErr)
@@ -189,4 +191,65 @@ func TestCheckConditionErrors(t *testing.T) {
 		})
 	}
 
+}
+
+func Test_translateDivertDeployment(t *testing.T) {
+	original := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:             types.UID("id"),
+			Name:            "name",
+			Namespace:       "namespace",
+			Annotations:     map[string]string{"annotation1": "value1"},
+			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
+			ResourceVersion: "version",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "value",
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "value",
+					},
+				},
+			},
+		},
+	}
+	translated := TranslateDivert("cindy", original)
+	expected := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "name-cindy",
+			Namespace: "namespace",
+			Annotations: map[string]string{
+				"annotation1":                    "value1",
+				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+			},
+			Labels: map[string]string{
+				model.DeployedByLabel:   "cindy",
+				model.OktetoDivertLabel: "cindy",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					model.OktetoDivertLabel: "cindy",
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						model.OktetoDivertLabel: "cindy",
+					},
+				},
+			},
+		},
+	}
+	marshalled, _ := yaml.Marshal(translated)
+	marshalledExpected, _ := yaml.Marshal(expected)
+	if string(marshalled) != string(marshalledExpected) {
+		t.Fatalf("Wrong translation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledExpected))
+	}
 }

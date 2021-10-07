@@ -15,7 +15,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,6 +30,13 @@ import (
 type UpState string
 
 const (
+	deprecatedAnalyticsFile = ".noanalytics"
+	analyticsFile           = "analytics.json"
+	tokenFile               = ".token.json"
+	contextDir              = "context"
+	contextsStoreFile       = "config.json"
+	kubeconfigFile          = "kubeconfig"
+
 	oktetoFolderName = ".okteto"
 	//Activating up started
 	Activating UpState = "activating"
@@ -49,6 +55,9 @@ const (
 	//Failed up failed
 	Failed    UpState = "failed"
 	stateFile         = "okteto.state"
+
+	//OktetoContextVariableName defines the kubeconfig context of okteto commands
+	OktetoContextVariableName = "OKTETO_CONTEXT"
 )
 
 // VersionString the version of the cli
@@ -96,8 +105,8 @@ func GetNamespaceHome(namespace string) string {
 	return d
 }
 
-// GetDeploymentHome returns the path of the folder
-func GetDeploymentHome(namespace, name string) string {
+// GetAppHome returns the path of the folder
+func GetAppHome(namespace, name string) string {
 	okHome := GetOktetoHome()
 	d := filepath.Join(okHome, namespace, name)
 
@@ -118,8 +127,8 @@ func UpdateStateFile(dev *model.Dev, state UpState) error {
 		return fmt.Errorf("can't update state file, name is empty")
 	}
 
-	s := filepath.Join(GetDeploymentHome(dev.Namespace, dev.Name), stateFile)
-	if err := ioutil.WriteFile(s, []byte(state), 0644); err != nil {
+	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
+	if err := os.WriteFile(s, []byte(state), 0644); err != nil {
 		return fmt.Errorf("failed to update state file: %s", err)
 	}
 
@@ -136,7 +145,7 @@ func DeleteStateFile(dev *model.Dev) error {
 		return fmt.Errorf("can't delete state file, name is empty")
 	}
 
-	s := filepath.Join(GetDeploymentHome(dev.Namespace, dev.Name), stateFile)
+	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
 	return os.Remove(s)
 }
 
@@ -151,8 +160,8 @@ func GetState(dev *model.Dev) (UpState, error) {
 		return Failed, fmt.Errorf("can't update state file, name is empty")
 	}
 
-	statePath := filepath.Join(GetDeploymentHome(dev.Namespace, dev.Name), stateFile)
-	stateBytes, err := ioutil.ReadFile(statePath)
+	statePath := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
+	stateBytes, err := os.ReadFile(statePath)
 	if err != nil {
 		log.Infof("error reading state file: %s", err.Error())
 		return Failed, errors.UserError{
@@ -210,8 +219,8 @@ func homedirWindows() (string, error) {
 	return home, nil
 }
 
-// GetKubeConfigFile returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration
-func GetKubeConfigFile() string {
+// GetKubeconfigPath returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration
+func GetKubeconfigPath() string {
 	home := GetUserHomeDir()
 	kubeconfig := filepath.Join(home, ".kube", "config")
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
@@ -226,4 +235,33 @@ func splitKubeConfigEnv(value string) string {
 		return strings.Split(value, ";")[0]
 	}
 	return strings.Split(value, ":")[0]
+}
+
+func GetTokenPathDeprecated() string {
+	return filepath.Join(GetOktetoHome(), tokenFile)
+}
+
+func GetDeprecatedAnalyticsPath() string {
+	return filepath.Join(GetOktetoHome(), deprecatedAnalyticsFile)
+}
+
+func GetAnalyticsPath() string {
+	return filepath.Join(GetOktetoHome(), analyticsFile)
+}
+
+func GetOktetoContextFolder() string {
+	return filepath.Join(GetOktetoHome(), contextDir)
+}
+
+func GetOktetoContextsStorePath() string {
+	return filepath.Join(GetOktetoContextFolder(), contextsStoreFile)
+}
+
+func GetOktetoContextKubeconfigPath() string {
+	return filepath.Join(GetOktetoContextFolder(), kubeconfigFile)
+}
+
+// GetCertificatePath returns the path  to the certificate of the okteto buildkit
+func GetCertificatePath() string {
+	return filepath.Join(GetOktetoHome(), ".ca.crt")
 }

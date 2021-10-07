@@ -86,6 +86,7 @@ We ❤️ contributions big or small. [See our guide](contributing.md) on how to
 <a href="https://github.com/pchico83"><img src="https://avatars.githubusercontent.com/u/7474696?v=4" title="pchico83" width="80" height="80"></a>
 <a href="https://github.com/rberrelleza"><img src="https://avatars.githubusercontent.com/u/475313?v=4" title="rberrelleza" width="80" height="80"></a>
 <a href="https://github.com/jLopezbarb"><img src="https://avatars.githubusercontent.com/u/25170843?v=4" title="jLopezbarb" width="80" height="80"></a>
+<a href="https://github.com/apps/dependabot"><img src="https://avatars.githubusercontent.com/in/29110?v=4" title="dependabot[bot]" width="80" height="80"></a>
 <a href="https://github.com/jbampton"><img src="https://avatars.githubusercontent.com/u/418747?v=4" title="jbampton" width="80" height="80"></a>
 <a href="https://github.com/rlamana"><img src="https://avatars.githubusercontent.com/u/237819?v=4" title="rlamana" width="80" height="80"></a>
 <a href="https://github.com/marco2704"><img src="https://avatars.githubusercontent.com/u/12150248?v=4" title="marco2704" width="80" height="80"></a>
@@ -93,6 +94,7 @@ We ❤️ contributions big or small. [See our guide](contributing.md) on how to
 <a href="https://github.com/danielhelfand"><img src="https://avatars.githubusercontent.com/u/34258252?v=4" title="danielhelfand" width="80" height="80"></a>
 <a href="https://github.com/glensc"><img src="https://avatars.githubusercontent.com/u/199095?v=4" title="glensc" width="80" height="80"></a>
 <a href="https://github.com/ifbyol"><img src="https://avatars.githubusercontent.com/u/3510171?v=4" title="ifbyol" width="80" height="80"></a>
+<a href="https://github.com/jmacelroy"><img src="https://avatars.githubusercontent.com/u/30531294?v=4" title="jmacelroy" width="80" height="80"></a>
 <a href="https://github.com/kivi"><img src="https://avatars.githubusercontent.com/u/366163?v=4" title="kivi" width="80" height="80"></a>
 <a href="https://github.com/aguthrie"><img src="https://avatars.githubusercontent.com/u/210097?v=4" title="aguthrie" width="80" height="80"></a>
 <a href="https://github.com/alanmbarr"><img src="https://avatars.githubusercontent.com/u/760506?v=4" title="alanmbarr" width="80" height="80"></a>
@@ -104,8 +106,8 @@ We ❤️ contributions big or small. [See our guide](contributing.md) on how to
 <a href="https://github.com/drodriguezhdez"><img src="https://avatars.githubusercontent.com/u/29516565?v=4" title="drodriguezhdez" width="80" height="80"></a>
 <a href="https://github.com/snitkdan"><img src="https://avatars.githubusercontent.com/u/15274429?v=4" title="snitkdan" width="80" height="80"></a>
 <a href="https://github.com/fermayo"><img src="https://avatars.githubusercontent.com/u/3635457?v=4" title="fermayo" width="80" height="80"></a>
+<a href="https://github.com/maroshii"><img src="https://avatars.githubusercontent.com/u/1316984?v=4" title="maroshii" width="80" height="80"></a>
 <a href="https://github.com/irespaldiza"><img src="https://avatars.githubusercontent.com/u/11633327?v=4" title="irespaldiza" width="80" height="80"></a>
-<a href="https://github.com/jmacelroy"><img src="https://avatars.githubusercontent.com/u/30531294?v=4" title="jmacelroy" width="80" height="80"></a>
 <a href="https://github.com/dekkers"><img src="https://avatars.githubusercontent.com/u/656182?v=4" title="dekkers" width="80" height="80"></a>
 <a href="https://github.com/thatnerdjosh"><img src="https://avatars.githubusercontent.com/u/5251847?v=4" title="thatnerdjosh" width="80" height="80"></a>
 <a href="https://github.com/freeman"><img src="https://avatars.githubusercontent.com/u/7547?v=4" title="freeman" width="80" height="80"></a>

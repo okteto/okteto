@@ -20,23 +20,71 @@ import (
 	"os"
 	"strings"
 
-	"github.com/machinebox/graphql"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"github.com/shurcooL/graphql"
+	"golang.org/x/oauth2"
 )
 
-func getClient(oktetoURL string) (*graphql.Client, error) {
+//Client implementation to connect to Okteto API
+type OktetoClient struct {
+	client *graphql.Client
+}
 
-	u, err := parseOktetoURL(oktetoURL)
+//NewClient creates a new client to connect with Okteto API
+func NewOktetoClient() (*OktetoClient, error) {
+	token := Context().Token
+	if token == "" {
+		return nil, errors.ErrNotLogged
+	}
+	u, err := parseOktetoURL(Context().Name)
 	if err != nil {
 		return nil, err
 	}
 
-	graphqlClient := graphql.NewClient(u)
-	return graphqlClient, nil
+	src := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token,
+			TokenType: "Bearer"},
+	)
+	httpClient := oauth2.NewClient(context.Background(), src)
+
+	client := &OktetoClient{
+		client: graphql.NewClient(u, httpClient),
+	}
+	return client, nil
+}
+
+//NewClient creates a new client to connect with Okteto API
+func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
+	u, err := parseOktetoURL(url)
+	if err != nil {
+		return nil, err
+	}
+
+	src := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token,
+			TokenType: "Bearer"},
+	)
+	httpClient := oauth2.NewClient(context.Background(), src)
+
+	client := &OktetoClient{
+		client: graphql.NewClient(u, httpClient),
+	}
+	return client, nil
+}
+
+//NewClient creates a new client to connect with Okteto API
+func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
+	u, err := parseOktetoURL(url)
+	if err != nil {
+		return nil, err
+	}
+
+	httpClient := oauth2.NewClient(context.Background(), nil)
+	client := &OktetoClient{
+		client: graphql.NewClient(u, httpClient),
+	}
+	return client, nil
 }
 
 func parseOktetoURL(u string) (string, error) {
@@ -58,115 +106,27 @@ func parseOktetoURL(u string) (string, error) {
 	return parsed.String(), nil
 }
 
-func getRequest(q, token string) *graphql.Request {
-	req := graphql.NewRequest(q)
-	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", token))
-	return req
-}
-
-func query(ctx context.Context, query string, result interface{}) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("couldn't get token: %s", err)
-		return errors.ErrNotLogged
-	}
-
-	c, err := getClient(t.URL)
-	if err != nil {
-		log.Infof("error getting the graphql client: %s", err)
-		return fmt.Errorf("internal server error")
-	}
-
-	req := getRequest(query, t.Token)
-	if err := c.Run(ctx, req, result); err != nil {
-		return translateAPIErr(err)
-	}
-
-	return nil
-}
-
-func queryWithRequest(ctx context.Context, req *graphql.Request, result interface{}) error {
-	t, err := GetToken()
-	if err != nil {
-		log.Infof("couldn't get token: %s", err)
-		return errors.ErrNotLogged
-	}
-	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", t.Token))
-
-	c, err := getClient(t.URL)
-	if err != nil {
-		log.Infof("error getting the graphql client: %s", err)
-		return fmt.Errorf("internal server error")
-	}
-
-	if err := c.Run(ctx, req, result); err != nil {
-		return translateAPIErr(err)
-	}
-
-	return nil
-}
-
 func translateAPIErr(err error) error {
 	e := strings.TrimPrefix(err.Error(), "graphql: ")
 	switch e {
 	case "not-authorized":
 		return errors.ErrNotLogged
 	case "namespace-quota-exceeded":
-		return fmt.Errorf("You have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
+		return fmt.Errorf("you have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
 	case "namespace-quota-exceeded-onpremises":
-		return fmt.Errorf("You have exceeded your namespace quota, please contact your administrator to increase it")
+		return fmt.Errorf("you have exceeded your namespace quota, please contact your administrator to increase it")
 	case "users-limit-exceeded":
-		return fmt.Errorf("License limit exceeded. Contact your administrator to update your license and try again")
+		return fmt.Errorf("license limit exceeded. Contact your administrator to update your license and try again")
 	case "internal-server-error":
-		return fmt.Errorf("Server temporarily unavailable, please try again")
+		return fmt.Errorf("server temporarily unavailable, please try again")
+	case "non-200 OK status code: 401 Unauthorized body: \"\"":
+		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
+
 	default:
 		log.Infof("Unrecognized API error: %s", err)
 		return fmt.Errorf(e)
 	}
 
-}
-
-//SetKubeConfig updates a kubeconfig file with okteto cluster credentials
-func SetKubeConfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string, setCurrent bool) error {
-	cfg, err := getOrCreateKubeConfig(kubeConfigPath)
-	if err != nil {
-		return err
-	}
-
-	// create cluster
-	cluster, ok := cfg.Clusters[clusterName]
-	if !ok {
-		cluster = clientcmdapi.NewCluster()
-	}
-
-	cluster.CertificateAuthorityData = []byte(cred.Certificate)
-	cluster.Server = cred.Server
-	cfg.Clusters[clusterName] = cluster
-
-	// create user
-	user, ok := cfg.AuthInfos[userName]
-	if !ok {
-		user = clientcmdapi.NewAuthInfo()
-	}
-	user.Token = cred.Token
-	cfg.AuthInfos[userName] = user
-
-	// create context
-	context, ok := cfg.Contexts[clusterName]
-	if !ok {
-		context = clientcmdapi.NewContext()
-	}
-
-	context.Cluster = clusterName
-	context.AuthInfo = userName
-	context.Namespace = namespace
-	cfg.Contexts[clusterName] = context
-
-	if setCurrent {
-		cfg.CurrentContext = clusterName
-	}
-
-	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }
 
 // InDevContainer returns true if running in an okteto dev container
@@ -176,22 +136,4 @@ func InDevContainer() bool {
 	}
 
 	return false
-}
-
-func getOrCreateKubeConfig(kubeConfigPath string) (*clientcmdapi.Config, error) {
-	var cfg *clientcmdapi.Config
-	_, err := os.Stat(kubeConfigPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			cfg = clientcmdapi.NewConfig()
-		} else {
-			return nil, err
-		}
-	} else {
-		cfg, err = clientcmd.LoadFromFile(kubeConfigPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return cfg, nil
 }

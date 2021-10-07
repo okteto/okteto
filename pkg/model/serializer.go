@@ -89,7 +89,7 @@ type NodeSelectorTerm struct {
 
 type NodeSelectorRequirement struct {
 	Key      string                     `yaml:"key" json:"key"`
-	Operator apiv1.NodeSelectorOperator `yaml:"operator" json:"operator`
+	Operator apiv1.NodeSelectorOperator `yaml:"operator" json:"operator"`
 	Values   []string                   `yaml:"values,omitempty" json:"values,omitempty"`
 }
 

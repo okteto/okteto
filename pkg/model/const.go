@@ -16,14 +16,17 @@ package model
 import apiv1 "k8s.io/api/core/v1"
 
 const (
-	//Version represents the current dev data version
-	Version = "1.0"
-
 	// TimeFormat is the format to use when storing timestamps as a string
 	TimeFormat = "2006-01-02T15:04:05"
 
-	// DevLabel indicates the dev pod
+	// DevLabel indicates the deployment is in dev mode
 	DevLabel = "dev.okteto.com"
+
+	// DevCloneLabel indicates it is a dev pod clone
+	DevCloneLabel = "dev.okteto.com/clone"
+
+	// AppReplicasAnnotation indicates the number of replicas before dev mode was activated
+	AppReplicasAnnotation = "dev.okteto.com/replicas"
 
 	// InteractiveDevLabel indicates the interactive dev pod
 	InteractiveDevLabel = "interactive.dev.okteto.com"
@@ -31,8 +34,11 @@ const (
 	// DetachedDevLabel indicates the detached dev pods
 	DetachedDevLabel = "detached.dev.okteto.com"
 
-	// RevisionAnnotation indicates the revision when the development container was activated
-	RevisionAnnotation = "dev.okteto.com/revision"
+	// DeploymentRevisionAnnotation indicates the revision when the development container was activated
+	DeploymentRevisionAnnotation = "deployment.kubernetes.io/revision"
+
+	// OktetoRevisionAnnotation indicates the revision when the development container was activated
+	OktetoRevisionAnnotation = "dev.okteto.com/revision"
 
 	// DeploymentAnnotation indicates the original deployment manifest  when the development container was activated
 	DeploymentAnnotation = "dev.okteto.com/deployment"
@@ -91,6 +97,11 @@ const (
 	// StackVolumeNameLabel indicates the name of the stack volume an object belongs to
 	StackVolumeNameLabel = "stack.okteto.com/volume"
 
+	//Deployment k8s deployemnt kind
+	Deployment = "Deployment"
+	//StatefulSet k8s statefulset kind
+	StatefulSet = "StatefulSet"
+
 	//Localhost localhost
 	Localhost                   = "localhost"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
@@ -111,7 +122,9 @@ const (
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
 	//OktetoVolumeNameTemplate name template of the development container persistent volume
-	OktetoVolumeNameTemplate = "okteto-%s"
+	OktetoVolumeNameTemplate = "%s-okteto"
+	//DeprecatedOktetoVolumeNameTemplate name template of the development container persistent volume
+	DeprecatedOktetoVolumeNameTemplate = "okteto-%s"
 	//DataSubPath subpath in the development container persistent volume for the data volumes
 	DataSubPath = "data"
 	//SourceCodeSubPath subpath in the development container persistent volume for the source code
@@ -147,9 +160,6 @@ const (
 	//DefaultImage default image for sandboxes
 	DefaultImage = "okteto/dev:latest"
 
-	//TranslationVersion version of the translation schema
-	TranslationVersion = "1.0"
-
 	//ResourceAMDGPU amd.com/gpu resource
 	ResourceAMDGPU apiv1.ResourceName = "amd.com/gpu"
 	//ResourceNVIDIAGPU nvidia.com/gpu resource
@@ -159,4 +169,7 @@ const (
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 
 	syncFieldDocsURL = "https://okteto.com/docs/reference/manifest/#sync-string-required"
+
+	//OktetoExtension identifies the okteto extension in kubeconfig files
+	OktetoExtension = "okteto"
 )

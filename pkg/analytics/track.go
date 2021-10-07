@@ -17,13 +17,11 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/denisbrodbeck/machineid"
 	"github.com/dukex/mixpanel"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
@@ -37,6 +35,7 @@ const (
 
 	upEvent                  = "Up"
 	upErrorEvent             = "Up Error"
+	manifestHasChangedEvent  = "Manifest Has Changed"
 	durationActivateUpEvent  = "Up Duration Time"
 	reconnectEvent           = "Reconnect"
 	durationInitialSyncEvent = "Initial Sync Duration Time"
@@ -53,6 +52,7 @@ const (
 	destroyStackEvent        = "Destroy Stack"
 	loginEvent               = "Login"
 	initEvent                = "Create Manifest"
+	kubeconfigEvent          = "Kubeconfig"
 	namespaceEvent           = "Namespace"
 	namespaceCreateEvent     = "CreateNamespace"
 	namespaceDeleteEvent     = "DeleteNamespace"
@@ -60,14 +60,13 @@ const (
 	previewDestroyEvent      = "DestroyPreview"
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
+	contextEvent             = "Context"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
 )
 
 var (
 	mixpanelClient mixpanel.Mixpanel
-	clusterType    string
-	clusterContext string
 )
 
 func init() {
@@ -84,22 +83,17 @@ func init() {
 	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "")
 }
 
-// SetClusterType sets the cluster type for analytics
-func SetClusterType(value string) {
-	clusterType = value
-}
-
-// SetClusterContext sets the cluster context for analytics
-func SetClusterContext(value string) {
-	clusterContext = value
-}
-
 // TrackInit sends a tracking event to mixpanel when the user creates a manifest
 func TrackInit(success bool, language string) {
 	props := map[string]interface{}{
 		"language": language,
 	}
 	track(initEvent, success, props)
+}
+
+// TrackKubeconfig sends a tracking event to mixpanel when the user use the kubeconfig command
+func TrackKubeconfig(success bool) {
+	track(kubeconfigEvent, success, nil)
 }
 
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
@@ -128,11 +122,8 @@ func TrackPreviewDestroy(success bool) {
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func TrackReconnect(success, swap bool) {
-	props := map[string]interface{}{
-		"swap": swap,
-	}
-	track(reconnectEvent, success, props)
+func TrackReconnect(success bool) {
+	track(reconnectEvent, success, nil)
 }
 
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
@@ -154,23 +145,24 @@ func TrackResetDatabase(success bool) {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, devName string, interactive, single, swap, divert bool) {
+func TrackUp(success bool, devName string, interactive, single, divert bool) {
 	props := map[string]interface{}{
 		"name":          devName,
 		"interactive":   interactive,
 		"singleService": single,
-		"swap":          swap,
 		"divert":        divert,
 	}
 	track(upEvent, success, props)
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
-func TrackUpError(success, swap bool) {
-	props := map[string]interface{}{
-		"swap": swap,
-	}
-	track(upErrorEvent, success, props)
+func TrackUpError(success bool) {
+	track(upErrorEvent, success, nil)
+}
+
+// TrackManifestHasChanged sends a tracking event to mixpanel when the okteto up command fails because manifest has changed
+func TrackManifestHasChanged(success bool) {
+	track(manifestHasChangedEvent, success, nil)
 }
 
 // TrackDurationActivateUp sends a tracking event to mixpanel of the time that has elapsed in the execution of up
@@ -251,36 +243,29 @@ func TrackDestroyStack(success bool) {
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
-func TrackLogin(success bool, name, email, oktetoID, externalID string) {
-	if !isEnabled() {
+func TrackLogin(success bool) {
+	if !get().Enabled {
 		return
 	}
 
 	track(loginEvent, success, nil)
-	if name == "" {
-		name = externalID
-	}
-
-	if err := mixpanelClient.Update(oktetoID, &mixpanel.Update{
-		Operation: "$set",
-		Properties: map[string]interface{}{
-			"$name":    name,
-			"$email":   email,
-			"oktetoId": oktetoID,
-			"githubId": externalID,
-		},
-	}); err != nil {
-		log.Infof("failed to update user: %s", err)
-	}
 }
 
 // TrackSignup sends a tracking event to mixpanel when the user signs up
 func TrackSignup(success bool, userID string) {
-	if err := mixpanelClient.Alias(getMachineID(), userID); err != nil {
-		log.Errorf("failed to alias %s to %s", getMachineID(), userID)
+	if err := mixpanelClient.Alias(get().MachineID, userID); err != nil {
+		log.Errorf("failed to alias %s to %s", get().MachineID, userID)
 	}
 
 	track(signupEvent, success, nil)
+}
+
+// TrackContext sends a tracking event to mixpanel when the user use context in
+func TrackContext(success bool) {
+	if !get().Enabled {
+		return
+	}
+	track(contextEvent, success, nil)
 }
 
 func TrackStackWarnings(warnings []string) {
@@ -298,7 +283,7 @@ func TrackStackWarnings(warnings []string) {
 }
 
 func track(event string, success bool, props map[string]interface{}) {
-	if !isEnabled() {
+	if !get().Enabled {
 		return
 	}
 	mpOS := ""
@@ -321,92 +306,15 @@ func track(event string, success bool, props map[string]interface{}) {
 	}
 	props["$os"] = mpOS
 	props["version"] = config.VersionString
-	props["$referring_domain"] = okteto.GetURL()
-	props["machine_id"] = getMachineID()
+	props["$referring_domain"] = okteto.Context().Name
+	props["machine_id"] = get().MachineID
 	props["origin"] = origin
 	props["success"] = success
-	if clusterType != "" {
-		props["clusterType"] = clusterType
-	}
-	if clusterContext != "" {
-		props["clusterContext"] = clusterContext
-	}
+	props["contextType"] = getContextType(okteto.Context().Name)
+	props["context"] = okteto.Context().Name
 
 	e := &mixpanel.Event{Properties: props}
-	trackID := getTrackID()
-	if err := mixpanelClient.Track(trackID, event, e); err != nil {
+	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
 		log.Infof("Failed to send analytics: %s", err)
 	}
-}
-
-func getFlagPath() string {
-	return filepath.Join(config.GetOktetoHome(), ".noanalytics")
-}
-
-// Disable disables analytics
-func Disable(version string) error {
-	var _, err = os.Stat(getFlagPath())
-	trackDisable(true)
-	if os.IsNotExist(err) {
-		var file, err = os.Create(getFlagPath())
-		if err != nil {
-			trackDisable(false)
-			return err
-		}
-
-		defer file.Close()
-	}
-	return nil
-}
-
-// Enable enables analytics
-func Enable(version string) error {
-	var _, err = os.Stat(getFlagPath())
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	return os.Remove(getFlagPath())
-}
-
-func isEnabled() bool {
-	if _, err := os.Stat(getFlagPath()); !os.IsNotExist(err) {
-		return false
-	}
-
-	return true
-}
-
-func getTrackID() string {
-	uid := okteto.GetUserID()
-	if len(uid) > 0 {
-		return uid
-	}
-
-	return getMachineID()
-}
-
-func getMachineID() string {
-	mid := okteto.GetMachineID()
-	if len(mid) > 0 {
-		return mid
-	}
-
-	mid = generateMachineID()
-	if err := okteto.SaveMachineID(mid); err != nil {
-		log.Info("failed to save the machine id")
-		mid = "na"
-	}
-
-	return mid
-}
-
-func generateMachineID() string {
-	mid, err := machineid.ProtectedID("okteto")
-	if err != nil {
-		log.Infof("failed to generate a machine id: %s", err)
-		mid = "na"
-	}
-
-	return mid
 }

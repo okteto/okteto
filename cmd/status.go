@@ -19,13 +19,13 @@ import (
 	"os/signal"
 	"time"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
@@ -48,12 +48,20 @@ func Status() *cobra.Command {
 				return errors.ErrNotInDevContainer
 			}
 
+			ctx := context.Background()
+			if err := contextCMD.Init(ctx); err != nil {
+				return err
+			}
+
 			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
 
-			ctx := context.Background()
+			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
+				return err
+			}
+
 			waitForStates := []config.UpState{config.Synchronizing, config.Ready}
 			if err := status.Wait(ctx, dev, waitForStates); err != nil {
 				return err
@@ -72,9 +80,9 @@ func Status() *cobra.Command {
 			}
 
 			if watch {
-				err = runWithWatch(ctx, dev, sy)
+				err = runWithWatch(ctx, sy)
 			} else {
-				err = runWithoutWatch(ctx, dev, sy)
+				err = runWithoutWatch(ctx, sy)
 			}
 
 			analytics.TrackStatus(err == nil, showInfo)
@@ -89,7 +97,7 @@ func Status() *cobra.Command {
 	return cmd
 }
 
-func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {
+func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 	suffix := "Synchronizing your files..."
 	spinner := utils.NewSpinner(suffix)
 	pbScaling := 0.30
@@ -105,7 +113,7 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 		for {
 			<-ticker.C
 			message := ""
-			progress, err := status.Run(ctx, dev, sy)
+			progress, err := status.Run(ctx, sy)
 			if err != nil {
 				log.Infof("error accessing status: %s", err)
 				continue
@@ -116,7 +124,6 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 				message = utils.RenderProgressBar(suffix, progress, pbScaling)
 			}
 			spinner.Update(message)
-			exit <- nil
 		}
 	}()
 
@@ -124,7 +131,7 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		os.Exit(130)
+		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
@@ -134,8 +141,8 @@ func runWithWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) 
 	return nil
 }
 
-func runWithoutWatch(ctx context.Context, dev *model.Dev, sy *syncthing.Syncthing) error {
-	progress, err := status.Run(ctx, dev, sy)
+func runWithoutWatch(ctx context.Context, sy *syncthing.Syncthing) error {
+	progress, err := status.Run(ctx, sy)
 	if err != nil {
 		return err
 	}

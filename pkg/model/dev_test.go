@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -686,7 +685,7 @@ func Test_LoadForcePull(t *testing.T) {
 }
 
 func Test_validate(t *testing.T) {
-	file, err := ioutil.TempFile("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -899,6 +898,39 @@ func Test_validate(t *testing.T) {
       docker:
         enabled: true`),
 			expectErr: true,
+		},
+		{
+			name: "runAsNonRoot-with-root-user",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 0`),
+			expectErr: true,
+		},
+		{
+			name: "runAsNonRoot-with-non-root-user",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101`),
+			expectErr: false,
+		},
+		{
+			name: "runAsNonRoot-with-root-group",
+			manifest: []byte(`
+      name: deployment
+      sync:
+        - .:/app
+      securityContext:
+        runAsNonRoot: true
+        runAsGroup: 0`),
+			expectErr: false,
 		},
 	}
 
