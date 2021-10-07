@@ -17,6 +17,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
+	"runtime"
 	"text/template"
 
 	"github.com/chzyer/readline"
@@ -64,7 +66,7 @@ type SelectorItem struct {
 func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	clusters := []SelectorItem{
 		{
-			Label:  "Okteto contexts",
+			Label:  "Okteto contexts:",
 			Enable: false,
 		},
 		{
@@ -80,7 +82,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 		k8sClusters := getKubernetesContextList()
 		if len(k8sClusters) > 0 {
 			clusters = append(clusters, SelectorItem{
-				Label:  "Kubernetes contexts",
+				Label:  "Kubernetes contexts:",
 				Enable: false,
 			})
 			for _, k8sCluster := range k8sClusters {
@@ -95,18 +97,29 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 }
 
 func AskForOptions(options []SelectorItem, label string) (string, error) {
+	selectedTemplate := "{{if .Enable}} ✓  {{ .Label | oktetoblue }}{{else}}{{ .Label | oktetoblue}}{{end}}"
+	activeTemplate := fmt.Sprintf("{{if .Enable}}  %s {{ .Label | oktetoblue }}{{else}}{{ .Label | oktetoblue}}{{end}}", promptui.IconSelect)
+	inactiveTemplate := "{{if .Enable}}    {{ .Label | oktetoblue}}{{else}}• {{ .Label }}{{end}}"
+	if runtime.GOOS == "windows" {
+		selectedTemplate = "{{if .Enable}} ✓  {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}"
+		activeTemplate = fmt.Sprintf("{{if .Enable}}  %s {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}", promptui.IconSelect)
+		inactiveTemplate = "{{if .Enable}}    {{ .Label | blue}}{{else}}• {{ .Label }}{{end}}"
+	}
+
 	prompt := OktetoSelector{
 		Label: label,
 		Items: options,
 		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ .Label }}",
-			Selected: "{{if .Enable}} ✓  {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}",
-			Active:   fmt.Sprintf("{{if .Enable}}%s {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}", promptui.IconSelect),
-			Inactive: "{{if .Enable}}  {{ .Label | blue}}{{else}}{{ .Label | blue}}{{end}}",
+			Selected: selectedTemplate,
+			Active:   activeTemplate,
+			Inactive: inactiveTemplate,
 			FuncMap:  promptui.FuncMap,
 		},
 	}
+
+	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
 
 	optionSelected, err := prompt.Run()
 	if err != nil {
@@ -136,6 +149,9 @@ func (s OktetoSelector) Run() (string, error) {
 	err = c.Init()
 	if err != nil {
 		return "", err
+	}
+	if runtime.GOOS != "windows" {
+		c.Stdout = &stdout{}
 	}
 
 	c.Stdin = readline.NewCancelableStdin(c.Stdin)
@@ -397,4 +413,20 @@ func render(tpl *template.Template, data interface{}) []byte {
 		return []byte(fmt.Sprintf("%v", data))
 	}
 	return buf.Bytes()
+}
+
+type stdout struct{}
+
+// Write implements an io.WriterCloser over os.Stderr, but it skips the terminal
+// bell character.
+func (s *stdout) Write(b []byte) (int, error) {
+	if len(b) == 1 && b[0] == readline.CharBell {
+		return 0, nil
+	}
+	return os.Stderr.Write(b)
+}
+
+// Close implements an io.WriterCloser over os.Stderr.
+func (s *stdout) Close() error {
+	return os.Stderr.Close()
 }

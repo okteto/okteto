@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -145,6 +146,14 @@ func AskYesNo(q string) (bool, error) {
 }
 
 func AskForOptions(options []string, label string) (string, error) {
+	selectedTemplate := " ✓  {{ . | oktetoblue }}"
+	activeTemplate := fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect)
+	inactiveTemplate := "  {{ . | oktetoblue }}"
+	if runtime.GOOS == "windows" {
+		selectedTemplate = " ✓  {{ . | blue }}"
+		activeTemplate = fmt.Sprintf("%s {{ . | blue }}", promptui.IconSelect)
+		inactiveTemplate = "  {{ . | blue }}"
+	}
 
 	prompt := promptui.Select{
 		Label: label,
@@ -152,12 +161,13 @@ func AskForOptions(options []string, label string) (string, error) {
 		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ . }}",
-			Selected: " ✓  {{ . | blue }}",
-			Active:   fmt.Sprintf("%s {{ . | blue }}", promptui.IconSelect),
-			Inactive: "  {{ . | blue }}",
+			Selected: selectedTemplate,
+			Active:   activeTemplate,
+			Inactive: inactiveTemplate,
 			FuncMap:  promptui.FuncMap,
 		},
 	}
+	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
 
 	i, _, err := prompt.Run()
 	if err != nil {
