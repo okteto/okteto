@@ -107,6 +107,7 @@ func get() *Analytics {
 		log.Debugf("error unmarshaling analytics: %s", err)
 		return &Analytics{Enabled: false, MachineID: ""}
 	}
+
 	return result
 }
 
