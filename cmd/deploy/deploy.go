@@ -1,22 +1,36 @@
 package deploy
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
 
-var tempKubeConfig = "/var/tmp/okteto.kubeconfig"
+type DeployOptions struct {
+	ManifestPath string
+	Name         string
+	Variables    []string
+}
 
 type kubeConfigHandler interface {
 	Read() (*rest.Config, error)
@@ -24,7 +38,7 @@ type kubeConfigHandler interface {
 }
 
 type proxyInterface interface {
-	Start(ctx context.Context, name string, clusterConfig *rest.Config) error
+	Start()
 	Shutdown(ctx context.Context) error
 	GetPort() int
 	GetToken() string
@@ -35,7 +49,6 @@ type manifestExecutor interface {
 }
 
 type deployCommand struct {
-	getSecrets  func(ctx context.Context) ([]string, error)
 	getManifest func(cwd, name, filename string) (*Manifest, error)
 
 	proxy      proxyInterface
@@ -45,14 +58,13 @@ type deployCommand struct {
 
 //Deploy deploys the okteto manifest
 func Deploy(ctx context.Context) *cobra.Command {
-	var filename string
-	var variables []string
-	var name string
+	options := &DeployOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "deploy",
-		Short: "Executes the list of commands specified in the Okteto manifest",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
+		Use:    "deploy",
+		Short:  "Executes the list of commands specified in the Okteto manifest",
+		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
+		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := contextCMD.Init(ctx); err != nil {
 				return err
@@ -63,8 +75,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
 
-			if name == "" {
-				name = getName(cwd)
+			if options.Name == "" {
+				options.Name, err = getName(cwd)
+				if err != nil {
+					return fmt.Errorf("could not infer environment name")
+				}
 			}
 
 			// Look for a free local port to start the proxy
@@ -85,67 +100,80 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// Generate a token for the requests done to the proxy
 			sessionToken := uuid.NewString()
 
+			kubeconfig := newKubeConfig()
+			clusterConfig, err := kubeconfig.Read()
+			if err != nil {
+				log.Errorf("could not read kubeconfig file: %s", err)
+				return err
+			}
+
+			handler, err := getProxyHandler(options.Name, sessionToken, clusterConfig)
+			if err != nil {
+				log.Errorf("could not configure local proxy: %s", err)
+				return err
+			}
+
+			s := &http.Server{
+				Addr:         fmt.Sprintf(":%d", port),
+				Handler:      handler,
+				ReadTimeout:  5 * time.Second,
+				WriteTimeout: 10 * time.Second,
+				IdleTimeout:  120 * time.Second,
+				TLSConfig: &tls.Config{
+					Certificates: []tls.Certificate{cert},
+				},
+			}
+
 			c := &deployCommand{
-				getSecrets:  getOktetoSecretsAsEnvironmenVariables,
 				getManifest: getManifest,
 
-				kubeconfig: newKubeConfig(),
+				kubeconfig: kubeconfig,
 				executor:   newExecutor(),
 				proxy: newProxy(proxyConfig{
-					port:         port,
-					certificates: []tls.Certificate{cert},
-					token:        sessionToken,
-				}),
+					port:  port,
+					token: sessionToken,
+				}, s),
 			}
-			return c.runDeploy(ctx, cwd, name, filename, variables)
+			return c.runDeploy(ctx, cwd, options)
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "a", "", "application name")
-	cmd.Flags().StringVarP(&filename, "filename", "f", "", "path to the manifest file")
-	cmd.Flags().StringArrayVarP(&variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
+	cmd.Flags().StringVarP(&options.Name, "name", "a", "", "application name")
+	cmd.Flags().StringVarP(&options.ManifestPath, "filename", "f", "", "path to the manifest file")
+	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
 
 	return cmd
 }
 
-func (dc *deployCommand) runDeploy(ctx context.Context, cwd, name, filename string, variables []string) error {
-	clusterConfig, err := dc.kubeconfig.Read()
-	if err != nil {
-		log.Errorf("could not build kube config: %s", err)
-		return err
-	}
-
+func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *DeployOptions) error {
 	if err := dc.kubeconfig.Modify(ctx, dc.proxy.GetPort(), dc.proxy.GetToken()); err != nil {
 		log.Errorf("could not create temporal kubeconfig %s", err)
 		return err
 	}
 
 	// Read manifest file with the commands to be executed
-	m, err := dc.getManifest(cwd, name, filename)
+	manifest, err := dc.getManifest(cwd, opts.Name, opts.ManifestPath)
 	if err != nil {
 		log.Errorf("could not find manifest file to be executed: %s", err)
 		return err
 	}
 
-	// Get secrets from API
-	sList, err := dc.getSecrets(ctx)
-	if err != nil {
-		log.Errorf("could not load Okteto Secrets: %s", err.Error())
-		sList = []string{}
-	}
+	log.Debugf("start server on %d", dc.proxy.GetPort())
+	dc.proxy.Start()
 
-	if err := dc.proxy.Start(ctx, name, clusterConfig); err != nil {
-		log.Errorf("could not start proxy server %s", err)
-		return err
-	}
+	defer func() {
+		log.Debugf("stopping local server...")
+		if err := dc.proxy.Shutdown(ctx); err != nil {
+			log.Errorf("could not stop local server: %s", err)
+		}
+	}()
 
-	// Include secrets as part of variables list
-	env := append(variables, sList...)
-	// Set KUBECONFIG environment variable to make sure it executes kubectl commands against the proxy
-	env = append(env, fmt.Sprintf("KUBECONFIG=%s", tempKubeConfig))
+	// Set variables and KUBECONFIG environment variable as environment for the commands to be executed
+	//env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", config.GetOktetoContextKubeconfigPath()))
+	env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", config.GetOktetoContextKubeconfigPath()))
 
 	var commandErr error
-	for _, command := range m.Deploy {
+	for _, command := range manifest.Deploy {
 		if err := dc.executor.Execute(command, env); err != nil {
 			log.Errorf("error executing command '%s': %s", command, err.Error())
 			commandErr = err
@@ -153,21 +181,109 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd, name, filename stri
 		}
 	}
 
-	if err := dc.proxy.Shutdown(ctx); err != nil {
-		log.Errorf("could not stop local server: %s", err)
-		return err
-	}
-
 	return commandErr
 }
 
-func getName(cwd string) string {
-	repo, err := model.GetRepositoryURL(cwd)
+func getName(cwd string) (string, error) {
+	name, err := model.GetValidNameFromGitRepo(filepath.Dir(cwd))
 	if err != nil {
-		log.Info("inferring name from folder")
-		return filepath.Base(cwd)
+		name, err = model.GetValidNameFromFolder(filepath.Dir(cwd))
+		if err != nil {
+			return "", err
+		}
+	}
+	return name, nil
+}
+
+func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handler, error) {
+	trans, err := rest.TransportFor(clusterConfig)
+	if err != nil {
+		log.Errorf("could not get http transport from config: %s", err)
+		return nil, err
 	}
 
-	log.Info("inferring name from git repository URL")
-	return model.TranslateURLToName(repo)
+	handler := http.NewServeMux()
+
+	proxy := httputil.NewSingleHostReverseProxy(&url.URL{
+		Host:   strings.TrimPrefix(clusterConfig.Host, "https://"),
+		Scheme: "https",
+	})
+	proxy.Transport = trans
+
+	log.Debugf("forwarding host: %s", clusterConfig.Host)
+
+	handler.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+		requestToken := r.Header.Get("Authorization")
+		expectedToken := fmt.Sprintf("Bearer %s", token)
+		// Validate token with the generated for the local kubeconfig file
+		if requestToken != expectedToken {
+			rw.WriteHeader(401)
+			return
+		}
+
+		// Set the right bearer token based on the original kubeconfig
+		r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", clusterConfig.BearerToken))
+
+		// Modify all resources updated or created to include the label.
+		if r.Method == "PUT" || r.Method == "POST" {
+			b, err := io.ReadAll(r.Body)
+			if err != nil {
+				log.Errorf("could not read the request body: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+
+			var body map[string]json.RawMessage
+			if err := json.Unmarshal(b, &body); err != nil {
+				log.Errorf("could not unmarshal request: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+
+			m, ok := body["metadata"]
+			if !ok {
+				log.Error("request body doesn't have metadata field")
+				rw.WriteHeader(500)
+				return
+			}
+
+			var metadata metav1.ObjectMeta
+			if err := json.Unmarshal(m, &metadata); err != nil {
+				log.Errorf("could not process resource's metadata: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+
+			if metadata.Labels == nil {
+				metadata.Labels = map[string]string{}
+			}
+			metadata.Labels[model.DeployedByLabel] = name
+
+			metadataAsByte, err := json.Marshal(metadata)
+			if err != nil {
+				log.Errorf("could not process resource's metadata: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+
+			body["metadata"] = metadataAsByte
+
+			b, err = json.Marshal(body)
+			if err != nil {
+				log.Errorf("could not marshal modified body: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+
+			// Needed to set the new Content-Length
+			r.ContentLength = int64(len(b))
+			r.Body = io.NopCloser(bytes.NewBuffer(b))
+		}
+
+		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
+		proxy.ServeHTTP(rw, r)
+	})
+
+	return handler, nil
+
 }

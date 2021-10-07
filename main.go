@@ -110,11 +110,7 @@ func main() {
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.Update())
-
-	deployCmd := deploy.Deploy(ctx)
-	deployCmd.Hidden = true
-
-	root.AddCommand(deployCmd)
+	root.AddCommand(deploy.Deploy(ctx))
 
 	err := root.Execute()
 

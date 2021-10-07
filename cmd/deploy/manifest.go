@@ -7,11 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/log"
 	"gopkg.in/yaml.v2"
 )
 
 // Manifest represents a manifest file
 type Manifest struct {
+	Name     string `yaml:"name"`
 	Icon     string `yaml:"icon,omitempty"`
 	Type     string
 	Deploy   []string `yaml:"deploy,omitempty"`
@@ -23,7 +25,7 @@ type Manifest struct {
 func getManifest(srcFolder, name, filename string) (*Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, filename)
 	if pipelinePath != "" {
-		fmt.Println("Found okteto pipeline")
+		log.Debugf("Found okteto manifest %s", pipelinePath)
 		pipelineBytes, err := ioutil.ReadFile(pipelinePath)
 		if err != nil {
 			return nil, err
@@ -91,7 +93,7 @@ func getManifest(srcFolder, name, filename string) (*Manifest, error) {
 		}, nil
 	}
 
-	return nil, fmt.Errorf("File 'okteto-pipeline.yml' not found. See https://okteto.com/docs/cloud/okteto-pipeline for details on how to configure your git repository with okteto")
+	return nil, fmt.Errorf("file okteto manifest not found. See https://okteto.com/docs/cloud/okteto-pipeline for details on how to configure your git repository with okteto")
 }
 
 func getPipelinePath(src, filename string) string {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/rest"
@@ -42,7 +43,8 @@ func (k *kubeConfig) Modify(ctx context.Context, port int, sessionToken string) 
 	clusterInfo.CertificateAuthorityData = cert
 
 	// Save on disk the config changes
-	if err := clientcmd.WriteToFile(*clientCfg, tempKubeConfig); err != nil {
+	//if err := clientcmd.WriteToFile(*clientCfg, config.GetOktetoContextKubeconfigPath()); err != nil {
+	if err := clientcmd.WriteToFile(*clientCfg, config.GetOktetoContextKubeconfigPath()); err != nil {
 		log.Errorf("could not modify the k8s config: %s", err)
 		return err
 	}

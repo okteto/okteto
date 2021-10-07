@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -32,7 +33,7 @@ func (e *executor) Execute(command string, env []string) error {
 	go func() {
 		for scanner.Scan() {
 			line := scanner.Text()
-			log.Information(line)
+			fmt.Println(line)
 		}
 		done <- struct{}{}
 	}()
