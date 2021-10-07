@@ -33,8 +33,8 @@ type OktetoClient struct {
 
 //NewClient creates a new client to connect with Okteto API
 func NewOktetoClient() (*OktetoClient, error) {
-	t := Context().Token
-	if t == "" {
+	token := Context().Token
+	if token == "" {
 		return nil, errors.ErrNotLogged
 	}
 	u, err := parseOktetoURL(Context().Name)
@@ -43,7 +43,7 @@ func NewOktetoClient() (*OktetoClient, error) {
 	}
 
 	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: t,
+		&oauth2.Token{AccessToken: token,
 			TokenType: "Bearer"},
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
@@ -120,7 +120,7 @@ func translateAPIErr(err error) error {
 	case "internal-server-error":
 		return fmt.Errorf("server temporarily unavailable, please try again")
 	case "non-200 OK status code: 401 Unauthorized body: \"\"":
-		return fmt.Errorf("unauthorized. Please run okteto login and try again")
+		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
 
 	default:
 		log.Infof("Unrecognized API error: %s", err)

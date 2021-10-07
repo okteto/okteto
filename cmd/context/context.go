@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type ContextOptions struct {
@@ -193,13 +194,8 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 }
 
 func getContext(ctxOptions *ContextOptions) (string, error) {
-	clusters := []string{"Okteto Cloud", "Okteto Enterprise"}
-	if !ctxOptions.OnlyOkteto {
-		k8sClusters := getKubernetesContextList()
-		clusters = append(clusters, k8sClusters...)
-	}
-	oktetoContext, err := utils.AskForOptions(clusters, "Select the context you want to activate:")
-
+	ctxs := getContextsSelection(ctxOptions)
+	oktetoContext, err := AskForOptions(ctxs, "Select the context you want to activate:")
 	if err != nil {
 		return "", err
 	}
@@ -222,7 +218,66 @@ func Init(ctx context.Context) error {
 			return err
 		}
 	}
-	os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
+	if okteto.IsOktetoContext() {
+
+		secretsAndKubeCredentials, err := getSecretsAndCredentials(ctx)
+		if err != nil {
+			return err
+		}
+		if err := updateContext(secretsAndKubeCredentials.Credentials); err != nil {
+			log.Info(err)
+		}
+		setSecrets(secretsAndKubeCredentials.Secrets)
+
+		os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
+	}
+
 	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
 	return nil
+}
+
+func setSecrets(secrets []okteto.Secret) {
+	for _, secret := range secrets {
+		os.Setenv(secret.Name, secret.Value)
+	}
+}
+
+func updateContext(cred okteto.Credential) error {
+	octx := okteto.Context()
+	kubeconfigFile := config.GetKubeconfigPath()
+	cfg := client.GetKubeconfig(kubeconfigFile)
+	u := octx.ToUser()
+
+	clusterName := okteto.UrlToContext(octx.Name)
+	cluster, ok := cfg.Clusters[clusterName]
+	if !ok {
+		cluster = clientcmdapi.NewCluster()
+	}
+
+	cluster.CertificateAuthorityData = []byte(cred.Certificate)
+	cluster.Server = cred.Server
+
+	return okteto.SaveOktetoClusterContext(okteto.Context().Name, u, okteto.Context().Namespace, cfg)
+}
+
+func getSecretsAndCredentials(ctx context.Context) (*okteto.SecretsAndCredentialToken, error) {
+	client, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
+	retries := 3
+	var secretsAndKubeCredentials *okteto.SecretsAndCredentialToken
+	for retries > 0 {
+		secretsAndKubeCredentials, err = client.GetSecretsAndKubeCredentials(ctx)
+		if err != nil {
+			retries -= 1
+		}
+		if err != nil {
+			log.Info(err)
+			retries -= 1
+		} else {
+			break
+		}
+	}
+	return secretsAndKubeCredentials, err
 }

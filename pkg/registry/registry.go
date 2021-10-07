@@ -27,6 +27,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const (
+	DockerRegistry = "https://registry.hub.docker.com"
+)
+
 type ImageInfo struct {
 	Config *ConfigInfo `json:"config"`
 }
@@ -111,17 +115,17 @@ func GetRegistryAndRepo(tag string) (string, string) {
 
 func GetHiddenExposePorts(image string) []model.Port {
 	exposedPorts := make([]model.Port, 0)
-	var err error
-	var username string
-	var token string
-	if okteto.IsOktetoContext() {
-		image = ExpandOktetoDevRegistry(image)
-		image = ExpandOktetoGlobalRegistry(image)
-		username = okteto.Context().UserID
-		token = okteto.Context().Token
-	}
+
+	image = ExpandOktetoDevRegistry(image)
+	image = ExpandOktetoGlobalRegistry(image)
+	username := okteto.Context().UserID
+	token := okteto.Context().Token
 
 	registry := getRegistryURL(image)
+	if registry == DockerRegistry {
+		username = ""
+		token = ""
+	}
 
 	c, err := NewRegistryClient(registry, username, token)
 	if err != nil {
@@ -170,7 +174,7 @@ func GetHiddenExposePorts(image string) []model.Port {
 func getRegistryURL(image string) string {
 	registry, _ := GetRegistryAndRepo(image)
 	if registry == "docker.io" {
-		return "https://registry.hub.docker.com"
+		return DockerRegistry
 	} else {
 		if !strings.HasPrefix(registry, "https://") {
 			registry = fmt.Sprintf("https://%s", registry)

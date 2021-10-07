@@ -88,7 +88,11 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 		return err
 	}
 
-	pod, err := app.GetRunningPod(ctx, up.Client)
+	devApp := app.DevClone()
+	if err := devApp.Refresh(ctx, up.Client); err != nil {
+		return err
+	}
+	pod, err := devApp.GetRunningPod(ctx, up.Client)
 	if err != nil {
 		return err
 	}

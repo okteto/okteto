@@ -32,7 +32,7 @@ func InCluster() bool {
 
 // Get returns a kubernetes client for the current okteto context
 func Get(kubeconfigFile string) (*kubernetes.Clientset, *rest.Config, error) {
-	clientConfig := getClientConfig(kubeconfigFile, "")
+	clientConfig := GetClientConfig(kubeconfigFile, "")
 
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
@@ -48,7 +48,7 @@ func Get(kubeconfigFile string) (*kubernetes.Clientset, *rest.Config, error) {
 	return client, config, nil
 }
 
-func getClientConfig(kubeconfigPath, kubeContext string) clientcmd.ClientConfig {
+func GetClientConfig(kubeconfigPath, kubeContext string) clientcmd.ClientConfig {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
 	loadingRules.ExplicitPath = kubeconfigPath

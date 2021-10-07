@@ -52,6 +52,10 @@ func Restart() *cobra.Command {
 				return err
 			}
 
+			if len(dev.Services) == 0 {
+				return errors.ErrNoServicesinOktetoManifest
+			}
+
 			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
 				return err
 			}

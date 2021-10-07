@@ -87,15 +87,8 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	}
 
 	cfg := client.GetKubeconfig(kubeconfigFile)
-	u := &okteto.User{
-		ID:              octx.UserID,
-		ExternalID:      octx.Username,
-		Token:           octx.Token,
-		Buildkit:        octx.Buildkit,
-		Registry:        octx.Registry,
-		Certificate:     octx.Certificate,
-		GlobalNamespace: octx.GlobalNamespace,
-	}
+	u := octx.ToUser()
+
 	if err := okteto.SaveOktetoClusterContext(octx.Name, u, namespace, cfg); err != nil {
 		return err
 	}

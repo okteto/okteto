@@ -25,8 +25,17 @@ import (
 var (
 	//DefaultStackManifest default okteto stack manifest file
 	DefaultStackManifest    = "okteto-stack.yml"
-	secondaryStackManifests = []string{"okteto-stack.yaml", "stack.yml", "stack.yaml", "docker-compose.yml", "docker-compose.yaml"}
-	deprecatedManifests     = []string{"stack.yml", "stack.yaml"}
+	secondaryStackManifests = [][]string{
+		{"okteto-stack.yaml"},
+		{"stack.yml"},
+		{"stack.yaml"},
+		{".okteto", "okteto-stack.yaml"},
+		{"docker-compose.yml"},
+		{"docker-compose.yaml"},
+		{".okteto", "docker-compose.yml"},
+		{".okteto", "docker-compose.yaml"},
+	}
+	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
 )
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
@@ -41,14 +50,16 @@ func LoadStack(name, stackPath string) (*model.Stack, error) {
 
 	if stackPath == DefaultStackManifest {
 		for _, secondaryStackManifest := range secondaryStackManifests {
-			if model.FileExists(secondaryStackManifest) {
-				if isDeprecatedExtension(secondaryStackManifest) {
-					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", stackPath)
+			manifestPath := filepath.Join(secondaryStackManifest...)
+			if model.FileExists(manifestPath) {
+				if isDeprecatedExtension(manifestPath) {
+					deprecatedFile := filepath.Base(manifestPath)
+					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
 				}
-				if isPathAComposeFile(secondaryStackManifest) {
+				if isPathAComposeFile(manifestPath) {
 					isCompose = true
 				}
-				return model.GetStack(name, secondaryStackManifest, isCompose)
+				return model.GetStack(name, manifestPath, isCompose)
 			}
 		}
 	}
@@ -62,8 +73,9 @@ func isPathAComposeFile(path string) bool {
 }
 
 func isDeprecatedExtension(stackPath string) bool {
+	base := filepath.Base(stackPath)
 	for _, deprecatedManifest := range deprecatedManifests {
-		if deprecatedManifest == stackPath {
+		if deprecatedManifest == base {
 			return true
 		}
 	}

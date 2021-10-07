@@ -455,3 +455,17 @@ func GetSanitizedUsername() string {
 	octx := Context()
 	return reg.ReplaceAllString(strings.ToLower(octx.Username), "-")
 }
+
+func (okctx *OktetoContext) ToUser() *User {
+	u := &User{
+		ID:              okctx.UserID,
+		ExternalID:      okctx.Username,
+		Token:           okctx.Token,
+		Buildkit:        okctx.Buildkit,
+		Registry:        okctx.Registry,
+		Certificate:     okctx.Certificate,
+		GlobalNamespace: okctx.GlobalNamespace,
+	}
+	return u
+
+}

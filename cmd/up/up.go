@@ -38,6 +38,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/spf13/cobra"
 )
@@ -160,6 +161,11 @@ func Up() *cobra.Command {
 			}
 
 			err = up.start()
+
+			if err := up.Client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
+				log.Infof("error deleting deprecated volume: %v", err)
+			}
+
 			return err
 		},
 	}
@@ -297,9 +303,6 @@ func (up *upContext) activateLoop() {
 			if isTransientError {
 				<-t.C
 			}
-			if up.Dev.Divert != nil {
-				up.Dev.Name = strings.Replace(up.Dev.Name, fmt.Sprintf("%s-", okteto.GetSanitizedUsername()), "", 1)
-			}
 		}
 
 		err := up.activate()
@@ -325,39 +328,8 @@ func (up *upContext) activateLoop() {
 	}
 }
 
-func (up *upContext) getApp(ctx context.Context) (apps.App, bool, error) {
-	app, err := apps.Get(ctx, up.Dev, up.Dev.Namespace, up.Client)
-	if errors.IsNotFound(err) && up.Dev.Autocreate {
-		return apps.NewDeploymentApp(apps.GetDeploymentSandbox(up.Dev)), true, nil
-	}
-	if err == nil {
-		return app, false, nil
-	}
-
-	if !errors.IsNotFound(err) || up.isRetry {
-		return nil, false, err
-	}
-
-	if len(up.Dev.Labels) > 0 {
-		if err == errors.ErrNotFound {
-			err = errors.UserError{
-				E:    fmt.Errorf("Didn't find an application in namespace %s that matches the labels in your Okteto manifest", up.Dev.Namespace),
-				Hint: "Update the labels or point your context to a different namespace and try again"}
-		}
-		return nil, false, err
-	}
-
-	err = errors.UserError{
-		E: fmt.Errorf("Application '%s' not found in namespace '%s'", up.Dev.Name, up.Dev.Namespace),
-		Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
-Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-More information is available here: https://okteto.com/docs/reference/cli/#up`,
-	}
-	return nil, false, err
-}
-
-// waitUntilExitOrInterrupt blocks execution until a stop signal is sent or a disconnect event or an error
-func (up *upContext) waitUntilExitOrInterrupt() error {
+// waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modify
+func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error {
 	for {
 		select {
 		case err := <-up.CommandResult:
@@ -381,8 +353,20 @@ func (up *upContext) waitUntilExitOrInterrupt() error {
 				return up.getInsufficientSpaceError(err)
 			}
 			return err
+
+		case err := <-up.applyToApps(ctx):
+			log.Infof("exiting by applyToAppsChan: %v", err)
+			return err
 		}
 	}
+}
+
+func (up *upContext) applyToApps(ctx context.Context) chan error {
+	result := make(chan error, 1)
+	for _, tr := range up.Translations {
+		go tr.App.Watch(ctx, result, up.Client)
+	}
+	return result
 }
 
 func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
