@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -94,16 +95,20 @@ func Update(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.
 
 func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath string) error {
 	currentSize, ok := pvc.Spec.Resources.Requests["storage"]
+	okDownCommandHint := "okteto down -v"
+	if utils.DefaultDevManifest != devPath {
+		okDownCommandHint = fmt.Sprintf("okteto down -v -f %s", devPath)
+	}
 	if !ok {
-		return fmt.Errorf("current okteto volume size is wrong. Run 'okteto down -v -f %s' and try again", devPath)
+		return fmt.Errorf("current okteto volume size is wrong. Run '%s' and try again", okDownCommandHint)
 	}
 	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) > 0 {
 		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.PersistentVolumeSize() != model.OktetoDefaultPVSize {
 			return fmt.Errorf(
-				"okteto volume size '%s' cannot be less than previous value '%s'. Run 'okteto down -v -f %s' and try again",
+				"okteto volume size '%s' cannot be less than previous value '%s'. Run '%s' and try again",
 				dev.PersistentVolumeSize(),
 				currentSize.String(),
-				devPath,
+				okDownCommandHint,
 			)
 		}
 	}
@@ -124,16 +129,16 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 	if dev.PersistentVolumeStorageClass() != "" {
 		if pvc.Spec.StorageClassName == nil {
 			return fmt.Errorf(
-				"okteto volume storageclass is '' instead of '%s'. Run 'okteto down -v -f %s' and try again",
+				"okteto volume storageclass is '' instead of '%s'. Run '%s' and try again",
 				dev.PersistentVolumeStorageClass(),
-				devPath,
+				okDownCommandHint,
 			)
 		} else if dev.PersistentVolumeStorageClass() != *pvc.Spec.StorageClassName {
 			return fmt.Errorf(
-				"okteto volume storageclass cannot be updated from '%s' to '%s'. Run 'okteto down -v -f %s' and try again",
+				"okteto volume storageclass cannot be updated from '%s' to '%s'. Run '%s' and try again",
 				*pvc.Spec.StorageClassName,
 				dev.PersistentVolumeStorageClass(),
-				devPath,
+				okDownCommandHint,
 			)
 		}
 	}
