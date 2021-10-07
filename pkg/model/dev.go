@@ -778,7 +778,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 func (dev *Dev) LoadForcePull() {
 	restartUUID := uuid.New().String()
 	dev.ImagePullPolicy = apiv1.PullAlways
-	dev.Annotations[OktetoRestartAnnotation] = restartUUID
+	dev.Metadata.Annotations[OktetoRestartAnnotation] = restartUUID
 	for _, s := range dev.Services {
 		s.ImagePullPolicy = apiv1.PullAlways
 		s.Annotations[OktetoRestartAnnotation] = restartUUID
@@ -816,10 +816,10 @@ func SerializeBuildArgs(buildArgs Environment) []string {
 
 //SetLastBuiltAnnotation sets the dev timestacmp
 func (dev *Dev) SetLastBuiltAnnotation() {
-	if dev.Annotations == nil {
-		dev.Annotations = Annotations{}
+	if dev.Metadata.Annotations == nil {
+		dev.Metadata.Annotations = Annotations{}
 	}
-	dev.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
+	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
 //GetVolumeName returns the okteto volume name for a given development container

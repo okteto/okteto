@@ -108,10 +108,10 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 	}
 	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) < 0 {
 		restartUUID := uuid.New().String()
-		if dev.Annotations == nil {
-			dev.Annotations = map[string]string{}
+		if dev.Metadata.Annotations == nil {
+			dev.Metadata.Annotations = map[string]string{}
 		}
-		dev.Annotations[model.OktetoRestartAnnotation] = restartUUID
+		dev.Metadata.Annotations[model.OktetoRestartAnnotation] = restartUUID
 		for _, s := range dev.Services {
 			if s.Annotations == nil {
 				s.Annotations = map[string]string{}

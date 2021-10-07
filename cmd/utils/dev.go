@@ -294,7 +294,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (apps.A
 		if dev.Autocreate {
 			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
 		}
-		if len(dev.Labels) > 0 {
+		if len(dev.Selector) > 0 {
 			if err == errors.ErrNotFound {
 				err = errors.UserError{
 					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", dev.Namespace),

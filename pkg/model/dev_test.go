@@ -685,7 +685,7 @@ func Test_LoadForcePull(t *testing.T) {
 		t.Errorf("wrong image pull policy for main container: %s", dev.ImagePullPolicy)
 	}
 
-	if dev.Annotations[OktetoRestartAnnotation] == "" {
+	if dev.Metadata.Annotations[OktetoRestartAnnotation] == "" {
 		t.Errorf("restart annotation not set for main container")
 	}
 
@@ -694,7 +694,7 @@ func Test_LoadForcePull(t *testing.T) {
 		t.Errorf("wrong image pull policy for services: %s", dev.ImagePullPolicy)
 	}
 
-	if dev.Annotations[OktetoRestartAnnotation] == "" {
+	if dev.Metadata.Annotations[OktetoRestartAnnotation] == "" {
 		t.Errorf("restart annotation not set for services")
 	}
 }
