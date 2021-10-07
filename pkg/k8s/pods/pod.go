@@ -305,7 +305,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	}
 
 	if !found {
-		return fmt.Errorf("Unable to find any service with the provided name")
+		return fmt.Errorf("no pods running in development mode")
 	}
 	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name), c)
 }

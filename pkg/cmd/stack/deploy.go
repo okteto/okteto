@@ -197,13 +197,13 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernet
 					if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
 						if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient, config); len(failedJobs) > 0 {
 							if len(failedJobs) == 1 {
-								return fmt.Errorf("Service '%s' dependency '%s' failed", svcName, failedJobs[0])
+								return fmt.Errorf("service '%s' dependency '%s' failed", svcName, failedJobs[0])
 							}
-							return fmt.Errorf("Service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
+							return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
 						}
 						if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient, config); len(failedServices) > 0 {
 							for key, value := range failedServices {
-								return fmt.Errorf("Service '%s' has failed his healthcheck probes: %s", key, value)
+								return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
 							}
 						}
 						continue
@@ -387,22 +387,16 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		if old.Labels[model.StackNameLabel] != s.Name {
 			return fmt.Errorf("name collision: the deployment '%s' belongs to the stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
-		if deployments.IsDevModeOn(old) {
-			deployments.RestoreDevModeFrom(d, old)
-		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			d.Labels[model.DeployedByLabel] = v
 		}
 	}
 
-	if isNewDeployment {
-		if _, err := deployments.Create(ctx, d, c); err != nil {
+	if _, err := deployments.Deploy(ctx, d, c); err != nil {
+		if isNewDeployment {
 			return fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
 		}
-	} else {
-		if _, err := deployments.Update(ctx, d, c); err != nil {
-			return fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
-		}
+		return fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
 	}
 
 	return nil
@@ -415,7 +409,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 		return fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
 	}
 	if old == nil || old.Name == "" {
-		if _, err := statefulsets.Create(ctx, sfs, c); err != nil {
+		if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
 			return fmt.Errorf("error creating statefulset of service '%s': %s", svcName, err.Error())
 		}
 	} else {
@@ -425,20 +419,17 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 		if old.Labels[model.StackNameLabel] != s.Name {
 			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
-		if statefulsets.IsDevModeOn(old) {
-			statefulsets.RestoreDevModeFrom(sfs, old)
-		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			sfs.Labels[model.DeployedByLabel] = v
 		}
-		if _, err := statefulsets.Update(ctx, sfs, c); err != nil {
+		if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
 			if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
 			if err := statefulsets.Destroy(ctx, sfs.Name, sfs.Namespace, c); err != nil {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
-			if _, err := statefulsets.Create(ctx, sfs, c); err != nil {
+			if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
 				return fmt.Errorf("error updating statefulset of service '%s': %s", svcName, err.Error())
 			}
 		}
@@ -545,7 +536,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 	}
 
 	ticker := time.NewTicker(100 * time.Millisecond)
-	timeout := time.Now().Add(300 * time.Second)
+	timeout := time.Now().Add(600 * time.Second)
 
 	selector := map[string]string{model.StackNameLabel: s.Name}
 	for time.Now().Before(timeout) {
@@ -560,7 +551,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.C
 				pendingPods--
 			}
 			if podList[i].Status.Phase == apiv1.PodFailed {
-				return fmt.Errorf("Service '%s' has failed. Please check for errors and try again", podList[i].Labels[model.StackServiceNameLabel])
+				return fmt.Errorf("service '%s' has failed. Please check for errors and try again", podList[i].Labels[model.StackServiceNameLabel])
 			}
 		}
 		if pendingPods == 0 {

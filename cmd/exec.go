@@ -78,8 +78,8 @@ func Exec() *cobra.Command {
 
 			if errors.IsNotFound(err) {
 				return errors.UserError{
-					E:    fmt.Errorf("Development container not found in namespace %s", dev.Namespace),
-					Hint: "Run 'okteto up' to launch it or use 'okteto namespace' to select the correct namespace and try again",
+					E:    fmt.Errorf("development container not found in namespace '%s'", dev.Namespace),
+					Hint: "Run 'okteto up' to create your development container or use 'okteto context' to change your current context",
 				}
 			}
 
@@ -110,20 +110,33 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	pod, err := apps.GetRunningPodInLoop(ctx, dev, app, c)
-	if err != nil {
-		return err
-	}
-
-	if pod == nil {
-		return errors.UserError{
-			E:    fmt.Errorf("development mode is not enabled"),
-			Hint: "Run 'okteto up' to enable it and try again",
+	retries := 0
+	ticker := time.NewTicker(500 * time.Millisecond)
+	for {
+		if apps.IsDevModeOn(app) {
+			break
 		}
+		retries++
+		if retries >= 10 {
+			return errors.UserError{
+				E:    fmt.Errorf("development mode is not enabled"),
+				Hint: "Run 'okteto up' to enable it and try again",
+			}
+		}
+		<-ticker.C
 	}
 
 	waitForStates := []config.UpState{config.Ready}
 	if err := status.Wait(ctx, dev, waitForStates); err != nil {
+		return err
+	}
+
+	devApp := app.DevClone()
+	if err := devApp.Refresh(ctx, c); err != nil {
+		return err
+	}
+	pod, err := devApp.GetRunningPod(ctx, c)
+	if err != nil {
 		return err
 	}
 
@@ -132,19 +145,17 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	}
 
 	if dev.RemoteModeEnabled() {
-		if dev.RemotePort == 0 {
-			p, err := ssh.GetPort(dev.Name)
-			if err != nil {
-				log.Infof("failed to get the SSH port for %s: %s", dev.Name, err)
-				return errors.UserError{
-					E:    fmt.Errorf("development mode is not enabled on your deployment"),
-					Hint: "Run 'okteto up' to enable it and try again",
-				}
+		p, err := ssh.GetPort(dev.Name)
+		if err != nil {
+			log.Infof("failed to get the SSH port for %s: %s", dev.Name, err)
+			return errors.UserError{
+				E:    fmt.Errorf("development mode is not enabled on your deployment"),
+				Hint: "Run 'okteto up' to enable it and try again",
 			}
-
-			dev.RemotePort = p
-			log.Infof("executing remote command over SSH port %d", dev.RemotePort)
 		}
+
+		dev.RemotePort = p
+		log.Infof("executing remote command over SSH port %d", dev.RemotePort)
 
 		dev.LoadRemote(ssh.GetPublicKey())
 

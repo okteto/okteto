@@ -19,15 +19,19 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/apps"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -142,6 +146,14 @@ func AskYesNo(q string) (bool, error) {
 }
 
 func AskForOptions(options []string, label string) (string, error) {
+	selectedTemplate := " ✓  {{ . | oktetoblue }}"
+	activeTemplate := fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect)
+	inactiveTemplate := "  {{ . | oktetoblue }}"
+	if runtime.GOOS == "windows" {
+		selectedTemplate = " ✓  {{ . | blue }}"
+		activeTemplate = fmt.Sprintf("%s {{ . | blue }}", promptui.IconSelect)
+		inactiveTemplate = "  {{ . | blue }}"
+	}
 
 	prompt := promptui.Select{
 		Label: label,
@@ -149,12 +161,13 @@ func AskForOptions(options []string, label string) (string, error) {
 		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ . }}",
-			Selected: " ✓  {{ . | blue }}",
-			Active:   fmt.Sprintf("%s {{ . | blue }}", promptui.IconSelect),
-			Inactive: "  {{ . | blue }}",
+			Selected: selectedTemplate,
+			Active:   activeTemplate,
+			Inactive: inactiveTemplate,
 			FuncMap:  promptui.FuncMap,
 		},
 	}
+	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
 
 	i, _, err := prompt.Run()
 	if err != nil {
@@ -270,4 +283,35 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 	}
 
 	return nil
+}
+
+func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (apps.App, bool, error) {
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return nil, false, err
+		}
+		if dev.Autocreate {
+			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
+		}
+		if len(dev.Labels) > 0 {
+			if err == errors.ErrNotFound {
+				err = errors.UserError{
+					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", dev.Namespace),
+					Hint: "Update the labels or point your context to a different namespace and try again"}
+			}
+			return nil, false, err
+		}
+		return nil, false, errors.UserError{
+			E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
+			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+    Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
+    More information is available here: https://okteto.com/docs/reference/cli/#up`,
+		}
+	}
+	if dev.Divert != nil {
+		dev.Name = model.DivertName(dev.Name, okteto.GetSanitizedUsername())
+		return app.Divert(okteto.GetSanitizedUsername()), false, nil
+	}
+	return app, false, nil
 }

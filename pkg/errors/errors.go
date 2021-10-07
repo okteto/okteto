@@ -78,6 +78,12 @@ var (
 	// ErrBusySyncthing is raised when syncthing is busy
 	ErrBusySyncthing = fmt.Errorf("synchronization service is unresponsive")
 
+	// ErrDeleteToApp is raised when the app is deleted while running "okteto up"
+	ErrDeleteToApp = fmt.Errorf("application has been deleted. Run 'okteto down -v' to delete the resources created by your development container")
+
+	// ErrApplyToApp is raised when the app is modified while running "okteto up"
+	ErrApplyToApp = fmt.Errorf("application has been modified")
+
 	// ErrLostSyncthing is raised when we lose connectivity with syncthing
 	ErrLostSyncthing = fmt.Errorf("synchronization service is disconnected")
 
@@ -116,11 +122,20 @@ var (
 
 	//ErrCorruptedOktetoContexts raised when the okteto context store is corrupted
 	ErrCorruptedOktetoContexts = "okteto context store is corrupted. Delete the folder %s and try again"
+
+	//ErrNoBuilderInContext raised when there is no builder in the context
+	ErrNoBuilderInContext = "Your current context doesn't support builds.\n    Run 'okteto context'  with the ' --builder' flag to configure your build service"
+
+	//ErrKubernetesLongTimeToCreateDevContainer raised when the creation of the dev container times out
+	ErrKubernetesLongTimeToCreateDevContainer = fmt.Errorf("kubernetes is taking too long to start your development container. Please check for errors and try again")
+
+	//ErrNoServicesinOktetoManifest raised when no services are defined in the okteto manifest
+	ErrNoServicesinOktetoManifest = fmt.Errorf("'okteto restart' is only supported when using the field 'services'")
 )
 
 // IsNotFound returns true if err is of the type not found
 func IsNotFound(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "not found")
+	return err != nil && (strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "doesn't exist"))
 }
 
 // IsNotExist returns true if err is of the type does not exist

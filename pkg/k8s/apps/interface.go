@@ -17,7 +17,6 @@ import (
 	"context"
 
 	"github.com/okteto/okteto/pkg/model"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -27,37 +26,22 @@ type App interface {
 	TypeMeta() metav1.TypeMeta
 	ObjectMeta() metav1.ObjectMeta
 	Replicas() int32
+	SetReplicas(n int32)
 	TemplateObjectMeta() metav1.ObjectMeta
 	PodSpec() *apiv1.PodSpec
 
-	NewTranslation(dev *model.Dev) *Translation
-	DevModeOn()
-	DevModeOff(t *Translation)
-	CheckConditionErrors(dev *model.Dev) error
-	GetRevision() string
-	GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error)
-	Divert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) (App, error)
+	DevClone() App
 
+	CheckConditionErrors(dev *model.Dev) error
+	GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error)
+
+	//TODO: remove after people move to CLI >= 1.14
 	RestoreOriginal() error
-	SetOriginal() error
 
 	Refresh(ctx context.Context, c kubernetes.Interface) error
-	Create(ctx context.Context, c kubernetes.Interface) error
-	Update(ctx context.Context, c kubernetes.Interface) error
-	Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error
-	DestroyDivert(ctx context.Context, username string, dev *model.Dev, c kubernetes.Interface) error
-}
+	Watch(ctx context.Context, result chan error, c kubernetes.Interface)
+	Deploy(ctx context.Context, c kubernetes.Interface) error
+	Destroy(ctx context.Context, c kubernetes.Interface) error
 
-// Translation represents the information for translating a deployment
-type Translation struct {
-	Interactive         bool               `json:"interactive"`
-	Name                string             `json:"name"`
-	Version             string             `json:"version"`
-	App                 App                `json:"-"`
-	Annotations         model.Annotations  `json:"annotations,omitempty"`
-	Tolerations         []apiv1.Toleration `json:"tolerations,omitempty"`
-	Replicas            int32              `json:"replicas"`
-	DeploymentStrategy  appsv1.DeploymentStrategy
-	StatefulsetStrategy appsv1.StatefulSetUpdateStrategy
-	Rules               []*model.TranslationRule `json:"rules"`
+	Divert(username string) App
 }

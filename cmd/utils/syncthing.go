@@ -44,7 +44,7 @@ func (s *SyncthingProgress) initProgressBar() {
 			decor.OnComplete(decor.Name(" "), ""),
 			decor.OnComplete(s.ItemStartedDecorator(), ""),
 		),
-		mpb.BarExtender(mpb.NewBarFiller(mpb.BarStyle().Lbound("[").Filler("-").Tip(">").Padding("_").Rbound("]"))),
+		mpb.BarExtender(NewLineBarFiller(mpb.NewBarFiller(mpb.BarStyle().Lbound("[").Filler("-").Tip(">").Padding("_").Rbound("]")))),
 		mpb.BarRemoveOnComplete(),
 	)
 }
