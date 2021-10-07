@@ -129,6 +129,33 @@ func translateAPIErr(err error) error {
 
 }
 
+func isAPITransientErr(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	switch {
+	case
+		strings.Contains(err.Error(), "can't assign requested address"),
+		strings.Contains(err.Error(), "command exited without exit status or exit signal"),
+		strings.Contains(err.Error(), "connection refused"),
+		strings.Contains(err.Error(), "connection reset by peer"),
+		strings.Contains(err.Error(), "client connection lost"),
+		strings.Contains(err.Error(), "nodename nor servname provided, or not known"),
+		strings.Contains(err.Error(), "unexpected EOF"),
+		strings.Contains(err.Error(), "TLS handshake timeout"),
+		strings.Contains(err.Error(), "broken pipe"),
+		strings.Contains(err.Error(), "No connection could be made"),
+		strings.Contains(err.Error(), "dial tcp: operation was canceled"),
+		strings.Contains(err.Error(), "network is unreachable"),
+		strings.Contains(err.Error(), "development container has been removed"):
+		return true
+	default:
+		return false
+	}
+
+}
+
 // InDevContainer returns true if running in an okteto dev container
 func InDevContainer() bool {
 	if v, ok := os.LookupEnv("OKTETO_NAME"); ok && v != "" {
@@ -141,7 +168,7 @@ func InDevContainer() bool {
 func (c *OktetoClient) Query(ctx context.Context, query interface{}, variables map[string]interface{}) error {
 	err := c.client.Query(ctx, query, variables)
 	if err != nil {
-		if errors.IsTransient(err) {
+		if isAPITransientErr(err) {
 			err = c.client.Query(ctx, query, variables)
 		}
 		return translateAPIErr(err)
@@ -152,9 +179,6 @@ func (c *OktetoClient) Query(ctx context.Context, query interface{}, variables m
 func (c *OktetoClient) Mutate(ctx context.Context, mutation interface{}, variables map[string]interface{}) error {
 	err := c.client.Mutate(ctx, mutation, variables)
 	if err != nil {
-		if errors.IsTransient(err) {
-			err = c.client.Mutate(ctx, mutation, variables)
-		}
 		return translateAPIErr(err)
 	}
 	return nil
