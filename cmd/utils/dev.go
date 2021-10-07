@@ -273,3 +273,11 @@ func LoadEnvironment(ctx context.Context, getSecrets bool) error {
 
 	return nil
 }
+
+func GetDownCommand(devPath string) string {
+	okDownCommandHint := "okteto down -v"
+	if DefaultDevManifest != devPath {
+		okDownCommandHint = fmt.Sprintf("okteto down -v -f %s", devPath)
+	}
+	return okDownCommandHint
+}

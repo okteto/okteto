@@ -458,15 +458,12 @@ func (up *upContext) getInteractive() bool {
 
 func (up *upContext) getInsufficientSpaceError(err error) error {
 	if up.Dev.PersistentVolumeEnabled() {
-		okDownCommandHint := "okteto down -v"
-		if utils.DefaultDevManifest != up.Options.DevPath {
-			okDownCommandHint = fmt.Sprintf("okteto down -v -f %s", up.Options.DevPath)
-		}
+
 		return errors.UserError{
 			E: err,
 			Hint: fmt.Sprintf(`Okteto volume is full.
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, okDownCommandHint),
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.DevPath)),
 		}
 	}
 	return errors.UserError{
