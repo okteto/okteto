@@ -37,9 +37,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (up *upContext) activate(build bool) error {
-
-	if build && okteto.Context().Buildkit == "" {
+func (up *upContext) activate() error {
+	if up.Options.Build && okteto.Context().Buildkit == "" {
 		log.Information(errors.ErrNoBuilderInContext)
 		return nil
 	}
@@ -83,10 +82,10 @@ func (up *upContext) activate(build bool) error {
 
 	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == errors.ErrNotFound {
 		log.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
-		build = true
+		up.Options.Build = true
 	}
 
-	if !up.isRetry && build {
+	if !up.isRetry && up.Options.Build {
 		if err := up.buildDevImage(ctx, app); err != nil {
 			return fmt.Errorf("error building dev image: %s", err)
 		}
@@ -239,7 +238,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	if up.Dev.PersistentVolumeEnabled() {
-		if err := volumes.CreateForDev(ctx, up.Dev, up.Client); err != nil {
+		if err := volumes.CreateForDev(ctx, up.Dev, up.Client, up.Options.DevPath); err != nil {
 			return err
 		}
 	}

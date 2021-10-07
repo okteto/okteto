@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -46,7 +47,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 }
 
 // CreateForDev deploys the volume claim for a given development container
-func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, devPath string) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvc := translate(dev)
 	k8Volume, err := vClient.Get(ctx, pvc.Name, metav1.GetOptions{})
@@ -60,7 +61,7 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) 
 			return fmt.Errorf("error creating kubernetes volume claim: %s", err)
 		}
 	} else {
-		if err := checkPVCValues(pvc, dev); err != nil {
+		if err := checkPVCValues(pvc, dev, devPath); err != nil {
 			return err
 		}
 		log.Infof("updating volume claim '%s'", pvc.Name)
@@ -92,17 +93,18 @@ func Update(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.
 	return nil
 }
 
-func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
+func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath string) error {
 	currentSize, ok := pvc.Spec.Resources.Requests["storage"]
 	if !ok {
-		return fmt.Errorf("current okteto volume size is wrong. Run 'okteto down -v' and try again")
+		return fmt.Errorf("current okteto volume size is wrong. Run '%s' and try again", utils.GetDownCommand(devPath))
 	}
 	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) > 0 {
 		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.PersistentVolumeSize() != model.OktetoDefaultPVSize {
 			return fmt.Errorf(
-				"okteto volume size '%s' cannot be less than previous value '%s'. Run 'okteto down -v' and try again",
+				"okteto volume size '%s' cannot be less than previous value '%s'. Run '%s' and try again",
 				dev.PersistentVolumeSize(),
 				currentSize.String(),
+				utils.GetDownCommand(devPath),
 			)
 		}
 	}
@@ -123,14 +125,16 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev) error {
 	if dev.PersistentVolumeStorageClass() != "" {
 		if pvc.Spec.StorageClassName == nil {
 			return fmt.Errorf(
-				"okteto volume storageclass is '' instead of '%s'. Run 'okteto down -v' and try again",
+				"okteto volume storageclass is '' instead of '%s'. Run '%s' and try again",
 				dev.PersistentVolumeStorageClass(),
+				utils.GetDownCommand(devPath),
 			)
 		} else if dev.PersistentVolumeStorageClass() != *pvc.Spec.StorageClassName {
 			return fmt.Errorf(
-				"okteto volume storageclass cannot be updated from '%s' to '%s'. Run 'okteto down -v' and try again",
+				"okteto volume storageclass cannot be updated from '%s' to '%s'. Run '%s' and try again",
 				*pvc.Spec.StorageClassName,
 				dev.PersistentVolumeStorageClass(),
+				utils.GetDownCommand(devPath),
 			)
 		}
 	}
