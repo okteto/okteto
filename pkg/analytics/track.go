@@ -286,6 +286,9 @@ func track(event string, success bool, props map[string]interface{}) {
 	if !get().Enabled {
 		return
 	}
+	if !okteto.IsTelemetryEnabled() && !okteto.IsOktetoCloud() {
+		return
+	}
 	mpOS := ""
 	switch runtime.GOOS {
 	case "darwin":
