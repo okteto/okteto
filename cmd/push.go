@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -140,7 +141,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 			return fmt.Errorf("'autocreate' cannot be used in combination with 'services'")
 		}
 
-		app = apps.NewDeploymentApp(apps.GetDeploymentSandbox(dev))
+		app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 
 		app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
 		exists = false
@@ -153,37 +154,12 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 		}
 	}
 
-	tList, err := apps.GetTranslations(ctx, dev, app, false, c)
+	trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
 	if err != nil {
 		return err
 	}
 
-	for _, t := range tList {
-		if len(dev.Services) == 0 {
-			if t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || t.App.PodSpec().Containers[0].Name == "dev" {
-				t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
-			}
-		}
-		if t.App.Replicas() == 0 {
-			t.DevModeOff()
-		}
-
-		if t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
-			for k, v := range t.Annotations {
-				t.App.ObjectMeta().Annotations[k] = v
-			}
-		}
-	}
-
-	if app != nil && apps.IsDevModeOn(app) {
-		if err := down.Run(dev, app, tList, false, c); err != nil {
-			return err
-		}
-
-		log.Information("Development container deactivated")
-	}
-
-	imageFromApp, err := getImageFromApp(tList)
+	imageFromApp, err := getImageFromApp(trMap)
 	if err != nil {
 		return err
 	}
@@ -201,6 +177,20 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 
+	for _, tr := range trMap {
+		if len(dev.Services) == 0 {
+			if tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || tr.App.PodSpec().Containers[0].Name == "dev" {
+				tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+			}
+		}
+		if apps.IsDevModeOn(tr.App) {
+			if err := down.Run(dev, app, trMap, false, c); err != nil {
+				return err
+			}
+			log.Information("Development container deactivated")
+		}
+	}
+
 	go func() {
 		if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
 			if err := services.CreateDev(ctx, dev, c); err != nil {
@@ -212,11 +202,11 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 		if !exists {
 			app.PodSpec().Containers[0].Image = imageTag
 			apps.SetLastBuiltAnnotation(app)
-			exit <- app.Create(ctx, c)
+			exit <- app.Deploy(ctx, c)
 			return
 		}
 
-		for _, tr := range tList {
+		for _, tr := range trMap {
 			if tr.App == nil {
 				continue
 			}
@@ -230,7 +220,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 				devContainer.Image = imageTag
 			}
 
-			if err := tr.App.Update(ctx, c); err != nil {
+			if err := tr.App.Deploy(ctx, c); err != nil {
 				exit <- err
 				return
 			}
@@ -270,19 +260,19 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, okt
 	return buildTag, nil
 }
 
-func getImageFromApp(tList map[string]*apps.Translation) (string, error) {
+func getImageFromApp(trMap map[string]*apps.Translation) (string, error) {
 	imageFromApp := ""
-	for _, t := range tList {
-		if t.App == nil {
+	for _, tr := range trMap {
+		if tr.App == nil {
 			continue
 		}
-		if t.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] != "" && len(tList) > 1 {
+		if tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] != "" && len(trMap) > 1 {
 			continue
 		}
-		for _, rule := range t.Rules {
-			devContainer := apps.GetDevContainer(t.App.PodSpec(), rule.Container)
+		for _, rule := range tr.Rules {
+			devContainer := apps.GetDevContainer(tr.App.PodSpec(), rule.Container)
 			if devContainer == nil {
-				return "", fmt.Errorf("%s '%s': container '%s' not found", t.App.TypeMeta().Kind, t.App.ObjectMeta().Name, rule.Container)
+				return "", fmt.Errorf("%s '%s': container '%s' not found", tr.App.TypeMeta().Kind, tr.App.ObjectMeta().Name, rule.Container)
 			}
 			if imageFromApp == "" {
 				imageFromApp = devContainer.Image

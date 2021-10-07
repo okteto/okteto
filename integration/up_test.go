@@ -29,7 +29,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -41,6 +40,8 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -66,7 +67,8 @@ type deployment struct {
 }
 
 const (
-	endpoint         = "http://localhost:8080/index.html"
+	indexEndpoint    = "http://localhost:8080/index.html"
+	varEndpoint      = "http://localhost:8080/var.html"
 	deploymentFormat = `
 apiVersion: apps/v1
 kind: Deployment
@@ -89,11 +91,13 @@ spec:
         ports:
         - containerPort: 8080
         workingDir: /usr/src/app
+        env:
+          - name: VAR
+            value: value1
         command:
-            - "python"
-            - "-m"
-            - "http.server"
-            - "8080"
+            - sh
+            - -c
+            - "echo -n $VAR > var.html && python -m http.server 8080"
 ---
 apiVersion: v1
 kind: Service
@@ -132,11 +136,13 @@ spec:
         ports:
         - containerPort: 8080
         workingDir: /usr/src/app
+        env:
+          - name: VAR
+            value: value1
         command:
-            - "python"
-            - "-m"
-            - "http.server"
-            - "8080"
+            - sh
+            - -c
+            - "echo -n $VAR > var.html && python -m http.server 8080"
 ---
 apiVersion: v1
 kind: Service
@@ -156,13 +162,14 @@ spec:
 name: {{ .Name }}
 image: python:alpine
 command:
-  - "python"
-  - "-m"
-  - "http.server"
-  - "8080"
+  - sh
+  - -c
+  - "echo -n $VAR > var.html && python -m http.server 8080"
 forward:
   - 8080:8080
 workdir: /usr/src/app
+persistentVolume:
+  enabled: false
 `
 	divertGitRepo   = "git@github.com:okteto/catalog.git"
 	divertGitFolder = "catalog"
@@ -177,21 +184,6 @@ func TestMain(m *testing.M) {
 	} else {
 		user = u
 	}
-
-	mode = "server"
-	if v, ok := os.LookupEnv("OKTETO_CLIENTSIDE_TRANSLATION"); ok && v != "" {
-		clientside, err := strconv.ParseBool(v)
-		if err != nil {
-			log.Printf("'%s' is not a valid value for OKTETO_CLIENTSIDE_TRANSLATION", v)
-			os.Exit(1)
-		}
-
-		if clientside {
-			mode = "client"
-		}
-	}
-
-	log.Printf("running in %s mode", mode)
 
 	if runtime.GOOS == "windows" {
 		kubectlBinary = "kubectl.exe"
@@ -248,7 +240,7 @@ func TestDownloadSyncthing(t *testing.T) {
 	}
 }
 
-func TestAll(t *testing.T) {
+func TestUpDeployments(t *testing.T) {
 	tName := fmt.Sprintf("TestAll-%s-%s", runtime.GOOS, mode)
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
@@ -317,24 +309,51 @@ func TestAll(t *testing.T) {
 
 	waitForDeployment(ctx, namespace, name, 2, 120)
 
+	defer showUpLogs(name, namespace, t)
+
 	log.Println("getting synchronized content")
 
-	c, err := getContent(endpoint, 150, upErrorChannel)
+	content, err := getContent(indexEndpoint, 150, upErrorChannel)
 	if err != nil {
-		t.Fatalf("failed to get content: %s", err)
+		t.Fatalf("failed to get index content: %s", err)
 	}
 
-	log.Println("got synchronized content")
+	log.Println("got synchronized index content")
 
-	if c != name {
-		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
+	if content != name {
+		t.Fatalf("expected synchronized index content to be '%s', got '%s'", name, content)
+	}
+
+	content, err = getContent(varEndpoint, 150, upErrorChannel)
+	if err != nil {
+		t.Fatalf("failed to get var content: %s", err)
+	}
+
+	log.Println("got synchronized var content")
+
+	if content != "value1" {
+		t.Fatalf("expected var content to be 'value1', got '%s'", content)
 	}
 
 	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10, upErrorChannel); err != nil {
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := getDeployment(ctx, namespace, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalDeployment.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	d.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	if _, err := deployments.Deploy(ctx, d, c); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 150, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -342,7 +361,7 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 150, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -350,11 +369,11 @@ func TestAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 150, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
-	d, err := getDeployment(ctx, namespace, name)
+	d, err = getDeployment(ctx, namespace, name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,7 +397,7 @@ func TestAll(t *testing.T) {
 	}
 
 }
-func TestAllStatefulset(t *testing.T) {
+func TestUpStatefulset(t *testing.T) {
 	if mode == "client" {
 		t.Skip("this test is not required for client-side translation")
 		return
@@ -452,23 +471,50 @@ func TestAllStatefulset(t *testing.T) {
 
 	waitForStatefulset(ctx, namespace, name, 120)
 
+	defer showUpLogs(name, namespace, t)
+
 	log.Println("getting synchronized content")
 
-	c, err := getContent(endpoint, 120, upErrorChannel)
+	content, err := getContent(indexEndpoint, 120, upErrorChannel)
 	if err != nil {
 		t.Fatalf("failed to get content: %s", err)
 	}
 	log.Println("got synchronized content")
 
-	if c != name {
-		t.Fatalf("expected synchronized content to be %s, got %s", name, c)
+	if content != name {
+		t.Fatalf("expected synchronized content to be %s, got %s", name, content)
+	}
+
+	content, err = getContent(varEndpoint, 150, upErrorChannel)
+	if err != nil {
+		t.Fatalf("failed to get var content: %s", err)
+	}
+
+	log.Println("got synchronized var content")
+
+	if content != "value1" {
+		t.Fatalf("expected var content to be 'value1', got '%s'", content)
 	}
 
 	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 10, upErrorChannel); err != nil {
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalStatefulset.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	sfs, err := getStatefulset(ctx, namespace, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sfs.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 300, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -488,12 +534,12 @@ func TestAllStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d, err := getStatefulset(ctx, namespace, name)
+	sfs, err = getStatefulset(ctx, namespace, name)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	log.Printf("statefulset: %s", d.Name)
+	log.Printf("statefulset: %s", sfs.Name)
 
 	if err := down(ctx, namespace, name, manifestPath, oktetoPath, false, false); err != nil {
 		t.Fatal(err)
@@ -559,26 +605,28 @@ func TestDivert(t *testing.T) {
 
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
-	p, err := up(ctx, &wg, namespace, fmt.Sprintf("%s-health-checker", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, upErrorChannel)
+	p, err := up(ctx, &wg, namespace, fmt.Sprintf("health-checker-%s", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, upErrorChannel)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	divertedSvcName := fmt.Sprintf("%s-health-checker", user)
+	divertedSvcName := fmt.Sprintf("health-checker-%s", user)
 	waitForDeployment(ctx, namespace, divertedSvcName, 2, 120)
 
+	defer showUpLogs(name, namespace, t)
+
 	apiSvc := "catalog-chart"
-	originalContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiSvc, namespace), 120, upErrorChannel)
+	originalContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiSvc, namespace), 150, upErrorChannel)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 120); err != nil {
+	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 150); err != nil {
 
 		t.Fatal("Contents are the same")
 	}
 
-	if err := down(ctx, namespace, fmt.Sprintf("%s-health-checker", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, false, true); err != nil {
+	if err := down(ctx, namespace, fmt.Sprintf("health-checker-%s", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, false, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -586,7 +634,7 @@ func TestDivert(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = getDeployment(ctx, namespace, fmt.Sprintf("%s-health-checker", user))
+	_, err = getDeployment(ctx, namespace, fmt.Sprintf("health-checker-%s", user))
 	if err == nil {
 		t.Fatalf("'dev' deployment not deleted after 'okteto stack destroy'")
 	}
@@ -635,10 +683,21 @@ func modifyDivertApp() error {
 	return nil
 }
 
+func showUpLogs(name, namespace string, t *testing.T) {
+	if !t.Failed() {
+		return
+	}
+	logsPath := filepath.Join(config.GetAppHome(namespace, name), "okteto.log")
+	logBytes, err := os.ReadFile(logsPath)
+	if err == nil {
+		fmt.Println("up logs:", string(logBytes))
+	}
+}
+
 func waitForDivertedContent(originalContent, namespace, apiSvc string, upErrorChannel chan error, timeout int) error {
 	for i := 0; i < timeout; i++ {
-		apiDivertedSvc := fmt.Sprintf("%s-%s", user, apiSvc)
-		divertedContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiDivertedSvc, namespace), 120, upErrorChannel)
+		apiDivertedSvc := fmt.Sprintf("%s-%s", apiSvc, user)
+		divertedContent, err := getContent(fmt.Sprintf("https://%s-%s.cloud.okteto.net/data", apiDivertedSvc, namespace), 3, upErrorChannel)
 		if err != nil {
 			continue
 		}
@@ -829,7 +888,7 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		return fmt.Errorf("failed to update %s: %s", contentPath, err.Error())
 	}
 
-	log.Printf("getting updated content from %s\n", endpoint)
+	log.Printf("getting updated content from %s\n", indexEndpoint)
 	tick := time.NewTicker(1 * time.Second)
 	gotUpdated := false
 	counter := 0
@@ -838,7 +897,7 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		if !isUpRunning(upErrorChannel) {
 			return fmt.Errorf("Up command is no longer running")
 		}
-		currentContent, err := getContent(endpoint, timeout, upErrorChannel)
+		currentContent, err := getContent(indexEndpoint, 3, upErrorChannel)
 		if err != nil {
 			log.Printf("failed to get updated content: %s", err.Error())
 			if strings.Contains(err.Error(), "Up command is no longer running") {
@@ -850,12 +909,24 @@ func testUpdateContent(content, contentPath string, timeout int, upErrorChannel 
 		if currentContent != content {
 			counter++
 			if counter%5 == 0 {
-				log.Printf("expected updated content to be %s, got %s\n", content, currentContent)
+				log.Printf("expected updated index content to be %s, got %s\n", content, currentContent)
 			}
 			continue
 		}
 
 		log.Printf("got updated content after %v\n", time.Now().Sub(start))
+		currentContent, err = getContent(varEndpoint, 3, upErrorChannel)
+		if err != nil {
+			return err
+		}
+
+		log.Println("got synchronized var content")
+
+		if currentContent != "value2" {
+			log.Printf("expected updated var content to be 'value2', got %s\n", currentContent)
+			continue
+		}
+
 		gotUpdated = true
 		break
 	}
