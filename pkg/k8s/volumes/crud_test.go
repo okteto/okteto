@@ -30,6 +30,27 @@ func Test_checkPVCValues(t *testing.T) {
 		wantError bool
 	}{
 		{
+			name: "pvc-with-more-storage-size",
+			pvc: &apiv1.PersistentVolumeClaim{
+				Spec: apiv1.PersistentVolumeClaimSpec{
+					StorageClassName: &className,
+					Resources: apiv1.ResourceRequirements{
+						Requests: apiv1.ResourceList{
+							"storage": resource.MustParse("20Gi"),
+						},
+					},
+				},
+			},
+			dev: &model.Dev{
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Size:         "30Gi",
+					StorageClass: "class",
+				},
+			},
+			wantError: false,
+		},
+
+		{
 			name: "ok-without-storage-class",
 			pvc: &apiv1.PersistentVolumeClaim{
 				Spec: apiv1.PersistentVolumeClaimSpec{
@@ -86,26 +107,7 @@ func Test_checkPVCValues(t *testing.T) {
 			},
 			wantError: true,
 		},
-		{
-			name: "pvc-with-more-storage-size",
-			pvc: &apiv1.PersistentVolumeClaim{
-				Spec: apiv1.PersistentVolumeClaimSpec{
-					StorageClassName: &className,
-					Resources: apiv1.ResourceRequirements{
-						Requests: apiv1.ResourceList{
-							"storage": resource.MustParse("20Gi"),
-						},
-					},
-				},
-			},
-			dev: &model.Dev{
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
-					Size:         "30Gi",
-					StorageClass: "class",
-				},
-			},
-			wantError: false,
-		},
+
 		{
 			name: "pvc-with-less-storage-size",
 			pvc: &apiv1.PersistentVolumeClaim{

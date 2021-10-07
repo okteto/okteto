@@ -781,7 +781,7 @@ func (dev *Dev) LoadForcePull() {
 	dev.Metadata.Annotations[OktetoRestartAnnotation] = restartUUID
 	for _, s := range dev.Services {
 		s.ImagePullPolicy = apiv1.PullAlways
-		s.Annotations[OktetoRestartAnnotation] = restartUUID
+		s.Metadata.Annotations[OktetoRestartAnnotation] = restartUUID
 	}
 	log.Infof("enabled force pull")
 }
