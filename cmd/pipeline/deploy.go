@@ -89,7 +89,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if skipIfExists {
-				variables = append(variables, "SKIP_COMMIT=true")
+				variables = append(variables, "OKTETO_SKIP_COMMIT_IF_DEPLOYED=true")
 			}
 
 			resp, err := deployPipeline(ctx, name, repository, branch, filename, variables)
