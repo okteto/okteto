@@ -102,26 +102,28 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 
 //GetTranslations fills all the deployments pointed by a development container
 func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
-	tr := &Translation{
+	mainTr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
 		App:     app,
 		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, reset)},
 	}
-	result := map[string]*Translation{app.ObjectMeta().Name: tr}
+	result := map[string]*Translation{app.ObjectMeta().Name: mainTr}
 
 	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {
 		return nil, err
 	}
 
-	for _, rule := range tr.Rules {
-		devContainer := GetDevContainer(app.PodSpec(), rule.Container)
-		if devContainer == nil {
-			return nil, fmt.Errorf("%s '%s': container '%s' not found", app.TypeMeta().Kind, app.ObjectMeta().Name, rule.Container)
-		}
-		rule.Container = devContainer.Name
-		if rule.Image == "" {
-			rule.Image = devContainer.Image
+	for _, tr := range result {
+		for _, rule := range tr.Rules {
+			devContainer := GetDevContainer(tr.App.PodSpec(), rule.Container)
+			if devContainer == nil {
+				return nil, fmt.Errorf("%s '%s': container '%s' not found", tr.App.TypeMeta().Kind, tr.App.ObjectMeta().Name, rule.Container)
+			}
+			rule.Container = devContainer.Name
+			if rule.Image == "" {
+				rule.Image = devContainer.Image
+			}
 		}
 	}
 
