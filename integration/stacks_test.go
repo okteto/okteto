@@ -17,6 +17,7 @@
 package integration
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -134,9 +135,18 @@ func deployStack(ctx context.Context, oktetoPath, stackPath, dir string) error {
 	cmd := exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait")
 	cmd.Env = os.Environ()
 	cmd.Dir = dir
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("okteto stack deploy failed: %s - %s", string(o), err)
+
+	stderr, _ := cmd.StderrPipe()
+	cmd.Start()
+
+	scanner := bufio.NewScanner(stderr)
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		m := scanner.Text()
+		fmt.Println(m)
+	}
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("okteto stack deploy failed: %s", err)
 	}
 	log.Printf("okteto stack deploy %s success", stackPath)
 	return nil
