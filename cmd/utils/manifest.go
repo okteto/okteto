@@ -1,15 +1,28 @@
-package deploy
+package utils
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
 	"gopkg.in/yaml.v2"
 )
+
+type ManifestExecutor interface {
+	Execute(command string, env []string) error
+}
+
+type Executor struct{}
+
+// NewExecutor returns a new executor
+func NewExecutor() *Executor {
+	return &Executor{}
+}
 
 // Manifest represents a manifest file
 type Manifest struct {
@@ -22,7 +35,8 @@ type Manifest struct {
 	Filename string   `yaml:"-"`
 }
 
-func getManifest(srcFolder, name, filename string) (*Manifest, error) {
+// GetManifest Loads a manifest
+func GetManifest(srcFolder, name, filename string) (*Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, filename)
 	if pipelinePath != "" {
 		log.Debugf("Found okteto manifest %s", pipelinePath)
@@ -98,7 +112,7 @@ func getManifest(srcFolder, name, filename string) (*Manifest, error) {
 
 func getPipelinePath(src, filename string) string {
 	path := filepath.Join(src, filename)
-	if filename != "" && FileExistsAndNotDir(path) {
+	if filename != "" && fileExistsAndNotDir(path) {
 		return path
 	}
 
@@ -121,7 +135,7 @@ func getPipelinePath(src, filename string) string {
 
 	for _, name := range files {
 		path := filepath.Join(baseDir, name)
-		if FileExistsAndNotDir(path) {
+		if fileExistsAndNotDir(path) {
 			return path
 		}
 	}
@@ -170,7 +184,7 @@ func getStackSubPath(basePath, src string) string {
 	}
 	for _, name := range files {
 		path := filepath.Join(src, name)
-		if FileExistsAndNotDir(path) {
+		if fileExistsAndNotDir(path) {
 			prefix := fmt.Sprintf("%s/", basePath)
 			return strings.TrimPrefix(path, prefix)
 		}
@@ -188,7 +202,7 @@ func getOktetoSubPath(basePath, src string) string {
 	}
 	for _, name := range files {
 		path := filepath.Join(src, name)
-		if FileExistsAndNotDir(path) {
+		if fileExistsAndNotDir(path) {
 			prefix := fmt.Sprintf("%s/", basePath)
 			return strings.TrimPrefix(path, prefix)
 		}
@@ -212,11 +226,44 @@ func pathExistsAndDir(path string) bool {
 	return info.IsDir()
 }
 
-//FileExistsAndNotDir checks the existence of a file
-func FileExistsAndNotDir(filename string) bool {
+func fileExistsAndNotDir(filename string) bool {
 	info, err := os.Stat(filename)
 	if err != nil && os.IsNotExist(err) {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func (e *Executor) Execute(command string, env []string) error {
+	log.Information("Running '%s'...", command)
+
+	cmd := exec.Command("bash", "-c", command)
+	cmd.Env = append(os.Environ(), env...)
+
+	r, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	cmd.Stderr = cmd.Stdout
+	done := make(chan struct{})
+	scanner := bufio.NewScanner(r)
+
+	go func() {
+		for scanner.Scan() {
+			line := scanner.Text()
+			fmt.Println(line)
+		}
+		done <- struct{}{}
+	}()
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -29,6 +29,8 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -448,6 +450,42 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 		return nil, nil, err
 	}
 	return client.Get(kubeconfigFile)
+}
+
+// GetDynamicClient returns a kubernetes dynamic client for the current okteto context
+func GetDynamicClient() (dynamic.Interface, *rest.Config, error) {
+	octx := Context()
+	kubeconfigBytes, err := base64.StdEncoding.DecodeString(octx.Kubeconfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+	}
+	var cfg clientcmdapi.Config
+	if err := json.Unmarshal(kubeconfigBytes, &cfg); err != nil {
+		return nil, nil, err
+	}
+	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
+	if err := client.WriteKubeconfig(&cfg, kubeconfigFile); err != nil {
+		return nil, nil, err
+	}
+	return client.GetDynamicClient(kubeconfigFile)
+}
+
+// GetDiscovery return a kubernetes discovery client for the current okteto context
+func GetDiscoveryClient() (discovery.DiscoveryInterface, *rest.Config, error) {
+	octx := Context()
+	kubeconfigBytes, err := base64.StdEncoding.DecodeString(octx.Kubeconfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+	}
+	var cfg clientcmdapi.Config
+	if err := json.Unmarshal(kubeconfigBytes, &cfg); err != nil {
+		return nil, nil, err
+	}
+	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
+	if err := client.WriteKubeconfig(&cfg, kubeconfigFile); err != nil {
+		return nil, nil, err
+	}
+	return client.GetDiscoveryClient(kubeconfigFile)
 }
 
 // GetSanitizedUsername returns the username of the authenticated user sanitized to be DNS compatible

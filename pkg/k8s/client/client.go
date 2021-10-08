@@ -17,6 +17,8 @@ import (
 	"log"
 	"os"
 
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -46,6 +48,44 @@ func Get(kubeconfigFile string) (*kubernetes.Clientset, *rest.Config, error) {
 		return nil, nil, err
 	}
 	return client, config, nil
+}
+
+// GetDynamicClient returns a kubernetes dynamic client for the current okteto context
+func GetDynamicClient(kubeconfigFile string) (dynamic.Interface, *rest.Config, error) {
+	clientConfig := GetClientConfig(kubeconfigFile, "")
+
+	config, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	config.Timeout = getKubernetesTimeout()
+
+	dc, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return dc, config, err
+}
+
+// GetDiscoveryClient return a kubernetes discovery client for the current okteto context
+func GetDiscoveryClient(kubeconfigFile string) (discovery.DiscoveryInterface, *rest.Config, error) {
+	clientConfig := GetClientConfig(kubeconfigFile, "")
+
+	config, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	config.Timeout = getKubernetesTimeout()
+
+	dc, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return dc, config, err
 }
 
 func GetClientConfig(kubeconfigPath, kubeContext string) clientcmd.ClientConfig {

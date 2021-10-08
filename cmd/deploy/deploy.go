@@ -44,16 +44,12 @@ type proxyInterface interface {
 	GetToken() string
 }
 
-type manifestExecutor interface {
-	Execute(command string, env []string) error
-}
-
 type deployCommand struct {
-	getManifest func(cwd, name, filename string) (*Manifest, error)
+	getManifest func(cwd, name, filename string) (*utils.Manifest, error)
 
 	proxy      proxyInterface
 	kubeconfig kubeConfigHandler
-	executor   manifestExecutor
+	executor   utils.ManifestExecutor
 }
 
 //Deploy deploys the okteto manifest
@@ -62,7 +58,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:    "deploy",
-		Short:  "Executes the list of commands specified in the Okteto manifest",
+		Short:  "Executes the list of commands specified in the Okteto manifest to deploy the application",
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -76,10 +72,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				options.Name, err = getName(cwd)
-				if err != nil {
-					return fmt.Errorf("could not infer environment name")
-				}
+				options.Name = getName(cwd)
 			}
 
 			// Look for a free local port to start the proxy
@@ -125,10 +118,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &deployCommand{
-				getManifest: getManifest,
+				getManifest: utils.GetManifest,
 
 				kubeconfig: kubeconfig,
-				executor:   newExecutor(),
+				executor:   utils.NewExecutor(),
 				proxy: newProxy(proxyConfig{
 					port:  port,
 					token: sessionToken,
@@ -140,7 +133,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVarP(&options.Name, "name", "a", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "filename", "f", "", "path to the manifest file")
-	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
+	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 
 	return cmd
 }
@@ -169,7 +162,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Deploy
 	}()
 
 	// Set variables and KUBECONFIG environment variable as environment for the commands to be executed
-	//env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", config.GetOktetoContextKubeconfigPath()))
 	env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", config.GetOktetoContextKubeconfigPath()))
 
 	var commandErr error
@@ -184,15 +176,16 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Deploy
 	return commandErr
 }
 
-func getName(cwd string) (string, error) {
-	name, err := model.GetValidNameFromGitRepo(filepath.Dir(cwd))
+// This will probably will be moved to a common place when we implement the full dev spec
+func getName(cwd string) string {
+	repo, err := model.GetRepositoryURL(cwd)
 	if err != nil {
-		name, err = model.GetValidNameFromFolder(filepath.Dir(cwd))
-		if err != nil {
-			return "", err
-		}
+		log.Info("inferring name from folder")
+		return filepath.Base(cwd)
 	}
-	return name, nil
+
+	log.Info("inferring name from git repository URL")
+	return model.TranslateURLToName(repo)
 }
 
 func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handler, error) {

@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
 )
 
-var fakeManifest *Manifest = &Manifest{
+var fakeManifest *utils.Manifest = &utils.Manifest{
 	Deploy: []string{
 		"printenv",
 		"ls -la",
@@ -218,10 +219,10 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 }
 
-func getManifestWithError(_, _, _ string) (*Manifest, error) {
+func getManifestWithError(_, _, _ string) (*utils.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_, _, _ string) (*Manifest, error) {
+func getFakeManifest(_, _, _ string) (*utils.Manifest, error) {
 	return fakeManifest, nil
 }
