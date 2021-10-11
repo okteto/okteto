@@ -28,7 +28,7 @@ const (
 )
 
 type destroyer interface {
-	DestroyWithLabel(ctx context.Context, ns, labelSelector string) error
+	DestroyWithLabel(ctx context.Context, ns, labelSelector string, destroyVolumes bool) error
 }
 
 type secretHandler interface {
@@ -37,10 +37,11 @@ type secretHandler interface {
 
 // Options destroy commands options
 type Options struct {
-	ManifestPath string
-	Name         string
-	Variables    []string
-	Namespace    string
+	ManifestPath   string
+	Name           string
+	Variables      []string
+	Namespace      string
+	DestroyVolumes bool
 }
 
 type destroyCommand struct {
@@ -53,7 +54,9 @@ type destroyCommand struct {
 
 // Destroy destroys the dev application defined by the manifest
 func Destroy(ctx context.Context) *cobra.Command {
-	options := &Options{}
+	options := &Options{
+		Variables: []string{},
+	}
 
 	cmd := &cobra.Command{
 		Use:    "destroy",
@@ -104,7 +107,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVarP(&options.Name, "name", "a", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "filename", "f", "", "path to the manifest file")
-	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
+	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 
 	return cmd
 }
@@ -156,12 +159,12 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		log.Debugf("uninstalling helm release %s", helmReleaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, helmReleaseName)
 		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
-			log.Errorf("could not uninstall helm release %s: %s", helmReleaseName, err)
+			log.Errorf("could not uninstall helm release '%s': %s", helmReleaseName, err)
 		}
 	}
 
-	log.Debugf("destroying resources with deployed-by label %s", deployedBySelector)
-	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deployedBySelector); err != nil {
+	log.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
+	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deployedBySelector, opts.DestroyVolumes); err != nil {
 		log.Errorf("could not delete all the resources: %s", err)
 		return err
 	}

@@ -3,7 +3,6 @@ package deploy
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -55,10 +54,5 @@ func (k *kubeConfig) getCMDAPIConfig() (*clientcmdapi.Config, error) {
 		return nil, err
 	}
 
-	var clientCfg clientcmdapi.Config
-	if err := json.Unmarshal(kubeconfigBytes, &clientCfg); err != nil {
-		return nil, err
-	}
-
-	return &clientCfg, nil
+	return clientcmd.Load(kubeconfigBytes)
 }

@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const tempKubeConfig = "/tmp/.okteto/kubeconfig.json"
+const tempKubeConfig = "/tmp/.okteto/kubeconfig"
 
 // Options options for deploy command
 type Options struct {
