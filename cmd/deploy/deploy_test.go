@@ -84,7 +84,7 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
-	opts := &DeployOptions{
+	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
@@ -110,7 +110,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
-	opts := &DeployOptions{
+	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
@@ -138,7 +138,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
-	opts := &DeployOptions{
+	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
@@ -170,7 +170,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
-	opts := &DeployOptions{
+	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
@@ -200,7 +200,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
-	opts := &DeployOptions{
+	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},

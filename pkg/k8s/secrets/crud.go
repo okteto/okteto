@@ -132,13 +132,3 @@ func (s *Secrets) List(ctx context.Context, ns, labelSelector string) ([]v1.Secr
 	}
 	return sList.Items, nil
 }
-
-// DeleteCollection delete all secrets which match with the specified label and field selectors
-func (s *Secrets) DeleteCollection(ctx context.Context, ns, labelSelector, fieldSelector string) error {
-	listOpts := metav1.ListOptions{
-		LabelSelector: labelSelector,
-		FieldSelector: fieldSelector,
-	}
-
-	return s.k8sClient.CoreV1().Secrets(ns).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
-}

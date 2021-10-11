@@ -18,7 +18,6 @@ import (
 	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
@@ -26,7 +25,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type DeployOptions struct {
+const tempKubeConfig = "/tmp/.okteto/kubeconfig.json"
+
+// Options options for deploy command
+type Options struct {
 	ManifestPath string
 	Name         string
 	Variables    []string
@@ -54,7 +56,7 @@ type deployCommand struct {
 
 //Deploy deploys the okteto manifest
 func Deploy(ctx context.Context) *cobra.Command {
-	options := &DeployOptions{}
+	options := &Options{}
 
 	cmd := &cobra.Command{
 		Use:    "deploy",
@@ -138,7 +140,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *DeployOptions) error {
+func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Options) error {
 	if err := dc.kubeconfig.Modify(ctx, dc.proxy.GetPort(), dc.proxy.GetToken()); err != nil {
 		log.Errorf("could not create temporal kubeconfig %s", err)
 		return err
@@ -162,7 +164,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Deploy
 	}()
 
 	// Set variables and KUBECONFIG environment variable as environment for the commands to be executed
-	env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", config.GetOktetoContextKubeconfigPath()))
+	env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", tempKubeConfig))
 
 	var commandErr error
 	for _, command := range manifest.Deploy {

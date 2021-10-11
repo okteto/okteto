@@ -15,16 +15,16 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
 
 const (
-	ownerLabel = "owner"
-	nameLabel  = "name"
-	helmOwner  = "helm"
-	typeField  = "type"
+	ownerLabel           = "owner"
+	nameLabel            = "name"
+	helmOwner            = "helm"
+	typeField            = "type"
+	helmUninstallCommand = "helm uninstall %s"
 )
 
 type destroyer interface {
@@ -33,10 +33,10 @@ type destroyer interface {
 
 type secretHandler interface {
 	List(ctx context.Context, ns, labelSelector string) ([]v1.Secret, error)
-	DeleteCollection(ctx context.Context, ns, labelSelector, fieldSelector string) error
 }
 
-type DestroyOptions struct {
+// Options destroy commands options
+type Options struct {
 	ManifestPath string
 	Name         string
 	Variables    []string
@@ -51,9 +51,9 @@ type destroyCommand struct {
 	secrets     secretHandler
 }
 
-//Detroy destroys the dev application defined by the manifest
+// Destroy destroys the dev application defined by the manifest
 func Destroy(ctx context.Context) *cobra.Command {
-	options := &DestroyOptions{}
+	options := &Options{}
 
 	cmd := &cobra.Command{
 		Use:    "destroy",
@@ -109,12 +109,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *DestroyOptions) error {
+func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
 	manifest, err := dc.getManifest(cwd, opts.Name, opts.ManifestPath)
 	if err != nil {
+		// Log error message but application can still be deleted
 		log.Errorf("could not find manifest file to be executed: %s", err)
-		return err
 	}
 
 	var commandErr error
@@ -141,46 +141,26 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Dest
 		return err
 	}
 
-	log.Debugf("checking if there is any orphant helm secret created without deployed-by label")
+	log.Debugf("checking if application installed something with helm")
+	var helmReleaseName string
 	for _, s := range sList {
 		if s.Type == model.HelmSecretType && s.Labels[ownerLabel] == helmOwner {
-			helmReleaseName := s.Labels[nameLabel]
-			if helmReleaseName != "" {
-				// Owner helm
-				ownerLs, err := labels.NewRequirement(
-					ownerLabel,
-					selection.Equals,
-					[]string{helmOwner},
-				)
-				if err != nil {
-					return err
-				}
-
-				// Release name
-				nameLs, err := labels.NewRequirement(
-					nameLabel,
-					selection.Equals,
-					[]string{helmReleaseName},
-				)
-				if err != nil {
-					return err
-				}
-
-				ls := labels.NewSelector().Add(*ownerLs).Add(*nameLs)
-				fs := fields.OneTermEqualSelector(typeField, model.HelmSecretType)
-
-				log.Debugf("removing orphant helm secrets labelSelector=%s, fieldSelector=%s", ls.String(), fs.String())
-				if err := dc.secrets.DeleteCollection(ctx, opts.Namespace, ls.String(), fs.String()); err != nil {
-					log.Errorf("could not delete secrets: %s", err)
-					// TODO: Should we return an error and stop the command in this case?
-				}
-
+			if helmReleaseName = s.Labels[nameLabel]; helmReleaseName != "" {
 				break
 			}
 		}
 	}
 
-	log.Debugf("destroying resources deployed by the pipeline")
+	// If the application to be destroyed was deployed with helm, we try to uninstall it to avoid to leave orphan release resources
+	if helmReleaseName != "" {
+		log.Debugf("uninstalling helm release %s", helmReleaseName)
+		cmd := fmt.Sprintf(helmUninstallCommand, helmReleaseName)
+		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
+			log.Errorf("could not uninstall helm release %s: %s", helmReleaseName, err)
+		}
+	}
+
+	log.Debugf("destroying resources with deployed-by label %s", deployedBySelector)
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deployedBySelector); err != nil {
 		log.Errorf("could not delete all the resources: %s", err)
 		return err
