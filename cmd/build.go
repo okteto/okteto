@@ -22,7 +22,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -30,15 +29,8 @@ import (
 
 //Build build and optionally push a Docker image
 func Build(ctx context.Context) *cobra.Command {
-	var file string
-	var tag string
-	var target string
-	var noCache bool
-	var cacheFrom []string
-	var progress string
-	var buildArgs []string
-	var secrets []string
 
+	options := build.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [PATH]",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#build"),
@@ -57,32 +49,33 @@ func Build(ctx context.Context) *cobra.Command {
 			if err := utils.CheckIfDirectory(path); err != nil {
 				return fmt.Errorf("invalid build context: %s", err.Error())
 			}
+			options.Path = path
 
-			if file == "" {
-				file = filepath.Join(path, "Dockerfile")
+			if options.File == "" {
+				options.File = filepath.Join(path, "Dockerfile")
 			}
 
-			if err := utils.CheckIfRegularFile(file); err != nil {
+			if err := utils.CheckIfRegularFile(options.File); err != nil {
 				return fmt.Errorf("invalid Dockerfile: %s", err.Error())
 			}
 
 			if okteto.Context().Buildkit == "" {
-				log.Information(errors.ErrNoBuilderInContext)
-				return nil
+				log.Information("Building your image using your local docker daemon")
+			} else {
+				log.Information("Running your build in %s...", okteto.Context().Buildkit)
 			}
-			log.Information("Running your build in %s...", okteto.Context().Buildkit)
 
 			ctx := context.Background()
-			if err := build.Run(ctx, path, file, tag, target, noCache, cacheFrom, buildArgs, secrets, progress); err != nil {
+			if err := build.Run(ctx, "", options); err != nil {
 				analytics.TrackBuild(okteto.Context().Buildkit, false)
 				return err
 			}
 
-			if tag == "" {
+			if options.Tag == "" {
 				log.Success("Build succeeded")
 				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 			} else {
-				log.Success(fmt.Sprintf("Image '%s' successfully pushed", tag))
+				log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
 			}
 
 			analytics.TrackBuild(okteto.Context().Buildkit, true)
@@ -90,13 +83,13 @@ func Build(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&file, "file", "f", "", "name of the Dockerfile (Default is 'PATH/Dockerfile')")
-	cmd.Flags().StringVarP(&tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
-	cmd.Flags().StringVarP(&target, "target", "", "", "set the target build stage to build")
-	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "do not use cache when building the image")
-	cmd.Flags().StringArrayVar(&cacheFrom, "cache-from", nil, "cache source images")
-	cmd.Flags().StringVarP(&progress, "progress", "", "tty", "show plain/tty build output")
-	cmd.Flags().StringArrayVar(&buildArgs, "build-arg", nil, "set build-time variables")
-	cmd.Flags().StringArrayVar(&secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
+	cmd.Flags().StringVarP(&options.File, "file", "f", "", "name of the Dockerfile (Default is 'PATH/Dockerfile')")
+	cmd.Flags().StringVarP(&options.Tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
+	cmd.Flags().StringVarP(&options.Target, "target", "", "", "set the target build stage to build")
+	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
+	cmd.Flags().StringArrayVar(&options.CacheFrom, "cache-from", nil, "cache source images")
+	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", "tty", "show plain/tty build output")
+	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables")
+	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
 	return cmd
 }

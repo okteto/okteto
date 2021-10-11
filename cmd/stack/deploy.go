@@ -22,7 +22,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -38,10 +37,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := contextCMD.Init(ctx); err != nil {
 				return err
-			}
-
-			if !okteto.IsOktetoContext() {
-				return errors.ErrContextIsNotOktetoCluster
 			}
 
 			ctx := context.Background()
@@ -66,7 +61,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if s.Namespace != "" {
-				if s.Namespace != options.Namespace {
+				if options.Namespace != "" && s.Namespace != options.Namespace {
 					return fmt.Errorf("the namespace in the okteto stack manifest '%s' does not match the namespace '%s'", s.Namespace, options.Namespace)
 				}
 				if err := okteto.SetCurrentContext("", s.Namespace); err != nil {

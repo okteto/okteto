@@ -39,8 +39,8 @@ import (
 	ps "github.com/mitchellh/go-ps"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -840,7 +840,7 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 
 	log.Printf("create namespace output: \n%s\n", string(o))
 
-	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
+	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -860,7 +860,7 @@ func changeToNamespace(ctx context.Context, oktetoPath, namespace string) error 
 
 	log.Printf("namespace output: \n%s\n", string(o))
 
-	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
+	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -1298,5 +1298,5 @@ func checkIfUpFinished(ctx context.Context, pid int) error {
 }
 
 func getCurrentNamespace() string {
-	return k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
+	return kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
 }

@@ -1392,7 +1392,6 @@ resources:
     amd.com/gpu: 1
 services:
   - name: worker
-    container: dev
     image: worker:latest
     annotations:
       key2: value2

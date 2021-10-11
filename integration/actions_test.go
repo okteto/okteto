@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
-	k8Client "github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -369,7 +369,7 @@ func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("create namespace output: \n%s\n", string(o))
-	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
+	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -398,7 +398,7 @@ func executeChangeNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("changing namespace output: \n%s\n", string(o))
-	n := k8Client.GetCurrentNamespace(config.GetKubeconfigPath())
+	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}

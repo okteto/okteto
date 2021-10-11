@@ -14,13 +14,16 @@
 package diverts
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sScheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type DivertV1nterface interface {
@@ -52,9 +55,19 @@ func NewForConfig(cfg *rest.Config) (*DivertV1Client, error) {
 
 }
 
-func GetClient(thisContext string) (*DivertV1Client, error) {
-	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
-	clientConfig := client.GetClientConfig(kubeconfigFile, "")
+func GetClient() (*DivertV1Client, error) {
+	octx := okteto.Context()
+	kubeconfigBytes, err := base64.StdEncoding.DecodeString(octx.Kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+	}
+
+	clientApiConfig, err := clientcmd.Load(kubeconfigBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
 
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
@@ -63,9 +76,8 @@ func GetClient(thisContext string) (*DivertV1Client, error) {
 
 	c, err := NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize diverts client: %s", err.Error())
+		return nil, err
 	}
-
 	return c, nil
 }
 

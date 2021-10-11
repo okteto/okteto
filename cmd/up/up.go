@@ -46,16 +46,20 @@ import (
 // ReconnectingMessage is the message shown when we are trying to reconnect
 const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
+type UpOptions struct {
+	DevPath    string
+	Namespace  string
+	K8sContext string
+	Remote     int
+	AutoDeploy bool
+	Build      bool
+	ForcePull  bool
+	Reset      bool
+}
+
 // Up starts a development container
 func Up() *cobra.Command {
-	var devPath string
-	var namespace string
-	var k8sContext string
-	var remote int
-	var autoDeploy bool
-	var build bool
-	var forcePull bool
-	var reset bool
+	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activates your development container",
@@ -95,7 +99,7 @@ func Up() *cobra.Command {
 
 			checkLocalWatchesConfiguration()
 
-			if autoDeploy {
+			if upOptions.AutoDeploy {
 				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
     More information is available here: https://okteto.com/docs/reference/cli/#up`)
@@ -111,12 +115,12 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			dev, err := loadDevOrInit(namespace, k8sContext, devPath)
+			dev, err := loadDevOrInit(upOptions)
 			if err != nil {
 				return err
 			}
 
-			if err := loadDevOverrides(dev, forcePull, remote, autoDeploy); err != nil {
+			if err := loadDevOverrides(dev, upOptions); err != nil {
 				return err
 			}
 
@@ -135,14 +139,15 @@ func Up() *cobra.Command {
 			}
 
 			if _, ok := os.LookupEnv("OKTETO_AUTODEPLOY"); ok {
-				autoDeploy = true
+				upOptions.AutoDeploy = true
 			}
 
 			up := &upContext{
 				Dev:            dev,
 				Exit:           make(chan error, 1),
-				resetSyncthing: reset,
+				resetSyncthing: upOptions.Reset,
 				StartTime:      time.Now(),
+				Options:        upOptions,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -155,7 +160,7 @@ func Up() *cobra.Command {
 				log.Infof("Terminal: %v", up.stateTerm)
 			}
 
-			err = up.start(build)
+			err = up.start()
 
 			if err := up.Client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
 				log.Infof("error deleting deprecated volume: %v", err)
@@ -165,20 +170,20 @@ func Up() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed")
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command is executed")
-	cmd.Flags().IntVarP(&remote, "remote", "r", 0, "configures remote execution on the specified port")
-	cmd.Flags().BoolVarP(&autoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
+	cmd.Flags().StringVarP(&upOptions.DevPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
+	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
+	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
+	cmd.Flags().BoolVarP(&upOptions.AutoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
 	cmd.Flags().MarkHidden("deploy")
-	cmd.Flags().BoolVarP(&build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
-	cmd.Flags().BoolVarP(&forcePull, "pull", "", false, "force dev image pull")
-	cmd.Flags().BoolVarP(&reset, "reset", "", false, "reset the file synchronization database")
+	cmd.Flags().BoolVarP(&upOptions.Build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
+	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
+	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
 	return cmd
 }
 
-func loadDevOrInit(namespace, oktetoContext, devPath string) (*model.Dev, error) {
-	dev, err := utils.LoadDev(devPath, namespace, oktetoContext)
+func loadDevOrInit(upOptions *UpOptions) (*model.Dev, error) {
+	dev, err := utils.LoadDev(upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
 
 	if err == nil {
 		return dev, nil
@@ -186,7 +191,7 @@ func loadDevOrInit(namespace, oktetoContext, devPath string) (*model.Dev, error)
 	if !strings.Contains(err.Error(), "okteto init") {
 		return nil, err
 	}
-	if !utils.AskIfOktetoInit(devPath) {
+	if !utils.AskIfOktetoInit(upOptions.DevPath) {
 		return nil, err
 	}
 
@@ -194,17 +199,17 @@ func loadDevOrInit(namespace, oktetoContext, devPath string) (*model.Dev, error)
 	if err != nil {
 		return nil, fmt.Errorf("unknown current folder: %s", err)
 	}
-	if err := initCMD.Run(devPath, "", workDir, false); err != nil {
+	if err := initCMD.Run(upOptions.DevPath, "", workDir, false); err != nil {
 		return nil, err
 	}
 
-	log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
-	return utils.LoadDev(devPath, namespace, oktetoContext)
+	log.Success(fmt.Sprintf("okteto manifest (%s) created", upOptions.DevPath))
+	return utils.LoadDev(upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
 }
 
-func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy bool) error {
-	if remote > 0 {
-		dev.RemotePort = remote
+func loadDevOverrides(dev *model.Dev, upOptions *UpOptions) error {
+	if upOptions.Remote > 0 {
+		dev.RemotePort = upOptions.Remote
 	}
 
 	if dev.RemoteModeEnabled() {
@@ -216,10 +221,10 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 	}
 
 	if !dev.Autocreate {
-		dev.Autocreate = autoDeploy
+		dev.Autocreate = upOptions.AutoDeploy
 	}
 
-	if forcePull {
+	if upOptions.ForcePull {
 		dev.LoadForcePull()
 	}
 
@@ -229,16 +234,11 @@ func loadDevOverrides(dev *model.Dev, forcePull bool, remote int, autoDeploy boo
 	return nil
 }
 
-func (up *upContext) start(build bool) error {
+func (up *upContext) start() error {
 	var err error
 	up.Client, up.RestConfig, err = okteto.GetK8sClient()
 	if err != nil {
-		kubecfg := config.GetOktetoContextKubeconfigPath()
-		log.Infof("failed to load okteto Kubeconfig: %s", err)
-		if up.Dev.Context == "" {
-			return fmt.Errorf("failed to load your okteto Kubeconfig %q", kubecfg)
-		}
-		return fmt.Errorf("failed to load your okteto Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
+		return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
 	}
 
 	ctx := context.Background()
@@ -261,7 +261,7 @@ func (up *upContext) start(build bool) error {
 
 	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.Dev.Divert != nil)
 
-	go up.activateLoop(build)
+	go up.activateLoop()
 
 	select {
 	case <-stop:
@@ -278,7 +278,7 @@ func (up *upContext) start(build bool) error {
 }
 
 // activateLoop activates the development container in a retry loop
-func (up *upContext) activateLoop(build bool) {
+func (up *upContext) activateLoop() {
 	isTransientError := false
 	t := time.NewTicker(1 * time.Second)
 	iter := 0
@@ -300,7 +300,7 @@ func (up *upContext) activateLoop(build bool) {
 			}
 		}
 
-		err := up.activate(build)
+		err := up.activate()
 		if err != nil {
 			log.Infof("activate failed with: %s", err)
 
@@ -391,7 +391,17 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	log.Infof("building dev image tag %s", imageTag)
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
-	if err := buildCMD.Run(ctx, up.Dev.Image.Context, up.Dev.Image.Dockerfile, imageTag, up.Dev.Image.Target, false, up.Dev.Image.CacheFrom, buildArgs, nil, "tty"); err != nil {
+
+	buildOptions := buildCMD.BuildOptions{
+		Path:       up.Dev.Image.Context,
+		File:       up.Dev.Image.Dockerfile,
+		Tag:        imageTag,
+		Target:     up.Dev.Image.Target,
+		CacheFrom:  up.Dev.Image.CacheFrom,
+		BuildArgs:  buildArgs,
+		OutputMode: "tty",
+	}
+	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildOptions); err != nil {
 		return err
 	}
 	for _, s := range up.Dev.Services {
@@ -437,11 +447,12 @@ func (up *upContext) getInteractive() bool {
 
 func (up *upContext) getInsufficientSpaceError(err error) error {
 	if up.Dev.PersistentVolumeEnabled() {
+
 		return errors.UserError{
 			E: err,
-			Hint: `Okteto volume is full.
-    Increase your persistent volume size, run 'okteto down -v' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`,
+			Hint: fmt.Sprintf(`Okteto volume is full.
+    Increase your persistent volume size, run '%s' and try 'okteto up' again.
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.DevPath)),
 		}
 	}
 	return errors.UserError{

@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -73,7 +73,7 @@ Or show a list of available options with:
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if ctxOptions.Token == "" && client.InCluster() {
+			if ctxOptions.Token == "" && kubeconfig.InCluster() {
 				return errors.ErrTokenFlagNeeded
 			}
 
@@ -162,7 +162,7 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 		}
 		log.Success("Updated kubernetes context: %s", okteto.UrlToContext(oktetoContext))
 
-		cfg := client.GetKubeconfig(kubeconfigFile)
+		cfg := kubeconfig.Get(kubeconfigFile)
 		if err := okteto.SaveOktetoClusterContext(oktetoContext, user, ctxOptions.Namespace, cfg); err != nil {
 			return fmt.Errorf("error configuring okteto context: %v", err)
 		}
@@ -176,14 +176,14 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 			Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(), "\n      ")),
 		}
 	}
-	cfg := client.GetKubeconfig(kubeconfigFile)
+	cfg := kubeconfig.Get(kubeconfigFile)
 	cfg.CurrentContext = oktetoContext
 	if ctxOptions.Namespace != "" {
 		cfg.Contexts[oktetoContext].Namespace = ctxOptions.Namespace
 	} else {
-		ctxOptions.Namespace = client.GetCurrentNamespace(kubeconfigFile)
+		ctxOptions.Namespace = kubeconfig.CurrentNamespace(kubeconfigFile)
 	}
-	if err := client.WriteKubeconfig(cfg, kubeconfigFile); err != nil {
+	if err := kubeconfig.Write(cfg, kubeconfigFile); err != nil {
 		return err
 	}
 	if err := okteto.SaveKubernetesClusterContext(oktetoContext, ctxOptions.Namespace, cfg, ctxOptions.Builder); err != nil {
@@ -195,7 +195,7 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 
 func getContext(ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
-	oktetoContext, err := AskForOptions(ctxs, "Select the context you want to activate:")
+	oktetoContext, err := AskForOptions(ctxs, "Select the context you want to use:")
 	if err != nil {
 		return "", err
 	}
@@ -245,7 +245,7 @@ func setSecrets(secrets []okteto.Secret) {
 func updateContext(cred okteto.Credential) error {
 	octx := okteto.Context()
 	kubeconfigFile := config.GetKubeconfigPath()
-	cfg := client.GetKubeconfig(kubeconfigFile)
+	cfg := kubeconfig.Get(kubeconfigFile)
 	u := octx.ToUser()
 
 	clusterName := okteto.UrlToContext(octx.Name)
