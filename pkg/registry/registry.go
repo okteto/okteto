@@ -93,6 +93,10 @@ func ExpandOktetoDevRegistry(tag string) string {
 	return replaceRegistry(tag, okteto.DevRegistry, okteto.Context().Namespace)
 }
 
+func TransformOktetoDevToGlobalRegistry(tag string) string {
+	return strings.Replace(tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
+}
+
 // SplitRegistryAndImage returns image tag and the registry to push the image
 func GetRegistryAndRepo(tag string) (string, string) {
 	var imageTag string

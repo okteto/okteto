@@ -79,6 +79,17 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 	}
 
 	if okteto.IsOktetoContext() {
+		if buildOptions.NoCache {
+			globalRegistryTag := buildOptions.Tag
+			if registry.IsDevRegistry(buildOptions.Tag) {
+				globalRegistryTag = registry.TransformOktetoDevToGlobalRegistry(buildOptions.Tag)
+
+			}
+			if _, err := registry.GetImageTagWithDigest(globalRegistryTag); err != okErrors.ErrNotFound {
+				// TODO: return feedback as error ? 
+				return registry.GetErrorMessage(errors.New("global registry: image already built in global registry"), globalRegistryTag)
+			}
+		}
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)
 		for i := range buildOptions.CacheFrom {
