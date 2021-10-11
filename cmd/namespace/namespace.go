@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -86,7 +86,7 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		return err
 	}
 
-	cfg := client.GetKubeconfig(kubeconfigFile)
+	cfg := kubeconfig.Get(kubeconfigFile)
 	u := octx.ToUser()
 
 	if err := okteto.SaveOktetoClusterContext(octx.Name, u, namespace, cfg); err != nil {

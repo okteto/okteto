@@ -18,7 +18,7 @@ import (
 	"net/url"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -31,7 +31,7 @@ type SelectItem struct {
 func getKubernetesContextList() []string {
 	contextList := make([]string, 0)
 	kubeconfigFile := config.GetKubeconfigPath()
-	cfg := client.GetKubeconfig(kubeconfigFile)
+	cfg := kubeconfig.Get(kubeconfigFile)
 	if cfg == nil {
 		return contextList
 	}
