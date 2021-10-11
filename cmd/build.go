@@ -22,8 +22,10 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 )
 
@@ -67,6 +69,16 @@ func Build(ctx context.Context) *cobra.Command {
 
 			ctx := context.Background()
 			if err := build.Run(ctx, "", options); err != nil {
+				// TODO: return as err and print as warning? - how to give feedback to the user
+				if registry.IsAlreadyBuiltInGlobalRegistry(err) {
+					if uErr, ok := err.(errors.UserError); ok {
+						log.Warning(uErr.Error())
+						if len(uErr.Hint) > 0 {
+							log.Hint("    %s", uErr.Hint)
+						}
+					}
+					return nil
+				}
 				analytics.TrackBuild(okteto.Context().Buildkit, false)
 				return err
 			}
