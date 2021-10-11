@@ -257,11 +257,7 @@ func GetOktetoContextsStorePath() string {
 	return filepath.Join(GetOktetoContextFolder(), contextsStoreFile)
 }
 
-func GetOktetoContextKubeconfigPath() string {
-	return filepath.Join(GetOktetoContextFolder(), kubeconfigFile)
-}
-
-// GetCertificatePath returns the path  to the certificate of the okteto buildkit
+// GetCertificatePath returns the path to the certificate of the okteto buildkit
 func GetCertificatePath() string {
 	return filepath.Join(GetOktetoHome(), ".ca.crt")
 }

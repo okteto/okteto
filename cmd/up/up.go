@@ -238,12 +238,7 @@ func (up *upContext) start() error {
 	var err error
 	up.Client, up.RestConfig, err = okteto.GetK8sClient()
 	if err != nil {
-		kubecfg := config.GetOktetoContextKubeconfigPath()
-		log.Infof("failed to load okteto Kubeconfig: %s", err)
-		if up.Dev.Context == "" {
-			return fmt.Errorf("failed to load your okteto Kubeconfig %q", kubecfg)
-		}
-		return fmt.Errorf("failed to load your okteto Kubeconfig: %q context not found in %q", up.Dev.Context, kubecfg)
+		return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
 	}
 
 	ctx := context.Background()

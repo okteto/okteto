@@ -26,7 +26,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -79,7 +79,7 @@ func InitContextWithToken(ctx context.Context, oktetoUrl, oktetoToken string) er
 		return fmt.Errorf("error updating kubernetes context: %v", err)
 	}
 
-	cfg := client.GetKubeconfig(kubeconfigFile)
+	cfg := kubeconfig.Get(kubeconfigFile)
 	if err := SaveOktetoClusterContext(oktetoUrl, user, cred.Namespace, cfg); err != nil {
 		return fmt.Errorf("error configuring okteto context: %v", err)
 	}
@@ -110,11 +110,11 @@ func InitContext(ctx context.Context, oktetoToken string) error {
 		currentContext = os.Getenv(config.OktetoContextVariableName)
 	}
 	kubeconfigFile := config.GetKubeconfigPath()
-	cfg := client.GetKubeconfig(kubeconfigFile)
+	cfg := kubeconfig.Get(kubeconfigFile)
 	if currentContext == "" {
-		currentContext = client.GetCurrentKubernetesContext(kubeconfigFile)
+		currentContext = kubeconfig.CurrentContext(kubeconfigFile)
 	}
-	namespace := client.GetCurrentNamespace(kubeconfigFile)
+	namespace := kubeconfig.CurrentNamespace(kubeconfigFile)
 
 	token, err := getTokenFromOktetoHome()
 	if err == nil {
@@ -221,7 +221,7 @@ func SetCurrentContext(oktetoContext, namespace string) error {
 			}
 		} else {
 			kubeconfigFile := config.GetKubeconfigPath()
-			cfg := client.GetKubeconfig(kubeconfigFile)
+			cfg := kubeconfig.Get(kubeconfigFile)
 			if _, ok := cfg.Contexts[oktetoContext]; !ok {
 				return fmt.Errorf(errors.ErrKubernetesContextNotFound, oktetoContext, kubeconfigFile)
 			}
@@ -366,9 +366,9 @@ func saveContextConfigInFile(c *OktetoContextStore) error {
 
 //SetKubeContext updates the current context of a kubeconfig file
 func SetKubeContext(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
-	cfg := client.GetKubeconfig(kubeConfigPath)
+	cfg := kubeconfig.Get(kubeConfigPath)
 	if cfg == nil {
-		cfg = client.CreateKubeconfig()
+		cfg = kubeconfig.Create()
 	}
 
 	// create cluster
@@ -446,15 +446,7 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
 	}
-	cfg, err := clientcmd.Load(kubeconfigBytes)
-	if err != nil {
-		return nil, nil, err
-	}
-	kubeconfigFile := config.GetOktetoContextKubeconfigPath()
-	if err := client.WriteKubeconfig(cfg, kubeconfigFile); err != nil {
-		return nil, nil, err
-	}
-	return client.Get(kubeconfigFile)
+	return getK8sClient(kubeconfigBytes)
 }
 
 // GetSanitizedUsername returns the username of the authenticated user sanitized to be DNS compatible

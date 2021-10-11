@@ -104,7 +104,7 @@ func divertIngress(ctx context.Context, dev *model.Dev, username string, c kuber
 }
 
 func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *networkingv1.Ingress, s *apiv1.Service) error {
-	dClient, err := GetClient(dev.Context)
+	dClient, err := GetClient()
 	if err != nil {
 		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
 	}
@@ -143,7 +143,7 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	username := okteto.GetSanitizedUsername()
 
-	dClient, err := GetClient(dev.Context)
+	dClient, err := GetClient()
 	if err != nil {
 		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
 	}
