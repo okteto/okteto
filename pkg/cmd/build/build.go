@@ -87,7 +87,7 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 
 			}
 			if _, err := registry.GetImageTagWithDigest(globalRegistryTag); err != okErrors.ErrNotFound {
-				// TODO: return feedback as error ? 
+				// TODO: return feedback as error ?
 				return registry.GetErrorMessage(errors.New("global registry: image already built in global registry"), globalRegistryTag)
 			}
 		}
