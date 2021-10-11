@@ -42,6 +42,7 @@ type Options struct {
 	Variables      []string
 	Namespace      string
 	DestroyVolumes bool
+	ForceDestroy   bool
 }
 
 type destroyCommand struct {
@@ -108,6 +109,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.Name, "name", "a", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "filename", "f", "", "path to the manifest file")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
+	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
 
 	return cmd
 }
@@ -124,6 +126,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	for _, command := range manifest.Destroy {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Errorf("error executing command '%s': %s", command, err.Error())
+			if !opts.ForceDestroy {
+				return err
+			}
+
+			// Store the error to return if the force destroy option is set
 			commandErr = err
 			break
 		}
@@ -160,6 +167,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		cmd := fmt.Sprintf(helmUninstallCommand, helmReleaseName)
 		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
 			log.Errorf("could not uninstall helm release '%s': %s", helmReleaseName, err)
+			if !opts.ForceDestroy {
+				return err
+			}
 		}
 	}
 
