@@ -153,7 +153,7 @@ func ContextStore() *OktetoContextStore {
 		b, err := os.ReadFile(config.GetOktetoContextsStorePath())
 		if err != nil {
 			log.Errorf("error reading okteto contexts: %v", err)
-			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 		}
 
 		dec := json.NewDecoder(bytes.NewReader(b))
@@ -162,12 +162,12 @@ func ContextStore() *OktetoContextStore {
 		ctxStore := &OktetoContextStore{}
 		if err := dec.Decode(&ctxStore); err != nil {
 			log.Errorf("error decoding okteto contexts: %v", err)
-			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 		}
 		CurrentStore = ctxStore
 
 		if _, ok := CurrentStore.Contexts[CurrentStore.CurrentContext]; !ok {
-			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 		}
 		return CurrentStore
 	}
@@ -182,12 +182,12 @@ func Context() *OktetoContext {
 	c := ContextStore()
 	if c.CurrentContext == "" {
 		log.Info("ContextStore().CurrentContext is empty")
-		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 	}
 	octx, ok := c.Contexts[c.CurrentContext]
 	if !ok {
 		log.Info("ContextStore().CurrentContext not in ContextStore().Contexts")
-		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 	}
 
 	return octx

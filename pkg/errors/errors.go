@@ -127,7 +127,7 @@ var (
 	ErrIntSig = fmt.Errorf("interrupt signal received")
 
 	//ErrCorruptedOktetoContexts raised when the okteto context store is corrupted
-	ErrCorruptedOktetoContexts = "okteto context store is corrupted. Delete the folder %s and try again"
+	ErrCorruptedOktetoContexts = "okteto context store is corrupted. Delete the folder '%s' and try again"
 
 	//ErrNoBuilderInContext raised when there is no builder in the context
 	ErrNoBuilderInContext = "Your current context doesn't support builds.\n    Run 'okteto context'  with the ' --builder' flag to configure your build service"
