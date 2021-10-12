@@ -82,7 +82,8 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	}
 
 	octx := okteto.Context()
-	if err := okteto.WriteKubeconfig(cred, config.GetKubeconfigPath(), namespace, octx.UserID, okteto.UrlToKubernetesContext(octx.Name)); err != nil {
+	k8sContext := okteto.UrlToKubernetesContext(octx.Name)
+	if err := okteto.WriteKubeconfig(cred, config.GetKubeconfigPath(), namespace, octx.UserID, k8sContext); err != nil {
 		return err
 	}
 
@@ -92,7 +93,7 @@ func RunNamespace(ctx context.Context, namespace string) error {
 		return err
 	}
 
-	log.Success("Updated context '%s': current namespace '%s'", octx.Name, namespace)
+	log.Information("Current kubernetes context '%s/%s' in '%s'", k8sContext, namespace, config.GetKubeconfigPath())
 	return nil
 }
 

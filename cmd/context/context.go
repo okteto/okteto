@@ -154,13 +154,14 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 		if err != nil {
 			return err
 		}
-		if err := okteto.WriteKubeconfig(cred, kubeconfigFile, ctxOptions.Namespace, user.ID, okteto.UrlToKubernetesContext(oktetoContext)); err != nil {
+		k8sCointext := okteto.UrlToKubernetesContext(oktetoContext)
+		if err := okteto.WriteKubeconfig(cred, kubeconfigFile, ctxOptions.Namespace, user.ID, k8sCointext); err != nil {
 			return fmt.Errorf("error updating kubernetes context: %v", err)
 		}
 		if err := okteto.WriteOktetoContextConfig(); err != nil {
 			return fmt.Errorf("error configuring okteto context: %v", err)
 		}
-		log.Information("Current kubernetes context '%s' in '%s'", okteto.UrlToKubernetesContext(oktetoContext), kubeconfigFile)
+		log.Information("Current kubernetes context '%s/%s' in '%s'", k8sCointext, ctxOptions.Namespace, kubeconfigFile)
 
 		return nil
 	}
@@ -192,7 +193,7 @@ func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOp
 	if err := kubeconfig.Write(cfg, kubeconfigFile); err != nil {
 		return err
 	}
-	log.Information("Current kubernetes context '%s' in '%s'", oktetoContext, kubeconfigFile)
+	log.Information("Current kubernetes context '%s/%s' in '%s'", oktetoContext, ctxOptions.Namespace, kubeconfigFile)
 
 	return nil
 }
