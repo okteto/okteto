@@ -153,7 +153,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		return err
 	}
 
-	log.Debugf("start server on %d", dc.proxy.GetPort())
+	log.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()
 
 	defer func() {
