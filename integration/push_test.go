@@ -59,6 +59,10 @@ func TestPush(t *testing.T) {
 
 		log.Printf("created namespace %s \n", namespace)
 
+		if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
+			t.Fatal(err)
+		}
+
 		if err := cloneGitRepo(ctx, pushGitRepo); err != nil {
 			t.Fatal(err)
 		}

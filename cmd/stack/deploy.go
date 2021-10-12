@@ -24,7 +24,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -44,25 +43,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			ctxResource, err := utils.LoadStackContext(options.StackPath)
+			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.StackPath, options.Namespace)
 			if err != nil {
 				return err
 			}
 
-			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
-				return err
-			}
-
-			if err := contextCMD.Init(ctx, ctxResource); err != nil {
-				return err
-			}
-
-			s, err := utils.LoadStack(options.Name, options.StackPath)
-			if err != nil {
-				return err
-			}
 			analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
-			s.Namespace = okteto.Context().Namespace
 
 			if len(args) > 0 {
 				options.ServicesToDeploy = args

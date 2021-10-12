@@ -44,23 +44,7 @@ func Restart() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			ctxResource, err := utils.LoadDevContext(devPath)
-			if err != nil {
-				return err
-			}
-
-			if err := ctxResource.UpdateNamespace(namespace); err != nil {
-				return err
-			}
-
-			if err := ctxResource.UpdateContext(k8sContext); err != nil {
-				return err
-			}
-			if err := contextCMD.Init(ctx, ctxResource); err != nil {
-				return err
-			}
-
-			dev, err := utils.LoadDev(devPath)
+			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}

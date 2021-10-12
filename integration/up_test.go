@@ -290,6 +290,10 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := deploy(ctx, namespace, name, dPath, true); err != nil {
 		t.Fatal(err)
 	}
@@ -337,10 +341,6 @@ func TestUpDeployments(t *testing.T) {
 	}
 
 	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := contextCMD.Init(ctx, &model.ContextResource{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -456,6 +456,10 @@ func TestUpStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := deploy(ctx, namespace, name, sfsPath, false); err != nil {
 		t.Fatal(err)
 	}
@@ -502,10 +506,6 @@ func TestUpStatefulset(t *testing.T) {
 	}
 
 	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := contextCMD.Init(ctx, &model.ContextResource{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -586,6 +586,10 @@ func TestDivert(t *testing.T) {
 	defer changeToNamespace(ctx, oktetoPath, startNamespace)
 
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
 		t.Fatal(err)
 	}
 

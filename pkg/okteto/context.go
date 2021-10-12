@@ -285,7 +285,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *Credential, names
 
 func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
-		log.Fatalf("okteto context not initialized")
+		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
 	return getK8sClient(Context().Cfg)
 }

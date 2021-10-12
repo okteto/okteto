@@ -39,7 +39,6 @@ const (
 	secondaryDevManifest = "okteto.yaml"
 )
 
-//LoadDevContext loads the namespace and context of an okteto manifest checking "yml" and "yaml"
 func LoadDevContext(devPath string) (*model.ContextResource, error) {
 	if !model.FileExists(devPath) {
 		if devPath == DefaultDevManifest {

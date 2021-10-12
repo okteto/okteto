@@ -22,7 +22,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -37,28 +36,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Short: "Destroys a stack",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#destroy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxResource, err := utils.LoadStackContext(stackPath)
+			s, err := contextCMD.LoadStackWithContext(ctx, name, stackPath, namespace)
 			if err != nil {
 				return err
 			}
-
-			if err := ctxResource.UpdateNamespace(namespace); err != nil {
-				return err
-			}
-
-			if err := contextCMD.Init(ctx, ctxResource); err != nil {
-				return err
-			}
-
-			s, err := utils.LoadStack(name, stackPath)
-			if err != nil {
-				if name == "" {
-					return err
-				}
-				log.Errorf("error reading stack: %s", err.Error())
-				s = &model.Stack{Name: name}
-			}
-			s.Namespace = okteto.Context().Namespace
 
 			to, err := model.GetTimeout()
 			if err != nil {

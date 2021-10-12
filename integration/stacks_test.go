@@ -61,6 +61,10 @@ func TestStacks(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
+			t.Fatal(err)
+		}
+
 		log.Printf("created namespace %s \n", namespace)
 
 		if err := cloneGitRepo(ctx, stackGitRepo); err != nil {
@@ -201,6 +205,10 @@ func TestCompose(t *testing.T) {
 	}
 
 	log.Printf("created namespace %s \n", namespace)
+
+	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := cloneGitRepo(ctx, composeGitRepo); err != nil {
 		t.Fatal(err)

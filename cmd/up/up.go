@@ -99,26 +99,19 @@ func Up() *cobra.Command {
 				}
 			}
 
-			ctxResource, err := utils.LoadDevContext(upOptions.DevPath)
+			dev, err := contextCMD.LoadDevWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
 			if err != nil {
-				return err
-			}
+				if !strings.Contains(err.Error(), "okteto init") {
+					return err
+				}
+				if !utils.AskIfOktetoInit(upOptions.DevPath) {
+					return err
+				}
 
-			if err := ctxResource.UpdateNamespace(upOptions.Namespace); err != nil {
-				return err
-			}
-
-			if err := ctxResource.UpdateContext(upOptions.K8sContext); err != nil {
-				return err
-			}
-
-			if err := contextCMD.Init(ctx, ctxResource); err != nil {
-				return err
-			}
-
-			dev, err := loadDevOrInit(upOptions)
-			if err != nil {
-				return err
+				dev, err = loadDevWithInit(upOptions.DevPath)
+				if err != nil {
+					return err
+				}
 			}
 
 			if err := loadDevOverrides(dev, upOptions); err != nil {
@@ -195,29 +188,17 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-func loadDevOrInit(upOptions *UpOptions) (*model.Dev, error) {
-	dev, err := utils.LoadDev(upOptions.DevPath)
-
-	if err == nil {
-		return dev, nil
-	}
-	if !strings.Contains(err.Error(), "okteto init") {
-		return nil, err
-	}
-	if !utils.AskIfOktetoInit(upOptions.DevPath) {
-		return nil, err
-	}
-
+func loadDevWithInit(devPath string) (*model.Dev, error) {
 	workDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("unknown current folder: %s", err)
 	}
-	if err := initCMD.Run(upOptions.DevPath, "", workDir, false); err != nil {
+	if err := initCMD.Run(devPath, "", workDir, false); err != nil {
 		return nil, err
 	}
 
-	log.Success(fmt.Sprintf("okteto manifest (%s) created", upOptions.DevPath))
-	return utils.LoadDev(upOptions.DevPath)
+	log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
+	return utils.LoadDev(devPath)
 }
 
 func loadDevOverrides(dev *model.Dev, upOptions *UpOptions) error {
