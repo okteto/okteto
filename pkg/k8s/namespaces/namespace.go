@@ -5,6 +5,7 @@ import (
 
 	"github.com/ibuildthecloud/finalizers/pkg/world"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -57,6 +58,14 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns, labelSelector str
 	}
 
 	rm := restmapper.NewDiscoveryRESTMapper(groupResources)
+
+	// This is done because the wander function will try to list all k8s resources and most of them cannot be listed by
+	// Okteto user's service accounts, so it prints tons of warnings in the standard output. Setting the logrus level to err avoid those warnings
+	prevLevel := logrus.GetLevel()
+	logrus.SetLevel(logrus.ErrorLevel)
+	defer func() {
+		logrus.SetLevel(prevLevel)
+	}()
 
 	return trip.Wander(ctx, world.TravelerFunc(func(obj runtime.Object) error {
 		m, err := meta.Accessor(obj)
