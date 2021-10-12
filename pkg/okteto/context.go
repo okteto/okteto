@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -42,17 +43,17 @@ var CurrentStore *OktetoContextStore
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
-	Name            string               `json:"name,omitempty" yaml:"name,omitempty"`
-	UserID          string               `json:"-" yaml:"userID"`
-	Username        string               `json:"-" yaml:"username"`
-	Token           string               `json:"token,omitempty" yaml:"token"`
-	Namespace       string               `json:"namespace,omitempty" yaml:"namespace"`
-	Cfg             *clientcmdapi.Config `json:"-" yaml:"cfg""`
-	Buildkit        string               `json:"buildkit" yaml:"buildkit"`
-	Registry        string               `json:"-" yaml:"registry"`
-	Certificate     string               `json:"certificate" yaml:"certificate"`
-	GlobalNamespace string               `json:"-" yaml:"globalNamespace"`
-	Analytics       bool                 `json:"-" yaml:"analytics"`
+	Name            string               `json:"name"`
+	UserID          string               `json:"-"`
+	Username        string               `json:"-"`
+	Token           string               `json:"token,omitempty"`
+	Namespace       string               `json:"namespace"`
+	Cfg             *clientcmdapi.Config `json:"-"`
+	Buildkit        string               `json:"buildkit,omitempty"`
+	Registry        string               `json:"-"`
+	Certificate     string               `json:"certificate,omitempty"`
+	GlobalNamespace string               `json:"-"`
+	Analytics       bool                 `json:"-"`
 }
 
 func AutomaticContextWithOktetoEnvVars(ctxResource *model.ContextResource) {
@@ -105,10 +106,18 @@ func contextWithDeprecatedToken(token *Token, ctxResource *model.ContextResource
 			return
 		}
 
+		certificateBytes, err := os.ReadFile(config.GetCertificatePath())
+		if err != nil {
+			log.Infof("error reading okteto certificate: %v", err)
+			return
+		}
+
 		ctxStore.Contexts[token.URL] = &OktetoContext{
-			Name:      token.URL,
-			Namespace: kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
-			Token:     token.Token,
+			Name:        token.URL,
+			Namespace:   kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
+			Token:       token.Token,
+			Buildkit:    token.Buildkit,
+			Certificate: base64.StdEncoding.EncodeToString(certificateBytes),
 		}
 		ctxStore.CurrentContext = token.URL
 		if err := WriteOktetoContextConfig(); err != nil {
