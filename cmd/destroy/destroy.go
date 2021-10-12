@@ -120,6 +120,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	if err != nil {
 		// Log error message but application can still be deleted
 		log.Errorf("could not find manifest file to be executed: %s", err)
+		manifest = &utils.Manifest{
+			Destroy: []string{},
+		}
 	}
 
 	var commandErr error
@@ -132,7 +135,6 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 
 			// Store the error to return if the force destroy option is set
 			commandErr = err
-			break
 		}
 	}
 
