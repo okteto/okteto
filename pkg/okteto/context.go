@@ -15,7 +15,6 @@ package okteto
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -56,7 +55,7 @@ type OktetoContext struct {
 	Analytics       bool                 `json:"-" yaml:"analytics"`
 }
 
-func AutomaticContextWithOktetoEnvVars(ctx context.Context, ctxResource *model.ContextResource) {
+func AutomaticContextWithOktetoEnvVars(ctxResource *model.ContextResource) {
 	if ctxResource.Token == "" {
 		ctxResource.Token = os.Getenv("OKTETO_TOKEN")
 	}

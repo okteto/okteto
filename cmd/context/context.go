@@ -213,7 +213,7 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 }
 
 func Init(ctx context.Context, ctxResource *model.ContextResource) error {
-	okteto.AutomaticContextWithOktetoEnvVars(ctx, ctxResource)
+	okteto.AutomaticContextWithOktetoEnvVars(ctxResource)
 
 	ctxStore := okteto.ContextStore()
 	if ctxResource.Context != "" {
