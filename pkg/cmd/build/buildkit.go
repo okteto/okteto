@@ -81,7 +81,7 @@ func getSolveOpt(buildOptions BuildOptions) (*client.SolveOpt, error) {
 		frontendAttrs["build-arg:"+kv[0]] = kv[1]
 	}
 	attachable := []session.Attachable{}
-	if okteto.IsOktetoContext() {
+	if okteto.IsOkteto() {
 		attachable = append(attachable, newDockerAndOktetoAuthProvider(okteto.Context().Registry, okteto.Context().UserID, okteto.Context().Token, os.Stderr))
 	} else {
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))

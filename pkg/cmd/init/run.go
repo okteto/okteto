@@ -66,7 +66,7 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 	setAnnotationsFromApp(dev, app)
 	setNameAndLabelsFromApp(dev, app)
 
-	if !okteto.IsOktetoContext() {
+	if !okteto.IsOkteto() {
 		setResourcesFromPod(dev, pod, container)
 	}
 

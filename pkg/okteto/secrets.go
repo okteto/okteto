@@ -26,7 +26,8 @@ type Secret struct {
 	Value string `json:"value,omitempty"`
 }
 
-type SecretsAndCredentialToken struct {
+type UserContext struct {
+	User        User       `json:"user,omitempty"`
 	Secrets     []Secret   `json:"secrets,omitempty"`
 	Credentials Credential `json:"credentials,omitempty"`
 }
@@ -58,13 +59,26 @@ func (c *OktetoClient) GetSecrets(ctx context.Context) ([]Secret, error) {
 }
 
 //GetSecrets returns the secrets from Okteto API
-func (c *OktetoClient) GetSecretsAndKubeCredentials(ctx context.Context) (*SecretsAndCredentialToken, error) {
+func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error) {
 	var query struct {
+		User struct {
+			Id              graphql.String
+			Name            graphql.String
+			Email           graphql.String
+			ExternalID      graphql.String `graphql:"externalID"`
+			Token           graphql.String
+			New             graphql.Boolean
+			Registry        graphql.String
+			Buildkit        graphql.String
+			Certificate     graphql.String
+			GlobalNamespace graphql.String  `graphql:"globalNamespace"`
+			Analytics       graphql.Boolean `graphql:"telemetryEnabled"`
+		} `graphql:"user"`
 		Secrets []struct {
 			Name  graphql.String
 			Value graphql.String
 		} `graphql:"getGitDeploySecrets"`
-		Space struct {
+		Cred struct {
 			Server      graphql.String
 			Certificate graphql.String
 			Token       graphql.String
@@ -88,13 +102,32 @@ func (c *OktetoClient) GetSecretsAndKubeCredentials(ctx context.Context) (*Secre
 			})
 		}
 	}
-	result := &SecretsAndCredentialToken{
+
+	globalNamespace := getGlobalNamespace(string(query.User.GlobalNamespace))
+	analytics := bool(query.User.Analytics)
+	if IsOktetoCloud() {
+		analytics = true
+	}
+	result := &UserContext{
+		User: User{
+			ID:              string(query.User.Id),
+			Name:            string(query.User.Name),
+			Email:           string(query.User.Email),
+			ExternalID:      string(query.User.ExternalID),
+			Token:           string(query.User.Token),
+			New:             bool(query.User.New),
+			Registry:        string(query.User.Registry),
+			Buildkit:        string(query.User.Buildkit),
+			Certificate:     string(query.User.Certificate),
+			GlobalNamespace: globalNamespace,
+			Analytics:       analytics,
+		},
 		Secrets: secrets,
 		Credentials: Credential{
-			Server:      string(query.Space.Server),
-			Certificate: string(query.Space.Certificate),
-			Token:       string(query.Space.Token),
-			Namespace:   string(query.Space.Namespace),
+			Server:      string(query.Cred.Server),
+			Certificate: string(query.Cred.Certificate),
+			Token:       string(query.Cred.Token),
+			Namespace:   string(query.Cred.Namespace),
 		},
 	}
 	return result, nil

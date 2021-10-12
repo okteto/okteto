@@ -20,7 +20,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -32,30 +31,29 @@ var reg = regexp.MustCompile("[^A-Za-z0-9]+")
 
 // Token contains the auth token and the URL it belongs to
 type Token struct {
-	URL              string `json:"URL"`
-	Buildkit         string `json:"Buildkit"`
-	Registry         string `json:"Registry"`
-	ID               string `json:"ID"`
-	Username         string `json:"Username"`
-	Token            string `json:"Token"`
-	MachineID        string `json:"MachineID"`
-	GlobalNamespace  string `json:"GlobalNamespace"`
-	TelemetryEnabled string `json:"TelemetryEnabled"`
+	URL       string `json:"URL"`
+	Buildkit  string `json:"Buildkit"`
+	Registry  string `json:"Registry"`
+	ID        string `json:"ID"`
+	Username  string `json:"Username"`
+	Token     string `json:"Token"`
+	MachineID string `json:"MachineID"`
 }
 
 // User contains the auth information of the logged in user
 type User struct {
-	Name             string
-	Email            string
-	ExternalID       string
-	Token            string
-	ID               string
-	New              bool
-	Buildkit         string
-	Registry         string
-	Certificate      string
-	GlobalNamespace  string
-	TelemetryEnabled string
+	Name            string
+	Namespace       string
+	Email           string
+	ExternalID      string
+	Token           string
+	ID              string
+	New             bool
+	Buildkit        string
+	Registry        string
+	Certificate     string
+	GlobalNamespace string
+	Analytics       bool
 }
 
 // AuthWithToken authenticates in okteto with the provided token
@@ -100,17 +98,18 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 	var query struct {
 		User struct {
-			Id               graphql.String
-			Name             graphql.String
-			Email            graphql.String
-			ExternalID       graphql.String `graphql:"externalID"`
-			Token            graphql.String
-			New              graphql.Boolean
-			Registry         graphql.String
-			Buildkit         graphql.String
-			Certificate      graphql.String
-			GlobalNamespace  graphql.String  `graphql:"globalNamespace"`
-			TelemetryEnabled graphql.Boolean `graphql:"telemetryEnabled"`
+			Id              graphql.String
+			Name            graphql.String
+			Namespace       graphql.String
+			Email           graphql.String
+			ExternalID      graphql.String `graphql:"externalID"`
+			Token           graphql.String
+			New             graphql.Boolean
+			Registry        graphql.String
+			Buildkit        graphql.String
+			Certificate     graphql.String
+			GlobalNamespace graphql.String  `graphql:"globalNamespace"`
+			Analytics       graphql.Boolean `graphql:"telemetryEnabled"`
 		} `graphql:"user"`
 	}
 	err := c.client.Query(ctx, &query, nil)
@@ -125,20 +124,24 @@ func (c *OktetoClient) queryUser(ctx context.Context) (*User, error) {
 	}
 
 	globalNamespace := getGlobalNamespace(string(query.User.GlobalNamespace))
-	telemetry := strconv.FormatBool(bool(query.User.TelemetryEnabled))
+	analytics := bool(query.User.Analytics)
+	if IsOktetoCloud() {
+		analytics = true
+	}
 
 	user := &User{
-		ID:               string(query.User.Id),
-		Name:             string(query.User.Name),
-		Email:            string(query.User.Email),
-		ExternalID:       string(query.User.ExternalID),
-		Token:            string(query.User.Token),
-		New:              bool(query.User.New),
-		Registry:         string(query.User.Registry),
-		Buildkit:         string(query.User.Buildkit),
-		Certificate:      string(query.User.Certificate),
-		GlobalNamespace:  globalNamespace,
-		TelemetryEnabled: telemetry,
+		ID:              string(query.User.Id),
+		Name:            string(query.User.Name),
+		Namespace:       string(query.User.Namespace),
+		Email:           string(query.User.Email),
+		ExternalID:      string(query.User.ExternalID),
+		Token:           string(query.User.Token),
+		New:             bool(query.User.New),
+		Registry:        string(query.User.Registry),
+		Buildkit:        string(query.User.Buildkit),
+		Certificate:     string(query.User.Certificate),
+		GlobalNamespace: globalNamespace,
+		Analytics:       analytics,
 	}
 
 	return user, nil
@@ -150,6 +153,7 @@ func (c *OktetoClient) deprecatedQueryUser(ctx context.Context) (*User, error) {
 		User struct {
 			Id          graphql.String
 			Name        graphql.String
+			Namespace   graphql.String
 			Email       graphql.String
 			ExternalID  graphql.String `graphql:"externalID"`
 			Token       graphql.String
@@ -166,6 +170,7 @@ func (c *OktetoClient) deprecatedQueryUser(ctx context.Context) (*User, error) {
 	user := &User{
 		ID:          string(query.User.Id),
 		Name:        string(query.User.Name),
+		Namespace:   string(query.User.Namespace),
 		Email:       string(query.User.Email),
 		ExternalID:  string(query.User.ExternalID),
 		Token:       string(query.User.Token),
@@ -173,6 +178,7 @@ func (c *OktetoClient) deprecatedQueryUser(ctx context.Context) (*User, error) {
 		Registry:    string(query.User.Registry),
 		Buildkit:    string(query.User.Buildkit),
 		Certificate: string(query.User.Certificate),
+		Analytics:   true,
 	}
 
 	return user, nil
@@ -181,17 +187,18 @@ func (c *OktetoClient) deprecatedQueryUser(ctx context.Context) (*User, error) {
 func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error) {
 	var mutation struct {
 		User struct {
-			Id               graphql.String
-			Name             graphql.String
-			Email            graphql.String
-			ExternalID       graphql.String `graphql:"externalID"`
-			Token            graphql.String
-			New              graphql.Boolean
-			Registry         graphql.String
-			Buildkit         graphql.String
-			Certificate      graphql.String
-			GlobalNamespace  graphql.String  `graphql:"globalNamespace"`
-			TelemetryEnabled graphql.Boolean `graphql:"telemetryEnabled"`
+			Id              graphql.String
+			Name            graphql.String
+			Namespace       graphql.String
+			Email           graphql.String
+			ExternalID      graphql.String `graphql:"externalID"`
+			Token           graphql.String
+			New             graphql.Boolean
+			Registry        graphql.String
+			Buildkit        graphql.String
+			Certificate     graphql.String
+			GlobalNamespace graphql.String  `graphql:"globalNamespace"`
+			Analytics       graphql.Boolean `graphql:"telemetryEnabled"`
 		} `graphql:"auth(code: $code, source: $source)"`
 	}
 
@@ -212,19 +219,24 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 	}
 
 	globalNamespace := getGlobalNamespace(string(mutation.User.GlobalNamespace))
-	telemetry := strconv.FormatBool(bool(mutation.User.TelemetryEnabled))
+	analytics := bool(mutation.User.Analytics)
+	if IsOktetoCloud() {
+		analytics = true
+	}
+
 	user := &User{
-		ID:               string(mutation.User.Id),
-		Name:             string(mutation.User.Name),
-		Email:            string(mutation.User.Email),
-		ExternalID:       string(mutation.User.ExternalID),
-		Token:            string(mutation.User.Token),
-		New:              bool(mutation.User.New),
-		Registry:         string(mutation.User.Registry),
-		Buildkit:         string(mutation.User.Buildkit),
-		Certificate:      string(mutation.User.Certificate),
-		GlobalNamespace:  globalNamespace,
-		TelemetryEnabled: telemetry,
+		ID:              string(mutation.User.Id),
+		Name:            string(mutation.User.Name),
+		Namespace:       string(mutation.User.Namespace),
+		Email:           string(mutation.User.Email),
+		ExternalID:      string(mutation.User.ExternalID),
+		Token:           string(mutation.User.Token),
+		New:             bool(mutation.User.New),
+		Registry:        string(mutation.User.Registry),
+		Buildkit:        string(mutation.User.Buildkit),
+		Certificate:     string(mutation.User.Certificate),
+		GlobalNamespace: globalNamespace,
+		Analytics:       analytics,
 	}
 
 	return user, nil
@@ -235,6 +247,7 @@ func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*Us
 		User struct {
 			Id          graphql.String
 			Name        graphql.String
+			Namespace   graphql.String
 			Email       graphql.String
 			ExternalID  graphql.String `graphql:"externalID"`
 			Token       graphql.String
@@ -256,15 +269,18 @@ func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*Us
 	}
 
 	user := &User{
-		ID:          string(mutation.User.Id),
-		Name:        string(mutation.User.Name),
-		Email:       string(mutation.User.Email),
-		ExternalID:  string(mutation.User.ExternalID),
-		Token:       string(mutation.User.Token),
-		New:         bool(mutation.User.New),
-		Registry:    string(mutation.User.Registry),
-		Buildkit:    string(mutation.User.Buildkit),
-		Certificate: string(mutation.User.Certificate),
+		ID:              string(mutation.User.Id),
+		Name:            string(mutation.User.Name),
+		Namespace:       string(mutation.User.Namespace),
+		Email:           string(mutation.User.Email),
+		ExternalID:      string(mutation.User.ExternalID),
+		Token:           string(mutation.User.Token),
+		New:             bool(mutation.User.New),
+		Registry:        string(mutation.User.Registry),
+		Buildkit:        string(mutation.User.Buildkit),
+		Certificate:     string(mutation.User.Certificate),
+		GlobalNamespace: DefaultGlobalNamespace,
+		Analytics:       true,
 	}
 
 	return user, nil

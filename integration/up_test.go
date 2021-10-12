@@ -37,6 +37,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	ps "github.com/mitchellh/go-ps"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -339,6 +340,10 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := contextCMD.Init(ctx, &model.ContextResource{}); err != nil {
+		t.Fatal(err)
+	}
+
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		t.Fatal(err)
@@ -497,6 +502,10 @@ func TestUpStatefulset(t *testing.T) {
 	}
 
 	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := contextCMD.Init(ctx, &model.ContextResource{}); err != nil {
 		t.Fatal(err)
 	}
 

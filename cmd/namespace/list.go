@@ -22,6 +22,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -32,11 +33,13 @@ func List(ctx context.Context) *cobra.Command {
 		Use:   "namespace",
 		Short: "List namespaces managed by Okteto in your current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Init(ctx); err != nil {
+
+			ctxResource := &model.ContextResource{}
+			if err := contextCMD.Init(ctx, ctxResource); err != nil {
 				return err
 			}
 
-			if !okteto.IsOktetoContext() {
+			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 

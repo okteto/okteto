@@ -27,6 +27,7 @@ import (
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 const (
@@ -34,6 +35,11 @@ const (
 	hideCursor = esc + "?25l"
 	showCursor = esc + "?25h"
 	clearLine  = esc + "2K"
+)
+
+var (
+	cloudOption = fmt.Sprintf("[Okteto Cloud] %s", okteto.CloudURL)
+	newOEOption = "New Okteto Cluster URL"
 )
 
 type OktetoSelector struct {
@@ -70,21 +76,21 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 			Enable: false,
 		},
 		{
-			Label:  "Okteto Cloud",
-			Enable: true,
-		},
-		{
-			Label:  "Okteto Enterprise",
+			Label:  cloudOption,
 			Enable: true,
 		},
 	}
+	ctxStore := okteto.ContextStore()
+	for ctxName := range ctxStore.Contexts {
+		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
+			clusters = append(clusters, SelectorItem{Label: ctxName, Enable: true})
+		}
+	}
+	clusters = append(clusters, SelectorItem{Label: newOEOption, Enable: true})
 	if !ctxOptions.OnlyOkteto {
 		k8sClusters := getKubernetesContextList()
 		if len(k8sClusters) > 0 {
-			clusters = append(clusters, SelectorItem{
-				Label:  "Kubernetes contexts:",
-				Enable: false,
-			})
+			clusters = append(clusters, SelectorItem{Label: "Kubernetes contexts:", Enable: false})
 			for _, k8sCluster := range k8sClusters {
 				clusters = append(clusters, SelectorItem{
 					Label:  k8sCluster,

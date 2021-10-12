@@ -22,8 +22,8 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -41,11 +41,12 @@ func Namespace(ctx context.Context) *cobra.Command {
 				namespace = args[0]
 			}
 
-			if err := contextCMD.Init(ctx); err != nil {
+			ctxResource := &model.ContextResource{}
+			if err := contextCMD.Init(ctx, ctxResource); err != nil {
 				return err
 			}
 
-			if !okteto.IsOktetoContext() {
+			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
@@ -81,15 +82,13 @@ func RunNamespace(ctx context.Context, namespace string) error {
 	}
 
 	octx := okteto.Context()
-	kubeconfigFile := config.GetKubeconfigPath()
-	if err := okteto.SetKubeContext(cred, kubeconfigFile, namespace, octx.UserID, okteto.UrlToContext(octx.Name)); err != nil {
+	if err := okteto.WriteKubeconfig(cred, config.GetKubeconfigPath(), namespace, octx.UserID, okteto.UrlToKubernetesContext(octx.Name)); err != nil {
 		return err
 	}
 
-	cfg := kubeconfig.Get(kubeconfigFile)
-	u := octx.ToUser()
+	okteto.AddOktetoContext(octx.Name, octx.ToUser(), namespace)
 
-	if err := okteto.SaveOktetoClusterContext(octx.Name, u, namespace, cfg); err != nil {
+	if err := okteto.WriteOktetoContextConfig(); err != nil {
 		return err
 	}
 

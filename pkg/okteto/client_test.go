@@ -28,23 +28,23 @@ func TestSetKubeConfig(t *testing.T) {
 	defer os.Remove(file.Name())
 
 	c := &Credential{}
-	if err := SetKubeContext(c, file.Name(), "", "123-123-123", "cloud-okteto-com"); err != nil {
+	if err := WriteKubeconfig(c, file.Name(), "", "123-123-123", "cloud-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeContext(c, file.Name(), "ns", "123-123-123", "cloud-okteto-com"); err != nil {
+	if err := WriteKubeconfig(c, file.Name(), "ns", "123-123-123", "cloud-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeContext(c, file.Name(), "ns-2", "123-123-123", "cloud-okteto-com"); err != nil {
+	if err := WriteKubeconfig(c, file.Name(), "ns-2", "123-123-123", "cloud-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeContext(c, file.Name(), "", "123-123-124", "sf-okteto-com"); err != nil {
+	if err := WriteKubeconfig(c, file.Name(), "", "123-123-124", "sf-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeContext(c, file.Name(), "ns-2", "123-123-124", "sf-okteto-com"); err != nil {
+	if err := WriteKubeconfig(c, file.Name(), "ns-2", "123-123-124", "sf-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
@@ -71,11 +71,11 @@ func TestSetKubeConfig(t *testing.T) {
 
 	// add duplicated
 
-	if err := SetKubeContext(c, file.Name(), "ns-2", "123-123-124", "sf-okteto-com"); err != nil {
+	if err := WriteKubeconfig(c, file.Name(), "ns-2", "123-123-124", "sf-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	if err := SetKubeContext(c, file.Name(), "ns-2", "123-123-123", "cloud-okteto-com"); err != nil {
+	if err := WriteKubeconfig(c, file.Name(), "ns-2", "123-123-123", "cloud-okteto-com"); err != nil {
 		t.Fatal(err.Error())
 	}
 

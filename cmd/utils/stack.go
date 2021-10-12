@@ -40,6 +40,22 @@ var (
 	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
 )
 
+//LoadStackContext loads the namespace and context of an okteto stack manifest
+func LoadStackContext(stackPath string) (*model.ContextResource, error) {
+	if model.FileExists(stackPath) {
+		return model.GetContextResource(stackPath)
+	}
+	if stackPath == DefaultStackManifest {
+		for _, secondaryStackManifest := range secondaryStackManifests {
+			manifestPath := filepath.Join(secondaryStackManifest...)
+			if model.FileExists(manifestPath) {
+				return model.GetContextResource(manifestPath)
+			}
+		}
+	}
+	return nil, fmt.Errorf("'%s' does not exist", stackPath)
+}
+
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
 func LoadStack(name string, stackPaths []string) (*model.Stack, error) {
 	var resultStack *model.Stack

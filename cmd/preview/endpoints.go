@@ -23,6 +23,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -36,15 +37,21 @@ func Endpoints(ctx context.Context) *cobra.Command {
 		Short: "Show endpoints for a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Init(ctx); err != nil {
+
+			previewName := args[0]
+
+			ctxResource := &model.ContextResource{}
+			if err := ctxResource.UpdateNamespace(previewName); err != nil {
 				return err
 			}
 
-			if !okteto.IsOktetoContext() {
-				return errors.ErrContextIsNotOktetoCluster
+			if err := contextCMD.Init(ctx, ctxResource); err != nil {
+				return err
 			}
 
-			previewName := args[0]
+			if !okteto.IsOkteto() {
+				return errors.ErrContextIsNotOktetoCluster
+			}
 
 			if err := validateOutput(output); err != nil {
 				return err

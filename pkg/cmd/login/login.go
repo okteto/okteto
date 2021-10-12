@@ -62,11 +62,7 @@ func AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (
 	}
 	log.Infof("authenticated user %s", user.ID)
 
-	if oktetoURL == okteto.CloudURL {
-		log.Success("Logged in as %s", user.ExternalID)
-	} else {
-		log.Success("Logged in as %s @ %s", user.ExternalID, oktetoURL)
-	}
+	log.Success("Logged in as %s @ %s", user.ExternalID, oktetoURL)
 
 	return user, nil
 }
@@ -89,7 +85,7 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*okteto.User, error) {
 	if err := open.Start(authorizationURL); err != nil {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {
 			return nil, errors.UserError{
-				E:    fmt.Errorf("No browser could be found"),
+				E:    fmt.Errorf("no browser could be found"),
 				Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://okteto.com/docs/reference/cli/#login",
 			}
 		}

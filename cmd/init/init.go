@@ -54,11 +54,16 @@ func Init() *cobra.Command {
 		Short: "Automatically generates your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := contextCMD.Init(ctx); err != nil {
+
+			ctxResource := &model.ContextResource{}
+			if err := ctxResource.UpdateNamespace(namespace); err != nil {
 				return err
 			}
 
-			if err := okteto.SetCurrentContext(k8sContext, namespace); err != nil {
+			if err := ctxResource.UpdateContext(k8sContext); err != nil {
+				return err
+			}
+			if err := contextCMD.Init(ctx, ctxResource); err != nil {
 				return err
 			}
 
@@ -211,7 +216,7 @@ func getRunningApp(ctx context.Context) (apps.App, string, error) {
 }
 
 func supportsPersistentVolumes(ctx context.Context) bool {
-	if okteto.IsOktetoContext() {
+	if okteto.IsOkteto() {
 		return true
 	}
 	c, _, err := okteto.GetK8sClient()

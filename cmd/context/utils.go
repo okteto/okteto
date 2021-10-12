@@ -45,22 +45,34 @@ func getKubernetesContextList() []string {
 }
 
 func isOktetoCluster(option string) bool {
-	return option == "Okteto Cloud" || option == "Okteto Enterprise"
+	if option == cloudOption {
+		return true
+	}
+
+	if option == newOEOption {
+		return true
+	}
+
+	return okteto.IsOktetoURL(option)
 }
 
 func getOktetoClusterUrl(option string) string {
-	if option == "Okteto Cloud" {
+	if option == cloudOption {
 		return okteto.CloudURL
+	}
+
+	if okteto.IsOktetoURL(option) {
+		return option
 	}
 
 	return askForOktetoURL()
 }
 
 func askForOktetoURL() string {
-	octx := okteto.Context()
-	clusterURL := octx.Name
-	if !okteto.IsOktetoURL(octx.Name) {
-		clusterURL = okteto.CloudURL
+	clusterURL := okteto.CloudURL
+	ctxStore := okteto.ContextStore()
+	if okteto.IsOktetoURL(ctxStore.CurrentContext) {
+		clusterURL = ctxStore.CurrentContext
 	}
 	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", clusterURL)
 	fmt.Scanln(&clusterURL)

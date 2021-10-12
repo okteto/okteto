@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -36,11 +37,12 @@ func Create(ctx context.Context) *cobra.Command {
 		Short: "Creates a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Init(ctx); err != nil {
+			ctxResource := &model.ContextResource{}
+			if err := contextCMD.Init(ctx, ctxResource); err != nil {
 				return err
 			}
 
-			if !okteto.IsOktetoContext() {
+			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 

@@ -15,14 +15,15 @@ package stack
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"github.com/joho/godotenv"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -35,12 +36,24 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Deploys a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Init(ctx); err != nil {
+
+			if model.FileExists(".env") {
+				err := godotenv.Load()
+				if err != nil {
+					log.Errorf("error loading .env file: %s", err.Error())
+				}
+			}
+
+			ctxResource, err := utils.LoadStackContext(options.StackPath)
+			if err != nil {
 				return err
 			}
 
-			ctx := context.Background()
-			if err := utils.LoadEnvironment(ctx, true); err != nil {
+			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
+				return err
+			}
+
+			if err := contextCMD.Init(ctx, ctxResource); err != nil {
 				return err
 			}
 
@@ -49,6 +62,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 			analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
+			s.Namespace = okteto.Context().Namespace
 
 			if len(args) > 0 {
 				options.ServicesToDeploy = args
@@ -58,17 +72,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 					definedSvcs = append(definedSvcs, svcName)
 				}
 				options.ServicesToDeploy = definedSvcs
-			}
-
-			if s.Namespace != "" {
-				if options.Namespace != "" && s.Namespace != options.Namespace {
-					return fmt.Errorf("the namespace in the okteto stack manifest '%s' does not match the namespace '%s'", s.Namespace, options.Namespace)
-				}
-				if err := okteto.SetCurrentContext("", s.Namespace); err != nil {
-					return err
-				}
-			} else {
-				s.Namespace = okteto.Context().Namespace
 			}
 
 			err = stack.Deploy(ctx, s, options)

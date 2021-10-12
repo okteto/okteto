@@ -22,7 +22,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/joho/godotenv"
 	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
@@ -40,12 +39,25 @@ const (
 	secondaryDevManifest = "okteto.yaml"
 )
 
-//LoadDev loads an okteto manifest checking "yml" and "yaml"
-func LoadDev(devPath, namespace, oktetoContext string) (*model.Dev, error) {
+//LoadDevContext loads the namespace and context of an okteto manifest checking "yml" and "yaml"
+func LoadDevContext(devPath string) (*model.ContextResource, error) {
 	if !model.FileExists(devPath) {
 		if devPath == DefaultDevManifest {
 			if model.FileExists(secondaryDevManifest) {
-				return LoadDev(secondaryDevManifest, namespace, oktetoContext)
+				return model.GetContextResource(secondaryDevManifest)
+			}
+		}
+		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
+	}
+	return model.GetContextResource(devPath)
+}
+
+//LoadDev loads an okteto manifest checking "yml" and "yaml"
+func LoadDev(devPath string) (*model.Dev, error) {
+	if !model.FileExists(devPath) {
+		if devPath == DefaultDevManifest {
+			if model.FileExists(secondaryDevManifest) {
+				return LoadDev(secondaryDevManifest)
 			}
 		}
 
@@ -60,24 +72,9 @@ func LoadDev(devPath, namespace, oktetoContext string) (*model.Dev, error) {
 	if err := loadDevRc(dev); err != nil {
 		return nil, err
 	}
-	if dev.Namespace == "" {
-		dev.Namespace = namespace
-	}
-	if namespace != "" && namespace != dev.Namespace {
-		return nil, fmt.Errorf("the namespace in the okteto manifest '%s' does not match the namespace '%s'", dev.Namespace, namespace)
-	}
-	if dev.Namespace == "" {
-		dev.Namespace = okteto.Context().Namespace
-	}
-	if dev.Context == "" {
-		dev.Context = oktetoContext
-	}
-	if oktetoContext != "" && oktetoContext != dev.Context {
-		return nil, fmt.Errorf("the context in the okteto manifest '%s' does not match the context '%s'", dev.Context, oktetoContext)
-	}
-	if dev.Context == "" {
-		dev.Context = okteto.Context().Name
-	}
+
+	dev.Namespace = okteto.Context().Namespace
+	dev.Context = okteto.Context().Name
 
 	return dev, nil
 }
@@ -106,8 +103,8 @@ func loadDevRc(dev *model.Dev) error {
 }
 
 //LoadDevOrDefault loads an okteto manifest or a default one if does not exist
-func LoadDevOrDefault(devPath, name, namespace, k8sContext string) (*model.Dev, error) {
-	dev, err := LoadDev(devPath, namespace, k8sContext)
+func LoadDevOrDefault(devPath, name string) (*model.Dev, error) {
+	dev, err := LoadDev(devPath)
 	if err == nil {
 		return dev, nil
 	}
@@ -118,8 +115,6 @@ func LoadDevOrDefault(devPath, name, namespace, k8sContext string) (*model.Dev, 
 			return nil, err
 		}
 		dev.Name = name
-		dev.Namespace = namespace
-		dev.Context = k8sContext
 		return dev, nil
 	}
 
@@ -240,49 +235,6 @@ func CheckIfRegularFile(path string) error {
 		return nil
 	}
 	return fmt.Errorf("'%s' is not a regular file", path)
-}
-
-//LoadEnvironment taking into account .env files and Okteto Secrets
-func LoadEnvironment(ctx context.Context, getSecrets bool) error {
-	if model.FileExists(".env") {
-		err := godotenv.Load()
-		if err != nil {
-			log.Errorf("error loading .env file: %s", err.Error())
-		}
-	}
-
-	if !getSecrets {
-		return nil
-	}
-
-	if okteto.IsOktetoContext() {
-		oktetoClient, err := okteto.NewOktetoClient()
-		if err != nil {
-			return err
-		}
-		secrets, err := oktetoClient.GetSecrets(ctx)
-		if err != nil {
-			return fmt.Errorf("error loading Okteto Secrets: %s", err.Error())
-		}
-
-		currentEnv := map[string]bool{}
-		rawEnv := os.Environ()
-		for _, rawEnvLine := range rawEnv {
-			key := strings.Split(rawEnvLine, "=")[0]
-			currentEnv[key] = true
-		}
-
-		for _, secret := range secrets {
-			if strings.HasPrefix(secret.Name, "github.") {
-				continue
-			}
-			if !currentEnv[secret.Name] {
-				os.Setenv(secret.Name, secret.Value)
-			}
-		}
-	}
-
-	return nil
 }
 
 func GetDownCommand(devPath string) string {

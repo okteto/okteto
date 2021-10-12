@@ -9,6 +9,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var timeout time.Duration
@@ -35,12 +36,7 @@ func getKubernetesTimeout() time.Duration {
 	return timeout
 }
 
-func getK8sClient(kubeconfigBytes []byte) (*kubernetes.Clientset, *rest.Config, error) {
-	clientApiConfig, err := clientcmd.Load(kubeconfigBytes)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func getK8sClient(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
 	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
 
 	config, err := clientConfig.ClientConfig()

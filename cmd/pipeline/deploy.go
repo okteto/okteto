@@ -47,16 +47,17 @@ func deploy(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#deploy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Init(ctx); err != nil {
+			ctxResource := &model.ContextResource{}
+			if err := ctxResource.UpdateNamespace(namespace); err != nil {
 				return err
 			}
 
-			if !okteto.IsOktetoContext() {
+			if err := contextCMD.Init(ctx, ctxResource); err != nil {
+				return err
+			}
+
+			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
-			}
-
-			if err := okteto.SetCurrentContext("", namespace); err != nil {
-				return err
 			}
 
 			cwd, err := os.Getwd()

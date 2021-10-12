@@ -46,7 +46,7 @@ var (
 	ErrCommandFailed = errors.New("command execution failed")
 
 	// ErrNotLogged is raised when we can't get the user token
-	ErrNotLogged = fmt.Errorf("okteto context isn't configured. Please run 'okteto context' and try again")
+	ErrNotLogged = "your token is invalid. Please run 'okteto context %s' and try again"
 
 	// ErrNotOktetoCluster is raised when we a command is only available on an okteto cluster
 	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context' and try again")
@@ -111,6 +111,12 @@ var (
 	//ErrOktetoContextNotFound is raised when the context is not found in existing okteto contexts
 	ErrOktetoContextNotFound = "context '%s' not found. Run 'okteto context %s' to configure it"
 
+	//ErrNamespaceNotMatching is raised when the namespace arg doesn't match the manifest namespace
+	ErrNamespaceNotMatching = fmt.Errorf("the namespace in the okteto manifest doesn't match your namespace argument")
+
+	//ErrContextNotMatching is raised when the context arg doesn't match the manifest context
+	ErrContextNotMatching = fmt.Errorf("the context in the okteto manifest doesn't match your context argument")
+
 	//ErrKubernetesContextNotFound is raised when the kubernetes context is not found in kubeconfig
 	ErrKubernetesContextNotFound = "context '%s' not found in '%s'"
 
@@ -132,6 +138,11 @@ var (
 	//ErrNoServicesinOktetoManifest raised when no services are defined in the okteto manifest
 	ErrNoServicesinOktetoManifest = fmt.Errorf("'okteto restart' is only supported when using the field 'services'")
 )
+
+// IsForbidden raised if the Okteto API returns 401
+func IsForbidden(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "unauthorized")
+}
 
 // IsNotFound returns true if err is of the type not found
 func IsNotFound(err error) bool {
