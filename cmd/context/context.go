@@ -213,7 +213,7 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 }
 
 func Init(ctx context.Context, ctxResource *model.ContextResource) error {
-	okteto.ContextWithOktetoEnvVars(ctx, ctxResource)
+	okteto.AutomaticContextWithOktetoEnvVars(ctx, ctxResource)
 
 	ctxStore := okteto.ContextStore()
 	if ctxResource.Context != "" {
@@ -233,19 +233,9 @@ func Init(ctx context.Context, ctxResource *model.ContextResource) error {
 				if _, ok := ctxStore.Contexts[ctxResource.Context]; !ok {
 					kubeconfigFile := config.GetKubeconfigPath()
 					cfg := kubeconfig.Get(kubeconfigFile)
-					if cfg == nil {
-						return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
+					if err := addKubernetesContext(cfg, ctxResource); err != nil {
+						return err
 					}
-					if _, ok := cfg.Contexts[ctxResource.Context]; !ok {
-						return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, kubeconfigFile)
-					}
-					if ctxResource.Namespace == "" {
-						ctxResource.Namespace = cfg.Contexts[ctxResource.Context].Namespace
-					}
-					if ctxResource.Namespace == "" {
-						ctxResource.Namespace = "default"
-					}
-					okteto.AddKubernetesContext(ctxResource.Context, ctxResource.Namespace, "")
 				}
 			}
 		}

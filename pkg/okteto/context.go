@@ -56,29 +56,19 @@ type OktetoContext struct {
 	Analytics       bool                 `json:"-" yaml:"analytics"`
 }
 
-func ContextWithOktetoEnvVars(ctx context.Context, ctxResource *model.ContextResource) {
+func AutomaticContextWithOktetoEnvVars(ctx context.Context, ctxResource *model.ContextResource) {
 	if ctxResource.Token == "" {
 		ctxResource.Token = os.Getenv("OKTETO_TOKEN")
 	}
 
 	if ctxResource.Token != "" {
-		if ctxResource.Context == "" {
-			ctxResource.Context = CloudURL
-		}
-		log.Infof("Using 'OKTETO_TOKEN' to access %s", ctxResource.Context)
-		ctxStore := ContextStore()
-		if okCtx, ok := ctxStore.Contexts[ctxResource.Context]; ok {
-			okCtx.Token = ctxResource.Token
-		} else {
-			ctxStore.Contexts[ctxResource.Context] = &OktetoContext{
-				Name:  ctxResource.Context,
-				Token: ctxResource.Token,
-			}
-		}
-		ctxStore.CurrentContext = ctxResource.Context
+		contextWithOktetoTokenEnvVar(ctxResource)
 		return
 	}
 
+	if !model.FileExists(config.GetTokenPathDeprecated()) {
+		return
+	}
 	defer os.RemoveAll(config.GetTokenPathDeprecated())
 	token, err := getTokenFromOktetoHome()
 	if err != nil {
@@ -86,17 +76,40 @@ func ContextWithOktetoEnvVars(ctx context.Context, ctxResource *model.ContextRes
 		return
 	}
 
+	contextWithDeprecatedToken(token, ctxResource)
+}
+
+func contextWithOktetoTokenEnvVar(ctxResource *model.ContextResource) {
+	if ctxResource.Context == "" {
+		ctxResource.Context = CloudURL
+	}
+	log.Infof("Using 'OKTETO_TOKEN' to access %s", ctxResource.Context)
+	ctxStore := ContextStore()
+	ctxStore.CurrentContext = ctxResource.Context
+
+	if okCtx, ok := ctxStore.Contexts[ctxResource.Context]; ok {
+		okCtx.Token = ctxResource.Token
+		return
+	}
+
+	ctxStore.Contexts[ctxResource.Context] = &OktetoContext{
+		Name:  ctxResource.Context,
+		Token: ctxResource.Token,
+	}
+}
+
+func contextWithDeprecatedToken(token *Token, ctxResource *model.ContextResource) {
 	k8sContext := UrlToKubernetesContext(token.URL)
 	if ctxResource.Context == k8sContext || ctxResource.Context == "" && kubeconfig.CurrentContext(config.GetKubeconfigPath()) == k8sContext {
 		ctxStore := ContextStore()
-		if okCtx, ok := ctxStore.Contexts[token.URL]; ok {
-			okCtx.Token = ctxResource.Token
-		} else {
-			ctxStore.Contexts[token.URL] = &OktetoContext{
-				Name:      token.URL,
-				Namespace: kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
-				Token:     token.Token,
-			}
+		if _, ok := ctxStore.Contexts[token.URL]; ok {
+			return
+		}
+
+		ctxStore.Contexts[token.URL] = &OktetoContext{
+			Name:      token.URL,
+			Namespace: kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
+			Token:     token.Token,
 		}
 		ctxStore.CurrentContext = token.URL
 		if err := WriteOktetoContextConfig(); err != nil {

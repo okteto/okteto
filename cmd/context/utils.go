@@ -18,9 +18,11 @@ import (
 	"net/url"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type SelectItem struct {
@@ -94,4 +96,21 @@ func isValidCluster(cluster string) bool {
 		}
 	}
 	return false
+}
+
+func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextResource) error {
+	if cfg == nil {
+		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
+	}
+	if _, ok := cfg.Contexts[ctxResource.Context]; !ok {
+		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
+	}
+	if ctxResource.Namespace == "" {
+		ctxResource.Namespace = cfg.Contexts[ctxResource.Context].Namespace
+	}
+	if ctxResource.Namespace == "" {
+		ctxResource.Namespace = "default"
+	}
+	okteto.AddKubernetesContext(ctxResource.Context, ctxResource.Namespace, "")
+	return nil
 }
