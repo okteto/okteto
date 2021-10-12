@@ -16,7 +16,6 @@ package okteto
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -44,17 +43,17 @@ var CurrentStore *OktetoContextStore
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
-	Name            string               `json:"name,omitempty"`
-	UserID          string               `json:"-" yaml:"-"`
-	Username        string               `json:"-" yaml:"-"`
-	Token           string               `json:"token,omitempty"`
-	Namespace       string               `json:"namespace,omitempty"`
-	Cfg             *clientcmdapi.Config `json:"-" yaml:"-"`
-	Buildkit        string               `json:"-" yaml:"-"`
-	Registry        string               `json:"-" yaml:"-"`
-	Certificate     string               `json:"-" yaml:"-"`
-	GlobalNamespace string               `json:"-" yaml:"-"`
-	Analytics       bool                 `json:"-" yaml:"-"`
+	Name            string               `json:"name,omitempty" yaml:"name,omitempty"`
+	UserID          string               `json:"-" yaml:"userID"`
+	Username        string               `json:"-" yaml:"username"`
+	Token           string               `json:"token,omitempty" yaml:"token"`
+	Namespace       string               `json:"namespace,omitempty" yaml:"namespace"`
+	Cfg             *clientcmdapi.Config `json:"-" yaml:"cfg""`
+	Buildkit        string               `json:"buildkit" yaml:"buildkit"`
+	Registry        string               `json:"-" yaml:"registry"`
+	Certificate     string               `json:"certificate" yaml:"certificate"`
+	GlobalNamespace string               `json:"-" yaml:"globalNamespace"`
+	Analytics       bool                 `json:"-" yaml:"analytics"`
 }
 
 func ContextWithOktetoEnvVars(ctx context.Context, ctxResource *model.ContextResource) {
@@ -68,9 +67,13 @@ func ContextWithOktetoEnvVars(ctx context.Context, ctxResource *model.ContextRes
 		}
 		log.Infof("Using 'OKTETO_TOKEN' to access %s", ctxResource.Context)
 		ctxStore := ContextStore()
-		ctxStore.Contexts[ctxResource.Context] = &OktetoContext{
-			Name:  ctxResource.Context,
-			Token: ctxResource.Token,
+		if okCtx, ok := ctxStore.Contexts[ctxResource.Context]; ok {
+			okCtx.Token = ctxResource.Token
+		} else {
+			ctxStore.Contexts[ctxResource.Context] = &OktetoContext{
+				Name:  ctxResource.Context,
+				Token: ctxResource.Token,
+			}
 		}
 		ctxStore.CurrentContext = ctxResource.Context
 		return
@@ -86,10 +89,14 @@ func ContextWithOktetoEnvVars(ctx context.Context, ctxResource *model.ContextRes
 	k8sContext := UrlToKubernetesContext(token.URL)
 	if ctxResource.Context == k8sContext || ctxResource.Context == "" && kubeconfig.CurrentContext(config.GetKubeconfigPath()) == k8sContext {
 		ctxStore := ContextStore()
-		ctxStore.Contexts[token.URL] = &OktetoContext{
-			Name:      token.URL,
-			Namespace: kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
-			Token:     token.Token,
+		if okCtx, ok := ctxStore.Contexts[token.URL]; ok {
+			okCtx.Token = ctxResource.Token
+		} else {
+			ctxStore.Contexts[token.URL] = &OktetoContext{
+				Name:      token.URL,
+				Namespace: kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
+				Token:     token.Token,
+			}
 		}
 		ctxStore.CurrentContext = token.URL
 		if err := WriteOktetoContextConfig(); err != nil {
@@ -182,7 +189,6 @@ func HasBeenLogged(oktetoURL string) bool {
 
 func AddOktetoContext(name string, u *User, namespace string) {
 	CurrentStore = ContextStore()
-	certificate := base64.StdEncoding.EncodeToString([]byte(u.Certificate))
 	CurrentStore.Contexts[name] = &OktetoContext{
 		Name:            name,
 		UserID:          u.ID,
@@ -192,7 +198,7 @@ func AddOktetoContext(name string, u *User, namespace string) {
 		GlobalNamespace: u.GlobalNamespace,
 		Buildkit:        u.Buildkit,
 		Registry:        u.Registry,
-		Certificate:     certificate,
+		Certificate:     u.Certificate,
 		Analytics:       u.Analytics,
 	}
 	CurrentStore.CurrentContext = name

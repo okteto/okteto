@@ -26,6 +26,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 const (

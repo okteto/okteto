@@ -53,7 +53,28 @@ func Push(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
+			ctxResource, err := utils.LoadDevContext(devPath)
+			if err != nil {
+				if errors.IsNotExist(err) && len(appName) > 0 {
+					ctxResource = &model.ContextResource{}
+				} else {
+					return err
+				}
+			}
+
+			if err := ctxResource.UpdateNamespace(namespace); err != nil {
+				return err
+			}
+
+			if err := ctxResource.UpdateContext(k8sContext); err != nil {
+				return err
+			}
+
+			if err := contextCMD.Init(ctx, ctxResource); err != nil {
+				return err
+			}
+
+			dev, err := utils.LoadDevOrDefault(devPath, appName)
 			if err != nil {
 				return err
 			}

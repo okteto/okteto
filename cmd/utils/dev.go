@@ -114,6 +114,8 @@ func LoadDevOrDefault(devPath, name string) (*model.Dev, error) {
 			return nil, err
 		}
 		dev.Name = name
+		dev.Namespace = okteto.Context().Namespace
+		dev.Context = okteto.Context().Name
 		return dev, nil
 	}
 
