@@ -29,10 +29,8 @@ import (
 	"text/template"
 	"time"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -107,10 +105,6 @@ func TestApplyPipeline(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := executeApply(ctx, namespace); err != nil {
 		t.Fatalf("Apply action failed: %s", err.Error())
 	}
@@ -135,10 +129,6 @@ func TestBuildActionPipeline(t *testing.T) {
 
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
-	}
-
-	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
-		t.Fatal(err)
 	}
 
 	dir, err := os.MkdirTemp("", "")
@@ -242,10 +232,6 @@ func TestPipelineActions(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := executeDeployPipelineAction(ctx, namespace); err != nil {
 		t.Fatalf("Deploy pipeline action failed: %s", err.Error())
 	}
@@ -301,10 +287,6 @@ func TestPushAction(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := executeApply(ctx, namespace); err != nil {
 		t.Fatalf("Apply action failed: %s", err.Error())
 	}
@@ -334,10 +316,6 @@ func TestStacksActions(t *testing.T) {
 
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
-	}
-
-	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
-		t.Fatal(err)
 	}
 
 	dir, err := os.MkdirTemp("", namespace)

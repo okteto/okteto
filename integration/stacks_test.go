@@ -28,9 +28,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/pkg/model"
 )
 
 const (
@@ -61,10 +58,6 @@ func TestStacks(t *testing.T) {
 		startNamespace := getCurrentNamespace()
 		defer changeToNamespace(ctx, oktetoPath, startNamespace)
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
 			t.Fatal(err)
 		}
 
@@ -208,10 +201,6 @@ func TestCompose(t *testing.T) {
 	}
 
 	log.Printf("created namespace %s \n", namespace)
-
-	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
-		t.Fatal(err)
-	}
 
 	if err := cloneGitRepo(ctx, composeGitRepo); err != nil {
 		t.Fatal(err)

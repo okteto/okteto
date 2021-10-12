@@ -37,14 +37,12 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	ps "github.com/mitchellh/go-ps"
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -290,10 +288,6 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := deploy(ctx, namespace, name, dPath, true); err != nil {
 		t.Fatal(err)
 	}
@@ -344,7 +338,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, _, err := okteto.GetK8sClient()
+	c, _, err := K8sClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -456,10 +450,6 @@ func TestUpStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := deploy(ctx, namespace, name, sfsPath, false); err != nil {
 		t.Fatal(err)
 	}
@@ -509,7 +499,7 @@ func TestUpStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, _, err := okteto.GetK8sClient()
+	c, _, err := K8sClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -586,10 +576,6 @@ func TestDivert(t *testing.T) {
 	defer changeToNamespace(ctx, oktetoPath, startNamespace)
 
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := contextCMD.Init(ctx, &model.ContextResource{Namespace: namespace}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1000,7 +986,7 @@ func killLocalSyncthing() error {
 
 func destroyPod(ctx context.Context, name, namespace string) error {
 	log.Printf("destroying pods of %s", name)
-	c, _, err := okteto.GetK8sClient()
+	c, _, err := K8sClient()
 	if err != nil {
 		return err
 	}
@@ -1208,7 +1194,7 @@ func getOktetoPath(ctx context.Context) (string, error) {
 }
 
 func getDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, error) {
-	client, _, err := okteto.GetK8sClient()
+	client, _, err := K8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1217,7 +1203,7 @@ func getDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, er
 }
 
 func getStatefulset(ctx context.Context, ns, name string) (*appsv1.StatefulSet, error) {
-	client, _, err := okteto.GetK8sClient()
+	client, _, err := K8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1226,7 +1212,7 @@ func getStatefulset(ctx context.Context, ns, name string) (*appsv1.StatefulSet, 
 }
 
 func getJob(ctx context.Context, ns, name string) (*batchv1.Job, error) {
-	client, _, err := okteto.GetK8sClient()
+	client, _, err := K8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1235,7 +1221,7 @@ func getJob(ctx context.Context, ns, name string) (*batchv1.Job, error) {
 }
 
 func getVolume(ctx context.Context, ns, name string) (*corev1.PersistentVolumeClaim, error) {
-	client, _, err := okteto.GetK8sClient()
+	client, _, err := K8sClient()
 	if err != nil {
 		return nil, err
 	}
