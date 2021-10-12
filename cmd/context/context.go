@@ -247,7 +247,7 @@ func Init(ctx context.Context, ctxResource *model.ContextResource) error {
 	}
 
 	showCurrentContext := true
-	if ctxStore.CurrentContext == "" {
+	if !okteto.ContextExists() && ctxStore.CurrentContext == "" {
 		showCurrentContext = false
 		okCtx := Context()
 		if err := okCtx.RunE(nil, nil); err != nil {

@@ -36,6 +36,7 @@ func (c *ContextResource) UpdateNamespace(namespace string) error {
 		if namespace != "" && c.Namespace != namespace {
 			return errors.ErrNamespaceNotMatching
 		}
+		return nil
 	}
 
 	if namespace == "" && os.Getenv("OKTETO_NAMESPACE") != "" {
@@ -51,6 +52,7 @@ func (c *ContextResource) UpdateContext(okCtx string) error {
 		if okCtx != "" && okCtx != c.Context {
 			return errors.ErrContextNotMatching
 		}
+		return nil
 	}
 
 	if okCtx == "" && os.Getenv("OKTETO_URL") != "" {
