@@ -82,9 +82,17 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns, labelSelector str
 			return err
 		}
 		deleteOpts := metav1.DeleteOptions{}
-		return n.dynClient.
+		err = n.dynClient.
 			Resource(mapping.Resource).
 			Namespace(ns).
 			Delete(ctx, m.GetName(), deleteOpts)
+
+		if err != nil {
+			log.Debugf("error deleting '%s' '%s': %s", gvk.Kind, m.GetName(), err)
+			return err
+		}
+
+		log.Debugf("successfully deleted '%s' '%s'", gvk.Kind, m.GetName())
+		return nil
 	}))
 }
