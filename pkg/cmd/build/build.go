@@ -109,7 +109,22 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 		analytics.TrackBuildTransientError(okteto.Context().Buildkit, success)
 		return err
 	}
-
+	
+	_, err = registry.GetImageTagWithDigest(buildOptions.Tag)
+	if err != nil {
+		log.Yellow(`Failed to pull '%s' from the registry:
+		%s,
+		Re-building image ...`, buildOptions.Tag, err.Error())
+		success := true
+		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+		if err != nil {
+			success = false
+			log.Infof("Failed to build image: %s", err.Error())
+		}
+		err = registry.GetErrorMessage(err, buildOptions.Tag)
+		analytics.TrackBuildPullError(okteto.Context().Buildkit, success)
+		return err
+	}
 	err = registry.GetErrorMessage(err, buildOptions.Tag)
 	return err
 }
