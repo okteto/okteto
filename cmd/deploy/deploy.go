@@ -216,8 +216,13 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 			return
 		}
 
-		// Set the right bearer token based on the original kubeconfig
-		r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", clusterConfig.BearerToken))
+		// Set the right bearer token based on the original kubeconfig. Authorization header should not be sent
+		// if clusterConfig.BearerToken is empty
+		if clusterConfig.BearerToken != "" {
+			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", clusterConfig.BearerToken))
+		} else {
+			r.Header.Del("Authorization")
+		}
 
 		// Modify all resources updated or created to include the label.
 		if r.Method == "PUT" || r.Method == "POST" {
