@@ -780,7 +780,9 @@ func translateStorageClass(className string) *string {
 func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 	result := []apiv1.EnvVar{}
 	for _, e := range svc.Environment {
-		result = append(result, apiv1.EnvVar{Name: e.Name, Value: e.Value})
+		if e.Value != "" && e.Name != "" {
+			result = append(result, apiv1.EnvVar{Name: e.Name, Value: e.Value})
+		}
 	}
 	return result
 }
