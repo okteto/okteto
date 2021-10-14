@@ -274,6 +274,9 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, okt
 		OutputMode: progress,
 	}
 	if err := build.Run(ctx, dev.Namespace, buildOptions); err != nil {
+		if registry.IsAlreadyBuiltInGlobalRegistry(err) {
+			return buildTag, nil
+		}
 		return "", err
 	}
 

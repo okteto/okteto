@@ -173,6 +173,10 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			OutputMode: "tty",
 		}
 		if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
+			if registry.IsAlreadyBuiltInGlobalRegistry(err) {
+				log.Success("Image for service '%s' already pushed to global registry", name)
+				return hasBuiltSomething, nil
+			}
 			return hasBuiltSomething, err
 		}
 		svc.SetLastBuiltAnnotation()
@@ -219,6 +223,10 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				OutputMode: "tty",
 			}
 			if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
+				if registry.IsAlreadyBuiltInGlobalRegistry(err) {
+					log.Success("Image for service '%s' already pushed to global registry", name)
+					return hasAddedAnyVolumeMounts, nil
+				}
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.SetLastBuiltAnnotation()

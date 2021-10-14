@@ -396,6 +396,10 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		OutputMode: "tty",
 	}
 	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildOptions); err != nil {
+		if registry.IsAlreadyBuiltInGlobalRegistry(err) {
+			up.Dev.Image.Name = imageTag
+			return nil
+		}
 		return err
 	}
 	for _, s := range up.Dev.Services {
