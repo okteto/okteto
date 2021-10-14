@@ -63,12 +63,12 @@ type SelectorItem struct {
 	Enable bool
 }
 
-func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
-	clusters := []SelectorItem{
-		{
-			Label:  "Okteto contexts:",
-			Enable: false,
-		},
+var (
+	oktetoContextSelection = SelectorItem{
+		Label:  "Okteto contexts:",
+		Enable: false,
+	}
+	defaultOktetoContexts = []SelectorItem{
 		{
 			Label:  "Okteto Cloud",
 			Enable: true,
@@ -78,33 +78,40 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 			Enable: true,
 		},
 	}
+	k8sContextSelection = SelectorItem{
+		Label:  "Kubernetes contexts:",
+		Enable: false,
+	}
+)
+
+func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
+	k8sClusters := make([]string, 0)
 	if !ctxOptions.OnlyOkteto {
-		k8sClusters := getKubernetesContextList()
-		if len(k8sClusters) > 0 {
+		k8sClusters = getKubernetesContextList()
+	}
+	clusters := make([]SelectorItem, 0)
+	if len(k8sClusters) > 0 {
+		clusters = append(clusters, oktetoContextSelection)
+	}
+	clusters = append(clusters, defaultOktetoContexts...)
+
+	if len(k8sClusters) > 0 {
+		clusters = append(clusters, k8sContextSelection)
+		for _, k8sCluster := range k8sClusters {
 			clusters = append(clusters, SelectorItem{
-				Label:  "Kubernetes contexts:",
-				Enable: false,
+				Label:  k8sCluster,
+				Enable: true,
 			})
-			for _, k8sCluster := range k8sClusters {
-				clusters = append(clusters, SelectorItem{
-					Label:  k8sCluster,
-					Enable: true,
-				})
-			}
 		}
+
 	}
 	return clusters
 }
 
 func AskForOptions(options []SelectorItem, label string) (string, error) {
-	selectedTemplate := "{{if .Enable}} ✓  {{ .Label | oktetoblue }}{{else}}{{ .Label | oktetoblue}}{{end}}"
-	activeTemplate := fmt.Sprintf("{{if .Enable}}  %s {{ .Label | oktetoblue }}{{else}}{{ .Label | oktetoblue}}{{end}}", promptui.IconSelect)
-	inactiveTemplate := "{{if .Enable}}    {{ .Label | oktetoblue}}{{else}}• {{ .Label }}{{end}}"
-	if runtime.GOOS == "windows" {
-		selectedTemplate = "{{if .Enable}} ✓  {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}"
-		activeTemplate = fmt.Sprintf("{{if .Enable}}  %s {{ .Label | blue }}{{else}}{{ .Label | blue}}{{end}}", promptui.IconSelect)
-		inactiveTemplate = "{{if .Enable}}    {{ .Label | blue}}{{else}}• {{ .Label }}{{end}}"
-	}
+	selectedTemplate := getSelectedTemplate()
+	activeTemplate := getActiveTemplate(options)
+	inactiveTemplate := getInactiveTemplate(options)
 
 	prompt := OktetoSelector{
 		Label: label,
@@ -438,4 +445,36 @@ func (s *stdout) Write(b []byte) (int, error) {
 // Close implements an io.WriterCloser over os.Stderr.
 func (s *stdout) Close() error {
 	return os.Stderr.Close()
+}
+
+func getSelectedTemplate() string {
+	result := "✓  {{ .Label | oktetoblue }}"
+	result = changeColorForWindows(result)
+	return result
+}
+
+func getActiveTemplate(options []SelectorItem) string {
+	whitespaces := ""
+	if len(options) > 2 {
+		whitespaces = strings.Repeat(" ", 2)
+	}
+	result := fmt.Sprintf("%s%s {{ .Label | oktetoblue }}", whitespaces, promptui.IconSelect)
+	result = changeColorForWindows(result)
+	return result
+}
+
+func getInactiveTemplate(options []SelectorItem) string {
+	whitespaces := strings.Repeat(" ", 2)
+	if len(options) > 2 {
+		whitespaces = strings.Repeat(" ", 4)
+	}
+	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label | oktetoblue}}{{else}}• {{ .Label }}{{end}}", whitespaces)
+	result = changeColorForWindows(result)
+	return result
+}
+func changeColorForWindows(template string) string {
+	if runtime.GOOS == "windows" {
+		template = strings.ReplaceAll(template, "oktetoblue", "blue")
+	}
+	return template
 }
