@@ -33,7 +33,7 @@ import (
 const (
 	stackGitRepo     = "git@github.com:okteto/stacks-getting-started.git"
 	stackGitFolder   = "stacks-getting-started"
-	stackManifest    = "okteto-stack.yml"
+	stackManifest    = "docker-compose.yml"
 	composeGitRepo   = "git@github.com:okteto/flask-producer-consumer.git"
 	composeGitFolder = "flask-producer-consumer"
 )
@@ -75,7 +75,7 @@ func TestStacks(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		log.Printf("deployed stack using %s \n", stackManifest)
+		log.Printf("deployed stack using \n")
 
 		endpoint := fmt.Sprintf("https://vote-%s.cloud.okteto.net", namespace)
 		content, err := getContent(endpoint, 150, nil)
