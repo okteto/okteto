@@ -288,6 +288,47 @@ func TestDestroyWithoutError(t *testing.T) {
 			},
 		},
 		{
+			name:        "WithSeveralHelmSecretsWithoutManifest",
+			getManifest: getManifestWithError,
+			secrets: []v1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-1",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-2",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "another-helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-3",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "last-helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+			},
+			want: []string{
+				fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+				fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+			},
+		},
+		{
 			name:        "WithHelmSecretsWithManifest",
 			getManifest: getFakeManifest,
 			secrets: []v1.Secret{
@@ -303,6 +344,48 @@ func TestDestroyWithoutError(t *testing.T) {
 				},
 			},
 			want: append(fakeManifest.Destroy, fmt.Sprintf(helmUninstallCommand, "helm-app")),
+		},
+		{
+			name:        "WithSeveralHelmSecretsWithManifest",
+			getManifest: getFakeManifest,
+			secrets: []v1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-1",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-2",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "another-helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-3",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "last-helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+			},
+			want: append(
+				fakeManifest.Destroy,
+				fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+				fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+			),
 		},
 	}
 

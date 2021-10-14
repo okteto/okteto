@@ -38,7 +38,7 @@ func (fc *fakeKubeConfig) Read() (*rest.Config, error) {
 	return nil, nil
 }
 
-func (fc *fakeKubeConfig) Modify(ctx context.Context, port int, sessionToken string) error {
+func (fc *fakeKubeConfig) Modify(ctx context.Context, port int, sessionToken, tempKubeconfigFile string) error {
 	return fc.errOnModify
 }
 

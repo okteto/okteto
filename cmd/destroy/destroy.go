@@ -149,30 +149,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 	deployedBySelector := labels.NewSelector().Add(*deployedByLs).String()
 
-	sList, err := dc.secrets.List(ctx, opts.Namespace, deployedBySelector)
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("checking if application installed something with helm")
-	var helmReleaseName string
-	for _, s := range sList {
-		if s.Type == model.HelmSecretType && s.Labels[ownerLabel] == helmOwner {
-			if helmReleaseName = s.Labels[nameLabel]; helmReleaseName != "" {
-				break
-			}
-		}
-	}
-
-	// If the application to be destroyed was deployed with helm, we try to uninstall it to avoid to leave orphan release resources
-	if helmReleaseName != "" {
-		log.Debugf("uninstalling helm release %s", helmReleaseName)
-		cmd := fmt.Sprintf(helmUninstallCommand, helmReleaseName)
-		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
-			log.Errorf("could not uninstall helm release '%s': %s", helmReleaseName, err)
-			if !opts.ForceDestroy {
-				return err
-			}
+	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
+		if !opts.ForceDestroy {
+			return err
 		}
 	}
 
@@ -183,6 +162,40 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	return commandErr
+}
+
+func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts *Options, labelSelector string) error {
+	sList, err := dc.secrets.List(ctx, opts.Namespace, labelSelector)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("checking if application installed something with helm")
+	helmReleases := map[string]bool{}
+	for _, s := range sList {
+		if s.Type == model.HelmSecretType && s.Labels[ownerLabel] == helmOwner {
+			helmReleaseName, ok := s.Labels[nameLabel]
+			if !ok {
+				continue
+			}
+
+			helmReleases[helmReleaseName] = true
+		}
+	}
+
+	// If the application to be destroyed was deployed with helm, we try to uninstall it to avoid to leave orphan release resources
+	for releaseName := range helmReleases {
+		log.Debugf("uninstalling helm release %s", releaseName)
+		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)
+		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
+			log.Errorf("could not uninstall helm release '%s': %s", releaseName, err)
+			if !opts.ForceDestroy {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // This will probably will be moved to a common place when we implement the full dev spec
