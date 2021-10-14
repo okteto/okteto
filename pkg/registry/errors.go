@@ -41,11 +41,6 @@ func GetErrorMessage(err error, tag string) error {
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
-	case IsAlreadyBuiltInGlobalRegistry(err):
-		err = okErrors.UserError{
-			E:    fmt.Errorf("global registry: image already built in global registry"),
-			Hint: fmt.Sprintf("You can force the build by okteto build -t %s --no-cache", tag),
-		}
 	default:
 		err = okErrors.UserError{
 			E: fmt.Errorf("error building image '%s': %s", tag, err.Error()),
@@ -93,5 +88,5 @@ func IsBuildkitServiceUnavailable(err error) bool {
 
 // IsAlreadyBuiltInGlobalRegistry returns true when the error is because the image is already built in the global registry
 func IsAlreadyBuiltInGlobalRegistry(err error) bool {
-	return strings.Contains(err.Error(), "global registry: image already built in global registry")
+	return strings.Contains(err.Error(), "build skipped")
 }
