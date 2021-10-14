@@ -39,32 +39,51 @@ var (
 )
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
-func LoadStack(name, stackPath string) (*model.Stack, error) {
-	var isCompose bool
-	if model.FileExists(stackPath) {
-		if isPathAComposeFile(stackPath) {
-			isCompose = true
-		}
-		return model.GetStack(name, stackPath, isCompose)
-	}
+func LoadStack(name string, stackPaths []string) (*model.Stack, error) {
+	var resultStack *model.Stack
+	for _, stackPath := range stackPaths {
+		var isCompose bool
+		if model.FileExists(stackPath) {
+			if isPathAComposeFile(stackPath) {
+				isCompose = true
+			}
+			stack, err := model.GetStack(name, stackPath, isCompose)
+			if err != nil {
+				return nil, err
+			}
 
-	if stackPath == DefaultStackManifest {
-		for _, secondaryStackManifest := range secondaryStackManifests {
-			manifestPath := filepath.Join(secondaryStackManifest...)
-			if model.FileExists(manifestPath) {
-				if isDeprecatedExtension(manifestPath) {
-					deprecatedFile := filepath.Base(manifestPath)
-					log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
+			resultStack = resultStack.Merge(stack)
+			continue
+		}
+
+		if stackPath == DefaultStackManifest {
+			for _, secondaryStackManifest := range secondaryStackManifests {
+				manifestPath := filepath.Join(secondaryStackManifest...)
+				if model.FileExists(manifestPath) {
+					if isDeprecatedExtension(manifestPath) {
+						deprecatedFile := filepath.Base(manifestPath)
+						log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
+					}
+					if isPathAComposeFile(manifestPath) {
+						isCompose = true
+					}
+					stack, err := model.GetStack(name, manifestPath, isCompose)
+					if err != nil {
+						return nil, err
+					}
+
+					resultStack.Merge(stack)
+					continue
 				}
-				if isPathAComposeFile(manifestPath) {
-					isCompose = true
-				}
-				return model.GetStack(name, manifestPath, isCompose)
 			}
 		}
+		return nil, fmt.Errorf("'%s' does not exist", stackPath)
 	}
 
-	return nil, fmt.Errorf("'%s' does not exist", stackPath)
+	if err := resultStack.Validate(); err != nil {
+		return nil, err
+	}
+	return resultStack, nil
 }
 
 func isPathAComposeFile(path string) bool {

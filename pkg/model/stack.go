@@ -203,10 +203,6 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 		delete(s.Endpoints, "")
 	}
 
-	if err := s.validate(); err != nil {
-		return nil, err
-	}
-
 	stackDir, err := filepath.Abs(filepath.Dir(stackPath))
 	if err != nil {
 		return nil, err
@@ -312,7 +308,7 @@ func (svc *Service) IgnoreSyncVolumes(s *Stack) {
 	svc.VolumeMounts = notIgnoredVolumes
 }
 
-func (s *Stack) validate() error {
+func (s *Stack) Validate() error {
 	if err := validateStackName(s.Name); err != nil {
 		return fmt.Errorf("Invalid stack name: %s", err)
 	}
@@ -462,4 +458,108 @@ func (svc *Service) IsStatefulset() bool {
 }
 func (svc *Service) IsJob() bool {
 	return svc.RestartPolicy == apiv1.RestartPolicyNever || (svc.RestartPolicy == apiv1.RestartPolicyOnFailure && svc.BackOffLimit != 0)
+}
+
+func (stack *Stack) Merge(otherStack *Stack) *Stack {
+	if stack == nil {
+		return otherStack
+	}
+	if otherStack.Namespace != "" {
+		stack.Namespace = otherStack.Namespace
+	}
+	if len(otherStack.Endpoints) > 0 {
+		stack.Endpoints = otherStack.Endpoints
+	}
+	if len(otherStack.Volumes) > 0 {
+		stack.Volumes = otherStack.Volumes
+	}
+	stack = stack.mergeServices(otherStack)
+	return stack
+}
+
+func (stack *Stack) mergeServices(otherStack *Stack) *Stack {
+	for svcName, svc := range otherStack.Services {
+		if _, ok := stack.Services[svcName]; !ok {
+			stack.Services[svcName] = svc
+		}
+		resultSvc := stack.Services[svcName]
+		if svc.Image != "" {
+			resultSvc.Image = svc.Image
+		}
+		if svc.RestartPolicy != apiv1.RestartPolicyAlways {
+			resultSvc.RestartPolicy = svc.RestartPolicy
+		}
+		if svc.Workdir != "" {
+			resultSvc.Workdir = svc.Workdir
+		}
+		if svc.Replicas != 1 {
+			resultSvc.Replicas = svc.Replicas
+		}
+		if svc.StopGracePeriod != 0 {
+			resultSvc.StopGracePeriod = svc.StopGracePeriod
+		}
+		if svc.BackOffLimit != 0 {
+			resultSvc.BackOffLimit = svc.BackOffLimit
+		}
+		if svc.Build != nil {
+			resultSvc.Build = svc.Build
+		}
+		if svc.Healtcheck != nil {
+			resultSvc.Healtcheck = svc.Healtcheck
+		}
+
+		if len(svc.CapAdd) > 0 {
+			resultSvc.CapAdd = svc.CapAdd
+		}
+		if len(svc.CapDrop) > 0 {
+			resultSvc.CapDrop = svc.CapDrop
+		}
+
+		if len(svc.Entrypoint.Values) > 0 {
+			resultSvc.Entrypoint = svc.Entrypoint
+		}
+		if len(svc.Command.Values) > 0 {
+			resultSvc.Command = svc.Command
+		}
+		if len(svc.EnvFiles) > 0 {
+			resultSvc.EnvFiles = svc.EnvFiles
+		}
+		if len(svc.DependsOn) > 0 {
+			resultSvc.DependsOn = svc.DependsOn
+		}
+		if len(svc.Environment) > 0 {
+			resultSvc.Environment = svc.Environment
+		}
+		if len(svc.Labels) > 0 {
+			resultSvc.Labels = svc.Labels
+		}
+		if len(svc.Annotations) > 0 {
+			resultSvc.Annotations = svc.Annotations
+		}
+		if len(svc.Ports) > 0 {
+			resultSvc.Ports = svc.Ports
+		}
+		if len(svc.Volumes) > 0 {
+			resultSvc.Volumes = svc.Volumes
+			resultSvc.VolumeMounts = svc.VolumeMounts
+		}
+		if !svc.Resources.IsDefaultValue() {
+			resultSvc.Resources = svc.Resources
+		}
+	}
+	return stack
+}
+
+func (r *StackResources) IsDefaultValue() bool {
+	if r == nil {
+		return true
+	}
+	if r.Limits.IsDefaultValue() && r.Requests.IsDefaultValue() {
+		return true
+	}
+	return false
+}
+
+func (svcResources ServiceResources) IsDefaultValue() bool {
+	return svcResources.CPU.Value.IsZero() && svcResources.Memory.Value.IsZero() && svcResources.Storage.Size.Value.IsZero() && svcResources.Storage.Class == ""
 }
