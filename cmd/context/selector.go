@@ -204,9 +204,6 @@ func (s OktetoSelector) Run() (string, error) {
 		help := s.renderHelp()
 		sb.Write(help)
 
-		label := render(s.OktetoTemplates.label, s.Label)
-		sb.Write(label)
-
 		items, idx := s.list.Items()
 		last := len(items) - 1
 
