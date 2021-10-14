@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"strings"
 	"text/template"
 
 	"github.com/chzyer/readline"
@@ -172,7 +173,11 @@ func (s OktetoSelector) Run() (string, error) {
 	}
 
 	sb := screenbuf.New(rl)
-	s.list.SetCursor(1)
+	startPosition, err := s.getInitialPosition()
+	if err != nil {
+		return "", err
+	}
+	s.list.SetCursor(startPosition)
 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
 		switch {
@@ -185,12 +190,21 @@ func (s OktetoSelector) Run() (string, error) {
 			}
 			s.list.Next()
 		case key == s.Keys.Prev.Code:
-			prevItemIndex := s.list.Index() - 1
-			if prevItemIndex > 0 {
-				if !s.Items[prevItemIndex].Enable {
-					s.list.Prev()
-				}
+			currentIdx := s.list.Index()
+			prevItemIndex := currentIdx - 1
+			foundNewActive := false
+			for prevItemIndex > -1 {
 				s.list.Prev()
+				if !s.Items[prevItemIndex].Enable {
+					prevItemIndex -= 1
+					continue
+				} else {
+					foundNewActive = true
+					break
+				}
+			}
+			if !foundNewActive {
+				s.list.SetCursor(currentIdx)
 			}
 
 		case key == s.Keys.PageUp.Code:
@@ -371,6 +385,17 @@ func (s *OktetoSelector) prepareTemplates() error {
 	s.OktetoTemplates = tpls
 
 	return nil
+}
+
+func (s OktetoSelector) getInitialPosition() (int, error) {
+	idx := 0
+	for _, item := range s.Items {
+		if item.Enable {
+			return idx, nil
+		}
+		idx += 1
+	}
+	return 0, fmt.Errorf("non selectable item is available")
 }
 
 func (s *OktetoSelector) renderDetails(item interface{}) [][]byte {
