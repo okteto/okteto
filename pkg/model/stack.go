@@ -481,6 +481,7 @@ func (stack *Stack) mergeServices(otherStack *Stack) *Stack {
 	for svcName, svc := range otherStack.Services {
 		if _, ok := stack.Services[svcName]; !ok {
 			stack.Services[svcName] = svc
+			continue
 		}
 		resultSvc := stack.Services[svcName]
 		if svc.Image != "" {
