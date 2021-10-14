@@ -49,7 +49,7 @@ func LoadStack(name string, stackPaths []string) (*model.Stack, error) {
 		if err != nil {
 			return nil, err
 		}
-		resultStack.Merge(stack)
+		resultStack = resultStack.Merge(stack)
 	} else {
 		for _, stackPath := range stackPaths {
 			if model.FileExists(stackPath) {
