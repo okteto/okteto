@@ -22,7 +22,7 @@ func (k *kubeConfig) Read() (*rest.Config, error) {
 	return clientcmd.BuildConfigFromKubeconfigGetter("", k.getCMDAPIConfig)
 }
 
-func (k *kubeConfig) Modify(ctx context.Context, port int, sessionToken string) error {
+func (k *kubeConfig) Modify(ctx context.Context, port int, sessionToken, destKubeconfigFile string) error {
 	clientCfg, err := k.getCMDAPIConfig()
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func (k *kubeConfig) Modify(ctx context.Context, port int, sessionToken string) 
 	clusterInfo.CertificateAuthorityData = cert
 
 	// Save on disk the config changes
-	if err := clientcmd.WriteToFile(*clientCfg, tempKubeConfig); err != nil {
+	if err := clientcmd.WriteToFile(*clientCfg, destKubeconfigFile); err != nil {
 		log.Errorf("could not modify the k8s config: %s", err)
 		return err
 	}

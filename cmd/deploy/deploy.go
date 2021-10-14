@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-var tempKubeConfig = fmt.Sprintf("%s/.okteto/kubeconfig", config.GetUserHomeDir())
+var tempKubeConfigTemplate = "%s/.okteto/kubeconfig-%s"
 
 // Options options for deploy command
 type Options struct {
@@ -37,7 +37,7 @@ type Options struct {
 
 type kubeConfigHandler interface {
 	Read() (*rest.Config, error)
-	Modify(ctx context.Context, port int, sessionToken string) error
+	Modify(ctx context.Context, port int, sessionToken, destKubeconfigFile string) error
 }
 
 type proxyInterface interface {
@@ -50,9 +50,10 @@ type proxyInterface interface {
 type deployCommand struct {
 	getManifest func(cwd, name, filename string) (*utils.Manifest, error)
 
-	proxy      proxyInterface
-	kubeconfig kubeConfigHandler
-	executor   utils.ManifestExecutor
+	proxy              proxyInterface
+	kubeconfig         kubeConfigHandler
+	executor           utils.ManifestExecutor
+	tempKubeconfigFile string
 }
 
 //Deploy deploys the okteto manifest
@@ -129,6 +130,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 					port:  port,
 					token: sessionToken,
 				}, s),
+				tempKubeconfigFile: fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), options.Name),
 			}
 			return c.runDeploy(ctx, cwd, options)
 		},
@@ -142,7 +144,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 }
 
 func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Options) error {
-	if err := dc.kubeconfig.Modify(ctx, dc.proxy.GetPort(), dc.proxy.GetToken()); err != nil {
+	log.Debugf("creating temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
+	if err := dc.kubeconfig.Modify(ctx, dc.proxy.GetPort(), dc.proxy.GetToken(), dc.tempKubeconfigFile); err != nil {
 		log.Errorf("could not create temporal kubeconfig %s", err)
 		return err
 	}
@@ -157,15 +160,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	log.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()
 
-	defer func() {
-		log.Debugf("stopping local server...")
-		if err := dc.proxy.Shutdown(ctx); err != nil {
-			log.Errorf("could not stop local server: %s", err)
-		}
-	}()
+	defer dc.cleanUp(ctx)
 
 	// Set variables and KUBECONFIG environment variable as environment for the commands to be executed
-	env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", tempKubeConfig))
+	env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", dc.tempKubeconfigFile))
 
 	for _, command := range manifest.Deploy {
 		if err := dc.executor.Execute(command, env); err != nil {
@@ -175,6 +173,18 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	}
 
 	return nil
+}
+
+func (dc *deployCommand) cleanUp(ctx context.Context) {
+	log.Debugf("removing temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
+	if err := os.Remove(dc.tempKubeconfigFile); err != nil {
+		log.Errorf("could not remove temporal kubeconfig file: %s", err)
+	}
+
+	log.Debugf("stopping local server...")
+	if err := dc.proxy.Shutdown(ctx); err != nil {
+		log.Errorf("could not stop local server: %s", err)
+	}
 }
 
 // This will probably will be moved to a common place when we implement the full dev spec
