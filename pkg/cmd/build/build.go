@@ -110,6 +110,21 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 		return err
 	}
 
+	_, err = registry.GetImageTagWithDigest(buildOptions.Tag)
+	if err != nil {
+		log.Yellow(`Failed to push '%s' metadata to the registry:
+		%s,
+		Retrying ...`, buildOptions.Tag, err.Error())
+		success := true
+		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+		if err != nil {
+			success = false
+			log.Infof("Failed to build image: %s", err.Error())
+		}
+		err = registry.GetErrorMessage(err, buildOptions.Tag)
+		analytics.TrackBuildPullError(okteto.Context().Buildkit, success)
+		return err
+	}
 	err = registry.GetErrorMessage(err, buildOptions.Tag)
 	return err
 }
