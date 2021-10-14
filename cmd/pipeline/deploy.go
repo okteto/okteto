@@ -89,19 +89,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if skipIfExists {
-				oktetoClient, err := okteto.NewOktetoClient()
-				if err != nil {
-					return err
-				}
-				pipeline, err := oktetoClient.GetPipelineByRepository(ctx, repository)
-				if err == nil {
-					log.Information("Pipeline URL: %s", getPipelineURL(pipeline.GitDeploy))
-					log.Success("Pipeline '%s' was already deployed", name)
-					return nil
-				}
-				if !errors.IsNotFound(err) {
-					return err
-				}
+				variables = append(variables, "OKTETO_SKIP_COMMIT_IF_DEPLOYED=true")
 			}
 
 			resp, err := deployPipeline(ctx, name, repository, branch, filename, variables)
