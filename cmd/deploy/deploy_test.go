@@ -38,7 +38,7 @@ func (*fakeKubeConfig) Read() (*rest.Config, error) {
 	return nil, nil
 }
 
-func (fc *fakeKubeConfig) Modify(_ context.Context, _ int, _, _ string) error {
+func (fc *fakeKubeConfig) Modify(_ int, _, _ string) error {
 	return fc.errOnModify
 }
 

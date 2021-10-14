@@ -37,7 +37,7 @@ type Options struct {
 
 type kubeConfigHandler interface {
 	Read() (*rest.Config, error)
-	Modify(ctx context.Context, port int, sessionToken, destKubeconfigFile string) error
+	Modify(port int, sessionToken, destKubeconfigFile string) error
 }
 
 type proxyInterface interface {
@@ -149,7 +149,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Options) error {
 	log.Debugf("creating temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
-	if err := dc.kubeconfig.Modify(ctx, dc.proxy.GetPort(), dc.proxy.GetToken(), dc.tempKubeconfigFile); err != nil {
+	if err := dc.kubeconfig.Modify(dc.proxy.GetPort(), dc.proxy.GetToken(), dc.tempKubeconfigFile); err != nil {
 		log.Errorf("could not create temporal kubeconfig %s", err)
 		return err
 	}

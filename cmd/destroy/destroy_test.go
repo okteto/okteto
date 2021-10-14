@@ -36,7 +36,7 @@ type fakeExecutor struct {
 	executed []string
 }
 
-func (fd *fakeDestroyer) DestroyWithLabel(_ context.Context, _s string, _ namespaces.DeleteAllOptions) error {
+func (fd *fakeDestroyer) DestroyWithLabel(_ context.Context, _ string, _ namespaces.DeleteAllOptions) error {
 	if fd.err != nil {
 		return fd.err
 	}

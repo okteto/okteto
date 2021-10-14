@@ -1,7 +1,6 @@
 package deploy
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -22,7 +21,7 @@ func (k *kubeConfig) Read() (*rest.Config, error) {
 	return clientcmd.BuildConfigFromKubeconfigGetter("", k.getCMDAPIConfig)
 }
 
-func (k *kubeConfig) Modify(ctx context.Context, port int, sessionToken, destKubeconfigFile string) error {
+func (k *kubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) error {
 	clientCfg, err := k.getCMDAPIConfig()
 	if err != nil {
 		return err
