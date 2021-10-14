@@ -29,7 +29,7 @@ import (
 
 //Destroy destroys a stack
 func Destroy(ctx context.Context) *cobra.Command {
-	var stackPath string
+	var stackPath []string
 	var name string
 	var namespace string
 	var rm bool
@@ -75,7 +75,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&stackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
+	cmd.Flags().StringArrayVarP(&stackPath, "file", "f", []string{utils.DefaultStackManifest}, "path to the stack manifest file")
 	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the stack name")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is destroyed")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
