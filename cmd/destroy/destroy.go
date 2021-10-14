@@ -61,7 +61,8 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:    "destroy",
-		Short:  "Executes the list of commands specified in the Okteto manifest to destroy the application",
+		Short:  `Destroys everything created by "okteto deploy" command`,
+		Long:   `Destroys everything created by "okteto deploy" command. You can also include a "destroy" section in your Okteto manifest with a list of commands to be executed when the application is destroyed`,
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

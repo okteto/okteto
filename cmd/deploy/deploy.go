@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
@@ -25,7 +26,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const tempKubeConfig = "/tmp/.okteto/kubeconfig"
+var tempKubeConfig = fmt.Sprintf("%s/.okteto/kubeconfig", config.GetUserHomeDir())
 
 // Options options for deploy command
 type Options struct {
@@ -133,7 +134,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.Name, "name", "a", "", "application name")
+	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "filename", "f", "", "path to the manifest file")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 
@@ -166,16 +167,14 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	// Set variables and KUBECONFIG environment variable as environment for the commands to be executed
 	env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", tempKubeConfig))
 
-	var commandErr error
 	for _, command := range manifest.Deploy {
 		if err := dc.executor.Execute(command, env); err != nil {
 			log.Errorf("error executing command '%s': %s", command, err.Error())
-			commandErr = err
-			break
+			return err
 		}
 	}
 
-	return commandErr
+	return nil
 }
 
 // This will probably will be moved to a common place when we implement the full dev spec

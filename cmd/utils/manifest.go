@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v2"
 )
 
@@ -146,7 +147,7 @@ func getChartsSubPath(basePath, src string) string {
 	// Files will be checked in the order defined in the list
 	for _, name := range []string{"chart", "charts", "helm/chart", "helm/charts"} {
 		path := filepath.Join(src, name, "Chart.yaml")
-		if fileExists(path) {
+		if model.FileExists(path) {
 			prefix := fmt.Sprintf("%s/", basePath)
 			return strings.TrimPrefix(path, prefix)
 		}
@@ -158,7 +159,7 @@ func getManifestsSubPath(basePath, src string) string {
 	// Files will be checked in the order defined in the list
 	for _, name := range []string{"manifests", "manifests.yml", "manifests.yaml", "kubernetes", "kubernetes.yml", "kubernetes.yaml", "k8s", "k8s.yml", "k8s.yaml"} {
 		path := filepath.Join(src, name)
-		if fileExists(path) {
+		if model.FileExists(path) {
 			prefix := fmt.Sprintf("%s/", basePath)
 			return strings.TrimPrefix(path, prefix)
 		}
@@ -208,14 +209,6 @@ func getOktetoSubPath(basePath, src string) string {
 		}
 	}
 	return ""
-}
-
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	if err != nil && os.IsNotExist(err) {
-		return false
-	}
-	return true
 }
 
 func pathExistsAndDir(path string) bool {
