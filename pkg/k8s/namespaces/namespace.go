@@ -21,6 +21,14 @@ const (
 	volumeKind        = "PersistentVolumeClaim"
 )
 
+// DeleteAllOptions options for delete all operation
+type DeleteAllOptions struct {
+	// LabelSelector selector for resources to be deleted
+	LabelSelector string
+	// IncludeVolumes flag to indicate if volumes have to be deleted or not
+	IncludeVolumes bool
+}
+
 // Namespaces struct to interact with namespaces in k8s
 type Namespaces struct {
 	dynClient  dynamic.Interface
@@ -38,9 +46,9 @@ func NewNamespace(dynClient dynamic.Interface, discClient discovery.DiscoveryInt
 }
 
 // DestroyWithLabel deletes all resources within a namespace
-func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns, labelSelector string, includeVolumes bool) error {
+func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts DeleteAllOptions) error {
 	listOptions := metav1.ListOptions{
-		LabelSelector: labelSelector,
+		LabelSelector: opts.LabelSelector,
 	}
 
 	trip, err := world.NewTrip(n.restConfig, &world.Options{
@@ -73,7 +81,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns, labelSelector str
 			return err
 		}
 		gvk := obj.GetObjectKind().GroupVersionKind()
-		if !includeVolumes && gvk.Kind == volumeKind {
+		if !opts.IncludeVolumes && gvk.Kind == volumeKind {
 			log.Debugf("skipping deletion of pvc '%s'", m.GetName())
 			return nil
 		}

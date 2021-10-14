@@ -227,7 +227,8 @@ func fileExistsAndNotDir(filename string) bool {
 	return !info.IsDir()
 }
 
-func (e *Executor) Execute(command string, env []string) error {
+// Execute executes the specified command adding `env` to the execution environment
+func (*Executor) Execute(command string, env []string) error {
 	log.Information("Running '%s'...", command)
 
 	cmd := exec.Command("bash", "-c", command)
@@ -254,9 +255,5 @@ func (e *Executor) Execute(command string, env []string) error {
 		return err
 	}
 
-	if err := cmd.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.Wait()
 }

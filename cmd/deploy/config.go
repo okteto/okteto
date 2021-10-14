@@ -48,7 +48,7 @@ func (k *kubeConfig) Modify(ctx context.Context, port int, sessionToken, destKub
 	return nil
 }
 
-func (k *kubeConfig) getCMDAPIConfig() (*clientcmdapi.Config, error) {
+func (*kubeConfig) getCMDAPIConfig() (*clientcmdapi.Config, error) {
 	kubeconfigBytes, err := base64.StdEncoding.DecodeString(okteto.Context().Kubeconfig)
 	if err != nil {
 		return nil, err

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -35,7 +36,7 @@ type fakeExecutor struct {
 	executed []string
 }
 
-func (fd *fakeDestroyer) DestroyWithLabel(ctx context.Context, ns, labelSelector string, destroyVolumes bool) error {
+func (fd *fakeDestroyer) DestroyWithLabel(_ context.Context, _s string, _ namespaces.DeleteAllOptions) error {
 	if fd.err != nil {
 		return fd.err
 	}
@@ -44,7 +45,7 @@ func (fd *fakeDestroyer) DestroyWithLabel(ctx context.Context, ns, labelSelector
 	return nil
 }
 
-func (fd *fakeSecretHandler) List(ctx context.Context, ns, labelSelector string) ([]v1.Secret, error) {
+func (fd *fakeSecretHandler) List(_ context.Context, _, _ string) ([]v1.Secret, error) {
 	if fd.err != nil {
 		return nil, fd.err
 	}
@@ -52,7 +53,7 @@ func (fd *fakeSecretHandler) List(ctx context.Context, ns, labelSelector string)
 	return fd.secrets, nil
 }
 
-func (fe *fakeExecutor) Execute(command string, env []string) error {
+func (fe *fakeExecutor) Execute(command string, _ []string) error {
 	fe.executed = append(fe.executed, command)
 	if fe.err != nil {
 		return fe.err

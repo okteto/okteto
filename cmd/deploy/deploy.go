@@ -118,6 +118,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 				IdleTimeout:  120 * time.Second,
 				TLSConfig: &tls.Config{
 					Certificates: []tls.Certificate{cert},
+
+					// Recommended security configuration by DeepSource
+					MinVersion: tls.VersionTLS12,
+					MaxVersion: tls.VersionTLS13,
 				},
 			}
 
@@ -137,7 +141,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "filename", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 
 	return cmd
@@ -163,10 +167,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	defer dc.cleanUp(ctx)
 
 	// Set variables and KUBECONFIG environment variable as environment for the commands to be executed
-	env := append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", dc.tempKubeconfigFile))
+	opts.Variables = append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", dc.tempKubeconfigFile))
 
 	for _, command := range manifest.Deploy {
-		if err := dc.executor.Execute(command, env); err != nil {
+		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Errorf("error executing command '%s': %s", command, err.Error())
 			return err
 		}

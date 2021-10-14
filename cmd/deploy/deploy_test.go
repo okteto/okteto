@@ -34,11 +34,11 @@ type fakeKubeConfig struct {
 	errOnModify error
 }
 
-func (fc *fakeKubeConfig) Read() (*rest.Config, error) {
+func (*fakeKubeConfig) Read() (*rest.Config, error) {
 	return nil, nil
 }
 
-func (fc *fakeKubeConfig) Modify(ctx context.Context, port int, sessionToken, tempKubeconfigFile string) error {
+func (fc *fakeKubeConfig) Modify(_ context.Context, _ int, _, _ string) error {
 	return fc.errOnModify
 }
 
@@ -46,7 +46,7 @@ func (fk *fakeProxy) Start() {
 	fk.started = true
 }
 
-func (fk *fakeProxy) Shutdown(ctx context.Context) error {
+func (fk *fakeProxy) Shutdown(_ context.Context) error {
 	if fk.errOnShutdown != nil {
 		return fk.errOnShutdown
 	}
@@ -63,7 +63,7 @@ func (fk *fakeProxy) GetToken() string {
 	return fk.token
 }
 
-func (fe *fakeExecutor) Execute(command string, env []string) error {
+func (fe *fakeExecutor) Execute(command string, _ []string) error {
 	fe.executed = append(fe.executed, command)
 	if fe.err != nil {
 		return fe.err

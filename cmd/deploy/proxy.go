@@ -44,7 +44,7 @@ func (p *proxy) Start() {
 	go func(s *http.Server) {
 		// Path to cert and key files are empty because cert is provisioned on the tls config struct
 		if err := s.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("could not start proxy server: %s", err)
+			log.Errorf("could not start proxy server: %s", err)
 		}
 	}(p.s)
 }

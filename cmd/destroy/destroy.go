@@ -28,7 +28,7 @@ const (
 )
 
 type destroyer interface {
-	DestroyWithLabel(ctx context.Context, ns, labelSelector string, destroyVolumes bool) error
+	DestroyWithLabel(ctx context.Context, ns string, opts namespaces.DeleteAllOptions) error
 }
 
 type secretHandler interface {
@@ -107,8 +107,8 @@ func Destroy(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.Name, "name", "a", "", "application name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "filename", "f", "", "path to the manifest file")
+	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
 
@@ -156,7 +156,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	log.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
-	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deployedBySelector, opts.DestroyVolumes); err != nil {
+	deleteOpts := namespaces.DeleteAllOptions{
+		LabelSelector:  deployedBySelector,
+		IncludeVolumes: opts.DestroyVolumes,
+	}
+	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		log.Errorf("could not delete all the resources: %s", err)
 		return err
 	}
