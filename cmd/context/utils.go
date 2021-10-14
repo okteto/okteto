@@ -16,6 +16,7 @@ package context
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -62,7 +63,7 @@ func askForOktetoURL() string {
 	if !okteto.IsOktetoURL(octx.Name) {
 		clusterURL = okteto.CloudURL
 	}
-	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", clusterURL)
+	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", strings.TrimSuffix(clusterURL, "/"))
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)
