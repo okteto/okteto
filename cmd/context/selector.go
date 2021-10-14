@@ -192,6 +192,8 @@ func (s OktetoSelector) Run() (string, error) {
 			s.list.PageDown()
 		}
 
+		s.renderLabel(sb)
+
 		help := s.renderHelp()
 		sb.Write(help)
 
@@ -385,6 +387,13 @@ func (s *OktetoSelector) renderDetails(item interface{}) [][]byte {
 	output := buf.Bytes()
 
 	return bytes.Split(output, []byte("\n"))
+}
+
+func (s *OktetoSelector) renderLabel(sb *screenbuf.ScreenBuf) {
+	for _, labelLine := range strings.Split(s.Label, "\n") {
+		labelLineBytes := render(s.OktetoTemplates.label, labelLine)
+		sb.Write(labelLineBytes)
+	}
 }
 
 func (s *OktetoSelector) renderHelp() []byte {
