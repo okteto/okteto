@@ -25,8 +25,8 @@ import (
 
 var (
 	//DefaultStackManifest default okteto stack manifest file
-	DefaultStackManifest    = "okteto-stack.yml"
-	secondaryStackManifests = [][]string{
+	possibleStackManifests = [][]string{
+		{"okteto-stack.yml"},
 		{"okteto-stack.yaml"},
 		{"stack.yml"},
 		{"stack.yaml"},
@@ -87,15 +87,8 @@ func isDeprecatedExtension(stackPath string) bool {
 }
 
 func inferStack(name string) (*model.Stack, error) {
-	if model.FileExists(DefaultStackManifest) {
-		stack, err := getStack(name, DefaultStackManifest)
-		if err != nil {
-			return nil, err
-		}
-		return stack, nil
-	}
-	for _, secondaryStackManifest := range secondaryStackManifests {
-		manifestPath := filepath.Join(secondaryStackManifest...)
+	for _, possibleStackManifest := range possibleStackManifests {
+		manifestPath := filepath.Join(possibleStackManifest...)
 		if model.FileExists(manifestPath) {
 			stack, err := getStack(name, manifestPath)
 			if err != nil {
