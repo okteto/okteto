@@ -1116,3 +1116,67 @@ func Test_translateSvcProbe(t *testing.T) {
 		})
 	}
 }
+
+func Test_translateServiceEnvironment(t *testing.T) {
+	tests := []struct {
+		name     string
+		svc      *model.Service
+		expected []apiv1.EnvVar
+	}{
+		{
+			name: "none",
+			svc: &model.Service{
+				Environment: model.Environment{},
+			},
+			expected: []apiv1.EnvVar{},
+		},
+		{
+			name: "empty value",
+			svc: &model.Service{
+				Environment: model.Environment{
+					model.EnvVar{
+						Name: "DEBUG",
+					},
+				},
+			},
+			expected: []apiv1.EnvVar{},
+		},
+		{
+			name: "empty name",
+			svc: &model.Service{
+				Environment: model.Environment{
+					model.EnvVar{
+						Value: "DEBUG",
+					},
+				},
+			},
+			expected: []apiv1.EnvVar{},
+		},
+		{
+			name: "ok env var",
+			svc: &model.Service{
+				Environment: model.Environment{
+					model.EnvVar{
+						Name:  "DEBUG",
+						Value: "true",
+					},
+				},
+			},
+			expected: []apiv1.EnvVar{
+				{
+					Name:  "DEBUG",
+					Value: "true",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			envs := translateServiceEnvironment(tt.svc)
+			if !reflect.DeepEqual(tt.expected, envs) {
+				t.Fatal("Wrong translation")
+			}
+		})
+	}
+}
