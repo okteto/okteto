@@ -36,6 +36,7 @@ import (
 func Deploy(ctx context.Context) *cobra.Command {
 	var branch string
 	var filename string
+	var file string
 	var name string
 	var repository string
 	var scope string
@@ -94,7 +95,14 @@ func Deploy(ctx context.Context) *cobra.Command {
 				})
 			}
 
-			resp, err := executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, varList, wait, timeout)
+			if filename != "" {
+				log.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
+				if file == "" {
+					file = filename
+				}
+			}
+
+			resp, err := executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, file, varList, wait, timeout)
 			analytics.TrackPreviewDeploy(err == nil)
 			if err != nil {
 				return err
@@ -114,14 +122,16 @@ func Deploy(ctx context.Context) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
-	cmd.Flags().StringVarP(&filename, "filename", "f", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
 	cmd.Flags().StringVarP(&repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&scope, "scope", "s", "personal", "the scope of preview environment to create. Accepted values are ['personal', 'global']")
 	cmd.Flags().StringVarP(&sourceUrl, "sourceUrl", "", "", "the URL of the original pull/merge request.")
 	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringArrayVarP(&variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the preview environment deployment finishes (defaults to false)")
+	cmd.Flags().StringVarP(&file, "file", "f", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
 
+	cmd.Flags().StringVarP(&filename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
+	cmd.Flags().MarkHidden("filename")
 	return cmd
 }
 
