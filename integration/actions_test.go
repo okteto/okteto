@@ -278,11 +278,6 @@ func TestPushAction(t *testing.T) {
 	ctx := context.Background()
 	namespace := getTestNamespace()
 
-	user := okteto.Context().Username
-	if user == "" {
-		t.Fatal("Could not detect any user")
-	}
-
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
@@ -291,7 +286,7 @@ func TestPushAction(t *testing.T) {
 		t.Fatalf("Apply action failed: %s", err.Error())
 	}
 
-	if err := executePushAction(ctx, namespace, user); err != nil {
+	if err := executePushAction(ctx, namespace); err != nil {
 		t.Fatalf("Push action failed: %s", err.Error())
 	}
 
@@ -531,7 +526,7 @@ func executeApply(ctx context.Context, namespace string) error {
 	return nil
 }
 
-func executePushAction(ctx context.Context, namespace, user string) error {
+func executePushAction(ctx context.Context, namespace string) error {
 	dir, err := os.MkdirTemp("", namespace)
 	if err != nil {
 		return err

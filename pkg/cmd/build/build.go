@@ -78,7 +78,7 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 		}
 	}
 
-	if okteto.IsOktetoContext() {
+	if okteto.IsOkteto() {
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)
 		for i := range buildOptions.CacheFrom {

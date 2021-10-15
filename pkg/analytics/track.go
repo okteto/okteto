@@ -295,7 +295,7 @@ func track(event string, success bool, props map[string]interface{}) {
 	if !get().Enabled {
 		return
 	}
-	if !okteto.IsTelemetryEnabled() && !okteto.IsOktetoCloud() {
+	if !okteto.Context().Analytics {
 		return
 	}
 	mpOS := ""

@@ -36,11 +36,11 @@ func Create(ctx context.Context) *cobra.Command {
 		Short: "Creates a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Init(ctx); err != nil {
+			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
-			if !okteto.IsOktetoContext() {
+			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
@@ -73,7 +73,11 @@ func executeCreateNamespace(ctx context.Context, namespace string, members *[]st
 		}
 	}
 
-	if err := RunNamespace(ctx, oktetoNS); err != nil {
+	contextCommand := contextCMD.Context()
+	contextCommand.Flags().Set("token", okteto.Context().Token)
+	contextCommand.Flags().Set("namespace", oktetoNS)
+	args := []string{okteto.Context().Name}
+	if err := contextCommand.RunE(nil, args); err != nil {
 		return fmt.Errorf("failed to activate your new namespace %s: %s", oktetoNS, err)
 	}
 

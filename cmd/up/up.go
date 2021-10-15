@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	initCMD "github.com/okteto/okteto/cmd/init"
@@ -81,6 +82,42 @@ func Up() *cobra.Command {
 				}
 			}
 
+			checkLocalWatchesConfiguration()
+
+			if upOptions.AutoDeploy {
+				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
+    Set the 'autocreate' field in your okteto manifest to get the same behavior.
+    More information is available here: https://okteto.com/docs/reference/cli/#up`)
+			}
+
+			ctx := context.Background()
+
+			if model.FileExists(".env") {
+				err := godotenv.Load()
+				if err != nil {
+					log.Errorf("error loading .env file: %s", err.Error())
+				}
+			}
+
+			dev, err := contextCMD.LoadDevWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
+			if err != nil {
+				if !strings.Contains(err.Error(), "okteto init") {
+					return err
+				}
+				if !utils.AskIfOktetoInit(upOptions.DevPath) {
+					return err
+				}
+
+				dev, err = loadDevWithInit(upOptions.DevPath)
+				if err != nil {
+					return err
+				}
+			}
+
+			if err := loadDevOverrides(dev, upOptions); err != nil {
+				return err
+			}
+
 			if syncthing.ShouldUpgrade() {
 				fmt.Println("Installing dependencies...")
 				if err := downloadSyncthing(); err != nil {
@@ -95,37 +132,6 @@ func Up() *cobra.Command {
 				} else {
 					log.Success("Dependencies successfully installed")
 				}
-			}
-
-			checkLocalWatchesConfiguration()
-
-			if upOptions.AutoDeploy {
-				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
-    Set the 'autocreate' field in your okteto manifest to get the same behavior.
-    More information is available here: https://okteto.com/docs/reference/cli/#up`)
-			}
-
-			ctx := context.Background()
-
-			if err := contextCMD.Init(ctx); err != nil {
-				return err
-			}
-
-			if err := utils.LoadEnvironment(ctx, false); err != nil {
-				return err
-			}
-
-			dev, err := loadDevOrInit(upOptions)
-			if err != nil {
-				return err
-			}
-
-			if err := loadDevOverrides(dev, upOptions); err != nil {
-				return err
-			}
-
-			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
-				return err
 			}
 
 			log.ConfigureFileLogger(config.GetAppHome(dev.Namespace, dev.Name), config.VersionString)
@@ -182,29 +188,17 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-func loadDevOrInit(upOptions *UpOptions) (*model.Dev, error) {
-	dev, err := utils.LoadDev(upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
-
-	if err == nil {
-		return dev, nil
-	}
-	if !strings.Contains(err.Error(), "okteto init") {
-		return nil, err
-	}
-	if !utils.AskIfOktetoInit(upOptions.DevPath) {
-		return nil, err
-	}
-
+func loadDevWithInit(devPath string) (*model.Dev, error) {
 	workDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("unknown current folder: %s", err)
 	}
-	if err := initCMD.Run(upOptions.DevPath, "", workDir, false); err != nil {
+	if err := initCMD.Run(devPath, "", workDir, false); err != nil {
 		return nil, err
 	}
 
-	log.Success(fmt.Sprintf("okteto manifest (%s) created", upOptions.DevPath))
-	return utils.LoadDev(upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
+	log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
+	return utils.LoadDev(devPath)
 }
 
 func loadDevOverrides(dev *model.Dev, upOptions *UpOptions) error {
@@ -503,8 +497,6 @@ func (up *upContext) shutdown() {
 }
 
 func printDisplayContext(dev *model.Dev, divertURL string) {
-	log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), dev.Context))
-	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 
 	if len(dev.Forward) > 0 {

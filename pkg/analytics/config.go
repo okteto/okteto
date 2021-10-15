@@ -39,7 +39,7 @@ type Analytics struct {
 }
 
 func getContextType(oktetoContext string) string {
-	if okteto.IsOktetoContext() {
+	if okteto.IsOkteto() {
 		switch oktetoContext {
 		case okteto.CloudURL:
 			return CloudContext
