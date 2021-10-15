@@ -204,7 +204,11 @@ func replaceRegistry(input, registryType, namespace string) string {
 }
 
 func IsAtGlobalRegistry(image string) (ok bool) {
-	if IsOktetoRegistry(image) {
+	if !IsOktetoRegistry(image) {
+		return false
+	}
+	imageWithCommit := strings.SplitN(image, ":", 2)
+	if len(imageWithCommit) == 2 {
 		globalRegistryTag := image
 		if IsDevRegistry(image) {
 			globalRegistryTag = TransformOktetoDevToGlobalRegistry(image)
