@@ -14,11 +14,6 @@
 package diverts
 
 import (
-	"encoding/base64"
-	"fmt"
-
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sScheme "k8s.io/client-go/kubernetes/scheme"
@@ -57,17 +52,7 @@ func NewForConfig(cfg *rest.Config) (*DivertV1Client, error) {
 
 func GetClient() (*DivertV1Client, error) {
 	octx := okteto.Context()
-	kubeconfigBytes, err := base64.StdEncoding.DecodeString(octx.Kubeconfig)
-	if err != nil {
-		return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
-	}
-
-	clientApiConfig, err := clientcmd.Load(kubeconfigBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
+	clientConfig := clientcmd.NewDefaultClientConfig(*octx.Cfg, nil)
 
 	config, err := clientConfig.ClientConfig()
 	if err != nil {

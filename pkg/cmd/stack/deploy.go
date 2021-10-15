@@ -45,7 +45,7 @@ import (
 )
 
 type StackDeployOptions struct {
-	StackPath        string
+	StackPath        []string
 	Name             string
 	Namespace        string
 	ForceBuild       bool

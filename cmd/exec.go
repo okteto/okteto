@@ -48,16 +48,8 @@ func Exec() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			if err := contextCMD.Init(ctx); err != nil {
-				return err
-			}
-
-			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
+			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
 			if err != nil {
-				return err
-			}
-
-			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
 				return err
 			}
 

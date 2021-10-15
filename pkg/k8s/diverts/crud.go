@@ -32,7 +32,7 @@ import (
 )
 
 func Create(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
-	if !okteto.IsOktetoContext() {
+	if !okteto.IsOkteto() {
 		return errors.ErrDivertNotSupported
 	}
 

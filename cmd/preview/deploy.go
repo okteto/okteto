@@ -50,18 +50,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Init(ctx); err != nil {
-				return err
-			}
-
-			if !okteto.IsOktetoContext() {
-				return errors.ErrContextIsNotOktetoCluster
-			}
-
-			if err := validatePreviewType(scope); err != nil {
-				return err
-			}
-
 			var err error
 			repository, err = getRepository(ctx, repository)
 			if err != nil {
@@ -78,7 +66,23 @@ func Deploy(ctx context.Context) *cobra.Command {
 				name = getExpandedName(args[0])
 			}
 
-			if err := okteto.SetCurrentContext("", name); err != nil {
+			ctxResource := &model.ContextResource{}
+			if err := ctxResource.UpdateNamespace(name); err != nil {
+				return err
+			}
+
+			ctxOptions := &contextCMD.ContextOptions{
+				Namespace: ctxResource.Namespace,
+			}
+			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
+				return err
+			}
+
+			if !okteto.IsOkteto() {
+				return errors.ErrContextIsNotOktetoCluster
+			}
+
+			if err := validatePreviewType(scope); err != nil {
 				return err
 			}
 

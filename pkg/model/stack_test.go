@@ -18,6 +18,8 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 func Test_ReadStack(t *testing.T) {
@@ -408,7 +410,7 @@ func TestStack_validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.stack.validate(); err == nil {
+			if err := tt.stack.Validate(); err == nil {
 				t.Errorf("Stack.validate() not failed for test '%s'", tt.name)
 			}
 		})
@@ -476,6 +478,346 @@ func TestStack_readImageContext(t *testing.T) {
 
 			if !reflect.DeepEqual(stack.Services["test"].Build, tt.expected) {
 				t.Fatalf("Expected %v but got %v", tt.expected, stack.Services["test"].Build)
+			}
+		})
+	}
+}
+
+func TestStack_Merge(t *testing.T) {
+	tests := []struct {
+		name       string
+		stack      *Stack
+		otherStack *Stack
+		result     *Stack
+	}{
+		{
+			name: "Namespace overwrite",
+			stack: &Stack{
+				Namespace: "test",
+			},
+			otherStack: &Stack{
+				Namespace: "overwrite",
+			},
+			result: &Stack{
+				Namespace: "overwrite",
+			},
+		},
+		{
+			name: "volumes overwrite",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Volumes: []StackVolume{
+							{
+								LocalPath:  "/app",
+								RemotePath: "/app",
+							},
+						},
+						VolumeMounts: []StackVolume{
+							{
+								LocalPath:  "/data",
+								RemotePath: "/data",
+							},
+						},
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Volumes: []StackVolume{
+							{
+								LocalPath:  "/app-test",
+								RemotePath: "/app-test",
+							},
+						},
+						VolumeMounts: []StackVolume{
+							{
+								LocalPath:  "/data-test",
+								RemotePath: "/data",
+							},
+						},
+					},
+				},
+			},
+			result: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Volumes: []StackVolume{
+							{
+								LocalPath:  "/app-test",
+								RemotePath: "/app-test",
+							},
+						},
+						VolumeMounts: []StackVolume{
+							{
+								LocalPath:  "/data-test",
+								RemotePath: "/data",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Restart policy test",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:         "okteto",
+						RestartPolicy: corev1.RestartPolicyNever,
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:         "",
+						RestartPolicy: corev1.RestartPolicyAlways,
+					},
+				},
+			},
+			result: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:         "okteto",
+						RestartPolicy: corev1.RestartPolicyNever,
+					},
+				},
+			},
+		},
+		{
+			name: "Overwrite primitive field",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:           "okteto",
+						Workdir:         "",
+						Replicas:        2,
+						StopGracePeriod: 10,
+						BackOffLimit:    5,
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:           "okteto-dev",
+						Workdir:         "/app",
+						Replicas:        3,
+						StopGracePeriod: 20,
+						BackOffLimit:    3,
+					},
+				},
+			},
+			result: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:           "okteto-dev",
+						Workdir:         "/app",
+						Replicas:        3,
+						StopGracePeriod: 20,
+						BackOffLimit:    3,
+					},
+				},
+			},
+		},
+		{
+			name: "Overwrite non primitive",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Build: &BuildInfo{
+							Name:       "test",
+							Context:    "test",
+							Dockerfile: "test-Dockerfile",
+						},
+						Healtcheck: &HealthCheck{
+							HTTP: &HTTPHealtcheck{
+								Path: "/api",
+								Port: 8008,
+							},
+						},
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Build: &BuildInfo{
+							Name:       "test-overwrite",
+							Context:    "test-overwrite",
+							Dockerfile: "test-overwrite-Dockerfile",
+						},
+						Healtcheck: &HealthCheck{
+							HTTP: &HTTPHealtcheck{
+								Path: "/",
+								Port: 8008,
+							},
+						},
+					},
+				},
+			},
+			result: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Build: &BuildInfo{
+							Name:       "test-overwrite",
+							Context:    "test-overwrite",
+							Dockerfile: "test-overwrite-Dockerfile",
+						},
+						Healtcheck: &HealthCheck{
+							HTTP: &HTTPHealtcheck{
+								Path: "/",
+								Port: 8008,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Overwrite list field",
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						CapAdd:  []corev1.Capability{"tpu"},
+						CapDrop: []corev1.Capability{"cpu"},
+						Entrypoint: Entrypoint{
+							Values: []string{"python"},
+						},
+						Command: Command{
+							Values: []string{"app.py"},
+						},
+						EnvFiles: EnvFiles{".env"},
+						Environment: Environment{
+							EnvVar{
+								Name:  "test",
+								Value: "ok",
+							},
+						},
+						Labels:      Labels{"test": "ok"},
+						Annotations: Annotations{"test": "ok"},
+						Ports: []Port{
+							{
+								HostPort:      8080,
+								ContainerPort: 8080,
+							},
+						},
+					},
+				},
+			},
+			otherStack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						CapAdd:  []corev1.Capability{"cpu"},
+						CapDrop: []corev1.Capability{"tpu"},
+						Entrypoint: Entrypoint{
+							Values: []string{"go"},
+						},
+						Command: Command{
+							Values: []string{"run", "main.go"},
+						},
+						EnvFiles: EnvFiles{".env-test"},
+						Environment: Environment{
+							EnvVar{
+								Name:  "test",
+								Value: "overwrite",
+							},
+						},
+						Labels:      Labels{"test": "overwrite"},
+						Annotations: Annotations{"test": "overwrite"},
+						Ports: []Port{
+							{
+								HostPort:      3000,
+								ContainerPort: 3000,
+							},
+						},
+					},
+				},
+			},
+			result: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						CapAdd:  []corev1.Capability{"cpu"},
+						CapDrop: []corev1.Capability{"tpu"},
+						Entrypoint: Entrypoint{
+							Values: []string{"go"},
+						},
+						Command: Command{
+							Values: []string{"run", "main.go"},
+						},
+						EnvFiles: EnvFiles{".env-test"},
+						Environment: Environment{
+							EnvVar{
+								Name:  "test",
+								Value: "overwrite",
+							},
+						},
+						Labels:      Labels{"test": "overwrite"},
+						Annotations: Annotations{"test": "overwrite"},
+						Ports: []Port{
+							{
+								HostPort:      3000,
+								ContainerPort: 3000,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.stack.Merge(tt.otherStack)
+			if !reflect.DeepEqual(result, tt.result) {
+				t.Fatalf("Expected %v but got %v", tt.result, result)
+			}
+		})
+	}
+}
+
+func TestStack_ResourcesIsDefault(t *testing.T) {
+	tests := []struct {
+		name      string
+		resources *StackResources
+		expected  bool
+	}{
+		{
+			name:      "nil",
+			resources: nil,
+			expected:  true,
+		},
+		{
+			name:      "resources zero",
+			resources: &StackResources{},
+			expected:  true,
+		},
+		{
+			name: "resources limits not zero",
+			resources: &StackResources{
+				Limits: ServiceResources{
+					CPU: Quantity{resource.MustParse("1")},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "resources limits not zero",
+			resources: &StackResources{
+				Requests: ServiceResources{
+					CPU: Quantity{resource.MustParse("1")},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.resources.IsDefaultValue() && !tt.expected {
+				t.Fatal("Expected false but got true")
+			} else if !tt.resources.IsDefaultValue() && tt.expected {
+				t.Fatal("Expected true but got false")
 			}
 		})
 	}

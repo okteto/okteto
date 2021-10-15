@@ -28,6 +28,7 @@ import (
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 const (
@@ -35,6 +36,11 @@ const (
 	hideCursor = esc + "?25l"
 	showCursor = esc + "?25h"
 	clearLine  = esc + "2K"
+)
+
+var (
+	cloudOption = fmt.Sprintf("[Okteto Cloud] %s", okteto.CloudURL)
+	newOEOption = "New Okteto Cluster URL"
 )
 
 type OktetoSelector struct {
@@ -64,27 +70,6 @@ type SelectorItem struct {
 	Enable bool
 }
 
-var (
-	oktetoContextSelection = SelectorItem{
-		Label:  "Okteto contexts:",
-		Enable: false,
-	}
-	defaultOktetoContexts = []SelectorItem{
-		{
-			Label:  "Okteto Cloud",
-			Enable: true,
-		},
-		{
-			Label:  "Okteto Enterprise",
-			Enable: true,
-		},
-	}
-	k8sContextSelection = SelectorItem{
-		Label:  "Kubernetes contexts:",
-		Enable: false,
-	}
-)
-
 func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	k8sClusters := make([]string, 0)
 	if !ctxOptions.OnlyOkteto {
@@ -92,20 +77,28 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	}
 	clusters := make([]SelectorItem, 0)
 	if len(k8sClusters) > 0 {
-		clusters = append(clusters, oktetoContextSelection)
+		clusters = append(clusters, SelectorItem{Label: "Okteto contexts:", Enable: false})
 	}
-	clusters = append(clusters, defaultOktetoContexts...)
 
+	clusters = append(clusters, SelectorItem{Label: cloudOption, Enable: true})
+
+	ctxStore := okteto.ContextStore()
+	for ctxName := range ctxStore.Contexts {
+		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
+			clusters = append(clusters, SelectorItem{Label: ctxName, Enable: true})
+		}
+	}
+	clusters = append(clusters, SelectorItem{Label: newOEOption, Enable: true})
 	if len(k8sClusters) > 0 {
-		clusters = append(clusters, k8sContextSelection)
+		clusters = append(clusters, SelectorItem{Label: "Kubernetes contexts:", Enable: false})
 		for _, k8sCluster := range k8sClusters {
 			clusters = append(clusters, SelectorItem{
 				Label:  k8sCluster,
 				Enable: true,
 			})
 		}
-
 	}
+
 	return clusters
 }
 

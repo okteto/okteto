@@ -43,21 +43,14 @@ func Restart() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#restart"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := contextCMD.Init(ctx); err != nil {
-				return err
-			}
 
-			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
+			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
 
 			if len(dev.Services) == 0 {
 				return errors.ErrNoServicesinOktetoManifest
-			}
-
-			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
-				return err
 			}
 
 			serviceName := ""
