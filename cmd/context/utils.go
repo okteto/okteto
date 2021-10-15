@@ -89,7 +89,7 @@ func askForOktetoURL() string {
 	if url.Scheme == "" {
 		url.Scheme = "https"
 	}
-	return url.String()
+	return strings.TrimSuffix(url.String(), "/")
 }
 
 func isValidCluster(cluster string) bool {

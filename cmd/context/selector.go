@@ -84,6 +84,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 
 	ctxStore := okteto.ContextStore()
 	for ctxName := range ctxStore.Contexts {
+		ctxName = strings.TrimSuffix(ctxName, "/")
 		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
 			clusters = append(clusters, SelectorItem{Label: ctxName, Enable: true})
 		}
