@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -213,8 +214,8 @@ func IsImageAtGlobalRegistry(image string) (ok bool) {
 	if !IsOktetoRegistry(image) {
 		return false
 	}
-	imageWithCommit := strings.SplitN(image, ":", 2)
-	if len(imageWithCommit) == 2 {
+	okCommit := os.Getenv("OKTETO_GIT_COMMIT")
+	if okCommit != "" && strings.Contains(image, okCommit) {
 		globalRegistryTag := image
 		if IsDevRegistry(image) {
 			globalRegistryTag = TransformOktetoDevToGlobalRegistry(image)
