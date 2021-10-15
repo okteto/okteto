@@ -80,14 +80,8 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 
 	isOktetoRegistry := registry.IsOktetoRegistry(buildOptions.Tag)
 	if okteto.IsOkteto() {
-		if !buildOptions.NoCache && registry.IsOktetoRegistry(buildOptions.Tag) {
-			globalRegistryTag := buildOptions.Tag
-			if registry.IsDevRegistry(buildOptions.Tag) {
-				globalRegistryTag = registry.TransformOktetoDevToGlobalRegistry(buildOptions.Tag)
-			}
-			if _, err := registry.GetImageTagWithDigest(globalRegistryTag); err != okErrors.ErrNotFound {
-				return errors.New("build skipped: the image is already built at okteto global registry")
-			}
+		if ok := registry.IsAtGlobalRegistry(buildOptions.Tag); ok {
+			return nil
 		}
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)

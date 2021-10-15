@@ -202,3 +202,18 @@ func IsOktetoRegistry(tag string) bool {
 func replaceRegistry(input, registryType, namespace string) string {
 	return strings.Replace(input, registryType, fmt.Sprintf("%s/%s", okteto.Context().Registry, namespace), 1)
 }
+
+func IsAtGlobalRegistry(image string) (ok bool) {
+	if IsOktetoRegistry(image) {
+		globalRegistryTag := image
+		if IsDevRegistry(image) {
+			globalRegistryTag = TransformOktetoDevToGlobalRegistry(image)
+		}
+		if _, err := GetImageTagWithDigest(globalRegistryTag); err != errors.ErrNotFound {
+			log.Success("Skipping build: image is already build at the global registry")
+			log.Hint("You can force the build by using the flag --no-cache")
+			return true
+		}
+	}
+	return false
+}

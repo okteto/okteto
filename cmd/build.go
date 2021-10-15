@@ -24,7 +24,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 )
 
@@ -68,11 +67,6 @@ func Build(ctx context.Context) *cobra.Command {
 
 			ctx := context.Background()
 			if err := build.Run(ctx, "", options); err != nil {
-				if registry.IsAlreadyBuiltInGlobalRegistry(err) {
-					log.Success(err.Error())
-					log.Hint("You can force the build by using the flag --no-cache")
-					return nil
-				}
 				analytics.TrackBuild(okteto.Context().Buildkit, false)
 				return err
 			}
