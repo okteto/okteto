@@ -80,7 +80,7 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 
 	isOktetoRegistry := registry.IsOktetoRegistry(buildOptions.Tag)
 	if okteto.IsOkteto() {
-		if ok := registry.IsAtGlobalRegistry(buildOptions.Tag); ok {
+		if ok := registry.IsImageAtGlobalRegistry(buildOptions.Tag); ok {
 			return nil
 		}
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)

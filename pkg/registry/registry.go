@@ -93,6 +93,7 @@ func ExpandOktetoDevRegistry(tag string) string {
 	return replaceRegistry(tag, okteto.DevRegistry, okteto.Context().Namespace)
 }
 
+// TransformOktetoDevToGlobalRegistry returns the tag pointing to the global registry
 func TransformOktetoDevToGlobalRegistry(tag string) string {
 	return strings.Replace(tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 }
@@ -187,23 +188,28 @@ func getRegistryURL(image string) string {
 	}
 }
 
+// IsGlobalRegistry returns true if the tag is short for global registry
 func IsGlobalRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.GlobalRegistry)
 }
 
+// IsDevRegistry returns true if the tag is short for namespace registry
 func IsDevRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.DevRegistry)
 }
 
+// IsDevRegistry returns true if the tag is short for registry at Okteto
 func IsOktetoRegistry(tag string) bool {
 	return IsDevRegistry(tag) || IsGlobalRegistry(tag)
 }
 
+// replaceRegistry returns tag with registry replaced by the given
 func replaceRegistry(input, registryType, namespace string) string {
 	return strings.Replace(input, registryType, fmt.Sprintf("%s/%s", okteto.Context().Registry, namespace), 1)
 }
 
-func IsAtGlobalRegistry(image string) (ok bool) {
+// IsImageAtGlobalRegistry returns true if the image is at the global registry already
+func IsImageAtGlobalRegistry(image string) (ok bool) {
 	if !IsOktetoRegistry(image) {
 		return false
 	}
