@@ -103,7 +103,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	}
 
 	//K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
-	ctxOptions.Context = okteto.K8sContextToOktetoUrl(ctxOptions.Context)
+	ctxOptions.Context = okteto.K8sContextToOktetoUrl(strings.TrimSuffix(ctxOptions.Context, "/"))
 
 	if ctxOptions.Context == "" {
 		log.Infof("authenticating with interactive context")
