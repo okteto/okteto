@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -73,6 +74,8 @@ func main() {
 	if err := analytics.Init(); err != nil {
 		log.Infof("error initializing okteto analytics: %s", err)
 	}
+
+	okteto.InitContextWithDeprecatedToken()
 
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),

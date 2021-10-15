@@ -117,7 +117,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		return err
 	}
 	var hasAddedAnyVolumeMounts bool
-	if okteto.IsOktetoContext() {
+	if okteto.IsOkteto() {
 		hasAddedAnyVolumeMounts, err = addVolumeMountsToBuiltImage(ctx, s, options, hasBuiltSomething)
 		if err != nil {
 			return err
@@ -138,10 +138,10 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		if svc.Build == nil {
 			continue
 		}
-		if !okteto.IsOktetoContext() && svc.Image == "" {
+		if !okteto.IsOkteto() && svc.Image == "" {
 			return hasBuiltSomething, fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
 		}
-		if okteto.IsOktetoContext() && !registry.IsOktetoRegistry(svc.Image) {
+		if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !options.ForceBuild {
@@ -192,7 +192,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				log.Information("Running your build in %s...", okteto.Context().Buildkit)
 			}
 			fromImage := svc.Image
-			if okteto.IsOktetoContext() {
+			if okteto.IsOkteto() {
 				fromImage = registry.ExpandOktetoDevRegistry(svc.Image)
 				fromImage = registry.ExpandOktetoGlobalRegistry(fromImage)
 			}
@@ -202,7 +202,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.Build = svcBuild
-			if okteto.IsOktetoContext() && !registry.IsOktetoRegistry(svc.Image) {
+			if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
 				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
@@ -780,7 +780,9 @@ func translateStorageClass(className string) *string {
 func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 	result := []apiv1.EnvVar{}
 	for _, e := range svc.Environment {
-		result = append(result, apiv1.EnvVar{Name: e.Name, Value: e.Value})
+		if e.Value != "" && e.Name != "" {
+			result = append(result, apiv1.EnvVar{Name: e.Name, Value: e.Value})
+		}
 	}
 	return result
 }

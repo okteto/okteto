@@ -41,7 +41,7 @@ type ConfigInfo struct {
 
 // GetImageTagWithDigest returns the image tag digest
 func GetImageTagWithDigest(imageTag string) (string, error) {
-	if !okteto.IsOktetoContext() {
+	if !okteto.IsOkteto() {
 		return imageTag, nil
 	}
 

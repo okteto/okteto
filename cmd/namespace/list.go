@@ -32,11 +32,12 @@ func List(ctx context.Context) *cobra.Command {
 		Use:   "namespace",
 		Short: "List namespaces managed by Okteto in your current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Init(ctx); err != nil {
+
+			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
-			if !okteto.IsOktetoContext() {
+			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 

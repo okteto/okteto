@@ -49,16 +49,9 @@ func Down() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#down"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := contextCMD.Init(ctx); err != nil {
-				return err
-			}
 
-			dev, err := utils.LoadDev(devPath, namespace, k8sContext)
+			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
 			if err != nil {
-				return err
-			}
-
-			if err := okteto.SetCurrentContext(dev.Context, dev.Namespace); err != nil {
 				return err
 			}
 

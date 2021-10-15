@@ -52,20 +52,35 @@ func Push(ctx context.Context) *cobra.Command {
 		Short: "Builds, pushes and redeploys source code to the target app",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Init(ctx); err != nil {
-				return err
-			}
 
-			if err := utils.LoadEnvironment(ctx, true); err != nil {
-				return err
-			}
-
-			dev, err := utils.LoadDevOrDefault(devPath, appName, namespace, k8sContext)
+			ctxResource, err := utils.LoadDevContext(devPath)
 			if err != nil {
+				if errors.IsNotExist(err) && len(appName) > 0 {
+					ctxResource = &model.ContextResource{}
+				} else {
+					return err
+				}
+			}
+
+			if err := ctxResource.UpdateNamespace(namespace); err != nil {
 				return err
 			}
 
-			if err := okteto.SetCurrentContext(k8sContext, namespace); err != nil {
+			if err := ctxResource.UpdateContext(k8sContext); err != nil {
+				return err
+			}
+
+			ctxOptions := &contextCMD.ContextOptions{
+				Context:   ctxResource.Context,
+				Namespace: ctxResource.Namespace,
+				Show:      true,
+			}
+			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
+				return err
+			}
+
+			dev, err := utils.LoadDevOrDefault(devPath, appName)
+			if err != nil {
 				return err
 			}
 
@@ -125,7 +140,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 
 		if !dev.Autocreate {
 			return errors.UserError{
-				E: fmt.Errorf("Application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
+				E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
 				Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone deployment
     More information is available here: https://okteto.com/docs/reference/cli#up`,

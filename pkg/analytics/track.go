@@ -63,6 +63,7 @@ const (
 	contextEvent             = "Context"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
+	buildPullErrorEvent      = "BuildPullError"
 )
 
 var (
@@ -282,11 +283,19 @@ func TrackStackWarnings(warnings []string) {
 	}
 }
 
+// TrackBuildPullError sends a tracking event to mixpanel when the build was success but the image can't be pulled from registry
+func TrackBuildPullError(oktetoBuilkitURL string, success bool) {
+	props := map[string]interface{}{
+		"oktetoBuilkitURL": oktetoBuilkitURL,
+	}
+	track(buildPullErrorEvent, success, props)
+}
+
 func track(event string, success bool, props map[string]interface{}) {
 	if !get().Enabled {
 		return
 	}
-	if !okteto.IsTelemetryEnabled() && !okteto.IsOktetoCloud() {
+	if !okteto.Context().Analytics {
 		return
 	}
 	mpOS := ""
