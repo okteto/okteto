@@ -1,3 +1,16 @@
+// Copyright 2021 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package deploy
 
 import (
@@ -11,7 +24,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -76,7 +88,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				options.Name = getName(cwd)
+				options.Name = utils.InferApplicationName(cwd)
 			}
 
 			// Look for a free local port to start the proxy
@@ -189,18 +201,6 @@ func (dc *deployCommand) cleanUp(ctx context.Context) {
 	if err := dc.proxy.Shutdown(ctx); err != nil {
 		log.Errorf("could not stop local server: %s", err)
 	}
-}
-
-// This will probably will be moved to a common place when we implement the full dev spec
-func getName(cwd string) string {
-	repo, err := model.GetRepositoryURL(cwd)
-	if err != nil {
-		log.Info("inferring name from folder")
-		return filepath.Base(cwd)
-	}
-
-	log.Info("inferring name from git repository URL")
-	return model.TranslateURLToName(repo)
 }
 
 func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handler, error) {

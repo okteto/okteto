@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -89,7 +88,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				options.Name = getName(cwd)
+				options.Name = utils.InferApplicationName(cwd)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
@@ -213,16 +212,4 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	}
 
 	return nil
-}
-
-// This will probably will be moved to a common place when we implement the full dev spec
-func getName(cwd string) string {
-	repo, err := model.GetRepositoryURL(cwd)
-	if err != nil {
-		log.Info("inferring name from folder")
-		return filepath.Base(cwd)
-	}
-
-	log.Info("inferring name from git repository URL")
-	return model.TranslateURLToName(repo)
 }

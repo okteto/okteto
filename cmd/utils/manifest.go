@@ -49,6 +49,18 @@ type Manifest struct {
 	Filename string   `yaml:"-"`
 }
 
+// InferApplicationName infers the application name from the folder received as parameter
+func InferApplicationName(cwd string) string {
+	repo, err := model.GetRepositoryURL(cwd)
+	if err != nil {
+		log.Info("inferring name from folder")
+		return filepath.Base(cwd)
+	}
+
+	log.Info("inferring name from git repository URL")
+	return model.TranslateURLToName(repo)
+}
+
 // GetManifest Loads a manifest
 func GetManifest(srcFolder, name, filename string) (*Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, filename)
