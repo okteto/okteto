@@ -79,7 +79,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringArrayVarP(&options.StackPath, "file", "f", []string{utils.DefaultStackManifest}, "path to the stack manifest files. If more than one is passed the latest will overwrite the fields from the previous")
+	cmd.Flags().StringArrayVarP(&options.StackPath, "file", "f", []string{}, "path to the stack manifest files. If more than one is passed the latest will overwrite the fields from the previous")
 	cmd.Flags().StringVarP(&options.Name, "name", "", "", "overwrites the stack name")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
 	cmd.Flags().BoolVarP(&options.ForceBuild, "build", "", false, "build images before starting any Stack service")

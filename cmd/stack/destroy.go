@@ -75,7 +75,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringArrayVarP(&stackPath, "file", "f", []string{utils.DefaultStackManifest}, "path to the stack manifest file")
+	cmd.Flags().StringArrayVarP(&stackPath, "file", "f", []string{}, "path to the stack manifest file")
 	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the stack name")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is destroyed")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
