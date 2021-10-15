@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v2.3.5
       - name: Install
         run: wget -O - -q https://git.io/misspell | sh -s -- -b . # https://www.gnu.org/software/wget/
       - name: misspell
@@ -18,7 +18,7 @@ jobs:
     name: Run pre-commit # https://pre-commit.com/
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2.3.5
       - uses: actions/setup-python@v2.2.2 # https://www.python.org/
         with:
           python-version: '3.x' # Version range or exact version of a Python version to use, using SemVer's version range syntax
@@ -39,6 +39,6 @@ jobs:
     name: Trailing whitespace # https://en.wikipedia.org/wiki/Grep
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2.3.5
       - name: Check for trailing whitespace
         run: "! git grep -EIn $'[ \t]+$' | grep -v '\\- '"
