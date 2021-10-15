@@ -419,7 +419,12 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		}
 		svc.Command.Values = serviceRaw.Args.Values
 
-		svc.Labels = serviceRaw.Labels
+		if svc.Labels == nil {
+			svc.Labels = make(Labels)
+		}
+		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
+			svc.Labels[key] = value
+		}
 	}
 
 	svc.EnvFiles = serviceRaw.EnvFiles

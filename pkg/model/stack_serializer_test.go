@@ -1261,37 +1261,66 @@ func Test_DeployLabels(t *testing.T) {
 		name        string
 		manifest    []byte
 		annotations Annotations
+		labels      Labels
+		isCompose   bool
 	}{
+
 		{
 			name:        "deploy labels",
 			manifest:    []byte("services:\n  app:\n    deploy:\n      labels:\n        env: production\n    image: okteto/vote:1"),
 			annotations: Annotations{"env": "production"},
+			labels:      Labels{},
+			isCompose:   true,
 		},
 		{
 			name:        "no labels",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
 			annotations: Annotations{},
+			labels:      Labels{},
+			isCompose:   true,
 		},
 		{
 			name:        "labels on service",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      env: production"),
 			annotations: Annotations{"env": "production"},
+			labels:      Labels{},
+			isCompose:   true,
 		},
 		{
 			name:        "labels on deploy and service",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      app: main\n    deploy:\n      labels:\n        env: production\n"),
 			annotations: Annotations{"env": "production", "app": "main"},
+			labels:      Labels{},
+			isCompose:   true,
+		},
+
+		{
+			name:        "labels on deploy and service",
+			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      app: main\n    deploy:\n      labels:\n        env: production\n"),
+			annotations: Annotations{},
+			labels:      Labels{"app": "main", "env": "production"},
+			isCompose:   false,
+		},
+		{
+			name:        "labels on service",
+			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1\n    labels:\n      env: production"),
+			annotations: Annotations{},
+			labels:      Labels{"env": "production"},
+			isCompose:   false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			s, err := ReadStack(tt.manifest, false)
+			s, err := ReadStack(tt.manifest, tt.isCompose)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if len(s.Services["app"].Annotations) != len(tt.annotations) {
 				t.Fatalf("Bad deployment annotations")
+			}
+			if len(s.Services["app"].Labels) != len(tt.labels) {
+				t.Fatalf("Bad deployment labels")
 			}
 		})
 	}
