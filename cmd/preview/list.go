@@ -21,7 +21,6 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -33,8 +32,7 @@ func List(ctx context.Context) *cobra.Command {
 		Short: "Lists all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ctxResource := &model.ContextResource{}
-			if err := contextCMD.Init(ctx, ctxResource); err != nil {
+			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 

@@ -8,9 +8,8 @@ import (
 )
 
 type ContextResource struct {
-	Context   string `yaml:"context,omitempty"`
-	Namespace string `yaml:"namespace,omitempty"`
-	Token     string
+	Context   string
+	Namespace string
 }
 
 // GetContextResource returns a ContextResource object from a given file
@@ -31,22 +30,6 @@ func GetContextResource(filePath string) (*ContextResource, error) {
 	return ctxResource, nil
 }
 
-func (c *ContextResource) UpdateNamespace(namespace string) error {
-	if c.Namespace != "" {
-		if namespace != "" && c.Namespace != namespace {
-			return errors.ErrNamespaceNotMatching
-		}
-		return nil
-	}
-
-	if namespace == "" && os.Getenv("OKTETO_NAMESPACE") != "" {
-		namespace = os.Getenv("OKTETO_NAMESPACE")
-	}
-
-	c.Namespace = namespace
-	return nil
-}
-
 func (c *ContextResource) UpdateContext(okCtx string) error {
 	if c.Context != "" {
 		if okCtx != "" && okCtx != c.Context {
@@ -55,14 +38,18 @@ func (c *ContextResource) UpdateContext(okCtx string) error {
 		return nil
 	}
 
-	if okCtx == "" && os.Getenv("OKTETO_URL") != "" {
-		okCtx = os.Getenv("OKTETO_URL")
-	}
-
-	if okCtx == "" && os.Getenv("OKTETO_CONTEXT") != "" {
-		okCtx = os.Getenv("OKTETO_CONTEXT")
-	}
-
 	c.Context = okCtx
+	return nil
+}
+
+func (c *ContextResource) UpdateNamespace(okNs string) error {
+	if c.Namespace != "" {
+		if okNs != "" && c.Namespace != okNs {
+			return errors.ErrNamespaceNotMatching
+		}
+		return nil
+	}
+
+	c.Namespace = okNs
 	return nil
 }

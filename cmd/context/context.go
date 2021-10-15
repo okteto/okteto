@@ -26,17 +26,9 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
-
-type ContextOptions struct {
-	Token      string
-	Namespace  string
-	Builder    string
-	OnlyOkteto bool
-}
 
 // Context points okteto to a cluster.
 func Context() *cobra.Command {
@@ -73,37 +65,13 @@ Or show a list of available options with:
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if ctxOptions.Token == "" && kubeconfig.InCluster() {
-				return errors.ErrTokenFlagNeeded
+			if len(args) == 1 {
+				ctxOptions.Context = args[0]
 			}
 
-			apiToken := os.Getenv("OKTETO_TOKEN")
-			if ctxOptions.Token == "" {
-				ctxOptions.Token = apiToken
-			}
-
-			var err error
-			oktetoContext := os.Getenv("OKTETO_URL")
-			if oktetoContext == "" && ctxOptions.Token != "" {
-				oktetoContext = okteto.CloudURL
-			}
-
-			if len(args) == 0 {
-				if oktetoContext != "" {
-					log.Infof("authenticating with OKTETO_URL")
-				} else {
-					log.Infof("authenticating with interactive context")
-					oktetoContext, err = getContext(ctxOptions)
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				log.Infof("authenticating with context argument")
-				oktetoContext = args[0]
-			}
-
-			err = runContext(ctx, oktetoContext, ctxOptions)
+			ctxOptions.isCtxCommand = true
+			ctxOptions.Save = true
+			err := Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				return err
@@ -121,79 +89,72 @@ Or show a list of available options with:
 	return cmd
 }
 
-func runContext(ctx context.Context, oktetoContext string, ctxOptions *ContextOptions) error {
+func Run(ctx context.Context, ctxOptions *ContextOptions) error {
+	ctxStore := okteto.ContextStore()
+	ctxOptions.initFromContext()
+	ctxOptions.initFromEnvVars()
 
-	kubeconfigFile := config.GetKubeconfigPath()
+	if ctxOptions.Token == "" && ctxOptions.Context == "" && kubeconfig.InCluster() {
+		return errors.ErrTokenFlagNeeded
+	}
 
-	if okteto.IsOktetoURL(oktetoContext) {
-		octxStore := okteto.ContextStore()
-		octxStore.CurrentContext = oktetoContext
-		if _, ok := octxStore.Contexts[oktetoContext]; !ok {
-			octxStore.Contexts[oktetoContext] = &okteto.OktetoContext{
-				Name: oktetoContext,
-			}
-		}
+	if ctxOptions.Token == "" && !okteto.IsOktetoURL(ctxOptions.Context) && kubeconfig.InCluster() {
+		return errors.ErrTokenFlagNeeded
+	}
 
-		user, err := login.AuthenticateToOktetoCluster(ctx, oktetoContext, ctxOptions.Token)
+	//K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
+	ctxOptions.Context = okteto.K8sContextToOktetoUrl(ctxOptions.Context)
+
+	if ctxOptions.Context == "" {
+		log.Infof("authenticating with interactive context")
+		oktetoContext, err := getContext(ctxOptions)
 		if err != nil {
 			return err
 		}
-		octxStore.Contexts[oktetoContext].Token = user.Token
+		ctxOptions.Context = oktetoContext
+		ctxStore.CurrentContext = oktetoContext
+		ctxOptions.Save = true
+		ctxOptions.Show = false
+	}
 
-		if ctxOptions.Namespace == "" {
-			ctxOptions.Namespace = user.Namespace
-		}
+	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; !ok {
+		ctxStore.Contexts[ctxOptions.Context] = &okteto.OktetoContext{Name: ctxOptions.Context}
+	} else if ctxOptions.Token == "" {
+		//this is to avoid login with the browser again if we already have a valid token
+		ctxOptions.Token = okCtx.Token
+	}
+	ctxStore.CurrentContext = ctxOptions.Context
 
-		okteto.AddOktetoContext(oktetoContext, user, ctxOptions.Namespace)
-
-		oktetoClient, err := okteto.NewOktetoClient()
-		if err != nil {
+	if okteto.IsOktetoURL(ctxOptions.Context) {
+		if err := initOktetoContext(ctx, ctxOptions); err != nil {
 			return err
 		}
-		cred, err := oktetoClient.GetCredentials(ctx)
-		if err != nil {
-			return err
-		}
-		k8sCointext := okteto.UrlToKubernetesContext(oktetoContext)
-		if err := okteto.WriteKubeconfig(cred, kubeconfigFile, ctxOptions.Namespace, user.ID, k8sCointext); err != nil {
-			return fmt.Errorf("error updating kubernetes context: %v", err)
-		}
-		if err := okteto.WriteOktetoContextConfig(); err != nil {
-			return fmt.Errorf("error configuring okteto context: %v", err)
-		}
-		log.Information("Current kubernetes context '%s/%s' in '%s'", k8sCointext, ctxOptions.Namespace, kubeconfigFile)
-
-		return nil
-	}
-
-	if !isValidCluster(oktetoContext) {
-		return errors.UserError{
-			E:    fmt.Errorf(errors.ErrInvalidContext, oktetoContext),
-			Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(), "\n      ")),
-		}
-	}
-	cfg := kubeconfig.Get(kubeconfigFile)
-	if cfg == nil {
-		return fmt.Errorf(errors.ErrKubernetesContextNotFound, oktetoContext, config.GetKubeconfigPath())
-	}
-	cfg.CurrentContext = oktetoContext
-	if ctxOptions.Namespace != "" {
-		cfg.Contexts[oktetoContext].Namespace = ctxOptions.Namespace
 	} else {
-		if cfg.Contexts[oktetoContext].Namespace == "" {
-			cfg.Contexts[oktetoContext].Namespace = "default"
+		if err := initKubernetesContext(ctxOptions); err != nil {
+			return err
 		}
-		ctxOptions.Namespace = cfg.Contexts[oktetoContext].Namespace
 	}
-	okteto.AddKubernetesContext(oktetoContext, ctxOptions.Namespace, ctxOptions.Builder)
 
-	if err := okteto.WriteOktetoContextConfig(); err != nil {
-		return err
+	if ctxOptions.Save {
+		if err := okteto.WriteOktetoContextConfig(); err != nil {
+			return err
+		}
+		if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()); err != nil {
+			return err
+		}
+		k8sContext := ctxOptions.Context
+		if okteto.IsOktetoURL(k8sContext) {
+			k8sContext = okteto.UrlToKubernetesContext(k8sContext)
+		}
+		log.Information("Current kubernetes context '%s/%s' in '%s'", k8sContext, ctxOptions.Namespace, config.GetKubeconfigPath())
 	}
-	if err := kubeconfig.Write(cfg, kubeconfigFile); err != nil {
-		return err
+
+	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
+
+	if ctxOptions.Show {
+		log.Information("Context: %s", okteto.Context().Name)
+		log.Information("Namespace: %s", okteto.Context().Namespace)
 	}
-	log.Information("Current kubernetes context '%s/%s' in '%s'", oktetoContext, ctxOptions.Namespace, kubeconfigFile)
 
 	return nil
 }
@@ -210,96 +171,6 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 	}
 
 	return oktetoContext, nil
-}
-
-func Init(ctx context.Context, ctxResource *model.ContextResource) error {
-	okteto.AutomaticContextWithOktetoEnvVars(ctxResource)
-
-	ctxStore := okteto.ContextStore()
-	if ctxResource.Context != "" {
-		if okteto.IsOktetoURL(ctxResource.Context) {
-			if _, ok := ctxStore.Contexts[ctxResource.Context]; !ok {
-				return fmt.Errorf(errors.ErrOktetoContextNotFound, ctxResource.Context, ctxResource.Context)
-			}
-		} else {
-			for name := range ctxStore.Contexts {
-				if okteto.IsOktetoURL(name) && okteto.UrlToKubernetesContext(name) == ctxResource.Context {
-					ctxResource.Context = name
-					break
-				}
-			}
-
-			if !okteto.IsOktetoURL(ctxResource.Context) {
-				if _, ok := ctxStore.Contexts[ctxResource.Context]; !ok {
-					kubeconfigFile := config.GetKubeconfigPath()
-					cfg := kubeconfig.Get(kubeconfigFile)
-					if err := addKubernetesContext(cfg, ctxResource); err != nil {
-						return err
-					}
-				}
-			}
-		}
-		ctxStore.CurrentContext = ctxResource.Context
-	}
-
-	if ctxResource.Namespace != "" && ctxStore.CurrentContext != "" {
-		ctxStore.Contexts[ctxStore.CurrentContext].Namespace = ctxResource.Namespace
-	}
-
-	showCurrentContext := true
-	if !okteto.ContextExists() && ctxStore.CurrentContext == "" {
-		showCurrentContext = false
-		okCtx := Context()
-		if err := okCtx.RunE(nil, nil); err != nil {
-			return err
-		}
-	}
-
-	if okteto.IsOkteto() {
-		userContext, err := getUserContext(ctx)
-		if err != nil {
-			return err
-		}
-
-		if ctxResource.Namespace == "" {
-			ctxResource.Namespace = okteto.Context().Namespace
-		}
-
-		if ctxResource.Namespace == "" {
-			ctxResource.Namespace = userContext.Credentials.Namespace
-		}
-
-		okteto.AddOktetoContext(okteto.Context().Name, &userContext.User, ctxResource.Namespace)
-		cfg := kubeconfig.Create()
-		okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxResource.Namespace, userContext.User.ID, okteto.UrlToKubernetesContext(okteto.Context().Name))
-		okteto.Context().Cfg = cfg
-
-		setSecrets(userContext.Secrets)
-
-		os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
-
-	} else {
-		cfg := kubeconfig.Get(config.GetKubeconfigPath())
-		if cfg == nil {
-			return fmt.Errorf(errors.ErrKubernetesContextNotFound, okteto.Context().Name, config.GetKubeconfigPath())
-		}
-		kubeCtx, ok := cfg.Contexts[okteto.Context().Name]
-		if !ok {
-			return fmt.Errorf(errors.ErrKubernetesContextNotFound, okteto.Context().Name, config.GetKubeconfigPath())
-		}
-		kubeCtx.Namespace = okteto.Context().Namespace
-		cfg.CurrentContext = okteto.Context().Name
-		okteto.Context().Cfg = cfg
-	}
-
-	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
-
-	if showCurrentContext {
-		log.Information("Context: %s", okteto.Context().Name)
-		log.Information("Namespace: %s", okteto.Context().Namespace)
-	}
-
-	return nil
 }
 
 func setSecrets(secrets []okteto.Secret) {
@@ -321,6 +192,11 @@ func getUserContext(ctx context.Context) (*okteto.UserContext, error) {
 		}
 
 		if errors.IsForbidden(err) {
+			okteto.Context().Token = ""
+			if err := okteto.WriteOktetoContextConfig(); err != nil {
+				log.Infof("error updating okteto contexts: %v", err)
+				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+			}
 			return nil, fmt.Errorf(errors.ErrNotLogged, okteto.Context().Name)
 		}
 
@@ -330,51 +206,66 @@ func getUserContext(ctx context.Context) (*okteto.UserContext, error) {
 	return nil, errors.ErrInternalServerError
 }
 
-func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Dev, error) {
-	ctxResource, err := utils.LoadDevContext(devPath)
+func initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
+	user, err := login.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	ctxOptions.Token = user.Token
+	okteto.Context().Token = user.Token
 
-	if err := ctxResource.UpdateNamespace(namespace); err != nil {
-		return nil, err
+	userContext, err := getUserContext(ctx)
+	if err != nil {
+		return err
 	}
-
-	if err := ctxResource.UpdateContext(k8sContext); err != nil {
-		return nil, err
+	if ctxOptions.Namespace == "" {
+		ctxOptions.Namespace = userContext.User.Namespace
 	}
-
-	if err := Init(ctx, ctxResource); err != nil {
-		return nil, err
+	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace)
+	cfg := kubeconfig.Get(config.GetKubeconfigPath())
+	if cfg == nil {
+		cfg = kubeconfig.Create()
 	}
+	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.UrlToKubernetesContext(okteto.Context().Name))
+	okteto.Context().Cfg = cfg
 
-	return utils.LoadDev(devPath)
+	setSecrets(userContext.Secrets)
+
+	os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
+
+	return nil
 }
 
-func LoadStackWithContext(ctx context.Context, name, stackPath, namespace string) (*model.Stack, error) {
-	ctxResource, err := utils.LoadStackContext(stackPath)
-	if err != nil {
-		if name == "" {
-			return nil, err
+func initKubernetesContext(ctxOptions *ContextOptions) error {
+	if !isValidCluster(ctxOptions.Context) {
+		return errors.UserError{
+			E:    fmt.Errorf(errors.ErrInvalidContext, ctxOptions.Context),
+			Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(), "\n      ")),
 		}
-		ctxResource = &model.ContextResource{}
 	}
 
-	if err := ctxResource.UpdateNamespace(namespace); err != nil {
-		return nil, err
+	cfg := kubeconfig.Get(config.GetKubeconfigPath())
+	if cfg == nil {
+		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
 	}
-
-	if err := Init(ctx, ctxResource); err != nil {
-		return nil, err
+	kubeCtx, ok := cfg.Contexts[ctxOptions.Context]
+	if !ok {
+		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
 	}
-
-	s, err := utils.LoadStack(name, stackPath)
-	if err != nil {
-		if name == "" {
-			return nil, err
+	cfg.CurrentContext = ctxOptions.Context
+	if ctxOptions.Namespace != "" {
+		cfg.Contexts[ctxOptions.Context].Namespace = ctxOptions.Namespace
+	} else {
+		if cfg.Contexts[ctxOptions.Context].Namespace == "" {
+			cfg.Contexts[ctxOptions.Context].Namespace = "default"
 		}
-		s = &model.Stack{Name: name}
+		ctxOptions.Namespace = cfg.Contexts[ctxOptions.Context].Namespace
 	}
-	s.Namespace = okteto.Context().Namespace
-	return s, nil
+	okteto.AddKubernetesContext(ctxOptions.Context, ctxOptions.Namespace, ctxOptions.Builder)
+
+	kubeCtx.Namespace = okteto.Context().Namespace
+	cfg.CurrentContext = okteto.Context().Name
+	okteto.Context().Cfg = cfg
+
+	return nil
 }

@@ -63,7 +63,12 @@ func Init() *cobra.Command {
 			if err := ctxResource.UpdateContext(k8sContext); err != nil {
 				return err
 			}
-			if err := contextCMD.Init(ctx, ctxResource); err != nil {
+			ctxOptions := &contextCMD.ContextOptions{
+				Context:   ctxResource.Context,
+				Namespace: ctxResource.Namespace,
+				Show:      true,
+			}
+			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 

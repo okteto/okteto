@@ -1,71 +1,67 @@
 package okteto
 
 import (
-	"reflect"
 	"testing"
-
-	"github.com/okteto/okteto/pkg/model"
 )
 
-func Test_contextWithOktetoTokenEnvVar(t *testing.T) {
+func Test_UrlToKubernetesContext(t *testing.T) {
 	var tests = []struct {
-		name         string
-		ctxResource  *model.ContextResource
-		currentStore *OktetoContextStore
-		want         *OktetoContextStore
+		name string
+		in   string
+		want string
 	}{
-		{
-			name:        "empty-context",
-			ctxResource: &model.ContextResource{Token: "token"},
-			currentStore: &OktetoContextStore{
-				CurrentContext: "",
-				Contexts:       map[string]*OktetoContext{},
-			},
-			want: &OktetoContextStore{
-				CurrentContext: CloudURL,
-				Contexts: map[string]*OktetoContext{
-					CloudURL: {Name: CloudURL, Token: "token"},
-				},
-			},
-		},
-		{
-			name:        "with-new-context",
-			ctxResource: &model.ContextResource{Token: "token", Context: "context"},
-			currentStore: &OktetoContextStore{
-				CurrentContext: "",
-				Contexts:       map[string]*OktetoContext{},
-			},
-			want: &OktetoContextStore{
-				CurrentContext: "context",
-				Contexts: map[string]*OktetoContext{
-					"context": {Name: "context", Token: "token"},
-				},
-			},
-		},
-		{
-			name:        "with-existing-context",
-			ctxResource: &model.ContextResource{Token: "token", Context: "context"},
-			currentStore: &OktetoContextStore{
-				CurrentContext: "context",
-				Contexts: map[string]*OktetoContext{
-					"context": {Name: "context", Token: "token-old", Namespace: "namespace"},
-				},
-			},
-			want: &OktetoContextStore{
-				CurrentContext: "context",
-				Contexts: map[string]*OktetoContext{
-					"context": {Name: "context", Token: "token", Namespace: "namespace"},
-				},
-			},
-		},
+		{name: "is-url-with-protocol", in: "https://cloud.okteto.com", want: "cloud_okteto_com"},
+		{name: "is-k8scontext", in: "minikube", want: ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			CurrentStore = tt.currentStore
-			contextWithOktetoTokenEnvVar(tt.ctxResource)
-			if !reflect.DeepEqual(tt.want, CurrentStore) {
-				t.Errorf("Test '%s' failed: %+v", tt.name, CurrentStore)
+			if result := UrlToKubernetesContext(tt.in); result != tt.want {
+				t.Errorf("Test '%s' failed: %s", tt.name, result)
+			}
+		})
+	}
+}
+
+func Test_IsOktetoURL(t *testing.T) {
+	var tests = []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{name: "is-url", in: "https://cloud.okteto.com", want: true},
+		{name: "is-empty", in: "", want: false},
+		{name: "is-k8scontext", in: "minikube", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if result := IsOktetoURL(tt.in); result != tt.want {
+				t.Errorf("Test '%s' failed", tt.name)
+			}
+		})
+	}
+}
+
+func Test_K8sContextToOktetoUrl(t *testing.T) {
+	var tests = []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "is-url", in: CloudURL, want: CloudURL},
+		{name: "is-okteto-context", in: "cloud_okteto_com", want: CloudURL},
+		{name: "is-empty", in: "", want: ""},
+		{name: "is-k8scontext", in: "minikube", want: "minikube"},
+	}
+
+	CurrentStore = &OktetoContextStore{
+		Contexts: map[string]*OktetoContext{CloudURL: {}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if result := K8sContextToOktetoUrl(tt.in); result != tt.want {
+				t.Errorf("Test '%s' failed: %s", tt.name, result)
 			}
 		})
 	}

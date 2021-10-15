@@ -30,46 +30,21 @@ import (
 )
 
 func AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*okteto.User, error) {
-	var user *okteto.User
-	var err error
-	if len(token) > 0 {
-		log.Infof("authenticating with an api token")
-		user, err = WithToken(ctx, oktetoURL, token)
-		if err != nil {
-			return nil, err
-		}
-	} else if okteto.HasBeenLogged(oktetoURL) {
-		log.Infof("re-authenticating with saved token")
-		token = okteto.ContextStore().Contexts[oktetoURL].Token
-		user, err = WithToken(ctx, oktetoURL, token)
-		if err != nil {
-			log.Infof("saved token is wrong. Authenticating with browser code")
-			user, err = WithBrowser(ctx, oktetoURL)
-			if err != nil {
-				return nil, err
-			}
-		}
-	} else {
+	if token == "" {
 		log.Infof("authenticating with browser code")
-		user, err = WithBrowser(ctx, oktetoURL)
+		user, err := WithBrowser(ctx, oktetoURL)
 		if err != nil {
 			return nil, err
 		}
+		if user.New {
+			analytics.TrackSignup(true, user.ID)
+		}
+		log.Infof("authenticated user %s", user.ID)
+
+		log.Success("Logged in as %s @ %s", user.ExternalID, oktetoURL)
+		return user, nil
 	}
-
-	if user.New {
-		analytics.TrackSignup(true, user.ID)
-	}
-	log.Infof("authenticated user %s", user.ID)
-
-	log.Success("Logged in as %s @ %s", user.ExternalID, oktetoURL)
-
-	return user, nil
-}
-
-// WithToken authenticates the user with an API token
-func WithToken(ctx context.Context, url, token string) (*okteto.User, error) {
-	return okteto.AuthWithToken(ctx, url, token)
+	return &okteto.User{Token: token}, nil
 }
 
 // WithBrowser authenticates the user with the browser

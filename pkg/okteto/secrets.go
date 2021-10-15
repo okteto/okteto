@@ -64,6 +64,7 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 		User struct {
 			Id              graphql.String
 			Name            graphql.String
+			Namespace       graphql.String
 			Email           graphql.String
 			ExternalID      graphql.String `graphql:"externalID"`
 			Token           graphql.String
@@ -112,6 +113,7 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 		User: User{
 			ID:              string(query.User.Id),
 			Name:            string(query.User.Name),
+			Namespace:       string(query.User.Namespace),
 			Email:           string(query.User.Email),
 			ExternalID:      string(query.User.ExternalID),
 			Token:           string(query.User.Token),

@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -56,19 +55,13 @@ type OktetoContext struct {
 	Analytics       bool                 `json:"-"`
 }
 
-func AutomaticContextWithOktetoEnvVars(ctxResource *model.ContextResource) {
-	if ctxResource.Token == "" {
-		ctxResource.Token = os.Getenv("OKTETO_TOKEN")
-	}
-
-	if ctxResource.Token != "" {
-		contextWithOktetoTokenEnvVar(ctxResource)
-		return
-	}
-
+// InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
+// this function is to make "okteto context" transparent to current Okteto Enterprise users, but it can be removed when people upgrade
+func InitContextWithDeprecatedToken() {
 	if !model.FileExists(config.GetTokenPathDeprecated()) {
 		return
 	}
+
 	defer os.RemoveAll(config.GetTokenPathDeprecated())
 	token, err := getTokenFromOktetoHome()
 	if err != nil {
@@ -76,55 +69,34 @@ func AutomaticContextWithOktetoEnvVars(ctxResource *model.ContextResource) {
 		return
 	}
 
-	contextWithDeprecatedToken(token, ctxResource)
-}
-
-func contextWithOktetoTokenEnvVar(ctxResource *model.ContextResource) {
-	if ctxResource.Context == "" {
-		ctxResource.Context = CloudURL
-	}
-	log.Infof("Using 'OKTETO_TOKEN' to access %s", ctxResource.Context)
-	ctxStore := ContextStore()
-	ctxStore.CurrentContext = ctxResource.Context
-
-	if okCtx, ok := ctxStore.Contexts[ctxResource.Context]; ok {
-		okCtx.Token = ctxResource.Token
+	k8sContext := UrlToKubernetesContext(token.URL)
+	if kubeconfig.CurrentContext(config.GetKubeconfigPath()) != k8sContext {
 		return
 	}
 
-	ctxStore.Contexts[ctxResource.Context] = &OktetoContext{
-		Name:  ctxResource.Context,
-		Token: ctxResource.Token,
-	}
-}
-
-func contextWithDeprecatedToken(token *Token, ctxResource *model.ContextResource) {
-	k8sContext := UrlToKubernetesContext(token.URL)
-	if ctxResource.Context == k8sContext || ctxResource.Context == "" && kubeconfig.CurrentContext(config.GetKubeconfigPath()) == k8sContext {
-		ctxStore := ContextStore()
-		if _, ok := ctxStore.Contexts[token.URL]; ok {
-			return
-		}
-
-		certificateBytes, err := os.ReadFile(config.GetCertificatePath())
-		if err != nil {
-			log.Infof("error reading okteto certificate: %v", err)
-			return
-		}
-
-		ctxStore.Contexts[token.URL] = &OktetoContext{
-			Name:        token.URL,
-			Namespace:   kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
-			Token:       token.Token,
-			Buildkit:    token.Buildkit,
-			Certificate: base64.StdEncoding.EncodeToString(certificateBytes),
-		}
-		ctxStore.CurrentContext = token.URL
-		if err := WriteOktetoContextConfig(); err != nil {
-			log.Infof("error writing okteto context: %v", err)
-		}
+	ctxStore := ContextStore()
+	if _, ok := ctxStore.Contexts[token.URL]; ok {
+		return
 	}
 
+	certificateBytes, err := os.ReadFile(config.GetCertificatePath())
+	if err != nil {
+		log.Infof("error reading okteto certificate: %v", err)
+		return
+	}
+
+	ctxStore.Contexts[token.URL] = &OktetoContext{
+		Name:        token.URL,
+		Namespace:   kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
+		Token:       token.Token,
+		Buildkit:    token.Buildkit,
+		Certificate: base64.StdEncoding.EncodeToString(certificateBytes),
+	}
+	ctxStore.CurrentContext = token.URL
+
+	if err := WriteOktetoContextConfig(); err != nil {
+		log.Infof("error writing okteto context: %v", err)
+	}
 }
 
 //ContextExists checks if an okteto context has been created
@@ -142,6 +114,18 @@ func ContextExists() bool {
 func UrlToKubernetesContext(uri string) string {
 	u, _ := url.Parse(uri)
 	return strings.ReplaceAll(u.Host, ".", "_")
+}
+
+// K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
+// It can be removed when people move to "okteto context"
+func K8sContextToOktetoUrl(k8sContext string) string {
+	ctxStore := ContextStore()
+	for name := range ctxStore.Contexts {
+		if IsOktetoURL(name) && UrlToKubernetesContext(name) == k8sContext {
+			return name
+		}
+	}
+	return k8sContext
 }
 
 func IsOktetoURL(name string) bool {
@@ -260,18 +244,6 @@ func WriteOktetoContextConfig() error {
 	}
 
 	return nil
-}
-
-//WriteKubeconfig updates the current context of a kubeconfig file
-func WriteKubeconfig(cred *Credential, kubeConfigPath, namespace, userName, clusterName string) error {
-	cfg := kubeconfig.Get(kubeConfigPath)
-	if cfg == nil {
-		cfg = kubeconfig.Create()
-	}
-
-	AddOktetoCredentialsToCfg(cfg, cred, namespace, userName, clusterName)
-
-	return clientcmd.WriteToFile(*cfg, kubeConfigPath)
 }
 
 func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *Credential, namespace, userName, clusterName string) {

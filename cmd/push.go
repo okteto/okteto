@@ -70,7 +70,12 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if err := contextCMD.Init(ctx, ctxResource); err != nil {
+			ctxOptions := &contextCMD.ContextOptions{
+				Context:   ctxResource.Context,
+				Namespace: ctxResource.Namespace,
+				Show:      true,
+			}
+			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 

@@ -15,15 +15,11 @@ package namespace
 
 import (
 	"context"
-	"fmt"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -41,8 +37,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 				namespace = args[0]
 			}
 
-			ctxResource := &model.ContextResource{}
-			if err := contextCMD.Init(ctx, ctxResource); err != nil {
+			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
@@ -50,67 +45,16 @@ func Namespace(ctx context.Context) *cobra.Command {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			err := RunNamespace(ctx, namespace)
+			contextCommand := contextCMD.Context()
+			contextCommand.Flags().Set("token", okteto.Context().Token)
+			args = []string{okteto.Context().Name}
+			if namespace != "" {
+				contextCommand.Flags().Set("namespace", namespace)
+			}
+			err := contextCommand.RunE(nil, args)
 			analytics.TrackNamespace(err == nil)
 			return err
 		},
 	}
 	return cmd
-}
-
-// RunNamespace starts the kubeconfig sequence
-func RunNamespace(ctx context.Context, namespace string) error {
-
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	cred, err := oktetoClient.GetCredentials(ctx)
-	if err != nil {
-		return err
-	}
-	if namespace == "" {
-		namespace = cred.Namespace
-	}
-
-	hasAccess, err := hasAccessToNamespace(ctx, namespace)
-	if err != nil {
-		return err
-	}
-	if !hasAccess {
-		return fmt.Errorf(errors.ErrNamespaceNotFound, namespace)
-	}
-
-	octx := okteto.Context()
-	k8sContext := okteto.UrlToKubernetesContext(octx.Name)
-	if err := okteto.WriteKubeconfig(cred, config.GetKubeconfigPath(), namespace, octx.UserID, k8sContext); err != nil {
-		return err
-	}
-
-	okteto.AddOktetoContext(octx.Name, octx.ToUser(), namespace)
-
-	if err := okteto.WriteOktetoContextConfig(); err != nil {
-		return err
-	}
-
-	log.Information("Current kubernetes context '%s/%s' in '%s'", k8sContext, namespace, config.GetKubeconfigPath())
-	return nil
-}
-
-func hasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return false, err
-	}
-	spaces, err := oktetoClient.ListNamespaces(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	for i := range spaces {
-		if spaces[i].ID == namespace {
-			return true, nil
-		}
-	}
-	return false, nil
 }

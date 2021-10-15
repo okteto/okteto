@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -37,8 +36,7 @@ func Create(ctx context.Context) *cobra.Command {
 		Short: "Creates a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ctxResource := &model.ContextResource{}
-			if err := contextCMD.Init(ctx, ctxResource); err != nil {
+			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
@@ -75,7 +73,11 @@ func executeCreateNamespace(ctx context.Context, namespace string, members *[]st
 		}
 	}
 
-	if err := RunNamespace(ctx, oktetoNS); err != nil {
+	contextCommand := contextCMD.Context()
+	contextCommand.Flags().Set("token", okteto.Context().Token)
+	contextCommand.Flags().Set("namespace", oktetoNS)
+	args := []string{okteto.Context().Name}
+	if err := contextCommand.RunE(nil, args); err != nil {
 		return fmt.Errorf("failed to activate your new namespace %s: %s", oktetoNS, err)
 	}
 

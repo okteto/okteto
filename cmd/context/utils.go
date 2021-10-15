@@ -14,9 +14,11 @@
 package context
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -113,4 +115,63 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 	}
 	okteto.AddKubernetesContext(ctxResource.Context, ctxResource.Namespace, "")
 	return nil
+}
+
+func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Dev, error) {
+	ctxResource, err := utils.LoadDevContext(devPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ctxResource.UpdateNamespace(namespace); err != nil {
+		return nil, err
+	}
+
+	if err := ctxResource.UpdateContext(k8sContext); err != nil {
+		return nil, err
+	}
+
+	ctxOptions := &ContextOptions{
+		Context:   ctxResource.Context,
+		Namespace: ctxResource.Namespace,
+		Show:      true,
+	}
+	if err := Run(ctx, ctxOptions); err != nil {
+		return nil, err
+	}
+
+	return utils.LoadDev(devPath)
+}
+
+func LoadStackWithContext(ctx context.Context, name, stackPath, namespace string) (*model.Stack, error) {
+	ctxResource, err := utils.LoadStackContext(stackPath)
+	if err != nil {
+		if name == "" {
+			return nil, err
+		}
+		ctxResource = &model.ContextResource{}
+	}
+
+	if err := ctxResource.UpdateNamespace(namespace); err != nil {
+		return nil, err
+	}
+
+	ctxOptions := &ContextOptions{
+		Context:   ctxResource.Context,
+		Namespace: ctxResource.Namespace,
+		Show:      true,
+	}
+	if err := Run(ctx, ctxOptions); err != nil {
+		return nil, err
+	}
+
+	s, err := utils.LoadStack(name, stackPath)
+	if err != nil {
+		if name == "" {
+			return nil, err
+		}
+		s = &model.Stack{Name: name}
+	}
+	s.Namespace = okteto.Context().Namespace
+	return s, nil
 }
