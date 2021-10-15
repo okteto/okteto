@@ -41,19 +41,45 @@ var (
 )
 
 //LoadStackContext loads the namespace and context of an okteto stack manifest
-func LoadStackContext(stackPath string) (*model.ContextResource, error) {
-	if model.FileExists(stackPath) {
-		return model.GetContextResource(stackPath)
-	}
-	if stackPath == DefaultStackManifest {
-		for _, secondaryStackManifest := range secondaryStackManifests {
-			manifestPath := filepath.Join(secondaryStackManifest...)
+func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
+	ctxResource := &model.ContextResource{}
+	found := false
+	var err error
+	if len(stackPaths) == 0 {
+		for _, possibleStackManifest := range possibleStackManifests {
+			manifestPath := filepath.Join(possibleStackManifest...)
 			if model.FileExists(manifestPath) {
-				return model.GetContextResource(manifestPath)
+				ctxResource, err = model.GetContextResource(manifestPath)
+				if err != nil {
+					return nil, err
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, errors.UserError{
+				E:    fmt.Errorf("could not detect any stack file to deploy"),
+				Hint: "Try setting the flag '--file' pointing to your stack file",
 			}
 		}
 	}
-	return nil, fmt.Errorf("'%s' does not exist", stackPath)
+	for _, stackPath := range stackPaths {
+		if !model.FileExists(stackPath) {
+			return nil, fmt.Errorf("'%s' does not exist", stackPath)
+		}
+		thisCtxResource, err := model.GetContextResource(stackPath)
+		if err != nil {
+			return nil, err
+		}
+		if thisCtxResource.Context != "" {
+			ctxResource.Context = thisCtxResource.Context
+		}
+		if thisCtxResource.Namespace != "" {
+			ctxResource.Namespace = thisCtxResource.Namespace
+		}
+	}
+	return ctxResource, nil
 }
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"

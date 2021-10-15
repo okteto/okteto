@@ -143,8 +143,8 @@ func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext stri
 	return utils.LoadDev(devPath)
 }
 
-func LoadStackWithContext(ctx context.Context, name, stackPath, namespace string) (*model.Stack, error) {
-	ctxResource, err := utils.LoadStackContext(stackPath)
+func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string) (*model.Stack, error) {
+	ctxResource, err := utils.LoadStackContext(stackPaths)
 	if err != nil {
 		if name == "" {
 			return nil, err
@@ -165,7 +165,7 @@ func LoadStackWithContext(ctx context.Context, name, stackPath, namespace string
 		return nil, err
 	}
 
-	s, err := utils.LoadStack(name, stackPath)
+	s, err := utils.LoadStack(name, stackPaths)
 	if err != nil {
 		if name == "" {
 			return nil, err
