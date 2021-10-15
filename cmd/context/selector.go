@@ -39,8 +39,10 @@ const (
 )
 
 var (
-	cloudOption = fmt.Sprintf("[Okteto Cloud] %s", okteto.CloudURL)
-	newOEOption = "New Okteto Cluster URL"
+	cloudOption           = fmt.Sprintf("[Okteto Cloud] %s", okteto.CloudURL)
+	newOEOption           = "New Okteto Cluster URL"
+	oktetoContextsDivider = "Okteto contexts:"
+	k8sContextsDivider    = "Kubernetes contexts:"
 )
 
 type OktetoSelector struct {
@@ -77,7 +79,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	}
 	clusters := make([]SelectorItem, 0)
 	if len(k8sClusters) > 0 {
-		clusters = append(clusters, SelectorItem{Label: "Okteto contexts:", Enable: false})
+		clusters = append(clusters, SelectorItem{Label: oktetoContextsDivider, Enable: false})
 	}
 
 	clusters = append(clusters, SelectorItem{Label: cloudOption, Enable: true})
@@ -91,7 +93,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	}
 	clusters = append(clusters, SelectorItem{Label: newOEOption, Enable: true})
 	if len(k8sClusters) > 0 {
-		clusters = append(clusters, SelectorItem{Label: "Kubernetes contexts:", Enable: false})
+		clusters = append(clusters, SelectorItem{Label: k8sContextsDivider, Enable: false})
 		for _, k8sCluster := range k8sClusters {
 			clusters = append(clusters, SelectorItem{
 				Label:  k8sCluster,
@@ -471,7 +473,7 @@ func getSelectedTemplate() string {
 
 func getActiveTemplate(options []SelectorItem) string {
 	whitespaces := ""
-	if len(options) > 2 {
+	if options[0].Label == oktetoContextsDivider {
 		whitespaces = strings.Repeat(" ", 2)
 	}
 	result := fmt.Sprintf("%s%s {{ .Label | oktetoblue }}", whitespaces, promptui.IconSelect)
@@ -481,7 +483,7 @@ func getActiveTemplate(options []SelectorItem) string {
 
 func getInactiveTemplate(options []SelectorItem) string {
 	whitespaces := strings.Repeat(" ", 2)
-	if len(options) > 2 {
+	if options[0].Label == oktetoContextsDivider {
 		whitespaces = strings.Repeat(" ", 4)
 	}
 	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label | oktetoblue}}{{else}}• {{ .Label }}{{end}}", whitespaces)
