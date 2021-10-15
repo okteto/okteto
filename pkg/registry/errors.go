@@ -85,8 +85,3 @@ func IsNotLoggedIntoRegistry(err error) bool {
 func IsBuildkitServiceUnavailable(err error) bool {
 	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error")
 }
-
-// IsAlreadyBuiltInGlobalRegistry returns true when the error is because the image is already built in the global registry
-func IsAlreadyBuiltInGlobalRegistry(err error) bool {
-	return strings.Contains(err.Error(), "build skipped")
-}
