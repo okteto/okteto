@@ -75,7 +75,7 @@ func TestStacks(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		log.Printf("deployed stack using \n")
+		log.Printf("deployed stack using %s\n", stackManifest)
 
 		endpoint := fmt.Sprintf("https://vote-%s.cloud.okteto.net", namespace)
 		content, err := getContent(endpoint, 150, nil)
