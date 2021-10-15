@@ -18,17 +18,19 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
 var (
 	//DefaultStackManifest default okteto stack manifest file
-	DefaultStackManifest    = "okteto-stack.yml"
-	secondaryStackManifests = [][]string{
+	possibleStackManifests = [][]string{
+		{"okteto-stack.yml"},
 		{"okteto-stack.yaml"},
 		{"stack.yml"},
 		{"stack.yaml"},
+		{".okteto", "okteto-stack.yml"},
 		{".okteto", "okteto-stack.yaml"},
 		{"docker-compose.yml"},
 		{"docker-compose.yaml"},
@@ -41,57 +43,27 @@ var (
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
 func LoadStack(name string, stackPaths []string) (*model.Stack, error) {
 	var resultStack *model.Stack
-	for _, stackPath := range stackPaths {
-		var isCompose bool
-		if model.FileExists(stackPath) {
-			if isPathAComposeFile(stackPath) {
-				isCompose = true
-			}
-			stack, err := model.GetStack(name, stackPath, isCompose)
-			if err != nil {
-				return nil, err
-			}
 
-			resultStack = resultStack.Merge(stack)
-
-			overrideStack, err := getOverrideFile(stackPath)
-			if err == nil {
-				log.Info("override file detected. Merging it")
-				resultStack = resultStack.Merge(overrideStack)
-			}
-
-			continue
+	if len(stackPaths) == 0 {
+		stack, err := inferStack(name)
+		if err != nil {
+			return nil, err
 		}
+		resultStack = resultStack.Merge(stack)
 
-		if stackPath == DefaultStackManifest {
-			for _, secondaryStackManifest := range secondaryStackManifests {
-				manifestPath := filepath.Join(secondaryStackManifest...)
-				if model.FileExists(manifestPath) {
-					if isDeprecatedExtension(manifestPath) {
-						deprecatedFile := filepath.Base(manifestPath)
-						log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
-					}
-					if isPathAComposeFile(manifestPath) {
-						isCompose = true
-					}
-					stack, err := model.GetStack(name, manifestPath, isCompose)
-					if err != nil {
-						return nil, err
-					}
-
-					resultStack.Merge(stack)
-
-					overrideStack, err := getOverrideFile(stackPath)
-					if err != nil {
-						log.Info("override file detected. Merging it")
-						resultStack = resultStack.Merge(overrideStack)
-					}
-
-					continue
+	} else {
+		for _, stackPath := range stackPaths {
+			if model.FileExists(stackPath) {
+				stack, err := getStack(name, stackPath)
+				if err != nil {
+					return nil, err
 				}
+
+				resultStack = resultStack.Merge(stack)
+				continue
 			}
+			return nil, fmt.Errorf("'%s' does not exist", stackPath)
 		}
-		return nil, fmt.Errorf("'%s' does not exist", stackPath)
 	}
 
 	if err := resultStack.Validate(); err != nil {
@@ -131,4 +103,42 @@ func getOverrideFile(stackPath string) (*model.Stack, error) {
 		return stack, nil
 	}
 	return nil, fmt.Errorf("override file not found")
+}
+func inferStack(name string) (*model.Stack, error) {
+	for _, possibleStackManifest := range possibleStackManifests {
+		manifestPath := filepath.Join(possibleStackManifest...)
+		if model.FileExists(manifestPath) {
+			stack, err := getStack(name, manifestPath)
+			if err != nil {
+				return nil, err
+			}
+
+			return stack, nil
+		}
+	}
+	return nil, errors.UserError{
+		E:    fmt.Errorf("could not detect any stack file to deploy."),
+		Hint: "Try setting the flag '--file' pointing to your stack file",
+	}
+}
+
+func getStack(name, manifestPath string) (*model.Stack, error) {
+	var isCompose bool
+	if isDeprecatedExtension(manifestPath) {
+		deprecatedFile := filepath.Base(manifestPath)
+		log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
+	}
+	if isPathAComposeFile(manifestPath) {
+		isCompose = true
+	}
+	stack, err := model.GetStack(name, manifestPath, isCompose)
+	if err != nil {
+		return nil, err
+	}
+	overrideStack, err := getOverrideFile(manifestPath)
+	if err == nil {
+		log.Info("override file detected. Merging it")
+		stack = stack.Merge(overrideStack)
+	}
+	return stack, nil
 }
