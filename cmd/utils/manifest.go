@@ -254,7 +254,7 @@ func fileExistsAndNotDir(filename string) bool {
 
 // Execute executes the specified command adding `env` to the execution environment
 func (*Executor) Execute(command string, env []string) error {
-	log.Information("Running '%s'...", command)
+	fmt.Printf("Running '%s'...\n", command)
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Env = append(os.Environ(), env...)
