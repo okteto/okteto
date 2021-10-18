@@ -187,7 +187,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		fmt.Sprintf("KUBECONFIG=%s", dc.tempKubeconfigFile),
 		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all the Okteto commands executed within this command execution
 		// should not overwrite the server and the credentials in the kubeconfig
-		fmt.Sprintf("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT=true"),
+		"OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT=true",
 	)
 
 	for _, command := range manifest.Deploy {
