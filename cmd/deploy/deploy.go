@@ -78,6 +78,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
+			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
+			os.Setenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT", "false")
 			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
@@ -178,8 +181,14 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	defer dc.cleanUp(ctx)
 
-	// Set variables and KUBECONFIG environment variable as environment for the commands to be executed
-	opts.Variables = append(opts.Variables, fmt.Sprintf("KUBECONFIG=%s", dc.tempKubeconfigFile))
+	opts.Variables = append(
+		opts.Variables,
+		// Set KUBECONFIG environment variable as environment for the commands to be executed
+		fmt.Sprintf("KUBECONFIG=%s", dc.tempKubeconfigFile),
+		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all the Okteto commands executed within this command execution
+		// should not overwrite the server and the credentials in the kubeconfig
+		fmt.Sprintf("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT=true"),
+	)
 
 	for _, command := range manifest.Deploy {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {

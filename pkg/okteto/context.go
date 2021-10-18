@@ -249,6 +249,12 @@ func WriteOktetoContextConfig() error {
 }
 
 func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *Credential, namespace, userName, clusterName string) {
+	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
+	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
+	if os.Getenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT") == "true" {
+		return
+	}
+
 	// create cluster
 	cluster, ok := cfg.Clusters[clusterName]
 	if !ok {
