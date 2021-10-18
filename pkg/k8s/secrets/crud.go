@@ -68,13 +68,19 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 		},
 	}
 
+	idx := 0
 	for _, s := range dev.Secrets {
 		content, err := os.ReadFile(s.LocalPath)
 		if err != nil {
 			return fmt.Errorf("error reading secret '%s': %s", s.LocalPath, err)
 		}
+		if strings.Contains(s.GetKeyName(), "stignore") {
+			idx++
+			data.Data[fmt.Sprintf("%s-%d", s.GetKeyName(), idx)] = content
+		} else {
+			data.Data[s.GetKeyName()] = content
+		}
 
-		data.Data[s.GetKeyName()] = content
 	}
 
 	if sct.Name == "" {
