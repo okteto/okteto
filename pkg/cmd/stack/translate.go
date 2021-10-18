@@ -285,6 +285,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					Affinity:                      translateAffinity(svc),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -300,7 +301,6 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							LivenessProbe:   healthcheckProbe,
 						},
 					},
-					Affinity: translateAffinity(svc),
 				},
 			},
 		},
@@ -356,6 +356,8 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers:                initContainers,
+					Affinity:                      translateAffinity(svc),
+					Volumes:                       translateVolumes(svcName, svc),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -372,7 +374,6 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 							LivenessProbe:   healthcheckProbe,
 						},
 					},
-					Volumes: translateVolumes(svcName, svc),
 				},
 			},
 			VolumeClaimTemplates: translateVolumeClaimTemplates(svcName, s),
@@ -405,6 +406,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 					RestartPolicy:                 svc.RestartPolicy,
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers:                initContainers,
+					Affinity:                      translateAffinity(svc),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
