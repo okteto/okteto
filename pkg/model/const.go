@@ -172,4 +172,7 @@ const (
 
 	//OktetoExtension identifies the okteto extension in kubeconfig files
 	OktetoExtension = "okteto"
+
+	// HelmSecretType indicates the type for secrets created by Helm
+	HelmSecretType = "helm.sh/release.v1"
 )

@@ -28,6 +28,8 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -248,6 +250,12 @@ func WriteOktetoContextConfig() error {
 }
 
 func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *Credential, namespace, userName, clusterName string) {
+	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
+	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
+	if os.Getenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT") == "true" {
+		return
+	}
+
 	// create cluster
 	cluster, ok := cfg.Clusters[clusterName]
 	if !ok {
@@ -288,6 +296,22 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
 	return getK8sClient(Context().Cfg)
+}
+
+// GetDynamicClient returns a kubernetes dynamic client for the current okteto context
+func GetDynamicClient() (dynamic.Interface, *rest.Config, error) {
+	if Context().Cfg == nil {
+		return nil, nil, fmt.Errorf("okteto context not initialized")
+	}
+	return getDynamicClient(Context().Cfg)
+}
+
+// GetDiscoveryClient return a kubernetes discovery client for the current okteto context
+func GetDiscoveryClient() (discovery.DiscoveryInterface, *rest.Config, error) {
+	if Context().Cfg == nil {
+		return nil, nil, fmt.Errorf("okteto context not initialized")
+	}
+	return getDiscoveryClient(Context().Cfg)
 }
 
 // GetSanitizedUsername returns the username of the authenticated user sanitized to be DNS compatible

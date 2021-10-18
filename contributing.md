@@ -86,7 +86,7 @@ Please make sure to read and observe our [code of conduct](code-of-conduct.md).
 
 # Development Guide
 
-Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.16](https://golang.org/doc/go1.16). It uses go modules for dependency management.
+Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.17](https://golang.org/doc/go1.17). It uses go modules for dependency management.
 
 ## Build
 
