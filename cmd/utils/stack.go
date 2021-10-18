@@ -92,6 +92,7 @@ func LoadStack(name string, stackPaths []string) (*model.Stack, error) {
 			return nil, err
 		}
 		resultStack = resultStack.Merge(stack)
+
 	} else {
 		for _, stackPath := range stackPaths {
 			if model.FileExists(stackPath) {
@@ -128,6 +129,23 @@ func isDeprecatedExtension(stackPath string) bool {
 	return false
 }
 
+func getOverrideFile(stackPath string) (*model.Stack, error) {
+	extension := filepath.Ext(stackPath)
+	fileName := strings.TrimSuffix(stackPath, extension)
+	overridePath := fmt.Sprintf("%s.override%s", fileName, extension)
+	var isCompose bool
+	if model.FileExists(stackPath) {
+		if isPathAComposeFile(stackPath) {
+			isCompose = true
+		}
+		stack, err := model.GetStack("", overridePath, isCompose)
+		if err != nil {
+			return nil, err
+		}
+		return stack, nil
+	}
+	return nil, fmt.Errorf("override file not found")
+}
 func inferStack(name string) (*model.Stack, error) {
 	for _, possibleStackManifest := range possibleStackManifests {
 		manifestPath := filepath.Join(possibleStackManifest...)
@@ -136,6 +154,7 @@ func inferStack(name string) (*model.Stack, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			return stack, nil
 		}
 	}
@@ -157,6 +176,11 @@ func getStack(name, manifestPath string) (*model.Stack, error) {
 	stack, err := model.GetStack(name, manifestPath, isCompose)
 	if err != nil {
 		return nil, err
+	}
+	overrideStack, err := getOverrideFile(manifestPath)
+	if err == nil {
+		log.Info("override file detected. Merging it")
+		stack = stack.Merge(overrideStack)
 	}
 	return stack, nil
 }
