@@ -300,6 +300,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							LivenessProbe:   healthcheckProbe,
 						},
 					},
+					Affinity: translateAffinity(svc),
 				},
 			},
 		},
@@ -691,6 +692,36 @@ func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string 
 	return labels
 }
 
+func translateAffinity(svc *model.Service) *apiv1.Affinity {
+	requirements := make([]string, 0)
+	for _, volume := range svc.Volumes {
+		if volume.LocalPath != "" {
+			requirements = append(requirements, volume.LocalPath)
+		}
+	}
+	if len(requirements) > 0 {
+		return &apiv1.Affinity{
+			PodAffinity: &apiv1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+					{
+						LabelSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      model.StackVolumeNameLabel,
+									Operator: metav1.LabelSelectorOpIn,
+									Values:   requirements,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	return nil
+}
+
 func translateLabels(svcName string, s *model.Stack) map[string]string {
 	svc := s.Services[svcName]
 	labels := map[string]string{
@@ -699,6 +730,16 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 	}
 	for k := range svc.Labels {
 		labels[k] = svc.Labels[k]
+	}
+
+	for _, volume := range svc.Volumes {
+		if volume.LocalPath != "" {
+			if label, ok := labels[model.StackVolumeNameLabel]; ok {
+				labels[model.StackVolumeNameLabel] = fmt.Sprintf("%s-%s", label, volume.LocalPath)
+			} else {
+				labels[model.StackVolumeNameLabel] = volume.LocalPath
+			}
+		}
 	}
 	return labels
 }
