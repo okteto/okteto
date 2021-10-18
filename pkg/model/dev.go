@@ -941,7 +941,11 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			rule.Args = append(rule.Args, "-v")
 		}
 		for _, s := range rule.Secrets {
-			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
+			filename := s.GetFileName()
+			if strings.Contains(filename, ".stignore") {
+				filename = filepath.Base(s.LocalPath)
+			}
+			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", filename, s.RemotePath))
 		}
 		if dev.Docker.Enabled {
 			rule.Args = append(rule.Args, "-d")

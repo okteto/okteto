@@ -633,12 +633,20 @@ func TranslateOktetoDevSecret(spec *apiv1.PodSpec, secret string, secrets []mode
 			},
 		},
 	}
+	idx := 0
 	for i, s := range secrets {
+		key := s.GetKeyName()
+		path := s.GetFileName()
+		if strings.Contains(key, ".stignore") {
+			idx++
+			key = fmt.Sprintf("%s-%d", key, idx)
+			path = fmt.Sprintf("%s-%d", path, idx)
+		}
 		v.VolumeSource.Secret.Items = append(
 			v.VolumeSource.Secret.Items,
 			apiv1.KeyToPath{
-				Key:  s.GetKeyName(),
-				Path: s.GetFileName(),
+				Key:  key,
+				Path: path,
 				Mode: &secrets[i].Mode,
 			},
 		)

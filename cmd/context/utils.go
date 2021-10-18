@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
@@ -78,7 +79,7 @@ func askForOktetoURL() string {
 	if okteto.IsOktetoURL(ctxStore.CurrentContext) {
 		clusterURL = ctxStore.CurrentContext
 	}
-	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", clusterURL)
+	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", strings.TrimSuffix(clusterURL, "/"))
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)
@@ -88,7 +89,7 @@ func askForOktetoURL() string {
 	if url.Scheme == "" {
 		url.Scheme = "https"
 	}
-	return url.String()
+	return strings.TrimSuffix(url.String(), "/")
 }
 
 func isValidCluster(cluster string) bool {

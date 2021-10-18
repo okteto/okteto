@@ -196,6 +196,7 @@ func HasBeenLogged(oktetoURL string) bool {
 
 func AddOktetoContext(name string, u *User, namespace string) {
 	CurrentStore = ContextStore()
+	name = strings.TrimSuffix(name, "/")
 	CurrentStore.Contexts[name] = &OktetoContext{
 		Name:            name,
 		UserID:          u.ID,
