@@ -293,22 +293,18 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 
 // GetDynamicClient returns a kubernetes dynamic client for the current okteto context
 func GetDynamicClient() (dynamic.Interface, *rest.Config, error) {
-	octx := Context()
-	kubeconfigBytes, err := base64.StdEncoding.DecodeString(octx.Kubeconfig)
-	if err != nil {
-		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+	if Context().Cfg == nil {
+		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
-	return getDynamicClient(kubeconfigBytes)
+	return getDynamicClient(Context().Cfg)
 }
 
 // GetDiscoveryClient return a kubernetes discovery client for the current okteto context
 func GetDiscoveryClient() (discovery.DiscoveryInterface, *rest.Config, error) {
-	octx := Context()
-	kubeconfigBytes, err := base64.StdEncoding.DecodeString(octx.Kubeconfig)
-	if err != nil {
-		return nil, nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoHome())
+	if Context().Cfg == nil {
+		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
-	return getDiscoveryClient(kubeconfigBytes)
+	return getDiscoveryClient(Context().Cfg)
 }
 
 // GetSanitizedUsername returns the username of the authenticated user sanitized to be DNS compatible

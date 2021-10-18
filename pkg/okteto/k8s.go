@@ -55,12 +55,7 @@ func getK8sClient(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, 
 	return client, config, nil
 }
 
-func getDynamicClient(kubeconfigBytes []byte) (dynamic.Interface, *rest.Config, error) {
-	clientAPIConfig, err := clientcmd.Load(kubeconfigBytes)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func getDynamicClient(clientAPIConfig *clientcmdapi.Config) (dynamic.Interface, *rest.Config, error) {
 	clientConfig := clientcmd.NewDefaultClientConfig(*clientAPIConfig, nil)
 
 	config, err := clientConfig.ClientConfig()
@@ -78,12 +73,7 @@ func getDynamicClient(kubeconfigBytes []byte) (dynamic.Interface, *rest.Config, 
 	return dc, config, err
 }
 
-func getDiscoveryClient(kubeconfigBytes []byte) (discovery.DiscoveryInterface, *rest.Config, error) {
-	clientAPIConfig, err := clientcmd.Load(kubeconfigBytes)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func getDiscoveryClient(clientAPIConfig *clientcmdapi.Config) (discovery.DiscoveryInterface, *rest.Config, error) {
 	clientConfig := clientcmd.NewDefaultClientConfig(*clientAPIConfig, nil)
 
 	config, err := clientConfig.ClientConfig()

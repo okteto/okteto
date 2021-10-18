@@ -78,7 +78,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Init(ctx); err != nil {
+			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 

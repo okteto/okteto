@@ -14,7 +14,6 @@
 package deploy
 
 import (
-	"encoding/base64"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/log"
@@ -61,10 +60,9 @@ func (k *kubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 }
 
 func (*kubeConfig) getCMDAPIConfig() (*clientcmdapi.Config, error) {
-	kubeconfigBytes, err := base64.StdEncoding.DecodeString(okteto.Context().Kubeconfig)
-	if err != nil {
-		return nil, err
+	if okteto.Context().Cfg == nil {
+		return nil, fmt.Errorf("okteto context not initialized")
 	}
 
-	return clientcmd.Load(kubeconfigBytes)
+	return okteto.Context().Cfg, nil
 }
