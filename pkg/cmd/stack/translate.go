@@ -116,10 +116,14 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 	if err != nil {
 		return err
 	}
-	hasAddedAnyVolumeMounts, err := addVolumeMountsToBuiltImage(ctx, s, options, hasBuiltSomething)
-	if err != nil {
-		return err
+	var hasAddedAnyVolumeMounts bool
+	if okteto.IsOkteto() {
+		hasAddedAnyVolumeMounts, err = addVolumeMountsToBuiltImage(ctx, s, options, hasBuiltSomething)
+		if err != nil {
+			return err
+		}
 	}
+
 	if !hasBuiltSomething && !hasAddedAnyVolumeMounts && options.ForceBuild {
 		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
 	}
@@ -134,10 +138,10 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		if svc.Build == nil {
 			continue
 		}
-		if !okteto.IsOktetoContext() && svc.Image == "" {
+		if !okteto.IsOkteto() && svc.Image == "" {
 			return hasBuiltSomething, fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
 		}
-		if okteto.IsOktetoContext() && !registry.IsOktetoRegistry(svc.Image) {
+		if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !options.ForceBuild {
@@ -149,11 +153,26 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
-			log.Information("Running your build in %s...", okteto.Context().Buildkit)
+			if okteto.Context().Buildkit != "" {
+				log.Information("Running your build in %s...", okteto.Context().Buildkit)
+			} else {
+				log.Information("Running your build in docker")
+			}
+
 		}
 		log.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-		if err := build.Run(ctx, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, options.NoCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+		buildOptions := build.BuildOptions{
+			Path:       svc.Build.Context,
+			File:       svc.Build.Dockerfile,
+			Tag:        svc.Image,
+			Target:     svc.Build.Target,
+			NoCache:    options.NoCache,
+			CacheFrom:  svc.Build.CacheFrom,
+			BuildArgs:  buildArgs,
+			OutputMode: "tty",
+		}
+		if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
 			return hasBuiltSomething, err
 		}
 		svc.SetLastBuiltAnnotation()
@@ -173,7 +192,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				log.Information("Running your build in %s...", okteto.Context().Buildkit)
 			}
 			fromImage := svc.Image
-			if okteto.IsOktetoContext() {
+			if okteto.IsOkteto() {
 				fromImage = registry.ExpandOktetoDevRegistry(svc.Image)
 				fromImage = registry.ExpandOktetoGlobalRegistry(fromImage)
 			}
@@ -183,12 +202,23 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.Build = svcBuild
-			if okteto.IsOktetoContext() && !registry.IsOktetoRegistry(svc.Image) {
+			if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
 				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
-			if err := build.Run(ctx, svc.Build.Context, svc.Build.Dockerfile, svc.Image, svc.Build.Target, options.NoCache, svc.Build.CacheFrom, buildArgs, nil, "tty"); err != nil {
+
+			buildOptions := build.BuildOptions{
+				Path:       svc.Build.Context,
+				File:       svc.Build.Dockerfile,
+				Tag:        svc.Image,
+				Target:     svc.Build.Target,
+				NoCache:    options.NoCache,
+				CacheFrom:  svc.Build.CacheFrom,
+				BuildArgs:  buildArgs,
+				OutputMode: "tty",
+			}
+			if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.SetLastBuiltAnnotation()
@@ -750,7 +780,9 @@ func translateStorageClass(className string) *string {
 func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 	result := []apiv1.EnvVar{}
 	for _, e := range svc.Environment {
-		result = append(result, apiv1.EnvVar{Name: e.Name, Value: e.Value})
+		if e.Value != "" && e.Name != "" {
+			result = append(result, apiv1.EnvVar{Name: e.Name, Value: e.Value})
+		}
 	}
 	return result
 }

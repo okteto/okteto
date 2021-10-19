@@ -14,13 +14,18 @@
 package context
 
 import (
+	"context"
 	"fmt"
 	"net/url"
+	"strings"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/client"
+	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type SelectItem struct {
@@ -31,7 +36,7 @@ type SelectItem struct {
 func getKubernetesContextList() []string {
 	contextList := make([]string, 0)
 	kubeconfigFile := config.GetKubeconfigPath()
-	cfg := client.GetKubeconfig(kubeconfigFile)
+	cfg := kubeconfig.Get(kubeconfigFile)
 	if cfg == nil {
 		return contextList
 	}
@@ -45,24 +50,36 @@ func getKubernetesContextList() []string {
 }
 
 func isOktetoCluster(option string) bool {
-	return option == "Okteto Cloud" || option == "Okteto Enterprise"
+	if option == cloudOption {
+		return true
+	}
+
+	if option == newOEOption {
+		return true
+	}
+
+	return okteto.IsOktetoURL(option)
 }
 
 func getOktetoClusterUrl(option string) string {
-	if option == "Okteto Cloud" {
+	if option == cloudOption {
 		return okteto.CloudURL
+	}
+
+	if okteto.IsOktetoURL(option) {
+		return option
 	}
 
 	return askForOktetoURL()
 }
 
 func askForOktetoURL() string {
-	octx := okteto.Context()
-	clusterURL := octx.Name
-	if !okteto.IsOktetoURL(octx.Name) {
-		clusterURL = okteto.CloudURL
+	clusterURL := okteto.CloudURL
+	ctxStore := okteto.ContextStore()
+	if okteto.IsOktetoURL(ctxStore.CurrentContext) {
+		clusterURL = ctxStore.CurrentContext
 	}
-	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", clusterURL)
+	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", strings.TrimSuffix(clusterURL, "/"))
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)
@@ -72,7 +89,7 @@ func askForOktetoURL() string {
 	if url.Scheme == "" {
 		url.Scheme = "https"
 	}
-	return url.String()
+	return strings.TrimSuffix(url.String(), "/")
 }
 
 func isValidCluster(cluster string) bool {
@@ -82,4 +99,80 @@ func isValidCluster(cluster string) bool {
 		}
 	}
 	return false
+}
+
+func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextResource) error {
+	if cfg == nil {
+		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
+	}
+	if _, ok := cfg.Contexts[ctxResource.Context]; !ok {
+		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
+	}
+	if ctxResource.Namespace == "" {
+		ctxResource.Namespace = cfg.Contexts[ctxResource.Context].Namespace
+	}
+	if ctxResource.Namespace == "" {
+		ctxResource.Namespace = "default"
+	}
+	okteto.AddKubernetesContext(ctxResource.Context, ctxResource.Namespace, "")
+	return nil
+}
+
+func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Dev, error) {
+	ctxResource, err := utils.LoadDevContext(devPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ctxResource.UpdateNamespace(namespace); err != nil {
+		return nil, err
+	}
+
+	if err := ctxResource.UpdateContext(k8sContext); err != nil {
+		return nil, err
+	}
+
+	ctxOptions := &ContextOptions{
+		Context:   ctxResource.Context,
+		Namespace: ctxResource.Namespace,
+		Show:      true,
+	}
+	if err := Run(ctx, ctxOptions); err != nil {
+		return nil, err
+	}
+
+	return utils.LoadDev(devPath)
+}
+
+func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string) (*model.Stack, error) {
+	ctxResource, err := utils.LoadStackContext(stackPaths)
+	if err != nil {
+		if name == "" {
+			return nil, err
+		}
+		ctxResource = &model.ContextResource{}
+	}
+
+	if err := ctxResource.UpdateNamespace(namespace); err != nil {
+		return nil, err
+	}
+
+	ctxOptions := &ContextOptions{
+		Context:   ctxResource.Context,
+		Namespace: ctxResource.Namespace,
+		Show:      true,
+	}
+	if err := Run(ctx, ctxOptions); err != nil {
+		return nil, err
+	}
+
+	s, err := utils.LoadStack(name, stackPaths)
+	if err != nil {
+		if name == "" {
+			return nil, err
+		}
+		s = &model.Stack{Name: name}
+	}
+	s.Namespace = okteto.Context().Namespace
+	return s, nil
 }

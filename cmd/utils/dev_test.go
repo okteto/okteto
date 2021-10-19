@@ -20,6 +20,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 func Test_loadDevOrDefault(t *testing.T) {
@@ -60,9 +61,19 @@ func Test_loadDevOrDefault(t *testing.T) {
 		},
 	}
 
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Name:      "test",
+				Namespace: "namespace",
+			},
+		},
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			def, err := LoadDevOrDefault("/tmp/a-path", tt.deployment, "namespace", "context")
+			def, err := LoadDevOrDefault("/tmp/a-path", tt.deployment)
 			if tt.expectErr {
 				if err == nil {
 					t.Fatal("expected error when loading")
@@ -98,7 +109,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			loaded, err := LoadDevOrDefault(f.Name(), "foo", "namespace", "context")
+			loaded, err := LoadDevOrDefault(f.Name(), "foo")
 			if err != nil {
 				t.Fatalf("unexpected error when loading existing manifest: %s", err.Error())
 			}
@@ -114,7 +125,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 		})
 	}
 	name := "demo-deployment"
-	def, err := LoadDevOrDefault("/tmp/bad-path", name, "namespace", "context")
+	def, err := LoadDevOrDefault("/tmp/bad-path", name)
 	if err != nil {
 		t.Fatal("default dev was not returned")
 	}
@@ -123,7 +134,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 		t.Errorf("expected %s, got %s", name, def.Name)
 	}
 
-	_, err = LoadDevOrDefault("/tmp/bad-path", "", "namespace", "context")
+	_, err = LoadDevOrDefault("/tmp/bad-path", "")
 	if err == nil {
 		t.Error("expected error with empty deployment name")
 	}

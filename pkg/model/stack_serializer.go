@@ -395,9 +395,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if svc.Annotations == nil {
 		svc.Annotations = make(Annotations)
 	}
-	for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
-		svc.Annotations[key] = value
-	}
 
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
@@ -405,6 +402,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		}
 		svc.Entrypoint.Values = serviceRaw.Entrypoint.Values
 		svc.Command.Values = serviceRaw.Command.Values
+
+		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
+			svc.Annotations[key] = value
+		}
 
 	} else { // isOktetoStack
 		if len(serviceRaw.Entrypoint.Values) > 0 {
@@ -417,6 +418,13 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 			}
 		}
 		svc.Command.Values = serviceRaw.Args.Values
+
+		if svc.Labels == nil {
+			svc.Labels = make(Labels)
+		}
+		for key, value := range unmarshalLabels(serviceRaw.Labels, serviceRaw.Deploy) {
+			svc.Labels[key] = value
+		}
 	}
 
 	svc.EnvFiles = serviceRaw.EnvFiles

@@ -31,6 +31,18 @@ const (
 	oktetoSecretTemplate = "okteto-%s"
 )
 
+// Secrets struct to handle secrets on k8s
+type Secrets struct {
+	k8sClient kubernetes.Interface
+}
+
+// NewSecrets creates a new Secrets object
+func NewSecrets(k8sClient kubernetes.Interface) *Secrets {
+	return &Secrets{
+		k8sClient: k8sClient,
+	}
+}
+
 // Get returns the value of a secret
 func Get(ctx context.Context, name, namespace string, c *kubernetes.Clientset) (*v1.Secret, error) {
 	secret, err := c.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -68,13 +80,19 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 		},
 	}
 
+	idx := 0
 	for _, s := range dev.Secrets {
 		content, err := os.ReadFile(s.LocalPath)
 		if err != nil {
 			return fmt.Errorf("error reading secret '%s': %s", s.LocalPath, err)
 		}
+		if strings.Contains(s.GetKeyName(), "stignore") {
+			idx++
+			data.Data[fmt.Sprintf("%s-%d", s.GetKeyName(), idx)] = content
+		} else {
+			data.Data[s.GetKeyName()] = content
+		}
 
-		data.Data[s.GetKeyName()] = content
 	}
 
 	if sct.Name == "" {
@@ -110,4 +128,13 @@ func Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error 
 // GetSecretName returns the okteto secret name for a given development container
 func GetSecretName(dev *model.Dev) string {
 	return fmt.Sprintf(oktetoSecretTemplate, dev.Name)
+}
+
+// List lists secrets for a namespace
+func (s *Secrets) List(ctx context.Context, ns, labelSelector string) ([]v1.Secret, error) {
+	sList, err := s.k8sClient.CoreV1().Secrets(ns).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+	if err != nil {
+		return nil, err
+	}
+	return sList.Items, nil
 }

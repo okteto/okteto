@@ -47,16 +47,20 @@ func deploy(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#deploy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Init(ctx); err != nil {
+			ctxResource := &model.ContextResource{}
+			if err := ctxResource.UpdateNamespace(namespace); err != nil {
 				return err
 			}
 
-			if !okteto.IsOktetoContext() {
+			ctxOptions := &contextCMD.ContextOptions{
+				Namespace: ctxResource.Namespace,
+			}
+			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
+				return err
+			}
+
+			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
-			}
-
-			if err := okteto.SetCurrentContext("", namespace); err != nil {
-				return err
 			}
 
 			cwd, err := os.Getwd()
@@ -89,19 +93,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if skipIfExists {
-				oktetoClient, err := okteto.NewOktetoClient()
-				if err != nil {
-					return err
-				}
-				pipeline, err := oktetoClient.GetPipelineByRepository(ctx, repository)
-				if err == nil {
-					log.Information("Pipeline URL: %s", getPipelineURL(pipeline.GitDeploy))
-					log.Success("Pipeline '%s' was already deployed", name)
-					return nil
-				}
-				if !errors.IsNotFound(err) {
-					return err
-				}
+				variables = append(variables, "OKTETO_SKIP_COMMIT_IF_DEPLOYED=true")
 			}
 
 			resp, err := deployPipeline(ctx, name, repository, branch, filename, variables)

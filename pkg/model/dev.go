@@ -941,7 +941,11 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			rule.Args = append(rule.Args, "-v")
 		}
 		for _, s := range rule.Secrets {
-			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", s.GetFileName(), s.RemotePath))
+			filename := s.GetFileName()
+			if strings.Contains(filename, ".stignore") {
+				filename = filepath.Base(s.LocalPath)
+			}
+			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", filename, s.RemotePath))
 		}
 		if dev.Docker.Enabled {
 			rule.Args = append(rule.Args, "-d")
@@ -1056,4 +1060,14 @@ func GetTimeout() (time.Duration, error) {
 	}
 
 	return parsed, nil
+}
+
+// DivertName returns the name of the diverted version of a given resource
+func DivertName(name, username string) string {
+	return fmt.Sprintf("%s-%s", name, username)
+}
+
+// DevCloneName returns the name of the mirrored version of a given resource
+func DevCloneName(name string) string {
+	return fmt.Sprintf("%s-okteto", name)
 }

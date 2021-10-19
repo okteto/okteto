@@ -15,22 +15,19 @@ package stack
 
 import (
 	"context"
-	"fmt"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
 //Destroy destroys a stack
 func Destroy(ctx context.Context) *cobra.Command {
-	var stackPath string
+	var stackPath []string
 	var name string
 	var namespace string
 	var rm bool
@@ -39,32 +36,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Short: "Destroys a stack",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#destroy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Init(ctx); err != nil {
-				return err
-			}
-
-			if !okteto.IsOktetoContext() {
-				return errors.ErrContextIsNotOktetoCluster
-			}
-
-			s, err := utils.LoadStack(name, stackPath)
+			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath)
 			if err != nil {
-				if name == "" {
-					return err
-				}
-				log.Errorf("error reading stack: %s", err.Error())
-				s = &model.Stack{Name: name}
-			}
-
-			if s.Namespace != "" {
-				if s.Namespace != namespace {
-					return fmt.Errorf("the namespace in the okteto stack manifest '%s' does not match the namespace '%s'", s.Namespace, namespace)
-				}
-				if err := okteto.SetCurrentContext("", s.Namespace); err != nil {
-					return err
-				}
-			} else {
-				s.Namespace = okteto.Context().Namespace
+				return err
 			}
 
 			to, err := model.GetTimeout()
@@ -80,7 +54,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&stackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
+	cmd.Flags().StringArrayVarP(&stackPath, "file", "f", []string{}, "path to the stack manifest file")
 	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the stack name")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is destroyed")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")

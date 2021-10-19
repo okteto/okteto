@@ -228,7 +228,7 @@ func TestValidateMountPaths(t *testing.T) {
 					{
 						VolumeMounts: []v1.VolumeMount{
 							{
-								Name:      "okteto-test",
+								Name:      "test-okteto",
 								MountPath: "/data",
 							},
 						},

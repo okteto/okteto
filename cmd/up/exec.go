@@ -20,6 +20,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -87,7 +88,11 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 		return err
 	}
 
-	pod, err := app.GetRunningPod(ctx, up.Client)
+	devApp := app.DevClone()
+	if err := devApp.Refresh(ctx, up.Client); err != nil {
+		return err
+	}
+	pod, err := devApp.GetRunningPod(ctx, up.Client)
 	if err != nil {
 		return err
 	}
@@ -98,7 +103,7 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 			return errors.UserError{
 				E: fmt.Errorf("User %d doesn't have write permissions for synchronization paths", userID),
 				Hint: fmt.Sprintf(`Set 'securityContext.runAsUser: %d' in your okteto manifest.
-	After that, run 'okteto down -v' to reset your development container and run 'okteto up' again`, userID),
+	After that, run '%s' to reset your development container and run 'okteto up' again`, userID, utils.GetDownCommand(up.Options.DevPath)),
 			}
 		}
 	}
@@ -108,12 +113,12 @@ func (up *upContext) checkOktetoStartError(ctx context.Context, msg string) erro
 			E: fmt.Errorf(msg),
 			Hint: fmt.Sprintf(`Check your development container logs for errors: 'kubectl logs %s',
 	Check that your container can write to the destination path of your secrets.
-	Run 'okteto down -v' to reset your development container and try again`, up.Pod.Name),
+	Run '%s' to reset your development container and try again`, up.Pod.Name, utils.GetDownCommand(up.Options.DevPath)),
 		}
 	}
 	return errors.UserError{
 		E: fmt.Errorf(msg),
 		Hint: fmt.Sprintf(`Check your development container logs for errors: 'kubectl logs %s'.
-    Run 'okteto down -v' to reset your development container and try again`, up.Pod.Name),
+    Run '%s' to reset your development container and try again`, up.Pod.Name, utils.GetDownCommand(up.Options.DevPath)),
 	}
 }

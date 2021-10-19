@@ -33,9 +33,9 @@ type OktetoClient struct {
 
 //NewClient creates a new client to connect with Okteto API
 func NewOktetoClient() (*OktetoClient, error) {
-	t := Context().Token
-	if t == "" {
-		return nil, errors.ErrNotLogged
+	token := Context().Token
+	if token == "" {
+		return nil, fmt.Errorf(errors.ErrNotLogged, Context().Name)
 	}
 	u, err := parseOktetoURL(Context().Name)
 	if err != nil {
@@ -43,7 +43,7 @@ func NewOktetoClient() (*OktetoClient, error) {
 	}
 
 	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: t,
+		&oauth2.Token{AccessToken: token,
 			TokenType: "Bearer"},
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
@@ -110,7 +110,7 @@ func translateAPIErr(err error) error {
 	e := strings.TrimPrefix(err.Error(), "graphql: ")
 	switch e {
 	case "not-authorized":
-		return errors.ErrNotLogged
+		return fmt.Errorf(errors.ErrNotLogged, Context().Name)
 	case "namespace-quota-exceeded":
 		return fmt.Errorf("you have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
 	case "namespace-quota-exceeded-onpremises":

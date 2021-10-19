@@ -92,6 +92,9 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes
 		if podList.Items[i].DeletionTimestamp != nil {
 			continue
 		}
+		if podList.Items[i].Status.Phase == apiv1.PodFailed && podList.Items[i].Status.Reason == "Shutdown" {
+			continue
+		}
 		for _, or := range podList.Items[i].OwnerReferences {
 			if or.UID == rs.UID {
 				return &podList.Items[i], nil
@@ -109,6 +112,9 @@ func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kuberne
 	}
 	for i := range podList.Items {
 		if podList.Items[i].DeletionTimestamp != nil {
+			continue
+		}
+		if podList.Items[i].Status.Phase == apiv1.PodFailed && podList.Items[i].Status.Reason == "Shutdown" {
 			continue
 		}
 		if sfs.Status.UpdateRevision == podList.Items[i].Labels[appsv1.StatefulSetRevisionLabel] {
@@ -305,7 +311,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	}
 
 	if !found {
-		return fmt.Errorf("Unable to find any service with the provided name")
+		return fmt.Errorf("no pods running in development mode")
 	}
 	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name), c)
 }

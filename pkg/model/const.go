@@ -16,14 +16,17 @@ package model
 import apiv1 "k8s.io/api/core/v1"
 
 const (
-	//Version represents the current dev data version
-	Version = "1.0"
-
 	// TimeFormat is the format to use when storing timestamps as a string
 	TimeFormat = "2006-01-02T15:04:05"
 
-	// DevLabel indicates the dev pod
+	// DevLabel indicates the deployment is in dev mode
 	DevLabel = "dev.okteto.com"
+
+	// DevCloneLabel indicates it is a dev pod clone
+	DevCloneLabel = "dev.okteto.com/clone"
+
+	// AppReplicasAnnotation indicates the number of replicas before dev mode was activated
+	AppReplicasAnnotation = "dev.okteto.com/replicas"
 
 	// InteractiveDevLabel indicates the interactive dev pod
 	InteractiveDevLabel = "interactive.dev.okteto.com"
@@ -119,7 +122,9 @@ const (
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
 	//OktetoVolumeNameTemplate name template of the development container persistent volume
-	OktetoVolumeNameTemplate = "okteto-%s"
+	OktetoVolumeNameTemplate = "%s-okteto"
+	//DeprecatedOktetoVolumeNameTemplate name template of the development container persistent volume
+	DeprecatedOktetoVolumeNameTemplate = "okteto-%s"
 	//DataSubPath subpath in the development container persistent volume for the data volumes
 	DataSubPath = "data"
 	//SourceCodeSubPath subpath in the development container persistent volume for the source code
@@ -155,9 +160,6 @@ const (
 	//DefaultImage default image for sandboxes
 	DefaultImage = "okteto/dev:latest"
 
-	//TranslationVersion version of the translation schema
-	TranslationVersion = "1.0"
-
 	//ResourceAMDGPU amd.com/gpu resource
 	ResourceAMDGPU apiv1.ResourceName = "amd.com/gpu"
 	//ResourceNVIDIAGPU nvidia.com/gpu resource
@@ -170,4 +172,7 @@ const (
 
 	//OktetoExtension identifies the okteto extension in kubeconfig files
 	OktetoExtension = "okteto"
+
+	// HelmSecretType indicates the type for secrets created by Helm
+	HelmSecretType = "helm.sh/release.v1"
 )

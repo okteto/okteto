@@ -15,16 +15,14 @@ package stack
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"github.com/joho/godotenv"
 	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
 
@@ -36,23 +34,19 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Deploys a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Init(ctx); err != nil {
-				return err
+
+			if model.FileExists(".env") {
+				err := godotenv.Load()
+				if err != nil {
+					log.Errorf("error loading .env file: %s", err.Error())
+				}
 			}
 
-			if !okteto.IsOktetoContext() {
-				return errors.ErrContextIsNotOktetoCluster
-			}
-
-			ctx := context.Background()
-			if err := utils.LoadEnvironment(ctx, true); err != nil {
-				return err
-			}
-
-			s, err := utils.LoadStack(options.Name, options.StackPath)
+			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPath)
 			if err != nil {
 				return err
 			}
+
 			analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
 
 			if len(args) > 0 {
@@ -65,17 +59,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 				options.ServicesToDeploy = definedSvcs
 			}
 
-			if s.Namespace != "" {
-				if s.Namespace != options.Namespace {
-					return fmt.Errorf("the namespace in the okteto stack manifest '%s' does not match the namespace '%s'", s.Namespace, options.Namespace)
-				}
-				if err := okteto.SetCurrentContext("", s.Namespace); err != nil {
-					return err
-				}
-			} else {
-				s.Namespace = okteto.Context().Namespace
-			}
-
 			err = stack.Deploy(ctx, s, options)
 			analytics.TrackDeployStack(err == nil, s.IsCompose)
 			if err == nil {
@@ -84,7 +67,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&options.StackPath, "file", "f", utils.DefaultStackManifest, "path to the stack manifest file")
+	cmd.Flags().StringArrayVarP(&options.StackPath, "file", "f", []string{}, "path to the stack manifest files. If more than one is passed the latest will overwrite the fields from the previous")
 	cmd.Flags().StringVarP(&options.Name, "name", "", "", "overwrites the stack name")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
 	cmd.Flags().BoolVarP(&options.ForceBuild, "build", "", false, "build images before starting any Stack service")

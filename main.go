@@ -22,6 +22,8 @@ import (
 
 	"github.com/okteto/okteto/cmd"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/deploy"
+	"github.com/okteto/okteto/cmd/destroy"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
@@ -33,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	utilRuntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -72,6 +75,8 @@ func main() {
 		log.Infof("error initializing okteto analytics: %s", err)
 	}
 
+	okteto.InitContextWithDeprecatedToken()
+
 	root := &cobra.Command{
 		Use:           fmt.Sprintf("%s COMMAND [ARG...]", config.GetBinaryName()),
 		Short:         "Manage development containers",
@@ -109,6 +114,8 @@ func main() {
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.Update())
+	root.AddCommand(deploy.Deploy(ctx))
+	root.AddCommand(destroy.Destroy(ctx))
 
 	err := root.Execute()
 

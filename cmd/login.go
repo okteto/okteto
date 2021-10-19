@@ -14,6 +14,8 @@
 package cmd
 
 import (
+	"net/url"
+
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -42,6 +44,15 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			if len(args) == 1 {
+				parsedUrl, err := url.Parse(args[0])
+				if err == nil {
+					if parsedUrl.Scheme == "" {
+						parsedUrl.Scheme = "https"
+					}
+					args[0] = parsedUrl.String()
+				}
+			}
 			contextCommand := contextCMD.Context()
 			contextCommand.Flags().Set("token", token)
 			contextCommand.Flags().Set("okteto", "true")

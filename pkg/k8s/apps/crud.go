@@ -15,7 +15,6 @@ package apps
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -24,12 +23,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
 )
 
 func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, error) {
@@ -45,9 +40,11 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 
 	sfs, err := statefulsets.GetByDev(ctx, dev, namespace, c)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, fmt.Errorf("the application '%s' referred by your okteto manifest doesn't exist", dev.Name)
+		}
 		return nil, err
 	}
-
 	return &StatefulSetApp{sfs: sfs}, nil
 }
 
@@ -56,128 +53,9 @@ func IsDevModeOn(app App) bool {
 	return app.ObjectMeta().Labels[model.DevLabel] == "true"
 }
 
-func (t *Translation) DevModeOff() {
-	t.App.DevModeOff(t)
-	delete(t.App.ObjectMeta().Annotations, oktetoVersionAnnotation)
-	delete(t.App.ObjectMeta().Annotations, model.OktetoRevisionAnnotation)
-	deleteUserAnnotations(t.App.ObjectMeta().Annotations, t)
-
-	delete(t.App.TemplateObjectMeta().Annotations, model.TranslationAnnotation)
-	delete(t.App.TemplateObjectMeta().Annotations, model.OktetoRestartAnnotation)
-
-	delete(t.App.ObjectMeta().Labels, model.DevLabel)
-
-	delete(t.App.TemplateObjectMeta().Labels, model.InteractiveDevLabel)
-	delete(t.App.TemplateObjectMeta().Labels, model.DetachedDevLabel)
-
-}
-
-//HasBeenChanged returns if an app has been updated since the development container was activated
-func HasBeenChanged(app App) bool {
-	oktetoRevision := app.ObjectMeta().Annotations[model.OktetoRevisionAnnotation]
-	if oktetoRevision == "" {
-		return false
-	}
-	return oktetoRevision != app.GetRevision()
-}
-
 //SetLastBuiltAnnotation sets the app timestamp
 func SetLastBuiltAnnotation(app App) {
 	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(model.TimeFormat)
-}
-
-//GetDeploymentSandbox returns a base deployment when using "autocreate"
-func GetDeploymentSandbox(dev *model.Dev) *appsv1.Deployment {
-	image := dev.Image.Name
-	if image == "" {
-		image = model.DefaultImage
-	}
-	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      dev.Name,
-			Namespace: dev.Namespace,
-			Labels:    model.Labels{},
-			Annotations: model.Annotations{
-				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32Ptr(1),
-			Strategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RecreateDeploymentStrategyType,
-			},
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": dev.Name,
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": dev.Name,
-					},
-				},
-				Spec: apiv1.PodSpec{
-					ServiceAccountName:            dev.ServiceAccount,
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
-					Containers: []apiv1.Container{
-						{
-							Name:            "dev",
-							Image:           image,
-							ImagePullPolicy: apiv1.PullAlways,
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-//GetStatefulSetSandbox returns a base statefulset when using "autocreate"
-func GetStatefulSetSandbox(dev *model.Dev) *appsv1.StatefulSet {
-	image := dev.Image.Name
-	if image == "" {
-		image = model.DefaultImage
-	}
-	return &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      dev.Name,
-			Namespace: dev.Namespace,
-			Labels:    model.Labels{},
-			Annotations: model.Annotations{
-				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
-			},
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas: pointer.Int32Ptr(1),
-			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
-				Type: appsv1.RollingUpdateStatefulSetStrategyType,
-			},
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": dev.Name,
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": dev.Name,
-					},
-				},
-				Spec: apiv1.PodSpec{
-					ServiceAccountName:            dev.ServiceAccount,
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
-					Containers: []apiv1.Container{
-						{
-							Name:            "dev",
-							Image:           image,
-							ImagePullPolicy: apiv1.PullAlways,
-						},
-					},
-				},
-			},
-		},
-	}
 }
 
 // GetRunningPodInLoop returns the dev pod for an app and loops until it success
@@ -198,12 +76,6 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 		pod, err := app.GetRunningPod(ctx, c)
 
 		if err == nil {
-			if !okteto.IsOktetoContext() {
-				app.ObjectMeta().Annotations[model.OktetoRevisionAnnotation] = app.GetRevision()
-				if err := app.Update(ctx, c); err != nil {
-					return nil, err
-				}
-			}
 			return pod, nil
 		}
 
@@ -212,7 +84,7 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 		}
 
 		if time.Now().After(to) && retries > 10 {
-			return nil, fmt.Errorf("kubernetes is taking too long to start your development container. Please check for errors and try again")
+			return nil, errors.ErrKubernetesLongTimeToCreateDevContainer
 		}
 
 		select {
@@ -230,37 +102,28 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 
 //GetTranslations fills all the deployments pointed by a development container
 func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
-	result := map[string]*Translation{}
-	t := app.NewTranslation(dev)
-	trRulesJSON := app.TemplateObjectMeta().Annotations[model.TranslationAnnotation]
-	if trRulesJSON != "" {
-		trRules := &Translation{}
-		if err := json.Unmarshal([]byte(trRulesJSON), trRules); err != nil {
-			return nil, fmt.Errorf("malformed tr rules: %s", err)
-		}
-		t.Replicas = trRules.Replicas
-		t.DeploymentStrategy = trRules.DeploymentStrategy
-		t.StatefulsetStrategy = trRules.StatefulsetStrategy
-	} else {
-		t.Replicas = getPreviousAppReplicas(app)
+	mainTr := &Translation{
+		MainDev: dev,
+		Dev:     dev,
+		App:     app,
+		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, reset)},
 	}
-
-	rule := dev.ToTranslationRule(dev, reset)
-	t.Rules = []*model.TranslationRule{rule}
-	result[app.ObjectMeta().Name] = t
+	result := map[string]*Translation{app.ObjectMeta().Name: mainTr}
 
 	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {
 		return nil, err
 	}
 
-	for _, rule := range t.Rules {
-		devContainer := GetDevContainer(t.App.PodSpec(), rule.Container)
-		if devContainer == nil {
-			return nil, fmt.Errorf("%s '%s': container '%s' not found", t.App.TypeMeta().Kind, t.App.ObjectMeta().Name, rule.Container)
-		}
-		rule.Container = devContainer.Name
-		if rule.Image == "" {
-			rule.Image = devContainer.Image
+	for _, tr := range result {
+		for _, rule := range tr.Rules {
+			devContainer := GetDevContainer(tr.App.PodSpec(), rule.Container)
+			if devContainer == nil {
+				return nil, fmt.Errorf("%s '%s': container '%s' not found", tr.App.TypeMeta().Kind, tr.App.ObjectMeta().Name, rule.Container)
+			}
+			rule.Container = devContainer.Name
+			if rule.Image == "" {
+				rule.Image = devContainer.Image
+			}
 		}
 	}
 
@@ -281,27 +144,24 @@ func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, re
 			continue
 		}
 
-		t := app.NewTranslation(dev)
-		t.Interactive = false
-		t.Rules = []*model.TranslationRule{rule}
-		result[app.ObjectMeta().Name] = t
+		result[app.ObjectMeta().Name] = &Translation{
+			MainDev: dev,
+			Dev:     s,
+			App:     app,
+			Rules:   []*model.TranslationRule{rule},
+		}
 	}
 
 	return nil
 }
 
 //TranslateDevMode translates the deployment manifests to put them in dev mode
-func TranslateDevMode(tr map[string]*Translation) error {
-	for _, t := range tr {
-		err := translate(t)
+func TranslateDevMode(trMap map[string]*Translation) error {
+	for _, tr := range trMap {
+		err := tr.translate()
 		if err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// DivertName returns the name of the diverted version of a given resource
-func DivertName(username, name string) string {
-	return fmt.Sprintf("%s-%s", username, name)
 }
