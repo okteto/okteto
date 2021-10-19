@@ -94,9 +94,11 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if filename != "" {
-				log.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
+				log.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag")
 				if file == "" {
 					file = filename
+				} else {
+					log.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
 				}
 			}
 
@@ -163,7 +165,7 @@ func deployPipeline(ctx context.Context, name, repository, branch, file string, 
 			})
 		}
 		namespace := okteto.Context().Namespace
-		log.Infof("deploy pipeline %s defined on filename='%s' repository=%s branch=%s on namespace=%s", name, file, repository, branch, namespace)
+		log.Infof("deploy pipeline %s defined on file='%s' repository=%s branch=%s on namespace=%s", name, file, repository, branch, namespace)
 
 		resp, err = oktetoClient.DeployPipeline(ctx, name, repository, branch, file, varList)
 		exit <- err
