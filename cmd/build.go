@@ -71,13 +71,6 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if options.Tag == "" {
-				log.Success("Build succeeded")
-				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
-			} else {
-				log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
-			}
-
 			analytics.TrackBuild(okteto.Context().Buildkit, true)
 			return nil
 		},

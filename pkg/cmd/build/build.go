@@ -59,6 +59,12 @@ func Run(ctx context.Context, namespace string, buildOptions BuildOptions) error
 			return nil
 		}
 	}
+	if buildOptions.Tag == "" {
+		log.Success("Build succeeded")
+		log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
+	} else {
+		log.Success(fmt.Sprintf("Image '%s' successfully pushed", buildOptions.Tag))
+	}
 	return nil
 }
 

@@ -177,7 +177,6 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
-		log.Success("Image for service '%s' successfully pushed", name)
 	}
 	return hasBuiltSomething, nil
 }
@@ -223,7 +222,6 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			}
 			svc.SetLastBuiltAnnotation()
 			s.Services[name] = svc
-			log.Success("Image for service '%s' successfully pushed", name)
 		}
 	}
 	return hasAddedAnyVolumeMounts, nil
