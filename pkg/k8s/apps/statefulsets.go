@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 )
@@ -142,8 +143,9 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 	for {
 		select {
 		case e := <-watcher.ResultChan():
-			sfs, ok := e.Object.(*appsv1.StatefulSet)
-			if !ok {
+			log.Debugf("Received statefulset '%s' event: %s", i.sfs.Name, e)
+			if e.Object == nil {
+				log.Debugf("Recreating statefulset '%s' watcher", i.sfs.Name)
 				watcher, err = c.AppsV1().StatefulSets(i.sfs.Namespace).Watch(ctx, optsWatch)
 				if err != nil {
 					result <- err
@@ -151,9 +153,20 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 				}
 				continue
 			}
-			if sfs.Generation != i.sfs.Generation {
-				result <- errors.ErrApplyToApp
+			switch e.Type {
+			case watch.Deleted:
+				result <- errors.ErrDeleteToApp
 				return
+			case watch.Modified:
+				sfs, ok := e.Object.(*appsv1.StatefulSet)
+				if !ok {
+					log.Debugf("Failed to parse statefulset event: %s", e)
+					continue
+				}
+				if sfs.Generation != i.sfs.Generation {
+					result <- errors.ErrApplyToApp
+					return
+				}
 			}
 		case err := <-ctx.Done():
 			log.Debugf("call to up.applyToApp cancelled: %v", err)

@@ -153,6 +153,16 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 	for {
 		select {
 		case e := <-watcher.ResultChan():
+			log.Debugf("Received deployment '%s' event: %s", i.d.Name, e)
+			if e.Object == nil {
+				log.Debugf("Recreating deployment '%s' watcher", i.d.Name)
+				watcher, err = c.AppsV1().Deployments(i.d.Namespace).Watch(ctx, optsWatch)
+				if err != nil {
+					result <- err
+					return
+				}
+				continue
+			}
 			switch e.Type {
 			case watch.Deleted:
 				result <- errors.ErrDeleteToApp
@@ -160,11 +170,7 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 			case watch.Modified:
 				d, ok := e.Object.(*appsv1.Deployment)
 				if !ok {
-					watcher, err = c.AppsV1().Deployments(i.d.Namespace).Watch(ctx, optsWatch)
-					if err != nil {
-						result <- err
-						return
-					}
+					log.Debugf("Failed to parse deployment event: %s", e)
 					continue
 				}
 				if d.Annotations[model.DeploymentRevisionAnnotation] != "" && d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
