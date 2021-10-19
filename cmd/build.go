@@ -66,7 +66,7 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			ctx := context.Background()
-			if err := build.Run(ctx, "", options); err != nil {
+			if err := build.Run(ctx, options); err != nil {
 				analytics.TrackBuild(okteto.Context().Buildkit, false)
 				return err
 			}

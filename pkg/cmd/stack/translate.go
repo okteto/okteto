@@ -172,7 +172,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			BuildArgs:  buildArgs,
 			OutputMode: "tty",
 		}
-		if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
+		if err := build.Run(ctx, buildOptions); err != nil {
 			return hasBuiltSomething, err
 		}
 		svc.SetLastBuiltAnnotation()
@@ -217,7 +217,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				BuildArgs:  buildArgs,
 				OutputMode: "tty",
 			}
-			if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
+			if err := build.Run(ctx, buildOptions); err != nil {
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.SetLastBuiltAnnotation()

@@ -43,13 +43,13 @@ type BuildOptions struct {
 }
 
 // Run runs the build sequence
-func Run(ctx context.Context, namespace string, buildOptions BuildOptions) error {
+func Run(ctx context.Context, buildOptions BuildOptions) error {
 	if okteto.Context().Buildkit == "" {
 		if err := buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
-		skipped, err := buildWithOkteto(ctx, namespace, buildOptions)
+		skipped, err := buildWithOkteto(ctx, buildOptions)
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func Run(ctx context.Context, namespace string, buildOptions BuildOptions) error
 }
 
 // buildWithOkteto build and pushes the image to the registry, if skipped will return bool true, if error, will return error
-func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOptions) (bool, error) {
+func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) (bool, error) {
 	log.Infof("building your image on %s", okteto.Context().Buildkit)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
