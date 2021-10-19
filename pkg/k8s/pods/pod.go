@@ -95,6 +95,9 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes
 		if podList.Items[i].Status.Phase == apiv1.PodFailed && podList.Items[i].Status.Reason == "Shutdown" {
 			continue
 		}
+		if podList.Items[i].Status.Phase == apiv1.PodFailed && podList.Items[i].Status.Reason == "Evicted" {
+			continue
+		}
 		for _, or := range podList.Items[i].OwnerReferences {
 			if or.UID == rs.UID {
 				return &podList.Items[i], nil
@@ -115,6 +118,9 @@ func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kuberne
 			continue
 		}
 		if podList.Items[i].Status.Phase == apiv1.PodFailed && podList.Items[i].Status.Reason == "Shutdown" {
+			continue
+		}
+		if podList.Items[i].Status.Phase == apiv1.PodFailed && podList.Items[i].Status.Reason == "Evicted" {
 			continue
 		}
 		if sfs.Status.UpdateRevision == podList.Items[i].Labels[appsv1.StatefulSetRevisionLabel] {
