@@ -54,8 +54,6 @@ func Run(ctx context.Context, buildOptions BuildOptions) error {
 			return err
 		}
 		if skipped {
-			log.Success("Skipping build: image is already built at the global registry")
-			log.Information("Force the build by using the flag --no-cache")
 			return nil
 		}
 	}
@@ -93,7 +91,7 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) (bool, erro
 
 	isOktetoRegistry := registry.IsOktetoRegistry(buildOptions.Tag)
 	if okteto.IsOkteto() {
-		if ok := registry.IsImageAtGlobalRegistry(buildOptions.Tag); ok {
+		if ok := registry.IsImageAtRegistry(buildOptions.Tag); ok {
 			return true, nil
 		}
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
