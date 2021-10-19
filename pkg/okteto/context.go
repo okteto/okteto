@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -38,7 +39,14 @@ type OktetoContextStore struct {
 	CurrentContext string                    `json:"current-context"`
 }
 
-var CurrentStore *OktetoContextStore
+const (
+	localClusterType  = "local"
+	remoteClusterType = "remote"
+)
+
+var (
+	CurrentStore *OktetoContextStore
+)
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
@@ -53,6 +61,7 @@ type OktetoContext struct {
 	Certificate     string               `json:"certificate,omitempty"`
 	GlobalNamespace string               `json:"-"`
 	Analytics       bool                 `json:"-"`
+	ClusterType     string               `json:"-"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
@@ -318,4 +327,29 @@ func IsOktetoCloud() bool {
 	default:
 		return false
 	}
+}
+
+func (okctx *OktetoContext) SetClusterType(clusterHost string) {
+	if isLocalHostname(clusterHost) {
+		okctx.ClusterType = localClusterType
+	} else {
+		okctx.ClusterType = remoteClusterType
+	}
+}
+
+func isLocalHostname(clusterHost string) bool {
+	u, err := url.Parse(clusterHost)
+	host := ""
+	if err == nil {
+		host = u.Hostname()
+		if host == "" {
+			host = clusterHost
+		}
+	} else {
+		host = clusterHost
+	}
+
+	ipAddress := net.ParseIP(host)
+	return ipAddress.IsPrivate() || ipAddress.IsUnspecified() || ipAddress.IsLinkLocalUnicast() ||
+		ipAddress.IsLoopback() || ipAddress.IsLinkLocalMulticast() || host == "kubernetes.docker.internal"
 }

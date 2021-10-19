@@ -46,6 +46,7 @@ func getK8sClient(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, 
 
 	config.Timeout = getKubernetesTimeout()
 
+	Context().SetClusterType(config.Host)
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, nil, err
