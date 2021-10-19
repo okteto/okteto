@@ -49,24 +49,31 @@ func Run(ctx context.Context, namespace string, buildOptions BuildOptions) error
 			return err
 		}
 	} else {
-		if err := buildWithOkteto(ctx, namespace, buildOptions); err != nil {
+		skipped, err := buildWithOkteto(ctx, namespace, buildOptions)
+		if err != nil {
 			return err
+		}
+		if skipped {
+			log.Success("Skipping build: image is already built at the global registry")
+			log.Information("Force the build by using the flag --no-cache")
+			return nil
 		}
 	}
 	return nil
 }
 
-func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOptions) error {
+// buildWithOkteto build and pushes the image to the registry, if skipped will return bool true, if error, will return error
+func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOptions) (bool, error) {
 	log.Infof("building your image on %s", okteto.Context().Buildkit)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if buildOptions.File != "" {
 		buildOptions.File, err = registry.GetDockerfile(buildOptions.File)
 		if err != nil {
-			return err
+			return false, err
 		}
 		defer os.Remove(buildOptions.File)
 	}
@@ -74,14 +81,14 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 	if buildOptions.Tag != "" {
 		err = validateImage(buildOptions.Tag)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
 	isOktetoRegistry := registry.IsOktetoRegistry(buildOptions.Tag)
 	if okteto.IsOkteto() {
 		if ok := registry.IsImageAtGlobalRegistry(buildOptions.Tag); ok {
-			return nil
+			return true, nil
 		}
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)
@@ -92,7 +99,7 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 	}
 	opt, err := getSolveOpt(buildOptions)
 	if err != nil {
-		return errors.Wrap(err, "failed to create build solver")
+		return false, errors.Wrap(err, "failed to create build solver")
 	}
 
 	err = solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
@@ -111,7 +118,7 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 		}
 		err = registry.GetErrorMessage(err, buildOptions.Tag)
 		analytics.TrackBuildTransientError(okteto.Context().Buildkit, success)
-		return err
+		return false, err
 	}
 
 	if isOktetoRegistry {
@@ -127,11 +134,10 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 			}
 			err = registry.GetErrorMessage(err, buildOptions.Tag)
 			analytics.TrackBuildPullError(okteto.Context().Buildkit, success)
-			return err
+			return false, err
 		}
 	}
-	err = registry.GetErrorMessage(err, buildOptions.Tag)
-	return err
+	return false, nil
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209

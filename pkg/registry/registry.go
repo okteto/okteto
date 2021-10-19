@@ -221,8 +221,6 @@ func IsImageAtGlobalRegistry(image string) (ok bool) {
 			globalRegistryTag = TransformOktetoDevToGlobalRegistry(image)
 		}
 		if _, err := GetImageTagWithDigest(globalRegistryTag); err == nil {
-			log.Success("Skipping build: image is already build at the global registry")
-			log.Hint("You can force the build by using the flag --no-cache")
 			return true
 		}
 	}
