@@ -695,28 +695,27 @@ func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string 
 }
 
 func translateAffinity(svc *model.Service) *apiv1.Affinity {
-	requirements := make([]string, 0)
+	requirements := make([]apiv1.PodAffinityTerm, 0)
 	for _, volume := range svc.Volumes {
 		if volume.LocalPath != "" {
-			requirements = append(requirements, volume.LocalPath)
+			requirements = append(requirements, apiv1.PodAffinityTerm{
+				TopologyKey: "kubernetes.io/hostname",
+				LabelSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      fmt.Sprintf("%s-%s", model.StackVolumeNameLabel, volume.LocalPath),
+							Operator: metav1.LabelSelectorOpExists,
+						},
+					},
+				},
+			},
+			)
 		}
 	}
 	if len(requirements) > 0 {
 		return &apiv1.Affinity{
 			PodAffinity: &apiv1.PodAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
-					{
-						LabelSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{
-								{
-									Key:      model.StackVolumeNameLabel,
-									Operator: metav1.LabelSelectorOpIn,
-									Values:   requirements,
-								},
-							},
-						},
-					},
-				},
+				RequiredDuringSchedulingIgnoredDuringExecution: requirements,
 			},
 		}
 	}
@@ -736,11 +735,7 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 
 	for _, volume := range svc.Volumes {
 		if volume.LocalPath != "" {
-			if label, ok := labels[model.StackVolumeNameLabel]; ok {
-				labels[model.StackVolumeNameLabel] = fmt.Sprintf("%s-%s", label, volume.LocalPath)
-			} else {
-				labels[model.StackVolumeNameLabel] = volume.LocalPath
-			}
+			labels[fmt.Sprintf("%s-%s", model.StackVolumeNameLabel, volume.LocalPath)] = "true"
 		}
 	}
 	return labels
