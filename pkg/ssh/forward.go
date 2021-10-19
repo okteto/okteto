@@ -71,7 +71,6 @@ func (f *forward) start(ctx context.Context) {
 
 	tick := time.NewTicker(100 * time.Millisecond)
 	for {
-		log.Infof("%s -> listening for local connections", f.String())
 		localConn, err := localListener.Accept()
 		if err != nil {
 			if !f.connected() {
