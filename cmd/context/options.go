@@ -51,16 +51,8 @@ func (o *ContextOptions) initFromContext() {
 }
 
 func (o *ContextOptions) initFromEnvVars() {
-	okToken := os.Getenv("OKTETO_TOKEN")
 	if o.Token == "" {
-		o.Token = okToken
-	}
-
-	if o.Token != "" {
-		if o.Context == "" {
-			o.Context = okteto.CloudURL
-		}
-		o.Save = true
+		o.Token = os.Getenv("OKTETO_TOKEN")
 	}
 
 	if o.Context == "" && os.Getenv("OKTETO_URL") != "" {
@@ -70,6 +62,13 @@ func (o *ContextOptions) initFromEnvVars() {
 
 	if o.Context == "" && os.Getenv("OKTETO_CONTEXT") != "" {
 		o.Context = os.Getenv("OKTETO_CONTEXT")
+		o.Save = true
+	}
+
+	if o.Token != "" {
+		if o.Context == "" {
+			o.Context = okteto.CloudURL
+		}
 		o.Save = true
 	}
 

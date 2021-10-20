@@ -194,6 +194,28 @@ func Test_initFromEnvVars(t *testing.T) {
 			},
 		},
 		{
+			name: "context-notin-options-with-token-in-options-and-with-envar-url",
+			in: &ContextOptions{
+				Token: "token",
+			},
+			env: map[string]string{"OKTETO_URL": "okteto-url"},
+			want: &ContextOptions{
+				Token:   "token",
+				Context: "okteto-url",
+				Save:    true,
+			},
+		},
+		{
+			name: "context-notin-options-and-with-envar-url-and-token",
+			in:   &ContextOptions{},
+			env:  map[string]string{"OKTETO_URL": "okteto-url", "OKTETO_TOKEN": "token-envvar"},
+			want: &ContextOptions{
+				Token:   "token-envvar",
+				Context: "okteto-url",
+				Save:    true,
+			},
+		},
+		{
 			name: "namespace-in-options-no-envar",
 			in: &ContextOptions{
 				Namespace: "namespace",
