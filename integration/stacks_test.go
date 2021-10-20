@@ -39,10 +39,6 @@ const (
 )
 
 func TestStacks(t *testing.T) {
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
 
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
@@ -179,10 +175,6 @@ func destroyStackWithVolumes(ctx context.Context, oktetoPath, stackManifest, dir
 }
 
 func TestCompose(t *testing.T) {
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
 
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)

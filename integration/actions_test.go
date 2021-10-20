@@ -94,10 +94,6 @@ func TestApplyPipeline(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
@@ -118,10 +114,6 @@ func TestApplyPipeline(t *testing.T) {
 func TestBuildActionPipeline(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
-		return
-	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
 		return
 	}
 
@@ -171,10 +163,6 @@ func TestNamespaceActionsPipeline(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
@@ -195,10 +183,7 @@ func TestLoginActionPipeline(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
+
 	ctx := context.Background()
 	var remove bool
 	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
@@ -221,10 +206,7 @@ func TestContextAction(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
+
 	ctx := context.Background()
 	var remove bool
 	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
@@ -245,10 +227,6 @@ func TestContextAction(t *testing.T) {
 func TestPipelineActions(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
-		return
-	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
 		return
 	}
 
@@ -276,9 +254,6 @@ func TestPreviewActions(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-	}
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
@@ -295,10 +270,6 @@ func TestPreviewActions(t *testing.T) {
 func TestPushAction(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
-		return
-	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
 		return
 	}
 
@@ -325,11 +296,6 @@ func TestPushAction(t *testing.T) {
 func TestStacksActions(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
-		return
-	}
-
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
 		return
 	}
 
