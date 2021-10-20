@@ -35,6 +35,10 @@ var (
 	componentLabels []string = []string{"app.kubernetes.io/component", "component", "app"}
 )
 
+const (
+	defaultWorkdirPath = "/okteto"
+)
+
 // SetDevDefaultsFromApp sets dev defaults from a running app
 func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, container, language string) error {
 	c, config, err := okteto.GetK8sClient()
@@ -60,6 +64,7 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 		dev.Image = nil
 		dev.SecurityContext = getSecurityContextFromPod(ctx, pod, container, config, c)
 		dev.Sync.Folders[0].RemotePath = getWorkdirFromPod(ctx, dev, pod, container, config, c)
+
 		dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
 	}
 
@@ -109,7 +114,13 @@ func getWorkdirFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, cont
 	workdir, err := pods.GetWorkdirByPod(ctx, pod, container, config, c)
 	if err != nil {
 		log.Infof("error getting workdir of the deployment: %s", err)
+		if dev.Workdir == "/" {
+			return defaultWorkdirPath
+		}
 		return dev.Workdir
+	}
+	if workdir == "/" {
+		return defaultWorkdirPath
 	}
 	return workdir
 }
