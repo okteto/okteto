@@ -368,10 +368,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if err != nil {
 		return nil, err
 	}
-	svc.Image, err = ExpandEnv(serviceRaw.Image)
-	if err != nil {
-		return nil, err
-	}
+	svc.Image = serviceRaw.Image
 	svc.Build = serviceRaw.Build
 
 	svc.CapAdd = serviceRaw.CapAdd
@@ -466,10 +463,6 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Workdir = serviceRaw.Workdir
 	if serviceRaw.WorkingDirSneakCase != "" {
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
-	}
-	svc.Workdir, err = ExpandEnv(svc.Workdir)
-	if err != nil {
-		return nil, err
 	}
 
 	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
@@ -820,10 +813,7 @@ func getPortWithMapping(p *PortRaw, portString string) error {
 		if strings.Contains(hostPortString, ":") {
 			return fmt.Errorf("Can not convert '%s' to a port: Host IP is not allowed", portString)
 		}
-		hostPortString, err = ExpandEnv(hostPortString)
-		if err != nil {
-			return err
-		}
+
 		p.HostPort, err = getPortFromString(hostPortString, portString)
 		if err != nil {
 			return err
@@ -1065,10 +1055,7 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
-	raw, err = ExpandEnv(raw)
-	if err != nil {
-		return err
-	}
+
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		v.LocalPath = sanitizeName(parts[0])
