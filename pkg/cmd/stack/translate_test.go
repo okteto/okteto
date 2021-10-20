@@ -1221,14 +1221,12 @@ func Test_translateAffinity(t *testing.T) {
 				PodAffinity: &apiv1.PodAffinity{
 					RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
 						{
+							TopologyKey: "kubernetes.io/hostname",
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      model.StackVolumeNameLabel,
-										Operator: metav1.LabelSelectorOpIn,
-										Values: []string{
-											"test",
-										},
+										Key:      fmt.Sprintf("%s-test", model.StackVolumeNameLabel),
+										Operator: metav1.LabelSelectorOpExists,
 									},
 								},
 							},
@@ -1259,16 +1257,34 @@ func Test_translateAffinity(t *testing.T) {
 				PodAffinity: &apiv1.PodAffinity{
 					RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
 						{
+							TopologyKey: "kubernetes.io/hostname",
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      model.StackVolumeNameLabel,
-										Operator: metav1.LabelSelectorOpIn,
-										Values: []string{
-											"test-1",
-											"test-2",
-											"test-3",
-										},
+										Key:      fmt.Sprintf("%s-test-1", model.StackVolumeNameLabel),
+										Operator: metav1.LabelSelectorOpExists,
+									},
+								},
+							},
+						},
+						{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      fmt.Sprintf("%s-test-2", model.StackVolumeNameLabel),
+										Operator: metav1.LabelSelectorOpExists,
+									},
+								},
+							},
+						},
+						{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      fmt.Sprintf("%s-test-3", model.StackVolumeNameLabel),
+										Operator: metav1.LabelSelectorOpExists,
 									},
 								},
 							},
