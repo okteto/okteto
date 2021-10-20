@@ -295,9 +295,6 @@ func track(event string, success bool, props map[string]interface{}) {
 	if !get().Enabled {
 		return
 	}
-	if !okteto.Context().Analytics {
-		return
-	}
 	mpOS := ""
 	switch runtime.GOOS {
 	case "darwin":
@@ -320,6 +317,10 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["version"] = config.VersionString
 	props["$referring_domain"] = okteto.Context().Name
 	props["machine_id"] = get().MachineID
+	if okteto.Context().ClusterType != "" {
+		props["clusterType"] = okteto.Context().ClusterType
+	}
+
 	props["origin"] = origin
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)
