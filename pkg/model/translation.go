@@ -24,6 +24,7 @@ type TranslationRule struct {
 	Node              string               `json:"node,omitempty"`
 	Container         string               `json:"container,omitempty"`
 	Image             string               `json:"image,omitempty"`
+	Labels            Labels               `json:"labels,omitempty"`
 	ImagePullPolicy   apiv1.PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Environment       Environment          `json:"environment,omitempty"`
 	Secrets           []Secret             `json:"secrets,omitempty"`

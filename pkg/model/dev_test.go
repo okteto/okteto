@@ -35,6 +35,9 @@ annotations:
   key2: value2
 labels:
   key3: value3
+metadata:
+  labels:
+    key4: value4
 resources:
   requests:
     memory: "64Mi"
@@ -61,6 +64,11 @@ services:
     annotations:
       key1: value1
       key2: value2
+    labels:
+      key3: value3
+    metadata:
+      labels:
+        key4: value4
     resources:
       requests:
         memory: "64Mi"
@@ -112,8 +120,15 @@ services:
 			t.Errorf("Resources.Requests.CPU was not parsed correctly. Expected '500M', got '%s'", cpu.String())
 		}
 
-		if dev.Annotations["key1"] != "value1" && dev.Annotations["key2"] != "value2" {
+		if dev.Metadata.Annotations["key1"] != "value1" && dev.Metadata.Annotations["key2"] != "value2" {
 			t.Errorf("Annotations were not parsed correctly")
+		}
+		if dev.Metadata.Labels["key4"] != "value4" {
+			t.Errorf("Labels were not parsed correctly")
+		}
+
+		if dev.Selector["key3"] != "value3" {
+			t.Errorf("Selector were not parsed correctly")
 		}
 
 		if !reflect.DeepEqual(dev.SecurityContext.Capabilities.Add, []apiv1.Capability{"SYS_TRACE"}) {
@@ -334,38 +349,38 @@ services:
 	}
 }
 
-func Test_loadLabels(t *testing.T) {
+func Test_loadSelector(t *testing.T) {
 	tests := []struct {
-		name   string
-		labels Labels
-		value  string
-		want   Labels
+		name     string
+		selector Selector
+		value    string
+		want     Selector
 	}{
 		{
-			name:   "no-var",
-			labels: Labels{"a": "1", "b": "2"},
-			value:  "3",
-			want:   Labels{"a": "1", "b": "2"},
+			name:     "no-var",
+			selector: Selector{"a": "1", "b": "2"},
+			value:    "3",
+			want:     Selector{"a": "1", "b": "2"},
 		},
 		{
-			name:   "var",
-			labels: Labels{"a": "1", "b": "${value}"},
-			value:  "3",
-			want:   Labels{"a": "1", "b": "3"},
+			name:     "var",
+			selector: Selector{"a": "1", "b": "${value}"},
+			value:    "3",
+			want:     Selector{"a": "1", "b": "3"},
 		},
 		{
-			name:   "missing",
-			labels: Labels{"a": "1", "b": "${valueX}"},
-			value:  "1",
-			want:   Labels{"a": "1", "b": ""},
+			name:     "missing",
+			selector: Selector{"a": "1", "b": "${valueX}"},
+			value:    "1",
+			want:     Selector{"a": "1", "b": ""},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dev := &Dev{Labels: tt.labels}
+			dev := &Dev{Selector: tt.selector}
 			os.Setenv("value", tt.value)
-			dev.loadLabels()
+			dev.loadSelector()
 			for key, value := range dev.Labels {
 				if tt.want[key] != value {
 					t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
@@ -670,7 +685,7 @@ func Test_LoadForcePull(t *testing.T) {
 		t.Errorf("wrong image pull policy for main container: %s", dev.ImagePullPolicy)
 	}
 
-	if dev.Annotations[OktetoRestartAnnotation] == "" {
+	if dev.Metadata.Annotations[OktetoRestartAnnotation] == "" {
 		t.Errorf("restart annotation not set for main container")
 	}
 
@@ -679,7 +694,7 @@ func Test_LoadForcePull(t *testing.T) {
 		t.Errorf("wrong image pull policy for services: %s", dev.ImagePullPolicy)
 	}
 
-	if dev.Annotations[OktetoRestartAnnotation] == "" {
+	if dev.Metadata.Annotations[OktetoRestartAnnotation] == "" {
 		t.Errorf("restart annotation not set for services")
 	}
 }

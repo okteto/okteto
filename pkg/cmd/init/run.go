@@ -157,7 +157,7 @@ func setNameAndLabelsFromApp(dev *model.Dev, app apps.App) {
 			continue
 		}
 		dev.Name = component
-		dev.Labels = map[string]string{l: component}
+		dev.Selector = map[string]string{l: component}
 		return
 	}
 	dev.Name = app.ObjectMeta().Name
@@ -165,7 +165,7 @@ func setNameAndLabelsFromApp(dev *model.Dev, app apps.App) {
 
 func setAnnotationsFromApp(dev *model.Dev, app apps.App) {
 	if v := app.ObjectMeta().Annotations[model.FluxAnnotation]; v != "" {
-		dev.Annotations = map[string]string{"fluxcd.io/ignore": "true"}
+		dev.Metadata.Annotations = map[string]string{"fluxcd.io/ignore": "true"}
 	}
 }
 

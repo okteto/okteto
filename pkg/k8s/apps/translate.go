@@ -59,10 +59,15 @@ func (tr *Translation) translate() error {
 	tr.App.ObjectMeta().Labels[model.DevLabel] = "true"
 	tr.App.SetReplicas(0)
 
-	for k, v := range tr.Dev.Annotations {
+	for k, v := range tr.Dev.Metadata.Annotations {
 		tr.DevApp.ObjectMeta().Annotations[k] = v
 		tr.DevApp.TemplateObjectMeta().Annotations[k] = v
 	}
+	for k, v := range tr.Dev.Metadata.Labels {
+		tr.DevApp.ObjectMeta().Labels[k] = v
+		tr.DevApp.TemplateObjectMeta().Labels[k] = v
+	}
+
 	TranslateDevTolerations(tr.DevApp.PodSpec(), tr.Dev.Tolerations)
 
 	if tr.MainDev == tr.Dev {

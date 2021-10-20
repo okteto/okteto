@@ -21,10 +21,12 @@ type DevRC struct {
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	PersistentVolumeInfo *PersistentVolumeInfo `json:"persistentVolume,omitempty" yaml:"persistentVolume,omitempty"`
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Sync                 Sync                  `json:"sync,omitempty" yaml:"sync,omitempty"`
 	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
@@ -75,8 +77,11 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 }
 
 func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
-	for annotationKey, annotationValue := range devRc.Annotations {
-		dev.Annotations[annotationKey] = annotationValue
+	if len(devRc.Annotations) > 0 {
+		log.Warning("The field 'annotations' is deprecated. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata-object-optional)")
+		for annotationKey, annotationValue := range devRc.Annotations {
+			dev.Metadata.Annotations[annotationKey] = annotationValue
+		}
 	}
 
 	if devRc.Context != "" {
@@ -136,10 +141,21 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 		dev.InitContainer.Resources.Requests[resourceKey] = resourceValue
 	}
 
-	for labelKey, labelValue := range devRc.Labels {
-		dev.Labels[labelKey] = labelValue
+	if len(devRc.Labels) > 0 {
+		log.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector-mapstringstring-optional)")
+		for labelKey, labelValue := range devRc.Labels {
+			dev.Selector[labelKey] = labelValue
+		}
 	}
 
+	if devRc.Metadata != nil {
+		for annotationKey, annotationValue := range devRc.Metadata.Annotations {
+			dev.Metadata.Annotations[annotationKey] = annotationValue
+		}
+		for labelKey, labelValue := range devRc.Metadata.Labels {
+			dev.Metadata.Labels[labelKey] = labelValue
+		}
+	}
 	if devRc.Namespace != "" {
 		dev.Namespace = devRc.Namespace
 	}
@@ -177,6 +193,10 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 
 	for _, secret := range devRc.Secrets {
 		dev.Secrets = append(dev.Secrets, secret)
+	}
+
+	for key, value := range devRc.Selector {
+		dev.Selector[key] = value
 	}
 
 	if devRc.Sync.Compression {

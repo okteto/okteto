@@ -54,6 +54,7 @@ type Dev struct {
 	RegistryURL          string                `json:"-" yaml:"-"`
 	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
@@ -91,6 +92,7 @@ type Dev struct {
 	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
+	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 type Affinity apiv1.Affinity
@@ -175,6 +177,11 @@ type Timeout struct {
 	Resources time.Duration `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
+type Metadata struct {
+	Labels      Labels      `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+}
+
 // Duration represents a duration
 type Duration time.Duration
 
@@ -243,6 +250,9 @@ type ResourceList map[apiv1.ResourceName]resource.Quantity
 
 // Labels is a set of (key, value) pairs.
 type Labels map[string]string
+
+// Selector is a set of (key, value) pairs.
+type Selector map[string]string
 
 // Annotations is a set of (key, value) pairs.
 type Annotations map[string]string
@@ -335,6 +345,9 @@ func Read(bytes []byte) (*Dev, error) {
 	if err := dev.setDefaults(); err != nil {
 		return nil, err
 	}
+	if err := dev.translateDeprecatedMetadataFields(); err != nil {
+		return nil, err
+	}
 
 	sort.SliceStable(dev.Forward, func(i, j int) bool {
 		return dev.Forward[i].less(&dev.Forward[j])
@@ -398,7 +411,7 @@ func (dev *Dev) expandEnvVars() error {
 	if err := dev.loadContext(); err != nil {
 		return err
 	}
-	if err := dev.loadLabels(); err != nil {
+	if err := dev.loadSelector(); err != nil {
 		return err
 	}
 
@@ -438,10 +451,10 @@ func (dev *Dev) loadContext() error {
 	return nil
 }
 
-func (dev *Dev) loadLabels() error {
+func (dev *Dev) loadSelector() error {
 	var err error
-	for i := range dev.Labels {
-		dev.Labels[i], err = ExpandEnv(dev.Labels[i])
+	for i := range dev.Selector {
+		dev.Selector[i], err = ExpandEnv(dev.Selector[i])
 		if err != nil {
 			return err
 		}
@@ -480,12 +493,19 @@ func (dev *Dev) setDefaults() error {
 	if dev.ImagePullPolicy == "" {
 		dev.ImagePullPolicy = apiv1.PullAlways
 	}
-	if dev.Labels == nil {
-		dev.Labels = map[string]string{}
+	if dev.Metadata == nil {
+		dev.Metadata = &Metadata{}
 	}
-	if dev.Annotations == nil {
-		dev.Annotations = Annotations{}
+	if dev.Metadata.Annotations == nil {
+		dev.Metadata.Annotations = make(Annotations)
 	}
+	if dev.Metadata.Labels == nil {
+		dev.Metadata.Labels = make(Labels)
+	}
+	if dev.Selector == nil {
+		dev.Selector = make(Selector)
+	}
+
 	if dev.Healthchecks {
 		log.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future release. Please use the field 'probes' instead.")
 		if dev.Probes == nil {
@@ -524,14 +544,26 @@ func (dev *Dev) setDefaults() error {
 		if s.ImagePullPolicy == "" {
 			s.ImagePullPolicy = apiv1.PullAlways
 		}
-		if s.Labels == nil {
-			s.Labels = map[string]string{}
+		if s.Metadata == nil {
+			s.Metadata = &Metadata{
+				Annotations: make(Annotations),
+				Labels:      make(Labels),
+			}
+		}
+		if s.Metadata.Annotations == nil {
+			s.Metadata.Annotations = map[string]string{}
+		}
+		if s.Metadata.Labels == nil {
+			s.Metadata.Labels = map[string]string{}
+		}
+		if s.Selector == nil {
+			s.Selector = map[string]string{}
 		}
 		if s.Annotations == nil {
 			s.Annotations = Annotations{}
 		}
-		if s.Name != "" && len(s.Labels) > 0 {
-			return fmt.Errorf("'name' and 'labels' cannot be defined at the same time for service '%s'", s.Name)
+		if s.Name != "" && len(s.Selector) > 0 {
+			return fmt.Errorf("'name' and 'selector' cannot be defined at the same time for service '%s'", s.Name)
 		}
 		s.Namespace = ""
 		s.Context = ""
@@ -746,10 +778,10 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 func (dev *Dev) LoadForcePull() {
 	restartUUID := uuid.New().String()
 	dev.ImagePullPolicy = apiv1.PullAlways
-	dev.Annotations[OktetoRestartAnnotation] = restartUUID
+	dev.Metadata.Annotations[OktetoRestartAnnotation] = restartUUID
 	for _, s := range dev.Services {
 		s.ImagePullPolicy = apiv1.PullAlways
-		s.Annotations[OktetoRestartAnnotation] = restartUUID
+		s.Metadata.Annotations[OktetoRestartAnnotation] = restartUUID
 	}
 	log.Infof("enabled force pull")
 }
@@ -784,10 +816,10 @@ func SerializeBuildArgs(buildArgs Environment) []string {
 
 //SetLastBuiltAnnotation sets the dev timestacmp
 func (dev *Dev) SetLastBuiltAnnotation() {
-	if dev.Annotations == nil {
-		dev.Annotations = Annotations{}
+	if dev.Metadata.Annotations == nil {
+		dev.Metadata.Annotations = Annotations{}
 	}
-	dev.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
+	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
 //GetVolumeName returns the okteto volume name for a given development container
@@ -798,11 +830,11 @@ func (dev *Dev) GetVolumeName() string {
 // LabelsSelector returns the labels of a Deployment as a k8s selector
 func (dev *Dev) LabelsSelector() string {
 	labels := ""
-	for k := range dev.Labels {
+	for k := range dev.Selector {
 		if labels == "" {
-			labels = fmt.Sprintf("%s=%s", k, dev.Labels[k])
+			labels = fmt.Sprintf("%s=%s", k, dev.Selector[k])
 		} else {
-			labels = fmt.Sprintf("%s, %s=%s", labels, k, dev.Labels[k])
+			labels = fmt.Sprintf("%s, %s=%s", labels, k, dev.Selector[k])
 		}
 	}
 	return labels
@@ -1060,6 +1092,38 @@ func GetTimeout() (time.Duration, error) {
 	}
 
 	return parsed, nil
+}
+
+func (dev *Dev) translateDeprecatedMetadataFields() error {
+	if len(dev.Labels) > 0 {
+		log.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector-mapstringstring-optional)")
+		for k, v := range dev.Labels {
+			dev.Selector[k] = v
+		}
+	}
+
+	if len(dev.Annotations) > 0 {
+		log.Warning("The field 'annotations' is deprecated. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata-object-optional)")
+		for k, v := range dev.Annotations {
+			dev.Metadata.Annotations[k] = v
+		}
+	}
+	for _, s := range dev.Services {
+		if len(s.Labels) > 0 {
+			log.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector-mapstringstring-optional)", s.Name)
+			for k, v := range s.Labels {
+				s.Selector[k] = v
+			}
+		}
+
+		if len(s.Annotations) > 0 {
+			log.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata-object-optional)", s.Name)
+			for k, v := range s.Annotations {
+				s.Metadata.Annotations[k] = v
+			}
+		}
+	}
+	return nil
 }
 
 // DivertName returns the name of the diverted version of a given resource

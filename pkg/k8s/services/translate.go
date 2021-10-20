@@ -29,7 +29,7 @@ func translate(dev *model.Dev) *apiv1.Service {
 	if len(dev.Services) == 0 {
 		annotations[oktetoAutoIngressAnnotation] = "true"
 	}
-	for k, v := range dev.Annotations {
+	for k, v := range dev.Metadata.Annotations {
 		annotations[k] = v
 	}
 	return &apiv1.Service{

@@ -56,6 +56,9 @@ image: web:latest
 annotations:
   key1: value1
 command: ["./run_web.sh"]
+metadata:
+  labels:
+    app: web
 workdir: /app
 securityContext:
   runAsUser: 100
@@ -373,8 +376,10 @@ services:
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong d1 labels: '%v'", tr1.App.ObjectMeta().Labels)
 	}
+
 	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Labels, d1Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong d1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
+
 	}
 	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
@@ -397,10 +402,15 @@ services:
 	if tr1.DevApp.Replicas() != 1 {
 		t.Fatalf("dev d1 is running %d replicas", tr1.DevApp.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevCloneLabel: "deploy1"}
-	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Labels, expectedLabels) {
-		t.Fatalf("Wrong dev d1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
+	expectedLabels = map[string]string{model.DevCloneLabel: "deploy1", "app": "web"}
+	for k, v := range expectedLabels {
+		if devValue, ok := tr1.DevApp.ObjectMeta().Labels[k]; ok && devValue != v {
+			t.Fatalf("Wrong dev d1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
+		} else if !ok {
+			t.Fatalf("Wrong dev d1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
+		}
 	}
+
 	expectedPodLabels := map[string]string{"app": "web", model.InteractiveDevLabel: dev1.Name}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)

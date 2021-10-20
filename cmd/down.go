@@ -95,6 +95,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			}
 		}
 
+		spinner.Stop()
 		app, _, err := utils.GetApp(ctx, dev, c)
 		if err != nil {
 			if !errors.IsNotFound(err) {
@@ -103,6 +104,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			}
 			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 		}
+		spinner.Start()
 
 		trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
 		if err != nil {

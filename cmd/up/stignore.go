@@ -92,7 +92,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 			},
 		)
 	}
-	dev.Annotations[model.OktetoStignoreAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
+	dev.Metadata.Annotations[model.OktetoStignoreAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
 	return nil
 }
 
