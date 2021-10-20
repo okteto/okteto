@@ -188,7 +188,11 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	s, err := ReadStack(b, isCompose)
+	expandedManifest, err := ExpandEnv(string(b))
+	if err != nil {
+		return nil, err
+	}
+	s, err := ReadStack([]byte(expandedManifest), isCompose)
 	if err != nil {
 		return nil, err
 	}
