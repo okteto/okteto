@@ -35,10 +35,6 @@ const (
 )
 
 func TestPush(t *testing.T) {
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
 
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)

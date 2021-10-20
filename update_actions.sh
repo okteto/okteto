@@ -20,7 +20,8 @@ actionsRepos=(delete-namespace
         destroy-pipeline
         login
         destroy-stack
-        apply)
+        apply
+        context)
 
 for repo in "${actionsRepos[@]}"; do
         echo "$repo"

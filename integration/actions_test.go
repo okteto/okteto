@@ -46,6 +46,7 @@ const (
 	destroyPreviewPath  = "okteto/destroy-preview"
 	destroyStackPath    = "okteto/destroy-stack"
 	loginPath           = "okteto/login"
+	contextPath         = "okteto/context"
 	namespacePath       = "okteto/namespace"
 	pipelinePath        = "okteto/pipeline"
 	pushPath            = "okteto/push"
@@ -93,10 +94,6 @@ func TestApplyPipeline(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
@@ -117,10 +114,6 @@ func TestApplyPipeline(t *testing.T) {
 func TestBuildActionPipeline(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
-		return
-	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
 		return
 	}
 
@@ -170,10 +163,6 @@ func TestNamespaceActionsPipeline(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
@@ -194,10 +183,7 @@ func TestLoginActionPipeline(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-		return
-	}
+
 	ctx := context.Background()
 	var remove bool
 	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
@@ -215,13 +201,32 @@ func TestLoginActionPipeline(t *testing.T) {
 
 }
 
-func TestPipelineActions(t *testing.T) {
+func TestContextAction(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
+
+	ctx := context.Background()
+	var remove bool
+	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
+		remove = true
+	}
+	if err := executeContextAction(ctx); err != nil {
+		t.Fatalf("Context action failed: %s", err.Error())
+	}
+
+	if remove {
+		if err := os.RemoveAll(config.GetOktetoContextFolder()); err != nil {
+			t.Fatalf("Removing failed: %s", err.Error())
+		}
+	}
+
+}
+
+func TestPipelineActions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
 
@@ -249,9 +254,6 @@ func TestPreviewActions(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
-	}
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
@@ -268,10 +270,6 @@ func TestPreviewActions(t *testing.T) {
 func TestPushAction(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
-		return
-	}
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
 		return
 	}
 
@@ -298,11 +296,6 @@ func TestPushAction(t *testing.T) {
 func TestStacksActions(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
-		return
-	}
-
-	if mode == "client" {
-		t.Skip("this test is not required for client-side translation")
 		return
 	}
 
@@ -644,6 +637,34 @@ func executeLoginAction(ctx context.Context) error {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
 	log.Printf("logging output: \n%s\n", string(o))
+	return nil
+}
+
+func executeContextAction(ctx context.Context) error {
+	token := os.Getenv("API_TOKEN")
+	if token == "" {
+		token = okteto.Context().Token
+	}
+
+	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, contextPath)
+	actionFolder := strings.Split(contextPath, "/")[1]
+	log.Printf("cloning build action repository: %s", actionRepo)
+	if err := cloneGitRepo(ctx, actionRepo); err != nil {
+		return err
+	}
+	log.Printf("cloned repo %s \n", actionRepo)
+	defer deleteGitRepo(ctx, actionFolder)
+
+	log.Printf("login into %s", okteto.CloudURL)
+	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
+	args := []string{token, okteto.CloudURL}
+	cmd := exec.Command(command, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
+	}
+	log.Printf("context output: \n%s\n", string(o))
 	return nil
 }
 
