@@ -40,7 +40,7 @@ const (
 )
 
 var (
-	cloudOption           = fmt.Sprintf("[Okteto Cloud] %s", okteto.CloudURL)
+	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", utils.RemoveSchema(okteto.CloudURL))
 	newOEOption           = "New Okteto Cluster URL"
 	oktetoContextsDivider = "Okteto contexts:"
 	k8sContextsDivider    = "Kubernetes contexts:"
@@ -88,7 +88,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	ctxStore := okteto.ContextStore()
 	for ctxName := range ctxStore.Contexts {
 		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
-			clusters = append(clusters, SelectorItem{Label: ctxName, Enable: true})
+			clusters = append(clusters, SelectorItem{Label: utils.RemoveSchema(ctxName), Enable: true})
 		}
 	}
 	clusters = append(clusters, SelectorItem{Label: newOEOption, Enable: true})
@@ -135,6 +135,11 @@ func AskForOptions(options []SelectorItem, label string) (string, error) {
 }
 
 func (s OktetoSelector) Run() (string, error) {
+	startPosition, err := s.getInitialPosition()
+	if err != nil {
+		return "", err
+	}
+	s.Items[startPosition].Label += " *"
 	l, err := list.New(s.Items, s.Size)
 	if err != nil {
 		return "", err
@@ -169,10 +174,7 @@ func (s OktetoSelector) Run() (string, error) {
 	}
 
 	sb := screenbuf.New(rl)
-	startPosition, err := s.getInitialPosition()
-	if err != nil {
-		return "", err
-	}
+
 	s.list.SetCursor(startPosition)
 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
