@@ -152,7 +152,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
 
 	if ctxOptions.Show {
-		log.Information("Using %s @ %s as context", okteto.Context().Namespace, strings.TrimPrefix(okteto.Context().Name, "https://"))
+		log.Information("Using %s @ %s as context", okteto.Context().Namespace, utils.RemoveSchema(okteto.Context().Name))
 	}
 
 	return nil
