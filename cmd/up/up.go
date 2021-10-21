@@ -497,7 +497,7 @@ func (up *upContext) shutdown() {
 }
 
 func printDisplayContext(dev *model.Dev, divertURL string) {
-	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Namespace))
+	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
 
 	if len(dev.Forward) > 0 {
