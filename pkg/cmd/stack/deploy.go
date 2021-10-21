@@ -161,7 +161,14 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 		}
 
 		spinner.Update("Waiting for services to be ready...")
-		exit <- waitForPodsToBeRunning(ctx, s, c)
+		if err := waitForPodsToBeRunning(ctx, s, c); err != nil {
+			exit <- err
+			return
+		}
+		if err := ListEndpoints(ctx, s, ""); err != nil {
+			exit <- err
+			return
+		}
 	}()
 
 	select {
