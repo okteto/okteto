@@ -27,6 +27,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -383,7 +384,15 @@ func (s *OktetoSelector) prepareTemplates() error {
 }
 
 func (s OktetoSelector) getInitialPosition() (int, error) {
+	ctx := utils.RemoveSchema(okteto.Context().Name)
 	idx := 0
+	for _, item := range s.Items {
+		if strings.Contains(item.Label, ctx) {
+			return idx, nil
+		}
+		idx += 1
+	}
+	idx = 0
 	for _, item := range s.Items {
 		if item.Enable {
 			return idx, nil
