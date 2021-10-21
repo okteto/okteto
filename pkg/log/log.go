@@ -178,6 +178,11 @@ func BlueString(format string, args ...interface{}) string {
 	return blueString(format, args...)
 }
 
+// BlueBackgroundString returns a string in a blue background
+func BlueBackgroundString(format string, args ...interface{}) string {
+	return blueString(format, args...)
+}
+
 // Success prints a message with the success symbol first, and the text in green
 func Success(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
