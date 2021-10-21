@@ -52,7 +52,7 @@ func ListEndpoints(ctx context.Context, stack *model.Stack, output string) error
 			sort.Slice(endpoints, func(i, j int) bool {
 				return len(endpoints[i]) < len(endpoints[j])
 			})
-			fmt.Printf("Available endpoints for stack '%s'\n  - %s\n", stack.Name, strings.Join(endpoints, "\n  - "))
+			fmt.Printf("Available endpoints for stack '%s':\n  - %s\n", stack.Name, strings.Join(endpoints, "\n  - "))
 		}
 	}
 	return nil

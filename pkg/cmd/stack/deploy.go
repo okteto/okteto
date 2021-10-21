@@ -169,6 +169,8 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 			exit <- err
 			return
 		}
+		exit <- nil
+		return
 	}()
 
 	select {
