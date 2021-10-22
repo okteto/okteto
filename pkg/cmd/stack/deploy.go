@@ -165,6 +165,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 			exit <- err
 			return
 		}
+		spinner.Stop()
 		if err := ListEndpoints(ctx, s, ""); err != nil {
 			exit <- err
 			return
