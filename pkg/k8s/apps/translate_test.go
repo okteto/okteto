@@ -101,7 +101,6 @@ services:
     command: ["./run_worker.sh"]
     annotations:
       key2: value2
-    serviceAccount: sa
     sync:
        - worker:/src`, file.Name()))
 
@@ -475,7 +474,7 @@ services:
 		SecurityContext: &apiv1.PodSecurityContext{
 			FSGroup: pointer.Int64Ptr(0),
 		},
-		ServiceAccountName:            "sa",
+		ServiceAccountName:            "",
 		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 		Volumes: []apiv1.Volume{
 			{
@@ -1406,7 +1405,6 @@ services:
     annotations:
       key2: value2
     command: ["./run_worker.sh"]
-    serviceAccount: sa
     sync:
        - worker:/src`, file.Name()))
 
@@ -1764,7 +1762,7 @@ services:
 		SecurityContext: &apiv1.PodSecurityContext{
 			FSGroup: pointer.Int64Ptr(0),
 		},
-		ServiceAccountName:            "sa",
+		ServiceAccountName:            "",
 		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 		Volumes: []apiv1.Volume{
 			{
