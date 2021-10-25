@@ -33,11 +33,14 @@ type SelectItem struct {
 	Enable bool
 }
 
-func getKubernetesContextList() []string {
+func getKubernetesContextList(filterOkteto bool) []string {
 	contextList := make([]string, 0)
 	kubeconfigFile := config.GetKubeconfigPath()
 	cfg := kubeconfig.Get(kubeconfigFile)
 	if cfg == nil {
+		return contextList
+	}
+	if !filterOkteto {
 		return contextList
 	}
 	for name := range cfg.Contexts {
@@ -93,7 +96,7 @@ func askForOktetoURL() string {
 }
 
 func isValidCluster(cluster string) bool {
-	for _, c := range getKubernetesContextList() {
+	for _, c := range getKubernetesContextList(false) {
 		if cluster == c {
 			return true
 		}

@@ -102,9 +102,6 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		return errors.ErrTokenFlagNeeded
 	}
 
-	//K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
-	ctxOptions.Context = okteto.K8sContextToOktetoUrl(strings.TrimSuffix(ctxOptions.Context, "/"))
-
 	if ctxOptions.Context == "" {
 		log.Infof("authenticating with interactive context")
 		oktetoContext, err := getContext(ctxOptions)
@@ -115,6 +112,17 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		ctxStore.CurrentContext = oktetoContext
 		ctxOptions.Save = true
 		ctxOptions.Show = false
+	}
+
+	ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
+	if !okteto.IsOktetoURL(ctxOptions.Context) {
+		if !isValidCluster(ctxOptions.Context) {
+			return errors.UserError{
+				E:    fmt.Errorf(errors.ErrInvalidContext, ctxOptions.Context),
+				Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(false), "\n      ")),
+			}
+		}
+		ctxOptions.Context = okteto.K8sContextToOktetoUrl(ctxOptions.Context, ctxOptions.Namespace)
 	}
 
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; !ok {
@@ -225,7 +233,7 @@ func initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	if cfg == nil {
 		cfg = kubeconfig.Create()
 	}
-	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.UrlToKubernetesContext(okteto.Context().Name))
+	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.Context().Name)
 	okteto.Context().Cfg = cfg
 
 	setSecrets(userContext.Secrets)
@@ -236,13 +244,6 @@ func initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
 }
 
 func initKubernetesContext(ctxOptions *ContextOptions) error {
-	if !isValidCluster(ctxOptions.Context) {
-		return errors.UserError{
-			E:    fmt.Errorf(errors.ErrInvalidContext, ctxOptions.Context),
-			Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(), "\n      ")),
-		}
-	}
-
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
 		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
@@ -260,6 +261,7 @@ func initKubernetesContext(ctxOptions *ContextOptions) error {
 		}
 		ctxOptions.Namespace = cfg.Contexts[ctxOptions.Context].Namespace
 	}
+
 	okteto.AddKubernetesContext(ctxOptions.Context, ctxOptions.Namespace, ctxOptions.Builder)
 
 	kubeCtx.Namespace = okteto.Context().Namespace

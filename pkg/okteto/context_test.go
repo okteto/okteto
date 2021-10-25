@@ -60,7 +60,7 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if result := K8sContextToOktetoUrl(tt.in); result != tt.want {
+			if result := K8sContextToOktetoUrl(tt.in, "namespace"); result != tt.want {
 				t.Errorf("Test '%s' failed: %s", tt.name, result)
 			}
 		})

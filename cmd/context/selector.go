@@ -77,7 +77,7 @@ type SelectorItem struct {
 func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	k8sClusters := make([]string, 0)
 	if !ctxOptions.OnlyOkteto {
-		k8sClusters = getKubernetesContextList()
+		k8sClusters = getKubernetesContextList(true)
 	}
 	clusters := make([]SelectorItem, 0)
 
