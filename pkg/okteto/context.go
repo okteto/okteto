@@ -130,7 +130,7 @@ func UrlToKubernetesContext(uri string) string {
 }
 
 // K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
-func K8sContextToOktetoUrl(k8sContext, k8sNamespace string) string {
+func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string) string {
 	if IsOktetoURL(k8sContext) {
 		return k8sContext
 	}
@@ -155,7 +155,6 @@ func K8sContextToOktetoUrl(k8sContext, k8sNamespace string) string {
 		return k8sContext
 	}
 
-	ctx := context.Background()
 	//check the namespace label
 	if k8sNamespace == "" {
 		k8sNamespace = cfg.Contexts[k8sContext].Namespace

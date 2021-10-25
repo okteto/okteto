@@ -122,7 +122,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 				Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(false), "\n      ")),
 			}
 		}
-		ctxOptions.Context = okteto.K8sContextToOktetoUrl(ctxOptions.Context, ctxOptions.Namespace)
+		ctxOptions.Context = okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
 	}
 
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; !ok {
