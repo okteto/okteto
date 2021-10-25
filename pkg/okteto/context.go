@@ -343,3 +343,11 @@ func IsOktetoCloud() bool {
 		return false
 	}
 }
+
+func RemoveSchema(uri string) string {
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	return strings.TrimPrefix(u.String(), fmt.Sprintf("%s://", u.Scheme))
+}
