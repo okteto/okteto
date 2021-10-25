@@ -29,6 +29,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/pointer"
 )
@@ -110,6 +111,7 @@ services:
 	}
 
 	d1 := deployments.Sandbox(dev1)
+	d1.UID = types.UID("deploy1")
 	delete(d1.Annotations, model.OktetoAutoCreateAnnotation)
 	d1.Spec.Replicas = pointer.Int32Ptr(2)
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
@@ -400,7 +402,7 @@ services:
 	if tr1.DevApp.Replicas() != 1 {
 		t.Fatalf("dev d1 is running %d replicas", tr1.DevApp.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevCloneLabel: "web", "app": "web"}
+	expectedLabels = map[string]string{model.DevCloneLabel: "deploy1", "app": "web"}
 	for k, v := range expectedLabels {
 		if devValue, ok := tr1.DevApp.ObjectMeta().Labels[k]; ok && devValue != v {
 			t.Fatalf("Wrong dev d1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
@@ -439,6 +441,7 @@ services:
 
 	dev2 := dev1.Services[0]
 	d2 := deployments.Sandbox(dev2)
+	d2.UID = types.UID("deploy2")
 	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
 	d2.Spec.Replicas = pointer.Int32Ptr(3)
 	d2.Namespace = dev1.Namespace
@@ -539,7 +542,7 @@ services:
 	if tr2.DevApp.Replicas() != 3 {
 		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevCloneLabel: "worker"}
+	expectedLabels = map[string]string{model.DevCloneLabel: "deploy2"}
 	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong dev d2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
 	}
@@ -1413,6 +1416,7 @@ services:
 	}
 
 	sfs1 := statefulsets.Sandbox(dev1)
+	sfs1.UID = types.UID("sfs1")
 	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
 	sfs1.Spec.Replicas = pointer.Int32Ptr(2)
 
@@ -1691,7 +1695,7 @@ services:
 	if tr1.DevApp.Replicas() != 1 {
 		t.Fatalf("dev sfs1 is running %d replicas", tr1.DevApp.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevCloneLabel: "web"}
+	expectedLabels = map[string]string{model.DevCloneLabel: "sfs1"}
 	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong dev sfs1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
 	}
@@ -1726,6 +1730,7 @@ services:
 	dev2 := dev1.Services[0]
 	sfs2 := statefulsets.Sandbox(dev2)
 	sfs2.Spec.Replicas = pointer.Int32Ptr(3)
+	sfs2.UID = types.UID("sfs2")
 	delete(sfs2.Annotations, model.OktetoAutoCreateAnnotation)
 	sfs2.Namespace = dev1.Namespace
 
@@ -1826,7 +1831,7 @@ services:
 	if tr2.DevApp.Replicas() != 3 {
 		t.Fatalf("dev sfs2 is running %d replicas", tr2.DevApp.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevCloneLabel: "worker"}
+	expectedLabels = map[string]string{model.DevCloneLabel: "sfs2"}
 	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong dev sfs2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
 	}

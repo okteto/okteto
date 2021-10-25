@@ -89,7 +89,7 @@ func (i *DeploymentApp) DevClone() App {
 	if i.d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
 		clone.Labels[model.DevLabel] = "true"
 	} else {
-		clone.Labels[model.DevCloneLabel] = i.d.Name
+		clone.Labels[model.DevCloneLabel] = string(i.d.UID)
 	}
 	for k, v := range i.d.Labels {
 		clone.Labels[k] = v
