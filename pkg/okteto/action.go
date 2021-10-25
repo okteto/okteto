@@ -36,9 +36,9 @@ func (c *OktetoClient) GetAction(ctx context.Context, name string) (*Action, err
 		"space": graphql.String(namespace),
 	}
 
-	err := c.client.Query(ctx, &query, variables)
+	err := c.Query(ctx, &query, variables)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 	action := &Action{
 		ID:     string(query.Action.Id),

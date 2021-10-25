@@ -42,9 +42,9 @@ func (c *OktetoClient) GetCredentials(ctx context.Context) (*Credential, error) 
 	variables := map[string]interface{}{
 		"cred": graphql.String(""),
 	}
-	err := c.client.Query(ctx, &query, variables)
+	err := c.Query(ctx, &query, variables)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	cred := &Credential{
