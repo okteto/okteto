@@ -276,11 +276,3 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (apps.A
 	}
 	return app, false, nil
 }
-
-func RemoveSchema(uri string) string {
-	u, err := url.Parse(uri)
-	if err != nil {
-		return uri
-	}
-	return strings.TrimPrefix(u.String(), fmt.Sprintf("%s://", u.Scheme))
-}

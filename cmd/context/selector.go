@@ -27,7 +27,6 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -40,7 +39,7 @@ const (
 )
 
 var (
-	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", utils.RemoveSchema(okteto.CloudURL))
+	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.RemoveSchema(okteto.CloudURL))
 	newOEOption           = "New Okteto Cluster URL"
 	oktetoContextsDivider = "Okteto contexts:"
 	k8sContextsDivider    = "Kubernetes contexts:"
@@ -89,7 +88,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	ctxStore := okteto.ContextStore()
 	for ctxName := range ctxStore.Contexts {
 		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
-			clusters = append(clusters, SelectorItem{Name: ctxName, Label: utils.RemoveSchema(ctxName), Enable: true})
+			clusters = append(clusters, SelectorItem{Name: ctxName, Label: okteto.RemoveSchema(ctxName), Enable: true})
 		}
 	}
 	clusters = append(clusters, SelectorItem{Label: newOEOption, Enable: true})
@@ -388,7 +387,7 @@ func (s *OktetoSelector) prepareTemplates() error {
 }
 
 func (s OktetoSelector) getInitialPosition() (int, error) {
-	ctx := utils.RemoveSchema(okteto.Context().Name)
+	ctx := okteto.RemoveSchema(okteto.Context().Name)
 	idx := 0
 	for _, item := range s.Items {
 		if strings.Contains(item.Label, ctx) {
