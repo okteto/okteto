@@ -353,6 +353,14 @@ func IsOktetoCloud() bool {
 	}
 }
 
+func RemoveSchema(uri string) string {
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	return strings.TrimPrefix(u.String(), fmt.Sprintf("%s://", u.Scheme))
+}
+
 func (okctx *OktetoContext) SetClusterType(clusterHost string) {
 	if isLocalHostname(clusterHost) {
 		okctx.ClusterType = localClusterType
@@ -376,4 +384,12 @@ func isLocalHostname(clusterHost string) bool {
 	ipAddress := net.ParseIP(host)
 	return ipAddress.IsPrivate() || ipAddress.IsUnspecified() || ipAddress.IsLinkLocalUnicast() ||
 		ipAddress.IsLoopback() || ipAddress.IsLinkLocalMulticast() || host == "kubernetes.docker.internal"
+}
+
+func RemoveSchema(uri string) string {
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	return strings.TrimPrefix(u.String(), fmt.Sprintf("%s://", u.Scheme))
 }

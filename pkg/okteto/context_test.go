@@ -92,3 +92,35 @@ func Test_IsOktetoCloud(t *testing.T) {
 		})
 	}
 }
+
+func Test_RemoveSchema(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{
+			name: "https",
+			url:  "https://okteto.dev.com",
+			want: "okteto.dev.com",
+		},
+		{
+			name: "non url",
+			url:  "minikube",
+			want: "minikube",
+		},
+		{
+			name: "http",
+			url:  "http://okteto.com",
+			want: "okteto.com",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := RemoveSchema(tt.url)
+			if result != tt.want {
+				t.Fatalf("Expected %s but got %s", tt.want, result)
+			}
+		})
+	}
+}

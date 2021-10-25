@@ -94,7 +94,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 		"source": graphql.String("cli"),
 	}
 
-	err := c.client.Mutate(ctx, &mutation, queryVariables)
+	err := c.Mutate(ctx, &mutation, queryVariables)
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
 			return c.deprecatedAuthUser(ctx, code)
@@ -102,7 +102,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 		if strings.Contains(err.Error(), "Cannot query field \"telemetryEnabled\" on type \"me\"") {
 			return c.deprecatedAuthUser(ctx, code)
 		}
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	globalNamespace := getGlobalNamespace(string(mutation.User.GlobalNamespace))
@@ -150,9 +150,9 @@ func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*Us
 		"source": graphql.String("cli"),
 	}
 
-	err := c.client.Mutate(ctx, &mutation, queryVariables)
+	err := c.Mutate(ctx, &mutation, queryVariables)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	user := &User{

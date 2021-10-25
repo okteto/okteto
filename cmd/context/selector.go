@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	cloudOption           = fmt.Sprintf("[Okteto Cloud] %s", okteto.CloudURL)
+	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.RemoveSchema(okteto.CloudURL))
 	newOEOption           = "New Okteto Cluster URL"
 	oktetoContextsDivider = "Okteto contexts:"
 	k8sContextsDivider    = "Kubernetes contexts:"
@@ -58,16 +58,18 @@ type OktetoSelector struct {
 }
 
 type OktetoTemplates struct {
-	FuncMap  template.FuncMap
-	label    *template.Template
-	active   *template.Template
-	inactive *template.Template
-	selected *template.Template
-	details  *template.Template
-	help     *template.Template
+	FuncMap   template.FuncMap
+	label     *template.Template
+	active    *template.Template
+	inactive  *template.Template
+	selected  *template.Template
+	details   *template.Template
+	help      *template.Template
+	extraInfo *template.Template
 }
 
 type SelectorItem struct {
+	Name   string
 	Label  string
 	Enable bool
 }
@@ -78,23 +80,19 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 		k8sClusters = getKubernetesContextList()
 	}
 	clusters := make([]SelectorItem, 0)
-	if len(k8sClusters) > 0 {
-		clusters = append(clusters, SelectorItem{Label: oktetoContextsDivider, Enable: false})
-	}
 
-	clusters = append(clusters, SelectorItem{Label: cloudOption, Enable: true})
+	clusters = append(clusters, SelectorItem{Name: cloudOption, Label: cloudOption, Enable: true})
 
 	ctxStore := okteto.ContextStore()
 	for ctxName := range ctxStore.Contexts {
 		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
-			clusters = append(clusters, SelectorItem{Label: ctxName, Enable: true})
+			clusters = append(clusters, SelectorItem{Name: ctxName, Label: okteto.RemoveSchema(ctxName), Enable: true})
 		}
 	}
-	clusters = append(clusters, SelectorItem{Label: newOEOption, Enable: true})
 	if len(k8sClusters) > 0 {
-		clusters = append(clusters, SelectorItem{Label: k8sContextsDivider, Enable: false})
 		for _, k8sCluster := range k8sClusters {
 			clusters = append(clusters, SelectorItem{
+				Name:   k8sCluster,
 				Label:  k8sCluster,
 				Enable: true,
 			})
@@ -134,6 +132,12 @@ func AskForOptions(options []SelectorItem, label string) (string, error) {
 }
 
 func (s OktetoSelector) Run() (string, error) {
+	startPosition, err := s.getInitialPosition()
+	if err != nil {
+		return "", err
+	}
+	s.Items[startPosition].Label += " *"
+
 	l, err := list.New(s.Items, s.Size)
 	if err != nil {
 		return "", err
@@ -168,10 +172,6 @@ func (s OktetoSelector) Run() (string, error) {
 	}
 
 	sb := screenbuf.New(rl)
-	startPosition, err := s.getInitialPosition()
-	if err != nil {
-		return "", err
-	}
 	s.list.SetCursor(startPosition)
 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
@@ -255,6 +255,9 @@ func (s OktetoSelector) Run() (string, error) {
 			}
 		}
 
+		sb.WriteString("")
+		sb.Write(render(s.OktetoTemplates.extraInfo, "Use 'okteto context add <URL>' to add a new cluster context"))
+
 		sb.Flush()
 
 		return nil, 0, true
@@ -301,7 +304,7 @@ func (s OktetoSelector) Run() (string, error) {
 	rl.Write([]byte(showCursor))
 	rl.Close()
 
-	return s.Items[s.list.Index()].Label, err
+	return s.Items[s.list.Index()].Name, err
 }
 
 func (s *OktetoSelector) prepareTemplates() error {
@@ -377,13 +380,30 @@ func (s *OktetoSelector) prepareTemplates() error {
 
 	tpls.help = tpl
 
+	extraInfo := changeColorForWindows(`{{ " i " | black | bgBlue }} {{ "Use 'okteto context <URL>' to add a new cluster context" | oktetoblue }}`)
+
+	tpl, err = template.New("").Funcs(tpls.FuncMap).Parse(extraInfo)
+	if err != nil {
+		return err
+	}
+
+	tpls.extraInfo = tpl
+
 	s.OktetoTemplates = tpls
 
 	return nil
 }
 
 func (s OktetoSelector) getInitialPosition() (int, error) {
+	ctx := okteto.RemoveSchema(okteto.Context().Name)
 	idx := 0
+	for _, item := range s.Items {
+		if strings.Contains(item.Label, ctx) {
+			return idx, nil
+		}
+		idx += 1
+	}
+	idx = 0
 	for _, item := range s.Items {
 		if item.Enable {
 			return idx, nil
@@ -489,6 +509,7 @@ func getInactiveTemplate(options []SelectorItem) string {
 	result = changeColorForWindows(result)
 	return result
 }
+
 func changeColorForWindows(template string) string {
 	if runtime.GOOS == "windows" {
 		template = strings.ReplaceAll(template, "oktetoblue", "blue")
