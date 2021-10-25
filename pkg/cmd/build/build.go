@@ -114,8 +114,8 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 	if isOktetoRegistry {
 		if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			log.Yellow(`Failed to push '%s' metadata to the registry:
-			%s,
-			Retrying ...`, buildOptions.Tag, err.Error())
+  %s,
+  Retrying ...`, buildOptions.Tag, err.Error())
 			success := true
 			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 			if err != nil {
