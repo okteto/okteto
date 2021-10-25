@@ -58,13 +58,14 @@ type OktetoSelector struct {
 }
 
 type OktetoTemplates struct {
-	FuncMap  template.FuncMap
-	label    *template.Template
-	active   *template.Template
-	inactive *template.Template
-	selected *template.Template
-	details  *template.Template
-	help     *template.Template
+	FuncMap   template.FuncMap
+	label     *template.Template
+	active    *template.Template
+	inactive  *template.Template
+	selected  *template.Template
+	details   *template.Template
+	help      *template.Template
+	extraInfo *template.Template
 }
 
 type SelectorItem struct {
@@ -78,10 +79,6 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 		k8sClusters = getKubernetesContextList()
 	}
 	clusters := make([]SelectorItem, 0)
-	if len(k8sClusters) > 0 {
-		clusters = append(clusters, SelectorItem{Label: oktetoContextsDivider, Enable: false})
-	}
-
 	clusters = append(clusters, SelectorItem{Label: cloudOption, Enable: true})
 
 	ctxStore := okteto.ContextStore()
@@ -90,9 +87,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 			clusters = append(clusters, SelectorItem{Label: ctxName, Enable: true})
 		}
 	}
-	clusters = append(clusters, SelectorItem{Label: newOEOption, Enable: true})
 	if len(k8sClusters) > 0 {
-		clusters = append(clusters, SelectorItem{Label: k8sContextsDivider, Enable: false})
 		for _, k8sCluster := range k8sClusters {
 			clusters = append(clusters, SelectorItem{
 				Label:  k8sCluster,
@@ -255,6 +250,9 @@ func (s OktetoSelector) Run() (string, error) {
 			}
 		}
 
+		sb.WriteString("")
+		sb.Write(render(s.OktetoTemplates.extraInfo, "Use 'okteto context add <URL>' to add a new cluster context"))
+
 		sb.Flush()
 
 		return nil, 0, true
@@ -377,6 +375,15 @@ func (s *OktetoSelector) prepareTemplates() error {
 
 	tpls.help = tpl
 
+	extraInfo := changeColorForWindows(`{{ " i " | black | bgBlue }} {{ "Use 'okteto context <URL>' to add a new cluster context" | oktetoblue }}`)
+
+	tpl, err = template.New("").Funcs(tpls.FuncMap).Parse(extraInfo)
+	if err != nil {
+		return err
+	}
+
+	tpls.extraInfo = tpl
+
 	s.OktetoTemplates = tpls
 
 	return nil
@@ -489,6 +496,7 @@ func getInactiveTemplate(options []SelectorItem) string {
 	result = changeColorForWindows(result)
 	return result
 }
+
 func changeColorForWindows(template string) string {
 	if runtime.GOOS == "windows" {
 		template = strings.ReplaceAll(template, "oktetoblue", "blue")
