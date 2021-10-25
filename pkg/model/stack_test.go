@@ -14,12 +14,13 @@
 package model
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/api/resource"
-
+	apiv1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func Test_ReadStack(t *testing.T) {
@@ -818,6 +819,147 @@ func TestStack_ResourcesIsDefault(t *testing.T) {
 				t.Fatal("Expected false but got true")
 			} else if !tt.resources.IsDefaultValue() && tt.expected {
 				t.Fatal("Expected true but got false")
+			}
+		})
+	}
+}
+
+func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+		envs     map[string]string
+		stack    *Stack
+	}{
+		{
+			name: "not expanding anything",
+			manifest: []byte(`services:
+  app:
+    image: alpine`),
+			envs: map[string]string{},
+			stack: &Stack{
+				Name: "test",
+				Services: map[string]*Service{
+					"app": {
+						Image:         "alpine",
+						RestartPolicy: "Always",
+						Replicas:      1,
+					},
+				},
+			},
+		},
+		{
+			name: "expand image with default",
+			manifest: []byte(`services:
+  app:
+    image: ${IMAGE:-alpine}`),
+			envs: map[string]string{},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:         "alpine",
+						RestartPolicy: "Always",
+						Replicas:      1,
+					},
+				},
+			},
+		},
+		{
+			name: "override env image",
+			manifest: []byte(`services:
+  app:
+    image: ${IMAGE:-alpine}`),
+			envs: map[string]string{
+				"IMAGE": "test",
+			},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:         "test",
+						RestartPolicy: "Always",
+						Replicas:      1,
+					},
+				},
+			},
+		},
+		{
+			name: "expand image with default",
+			manifest: []byte(`services:
+  app:
+    image: ${IMAGE:-alpine}
+    ports:
+    - 8080:${CONTAINER_PORT}`),
+			envs: map[string]string{
+				"IMAGE":          "test",
+				"CONTAINER_PORT": "8080",
+			},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:         "test",
+						RestartPolicy: "Always",
+						Replicas:      1,
+						Ports: []Port{
+							{
+								HostPort:      8080,
+								ContainerPort: 8080,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "expand image with default",
+			manifest: []byte(`services:
+  app:
+    image: ${IMAGE:-alpine}
+    environment:
+    - TEST`),
+			envs: map[string]string{
+				"IMAGE": "test",
+				"TEST":  "hello",
+			},
+			stack: &Stack{
+				Services: map[string]*Service{
+					"app": {
+						Image:         "test",
+						RestartPolicy: "Always",
+						Replicas:      1,
+						Environment: Environment{
+							{
+								Name:  "TEST",
+								Value: "hello",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpFile, err := os.CreateTemp("", "stack.yml")
+			if err != nil {
+				t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
+			}
+			if err := os.WriteFile(tmpFile.Name(), []byte(tt.manifest), 0600); err != nil {
+				t.Fatalf("failed to write manifest file: %s", err.Error())
+			}
+			defer os.RemoveAll(tmpFile.Name())
+
+			for key, value := range tt.envs {
+				os.Setenv(key, value)
+			}
+
+			stack, err := GetStack("test", tmpFile.Name(), false)
+			if err != nil {
+				t.Fatalf("Error detected: %s", err.Error())
+			}
+			stack.Services["app"].Resources = nil
+			if !reflect.DeepEqual(stack.Services["app"].Resources, tt.stack.Services["app"].Resources) {
+				t.Fatalf("Got:\n %+v\n expected:\n %+v", stack.Services["app"], tt.stack.Services["app"])
 			}
 		})
 	}
