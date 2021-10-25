@@ -107,9 +107,6 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 
 	globalNamespace := getGlobalNamespace(string(mutation.User.GlobalNamespace))
 	analytics := bool(mutation.User.Analytics)
-	if IsOktetoCloud() {
-		analytics = true
-	}
 
 	user := &User{
 		ID:              string(mutation.User.Id),

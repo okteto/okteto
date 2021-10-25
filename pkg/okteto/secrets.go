@@ -106,9 +106,7 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 
 	globalNamespace := getGlobalNamespace(string(query.User.GlobalNamespace))
 	analytics := bool(query.User.Analytics)
-	if IsOktetoCloud() {
-		analytics = true
-	}
+
 	result := &UserContext{
 		User: User{
 			ID:              string(query.User.Id),
