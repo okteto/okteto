@@ -325,6 +325,11 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)
 	props["context"] = okteto.Context().Name
+	if termType := os.Getenv("TERM"); termType == "" {
+		props["term-type"] = "other"
+	} else {
+		props["term-type"] = termType
+	}
 
 	e := &mixpanel.Event{Properties: props}
 	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
