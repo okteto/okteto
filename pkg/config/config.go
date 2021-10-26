@@ -220,9 +220,9 @@ func homedirWindows() (string, error) {
 }
 
 // GetKubeconfigPath returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration
-func GetKubeconfigPath() string {
+func GetKubeconfigPath() []string {
 	home := GetUserHomeDir()
-	kubeconfig := filepath.Join(home, ".kube", "config")
+	kubeconfig := []string{filepath.Join(home, ".kube", "config")}
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
 	if len(kubeconfigEnv) > 0 {
 		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)
@@ -230,11 +230,11 @@ func GetKubeconfigPath() string {
 	return kubeconfig
 }
 
-func splitKubeConfigEnv(value string) string {
+func splitKubeConfigEnv(value string) []string {
 	if runtime.GOOS == "windows" {
-		return strings.Split(value, ";")[0]
+		return strings.Split(value, ";")
 	}
-	return strings.Split(value, ":")[0]
+	return strings.Split(value, ":")
 }
 
 func GetTokenPathDeprecated() string {

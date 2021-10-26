@@ -147,14 +147,14 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		if err := okteto.WriteOktetoContextConfig(); err != nil {
 			return err
 		}
-		if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()); err != nil {
+		if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()[0]); err != nil {
 			return err
 		}
 		k8sContext := ctxOptions.Context
 		if okteto.IsOktetoURL(k8sContext) {
 			k8sContext = okteto.UrlToKubernetesContext(k8sContext)
 		}
-		log.Information("Current kubernetes context '%s/%s' in '%s'", k8sContext, ctxOptions.Namespace, config.GetKubeconfigPath())
+		log.Information("Current kubernetes context '%s/%s' in '%s'", k8sContext, ctxOptions.Namespace, config.GetKubeconfigPath()[0])
 	}
 
 	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
