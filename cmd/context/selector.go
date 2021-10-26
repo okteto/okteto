@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.RemoveSchema(okteto.CloudURL))
+	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.CloudURL)
 	newOEOption           = "New Okteto Cluster URL"
 	oktetoContextsDivider = "Okteto contexts:"
 	k8sContextsDivider    = "Kubernetes contexts:"
@@ -395,10 +395,14 @@ func (s *OktetoSelector) prepareTemplates() error {
 }
 
 func (s OktetoSelector) getInitialPosition() (int, error) {
-	ctx := okteto.RemoveSchema(okteto.Context().Name)
+	ctxStore := okteto.ContextStore()
+	oCtx := ctxStore.CurrentContext
+	if oCtx == "" {
+		oCtx = okteto.CloudURL
+	}
 	idx := 0
 	for _, item := range s.Items {
-		if strings.Contains(item.Label, ctx) {
+		if strings.Contains(item.Label, oCtx) {
 			return idx, nil
 		}
 		idx += 1
