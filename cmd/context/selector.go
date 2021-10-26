@@ -493,7 +493,7 @@ func (s *stdout) Close() error {
 }
 
 func getSelectedTemplate() string {
-	result := "✓  {{ .Label | oktetoblue }}"
+	result := `{{ " ✓ " | bgGreen | black }} {{ .Label | green }}`
 	result = changeColorForWindows(result)
 	return result
 }
