@@ -395,7 +395,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		BuildArgs:  buildArgs,
 		OutputMode: "tty",
 	}
-	if err := buildCMD.Run(ctx, up.Dev.Namespace, buildOptions); err != nil {
+	if err := buildCMD.Run(ctx, buildOptions); err != nil {
 		return err
 	}
 	for _, s := range up.Dev.Services {

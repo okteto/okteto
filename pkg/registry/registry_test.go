@@ -241,3 +241,35 @@ func Test_translateRegistry(t *testing.T) {
 	}
 
 }
+
+func Test_TransformOktetoDevToGlobalRegistry(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "is-global-registry",
+			input: "okteto.global/image",
+			want:  "okteto.global/image",
+		},
+		{
+			name:  "is-dev-registry",
+			input: "okteto.dev/image",
+			want:  "okteto.global/image",
+		},
+		{
+			name:  "is-not-okteto-registry",
+			input: "docker.io/image",
+			want:  "docker.io/image",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := TransformOktetoDevToGlobalRegistry(tt.input); got != tt.want {
+				t.Errorf("registry.replaceRegistry = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
