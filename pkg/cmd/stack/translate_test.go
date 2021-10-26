@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
@@ -1175,6 +1176,129 @@ func Test_translateServiceEnvironment(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			envs := translateServiceEnvironment(tt.svc)
 			if !reflect.DeepEqual(tt.expected, envs) {
+				t.Fatal("Wrong translation")
+			}
+		})
+	}
+}
+
+func Test_translateAffinity(t *testing.T) {
+	tests := []struct {
+		name     string
+		svc      *model.Service
+		affinity *apiv1.Affinity
+	}{
+		{
+			name: "none",
+			svc: &model.Service{
+				Environment: model.Environment{},
+			},
+			affinity: nil,
+		},
+		{
+			name: "only volume mounts",
+			svc: &model.Service{
+				VolumeMounts: []model.StackVolume{
+					{
+						LocalPath:  "",
+						RemotePath: "/var",
+					},
+				},
+			},
+			affinity: nil,
+		},
+		{
+			name: "one volume",
+			svc: &model.Service{
+				Volumes: []model.StackVolume{
+					{
+						LocalPath:  "test",
+						RemotePath: "/var",
+					},
+				},
+			},
+			affinity: &apiv1.Affinity{
+				PodAffinity: &apiv1.PodAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+						{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      fmt.Sprintf("%s-test", model.StackVolumeNameLabel),
+										Operator: metav1.LabelSelectorOpExists,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple volumes",
+			svc: &model.Service{
+				Volumes: []model.StackVolume{
+					{
+						LocalPath:  "test-1",
+						RemotePath: "/var",
+					},
+					{
+						LocalPath:  "test-2",
+						RemotePath: "/var",
+					},
+					{
+						LocalPath:  "test-3",
+						RemotePath: "/var",
+					},
+				},
+			},
+			affinity: &apiv1.Affinity{
+				PodAffinity: &apiv1.PodAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: []apiv1.PodAffinityTerm{
+						{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      fmt.Sprintf("%s-test-1", model.StackVolumeNameLabel),
+										Operator: metav1.LabelSelectorOpExists,
+									},
+								},
+							},
+						},
+						{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      fmt.Sprintf("%s-test-2", model.StackVolumeNameLabel),
+										Operator: metav1.LabelSelectorOpExists,
+									},
+								},
+							},
+						},
+						{
+							TopologyKey: "kubernetes.io/hostname",
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      fmt.Sprintf("%s-test-3", model.StackVolumeNameLabel),
+										Operator: metav1.LabelSelectorOpExists,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			aff := translateAffinity(tt.svc)
+			if !reflect.DeepEqual(tt.affinity, aff) {
 				t.Fatal("Wrong translation")
 			}
 		})

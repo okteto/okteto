@@ -355,6 +355,8 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers:                initContainers,
+					Affinity:                      translateAffinity(svc),
+					Volumes:                       translateVolumes(svcName, svc),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -371,7 +373,6 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 							LivenessProbe:   healthcheckProbe,
 						},
 					},
-					Volumes: translateVolumes(svcName, svc),
 				},
 			},
 			VolumeClaimTemplates: translateVolumeClaimTemplates(svcName, s),
@@ -404,6 +405,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 					RestartPolicy:                 svc.RestartPolicy,
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers:                initContainers,
+					Affinity:                      translateAffinity(svc),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -691,6 +693,36 @@ func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string 
 	return labels
 }
 
+func translateAffinity(svc *model.Service) *apiv1.Affinity {
+	requirements := make([]apiv1.PodAffinityTerm, 0)
+	for _, volume := range svc.Volumes {
+		if volume.LocalPath == "" {
+			continue
+		}
+		requirements = append(requirements, apiv1.PodAffinityTerm{
+			TopologyKey: "kubernetes.io/hostname",
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      fmt.Sprintf("%s-%s", model.StackVolumeNameLabel, volume.LocalPath),
+						Operator: metav1.LabelSelectorOpExists,
+					},
+				},
+			},
+		},
+		)
+	}
+	if len(requirements) > 0 {
+		return &apiv1.Affinity{
+			PodAffinity: &apiv1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: requirements,
+			},
+		}
+	}
+
+	return nil
+}
+
 func translateLabels(svcName string, s *model.Stack) map[string]string {
 	svc := s.Services[svcName]
 	labels := map[string]string{
@@ -699,6 +731,12 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 	}
 	for k := range svc.Labels {
 		labels[k] = svc.Labels[k]
+	}
+
+	for _, volume := range svc.Volumes {
+		if volume.LocalPath != "" {
+			labels[fmt.Sprintf("%s-%s", model.StackVolumeNameLabel, volume.LocalPath)] = "true"
+		}
 	}
 	return labels
 }
