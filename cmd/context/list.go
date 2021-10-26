@@ -14,8 +14,11 @@
 package context
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"sort"
+	"text/tabwriter"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -30,20 +33,9 @@ func List() *cobra.Command {
 		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
 		Short:   "Lists okteto contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oCtxs := okteto.ContextStore()
-			contexts := make([]string, 0)
-			for name := range oCtxs.Contexts {
-				if name == oCtxs.CurrentContext {
-					contexts = append(contexts, fmt.Sprintf("* %s", name))
-				} else {
-					contexts = append(contexts, fmt.Sprintf("  %s", name))
-				}
-			}
-			sort.Slice(contexts, func(i, j int) bool {
-				return len(contexts[i]) < len(contexts[j])
-			})
-			for _, ctx := range contexts {
-				fmt.Println(ctx)
+			ctx := context.Background()
+			if err := executeListContext(ctx); err != nil {
+				return err
 			}
 
 			return nil
@@ -51,4 +43,34 @@ func List() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func executeListContext(ctx context.Context) error {
+	oCtxs := okteto.ContextStore()
+	contexts := make([]string, 0)
+	for name := range oCtxs.Contexts {
+		contexts = append(contexts, name)
+
+	}
+	sort.Slice(contexts, func(i, j int) bool {
+		return len(contexts[i]) < len(contexts[j])
+	})
+
+	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
+	fmt.Fprintf(w, "Name\tBuilder\tRegistry\n")
+	for _, okctxName := range contexts {
+		okCtx := oCtxs.Contexts[okctxName]
+		name := okteto.RemoveSchema(okCtx.Name)
+		if okCtx.Name == oCtxs.CurrentContext {
+			name += " *"
+		}
+		builder := "docker"
+		if okCtx.Buildkit != "" {
+			builder = okCtx.Buildkit
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\n", name, builder, okCtx.Registry)
+	}
+
+	w.Flush()
+	return nil
 }
