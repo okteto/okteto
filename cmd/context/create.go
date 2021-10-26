@@ -49,6 +49,7 @@ func CreateCMD() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
+	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
 	return cmd
 }
 
