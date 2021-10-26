@@ -4,7 +4,7 @@ Okteto replaces your application pods by a development container. Let's explain 
 
 <img align="left" src="okteto-architecture.png">
 
-When you run `okteto up`, okteto scales to zero the  **api** deployment and creates the mirror deployment **api-okteto**. The **api-okteto** deployment manifest is a combination of the **api** deployment manifest and the overrides defined in your [okteto manifest](https://okteto.com/docs/reference/manifest/).
+When you run `okteto up`, okteto scales to zero the **api** deployment and creates the mirror deployment **api-okteto**. The **api-okteto** deployment manifest is a combination of the **api** deployment manifest and the overrides defined in your [okteto manifest](https://okteto.com/docs/reference/manifest/).
 
 The okteto manifest overrides include things like:
 
@@ -14,6 +14,6 @@ The okteto manifest overrides include things like:
 - Port forwards and reverse tunnels to access your application in localhost.
 - And much more. Pretty much every deployment manifest field is overridable using the [okteto manifest](https://okteto.com/docs/reference/manifest/).
 
-Note that the **api-okteto** deployment inherits the original **api** manifest definition: same service account, environment variables, secrets, volumes, sidecars, ... [okteto up](https://okteto.com/docs/reference/cli/#up) also configures a watcher to stream any change to the deployment **api** definition into your **api-okteto**  development container.
+Note that the **api-okteto** deployment inherits the original **api** manifest definition: same service account, environment variables, secrets, volumes, sidecars, ... [okteto up](https://okteto.com/docs/reference/cli/#up) also configures a watcher to stream any change to the deployment **api** definition into your **api-okteto** development container.
 
-Finally, local code changes are immediately synchronized into your **api-okteto** development container via [syncthing](https://github.com/syncthing/syncthing). To accomplish this, Okteto launches syncthing both locally and in your **api-okteto**  development container. Both processes are securely connected via SSH tunnels.
+Finally, local code changes are immediately synchronized into your **api-okteto** development container via [syncthing](https://github.com/syncthing/syncthing). To accomplish this, Okteto launches syncthing both locally and in your **api-okteto** development container. Both processes are securely connected via SSH tunnels.
