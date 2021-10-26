@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -128,14 +130,49 @@ func UrlToKubernetesContext(uri string) string {
 }
 
 // K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
-// It can be removed when people move to "okteto context"
-func K8sContextToOktetoUrl(k8sContext string) string {
+func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string) string {
+	if IsOktetoURL(k8sContext) {
+		return k8sContext
+	}
+
 	ctxStore := ContextStore()
+	//check if belongs to the okteto contexts
 	for name := range ctxStore.Contexts {
 		if IsOktetoURL(name) && UrlToKubernetesContext(name) == k8sContext {
 			return name
 		}
 	}
+
+	cfg := kubeconfig.Get(config.GetKubeconfigPath())
+	if cfg == nil {
+		return k8sContext
+	}
+
+	cfg.CurrentContext = k8sContext
+	c, _, err := getK8sClient(cfg)
+	if err != nil {
+		log.Infof("error getting k8s client: %v", err)
+		return k8sContext
+	}
+
+	//check the namespace label
+	if k8sNamespace == "" {
+		k8sNamespace = cfg.Contexts[k8sContext].Namespace
+	}
+
+	if k8sNamespace == "" {
+		return k8sContext
+	}
+
+	n, err := c.CoreV1().Namespaces().Get(ctx, k8sNamespace, metav1.GetOptions{})
+	if err != nil {
+		log.Debugf("error accessing current namespace: %v", err)
+		return k8sContext
+	}
+	if _, ok := n.Labels[model.DevLabel]; ok {
+		return n.Annotations[model.OktetoURLAnnotation]
+	}
+
 	return k8sContext
 }
 
@@ -258,13 +295,14 @@ func WriteOktetoContextConfig() error {
 	return nil
 }
 
-func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *Credential, namespace, userName, clusterName string) {
+func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *Credential, namespace, userName, oktetoURL string) {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
 	if os.Getenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT") == "true" {
 		return
 	}
 
+	clusterName := UrlToKubernetesContext(oktetoURL)
 	// create cluster
 	cluster, ok := cfg.Clusters[clusterName]
 	if !ok {
@@ -304,7 +342,11 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
-	return getK8sClient(Context().Cfg)
+	c, config, err := getK8sClient(Context().Cfg)
+	if err == nil {
+		Context().SetClusterType(config.Host)
+	}
+	return c, config, err
 }
 
 // GetDynamicClient returns a kubernetes dynamic client for the current okteto context
