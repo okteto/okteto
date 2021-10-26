@@ -54,7 +54,7 @@ func Show() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&output, "output", "o", "json", "API token for authentication")
+	cmd.Flags().StringVarP(&output, "output", "o", "json", "output format. One of: ['json', 'yaml']")
 
 	return cmd
 }
