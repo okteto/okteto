@@ -1277,17 +1277,17 @@ func Test_validateForExtraFields(t *testing.T) {
 		},
 		{
 			name: "forward",
-			value: `forward: 
+			value: `forward:
                    - 8080:80`,
 		},
 		{
 			name: "reverse",
-			value: `reverse: 
+			value: `reverse:
                    - 9000:9001`,
 		},
 		{
 			name: "reverse",
-			value: `reverse: 
+			value: `reverse:
                    - 9000:9001`,
 		},
 		{
