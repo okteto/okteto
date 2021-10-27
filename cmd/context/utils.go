@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
@@ -53,22 +54,14 @@ func getKubernetesContextList(filterOkteto bool) []string {
 	return contextList
 }
 
-func isOktetoCluster(option string) bool {
-	if option == cloudOption {
-		return true
-	}
-
+func isCreateNewContextOption(option string) bool {
 	if option == newOEOption {
 		return true
 	}
-
 	return okteto.IsOktetoURL(option)
 }
 
 func getOktetoClusterUrl(option string) string {
-	if option == cloudOption {
-		return okteto.CloudURL
-	}
 
 	if okteto.IsOktetoURL(option) {
 		return option
@@ -83,6 +76,7 @@ func askForOktetoURL() string {
 	if okteto.IsOktetoURL(ctxStore.CurrentContext) {
 		clusterURL = ctxStore.CurrentContext
 	}
+
 	log.Question("Enter your Okteto Enterprise URL [%s]:", strings.TrimSuffix(clusterURL, "/"))
 	fmt.Scanln(&clusterURL)
 
