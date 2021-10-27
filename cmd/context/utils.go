@@ -19,7 +19,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"

@@ -112,6 +112,7 @@ services:
 	d1 := deployments.Sandbox(dev1)
 	d1.UID = types.UID("deploy1")
 	delete(d1.Annotations, model.OktetoAutoCreateAnnotation)
+	d1.Annotations[model.StateBeforeSleepingAnnontation] = "{\"Replicas\":3}"
 	d1.Spec.Replicas = pointer.Int32Ptr(2)
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
@@ -380,7 +381,7 @@ services:
 		t.Fatalf("Wrong d1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
 
 	}
-	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2"}
+	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "3"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong d1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
 	}
@@ -434,7 +435,7 @@ services:
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
 	}
 
-	if tr1.App.Replicas() != 2 {
+	if tr1.App.Replicas() != 3 {
 		t.Fatalf("d1 is running %d replicas after 'okteto down'", tr1.App.Replicas())
 	}
 
