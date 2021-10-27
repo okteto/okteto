@@ -54,15 +54,15 @@ var (
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
-	Name            string               `json:"name"`
+	Name            string               `json:"name" yaml:"name,omitempty"`
 	UserID          string               `json:"-"`
 	Username        string               `json:"-"`
-	Token           string               `json:"token,omitempty"`
-	Namespace       string               `json:"namespace"`
+	Token           string               `json:"token,omitempty" yaml:"token,omitempty"`
+	Namespace       string               `json:"namespace" yaml:"namespace,omitempty"`
 	Cfg             *clientcmdapi.Config `json:"-"`
-	Buildkit        string               `json:"buildkit,omitempty"`
-	Registry        string               `json:"registry,omitempty"`
-	Certificate     string               `json:"certificate,omitempty"`
+	Buildkit        string               `json:"buildkit,omitempty" yaml:"buildkit,omitempty"`
+	Registry        string               `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Certificate     string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	GlobalNamespace string               `json:"-"`
 	Analytics       bool                 `json:"-"`
 	ClusterType     string               `json:"-"`

@@ -57,7 +57,7 @@ func executeListContext(ctx context.Context) error {
 	})
 
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Name\tBuilder\tRegistry\n")
+	fmt.Fprintf(w, "Name\tNamespace\tBuilder\tRegistry\n")
 	for _, okctxName := range contexts {
 		okCtx := oCtxs.Contexts[okctxName]
 		name := okteto.RemoveSchema(okCtx.Name)
@@ -68,7 +68,7 @@ func executeListContext(ctx context.Context) error {
 		if okCtx.Buildkit != "" {
 			builder = okCtx.Buildkit
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n", name, builder, okCtx.Registry)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", name, okCtx.Namespace, builder, okCtx.Registry)
 	}
 
 	w.Flush()
