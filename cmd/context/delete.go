@@ -44,7 +44,7 @@ func DeleteCMD() *cobra.Command {
 func Delete(ctx context.Context, okCtx string) error {
 	ctxStore := okteto.ContextStore()
 	if okCtx == ctxStore.CurrentContext {
-		return fmt.Errorf("'%s' is the current context and can not be deleted", okCtx)
+		ctxStore.CurrentContext = ""
 	}
 
 	if _, ok := ctxStore.Contexts[okCtx]; ok {

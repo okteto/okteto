@@ -60,11 +60,10 @@ func isCreateNewContextOption(option string) bool {
 	if option == newOEOption {
 		return true
 	}
-	return okteto.IsOktetoURL(option)
+	return false
 }
 
 func getOktetoClusterUrl(option string) string {
-
 	if okteto.IsOktetoURL(option) {
 		return option
 	}

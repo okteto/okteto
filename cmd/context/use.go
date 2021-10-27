@@ -199,6 +199,7 @@ func initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	}
 	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.Context().Name)
 	okteto.Context().Cfg = cfg
+	okteto.Context().IsOkteto = true
 
 	setSecrets(userContext.Secrets)
 
@@ -231,6 +232,7 @@ func initKubernetesContext(ctxOptions *ContextOptions) error {
 	kubeCtx.Namespace = okteto.Context().Namespace
 	cfg.CurrentContext = okteto.Context().Name
 	okteto.Context().Cfg = cfg
+	okteto.Context().IsOkteto = false
 
 	return nil
 }

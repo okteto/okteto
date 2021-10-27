@@ -34,6 +34,9 @@ func List() *cobra.Command {
 		Short:   "Lists okteto contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			if err := Run(ctx, &ContextOptions{}); err != nil {
+				return err
+			}
 			if err := executeListContext(ctx); err != nil {
 				return err
 			}

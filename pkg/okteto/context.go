@@ -66,6 +66,7 @@ type OktetoContext struct {
 	GlobalNamespace string               `json:"-"`
 	Analytics       bool                 `json:"-"`
 	ClusterType     string               `json:"-"`
+	IsOkteto        bool                 `json:"-"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
@@ -187,7 +188,7 @@ func IsContextInitialized() bool {
 }
 
 func IsOkteto() bool {
-	return IsOktetoURL(Context().Name)
+	return Context().IsOkteto
 }
 
 func ContextStore() *OktetoContextStore {
@@ -213,7 +214,7 @@ func ContextStore() *OktetoContextStore {
 		CurrentStore = ctxStore
 
 		if _, ok := CurrentStore.Contexts[CurrentStore.CurrentContext]; !ok {
-			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+			return CurrentStore
 		}
 		return CurrentStore
 	}
