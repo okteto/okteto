@@ -15,6 +15,7 @@ package context
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -130,7 +131,7 @@ func getK8sClusters(k8sClusters []string) []SelectorItem {
 	return orderedK8sClusters
 }
 
-func AskForOptions(options []SelectorItem, label string) (string, error) {
+func AskForOptions(ctx context.Context, options []SelectorItem, label string) (string, error) {
 	selectedTemplate := getSelectedTemplate()
 	activeTemplate := getActiveTemplate(options)
 	inactiveTemplate := getInactiveTemplate(options)
@@ -149,9 +150,8 @@ func AskForOptions(options []SelectorItem, label string) (string, error) {
 	}
 
 	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
-
-	optionSelected, err := prompt.Run()
-	if err != nil {
+	optionSelected, err := prompt.Run(ctx)
+	if err != nil || !isValidOption(options, optionSelected) {
 		log.Infof("invalid init option: %s", err)
 		return "", fmt.Errorf("invalid option")
 	}
@@ -159,13 +159,23 @@ func AskForOptions(options []SelectorItem, label string) (string, error) {
 	return optionSelected, nil
 }
 
-func (s OktetoSelector) Run() (string, error) {
-	startPosition, err := s.getInitialPosition()
+func isValidOption(options []SelectorItem, optionSelected string) bool {
+	for _, option := range options {
+		if optionSelected == option.Name {
+			return true
+		}
+	}
+	return false
+}
+
+func (s OktetoSelector) Run(ctx context.Context) (string, error) {
+	startPosition, err := s.getInitialPosition(ctx)
 	if err != nil {
 		return "", err
 	}
-	s.Items[startPosition].Label += " *"
-
+	if startPosition != -1 {
+		s.Items[startPosition].Label += " *"
+	}
 	l, err := list.New(s.Items, s.Size)
 	if err != nil {
 		return "", err
@@ -419,23 +429,21 @@ func (s *OktetoSelector) prepareTemplates() error {
 	return nil
 }
 
-func (s OktetoSelector) getInitialPosition() (int, error) {
-	ctx := okteto.RemoveSchema(okteto.Context().Name)
+func (s OktetoSelector) getInitialPosition(ctx context.Context) (int, error) {
+	ctxStore := okteto.ContextStore()
+	oCtx := ctxStore.CurrentContext
+	if oCtx == "" {
+		return -1, nil
+	}
+	oCtx = okteto.K8sContextToOktetoUrl(ctx, oCtx, ctxStore.Contexts[oCtx].Namespace)
 	idx := 0
 	for _, item := range s.Items {
-		if strings.Contains(item.Label, ctx) {
+		if strings.Contains(item.Name, oCtx) {
 			return idx, nil
 		}
 		idx += 1
 	}
-	idx = 0
-	for _, item := range s.Items {
-		if item.Enable {
-			return idx, nil
-		}
-		idx += 1
-	}
-	return 0, fmt.Errorf("non selectable item is available")
+	return -1, nil
 }
 
 func (s *OktetoSelector) renderDetails(item interface{}) [][]byte {
