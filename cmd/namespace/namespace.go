@@ -37,21 +37,17 @@ func Namespace(ctx context.Context) *cobra.Command {
 				namespace = args[0]
 			}
 
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
-				return err
-			}
-
 			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
+			err := contextCMD.Run(ctx, &contextCMD.ContextOptions{
+				Namespace: namespace,
+			})
 
-			contextCommand := contextCMD.Context()
-			contextCommand.Flags().Set("token", okteto.Context().Token)
-			args = []string{okteto.Context().Name}
-			if namespace != "" {
-				contextCommand.Flags().Set("namespace", namespace)
+			if err != nil {
+				return err
 			}
-			err := contextCommand.RunE(nil, args)
+
 			analytics.TrackNamespace(err == nil)
 			return err
 		},
