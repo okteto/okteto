@@ -340,6 +340,9 @@ func Read(bytes []byte) (*Dev, error) {
 		if err := s.expandEnvVars(); err != nil {
 			return nil, err
 		}
+		if err := s.validateForExtraFields(); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := dev.setDefaults(); err != nil {
@@ -1123,6 +1126,87 @@ func (dev *Dev) translateDeprecatedMetadataFields() error {
 			}
 		}
 	}
+	return nil
+}
+
+func (service *Dev) validateForExtraFields() error {
+	errorMessage := "%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/index.html#services-object-optional for documentation"
+	if service.Username != "" {
+		return fmt.Errorf(errorMessage, "username")
+	}
+	if service.RegistryURL != "" {
+		return fmt.Errorf(errorMessage, "registryURL")
+	}
+	if service.Autocreate {
+		return fmt.Errorf(errorMessage, "autocreate")
+	}
+	if service.Context != "" {
+		return fmt.Errorf(errorMessage, "context")
+	}
+	if service.Push != nil {
+		return fmt.Errorf(errorMessage, "push")
+	}
+	if service.Secrets != nil {
+		return fmt.Errorf(errorMessage, "secrets")
+	}
+	if service.Healthchecks {
+		return fmt.Errorf(errorMessage, "healthchecks")
+	}
+	if service.Probes != nil {
+		return fmt.Errorf(errorMessage, "probes")
+	}
+	if service.Lifecycle != nil {
+		return fmt.Errorf(errorMessage, "lifecycle")
+	}
+	if service.SecurityContext != nil {
+		return fmt.Errorf(errorMessage, "securityContext")
+	}
+	if service.ServiceAccount != "" {
+		return fmt.Errorf(errorMessage, "serviceAccount")
+	}
+	if service.RemotePort != 0 {
+		return fmt.Errorf(errorMessage, "remote")
+	}
+	if service.SSHServerPort != 0 {
+		return fmt.Errorf(errorMessage, "sshServerPort")
+	}
+	if service.ExternalVolumes != nil {
+		return fmt.Errorf(errorMessage, "externalVolumes")
+	}
+	if service.parentSyncFolder != "" {
+		return fmt.Errorf(errorMessage, "parentSyncFolder")
+	}
+	if service.Forward != nil {
+		return fmt.Errorf(errorMessage, "forward")
+	}
+	if service.Reverse != nil {
+		return fmt.Errorf(errorMessage, "reverse")
+	}
+	if service.Interface != "" {
+		return fmt.Errorf(errorMessage, "interface")
+	}
+	if service.Services != nil {
+		return fmt.Errorf(errorMessage, "services")
+	}
+	if service.PersistentVolumeInfo != nil {
+		return fmt.Errorf(errorMessage, "persistentVolume")
+	}
+	if service.InitContainer.Image != "" {
+		return fmt.Errorf(errorMessage, "initContainer")
+	}
+	if service.InitFromImage {
+		return fmt.Errorf(errorMessage, "initFromImage")
+	}
+	if service.Timeout != (Timeout{}) {
+		return fmt.Errorf(errorMessage, "timeout")
+	}
+	if service.Docker.Enabled && service.Docker.Image != "" {
+		return fmt.Errorf(errorMessage, "docker")
+	}
+	if service.Divert != nil {
+		return fmt.Errorf(errorMessage, "divert")
+	}
+
 	return nil
 }
 
