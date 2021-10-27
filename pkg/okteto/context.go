@@ -181,6 +181,11 @@ func IsOktetoURL(name string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
+func IsContextInitialized() bool {
+	ctxStore := ContextStore()
+	return ctxStore.CurrentContext != ""
+}
+
 func IsOkteto() bool {
 	return IsOktetoURL(Context().Name)
 }

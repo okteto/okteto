@@ -296,7 +296,7 @@ func track(event string, success bool, props map[string]interface{}) {
 		return
 	}
 
-	if okteto.ContextStore().CurrentContext == "" || (!okteto.Context().Analytics && !okteto.IsOktetoCloud()) {
+	if okteto.IsContextInitialized() || (!okteto.Context().Analytics && !okteto.IsOktetoCloud()) {
 		return
 	}
 

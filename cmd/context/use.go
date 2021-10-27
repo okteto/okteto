@@ -99,6 +99,10 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		return errors.ErrTokenFlagNeeded
 	}
 
+	if ctxOptions.Token == "" && ctxOptions.Context == "" && !ctxOptions.isCtxCommand && !okteto.IsContextInitialized() {
+		return errors.ErrContextNotInitialized
+	}
+
 	if ctxOptions.Context == "" {
 		log.Infof("authenticating with interactive context")
 		oktetoContext, err := getContext(ctx, ctxOptions)

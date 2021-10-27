@@ -99,6 +99,9 @@ var (
 	//ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
 	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available on Okteto Cloud or Okteto Enterprise")
 
+	//ErrContextNotInitialized is raised when the okteto context is not initialized
+	ErrContextNotInitialized = fmt.Errorf("context is not initialized. Run 'okteto context use' to configure it and try again")
+
 	//ErrTokenFlagNeeded is raised when the command is executed from inside a pod
 	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
 
