@@ -66,7 +66,7 @@ type OktetoContext struct {
 	GlobalNamespace string               `json:"-"`
 	Analytics       bool                 `json:"-"`
 	ClusterType     string               `json:"-"`
-	IsOkteto        bool                 `json:"-"`
+	IsOkteto        bool                 `json:"isOkteto"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context

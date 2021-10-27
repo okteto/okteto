@@ -56,8 +56,12 @@ func CreateCMD() *cobra.Command {
 
 func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions *ContextOptions) error {
 	var created bool
+	var initialCurrentCtxNamespace string
 	initialCurrentCtx := ctxStore.CurrentContext
-	initialCurrentCtxNamespace := ctxStore.Contexts[initialCurrentCtx].Namespace
+	if _, ok := ctxStore.Contexts[initialCurrentCtx]; ok {
+		initialCurrentCtxNamespace = ctxStore.Contexts[initialCurrentCtx].Namespace
+	}
+
 	ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 	if !okteto.IsOktetoURL(ctxOptions.Context) {
 		if !isValidCluster(ctxOptions.Context) {

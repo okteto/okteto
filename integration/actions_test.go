@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -201,28 +200,29 @@ func TestLoginActionPipeline(t *testing.T) {
 
 }
 
-func TestContextAction(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("this test is not required for windows e2e tests")
-		return
-	}
+// func TestContextAction(t *testing.T) {
+// 	if runtime.GOOS == "windows" {
+// 		t.Skip("this test is not required for windows e2e tests")
+// 		return
+// 	}
+//
 
-	ctx := context.Background()
-	var remove bool
-	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
-		remove = true
-	}
-	if err := executeContextAction(ctx); err != nil {
-		t.Fatalf("Context action failed: %s", err.Error())
-	}
+// 	ctx := context.Background()
+// 	var remove bool
+// 	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
+// 		remove = true
+// 	}
+// 	if err := executeContextAction(ctx); err != nil {
+// 		t.Fatalf("Context action failed: %s", err.Error())
+// 	}
 
-	if remove {
-		if err := os.RemoveAll(config.GetOktetoContextFolder()); err != nil {
-			t.Fatalf("Removing failed: %s", err.Error())
-		}
-	}
+// 	if remove {
+// 		if err := os.RemoveAll(config.GetOktetoContextFolder()); err != nil {
+// 			t.Fatalf("Removing failed: %s", err.Error())
+// 		}
+// 	}
 
-}
+// }
 
 func TestPipelineActions(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -336,6 +336,7 @@ func getTestNamespace() string {
 }
 
 func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
+	okteto.CurrentStore = nil
 	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, createNamespacePath)
 	actionFolder := strings.Split(createNamespacePath, "/")[1]
 	log.Printf("cloning create namespace repository: %s", actionRepo)
@@ -357,7 +358,7 @@ func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("create namespace output: \n%s\n", string(o))
-	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
+	n := okteto.Context().Namespace
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -366,6 +367,7 @@ func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
 }
 
 func executeChangeNamespaceAction(ctx context.Context, namespace string) error {
+	okteto.CurrentStore = nil
 	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, namespacePath)
 	actionFolder := strings.Split(namespacePath, "/")[1]
 	log.Printf("cloning changing namespace repository: %s", actionRepo)
@@ -386,7 +388,7 @@ func executeChangeNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("changing namespace output: \n%s\n", string(o))
-	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
+	n := okteto.Context().Namespace
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
