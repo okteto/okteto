@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -82,35 +83,40 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	clusters := make([]SelectorItem, 0)
 
 	clusters = append(clusters, SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true})
+	clusters = append(clusters, getOktetoClusters()...)
+	if len(k8sClusters) > 0 {
+		clusters = append(clusters, getK8sClusters(k8sClusters)...)
+	}
 
+	return clusters
+}
+func getOktetoClusters() []SelectorItem {
+	orderedOktetoClusters := make([]SelectorItem, 0)
 	ctxStore := okteto.ContextStore()
 	for ctxName := range ctxStore.Contexts {
 		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
-			clusters = append(clusters, SelectorItem{Name: ctxName, Label: okteto.RemoveSchema(ctxName), Enable: true})
+			orderedOktetoClusters = append(orderedOktetoClusters, SelectorItem{Name: ctxName, Label: okteto.RemoveSchema(ctxName), Enable: true})
 		}
 	}
-	if len(k8sClusters) > 0 {
-		for _, k8sCluster := range k8sClusters {
-			clusters = append(clusters, SelectorItem{
-				Name:   k8sCluster,
-				Label:  k8sCluster,
-				Enable: true,
-			})
-		}
-	}
-	clusters = append(clusters, []SelectorItem{
-		{
-			Label:  "",
-			Enable: false,
-		},
-		{
-			Name:   newOEOption,
-			Label:  newOEOption,
-			Enable: true,
-		},
-	}...)
+	sort.Slice(orderedOktetoClusters, func(i, j int) bool {
+		return len(orderedOktetoClusters[i].Name) < len(orderedOktetoClusters[j].Name)
+	})
+	return orderedOktetoClusters
+}
 
-	return clusters
+func getK8sClusters(k8sClusters []string) []SelectorItem {
+	orderedK8sClusters := make([]SelectorItem, 0)
+	for _, k8sCluster := range k8sClusters {
+		orderedK8sClusters = append(orderedK8sClusters, SelectorItem{
+			Name:   k8sCluster,
+			Label:  k8sCluster,
+			Enable: true,
+		})
+	}
+	sort.Slice(orderedK8sClusters, func(i, j int) bool {
+		return len(orderedK8sClusters[i].Name) < len(orderedK8sClusters[j].Name)
+	})
+	return orderedK8sClusters
 }
 
 func AskForOptions(options []SelectorItem, label string) (string, error) {
