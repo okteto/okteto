@@ -61,7 +61,7 @@ type OktetoContext struct {
 	Namespace       string               `json:"namespace"`
 	Cfg             *clientcmdapi.Config `json:"-"`
 	Buildkit        string               `json:"buildkit,omitempty"`
-	Registry        string               `json:"-"`
+	Registry        string               `json:"registry,omitempty"`
 	Certificate     string               `json:"certificate,omitempty"`
 	GlobalNamespace string               `json:"-"`
 	Analytics       bool                 `json:"-"`

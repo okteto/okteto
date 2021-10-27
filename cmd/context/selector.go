@@ -40,7 +40,7 @@ const (
 
 var (
 	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.RemoveSchema(okteto.CloudURL))
-	newOEOption           = "New Okteto Cluster URL"
+	newOEOption           = "Create new context"
 	oktetoContextsDivider = "Okteto contexts:"
 	k8sContextsDivider    = "Kubernetes contexts:"
 )
@@ -81,7 +81,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	}
 	clusters := make([]SelectorItem, 0)
 
-	clusters = append(clusters, SelectorItem{Name: cloudOption, Label: cloudOption, Enable: true})
+	clusters = append(clusters, SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true})
 
 	ctxStore := okteto.ContextStore()
 	for ctxName := range ctxStore.Contexts {
@@ -98,6 +98,17 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 			})
 		}
 	}
+	clusters = append(clusters, []SelectorItem{
+		{
+			Label:  "",
+			Enable: false,
+		},
+		{
+			Name:   newOEOption,
+			Label:  newOEOption,
+			Enable: true,
+		},
+	}...)
 
 	return clusters
 }
@@ -254,9 +265,6 @@ func (s OktetoSelector) Run() (string, error) {
 				sb.Write(d)
 			}
 		}
-
-		sb.WriteString("")
-		sb.Write(render(s.OktetoTemplates.extraInfo, "Use 'okteto context add <URL>' to add a new cluster context"))
 
 		sb.Flush()
 
@@ -485,7 +493,7 @@ func (s *stdout) Close() error {
 }
 
 func getSelectedTemplate() string {
-	result := "✓  {{ .Label | oktetoblue }}"
+	result := `{{ " ✓ " | bgGreen | black }} {{ .Label | green }}`
 	result = changeColorForWindows(result)
 	return result
 }
@@ -495,7 +503,7 @@ func getActiveTemplate(options []SelectorItem) string {
 	if options[0].Label == oktetoContextsDivider {
 		whitespaces = strings.Repeat(" ", 2)
 	}
-	result := fmt.Sprintf("%s%s {{ .Label | oktetoblue }}", whitespaces, promptui.IconSelect)
+	result := fmt.Sprintf("%s%s {{ .Label }}", whitespaces, promptui.IconSelect)
 	result = changeColorForWindows(result)
 	return result
 }
@@ -505,7 +513,7 @@ func getInactiveTemplate(options []SelectorItem) string {
 	if options[0].Label == oktetoContextsDivider {
 		whitespaces = strings.Repeat(" ", 4)
 	}
-	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label | oktetoblue}}{{else}}• {{ .Label }}{{end}}", whitespaces)
+	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label }}{{else}}%s{{ .Label }}{{end}}", whitespaces, whitespaces)
 	result = changeColorForWindows(result)
 	return result
 }

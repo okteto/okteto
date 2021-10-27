@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -75,7 +76,8 @@ func askForOktetoURL() string {
 	if okteto.IsOktetoURL(ctxStore.CurrentContext) {
 		clusterURL = ctxStore.CurrentContext
 	}
-	fmt.Print(color.MagentaString("What is the URL of your Okteto Cluster? [%s]: ", strings.TrimSuffix(clusterURL, "/")))
+
+	log.Question("Enter your Okteto Enterprise URL [%s]:", strings.TrimSuffix(clusterURL, "/"))
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)

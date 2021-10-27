@@ -61,10 +61,7 @@ services:
     image: worker:latest
     imagePullPolicy: IfNotPresent
     sync:
-      - worker:/src
-    healthchecks: true
-    lifecycle:
-       postStart: true`)
+      - worker:/src`)
 
 	dev, err := Read(manifest)
 	if err != nil {
@@ -169,9 +166,9 @@ services:
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command:         nil,
 		Args:            nil,
-		Healthchecks:    true,
-		Probes:          &Probes{Readiness: true, Liveness: true, Startup: true},
-		Lifecycle:       &Lifecycle{PostStart: true, PostStop: false},
+		Healthchecks:    false,
+		Probes:          &Probes{},
+		Lifecycle:       &Lifecycle{},
 		Environment:     make(Environment, 0),
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64Ptr(0),
