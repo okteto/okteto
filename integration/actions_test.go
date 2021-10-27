@@ -200,29 +200,28 @@ func TestLoginActionPipeline(t *testing.T) {
 
 }
 
-// func TestContextAction(t *testing.T) {
-// 	if runtime.GOOS == "windows" {
-// 		t.Skip("this test is not required for windows e2e tests")
-// 		return
-// 	}
-//
+func TestContextAction(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 
-// 	ctx := context.Background()
-// 	var remove bool
-// 	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
-// 		remove = true
-// 	}
-// 	if err := executeContextAction(ctx); err != nil {
-// 		t.Fatalf("Context action failed: %s", err.Error())
-// 	}
+	ctx := context.Background()
+	var remove bool
+	if _, err := os.Stat(config.GetOktetoContextFolder()); err != nil {
+		remove = true
+	}
+	if err := executeContextAction(ctx); err != nil {
+		t.Fatalf("Context action failed: %s", err.Error())
+	}
 
-// 	if remove {
-// 		if err := os.RemoveAll(config.GetOktetoContextFolder()); err != nil {
-// 			t.Fatalf("Removing failed: %s", err.Error())
-// 		}
-// 	}
+	if remove {
+		if err := os.RemoveAll(config.GetOktetoContextFolder()); err != nil {
+			t.Fatalf("Removing failed: %s", err.Error())
+		}
+	}
 
-// }
+}
 
 func TestPipelineActions(t *testing.T) {
 	if runtime.GOOS == "windows" {
