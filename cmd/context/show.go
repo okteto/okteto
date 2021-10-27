@@ -29,7 +29,7 @@ func Show() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
-		Short: "Show current context",
+		Short: "Print the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oCtxs := okteto.ContextStore()
 			current := oCtxs.Contexts[oCtxs.CurrentContext]

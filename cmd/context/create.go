@@ -31,7 +31,7 @@ func CreateCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [cluster-url]",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
-		Short: "Adds a new cluster to okteto context",
+		Short: "Create a new context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
