@@ -138,8 +138,8 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string)
 
 	ctxStore := ContextStore()
 	//check if belongs to the okteto contexts
-	for name, oCtx := range ctxStore.Contexts {
-		if oCtx.IsOkteto && UrlToKubernetesContext(name) == k8sContext {
+	for name := range ctxStore.Contexts {
+		if IsOktetoURL(name) && UrlToKubernetesContext(name) == k8sContext {
 			return name
 		}
 	}
