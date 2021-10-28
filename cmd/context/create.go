@@ -40,7 +40,7 @@ func CreateCMD() *cobra.Command {
 
 			ctxOptions.Context = args[0]
 
-			err := Create(ctx, ctxStore, ctxOptions)
+			err := Create(ctx, ctxStore, ctxOptions, ctxStore.CurrentContext)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				return err
@@ -54,12 +54,11 @@ func CreateCMD() *cobra.Command {
 	return cmd
 }
 
-func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions *ContextOptions) error {
+func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions *ContextOptions, initialCtx string) error {
 	var created bool
 	var initialCurrentCtxNamespace string
-	initialCurrentCtx := ctxStore.CurrentContext
-	if _, ok := ctxStore.Contexts[initialCurrentCtx]; ok {
-		initialCurrentCtxNamespace = ctxStore.Contexts[initialCurrentCtx].Namespace
+	if _, ok := ctxStore.Contexts[initialCtx]; ok {
+		initialCurrentCtxNamespace = ctxStore.Contexts[initialCtx].Namespace
 	}
 
 	ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
@@ -99,7 +98,7 @@ func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions
 		log.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
 	}
 
-	if initialCurrentCtx != ctxStore.CurrentContext || initialCurrentCtxNamespace != ctxStore.Contexts[ctxStore.CurrentContext].Namespace {
+	if initialCtx != ctxStore.CurrentContext || initialCurrentCtxNamespace != ctxStore.Contexts[ctxStore.CurrentContext].Namespace {
 		log.Success("Switched to context '%s' @ %s", okteto.RemoveSchema(ctxStore.CurrentContext), ctxStore.Contexts[ctxStore.CurrentContext].Namespace)
 	}
 	return nil
