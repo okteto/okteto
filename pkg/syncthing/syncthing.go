@@ -100,11 +100,12 @@ type Syncthing struct {
 
 //Folder represents a sync folder
 type Folder struct {
-	Name        string `yaml:"name"`
-	LocalPath   string `yaml:"localPath"`
-	RemotePath  string `yaml:"remotePath"`
-	Retries     int    `yaml:"-"`
-	Overwritten bool   `yaml:"-"`
+	Name        string              `yaml:"name"`
+	LocalPath   string              `yaml:"localPath"`
+	RemotePath  string              `yaml:"remotePath"`
+	Retries     int                 `yaml:"-"`
+	Overwritten bool                `yaml:"-"`
+	Mode        model.SyncthingMode `yaml:"mode"`
 }
 
 // Status represents the status of a syncthing folder.
@@ -204,7 +205,6 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		LocalPort:        listenPort,
 		RemoteGUIPort:    remoteGUIPort,
 		RemotePort:       remotePort,
-		Type:             "sendonly",
 		IgnoreDelete:     true,
 		Verbose:          dev.Sync.Verbose,
 		Folders:          []*Folder{},
@@ -225,6 +225,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 					Name:       strconv.Itoa(index),
 					LocalPath:  sync.LocalPath,
 					RemotePath: sync.RemotePath,
+					Mode:       sync.Mode,
 				},
 			)
 			index++
@@ -239,7 +240,7 @@ func (s *Syncthing) initConfig() error {
 		return fmt.Errorf("failed to create %s: %s", s.Home, err)
 	}
 
-	if err := s.UpdateConfig(); err != nil {
+	if err := s.UpdateConfigWithSendOnly(); err != nil {
 		return err
 	}
 
@@ -251,6 +252,20 @@ func (s *Syncthing) initConfig() error {
 		return fmt.Errorf("failed to write syncthing key: %w", err)
 	}
 
+	return nil
+}
+
+func (s *Syncthing) UpdateConfigWithSendOnly() error {
+	originalFolders := s.GetFolderCopy()
+	for _, folder := range s.Folders {
+		folder.Mode = model.SendOnly
+	}
+
+	if err := s.UpdateConfig(); err != nil {
+		return err
+	}
+
+	s.Folders = originalFolders
 	return nil
 }
 
@@ -269,7 +284,7 @@ func (s *Syncthing) UpdateConfig() error {
 }
 
 // Run starts up a local syncthing process to serve files from.
-func (s *Syncthing) Run(ctx context.Context) error {
+func (s *Syncthing) Run() error {
 	if err := s.initConfig(); err != nil {
 		return err
 	}
@@ -829,4 +844,13 @@ func getInfoFile(namespace, name string) string {
 // GetLogFile returns the path to the syncthing log file
 func GetLogFile(namespace, name string) string {
 	return filepath.Join(config.GetAppHome(namespace, name), "syncthing.log")
+}
+
+func (s *Syncthing) GetFolderCopy() []*Folder {
+	cpy := []*Folder{}
+	for _, folder := range s.Folders {
+		f := Folder(*folder)
+		cpy = append(cpy, &f)
+	}
+	return cpy
 }

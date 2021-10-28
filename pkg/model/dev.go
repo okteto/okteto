@@ -142,7 +142,17 @@ type Sync struct {
 type SyncFolder struct {
 	LocalPath  string
 	RemotePath string
+	Mode       SyncthingMode
 }
+
+// SyncthingFolderType represents a sync folder type
+type SyncthingMode string
+
+const (
+	SendReceive SyncthingMode = "sendreceive"
+	ReceiveOnly SyncthingMode = "receiveonly"
+	SendOnly    SyncthingMode = "sendonly"
+)
 
 // ExternalVolume represents a external volume in the development container
 type ExternalVolume struct {

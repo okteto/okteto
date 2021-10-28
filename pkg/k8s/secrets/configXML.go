@@ -17,12 +17,13 @@ import (
 	"bytes"
 	"html/template"
 
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
 const configXML = `<configuration version="32">
 {{ range .Folders }}
-<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .RemotePath }}" type="sendreceive" rescanIntervalS="{{ $.RescanInterval }}" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .RemotePath }}" type="{{ .Mode }}" rescanIntervalS="{{ $.RescanInterval }}" {{ if eq .Mode "sendreceive" }} fsWatcherEnabled="true" fsWatcherDelayS="1" {{ else }} fsWatcherEnabled="false" {{ end }} ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
     <device id="ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU" introducedBy=""></device>
@@ -64,9 +65,9 @@ const configXML = `<configuration version="32">
 </device>
 <gui enabled="true" tls="false" debugging="false">
     <address>{{ .RemoteGUIAddress }}</address>
-    <apikey>{{.APIKey}}</apikey>
+    <apikey>{{ .APIKey }}</apikey>
     <user>okteto</user>
-    <password>{{.GUIPasswordHash}}</password>
+    <password>{{ .GUIPasswordHash }}</password>
     <theme>default</theme>
 </gui>
 <ldap></ldap>
@@ -102,10 +103,19 @@ const configXML = `<configuration version="32">
 </configuration>`
 
 func getConfigXML(s *syncthing.Syncthing) ([]byte, error) {
+	originalFolders := s.GetFolderCopy()
+	for _, folder := range s.Folders {
+		if folder.Mode == model.SendOnly {
+			folder.Mode = model.ReceiveOnly
+		}
+	}
+
 	configTemplate := template.Must(template.New("syncthingConfig").Parse(configXML))
 	buf := new(bytes.Buffer)
 	if err := configTemplate.Execute(buf, s); err != nil {
 		return nil, err
 	}
+
+	s.Folders = originalFolders
 	return buf.Bytes(), nil
 }

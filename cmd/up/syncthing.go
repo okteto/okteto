@@ -74,7 +74,6 @@ func (up *upContext) sync(ctx context.Context) error {
     More information is available here: https://okteto.com/docs/reference/file-synchronization/`, minutes, seconds)
 	}
 
-	up.Sy.Type = "sendreceive"
 	up.Sy.IgnoreDelete = false
 	if err := up.Sy.UpdateConfig(); err != nil {
 		return err
@@ -82,7 +81,7 @@ func (up *upContext) sync(ctx context.Context) error {
 
 	go up.Sy.Monitor(ctx, up.Disconnect)
 	go up.Sy.MonitorStatus(ctx, up.Disconnect)
-	log.Infof("restarting syncthing to update sync mode to sendreceive")
+
 	return up.Sy.Restart(ctx)
 }
 
@@ -95,7 +94,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		return err
 	}
 
-	if err := up.Sy.Run(ctx); err != nil {
+	if err := up.Sy.Run(); err != nil {
 		return err
 	}
 

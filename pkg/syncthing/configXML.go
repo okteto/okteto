@@ -15,10 +15,10 @@ package syncthing
 
 const configXML = `<configuration version="32">
 {{ range .Folders }}
-<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .LocalPath }}" type="{{ $.Type }}" rescanIntervalS="{{ $.RescanInterval }}" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
+<folder id="okteto-{{ .Name }}" label="{{ .Name }}" path="{{ .LocalPath }}" type="{{ .Mode }}" rescanIntervalS="{{ $.RescanInterval }}" fsWatcherEnabled="true" fsWatcherDelayS="1" ignorePerms="false" autoNormalize="true">
     <filesystemType>basic</filesystemType>
     <device id="ABKAVQF-RUO4CYO-FSC2VIP-VRX4QDA-TQQRN2J-MRDXJUC-FXNWP6N-S6ZSAAR" introducedBy=""></device>
-    <device id="{{$.RemoteDeviceID}}" introducedBy=""></device>
+    <device id="{{ $.RemoteDeviceID }}" introducedBy=""></device>
     <minDiskFree unit="%">1</minDiskFree>
     <versioning></versioning>
     <copiers>0</copiers>
@@ -46,8 +46,8 @@ const configXML = `<configuration version="32">
     <maxRecvKbps>0</maxRecvKbps>
     <maxRequestKiB>0</maxRequestKiB>
 </device>
-<device id="{{.RemoteDeviceID}}" name="remote" compression="{{ .Compression }}" introducer="false" skipIntroductionRemovals="false" introducedBy="">
-    <address>{{.RemoteAddress}}</address>
+<device id="{{ .RemoteDeviceID }}" name="remote" compression="{{ .Compression }}" introducer="false" skipIntroductionRemovals="false" introducedBy="">
+    <address>{{ .RemoteAddress }}</address>
     <paused>false</paused>
     <autoAcceptFolders>false</autoAcceptFolders>
     <maxSendKbps>0</maxSendKbps>
@@ -55,10 +55,10 @@ const configXML = `<configuration version="32">
     <maxRequestKiB>0</maxRequestKiB>
 </device>
 <gui enabled="true" tls="false" debugging="false">
-    <address>{{.GUIAddress}}</address>
-    <apikey>{{.APIKey}}</apikey>
+    <address>{{ .GUIAddress }}</address>
+    <apikey>{{ .APIKey }}</apikey>
     <user>okteto</user>
-    <password>{{.GUIPasswordHash}}</password>
+    <password>{{ .GUIPasswordHash }}</password>
     <theme>default</theme>
 </gui>
 <ldap></ldap>

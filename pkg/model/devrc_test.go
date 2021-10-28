@@ -57,6 +57,7 @@ resources:
 						{
 							LocalPath:  "/home/.vimrc",
 							RemotePath: "/home/.vimrc",
+							Mode:       SendReceive,
 						},
 					},
 				},
@@ -102,6 +103,7 @@ resources:
 						{
 							LocalPath:  "/home/.vimrc",
 							RemotePath: "/home/.vimrc",
+							Mode:       SendReceive,
 						},
 					},
 				},

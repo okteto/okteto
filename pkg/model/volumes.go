@@ -64,7 +64,11 @@ func (dev *Dev) translateDeprecatedVolumes() {
 			volumes = append(volumes, v)
 			continue
 		}
-		dev.Sync.Folders = append(dev.Sync.Folders, SyncFolder(v))
+		dev.Sync.Folders = append(dev.Sync.Folders, SyncFolder{
+			LocalPath:  v.LocalPath,
+			RemotePath: v.RemotePath,
+			Mode:       SendReceive,
+		})
 	}
 	dev.Volumes = volumes
 }
