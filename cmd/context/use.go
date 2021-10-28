@@ -41,25 +41,17 @@ func Use() *cobra.Command {
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
 The current context is the default cluster/namespace for any Okteto CLI command.
 
-If you want to log into an Okteto Enterprise instance, specify a URL. For example, run:
+You can specify the URL of an Okteto Enterprise instance:
 
-    $ okteto context https://cloud.okteto.com
+    $ okteto context use https://cloud.okteto.com
 
-to configure your context to access Okteto Cloud.
+Or the name of a Kubernetes context with:
 
-Your browser will ask for your authentication to retrieve your API token.
-
-If you need to automate authentication or if you don't want to use browser-based authentication, use the "--token" parameter:
-
-    $ okteto context https://cloud.okteto.com --token ${OKTETO_TOKEN}
-
-You can also specify the name of a Kubernetes context with:
-
-    $ okteto context kubernetes_context_name
+    $ okteto context use kubernetes_context_name
 
 Or show a list of available options with:
 
-    $ okteto context
+    $ okteto context use
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -91,19 +83,10 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxOptions.initFromContext()
 	ctxOptions.initFromEnvVars()
 
-	if ctxOptions.Token == "" && ctxOptions.Context == "" && kubeconfig.InCluster() {
+	if ctxOptions.Token == "" && kubeconfig.InCluster() && !isValidCluster(ctxOptions.Context) {
 		return errors.ErrTokenFlagNeeded
 	}
 
-	if ctxOptions.Token == "" && !okteto.IsOktetoURL(ctxOptions.Context) && kubeconfig.InCluster() {
-		return errors.ErrTokenFlagNeeded
-	}
-
-	if ctxOptions.Token == "" && ctxOptions.Context == "" && !ctxOptions.isCtxCommand && !okteto.IsContextInitialized() {
-		return errors.ErrContextNotInitialized
-	}
-
-	ctxOptions.initialCtx = ctxStore.CurrentContext
 	if ctxOptions.Context == "" {
 		log.Infof("authenticating with interactive context")
 		oktetoContext, err := getContext(ctx, ctxOptions)
@@ -115,7 +98,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		ctxOptions.Show = false
 	}
 
-	if err := Create(ctx, ctxStore, ctxOptions); err != nil {
+	if err := UseContext(ctx, ctxOptions); err != nil {
 		return err
 	}
 
@@ -126,7 +109,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	}
 
 	if ctxOptions.isCtxCommand && okteto.Context().IsOkteto {
-		log.Hint("    Run 'okteto context update-kubeconfig' to configure kubectl so that you can connect to your okteto context")
+		log.Information("Run 'okteto context update-kubeconfig' to update your kubectl credentials")
 	}
 	return nil
 }

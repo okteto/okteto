@@ -36,8 +36,8 @@ func Show() *cobra.Command {
 			if err := Run(ctx, &ContextOptions{}); err != nil {
 				return err
 			}
-			oCtxs := okteto.ContextStore()
-			current := oCtxs.Contexts[oCtxs.CurrentContext]
+			ctxStore := okteto.ContextStore()
+			current := ctxStore.Contexts[ctxStore.CurrentContext]
 			if err := validateOutput(output); err != nil {
 				return err
 			}

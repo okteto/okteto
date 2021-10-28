@@ -70,10 +70,13 @@ type OktetoTemplates struct {
 }
 
 type SelectorItem struct {
-	Name     string
-	Label    string
-	Enable   bool
-	isOkteto bool
+	Name      string
+	Label     string
+	Enable    bool
+	isOkteto  bool
+	Namespace string
+	Builder   string
+	Registry  string
 }
 
 func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
@@ -84,7 +87,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	clusters := make([]SelectorItem, 0)
 
 	clusters = append(clusters, SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true, isOkteto: true})
-	clusters = append(clusters, getOktetoClusters()...)
+	clusters = append(clusters, getOktetoClusters(true)...)
 	if len(k8sClusters) > 0 {
 		clusters = append(clusters, getK8sClusters(k8sClusters)...)
 	}
@@ -102,16 +105,36 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 
 	return clusters
 }
-func getOktetoClusters() []SelectorItem {
+func getOktetoClusters(skipCloud bool) []SelectorItem {
 	orderedOktetoClusters := make([]SelectorItem, 0)
 	ctxStore := okteto.ContextStore()
 	for ctxName, okCtx := range ctxStore.Contexts {
-		if okCtx.IsOkteto && ctxName != okteto.CloudURL {
-			orderedOktetoClusters = append(orderedOktetoClusters, SelectorItem{Name: ctxName, Label: ctxName, Enable: true, isOkteto: true})
+		if !okCtx.IsOkteto {
+			continue
 		}
+		if skipCloud && ctxName == okteto.CloudURL {
+			continue
+		}
+		orderedOktetoClusters = append(
+			orderedOktetoClusters,
+			SelectorItem{
+				Name:      ctxName,
+				Label:     ctxName,
+				Enable:    true,
+				isOkteto:  true,
+				Namespace: okCtx.Namespace,
+				Builder:   okCtx.Builder,
+				Registry:  okCtx.Registry,
+			})
 	}
 	sort.Slice(orderedOktetoClusters, func(i, j int) bool {
-		return len(orderedOktetoClusters[i].Name) < len(orderedOktetoClusters[j].Name)
+		if orderedOktetoClusters[i].Name == okteto.CloudURL {
+			return true
+		}
+		if orderedOktetoClusters[j].Name == okteto.CloudURL {
+			return false
+		}
+		return strings.Compare(orderedOktetoClusters[i].Name, orderedOktetoClusters[j].Name) < 0
 	})
 	return orderedOktetoClusters
 }
@@ -120,14 +143,16 @@ func getK8sClusters(k8sClusters []string) []SelectorItem {
 	orderedK8sClusters := make([]SelectorItem, 0)
 	for _, k8sCluster := range k8sClusters {
 		orderedK8sClusters = append(orderedK8sClusters, SelectorItem{
-			Name:     k8sCluster,
-			Label:    k8sCluster,
-			Enable:   true,
-			isOkteto: false,
+			Name:      k8sCluster,
+			Label:     k8sCluster,
+			Enable:    true,
+			isOkteto:  false,
+			Namespace: getKubernetesContextNamespace(k8sCluster),
+			Builder:   "docker",
 		})
 	}
 	sort.Slice(orderedK8sClusters, func(i, j int) bool {
-		return len(orderedK8sClusters[i].Name) < len(orderedK8sClusters[j].Name)
+		return strings.Compare(orderedK8sClusters[i].Name, orderedK8sClusters[j].Name) < 0
 	})
 	return orderedK8sClusters
 }

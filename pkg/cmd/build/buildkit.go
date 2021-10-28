@@ -127,11 +127,11 @@ func getSolveOpt(buildOptions BuildOptions) (*client.SolveOpt, error) {
 }
 
 func getBuildkitClient(ctx context.Context) (*client.Client, error) {
-	buildkitHost := okteto.Context().Buildkit
+	buildkitHost := okteto.Context().Builder
 	octxStore := okteto.ContextStore()
 	for _, octx := range octxStore.Contexts {
 		//if a context configures buildkit with an Okteto Cluster
-		if octx.IsOkteto && octx.Buildkit == buildkitHost {
+		if octx.IsOkteto && octx.Builder == buildkitHost {
 			okteto.Context().Token = octx.Token
 			okteto.Context().Certificate = octx.Certificate
 		}
@@ -155,18 +155,18 @@ func getBuildkitClient(ctx context.Context) (*client.Client, error) {
 		return c, nil
 	}
 
-	c, err := client.New(ctx, okteto.Context().Buildkit, client.WithFailFast())
+	c, err := client.New(ctx, okteto.Context().Builder, client.WithFailFast())
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create the builder client for %s", okteto.Context().Buildkit)
+		return nil, errors.Wrapf(err, "failed to create the builder client for %s", okteto.Context().Builder)
 	}
 	return c, nil
 }
 
 func getClientForOktetoCluster(ctx context.Context) (*client.Client, error) {
 
-	b, err := url.Parse(okteto.Context().Buildkit)
+	b, err := url.Parse(okteto.Context().Builder)
 	if err != nil {
-		return nil, errors.Wrapf(err, "invalid buildkit host %s", okteto.Context().Buildkit)
+		return nil, errors.Wrapf(err, "invalid buildkit host %s", okteto.Context().Builder)
 	}
 
 	creds := client.WithCredentials(b.Hostname(), config.GetCertificatePath(), "", "")
@@ -176,7 +176,7 @@ func getClientForOktetoCluster(ctx context.Context) (*client.Client, error) {
 	}
 
 	rpc := client.WithRPCCreds(oauth.NewOauthAccess(oauthToken))
-	c, err := client.New(ctx, okteto.Context().Buildkit, client.WithFailFast(), creds, rpc)
+	c, err := client.New(ctx, okteto.Context().Builder, client.WithFailFast(), creds, rpc)
 	if err != nil {
 		return nil, err
 	}

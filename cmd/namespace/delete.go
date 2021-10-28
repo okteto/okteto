@@ -30,7 +30,7 @@ import (
 func Delete(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
 		Use:   "namespace <name>",
-		Short: "Deletes a namespace",
+		Short: "Delete a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {

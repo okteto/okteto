@@ -63,7 +63,7 @@ func Up() *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Activates your development container",
+		Short: "Activate your development container",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
@@ -379,7 +379,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		up.Dev.Image.Name = devContainer.Image
 	}
 
-	log.Information("Running your build in %s...", okteto.Context().Buildkit)
+	log.Information("Running your build in %s...", okteto.Context().Builder)
 
 	imageTag := registry.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
 	log.Infof("building dev image tag %s", imageTag)

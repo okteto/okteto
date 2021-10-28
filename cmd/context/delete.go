@@ -32,6 +32,8 @@ func DeleteCMD() *cobra.Command {
 		Short: "Delete a context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			args[0] = okteto.AddSchema(args[0])
+			args[0] = strings.TrimSuffix(args[0], "/")
 			if err := Delete(ctx, args[0]); err != nil {
 				return err
 			}
@@ -60,7 +62,7 @@ func Delete(ctx context.Context, okCtx string) error {
 				validOptions = append(validOptions, k)
 			}
 		}
-		return fmt.Errorf("'%s' is not a okteto context. Valid options are: [%s]", okCtx, strings.Join(validOptions, ", "))
+		return fmt.Errorf("'%s' context doesn't exist. Valid options are: [%s]", okCtx, strings.Join(validOptions, ", "))
 	}
 	return nil
 }

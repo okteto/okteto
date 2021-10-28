@@ -153,8 +153,8 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
-			if okteto.Context().Buildkit != "" {
-				log.Information("Running your build in %s...", okteto.Context().Buildkit)
+			if okteto.Context().Builder != "" {
+				log.Information("Running your build in %s...", okteto.Context().Builder)
 			} else {
 				log.Information("Running your build in docker")
 			}
@@ -188,7 +188,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 		if len(notSkippableVolumeMounts) != 0 {
 			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
 				hasAddedAnyVolumeMounts = true
-				log.Information("Running your build in %s...", okteto.Context().Buildkit)
+				log.Information("Running your build in %s...", okteto.Context().Builder)
 			}
 			fromImage := svc.Image
 			if okteto.IsOkteto() {
