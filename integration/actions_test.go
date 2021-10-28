@@ -100,6 +100,13 @@ func TestApplyPipeline(t *testing.T) {
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := updateKubeConfig(oktetoPath); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := executeApply(ctx, namespace); err != nil {
 		t.Fatalf("Apply action failed: %s", err.Error())
