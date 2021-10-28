@@ -50,6 +50,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			if err := contextCMD.ExecuteUpdateKubeconfig(ctx); err != nil {
 				return err
 			}
