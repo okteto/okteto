@@ -54,18 +54,19 @@ var (
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
-	Name            string               `json:"name"`
+	Name            string               `json:"name" yaml:"name,omitempty"`
 	UserID          string               `json:"-"`
 	Username        string               `json:"-"`
-	Token           string               `json:"token,omitempty"`
-	Namespace       string               `json:"namespace"`
+	Token           string               `json:"token,omitempty" yaml:"token,omitempty"`
+	Namespace       string               `json:"namespace" yaml:"namespace,omitempty"`
 	Cfg             *clientcmdapi.Config `json:"-"`
-	Buildkit        string               `json:"buildkit,omitempty"`
-	Registry        string               `json:"registry,omitempty"`
-	Certificate     string               `json:"certificate,omitempty"`
+	Buildkit        string               `json:"buildkit,omitempty" yaml:"buildkit,omitempty"`
+	Registry        string               `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Certificate     string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	GlobalNamespace string               `json:"-"`
 	Analytics       bool                 `json:"-"`
 	ClusterType     string               `json:"-"`
+	IsOkteto        bool                 `json:"isOkteto"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
@@ -181,8 +182,13 @@ func IsOktetoURL(name string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
+func IsContextInitialized() bool {
+	ctxStore := ContextStore()
+	return ctxStore.CurrentContext != ""
+}
+
 func IsOkteto() bool {
-	return IsOktetoURL(Context().Name)
+	return Context().IsOkteto
 }
 
 func ContextStore() *OktetoContextStore {
@@ -208,7 +214,7 @@ func ContextStore() *OktetoContextStore {
 		CurrentStore = ctxStore
 
 		if _, ok := CurrentStore.Contexts[CurrentStore.CurrentContext]; !ok {
-			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+			return CurrentStore
 		}
 		return CurrentStore
 	}

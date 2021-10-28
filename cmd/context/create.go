@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +39,8 @@ func CreateCMD() *cobra.Command {
 			ctxStore := okteto.ContextStore()
 
 			ctxOptions.Context = args[0]
+			ctxOptions.initialCtx = ctxStore.CurrentContext
+			ctxOptions.isOkteto = true
 
 			err := Create(ctx, ctxStore, ctxOptions)
 			analytics.TrackContext(err == nil)
@@ -54,19 +57,38 @@ func CreateCMD() *cobra.Command {
 }
 
 func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions *ContextOptions) error {
+	var created bool
+	var initialCurrentCtxNamespace string
+	if _, ok := ctxStore.Contexts[ctxOptions.initialCtx]; ok {
+		initialCurrentCtxNamespace = ctxStore.Contexts[ctxOptions.initialCtx].Namespace
+	}
+
 	ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
-	if !okteto.IsOktetoURL(ctxOptions.Context) {
+	if !ctxOptions.isOkteto {
 		if !isValidCluster(ctxOptions.Context) {
+			if okteto.IsOktetoURL(ctxOptions.Context) {
+				return errors.UserError{
+					E:    fmt.Errorf(errors.ErrInvalidContextOrOktetoCtx, ctxOptions.Context),
+					Hint: fmt.Sprintf("Run 'okteto context create %s' to create a new okteto context or select one kubernetes context from:\n      %s", ctxOptions.Context, strings.Join(getKubernetesContextList(false), "\n      ")),
+				}
+			}
 			return errors.UserError{
 				E:    fmt.Errorf(errors.ErrInvalidContext, ctxOptions.Context),
 				Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(false), "\n      ")),
 			}
 		}
-		ctxOptions.Context = okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
+
+		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
+		if transformedCtx != ctxOptions.Context {
+			ctxOptions.Context = transformedCtx
+			ctxOptions.isOkteto = true
+		}
+
 	}
 
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; !ok {
 		ctxStore.Contexts[ctxOptions.Context] = &okteto.OktetoContext{Name: ctxOptions.Context}
+		created = true
 	} else if ctxOptions.Token == "" {
 		//this is to avoid login with the browser again if we already have a valid token
 		ctxOptions.Token = okCtx.Token
@@ -74,7 +96,7 @@ func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions
 
 	ctxStore.CurrentContext = ctxOptions.Context
 
-	if okteto.IsOktetoURL(ctxOptions.Context) {
+	if ctxOptions.isOkteto {
 		if err := initOktetoContext(ctx, ctxOptions); err != nil {
 			return err
 		}
@@ -82,6 +104,16 @@ func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions
 		if err := initKubernetesContext(ctxOptions); err != nil {
 			return err
 		}
+	}
+	if err := okteto.WriteOktetoContextConfig(); err != nil {
+		return err
+	}
+	if created {
+		log.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
+	}
+
+	if ctxOptions.initialCtx != ctxStore.CurrentContext || initialCurrentCtxNamespace != ctxStore.Contexts[ctxStore.CurrentContext].Namespace {
+		log.Success("Switched to context '%s' @ %s", okteto.RemoveSchema(ctxStore.CurrentContext), ctxStore.Contexts[ctxStore.CurrentContext].Namespace)
 	}
 	return nil
 }

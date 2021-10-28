@@ -14,6 +14,7 @@
 package context
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -31,6 +32,10 @@ func Show() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
 		Short: "Show current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+			if err := Run(ctx, &ContextOptions{}); err != nil {
+				return err
+			}
 			oCtxs := okteto.ContextStore()
 			current := oCtxs.Contexts[oCtxs.CurrentContext]
 			if err := validateOutput(output); err != nil {

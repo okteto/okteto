@@ -99,9 +99,14 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		return errors.ErrTokenFlagNeeded
 	}
 
+	if ctxOptions.Token == "" && ctxOptions.Context == "" && !ctxOptions.isCtxCommand && !okteto.IsContextInitialized() {
+		return errors.ErrContextNotInitialized
+	}
+
+	ctxOptions.initialCtx = ctxStore.CurrentContext
 	if ctxOptions.Context == "" {
 		log.Infof("authenticating with interactive context")
-		oktetoContext, err := getContext(ctxOptions)
+		oktetoContext, err := getContext(ctx, ctxOptions)
 		if err != nil {
 			return err
 		}
@@ -120,21 +125,23 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		log.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
 	}
 
-	if ctxOptions.isCtxCommand {
-		log.Hint("    Run `okteto context update-kubeconfig` to switch your context and download your Kubernetes credentials.")
+	if ctxOptions.isCtxCommand && okteto.Context().IsOkteto {
+		log.Hint("    Run 'okteto context update-kubeconfig' to configure kubectl so that you can connect to your okteto context")
 	}
 	return nil
 }
 
-func getContext(ctxOptions *ContextOptions) (string, error) {
+func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
-	oktetoContext, err := AskForOptions(ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:")
+	oktetoContext, isOkteto, err := AskForOptions(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:")
 	if err != nil {
 		return "", err
 	}
+	ctxOptions.isOkteto = isOkteto
 
 	if isCreateNewContextOption(oktetoContext) {
-		oktetoContext = getOktetoClusterUrl(oktetoContext)
+		oktetoContext = askForOktetoURL()
+		ctxOptions.isOkteto = true
 	}
 
 	return oktetoContext, nil
@@ -195,6 +202,7 @@ func initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	}
 	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.Context().Name)
 	okteto.Context().Cfg = cfg
+	okteto.Context().IsOkteto = true
 
 	setSecrets(userContext.Secrets)
 
@@ -227,6 +235,7 @@ func initKubernetesContext(ctxOptions *ContextOptions) error {
 	kubeCtx.Namespace = okteto.Context().Namespace
 	cfg.CurrentContext = okteto.Context().Name
 	okteto.Context().Cfg = cfg
+	okteto.Context().IsOkteto = false
 
 	return nil
 }

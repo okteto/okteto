@@ -42,6 +42,9 @@ func getKubernetesContextList(filterOkteto bool) []string {
 		return contextList
 	}
 	if !filterOkteto {
+		for name := range cfg.Contexts {
+			contextList = append(contextList, name)
+		}
 		return contextList
 	}
 	for name := range cfg.Contexts {
@@ -53,20 +56,17 @@ func getKubernetesContextList(filterOkteto bool) []string {
 	return contextList
 }
 
-func isCreateNewContextOption(option string) bool {
-	if option == newOEOption {
-		return true
+func getKubernetesContextNamespace(k8sContext string) string {
+	kubeconfigFile := config.GetKubeconfigPath()
+	cfg := kubeconfig.Get(kubeconfigFile)
+	if cfg == nil {
+		return ""
 	}
-	return okteto.IsOktetoURL(option)
+	return cfg.Contexts[k8sContext].Namespace
 }
 
-func getOktetoClusterUrl(option string) string {
-
-	if okteto.IsOktetoURL(option) {
-		return option
-	}
-
-	return askForOktetoURL()
+func isCreateNewContextOption(option string) bool {
+	return option == newOEOption
 }
 
 func askForOktetoURL() string {
