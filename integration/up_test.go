@@ -841,10 +841,22 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
-
+	if err := updateKubeConfig(oktetoPath); err != nil {
+		return err
+	}
 	return nil
 }
 
+func updateKubeConfig(oktetoPath string) error {
+	args := []string{"ctx", "update-kubeconfig"}
+	cmd := exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
+	}
+	return nil
+}
 func changeToNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	okteto.CurrentStore = nil
 	log.Printf("changing to namespace %s", namespace)
@@ -861,6 +873,13 @@ func changeToNamespace(ctx context.Context, oktetoPath, namespace string) error 
 	n := okteto.Context().Namespace
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
+	}
+	args = []string{"ctx", "update-kubeconfig"}
+	cmd = exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
 	}
 
 	return nil
