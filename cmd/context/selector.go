@@ -41,10 +41,9 @@ const (
 )
 
 var (
-	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.RemoveSchema(okteto.CloudURL))
+	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.CloudURL)
 	newOEOption           = "Create new context"
 	oktetoContextsDivider = "Okteto contexts:"
-	k8sContextsDivider    = "Kubernetes contexts:"
 )
 
 type OktetoSelector struct {
@@ -107,7 +106,7 @@ func getOktetoClusters() []SelectorItem {
 	ctxStore := okteto.ContextStore()
 	for ctxName := range ctxStore.Contexts {
 		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
-			orderedOktetoClusters = append(orderedOktetoClusters, SelectorItem{Name: ctxName, Label: okteto.RemoveSchema(ctxName), Enable: true})
+			orderedOktetoClusters = append(orderedOktetoClusters, SelectorItem{Name: ctxName, Label: ctxName, Enable: true})
 		}
 	}
 	sort.Slice(orderedOktetoClusters, func(i, j int) bool {
