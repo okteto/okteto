@@ -124,8 +124,8 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		log.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
 	}
 
-	if ctxOptions.isCtxCommand {
-		log.Hint("    Run `okteto context update-kubeconfig` to switch your context and download your Kubernetes credentials.")
+	if ctxOptions.isCtxCommand && okteto.Context().IsOkteto {
+		log.Hint("    Run 'okteto context update-kubeconfig' to configure kubectl so that you can connect to your okteto context")
 	}
 	return nil
 }
