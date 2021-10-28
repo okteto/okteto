@@ -25,7 +25,7 @@ import (
 func Delete(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Deletes resources",
+		Short: "Delete resources",
 		Args:  utils.NoArgsAccepted(""),
 	}
 	cmd.AddCommand(namespace.Delete(ctx))

@@ -62,6 +62,9 @@ func getKubernetesContextNamespace(k8sContext string) string {
 	if cfg == nil {
 		return ""
 	}
+	if cfg.Contexts[k8sContext].Namespace == "" {
+		return "default"
+	}
 	return cfg.Contexts[k8sContext].Namespace
 }
 
@@ -72,11 +75,11 @@ func isCreateNewContextOption(option string) bool {
 func askForOktetoURL() string {
 	clusterURL := okteto.CloudURL
 	ctxStore := okteto.ContextStore()
-	if okteto.IsOktetoURL(ctxStore.CurrentContext) {
+	if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
 		clusterURL = ctxStore.CurrentContext
 	}
 
-	log.Question("Enter your Okteto Enterprise URL [%s]:", strings.TrimSuffix(clusterURL, "/"))
+	log.Question("Enter your Okteto Enterprise URL [%s]:", clusterURL)
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)

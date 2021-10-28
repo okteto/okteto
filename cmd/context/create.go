@@ -15,12 +15,10 @@ package context
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -32,17 +30,33 @@ func CreateCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [cluster-url]",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
-		Short: "Create a new context",
+		Short: "Add a context",
+		Long: `Add a context
+
+A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
+The current context is the default cluster/namespace for any Okteto CLI command.
+
+You need to specify the URL of your Okteto Enterprise. For example, run:
+
+	$ okteto context create https://cloud.okteto.com
+
+to configure your context to access Okteto Cloud.
+
+Your browser will ask for your authentication to retrieve your API token.
+
+If you need to automate authentication or if you don't want to use browser-based authentication, use the "--token" parameter:
+
+	$ okteto context create https://cloud.okteto.com --token ${OKTETO_TOKEN}
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			ctxStore := okteto.ContextStore()
-
 			ctxOptions.Context = args[0]
-			ctxOptions.initialCtx = ctxStore.CurrentContext
+			ctxOptions.Context = okteto.AddSchema(ctxOptions.Context)
+			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.isOkteto = true
 
-			err := Create(ctx, ctxStore, ctxOptions)
+			err := UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				return err
@@ -56,26 +70,27 @@ func CreateCMD() *cobra.Command {
 	return cmd
 }
 
-func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions *ContextOptions) error {
-	var created bool
-	var initialCurrentCtxNamespace string
-	if _, ok := ctxStore.Contexts[ctxOptions.initialCtx]; ok {
-		initialCurrentCtxNamespace = ctxStore.Contexts[ctxOptions.initialCtx].Namespace
+func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
+	created := false
+
+	ctxStore := okteto.ContextStore()
+	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; ok && okCtx.IsOkteto {
+		ctxOptions.isOkteto = true
 	}
 
-	ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
+	if okCtx, ok := ctxStore.Contexts[okteto.AddSchema(ctxOptions.Context)]; ok && okCtx.IsOkteto {
+		ctxOptions.Context = okteto.AddSchema(ctxOptions.Context)
+		ctxOptions.isOkteto = true
+	}
+
 	if !ctxOptions.isOkteto {
 		if !isValidCluster(ctxOptions.Context) {
-			if okteto.IsOktetoURL(ctxOptions.Context) {
-				return errors.UserError{
-					E:    fmt.Errorf(errors.ErrInvalidContextOrOktetoCtx, ctxOptions.Context),
-					Hint: fmt.Sprintf("Run 'okteto context create %s' to create a new okteto context or select one kubernetes context from:\n      %s", ctxOptions.Context, strings.Join(getKubernetesContextList(false), "\n      ")),
-				}
-			}
-			return errors.UserError{
-				E:    fmt.Errorf(errors.ErrInvalidContext, ctxOptions.Context),
-				Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(false), "\n      ")),
-			}
+			log.Fail("%s: invalid okteto context", ctxOptions.Context)
+			ctxOptions = &ContextOptions{}
+			ctxOptions.isCtxCommand = true
+			err := Run(ctx, ctxOptions)
+			analytics.TrackContext(err == nil)
+			return err
 		}
 
 		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
@@ -83,7 +98,6 @@ func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions
 			ctxOptions.Context = transformedCtx
 			ctxOptions.isOkteto = true
 		}
-
 	}
 
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; !ok {
@@ -108,12 +122,13 @@ func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions
 	if err := okteto.WriteOktetoContextConfig(); err != nil {
 		return err
 	}
-	if created {
+	if created && ctxOptions.isOkteto {
 		log.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
 	}
 
-	if ctxOptions.initialCtx != ctxStore.CurrentContext || initialCurrentCtxNamespace != ctxStore.Contexts[ctxStore.CurrentContext].Namespace {
-		log.Success("Switched to context '%s' @ %s", okteto.RemoveSchema(ctxStore.CurrentContext), ctxStore.Contexts[ctxStore.CurrentContext].Namespace)
+	if ctxOptions.isCtxCommand {
+		log.Success("Using context %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
 	}
+
 	return nil
 }

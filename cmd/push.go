@@ -49,7 +49,7 @@ func Push(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "push",
-		Short: "Builds, pushes and redeploys source code to the target app",
+		Short: "Build, push and redeploy source code to the target app",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -254,7 +254,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 }
 
 func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, oktetoRegistryURL string, noCache bool, progress string) (string, error) {
-	log.Information("Running your build in %s...", okteto.Context().Buildkit)
+	log.Information("Running your build in %s...", okteto.Context().Builder)
 
 	if imageTag == "" {
 		imageTag = dev.Push.Name

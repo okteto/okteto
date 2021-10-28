@@ -74,7 +74,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:    "deploy",
-		Short:  "Executes the list of commands specified in the Okteto manifest to deploy the application",
+		Short:  "Execute the list of commands specified in the Okteto manifest to deploy the application",
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

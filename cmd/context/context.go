@@ -25,32 +25,16 @@ import (
 func Context() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
-		Use:     "context [url|k8s-context]",
+		Use:     "context",
 		Aliases: []string{"ctx"},
 		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
-		Short:   "Manage your okteto context",
-		Long: `Manage your okteto context
+		Short:   "Set the default context",
+		Long: `Set the default context
 
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
 The current context is the default cluster/namespace for any Okteto CLI command.
 
-If you want to log into an Okteto Enterprise instance, specify a URL. For example, run:
-
-    $ okteto context https://cloud.okteto.com
-
-to configure your context to access Okteto Cloud.
-
-Your browser will ask for your authentication to retrieve your API token.
-
-If you need to automate authentication or if you don't want to use browser-based authentication, use the "--token" parameter:
-
-    $ okteto context https://cloud.okteto.com --token ${OKTETO_TOKEN}
-
-You can also specify the name of a Kubernetes context with:
-
-    $ okteto context kubernetes_context_name
-
-Or show a list of available options with:
+Show a list of available options with:
 
     $ okteto context
 `,
@@ -63,11 +47,7 @@ Or show a list of available options with:
 			ctxOptions.isCtxCommand = true
 			err := Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return err
 		},
 	}
 	cmd.AddCommand(Use())

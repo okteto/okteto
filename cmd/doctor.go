@@ -33,7 +33,7 @@ func Doctor() *cobra.Command {
 	var k8sContext string
 	cmd := &cobra.Command{
 		Use:   "doctor",
-		Short: "Generates a zip file with the okteto logs",
+		Short: "Generate a zip file with the okteto logs",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Info("starting doctor command")

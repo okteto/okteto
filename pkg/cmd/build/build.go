@@ -44,7 +44,7 @@ type BuildOptions struct {
 
 // Run runs the build sequence
 func Run(ctx context.Context, buildOptions BuildOptions) error {
-	if okteto.Context().Buildkit == "" {
+	if okteto.Context().Builder == "" {
 		if err := buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ func Run(ctx context.Context, buildOptions BuildOptions) error {
 
 // buildWithOkteto build and pushes the image to the registry, if skipped will return bool true, if error, will return error
 func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) (bool, error) {
-	log.Infof("building your image on %s", okteto.Context().Buildkit)
+	log.Infof("building your image on %s", okteto.Context().Builder)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
 		return false, err
@@ -121,7 +121,7 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) (bool, erro
 			log.Infof("Failed to build image: %s", err.Error())
 		}
 		err = registry.GetErrorMessage(err, buildOptions.Tag)
-		analytics.TrackBuildTransientError(okteto.Context().Buildkit, success)
+		analytics.TrackBuildTransientError(okteto.Context().Builder, success)
 		return false, err
 	}
 
@@ -137,7 +137,7 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) (bool, erro
 				log.Infof("Failed to build image: %s", err.Error())
 			}
 			err = registry.GetErrorMessage(err, buildOptions.Tag)
-			analytics.TrackBuildPullError(okteto.Context().Buildkit, success)
+			analytics.TrackBuildPullError(okteto.Context().Builder, success)
 			return false, err
 		}
 	}

@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"sort"
 	"text/tabwriter"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -46,51 +45,21 @@ func List() *cobra.Command {
 }
 
 func executeListContext(ctx context.Context) error {
-	oCtxs := okteto.ContextStore()
-	contexts := make([]string, 0)
-	for name := range oCtxs.Contexts {
-		contexts = append(contexts, name)
-	}
-	for _, k8sCluster := range getKubernetesContextList(true) {
-		if _, ok := oCtxs.Contexts[k8sCluster]; !ok {
-			contexts = append(contexts, k8sCluster)
-		}
-	}
-	sort.Slice(contexts, func(i, j int) bool {
-		return len(contexts[i]) < len(contexts[j])
-	})
+	contexts := getOktetoClusters(false)
+	contexts = append(contexts, getK8sClusters(getKubernetesContextList(true))...)
 
 	if len(contexts) == 0 {
-		return fmt.Errorf("No contexts are available. Run 'okteto context' to configure your first okteto context")
+		return fmt.Errorf("no contexts are available. Run 'okteto context' to configure your first okteto context")
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 	fmt.Fprintf(w, "Name\tNamespace\tBuilder\tRegistry\n")
-	for _, okctxName := range contexts {
-		var (
-			name      string
-			namespace string
-			builder   string
-			registry  string
-		)
-		builder = "docker"
-
-		if oCtx, ok := oCtxs.Contexts[okctxName]; ok {
-			name = okteto.RemoveSchema(oCtx.Name)
-			if oCtxs.CurrentContext == oCtx.Name {
-				name += " *"
-			}
-			namespace = oCtx.Namespace
-			if oCtx.Buildkit != "" {
-				builder = oCtx.Buildkit
-			}
-			registry = oCtx.Registry
-		} else {
-			name = okctxName
-			namespace = getKubernetesContextNamespace(okctxName)
-			registry = "-"
+	ctxStore := okteto.ContextStore()
+	for _, ctxSelector := range contexts {
+		if okCtx, ok := ctxStore.Contexts[ctxSelector.Name]; ok && okCtx.Builder != "" {
+			ctxSelector.Builder = okCtx.Builder
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", name, namespace, builder, registry)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ctxSelector.Name, ctxSelector.Namespace, ctxSelector.Builder, ctxSelector.Registry)
 	}
 
 	w.Flush()
