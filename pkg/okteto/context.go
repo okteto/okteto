@@ -23,7 +23,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
@@ -165,9 +164,6 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string)
 	if k8sNamespace == "" {
 		return k8sContext
 	}
-
-	timeout, _ := time.ParseDuration("0.25s")
-	c.RESTClient().Get().Timeout(timeout)
 
 	n, err := c.CoreV1().Namespaces().Get(ctx, k8sNamespace, metav1.GetOptions{})
 	if err != nil {

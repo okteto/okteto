@@ -59,6 +59,7 @@ func (o *ContextOptions) initFromEnvVars() {
 
 	if o.Context == "" && os.Getenv("OKTETO_URL") != "" {
 		o.Context = os.Getenv("OKTETO_URL")
+		o.isOkteto = true
 	}
 
 	if o.Context == "" && os.Getenv("OKTETO_CONTEXT") != "" {
