@@ -40,6 +40,7 @@ func CreateCMD() *cobra.Command {
 
 			ctxOptions.Context = args[0]
 			ctxOptions.initialCtx = ctxStore.CurrentContext
+			ctxOptions.isOkteto = true
 
 			err := Create(ctx, ctxStore, ctxOptions)
 			analytics.TrackContext(err == nil)
@@ -63,14 +64,26 @@ func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions
 	}
 
 	ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
-	if !okteto.IsOktetoURL(ctxOptions.Context) {
+	if !ctxOptions.isOkteto {
 		if !isValidCluster(ctxOptions.Context) {
+			if okteto.IsOktetoURL(ctxOptions.Context) {
+				return errors.UserError{
+					E:    fmt.Errorf(errors.ErrInvalidContextOrOktetoCtx, ctxOptions.Context),
+					Hint: fmt.Sprintf("Run 'okteto context create %s' to create a new okteto context or select one kubernetes context from:\n      %s", ctxOptions.Context, strings.Join(getKubernetesContextList(false), "\n      ")),
+				}
+			}
 			return errors.UserError{
 				E:    fmt.Errorf(errors.ErrInvalidContext, ctxOptions.Context),
 				Hint: fmt.Sprintf("Valid Kubernetes contexts are:\n      %s", strings.Join(getKubernetesContextList(false), "\n      ")),
 			}
 		}
-		ctxOptions.Context = okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
+
+		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
+		if transformedCtx != ctxOptions.Context {
+			ctxOptions.Context = transformedCtx
+			ctxOptions.isOkteto = true
+		}
+
 	}
 
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; !ok {
@@ -83,7 +96,7 @@ func Create(ctx context.Context, ctxStore *okteto.OktetoContextStore, ctxOptions
 
 	ctxStore.CurrentContext = ctxOptions.Context
 
-	if okteto.IsOktetoURL(ctxOptions.Context) {
+	if ctxOptions.isOkteto {
 		if err := initOktetoContext(ctx, ctxOptions); err != nil {
 			return err
 		}

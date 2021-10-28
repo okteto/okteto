@@ -108,6 +108,9 @@ var (
 	//ErrInvalidContext is raised when the Kubernetes context selected is not defined on your kubeconfig or is not an okteto cluster
 	ErrInvalidContext = "'%s' isn't a valid Kubernetes context"
 
+	//ErrInvalidContextOrOktetoCtx is raised when the Kubernetes context selected is not defined on your kubeconfig or is not an okteto cluster
+	ErrInvalidContextOrOktetoCtx = "'%s' isn't a valid Kubernetes context or a valid okteto ctx"
+
 	//ErrNamespaceNotFound is raised when the namespace is not found on an okteto instance
 	ErrNamespaceNotFound = "namespace '%s' not found. Please verify that the namespace exists and that you have access to it"
 

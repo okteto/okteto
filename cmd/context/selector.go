@@ -70,9 +70,10 @@ type OktetoTemplates struct {
 }
 
 type SelectorItem struct {
-	Name   string
-	Label  string
-	Enable bool
+	Name     string
+	Label    string
+	Enable   bool
+	isOkteto bool
 }
 
 func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
@@ -82,7 +83,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	}
 	clusters := make([]SelectorItem, 0)
 
-	clusters = append(clusters, SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true})
+	clusters = append(clusters, SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true, isOkteto: true})
 	clusters = append(clusters, getOktetoClusters()...)
 	if len(k8sClusters) > 0 {
 		clusters = append(clusters, getK8sClusters(k8sClusters)...)
@@ -104,9 +105,9 @@ func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 func getOktetoClusters() []SelectorItem {
 	orderedOktetoClusters := make([]SelectorItem, 0)
 	ctxStore := okteto.ContextStore()
-	for ctxName := range ctxStore.Contexts {
-		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
-			orderedOktetoClusters = append(orderedOktetoClusters, SelectorItem{Name: ctxName, Label: ctxName, Enable: true})
+	for ctxName, okCtx := range ctxStore.Contexts {
+		if okCtx.IsOkteto && ctxName != okteto.CloudURL {
+			orderedOktetoClusters = append(orderedOktetoClusters, SelectorItem{Name: ctxName, Label: ctxName, Enable: true, isOkteto: true})
 		}
 	}
 	sort.Slice(orderedOktetoClusters, func(i, j int) bool {
@@ -119,9 +120,10 @@ func getK8sClusters(k8sClusters []string) []SelectorItem {
 	orderedK8sClusters := make([]SelectorItem, 0)
 	for _, k8sCluster := range k8sClusters {
 		orderedK8sClusters = append(orderedK8sClusters, SelectorItem{
-			Name:   k8sCluster,
-			Label:  k8sCluster,
-			Enable: true,
+			Name:     k8sCluster,
+			Label:    k8sCluster,
+			Enable:   true,
+			isOkteto: false,
 		})
 	}
 	sort.Slice(orderedK8sClusters, func(i, j int) bool {
@@ -130,7 +132,7 @@ func getK8sClusters(k8sClusters []string) []SelectorItem {
 	return orderedK8sClusters
 }
 
-func AskForOptions(ctx context.Context, options []SelectorItem, label string) (string, error) {
+func AskForOptions(ctx context.Context, options []SelectorItem, label string) (string, bool, error) {
 	selectedTemplate := getSelectedTemplate()
 	activeTemplate := getActiveTemplate(options)
 	inactiveTemplate := getInactiveTemplate(options)
@@ -149,13 +151,13 @@ func AskForOptions(ctx context.Context, options []SelectorItem, label string) (s
 	}
 
 	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
-	optionSelected, err := prompt.Run(ctx)
+	optionSelected, isOkteto, err := prompt.Run(ctx)
 	if err != nil || !isValidOption(options, optionSelected) {
 		log.Infof("invalid init option: %s", err)
-		return "", fmt.Errorf("invalid option")
+		return "", false, fmt.Errorf("invalid option")
 	}
 
-	return optionSelected, nil
+	return optionSelected, isOkteto, nil
 }
 
 func isValidOption(options []SelectorItem, optionSelected string) bool {
@@ -167,17 +169,17 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 	return false
 }
 
-func (s OktetoSelector) Run(ctx context.Context) (string, error) {
+func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 	startPosition, err := s.getInitialPosition(ctx)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	if startPosition != -1 {
 		s.Items[startPosition].Label += " *"
 	}
 	l, err := list.New(s.Items, s.Size)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	s.list = l
 
@@ -192,7 +194,7 @@ func (s OktetoSelector) Run(ctx context.Context) (string, error) {
 	c := &readline.Config{}
 	err = c.Init()
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	if runtime.GOOS != "windows" {
 		c.Stdout = &stdout{}
@@ -205,7 +207,7 @@ func (s OktetoSelector) Run(ctx context.Context) (string, error) {
 
 	rl, err := readline.NewEx(c)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	sb := screenbuf.New(rl)
@@ -325,7 +327,7 @@ func (s OktetoSelector) Run(ctx context.Context) (string, error) {
 		sb.Flush()
 		rl.Write([]byte(showCursor))
 		rl.Close()
-		return "", err
+		return "", false, err
 	}
 
 	items, idx := s.list.Items()
@@ -338,7 +340,7 @@ func (s OktetoSelector) Run(ctx context.Context) (string, error) {
 	rl.Write([]byte(showCursor))
 	rl.Close()
 
-	return s.Items[s.list.Index()].Name, err
+	return s.Items[s.list.Index()].Name, s.Items[s.list.Index()].isOkteto, err
 }
 
 func (s *OktetoSelector) prepareTemplates() error {

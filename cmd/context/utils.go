@@ -66,18 +66,7 @@ func getKubernetesContextNamespace(k8sContext string) string {
 }
 
 func isCreateNewContextOption(option string) bool {
-	if option == newOEOption {
-		return true
-	}
-	return false
-}
-
-func getOktetoClusterUrl(option string) string {
-	if okteto.IsOktetoURL(option) {
-		return option
-	}
-
-	return askForOktetoURL()
+	return option == newOEOption
 }
 
 func askForOktetoURL() string {

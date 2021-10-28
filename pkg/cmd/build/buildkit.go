@@ -129,9 +129,9 @@ func getSolveOpt(buildOptions BuildOptions) (*client.SolveOpt, error) {
 func getBuildkitClient(ctx context.Context) (*client.Client, error) {
 	buildkitHost := okteto.Context().Buildkit
 	octxStore := okteto.ContextStore()
-	for name, octx := range octxStore.Contexts {
+	for _, octx := range octxStore.Contexts {
 		//if a context configures buildkit with an Okteto Cluster
-		if okteto.IsOktetoURL(name) && octx.Buildkit == buildkitHost {
+		if octx.IsOkteto && octx.Buildkit == buildkitHost {
 			okteto.Context().Token = octx.Token
 			okteto.Context().Certificate = octx.Certificate
 		}

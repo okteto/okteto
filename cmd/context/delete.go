@@ -55,8 +55,8 @@ func Delete(ctx context.Context, okCtx string) error {
 		log.Success("'%s' deleted successfully", okCtx)
 	} else {
 		validOptions := make([]string, 0)
-		for k := range ctxStore.Contexts {
-			if okteto.IsOktetoURL(k) {
+		for k, v := range ctxStore.Contexts {
+			if v.IsOkteto {
 				validOptions = append(validOptions, k)
 			}
 		}

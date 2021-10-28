@@ -133,13 +133,15 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 
 func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
-	oktetoContext, err := AskForOptions(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:")
+	oktetoContext, isOkteto, err := AskForOptions(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:")
 	if err != nil {
 		return "", err
 	}
+	ctxOptions.isOkteto = isOkteto
 
 	if isCreateNewContextOption(oktetoContext) {
-		oktetoContext = getOktetoClusterUrl(oktetoContext)
+		oktetoContext = askForOktetoURL()
+		ctxOptions.isOkteto = true
 	}
 
 	return oktetoContext, nil

@@ -53,7 +53,7 @@ func executeUpdateKubeconfig(ctx context.Context) error {
 		return err
 	}
 	k8sContext := okteto.Context().Name
-	if okteto.IsOktetoURL(k8sContext) {
+	if okteto.Context().IsOkteto {
 		k8sContext = okteto.UrlToKubernetesContext(k8sContext)
 	}
 	log.Information("Current kubernetes context '%s/%s' in '%s'", k8sContext, okteto.Context().Namespace, config.GetKubeconfigPath())
