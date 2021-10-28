@@ -30,7 +30,7 @@ func Show() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
-		Short: "Show current context",
+		Short: "Print the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if err := Run(ctx, &ContextOptions{}); err != nil {

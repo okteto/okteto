@@ -35,8 +35,8 @@ func Use() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "use [url|k8s-context]",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
-		Short: "Manage your okteto context",
-		Long: `Manage your okteto context
+		Short: "Set the default context",
+		Long: `Set the default context
 
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
 The current context is the default cluster/namespace for any Okteto CLI command.
