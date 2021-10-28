@@ -103,7 +103,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		return errors.ErrContextNotInitialized
 	}
 
-	initialCtx := ctxStore.CurrentContext
+	ctxOptions.initialCtx = ctxStore.CurrentContext
 	if ctxOptions.Context == "" {
 		log.Infof("authenticating with interactive context")
 		oktetoContext, err := getContext(ctx, ctxOptions)
@@ -115,7 +115,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		ctxOptions.Show = false
 	}
 
-	if err := Create(ctx, ctxStore, ctxOptions, initialCtx); err != nil {
+	if err := Create(ctx, ctxStore, ctxOptions); err != nil {
 		return err
 	}
 

@@ -18,7 +18,6 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -36,10 +35,6 @@ func UpdateKubeconfigCMD() *cobra.Command {
 
 			if err := Run(ctx, &ContextOptions{}); err != nil {
 				return err
-			}
-
-			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
 			}
 
 			if err := executeUpdateKubeconfig(ctx); err != nil {

@@ -27,6 +27,7 @@ type ContextOptions struct {
 	OnlyOkteto   bool
 	Show         bool
 	isCtxCommand bool
+	initialCtx   string
 }
 
 func (o *ContextOptions) initFromContext() {

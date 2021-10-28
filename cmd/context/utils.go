@@ -56,6 +56,15 @@ func getKubernetesContextList(filterOkteto bool) []string {
 	return contextList
 }
 
+func getKubernetesContextNamespace(k8sContext string) string {
+	kubeconfigFile := config.GetKubeconfigPath()
+	cfg := kubeconfig.Get(kubeconfigFile)
+	if cfg == nil {
+		return ""
+	}
+	return cfg.Contexts[k8sContext].Namespace
+}
+
 func isCreateNewContextOption(option string) bool {
 	if option == newOEOption {
 		return true
