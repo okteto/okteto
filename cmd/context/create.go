@@ -36,7 +36,7 @@ func CreateCMD() *cobra.Command {
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
 The current context is the default cluster/namespace for any Okteto CLI command.
 
-You need to specify the URL of your Okteto Enterprise. For example, run:
+You need to specify an Okteto URL. For example, run:
 
 	$ okteto context create https://cloud.okteto.com
 
