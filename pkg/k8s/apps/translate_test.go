@@ -435,6 +435,10 @@ services:
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
 	}
 
+	if _, ok := tr1.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	}
+
 	if tr1.App.Replicas() != 3 {
 		t.Fatalf("d1 is running %d replicas after 'okteto down'", tr1.App.Replicas())
 	}
@@ -568,6 +572,10 @@ services:
 
 	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	}
+
+	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
 	}
 
 	if tr2.App.Replicas() != 3 {
@@ -1722,6 +1730,10 @@ services:
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
 	}
 
+	if _, ok := tr1.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	}
+
 	if tr1.App.Replicas() != 2 {
 		t.Fatalf("sfs1 is running %d replicas after 'okteto down'", tr1.App.Replicas())
 	}
@@ -1856,6 +1868,10 @@ services:
 
 	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	}
+
+	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
 	}
 
 	if tr2.App.Replicas() != 3 {
