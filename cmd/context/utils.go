@@ -79,7 +79,7 @@ func askForOktetoURL() string {
 		clusterURL = ctxStore.CurrentContext
 	}
 
-	log.Question("Enter your Okteto Enterprise URL [%s]:", clusterURL)
+	log.Question("Enter your Okteto URL [%s]:", clusterURL)
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)

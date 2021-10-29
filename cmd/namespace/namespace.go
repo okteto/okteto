@@ -40,11 +40,18 @@ func Namespace(ctx context.Context) *cobra.Command {
 			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
-			err := contextCMD.Run(ctx, &contextCMD.ContextOptions{
-				Namespace: namespace,
-			})
+			err := contextCMD.Run(
+				ctx,
+				&contextCMD.ContextOptions{
+					Namespace: namespace,
+				},
+			)
 
 			if err != nil {
+				return err
+			}
+
+			if err := contextCMD.ExecuteUpdateKubeconfig(ctx); err != nil {
 				return err
 			}
 

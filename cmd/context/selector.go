@@ -149,6 +149,7 @@ func getK8sClusters(k8sClusters []string) []SelectorItem {
 			isOkteto:  false,
 			Namespace: getKubernetesContextNamespace(k8sCluster),
 			Builder:   "docker",
+			Registry:  "-",
 		})
 	}
 	sort.Slice(orderedK8sClusters, func(i, j int) bool {

@@ -41,7 +41,7 @@ func Use() *cobra.Command {
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
 The current context is the default cluster/namespace for any Okteto CLI command.
 
-You can specify the URL of an Okteto Enterprise instance:
+You can specify an Okteto URL:
 
     $ okteto context use https://cloud.okteto.com
 
@@ -49,7 +49,7 @@ Or the name of a Kubernetes context with:
 
     $ okteto context use kubernetes_context_name
 
-Or show a list of available options with:
+Or show a list of available contexts with:
 
     $ okteto context use
 `,

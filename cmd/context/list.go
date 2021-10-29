@@ -59,6 +59,10 @@ func executeListContext(ctx context.Context) error {
 		if okCtx, ok := ctxStore.Contexts[ctxSelector.Name]; ok && okCtx.Builder != "" {
 			ctxSelector.Builder = okCtx.Builder
 		}
+
+		if ctxSelector.Name == ctxStore.CurrentContext {
+			ctxSelector.Name += " *"
+		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ctxSelector.Name, ctxSelector.Namespace, ctxSelector.Builder, ctxSelector.Registry)
 	}
 

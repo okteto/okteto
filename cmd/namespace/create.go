@@ -80,6 +80,9 @@ func executeCreateNamespace(ctx context.Context, namespace string, members *[]st
 	if err := contextCommand.RunE(nil, args); err != nil {
 		return fmt.Errorf("failed to activate your new namespace %s: %s", oktetoNS, err)
 	}
+	if err := contextCMD.ExecuteUpdateKubeconfig(ctx); err != nil {
+		return err
+	}
 
 	return nil
 }
