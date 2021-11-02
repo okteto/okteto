@@ -56,7 +56,7 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.isOkteto = true
 
-			err := UseContext(ctx, ctxOptions)
+			_, err := UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				return err
@@ -70,7 +70,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	return cmd
 }
 
-func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func UseContext(ctx context.Context, ctxOptions *ContextOptions) (bool, error) {
 	created := false
 
 	ctxStore := okteto.ContextStore()
@@ -90,7 +90,7 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 			ctxOptions.isCtxCommand = true
 			err := Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
-			return err
+			return true, err
 		}
 
 		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
@@ -112,15 +112,15 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 
 	if ctxOptions.isOkteto {
 		if err := initOktetoContext(ctx, ctxOptions); err != nil {
-			return err
+			return false, err
 		}
 	} else {
 		if err := initKubernetesContext(ctxOptions); err != nil {
-			return err
+			return false, err
 		}
 	}
 	if err := okteto.WriteOktetoContextConfig(); err != nil {
-		return err
+		return false, err
 	}
 	if created && ctxOptions.isOkteto {
 		log.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
@@ -130,5 +130,5 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 		log.Success("Using context %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
 	}
 
-	return nil
+	return false, nil
 }

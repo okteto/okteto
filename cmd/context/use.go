@@ -101,7 +101,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		ctxOptions.Show = false
 	}
 
-	if err := UseContext(ctx, ctxOptions); err != nil {
+	if hasRunSelector, err := UseContext(ctx, ctxOptions); err != nil || hasRunSelector {
 		return err
 	}
 
