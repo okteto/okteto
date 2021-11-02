@@ -106,6 +106,8 @@ func Test_updateKubeconfig(t *testing.T) {
 			okteto.CurrentStore = tt.context
 			if len(tt.kubeconfigCtx.Name) > 0 {
 				createKubeconfig(tt.kubeconfigCtx)
+			} else {
+				createKubeconfig(kubeconfigFields{})
 			}
 
 			if err := ExecuteUpdateKubeconfig(ctx); err != nil {
