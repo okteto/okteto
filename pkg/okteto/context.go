@@ -132,7 +132,7 @@ func UrlToKubernetesContext(uri string) string {
 }
 
 // K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
-func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string) string {
+func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string, clientProvider func(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)) string {
 	ctxStore := ContextStore()
 	//check if belongs to the okteto contexts
 	for name, oCtx := range ctxStore.Contexts {
@@ -147,7 +147,7 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string)
 	}
 
 	cfg.CurrentContext = k8sContext
-	c, _, err := getK8sClient(cfg)
+	c, _, err := clientProvider(cfg)
 	if err != nil {
 		log.Infof("error getting k8s client: %v", err)
 		return k8sContext
@@ -340,7 +340,7 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
-	c, config, err := getK8sClient(Context().Cfg)
+	c, config, err := GetK8sClientWithApiConfig(Context().Cfg)
 	if err == nil {
 		Context().SetClusterType(config.Host)
 	}

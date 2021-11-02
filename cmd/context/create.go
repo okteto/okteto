@@ -19,10 +19,20 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+type ContextUseController struct {
+	k8sClientProvider        func(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
+	loginController          login.LoginInterface
+	oktetoUserClientProvider func() (okteto.UserInterface, error)
+}
 
 // Create adds a new cluster to okteto context
 func CreateCMD() *cobra.Command {
@@ -55,8 +65,13 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Context = okteto.AddSchema(ctxOptions.Context)
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.isOkteto = true
+			ctxController := ContextUseController{
+				k8sClientProvider:        okteto.K8sProvider,
+				loginController:          login.LoginController{},
+				oktetoUserClientProvider: okteto.NewOktetoUserClient,
+			}
 
-			err := UseContext(ctx, ctxOptions)
+			err := ctxController.UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				return err
@@ -70,7 +85,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	return cmd
 }
 
-func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func (ctxController *ContextUseController) UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	created := false
 
 	ctxStore := okteto.ContextStore()
@@ -93,7 +108,7 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 			return err
 		}
 
-		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
+		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, ctxController.k8sClientProvider)
 		if transformedCtx != ctxOptions.Context {
 			ctxOptions.Context = transformedCtx
 			ctxOptions.isOkteto = true
@@ -111,7 +126,7 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxStore.CurrentContext = ctxOptions.Context
 
 	if ctxOptions.isOkteto {
-		if err := initOktetoContext(ctx, ctxOptions); err != nil {
+		if err := ctxController.initOktetoContext(ctx, ctxOptions); err != nil {
 			return err
 		}
 	} else {

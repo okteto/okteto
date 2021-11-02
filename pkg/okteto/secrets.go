@@ -32,6 +32,10 @@ type UserContext struct {
 	Credentials Credential `json:"credentials,omitempty"`
 }
 
+func NewOktetoUserClient() (UserInterface, error) {
+	return NewOktetoClient()
+}
+
 //GetSecrets returns the secrets from Okteto API
 func (c *OktetoClient) GetSecrets(ctx context.Context) ([]Secret, error) {
 	var query struct {

@@ -101,7 +101,13 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		ctxOptions.Show = false
 	}
 
-	if err := UseContext(ctx, ctxOptions); err != nil {
+	ctxController := ContextUseController{
+		k8sClientProvider:        okteto.K8sProvider,
+		loginController:          login.LoginController{},
+		oktetoUserClientProvider: okteto.NewOktetoUserClient,
+	}
+
+	if err := ctxController.UseContext(ctx, ctxOptions); err != nil {
 		return err
 	}
 
@@ -139,11 +145,12 @@ func setSecrets(secrets []okteto.Secret) {
 	}
 }
 
-func getUserContext(ctx context.Context) (*okteto.UserContext, error) {
-	client, err := okteto.NewOktetoClient()
+func (ctxController ContextUseController) getUserContext(ctx context.Context) (*okteto.UserContext, error) {
+	client, err := ctxController.oktetoUserClientProvider()
 	if err != nil {
 		return nil, err
 	}
+
 	retries := 0
 	for retries <= 3 {
 		userContext, err := client.GetUserContext(ctx)
@@ -166,15 +173,15 @@ func getUserContext(ctx context.Context) (*okteto.UserContext, error) {
 	return nil, errors.ErrInternalServerError
 }
 
-func initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
-	user, err := login.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
+func (ctxController ContextUseController) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
+	user, err := ctxController.loginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
 	if err != nil {
 		return err
 	}
 	ctxOptions.Token = user.Token
 	okteto.Context().Token = user.Token
 
-	userContext, err := getUserContext(ctx)
+	userContext, err := ctxController.getUserContext(ctx)
 	if err != nil {
 		return err
 	}
