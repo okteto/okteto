@@ -23,19 +23,19 @@ import (
 )
 
 // Namespace changes your current context namespace.
-func Namespace() *cobra.Command {
+func UseNamespace() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
-		Use:   "namespace [name]",
+		Use:   "use-namespace [name]",
 		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
-		Short: "Set the context namespace",
+		Short: "Set the namespace of the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			ctxOptions.Namespace = args[0]
 			ctxOptions.Context = okteto.Context().Name
 			ctxOptions.Show = true
 			err := Run(ctx, ctxOptions)
-			analytics.TrackContext(err == nil)
+			analytics.TrackContextUseNamespace(err == nil)
 			if err != nil {
 				return err
 			}

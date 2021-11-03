@@ -58,6 +58,7 @@ This will prompt you to select one of your existing contexts or to create a new 
 	cmd.AddCommand(CreateCMD())
 	cmd.AddCommand(UpdateKubeconfigCMD())
 	cmd.AddCommand(List())
+	cmd.AddCommand(UseNamespace())
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")

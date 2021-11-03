@@ -61,6 +61,7 @@ const (
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
 	contextEvent             = "Context"
+	contextUseNamespaceEvent = "Context Use-namespace"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
 	buildPullErrorEvent      = "BuildPullError"
@@ -267,6 +268,14 @@ func TrackContext(success bool) {
 		return
 	}
 	track(contextEvent, success, nil)
+}
+
+// TrackContextUseNamespace sends a tracking event to mixpanel when the user use context in
+func TrackContextUseNamespace(success bool) {
+	if !get().Enabled {
+		return
+	}
+	track(contextUseNamespaceEvent, success, nil)
 }
 
 func TrackStackWarnings(warnings []string) {
