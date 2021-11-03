@@ -1,6 +1,6 @@
 ## How does Okteto work?
 
-Okteto replaces your application's container with a development container. Let's explain this process with a diagram:
+Okteto helps you move your development environment into any Kubernetes cluster. Let's explain this process with a diagram:
 
 <img align="left" src="okteto-architecture.png">
 
