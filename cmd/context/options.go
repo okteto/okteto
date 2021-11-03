@@ -20,12 +20,15 @@ import (
 )
 
 type ContextOptions struct {
-	Token        string
-	Context      string
-	Namespace    string
-	Builder      string
-	OnlyOkteto   bool
-	Show         bool
+	Token            string
+	Context          string
+	Namespace        string
+	Builder          string
+	OnlyOkteto       bool
+	Show             bool
+	Save             bool
+	SkipComprobation bool
+
 	isCtxCommand bool
 	isOkteto     bool
 }

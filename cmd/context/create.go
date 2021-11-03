@@ -123,9 +123,12 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 			return err
 		}
 	}
-	if err := okteto.WriteOktetoContextConfig(); err != nil {
-		return err
+	if ctxOptions.Save {
+		if err := okteto.WriteOktetoContextConfig(); err != nil {
+			return err
+		}
 	}
+
 	if created && ctxOptions.isOkteto {
 		log.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
 	}

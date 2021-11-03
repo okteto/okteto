@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -59,5 +60,10 @@ func executeDeleteNamespace(ctx context.Context, namespace string) error {
 	}
 
 	log.Success("Namespace '%s' deleted", namespace)
+	okteto.Context().Namespace = ""
+	os.Setenv("OKTETO_NAMESPACE", "")
+	if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{Show: true, SkipComprobation: true}); err != nil {
+		return err
+	}
 	return nil
 }

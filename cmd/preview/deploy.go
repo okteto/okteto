@@ -73,7 +73,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			ctxOptions := &contextCMD.ContextOptions{
-				Namespace: ctxResource.Namespace,
+				Namespace:        ctxResource.Namespace,
+				SkipComprobation: true,
+				Save:             false,
 			}
 			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
 				return err
