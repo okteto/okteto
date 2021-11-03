@@ -25,7 +25,7 @@ import (
 func Create(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Creates resources",
+		Short: "Create resources",
 		Args:  utils.NoArgsAccepted(""),
 	}
 	cmd.AddCommand(namespace.Create(ctx))

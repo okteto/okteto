@@ -59,26 +59,19 @@ func Build(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("invalid Dockerfile: %s", err.Error())
 			}
 
-			if okteto.Context().Buildkit == "" {
+			if okteto.Context().Builder == "" {
 				log.Information("Building your image using your local docker daemon")
 			} else {
-				log.Information("Running your build in %s...", okteto.Context().Buildkit)
+				log.Information("Running your build in %s...", okteto.Context().Builder)
 			}
 
 			ctx := context.Background()
-			if err := build.Run(ctx, "", options); err != nil {
-				analytics.TrackBuild(okteto.Context().Buildkit, false)
+			if err := build.Run(ctx, options); err != nil {
+				analytics.TrackBuild(okteto.Context().Builder, false)
 				return err
 			}
 
-			if options.Tag == "" {
-				log.Success("Build succeeded")
-				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
-			} else {
-				log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
-			}
-
-			analytics.TrackBuild(okteto.Context().Buildkit, true)
+			analytics.TrackBuild(okteto.Context().Builder, true)
 			return nil
 		},
 	}

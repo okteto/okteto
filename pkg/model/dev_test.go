@@ -76,12 +76,6 @@ services:
       limits:
         memory: "128Mi"
         cpu: "500m"
-    securityContext:
-      capabilities:
-        add:
-          - SYS_TRACE
-        drop:
-          - SYS_NICE
     workdir: /app`)
 	main, err := Read(manifest)
 	if err != nil {
@@ -130,14 +124,6 @@ services:
 		if dev.Selector["key3"] != "value3" {
 			t.Errorf("Selector were not parsed correctly")
 		}
-
-		if !reflect.DeepEqual(dev.SecurityContext.Capabilities.Add, []apiv1.Capability{"SYS_TRACE"}) {
-			t.Errorf("SecurityContext.Capabilities.Add was not parsed correctly. Expected [SYS_TRACE]")
-		}
-
-		if !reflect.DeepEqual(dev.SecurityContext.Capabilities.Drop, []apiv1.Capability{"SYS_NICE"}) {
-			t.Errorf("SecurityContext.Capabilities.Drop was not parsed correctly. Expected [SYS_NICE]")
-		}
 	}
 
 	expected := (63 * time.Second)
@@ -166,7 +152,7 @@ workdir: /app`)
 }
 
 func Test_LoadDevDefaults(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name                string
 		manifest            []byte
 		expectedEnvironment Environment
@@ -706,7 +692,7 @@ func Test_validate(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	var tests = []struct {
+	tests := []struct {
 		name      string
 		manifest  []byte
 		expectErr bool
@@ -964,12 +950,12 @@ func Test_validate(t *testing.T) {
 			if !tt.expectErr && err != nil {
 				t.Errorf("got an unexpected error: %s", err)
 			}
-
 		})
 	}
 }
+
 func TestPersistentVolumeEnabled(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name     string
 		manifest []byte
 		expected bool
@@ -1117,7 +1103,6 @@ func Test_loadEnvFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			if tt.content != nil {
 				file, err := createEnvFile(tt.content)
 				if err != nil {
@@ -1223,8 +1208,211 @@ services:
 	}
 }
 
+func Test_validateForExtraFields(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{
+			name:  "autocreate",
+			value: "autocreate: true",
+		},
+		{
+			name:  "context",
+			value: "context: minikube",
+		},
+		{
+			name: "push",
+			value: `push:
+                   context: .
+                   dockerfile: Dockerfile
+                   target: prod`,
+		},
+		{
+			name:  "secrets",
+			value: "secrets: []",
+		},
+		{
+			name:  "healthchecks",
+			value: "healthchecks: true",
+		},
+		{
+			name: "probes",
+			value: `probes:
+               liveness: true
+               readiness: true
+               startup: true`,
+		},
+		{
+			name: "lifecycle",
+			value: `lifecycle:
+               postStart: false
+               postStop: true`,
+		},
+		{
+			name: "securityContext",
+			value: `securityContext:
+               runAsUser: 1000
+               runAsGroup: 2000
+               fsGroup: 3000
+               capabilities:
+                 add:
+                 - SYS_PTRACE`,
+		},
+		{
+			name:  "serviceAccount",
+			value: "serviceAccount: sa",
+		},
+		{
+			name:  "remote",
+			value: "remote: 2222",
+		},
+		{
+			name:  "sshServerPort",
+			value: "sshServerPort: 2222",
+		},
+		{
+			name:  "externalVolumes",
+			value: `externalVolumes: []`,
+		},
+		{
+			name: "forward",
+			value: `forward:
+                   - 8080:80`,
+		},
+		{
+			name: "reverse",
+			value: `reverse:
+                   - 9000:9001`,
+		},
+		{
+			name: "reverse",
+			value: `reverse:
+                   - 9000:9001`,
+		},
+		{
+			name:  "interface",
+			value: "interface: 0.0.0.0",
+		},
+		{
+			name:  "services",
+			value: "services: []",
+		},
+		{
+			name: "persistentVolume",
+			value: `persistentVolume:
+                   enabled: true
+                   storageClass: standard
+                   size: 30Gi`,
+		},
+		{
+			name: "initContainer",
+			value: `initContainer:
+                   image: alpine`,
+		},
+		{
+			name:  "initFromImage",
+			value: "initFromImage: true",
+		},
+		{
+			name: "timeout",
+			value: `timeout:
+                   default: 3m
+                   resources: 5m`,
+		},
+		{
+			name: "docker",
+			value: `docker:
+                   enabled: true
+                   image: docker:20-dind
+                   resources:
+                     requests:
+                       cpu: 30m
+                       memory: 30Mi
+                     limits:
+                       cpu: 30m
+                       memory: 30Mi`,
+		},
+		{
+			name: "divert",
+			value: `divert:
+                   ingress: api
+                   service: api
+                   port: 8080`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s is present", tt.name), func(t *testing.T) {
+			manifest := []byte(fmt.Sprintf(`
+name: deployment
+container: core
+image: code/core:0.1.8
+command: ["uwsgi"]
+annotations:
+  key1: value1
+  key2: value2
+labels:
+  key3: value3
+metadata:
+  labels:
+    key4: value4
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "250m"
+  limits:
+    memory: "128Mi"
+    cpu: "500m"
+securityContext:
+  capabilities:
+    add:
+    - SYS_TRACE
+    drop:
+    - SYS_NICE
+serviceAccount: sa
+workdir: /app
+persistentVolume:
+  enabled: true
+timeout: 63s
+services:
+  - name: deployment
+    container: core
+    image: code/core:0.1.8
+    command: ["uwsgi"]
+    annotations:
+      key1: value1
+      key2: value2
+    labels:
+      key3: value3
+    metadata:
+      labels:
+        key4: value4
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    workdir: /app
+    %s`, tt.value))
+			expected := fmt.Sprintf("%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/index.html#services-object-optional for documentation", tt.name)
+
+			_, err := Read(manifest)
+			if err == nil {
+				t.Fatal("Expected to receive error from validateForExtraFields but got none")
+			}
+
+			if err.Error() != expected {
+				t.Errorf("Received error from validateForExtraFields is invalid: got %s, expected %s", err.Error(), expected)
+			}
+		})
+	}
+}
+
 func createEnvFile(content map[string]string) (string, error) {
-	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
 		return "", err
 	}

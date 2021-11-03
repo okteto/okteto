@@ -52,9 +52,11 @@ type Translation struct {
 func (tr *Translation) translate() error {
 	tr.DevModeOff()
 
+	replicas := getPreviousAppReplicas(tr.App)
+	delete(tr.App.ObjectMeta().Annotations, model.StateBeforeSleepingAnnontation)
+
 	tr.DevApp = tr.App.DevClone()
 
-	replicas := getPreviousAppReplicas(tr.App)
 	tr.App.ObjectMeta().Annotations[model.AppReplicasAnnotation] = strconv.Itoa(int(replicas))
 	tr.App.ObjectMeta().Labels[model.DevLabel] = "true"
 	tr.App.SetReplicas(0)
@@ -105,6 +107,7 @@ func (tr *Translation) DevModeOff() error {
 
 	delete(tr.App.ObjectMeta().Labels, model.DevLabel)
 	tr.App.SetReplicas(getPreviousAppReplicas(tr.App))
+	delete(tr.App.ObjectMeta().Annotations, model.AppReplicasAnnotation)
 
 	//TODO: this is for backward compatibility: remove when people is on CLI >= 1.14
 	delete(tr.App.ObjectMeta().Annotations, oktetoVersionAnnotation)

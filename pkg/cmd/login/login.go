@@ -41,7 +41,6 @@ func AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (
 		}
 		log.Infof("authenticated user %s", user.ID)
 
-		log.Success("Logged in as %s @ %s", user.ExternalID, oktetoURL)
 		return user, nil
 	}
 	return &okteto.User{Token: token}, nil

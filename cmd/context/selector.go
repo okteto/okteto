@@ -15,10 +15,12 @@ package context
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -39,10 +41,9 @@ const (
 )
 
 var (
-	cloudOption           = fmt.Sprintf("[Okteto Cloud] %s", okteto.CloudURL)
-	newOEOption           = "New Okteto Cluster URL"
+	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.CloudURL)
+	newOEOption           = "Create new context"
 	oktetoContextsDivider = "Okteto contexts:"
-	k8sContextsDivider    = "Kubernetes contexts:"
 )
 
 type OktetoSelector struct {
@@ -58,53 +59,106 @@ type OktetoSelector struct {
 }
 
 type OktetoTemplates struct {
-	FuncMap  template.FuncMap
-	label    *template.Template
-	active   *template.Template
-	inactive *template.Template
-	selected *template.Template
-	details  *template.Template
-	help     *template.Template
+	FuncMap   template.FuncMap
+	label     *template.Template
+	active    *template.Template
+	inactive  *template.Template
+	selected  *template.Template
+	details   *template.Template
+	help      *template.Template
+	extraInfo *template.Template
 }
 
 type SelectorItem struct {
-	Label  string
-	Enable bool
+	Name      string
+	Label     string
+	Enable    bool
+	isOkteto  bool
+	Namespace string
+	Builder   string
+	Registry  string
 }
 
 func getContextsSelection(ctxOptions *ContextOptions) []SelectorItem {
 	k8sClusters := make([]string, 0)
 	if !ctxOptions.OnlyOkteto {
-		k8sClusters = getKubernetesContextList()
+		k8sClusters = getKubernetesContextList(true)
 	}
 	clusters := make([]SelectorItem, 0)
-	if len(k8sClusters) > 0 {
-		clusters = append(clusters, SelectorItem{Label: oktetoContextsDivider, Enable: false})
-	}
 
-	clusters = append(clusters, SelectorItem{Label: cloudOption, Enable: true})
-
-	ctxStore := okteto.ContextStore()
-	for ctxName := range ctxStore.Contexts {
-		if okteto.IsOktetoURL(ctxName) && ctxName != okteto.CloudURL {
-			clusters = append(clusters, SelectorItem{Label: ctxName, Enable: true})
-		}
-	}
-	clusters = append(clusters, SelectorItem{Label: newOEOption, Enable: true})
+	clusters = append(clusters, SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true, isOkteto: true})
+	clusters = append(clusters, getOktetoClusters(true)...)
 	if len(k8sClusters) > 0 {
-		clusters = append(clusters, SelectorItem{Label: k8sContextsDivider, Enable: false})
-		for _, k8sCluster := range k8sClusters {
-			clusters = append(clusters, SelectorItem{
-				Label:  k8sCluster,
-				Enable: true,
-			})
-		}
+		clusters = append(clusters, getK8sClusters(k8sClusters)...)
 	}
+	clusters = append(clusters, []SelectorItem{
+		{
+			Label:  "",
+			Enable: false,
+		},
+		{
+			Name:   newOEOption,
+			Label:  newOEOption,
+			Enable: true,
+		},
+	}...)
 
 	return clusters
 }
+func getOktetoClusters(skipCloud bool) []SelectorItem {
+	orderedOktetoClusters := make([]SelectorItem, 0)
+	ctxStore := okteto.ContextStore()
+	for ctxName, okCtx := range ctxStore.Contexts {
+		if !okCtx.IsOkteto {
+			continue
+		}
+		if skipCloud && ctxName == okteto.CloudURL {
+			continue
+		}
+		orderedOktetoClusters = append(
+			orderedOktetoClusters,
+			SelectorItem{
+				Name:      ctxName,
+				Label:     ctxName,
+				Enable:    true,
+				isOkteto:  true,
+				Namespace: okCtx.Namespace,
+				Builder:   okCtx.Builder,
+				Registry:  okCtx.Registry,
+			})
+	}
+	sort.Slice(orderedOktetoClusters, func(i, j int) bool {
+		if orderedOktetoClusters[i].Name == okteto.CloudURL {
+			return true
+		}
+		if orderedOktetoClusters[j].Name == okteto.CloudURL {
+			return false
+		}
+		return strings.Compare(orderedOktetoClusters[i].Name, orderedOktetoClusters[j].Name) < 0
+	})
+	return orderedOktetoClusters
+}
 
-func AskForOptions(options []SelectorItem, label string) (string, error) {
+func getK8sClusters(k8sClusters []string) []SelectorItem {
+	orderedK8sClusters := make([]SelectorItem, 0)
+	for _, k8sCluster := range k8sClusters {
+		orderedK8sClusters = append(orderedK8sClusters, SelectorItem{
+			Name:      k8sCluster,
+			Label:     k8sCluster,
+			Enable:    true,
+			isOkteto:  false,
+			Namespace: getKubernetesContextNamespace(k8sCluster),
+			Builder:   "docker",
+			Registry:  "-",
+		})
+	}
+	sort.Slice(orderedK8sClusters, func(i, j int) bool {
+		return strings.Compare(orderedK8sClusters[i].Name, orderedK8sClusters[j].Name) < 0
+	})
+	return orderedK8sClusters
+}
+
+func AskForOptions(ctx context.Context, options []SelectorItem, label string) (string, bool, error) {
 	selectedTemplate := getSelectedTemplate()
 	activeTemplate := getActiveTemplate(options)
 	inactiveTemplate := getInactiveTemplate(options)
@@ -123,20 +177,35 @@ func AskForOptions(options []SelectorItem, label string) (string, error) {
 	}
 
 	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
-
-	optionSelected, err := prompt.Run()
-	if err != nil {
+	optionSelected, isOkteto, err := prompt.Run(ctx)
+	if err != nil || !isValidOption(options, optionSelected) {
 		log.Infof("invalid init option: %s", err)
-		return "", fmt.Errorf("invalid option")
+		return "", false, fmt.Errorf("invalid option")
 	}
 
-	return optionSelected, nil
+	return optionSelected, isOkteto, nil
 }
 
-func (s OktetoSelector) Run() (string, error) {
+func isValidOption(options []SelectorItem, optionSelected string) bool {
+	for _, option := range options {
+		if optionSelected == option.Name {
+			return true
+		}
+	}
+	return false
+}
+
+func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
+	startPosition, err := s.getInitialPosition(ctx)
+	if err != nil {
+		return "", false, err
+	}
+	if startPosition != -1 {
+		s.Items[startPosition].Label += " *"
+	}
 	l, err := list.New(s.Items, s.Size)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	s.list = l
 
@@ -151,7 +220,7 @@ func (s OktetoSelector) Run() (string, error) {
 	c := &readline.Config{}
 	err = c.Init()
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	if runtime.GOOS != "windows" {
 		c.Stdout = &stdout{}
@@ -164,14 +233,10 @@ func (s OktetoSelector) Run() (string, error) {
 
 	rl, err := readline.NewEx(c)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	sb := screenbuf.New(rl)
-	startPosition, err := s.getInitialPosition()
-	if err != nil {
-		return "", err
-	}
 	s.list.SetCursor(startPosition)
 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
@@ -288,7 +353,7 @@ func (s OktetoSelector) Run() (string, error) {
 		sb.Flush()
 		rl.Write([]byte(showCursor))
 		rl.Close()
-		return "", err
+		return "", false, err
 	}
 
 	items, idx := s.list.Items()
@@ -301,7 +366,7 @@ func (s OktetoSelector) Run() (string, error) {
 	rl.Write([]byte(showCursor))
 	rl.Close()
 
-	return s.Items[s.list.Index()].Label, err
+	return s.Items[s.list.Index()].Name, s.Items[s.list.Index()].isOkteto, err
 }
 
 func (s *OktetoSelector) prepareTemplates() error {
@@ -377,20 +442,35 @@ func (s *OktetoSelector) prepareTemplates() error {
 
 	tpls.help = tpl
 
+	extraInfo := changeColorForWindows(`{{ " i " | black | bgBlue }} {{ "Use 'okteto context <URL>' to add a new cluster context" | oktetoblue }}`)
+
+	tpl, err = template.New("").Funcs(tpls.FuncMap).Parse(extraInfo)
+	if err != nil {
+		return err
+	}
+
+	tpls.extraInfo = tpl
+
 	s.OktetoTemplates = tpls
 
 	return nil
 }
 
-func (s OktetoSelector) getInitialPosition() (int, error) {
+func (s OktetoSelector) getInitialPosition(ctx context.Context) (int, error) {
+	ctxStore := okteto.ContextStore()
+	oCtx := ctxStore.CurrentContext
+	if oCtx == "" {
+		return -1, nil
+	}
+	oCtx = okteto.K8sContextToOktetoUrl(ctx, oCtx, ctxStore.Contexts[oCtx].Namespace)
 	idx := 0
 	for _, item := range s.Items {
-		if item.Enable {
+		if strings.Contains(item.Name, oCtx) {
 			return idx, nil
 		}
 		idx += 1
 	}
-	return 0, fmt.Errorf("non selectable item is available")
+	return -1, nil
 }
 
 func (s *OktetoSelector) renderDetails(item interface{}) [][]byte {
@@ -465,7 +545,7 @@ func (s *stdout) Close() error {
 }
 
 func getSelectedTemplate() string {
-	result := "✓  {{ .Label | oktetoblue }}"
+	result := `{{ " ✓ " | bgGreen | black }} {{ .Label | green }}`
 	result = changeColorForWindows(result)
 	return result
 }
@@ -475,7 +555,7 @@ func getActiveTemplate(options []SelectorItem) string {
 	if options[0].Label == oktetoContextsDivider {
 		whitespaces = strings.Repeat(" ", 2)
 	}
-	result := fmt.Sprintf("%s%s {{ .Label | oktetoblue }}", whitespaces, promptui.IconSelect)
+	result := fmt.Sprintf("%s%s {{ .Label }}", whitespaces, promptui.IconSelect)
 	result = changeColorForWindows(result)
 	return result
 }
@@ -485,10 +565,11 @@ func getInactiveTemplate(options []SelectorItem) string {
 	if options[0].Label == oktetoContextsDivider {
 		whitespaces = strings.Repeat(" ", 4)
 	}
-	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label | oktetoblue}}{{else}}• {{ .Label }}{{end}}", whitespaces)
+	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label }}{{else}}%s{{ .Label }}{{end}}", whitespaces, whitespaces)
 	result = changeColorForWindows(result)
 	return result
 }
+
 func changeColorForWindows(template string) string {
 	if runtime.GOOS == "windows" {
 		template = strings.ReplaceAll(template, "oktetoblue", "blue")

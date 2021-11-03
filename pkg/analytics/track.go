@@ -61,6 +61,7 @@ const (
 	execEvent                = "Exec"
 	signupEvent              = "Signup"
 	contextEvent             = "Context"
+	contextUseNamespaceEvent = "Context Use-namespace"
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
 	buildPullErrorEvent      = "BuildPullError"
@@ -98,8 +99,11 @@ func TrackKubeconfig(success bool) {
 }
 
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
-func TrackNamespace(success bool) {
-	track(namespaceEvent, success, nil)
+func TrackNamespace(success, withArg bool) {
+	props := map[string]interface{}{
+		"withArg": withArg,
+	}
+	track(namespaceEvent, success, props)
 }
 
 // TrackCreateNamespace sends a tracking event to mixpanel when the creates a namespace
@@ -245,10 +249,6 @@ func TrackDestroyStack(success bool) {
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
 func TrackLogin(success bool) {
-	if !get().Enabled {
-		return
-	}
-
 	track(loginEvent, success, nil)
 }
 
@@ -263,10 +263,12 @@ func TrackSignup(success bool, userID string) {
 
 // TrackContext sends a tracking event to mixpanel when the user use context in
 func TrackContext(success bool) {
-	if !get().Enabled {
-		return
-	}
 	track(contextEvent, success, nil)
+}
+
+// TrackContextUseNamespace sends a tracking event to mixpanel when the user use context in
+func TrackContextUseNamespace(success bool) {
+	track(contextUseNamespaceEvent, success, nil)
 }
 
 func TrackStackWarnings(warnings []string) {
@@ -295,6 +297,11 @@ func track(event string, success bool, props map[string]interface{}) {
 	if !get().Enabled {
 		return
 	}
+
+	if !okteto.IsContextInitialized() || (!okteto.Context().Analytics && !okteto.IsOktetoCloud()) {
+		return
+	}
+
 	mpOS := ""
 	switch runtime.GOOS {
 	case "darwin":
@@ -325,6 +332,11 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)
 	props["context"] = okteto.Context().Name
+	if termType := os.Getenv("TERM"); termType == "" {
+		props["term-type"] = "other"
+	} else {
+		props["term-type"] = termType
+	}
 
 	e := &mixpanel.Event{Properties: props}
 	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {

@@ -43,6 +43,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -824,6 +825,7 @@ func writeManifest(path, name string) error {
 }
 
 func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
+	okteto.CurrentStore = nil
 	log.Printf("creating namespace %s", namespace)
 	args := []string{"create", "namespace", namespace, "-l", "debug"}
 	cmd := exec.Command(oktetoPath, args...)
@@ -835,15 +837,28 @@ func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 
 	log.Printf("create namespace output: \n%s\n", string(o))
 
-	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
+	n := okteto.Context().Namespace
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
-
+	if err := updateKubeConfig(oktetoPath); err != nil {
+		return err
+	}
 	return nil
 }
 
+func updateKubeConfig(oktetoPath string) error {
+	args := []string{"ctx", "update-kubeconfig"}
+	cmd := exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
+	}
+	return nil
+}
 func changeToNamespace(ctx context.Context, oktetoPath, namespace string) error {
+	okteto.CurrentStore = nil
 	log.Printf("changing to namespace %s", namespace)
 	args := []string{"namespace", namespace, "-l", "debug"}
 	cmd := exec.Command(oktetoPath, args...)
@@ -855,9 +870,16 @@ func changeToNamespace(ctx context.Context, oktetoPath, namespace string) error 
 
 	log.Printf("namespace output: \n%s\n", string(o))
 
-	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
+	n := okteto.Context().Namespace
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
+	}
+	args = []string{"ctx", "update-kubeconfig"}
+	cmd = exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
 	}
 
 	return nil

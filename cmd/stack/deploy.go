@@ -32,7 +32,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
-		Short: "Deploys a stack",
+		Short: "Deploy a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if model.FileExists(".env") {

@@ -129,9 +129,9 @@ func Test_initFromEnvVars(t *testing.T) {
 				Token: "token",
 			},
 			want: &ContextOptions{
-				Token:   "token",
-				Context: okteto.CloudURL,
-				Save:    true,
+				Token:    "token",
+				Context:  okteto.CloudURL,
+				isOkteto: true,
 			},
 		},
 		{
@@ -141,9 +141,9 @@ func Test_initFromEnvVars(t *testing.T) {
 			},
 			env: map[string]string{"OKTETO_TOKEN": "bad-token"},
 			want: &ContextOptions{
-				Token:   "token",
-				Context: okteto.CloudURL,
-				Save:    true,
+				Token:    "token",
+				Context:  okteto.CloudURL,
+				isOkteto: true,
 			},
 		},
 		{
@@ -151,9 +151,9 @@ func Test_initFromEnvVars(t *testing.T) {
 			in:   &ContextOptions{},
 			env:  map[string]string{"OKTETO_TOKEN": "token"},
 			want: &ContextOptions{
-				Token:   "token",
-				Context: okteto.CloudURL,
-				Save:    true,
+				Token:    "token",
+				Context:  okteto.CloudURL,
+				isOkteto: true,
 			},
 		},
 		{
@@ -181,7 +181,6 @@ func Test_initFromEnvVars(t *testing.T) {
 			env:  map[string]string{"OKTETO_CONTEXT": "okteto-context"},
 			want: &ContextOptions{
 				Context: "okteto-context",
-				Save:    true,
 			},
 		},
 		{
@@ -189,8 +188,8 @@ func Test_initFromEnvVars(t *testing.T) {
 			in:   &ContextOptions{},
 			env:  map[string]string{"OKTETO_URL": "okteto-url"},
 			want: &ContextOptions{
-				Context: "okteto-url",
-				Save:    true,
+				Context:  "okteto-url",
+				isOkteto: true,
 			},
 		},
 		{
@@ -200,9 +199,9 @@ func Test_initFromEnvVars(t *testing.T) {
 			},
 			env: map[string]string{"OKTETO_URL": "okteto-url"},
 			want: &ContextOptions{
-				Token:   "token",
-				Context: "okteto-url",
-				Save:    true,
+				Token:    "token",
+				Context:  "okteto-url",
+				isOkteto: true,
 			},
 		},
 		{
@@ -210,9 +209,9 @@ func Test_initFromEnvVars(t *testing.T) {
 			in:   &ContextOptions{},
 			env:  map[string]string{"OKTETO_URL": "okteto-url", "OKTETO_TOKEN": "token-envvar"},
 			want: &ContextOptions{
-				Token:   "token-envvar",
-				Context: "okteto-url",
-				Save:    true,
+				Token:    "token-envvar",
+				Context:  "okteto-url",
+				isOkteto: true,
 			},
 		},
 		{

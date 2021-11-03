@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -91,6 +92,11 @@ func ExpandOktetoGlobalRegistry(tag string) string {
 // ExpandOktetoDevRegistry translates okteto.dev
 func ExpandOktetoDevRegistry(tag string) string {
 	return replaceRegistry(tag, okteto.DevRegistry, okteto.Context().Namespace)
+}
+
+// TransformOktetoDevToGlobalRegistry returns the tag pointing to the global registry
+func TransformOktetoDevToGlobalRegistry(tag string) string {
+	return strings.Replace(tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 }
 
 // SplitRegistryAndImage returns image tag and the registry to push the image
@@ -183,18 +189,45 @@ func getRegistryURL(image string) string {
 	}
 }
 
+// IsGlobalRegistry returns true if the tag is short for global registry
 func IsGlobalRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.GlobalRegistry)
 }
 
+// IsDevRegistry returns true if the tag is short for namespace registry
 func IsDevRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.DevRegistry)
 }
 
+// IsDevRegistry returns true if the tag is short for registry at Okteto
 func IsOktetoRegistry(tag string) bool {
 	return IsDevRegistry(tag) || IsGlobalRegistry(tag)
 }
 
+// replaceRegistry returns tag with registry replaced by the given
 func replaceRegistry(input, registryType, namespace string) string {
 	return strings.Replace(input, registryType, fmt.Sprintf("%s/%s", okteto.Context().Registry, namespace), 1)
+}
+
+// IsImageAtRegistry returns true if the image is at the global or personal registry already
+func IsImageAtRegistry(image string) (ok bool) {
+	if !IsOktetoRegistry(image) {
+		return false
+	}
+	okCommit := os.Getenv("OKTETO_GIT_COMMIT")
+	if okCommit != "" && strings.Contains(image, okCommit) {
+		globalRegistryTag := image
+		if IsDevRegistry(image) {
+			globalRegistryTag = TransformOktetoDevToGlobalRegistry(image)
+		}
+		if _, err := GetImageTagWithDigest(globalRegistryTag); err == nil {
+			log.Information("Skipping build: image is already built at the global registry\nForce the build by using the flag --no-cache")
+			return true
+		}
+		if _, err := GetImageTagWithDigest(image); err == nil {
+			log.Information("Skipping build: image is already built at registry\nForce the build by using the flag --no-cache")
+			return true
+		}
+	}
+	return false
 }

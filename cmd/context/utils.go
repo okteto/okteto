@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -33,11 +34,17 @@ type SelectItem struct {
 	Enable bool
 }
 
-func getKubernetesContextList() []string {
+func getKubernetesContextList(filterOkteto bool) []string {
 	contextList := make([]string, 0)
 	kubeconfigFile := config.GetKubeconfigPath()
 	cfg := kubeconfig.Get(kubeconfigFile)
 	if cfg == nil {
+		return contextList
+	}
+	if !filterOkteto {
+		for name := range cfg.Contexts {
+			contextList = append(contextList, name)
+		}
 		return contextList
 	}
 	for name := range cfg.Contexts {
@@ -49,37 +56,30 @@ func getKubernetesContextList() []string {
 	return contextList
 }
 
-func isOktetoCluster(option string) bool {
-	if option == cloudOption {
-		return true
+func getKubernetesContextNamespace(k8sContext string) string {
+	kubeconfigFile := config.GetKubeconfigPath()
+	cfg := kubeconfig.Get(kubeconfigFile)
+	if cfg == nil {
+		return ""
 	}
-
-	if option == newOEOption {
-		return true
+	if cfg.Contexts[k8sContext].Namespace == "" {
+		return "default"
 	}
-
-	return okteto.IsOktetoURL(option)
+	return cfg.Contexts[k8sContext].Namespace
 }
 
-func getOktetoClusterUrl(option string) string {
-	if option == cloudOption {
-		return okteto.CloudURL
-	}
-
-	if okteto.IsOktetoURL(option) {
-		return option
-	}
-
-	return askForOktetoURL()
+func isCreateNewContextOption(option string) bool {
+	return option == newOEOption
 }
 
 func askForOktetoURL() string {
 	clusterURL := okteto.CloudURL
 	ctxStore := okteto.ContextStore()
-	if okteto.IsOktetoURL(ctxStore.CurrentContext) {
+	if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
 		clusterURL = ctxStore.CurrentContext
 	}
-	fmt.Printf("What is the URL of your Okteto Cluster? [%s]: ", strings.TrimSuffix(clusterURL, "/"))
+
+	log.Question("Enter your Okteto URL [%s]: ", clusterURL)
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)
@@ -93,7 +93,7 @@ func askForOktetoURL() string {
 }
 
 func isValidCluster(cluster string) bool {
-	for _, c := range getKubernetesContextList() {
+	for _, c := range getKubernetesContextList(false) {
 		if cluster == c {
 			return true
 		}

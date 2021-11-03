@@ -25,9 +25,9 @@ type ContextOptions struct {
 	Namespace    string
 	Builder      string
 	OnlyOkteto   bool
-	Save         bool
 	Show         bool
 	isCtxCommand bool
+	isOkteto     bool
 }
 
 func (o *ContextOptions) initFromContext() {
@@ -47,6 +47,7 @@ func (o *ContextOptions) initFromContext() {
 		if o.Namespace == "" {
 			o.Namespace = okCtx.Namespace
 		}
+		o.isOkteto = okCtx.IsOkteto
 	}
 }
 
@@ -57,19 +58,18 @@ func (o *ContextOptions) initFromEnvVars() {
 
 	if o.Context == "" && os.Getenv("OKTETO_URL") != "" {
 		o.Context = os.Getenv("OKTETO_URL")
-		o.Save = true
+		o.isOkteto = true
 	}
 
 	if o.Context == "" && os.Getenv("OKTETO_CONTEXT") != "" {
 		o.Context = os.Getenv("OKTETO_CONTEXT")
-		o.Save = true
 	}
 
 	if o.Token != "" {
+		o.isOkteto = true
 		if o.Context == "" {
 			o.Context = okteto.CloudURL
 		}
-		o.Save = true
 	}
 
 	if o.Namespace == "" && os.Getenv("OKTETO_NAMESPACE") != "" {

@@ -43,9 +43,9 @@ func (c *OktetoClient) CreateNamespace(ctx context.Context, namespace string) (s
 	variables := map[string]interface{}{
 		"name": graphql.String(namespace),
 	}
-	err := c.client.Mutate(ctx, &mutation, variables)
+	err := c.Mutate(ctx, &mutation, variables)
 	if err != nil {
-		return "", translateAPIErr(err)
+		return "", err
 	}
 
 	return string(mutation.Space.Id), nil
@@ -60,9 +60,9 @@ func (c *OktetoClient) ListNamespaces(ctx context.Context) ([]Namespace, error) 
 		} `graphql:"spaces"`
 	}
 
-	err := c.client.Query(ctx, &query, nil)
+	err := c.Query(ctx, &query, nil)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	result := make([]Namespace, 0)
@@ -92,9 +92,9 @@ func (c *OktetoClient) AddNamespaceMembers(ctx context.Context, namespace string
 		"id":      graphql.String(namespace),
 		"members": membersVariable,
 	}
-	err := c.client.Mutate(ctx, &mutation, variables)
+	err := c.Mutate(ctx, &mutation, variables)
 	if err != nil {
-		return translateAPIErr(err)
+		return err
 	}
 
 	return nil
@@ -110,9 +110,9 @@ func (c *OktetoClient) DeleteNamespace(ctx context.Context, namespace string) er
 	variables := map[string]interface{}{
 		"id": graphql.String(namespace),
 	}
-	err := c.client.Mutate(ctx, &mutation, variables)
+	err := c.Mutate(ctx, &mutation, variables)
 	if err != nil {
-		return translateAPIErr(err)
+		return err
 	}
 
 	return nil

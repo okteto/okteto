@@ -43,30 +43,41 @@ type BuildOptions struct {
 }
 
 // Run runs the build sequence
-func Run(ctx context.Context, namespace string, buildOptions BuildOptions) error {
-	if okteto.Context().Buildkit == "" {
+func Run(ctx context.Context, buildOptions BuildOptions) error {
+	if okteto.Context().Builder == "" {
 		if err := buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
-		if err := buildWithOkteto(ctx, namespace, buildOptions); err != nil {
+		skipped, err := buildWithOkteto(ctx, buildOptions)
+		if err != nil {
 			return err
 		}
+		if skipped {
+			return nil
+		}
+	}
+	if buildOptions.Tag == "" {
+		log.Success("Build succeeded")
+		log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
+	} else {
+		log.Success(fmt.Sprintf("Image '%s' successfully pushed", buildOptions.Tag))
 	}
 	return nil
 }
 
-func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOptions) error {
-	log.Infof("building your image on %s", okteto.Context().Buildkit)
+// buildWithOkteto build and pushes the image to the registry, if skipped will return bool true, if error, will return error
+func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) (bool, error) {
+	log.Infof("building your image on %s", okteto.Context().Builder)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if buildOptions.File != "" {
 		buildOptions.File, err = registry.GetDockerfile(buildOptions.File)
 		if err != nil {
-			return err
+			return false, err
 		}
 		defer os.Remove(buildOptions.File)
 	}
@@ -74,11 +85,15 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 	if buildOptions.Tag != "" {
 		err = validateImage(buildOptions.Tag)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
+	isOktetoRegistry := registry.IsOktetoRegistry(buildOptions.Tag)
 	if okteto.IsOkteto() {
+		if ok := registry.IsImageAtRegistry(buildOptions.Tag); ok {
+			return true, nil
+		}
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)
 		for i := range buildOptions.CacheFrom {
@@ -88,7 +103,7 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 	}
 	opt, err := getSolveOpt(buildOptions)
 	if err != nil {
-		return errors.Wrap(err, "failed to create build solver")
+		return false, errors.Wrap(err, "failed to create build solver")
 	}
 
 	err = solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
@@ -106,27 +121,27 @@ func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOp
 			log.Infof("Failed to build image: %s", err.Error())
 		}
 		err = registry.GetErrorMessage(err, buildOptions.Tag)
-		analytics.TrackBuildTransientError(okteto.Context().Buildkit, success)
-		return err
+		analytics.TrackBuildTransientError(okteto.Context().Builder, success)
+		return false, err
 	}
 
-	_, err = registry.GetImageTagWithDigest(buildOptions.Tag)
-	if err != nil {
-		log.Yellow(`Failed to push '%s' metadata to the registry:
-		%s,
-		Retrying ...`, buildOptions.Tag, err.Error())
-		success := true
-		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
-		if err != nil {
-			success = false
-			log.Infof("Failed to build image: %s", err.Error())
+	if isOktetoRegistry {
+		if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
+			log.Yellow(`Failed to push '%s' metadata to the registry:
+  %s,
+  Retrying ...`, buildOptions.Tag, err.Error())
+			success := true
+			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+			if err != nil {
+				success = false
+				log.Infof("Failed to build image: %s", err.Error())
+			}
+			err = registry.GetErrorMessage(err, buildOptions.Tag)
+			analytics.TrackBuildPullError(okteto.Context().Builder, success)
+			return false, err
 		}
-		err = registry.GetErrorMessage(err, buildOptions.Tag)
-		analytics.TrackBuildPullError(okteto.Context().Buildkit, success)
-		return err
 	}
-	err = registry.GetErrorMessage(err, buildOptions.Tag)
-	return err
+	return false, nil
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209

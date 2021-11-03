@@ -41,9 +41,9 @@ func (c *OktetoClient) GetSecrets(ctx context.Context) ([]Secret, error) {
 		} `graphql:"getGitDeploySecrets"`
 	}
 
-	err := c.client.Query(ctx, &query, nil)
+	err := c.Query(ctx, &query, nil)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	secrets := make([]Secret, 0)
@@ -89,9 +89,9 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 	variables := map[string]interface{}{
 		"cred": graphql.String(""),
 	}
-	err := c.client.Query(ctx, &query, variables)
+	err := c.Query(ctx, &query, variables)
 	if err != nil {
-		return nil, translateAPIErr(err)
+		return nil, err
 	}
 
 	secrets := make([]Secret, 0)
@@ -106,9 +106,7 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 
 	globalNamespace := getGlobalNamespace(string(query.User.GlobalNamespace))
 	analytics := bool(query.User.Analytics)
-	if IsOktetoCloud() {
-		analytics = true
-	}
+
 	result := &UserContext{
 		User: User{
 			ID:              string(query.User.Id),

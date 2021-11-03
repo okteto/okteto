@@ -14,8 +14,10 @@
 package context
 
 import (
+	"context"
 	"fmt"
-	"sort"
+	"os"
+	"text/tabwriter"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -28,22 +30,11 @@ func List() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
-		Short:   "Lists okteto contexts",
+		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oCtxs := okteto.ContextStore()
-			contexts := make([]string, 0)
-			for name := range oCtxs.Contexts {
-				if name == oCtxs.CurrentContext {
-					contexts = append(contexts, fmt.Sprintf("* %s", name))
-				} else {
-					contexts = append(contexts, fmt.Sprintf("  %s", name))
-				}
-			}
-			sort.Slice(contexts, func(i, j int) bool {
-				return len(contexts[i]) < len(contexts[j])
-			})
-			for _, ctx := range contexts {
-				fmt.Println(ctx)
+			ctx := context.Background()
+			if err := executeListContext(ctx); err != nil {
+				return err
 			}
 
 			return nil
@@ -51,4 +42,30 @@ func List() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func executeListContext(ctx context.Context) error {
+	contexts := getOktetoClusters(false)
+	contexts = append(contexts, getK8sClusters(getKubernetesContextList(true))...)
+
+	if len(contexts) == 0 {
+		return fmt.Errorf("no contexts are available. Run 'okteto context' to configure your first okteto context")
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
+	fmt.Fprintf(w, "Name\tNamespace\tBuilder\tRegistry\n")
+	ctxStore := okteto.ContextStore()
+	for _, ctxSelector := range contexts {
+		if okCtx, ok := ctxStore.Contexts[ctxSelector.Name]; ok && okCtx.Builder != "" {
+			ctxSelector.Builder = okCtx.Builder
+		}
+
+		if ctxSelector.Name == ctxStore.CurrentContext {
+			ctxSelector.Name += " *"
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ctxSelector.Name, ctxSelector.Namespace, ctxSelector.Builder, ctxSelector.Registry)
+	}
+
+	w.Flush()
+	return nil
 }
