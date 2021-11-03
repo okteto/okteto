@@ -27,9 +27,10 @@ import (
 // Namespace fetch credentials for a cluster namespace
 func Namespace(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "namespace [name]",
-		Short: "Download k8s credentials for a namespace",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
+		Use:    "namespace [name]",
+		Hidden: true,
+		Short:  "Download k8s credentials for a namespace",
+		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			namespace := ""
