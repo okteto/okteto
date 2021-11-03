@@ -62,7 +62,7 @@ func executeDeleteNamespace(ctx context.Context, namespace string) error {
 	log.Success("Namespace '%s' deleted", namespace)
 	okteto.Context().Namespace = ""
 	os.Setenv("OKTETO_NAMESPACE", "")
-	if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{Show: true, SkipComprobation: true}); err != nil {
+	if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{Show: true, SkipComprobation: true, Save: true}); err != nil {
 		return err
 	}
 	return nil
