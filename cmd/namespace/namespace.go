@@ -55,7 +55,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			analytics.TrackNamespace(err == nil)
+			analytics.TrackNamespace(err == nil, len(args) > 0)
 			return err
 		},
 	}

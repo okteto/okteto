@@ -98,8 +98,11 @@ func TrackKubeconfig(success bool) {
 }
 
 // TrackNamespace sends a tracking event to mixpanel when the user changes a namespace
-func TrackNamespace(success bool) {
-	track(namespaceEvent, success, nil)
+func TrackNamespace(success, withArg bool) {
+	props := map[string]interface{}{
+		"withArg": withArg,
+	}
+	track(namespaceEvent, success, props)
 }
 
 // TrackCreateNamespace sends a tracking event to mixpanel when the creates a namespace
