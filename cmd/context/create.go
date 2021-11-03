@@ -83,6 +83,10 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 		ctxOptions.isOkteto = true
 	}
 
+	if ctxOptions.Context == okteto.CloudURL {
+		ctxOptions.isOkteto = true
+	}
+
 	if !ctxOptions.isOkteto {
 		if !isValidCluster(ctxOptions.Context) {
 			log.Fail("%s: invalid okteto context", ctxOptions.Context)

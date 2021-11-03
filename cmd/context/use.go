@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -56,7 +57,7 @@ Or show a list of available contexts with:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if len(args) == 1 {
-				ctxOptions.Context = args[0]
+				ctxOptions.Context = strings.TrimSuffix(args[0], "/")
 			}
 
 			ctxOptions.isCtxCommand = true
