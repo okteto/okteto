@@ -53,6 +53,7 @@ type StackDeployOptions struct {
 	NoCache          bool
 	Timeout          time.Duration
 	ServicesToDeploy []string
+	Progress         string
 }
 
 // Deploy deploys a stack
