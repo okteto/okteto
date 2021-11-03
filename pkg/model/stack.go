@@ -349,6 +349,9 @@ func (s *Stack) Validate() error {
 		}
 		svc.IgnoreSyncVolumes(s)
 	}
+	if err := validateDependsOn(s); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -362,6 +365,29 @@ func validateStackName(name string) error {
 	}
 	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") {
 		return fmt.Errorf(errBadStackName)
+	}
+	return nil
+}
+
+func validateDependsOn(s *Stack) error {
+	for svcName, svc := range s.Services {
+		for dependentSvc, condition := range svc.DependsOn {
+			if svcName == dependentSvc {
+				return fmt.Errorf(" Service '%s' depends can not depend of itself.", svcName)
+			}
+			if _, ok := s.Services[dependentSvc]; !ok {
+				return fmt.Errorf(" Service '%s' depends on service '%s' which is undefined.", svcName, dependentSvc)
+			}
+			if condition.Condition == DependsOnServiceCompleted && !s.Services[dependentSvc].IsJob() {
+				return fmt.Errorf(" Service '%s' is not a job. Please change the reset policy so that it is not always in service '%s' ", dependentSvc, dependentSvc)
+			}
+		}
+	}
+
+	dependencyCycle := getDependentCyclic(s)
+	if len(dependencyCycle) > 0 {
+		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(dependencyCycle[:len(dependencyCycle)-1], ", "), dependencyCycle[len(dependencyCycle)-1])
+		return fmt.Errorf(" There was a cyclic dependendecy between %s.", svcsDependents)
 	}
 	return nil
 }
