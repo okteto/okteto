@@ -56,7 +56,7 @@ var (
 type OktetoContext struct {
 	Name            string               `json:"name" yaml:"name,omitempty"`
 	UserID          string               `json:"-"`
-	Username        string               `json:"username,omitempty" yaml:"username,omitempty"`
+	Username        string               `json:"-"`
 	Token           string               `json:"token,omitempty" yaml:"token,omitempty"`
 	Namespace       string               `json:"namespace" yaml:"namespace,omitempty"`
 	Cfg             *clientcmdapi.Config `json:"-"`
@@ -101,7 +101,6 @@ func InitContextWithDeprecatedToken() {
 
 	ctxStore.Contexts[token.URL] = &OktetoContext{
 		Name:        token.URL,
-		Username:    token.Username,
 		Namespace:   kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
 		Token:       token.Token,
 		Builder:     token.Buildkit,
