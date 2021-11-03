@@ -184,6 +184,16 @@ func initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = userContext.User.Namespace
 	}
+	hasAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace)
+	if err != nil {
+		return err
+	}
+	if !hasAccess {
+		return errors.UserError{E: fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
+			Hint: "Please verify that the namespace exists and that you have access to it.",
+		}
+	}
+
 	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace)
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
