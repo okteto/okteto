@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -43,7 +44,7 @@ func ListEndpoints(ctx context.Context, stack *model.Stack, output string) error
 		fmt.Println(string(bytes))
 	default:
 		if len(endpointList) == 0 {
-			fmt.Printf("There are no available endpoints for stack '%s'\n", stack.Name)
+			log.Information("There are no available endpoints for stack '%s'\n", stack.Name)
 		} else {
 			endpoints := make([]string, 0)
 			for _, endpoint := range endpointList {
@@ -52,7 +53,7 @@ func ListEndpoints(ctx context.Context, stack *model.Stack, output string) error
 			sort.Slice(endpoints, func(i, j int) bool {
 				return len(endpoints[i]) < len(endpoints[j])
 			})
-			fmt.Printf("Available endpoints for stack '%s':\n  - %s\n", stack.Name, strings.Join(endpoints, "\n  - "))
+			log.Information("Available endpoints for stack '%s':\n  - %s\n", stack.Name, strings.Join(endpoints, "\n  - "))
 		}
 	}
 	return nil
