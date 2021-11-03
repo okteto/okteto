@@ -15,10 +15,12 @@ package context
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -56,7 +58,7 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.isOkteto = true
 
-			_, err := UseContext(ctx, ctxOptions)
+			err := UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				return err
@@ -70,7 +72,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	return cmd
 }
 
-func UseContext(ctx context.Context, ctxOptions *ContextOptions) (bool, error) {
+func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	created := false
 
 	ctxStore := okteto.ContextStore()
@@ -85,12 +87,8 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) (bool, error) {
 
 	if !ctxOptions.isOkteto {
 		if !isValidCluster(ctxOptions.Context) {
-			log.Fail("%s: invalid okteto context", ctxOptions.Context)
-			ctxOptions = &ContextOptions{}
-			ctxOptions.isCtxCommand = true
-			err := Run(ctx, ctxOptions)
-			analytics.TrackContext(err == nil)
-			return true, err
+			return errors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
+				Hint: "Please run 'okteto context' to select one context"}
 		}
 
 		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
@@ -112,15 +110,15 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) (bool, error) {
 
 	if ctxOptions.isOkteto {
 		if err := initOktetoContext(ctx, ctxOptions); err != nil {
-			return false, err
+			return err
 		}
 	} else {
 		if err := initKubernetesContext(ctxOptions); err != nil {
-			return false, err
+			return err
 		}
 	}
 	if err := okteto.WriteOktetoContextConfig(); err != nil {
-		return false, err
+		return err
 	}
 	if created && ctxOptions.isOkteto {
 		log.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
@@ -130,5 +128,5 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) (bool, error) {
 		log.Success("Using context %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
 	}
 
-	return false, nil
+	return nil
 }
