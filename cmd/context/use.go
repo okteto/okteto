@@ -72,6 +72,7 @@ Or a Kubernetes context:
 			return nil
 		},
 	}
+	cmd.AddCommand(Namespace())
 
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
