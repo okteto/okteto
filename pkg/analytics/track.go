@@ -246,10 +246,6 @@ func TrackDestroyStack(success bool) {
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in
 func TrackLogin(success bool) {
-	if !get().Enabled {
-		return
-	}
-
 	track(loginEvent, success, nil)
 }
 
@@ -264,17 +260,11 @@ func TrackSignup(success bool, userID string) {
 
 // TrackContext sends a tracking event to mixpanel when the user use context in
 func TrackContext(success bool) {
-	if !get().Enabled {
-		return
-	}
 	track(contextEvent, success, nil)
 }
 
 // TrackContextUseNamespace sends a tracking event to mixpanel when the user use context in
 func TrackContextUseNamespace(success bool) {
-	if !get().Enabled {
-		return
-	}
 	track(contextUseNamespaceEvent, success, nil)
 }
 
