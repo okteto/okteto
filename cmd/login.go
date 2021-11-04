@@ -26,7 +26,7 @@ import (
 
 // Login starts the login handshake with GitHub and okteto
 func Login() *cobra.Command {
-    log.Information("okteto login will soon be depreciated, run okteto context to configure your cluster.")
+    log.Warning("'okteto login' will soon be depreciated, run 'okteto context' to configure your cluster.")
 	token := ""
 	cmd := &cobra.Command{
 		Hidden: true,
