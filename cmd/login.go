@@ -21,7 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/okteto"
-    "github.com/spf13/cobra"
+	"github.com/spf13/cobra"
 )
 
 // Login starts the login handshake with GitHub and okteto
