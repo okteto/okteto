@@ -58,15 +58,12 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.IsOkteto = true
 			ctxOptions.IsCtxCommand = true
+			ctxOptions.Show = true
 			ctxOptions.Save = true
 
-			err := UseContext(ctx, ctxOptions)
+			err := Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
-			if err != nil {
-				return err
-			}
-			log.Information("Run 'okteto context update-kubeconfig' to update your kubectl credentials")
-			return nil
+			return err
 		},
 	}
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
