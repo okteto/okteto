@@ -50,9 +50,8 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 				args[0] = okteto.AddSchema(args[0])
 				args[0] = strings.TrimSuffix(args[0], "/")
 			}
-			contextCommand := contextCMD.Context()
+			contextCommand := contextCMD.CreateCMD()
 			contextCommand.Flags().Set("token", token)
-			contextCommand.Flags().Set("okteto", "true")
 			err := contextCommand.RunE(cmd, args)
 			if err != nil {
 				analytics.TrackLogin(false)
