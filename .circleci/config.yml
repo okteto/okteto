@@ -81,7 +81,7 @@ jobs:
           at: ./artifacts
       - add_ssh_keys:
           fingerprints:
-            - c7:54:e1:73:e1:27:24:47:5e:52:d8:e1:b7:e3:b8:b0
+            - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
       - deploy:
           name: Update brew formula
           command: |
@@ -169,7 +169,7 @@ jobs:
             ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
       - add_ssh_keys:
           fingerprints:
-            - c7:54:e1:73:e1:27:24:47:5e:52:d8:e1:b7:e3:b8:b0
+            - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
       - deploy:
           name: Update brew formula
           command: |
