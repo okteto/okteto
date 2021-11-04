@@ -14,7 +14,8 @@
 package cmd
 
 import (
-	"strings"
+    "github.com/okteto/okteto/pkg/log"
+    "strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -25,6 +26,7 @@ import (
 
 // Login starts the login handshake with GitHub and okteto
 func Login() *cobra.Command {
+    log.Information("okteto login will soon be depreciated, run okteto context to configure your cluster.")
 	token := ""
 	cmd := &cobra.Command{
 		Hidden: true,
