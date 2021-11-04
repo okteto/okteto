@@ -35,7 +35,7 @@ func Use() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
 		Use:   "use [<url>|Kubernetes context]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use"),
 		Short: "Set the default context",
 		Long: `Set the default context
 

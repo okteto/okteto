@@ -28,7 +28,7 @@ import (
 func DeleteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
+		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#delete"),
 		Short: "Delete a context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()

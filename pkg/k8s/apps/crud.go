@@ -118,7 +118,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c
 		for _, rule := range tr.Rules {
 			devContainer := GetDevContainer(tr.App.PodSpec(), rule.Container)
 			if devContainer == nil {
-				return nil, fmt.Errorf("%s '%s': container '%s' not found", tr.App.TypeMeta().Kind, tr.App.ObjectMeta().Name, rule.Container)
+				return nil, fmt.Errorf("%s '%s': container '%s' not found", tr.App.Kind(), tr.App.ObjectMeta().Name, rule.Container)
 			}
 			rule.Container = devContainer.Name
 			if rule.Image == "" {

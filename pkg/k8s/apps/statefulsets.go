@@ -32,15 +32,16 @@ import (
 )
 
 type StatefulSetApp struct {
-	sfs *appsv1.StatefulSet
+	kind string
+	sfs  *appsv1.StatefulSet
 }
 
 func NewStatefulSetApp(sfs *appsv1.StatefulSet) *StatefulSetApp {
-	return &StatefulSetApp{sfs: sfs}
+	return &StatefulSetApp{kind: model.StatefulSet, sfs: sfs}
 }
 
-func (i *StatefulSetApp) TypeMeta() metav1.TypeMeta {
-	return i.sfs.TypeMeta
+func (i *StatefulSetApp) Kind() string {
+	return i.kind
 }
 
 func (i *StatefulSetApp) ObjectMeta() metav1.ObjectMeta {

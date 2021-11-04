@@ -27,7 +27,7 @@ func UseNamespace() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
 		Use:   "use-namespace [name]",
-		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
+		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use-namespace"),
 		Short: "Set the namespace of the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
