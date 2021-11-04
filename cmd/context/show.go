@@ -29,7 +29,7 @@ func Show() *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
 		Use:   "show",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#show"),
 		Short: "Print the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()

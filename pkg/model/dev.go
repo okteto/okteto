@@ -1099,28 +1099,28 @@ func GetTimeout() (time.Duration, error) {
 
 func (dev *Dev) translateDeprecatedMetadataFields() error {
 	if len(dev.Labels) > 0 {
-		log.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector-mapstringstring-optional)")
+		log.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for k, v := range dev.Labels {
 			dev.Selector[k] = v
 		}
 	}
 
 	if len(dev.Annotations) > 0 {
-		log.Warning("The field 'annotations' is deprecated. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata-object-optional)")
+		log.Warning("The field 'annotations' is deprecated. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
 		for k, v := range dev.Annotations {
 			dev.Metadata.Annotations[k] = v
 		}
 	}
 	for _, s := range dev.Services {
 		if len(s.Labels) > 0 {
-			log.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector-mapstringstring-optional)", s.Name)
+			log.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
 			for k, v := range s.Labels {
 				s.Selector[k] = v
 			}
 		}
 
 		if len(s.Annotations) > 0 {
-			log.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata-object-optional)", s.Name)
+			log.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
 			for k, v := range s.Annotations {
 				s.Metadata.Annotations[k] = v
 			}
@@ -1130,7 +1130,7 @@ func (dev *Dev) translateDeprecatedMetadataFields() error {
 }
 
 func (service *Dev) validateForExtraFields() error {
-	errorMessage := "%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/index.html#services-object-optional for documentation"
+	errorMessage := "%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/#services for documentation"
 	if service.Username != "" {
 		return fmt.Errorf(errorMessage, "username")
 	}

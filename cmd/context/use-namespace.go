@@ -11,54 +11,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package namespace
+package context
 
 import (
 	"context"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-// Namespace fetch credentials for a cluster namespace
-func Namespace(ctx context.Context) *cobra.Command {
+// Namespace changes your current context namespace.
+func UseNamespace() *cobra.Command {
+	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
-		Use:    "namespace [name]",
-		Hidden: true,
-		Short:  "Download k8s credentials for a namespace",
-		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
+		Use:   "use-namespace [name]",
+		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use-namespace"),
+		Short: "Set the namespace of the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			namespace := ""
-			if len(args) > 0 {
-				namespace = args[0]
-			}
-
-			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
-			}
-			err := contextCMD.Run(
-				ctx,
-				&contextCMD.ContextOptions{
-					Namespace: namespace,
-				},
-			)
-
+			ctx := context.Background()
+			ctxOptions.Namespace = args[0]
+			ctxOptions.Context = okteto.Context().Name
+			ctxOptions.Show = true
+			ctxOptions.Save = true
+			err := Run(ctx, ctxOptions)
+			analytics.TrackContextUseNamespace(err == nil)
 			if err != nil {
 				return err
 			}
 
-			if err := contextCMD.ExecuteUpdateKubeconfig(ctx); err != nil {
-				return err
-			}
-
-			analytics.TrackNamespace(err == nil, len(args) > 0)
-			return err
+			return nil
 		},
 	}
+
 	return cmd
 }

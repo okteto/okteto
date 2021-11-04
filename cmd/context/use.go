@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -33,30 +34,32 @@ import (
 func Use() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
-		Use:   "use [url|k8s-context]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
+		Use:   "use [<url>|Kubernetes context]",
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use"),
 		Short: "Set the default context",
 		Long: `Set the default context
 
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
 The current context is the default cluster/namespace for any Okteto CLI command.
 
-You can specify an Okteto URL:
+To set your default context, run the ` + "`okteto context use`" + ` command:
+
+    $ okteto context use
+
+This will prompt you to select one of your existing contexts or to create a new one.
+
+You can also specify an Okteto URL:
 
     $ okteto context use https://cloud.okteto.com
 
-Or the name of a Kubernetes context with:
+Or a Kubernetes context:
 
     $ okteto context use kubernetes_context_name
-
-Or show a list of available contexts with:
-
-    $ okteto context use
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if len(args) == 1 {
-				ctxOptions.Context = args[0]
+				ctxOptions.Context = strings.TrimSuffix(args[0], "/")
 			}
 
 			ctxOptions.isCtxCommand = true
@@ -99,6 +102,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		ctxOptions.Context = oktetoContext
 		ctxStore.CurrentContext = oktetoContext
 		ctxOptions.Show = false
+		ctxOptions.Save = true
 	}
 
 	if err := UseContext(ctx, ctxOptions); err != nil {
@@ -111,7 +115,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		log.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
 	}
 
-	if ctxOptions.isCtxCommand && okteto.Context().IsOkteto {
+	if ctxOptions.isCtxCommand {
 		log.Information("Run 'okteto context update-kubeconfig' to update your kubectl credentials")
 	}
 	return nil
