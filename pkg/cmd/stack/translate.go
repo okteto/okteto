@@ -133,6 +133,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 
 func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOptions) (bool, error) {
 	hasBuiltSomething := false
+
 	for _, name := range options.ServicesToDeploy {
 		svc := s.Services[name]
 		if svc.Build == nil {
@@ -170,7 +171,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			NoCache:    options.NoCache,
 			CacheFrom:  svc.Build.CacheFrom,
 			BuildArgs:  buildArgs,
-			OutputMode: "tty",
+			OutputMode: options.Progress,
 		}
 		if err := build.Run(ctx, buildOptions); err != nil {
 			return hasBuiltSomething, err
@@ -215,7 +216,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				NoCache:    options.NoCache,
 				CacheFrom:  svc.Build.CacheFrom,
 				BuildArgs:  buildArgs,
-				OutputMode: "tty",
+				OutputMode: options.Progress,
 			}
 			if err := build.Run(ctx, buildOptions); err != nil {
 				return hasAddedAnyVolumeMounts, err
