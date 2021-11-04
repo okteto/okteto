@@ -63,6 +63,7 @@ Or a Kubernetes context:
 			}
 
 			ctxOptions.isCtxCommand = true
+			ctxOptions.Save = true
 			err := Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
