@@ -58,7 +58,7 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.IsOkteto = true
 			ctxOptions.IsCtxCommand = true
-			ctxOptions.Show = true
+			ctxOptions.Show = false
 			ctxOptions.Save = true
 
 			err := Run(ctx, ctxOptions)
