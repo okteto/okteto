@@ -122,6 +122,17 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 			return err
 		}
 	}
+	if ctxOptions.isOkteto && ctxOptions.Save {
+		hasAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace)
+		if err != nil {
+			return err
+		}
+		if !hasAccess {
+			return errors.UserError{E: fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
+				Hint: "Please verify that the namespace exists and that you have access to it.",
+			}
+		}
+	}
 	if ctxOptions.Save {
 		if err := okteto.WriteOktetoContextConfig(); err != nil {
 			return err
