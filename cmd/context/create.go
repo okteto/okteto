@@ -67,7 +67,7 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.isOkteto = true
 			ctxController := ContextUseController{
 				k8sClientProvider:        okteto.K8sProvider,
-				loginController:          login.LoginController{},
+				loginController:          login.NewLoginController(),
 				oktetoUserClientProvider: okteto.NewOktetoUserClient,
 			}
 

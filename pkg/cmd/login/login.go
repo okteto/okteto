@@ -36,6 +36,10 @@ type LoginInterface interface {
 type LoginController struct {
 }
 
+func NewLoginController() *LoginController {
+	return &LoginController{}
+}
+
 type FakeLoginController struct {
 	User *okteto.User
 	Err  error

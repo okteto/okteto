@@ -103,7 +103,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 
 	ctxController := ContextUseController{
 		k8sClientProvider:        okteto.K8sProvider,
-		loginController:          login.LoginController{},
+		loginController:          login.NewLoginController(),
 		oktetoUserClientProvider: okteto.NewOktetoUserClient,
 	}
 
