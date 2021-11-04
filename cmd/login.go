@@ -52,6 +52,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 				IsCtxCommand: true,
 				IsOkteto:     true,
 				Save:         true,
+				Token:        token,
 			}
 			if len(args) == 1 {
 				args[0] = okteto.AddSchema(args[0])
