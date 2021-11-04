@@ -15,10 +15,12 @@ package context
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -89,12 +91,8 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 
 	if !ctxOptions.isOkteto {
 		if !isValidCluster(ctxOptions.Context) {
-			log.Fail("%s: invalid okteto context", ctxOptions.Context)
-			ctxOptions = &ContextOptions{}
-			ctxOptions.isCtxCommand = true
-			err := Run(ctx, ctxOptions)
-			analytics.TrackContext(err == nil)
-			return err
+			return errors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
+				Hint: "Please run 'okteto context' to select one context"}
 		}
 
 		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
