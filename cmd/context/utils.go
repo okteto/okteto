@@ -48,7 +48,7 @@ func getKubernetesContextList(filterOkteto bool) []string {
 		return contextList
 	}
 	for name := range cfg.Contexts {
-		if _, ok := cfg.Contexts[name].Extensions[model.OktetoExtension]; ok {
+		if _, ok := cfg.Contexts[name].Extensions[model.OktetoExtension]; ok && filterOkteto {
 			continue
 		}
 		contextList = append(contextList, name)
