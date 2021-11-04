@@ -144,6 +144,10 @@ func Up() *cobra.Command {
 				return err
 			}
 
+			if err := addSyncFieldHash(dev); err != nil {
+				return err
+			}
+
 			if _, ok := os.LookupEnv("OKTETO_AUTODEPLOY"); ok {
 				upOptions.AutoDeploy = true
 			}
