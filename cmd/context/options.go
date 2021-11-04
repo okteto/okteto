@@ -26,6 +26,7 @@ type ContextOptions struct {
 	Builder      string
 	OnlyOkteto   bool
 	Show         bool
+	Save         bool
 	isCtxCommand bool
 	isOkteto     bool
 }

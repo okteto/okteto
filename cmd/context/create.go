@@ -57,6 +57,7 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Context = okteto.AddSchema(ctxOptions.Context)
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.isOkteto = true
+			ctxOptions.Save = true
 
 			err := UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
@@ -121,8 +122,10 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 			return err
 		}
 	}
-	if err := okteto.WriteOktetoContextConfig(); err != nil {
-		return err
+	if ctxOptions.Save {
+		if err := okteto.WriteOktetoContextConfig(); err != nil {
+			return err
+		}
 	}
 	if created && ctxOptions.isOkteto {
 		log.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
