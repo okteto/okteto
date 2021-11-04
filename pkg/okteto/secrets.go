@@ -91,6 +91,12 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 	}
 	err := c.Query(ctx, &query, variables)
 	if err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
+			return c.deprecatedGetUserContext(ctx)
+		}
+		if strings.Contains(err.Error(), "Cannot query field \"telemetryEnabled\" on type \"me\"") {
+			return c.deprecatedGetUserContext(ctx)
+		}
 		return nil, err
 	}
 
@@ -121,6 +127,74 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 			Certificate:     string(query.User.Certificate),
 			GlobalNamespace: globalNamespace,
 			Analytics:       analytics,
+		},
+		Secrets: secrets,
+		Credentials: Credential{
+			Server:      string(query.Cred.Server),
+			Certificate: string(query.Cred.Certificate),
+			Token:       string(query.Cred.Token),
+			Namespace:   string(query.Cred.Namespace),
+		},
+	}
+	return result, nil
+}
+
+func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*UserContext, error) {
+	var query struct {
+		User struct {
+			Id          graphql.String
+			Name        graphql.String
+			Namespace   graphql.String
+			Email       graphql.String
+			ExternalID  graphql.String `graphql:"externalID"`
+			Token       graphql.String
+			New         graphql.Boolean
+			Registry    graphql.String
+			Buildkit    graphql.String
+			Certificate graphql.String
+		} `graphql:"user"`
+		Secrets []struct {
+			Name  graphql.String
+			Value graphql.String
+		} `graphql:"getGitDeploySecrets"`
+		Cred struct {
+			Server      graphql.String
+			Certificate graphql.String
+			Token       graphql.String
+			Namespace   graphql.String
+		} `graphql:"credentials(space: $cred)"`
+	}
+	variables := map[string]interface{}{
+		"cred": graphql.String(""),
+	}
+	err := c.Query(ctx, &query, variables)
+	if err != nil {
+		return nil, err
+	}
+
+	secrets := make([]Secret, 0)
+	for _, secret := range query.Secrets {
+		if !strings.Contains(string(secret.Name), ".") {
+			secrets = append(secrets, Secret{
+				Name:  string(secret.Name),
+				Value: string(secret.Value),
+			})
+		}
+	}
+	result := &UserContext{
+		User: User{
+			ID:              string(query.User.Id),
+			Name:            string(query.User.Name),
+			Namespace:       string(query.User.Namespace),
+			Email:           string(query.User.Email),
+			ExternalID:      string(query.User.ExternalID),
+			Token:           string(query.User.Token),
+			New:             bool(query.User.New),
+			Registry:        string(query.User.Registry),
+			Buildkit:        string(query.User.Buildkit),
+			Certificate:     string(query.User.Certificate),
+			GlobalNamespace: DefaultGlobalNamespace,
+			Analytics:       true,
 		},
 		Secrets: secrets,
 		Credentials: Credential{
