@@ -60,12 +60,17 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := createDeprecatedToken(tt.tokenUrl); err != nil {
+			tokenPath, err := createDeprecatedToken(tt.tokenUrl)
+			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := createKubeconfig(tt.kubeconfigCtx); err != nil {
+			defer os.Remove(tokenPath)
+
+			kubepath, err := createKubeconfig(tt.kubeconfigCtx)
+			if err != nil {
 				t.Fatal(err)
 			}
+			defer os.Remove(kubepath)
 			okteto.InitContextWithDeprecatedToken()
 			if okteto.ContextStore().CurrentContext == "" {
 				t.Fatal("Not initialized")

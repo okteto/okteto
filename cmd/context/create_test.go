@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -224,9 +225,11 @@ func Test_createContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := createKubeconfig(tt.kubeconfigCtx); err != nil {
+			file, err := createKubeconfig(tt.kubeconfigCtx)
+			if err != nil {
 				t.Fatal(err)
 			}
+			defer os.Remove(file)
 			fakeK8sClient := fakeK8sProvider{objects: tt.fakeObjects}
 			fakeUserClient := fakeUserClient{userContext: &okteto.UserContext{User: *tt.user}}
 			ctxController := ContextUseController{
@@ -237,8 +240,8 @@ func Test_createContext(t *testing.T) {
 				oktetoUserClientProvider: fakeUserClient.userClientProvider,
 			}
 			okteto.CurrentStore = tt.ctxStore
-			err := ctxController.UseContext(ctx, tt.ctxOptions)
-			if err != nil && !tt.expectedErr {
+
+			if err := ctxController.UseContext(ctx, tt.ctxOptions); err != nil && !tt.expectedErr {
 				t.Fatalf("Not expecting error but got: %s", err.Error())
 			} else if tt.expectedErr && err == nil {
 				t.Fatal("Not thrown error")

@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -104,11 +105,11 @@ func Test_updateKubeconfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			okteto.CurrentStore = tt.context
-			if len(tt.kubeconfigCtx.Name) > 0 {
-				createKubeconfig(tt.kubeconfigCtx)
-			} else {
-				createKubeconfig(kubeconfigFields{})
+			file, err := createKubeconfig(tt.kubeconfigCtx)
+			if err != nil {
+				t.Fatal(err)
 			}
+			defer os.Remove(file)
 
 			if err := ExecuteUpdateKubeconfig(ctx); err != nil {
 				t.Fatal(err)

@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/okteto"
@@ -58,7 +59,11 @@ func Test_deleteContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			createKubeconfig(kubeconfigFields{})
+			file, err := createKubeconfig(kubeconfigFields{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(file)
 			okteto.CurrentStore = tt.ctxStore
 			if err := Delete(ctx, tt.toDelete); err == nil && tt.expectedErr || err != nil && !tt.expectedErr {
 				t.Fatal(err)
