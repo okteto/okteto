@@ -56,7 +56,7 @@ var (
 type OktetoContext struct {
 	Name            string               `json:"name" yaml:"name,omitempty"`
 	UserID          string               `json:"-"`
-	Username        string               `json:"-"`
+	Username        string               `json:"username,omitempty" yaml:"username,omitempty"`
 	Token           string               `json:"token,omitempty" yaml:"token,omitempty"`
 	Namespace       string               `json:"namespace" yaml:"namespace,omitempty"`
 	Cfg             *clientcmdapi.Config `json:"-"`
