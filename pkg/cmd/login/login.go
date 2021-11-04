@@ -40,15 +40,6 @@ func NewLoginController() *LoginController {
 	return &LoginController{}
 }
 
-type FakeLoginController struct {
-	User *okteto.User
-	Err  error
-}
-
-func (fakeController FakeLoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*okteto.User, error) {
-	return fakeController.User, fakeController.Err
-}
-
 func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*okteto.User, error) {
 	if token == "" {
 		log.Infof("authenticating with browser code")

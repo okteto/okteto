@@ -18,7 +18,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/cmd/login"
+	oktetofake "github.com/okteto/okteto/pkg/fake"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	corev1 "k8s.io/api/core/v1"
@@ -233,10 +233,8 @@ func Test_createContext(t *testing.T) {
 			fakeK8sClient := fakeK8sProvider{objects: tt.fakeObjects}
 			fakeUserClient := fakeUserClient{userContext: &okteto.UserContext{User: *tt.user}}
 			ctxController := ContextUseController{
-				k8sClientProvider: fakeK8sClient.K8sProvider,
-				loginController: login.FakeLoginController{
-					User: tt.user,
-				},
+				k8sClientProvider:        fakeK8sClient.K8sProvider,
+				loginController:          oktetofake.NewFakeLoginController(tt.user, nil),
 				oktetoUserClientProvider: fakeUserClient.userClientProvider,
 			}
 			okteto.CurrentStore = tt.ctxStore
