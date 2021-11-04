@@ -102,6 +102,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		ctxOptions.Context = oktetoContext
 		ctxStore.CurrentContext = oktetoContext
 		ctxOptions.Show = false
+		ctxOptions.Save = true
 	}
 
 	if err := UseContext(ctx, ctxOptions); err != nil {
