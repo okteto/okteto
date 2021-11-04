@@ -27,12 +27,12 @@ type ContextOptions struct {
 	OnlyOkteto   bool
 	Show         bool
 	Save         bool
-	isCtxCommand bool
-	isOkteto     bool
+	IsCtxCommand bool
+	IsOkteto     bool
 }
 
 func (o *ContextOptions) initFromContext() {
-	if o.isCtxCommand {
+	if o.IsCtxCommand {
 		return
 	}
 	if o.Context != "" {
@@ -48,7 +48,7 @@ func (o *ContextOptions) initFromContext() {
 		if o.Namespace == "" {
 			o.Namespace = okCtx.Namespace
 		}
-		o.isOkteto = okCtx.IsOkteto
+		o.IsOkteto = okCtx.IsOkteto
 	}
 }
 
@@ -59,7 +59,7 @@ func (o *ContextOptions) initFromEnvVars() {
 
 	if o.Context == "" && os.Getenv("OKTETO_URL") != "" {
 		o.Context = os.Getenv("OKTETO_URL")
-		o.isOkteto = true
+		o.IsOkteto = true
 	}
 
 	if o.Context == "" && os.Getenv("OKTETO_CONTEXT") != "" {
@@ -67,7 +67,7 @@ func (o *ContextOptions) initFromEnvVars() {
 	}
 
 	if o.Token != "" {
-		o.isOkteto = true
+		o.IsOkteto = true
 		if o.Context == "" {
 			o.Context = okteto.CloudURL
 		}

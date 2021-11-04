@@ -62,7 +62,7 @@ Or a Kubernetes context:
 				ctxOptions.Context = strings.TrimSuffix(args[0], "/")
 			}
 
-			ctxOptions.isCtxCommand = true
+			ctxOptions.IsCtxCommand = true
 			ctxOptions.Save = true
 			err := Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
@@ -92,7 +92,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	}
 
 	if ctxOptions.Context == "" {
-		if !ctxOptions.isCtxCommand {
+		if !ctxOptions.IsCtxCommand {
 			log.Information("Okteto context is not initialized")
 		}
 		log.Infof("authenticating with interactive context")
@@ -116,7 +116,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		log.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
 	}
 
-	if ctxOptions.isCtxCommand {
+	if ctxOptions.IsCtxCommand {
 		log.Information("Run 'okteto context update-kubeconfig' to update your kubectl credentials")
 	}
 	return nil
@@ -128,11 +128,11 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 	if err != nil {
 		return "", err
 	}
-	ctxOptions.isOkteto = isOkteto
+	ctxOptions.IsOkteto = isOkteto
 
 	if isCreateNewContextOption(oktetoContext) {
 		oktetoContext = askForOktetoURL()
-		ctxOptions.isOkteto = true
+		ctxOptions.IsOkteto = true
 	}
 
 	return oktetoContext, nil

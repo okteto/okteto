@@ -14,11 +14,13 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -46,17 +48,23 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			ctxOptions := contextCMD.ContextOptions{
+				IsCtxCommand: true,
+				IsOkteto:     true,
+				Save:         true,
+			}
 			if len(args) == 1 {
 				args[0] = okteto.AddSchema(args[0])
 				args[0] = strings.TrimSuffix(args[0], "/")
+				ctxOptions.Context = args[0]
 			}
-			contextCommand := contextCMD.Context()
-			contextCommand.Flags().Set("token", token)
-			contextCommand.Flags().Set("okteto", "true")
-			err := contextCommand.RunE(cmd, args)
+
+			ctx := context.Background()
+			err := contextCMD.UseContext(ctx, &ctxOptions)
 			if err != nil {
 				analytics.TrackLogin(false)
 			} else {
+				log.Information("Run 'okteto context update-kubeconfig' to update your kubectl credentials")
 				analytics.TrackLogin(true)
 			}
 			return err
