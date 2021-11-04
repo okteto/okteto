@@ -140,15 +140,15 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 				container = app.PodSpec().Containers[0].Name
 			}
 
-			suffix := fmt.Sprintf("Analyzing %s '%s'...", app.TypeMeta().Kind, app.ObjectMeta().Name)
+			suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.ObjectMeta().Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
 			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.TypeMeta().Kind, app.ObjectMeta().Name))
+				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.Kind(), app.ObjectMeta().Name))
 			} else {
-				log.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.TypeMeta().Kind, app.ObjectMeta().Name, err))
+				log.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.Kind(), app.ObjectMeta().Name, err))
 				linguist.SetForwardDefaults(dev, language)
 			}
 		}
@@ -206,7 +206,7 @@ func getRunningApp(ctx context.Context) (apps.App, string, error) {
 	}
 
 	if apps.IsDevModeOn(app) {
-		return nil, "", fmt.Errorf("%s '%s' is in development mode", app.TypeMeta().Kind, app.ObjectMeta().Name)
+		return nil, "", fmt.Errorf("%s '%s' is in development mode", app.Kind(), app.ObjectMeta().Name)
 	}
 
 	container := ""
@@ -299,9 +299,21 @@ func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, er
 	}
 	options := []string{}
 	for i := range dList {
+		if dList[i].Labels[model.DevLabel] != "" {
+			continue
+		}
+		if dList[i].Labels[model.DevCloneLabel] != "" {
+			continue
+		}
 		options = append(options, dList[i].Name)
 	}
 	for i := range sfsList {
+		if sfsList[i].Labels[model.DevLabel] != "" {
+			continue
+		}
+		if sfsList[i].Labels[model.DevCloneLabel] != "" {
+			continue
+		}
 		options = append(options, sfsList[i].Name)
 	}
 	options = append(options, defaultInitValues)
@@ -336,6 +348,6 @@ func askForContainer(app apps.App) (string, error) {
 	}
 	return utils.AskForOptions(
 		options,
-		fmt.Sprintf("%s '%s' has %d containers. Select the container you want to replace with your development container:", app.TypeMeta().Kind, app.ObjectMeta().Name, len(app.PodSpec().Containers)),
+		fmt.Sprintf("%s '%s' has %d containers. Select the container you want to replace with your development container:", app.Kind(), app.ObjectMeta().Name, len(app.PodSpec().Containers)),
 	)
 }
