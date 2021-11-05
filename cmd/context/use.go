@@ -186,7 +186,7 @@ func initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = userContext.User.Namespace
 	}
-	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace)
+	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace, userContext.User.Namespace)
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
 		cfg = kubeconfig.Create()
