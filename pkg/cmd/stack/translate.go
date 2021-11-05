@@ -22,13 +22,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -92,7 +92,7 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	}
 	defer f.Close()
 
-	envMap, err := gotenv.StrictParse(f)
+	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 	if err != nil {
 		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
 	}
