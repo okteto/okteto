@@ -205,6 +205,10 @@ func TestContextAction(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
+	if os.Getenv("OKTETO_SKIP_CTX_TEST") != "" {
+		t.Skip("this test is not required because of 'OKTETO_SKIP_CTX_TEST' env var")
+		return
+	}
 
 	ctx := context.Background()
 	var remove bool
