@@ -1,5 +1,5 @@
-//go:build integration
-// +build integration
+//go:build actions
+// +build actions
 
 // Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");

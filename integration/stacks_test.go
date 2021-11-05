@@ -104,28 +104,6 @@ func TestStacks(t *testing.T) {
 	})
 }
 
-func cloneGitRepo(ctx context.Context, name string) error {
-	log.Printf("cloning git repo %s", name)
-	cmd := exec.Command("git", "clone", name)
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("cloning git repo %s failed: %s - %s", name, string(o), err)
-	}
-	log.Printf("clone git repo %s success", name)
-	return nil
-}
-
-func deleteGitRepo(ctx context.Context, path string) error {
-	log.Printf("delete git repo %s", path)
-	err := os.RemoveAll(path)
-	if err != nil {
-		return fmt.Errorf("delete git repo %s failed: %w", path, err)
-	}
-
-	log.Printf("deleted git repo %s", path)
-	return nil
-}
-
 func deployStack(ctx context.Context, oktetoPath, stackPath, dir string) error {
 	log.Printf("okteto stack deploy %s", stackPath)
 	cmd := exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait")
