@@ -8,24 +8,24 @@ if [ -z "$VERSION" ]; then
         exit 1
 fi
 
-actionsRepos=(delete-namespace_master
-        build_master
-        destroy-preview_master
-        deploy-preview_master
-        deploy-stack_master
-        namespace_master
-        pipeline_master
-        push_master
-        create-namespace_master
-        destroy-pipeline_master
-        login_master
-        destroy-stack_master
-        apply_master
-        context_main)
+actionsRepos=(delete-namespace/master
+        build/master
+        destroy-preview/master
+        deploy-preview/master
+        deploy-stack/master
+        namespace/master
+        pipeline/master
+        push/master
+        create-namespace/master
+        destroy-pipeline/master
+        login/master
+        destroy-stack/master
+        apply/master
+        context/main)
 
 for actionRepo in "${actionsRepos[@]}"; do
-        repo=${actionRepo%_*}
-        branch=${actionRepo#*_}
+        repo=${actionRepo%/*}
+        branch=${actionRepo#*/}
         echo "$repo will be published @ $branch"
         git clone --depth 1 git@github.com:okteto/"$repo".git
         pushd "$repo"
