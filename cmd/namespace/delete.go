@@ -59,5 +59,18 @@ func executeDeleteNamespace(ctx context.Context, namespace string) error {
 	}
 
 	log.Success("Namespace '%s' deleted", namespace)
+	if okteto.Context().Namespace == namespace {
+		personalNamespace := okteto.Context().PersonalNamespace
+		if personalNamespace == "" {
+			personalNamespace = okteto.GetSanitizedUsername()
+		}
+		ctxOptions := &contextCMD.ContextOptions{
+			Namespace: personalNamespace,
+			Context:   okteto.Context().Name,
+			Show:      true,
+			Save:      true,
+		}
+		return contextCMD.Run(ctx, ctxOptions)
+	}
 	return nil
 }
