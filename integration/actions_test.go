@@ -1,5 +1,5 @@
-//go:build integration
-// +build integration
+//go:build actions
+// +build actions
 
 // Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -203,6 +203,10 @@ func TestLoginActionPipeline(t *testing.T) {
 func TestContextAction(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
+	if os.Getenv("OKTETO_SKIP_CONTEXT_TEST") != "" {
+		t.Skip("this test is not required because of 'OKTETO_SKIP_CONTEXT_TEST' env var")
 		return
 	}
 
