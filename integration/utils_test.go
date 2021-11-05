@@ -38,6 +38,7 @@ type deployment struct {
 var (
 	user          = ""
 	kubectlBinary = "kubectl"
+	appsSubdomain = "cloud.okteto.net"
 )
 
 func TestMain(m *testing.M) {
@@ -46,6 +47,10 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	} else {
 		user = u
+	}
+
+	if v := os.Getenv("OKTETO_APPS_SUBDOMAIN"); v != "" {
+		appsSubdomain = v
 	}
 
 	if runtime.GOOS == "windows" {
