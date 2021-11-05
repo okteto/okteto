@@ -8,23 +8,25 @@ if [ -z "$VERSION" ]; then
         exit 1
 fi
 
-actionsRepos=(delete-namespace
-        build
-        destroy-preview
-        deploy-preview
-        deploy-stack
-        namespace
-        pipeline
-        push
-        create-namespace
-        destroy-pipeline
-        login
-        destroy-stack
-        apply
-        context)
+actionsRepos=(delete-namespace_master
+        build_master
+        destroy-preview_master
+        deploy-preview_master
+        deploy-stack_master
+        namespace_master
+        pipeline_master
+        push_master
+        create-namespace_master
+        destroy-pipeline_master
+        login_master
+        destroy-stack_master
+        apply_master
+        context_main)
 
-for repo in "${actionsRepos[@]}"; do
-        echo "$repo"
+for actionRepo in "${actionsRepos[@]}"; do
+        repo=${actionRepo%_*}
+        branch=${actionRepo#*_}
+        echo "$repo will be published @ $branch"
         git clone --depth 1 git@github.com:okteto/"$repo".git
         pushd "$repo"
         git config user.name "okteto"
@@ -35,7 +37,7 @@ for repo in "${actionsRepos[@]}"; do
         ret=0
         git commit -m "release $VERSION" || ret=1
         if [ $ret -ne 1 ]; then
-                git push git@github.com:okteto/"$repo".git master
+                git push git@github.com:okteto/"$repo".git "$branch"
                 git --no-pager log -1
         fi
         ghr -token "$GITHUB_TOKEN" -replace "$VERSION"
