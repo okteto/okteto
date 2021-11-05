@@ -10,23 +10,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package fake
 
-import (
-	"context"
+package types
 
-	"github.com/okteto/okteto/pkg/okteto"
-)
-
-type LoginController struct {
-	User *okteto.User
-	Err  error
-}
-
-func NewFakeLoginController(user *okteto.User, err error) *LoginController {
-	return &LoginController{User: user, Err: err}
-}
-
-func (fakeController LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*okteto.User, error) {
-	return fakeController.User, fakeController.Err
+// User contains the auth information of the logged in user
+type User struct {
+	Name            string
+	Namespace       string
+	Email           string
+	ExternalID      string
+	Token           string
+	ID              string
+	New             bool
+	Buildkit        string
+	Registry        string
+	Certificate     string
+	GlobalNamespace string
+	Analytics       bool
 }

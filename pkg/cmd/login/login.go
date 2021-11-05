@@ -26,11 +26,12 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/skratchdot/open-golang/open"
 )
 
 type LoginInterface interface {
-	AuthenticateToOktetoCluster(context.Context, string, string) (*okteto.User, error)
+	AuthenticateToOktetoCluster(context.Context, string, string) (*types.User, error)
 }
 
 type LoginController struct {
@@ -40,7 +41,7 @@ func NewLoginController() *LoginController {
 	return &LoginController{}
 }
 
-func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*okteto.User, error) {
+func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
 	if token == "" {
 		log.Infof("authenticating with browser code")
 		user, err := WithBrowser(ctx, oktetoURL)
@@ -54,11 +55,11 @@ func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, okteto
 
 		return user, nil
 	}
-	return &okteto.User{Token: token}, nil
+	return &types.User{Token: token}, nil
 }
 
 // WithBrowser authenticates the user with the browser
-func WithBrowser(ctx context.Context, oktetoURL string) (*okteto.User, error) {
+func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 	h, err := StartWithBrowser(ctx, oktetoURL)
 	if err != nil {
 		log.Infof("couldn't start the login process: %s", err)
@@ -120,7 +121,7 @@ func StartWithBrowser(ctx context.Context, u string) (*Handler, error) {
 }
 
 // EndWithBrowser finishes the browser based auth
-func EndWithBrowser(ctx context.Context, h *Handler) (*okteto.User, error) {
+func EndWithBrowser(ctx context.Context, h *Handler) (*types.User, error) {
 	go func() {
 		http.Handle("/authorization-code/callback", h.handle())
 		h.errChan <- http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", h.port), nil)

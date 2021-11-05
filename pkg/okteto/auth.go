@@ -23,6 +23,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
 
@@ -39,24 +40,8 @@ type Token struct {
 	MachineID string `json:"MachineID"`
 }
 
-// User contains the auth information of the logged in user
-type User struct {
-	Name            string
-	Namespace       string
-	Email           string
-	ExternalID      string
-	Token           string
-	ID              string
-	New             bool
-	Buildkit        string
-	Registry        string
-	Certificate     string
-	GlobalNamespace string
-	Analytics       bool
-}
-
 // Auth authenticates in okteto with an OAuth code
-func Auth(ctx context.Context, code, url string) (*User, error) {
+func Auth(ctx context.Context, code, url string) (*types.User, error) {
 	oktetoClient, err := NewOktetoClientFromUrl(url)
 	if err != nil {
 		return nil, err
@@ -71,7 +56,7 @@ func Auth(ctx context.Context, code, url string) (*User, error) {
 	return user, nil
 }
 
-func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error) {
+func (c *OktetoClient) authUser(ctx context.Context, code string) (*types.User, error) {
 	var mutation struct {
 		User struct {
 			Id              graphql.String
@@ -108,7 +93,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 	globalNamespace := getGlobalNamespace(string(mutation.User.GlobalNamespace))
 	analytics := bool(mutation.User.Analytics)
 
-	user := &User{
+	user := &types.User{
 		ID:              string(mutation.User.Id),
 		Name:            string(mutation.User.Name),
 		Namespace:       string(mutation.User.Namespace),
@@ -126,7 +111,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*User, error)
 	return user, nil
 }
 
-func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*User, error) {
+func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*types.User, error) {
 	var mutation struct {
 		User struct {
 			Id          graphql.String
@@ -152,7 +137,7 @@ func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*Us
 		return nil, err
 	}
 
-	user := &User{
+	user := &types.User{
 		ID:              string(mutation.User.Id),
 		Name:            string(mutation.User.Name),
 		Namespace:       string(mutation.User.Namespace),

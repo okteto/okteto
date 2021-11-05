@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -132,7 +133,7 @@ func UrlToKubernetesContext(uri string) string {
 }
 
 // K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
-func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string, clientProvider func(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)) string {
+func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string, clientProvider K8sClientProvider) string {
 	ctxStore := ContextStore()
 	//check if belongs to the okteto contexts
 	for name, oCtx := range ctxStore.Contexts {
@@ -147,7 +148,7 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string,
 	}
 
 	cfg.CurrentContext = k8sContext
-	c, _, err := clientProvider(cfg)
+	c, _, err := clientProvider.Provide(cfg)
 	if err != nil {
 		log.Infof("error getting k8s client: %v", err)
 		return k8sContext
@@ -238,7 +239,7 @@ func HasBeenLogged(oktetoURL string) bool {
 	return ok
 }
 
-func AddOktetoContext(name string, u *User, namespace string) {
+func AddOktetoContext(name string, u *types.User, namespace string) {
 	CurrentStore = ContextStore()
 	name = strings.TrimSuffix(name, "/")
 	CurrentStore.Contexts[name] = &OktetoContext{
@@ -293,7 +294,7 @@ func WriteOktetoContextConfig() error {
 	return nil
 }
 
-func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *Credential, namespace, userName, oktetoURL string) {
+func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string) {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
 	if os.Getenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT") == "true" {
@@ -369,8 +370,8 @@ func GetSanitizedUsername() string {
 	return reg.ReplaceAllString(strings.ToLower(octx.Username), "-")
 }
 
-func (okctx *OktetoContext) ToUser() *User {
-	u := &User{
+func (okctx *OktetoContext) ToUser() *types.User {
+	u := &types.User{
 		ID:              okctx.UserID,
 		ExternalID:      okctx.Username,
 		Token:           okctx.Token,

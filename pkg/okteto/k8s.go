@@ -17,7 +17,17 @@ import (
 var timeout time.Duration
 var tOnce sync.Once
 
-func K8sProvider(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+type K8sClientProvider interface {
+	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
+}
+
+type K8sClient struct{}
+
+func NewK8sClientProvider() *K8sClient {
+	return &K8sClient{}
+}
+
+func (c *K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
 	return GetK8sClientWithApiConfig(clientApiConfig)
 }
 

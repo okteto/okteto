@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -102,9 +103,8 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	}
 
 	ctxController := ContextUseController{
-		k8sClientProvider:        okteto.K8sProvider,
-		loginController:          login.NewLoginController(),
-		oktetoUserClientProvider: okteto.NewOktetoUserClient,
+		k8sClientProvider: okteto.NewK8sClientProvider(),
+		loginController:   login.NewLoginController(),
 	}
 
 	if err := ctxController.UseContext(ctx, ctxOptions); err != nil {
@@ -139,14 +139,14 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 	return oktetoContext, nil
 }
 
-func setSecrets(secrets []okteto.Secret) {
+func setSecrets(secrets []types.Secret) {
 	for _, secret := range secrets {
 		os.Setenv(secret.Name, secret.Value)
 	}
 }
 
-func (ctxController ContextUseController) getUserContext(ctx context.Context) (*okteto.UserContext, error) {
-	client, err := ctxController.oktetoUserClientProvider()
+func (cc ContextUseController) getUserContext(ctx context.Context) (*types.UserContext, error) {
+	client, err := cc.oktetoClientProvider.NewOktetoUserClient()
 	if err != nil {
 		return nil, err
 	}

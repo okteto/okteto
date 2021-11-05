@@ -18,33 +18,14 @@ import (
 	"os"
 	"testing"
 
-	oktetofake "github.com/okteto/okteto/pkg/fake"
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-type fakeK8sProvider struct {
-	objects []runtime.Object
-}
-
-func (f *fakeK8sProvider) K8sProvider(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
-	return fake.NewSimpleClientset(f.objects...), nil, nil
-}
-
-type fakeUserClient struct {
-	userContext *okteto.UserContext
-}
-
-func (f *fakeUserClient) userClientProvider() (okteto.UserInterface, error) {
-	return &okteto.FakeUserClient{UserContext: f.userContext}, nil
-}
 
 func Test_createContext(t *testing.T) {
 	ctx := context.Background()
@@ -55,7 +36,7 @@ func Test_createContext(t *testing.T) {
 		ctxOptions    *ContextOptions
 		kubeconfigCtx kubeconfigFields
 		expectedErr   bool
-		user          *okteto.User
+		user          *types.User
 		fakeObjects   []runtime.Object
 	}{
 		{
@@ -71,7 +52,7 @@ func Test_createContext(t *testing.T) {
 				Name:      []string{"cloud_okteto_com"},
 				Namespace: []string{"test"},
 			},
-			user: &okteto.User{
+			user: &types.User{
 				Token: "test",
 			},
 			fakeObjects: []runtime.Object{
@@ -98,7 +79,7 @@ func Test_createContext(t *testing.T) {
 				isOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
-			user: &okteto.User{
+			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: kubeconfigFields{
@@ -116,7 +97,7 @@ func Test_createContext(t *testing.T) {
 				isOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
-			user: &okteto.User{
+			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: kubeconfigFields{
@@ -135,7 +116,7 @@ func Test_createContext(t *testing.T) {
 				isOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
-			user: &okteto.User{
+			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: kubeconfigFields{
@@ -154,7 +135,7 @@ func Test_createContext(t *testing.T) {
 					},
 				},
 			},
-			user: &okteto.User{
+			user: &types.User{
 				Token: "test",
 			},
 			ctxOptions: &ContextOptions{
@@ -174,7 +155,7 @@ func Test_createContext(t *testing.T) {
 					},
 				},
 			},
-			user: &okteto.User{
+			user: &types.User{
 				Token: "test",
 			},
 			ctxOptions: &ContextOptions{
@@ -194,7 +175,7 @@ func Test_createContext(t *testing.T) {
 					},
 				},
 			},
-			user: &okteto.User{
+			user: &types.User{
 				Token: "test",
 			},
 			ctxOptions: &ContextOptions{
@@ -215,7 +196,7 @@ func Test_createContext(t *testing.T) {
 				Context:  "https://okteto.cloud.com",
 				Token:    "this is a token",
 			},
-			user: &okteto.User{
+			user: &types.User{
 				Token: "test",
 			},
 			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
@@ -230,12 +211,10 @@ func Test_createContext(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer os.Remove(file)
-			fakeK8sClient := fakeK8sProvider{objects: tt.fakeObjects}
-			fakeUserClient := fakeUserClient{userContext: &okteto.UserContext{User: *tt.user}}
 			ctxController := ContextUseController{
-				k8sClientProvider:        fakeK8sClient.K8sProvider,
-				loginController:          oktetofake.NewFakeLoginController(tt.user, nil),
-				oktetoUserClientProvider: fakeUserClient.userClientProvider,
+				k8sClientProvider:    test.NewFakeK8sProvider(tt.fakeObjects),
+				loginController:      test.NewFakeLoginController(tt.user, nil),
+				oktetoClientProvider: test.NewFakeOktetoClientProvider(&types.UserContext{User: *tt.user}, nil),
 			}
 			okteto.CurrentStore = tt.ctxStore
 

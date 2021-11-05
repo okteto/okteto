@@ -22,16 +22,14 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type ContextUseController struct {
-	k8sClientProvider        func(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
-	loginController          login.LoginInterface
-	oktetoUserClientProvider func() (okteto.UserInterface, error)
+	k8sClientProvider    okteto.K8sClientProvider
+	loginController      login.LoginInterface
+	oktetoClientProvider types.OktetoUserClientProvider
 }
 
 // Create adds a new cluster to okteto context
@@ -66,9 +64,9 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.isOkteto = true
 			ctxController := ContextUseController{
-				k8sClientProvider:        okteto.K8sProvider,
-				loginController:          login.NewLoginController(),
-				oktetoUserClientProvider: okteto.NewOktetoUserClient,
+				k8sClientProvider:    okteto.NewK8sClientProvider(),
+				loginController:      login.NewLoginController(),
+				oktetoClientProvider: okteto.NewOktetoClientProvider(),
 			}
 
 			err := ctxController.UseContext(ctx, ctxOptions)

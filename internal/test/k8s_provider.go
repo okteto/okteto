@@ -11,25 +11,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package okteto
+package test
 
 import (
-	"context"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-type UserClientInterface interface {
+type FakeK8sProvider struct {
+	objects []runtime.Object
 }
 
-type UserInterface interface {
-	GetUserContext(ctx context.Context) (*UserContext, error)
+func NewFakeK8sProvider(objects []runtime.Object) *FakeK8sProvider {
+	return &FakeK8sProvider{objects: objects}
 }
 
-type FakeUserClient struct {
-	UserContext *UserContext
-	err         error
-}
-
-// GetUserContext get user context
-func (f *FakeUserClient) GetUserContext(ctx context.Context) (*UserContext, error) {
-	return f.UserContext, f.err
+func (f *FakeK8sProvider) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+	return fake.NewSimpleClientset(f.objects...), nil, nil
 }
