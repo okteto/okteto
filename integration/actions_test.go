@@ -632,9 +632,13 @@ func executeLoginAction(ctx context.Context) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 
-	log.Printf("login into %s", okteto.CloudURL)
+	oktetoURL := os.Getenv("OKTETO_URL")
+	if oktetoURL == "" {
+		oktetoURL = okteto.CloudURL
+	}
+	log.Printf("login into %s", oktetoURL)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
-	args := []string{token, okteto.CloudURL}
+	args := []string{token, oktetoURL}
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()
@@ -660,9 +664,13 @@ func executeContextAction(ctx context.Context) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 
-	log.Printf("login into %s", okteto.CloudURL)
+	oktetoURL := os.Getenv("OKTETO_URL")
+	if oktetoURL == "" {
+		oktetoURL = okteto.CloudURL
+	}
+	log.Printf("login into %s", oktetoURL)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
-	args := []string{token, okteto.CloudURL}
+	args := []string{token, oktetoURL}
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()
