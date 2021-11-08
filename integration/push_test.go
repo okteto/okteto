@@ -103,6 +103,7 @@ func oktetoPush(ctx context.Context, oktetoPath, oktetoManifestPath string) erro
 	if err != nil {
 		return fmt.Errorf("okteto push failed: %s - %s", string(o), err)
 	}
+	log.Printf("oktetoPushOutput: %s", string(o))
 	log.Printf("okteto push %s success", oktetoManifestPath)
 	return nil
 }
