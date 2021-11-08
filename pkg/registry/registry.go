@@ -215,7 +215,7 @@ func IsImageAtRegistry(image string) (ok bool) {
 		return false
 	}
 	okCommit := os.Getenv("OKTETO_GIT_COMMIT")
-	if okCommit != "" && strings.Contains(image, okCommit) {
+	if okCommit != "" && strings.HasSuffix(image, okCommit) {
 		globalRegistryTag := image
 		if IsDevRegistry(image) {
 			globalRegistryTag = TransformOktetoDevToGlobalRegistry(image)
