@@ -49,7 +49,7 @@ var (
 	ErrNotLogged = "your token is invalid. Please run 'okteto context use %s' and try again"
 
 	// ErrNotOktetoCluster is raised when we a command is only available on an okteto cluster
-	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context use' and try again")
+	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context use' and select your context")
 
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
