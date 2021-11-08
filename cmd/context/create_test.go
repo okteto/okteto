@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -211,7 +212,7 @@ func Test_createContext(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer os.Remove(file)
-			ctxController := ContextUseController{
+			ctxController := ContextUse{
 				k8sClientProvider:    test.NewFakeK8sProvider(tt.fakeObjects),
 				loginController:      test.NewFakeLoginController(tt.user, nil),
 				oktetoClientProvider: test.NewFakeOktetoClientProvider(&types.UserContext{User: *tt.user}, nil),
@@ -223,6 +224,7 @@ func Test_createContext(t *testing.T) {
 			} else if tt.expectedErr && err == nil {
 				t.Fatal("Not thrown error")
 			}
+			assert.Equal(t, tt.ctxOptions.Context, okteto.CurrentStore.CurrentContext)
 		})
 	}
 }
