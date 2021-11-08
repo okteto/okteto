@@ -245,7 +245,11 @@ func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
 		"id": graphql.String(name),
 	}
 
-	return c.Mutate(ctx, &mutation, variables)
+	err := c.Mutate(ctx, &mutation, variables)
+	if errors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 // ListPreviews list preview environments

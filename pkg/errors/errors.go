@@ -134,7 +134,7 @@ func IsForbidden(err error) bool {
 
 // IsNotFound returns true if err is of the type not found
 func IsNotFound(err error) bool {
-	return err != nil && (strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "doesn't exist"))
+	return err != nil && (strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "doesn't exist")) || (strings.Contains(err.Error(), "not-found"))
 }
 
 // IsNotExist returns true if err is of the type does not exist
