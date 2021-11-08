@@ -38,7 +38,7 @@ func destroy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "destroy",
-		Short: "Destroys an okteto pipeline",
+		Short: "Destroy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 

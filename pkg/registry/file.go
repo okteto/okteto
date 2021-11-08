@@ -64,7 +64,7 @@ func getTranslatedDockerFile(filename string) (string, error) {
 		userID = "anonymous"
 	}
 
-	withCacheHandler := okteto.Context().Buildkit == okteto.CloudBuildKitURL
+	withCacheHandler := okteto.Context().Builder == okteto.CloudBuildKitURL
 
 	for scanner.Scan() {
 		line := scanner.Text()

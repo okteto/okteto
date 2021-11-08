@@ -22,13 +22,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -92,7 +92,7 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	}
 	defer f.Close()
 
-	envMap, err := gotenv.StrictParse(f)
+	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 	if err != nil {
 		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
 	}
@@ -133,6 +133,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 
 func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOptions) (bool, error) {
 	hasBuiltSomething := false
+
 	for _, name := range options.ServicesToDeploy {
 		svc := s.Services[name]
 		if svc.Build == nil {
@@ -153,8 +154,8 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
-			if okteto.Context().Buildkit != "" {
-				log.Information("Running your build in %s...", okteto.Context().Buildkit)
+			if okteto.Context().Builder != "" {
+				log.Information("Running your build in %s...", okteto.Context().Builder)
 			} else {
 				log.Information("Running your build in docker")
 			}
@@ -170,7 +171,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			NoCache:    options.NoCache,
 			CacheFrom:  svc.Build.CacheFrom,
 			BuildArgs:  buildArgs,
-			OutputMode: "tty",
+			OutputMode: options.Progress,
 		}
 		if err := build.Run(ctx, buildOptions); err != nil {
 			return hasBuiltSomething, err
@@ -188,7 +189,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 		if len(notSkippableVolumeMounts) != 0 {
 			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
 				hasAddedAnyVolumeMounts = true
-				log.Information("Running your build in %s...", okteto.Context().Buildkit)
+				log.Information("Running your build in %s...", okteto.Context().Builder)
 			}
 			fromImage := svc.Image
 			if okteto.IsOkteto() {
@@ -215,7 +216,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				NoCache:    options.NoCache,
 				CacheFrom:  svc.Build.CacheFrom,
 				BuildArgs:  buildArgs,
-				OutputMode: "tty",
+				OutputMode: options.Progress,
 			}
 			if err := build.Run(ctx, buildOptions); err != nil {
 				return hasAddedAnyVolumeMounts, err

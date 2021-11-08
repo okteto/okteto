@@ -33,7 +33,7 @@ const (
 func Update() *cobra.Command {
 	return &cobra.Command{
 		Use:   "update",
-		Short: "Updates okteto version",
+		Short: "Update okteto version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			currentVersion, err := semver.NewVersion(config.VersionString)
 			if err != nil {

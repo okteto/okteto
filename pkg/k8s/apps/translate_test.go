@@ -101,7 +101,6 @@ services:
     command: ["./run_worker.sh"]
     annotations:
       key2: value2
-    serviceAccount: sa
     sync:
        - worker:/src`, file.Name()))
 
@@ -113,6 +112,7 @@ services:
 	d1 := deployments.Sandbox(dev1)
 	d1.UID = types.UID("deploy1")
 	delete(d1.Annotations, model.OktetoAutoCreateAnnotation)
+	d1.Annotations[model.StateBeforeSleepingAnnontation] = "{\"Replicas\":3}"
 	d1.Spec.Replicas = pointer.Int32Ptr(2)
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
@@ -381,7 +381,7 @@ services:
 		t.Fatalf("Wrong d1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
 
 	}
-	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2"}
+	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "3"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong d1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
 	}
@@ -435,7 +435,11 @@ services:
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
 	}
 
-	if tr1.App.Replicas() != 2 {
+	if _, ok := tr1.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	}
+
+	if tr1.App.Replicas() != 3 {
 		t.Fatalf("d1 is running %d replicas after 'okteto down'", tr1.App.Replicas())
 	}
 
@@ -475,7 +479,7 @@ services:
 		SecurityContext: &apiv1.PodSecurityContext{
 			FSGroup: pointer.Int64Ptr(0),
 		},
-		ServiceAccountName:            "sa",
+		ServiceAccountName:            "",
 		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 		Volumes: []apiv1.Volume{
 			{
@@ -568,6 +572,10 @@ services:
 
 	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	}
+
+	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
 	}
 
 	if tr2.App.Replicas() != 3 {
@@ -1406,7 +1414,6 @@ services:
     annotations:
       key2: value2
     command: ["./run_worker.sh"]
-    serviceAccount: sa
     sync:
        - worker:/src`, file.Name()))
 
@@ -1723,6 +1730,10 @@ services:
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
 	}
 
+	if _, ok := tr1.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	}
+
 	if tr1.App.Replicas() != 2 {
 		t.Fatalf("sfs1 is running %d replicas after 'okteto down'", tr1.App.Replicas())
 	}
@@ -1764,7 +1775,7 @@ services:
 		SecurityContext: &apiv1.PodSecurityContext{
 			FSGroup: pointer.Int64Ptr(0),
 		},
-		ServiceAccountName:            "sa",
+		ServiceAccountName:            "",
 		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 		Volumes: []apiv1.Volume{
 			{
@@ -1857,6 +1868,10 @@ services:
 
 	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	}
+
+	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
 	}
 
 	if tr2.App.Replicas() != 3 {

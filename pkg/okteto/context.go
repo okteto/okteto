@@ -54,18 +54,20 @@ var (
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
-	Name            string               `json:"name"`
-	UserID          string               `json:"-"`
-	Username        string               `json:"-"`
-	Token           string               `json:"token,omitempty"`
-	Namespace       string               `json:"namespace"`
-	Cfg             *clientcmdapi.Config `json:"-"`
-	Buildkit        string               `json:"buildkit,omitempty"`
-	Registry        string               `json:"registry,omitempty"`
-	Certificate     string               `json:"certificate,omitempty"`
-	GlobalNamespace string               `json:"-"`
-	Analytics       bool                 `json:"-"`
-	ClusterType     string               `json:"-"`
+	Name              string               `json:"name" yaml:"name,omitempty"`
+	UserID            string               `json:"-"`
+	Username          string               `json:"username,omitempty" yaml:"username,omitempty"`
+	Token             string               `json:"token,omitempty" yaml:"token,omitempty"`
+	Namespace         string               `json:"namespace" yaml:"namespace,omitempty"`
+	Cfg               *clientcmdapi.Config `json:"-"`
+	Builder           string               `json:"builder,omitempty" yaml:"builder,omitempty"`
+	Registry          string               `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Certificate       string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	PersonalNamespace string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
+	GlobalNamespace   string               `json:"-"`
+	Analytics         bool                 `json:"-"`
+	ClusterType       string               `json:"-"`
+	IsOkteto          bool                 `json:"isOkteto"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
@@ -102,8 +104,9 @@ func InitContextWithDeprecatedToken() {
 		Name:        token.URL,
 		Namespace:   kubeconfig.CurrentNamespace(config.GetKubeconfigPath()),
 		Token:       token.Token,
-		Buildkit:    token.Buildkit,
+		Builder:     token.Buildkit,
 		Certificate: base64.StdEncoding.EncodeToString(certificateBytes),
+		IsOkteto:    true,
 	}
 	ctxStore.CurrentContext = token.URL
 
@@ -131,14 +134,10 @@ func UrlToKubernetesContext(uri string) string {
 
 // K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
 func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string) string {
-	if IsOktetoURL(k8sContext) {
-		return k8sContext
-	}
-
 	ctxStore := ContextStore()
 	//check if belongs to the okteto contexts
-	for name := range ctxStore.Contexts {
-		if IsOktetoURL(name) && UrlToKubernetesContext(name) == k8sContext {
+	for name, oCtx := range ctxStore.Contexts {
+		if oCtx.IsOkteto && UrlToKubernetesContext(name) == k8sContext {
 			return name
 		}
 	}
@@ -176,13 +175,13 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string)
 	return k8sContext
 }
 
-func IsOktetoURL(name string) bool {
-	u, err := url.Parse(name)
-	return err == nil && u.Scheme != "" && u.Host != ""
+func IsContextInitialized() bool {
+	ctxStore := ContextStore()
+	return ctxStore.CurrentContext != ""
 }
 
 func IsOkteto() bool {
-	return IsOktetoURL(Context().Name)
+	return Context().IsOkteto
 }
 
 func ContextStore() *OktetoContextStore {
@@ -208,7 +207,7 @@ func ContextStore() *OktetoContextStore {
 		CurrentStore = ctxStore
 
 		if _, ok := CurrentStore.Contexts[CurrentStore.CurrentContext]; !ok {
-			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+			return CurrentStore
 		}
 		return CurrentStore
 	}
@@ -240,20 +239,21 @@ func HasBeenLogged(oktetoURL string) bool {
 	return ok
 }
 
-func AddOktetoContext(name string, u *User, namespace string) {
+func AddOktetoContext(name string, u *User, namespace, personalNamespace string) {
 	CurrentStore = ContextStore()
 	name = strings.TrimSuffix(name, "/")
 	CurrentStore.Contexts[name] = &OktetoContext{
-		Name:            name,
-		UserID:          u.ID,
-		Username:        u.ExternalID,
-		Token:           u.Token,
-		Namespace:       namespace,
-		GlobalNamespace: u.GlobalNamespace,
-		Buildkit:        u.Buildkit,
-		Registry:        u.Registry,
-		Certificate:     u.Certificate,
-		Analytics:       u.Analytics,
+		Name:              name,
+		UserID:            u.ID,
+		Username:          u.ExternalID,
+		Token:             u.Token,
+		Namespace:         namespace,
+		PersonalNamespace: personalNamespace,
+		GlobalNamespace:   u.GlobalNamespace,
+		Builder:           u.Buildkit,
+		Registry:          u.Registry,
+		Certificate:       u.Certificate,
+		Analytics:         u.Analytics,
 	}
 	CurrentStore.CurrentContext = name
 }
@@ -263,7 +263,7 @@ func AddKubernetesContext(name, namespace, buildkitURL string) {
 	CurrentStore.Contexts[name] = &OktetoContext{
 		Name:      name,
 		Namespace: namespace,
-		Buildkit:  buildkitURL,
+		Builder:   buildkitURL,
 	}
 	CurrentStore.CurrentContext = name
 }
@@ -376,7 +376,7 @@ func (okctx *OktetoContext) ToUser() *User {
 		ID:              okctx.UserID,
 		ExternalID:      okctx.Username,
 		Token:           okctx.Token,
-		Buildkit:        okctx.Buildkit,
+		Buildkit:        okctx.Builder,
 		Registry:        okctx.Registry,
 		Certificate:     okctx.Certificate,
 		GlobalNamespace: okctx.GlobalNamespace,
@@ -401,6 +401,17 @@ func RemoveSchema(uri string) string {
 		return uri
 	}
 	return strings.TrimPrefix(u.String(), fmt.Sprintf("%s://", u.Scheme))
+}
+
+func AddSchema(oCtx string) string {
+	parsedUrl, err := url.Parse(oCtx)
+	if err == nil {
+		if parsedUrl.Scheme == "" {
+			parsedUrl.Scheme = "https"
+		}
+		return parsedUrl.String()
+	}
+	return oCtx
 }
 
 func (okctx *OktetoContext) SetClusterType(clusterHost string) {

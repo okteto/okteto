@@ -24,26 +24,6 @@ func Test_UrlToKubernetesContext(t *testing.T) {
 	}
 }
 
-func Test_IsOktetoURL(t *testing.T) {
-	var tests = []struct {
-		name string
-		in   string
-		want bool
-	}{
-		{name: "is-url", in: "https://cloud.okteto.com", want: true},
-		{name: "is-empty", in: "", want: false},
-		{name: "is-k8scontext", in: "minikube", want: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if result := IsOktetoURL(tt.in); result != tt.want {
-				t.Errorf("Test '%s' failed", tt.name)
-			}
-		})
-	}
-}
-
 func Test_K8sContextToOktetoUrl(t *testing.T) {
 	var tests = []struct {
 		name string
@@ -57,7 +37,7 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 	}
 
 	CurrentStore = &OktetoContextStore{
-		Contexts: map[string]*OktetoContext{CloudURL: {}},
+		Contexts: map[string]*OktetoContext{CloudURL: {IsOkteto: true}},
 	}
 	ctx := context.Background()
 	for _, tt := range tests {

@@ -142,7 +142,7 @@ func AskYesNo(q string) (bool, error) {
 }
 
 func AskForOptions(options []string, label string) (string, error) {
-	selectedTemplate := " ✓  {{ . | oktetoblue }}"
+	selectedTemplate := `{{ " ✓ " | bgGreen | black }} {{ .Label | green }}`
 	activeTemplate := fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect)
 	inactiveTemplate := "  {{ . | oktetoblue }}"
 	if runtime.GOOS == "windows" {

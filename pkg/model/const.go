@@ -145,6 +145,8 @@ const (
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
 	OktetoRestartAnnotation = "dev.okteto.com/restart"
+	//OktetoSyncAnnotation indicates the hash of the sync folders to force redeployment
+	OktetoSyncAnnotation = "dev.okteto.com/sync"
 	//OktetoStignoreAnnotation indicates the hash of the stignore files to force redeployment
 	OktetoStignoreAnnotation = "dev.okteto.com/stignore"
 	//OktetoDivertLabel indicates the object is a diverted version

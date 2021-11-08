@@ -29,7 +29,7 @@ import (
 func List(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists all preview environments",
+		Short: "List all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {

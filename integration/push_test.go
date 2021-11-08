@@ -41,7 +41,6 @@ func TestPush(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	tName := fmt.Sprintf("TestPush-%s", runtime.GOOS)
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
@@ -69,7 +68,7 @@ func TestPush(t *testing.T) {
 
 		log.Printf("pushed using %s \n", pushManifest)
 
-		endpoint := fmt.Sprintf("https://react-getting-started-%s.cloud.okteto.net", namespace)
+		endpoint := fmt.Sprintf("https://react-getting-started-%s.%s", namespace, appsSubdomain)
 		content, err := getContent(endpoint, 150, nil)
 		if err != nil {
 			t.Fatalf("failed to get app content: %s", err)
@@ -84,7 +83,7 @@ func TestPush(t *testing.T) {
 			t.Fatalf("error getting 'react-getting-started' deployment: %s", err.Error())
 		}
 
-		imageName := fmt.Sprintf("registry.cloud.okteto.net/%s/react-getting-started:okteto", namespace)
+		imageName := fmt.Sprintf("registry.%s/%s/react-getting-started:okteto", appsSubdomain, namespace)
 		if d.Spec.Template.Spec.Containers[0].Image != imageName {
 			t.Fatalf("wrong image built for okteto push: expected '%s', got '%s'", imageName, d.Spec.Template.Spec.Containers[0].Image)
 		}

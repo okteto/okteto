@@ -40,7 +40,12 @@ const (
 
 B=$B
 
-C=3`
+C=3
+
+D="4
+5 $B
+\"6\"
+'7'"`
 )
 
 func Test_translate(t *testing.T) {
@@ -91,7 +96,7 @@ func Test_translateEnvVars(t *testing.T) {
 	if stack.Services["1"].Image != "image" {
 		t.Errorf("Wrong image: %s", stack.Services["1"].Image)
 	}
-	if len(stack.Services["1"].Environment) != 3 {
+	if len(stack.Services["1"].Environment) != 4 {
 		t.Errorf("Wrong environment: %v", stack.Services["1"].Environment)
 	}
 	for _, e := range stack.Services["1"].Environment {
@@ -103,6 +108,9 @@ func Test_translateEnvVars(t *testing.T) {
 		}
 		if e.Name == "C" && e.Value != "original" {
 			t.Errorf("Wrong environment variable C: %s", e.Value)
+		}
+		if e.Name == "D" && e.Value != "4\n5 2\n\"6\"\n'7'" {
+			t.Errorf("Wrong environment variable D: %s", e.Value)
 		}
 	}
 }

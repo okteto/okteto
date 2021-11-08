@@ -30,7 +30,7 @@ import (
 func Delete(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
 		Use:   "namespace <name>",
-		Short: "Deletes a namespace",
+		Short: "Delete a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
@@ -59,5 +59,18 @@ func executeDeleteNamespace(ctx context.Context, namespace string) error {
 	}
 
 	log.Success("Namespace '%s' deleted", namespace)
+	if okteto.Context().Namespace == namespace {
+		personalNamespace := okteto.Context().PersonalNamespace
+		if personalNamespace == "" {
+			personalNamespace = okteto.GetSanitizedUsername()
+		}
+		ctxOptions := &contextCMD.ContextOptions{
+			Namespace: personalNamespace,
+			Context:   okteto.Context().Name,
+			Show:      true,
+			Save:      true,
+		}
+		return contextCMD.Run(ctx, ctxOptions)
+	}
 	return nil
 }

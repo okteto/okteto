@@ -14,11 +14,13 @@
 package cmd
 
 import (
-	"net/url"
+	"context"
+	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +28,10 @@ import (
 func Login() *cobra.Command {
 	token := ""
 	cmd := &cobra.Command{
-		Use:   "login [url]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#login"),
-		Short: "Log into Okteto",
+		Hidden: true,
+		Use:    "login [url]",
+		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#login"),
+		Short:  "Log into Okteto",
 		Long: `Log into Okteto
 
 Run
@@ -44,19 +47,20 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if len(args) == 1 {
-				parsedUrl, err := url.Parse(args[0])
-				if err == nil {
-					if parsedUrl.Scheme == "" {
-						parsedUrl.Scheme = "https"
-					}
-					args[0] = parsedUrl.String()
-				}
+			ctxOptions := contextCMD.ContextOptions{
+				IsCtxCommand: true,
+				IsOkteto:     true,
+				Save:         true,
+				Token:        token,
 			}
-			contextCommand := contextCMD.Context()
-			contextCommand.Flags().Set("token", token)
-			contextCommand.Flags().Set("okteto", "true")
-			err := contextCommand.RunE(cmd, args)
+			if len(args) == 1 {
+				args[0] = okteto.AddSchema(args[0])
+				args[0] = strings.TrimSuffix(args[0], "/")
+				ctxOptions.Context = args[0]
+			}
+
+			ctx := context.Background()
+			err := contextCMD.Run(ctx, &ctxOptions)
 			if err != nil {
 				analytics.TrackLogin(false)
 			} else {

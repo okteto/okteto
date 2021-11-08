@@ -1,5 +1,5 @@
-//go:build integration
-// +build integration
+//go:build actions
+// +build actions
 
 // Copyright 2021 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -206,6 +205,10 @@ func TestContextAction(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
+	if os.Getenv("OKTETO_SKIP_CONTEXT_TEST") != "" {
+		t.Skip("this test is not required because of 'OKTETO_SKIP_CONTEXT_TEST' env var")
+		return
+	}
 
 	ctx := context.Background()
 	var remove bool
@@ -336,6 +339,7 @@ func getTestNamespace() string {
 }
 
 func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
+	okteto.CurrentStore = nil
 	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, createNamespacePath)
 	actionFolder := strings.Split(createNamespacePath, "/")[1]
 	log.Printf("cloning create namespace repository: %s", actionRepo)
@@ -357,7 +361,7 @@ func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("create namespace output: \n%s\n", string(o))
-	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
+	n := okteto.Context().Namespace
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -366,6 +370,7 @@ func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
 }
 
 func executeChangeNamespaceAction(ctx context.Context, namespace string) error {
+	okteto.CurrentStore = nil
 	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, namespacePath)
 	actionFolder := strings.Split(namespacePath, "/")[1]
 	log.Printf("cloning changing namespace repository: %s", actionRepo)
@@ -386,7 +391,7 @@ func executeChangeNamespaceAction(ctx context.Context, namespace string) error {
 	}
 
 	log.Printf("changing namespace output: \n%s\n", string(o))
-	n := kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
+	n := okteto.Context().Namespace
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
@@ -627,9 +632,13 @@ func executeLoginAction(ctx context.Context) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 
-	log.Printf("login into %s", okteto.CloudURL)
+	oktetoURL := os.Getenv("OKTETO_URL")
+	if oktetoURL == "" {
+		oktetoURL = okteto.CloudURL
+	}
+	log.Printf("login into %s", oktetoURL)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
-	args := []string{token, okteto.CloudURL}
+	args := []string{token, oktetoURL}
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()
@@ -655,9 +664,13 @@ func executeContextAction(ctx context.Context) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 
-	log.Printf("login into %s", okteto.CloudURL)
+	oktetoURL := os.Getenv("OKTETO_URL")
+	if oktetoURL == "" {
+		oktetoURL = okteto.CloudURL
+	}
+	log.Printf("login into %s", oktetoURL)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
-	args := []string{token, okteto.CloudURL}
+	args := []string{token, oktetoURL}
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()

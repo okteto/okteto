@@ -34,6 +34,7 @@ const configXML = `<configuration version="32">
     <order>random</order>
     <ignoreDelete>false</ignoreDelete>
     <scanProgressIntervalS>1</scanProgressIntervalS>
+    <disableFsync>true</disableFsync>
     <pullerPauseS>0</pullerPauseS>
     <maxConflicts>0</maxConflicts>
     <disableSparseFiles>false</disableSparseFiles>

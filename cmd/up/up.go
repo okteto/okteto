@@ -63,7 +63,7 @@ func Up() *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Activates your development container",
+		Short: "Activate your development container",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
@@ -108,7 +108,7 @@ func Up() *cobra.Command {
 					return err
 				}
 
-				dev, err = loadDevWithInit(upOptions.DevPath)
+				dev, err = loadDevWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
 				if err != nil {
 					return err
 				}
@@ -141,6 +141,10 @@ func Up() *cobra.Command {
 			}
 
 			if err := addStignoreSecrets(dev); err != nil {
+				return err
+			}
+
+			if err := addSyncFieldHash(dev); err != nil {
 				return err
 			}
 
@@ -188,11 +192,20 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-func loadDevWithInit(devPath string) (*model.Dev, error) {
+func loadDevWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Dev, error) {
 	workDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("unknown current folder: %s", err)
 	}
+	ctxOptions := &contextCMD.ContextOptions{
+		Context:   k8sContext,
+		Namespace: namespace,
+		Show:      true,
+	}
+	if err := contextCMD.Run(ctx, ctxOptions); err != nil {
+		return nil, err
+	}
+
 	if err := initCMD.Run(devPath, "", workDir, false); err != nil {
 		return nil, err
 	}
@@ -379,7 +392,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		up.Dev.Image.Name = devContainer.Image
 	}
 
-	log.Information("Running your build in %s...", okteto.Context().Buildkit)
+	log.Information("Running your build in %s...", okteto.Context().Builder)
 
 	imageTag := registry.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
 	log.Infof("building dev image tag %s", imageTag)

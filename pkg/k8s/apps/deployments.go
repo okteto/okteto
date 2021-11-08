@@ -33,15 +33,16 @@ import (
 )
 
 type DeploymentApp struct {
-	d *appsv1.Deployment
+	kind string
+	d    *appsv1.Deployment
 }
 
 func NewDeploymentApp(d *appsv1.Deployment) *DeploymentApp {
-	return &DeploymentApp{d: d}
+	return &DeploymentApp{kind: model.Deployment, d: d}
 }
 
-func (i *DeploymentApp) TypeMeta() metav1.TypeMeta {
-	return i.d.TypeMeta
+func (i *DeploymentApp) Kind() string {
+	return i.kind
 }
 
 func (i *DeploymentApp) ObjectMeta() metav1.ObjectMeta {

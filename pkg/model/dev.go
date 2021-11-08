@@ -340,6 +340,9 @@ func Read(bytes []byte) (*Dev, error) {
 		if err := s.expandEnvVars(); err != nil {
 			return nil, err
 		}
+		if err := s.validateForExtraFields(); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := dev.setDefaults(); err != nil {
@@ -1096,33 +1099,114 @@ func GetTimeout() (time.Duration, error) {
 
 func (dev *Dev) translateDeprecatedMetadataFields() error {
 	if len(dev.Labels) > 0 {
-		log.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector-mapstringstring-optional)")
+		log.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for k, v := range dev.Labels {
 			dev.Selector[k] = v
 		}
 	}
 
 	if len(dev.Annotations) > 0 {
-		log.Warning("The field 'annotations' is deprecated. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata-object-optional)")
+		log.Warning("The field 'annotations' is deprecated. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
 		for k, v := range dev.Annotations {
 			dev.Metadata.Annotations[k] = v
 		}
 	}
 	for _, s := range dev.Services {
 		if len(s.Labels) > 0 {
-			log.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector-mapstringstring-optional)", s.Name)
+			log.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
 			for k, v := range s.Labels {
 				s.Selector[k] = v
 			}
 		}
 
 		if len(s.Annotations) > 0 {
-			log.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata-object-optional)", s.Name)
+			log.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
 			for k, v := range s.Annotations {
 				s.Metadata.Annotations[k] = v
 			}
 		}
 	}
+	return nil
+}
+
+func (service *Dev) validateForExtraFields() error {
+	errorMessage := "%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/#services for documentation"
+	if service.Username != "" {
+		return fmt.Errorf(errorMessage, "username")
+	}
+	if service.RegistryURL != "" {
+		return fmt.Errorf(errorMessage, "registryURL")
+	}
+	if service.Autocreate {
+		return fmt.Errorf(errorMessage, "autocreate")
+	}
+	if service.Context != "" {
+		return fmt.Errorf(errorMessage, "context")
+	}
+	if service.Push != nil {
+		return fmt.Errorf(errorMessage, "push")
+	}
+	if service.Secrets != nil {
+		return fmt.Errorf(errorMessage, "secrets")
+	}
+	if service.Healthchecks {
+		return fmt.Errorf(errorMessage, "healthchecks")
+	}
+	if service.Probes != nil {
+		return fmt.Errorf(errorMessage, "probes")
+	}
+	if service.Lifecycle != nil {
+		return fmt.Errorf(errorMessage, "lifecycle")
+	}
+	if service.SecurityContext != nil {
+		return fmt.Errorf(errorMessage, "securityContext")
+	}
+	if service.ServiceAccount != "" {
+		return fmt.Errorf(errorMessage, "serviceAccount")
+	}
+	if service.RemotePort != 0 {
+		return fmt.Errorf(errorMessage, "remote")
+	}
+	if service.SSHServerPort != 0 {
+		return fmt.Errorf(errorMessage, "sshServerPort")
+	}
+	if service.ExternalVolumes != nil {
+		return fmt.Errorf(errorMessage, "externalVolumes")
+	}
+	if service.parentSyncFolder != "" {
+		return fmt.Errorf(errorMessage, "parentSyncFolder")
+	}
+	if service.Forward != nil {
+		return fmt.Errorf(errorMessage, "forward")
+	}
+	if service.Reverse != nil {
+		return fmt.Errorf(errorMessage, "reverse")
+	}
+	if service.Interface != "" {
+		return fmt.Errorf(errorMessage, "interface")
+	}
+	if service.Services != nil {
+		return fmt.Errorf(errorMessage, "services")
+	}
+	if service.PersistentVolumeInfo != nil {
+		return fmt.Errorf(errorMessage, "persistentVolume")
+	}
+	if service.InitContainer.Image != "" {
+		return fmt.Errorf(errorMessage, "initContainer")
+	}
+	if service.InitFromImage {
+		return fmt.Errorf(errorMessage, "initFromImage")
+	}
+	if service.Timeout != (Timeout{}) {
+		return fmt.Errorf(errorMessage, "timeout")
+	}
+	if service.Docker.Enabled && service.Docker.Image != "" {
+		return fmt.Errorf(errorMessage, "docker")
+	}
+	if service.Divert != nil {
+		return fmt.Errorf(errorMessage, "divert")
+	}
+
 	return nil
 }
 

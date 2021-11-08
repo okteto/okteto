@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"sort"
 	"text/tabwriter"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -30,8 +29,8 @@ func List() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
-		Short:   "Lists okteto contexts",
+		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#list"),
+		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if err := executeListContext(ctx); err != nil {
@@ -46,29 +45,25 @@ func List() *cobra.Command {
 }
 
 func executeListContext(ctx context.Context) error {
-	oCtxs := okteto.ContextStore()
-	contexts := make([]string, 0)
-	for name := range oCtxs.Contexts {
-		contexts = append(contexts, name)
+	contexts := getOktetoClusters(false)
+	contexts = append(contexts, getK8sClusters(getKubernetesContextList(true))...)
 
+	if len(contexts) == 0 {
+		return fmt.Errorf("no contexts are available. Run 'okteto context' to configure your first okteto context")
 	}
-	sort.Slice(contexts, func(i, j int) bool {
-		return len(contexts[i]) < len(contexts[j])
-	})
 
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Name\tBuilder\tRegistry\n")
-	for _, okctxName := range contexts {
-		okCtx := oCtxs.Contexts[okctxName]
-		name := okteto.RemoveSchema(okCtx.Name)
-		if okCtx.Name == oCtxs.CurrentContext {
-			name += " *"
+	fmt.Fprintf(w, "Name\tNamespace\tBuilder\tRegistry\n")
+	ctxStore := okteto.ContextStore()
+	for _, ctxSelector := range contexts {
+		if okCtx, ok := ctxStore.Contexts[ctxSelector.Name]; ok && okCtx.Builder != "" {
+			ctxSelector.Builder = okCtx.Builder
 		}
-		builder := "docker"
-		if okCtx.Buildkit != "" {
-			builder = okCtx.Buildkit
+
+		if ctxSelector.Name == ctxStore.CurrentContext {
+			ctxSelector.Name += " *"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n", name, builder, okCtx.Registry)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ctxSelector.Name, ctxSelector.Namespace, ctxSelector.Builder, ctxSelector.Registry)
 	}
 
 	w.Flush()
