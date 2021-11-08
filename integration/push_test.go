@@ -96,7 +96,7 @@ func TestPush(t *testing.T) {
 
 func oktetoPush(ctx context.Context, oktetoPath, oktetoManifestPath string) error {
 	log.Printf("okteto push %s", oktetoManifestPath)
-	cmd := exec.Command(oktetoPath, "push", "-d", "-f", oktetoManifestPath)
+	cmd := exec.Command(oktetoPath, "push", "-d", "--no-cache", "-f", oktetoManifestPath)
 	cmd.Env = os.Environ()
 	cmd.Dir = pushGitFolder
 	o, err := cmd.CombinedOutput()
