@@ -27,7 +27,7 @@ import (
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	o_error "github.com/okteto/okteto/pkg/errors"
+	oktetoError "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
