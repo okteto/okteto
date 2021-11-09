@@ -627,7 +627,8 @@ func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []Stack
 	topLevelVolumes := make([]StackVolume, 0)
 	mountedVolumes := make([]StackVolume, 0)
 	for _, volume := range volumes {
-		if volume.LocalPath == "" || isInVolumesTopLevelSection(volume.LocalPath, s) {
+		if volume.LocalPath == "" || isInVolumesTopLevelSection(sanitizeName(volume.LocalPath), s) {
+			volume.LocalPath = sanitizeName(volume.LocalPath)
 			topLevelVolumes = append(topLevelVolumes, volume)
 		} else {
 			mountedVolumes = append(mountedVolumes, volume)
@@ -1058,7 +1059,7 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		v.LocalPath = sanitizeName(parts[0])
+		v.LocalPath = parts[0]
 		v.RemotePath = parts[1]
 	} else {
 		v.RemotePath = parts[0]
