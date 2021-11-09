@@ -42,7 +42,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 		}
 		infile, err := os.Open(stignorePath)
 		if err != nil {
-			return o_error.UserError{
+			return oktetoError.UserError{
 				E:    err,
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 			}
