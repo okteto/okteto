@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -753,109 +754,314 @@ func Test_translateJobWithVolumes(t *testing.T) {
 }
 
 func Test_translateService(t *testing.T) {
-	p1 := model.Port{HostPort: 82, ContainerPort: 80, Protocol: apiv1.ProtocolTCP}
-	p2 := model.Port{ContainerPort: 90, Protocol: apiv1.ProtocolTCP}
-	s := &model.Stack{
-		Name: "stackName",
-		Services: map[string]*model.Service{
-			"svcName": {
-				Labels: model.Labels{
-					"label1": "value1",
-					"label2": "value2",
+
+	var tests = []struct {
+		name     string
+		stack    *model.Stack
+		expected *apiv1.Service
+	}{
+		{
+			name: "translate svc no public endpoints",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Labels: model.Labels{
+							"label1": "value1",
+							"label2": "value2",
+						},
+						Annotations: model.Annotations{
+							"annotation1": "value1",
+							"annotation2": "value2",
+						},
+						Ports: []model.Port{
+							{
+								HostPort:      82,
+								ContainerPort: 80,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+							{
+								ContainerPort: 90,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+						},
+					},
 				},
-				Annotations: model.Annotations{
-					"annotation1": "value1",
-					"annotation2": "value2",
+			},
+			expected: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "svcName",
+					Labels: map[string]string{
+						"label1":                    "value1",
+						"label2":                    "value2",
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Annotations: map[string]string{
+						"annotation1": "value1",
+						"annotation2": "value2",
+					},
 				},
-				Ports: []model.Port{p1, p2},
+				Spec: apiv1.ServiceSpec{
+					Type: apiv1.ServiceTypeClusterIP,
+					Selector: map[string]string{
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "p-80-80-tcp",
+							Port:       80,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+						{
+							Name:       "p-82-80-tcp",
+							Port:       82,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+						{
+							Name:       "p-90-90-tcp",
+							Port:       90,
+							TargetPort: intstr.IntOrString{IntVal: 90},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "translate svc public endpoints",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Labels: model.Labels{
+							"label1": "value1",
+							"label2": "value2",
+						},
+
+						Public: true,
+						Annotations: model.Annotations{
+							"annotation1":                     "value1",
+							"annotation2":                     "value2",
+							model.OktetoAutoIngressAnnotation: "true",
+						},
+						Ports: []model.Port{
+							{
+								HostPort:      82,
+								ContainerPort: 80,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+							{
+								ContainerPort: 90,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			},
+			expected: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "svcName",
+					Labels: map[string]string{
+						"label1":                    "value1",
+						"label2":                    "value2",
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Annotations: map[string]string{
+						"annotation1":                     "value1",
+						"annotation2":                     "value2",
+						model.OktetoAutoIngressAnnotation: "true",
+					},
+				},
+				Spec: apiv1.ServiceSpec{
+					Type: apiv1.ServiceTypeLoadBalancer,
+					Selector: map[string]string{
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "p-80-80-tcp",
+							Port:       80,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+						{
+							Name:       "p-82-80-tcp",
+							Port:       82,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+						{
+							Name:       "p-90-90-tcp",
+							Port:       90,
+							TargetPort: intstr.IntOrString{IntVal: 90},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "translate svc private endpoints",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Labels: model.Labels{
+							"label1": "value1",
+							"label2": "value2",
+						},
+						Annotations: model.Annotations{
+							"annotation1":                     "value1",
+							"annotation2":                     "value2",
+							model.OktetoAutoIngressAnnotation: "private",
+						},
+						Public: true,
+						Ports: []model.Port{
+							{
+								HostPort:      82,
+								ContainerPort: 80,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+							{
+								ContainerPort: 90,
+								Protocol:      apiv1.ProtocolTCP,
+							}},
+					},
+				},
+			},
+			expected: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "svcName",
+					Labels: map[string]string{
+						"label1":                    "value1",
+						"label2":                    "value2",
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Annotations: map[string]string{
+						"annotation1":                     "value1",
+						"annotation2":                     "value2",
+						model.OktetoAutoIngressAnnotation: "private",
+					},
+				},
+				Spec: apiv1.ServiceSpec{
+					Type: apiv1.ServiceTypeLoadBalancer,
+					Selector: map[string]string{
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "p-80-80-tcp",
+							Port:       80,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+						{
+							Name:       "p-82-80-tcp",
+							Port:       82,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+						{
+							Name:       "p-90-90-tcp",
+							Port:       90,
+							TargetPort: intstr.IntOrString{IntVal: 90},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "translate svc private endpoints by private annotation",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Labels: model.Labels{
+							"label1": "value1",
+							"label2": "value2",
+						},
+						Annotations: model.Annotations{
+							"annotation1":                    "value1",
+							"annotation2":                    "value2",
+							model.OktetoPrivateSvcAnnotation: "true",
+						},
+						Public: true,
+						Ports: []model.Port{
+							{
+								HostPort:      82,
+								ContainerPort: 80,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+							{
+								ContainerPort: 90,
+								Protocol:      apiv1.ProtocolTCP,
+							}},
+					},
+				},
+			},
+			expected: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "svcName",
+					Labels: map[string]string{
+						"label1":                    "value1",
+						"label2":                    "value2",
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Annotations: map[string]string{
+						"annotation1":                     "value1",
+						"annotation2":                     "value2",
+						model.OktetoAutoIngressAnnotation: "private",
+						model.OktetoPrivateSvcAnnotation:  "true",
+					},
+				},
+				Spec: apiv1.ServiceSpec{
+					Type: apiv1.ServiceTypeLoadBalancer,
+					Selector: map[string]string{
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "p-80-80-tcp",
+							Port:       80,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+						{
+							Name:       "p-82-80-tcp",
+							Port:       82,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+						{
+							Name:       "p-90-90-tcp",
+							Port:       90,
+							TargetPort: intstr.IntOrString{IntVal: 90},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+					},
+				},
 			},
 		},
 	}
-	result := translateService("svcName", s)
-	if result.Name != "svcName" {
-		t.Errorf("Wrong service name: '%s'", result.Name)
-	}
-	labels := map[string]string{
-		"label1":                    "value1",
-		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
-	}
-	if !reflect.DeepEqual(result.Labels, labels) {
-		t.Errorf("Wrong service labels: '%s'", result.Labels)
-	}
-	annotations := map[string]string{
-		"annotation1": "value1",
-		"annotation2": "value2",
-	}
-	if !reflect.DeepEqual(result.Annotations, annotations) {
-		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
-	}
-	ports := []apiv1.ServicePort{
-		{
-			Name:       "p-80-80-tcp",
-			Port:       80,
-			TargetPort: intstr.IntOrString{IntVal: 80},
-			Protocol:   apiv1.ProtocolTCP,
-		},
-		{
-			Name:       "p-82-80-tcp",
-			Port:       82,
-			TargetPort: intstr.IntOrString{IntVal: 80},
-			Protocol:   apiv1.ProtocolTCP,
-		},
-		{
-			Name:       "p-90-90-tcp",
-			Port:       90,
-			TargetPort: intstr.IntOrString{IntVal: 90},
-			Protocol:   apiv1.ProtocolTCP,
-		},
-	}
-	if !reflect.DeepEqual(result.Spec.Ports, ports) {
-		t.Errorf("Wrong service ports: '%v', expected: '%v'", result.Spec.Ports, ports)
-	}
-	if result.Spec.Type != apiv1.ServiceTypeClusterIP {
-		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
-	}
-	selector := map[string]string{
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
-	}
-	if !reflect.DeepEqual(result.Spec.Selector, selector) {
-		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := translateService("svcName", tt.stack)
+			assert.Equal(t, tt.expected, result)
+		})
 	}
 
-	svc := s.Services["svcName"]
-	svc.Public = true
-	s.Services["svcName"] = svc
-	result = translateService("svcName", s)
-	annotations[model.OktetoAutoIngressAnnotation] = "true"
-	if !reflect.DeepEqual(result.Annotations, annotations) {
-		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
-	}
-	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
-		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
-	}
-	annotations[model.OktetoAutoIngressAnnotation] = "true"
-	if !reflect.DeepEqual(result.Annotations, annotations) {
-		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
-	}
-	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
-		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
-	}
-
-	svc = s.Services["svcName"]
-	svc.Public = true
-	svc.Annotations[model.OktetoAutoIngressAnnotation] = "private"
-	s.Services["svcName"] = svc
-	result = translateService("svcName", s)
-	annotations[model.OktetoAutoIngressAnnotation] = "private"
-	if !reflect.DeepEqual(result.Annotations, annotations) {
-		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
-	}
-	if result.Spec.Type != apiv1.ServiceTypeLoadBalancer {
-		t.Errorf("Wrong service type: '%s'", result.Spec.Type)
-	}
 }
 
 func Test_translateEndpointsV1(t *testing.T) {

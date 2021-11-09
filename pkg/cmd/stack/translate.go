@@ -561,6 +561,9 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	annotations := translateAnnotations(svc)
 	if s.Services[svcName].Public && annotations[model.OktetoAutoIngressAnnotation] == "" {
 		annotations[model.OktetoAutoIngressAnnotation] = "true"
+		if annotations[model.OktetoPrivateSvcAnnotation] == "true" {
+			annotations[model.OktetoAutoIngressAnnotation] = "private"
+		}
 	}
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{

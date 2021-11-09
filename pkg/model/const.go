@@ -91,6 +91,9 @@ const (
 	// OktetoAutoIngressAnnotation indicates an ingress must be created for a service
 	OktetoAutoIngressAnnotation = "dev.okteto.com/auto-ingress"
 
+	// OktetoPrivateSvcAnnotation indicates an ingress must be created private
+	OktetoPrivateSvcAnnotation = "dev.okteto.com/private"
+
 	// OktetoInstallerRunningLabel indicates the okteto installer is running on this resource
 	OktetoInstallerRunningLabel = "dev.okteto.com/installer-running"
 
