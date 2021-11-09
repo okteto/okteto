@@ -19,7 +19,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/clientcmd/api"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -33,7 +32,7 @@ func TestGetKubeconfig(t *testing.T) {
 	var tests = []struct {
 		name             string
 		KubeconfigFields []kubeconfigFields
-		expected         *api.Config
+		expected         *clientcmdapi.Config
 	}{
 		{
 			name: "only one",
