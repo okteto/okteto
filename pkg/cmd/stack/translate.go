@@ -173,11 +173,12 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			BuildArgs:  buildArgs,
 			OutputMode: options.Progress,
 		}
-		if err := build.Run(ctx, buildOptions); err != nil {
+		if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
 			return hasBuiltSomething, err
 		}
 		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
+		log.Success("Image for service '%s' successfully pushed", name)
 	}
 	return hasBuiltSomething, nil
 }
@@ -218,11 +219,12 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				BuildArgs:  buildArgs,
 				OutputMode: options.Progress,
 			}
-			if err := build.Run(ctx, buildOptions); err != nil {
+			if err := build.Run(ctx, s.Namespace, buildOptions); err != nil {
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.SetLastBuiltAnnotation()
 			s.Services[name] = svc
+			log.Success("Image for service '%s' successfully pushed", name)
 		}
 	}
 	return hasAddedAnyVolumeMounts, nil
