@@ -153,6 +153,8 @@ func getUserContext(ctx context.Context) (*okteto.UserContext, error) {
 	for retries <= 3 {
 		userContext, err := client.GetUserContext(ctx)
 
+		// If userID is not on context config file we add it and save it.
+		// this prevents from relogin to actual users
 		if okteto.Context().UserID == "" {
 			okteto.Context().UserID = userContext.User.ID
 			if err := okteto.WriteOktetoContextConfig(); err != nil {
@@ -160,6 +162,7 @@ func getUserContext(ctx context.Context) (*okteto.UserContext, error) {
 				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 			}
 		}
+
 		if err == nil {
 			return userContext, nil
 		}
