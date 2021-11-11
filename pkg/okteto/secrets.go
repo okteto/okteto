@@ -132,7 +132,7 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*types.UserContext, 
 	return result, nil
 }
 
-func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*UserContext, error) {
+func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*types.UserContext, error) {
 	var query struct {
 		User struct {
 			Id          graphql.String
@@ -165,17 +165,17 @@ func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*UserConte
 		return nil, err
 	}
 
-	secrets := make([]Secret, 0)
+	secrets := make([]types.Secret, 0)
 	for _, secret := range query.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, Secret{
+			secrets = append(secrets, types.Secret{
 				Name:  string(secret.Name),
 				Value: string(secret.Value),
 			})
 		}
 	}
-	result := &UserContext{
-		User: User{
+	result := &types.UserContext{
+		User: types.User{
 			ID:              string(query.User.Id),
 			Name:            string(query.User.Name),
 			Namespace:       string(query.User.Namespace),
@@ -190,7 +190,7 @@ func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*UserConte
 			Analytics:       true,
 		},
 		Secrets: secrets,
-		Credentials: Credential{
+		Credentials: types.Credential{
 			Server:      string(query.Cred.Server),
 			Certificate: string(query.Cred.Certificate),
 			Token:       string(query.Cred.Token),
