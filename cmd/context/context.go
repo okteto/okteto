@@ -34,9 +34,11 @@ func Context() *cobra.Command {
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
 The current context is the default cluster/namespace for any Okteto CLI command.
 
-Show a list of available contexts with:
+To set your default context, run the ` + "`okteto context`" + ` command:
 
     $ okteto context
+
+This will prompt you to select one of your existing contexts or to create a new one.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -44,7 +46,8 @@ Show a list of available contexts with:
 				ctxOptions.Context = args[0]
 			}
 
-			ctxOptions.isCtxCommand = true
+			ctxOptions.IsCtxCommand = true
+			ctxOptions.Save = true
 			err := Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			return err
@@ -56,6 +59,7 @@ Show a list of available contexts with:
 	cmd.AddCommand(CreateCMD())
 	cmd.AddCommand(UpdateKubeconfigCMD())
 	cmd.AddCommand(List())
+	cmd.AddCommand(UseNamespace())
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")

@@ -29,7 +29,7 @@ func List() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
+		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#list"),
 		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()

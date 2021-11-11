@@ -377,7 +377,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				spinner.Update("Pulling images...")
 				spinner.Start()
 			case "Killing":
-				if app.TypeMeta().Kind == model.StatefulSet {
+				if app.Kind() == model.StatefulSet {
 					killing = true
 					continue
 				}

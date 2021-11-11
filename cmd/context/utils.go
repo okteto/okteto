@@ -48,7 +48,7 @@ func getKubernetesContextList(filterOkteto bool) []string {
 		return contextList
 	}
 	for name := range cfg.Contexts {
-		if _, ok := cfg.Contexts[name].Extensions[model.OktetoExtension]; ok {
+		if _, ok := cfg.Contexts[name].Extensions[model.OktetoExtension]; ok && filterOkteto {
 			continue
 		}
 		contextList = append(contextList, name)
@@ -79,7 +79,7 @@ func askForOktetoURL() string {
 		clusterURL = ctxStore.CurrentContext
 	}
 
-	log.Question("Enter your Okteto URL [%s]:", clusterURL)
+	log.Question("Enter your Okteto URL [%s]: ", clusterURL)
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)

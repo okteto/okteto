@@ -223,7 +223,7 @@ func runPush(ctx context.Context, dev *model.Dev, imageTag, oktetoRegistryURL, p
 			for _, rule := range tr.Rules {
 				devContainer := apps.GetDevContainer(tr.App.PodSpec(), rule.Container)
 				if devContainer == nil {
-					exit <- fmt.Errorf("%s '%s': container '%s' not found", app.TypeMeta().Kind, app.ObjectMeta().Name, rule.Container)
+					exit <- fmt.Errorf("%s '%s': container '%s' not found", app.Kind(), app.ObjectMeta().Name, rule.Container)
 					return
 				}
 				apps.SetLastBuiltAnnotation(app)
@@ -292,7 +292,7 @@ func getImageFromApp(trMap map[string]*apps.Translation) (string, error) {
 		for _, rule := range tr.Rules {
 			devContainer := apps.GetDevContainer(tr.App.PodSpec(), rule.Container)
 			if devContainer == nil {
-				return "", fmt.Errorf("%s '%s': container '%s' not found", tr.App.TypeMeta().Kind, tr.App.ObjectMeta().Name, rule.Container)
+				return "", fmt.Errorf("%s '%s': container '%s' not found", tr.App.Kind(), tr.App.ObjectMeta().Name, rule.Container)
 			}
 			if imageFromApp == "" {
 				imageFromApp = devContainer.Image

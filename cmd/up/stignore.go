@@ -16,6 +16,7 @@ package up
 import (
 	"bufio"
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -93,6 +94,15 @@ func addStignoreSecrets(dev *model.Dev) error {
 		)
 	}
 	dev.Metadata.Annotations[model.OktetoStignoreAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
+	return nil
+}
+
+func addSyncFieldHash(dev *model.Dev) error {
+	output, err := json.Marshal(dev.Sync)
+	if err != nil {
+		return err
+	}
+	dev.Metadata.Annotations[model.OktetoSyncAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
 	return nil
 }
 

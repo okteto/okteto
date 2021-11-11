@@ -28,7 +28,7 @@ import (
 func UpdateKubeconfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update-kubeconfig",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#update-kubeconfig"),
 		Short: "Download kubectl credentials for the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -49,7 +49,7 @@ func UpdateKubeconfigCMD() *cobra.Command {
 }
 
 func ExecuteUpdateKubeconfig(ctx context.Context) error {
-	if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()); err != nil {
+	if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()[0]); err != nil {
 		return err
 	}
 	k8sContext := okteto.Context().Name

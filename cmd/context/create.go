@@ -42,7 +42,7 @@ func CreateCMD() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
 		Use:   "create [cluster-url]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#context"),
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
 		Short: "Add a context",
 		Long: `Add a context
 
@@ -67,7 +67,10 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.Context = args[0]
 			ctxOptions.Context = okteto.AddSchema(ctxOptions.Context)
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
-			ctxOptions.isOkteto = true
+			ctxOptions.IsOkteto = true
+			ctxOptions.IsCtxCommand = true
+			ctxOptions.Show = false
+			ctxOptions.Save = true
 			ctxController := ContextUse{
 				k8sClientProvider:    okteto.NewK8sClientProvider(),
 				loginController:      login.NewLoginController(),
@@ -76,10 +79,7 @@ If you need to automate authentication or if you don't want to use browser-based
 
 			err := ctxController.UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
-			if err != nil {
-				return err
-			}
-			return nil
+			return err
 		},
 	}
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
@@ -93,28 +93,28 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 
 	ctxStore := okteto.ContextStore()
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; ok && okCtx.IsOkteto {
-		ctxOptions.isOkteto = true
+		ctxOptions.IsOkteto = true
 	}
 
 	if okCtx, ok := ctxStore.Contexts[okteto.AddSchema(ctxOptions.Context)]; ok && okCtx.IsOkteto {
 		ctxOptions.Context = okteto.AddSchema(ctxOptions.Context)
-		ctxOptions.isOkteto = true
+		ctxOptions.IsOkteto = true
 	}
 
-	if !ctxOptions.isOkteto {
+	if ctxOptions.Context == okteto.CloudURL {
+		ctxOptions.IsOkteto = true
+	}
+
+	if !ctxOptions.IsOkteto {
 		if !isValidCluster(ctxOptions.Context) {
-			log.Fail("%s: invalid okteto context", ctxOptions.Context)
-			ctxOptions = &ContextOptions{}
-			ctxOptions.isCtxCommand = true
-			err := Run(ctx, ctxOptions)
-			analytics.TrackContext(err == nil)
-			return err
+			return errors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
+				Hint: "Please run 'okteto context' to select one context"}
 		}
 
 		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.k8sClientProvider)
 		if transformedCtx != ctxOptions.Context {
 			ctxOptions.Context = transformedCtx
-			ctxOptions.isOkteto = true
+			ctxOptions.IsOkteto = true
 		}
 	}
 
@@ -128,7 +128,7 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 
 	ctxStore.CurrentContext = ctxOptions.Context
 
-	if ctxOptions.isOkteto {
+	if ctxOptions.IsOkteto {
 		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
 			return err
 		}
@@ -137,14 +137,16 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 			return err
 		}
 	}
-	if err := okteto.WriteOktetoContextConfig(); err != nil {
-		return err
+	if ctxOptions.Save {
+		if err := okteto.WriteOktetoContextConfig(); err != nil {
+			return err
+		}
 	}
-	if created && ctxOptions.isOkteto {
+	if created && ctxOptions.IsOkteto {
 		log.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
 	}
 
-	if ctxOptions.isCtxCommand {
+	if ctxOptions.IsCtxCommand {
 		log.Success("Using context %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
 	}
 
@@ -166,7 +168,7 @@ func (c *ContextUse) initOktetoContext(ctx context.Context, ctxOptions *ContextO
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = userContext.User.Namespace
 	}
-	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace)
+	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace, userContext.User.Namespace)
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
 		cfg = kubeconfig.Create()

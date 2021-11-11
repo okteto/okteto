@@ -91,8 +91,10 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) (bool, erro
 
 	isOktetoRegistry := registry.IsOktetoRegistry(buildOptions.Tag)
 	if okteto.IsOkteto() {
-		if ok := registry.IsImageAtRegistry(buildOptions.Tag); ok {
-			return true, nil
+		if !buildOptions.NoCache {
+			if ok := registry.IsImageAtRegistry(buildOptions.Tag); ok {
+				return true, nil
+			}
 		}
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)

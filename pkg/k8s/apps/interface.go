@@ -23,7 +23,7 @@ import (
 )
 
 type App interface {
-	TypeMeta() metav1.TypeMeta
+	Kind() string
 	ObjectMeta() metav1.ObjectMeta
 	Replicas() int32
 	SetReplicas(n int32)

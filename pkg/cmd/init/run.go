@@ -82,17 +82,17 @@ func getRunningPod(ctx context.Context, app apps.App, container string, c kubern
 	pod, err := app.GetRunningPod(ctx, c)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, fmt.Errorf("%s '%s': no pod is running", app.TypeMeta().Kind, app.ObjectMeta().Name)
+			return nil, fmt.Errorf("%s '%s': no pod is running", app.Kind(), app.ObjectMeta().Name)
 		}
 		return nil, err
 	}
 
 	if pod.Status.Phase != apiv1.PodRunning {
-		return nil, fmt.Errorf("%s '%s': no pod is running", app.TypeMeta().Kind, app.ObjectMeta().Name)
+		return nil, fmt.Errorf("%s '%s': no pod is running", app.Kind(), app.ObjectMeta().Name)
 	}
 	for _, containerstatus := range pod.Status.ContainerStatuses {
 		if containerstatus.Name == container && containerstatus.State.Running == nil {
-			return nil, fmt.Errorf("%s '%s': no pod is running", app.TypeMeta().Kind, app.ObjectMeta().Name)
+			return nil, fmt.Errorf("%s '%s': no pod is running", app.Kind(), app.ObjectMeta().Name)
 		}
 	}
 	return pod, nil
