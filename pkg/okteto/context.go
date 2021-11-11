@@ -55,7 +55,7 @@ var (
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
 	Name              string               `json:"name" yaml:"name,omitempty"`
-	UserID            string               `json:"-"`
+	UserID            string               `json:"id,omitempty" yaml:"id,omitempty"`
 	Username          string               `json:"username,omitempty" yaml:"username,omitempty"`
 	Token             string               `json:"token,omitempty" yaml:"token,omitempty"`
 	Namespace         string               `json:"namespace" yaml:"namespace,omitempty"`
@@ -107,6 +107,7 @@ func InitContextWithDeprecatedToken() {
 		Builder:     token.Buildkit,
 		Certificate: base64.StdEncoding.EncodeToString(certificateBytes),
 		IsOkteto:    true,
+		UserID:      token.ID,
 	}
 	ctxStore.CurrentContext = token.URL
 

@@ -152,6 +152,14 @@ func getUserContext(ctx context.Context) (*okteto.UserContext, error) {
 	retries := 0
 	for retries <= 3 {
 		userContext, err := client.GetUserContext(ctx)
+
+		if okteto.Context().UserID == "" {
+			okteto.Context().UserID = userContext.User.ID
+			if err := okteto.WriteOktetoContextConfig(); err != nil {
+				log.Infof("error updating okteto contexts: %v", err)
+				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+			}
+		}
 		if err == nil {
 			return userContext, nil
 		}
