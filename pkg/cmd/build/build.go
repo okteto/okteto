@@ -43,20 +43,20 @@ type BuildOptions struct {
 }
 
 // Run runs the build sequence
-func Run(ctx context.Context, namespace string, buildOptions BuildOptions) error {
+func Run(ctx context.Context, buildOptions BuildOptions) error {
 	if okteto.Context().Builder == "" {
 		if err := buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
-		if err := buildWithOkteto(ctx, namespace, buildOptions); err != nil {
+		if err := buildWithOkteto(ctx, buildOptions); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func buildWithOkteto(ctx context.Context, namespace string, buildOptions BuildOptions) error {
+func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 	log.Infof("building your image on %s", okteto.Context().Builder)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {

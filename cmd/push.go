@@ -273,7 +273,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageTag, imageFromApp, okt
 		BuildArgs:  buildArgs,
 		OutputMode: progress,
 	}
-	if err := build.Run(ctx, dev.Namespace, buildOptions); err != nil {
+	if err := build.Run(ctx, buildOptions); err != nil {
 		return "", err
 	}
 
