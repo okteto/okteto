@@ -46,7 +46,7 @@ func Test_createContext(t *testing.T) {
 				Contexts: map[string]*okteto.OktetoContext{},
 			},
 			ctxOptions: &ContextOptions{
-				isOkteto: false,
+				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
 			kubeconfigCtx: kubeconfigFields{
@@ -77,7 +77,7 @@ func Test_createContext(t *testing.T) {
 				Contexts: map[string]*okteto.OktetoContext{},
 			},
 			ctxOptions: &ContextOptions{
-				isOkteto: false,
+				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
 			user: &types.User{
@@ -95,7 +95,7 @@ func Test_createContext(t *testing.T) {
 				Contexts: map[string]*okteto.OktetoContext{},
 			},
 			ctxOptions: &ContextOptions{
-				isOkteto: false,
+				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
 			user: &types.User{
@@ -114,7 +114,7 @@ func Test_createContext(t *testing.T) {
 				Contexts: map[string]*okteto.OktetoContext{},
 			},
 			ctxOptions: &ContextOptions{
-				isOkteto: false,
+				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
 			user: &types.User{
@@ -140,7 +140,7 @@ func Test_createContext(t *testing.T) {
 				Token: "test",
 			},
 			ctxOptions: &ContextOptions{
-				isOkteto: false,
+				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
 			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
@@ -160,7 +160,7 @@ func Test_createContext(t *testing.T) {
 				Token: "test",
 			},
 			ctxOptions: &ContextOptions{
-				isOkteto: true,
+				IsOkteto: true,
 				Context:  "cloud.okteto.com",
 			},
 			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
@@ -180,7 +180,7 @@ func Test_createContext(t *testing.T) {
 				Token: "test",
 			},
 			ctxOptions: &ContextOptions{
-				isOkteto: true,
+				IsOkteto: true,
 				Context:  "https://cloud.okteto.com",
 			},
 			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
@@ -193,7 +193,7 @@ func Test_createContext(t *testing.T) {
 				Contexts: make(map[string]*okteto.OktetoContext),
 			},
 			ctxOptions: &ContextOptions{
-				isOkteto: true,
+				IsOkteto: true,
 				Context:  "https://okteto.cloud.com",
 				Token:    "this is a token",
 			},
