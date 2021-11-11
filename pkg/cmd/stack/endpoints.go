@@ -39,9 +39,7 @@ func ListEndpoints(ctx context.Context, stack *model.Stack, output string) error
 	if err != nil {
 		return err
 	}
-	if len(endpointList) == 0 {
-		log.Information("There are no available endpoints for stack '%s'\n", stack.Name)
-	} else {
+	if len(endpointList) > 0 {
 		sort.Slice(endpointList, func(i, j int) bool {
 			return len(endpointList[i]) < len(endpointList[j])
 		})
