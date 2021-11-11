@@ -182,7 +182,7 @@ func (c *ContextUse) initOktetoContext(ctx context.Context, ctxOptions *ContextO
 	return nil
 }
 
-func (c *ContextUse) initKubernetesContext(ctxOptions *ContextOptions) error {
+func (_ *ContextUse) initKubernetesContext(ctxOptions *ContextOptions) error {
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
 		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())

@@ -21,12 +21,6 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
-type OktetoClientProvider struct{}
-
-func NewOktetoClientProvider() *OktetoClientProvider {
-	return &OktetoClientProvider{}
-}
-
 func (c OktetoClientProvider) NewOktetoUserClient() (types.UserInterface, error) {
 	return NewOktetoClient()
 }

@@ -27,8 +27,8 @@ func NewK8sClientProvider() *K8sClient {
 	return &K8sClient{}
 }
 
-func (c *K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
-	return GetK8sClientWithApiConfig(clientApiConfig)
+func (_ *K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+	return getK8sClientWithApiConfig(clientApiConfig)
 }
 
 func getKubernetesTimeout() time.Duration {
@@ -52,7 +52,7 @@ func getKubernetesTimeout() time.Duration {
 	return timeout
 }
 
-func GetK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
+func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
 	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
 
 	config, err := clientConfig.ClientConfig()

@@ -341,7 +341,7 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
-	c, config, err := GetK8sClientWithApiConfig(Context().Cfg)
+	c, config, err := getK8sClientWithApiConfig(Context().Cfg)
 	if err == nil {
 		Context().SetClusterType(config.Host)
 	}
