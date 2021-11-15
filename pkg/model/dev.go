@@ -287,6 +287,10 @@ func Get(devPath string) (*Dev, error) {
 		return nil, err
 	}
 
+	if err := dev.validateSync(); err != nil {
+		return nil, err
+	}
+
 	dev.computeParentSyncFolder()
 
 	return dev, nil
@@ -632,6 +636,17 @@ func (dev *Dev) setTimeout() error {
 	}
 
 	dev.Timeout.Default = t
+	return nil
+}
+
+func (dev *Dev) validateSync() error {
+	for _, folder := range dev.Sync.Folders {
+		validPath, err := os.Stat(folder.LocalPath)
+		if !validPath.IsDir() && err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
