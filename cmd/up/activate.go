@@ -174,7 +174,8 @@ func (up *upContext) activate() error {
 				divertURL = i.Spec.Rules[0].Host
 			}
 		}
-		printDisplayContext(up.Dev, divertURL)
+		endpoints := up.getUpEndpoints(ctx)
+		printDisplayContext(up.Dev, divertURL, endpoints)
 		durationActivateUp := time.Since(up.StartTime)
 		analytics.TrackDurationActivateUp(durationActivateUp)
 		if hook == "yes" {

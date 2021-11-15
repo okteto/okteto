@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -33,6 +34,8 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/k8s/endpoints"
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -509,7 +512,39 @@ func (up *upContext) shutdown() {
 
 }
 
-func printDisplayContext(dev *model.Dev, divertURL string) {
+func (up *upContext) getUpEndpoints(ctx context.Context) []string {
+	result := make([]string, 0)
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		return result
+	}
+	endpointList, err := endpoints.GetEndpointsByPodName(ctx, up.Pod.Name, up.Dev.Namespace, c)
+	if err != nil {
+		return result
+	}
+	svcsName := make([]string, 0)
+	for _, endpoint := range endpointList {
+		svcsName = append(svcsName, endpoint.Name)
+	}
+
+	iClient, err := ingresses.GetClient(ctx, c)
+	if err != nil {
+		return result
+	}
+	eps, err := iClient.GetEndpointsByEndpointsServices(ctx, up.Dev.Namespace, svcsName)
+	if err != nil {
+		return result
+	}
+
+	if len(eps) > 0 {
+		sort.Slice(eps, func(i, j int) bool {
+			return len(eps[i]) < len(eps[j])
+		})
+	}
+	return eps
+}
+
+func printDisplayContext(dev *model.Dev, divertURL string, endpoints []string) {
 	log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), okteto.RemoveSchema(dev.Context)))
 	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
 	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
@@ -539,6 +574,12 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 
 	if divertURL != "" {
 		log.Println(fmt.Sprintf("    %s       %s", log.BlueString("URL:"), divertURL))
+	}
+	if len(endpoints) > 0 {
+		log.Println(fmt.Sprintf("    %s %s", log.BlueString("Endpoints:"), endpoints[0]))
+		for i := 1; i < len(endpoints); i++ {
+			log.Println(fmt.Sprintf("               %s", endpoints[i]))
+		}
 	}
 	fmt.Println()
 }

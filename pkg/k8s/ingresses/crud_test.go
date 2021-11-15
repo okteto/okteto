@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	networkingv1 "k8s.io/api/networking/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -197,5 +198,231 @@ func TestDestroyWithError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), kubernetesError) {
 		t.Fatalf("Got '%s' error but expected '%s'", err.Error(), kubernetesError)
+	}
+}
+
+func TestGetEndpointsByEndpointsServices(t *testing.T) {
+	var tests = []struct {
+		name     string
+		svcs     []string
+		i        *networkingv1.Ingress
+		expected []string
+	}{
+
+		{
+			name: "simple",
+			svcs: []string{"vote"},
+			i: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-test",
+					Namespace: "test",
+				},
+
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{
+						{
+							Host: "vote.com",
+							IngressRuleValue: networkingv1.IngressRuleValue{
+								HTTP: &networkingv1.HTTPIngressRuleValue{
+									Paths: []networkingv1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1.IngressBackend{
+												Service: &networkingv1.IngressServiceBackend{
+													Name: "vote",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"https://vote.com/"},
+		},
+		{
+			name: "simple two services",
+			svcs: []string{"vote", "app"},
+			i: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-test",
+					Namespace: "test",
+				},
+
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{
+						{
+							Host: "vote.com",
+							IngressRuleValue: networkingv1.IngressRuleValue{
+								HTTP: &networkingv1.HTTPIngressRuleValue{
+									Paths: []networkingv1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1.IngressBackend{
+												Service: &networkingv1.IngressServiceBackend{
+													Name: "vote",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"https://vote.com/"},
+		},
+		{
+			name: "multiple paths only one svc",
+			svcs: []string{"vote"},
+			i: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-test",
+					Namespace: "test",
+				},
+
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{
+						{
+							Host: "vote.com",
+							IngressRuleValue: networkingv1.IngressRuleValue{
+								HTTP: &networkingv1.HTTPIngressRuleValue{
+									Paths: []networkingv1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1.IngressBackend{
+												Service: &networkingv1.IngressServiceBackend{
+													Name: "vote",
+												},
+											},
+										},
+										{
+											Path: "/api",
+											Backend: networkingv1.IngressBackend{
+												Service: &networkingv1.IngressServiceBackend{
+													Name: "vote",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"https://vote.com/", "https://vote.com/api"},
+		},
+		{
+			name: "multiple paths only one svc",
+			svcs: []string{"vote", "app"},
+			i: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-test",
+					Namespace: "test",
+				},
+
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{
+						{
+							Host: "vote.com",
+							IngressRuleValue: networkingv1.IngressRuleValue{
+								HTTP: &networkingv1.HTTPIngressRuleValue{
+									Paths: []networkingv1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1.IngressBackend{
+												Service: &networkingv1.IngressServiceBackend{
+													Name: "vote",
+												},
+											},
+										},
+										{
+											Path: "/api",
+											Backend: networkingv1.IngressBackend{
+												Service: &networkingv1.IngressServiceBackend{
+													Name: "app",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"https://vote.com/", "https://vote.com/api"},
+		},
+		{
+			name: "multiple paths only one svc",
+			svcs: []string{"vote", "app"},
+			i: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-test",
+					Namespace: "test",
+				},
+
+				Spec: networkingv1.IngressSpec{
+					Rules: []networkingv1.IngressRule{
+						{
+							Host: "vote.com",
+							IngressRuleValue: networkingv1.IngressRuleValue{
+								HTTP: &networkingv1.HTTPIngressRuleValue{
+									Paths: []networkingv1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1.IngressBackend{
+												Service: &networkingv1.IngressServiceBackend{
+													Name: "vote",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						{
+							Host: "app.com",
+							IngressRuleValue: networkingv1.IngressRuleValue{
+								HTTP: &networkingv1.HTTPIngressRuleValue{
+									Paths: []networkingv1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: networkingv1.IngressBackend{
+												Service: &networkingv1.IngressServiceBackend{
+													Name: "app",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"https://vote.com/", "https://app.com/"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			clientset := fake.NewSimpleClientset(tt.i)
+			iClient := Client{
+				c:    clientset,
+				isV1: true,
+			}
+
+			result, err := iClient.GetEndpointsByEndpointsServices(ctx, "test", tt.svcs)
+			if err != nil {
+				t.Fatalf("unexpected error '%s'", err)
+			}
+			assert.Equal(t, tt.expected, result)
+		})
 	}
 }

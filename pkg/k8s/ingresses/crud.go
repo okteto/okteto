@@ -164,3 +164,46 @@ func (iClient *Client) GetEndpointsBySelector(ctx context.Context, namespace, la
 	}
 	return result, nil
 }
+
+func (iClient *Client) GetEndpointsByEndpointsServices(ctx context.Context, namespace string, svcs []string) ([]string, error) {
+	result := make([]string, 0)
+	if iClient.isV1 {
+		iList, err := iClient.c.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for i := range iList.Items {
+			for _, rule := range iList.Items[i].Spec.Rules {
+				for _, path := range rule.IngressRuleValue.HTTP.Paths {
+					if isPathBackendInSvcList(path.Backend.Service.Name, svcs) {
+						result = append(result, fmt.Sprintf("https://%s%s", rule.Host, path.Path))
+					}
+				}
+			}
+		}
+		return result, nil
+	}
+	iList, err := iClient.c.NetworkingV1beta1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for i := range iList.Items {
+		for _, rule := range iList.Items[i].Spec.Rules {
+			for _, path := range rule.IngressRuleValue.HTTP.Paths {
+				if isPathBackendInSvcList(path.Backend.ServiceName, svcs) {
+					result = append(result, fmt.Sprintf("https://%s%s", rule.Host, path.Path))
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
+func isPathBackendInSvcList(svc string, svcs []string) bool {
+	for _, svcName := range svcs {
+		if svc == svcName {
+			return true
+		}
+	}
+	return false
+}
