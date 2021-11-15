@@ -818,7 +818,7 @@ func Test_validate(t *testing.T) {
       sync:
         - .:/app
         - docs:/docs`),
-			expectErr: false,
+			expectErr: true,
 		},
 		{
 			name: "external-volumes",
@@ -944,7 +944,7 @@ func Test_validate(t *testing.T) {
 
 			err = dev.validate()
 			if tt.expectErr && err == nil {
-				t.Error("didn't got the expected error")
+				t.Error("didn't get the expected error")
 			}
 
 			if !tt.expectErr && err != nil {
