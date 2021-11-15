@@ -104,10 +104,12 @@ services:
     sync:
        - worker:/src`, file.Name()))
 
-	dev1, err := model.Read(manifest)
+	devManifest1, err := model.Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev1 := devManifest1.Dev["web"]
 
 	d1 := deployments.Sandbox(dev1)
 	d1.UID = types.UID("deploy1")
@@ -592,10 +594,11 @@ sync:
 persistentVolume:
   enabled: false`)
 
-	dev, err := model.Read(manifest)
+	devManifest, err := model.Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := devManifest.Dev["web"]
 
 	d := deployments.Sandbox(dev)
 	rule := dev.ToTranslationRule(dev, true)
@@ -735,10 +738,12 @@ docker:
       cpu: 2
       memory: 4Gi`)
 
-	dev, err := model.Read(manifest)
+	devManifest, err := model.Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := devManifest.Dev["web"]
+
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
 
@@ -1300,10 +1305,12 @@ environment:
   key3: value3
 `)
 
-	dev, err := model.Read(manifest)
+	devManifest, err := model.Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := devManifest.Dev["web"]
+
 	dev.Username = "cindy"
 
 	d := deployments.Sandbox(dev)
@@ -1417,10 +1424,11 @@ services:
     sync:
        - worker:/src`, file.Name()))
 
-	dev1, err := model.Read(manifest)
+	devManifest, err := model.Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev1 := devManifest.Dev["web"]
 
 	sfs1 := statefulsets.Sandbox(dev1)
 	sfs1.UID = types.UID("sfs1")

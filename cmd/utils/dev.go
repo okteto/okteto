@@ -52,7 +52,7 @@ func LoadDevContext(devPath string) (*model.ContextResource, error) {
 }
 
 //LoadDev loads an okteto manifest checking "yml" and "yaml"
-func LoadDev(devPath string) (*model.Dev, error) {
+func LoadDev(devPath string) (*model.DevManifest, error) {
 	if !model.FileExists(devPath) {
 		if devPath == DefaultDevManifest {
 			if model.FileExists(secondaryDevManifest) {
@@ -63,19 +63,21 @@ func LoadDev(devPath string) (*model.Dev, error) {
 		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
 	}
 
-	dev, err := model.Get(devPath)
+	devManifest, err := model.Get(devPath)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := loadDevRc(dev); err != nil {
-		return nil, err
+	for _, dev := range devManifest.Dev {
+		if err := loadDevRc(dev); err != nil {
+			return nil, err
+		}
+
+		dev.Namespace = okteto.Context().Namespace
+		dev.Context = okteto.Context().Name
 	}
 
-	dev.Namespace = okteto.Context().Namespace
-	dev.Context = okteto.Context().Name
-
-	return dev, nil
+	return devManifest, nil
 }
 
 func loadDevRc(dev *model.Dev) error {
@@ -102,7 +104,7 @@ func loadDevRc(dev *model.Dev) error {
 }
 
 //LoadDevOrDefault loads an okteto manifest or a default one if does not exist
-func LoadDevOrDefault(devPath, name string) (*model.Dev, error) {
+func LoadDevOrDefault(devPath, name string) (*model.DevManifest, error) {
 	dev, err := LoadDev(devPath)
 	if err == nil {
 		return dev, nil
@@ -114,12 +116,33 @@ func LoadDevOrDefault(devPath, name string) (*model.Dev, error) {
 			return nil, err
 		}
 		dev.Name = name
-		dev.Namespace = okteto.Context().Namespace
-		dev.Context = okteto.Context().Name
+		dev.Dev[dev.Name] = model.NewDev()
+		dev.Dev[dev.Name].Namespace = okteto.Context().Namespace
+		dev.Dev[dev.Name].Context = okteto.Context().Name
 		return dev, nil
 	}
 
 	return nil, err
+}
+
+func GetDevFromManifest(devManifest *model.DevManifest) (*model.Dev, error) {
+	if len(devManifest.Dev) == 0 {
+		return nil, fmt.Errorf("okteto manifest has no dev references")
+	} else if len(devManifest.Dev) == 1 {
+		for _, dev := range devManifest.Dev {
+			return dev, nil
+		}
+	}
+
+	devs := make([]string, 0)
+	for k := range devManifest.Dev {
+		devs = append(devs, k)
+	}
+	devKey, err := AskForOptions(devs, "Select the dev you want to operate with:")
+	if err != nil {
+		return nil, err
+	}
+	return devManifest.Dev[devKey], nil
 }
 
 //AskYesNo prompts for yes/no confirmation

@@ -22,7 +22,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 )
 
 func TestReverseMashalling(t *testing.T) {
@@ -960,6 +963,812 @@ func TestSyncFoldersUnmashalling(t *testing.T) {
 
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDevManifestUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name            string
+		manifest        []byte
+		expected        *DevManifest
+		isErrorExpected bool
+	}{
+		{
+			name: "only dev",
+			manifest: []byte(`name: test
+sync:
+  - app:/app`),
+			expected: &DevManifest{
+				Name:      "test",
+				Variables: []DevVariables{},
+				Destroy:   []string{},
+				Dev: map[string]*Dev{
+					"test": {
+						Name: "test",
+						Sync: Sync{
+							RescanInterval: 300,
+
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []Forward{},
+						Selector:        Selector{},
+						EmptyImage:      true,
+						ImagePullPolicy: v1.PullAlways,
+						Image: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Interface: Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Push: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: false,
+							PostStop:  false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: Environment{},
+						Volumes:     []Volume{},
+					},
+				},
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "only dev with service",
+			manifest: []byte(`name: test
+sync:
+  - app:/app
+services:
+  - name: svc`),
+			expected: &DevManifest{
+				Name:      "test",
+				Variables: []DevVariables{},
+				Destroy:   []string{},
+				Dev: map[string]*Dev{
+					"test": {
+						Name: "test",
+						Sync: Sync{
+							RescanInterval: 300,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []Forward{},
+						Selector:        Selector{},
+						EmptyImage:      true,
+						ImagePullPolicy: v1.PullAlways,
+						Image: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Interface: Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Push: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: false,
+							PostStop:  false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services: []*Dev{
+							{
+								Name:            "svc",
+								Annotations:     Annotations{},
+								Selector:        Selector{},
+								EmptyImage:      true,
+								Image:           &BuildInfo{},
+								ImagePullPolicy: v1.PullAlways,
+								Secrets:         []Secret{},
+								Probes: &Probes{
+									Liveness:  false,
+									Readiness: false,
+									Startup:   false,
+								},
+								Lifecycle: &Lifecycle{
+									PostStart: false,
+									PostStop:  false,
+								},
+								SecurityContext: &SecurityContext{
+									RunAsUser:    pointer.Int64(0),
+									RunAsGroup:   pointer.Int64(0),
+									RunAsNonRoot: nil,
+									FSGroup:      pointer.Int64(0),
+								},
+								Sync: Sync{
+									RescanInterval: 300,
+								},
+								Forward:  []Forward{},
+								Reverse:  []Reverse{},
+								Services: []*Dev{},
+								Metadata: &Metadata{
+									Labels:      Labels{},
+									Annotations: Annotations{},
+								},
+							},
+						},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: Environment{},
+						Volumes:     []Volume{},
+					},
+				},
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "only dev with service unsupported field",
+			manifest: []byte(`name: test
+sync:
+  - app:/app
+services:
+  - name: svc
+    autocreate: true`),
+			expected:        nil,
+			isErrorExpected: true,
+		},
+		{
+			name: "only dev with errors",
+			manifest: []byte(`name: test
+sync:
+  - app:/app
+non-found-field:
+  testing`),
+			expected:        nil,
+			isErrorExpected: true,
+		},
+		{
+			name: "dev manifest with one dev",
+			manifest: []byte(`name: test
+dev:
+  test:
+    sync:
+    - app:/app
+`),
+			expected: &DevManifest{
+				Name:      "test",
+				Variables: []DevVariables{},
+				Destroy:   []string{},
+				Dev: map[string]*Dev{
+					"test": {
+						Name: "test",
+						Sync: Sync{
+							RescanInterval: 300,
+
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []Forward{},
+						Selector:        Selector{},
+						EmptyImage:      true,
+						ImagePullPolicy: v1.PullAlways,
+						Image: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Interface: Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Secrets: make([]Secret, 0),
+						Push: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: false,
+							PostStop:  false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: Environment{},
+						Volumes:     []Volume{},
+					},
+				},
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "dev manifest with multiple devs",
+			manifest: []byte(`name: test
+dev:
+  test-1:
+    sync:
+    - app:/app
+  test-2:
+    sync:
+    - app:/app
+`),
+			expected: &DevManifest{
+				Name:      "test",
+				Variables: []DevVariables{},
+				Destroy:   []string{},
+				Dev: map[string]*Dev{
+					"test-1": {
+						Name: "test-1",
+						Sync: Sync{
+							RescanInterval: 300,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []Forward{},
+						Selector:        Selector{},
+						EmptyImage:      true,
+						ImagePullPolicy: v1.PullAlways,
+						Image: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Interface: Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Push: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: false,
+							PostStop:  false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: Environment{},
+						Volumes:     []Volume{},
+					},
+					"test-2": {
+						Name: "test-2",
+						Sync: Sync{
+							RescanInterval: 300,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []Forward{},
+						Selector:        Selector{},
+						EmptyImage:      true,
+						ImagePullPolicy: v1.PullAlways,
+						Image: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Interface: Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Push: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: false,
+							PostStop:  false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: Environment{},
+						Volumes:     []Volume{},
+					},
+				},
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "dev manifest with errors",
+			manifest: []byte(`name: test
+dev:
+  test-1:
+    sync:
+    - app:/app
+    services:
+    - name: svc
+  test-2:
+    sync:
+    - app:/app
+    services:
+    - name: svc
+sync:
+- app:test
+`),
+			expected:        nil,
+			isErrorExpected: true,
+		},
+		{
+			name: "dev manifest with deploy",
+			manifest: []byte(`name: test
+deploy:
+  - okteto stack deploy
+`),
+			expected: &DevManifest{
+				Name:      "test",
+				Variables: []DevVariables{},
+				Destroy:   []string{},
+				Dev:       map[string]*Dev{},
+				Deploy: DeployInfo{
+					Commands: []string{
+						"okteto stack deploy",
+					},
+				},
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "dev manifest with dev and deploy",
+			manifest: []byte(`name: test
+deploy:
+  - okteto stack deploy
+dev:
+  test-1:
+    sync:
+    - app:/app
+  test-2:
+    sync:
+    - app:/app
+`),
+			expected: &DevManifest{
+				Name:      "test",
+				Variables: []DevVariables{},
+				Destroy:   []string{},
+				Deploy: DeployInfo{
+					Commands: []string{
+						"okteto stack deploy",
+					},
+				},
+				Dev: map[string]*Dev{
+					"test-1": {
+						Name: "test-1",
+						Sync: Sync{
+							RescanInterval: 300,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []Forward{},
+						Selector:        Selector{},
+						EmptyImage:      true,
+						ImagePullPolicy: v1.PullAlways,
+						Image: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Interface: Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Push: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: false,
+							PostStop:  false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: Environment{},
+						Volumes:     []Volume{},
+					},
+					"test-2": {
+						Name: "test-2",
+						Sync: Sync{
+							RescanInterval: 300,
+							Folders: []SyncFolder{
+								{
+									LocalPath:  "app",
+									RemotePath: "/app",
+								},
+							},
+						},
+						Forward:         []Forward{},
+						Selector:        Selector{},
+						EmptyImage:      true,
+						ImagePullPolicy: v1.PullAlways,
+						Image: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Interface: Localhost,
+						PersistentVolumeInfo: &PersistentVolumeInfo{
+							Enabled: true,
+						},
+						Push: &BuildInfo{
+							Name:       "",
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+							Target:     "",
+						},
+						Secrets: make([]Secret, 0),
+						Command: Command{Values: []string{"sh"}},
+						Probes: &Probes{
+							Liveness:  false,
+							Readiness: false,
+							Startup:   false,
+						},
+						Lifecycle: &Lifecycle{
+							PostStart: false,
+							PostStop:  false,
+						},
+						SecurityContext: &SecurityContext{
+							RunAsUser:    pointer.Int64(0),
+							RunAsGroup:   pointer.Int64(0),
+							RunAsNonRoot: nil,
+							FSGroup:      pointer.Int64(0),
+						},
+						SSHServerPort: 2222,
+						Services:      []*Dev{},
+						InitContainer: InitContainer{
+							Image: OktetoBinImageTag,
+						},
+						Timeout: Timeout{
+							Resources: 120 * time.Second,
+							Default:   60 * time.Second,
+						},
+						Metadata: &Metadata{
+							Labels:      Labels{},
+							Annotations: Annotations{},
+						},
+						Environment: Environment{},
+						Volumes:     []Volume{},
+					},
+				},
+			},
+
+			isErrorExpected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			devManifest, err := Read(tt.manifest)
+			if err != nil && !tt.isErrorExpected {
+				t.Fatalf("Not expecting error but got %s", err)
+			} else if tt.isErrorExpected && err == nil {
+				t.Fatal("Expected error but got none")
+			}
+
+			if !assert.Equal(t, tt.expected, devManifest) {
+				t.Fatal("Failed")
+			}
+		})
+	}
+}
+
+func TestDeployInfoUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name               string
+		deployInfoManifest []byte
+		expected           *DeployInfo
+	}{
+		{
+			name: "list of commands",
+			deployInfoManifest: []byte(`
+- okteto stack deploy`),
+			expected: &DeployInfo{
+				Commands: []string{
+					"okteto stack deploy",
+				},
+			},
+		},
+		{
+			name: "commands",
+			deployInfoManifest: []byte(`commands:
+- okteto stack deploy`),
+			expected: &DeployInfo{
+				Commands: []string{
+					"okteto stack deploy",
+				},
+			},
+		},
+		{
+			name: "compose with endpoints",
+			deployInfoManifest: []byte(`compose:
+  manifest: path
+  endpoints:
+    - path: /
+      service: app
+      port: 80`),
+			expected: &DeployInfo{
+				Commands: []string{},
+				Compose: &ComposeInfo{
+					Manifest: "path",
+					Endpoints: []EndpointRule{
+						{
+							Path:    "/",
+							Service: "app",
+							Port:    80,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "divert",
+			deployInfoManifest: []byte(`divert:
+  from:
+    namespace: staging
+    ingress: movies
+    service: frontend
+    deployment: frontend
+  to:
+    service: frontend`),
+			expected: &DeployInfo{
+				Commands: []string{},
+				Divert: &DivertInfo{
+					From: DivertFromInfo{
+						Namespace:  "staging",
+						Ingress:    "movies",
+						Service:    "frontend",
+						Deployment: "frontend",
+					},
+					To: DivertToInfo{
+						Service: "frontend",
+					},
+				},
+			},
+		},
+		{
+			name: "all together",
+			deployInfoManifest: []byte(`commands:
+- kubectl apply -f manifest.yml
+divert:
+  from:
+    namespace: staging
+    ingress: movies
+    service: frontend
+    deployment: frontend
+  to:
+    service: frontend
+compose:
+  manifest: ./docker-compose.yml
+  endpoints:
+  - path: /
+    service: frontend
+    port: 80
+  - path: /api
+    service: api
+    port: 8080`),
+			expected: &DeployInfo{
+				Commands: []string{"kubectl apply -f manifest.yml"},
+				Compose: &ComposeInfo{
+					Manifest: "./docker-compose.yml",
+					Endpoints: []EndpointRule{
+						{
+							Path:    "/",
+							Service: "frontend",
+							Port:    80,
+						},
+						{
+							Path:    "/api",
+							Service: "api",
+							Port:    8080,
+						},
+					},
+				},
+				Divert: &DivertInfo{
+					From: DivertFromInfo{
+						Namespace:  "staging",
+						Ingress:    "movies",
+						Service:    "frontend",
+						Deployment: "frontend",
+					},
+					To: DivertToInfo{
+						Service: "frontend",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &DeployInfo{}
+
+			if err := yaml.UnmarshalStrict(tt.deployInfoManifest, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !assert.Equal(t, tt.expected, result) {
+				t.Fatal("Failed")
 			}
 		})
 	}

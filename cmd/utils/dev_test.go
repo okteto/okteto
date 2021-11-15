@@ -114,8 +114,8 @@ func Test_loadDevOrDefault(t *testing.T) {
 				t.Fatalf("unexpected error when loading existing manifest: %s", err.Error())
 			}
 
-			if tt.dev.Image.Name != loaded.Image.Name {
-				t.Fatalf("expected %s got %s", tt.dev.Image.Name, loaded.Image.Name)
+			if tt.dev.Image.Name != loaded.Dev["loaded"].Image.Name {
+				t.Fatalf("expected %s got %s", tt.dev.Image.Name, loaded.Dev["foo"].Image.Name)
 			}
 
 			if tt.dev.Name != loaded.Name {

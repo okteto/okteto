@@ -50,7 +50,12 @@ func Status() *cobra.Command {
 
 			ctx := context.Background()
 
-			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
+			devManifest, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
+			if err != nil {
+				return err
+			}
+
+			dev, err := utils.GetDevFromManifest(devManifest)
 			if err != nil {
 				return err
 			}

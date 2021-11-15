@@ -77,10 +77,12 @@ services:
         memory: "128Mi"
         cpu: "500m"
     workdir: /app`)
-	main, err := Read(manifest)
+	devManifest, err := Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	main := devManifest.Dev["deployment"]
 
 	if len(main.Services) != 1 {
 		t.Errorf("'services' was not parsed: %+v", main)
@@ -206,10 +208,12 @@ forward:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d, err := Read(tt.manifest)
+			devManifest, err := Read(tt.manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			d := devManifest.Dev["service"]
 
 			if len(d.Command.Values) != 1 || d.Command.Values[0] != "sh" {
 				t.Errorf("command was parsed: %+v", d)
@@ -310,18 +314,23 @@ func Test_loadName(t *testing.T) {
 			manifest := []byte(fmt.Sprintf(`
 name: %s`, tt.devName))
 
+			devName := tt.want
+
 			if tt.onService {
 				manifest = []byte(fmt.Sprintf(`
 name: n1
 services:
   - name: %s`, tt.devName))
+				devName = "n1"
 			}
 
 			os.Setenv("value", tt.value)
-			dev, err := Read(manifest)
+			devManifest, err := Read(manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			dev := devManifest.Dev[devName]
 
 			name := dev.Name
 			if tt.onService {
@@ -456,10 +465,12 @@ services:
 			}
 
 			os.Setenv("tag", tt.tagValue)
-			dev, err := Read(manifest)
+			devManifest, err := Read(manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			dev := devManifest.Dev["deployment"]
 
 			img := dev.Image
 			if tt.onService {
@@ -544,10 +555,13 @@ image:
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dev, err := Read(tt.manifest)
+			devManifest, err := Read(tt.manifest)
 			if err != nil {
 				t.Fatalf("Wrong unmarshalling: %s", err.Error())
 			}
+
+			dev := devManifest.Dev["deployment"]
+
 			// Since dev isn't being unmarshalled through Read, apply defaults
 			// before validating.
 			if err := dev.setDefaults(); err != nil {
@@ -589,10 +603,12 @@ func Test_LoadRemote(t *testing.T) {
       drop:
       - SYS_NICE
   workdir: /app`)
-	dev, err := Read(manifest)
+	devManifest, err := Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev := devManifest.Dev["deployment"]
 
 	dev.LoadRemote("/tmp/key.pub")
 
@@ -632,10 +648,11 @@ func Test_Reverse(t *testing.T) {
     key2: value2
   reverse:
     - 8080:8080`)
-	dev, err := Read(manifest)
+	devManifest, err := Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := devManifest.Dev["deployment"]
 
 	dev.LoadRemote("/tmp/key.pub")
 
@@ -660,10 +677,12 @@ func Test_LoadForcePull(t *testing.T) {
   services:
     - name: b
       imagePullPolicy: IfNotPresent`)
-	dev, err := Read(manifest)
+	devManifest, err := Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev := devManifest.Dev["a"]
 
 	dev.LoadForcePull()
 
@@ -937,10 +956,12 @@ func Test_validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dev, err := Read(tt.manifest)
+			devManifest, err := Read(tt.manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			dev := devManifest.Dev["deployment"]
 
 			err = dev.validate()
 			if tt.expectErr && err == nil {
@@ -992,10 +1013,11 @@ func TestPersistentVolumeEnabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dev, err := Read(tt.manifest)
+			devManifest, err := Read(tt.manifest)
 			if err != nil {
 				t.Fatal(err)
 			}
+			dev := devManifest.Dev["deployment"]
 
 			if dev.PersistentVolumeEnabled() != tt.expected {
 				t.Errorf("Expecting %t but got %t", tt.expected, dev.PersistentVolumeEnabled())
@@ -1174,10 +1196,11 @@ services:
 		t.Fatal(err)
 	}
 
-	main, err := Read(manifest)
+	devManifest, err := Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+	main := devManifest.Dev["deployment-main"]
 
 	if len(main.Services) != 1 {
 		t.Errorf("'services' was not parsed: %+v", main)
@@ -1209,10 +1232,24 @@ services:
 }
 
 func Test_validateForExtraFields(t *testing.T) {
+	file, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
 	tests := []struct {
 		name  string
 		value string
 	}{
+		{
+			name: "secrets",
+			value: fmt.Sprintf(`secrets:
+    - %s:/app`, file.Name()),
+		},
+		{
+			name: "services",
+			value: `services:
+    - name: 1`,
+		},
 		{
 			name:  "autocreate",
 			value: "autocreate: true",
@@ -1227,10 +1264,6 @@ func Test_validateForExtraFields(t *testing.T) {
                    context: .
                    dockerfile: Dockerfile
                    target: prod`,
-		},
-		{
-			name:  "secrets",
-			value: "secrets: []",
 		},
 		{
 			name:  "healthchecks",
@@ -1293,10 +1326,6 @@ func Test_validateForExtraFields(t *testing.T) {
 		{
 			name:  "interface",
 			value: "interface: 0.0.0.0",
-		},
-		{
-			name:  "services",
-			value: "services: []",
 		},
 		{
 			name: "persistentVolume",
@@ -1397,7 +1426,7 @@ services:
         cpu: "500m"
     workdir: /app
     %s`, tt.value))
-			expected := fmt.Sprintf("%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/#services for documentation", tt.name)
+			expected := fmt.Sprintf("Error on dev 'deployment': %q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/#services for documentation", tt.name)
 
 			_, err := Read(manifest)
 			if err == nil {
@@ -1423,4 +1452,7 @@ func createEnvFile(content map[string]string) (string, error) {
 
 	file.Sync()
 	return file.Name(), nil
+}
+
+func Test_LoadDevManifest(t *testing.T) {
 }

@@ -99,7 +99,7 @@ func Up() *cobra.Command {
 				}
 			}
 
-			dev, err := contextCMD.LoadDevWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
+			devManifest, err := contextCMD.LoadDevWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
 			if err != nil {
 				if !strings.Contains(err.Error(), "okteto init") {
 					return err
@@ -108,10 +108,15 @@ func Up() *cobra.Command {
 					return err
 				}
 
-				dev, err = loadDevWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
+				devManifest, err = loadDevWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
 				if err != nil {
 					return err
 				}
+			}
+
+			dev, err := utils.GetDevFromManifest(devManifest)
+			if err != nil {
+				return err
 			}
 
 			if err := loadDevOverrides(dev, upOptions); err != nil {
@@ -192,7 +197,7 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-func loadDevWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Dev, error) {
+func loadDevWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.DevManifest, error) {
 	workDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("unknown current folder: %s", err)
