@@ -28,6 +28,7 @@ import (
 
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
+	oktetoError "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -284,10 +285,6 @@ func Get(devPath string) (*Dev, error) {
 	}
 
 	if err := dev.validate(); err != nil {
-		return nil, err
-	}
-
-	if err := dev.validateSync(); err != nil {
 		return nil, err
 	}
 
@@ -639,20 +636,32 @@ func (dev *Dev) setTimeout() error {
 	return nil
 }
 
-func (dev *Dev) validateSync() error {
-	for _, folder := range dev.Sync.Folders {
-		validPath, err := os.Stat(folder.LocalPath)
-		if !validPath.IsDir() && err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (dev *Dev) validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("Name cannot be empty")
+	}
+
+	for _, folder := range dev.Sync.Folders {
+		validPath, err := os.Stat(folder.LocalPath)
+
+		if err == nil {
+			if !validPath.IsDir() {
+				return oktetoError.UserError{
+					E:    fmt.Errorf("File paths are not supported on sync fields"),
+					Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+				}
+			}
+		} else if errors.Is(err, os.ErrNotExist) {
+			return oktetoError.UserError{
+				E:    fmt.Errorf("`stignore` path does not exist"),
+				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+			}
+		} else if err != nil {
+			return oktetoError.UserError{
+				E:    fmt.Errorf("File paths are not supported on sync fields"),
+				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+			}
+		}
 	}
 
 	if ValidKubeNameRegex.MatchString(dev.Name) {
