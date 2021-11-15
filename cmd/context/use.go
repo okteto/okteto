@@ -155,7 +155,7 @@ func getUserContext(ctx context.Context) (*okteto.UserContext, error) {
 
 		// If userID is not on context config file we add it and save it.
 		// this prevents from relogin to actual users
-		if okteto.Context().UserID == "" {
+		if okteto.Context().UserID == "" && okteto.Context().IsOkteto {
 			okteto.Context().UserID = userContext.User.ID
 			if err := okteto.WriteOktetoContextConfig(); err != nil {
 				log.Infof("error updating okteto contexts: %v", err)
