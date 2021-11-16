@@ -535,6 +535,7 @@ func TestUpStatefulset(t *testing.T) {
 }
 
 func TestDivert(t *testing.T) {
+	t.Skip("This test is not required until fixing nginx rules")
 	tName := fmt.Sprintf("Test")
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
