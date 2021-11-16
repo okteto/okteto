@@ -692,6 +692,12 @@ func Test_validate(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
+	dir, err := os.MkdirTemp("/tmp", "okteto-secret-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(dir)
+
 	tests := []struct {
 		name      string
 		manifest  []byte
@@ -920,6 +926,22 @@ func Test_validate(t *testing.T) {
       securityContext:
         runAsNonRoot: true
         runAsUser: 101`),
+			expectErr: false,
+		},
+		{
+			name: "file",
+			manifest: []byte(fmt.Sprintf(`
+      name: deployment
+      sync:
+        - %s:/app`, file.Name())),
+			expectErr: true,
+		},
+		{
+			name: "dir",
+			manifest: []byte(fmt.Sprintf(`
+      name: deployment
+      sync:
+        - %s:/app`, dir)),
 			expectErr: false,
 		},
 		{
