@@ -15,7 +15,7 @@ package model
 
 import (
 	"fmt"
-	"regexp"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -490,45 +490,63 @@ func validateHealthcheck(healthcheck *HealthCheck) error {
 }
 
 func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
-	localPortTestRegex := `^curl ((-f|--fail) )?'?((http|https)://)?(localhost|0.0.0.0):\d+(\/\w*)?'?$`
-	regexp, err := regexp.Compile(localPortTestRegex)
+	// Join and then split the strings by space to ensure that
+	// each element in the string slice is a contiguous string with
+	// no spaces.
+	s := strings.Join(healthcheck.Test, " ")
+	testStrings := strings.Split(s, " ")
+
+	// There should be at least two strings, the curl binary and url.
+	if len(testStrings) < 2 {
+		return
+	}
+
+	if testStrings[0] != "curl" {
+		return
+	}
+
+	var checkURL *url.URL
+	for _, possibleURL := range testStrings[1:] {
+		if possibleURL == "-f" || possibleURL == "--fail" {
+			continue
+		}
+
+		u, err := url.ParseRequestURI(possibleURL)
+		// It's possible to have a healthcheck url without the scheme. If
+		// that happens then we inject one and attempt parsing again.
+		if err != nil || u.Host == "" {
+			u, err = url.ParseRequestURI("https://" + possibleURL)
+			if err != nil {
+				u = nil
+				continue
+			}
+		}
+		checkURL = u
+		break
+	}
+
+	if checkURL == nil {
+		return
+	}
+
+	p := checkURL.Port()
+	if p == "" {
+		return
+	}
+	port, err := strconv.Atoi(p)
 	if err != nil {
 		return
 	}
-	testString := strings.Join(healthcheck.Test, " ")
-	if regexp.MatchString(testString) {
-		var firstSlashIndex, portStart int
-		if strings.Contains(testString, "://") {
-			testStringCopy := testString
-			for i := 0; i < 3; i++ {
-				firstSlashIndex += strings.Index(testStringCopy[firstSlashIndex:], "/") + 1
-			}
-			testStringCopy = testString
-			for i := 0; i < 2; i++ {
-				portStart += strings.Index(testStringCopy[portStart:], ":") + 1
-			}
-			portStart--
-			firstSlashIndex--
-		} else {
-			firstSlashIndex = strings.Index(testString, "/")
-			portStart = strings.Index(testString, ":")
-		}
 
-		var port, path string
-		if firstSlashIndex != -1 {
-			port = testString[portStart+1 : firstSlashIndex]
-			path = testString[firstSlashIndex:]
-		} else {
-			port = testString[portStart+1:]
-			path = "/"
-		}
-		p, err := strconv.Atoi(port)
-		if err != nil {
-			return
-		}
-		healthcheck.HTTP = &HTTPHealtcheck{Path: path, Port: int32(p)}
-		healthcheck.Test = make(HealtcheckTest, 0)
+	var path string
+	if checkURL.Path == "" {
+		path = "/"
+	} else {
+		path = checkURL.Path
 	}
+
+	healthcheck.HTTP = &HTTPHealtcheck{Path: path, Port: int32(port)}
+	healthcheck.Test = make(HealtcheckTest, 0)
 }
 
 func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
