@@ -14,6 +14,7 @@
 package model
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -25,6 +26,77 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 )
+
+func TestTranslateHealthcheckCurlToHttp(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		test         []string
+		expectedTest HealtcheckTest
+		expectedHTTP HTTPHealtcheck
+	}{
+		{
+			name:         "RegularCurlWithZeros",
+			test:         []string{"curl http://0.0.0.0:4572"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(4572)},
+		},
+		{
+			name:         "RegularCurlWithLocalhost",
+			test:         []string{"curl http://localhost:4572"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(4572)},
+		},
+		{
+			name:         "RegularCurlTrailingSlash",
+			test:         []string{"curl http://0.0.0.0:4572/"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(4572)},
+		},
+		{
+			name:         "MissingScheme",
+			test:         []string{"curl 0.0.0.0:4572/readiness"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/readiness", Port: int32(4572)},
+		},
+		{
+			name:         "MissingSchemeWithF",
+			test:         []string{"curl -f localhost:8080/"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(8080)},
+		},
+		{
+			name:         "NoTest",
+			test:         []string{"curl --fail 0.0.0.0:8080"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(8080)},
+		},
+		{
+			name:         "Readiness",
+			test:         []string{"curl https://0.0.0.0:8080/readiness"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/readiness", Port: int32(8080)},
+		},
+		{
+			name:         "RegularCurlWithPath",
+			test:         []string{"curl http://0.0.0.0:4572/a/path/exists"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/a/path/exists", Port: int32(4572)},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			check := HealthCheck{
+				Test: tc.test,
+			}
+			translateHealtcheckCurlToHTTP(&check)
+			if !reflect.DeepEqual(check.Test, tc.expectedTest) {
+				t.Fatalf("expected %v but got %v", tc.expectedTest, check.Test)
+			}
+			if !reflect.DeepEqual(check.Test, tc.expectedTest) {
+				t.Fatalf("expected %v but got %v", tc.expectedHTTP, check.HTTP)
+			}
+		})
+	}
+}
 
 func Test_DeployReplicasUnmarshalling(t *testing.T) {
 	tests := []struct {
@@ -324,7 +396,8 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 			}
 			if !tt.expectedError {
 				if !reflect.DeepEqual(s.Services["app"].Healtcheck, tt.expected) {
-					t.Fatalf("Expected %v, but got %v", tt.expected, s.Services["app"].Healtcheck)
+					fmt.Printf("GOT: %+v", s.Services["app"].Healtcheck.HTTP)
+					t.Fatalf("Expected %+v, but got %+v", tt.expected, s.Services["app"].Healtcheck)
 				}
 			}
 
