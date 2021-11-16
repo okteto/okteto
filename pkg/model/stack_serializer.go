@@ -490,7 +490,6 @@ func validateHealthcheck(healthcheck *HealthCheck) error {
 }
 
 func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
-	fmt.Printf("HC %+v\n", healthcheck)
 	// Join and then split the strings by space to ensure that
 	// each element in the string slice is a contiguous string with
 	// no spaces.
@@ -527,14 +526,11 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 	}
 
 	if checkURL == nil {
-		fmt.Println("NOT FOUND")
 		return
 	}
 
-	fmt.Printf("URL FOUND: %+v\n", checkURL)
 	p := checkURL.Port()
 	if p == "" {
-		fmt.Println("PORT")
 		return
 	}
 	port, err := strconv.Atoi(p)
@@ -551,7 +547,6 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 
 	healthcheck.HTTP = &HTTPHealtcheck{Path: path, Port: int32(port)}
 	healthcheck.Test = make(HealtcheckTest, 0)
-	fmt.Printf("NEXT %+v\n", healthcheck)
 }
 
 func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
