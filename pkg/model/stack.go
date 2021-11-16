@@ -379,7 +379,7 @@ func validateDependsOn(s *Stack) error {
 				return fmt.Errorf(" Service '%s' depends on service '%s' which is undefined.", svcName, dependentSvc)
 			}
 			if condition.Condition == DependsOnServiceCompleted && !s.Services[dependentSvc].IsJob() {
-				return fmt.Errorf(" Service '%s' is not a job. Please change the reset policy so that it is not always in service '%s' ", dependentSvc, dependentSvc)
+				return fmt.Errorf(" Service '%s' is not a job. Please make sure the 'restart_policy' is not set to 'always' in service '%s' ", dependentSvc, dependentSvc)
 			}
 		}
 	}
