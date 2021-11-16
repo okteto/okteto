@@ -31,6 +31,12 @@ type OktetoClient struct {
 	client *graphql.Client
 }
 
+type OktetoClientProvider struct{}
+
+func NewOktetoClientProvider() *OktetoClientProvider {
+	return &OktetoClientProvider{}
+}
+
 //NewClient creates a new client to connect with Okteto API
 func NewOktetoClient() (*OktetoClient, error) {
 	token := Context().Token

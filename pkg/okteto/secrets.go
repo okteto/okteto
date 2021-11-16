@@ -17,23 +17,16 @@ import (
 	"context"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
 
-//Secret represents a secret
-type Secret struct {
-	Name  string `json:"name,omitempty"`
-	Value string `json:"value,omitempty"`
-}
-
-type UserContext struct {
-	User        User       `json:"user,omitempty"`
-	Secrets     []Secret   `json:"secrets,omitempty"`
-	Credentials Credential `json:"credentials,omitempty"`
+func (c OktetoClientProvider) NewOktetoUserClient() (types.UserInterface, error) {
+	return NewOktetoClient()
 }
 
 //GetSecrets returns the secrets from Okteto API
-func (c *OktetoClient) GetSecrets(ctx context.Context) ([]Secret, error) {
+func (c *OktetoClient) GetSecrets(ctx context.Context) ([]types.Secret, error) {
 	var query struct {
 		Secrets []struct {
 			Name  graphql.String
@@ -46,10 +39,10 @@ func (c *OktetoClient) GetSecrets(ctx context.Context) ([]Secret, error) {
 		return nil, err
 	}
 
-	secrets := make([]Secret, 0)
+	secrets := make([]types.Secret, 0)
 	for _, secret := range query.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, Secret{
+			secrets = append(secrets, types.Secret{
 				Name:  string(secret.Name),
 				Value: string(secret.Value),
 			})
@@ -59,7 +52,7 @@ func (c *OktetoClient) GetSecrets(ctx context.Context) ([]Secret, error) {
 }
 
 //GetSecrets returns the secrets from Okteto API
-func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error) {
+func (c *OktetoClient) GetUserContext(ctx context.Context) (*types.UserContext, error) {
 	var query struct {
 		User struct {
 			Id              graphql.String
@@ -100,10 +93,10 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 		return nil, err
 	}
 
-	secrets := make([]Secret, 0)
+	secrets := make([]types.Secret, 0)
 	for _, secret := range query.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, Secret{
+			secrets = append(secrets, types.Secret{
 				Name:  string(secret.Name),
 				Value: string(secret.Value),
 			})
@@ -113,8 +106,8 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 	globalNamespace := getGlobalNamespace(string(query.User.GlobalNamespace))
 	analytics := bool(query.User.Analytics)
 
-	result := &UserContext{
-		User: User{
+	result := &types.UserContext{
+		User: types.User{
 			ID:              string(query.User.Id),
 			Name:            string(query.User.Name),
 			Namespace:       string(query.User.Namespace),
@@ -129,7 +122,7 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 			Analytics:       analytics,
 		},
 		Secrets: secrets,
-		Credentials: Credential{
+		Credentials: types.Credential{
 			Server:      string(query.Cred.Server),
 			Certificate: string(query.Cred.Certificate),
 			Token:       string(query.Cred.Token),
@@ -139,7 +132,7 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*UserContext, error)
 	return result, nil
 }
 
-func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*UserContext, error) {
+func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*types.UserContext, error) {
 	var query struct {
 		User struct {
 			Id          graphql.String
@@ -172,17 +165,17 @@ func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*UserConte
 		return nil, err
 	}
 
-	secrets := make([]Secret, 0)
+	secrets := make([]types.Secret, 0)
 	for _, secret := range query.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, Secret{
+			secrets = append(secrets, types.Secret{
 				Name:  string(secret.Name),
 				Value: string(secret.Value),
 			})
 		}
 	}
-	result := &UserContext{
-		User: User{
+	result := &types.UserContext{
+		User: types.User{
 			ID:              string(query.User.Id),
 			Name:            string(query.User.Name),
 			Namespace:       string(query.User.Namespace),
@@ -197,7 +190,7 @@ func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*UserConte
 			Analytics:       true,
 		},
 		Secrets: secrets,
-		Credentials: Credential{
+		Credentials: types.Credential{
 			Server:      string(query.Cred.Server),
 			Certificate: string(query.Cred.Certificate),
 			Token:       string(query.Cred.Token),
