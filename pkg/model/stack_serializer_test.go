@@ -839,11 +839,11 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		},
 		{
 			name:     "volume-relative-path-found",
-			manifest: []byte("services:\n  app:\n    volumes: \n    - test-volume-relative-path-found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			manifest: []byte("services:\n  app:\n    volumes: \n    - test_volume_relative_path_found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
 			create:   true,
 			expectedVolumesMount: []StackVolume{
 				{
-					LocalPath:  "test-volume-relative-path-found",
+					LocalPath:  "test_volume_relative_path_found",
 					RemotePath: "/var/lib/redpanda/data",
 				},
 			},
@@ -868,15 +868,28 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			},
 			expectedError: false,
 		},
+		{
+			name:     "volume-with-underscores",
+			manifest: []byte("services:\n  app:\n    volumes: \n    - redpanda_a:/var/lib/redpanda/data\n    image: okteto/vote:1\nvolumes:\n  redpanda_a:\n"),
+			create:   false,
+			expectedVolumes: []StackVolume{
+				{
+					LocalPath:  "redpanda-a",
+					RemotePath: "/var/lib/redpanda/data",
+				},
+			},
+			expectedVolumesMount: []StackVolume{},
+			expectedError:        false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.create {
-				err := os.Mkdir("test-volume-relative-path-found", 0755)
+				err := os.Mkdir("test_volume_relative_path_found", 0755)
 				if err != nil {
 					t.Fatal(err)
 				}
-				defer os.RemoveAll("test-volume-relative-path-found")
+				defer os.RemoveAll("test_volume_relative_path_found")
 			}
 			stack, err := ReadStack(tt.manifest, true)
 			if err != nil && !tt.expectedError {
