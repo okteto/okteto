@@ -21,7 +21,8 @@ actionsRepos=(delete-namespace
         login
         destroy-stack
         apply
-        context)
+        context
+)
 
 for repo in "${actionsRepos[@]}"; do
         echo "$repo"

@@ -19,6 +19,11 @@ type UserInterface interface {
 	GetUserContext(ctx context.Context) (*UserContext, error)
 }
 
+type NamespaceInterface interface {
+	ListNamespaces(ctx context.Context) ([]Namespace, error)
+}
+
 type OktetoUserClientProvider interface {
 	NewOktetoUserClient() (UserInterface, error)
+	NewOktetoNamespaceClient() (NamespaceInterface, error)
 }

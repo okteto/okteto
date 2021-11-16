@@ -22,7 +22,7 @@ actionsRepos=(delete-namespace
         destroy-stack
         apply
         context
-       )
+)
 
 for repo in "${actionsRepos[@]}"; do
         echo "$repo"

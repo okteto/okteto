@@ -11,25 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package types
 
-import (
-	"context"
-
-	"github.com/okteto/okteto/pkg/types"
-)
-
-func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient types.NamespaceInterface) (bool, error) {
-
-	nList, err := oktetoClient.ListNamespaces(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	for i := range nList {
-		if nList[i].ID == namespace {
-			return true, nil
-		}
-	}
-	return false, nil
+//Namespace represents an Okteto k8s namespace
+type Namespace struct {
+	ID       string `json:"id" yaml:"id"`
+	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
 }
