@@ -61,6 +61,26 @@ func Test_createContext(t *testing.T) {
 			expectedErr:   false,
 		},
 		{
+			name: "change namespace forbidden",
+			ctxStore: &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"https://okteto.cloud.com": {},
+				},
+				CurrentContext: "https://okteto.cloud.com",
+			},
+			ctxOptions: &ContextOptions{
+				IsOkteto:  true,
+				Save:      true,
+				Context:   "https://okteto.cloud.com",
+				Namespace: "not-found",
+			},
+			user: &types.User{
+				Token: "test",
+			},
+			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
+			expectedErr:   true,
+		},
+		{
 			name: "transform k8s to url and create okteto context -> namespace with label",
 			ctxStore: &okteto.OktetoContextStore{
 				Contexts: map[string]*okteto.OktetoContext{},
