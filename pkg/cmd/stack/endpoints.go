@@ -15,46 +15,35 @@ package stack
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
 func ListEndpoints(ctx context.Context, stack *model.Stack, output string) error {
-	oktetoClient, err := okteto.NewOktetoClient()
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
+	}
+	iClient, err := ingresses.GetClient(ctx, c)
 	if err != nil {
 		return err
 	}
-	endpointList, err := oktetoClient.ListStackEndpoints(ctx, stack)
-	if err != nil {
-		return fmt.Errorf("failed to get preview environments: %s", err)
-	}
 
-	switch output {
-	case "json":
-		bytes, err := json.MarshalIndent(endpointList, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(bytes))
-	default:
-		if len(endpointList) == 0 {
-			log.Information("There are no available endpoints for stack '%s'\n", stack.Name)
-		} else {
-			endpoints := make([]string, 0)
-			for _, endpoint := range endpointList {
-				endpoints = append(endpoints, endpoint.URL)
-			}
-			sort.Slice(endpoints, func(i, j int) bool {
-				return len(endpoints[i]) < len(endpoints[j])
-			})
-			log.Information("Endpoints available:\n  - %s\n", strings.Join(endpoints, "\n  - "))
-		}
+	endpointList, err := iClient.GetEndpointsBySelector(ctx, stack.Namespace, fmt.Sprintf("%s=%s", model.StackNameLabel, stack.Name))
+	if err != nil {
+		return err
+	}
+	if len(endpointList) > 0 {
+		sort.Slice(endpointList, func(i, j int) bool {
+			return len(endpointList[i]) < len(endpointList[j])
+		})
+		log.Information("Endpoints available:\n  - %s\n", strings.Join(endpointList, "\n  - "))
 	}
 	return nil
 }

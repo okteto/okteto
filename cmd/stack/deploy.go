@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -65,10 +64,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err == nil {
 				log.Success("Stack '%s' successfully deployed", s.Name)
 			}
-			if okteto.Context().IsOkteto {
-				if err := stack.ListEndpoints(ctx, s, ""); err != nil {
-					return err
-				}
+			if err := stack.ListEndpoints(ctx, s, ""); err != nil {
+				return err
 			}
 
 			return err
