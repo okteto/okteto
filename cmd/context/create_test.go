@@ -41,6 +41,26 @@ func Test_createContext(t *testing.T) {
 		fakeObjects   []runtime.Object
 	}{
 		{
+			name: "change namespace",
+			ctxStore: &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"https://okteto.cloud.com": {},
+				},
+				CurrentContext: "https://okteto.cloud.com",
+			},
+			ctxOptions: &ContextOptions{
+				IsOkteto:  true,
+				Save:      true,
+				Context:   "https://okteto.cloud.com",
+				Namespace: "test",
+			},
+			user: &types.User{
+				Token: "test",
+			},
+			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
+			expectedErr:   false,
+		},
+		{
 			name: "transform k8s to url and create okteto context -> namespace with label",
 			ctxStore: &okteto.OktetoContextStore{
 				Contexts: map[string]*okteto.OktetoContext{},
@@ -186,7 +206,6 @@ func Test_createContext(t *testing.T) {
 			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
 			expectedErr:   false,
 		},
-
 		{
 			name: "empty ctx create url",
 			ctxStore: &okteto.OktetoContextStore{
@@ -215,7 +234,7 @@ func Test_createContext(t *testing.T) {
 			ctxController := ContextUse{
 				k8sClientProvider:    test.NewFakeK8sProvider(tt.fakeObjects),
 				loginController:      test.NewFakeLoginController(tt.user, nil),
-				oktetoClientProvider: test.NewFakeOktetoClientProvider(&types.UserContext{User: *tt.user}, nil),
+				oktetoClientProvider: test.NewFakeOktetoClientProvider(&types.UserContext{User: *tt.user}, []types.Namespace{{ID: "test"}}, nil),
 			}
 			okteto.CurrentStore = tt.ctxStore
 

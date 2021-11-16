@@ -137,8 +137,12 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 			return err
 		}
 	}
-	if ctxOptions.isOkteto && ctxOptions.Save {
-		hasAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace)
+	if ctxOptions.IsOkteto && ctxOptions.Save {
+		client, err := c.oktetoClientProvider.NewOktetoNamespaceClient()
+		if err != nil {
+			return err
+		}
+		hasAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace, client)
 		if err != nil {
 			return err
 		}

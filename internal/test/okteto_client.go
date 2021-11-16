@@ -22,14 +22,19 @@ import (
 type FakeOktetoClientProvider struct {
 	UserContext *types.UserContext
 	Err         error
+	Namespaces  []types.Namespace
 }
 
-func NewFakeOktetoClientProvider(userContext *types.UserContext, err error) *FakeOktetoClientProvider {
-	return &FakeOktetoClientProvider{UserContext: userContext, Err: err}
+func NewFakeOktetoClientProvider(userContext *types.UserContext, namespaces []types.Namespace, err error) *FakeOktetoClientProvider {
+	return &FakeOktetoClientProvider{UserContext: userContext, Namespaces: namespaces, Err: err}
 }
 
 func (f FakeOktetoClientProvider) NewOktetoUserClient() (types.UserInterface, error) {
 	return FakeUserClient{UserContext: f.UserContext, err: f.Err}, nil
+}
+
+func (f FakeOktetoClientProvider) NewOktetoNamespaceClient() (types.NamespaceInterface, error) {
+	return FakeNamespaceClient{namespaces: f.Namespaces}, nil
 }
 
 type FakeUserClient struct {
@@ -40,4 +45,14 @@ type FakeUserClient struct {
 // GetUserContext get user context
 func (f FakeUserClient) GetUserContext(ctx context.Context) (*types.UserContext, error) {
 	return f.UserContext, f.err
+}
+
+type FakeNamespaceClient struct {
+	namespaces []types.Namespace
+	err        error
+}
+
+// GetUserContext get user context
+func (f FakeNamespaceClient) ListNamespaces(ctx context.Context) ([]types.Namespace, error) {
+	return f.namespaces, f.err
 }
