@@ -175,7 +175,7 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "in the time allotted"),
 		strings.Contains(err.Error(), "broken pipe"),
 		strings.Contains(err.Error(), "No connection could be made"),
-		strings.Contains(err.Error(), "dial tcp: operation was canceled"),
+		strings.Contains(err.Error(), "operation was canceled"),
 		strings.Contains(err.Error(), "network is unreachable"),
 		strings.Contains(err.Error(), "development container has been removed"):
 		return true
