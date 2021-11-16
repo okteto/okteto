@@ -32,6 +32,7 @@ import (
 const (
 	parallelism int64 = 10
 	volumeKind        = "PersistentVolumeClaim"
+	jobKind           = "Job"
 )
 
 // DeleteAllOptions options for delete all operation
@@ -103,6 +104,13 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 			return err
 		}
 		deleteOpts := metav1.DeleteOptions{}
+
+		// It seems that by default, client-go don't delete pods scheduled by jobs, so we need to set the propation policy
+		if gvk.Kind == jobKind {
+			deletePropagation := metav1.DeletePropagationBackground
+			deleteOpts.PropagationPolicy = &deletePropagation
+		}
+
 		err = n.dynClient.
 			Resource(mapping.Resource).
 			Namespace(ns).

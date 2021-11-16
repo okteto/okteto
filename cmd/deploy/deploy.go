@@ -38,6 +38,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const headerUpgrade = "Upgrade"
+
 var tempKubeConfigTemplate = "%s/.okteto/kubeconfig-%s"
 
 // Options options for deploy command
@@ -212,8 +214,25 @@ func (dc *deployCommand) cleanUp(ctx context.Context) {
 	}
 }
 
+func newProtocolTransport(clusterConfig *rest.Config, disableHTTP2 bool) (http.RoundTripper, error) {
+	copiedConfig := &rest.Config{}
+	*copiedConfig = *clusterConfig
+
+	if disableHTTP2 {
+		// According to https://pkg.go.dev/k8s.io/client-go/rest#TLSClientConfig, this is the way to disable HTTP/2
+		copiedConfig.TLSClientConfig.NextProtos = []string{"http/1.1"}
+	}
+
+	return rest.TransportFor(copiedConfig)
+}
+
+func isSPDY(r *http.Request) bool {
+	return strings.HasPrefix(strings.ToLower(r.Header.Get(headerUpgrade)), "spdy/")
+}
+
 func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handler, error) {
-	trans, err := rest.TransportFor(clusterConfig)
+	// By default we don't disable HTTP/2
+	trans, err := newProtocolTransport(clusterConfig, false)
 	if err != nil {
 		log.Errorf("could not get http transport from config: %s", err)
 		return nil, err
@@ -221,10 +240,11 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 	handler := http.NewServeMux()
 
-	proxy := httputil.NewSingleHostReverseProxy(&url.URL{
+	destinationURL := &url.URL{
 		Host:   strings.TrimPrefix(clusterConfig.Host, "https://"),
 		Scheme: "https",
-	})
+	}
+	proxy := httputil.NewSingleHostReverseProxy(destinationURL)
 	proxy.Transport = trans
 
 	log.Debugf("forwarding host: %s", clusterConfig.Host)
@@ -246,12 +266,31 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 			r.Header.Del("Authorization")
 		}
 
+		reverseProxy := proxy
+		if isSPDY(r) {
+			log.Debugf("detected SPDY request, disabling HTTP/2 for request %s %s", r.Method, r.URL.String())
+			// In case of a SPDY request, we create a new proxy with HTTP/2 disabled
+			t, err := newProtocolTransport(clusterConfig, true)
+			if err != nil {
+				log.Errorf("could not disabled HTTP/2: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+			reverseProxy = httputil.NewSingleHostReverseProxy(destinationURL)
+			reverseProxy.Transport = t
+		}
+
 		// Modify all resources updated or created to include the label.
 		if r.Method == "PUT" || r.Method == "POST" {
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				log.Errorf("could not read the request body: %s", err)
 				rw.WriteHeader(500)
+				return
+			}
+
+			if len(b) == 0 {
+				reverseProxy.ServeHTTP(rw, r)
 				return
 			}
 
@@ -303,7 +342,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 		}
 
 		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
-		proxy.ServeHTTP(rw, r)
+		reverseProxy.ServeHTTP(rw, r)
 	})
 
 	return handler, nil
