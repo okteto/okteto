@@ -44,7 +44,10 @@ func Namespace(ctx context.Context) *cobra.Command {
 			err := contextCMD.Run(
 				ctx,
 				&contextCMD.ContextOptions{
+					Context:   okteto.Context().Name,
 					Namespace: namespace,
+					Save:      true,
+					Show:      true,
 				},
 			)
 
