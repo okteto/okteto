@@ -170,6 +170,7 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "connection reset by peer"),
 		strings.Contains(err.Error(), "client connection lost"),
 		strings.Contains(err.Error(), "nodename nor servname provided, or not known"),
+		strings.Contains(err.Error(), "no route to host"),
 		strings.Contains(err.Error(), "unexpected EOF"),
 		strings.Contains(err.Error(), "TLS handshake timeout"),
 		strings.Contains(err.Error(), "in the time allotted"),
