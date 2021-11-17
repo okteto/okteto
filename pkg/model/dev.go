@@ -713,7 +713,7 @@ func (dev *Dev) validateSync() error {
 			}
 		} else if errors.Is(err, os.ErrNotExist) {
 			return oktetoError.UserError{
-				E:    fmt.Errorf("`stignore` path does not exist"),
+				E:    fmt.Errorf("path '%s' does not exist", folder.LocalPath),
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 			}
 		} else if err != nil {
