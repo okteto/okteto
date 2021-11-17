@@ -63,6 +63,11 @@ func (up *upContext) activate() error {
 		return err
 	}
 
+	if up.isRetry && up.Dev.Autocreate {
+		log.Information("Development container has been deactivated")
+		return nil
+	}
+
 	if up.isRetry && !apps.IsDevModeOn(app) {
 		log.Information("Development container has been deactivated")
 		return nil
