@@ -26,7 +26,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type DoctorOptions struct {
+//doctorOptions refers to all the options that can be passed to Doctor command
+type doctorOptions struct {
 	DevPath    string
 	Namespace  string
 	K8sContext string
@@ -35,7 +36,7 @@ type DoctorOptions struct {
 
 // Doctor generates a zip file with all okteto-related log files
 func Doctor() *cobra.Command {
-	doctorOptions := &DoctorOptions{}
+	doctorOpts := &doctorOptions{}
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Generate a zip file with the okteto logs",
@@ -48,7 +49,7 @@ func Doctor() *cobra.Command {
 				return errors.ErrNotInDevContainer
 			}
 
-			devManifest, err := contextCMD.LoadDevWithContext(ctx, doctorOptions.DevPath, doctorOptions.Namespace, doctorOptions.K8sContext)
+			manifest, err := contextCMD.LoadDevWithContext(ctx, doctorOpts.DevPath, doctorOpts.Namespace, doctorOpts.K8sContext)
 			if err != nil {
 				return err
 			}
@@ -58,11 +59,11 @@ func Doctor() *cobra.Command {
 				return err
 			}
 
-			dev, err := utils.GetDevFromManifest(devManifest)
+			dev, err := utils.GetDevFromManifest(manifest)
 			if err != nil {
 				return err
 			}
-			filename, err := doctor.Run(ctx, dev, doctorOptions.DevPath, c)
+			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, c)
 			if err == nil {
 				log.Information("Your doctor file is available at %s", filename)
 			}
@@ -70,8 +71,8 @@ func Doctor() *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&doctorOptions.DevPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
-	cmd.Flags().StringVarP(&doctorOptions.Namespace, "namespace", "n", "", "namespace where the up command was executing")
-	cmd.Flags().StringVarP(&doctorOptions.K8sContext, "context", "c", "", "context where the up command was executing")
+	cmd.Flags().StringVarP(&doctorOpts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&doctorOpts.Namespace, "namespace", "n", "", "namespace where the up command was executing")
+	cmd.Flags().StringVarP(&doctorOpts.K8sContext, "context", "c", "", "context where the up command was executing")
 	return cmd
 }

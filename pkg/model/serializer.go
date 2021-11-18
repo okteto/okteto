@@ -653,23 +653,23 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (d *DevManifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	dev := NewDev()
 	err := unmarshal(&dev)
 	if err == nil {
-		*d = *NewDevManifestFromDev(dev)
+		*d = *NewManifestFromDev(dev)
 		return nil
 	}
-	if !isDevManifestFieldNotFound(err) {
+	if !isManifestFieldNotFound(err) {
 		return err
 	}
-	type devManifestType DevManifest //Prevent recursion
-	devManifest := devManifestType(*NewDevManifest())
-	err = unmarshal(&devManifest)
+	type manifestType Manifest //Prevent recursion
+	manifest := manifestType(*NewManifest())
+	err = unmarshal(&manifest)
 	if err != nil {
 		return err
 	}
-	*d = DevManifest(devManifest)
+	*d = Manifest(manifest)
 	return nil
 }
 
@@ -679,15 +679,9 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err == nil {
 		d.Commands = commands
 		return nil
-	}
-	type deployInfoRaw DeployInfo //Prevent recursion
-	devManifest := deployInfoRaw(*NewDeployInfo())
-	err = unmarshal(&devManifest)
-	if err != nil {
+	} else {
 		return err
 	}
-	*d = DeployInfo(devManifest)
-	return nil
 }
 
 type devRaw Dev
@@ -703,14 +697,14 @@ func (d *devRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (d *DevManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type devManifestDevs map[string]devRaw
-	devs := make(devManifestDevs)
+func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type manifestDevs map[string]devRaw
+	devs := make(manifestDevs)
 	err := unmarshal(&devs)
 	if err != nil {
 		return err
 	}
-	result := DevManifestDevs{}
+	result := ManifestDevs{}
 	for k, v := range devs {
 		dev := Dev(v)
 		devPointer := &dev
@@ -720,9 +714,9 @@ func (d *DevManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error
 	return nil
 }
 
-func isDevManifestFieldNotFound(err error) bool {
-	devManifestFields := []string{"dev", "name", "icon", "variables", "deploy", "destroy"}
-	for _, field := range devManifestFields {
+func isManifestFieldNotFound(err error) bool {
+	manifestFields := []string{"dev", "name", "icon", "variables", "deploy", "destroy"}
+	for _, field := range manifestFields {
 		if strings.Contains(err.Error(), fmt.Sprintf("field %s not found", field)) {
 			return true
 		}

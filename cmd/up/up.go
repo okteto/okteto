@@ -99,7 +99,7 @@ func Up() *cobra.Command {
 				}
 			}
 
-			devManifest, err := contextCMD.LoadDevWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
+			manifest, err := contextCMD.LoadDevWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
 			if err != nil {
 				if !strings.Contains(err.Error(), "okteto init") {
 					return err
@@ -108,13 +108,13 @@ func Up() *cobra.Command {
 					return err
 				}
 
-				devManifest, err = loadDevWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
+				manifest, err = loadDevWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
 				if err != nil {
 					return err
 				}
 			}
 
-			dev, err := utils.GetDevFromManifest(devManifest)
+			dev, err := utils.GetDevFromManifest(manifest)
 			if err != nil {
 				return err
 			}
@@ -185,7 +185,7 @@ func Up() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&upOptions.DevPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&upOptions.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
@@ -197,7 +197,7 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-func loadDevWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.DevManifest, error) {
+func loadDevWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Manifest, error) {
 	workDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("unknown current folder: %s", err)

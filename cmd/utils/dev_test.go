@@ -90,8 +90,8 @@ func Test_loadDevOrDefault(t *testing.T) {
 				t.Fatalf("unexpected error: %s", err)
 			}
 
-			if def.Name != tt.deployment {
-				t.Errorf("expected default name, got %s", def.Name)
+			if def.Dev[tt.deployment].Name != tt.deployment {
+				t.Errorf("expected default name, got %s", tt.deployment)
 			}
 
 			if tt.dev == nil {
@@ -118,8 +118,8 @@ func Test_loadDevOrDefault(t *testing.T) {
 				t.Fatalf("expected %s got %s", tt.dev.Image.Name, loaded.Dev["foo"].Image.Name)
 			}
 
-			if tt.dev.Name != loaded.Name {
-				t.Fatalf("expected %s got %s", tt.dev.Name, loaded.Name)
+			if tt.dev.Name != loaded.Dev["loaded"].Name {
+				t.Fatalf("expected %s got %s", tt.dev.Name, loaded.Dev["foo"].Name)
 			}
 
 		})
@@ -130,8 +130,8 @@ func Test_loadDevOrDefault(t *testing.T) {
 		t.Fatal("default dev was not returned")
 	}
 
-	if def.Name != name {
-		t.Errorf("expected %s, got %s", name, def.Name)
+	if def.Dev[name].Name != name {
+		t.Errorf("expected %s, got %s", name, def.Dev[name].Name)
 	}
 
 	_, err = LoadDevOrDefault("/tmp/bad-path", "")

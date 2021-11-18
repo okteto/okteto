@@ -34,16 +34,16 @@ import (
 )
 
 const (
-	//DefaultDevManifest default okteto manifest file
-	DefaultDevManifest   = "okteto.yml"
-	secondaryDevManifest = "okteto.yaml"
+	//DefaultManifest default okteto manifest file
+	DefaultManifest   = "okteto.yml"
+	secondaryManifest = "okteto.yaml"
 )
 
 func LoadDevContext(devPath string) (*model.ContextResource, error) {
 	if !model.FileExists(devPath) {
-		if devPath == DefaultDevManifest {
-			if model.FileExists(secondaryDevManifest) {
-				return model.GetContextResource(secondaryDevManifest)
+		if devPath == DefaultManifest {
+			if model.FileExists(secondaryManifest) {
+				return model.GetContextResource(secondaryManifest)
 			}
 		}
 		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
@@ -52,23 +52,23 @@ func LoadDevContext(devPath string) (*model.ContextResource, error) {
 }
 
 //LoadDev loads an okteto manifest checking "yml" and "yaml"
-func LoadDev(devPath string) (*model.DevManifest, error) {
+func LoadDev(devPath string) (*model.Manifest, error) {
 	if !model.FileExists(devPath) {
-		if devPath == DefaultDevManifest {
-			if model.FileExists(secondaryDevManifest) {
-				return LoadDev(secondaryDevManifest)
+		if devPath == DefaultManifest {
+			if model.FileExists(secondaryManifest) {
+				return LoadDev(secondaryManifest)
 			}
 		}
 
 		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
 	}
 
-	devManifest, err := model.Get(devPath)
+	manifest, err := model.Get(devPath)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, dev := range devManifest.Dev {
+	for _, dev := range manifest.Dev {
 		if err := loadDevRc(dev); err != nil {
 			return nil, err
 		}
@@ -77,7 +77,7 @@ func LoadDev(devPath string) (*model.DevManifest, error) {
 		dev.Context = okteto.Context().Name
 	}
 
-	return devManifest, nil
+	return manifest, nil
 }
 
 func loadDevRc(dev *model.Dev) error {
@@ -104,45 +104,45 @@ func loadDevRc(dev *model.Dev) error {
 }
 
 //LoadDevOrDefault loads an okteto manifest or a default one if does not exist
-func LoadDevOrDefault(devPath, name string) (*model.DevManifest, error) {
+func LoadDevOrDefault(devPath, name string) (*model.Manifest, error) {
 	dev, err := LoadDev(devPath)
 	if err == nil {
 		return dev, nil
 	}
 
 	if errors.IsNotExist(err) && len(name) > 0 {
-		dev, err := model.Read(nil)
+		manifest, err := model.Read(nil)
 		if err != nil {
 			return nil, err
 		}
-		dev.Name = name
-		dev.Dev[dev.Name] = model.NewDev()
-		dev.Dev[dev.Name].Namespace = okteto.Context().Namespace
-		dev.Dev[dev.Name].Context = okteto.Context().Name
-		return dev, nil
+		manifest.Dev[name] = model.NewDev()
+		manifest.Dev[name].Name = name
+		manifest.Dev[name].Namespace = okteto.Context().Namespace
+		manifest.Dev[name].Context = okteto.Context().Name
+		return manifest, nil
 	}
 
 	return nil, err
 }
 
-func GetDevFromManifest(devManifest *model.DevManifest) (*model.Dev, error) {
-	if len(devManifest.Dev) == 0 {
+func GetDevFromManifest(manifest *model.Manifest) (*model.Dev, error) {
+	if len(manifest.Dev) == 0 {
 		return nil, fmt.Errorf("okteto manifest has no dev references")
-	} else if len(devManifest.Dev) == 1 {
-		for _, dev := range devManifest.Dev {
+	} else if len(manifest.Dev) == 1 {
+		for _, dev := range manifest.Dev {
 			return dev, nil
 		}
 	}
 
 	devs := make([]string, 0)
-	for k := range devManifest.Dev {
+	for k := range manifest.Dev {
 		devs = append(devs, k)
 	}
 	devKey, err := AskForOptions(devs, "Select the dev you want to operate with:")
 	if err != nil {
 		return nil, err
 	}
-	return devManifest.Dev[devKey], nil
+	return manifest.Dev[devKey], nil
 }
 
 //AskYesNo prompts for yes/no confirmation
@@ -263,7 +263,7 @@ func CheckIfRegularFile(path string) error {
 
 func GetDownCommand(devPath string) string {
 	okDownCommandHint := "okteto down -v"
-	if DefaultDevManifest != devPath {
+	if DefaultManifest != devPath {
 		okDownCommandHint = fmt.Sprintf("okteto down -v -f %s", devPath)
 	}
 	return okDownCommandHint

@@ -968,11 +968,11 @@ func TestSyncFoldersUnmashalling(t *testing.T) {
 	}
 }
 
-func TestDevManifestUnmarshalling(t *testing.T) {
+func TestmanifestUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name            string
 		manifest        []byte
-		expected        *DevManifest
+		expected        *Manifest
 		isErrorExpected bool
 	}{
 		{
@@ -980,10 +980,8 @@ func TestDevManifestUnmarshalling(t *testing.T) {
 			manifest: []byte(`name: test
 sync:
   - app:/app`),
-			expected: &DevManifest{
-				Name:      "test",
-				Variables: []DevVariables{},
-				Destroy:   []string{},
+			expected: &Manifest{
+				Destroy: []string{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1061,10 +1059,8 @@ sync:
   - app:/app
 services:
   - name: svc`),
-			expected: &DevManifest{
-				Name:      "test",
-				Variables: []DevVariables{},
-				Destroy:   []string{},
+			expected: &Manifest{
+				Destroy: []string{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1198,10 +1194,8 @@ dev:
     sync:
     - app:/app
 `),
-			expected: &DevManifest{
-				Name:      "test",
-				Variables: []DevVariables{},
-				Destroy:   []string{},
+			expected: &Manifest{
+				Destroy: []string{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1283,10 +1277,8 @@ dev:
     sync:
     - app:/app
 `),
-			expected: &DevManifest{
-				Name:      "test",
-				Variables: []DevVariables{},
-				Destroy:   []string{},
+			expected: &Manifest{
+				Destroy: []string{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1446,11 +1438,9 @@ sync:
 deploy:
   - okteto stack deploy
 `),
-			expected: &DevManifest{
-				Name:      "test",
-				Variables: []DevVariables{},
-				Destroy:   []string{},
-				Dev:       map[string]*Dev{},
+			expected: &Manifest{
+				Destroy: []string{},
+				Dev:     map[string]*Dev{},
 				Deploy: DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1472,10 +1462,8 @@ dev:
     sync:
     - app:/app
 `),
-			expected: &DevManifest{
-				Name:      "test",
-				Variables: []DevVariables{},
-				Destroy:   []string{},
+			expected: &Manifest{
+				Destroy: []string{},
 				Deploy: DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1619,14 +1607,14 @@ dev:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			devManifest, err := Read(tt.manifest)
+			manifest, err := Read(tt.manifest)
 			if err != nil && !tt.isErrorExpected {
 				t.Fatalf("Not expecting error but got %s", err)
 			} else if tt.isErrorExpected && err == nil {
 				t.Fatal("Expected error but got none")
 			}
 
-			if !assert.Equal(t, tt.expected, devManifest) {
+			if !assert.Equal(t, tt.expected, manifest) {
 				t.Fatal("Failed")
 			}
 		})
@@ -1638,6 +1626,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 		name               string
 		deployInfoManifest []byte
 		expected           *DeployInfo
+		isErrorExpected    bool
 	}{
 		{
 			name: "list of commands",
@@ -1654,10 +1643,9 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 			deployInfoManifest: []byte(`commands:
 - okteto stack deploy`),
 			expected: &DeployInfo{
-				Commands: []string{
-					"okteto stack deploy",
-				},
+				Commands: []string{},
 			},
+			isErrorExpected: true,
 		},
 		{
 			name: "compose with endpoints",
@@ -1669,17 +1657,8 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
       port: 80`),
 			expected: &DeployInfo{
 				Commands: []string{},
-				Compose: &ComposeInfo{
-					Manifest: "path",
-					Endpoints: []EndpointRule{
-						{
-							Path:    "/",
-							Service: "app",
-							Port:    80,
-						},
-					},
-				},
 			},
+			isErrorExpected: true,
 		},
 		{
 			name: "divert",
@@ -1693,18 +1672,8 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
     service: frontend`),
 			expected: &DeployInfo{
 				Commands: []string{},
-				Divert: &DivertInfo{
-					From: DivertFromInfo{
-						Namespace:  "staging",
-						Ingress:    "movies",
-						Service:    "frontend",
-						Deployment: "frontend",
-					},
-					To: DivertToInfo{
-						Service: "frontend",
-					},
-				},
 			},
+			isErrorExpected: true,
 		},
 		{
 			name: "all together",
@@ -1728,43 +1697,21 @@ compose:
     service: api
     port: 8080`),
 			expected: &DeployInfo{
-				Commands: []string{"kubectl apply -f manifest.yml"},
-				Compose: &ComposeInfo{
-					Manifest: "./docker-compose.yml",
-					Endpoints: []EndpointRule{
-						{
-							Path:    "/",
-							Service: "frontend",
-							Port:    80,
-						},
-						{
-							Path:    "/api",
-							Service: "api",
-							Port:    8080,
-						},
-					},
-				},
-				Divert: &DivertInfo{
-					From: DivertFromInfo{
-						Namespace:  "staging",
-						Ingress:    "movies",
-						Service:    "frontend",
-						Deployment: "frontend",
-					},
-					To: DivertToInfo{
-						Service: "frontend",
-					},
-				},
+				Commands: []string{},
 			},
+			isErrorExpected: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := &DeployInfo{}
+			result := NewDeployInfo()
 
-			if err := yaml.UnmarshalStrict(tt.deployInfoManifest, &result); err != nil {
-				t.Fatal(err)
+			err := yaml.UnmarshalStrict(tt.deployInfoManifest, &result)
+			if err != nil && !tt.isErrorExpected {
+				t.Fatalf("Not expecting error but got %s", err)
+			} else if tt.isErrorExpected && err == nil {
+				t.Fatal("Expected error but got none")
 			}
 
 			if !assert.Equal(t, tt.expected, result) {

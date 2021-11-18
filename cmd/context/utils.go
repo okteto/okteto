@@ -118,7 +118,7 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 	return nil
 }
 
-func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.DevManifest, error) {
+func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Manifest, error) {
 	ctxResource, err := utils.LoadDevContext(devPath)
 	if err != nil {
 		return nil, err

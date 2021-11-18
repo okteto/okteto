@@ -29,7 +29,7 @@ import (
 )
 
 func TestDevToTranslationRule(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 container: dev
 image: web:latest
@@ -64,12 +64,12 @@ services:
     sync:
       - worker:/src`)
 
-	devManifest, err := Read(manifest)
+	manifest, err := Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dev := devManifest.Dev["web"]
+	dev := manifest.Dev["web"]
 
 	rule1 := dev.ToTranslationRule(dev, false)
 	rule1OK := &TranslationRule{
@@ -198,7 +198,7 @@ services:
 }
 
 func TestDevToTranslationRuleInitContainer(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 sync:
   - .:/app
@@ -212,12 +212,12 @@ initContainer:
       cpu: 2
       memory: 2Gi`)
 
-	devManifest, err := Read(manifest)
+	manifest, err := Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dev := devManifest.Dev["web"]
+	dev := manifest.Dev["web"]
 
 	rule := dev.ToTranslationRule(dev, false)
 	ruleOK := &TranslationRule{
@@ -285,7 +285,7 @@ initContainer:
 }
 
 func TestDevToTranslationRuleDockerEnabled(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 image: dev-image
 namespace: n
 sync:
@@ -293,12 +293,12 @@ sync:
 docker:
   enabled: true`)
 
-	devManifest, err := Read(manifest)
+	manifest, err := Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dev := devManifest.Dev["web"]
+	dev := manifest.Dev["web"]
 
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
@@ -393,18 +393,18 @@ docker:
 func TestDevToTranslationDebugEnabled(t *testing.T) {
 	log.SetLevel("debug")
 	defer log.SetLevel("info")
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 image: dev-image
 namespace: n
 sync:
   - .:/app`)
 
-	devManifest, err := Read(manifest)
+	manifest, err := Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dev := devManifest.Dev["web"]
+	dev := manifest.Dev["web"]
 
 	rule := dev.ToTranslationRule(dev, false)
 	ruleOK := &TranslationRule{
@@ -598,12 +598,12 @@ securityContext:
 	}
 
 	for _, test := range tests {
-		devManifest, err := Read(test.manifest)
+		manifest, err := Read(test.manifest)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		dev := devManifest.Dev[test.name]
+		dev := manifest.Dev[test.name]
 
 		rule := dev.ToTranslationRule(dev, false)
 		marshalled, _ := yaml.Marshal(rule.SecurityContext)

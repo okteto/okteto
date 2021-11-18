@@ -50,12 +50,12 @@ func Down() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			devManifest, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
+			manifest, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}
 
-			dev, err := utils.GetDevFromManifest(devManifest)
+			dev, err := utils.GetDevFromManifest(manifest)
 			if err != nil {
 				return err
 			}
@@ -70,7 +70,7 @@ func Down() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volume")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the down command is executed")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the down command is executed")

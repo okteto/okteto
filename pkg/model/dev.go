@@ -62,7 +62,6 @@ type Dev struct {
 	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Variables            Environment           `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
 	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
@@ -89,13 +88,13 @@ type Dev struct {
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
+	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 
 	//Deprecated fields
-	Autocreate   bool        `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
-	Environment  Environment `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Healthchecks bool        `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
-	Labels       Labels      `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Volumes      []Volume    `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	Healthchecks bool   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
+	Labels       Labels `json:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
 type Affinity apiv1.Affinity
@@ -267,18 +266,18 @@ type Environment []EnvVar
 type EnvFiles []string
 
 // Get returns a Dev object from a given file
-func Get(devPath string) (*DevManifest, error) {
+func Get(devPath string) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {
 		return nil, err
 	}
 
-	devManifest, err := Read(b)
+	manifest, err := Read(b)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, dev := range devManifest.Dev {
+	for _, dev := range manifest.Dev {
 		if err := dev.translateDeprecatedVolumeFields(); err != nil {
 			return nil, err
 		}
@@ -294,7 +293,7 @@ func Get(devPath string) (*DevManifest, error) {
 		dev.computeParentSyncFolder()
 	}
 
-	return devManifest, nil
+	return manifest, nil
 }
 func NewDev() *Dev {
 	return &Dev{
@@ -316,16 +315,16 @@ func NewDev() *Dev {
 }
 
 // Read reads an okteto manifests
-func Read(bytes []byte) (*DevManifest, error) {
-	devManifest := NewDevManifest()
+func Read(bytes []byte) (*Manifest, error) {
+	manifest := NewManifest()
 	if bytes != nil {
-		if err := yaml.UnmarshalStrict(bytes, devManifest); err != nil {
+		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
 			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 				var sb strings.Builder
 				_, _ = sb.WriteString("Invalid manifest:\n")
 				l := strings.Split(err.Error(), "\n")
 				for i := 1; i < len(l); i++ {
-					e := strings.TrimSuffix(l[i], "in type model.DevManifest")
+					e := strings.TrimSuffix(l[i], "in type model.Manifest")
 					e = strings.TrimSpace(e)
 					_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 				}
@@ -335,11 +334,11 @@ func Read(bytes []byte) (*DevManifest, error) {
 			}
 
 			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid manifest:", 1)
-			msg = strings.TrimSuffix(msg, "in type model.DevManifest")
+			msg = strings.TrimSuffix(msg, "in type model.Manifest")
 			return nil, errors.New(msg)
 		}
 	}
-	for dName, d := range devManifest.Dev {
+	for dName, d := range manifest.Dev {
 		if d.Name == "" {
 			d.Name = dName
 		}
@@ -371,7 +370,7 @@ func Read(bytes []byte) (*DevManifest, error) {
 		})
 	}
 
-	return devManifest, nil
+	return manifest, nil
 }
 
 func (dev *Dev) loadAbsPaths(devPath string) error {

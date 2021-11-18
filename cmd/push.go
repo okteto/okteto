@@ -36,7 +36,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-type PushOptions struct {
+//pushOptions refers to all the options that can be passed to Push command
+type pushOptions struct {
 	DevPath    string
 	Namespace  string
 	K8sContext string
@@ -49,27 +50,27 @@ type PushOptions struct {
 
 // Push builds, pushes and redeploys the target app
 func Push(ctx context.Context) *cobra.Command {
-	pushOptions := &PushOptions{}
+	pushOpts := &pushOptions{}
 	cmd := &cobra.Command{
 		Use:   "push",
 		Short: "Build, push and redeploy source code to the target app",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ctxResource, err := utils.LoadDevContext(pushOptions.DevPath)
+			ctxResource, err := utils.LoadDevContext(pushOpts.DevPath)
 			if err != nil {
-				if errors.IsNotExist(err) && len(pushOptions.AppName) > 0 {
+				if errors.IsNotExist(err) && len(pushOpts.AppName) > 0 {
 					ctxResource = &model.ContextResource{}
 				} else {
 					return err
 				}
 			}
 
-			if err := ctxResource.UpdateNamespace(pushOptions.Namespace); err != nil {
+			if err := ctxResource.UpdateNamespace(pushOpts.Namespace); err != nil {
 				return err
 			}
 
-			if err := ctxResource.UpdateContext(pushOptions.K8sContext); err != nil {
+			if err := ctxResource.UpdateContext(pushOpts.K8sContext); err != nil {
 				return err
 			}
 
@@ -82,17 +83,17 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			devManifest, err := utils.LoadDevOrDefault(pushOptions.DevPath, pushOptions.AppName)
+			manifest, err := utils.LoadDevOrDefault(pushOpts.DevPath, pushOpts.AppName)
 			if err != nil {
 				return err
 			}
 
-			dev, err := utils.GetDevFromManifest(devManifest)
+			dev, err := utils.GetDevFromManifest(manifest)
 			if err != nil {
 				return err
 			}
 
-			if len(pushOptions.AppName) > 0 && pushOptions.AppName != dev.Name {
+			if len(pushOpts.AppName) > 0 && pushOpts.AppName != dev.Name {
 				return fmt.Errorf("app name provided does not match the name field in your okteto manifest")
 			}
 
@@ -103,17 +104,17 @@ func Push(ctx context.Context) *cobra.Command {
 
 			oktetoRegistryURL := okteto.Context().Registry
 
-			if pushOptions.AutoDeploy {
+			if pushOpts.AutoDeploy {
 				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
     More information is available here: https://okteto.com/docs/reference/cli#up`)
 			}
 
 			if !dev.Autocreate {
-				dev.Autocreate = pushOptions.AutoDeploy
+				dev.Autocreate = pushOpts.AutoDeploy
 			}
 
-			if err := runPush(ctx, dev, oktetoRegistryURL, pushOptions, c); err != nil {
+			if err := runPush(ctx, dev, oktetoRegistryURL, pushOpts, c); err != nil {
 				analytics.TrackPush(false, oktetoRegistryURL)
 				return err
 			}
@@ -126,18 +127,18 @@ func Push(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&pushOptions.DevPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
-	cmd.Flags().StringVarP(&pushOptions.Namespace, "namespace", "n", "", "namespace where the push command is executed")
-	cmd.Flags().StringVarP(&pushOptions.K8sContext, "context", "c", "", "context where the push command is executed")
-	cmd.Flags().StringVarP(&pushOptions.ImageTag, "tag", "t", "", "image tag to build, push and redeploy")
-	cmd.Flags().BoolVarP(&pushOptions.AutoDeploy, "deploy", "d", false, "create deployment when the app doesn't exist in a namespace")
-	cmd.Flags().StringVarP(&pushOptions.Progress, "progress", "", "tty", "show plain/tty build output")
-	cmd.Flags().StringVar(&pushOptions.AppName, "name", "", "name of the app to push to")
-	cmd.Flags().BoolVarP(&pushOptions.NoCache, "no-cache", "", false, "do not use cache when building the image")
+	cmd.Flags().StringVarP(&pushOpts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&pushOpts.Namespace, "namespace", "n", "", "namespace where the push command is executed")
+	cmd.Flags().StringVarP(&pushOpts.K8sContext, "context", "c", "", "context where the push command is executed")
+	cmd.Flags().StringVarP(&pushOpts.ImageTag, "tag", "t", "", "image tag to build, push and redeploy")
+	cmd.Flags().BoolVarP(&pushOpts.AutoDeploy, "deploy", "d", false, "create deployment when the app doesn't exist in a namespace")
+	cmd.Flags().StringVarP(&pushOpts.Progress, "progress", "", "tty", "show plain/tty build output")
+	cmd.Flags().StringVar(&pushOpts.AppName, "name", "", "name of the app to push to")
+	cmd.Flags().BoolVarP(&pushOpts.NoCache, "no-cache", "", false, "do not use cache when building the image")
 	return cmd
 }
 
-func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, pushOptions *PushOptions, c *kubernetes.Clientset) error {
+func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, pushOpts *pushOptions, c *kubernetes.Clientset) error {
 	exists := true
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 
@@ -164,11 +165,11 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 		app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
 		exists = false
 
-		if pushOptions.ImageTag == "" {
+		if pushOpts.ImageTag == "" {
 			if oktetoRegistryURL == "" {
 				return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
 			}
-			pushOptions.ImageTag = registry.GetImageTag("", dev.Name, dev.Namespace, oktetoRegistryURL)
+			pushOpts.ImageTag = registry.GetImageTag("", dev.Name, dev.Namespace, oktetoRegistryURL)
 		}
 	}
 
@@ -182,7 +183,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 		return err
 	}
 
-	pushOptions.ImageTag, err = buildImage(ctx, dev, imageFromApp, oktetoRegistryURL, pushOptions)
+	pushOpts.ImageTag, err = buildImage(ctx, dev, imageFromApp, oktetoRegistryURL, pushOpts)
 	if err != nil {
 		return err
 	}
@@ -218,7 +219,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 		}
 
 		if !exists {
-			app.PodSpec().Containers[0].Image = pushOptions.ImageTag
+			app.PodSpec().Containers[0].Image = pushOpts.ImageTag
 			apps.SetLastBuiltAnnotation(app)
 			exit <- app.Deploy(ctx, c)
 			return
@@ -235,7 +236,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 					return
 				}
 				apps.SetLastBuiltAnnotation(app)
-				devContainer.Image = pushOptions.ImageTag
+				devContainer.Image = pushOpts.ImageTag
 			}
 
 			if err := tr.App.Deploy(ctx, c); err != nil {
@@ -261,13 +262,13 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 
 }
 
-func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistryURL string, pushOptions *PushOptions) (string, error) {
+func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistryURL string, pushOpts *pushOptions) (string, error) {
 	log.Information("Running your build in %s...", okteto.Context().Builder)
 
-	if pushOptions.ImageTag == "" {
-		pushOptions.ImageTag = dev.Push.Name
+	if pushOpts.ImageTag == "" {
+		pushOpts.ImageTag = dev.Push.Name
 	}
-	buildTag := registry.GetDevImageTag(dev, pushOptions.ImageTag, imageFromApp, oktetoRegistryURL)
+	buildTag := registry.GetDevImageTag(dev, pushOpts.ImageTag, imageFromApp, oktetoRegistryURL)
 	log.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
@@ -276,10 +277,10 @@ func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistr
 		File:       dev.Push.Dockerfile,
 		Tag:        buildTag,
 		Target:     dev.Push.Target,
-		NoCache:    pushOptions.NoCache,
+		NoCache:    pushOpts.NoCache,
 		CacheFrom:  dev.Push.CacheFrom,
 		BuildArgs:  buildArgs,
-		OutputMode: pushOptions.Progress,
+		OutputMode: pushOpts.Progress,
 	}
 	if err := build.Run(ctx, buildOptions); err != nil {
 		return "", err
