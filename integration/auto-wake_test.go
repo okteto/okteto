@@ -112,7 +112,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := checkIfSleeping(ctx, name, namespace); err != nil {
+	if err := checkIfSleeping(ctx, name, namespace, 150); err != nil {
 		t.Fatal(err)
 	}
 
@@ -124,7 +124,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatalf("failed to get content")
 	}
 
-	if err := checkIfAwake(ctx, name, namespace); err != nil {
+	if err := checkIfAwake(ctx, name, namespace, 150); err != nil {
 		t.Fatal(err)
 	}
 
@@ -132,7 +132,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := checkIfSleeping(ctx, name, namespace); err != nil {
+	if err := checkIfSleeping(ctx, name, namespace, 150); err != nil {
 		t.Fatal(err)
 	}
 
@@ -143,12 +143,8 @@ func TestAutoWake(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	content, err = getContent(endpoint, 150, nil)
-	if err != nil {
-		t.Fatalf("failed to get content: %s", err)
-	}
-	if content == "" {
-		t.Fatalf("failed to get content")
+	if err := checkIfAwake(ctx, name, namespace, 150); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, true); err != nil {
@@ -159,51 +155,64 @@ func TestAutoWake(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := checkIfAwake(ctx, name, namespace); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
 		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 	}
 
 }
 
-func checkIfSleeping(ctx context.Context, name, namespace string) error {
-	time.Sleep(5 * time.Second)
-	d, err := getDeployment(ctx, namespace, name)
-	if err != nil {
-		return fmt.Errorf("error getting 'react-getting-started' deployment: %s", err.Error())
+func checkIfSleeping(ctx context.Context, name, namespace string, timeout int) error {
+
+	for i := 0; i < timeout; i++ {
+		d, err := getDeployment(ctx, namespace, name)
+		if err != nil {
+			log.Printf("error getting deployment: %s", err.Error())
+			continue
+		}
+
+		if *d.Spec.Replicas > 0 {
+			log.Printf("error deployment: not sleeping")
+			continue
+		}
+		sfs, err := getStatefulset(ctx, namespace, name)
+		if err != nil {
+			log.Printf("error getting sfs: %s", err.Error())
+			continue
+		}
+		if *sfs.Spec.Replicas > 0 {
+			log.Printf("error deployment: not sleeping")
+			continue
+		}
+		return nil
 	}
 
-	if *d.Spec.Replicas > 0 {
-		return fmt.Errorf("deployment not sleeping")
-	}
-	sfs, err := getStatefulset(ctx, namespace, name)
-	if err != nil {
-		return err
-	}
-	if *sfs.Spec.Replicas > 0 {
-		return fmt.Errorf("deployment not sleeping")
-	}
-
-	return nil
+	return fmt.Errorf("Resources not sleeping")
 }
-func checkIfAwake(ctx context.Context, name, namespace string) error {
-	d, err := getDeployment(ctx, namespace, name)
-	if err != nil {
-		return fmt.Errorf("error getting 'react-getting-started' deployment: %s", err.Error())
+func checkIfAwake(ctx context.Context, name, namespace string, timeout int) error {
+
+	for i := 0; i < timeout; i++ {
+		d, err := getDeployment(ctx, namespace, name)
+		if err != nil {
+			log.Printf("error getting deployment: %s", err.Error())
+			continue
+		}
+
+		if *d.Spec.Replicas == 0 {
+			log.Printf("error dep: Not awake")
+			continue
+		}
+
+		sfs, err := getStatefulset(ctx, namespace, name)
+		if err != nil {
+			log.Printf("error getting sfs: %s", err.Error())
+			continue
+		}
+		if *sfs.Spec.Replicas == 0 {
+			log.Printf("error sfs: Not awake")
+			continue
+		}
+		return nil
 	}
 
-	if *d.Spec.Replicas == 0 {
-		return fmt.Errorf("deployment not awake")
-	}
-	sfs, err := getStatefulset(ctx, namespace, name)
-	if err != nil {
-		return err
-	}
-	if *sfs.Spec.Replicas == 0 {
-		return fmt.Errorf("deployment not awake")
-	}
-	return nil
+	return fmt.Errorf("Resources are not awake")
 }
