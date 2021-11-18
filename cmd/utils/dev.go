@@ -284,5 +284,5 @@ func doesAppExist(ctx context.Context, dev *model.Dev, c kubernetes.Interface) b
 	autocreateDev := *dev
 	autocreateDev.Name = model.DevCloneName(dev.Name)
 	_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
-	return err != nil
+	return err == nil
 }
