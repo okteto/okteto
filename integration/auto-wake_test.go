@@ -29,7 +29,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 func TestAutoWake(t *testing.T) {
@@ -112,6 +114,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	time.Sleep(5 * time.Second)
 	if err := checkIfSleeping(ctx, name, namespace, 150); err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +127,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatalf("failed to get content")
 	}
 
-	if err := checkIfAwake(ctx, name, namespace, 150); err != nil {
+	if err := checkIfAwake(ctx, name, namespace, false, 150); err != nil {
 		t.Fatal(err)
 	}
 
@@ -143,7 +146,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := checkIfAwake(ctx, name, namespace, 150); err != nil {
+	if err := checkIfAwake(ctx, name, namespace, true, 150); err != nil {
 		t.Fatal(err)
 	}
 
@@ -162,8 +165,9 @@ func TestAutoWake(t *testing.T) {
 }
 
 func checkIfSleeping(ctx context.Context, name, namespace string, timeout int) error {
-
+	t := time.NewTicker(3 * time.Second)
 	for i := 0; i < timeout; i++ {
+		<-t.C
 		d, err := getDeployment(ctx, namespace, name)
 		if err != nil {
 			log.Printf("error getting deployment: %s", err.Error())
@@ -188,13 +192,25 @@ func checkIfSleeping(ctx context.Context, name, namespace string, timeout int) e
 
 	return fmt.Errorf("Resources not sleeping")
 }
-func checkIfAwake(ctx context.Context, name, namespace string, timeout int) error {
-
+func checkIfAwake(ctx context.Context, name, namespace string, isDevMode bool, timeout int) error {
+	t := time.NewTicker(1 * time.Second)
 	for i := 0; i < timeout; i++ {
-		d, err := getDeployment(ctx, namespace, name)
-		if err != nil {
-			log.Printf("error getting deployment: %s", err.Error())
-			continue
+		<-t.C
+		var d *appsv1.Deployment
+		var err error
+		if isDevMode {
+			d, err = getDeployment(ctx, namespace, model.DevCloneName(name))
+			if err != nil {
+				log.Printf("error getting deployment: %s", err.Error())
+				continue
+			}
+		} else {
+			d, err = getDeployment(ctx, namespace, name)
+			if err != nil {
+				log.Printf("error getting deployment: %s", err.Error())
+				continue
+			}
+
 		}
 
 		if *d.Spec.Replicas == 0 {
