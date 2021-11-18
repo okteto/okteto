@@ -58,9 +58,6 @@ type Variable struct {
 
 // DeployPipeline creates a pipeline
 func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error) {
-	if filename == "" {
-		return c.deployPipelineWithoutFilename(ctx, name, repository, branch, variables)
-	}
 	gitDeployResponse := &GitDeployResponse{}
 	if len(variables) > 0 {
 		var mutation struct {
@@ -96,6 +93,9 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 
 		err := c.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
+			if strings.Contains(err.Error(), "Unknown argument \"filename\" on type \"GitDeploy\"") && filename == "" {
+				return c.deployPipelineWithoutFilename(ctx, name, repository, branch, variables)
+			}
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
 				return c.deprecatedDeployPipeline(ctx, name, repository, branch, filename, variables)
 			}
@@ -140,6 +140,9 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 
 		err := c.Mutate(ctx, &mutation, queryVariables)
 		if err != nil {
+			if strings.Contains(err.Error(), "Unknown argument \"filename\" on field \"deployGitRepository\"") && filename == "" {
+				return c.deployPipelineWithoutFilename(ctx, name, repository, branch, variables)
+			}
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
 				return c.deprecatedDeployPipeline(ctx, name, repository, branch, filename, variables)
 			}
