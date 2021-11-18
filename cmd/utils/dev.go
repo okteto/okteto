@@ -253,7 +253,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 			return nil, false, err
 		}
 		if dev.Autocreate {
-			if isRetry && isAppDown(ctx, dev, c) {
+			if isRetry && !doesAppExist(ctx, dev, c) {
 				return nil, false, fmt.Errorf("Development container has been deactivated")
 			}
 			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
@@ -280,7 +280,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 	return app, false, nil
 }
 
-func isAppDown(ctx context.Context, dev *model.Dev, c kubernetes.Interface) bool {
+func doesAppExist(ctx context.Context, dev *model.Dev, c kubernetes.Interface) bool {
 	autocreateDev := *dev
 	autocreateDev.Name = model.DevCloneName(dev.Name)
 	_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
