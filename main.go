@@ -44,6 +44,8 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+
+	generateFigSpec "github.com/withfig/autocomplete-tools/packages/cobra"
 )
 
 func init() {
@@ -117,7 +119,7 @@ func main() {
 	root.AddCommand(cmd.Update())
 	root.AddCommand(deploy.Deploy(ctx))
 	root.AddCommand(destroy.Destroy(ctx))
-
+	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 	err := root.Execute()
 
 	if err != nil {
