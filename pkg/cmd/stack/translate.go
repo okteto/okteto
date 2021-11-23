@@ -831,6 +831,9 @@ func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 
 func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	result := []apiv1.ContainerPort{}
+	sort.Slice(svc.Ports, func(i, j int) bool {
+		return svc.Ports[i].ContainerPort < svc.Ports[j].ContainerPort
+	})
 	for _, p := range svc.Ports {
 		result = append(result, apiv1.ContainerPort{ContainerPort: p.ContainerPort})
 	}
