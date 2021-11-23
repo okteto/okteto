@@ -1441,7 +1441,7 @@ deploy:
 			expected: &Manifest{
 				Destroy: []string{},
 				Dev:     map[string]*Dev{},
-				Deploy: DeployInfo{
+				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
 					},
@@ -1464,7 +1464,7 @@ dev:
 `),
 			expected: &Manifest{
 				Destroy: []string{},
-				Deploy: DeployInfo{
+				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
 					},

@@ -58,7 +58,7 @@ type Options struct {
 }
 
 type destroyCommand struct {
-	getManifest func(cwd, name, filename string) (*utils.Manifest, error)
+	getManifest func(cwd, name, filename string) (*model.Manifest, error)
 
 	executor    utils.ManifestExecutor
 	nsDestroyer destroyer
@@ -133,7 +133,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	if err != nil {
 		// Log error message but application can still be deleted
 		log.Errorf("could not find manifest file to be executed: %s", err)
-		manifest = &utils.Manifest{
+		manifest = &model.Manifest{
 			Destroy: []string{},
 		}
 	}

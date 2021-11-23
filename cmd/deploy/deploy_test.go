@@ -17,16 +17,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
 )
 
-var fakeManifest *utils.Manifest = &utils.Manifest{
-	Deploy: []string{
-		"printenv",
-		"ls -la",
-		"cat /tmp/test.txt",
+var fakeManifest *model.Manifest = &model.Manifest{
+	Deploy: &model.DeployInfo{
+		Commands: []string{
+			"printenv",
+			"ls -la",
+			"cat /tmp/test.txt",
+		},
 	},
 }
 
@@ -163,7 +165,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	// No command was executed
 	assert.Len(t, e.executed, 1)
 	// Check expected commands were executed
-	assert.Equal(t, fakeManifest.Deploy[0], e.executed[0])
+	assert.Equal(t, fakeManifest.Deploy.Commands[0], e.executed[0])
 	// Proxy started
 	assert.True(t, p.started)
 	// Proxy shutdown
@@ -195,7 +197,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	// No command was executed
 	assert.Len(t, e.executed, 3)
 	// Check expected commands were executed
-	assert.Equal(t, fakeManifest.Deploy, e.executed)
+	assert.Equal(t, fakeManifest.Deploy.Commands, e.executed)
 	// Proxy started
 	assert.True(t, p.started)
 	// Proxy wasn't shutdown
@@ -225,17 +227,17 @@ func TestDeployWithoutErrors(t *testing.T) {
 	// No command was executed
 	assert.Len(t, e.executed, 3)
 	// Check expected commands were executed
-	assert.Equal(t, fakeManifest.Deploy, e.executed)
+	assert.Equal(t, fakeManifest.Deploy.Commands, e.executed)
 	// Proxy started
 	assert.True(t, p.started)
 	// Proxy was shutdown
 	assert.True(t, p.shutdown)
 }
 
-func getManifestWithError(_, _, _ string) (*utils.Manifest, error) {
+func getManifestWithError(_, _, _ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_, _, _ string) (*utils.Manifest, error) {
+func getFakeManifest(_, _, _ string) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
