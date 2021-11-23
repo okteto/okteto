@@ -47,6 +47,7 @@ type Options struct {
 	ManifestPath string
 	Name         string
 	Variables    []string
+	OutputMode   string
 }
 
 type kubeConfigHandler interface {
@@ -146,7 +147,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				getManifest: utils.GetManifest,
 
 				kubeconfig: kubeconfig,
-				executor:   utils.NewExecutor(),
+				executor:   utils.NewExecutor(options.OutputMode),
 				proxy: newProxy(proxyConfig{
 					port:  port,
 					token: sessionToken,
@@ -160,6 +161,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
+	cmd.Flags().StringVarP(&options.OutputMode, "output", "", "tty", "show plain/tty deploy output")
 
 	return cmd
 }
