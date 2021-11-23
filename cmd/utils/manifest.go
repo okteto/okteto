@@ -62,7 +62,7 @@ func InferApplicationName(cwd string) string {
 }
 
 // GetManifest Loads a manifest
-func GetManifest(srcFolder, name, filename string) (*Manifest, error) {
+func GetManifest(srcFolder, name, filename string) (*model.Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, filename)
 	if pipelinePath != "" {
 		log.Debugf("Found okteto manifest %s", pipelinePath)
@@ -70,7 +70,7 @@ func GetManifest(srcFolder, name, filename string) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		result := &Manifest{}
+		result := &model.Manifest{}
 		if err := yaml.Unmarshal(pipelineBytes, result); err != nil {
 			return nil, err
 		}
@@ -93,10 +93,9 @@ func GetManifest(srcFolder, name, filename string) (*Manifest, error) {
 	chartSubPath := getChartsSubPath(srcFolder, src)
 	if chartSubPath != "" {
 		fmt.Println("Found chart")
-		return &Manifest{
+		return &model.Manifest{
 			Type:     "chart",
-			Deploy:   []string{fmt.Sprintf("helm upgrade --install %s %s", name, chartSubPath)},
-			Devs:     devs,
+			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install %s %s", name, chartSubPath)}},
 			Filename: chartSubPath,
 		}, nil
 	}
@@ -104,10 +103,9 @@ func GetManifest(srcFolder, name, filename string) (*Manifest, error) {
 	manifestsSubPath := getManifestsSubPath(srcFolder, src)
 	if manifestsSubPath != "" {
 		fmt.Println("Found kubernetes manifests")
-		return &Manifest{
+		return &model.Manifest{
 			Type:     "kubernetes",
-			Deploy:   []string{fmt.Sprintf("kubectl apply -f %s", manifestsSubPath)},
-			Devs:     devs,
+			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("kubectl apply -f %s", manifestsSubPath)}},
 			Filename: manifestsSubPath,
 		}, nil
 	}
@@ -115,20 +113,18 @@ func GetManifest(srcFolder, name, filename string) (*Manifest, error) {
 	stackSubPath := getStackSubPath(srcFolder, src)
 	if stackSubPath != "" {
 		fmt.Println("Found okteto stack")
-		return &Manifest{
+		return &model.Manifest{
 			Type:     "stack",
-			Deploy:   []string{fmt.Sprintf("okteto stack deploy --build -f %s", stackSubPath)},
-			Devs:     devs,
+			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("okteto stack deploy --build -f %s", stackSubPath)}},
 			Filename: stackSubPath,
 		}, nil
 	}
 
 	if oktetoSubPath != "" {
 		fmt.Println("Found okteto manifest")
-		return &Manifest{
+		return &model.Manifest{
 			Type:     "okteto",
-			Deploy:   []string{"okteto push --deploy"},
-			Devs:     devs,
+			Deploy:   &model.DeployInfo{Commands: []string{"okteto push --deploy"}},
 			Filename: oktetoSubPath,
 		}, nil
 	}

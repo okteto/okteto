@@ -45,6 +45,7 @@ type Options struct {
 	ManifestPath string
 	Name         string
 	Variables    []string
+	Manifest     *model.Manifest
 }
 
 type kubeConfigHandler interface {
@@ -60,7 +61,7 @@ type proxyInterface interface {
 }
 
 type deployCommand struct {
-	getManifest func(cwd, name, filename string) (*utils.Manifest, error)
+	getManifest func(cwd, name, filename string) (*model.Manifest, error)
 
 	proxy              proxyInterface
 	kubeconfig         kubeConfigHandler
@@ -140,6 +141,15 @@ func Deploy(ctx context.Context) *cobra.Command {
 				},
 			}
 
+			var manifest *model.Manifest
+			if options.ManifestPath == "" {
+				manifest, err = contextCMD.LoadDevWithContext(ctx, "", "", "")
+				if err != nil {
+					log.Infof("could not load manifest: %s", err.Error())
+				}
+				options.Manifest = manifest
+			}
+
 			c := &deployCommand{
 				getManifest: utils.GetManifest,
 
@@ -169,11 +179,20 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		return err
 	}
 
-	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(cwd, opts.Name, opts.ManifestPath)
-	if err != nil {
-		log.Errorf("could not find manifest file to be executed: %s", err)
-		return err
+	var err error
+	if opts.Manifest == nil {
+		// Read manifest file with the commands to be executed
+		opts.Manifest, err = dc.getManifest(cwd, opts.Name, opts.ManifestPath)
+		if err != nil {
+			log.Errorf("could not find manifest file to be executed: %s", err)
+			return err
+		}
+	} else {
+		opts.Manifest, err = dc.getCommandsFromManifest(ctx, opts)
+		if err != nil {
+			log.Errorf("could not find manifest file to be executed: %s", err)
+			return err
+		}
 	}
 
 	log.Debugf("starting server on %d", dc.proxy.GetPort())
@@ -190,7 +209,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		"OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT=true",
 	)
 
-	for _, command := range manifest.Deploy {
+	for _, command := range opts.Manifest.Deploy.Commands {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Errorf("error executing command '%s': %s", command, err.Error())
 			return err
@@ -308,4 +327,19 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 	return handler, nil
 
+}
+
+func (dc *deployCommand) getCommandsFromManifest(ctx context.Context, opts *Options) (*model.Manifest, error) {
+	if opts.Manifest.Deploy == nil {
+		opts.Manifest.Deploy = &model.DeployInfo{}
+	}
+
+	if len(opts.Manifest.Deploy.Commands) == 0 {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the current working directory: %w", err)
+		}
+		return dc.getManifest(cwd, opts.Name, opts.ManifestPath)
+	}
+	return opts.Manifest, nil
 }
