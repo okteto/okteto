@@ -133,7 +133,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	manifest, err := dc.getManifest(cwd, opts.Name, opts.ManifestPath)
 	if err != nil {
 		// Log error message but application can still be deleted
-		log.Errorf("could not find manifest file to be executed: %s", err)
+		log.Infof("could not find manifest file to be executed: %s", err)
 		manifest = &utils.Manifest{
 			Destroy: []string{},
 		}
@@ -142,7 +142,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	var commandErr error
 	for _, command := range manifest.Destroy {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			log.Errorf("error executing command '%s': %s", command, err.Error())
+			log.Infof("error executing command '%s': %s", command, err.Error())
 			if !opts.ForceDestroy {
 				return err
 			}
@@ -178,7 +178,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 
 	log.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
-		log.Errorf("could not delete all the resources: %s", err)
+		log.Infof("could not delete all the resources: %s", err)
 		return err
 	}
 
@@ -209,7 +209,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		log.Debugf("uninstalling helm release %s", releaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)
 		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
-			log.Errorf("could not uninstall helm release '%s': %s", releaseName, err)
+			log.Infof("could not uninstall helm release '%s': %s", releaseName, err)
 			if !opts.ForceDestroy {
 				return err
 			}
