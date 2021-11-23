@@ -263,7 +263,6 @@ func fileExistsAndNotDir(filename string) bool {
 
 // Execute executes the specified command adding `env` to the execution environment
 func (e *Executor) Execute(command string, env []string) error {
-	fmt.Printf("Running '%s'...\n", command)
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Env = append(os.Environ(), env...)
@@ -334,8 +333,7 @@ func renderCommand(command string) []byte {
 	if err != nil {
 		return []byte{}
 	}
-	command = strings.TrimPrefix(command, "OKTETO_DISABLE_SPINNER=true ")
-
+	command = fmt.Sprintf("Running %s", strings.TrimPrefix(command, "OKTETO_DISABLE_SPINNER=true "))
 	return render(tpl, command)
 }
 
