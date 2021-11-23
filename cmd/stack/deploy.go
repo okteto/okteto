@@ -64,9 +64,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err == nil {
 				log.Success("Stack '%s' successfully deployed", s.Name)
 			}
-			if err := stack.ListEndpoints(ctx, s, ""); err != nil {
-				return err
-			}
 
 			return err
 		},

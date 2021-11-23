@@ -24,6 +24,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,10 +32,18 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/endpoints"
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
+	"github.com/okteto/okteto/pkg/k8s/pods"
+	"github.com/okteto/okteto/pkg/k8s/replicasets"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 )
 
@@ -47,6 +56,8 @@ type Options struct {
 	ManifestPath string
 	Name         string
 	Variables    []string
+	Wait         bool
+	Timeout      time.Duration
 }
 
 type kubeConfigHandler interface {
@@ -160,6 +171,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
+	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait for the pipeline to be fully deployed")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 
 	return cmd
 }
@@ -196,6 +209,18 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Errorf("error executing command '%s': %s", command, err.Error())
 			return err
+		}
+	}
+
+	if opts.Wait {
+		spinner := utils.NewSpinner("Waiting to be fully deployed...")
+		spinner.Start()
+		defer spinner.Stop()
+		if err := dc.waitUntilDeployed(ctx, opts); err != nil {
+			return err
+		}
+		if err := dc.showEndpoints(ctx, opts, spinner); err != nil {
+			log.Errorf("could not retrieve endpoints: %s", err)
 		}
 	}
 
@@ -347,4 +372,137 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 	return handler, nil
 
+}
+
+func (dc *deployCommand) waitUntilDeployed(ctx context.Context, opts *Options) error {
+	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(opts.Timeout)
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("pipeline '%s' didn't finish after %s", opts.Name, opts.Timeout.String())
+		case <-ticker.C:
+			isReady := true
+			dList, err := deployments.List(ctx, okteto.Context().Namespace, labelSelector, c)
+			if err != nil {
+				return err
+			}
+			for _, dep := range dList {
+				if dep.Status.ReadyReplicas != dep.Status.Replicas {
+					isReady = false
+				}
+			}
+			sfsList, err := statefulsets.List(ctx, okteto.Context().Namespace, labelSelector, c)
+			if err != nil {
+				return err
+			}
+			for _, sfs := range sfsList {
+				if sfs.Status.ReadyReplicas != sfs.Status.Replicas {
+					isReady = false
+				}
+			}
+
+			if !isReady {
+				continue
+			}
+			return nil
+		}
+	}
+}
+
+func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options, spinner *utils.Spinner) error {
+	spinner.Update("retrieving endpoints")
+	pods, err := getDeployPodNames(ctx, opts)
+	if err != nil {
+		return err
+	}
+
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		return err
+	}
+	endpoints, err := endpoints.GetEndpointsByPodName(ctx, pods, okteto.Context().Namespace, c)
+	if err != nil {
+		return err
+	}
+
+	svcsName := []string{}
+	for _, endpoint := range endpoints {
+		svcsName = append(svcsName, endpoint.Name)
+	}
+
+	iClient, err := ingresses.GetClient(ctx, c)
+	if err != nil {
+		return err
+	}
+	eps, err := iClient.GetEndpointsByEndpointsServices(ctx, okteto.Context().Namespace, svcsName)
+	if err != nil {
+		return err
+	}
+	spinner.Stop()
+	if len(eps) > 0 {
+		sort.Slice(eps, func(i, j int) bool {
+			return len(eps[i]) < len(eps[j])
+		})
+		log.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
+	}
+	return nil
+}
+
+func getDeployPodNames(ctx context.Context, opts *Options) ([]string, error) {
+	uuids := []types.UID{}
+	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		return []string{}, err
+	}
+	dList, err := deployments.List(ctx, okteto.Context().Namespace, labelSelector, c)
+	if err != nil {
+		return []string{}, err
+	}
+	for _, dep := range dList {
+		rs, err := replicasets.GetReplicaSetByDeployment(ctx, &dep, c)
+		if err != nil {
+			return []string{}, err
+		}
+		uuids = append(uuids, rs.UID)
+	}
+	sfsList, err := statefulsets.List(ctx, okteto.Context().Namespace, labelSelector, c)
+	if err != nil {
+		return []string{}, err
+	}
+	for _, sfs := range sfsList {
+		uuids = append(uuids, sfs.UID)
+	}
+	pList, err := pods.List(ctx, okteto.Context().Namespace, "", c)
+	if err != nil {
+		return []string{}, err
+	}
+
+	podList := []string{}
+	for _, p := range pList {
+		if isPodFromDeploy(uuids, p.OwnerReferences) {
+			podList = append(podList, p.Name)
+		}
+	}
+
+	return podList, nil
+}
+
+func isPodFromDeploy(uuids []types.UID, ownerReferences []metav1.OwnerReference) bool {
+	for _, id := range uuids {
+		for _, ownerReference := range ownerReferences {
+			if id == ownerReference.UID {
+				return true
+			}
+		}
+
+	}
+	return false
 }
