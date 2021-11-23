@@ -289,6 +289,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 				return
 			}
 
+			defer r.Body.Close()
 			if len(b) == 0 {
 				reverseProxy.ServeHTTP(rw, r)
 				return

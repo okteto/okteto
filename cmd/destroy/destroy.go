@@ -41,6 +41,7 @@ const (
 
 type destroyer interface {
 	DestroyWithLabel(ctx context.Context, ns string, opts namespaces.DeleteAllOptions) error
+	DestroySFSVolumes(ctx context.Context, ns string, opts namespaces.DeleteAllOptions) error
 }
 
 type secretHandler interface {
@@ -112,7 +113,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				getManifest: utils.GetManifest,
 
 				executor:    utils.NewExecutor(),
-				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg),
+				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:     secrets.NewSecrets(k8sClient),
 			}
 			return c.runDestroy(ctx, cwd, options)
@@ -160,6 +161,14 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		return err
 	}
 	deployedBySelector := labels.NewSelector().Add(*deployedByLs).String()
+	deleteOpts := namespaces.DeleteAllOptions{
+		LabelSelector:  deployedBySelector,
+		IncludeVolumes: opts.DestroyVolumes,
+	}
+
+	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
+		return err
+	}
 
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
@@ -168,10 +177,6 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	log.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
-	deleteOpts := namespaces.DeleteAllOptions{
-		LabelSelector:  deployedBySelector,
-		IncludeVolumes: opts.DestroyVolumes,
-	}
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		log.Errorf("could not delete all the resources: %s", err)
 		return err

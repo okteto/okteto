@@ -14,11 +14,17 @@
 package volumes
 
 import (
+	"context"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	k8sTesting "k8s.io/client-go/testing"
 )
 
 func Test_checkPVCValues(t *testing.T) {
@@ -161,4 +167,59 @@ func Test_checkPVCValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDestroyWithoutTimeout(t *testing.T) {
+	ctx := context.Background()
+	pvcName := "pvc-1"
+	ns := "test"
+	pvc := &apiv1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: pvcName,
+		},
+	}
+	c := fake.NewSimpleClientset(pvc)
+
+	err := DestroyWithoutTimeout(ctx, pvcName, ns, c)
+	assert.NoError(t, err)
+
+	pvcList, err := c.CoreV1().PersistentVolumeClaims(ns).List(ctx, metav1.ListOptions{})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(pvcList.Items))
+}
+
+func TestDestroyWithoutTimeoutNoExistentVolumen(t *testing.T) {
+	ctx := context.Background()
+	pvcName := "pvc-1"
+	ns := "test"
+	pvc := &apiv1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "pvc-2",
+		},
+	}
+	c := fake.NewSimpleClientset(pvc)
+
+	err := DestroyWithoutTimeout(ctx, pvcName, ns, c)
+
+	assert.NoError(t, err)
+}
+
+func TestDestroyWithoutTimeoutWithGenericError(t *testing.T) {
+	ctx := context.Background()
+	pvcName := "pvc-1"
+	ns := "test"
+	pvc := &apiv1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: pvcName,
+		},
+	}
+	c := fake.NewSimpleClientset(pvc)
+
+	c.Fake.PrependReactor("delete", "persistentvolumeclaims", func(action k8sTesting.Action) (bool, runtime.Object, error) {
+		return true, nil, assert.AnError
+	})
+
+	err := DestroyWithoutTimeout(ctx, pvcName, ns, c)
+
+	assert.Error(t, err)
 }
