@@ -14,38 +14,16 @@
 package utils
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
-	"text/template"
 
-	"github.com/manifoldco/promptui"
-	"github.com/manifoldco/promptui/screenbuf"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"golang.org/x/term"
 	"gopkg.in/yaml.v2"
 )
-
-type ManifestExecutor interface {
-	Execute(command string, env []string) error
-}
-
-type Executor struct {
-	outputMode string
-}
-
-// NewExecutor returns a new executor
-func NewExecutor(output string) *Executor {
-	return &Executor{
-		outputMode: output,
-	}
-}
 
 // Manifest represents a manifest file
 type Manifest struct {
@@ -126,7 +104,7 @@ func GetManifest(srcFolder, name, filename string) (*Manifest, error) {
 		fmt.Println("Found okteto stack")
 		return &Manifest{
 			Type:     "stack",
-			Deploy:   []string{fmt.Sprintf("OKTETO_DISABLE_SPINNER=true okteto stack deploy --build -f %s", stackSubPath)},
+			Deploy:   []string{fmt.Sprintf("okteto stack deploy --build -f %s", stackSubPath)},
 			Devs:     devs,
 			Filename: stackSubPath,
 		}, nil
@@ -136,7 +114,7 @@ func GetManifest(srcFolder, name, filename string) (*Manifest, error) {
 		fmt.Println("Found okteto manifest")
 		return &Manifest{
 			Type:     "okteto",
-			Deploy:   []string{"OKTETO_DISABLE_SPINNER=true okteto push --deploy"},
+			Deploy:   []string{"okteto push --deploy"},
 			Devs:     devs,
 			Filename: oktetoSubPath,
 		}, nil
@@ -259,120 +237,4 @@ func fileExistsAndNotDir(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
-}
-
-// Execute executes the specified command adding `env` to the execution environment
-func (e *Executor) Execute(command string, env []string) error {
-
-	cmd := exec.Command("bash", "-c", command)
-	cmd.Env = append(os.Environ(), env...)
-
-	r, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-
-	cmd.Stderr = cmd.Stdout
-	done := make(chan struct{})
-	scanner := bufio.NewScanner(r)
-
-	if e.outputMode == "plain" {
-		go displayPlainOutput(scanner, done)
-	} else {
-		go commandOutput(scanner, done, command)
-	}
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	return cmd.Wait()
-}
-
-func displayPlainOutput(scanner *bufio.Scanner, done chan struct{}) {
-	for scanner.Scan() {
-		line := scanner.Text()
-		fmt.Println(line)
-	}
-	done <- struct{}{}
-}
-
-func commandOutput(scanner *bufio.Scanner, done chan struct{}, command string) {
-
-	sb := screenbuf.New(os.Stdout)
-	queue := []string{}
-	for scanner.Scan() {
-		commandLine := renderCommand(command)
-		sb.Write(commandLine)
-		line := scanner.Text()
-		if len(queue) == 10 {
-			queue = queue[1:]
-		}
-		queue = append(queue, line)
-		lines := renderLines(queue, line)
-		for _, line := range lines {
-			sb.Write([]byte(line))
-		}
-
-		sb.Flush()
-	}
-	if scanner.Err() != nil {
-		log.Infof("Error reading command output: %s", scanner.Err().Error())
-	}
-	success := renderSuccessCommand(command)
-	sb.Reset()
-	sb.Write(success)
-	sb.Flush()
-
-	done <- struct{}{}
-}
-
-func renderCommand(command string) []byte {
-	commandTemplate := "{{ . | blue }}: "
-	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(commandTemplate)
-	if err != nil {
-		return []byte{}
-	}
-	command = fmt.Sprintf("Running %s", strings.TrimPrefix(command, "OKTETO_DISABLE_SPINNER=true "))
-	return render(tpl, command)
-}
-
-func renderSuccessCommand(command string) []byte {
-	commandTemplate := `{{ " ✓ " | bgGreen | black }} {{ . | green }}`
-	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(commandTemplate)
-	if err != nil {
-		return []byte{}
-	}
-	command = strings.TrimPrefix(command, "OKTETO_DISABLE_SPINNER=true ")
-
-	return render(tpl, command)
-}
-
-func renderLines(queue []string, line string) [][]byte {
-	lineTemplate := "{{ . | white }} "
-	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(lineTemplate)
-	if err != nil {
-		return [][]byte{}
-	}
-
-	result := [][]byte{}
-	for _, line := range queue {
-		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
-		if width > 4 && len(line)+2 > width {
-			result = append(result, render(tpl, fmt.Sprintf("%s...", line[:width-5])))
-		} else {
-			result = append(result, render(tpl, line))
-		}
-
-	}
-	return result
-}
-
-func render(tpl *template.Template, data interface{}) []byte {
-	var buf bytes.Buffer
-	err := tpl.Execute(&buf, data)
-	if err != nil {
-		return []byte(fmt.Sprintf("%v", data))
-	}
-	return buf.Bytes()
 }
