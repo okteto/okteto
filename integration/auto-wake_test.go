@@ -174,7 +174,7 @@ func checkIfSleeping(ctx context.Context, name, namespace string, timeout int) e
 			continue
 		}
 
-		if *d.Spec.Replicas > 0 {
+		if _, ok := d.Annotations[model.StateBeforeSleepingAnnontation]; !ok {
 			log.Printf("error deployment: not sleeping")
 			continue
 		}
@@ -183,7 +183,7 @@ func checkIfSleeping(ctx context.Context, name, namespace string, timeout int) e
 			log.Printf("error getting sfs: %s", err.Error())
 			continue
 		}
-		if *sfs.Spec.Replicas > 0 {
+		if _, ok := sfs.Annotations[model.StateBeforeSleepingAnnontation]; !ok {
 			log.Printf("error deployment: not sleeping")
 			continue
 		}
@@ -200,17 +200,13 @@ func checkIfAwake(ctx context.Context, name, namespace string, isDevMode bool, t
 		var err error
 		if isDevMode {
 			d, err = getDeployment(ctx, namespace, model.DevCloneName(name))
-			if err != nil {
-				log.Printf("error getting deployment: %s", err.Error())
-				continue
-			}
 		} else {
 			d, err = getDeployment(ctx, namespace, name)
-			if err != nil {
-				log.Printf("error getting deployment: %s", err.Error())
-				continue
-			}
+		}
 
+		if err != nil {
+			log.Printf("error getting deployment: %s", err.Error())
+			continue
 		}
 
 		if *d.Spec.Replicas == 0 {
