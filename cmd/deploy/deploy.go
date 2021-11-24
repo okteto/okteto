@@ -192,6 +192,8 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all the Okteto commands executed within this command execution
 		// should not overwrite the server and the credentials in the kubeconfig
 		"OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT=true",
+		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
+		"OKTETO_DISABLE_SPINNER=true",
 	)
 
 	for _, command := range manifest.Deploy {
