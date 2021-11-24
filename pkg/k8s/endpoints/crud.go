@@ -18,6 +18,7 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -36,13 +37,13 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 }
 
 // GetEndpointsByPodName returns the list of endpoints containing a pod
-func GetEndpointsByPodName(ctx context.Context, podNames []string, namespace string, c *kubernetes.Clientset) ([]apiv1.Endpoints, error) {
+func GetEndpointsByPodName(ctx context.Context, podNames map[string]bool, namespace string, c *kubernetes.Clientset) ([]apiv1.Endpoints, error) {
 	endpointsList, err := List(ctx, namespace, "", c)
 	if err != nil {
 		return nil, err
 	}
 
-	result := []apiv1.Endpoints{}
+	addedEndpoints := map[types.UID]apiv1.Endpoints{}
 	for _, endpoint := range endpointsList {
 		isAdded := false
 		for _, subset := range endpoint.Subsets {
@@ -50,8 +51,10 @@ func GetEndpointsByPodName(ctx context.Context, podNames []string, namespace str
 				if address.TargetRef == nil {
 					continue
 				}
-				if isOnPodList(podNames, address.TargetRef.Name) && !isAlreadyAdded(result, endpoint) {
-					result = append(result, endpoint)
+				_, isPodInList := podNames[address.TargetRef.Name]
+				_, isAlreadyAddedEndpoint := addedEndpoints[endpoint.UID]
+				if isPodInList && !isAlreadyAddedEndpoint {
+					addedEndpoints[endpoint.UID] = endpoint
 					isAdded = true
 				}
 				if isAdded {
@@ -63,23 +66,9 @@ func GetEndpointsByPodName(ctx context.Context, podNames []string, namespace str
 			}
 		}
 	}
+	result := []apiv1.Endpoints{}
+	for _, endpoint := range addedEndpoints {
+		result = append(result, endpoint)
+	}
 	return result, nil
-}
-
-func isOnPodList(podNames []string, refName string) bool {
-	for _, pName := range podNames {
-		if pName == refName {
-			return true
-		}
-	}
-	return false
-}
-
-func isAlreadyAdded(endpointList []apiv1.Endpoints, endpoint apiv1.Endpoints) bool {
-	for _, e := range endpointList {
-		if e.UID == endpoint.UID {
-			return true
-		}
-	}
-	return false
 }

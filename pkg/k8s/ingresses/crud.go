@@ -166,7 +166,7 @@ func (iClient *Client) GetEndpointsBySelector(ctx context.Context, namespace, la
 }
 
 //GetEndpointsByEndpointsServices returns the endpoints list from a list of services
-func (iClient *Client) GetEndpointsByEndpointsServices(ctx context.Context, namespace string, svcs []string) ([]string, error) {
+func (iClient *Client) GetEndpointsByEndpointsServices(ctx context.Context, namespace string, svcs map[string]bool) ([]string, error) {
 	result := make([]string, 0)
 	if iClient.isV1 {
 		iList, err := iClient.c.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
@@ -176,7 +176,7 @@ func (iClient *Client) GetEndpointsByEndpointsServices(ctx context.Context, name
 		for i := range iList.Items {
 			for _, rule := range iList.Items[i].Spec.Rules {
 				for _, path := range rule.IngressRuleValue.HTTP.Paths {
-					if isPathBackendInSvcList(path.Backend.Service.Name, svcs) {
+					if _, ok := svcs[path.Backend.Service.Name]; ok {
 						result = append(result, fmt.Sprintf("https://%s%s", rule.Host, path.Path))
 					}
 				}
@@ -191,20 +191,11 @@ func (iClient *Client) GetEndpointsByEndpointsServices(ctx context.Context, name
 	for i := range iList.Items {
 		for _, rule := range iList.Items[i].Spec.Rules {
 			for _, path := range rule.IngressRuleValue.HTTP.Paths {
-				if isPathBackendInSvcList(path.Backend.ServiceName, svcs) {
+				if _, ok := svcs[path.Backend.ServiceName]; ok {
 					result = append(result, fmt.Sprintf("https://%s%s", rule.Host, path.Path))
 				}
 			}
 		}
 	}
 	return result, nil
-}
-
-func isPathBackendInSvcList(svc string, svcs []string) bool {
-	for _, svcName := range svcs {
-		if svc == svcName {
-			return true
-		}
-	}
-	return false
 }
