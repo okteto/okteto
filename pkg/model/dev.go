@@ -28,6 +28,7 @@ import (
 
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
+	oktetoError "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -683,6 +684,10 @@ func (dev *Dev) validate() error {
 		return err
 	}
 
+	if err := dev.validateSync(); err != nil {
+		return err
+	}
+
 	if _, err := resource.ParseQuantity(dev.PersistentVolumeSize()); err != nil {
 		return fmt.Errorf("'persistentVolume.size' is not valid. A sample value would be '10Gi'")
 	}
@@ -705,6 +710,32 @@ func (dev *Dev) validate() error {
 		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 
+	return nil
+}
+
+func (dev *Dev) validateSync() error {
+	for _, folder := range dev.Sync.Folders {
+		validPath, err := os.Stat(folder.LocalPath)
+
+		if err == nil {
+			if !validPath.IsDir() {
+				return oktetoError.UserError{
+					E:    fmt.Errorf("File paths are not supported on sync fields"),
+					Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+				}
+			}
+		} else if errors.Is(err, os.ErrNotExist) {
+			return oktetoError.UserError{
+				E:    fmt.Errorf("path '%s' does not exist", folder.LocalPath),
+				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+			}
+		} else if err != nil {
+			return oktetoError.UserError{
+				E:    fmt.Errorf("File paths are not supported on sync fields"),
+				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+			}
+		}
+	}
 	return nil
 }
 

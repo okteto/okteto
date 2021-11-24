@@ -711,6 +711,12 @@ func Test_validate(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
+	dir, err := os.MkdirTemp("/tmp", "okteto-secret-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(dir)
+
 	tests := []struct {
 		name      string
 		manifest  []byte
@@ -837,7 +843,7 @@ func Test_validate(t *testing.T) {
       sync:
         - .:/app
         - docs:/docs`),
-			expectErr: false,
+			expectErr: true,
 		},
 		{
 			name: "external-volumes",
@@ -942,6 +948,22 @@ func Test_validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "file",
+			manifest: []byte(fmt.Sprintf(`
+      name: deployment
+      sync:
+        - %s:/app`, file.Name())),
+			expectErr: true,
+		},
+		{
+			name: "dir",
+			manifest: []byte(fmt.Sprintf(`
+      name: deployment
+      sync:
+        - %s:/app`, dir)),
+			expectErr: false,
+		},
+		{
 			name: "runAsNonRoot-with-root-group",
 			manifest: []byte(`
       name: deployment
@@ -965,7 +987,7 @@ func Test_validate(t *testing.T) {
 
 			err = dev.validate()
 			if tt.expectErr && err == nil {
-				t.Error("didn't got the expected error")
+				t.Error("didn't get the expected error")
 			}
 
 			if !tt.expectErr && err != nil {

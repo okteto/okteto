@@ -16,14 +16,11 @@ package utils
 import (
 	"context"
 
-	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 )
 
-func HasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return false, nil
-	}
+func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient types.NamespaceInterface) (bool, error) {
+
 	nList, err := oktetoClient.ListNamespaces(ctx)
 	if err != nil {
 		return false, err

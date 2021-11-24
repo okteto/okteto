@@ -14,6 +14,7 @@
 package model
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -25,6 +26,77 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 )
+
+func TestTranslateHealthcheckCurlToHttp(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		test         []string
+		expectedTest HealtcheckTest
+		expectedHTTP HTTPHealtcheck
+	}{
+		{
+			name:         "RegularCurlWithZeros",
+			test:         []string{"curl http://0.0.0.0:4572"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(4572)},
+		},
+		{
+			name:         "RegularCurlWithLocalhost",
+			test:         []string{"curl http://localhost:4572"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(4572)},
+		},
+		{
+			name:         "RegularCurlTrailingSlash",
+			test:         []string{"curl http://0.0.0.0:4572/"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(4572)},
+		},
+		{
+			name:         "MissingScheme",
+			test:         []string{"curl 0.0.0.0:4572/readiness"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/readiness", Port: int32(4572)},
+		},
+		{
+			name:         "MissingSchemeWithF",
+			test:         []string{"curl -f localhost:8080/"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(8080)},
+		},
+		{
+			name:         "NoTest",
+			test:         []string{"curl --fail 0.0.0.0:8080"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/", Port: int32(8080)},
+		},
+		{
+			name:         "Readiness",
+			test:         []string{"curl https://0.0.0.0:8080/readiness"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/readiness", Port: int32(8080)},
+		},
+		{
+			name:         "RegularCurlWithPath",
+			test:         []string{"curl http://0.0.0.0:4572/a/path/exists"},
+			expectedTest: HealtcheckTest{},
+			expectedHTTP: HTTPHealtcheck{Path: "/a/path/exists", Port: int32(4572)},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			check := HealthCheck{
+				Test: tc.test,
+			}
+			translateHealtcheckCurlToHTTP(&check)
+			if !reflect.DeepEqual(check.Test, tc.expectedTest) {
+				t.Fatalf("expected %v but got %v", tc.expectedTest, check.Test)
+			}
+			if !reflect.DeepEqual(check.Test, tc.expectedTest) {
+				t.Fatalf("expected %v but got %v", tc.expectedHTTP, check.HTTP)
+			}
+		})
+	}
+}
 
 func Test_DeployReplicasUnmarshalling(t *testing.T) {
 	tests := []struct {
@@ -324,7 +396,8 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 			}
 			if !tt.expectedError {
 				if !reflect.DeepEqual(s.Services["app"].Healtcheck, tt.expected) {
-					t.Fatalf("Expected %v, but got %v", tt.expected, s.Services["app"].Healtcheck)
+					fmt.Printf("GOT: %+v", s.Services["app"].Healtcheck.HTTP)
+					t.Fatalf("Expected %+v, but got %+v", tt.expected, s.Services["app"].Healtcheck)
 				}
 			}
 
@@ -839,11 +912,11 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		},
 		{
 			name:     "volume-relative-path-found",
-			manifest: []byte("services:\n  app:\n    volumes: \n    - test-volume-relative-path-found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			manifest: []byte("services:\n  app:\n    volumes: \n    - test_volume_relative_path_found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
 			create:   true,
 			expectedVolumesMount: []StackVolume{
 				{
-					LocalPath:  "test-volume-relative-path-found",
+					LocalPath:  "test_volume_relative_path_found",
 					RemotePath: "/var/lib/redpanda/data",
 				},
 			},
@@ -868,15 +941,28 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			},
 			expectedError: false,
 		},
+		{
+			name:     "volume-with-underscores",
+			manifest: []byte("services:\n  app:\n    volumes: \n    - redpanda_a:/var/lib/redpanda/data\n    image: okteto/vote:1\nvolumes:\n  redpanda_a:\n"),
+			create:   false,
+			expectedVolumes: []StackVolume{
+				{
+					LocalPath:  "redpanda-a",
+					RemotePath: "/var/lib/redpanda/data",
+				},
+			},
+			expectedVolumesMount: []StackVolume{},
+			expectedError:        false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.create {
-				err := os.Mkdir("test-volume-relative-path-found", 0755)
+				err := os.Mkdir("test_volume_relative_path_found", 0755)
 				if err != nil {
 					t.Fatal(err)
 				}
-				defer os.RemoveAll("test-volume-relative-path-found")
+				defer os.RemoveAll("test_volume_relative_path_found")
 			}
 			stack, err := ReadStack(tt.manifest, true)
 			if err != nil && !tt.expectedError {
@@ -1664,97 +1750,6 @@ func Test_MultipleEndpoints(t *testing.T) {
 			}
 			if s.Services["app"].Public != tt.svcPublic {
 				t.Fatal("Public property was not set properly")
-			}
-		})
-	}
-}
-
-func Test_validateDependsOn(t *testing.T) {
-	tests := []struct {
-		name       string
-		manifest   []byte
-		throwError bool
-		dependsOn  DependsOn
-	}{
-		{
-			name:       "defined dependent service",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test\n  test:\n    image: okteto/vote:1"),
-			throwError: false,
-			dependsOn: DependsOn{
-				"test": DependsOnConditionSpec{Condition: DependsOnServiceRunning},
-			},
-		},
-		{
-			name:       "defined dependent service needs to be sanitized",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test_db\n  test_db:\n    image: okteto/vote:1"),
-			throwError: false,
-			dependsOn: DependsOn{
-				"test-db": DependsOnConditionSpec{Condition: DependsOnServiceRunning},
-			},
-		},
-		{
-			name:       "defined dependent service started",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      test:\n        condition: service_started\n  test:\n    image: okteto/vote:1"),
-			throwError: false,
-			dependsOn: DependsOn{
-				"test": DependsOnConditionSpec{Condition: DependsOnServiceRunning},
-			},
-		},
-		{
-			name:       "defined dependent service healthy",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      test:\n        condition: service_healthy\n  test:\n    image: okteto/vote:1"),
-			throwError: false,
-			dependsOn: DependsOn{
-				"test": DependsOnConditionSpec{Condition: DependsOnServiceHealthy},
-			},
-		},
-		{
-			name:       "defined dependent service completed",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      test:\n        condition: service_completed_successfully\n  test:\n    image: okteto/vote:1\n    restart: never"),
-			throwError: false,
-			dependsOn: DependsOn{
-				"test": DependsOnConditionSpec{Condition: DependsOnServiceCompleted},
-			},
-		},
-		{
-			name:       "not defined dependent service",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - ads"),
-			throwError: true,
-		},
-		{
-			name:       "self dependent service",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - app"),
-			throwError: true,
-		},
-		{
-			name:       "circular dependency",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test\n  test:\n    image: okteto/vote:1\n    depends_on:\n      - app"),
-			throwError: true,
-		},
-		{
-			name:       "circular dependency difficult",
-			manifest:   []byte("services:\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test\n  test:\n    image: okteto/vote:1\n    depends_on:\n      - test2\n  test1:\n    image: okteto/vote:1\n    depends_on:\n      - test2\n  test2:\n    image: okteto/vote:1\n    depends_on:\n      - app"),
-			throwError: true,
-		},
-		{
-			name:       "circular dependency not first",
-			manifest:   []byte("services:\n  test:\n    image: okteto/vote:1\n    depends_on:\n      - test2\n  app:\n    image: okteto/vote:1\n    depends_on:\n      - test\n  test1:\n    image: okteto/vote:1\n    depends_on:\n      - test2\n  test2:\n    image: okteto/vote:1\n    depends_on:\n      - app"),
-			throwError: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s, err := ReadStack(tt.manifest, false)
-			if err == nil && tt.throwError {
-				t.Fatal("Expected error but not thrown")
-			}
-			if err != nil && !tt.throwError {
-				t.Fatal(err)
-			}
-			if err == nil && !tt.throwError {
-				if !reflect.DeepEqual(s.Services["app"].DependsOn, tt.dependsOn) {
-					t.Fatalf("Expected %v but got %v", tt.dependsOn, s.Services["app"].DependsOn)
-				}
 			}
 		})
 	}

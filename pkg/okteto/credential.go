@@ -17,19 +17,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
 
-// Credential represents an Okteto Space k8s credentials
-type Credential struct {
-	Server      string `json:"server" yaml:"server"`
-	Certificate string `json:"certificate" yaml:"certificate"`
-	Token       string `json:"token" yaml:"token"`
-	Namespace   string `json:"namespace" yaml:"namespace"`
-}
-
 // GetCredentials returns the space config credentials
-func (c *OktetoClient) GetCredentials(ctx context.Context) (*Credential, error) {
+func (c *OktetoClient) GetCredentials(ctx context.Context) (*types.Credential, error) {
 	var query struct {
 		Space struct {
 			Server      graphql.String
@@ -47,7 +40,7 @@ func (c *OktetoClient) GetCredentials(ctx context.Context) (*Credential, error) 
 		return nil, err
 	}
 
-	cred := &Credential{
+	cred := &types.Credential{
 		Server:      string(query.Space.Server),
 		Certificate: string(query.Space.Certificate),
 		Token:       string(query.Space.Token),

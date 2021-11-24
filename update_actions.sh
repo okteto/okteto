@@ -21,7 +21,8 @@ actionsRepos=(delete-namespace
         login
         destroy-stack
         apply
-        context)
+        context
+)
 
 for repo in "${actionsRepos[@]}"; do
         echo "$repo"
@@ -39,7 +40,6 @@ for repo in "${actionsRepos[@]}"; do
                 git --no-pager log -1
         fi
         ghr -token "$GITHUB_TOKEN" -replace "$VERSION"
-        ghr -token "$GITHUB_TOKEN" -delete "latest"
         popd
         rm -rf "$repo"
 done

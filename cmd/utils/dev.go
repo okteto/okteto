@@ -269,13 +269,16 @@ func GetDownCommand(devPath string) string {
 	return okDownCommandHint
 }
 
-func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (apps.App, bool, error) {
+func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return nil, false, err
 		}
 		if dev.Autocreate {
+			if isRetry && !doesAutocreateAppExist(ctx, dev, c) {
+				return nil, false, fmt.Errorf("Development container has been deactivated")
+			}
 			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
 		}
 		if len(dev.Selector) > 0 {
@@ -298,4 +301,16 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (apps.A
 		return app.Divert(okteto.GetSanitizedUsername()), false, nil
 	}
 	return app, false, nil
+}
+
+func doesAutocreateAppExist(ctx context.Context, dev *model.Dev, c kubernetes.Interface) bool {
+	autocreateDev := *dev
+	autocreateDev.Name = model.DevCloneName(dev.Name)
+	_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
+	if err != nil && !errors.IsNotFound(err) {
+		log.Infof("getApp autocreate k8s error, retrying...")
+		_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
+		return err == nil
+	}
+	return err == nil
 }

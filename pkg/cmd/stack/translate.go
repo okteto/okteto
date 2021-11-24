@@ -178,6 +178,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
+		log.Success("Image for service '%s' successfully pushed", name)
 	}
 	return hasBuiltSomething, nil
 }
@@ -223,6 +224,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			}
 			svc.SetLastBuiltAnnotation()
 			s.Services[name] = svc
+			log.Success("Image for service '%s' successfully pushed", name)
 		}
 	}
 	return hasAddedAnyVolumeMounts, nil
@@ -829,6 +831,9 @@ func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 
 func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	result := []apiv1.ContainerPort{}
+	sort.Slice(svc.Ports, func(i, j int) bool {
+		return svc.Ports[i].ContainerPort < svc.Ports[j].ContainerPort
+	})
 	for _, p := range svc.Ports {
 		result = append(result, apiv1.ContainerPort{ContainerPort: p.ContainerPort})
 	}

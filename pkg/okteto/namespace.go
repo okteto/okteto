@@ -19,6 +19,7 @@ import (
 	"regexp"
 
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
 
@@ -27,10 +28,8 @@ const (
 	MAX_ALLOWED_CHARS = 63
 )
 
-//Namespace represents an Okteto k8s namespace
-type Namespace struct {
-	ID       string `json:"id" yaml:"id"`
-	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
+func (c OktetoClientProvider) NewOktetoNamespaceClient() (types.NamespaceInterface, error) {
+	return NewOktetoClient()
 }
 
 // CreateNamespace creates a namespace
@@ -52,7 +51,7 @@ func (c *OktetoClient) CreateNamespace(ctx context.Context, namespace string) (s
 }
 
 // ListNamespaces list namespaces
-func (c *OktetoClient) ListNamespaces(ctx context.Context) ([]Namespace, error) {
+func (c *OktetoClient) ListNamespaces(ctx context.Context) ([]types.Namespace, error) {
 	var query struct {
 		Spaces []struct {
 			Id       graphql.String
@@ -65,9 +64,9 @@ func (c *OktetoClient) ListNamespaces(ctx context.Context) ([]Namespace, error) 
 		return nil, err
 	}
 
-	result := make([]Namespace, 0)
+	result := make([]types.Namespace, 0)
 	for _, space := range query.Spaces {
-		result = append(result, Namespace{
+		result = append(result, types.Namespace{
 			ID:       string(space.Id),
 			Sleeping: bool(space.Sleeping),
 		})
@@ -132,5 +131,23 @@ func validateNamespace(namespace, object string) error {
 			Hint: fmt.Sprintf("%s name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character", object),
 		}
 	}
+	return nil
+}
+
+// SleepNamespace sleeps a namespace
+func (c *OktetoClient) SleepNamespace(ctx context.Context, namespace string) error {
+	var mutation struct {
+		Space struct {
+			Id graphql.String
+		} `graphql:"sleepSpace(space: $space)"`
+	}
+	variables := map[string]interface{}{
+		"space": graphql.String(namespace),
+	}
+	err := c.Mutate(ctx, &mutation, variables)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

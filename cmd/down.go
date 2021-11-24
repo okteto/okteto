@@ -101,12 +101,16 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		}
 
 		spinner.Stop()
-		app, _, err := utils.GetApp(ctx, dev, c)
+
+		app, _, err := utils.GetApp(ctx, dev, c, false)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				exit <- err
 				return
 			}
+			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
+		}
+		if dev.Autocreate {
 			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 		}
 		spinner.Start()

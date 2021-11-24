@@ -16,15 +16,26 @@ package context
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/login"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
+
+type ContextUse struct {
+	k8sClientProvider    okteto.K8sClientProvider
+	loginController      login.LoginInterface
+	oktetoClientProvider types.OktetoUserClientProvider
+}
 
 // Create adds a new cluster to okteto context
 func CreateCMD() *cobra.Command {
@@ -60,8 +71,13 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.IsCtxCommand = true
 			ctxOptions.Show = false
 			ctxOptions.Save = true
+			ctxController := ContextUse{
+				k8sClientProvider:    okteto.NewK8sClientProvider(),
+				loginController:      login.NewLoginController(),
+				oktetoClientProvider: okteto.NewOktetoClientProvider(),
+			}
 
-			err := Run(ctx, ctxOptions)
+			err := ctxController.UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			return err
 		},
@@ -72,7 +88,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	return cmd
 }
 
-func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	created := false
 
 	ctxStore := okteto.ContextStore()
@@ -95,7 +111,7 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 				Hint: "Please run 'okteto context' to select one context"}
 		}
 
-		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace)
+		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.k8sClientProvider)
 		if transformedCtx != ctxOptions.Context {
 			ctxOptions.Context = transformedCtx
 			ctxOptions.IsOkteto = true
@@ -113,12 +129,27 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxStore.CurrentContext = ctxOptions.Context
 
 	if ctxOptions.IsOkteto {
-		if err := initOktetoContext(ctx, ctxOptions); err != nil {
+		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
 			return err
 		}
 	} else {
-		if err := initKubernetesContext(ctxOptions); err != nil {
+		if err := c.initKubernetesContext(ctxOptions); err != nil {
 			return err
+		}
+	}
+	if ctxOptions.IsOkteto && ctxOptions.Save {
+		client, err := c.oktetoClientProvider.NewOktetoNamespaceClient()
+		if err != nil {
+			return err
+		}
+		hasAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace, client)
+		if err != nil {
+			return err
+		}
+		if !hasAccess {
+			return errors.UserError{E: fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
+				Hint: "Please verify that the namespace exists and that you have access to it.",
+			}
 		}
 	}
 	if ctxOptions.Save {
@@ -133,6 +164,66 @@ func UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	if ctxOptions.IsCtxCommand {
 		log.Success("Using context %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
 	}
+
+	return nil
+}
+
+func (c *ContextUse) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
+	user, err := c.loginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
+	if err != nil {
+		return err
+	}
+	ctxOptions.Token = user.Token
+	okteto.Context().Token = user.Token
+
+	userContext, err := c.getUserContext(ctx)
+	if err != nil {
+		return err
+	}
+	if ctxOptions.Namespace == "" {
+		ctxOptions.Namespace = userContext.User.Namespace
+	}
+	okteto.AddOktetoContext(ctxOptions.Context, &userContext.User, ctxOptions.Namespace, userContext.User.Namespace)
+	cfg := kubeconfig.Get(config.GetKubeconfigPath())
+	if cfg == nil {
+		cfg = kubeconfig.Create()
+	}
+	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.Context().Name)
+	okteto.Context().Cfg = cfg
+	okteto.Context().IsOkteto = true
+
+	setSecrets(userContext.Secrets)
+
+	os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
+
+	return nil
+}
+
+func (_ *ContextUse) initKubernetesContext(ctxOptions *ContextOptions) error {
+	cfg := kubeconfig.Get(config.GetKubeconfigPath())
+	if cfg == nil {
+		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
+	}
+	kubeCtx, ok := cfg.Contexts[ctxOptions.Context]
+	if !ok {
+		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
+	}
+	cfg.CurrentContext = ctxOptions.Context
+	if ctxOptions.Namespace != "" {
+		cfg.Contexts[ctxOptions.Context].Namespace = ctxOptions.Namespace
+	} else {
+		if cfg.Contexts[ctxOptions.Context].Namespace == "" {
+			cfg.Contexts[ctxOptions.Context].Namespace = "default"
+		}
+		ctxOptions.Namespace = cfg.Contexts[ctxOptions.Context].Namespace
+	}
+
+	okteto.AddKubernetesContext(ctxOptions.Context, ctxOptions.Namespace, ctxOptions.Builder)
+
+	kubeCtx.Namespace = okteto.Context().Namespace
+	cfg.CurrentContext = okteto.Context().Name
+	okteto.Context().Cfg = cfg
+	okteto.Context().IsOkteto = false
 
 	return nil
 }

@@ -133,3 +133,34 @@ func (iClient *Client) Destroy(ctx context.Context, name, namespace string) erro
 	}
 	return nil
 }
+
+func (iClient *Client) GetEndpointsBySelector(ctx context.Context, namespace, labels string) ([]string, error) {
+	result := make([]string, 0)
+	if iClient.isV1 {
+		iList, err := iClient.c.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels})
+		if err != nil {
+			return nil, err
+		}
+		for i := range iList.Items {
+			for _, rule := range iList.Items[i].Spec.Rules {
+				for _, path := range rule.IngressRuleValue.HTTP.Paths {
+					result = append(result, fmt.Sprintf("https://%s%s", rule.Host, path.Path))
+				}
+			}
+		}
+		return result, nil
+	}
+
+	iList, err := iClient.c.NetworkingV1beta1().Ingresses(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels})
+	if err != nil {
+		return nil, err
+	}
+	for i := range iList.Items {
+		for _, rule := range iList.Items[i].Spec.Rules {
+			for _, path := range rule.IngressRuleValue.HTTP.Paths {
+				result = append(result, fmt.Sprintf("https://%s%s", rule.Host, path.Path))
+			}
+		}
+	}
+	return result, nil
+}

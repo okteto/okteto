@@ -38,6 +38,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const headerUpgrade = "Upgrade"
+
 var tempKubeConfigTemplate = "%s/.okteto/kubeconfig-%s"
 
 // Options options for deploy command
@@ -98,7 +100,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// Look for a free local port to start the proxy
 			port, err := model.GetAvailablePort("localhost")
 			if err != nil {
-				log.Errorf("could not find a free port to start proxy server: %s", err)
+				log.Infof("could not find a free port to start proxy server: %s", err)
 				return err
 			}
 			log.Debugf("found available port %d", port)
@@ -106,7 +108,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// TODO for now, using self-signed certificates
 			cert, err := tls.X509KeyPair(cert, key)
 			if err != nil {
-				log.Errorf("could not read certificate: %s", err)
+				log.Infof("could not read certificate: %s", err)
 				return err
 			}
 
@@ -116,13 +118,13 @@ func Deploy(ctx context.Context) *cobra.Command {
 			kubeconfig := newKubeConfig()
 			clusterConfig, err := kubeconfig.Read()
 			if err != nil {
-				log.Errorf("could not read kubeconfig file: %s", err)
+				log.Infof("could not read kubeconfig file: %s", err)
 				return err
 			}
 
 			handler, err := getProxyHandler(options.Name, sessionToken, clusterConfig)
 			if err != nil {
-				log.Errorf("could not configure local proxy: %s", err)
+				log.Infof("could not configure local proxy: %s", err)
 				return err
 			}
 
@@ -175,7 +177,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Options) error {
 	log.Debugf("creating temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
 	if err := dc.kubeconfig.Modify(dc.proxy.GetPort(), dc.proxy.GetToken(), dc.tempKubeconfigFile); err != nil {
-		log.Errorf("could not create temporal kubeconfig %s", err)
+		log.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
 
@@ -184,13 +186,13 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		// Read manifest file with the commands to be executed
 		opts.Manifest, err = dc.getManifest(cwd, opts.Name, opts.ManifestPath)
 		if err != nil {
-			log.Errorf("could not find manifest file to be executed: %s", err)
+			log.Infof("could not find manifest file to be executed: %s", err)
 			return err
 		}
 	} else {
 		opts.Manifest, err = dc.getCommandsFromManifest(ctx, opts)
 		if err != nil {
-			log.Errorf("could not find manifest file to be executed: %s", err)
+			log.Infof("could not find manifest file to be executed: %s", err)
 			return err
 		}
 	}
@@ -211,7 +213,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	for _, command := range opts.Manifest.Deploy.Commands {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			log.Errorf("error executing command '%s': %s", command, err.Error())
+			log.Infof("error executing command '%s': %s", command, err.Error())
 			return err
 		}
 	}
@@ -222,28 +224,46 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 func (dc *deployCommand) cleanUp(ctx context.Context) {
 	log.Debugf("removing temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
 	if err := os.Remove(dc.tempKubeconfigFile); err != nil {
-		log.Errorf("could not remove temporal kubeconfig file: %s", err)
+		log.Infof("could not remove temporal kubeconfig file: %s", err)
 	}
 
 	log.Debugf("stopping local server...")
 	if err := dc.proxy.Shutdown(ctx); err != nil {
-		log.Errorf("could not stop local server: %s", err)
+		log.Infof("could not stop local server: %s", err)
 	}
 }
 
+func newProtocolTransport(clusterConfig *rest.Config, disableHTTP2 bool) (http.RoundTripper, error) {
+	copiedConfig := &rest.Config{}
+	*copiedConfig = *clusterConfig
+
+	if disableHTTP2 {
+		// According to https://pkg.go.dev/k8s.io/client-go/rest#TLSClientConfig, this is the way to disable HTTP/2
+		copiedConfig.TLSClientConfig.NextProtos = []string{"http/1.1"}
+	}
+
+	return rest.TransportFor(copiedConfig)
+}
+
+func isSPDY(r *http.Request) bool {
+	return strings.HasPrefix(strings.ToLower(r.Header.Get(headerUpgrade)), "spdy/")
+}
+
 func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handler, error) {
-	trans, err := rest.TransportFor(clusterConfig)
+	// By default we don't disable HTTP/2
+	trans, err := newProtocolTransport(clusterConfig, false)
 	if err != nil {
-		log.Errorf("could not get http transport from config: %s", err)
+		log.Infof("could not get http transport from config: %s", err)
 		return nil, err
 	}
 
 	handler := http.NewServeMux()
 
-	proxy := httputil.NewSingleHostReverseProxy(&url.URL{
+	destinationURL := &url.URL{
 		Host:   strings.TrimPrefix(clusterConfig.Host, "https://"),
 		Scheme: "https",
-	})
+	}
+	proxy := httputil.NewSingleHostReverseProxy(destinationURL)
 	proxy.Transport = trans
 
 	log.Debugf("forwarding host: %s", clusterConfig.Host)
@@ -265,32 +285,52 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 			r.Header.Del("Authorization")
 		}
 
+		reverseProxy := proxy
+		if isSPDY(r) {
+			log.Debugf("detected SPDY request, disabling HTTP/2 for request %s %s", r.Method, r.URL.String())
+			// In case of a SPDY request, we create a new proxy with HTTP/2 disabled
+			t, err := newProtocolTransport(clusterConfig, true)
+			if err != nil {
+				log.Infof("could not disabled HTTP/2: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+			reverseProxy = httputil.NewSingleHostReverseProxy(destinationURL)
+			reverseProxy.Transport = t
+		}
+
 		// Modify all resources updated or created to include the label.
 		if r.Method == "PUT" || r.Method == "POST" {
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
-				log.Errorf("could not read the request body: %s", err)
+				log.Infof("could not read the request body: %s", err)
 				rw.WriteHeader(500)
+				return
+			}
+
+			defer r.Body.Close()
+			if len(b) == 0 {
+				reverseProxy.ServeHTTP(rw, r)
 				return
 			}
 
 			var body map[string]json.RawMessage
 			if err := json.Unmarshal(b, &body); err != nil {
-				log.Errorf("could not unmarshal request: %s", err)
+				log.Infof("could not unmarshal request: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
 
 			m, ok := body["metadata"]
 			if !ok {
-				log.Error("request body doesn't have metadata field")
+				log.Info("request body doesn't have metadata field")
 				rw.WriteHeader(500)
 				return
 			}
 
 			var metadata metav1.ObjectMeta
 			if err := json.Unmarshal(m, &metadata); err != nil {
-				log.Errorf("could not process resource's metadata: %s", err)
+				log.Infof("could not process resource's metadata: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
@@ -302,7 +342,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 			metadataAsByte, err := json.Marshal(metadata)
 			if err != nil {
-				log.Errorf("could not process resource's metadata: %s", err)
+				log.Infof("could not process resource's metadata: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
@@ -311,7 +351,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 			b, err = json.Marshal(body)
 			if err != nil {
-				log.Errorf("could not marshal modified body: %s", err)
+				log.Infof("could not marshal modified body: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
@@ -322,7 +362,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 		}
 
 		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
-		proxy.ServeHTTP(rw, r)
+		reverseProxy.ServeHTTP(rw, r)
 	})
 
 	return handler, nil
