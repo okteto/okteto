@@ -54,10 +54,11 @@ import (
 )
 
 var (
-	deploymentTemplate        = template.Must(template.New("deployment").Parse(deploymentFormat))
-	statefulsetTemplate       = template.Must(template.New("statefulset").Parse(statefulsetFormat))
-	manifestTemplate          = template.Must(template.New("manifest").Parse(manifestFormat))
-	zero                int64 = 0
+	deploymentTemplate               = template.Must(template.New("deployment").Parse(deploymentFormat))
+	statefulsetTemplate              = template.Must(template.New("statefulset").Parse(statefulsetFormat))
+	manifestTemplate                 = template.Must(template.New("manifest").Parse(manifestFormat))
+	autocreateManifestTemplate       = template.Must(template.New("manifest").Parse(autocreateManifestFormat))
+	zero                       int64 = 0
 )
 
 const (
@@ -164,6 +165,22 @@ forward:
 workdir: /usr/src/app
 persistentVolume:
   enabled: false
+`
+	autocreateManifestFormat = `
+name: {{ .Name }}
+autocreate: true
+image: python:alpine
+command:
+  - sh
+  - -c
+  - "echo -n $VAR > var.html && python -m http.server 8080"
+forward:
+  - 8080:8080
+workdir: /usr/src/app
+persistentVolume:
+  enabled: false
+environment:
+  VAR: value2
 `
 	divertGitRepo   = "git@github.com:okteto/catalog.git"
 	divertGitFolder = "catalog"
@@ -619,6 +636,114 @@ func TestDivert(t *testing.T) {
 	}
 }
 
+func TestUpAutocreate(t *testing.T) {
+	tName := fmt.Sprintf("TestAutocreate-%s-%s", runtime.GOOS, mode)
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := exec.LookPath(kubectlBinary); err != nil {
+		t.Fatalf("kubectl is not in the path: %s", err)
+	}
+
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	namespace := fmt.Sprintf("%s-%s", name, user)
+
+	dir, err := os.MkdirTemp("", tName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("created tempdir: %s", dir)
+
+	contentPath := filepath.Join(dir, "index.html")
+	if err := os.WriteFile(contentPath, []byte(name), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("original content: %s", name)
+
+	manifestPath := filepath.Join(dir, "okteto.yml")
+	if err := writeAutocreateManifest(manifestPath, name); err != nil {
+		t.Fatal(err)
+	}
+
+	stignorePath := filepath.Join(dir, ".stignore")
+	if err := os.WriteFile(stignorePath, []byte("venv"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	startNamespace := getCurrentNamespace()
+	defer changeToNamespace(ctx, oktetoPath, startNamespace)
+	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+	upErrorChannel := make(chan error, 1)
+	p, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath, upErrorChannel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	waitForDeployment(ctx, namespace, fmt.Sprintf("%s-okteto", name), 1, 120)
+
+	defer showUpLogs(name, namespace, t)
+
+	log.Println("getting synchronized content")
+
+	content, err := getContent(indexEndpoint, 150, upErrorChannel)
+	if err != nil {
+		t.Fatalf("failed to get index content: %s", err)
+	}
+
+	log.Println("got synchronized index content")
+
+	if content != name {
+		t.Fatalf("expected synchronized index content to be '%s', got '%s'", name, content)
+	}
+
+	if err := testRemoteStignoreGenerated(ctx, namespace, name, manifestPath, oktetoPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := killLocalSyncthing(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 150, upErrorChannel); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := destroyPod(ctx, name, namespace); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 150, upErrorChannel); err != nil {
+		t.Fatal(err)
+	}
+
+	d, err := getDeployment(ctx, namespace, fmt.Sprintf("%s-okteto", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[model.DeploymentRevisionAnnotation])
+
+	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, true); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
+		t.Error(err)
+	}
+
+	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
+		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
+	}
+}
+
 func oktetoPipeline(ctx context.Context, oktetoPath, repo, folder string) error {
 	log.Printf("okteto pipeline --wait")
 	cmd := exec.Command(oktetoPath, "pipeline", "deploy", "--wait")
@@ -803,6 +928,20 @@ func writeManifest(path, name string) error {
 	return nil
 }
 
+func writeAutocreateManifest(path, name string) error {
+	oFile, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer oFile.Close()
+
+	if err := autocreateManifestTemplate.Execute(oFile, deployment{Name: name}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func createNamespace(ctx context.Context, oktetoPath, namespace string) error {
 	okteto.CurrentStore = nil
 	log.Printf("creating namespace %s", namespace)
@@ -952,6 +1091,7 @@ func testRemoteStignoreGenerated(ctx context.Context, namespace, name, manifestP
 	log.Printf("exec command: %s", cmd.String())
 	bytes, err := cmd.CombinedOutput()
 	if err != nil {
+		log.Printf("okteto exec failed: %v - %s", err, string(bytes))
 		return fmt.Errorf("okteto exec failed: %v - %s", err, string(bytes))
 	}
 	output := string(bytes)

@@ -133,3 +133,21 @@ func validateNamespace(namespace, object string) error {
 	}
 	return nil
 }
+
+// SleepNamespace sleeps a namespace
+func (c *OktetoClient) SleepNamespace(ctx context.Context, namespace string) error {
+	var mutation struct {
+		Space struct {
+			Id graphql.String
+		} `graphql:"sleepSpace(space: $space)"`
+	}
+	variables := map[string]interface{}{
+		"space": graphql.String(namespace),
+	}
+	err := c.Mutate(ctx, &mutation, variables)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

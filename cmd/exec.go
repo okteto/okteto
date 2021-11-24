@@ -97,33 +97,43 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	app, err := apps.Get(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return err
-	}
-
-	retries := 0
-	ticker := time.NewTicker(500 * time.Millisecond)
-	for {
-		if apps.IsDevModeOn(app) {
-			break
+	devName := dev.Name
+	var devApp apps.App
+	if !dev.Autocreate {
+		app, err := apps.Get(ctx, dev, dev.Namespace, c)
+		if err != nil {
+			return err
 		}
-		retries++
-		if retries >= 10 {
-			return errors.UserError{
-				E:    fmt.Errorf("development mode is not enabled"),
-				Hint: "Run 'okteto up' to enable it and try again",
+
+		retries := 0
+		ticker := time.NewTicker(500 * time.Millisecond)
+		for {
+			if apps.IsDevModeOn(app) {
+				break
 			}
+			retries++
+			if retries >= 10 {
+				return errors.UserError{
+					E:    fmt.Errorf("development mode is not enabled"),
+					Hint: "Run 'okteto up' to enable it and try again",
+				}
+			}
+			<-ticker.C
 		}
-		<-ticker.C
+		waitForStates := []config.UpState{config.Ready}
+		if err := status.Wait(ctx, dev, waitForStates); err != nil {
+			return err
+		}
+
+		devApp = app.DevClone()
+	} else {
+		dev.Name = model.DevCloneName(dev.Name)
+		devApp, err = apps.Get(ctx, dev, dev.Namespace, c)
+		if err != nil {
+			return err
+		}
 	}
 
-	waitForStates := []config.UpState{config.Ready}
-	if err := status.Wait(ctx, dev, waitForStates); err != nil {
-		return err
-	}
-
-	devApp := app.DevClone()
 	if err := devApp.Refresh(ctx, c); err != nil {
 		return err
 	}
@@ -137,9 +147,9 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	}
 
 	if dev.RemoteModeEnabled() {
-		p, err := ssh.GetPort(dev.Name)
+		p, err := ssh.GetPort(devName)
 		if err != nil {
-			log.Infof("failed to get the SSH port for %s: %s", dev.Name, err)
+			log.Infof("failed to get the SSH port for %s: %s", devName, err)
 			return errors.UserError{
 				E:    fmt.Errorf("development mode is not enabled on your deployment"),
 				Hint: "Run 'okteto up' to enable it and try again",
