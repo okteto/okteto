@@ -35,8 +35,10 @@ var fakeManifest *utils.Manifest = &utils.Manifest{
 }
 
 type fakeDestroyer struct {
-	destroyed bool
-	err       error
+	destroyed        bool
+	destroyedVolumes bool
+	err              error
+	errOnVolumes     error
 }
 
 type fakeSecretHandler struct {
@@ -55,6 +57,15 @@ func (fd *fakeDestroyer) DestroyWithLabel(_ context.Context, _ string, _ namespa
 	}
 
 	fd.destroyed = true
+	return nil
+}
+
+func (fd *fakeDestroyer) DestroySFSVolumes(_ context.Context, _ string, _ namespaces.DeleteAllOptions) error {
+	if fd.errOnVolumes != nil {
+		return fd.errOnVolumes
+	}
+
+	fd.destroyedVolumes = true
 	return nil
 }
 
@@ -81,6 +92,31 @@ func getManifestWithError(_, _, _ string) (*utils.Manifest, error) {
 
 func getFakeManifest(_, _, _ string) (*utils.Manifest, error) {
 	return fakeManifest, nil
+}
+
+func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
+	ctx := context.Background()
+	executor := &fakeExecutor{}
+	opts := &Options{
+		Name: "test-app",
+	}
+	cwd := "/okteto/src"
+	destroyer := &fakeDestroyer{
+		errOnVolumes: assert.AnError,
+	}
+
+	cmd := &destroyCommand{
+		getManifest: getFakeManifest,
+		nsDestroyer: destroyer,
+		executor:    executor,
+	}
+
+	err := cmd.runDestroy(ctx, cwd, opts)
+
+	assert.Error(t, err)
+	assert.Equal(t, 3, len(executor.executed))
+	assert.False(t, destroyer.destroyed)
+	assert.False(t, destroyer.destroyedVolumes)
 }
 
 func TestDestroyWithErrorListingSecrets(t *testing.T) {
@@ -115,6 +151,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 			cmd := &destroyCommand{
 				getManifest: tt.getManifest,
 				secrets:     &secretHandler,
+				nsDestroyer: &fakeDestroyer{},
 				executor:    executor,
 			}
 
@@ -233,6 +270,7 @@ func TestDestroyWithError(t *testing.T) {
 			assert.Error(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
 			assert.False(t, destroyer.destroyed)
+			assert.True(t, destroyer.destroyedVolumes)
 		})
 	}
 }
@@ -425,6 +463,7 @@ func TestDestroyWithoutError(t *testing.T) {
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
 			assert.True(t, destroyer.destroyed)
+			assert.True(t, destroyer.destroyedVolumes)
 		})
 	}
 }
@@ -455,6 +494,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, 1, len(executor.executed))
 	assert.False(t, destroyer.destroyed)
+	assert.False(t, destroyer.destroyedVolumes)
 }
 
 func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
@@ -483,4 +523,5 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	assert.Error(t, err)
 	assert.ElementsMatch(t, fakeManifest.Destroy, executor.executed)
 	assert.True(t, destroyer.destroyed)
+	assert.True(t, destroyer.destroyedVolumes)
 }
