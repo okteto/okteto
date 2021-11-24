@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -84,7 +85,7 @@ func createDeprecatedToken(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	os.Setenv("OKTETO_FOLDER", dir)
+	os.Setenv(model.OktetoFolderEnvVar, dir)
 	token := &okteto.Token{
 		URL:       url,
 		Buildkit:  "buildkit",
@@ -118,7 +119,7 @@ func createKubeconfig(kubeconfigFields kubeconfigFields) (string, error) {
 		return "", err
 	}
 
-	os.Setenv("KUBECONFIG", dir.Name())
+	os.Setenv(model.KubeConfigEnvVar, dir.Name())
 
 	contexts := make(map[string]*clientcmdapi.Context)
 	for idx := range kubeconfigFields.Name {

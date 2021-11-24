@@ -16,6 +16,7 @@ package context
 import (
 	"os"
 
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -54,16 +55,16 @@ func (o *ContextOptions) initFromContext() {
 
 func (o *ContextOptions) initFromEnvVars() {
 	if o.Token == "" {
-		o.Token = os.Getenv("OKTETO_TOKEN")
+		o.Token = os.Getenv(model.OktetoTokenEnvVar)
 	}
 
-	if o.Context == "" && os.Getenv("OKTETO_URL") != "" {
-		o.Context = os.Getenv("OKTETO_URL")
+	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
+		o.Context = os.Getenv(model.OktetoURLEnvVar)
 		o.IsOkteto = true
 	}
 
-	if o.Context == "" && os.Getenv("OKTETO_CONTEXT") != "" {
-		o.Context = os.Getenv("OKTETO_CONTEXT")
+	if o.Context == "" && os.Getenv(model.OktetoContextEnvVar) != "" {
+		o.Context = os.Getenv(model.OktetoContextEnvVar)
 	}
 
 	if o.Token != "" {
@@ -73,7 +74,7 @@ func (o *ContextOptions) initFromEnvVars() {
 		}
 	}
 
-	if o.Namespace == "" && os.Getenv("OKTETO_NAMESPACE") != "" {
-		o.Namespace = os.Getenv("OKTETO_NAMESPACE")
+	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {
+		o.Namespace = os.Getenv(model.OktetoNamespaceEnvVar)
 	}
 }

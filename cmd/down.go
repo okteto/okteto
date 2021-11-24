@@ -143,7 +143,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		spinner.Stop()
 		log.Success("Persistent volume removed")
 
-		if os.Getenv("OKTETO_SKIP_CLEANUP") == "" {
+		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
 			if err := syncthing.RemoveFolder(dev); err != nil {
 				log.Infof("failed to delete existing syncthing folder")
 			}

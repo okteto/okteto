@@ -72,7 +72,7 @@ func Init() *cobra.Command {
 				return err
 			}
 
-			l := os.Getenv("OKTETO_LANGUAGE")
+			l := os.Getenv(model.OktetoLanguageEnvVar)
 			workDir, err := os.Getwd()
 			if err != nil {
 				return err

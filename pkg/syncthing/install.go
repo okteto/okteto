@@ -29,8 +29,7 @@ import (
 )
 
 const (
-	syncthingVersion       = "1.18.2"
-	syncthingVersionEnvVar = "OKTETO_SYNCTHING_VERSION"
+	syncthingVersion = "1.18.2"
 )
 
 var (
@@ -126,7 +125,7 @@ func ShouldUpgrade() bool {
 }
 
 func GetMinimumVersion() *semver.Version {
-	v := os.Getenv(syncthingVersionEnvVar)
+	v := os.Getenv(model.SyncthingVersionEnvVar)
 	if v == "" {
 		v = syncthingVersion
 	}

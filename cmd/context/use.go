@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -117,7 +118,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		return err
 	}
 
-	os.Setenv("OKTETO_NAMESPACE", okteto.Context().Namespace)
+	os.Setenv(model.OktetoNamespaceEnvVar, okteto.Context().Namespace)
 
 	if ctxOptions.Show {
 		log.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
