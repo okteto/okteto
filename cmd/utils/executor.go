@@ -39,10 +39,10 @@ type Executor struct {
 }
 
 type jsonMessage struct {
-	Level     string    `json:"level"`
-	Stage     string    `json:"stage"`
-	Message   string    `json:"message"`
-	Timestamp time.Time `json:"timestamp"`
+	Level     string `json:"level"`
+	Stage     string `json:"stage"`
+	Message   string `json:"message"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // NewExecutor returns a new executor
@@ -99,7 +99,7 @@ func displayJSONOutput(scanner *bufio.Scanner, command string) {
 			Level:     level,
 			Message:   line,
 			Stage:     command,
-			Timestamp: time.Now(),
+			Timestamp: time.Now().Unix(),
 		}
 		message, _ := json.Marshal(messageStruct)
 		fmt.Println(string(message))
