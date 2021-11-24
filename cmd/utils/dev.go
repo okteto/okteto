@@ -284,5 +284,10 @@ func doesAutocreateAppExist(ctx context.Context, dev *model.Dev, c kubernetes.In
 	autocreateDev := *dev
 	autocreateDev.Name = model.DevCloneName(dev.Name)
 	_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
+	if err != nil && !errors.IsNotFound(err) {
+		log.Infof("getApp autocreate k8s error, retrying...")
+		_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
+		return err == nil
+	}
 	return err == nil
 }
