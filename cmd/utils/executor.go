@@ -47,9 +47,17 @@ type jsonMessage struct {
 
 // NewExecutor returns a new executor
 func NewExecutor(output string) *Executor {
+	if output == "tty" && !IsSupportForTTY() {
+		output = "plain"
+	}
 	return &Executor{
 		outputMode: output,
 	}
+}
+
+func IsSupportForTTY() bool {
+	_, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
+	return err == nil
 }
 
 // Execute executes the specified command adding `env` to the execution environment
