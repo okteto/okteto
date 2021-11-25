@@ -18,17 +18,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"text/template"
 	"time"
 
-	"github.com/creack/pty"
 	"github.com/manifoldco/promptui"
 	"github.com/manifoldco/promptui/screenbuf"
 	"github.com/okteto/okteto/pkg/log"
-	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
 
@@ -58,8 +58,10 @@ func NewExecutor(output string) *Executor {
 }
 
 func IsSupportForTTY() bool {
-	_, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
-	return err == nil
+	if runtime.GOOS != "windows" {
+		return isSupportForTTY()
+	}
+	return false
 }
 
 // Execute executes the specified command adding `env` to the execution environment
@@ -71,11 +73,17 @@ func (e *Executor) Execute(command string, env []string) error {
 	var scanner *bufio.Scanner
 
 	if e.outputMode == "tty" {
-		f, err := pty.Start(cmd)
+		var (
+			reader io.Reader
+			err    error
+		)
+		if runtime.GOOS != "windows" {
+			reader, err = startCommandTTY(cmd)
+		}
 		if err != nil {
 			return err
 		}
-		scanner = bufio.NewScanner(f)
+		scanner = bufio.NewScanner(reader)
 	} else {
 		r, err := cmd.StdoutPipe()
 		if err != nil {
