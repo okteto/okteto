@@ -14,6 +14,7 @@
 package ssh
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -141,9 +142,14 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		return fmt.Errorf("unable to setup stdout for session: %v", err)
 	}
 
+	scanner := bufio.NewScanner(stdout)
+	var shellError error
 	go func() {
-		if _, err := io.Copy(outW, stdout); err != nil {
-			log.Infof("error while writing to stdOut: %s", err)
+		for scanner.Scan() {
+			outW.Write(scanner.Bytes())
+			if isShellInitError(scanner.Text()) {
+				shellError = fmt.Errorf("init path not found. Please set your workdir to an existing path")
+			}
 		}
 	}()
 
@@ -161,8 +167,11 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	cmd := shellescape.QuoteCommand(command)
 	log.Infof("executing command over ssh: '%s'", cmd)
 	err = session.Run(cmd)
-	if err == nil {
+	if err == nil && shellError == nil {
 		return nil
+	}
+	if shellError != nil {
+		return shellError
 	}
 	if strings.Contains(err.Error(), "status 130") || strings.Contains(err.Error(), "4294967295") {
 		return nil
@@ -197,4 +206,8 @@ func dial(ctx context.Context, network, addr string, config *ssh.ClientConfig) (
 		return nil, err
 	}
 	return ssh.NewClient(c, chans, reqs), nil
+}
+
+func isShellInitError(text string) bool {
+	return strings.Contains(text, "shell-init: error retrieving current directory")
 }
