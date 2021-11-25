@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -196,5 +197,10 @@ func IsOktetoRegistry(tag string) bool {
 }
 
 func replaceRegistry(input, registryType, namespace string) string {
-	return strings.Replace(input, registryType, fmt.Sprintf("%s/%s", okteto.Context().Registry, namespace), 1)
+	// Check if the registryType is the start of the sentence or has a whitespace before it
+	var re = regexp.MustCompile(fmt.Sprintf(`(^|\s)(%s)`, registryType))
+	if re.MatchString(input) {
+		return strings.Replace(input, registryType, fmt.Sprintf("%s/%s", okteto.Context().Registry, namespace), 1)
+	}
+	return input
 }
