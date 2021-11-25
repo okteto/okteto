@@ -194,11 +194,13 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		"OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT=true",
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		"OKTETO_DISABLE_SPINNER=true",
+		// Set BUILDKIT_PROGRESS=plain env variable, so all the commands disable docker tty builds
+		"BUILDKIT_PROGRESS=plain",
 	)
 
 	for _, command := range manifest.Deploy {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			log.Errorf("error executing command '%s': %s", command, err.Error())
+			log.Infof("error executing command '%s': %s", command, err.Error())
 			return err
 		}
 	}

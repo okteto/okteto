@@ -214,7 +214,10 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-require github.com/rancher/wrangler v0.7.3-0.20210224225730-5ed69efb6ab9 // indirect
+require (
+	github.com/creack/pty v1.1.17
+	github.com/rancher/wrangler v0.7.3-0.20210224225730-5ed69efb6ab9 // indirect
+)
 
 replace github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
 

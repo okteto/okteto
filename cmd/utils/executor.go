@@ -24,9 +24,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/creack/pty"
 	"github.com/manifoldco/promptui"
 	"github.com/manifoldco/promptui/screenbuf"
 	"github.com/okteto/okteto/pkg/log"
+	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
 
@@ -66,27 +68,40 @@ func (e *Executor) Execute(command string, env []string) error {
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Env = append(os.Environ(), env...)
 
-	r, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
+	var scanner *bufio.Scanner
+
+	if e.outputMode == "tty" {
+		f, err := pty.Start(cmd)
+		if err != nil {
+			return err
+		}
+		scanner = bufio.NewScanner(f)
+	} else {
+		r, err := cmd.StdoutPipe()
+		if err != nil {
+			return err
+		}
+		scanner = bufio.NewScanner(r)
+
+		if err := cmd.Start(); err != nil {
+			return err
+		}
 	}
 
-	cmd.Stderr = cmd.Stdout
-	scanner := bufio.NewScanner(r)
-
+	sb := screenbuf.New(os.Stdout)
 	if e.outputMode == "plain" {
 		go displayPlainOutput(scanner)
 	} else if e.outputMode == "json" {
 		go displayJSONOutput(scanner, command)
 	} else {
-		go displayTTYOutput(scanner, command)
+		go displayTTYOutput(scanner, command, sb)
 	}
 
-	if err := cmd.Start(); err != nil {
-		return err
+	err := cmd.Wait()
+	if e.outputMode == "tty" {
+		collapseTTY(command, err, sb)
 	}
-
-	return cmd.Wait()
+	return err
 }
 
 func displayPlainOutput(scanner *bufio.Scanner) {
@@ -114,12 +129,7 @@ func displayJSONOutput(scanner *bufio.Scanner, command string) {
 	}
 }
 
-func isErrorLine(text string) bool {
-	return strings.HasPrefix(text, " x ")
-}
-
-func displayTTYOutput(scanner *bufio.Scanner, command string) {
-	sb := screenbuf.New(os.Stdout)
+func displayTTYOutput(scanner *bufio.Scanner, command string, sb *screenbuf.ScreenBuf) {
 	queue := []string{}
 	for scanner.Scan() {
 		commandLine := renderCommand(command)
@@ -133,17 +143,29 @@ func displayTTYOutput(scanner *bufio.Scanner, command string) {
 		for _, line := range lines {
 			sb.Write([]byte(line))
 		}
-
 		sb.Flush()
 	}
 	if scanner.Err() != nil {
 		log.Infof("Error reading command output: %s", scanner.Err().Error())
 	}
-	success := renderSuccessCommand(command)
-	sb.Reset()
-	sb.Write(success)
-	sb.Flush()
+}
 
+func collapseTTY(command string, err error, sb *screenbuf.ScreenBuf) {
+	if sb == nil {
+		return
+	}
+	var message []byte
+	if err == nil {
+		message = renderSuccessCommand(command)
+	} else {
+		message = renderFailCommand(command)
+	}
+	sb.Reset()
+	sb.Write(message)
+	sb.Flush()
+}
+func isErrorLine(text string) bool {
+	return strings.HasPrefix(text, " x ")
 }
 
 func renderCommand(command string) []byte {
@@ -158,6 +180,16 @@ func renderCommand(command string) []byte {
 
 func renderSuccessCommand(command string) []byte {
 	commandTemplate := `{{ " ✓ " | bgGreen | black }} {{ . | green }}`
+	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(commandTemplate)
+	if err != nil {
+		return []byte{}
+	}
+
+	return render(tpl, command)
+}
+
+func renderFailCommand(command string) []byte {
+	commandTemplate := `{{ " x " | bgRed | black }} {{ . | red }}`
 	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(commandTemplate)
 	if err != nil {
 		return []byte{}
