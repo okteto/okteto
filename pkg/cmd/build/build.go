@@ -141,12 +141,12 @@ func buildWithDocker(ctx context.Context, buildOptions BuildOptions) error {
 	if versions.GreaterThanOrEqualTo(cli.ClientVersion(), "1.39") {
 		err = buildWithDockerDaemonBuildkit(ctx, buildOptions, cli)
 		if err != nil {
-			return err
+			return translateDockerErr(err)
 		}
 	} else {
 		err = buildWithDockerDaemon(ctx, buildOptions, cli)
 		if err != nil {
-			return err
+			return translateDockerErr(err)
 		}
 	}
 	if buildOptions.Tag != "" {
@@ -167,4 +167,17 @@ func validateImage(imageTag string) error {
 		}
 	}
 	return nil
+}
+
+func translateDockerErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	if strings.HasPrefix(err.Error(), "failed to dial gRPC: cannot connect to the Docker daemon") {
+		return okErrors.UserError{
+			E:    fmt.Errorf("cannot connect to Docker Daemon"),
+			Hint: "Please start the service and try again",
+		}
+	}
+	return err
 }
