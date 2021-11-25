@@ -148,7 +148,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			if _, ok := os.LookupEnv("OKTETO_AUTODEPLOY"); ok {
+			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
 				upOptions.AutoDeploy = true
 			}
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +35,7 @@ func (_ *K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.In
 func getKubernetesTimeout() time.Duration {
 	tOnce.Do(func() {
 		timeout = 0 * time.Second
-		t, ok := os.LookupEnv("OKTETO_KUBERNETES_TIMEOUT")
+		t, ok := os.LookupEnv(model.OktetoKubernetesTimeoutEnvVar)
 		if !ok {
 			return
 		}

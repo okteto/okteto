@@ -232,11 +232,11 @@ func TestGetPort(t *testing.T) {
 
 	defer os.RemoveAll(dir)
 
-	if err := os.Setenv("OKTETO_HOME", dir); err != nil {
+	if err := os.Setenv(model.OktetoHomeEnvVar, dir); err != nil {
 		t.Fatal(err)
 	}
 
-	defer os.Unsetenv("OKTETO_HOME")
+	defer os.Unsetenv(model.OktetoHomeEnvVar)
 
 	if _, err := GetPort(t.Name()); err == nil {
 		t.Fatal("expected error on non existing host")

@@ -530,8 +530,8 @@ func (dev *Dev) setDefaults() error {
 	}
 	dev.setRunAsUserDefaults(dev)
 
-	if os.Getenv("OKTETO_RESCAN_INTERVAL") != "" {
-		rescanInterval, err := strconv.Atoi(os.Getenv("OKTETO_RESCAN_INTERVAL"))
+	if os.Getenv(OktetoRescanIntervalEnvVar) != "" {
+		rescanInterval, err := strconv.Atoi(os.Getenv(OktetoRescanIntervalEnvVar))
 		if err != nil {
 			return fmt.Errorf("cannot parse 'OKTETO_RESCAN_INTERVAL' into an integer: %s", err.Error())
 		}
@@ -1086,7 +1086,7 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return true
 	}
 
-	if v, ok := os.LookupEnv("OKTETO_EXECUTE_SSH"); ok && v == "false" {
+	if v, ok := os.LookupEnv(OktetoExecuteSSHEnvVar); ok && v == "false" {
 		return false
 	}
 	return true
@@ -1115,7 +1115,7 @@ func ExpandEnv(value string) (string, error) {
 func GetTimeout() (time.Duration, error) {
 	defaultTimeout := (60 * time.Second)
 
-	t := os.Getenv("OKTETO_TIMEOUT")
+	t := os.Getenv(OktetoTimeoutEnvVar)
 	if t == "" {
 		return defaultTimeout, nil
 	}
