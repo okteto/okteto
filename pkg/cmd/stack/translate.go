@@ -66,7 +66,8 @@ func translate(ctx context.Context, s *model.Stack, options *StackDeployOptions)
 
 func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 	for svcName, svc := range s.Services {
-		for _, envFilepath := range svc.EnvFiles {
+		for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
+			envFilepath := svc.EnvFiles[i]
 			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath); err != nil {
 				return err
 			}
