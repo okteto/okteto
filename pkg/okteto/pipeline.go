@@ -20,45 +20,14 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	giturls "github.com/whilp/git-urls"
 )
 
-// SpaceBody top body answer
-type SpaceBody struct {
-	Space Space `json:"space"`
-}
-
-//GitDeployResponse represents
-type GitDeployResponse struct {
-	Action    *Action    `json:"action"`
-	GitDeploy *GitDeploy `json:"gitDeploy"`
-}
-
-//GitDeploy represents an Okteto pipeline status
-type GitDeploy struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Repository string `json:"repository"`
-	Status     string `json:"status"`
-}
-
-// Space represents the contents of an Okteto Cloud space
-type Space struct {
-	GitDeploys   []GitDeploy   `json:"gitDeploys"`
-	Statefulsets []Statefulset `json:"statefulsets"`
-	Deployments  []Deployment  `json:"deployments"`
-}
-
-// Variable represents a pipeline variable
-type Variable struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
 // DeployPipeline creates a pipeline
-func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error) {
-	gitDeployResponse := &GitDeployResponse{}
+func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []types.Variable) (*types.GitDeployResponse, error) {
+	gitDeployResponse := &types.GitDeployResponse{}
 	if len(variables) > 0 {
 		var mutation struct {
 			GitDeployResponse struct {
@@ -102,12 +71,12 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 
-		gitDeployResponse.Action = &Action{
+		gitDeployResponse.Action = &types.Action{
 			ID:     string(mutation.GitDeployResponse.Action.Id),
 			Name:   string(mutation.GitDeployResponse.Action.Name),
 			Status: string(mutation.GitDeployResponse.Action.Status),
 		}
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:         string(mutation.GitDeployResponse.GitDeploy.Id),
 			Name:       string(mutation.GitDeployResponse.GitDeploy.Name),
 			Repository: string(mutation.GitDeployResponse.GitDeploy.Repository),
@@ -149,12 +118,12 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 
-		gitDeployResponse.Action = &Action{
+		gitDeployResponse.Action = &types.Action{
 			ID:     string(mutation.GitDeployResponse.Action.Id),
 			Name:   string(mutation.GitDeployResponse.Action.Name),
 			Status: string(mutation.GitDeployResponse.Action.Status),
 		}
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:         string(mutation.GitDeployResponse.GitDeploy.Id),
 			Name:       string(mutation.GitDeployResponse.GitDeploy.Name),
 			Repository: string(mutation.GitDeployResponse.GitDeploy.Repository),
@@ -166,9 +135,9 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error) {
+func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []types.Variable) (*types.GitDeployResponse, error) {
 
-	gitDeployResponse := &GitDeployResponse{}
+	gitDeployResponse := &types.GitDeployResponse{}
 	if len(variables) > 0 {
 		var mutation struct {
 			GitDeployResponse struct {
@@ -197,7 +166,7 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repos
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:     string(mutation.GitDeployResponse.Id),
 			Status: string(mutation.GitDeployResponse.Status),
 		}
@@ -220,7 +189,7 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repos
 		if err != nil {
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:     string(mutation.GitDeployResponse.Id),
 			Status: string(mutation.GitDeployResponse.Status),
 		}
@@ -230,9 +199,9 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repos
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func (c *OktetoClient) deployPipelineWithoutFilename(ctx context.Context, name, repository, branch string, variables []Variable) (*GitDeployResponse, error) {
+func (c *OktetoClient) deployPipelineWithoutFilename(ctx context.Context, name, repository, branch string, variables []types.Variable) (*types.GitDeployResponse, error) {
 
-	gitDeployResponse := &GitDeployResponse{}
+	gitDeployResponse := &types.GitDeployResponse{}
 	if len(variables) > 0 {
 		var mutation struct {
 			GitDeployResponse struct {
@@ -260,7 +229,7 @@ func (c *OktetoClient) deployPipelineWithoutFilename(ctx context.Context, name, 
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:     string(mutation.GitDeployResponse.Id),
 			Status: string(mutation.GitDeployResponse.Status),
 		}
@@ -282,7 +251,7 @@ func (c *OktetoClient) deployPipelineWithoutFilename(ctx context.Context, name, 
 		if err != nil {
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:     string(mutation.GitDeployResponse.Id),
 			Status: string(mutation.GitDeployResponse.Status),
 		}
@@ -291,7 +260,7 @@ func (c *OktetoClient) deployPipelineWithoutFilename(ctx context.Context, name, 
 }
 
 // GetPipelineByName gets a pipeline given its name
-func (c *OktetoClient) GetPipelineByName(ctx context.Context, name string) (*GitDeploy, error) {
+func (c *OktetoClient) GetPipelineByName(ctx context.Context, name string) (*types.GitDeploy, error) {
 	var query struct {
 		Space struct {
 			GitDeploys []struct {
@@ -311,7 +280,7 @@ func (c *OktetoClient) GetPipelineByName(ctx context.Context, name string) (*Git
 
 	for _, gitDeploy := range query.Space.GitDeploys {
 		if string(gitDeploy.Name) == name {
-			return &GitDeploy{
+			return &types.GitDeploy{
 				ID:     string(gitDeploy.Id),
 				Name:   string(gitDeploy.Name),
 				Status: string(gitDeploy.Status),
@@ -322,7 +291,7 @@ func (c *OktetoClient) GetPipelineByName(ctx context.Context, name string) (*Git
 }
 
 // GetPipelineByRepository gets a pipeline given its repo url
-func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, repository string) (*GitDeployResponse, error) {
+func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, repository string) (*types.GitDeployResponse, error) {
 	var query struct {
 		Pipeline struct {
 			GitDeploys []struct {
@@ -342,8 +311,8 @@ func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, repository s
 
 	for _, gitDeploy := range query.Pipeline.GitDeploys {
 		if areSameRepository(string(gitDeploy.Repository), repository) {
-			pipeline := &GitDeployResponse{
-				GitDeploy: &GitDeploy{
+			pipeline := &types.GitDeployResponse{
+				GitDeploy: &types.GitDeploy{
 					ID:         string(gitDeploy.Id),
 					Repository: string(gitDeploy.Repository),
 					Status:     string(gitDeploy.Status),
@@ -372,9 +341,9 @@ func areSameRepository(repoA, repoB string) bool {
 }
 
 // DestroyPipeline destroys a pipeline
-func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*GitDeployResponse, error) {
+func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	log.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
-	gitDeployResponse := &GitDeployResponse{}
+	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
 		var mutation struct {
 			GitDeployResponse struct {
@@ -404,12 +373,12 @@ func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroy
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
-		gitDeployResponse.Action = &Action{
+		gitDeployResponse.Action = &types.Action{
 			ID:     string(mutation.GitDeployResponse.Action.Id),
 			Name:   string(mutation.GitDeployResponse.Action.Name),
 			Status: string(mutation.GitDeployResponse.Action.Status),
 		}
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:         string(mutation.GitDeployResponse.GitDeploy.Id),
 			Name:       string(mutation.GitDeployResponse.GitDeploy.Name),
 			Repository: string(mutation.GitDeployResponse.GitDeploy.Repository),
@@ -443,12 +412,12 @@ func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroy
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
-		gitDeployResponse.Action = &Action{
+		gitDeployResponse.Action = &types.Action{
 			ID:     string(mutation.GitDeployResponse.Action.Id),
 			Name:   string(mutation.GitDeployResponse.Action.Name),
 			Status: string(mutation.GitDeployResponse.Action.Status),
 		}
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:         string(mutation.GitDeployResponse.GitDeploy.Id),
 			Name:       string(mutation.GitDeployResponse.GitDeploy.Name),
 			Repository: string(mutation.GitDeployResponse.GitDeploy.Repository),
@@ -460,9 +429,9 @@ func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroy
 	return gitDeployResponse, nil
 }
 
-func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*GitDeployResponse, error) {
+func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	log.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
-	gitDeployResponse := &GitDeployResponse{}
+	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
 		var mutation struct {
 			GitDeployResponse struct {
@@ -480,7 +449,7 @@ func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name strin
 		if err != nil {
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:     string(mutation.GitDeployResponse.Id),
 			Status: string(mutation.GitDeployResponse.Status),
 		}
@@ -503,7 +472,7 @@ func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name strin
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
-		gitDeployResponse.GitDeploy = &GitDeploy{
+		gitDeployResponse.GitDeploy = &types.GitDeploy{
 			ID:     string(mutation.GitDeployResponse.Id),
 			Status: string(mutation.GitDeployResponse.Status),
 		}
