@@ -13,18 +13,14 @@
 
 package types
 
-import "context"
-
-type UserInterface interface {
-	GetUserContext(ctx context.Context) (*UserContext, error)
+// ActionBody top body answer
+type ActionBody struct {
+	Action Action `json:"action"`
 }
 
-type NamespaceInterface interface {
-	ListNamespaces(ctx context.Context) ([]Namespace, error)
-	ListPreviews(ctx context.Context) ([]Preview, error)
-}
-
-type OktetoUserClientProvider interface {
-	NewOktetoUserClient() (UserInterface, error)
-	NewOktetoNamespaceClient() (NamespaceInterface, error)
+//Action represents an action
+type Action struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
 }

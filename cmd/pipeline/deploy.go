@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -152,7 +153,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func deployPipeline(ctx context.Context, name, repository, branch, file string, variables []string) (*okteto.GitDeployResponse, error) {
+func deployPipeline(ctx context.Context, name, repository, branch, file string, variables []string) (*types.GitDeployResponse, error) {
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -162,20 +163,20 @@ func deployPipeline(ctx context.Context, name, repository, branch, file string, 
 	exit := make(chan error, 1)
 
 	var err error
-	var resp *okteto.GitDeployResponse
+	var resp *types.GitDeployResponse
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
 	go func() {
-		varList := []okteto.Variable{}
+		varList := []types.Variable{}
 		for _, v := range variables {
 			kv := strings.SplitN(v, "=", 2)
 			if len(kv) != 2 {
 				exit <- fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 				return
 			}
-			varList = append(varList, okteto.Variable{
+			varList = append(varList, types.Variable{
 				Name:  kv[0],
 				Value: kv[1],
 			})
@@ -205,7 +206,7 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func waitUntilRunning(ctx context.Context, name string, action *okteto.Action, timeout time.Duration) error {
+func waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for the pipeline to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -239,7 +240,7 @@ func waitUntilRunning(ctx context.Context, name string, action *okteto.Action, t
 	return nil
 }
 
-func waitToBeDeployed(ctx context.Context, name string, action *okteto.Action, timeout time.Duration) error {
+func waitToBeDeployed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	if action == nil {
 		return deprecatedWaitToBeDeployed(ctx, name, timeout)
 	}
@@ -329,7 +330,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 	}
 }
 
-func getPipelineURL(gitDeploy *okteto.GitDeploy) string {
+func getPipelineURL(gitDeploy *types.GitDeploy) string {
 	octx := okteto.Context()
 	pipelineURL := fmt.Sprintf("%s/#/spaces/%s?resourceId=%s", octx.Name, octx.Namespace, gitDeploy.ID)
 	return pipelineURL

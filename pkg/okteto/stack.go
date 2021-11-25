@@ -18,10 +18,11 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
 
-func (c *OktetoClient) ListStackEndpoints(ctx context.Context, stack *model.Stack) ([]Endpoint, error) {
+func (c *OktetoClient) ListStackEndpoints(ctx context.Context, stack *model.Stack) ([]types.Endpoint, error) {
 	var query struct {
 		Space struct {
 			Stacks []struct {
@@ -46,7 +47,7 @@ func (c *OktetoClient) ListStackEndpoints(ctx context.Context, stack *model.Stac
 	variables := map[string]interface{}{
 		"id": graphql.String(stack.Namespace),
 	}
-	endpoints := make([]Endpoint, 0)
+	endpoints := make([]types.Endpoint, 0)
 
 	err := c.client.Query(ctx, &query, variables)
 	if err != nil {
@@ -68,7 +69,7 @@ func (c *OktetoClient) ListStackEndpoints(ctx context.Context, stack *model.Stac
 			continue
 		}
 		for _, endpoint := range d.Endpoints {
-			endpoints = append(endpoints, Endpoint{
+			endpoints = append(endpoints, types.Endpoint{
 				URL: string(endpoint.Url),
 			})
 		}
@@ -79,7 +80,7 @@ func (c *OktetoClient) ListStackEndpoints(ctx context.Context, stack *model.Stac
 			continue
 		}
 		for _, endpoint := range sfs.Endpoints {
-			endpoints = append(endpoints, Endpoint{
+			endpoints = append(endpoints, types.Endpoint{
 				URL: string(endpoint.Url),
 			})
 		}

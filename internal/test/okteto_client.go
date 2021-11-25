@@ -23,6 +23,7 @@ type FakeOktetoClientProvider struct {
 	UserContext *types.UserContext
 	Err         error
 	Namespaces  []types.Namespace
+	Previews    []types.Preview
 }
 
 func NewFakeOktetoClientProvider(userContext *types.UserContext, namespaces []types.Namespace, err error) *FakeOktetoClientProvider {
@@ -50,9 +51,19 @@ func (f FakeUserClient) GetUserContext(ctx context.Context) (*types.UserContext,
 type FakeNamespaceClient struct {
 	namespaces []types.Namespace
 	err        error
+	previews   []types.Preview
+}
+
+func NewFakeNamespaceClient(namespaces []types.Namespace, previews []types.Preview, err error) *FakeNamespaceClient {
+	return &FakeNamespaceClient{namespaces: namespaces, err: err, previews: previews}
 }
 
 // GetUserContext get user context
 func (f FakeNamespaceClient) ListNamespaces(ctx context.Context) ([]types.Namespace, error) {
 	return f.namespaces, f.err
+}
+
+// GetUserContext get user context
+func (f FakeNamespaceClient) ListPreviews(ctx context.Context) ([]types.Preview, error) {
+	return f.previews, f.err
 }
