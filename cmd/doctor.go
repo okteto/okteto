@@ -49,7 +49,7 @@ func Doctor() *cobra.Command {
 				return errors.ErrNotInDevContainer
 			}
 
-			manifest, err := contextCMD.LoadDevWithContext(ctx, doctorOpts.DevPath, doctorOpts.Namespace, doctorOpts.K8sContext)
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, doctorOpts.DevPath, doctorOpts.Namespace, doctorOpts.K8sContext)
 			if err != nil {
 				return err
 			}

@@ -57,7 +57,7 @@ func Push(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ctxResource, err := utils.LoadDevContext(pushOpts.DevPath)
+			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
 			if err != nil {
 				if errors.IsNotExist(err) && len(pushOpts.AppName) > 0 {
 					ctxResource = &model.ContextResource{}
@@ -83,7 +83,7 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			manifest, err := utils.LoadDevOrDefault(pushOpts.DevPath, pushOpts.AppName)
+			manifest, err := utils.LoadManifestOrDefault(pushOpts.DevPath, pushOpts.AppName)
 			if err != nil {
 				return err
 			}

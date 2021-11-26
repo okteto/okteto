@@ -118,8 +118,8 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 	return nil
 }
 
-func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Manifest, error) {
-	ctxResource, err := utils.LoadDevContext(devPath)
+func LoadManifestWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Manifest, error) {
+	ctxResource, err := utils.LoadManifestContext(devPath)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext stri
 		return nil, err
 	}
 
-	return utils.LoadDev(devPath)
+	return utils.LoadManifest(devPath)
 }
 
 func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string) (*model.Stack, error) {

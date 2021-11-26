@@ -24,7 +24,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
-func Test_LoadDev(t *testing.T) {
+func Test_LoadManifest(t *testing.T) {
 	manifestBytes := []byte(`
 name: deployment
 container: core
@@ -153,7 +153,7 @@ workdir: /app`)
 	}
 }
 
-func Test_LoadDevDefaults(t *testing.T) {
+func Test_LoadManifestDefaults(t *testing.T) {
 	tests := []struct {
 		name                string
 		manifest            []byte
@@ -1182,7 +1182,7 @@ func Test_loadEnvFile(t *testing.T) {
 	}
 }
 
-func Test_LoadDevWithEnvFile(t *testing.T) {
+func Test_LoadManifestWithEnvFile(t *testing.T) {
 	content := map[string]string{
 		"DEPLOYMENT":    "main",
 		"IMAGE_TAG":     "1.2",

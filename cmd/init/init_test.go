@@ -57,7 +57,7 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	manifest, err := utils.LoadDev(p)
+	manifest, err := utils.LoadManifest(p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestRun(t *testing.T) {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
-	manifest, err = utils.LoadDev(p)
+	manifest, err = utils.LoadManifest(p)
 	if err != nil {
 		t.Fatal(err)
 	}

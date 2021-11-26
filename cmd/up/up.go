@@ -99,7 +99,7 @@ func Up() *cobra.Command {
 				}
 			}
 
-			manifest, err := contextCMD.LoadDevWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
 			if err != nil {
 				if !strings.Contains(err.Error(), "okteto init") {
 					return err
@@ -108,7 +108,7 @@ func Up() *cobra.Command {
 					return err
 				}
 
-				manifest, err = loadDevWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
+				manifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
 				if err != nil {
 					return err
 				}
@@ -119,7 +119,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			if err := loadDevOverrides(dev, upOptions); err != nil {
+			if err := loadManifestOverrides(dev, upOptions); err != nil {
 				return err
 			}
 
@@ -197,7 +197,7 @@ func Up() *cobra.Command {
 	return cmd
 }
 
-func loadDevWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Manifest, error) {
+func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Manifest, error) {
 	workDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("unknown current folder: %s", err)
@@ -216,10 +216,10 @@ func loadDevWithInit(ctx context.Context, k8sContext, namespace, devPath string)
 	}
 
 	log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
-	return utils.LoadDev(devPath)
+	return utils.LoadManifest(devPath)
 }
 
-func loadDevOverrides(dev *model.Dev, upOptions *UpOptions) error {
+func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 	if upOptions.Remote > 0 {
 		dev.RemotePort = upOptions.Remote
 	}

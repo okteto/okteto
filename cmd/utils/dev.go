@@ -39,7 +39,7 @@ const (
 	secondaryManifest = "okteto.yaml"
 )
 
-func LoadDevContext(devPath string) (*model.ContextResource, error) {
+func LoadManifestContext(devPath string) (*model.ContextResource, error) {
 	if !model.FileExists(devPath) {
 		if devPath == DefaultManifest {
 			if model.FileExists(secondaryManifest) {
@@ -51,12 +51,12 @@ func LoadDevContext(devPath string) (*model.ContextResource, error) {
 	return model.GetContextResource(devPath)
 }
 
-//LoadDev loads an okteto manifest checking "yml" and "yaml"
-func LoadDev(devPath string) (*model.Manifest, error) {
+//LoadManifest loads an okteto manifest checking "yml" and "yaml"
+func LoadManifest(devPath string) (*model.Manifest, error) {
 	if !model.FileExists(devPath) {
 		if devPath == DefaultManifest {
 			if model.FileExists(secondaryManifest) {
-				return LoadDev(secondaryManifest)
+				return LoadManifest(secondaryManifest)
 			}
 		}
 
@@ -69,7 +69,7 @@ func LoadDev(devPath string) (*model.Manifest, error) {
 	}
 
 	for _, dev := range manifest.Dev {
-		if err := loadDevRc(dev); err != nil {
+		if err := loadManifestRc(dev); err != nil {
 			return nil, err
 		}
 
@@ -80,7 +80,7 @@ func LoadDev(devPath string) (*model.Manifest, error) {
 	return manifest, nil
 }
 
-func loadDevRc(dev *model.Dev) error {
+func loadManifestRc(dev *model.Dev) error {
 	defaultDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yml")
 	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yaml")
 	var devRc *model.DevRC
@@ -103,9 +103,9 @@ func loadDevRc(dev *model.Dev) error {
 	return nil
 }
 
-//LoadDevOrDefault loads an okteto manifest or a default one if does not exist
-func LoadDevOrDefault(devPath, name string) (*model.Manifest, error) {
-	dev, err := LoadDev(devPath)
+//LoadManifestOrDefault loads an okteto manifest or a default one if does not exist
+func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
+	dev, err := LoadManifest(devPath)
 	if err == nil {
 		return dev, nil
 	}

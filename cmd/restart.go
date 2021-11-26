@@ -44,7 +44,7 @@ func Restart() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			manifest, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, devPath, namespace, k8sContext)
 			if err != nil {
 				return err
 			}

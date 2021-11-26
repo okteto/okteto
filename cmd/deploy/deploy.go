@@ -30,6 +30,7 @@ import (
 	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/cmd/utils/manifest"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -46,6 +47,8 @@ var tempKubeConfigTemplate = "%s/.okteto/kubeconfig-%s"
 type Options struct {
 	ManifestPath string
 	Name         string
+	Namespace    string
+	K8sContext   string
 	Variables    []string
 	Manifest     *model.Manifest
 }
@@ -63,11 +66,11 @@ type proxyInterface interface {
 }
 
 type deployCommand struct {
-	getManifest func(cwd, name, filename string) (*model.Manifest, error)
+	getManifest func(ctx context.Context, cwd string, opts *manifest.ManifestOptions) (*model.Manifest, error)
 
 	proxy              proxyInterface
 	kubeconfig         kubeConfigHandler
-	executor           utils.ManifestExecutor
+	executor           manifest.ManifestExecutor
 	tempKubeconfigFile string
 }
 
@@ -94,7 +97,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				options.Name = utils.InferApplicationName(cwd)
+				options.Name = manifest.InferApplicationName(cwd)
 			}
 
 			// Look for a free local port to start the proxy
@@ -143,20 +146,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 				},
 			}
 
-			var manifest *model.Manifest
-			if options.ManifestPath == "" {
-				manifest, err = contextCMD.LoadDevWithContext(ctx, "", "", "")
-				if err != nil {
-					log.Infof("could not load manifest: %s", err.Error())
-				}
-				options.Manifest = manifest
-			}
-
 			c := &deployCommand{
-				getManifest: utils.GetManifest,
+				getManifest: manifest.GetManifest,
 
 				kubeconfig: kubeconfig,
-				executor:   utils.NewExecutor(),
+				executor:   manifest.NewExecutor(),
 				proxy: newProxy(proxyConfig{
 					port:  port,
 					token: sessionToken,
@@ -169,6 +163,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVar(&options.Namespace, "namespace", "", "application name")
+	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
+
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 
 	return cmd
@@ -182,19 +179,11 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	}
 
 	var err error
-	if opts.Manifest == nil {
-		// Read manifest file with the commands to be executed
-		opts.Manifest, err = dc.getManifest(cwd, opts.Name, opts.ManifestPath)
-		if err != nil {
-			log.Infof("could not find manifest file to be executed: %s", err)
-			return err
-		}
-	} else {
-		opts.Manifest, err = dc.getCommandsFromManifest(ctx, opts)
-		if err != nil {
-			log.Infof("could not find manifest file to be executed: %s", err)
-			return err
-		}
+	// Read manifest file with the commands to be executed
+	opts.Manifest, err = dc.getManifest(ctx, cwd, &manifest.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
+	if err != nil {
+		log.Infof("could not find manifest file to be executed: %s", err)
+		return err
 	}
 
 	log.Debugf("starting server on %d", dc.proxy.GetPort())
@@ -367,19 +356,4 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 	return handler, nil
 
-}
-
-func (dc *deployCommand) getCommandsFromManifest(ctx context.Context, opts *Options) (*model.Manifest, error) {
-	if opts.Manifest.Deploy == nil {
-		opts.Manifest.Deploy = &model.DeployInfo{}
-	}
-
-	if len(opts.Manifest.Deploy.Commands) == 0 {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get the current working directory: %w", err)
-		}
-		return dc.getManifest(cwd, opts.Name, opts.ManifestPath)
-	}
-	return opts.Manifest, nil
 }

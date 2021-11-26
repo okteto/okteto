@@ -23,7 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-func Test_loadDevOrDefault(t *testing.T) {
+func Test_LoadManifestOrDefault(t *testing.T) {
 	var tests = []struct {
 		name       string
 		deployment string
@@ -73,7 +73,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			def, err := LoadDevOrDefault("/tmp/a-path", tt.deployment)
+			def, err := LoadManifestOrDefault("/tmp/a-path", tt.deployment)
 			if tt.expectErr {
 				if err == nil {
 					t.Fatal("expected error when loading")
@@ -109,7 +109,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			loaded, err := LoadDevOrDefault(f.Name(), "foo")
+			loaded, err := LoadManifestOrDefault(f.Name(), "foo")
 			if err != nil {
 				t.Fatalf("unexpected error when loading existing manifest: %s", err.Error())
 			}
@@ -125,7 +125,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 		})
 	}
 	name := "demo-deployment"
-	def, err := LoadDevOrDefault("/tmp/bad-path", name)
+	def, err := LoadManifestOrDefault("/tmp/bad-path", name)
 	if err != nil {
 		t.Fatal("default dev was not returned")
 	}
@@ -134,7 +134,7 @@ func Test_loadDevOrDefault(t *testing.T) {
 		t.Errorf("expected %s, got %s", name, def.Dev[name].Name)
 	}
 
-	_, err = LoadDevOrDefault("/tmp/bad-path", "")
+	_, err = LoadManifestOrDefault("/tmp/bad-path", "")
 	if err == nil {
 		t.Error("expected error with empty deployment name")
 	}

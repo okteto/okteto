@@ -11,20 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package manifest
 
 import (
 	"bufio"
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"gopkg.in/yaml.v2"
 )
 
 type ManifestExecutor interface {
@@ -33,20 +33,16 @@ type ManifestExecutor interface {
 
 type Executor struct{}
 
+type ManifestOptions struct {
+	Name       string
+	Namespace  string
+	Filename   string
+	K8sContext string
+}
+
 // NewExecutor returns a new executor
 func NewExecutor() *Executor {
 	return &Executor{}
-}
-
-// Manifest represents a manifest file
-type Manifest struct {
-	Name     string `yaml:"name"`
-	Icon     string `yaml:"icon,omitempty"`
-	Type     string
-	Deploy   []string `yaml:"deploy,omitempty"`
-	Destroy  []string `yaml:"destroy,omitempty"`
-	Devs     []string `yaml:"devs,omitempty"`
-	Filename string   `yaml:"-"`
 }
 
 // InferApplicationName infers the application name from the folder received as parameter
@@ -62,26 +58,23 @@ func InferApplicationName(cwd string) string {
 }
 
 // GetManifest Loads a manifest
-func GetManifest(srcFolder, name, filename string) (*model.Manifest, error) {
-	pipelinePath := getPipelinePath(srcFolder, filename)
+func GetManifest(ctx context.Context, srcFolder string, opts *ManifestOptions) (*model.Manifest, error) {
+	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
 	if pipelinePath != "" {
 		log.Debugf("Found okteto manifest %s", pipelinePath)
-		pipelineBytes, err := ioutil.ReadFile(pipelinePath)
+		manifest, err := contextCMD.LoadManifestWithContext(ctx, opts.Filename, opts.Namespace, opts.K8sContext)
 		if err != nil {
-			return nil, err
+			log.Infof("could not load manifest: %s", err.Error())
 		}
-		result := &model.Manifest{}
-		if err := yaml.Unmarshal(pipelineBytes, result); err != nil {
-			return nil, err
-		}
-		result.Type = "pipeline"
-		result.Filename = pipelinePath
-		return result, nil
+
+		manifest.Type = "pipeline"
+		manifest.Filename = pipelinePath
+		return manifest, nil
 	}
 
 	src := srcFolder
-	path := filepath.Join(srcFolder, filename)
-	if filename != "" && pathExistsAndDir(path) {
+	path := filepath.Join(srcFolder, opts.Filename)
+	if opts.Filename != "" && pathExistsAndDir(path) {
 		src = path
 	}
 
@@ -95,7 +88,7 @@ func GetManifest(srcFolder, name, filename string) (*model.Manifest, error) {
 		fmt.Println("Found chart")
 		return &model.Manifest{
 			Type:     "chart",
-			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install %s %s", name, chartSubPath)}},
+			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install %s %s", opts.Name, chartSubPath)}},
 			Filename: chartSubPath,
 		}, nil
 	}
