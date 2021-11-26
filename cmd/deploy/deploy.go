@@ -30,7 +30,6 @@ import (
 	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/cmd/utils/manifest"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -66,11 +65,11 @@ type proxyInterface interface {
 }
 
 type deployCommand struct {
-	getManifest func(ctx context.Context, cwd string, opts *manifest.ManifestOptions) (*model.Manifest, error)
+	getManifest func(ctx context.Context, cwd string, opts *contextCMD.ManifestOptions) (*model.Manifest, error)
 
 	proxy              proxyInterface
 	kubeconfig         kubeConfigHandler
-	executor           manifest.ManifestExecutor
+	executor           utils.ManifestExecutor
 	tempKubeconfigFile string
 }
 
@@ -97,7 +96,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				options.Name = manifest.InferApplicationName(cwd)
+				options.Name = utils.InferApplicationName(cwd)
 			}
 
 			// Look for a free local port to start the proxy
@@ -147,10 +146,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &deployCommand{
-				getManifest: manifest.GetManifest,
+				getManifest: contextCMD.GetManifest,
 
 				kubeconfig: kubeconfig,
-				executor:   manifest.NewExecutor(),
+				executor:   utils.NewExecutor(),
 				proxy: newProxy(proxyConfig{
 					port:  port,
 					token: sessionToken,
@@ -180,7 +179,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	var err error
 	// Read manifest file with the commands to be executed
-	opts.Manifest, err = dc.getManifest(ctx, cwd, &manifest.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
+	opts.Manifest, err = dc.getManifest(ctx, cwd, &contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
 	if err != nil {
 		log.Infof("could not find manifest file to be executed: %s", err)
 		return err

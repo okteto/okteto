@@ -20,7 +20,6 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/cmd/utils/manifest"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/log"
@@ -61,9 +60,9 @@ type Options struct {
 }
 
 type destroyCommand struct {
-	getManifest func(ctx context.Context, cwd string, opts *manifest.ManifestOptions) (*model.Manifest, error)
+	getManifest func(ctx context.Context, cwd string, opts *contextCMD.ManifestOptions) (*model.Manifest, error)
 
-	executor    manifest.ManifestExecutor
+	executor    utils.ManifestExecutor
 	nsDestroyer destroyer
 	secrets     secretHandler
 }
@@ -91,7 +90,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				options.Name = manifest.InferApplicationName(cwd)
+				options.Name = utils.InferApplicationName(cwd)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
@@ -115,9 +114,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &destroyCommand{
-				getManifest: manifest.GetManifest,
+				getManifest: contextCMD.GetManifest,
 
-				executor:    manifest.NewExecutor(),
+				executor:    utils.NewExecutor(),
 				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:     secrets.NewSecrets(k8sClient),
 			}
@@ -137,7 +136,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(ctx, cwd, &manifest.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext})
+	manifest, err := dc.getManifest(ctx, cwd, &contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext})
 	if err != nil {
 		// Log error message but application can still be deleted
 		log.Infof("could not find manifest file to be executed: %s", err)

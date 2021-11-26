@@ -17,7 +17,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/utils/manifest"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
@@ -235,10 +235,10 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 }
 
-func getManifestWithError(_ context.Context, _ string, _ *manifest.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ context.Context, _ string, _ *contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ context.Context, _ string, _ *manifest.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ context.Context, _ string, _ *contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return fakeManifest, nil
 }

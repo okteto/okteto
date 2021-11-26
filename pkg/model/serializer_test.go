@@ -968,7 +968,7 @@ func TestSyncFoldersUnmashalling(t *testing.T) {
 	}
 }
 
-func TestmanifestUnmarshalling(t *testing.T) {
+func TestManifestUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name            string
 		manifest        []byte
