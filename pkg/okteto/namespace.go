@@ -97,7 +97,7 @@ func (c *OktetoClient) deprecatedListNamespaces(ctx context.Context) ([]types.Na
 	for _, space := range query.Spaces {
 		status := "Active"
 		if space.Sleeping {
-			status = "Inactive"
+			status = "Sleeping"
 		}
 		result = append(result, types.Namespace{
 			ID:     string(space.Id),
