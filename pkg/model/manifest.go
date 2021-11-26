@@ -55,28 +55,3 @@ func NewDeployInfo() *DeployInfo {
 		Commands: make([]string, 0),
 	}
 }
-
-//ComposeInfo represents how to deploy a compose
-type ComposeInfo struct {
-	Manifest  string         `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Endpoints []EndpointRule `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
-}
-
-//DivertInfo represents how to create a divert
-type DivertInfo struct {
-	From DivertFromInfo `json:"from,omitempty" yaml:"from,omitempty"`
-	To   DivertToInfo   `json:"to,omitempty" yaml:"to,omitempty"`
-}
-
-//DivertFromInfo represents the service a divert must divert from.
-type DivertFromInfo struct {
-	Namespace  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Ingress    string `json:"ingress,omitempty" yaml:"ingress,omitempty"`
-	Service    string `json:"service,omitempty" yaml:"service,omitempty"`
-	Deployment string `json:"deployment,omitempty" yaml:"deployment,omitempty"`
-}
-
-//DivertToInfo represents the service a divert must divert to
-type DivertToInfo struct {
-	Service string `json:"service,omitempty" yaml:"service,omitempty"`
-}
