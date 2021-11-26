@@ -715,7 +715,7 @@ func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func isManifestFieldNotFound(err error) bool {
-	manifestFields := []string{"dev", "name", "icon", "variables", "deploy", "destroy"}
+	manifestFields := []string{"devs", "name", "icon", "variables", "deploy", "destroy"}
 	for _, field := range manifestFields {
 		if strings.Contains(err.Error(), fmt.Sprintf("field %s not found", field)) {
 			return true
