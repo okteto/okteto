@@ -79,7 +79,7 @@ func (c *OktetoClient) ListNamespaces(ctx context.Context) ([]types.Namespace, e
 	return result, nil
 }
 
-// TODO: remove when all users are in OktetoEnterprise > 0.11.49
+// TODO: remove when all users are in OktetoEnterprise >= 10.6
 func (c *OktetoClient) deprecatedListNamespaces(ctx context.Context) ([]types.Namespace, error) {
 	var query struct {
 		Spaces []struct {
