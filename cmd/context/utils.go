@@ -187,7 +187,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 }
 
 // GetManifest Loads a manifest
-func GetManifest(ctx context.Context, srcFolder string, opts *ManifestOptions) (*model.Manifest, error) {
+func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*model.Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
 	if pipelinePath != "" {
 		log.Debugf("Found okteto manifest %s", pipelinePath)

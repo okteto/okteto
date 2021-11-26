@@ -65,7 +65,7 @@ type proxyInterface interface {
 }
 
 type deployCommand struct {
-	getManifest func(ctx context.Context, cwd string, opts *contextCMD.ManifestOptions) (*model.Manifest, error)
+	getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 
 	proxy              proxyInterface
 	kubeconfig         kubeConfigHandler
@@ -179,7 +179,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	var err error
 	// Read manifest file with the commands to be executed
-	opts.Manifest, err = dc.getManifest(ctx, cwd, &contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
+	opts.Manifest, err = dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
 	if err != nil {
 		log.Infof("could not find manifest file to be executed: %s", err)
 		return err

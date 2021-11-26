@@ -235,10 +235,10 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 }
 
-func getManifestWithError(_ context.Context, _ string, _ *contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ context.Context, _ string, _ *contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
