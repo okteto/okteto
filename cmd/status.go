@@ -50,7 +50,12 @@ func Status() *cobra.Command {
 
 			ctx := context.Background()
 
-			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, devPath, namespace, k8sContext)
+			if err != nil {
+				return err
+			}
+
+			dev, err := utils.GetDevFromManifest(manifest)
 			if err != nil {
 				return err
 			}
@@ -82,7 +87,7 @@ func Status() *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executing")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command is executing")
 	cmd.Flags().BoolVarP(&showInfo, "info", "i", false, "show syncthing links for troubleshooting the synchronization service")

@@ -602,7 +602,7 @@ func TestDivert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	divertedSvcName := fmt.Sprintf("health-checker-%s", user)
+	divertedSvcName := fmt.Sprintf("health-checker-%s-okteto", user)
 	waitForDeployment(ctx, namespace, divertedSvcName, 2, 120)
 
 	defer showUpLogs(name, namespace, t)

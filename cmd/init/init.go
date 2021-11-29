@@ -84,7 +84,7 @@ func Init() *cobra.Command {
 
 			log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
 
-			if devPath == utils.DefaultDevManifest {
+			if devPath == utils.DefaultManifest {
 				log.Information("Run 'okteto up' to activate your development container")
 			} else {
 				log.Information("Run 'okteto up -f %s' to activate your development container", devPath)
@@ -95,7 +95,7 @@ func Init() *cobra.Command {
 
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context target for generating the okteto manifest")
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "overwrite existing manifest file")
 	return cmd
 }

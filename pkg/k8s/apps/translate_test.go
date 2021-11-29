@@ -104,10 +104,12 @@ services:
     sync:
        - worker:/src`, file.Name()))
 
-	dev1, err := model.Read(manifest)
+	manifest1, err := model.Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev1 := manifest1.Dev["web"]
 
 	d1 := deployments.Sandbox(dev1)
 	d1.UID = types.UID("deploy1")
@@ -584,7 +586,7 @@ services:
 }
 
 func Test_translateWithoutVolumes(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 image: web:latest
 sync:
@@ -592,10 +594,11 @@ sync:
 persistentVolume:
   enabled: false`)
 
-	dev, err := model.Read(manifest)
+	manifest, err := model.Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := manifest.Dev["web"]
 
 	d := deployments.Sandbox(dev)
 	rule := dev.ToTranslationRule(dev, true)
@@ -719,7 +722,7 @@ persistentVolume:
 }
 
 func Test_translateWithDocker(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 image: web:latest
 sync:
@@ -735,10 +738,12 @@ docker:
       cpu: 2
       memory: 4Gi`)
 
-	dev, err := model.Read(manifest)
+	manifest, err := model.Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := manifest.Dev["web"]
+
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
 
@@ -1287,7 +1292,7 @@ func TestTranslateOktetoVolumes(t *testing.T) {
 }
 
 func Test_translateMultipleEnvVars(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 image: web:latest
 sync:
@@ -1300,10 +1305,12 @@ environment:
   key3: value3
 `)
 
-	dev, err := model.Read(manifest)
+	manifest, err := model.Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := manifest.Dev["web"]
+
 	dev.Username = "cindy"
 
 	d := deployments.Sandbox(dev)
@@ -1366,7 +1373,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	var runAsUser int64 = 100
 	var runAsGroup int64 = 101
 	var fsGroup int64 = 102
-	manifest := []byte(fmt.Sprintf(`name: web
+	manifestBytes := []byte(fmt.Sprintf(`name: web
 namespace: n
 container: dev
 image: web:latest
@@ -1417,10 +1424,11 @@ services:
     sync:
        - worker:/src`, file.Name()))
 
-	dev1, err := model.Read(manifest)
+	manifest, err := model.Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev1 := manifest.Dev["web"]
 
 	sfs1 := statefulsets.Sandbox(dev1)
 	sfs1.UID = types.UID("sfs1")

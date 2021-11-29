@@ -17,6 +17,8 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -32,6 +34,13 @@ import (
 type SelectItem struct {
 	Name   string
 	Enable bool
+}
+
+type ManifestOptions struct {
+	Name       string
+	Namespace  string
+	Filename   string
+	K8sContext string
 }
 
 func getKubernetesContextList(filterOkteto bool) []string {
@@ -118,8 +127,8 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 	return nil
 }
 
-func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Dev, error) {
-	ctxResource, err := utils.LoadDevContext(devPath)
+func LoadManifestWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Manifest, error) {
+	ctxResource, err := utils.LoadManifestContext(devPath)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +150,7 @@ func LoadDevWithContext(ctx context.Context, devPath, namespace, k8sContext stri
 		return nil, err
 	}
 
-	return utils.LoadDev(devPath)
+	return utils.LoadManifest(devPath)
 }
 
 func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string) (*model.Stack, error) {
@@ -175,4 +184,188 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 	}
 	s.Namespace = okteto.Context().Namespace
 	return s, nil
+}
+
+// GetManifest Loads a manifest
+func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*model.Manifest, error) {
+	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
+	if pipelinePath != "" {
+		log.Debugf("Found okteto manifest %s", pipelinePath)
+		manifest, err := LoadManifestWithContext(ctx, opts.Filename, opts.Namespace, opts.K8sContext)
+		if err != nil {
+			log.Infof("could not load manifest: %s", err.Error())
+		}
+
+		manifest.Type = "pipeline"
+		manifest.Filename = pipelinePath
+		return manifest, nil
+	}
+
+	src := srcFolder
+	path := filepath.Join(srcFolder, opts.Filename)
+	if opts.Filename != "" && pathExistsAndDir(path) {
+		src = path
+	}
+
+	oktetoSubPath := getOktetoSubPath(srcFolder, src)
+	devs := []string{}
+	if oktetoSubPath != "" {
+		devs = append(devs, oktetoSubPath)
+	}
+	chartSubPath := getChartsSubPath(srcFolder, src)
+	if chartSubPath != "" {
+		fmt.Println("Found chart")
+		return &model.Manifest{
+			Type:     "chart",
+			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install %s %s", opts.Name, chartSubPath)}},
+			Filename: chartSubPath,
+		}, nil
+	}
+
+	manifestsSubPath := getManifestsSubPath(srcFolder, src)
+	if manifestsSubPath != "" {
+		fmt.Println("Found kubernetes manifests")
+		return &model.Manifest{
+			Type:     "kubernetes",
+			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("kubectl apply -f %s", manifestsSubPath)}},
+			Filename: manifestsSubPath,
+		}, nil
+	}
+
+	stackSubPath := getStackSubPath(srcFolder, src)
+	if stackSubPath != "" {
+		fmt.Println("Found okteto stack")
+		return &model.Manifest{
+			Type:     "stack",
+			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("okteto stack deploy --build -f %s", stackSubPath)}},
+			Filename: stackSubPath,
+		}, nil
+	}
+
+	if oktetoSubPath != "" {
+		fmt.Println("Found okteto manifest")
+		return &model.Manifest{
+			Type:     "okteto",
+			Deploy:   &model.DeployInfo{Commands: []string{"okteto push --deploy"}},
+			Filename: oktetoSubPath,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("file okteto manifest not found. See https://okteto.com/docs/cloud/okteto-pipeline for details on how to configure your git repository with okteto")
+}
+
+func getPipelinePath(src, filename string) string {
+	path := filepath.Join(src, filename)
+	if filename != "" && fileExistsAndNotDir(path) {
+		return path
+	}
+
+	baseDir := src
+	if filename != "" && pathExistsAndDir(path) {
+		baseDir = path
+	}
+
+	// Files will be checked in the order defined in the list
+	files := []string{
+		"okteto-pipeline.yml",
+		"okteto-pipeline.yaml",
+		"okteto-pipelines.yml",
+		"okteto-pipelines.yaml",
+		".okteto/okteto-pipeline.yml",
+		".okteto/okteto-pipeline.yaml",
+		".okteto/okteto-pipelines.yml",
+		".okteto/okteto-pipelines.yaml",
+	}
+
+	for _, name := range files {
+		path := filepath.Join(baseDir, name)
+		if fileExistsAndNotDir(path) {
+			return path
+		}
+	}
+	return ""
+}
+
+func getChartsSubPath(basePath, src string) string {
+	// Files will be checked in the order defined in the list
+	for _, name := range []string{"chart", "charts", "helm/chart", "helm/charts"} {
+		path := filepath.Join(src, name, "Chart.yaml")
+		if model.FileExists(path) {
+			prefix := fmt.Sprintf("%s/", basePath)
+			return strings.TrimPrefix(path, prefix)
+		}
+	}
+	return ""
+}
+
+func getManifestsSubPath(basePath, src string) string {
+	// Files will be checked in the order defined in the list
+	for _, name := range []string{"manifests", "manifests.yml", "manifests.yaml", "kubernetes", "kubernetes.yml", "kubernetes.yaml", "k8s", "k8s.yml", "k8s.yaml"} {
+		path := filepath.Join(src, name)
+		if model.FileExists(path) {
+			prefix := fmt.Sprintf("%s/", basePath)
+			return strings.TrimPrefix(path, prefix)
+		}
+	}
+	return ""
+}
+
+func getStackSubPath(basePath, src string) string {
+	// Files will be checked in the order defined in the list
+	files := []string{
+		"okteto-stack.yml",
+		"okteto-stack.yaml",
+		"stack.yml",
+		"stack.yaml",
+		".okteto/okteto-stack.yml",
+		".okteto/okteto-stack.yaml",
+		".okteto/stack.yml",
+		".okteto/stack.yaml",
+		"docker-compose.yml",
+		"docker-compose.yaml",
+		".okteto/docker-compose.yml",
+		".okteto/docker-compose.yaml",
+	}
+	for _, name := range files {
+		path := filepath.Join(src, name)
+		if fileExistsAndNotDir(path) {
+			prefix := fmt.Sprintf("%s/", basePath)
+			return strings.TrimPrefix(path, prefix)
+		}
+	}
+	return ""
+}
+
+func getOktetoSubPath(basePath, src string) string {
+	// Files will be checked in the order defined in the list
+	files := []string{
+		"okteto.yml",
+		"okteto.yaml",
+		".okteto/okteto.yml",
+		".okteto/okteto.yaml",
+	}
+	for _, name := range files {
+		path := filepath.Join(src, name)
+		if fileExistsAndNotDir(path) {
+			prefix := fmt.Sprintf("%s/", basePath)
+			return strings.TrimPrefix(path, prefix)
+		}
+	}
+	return ""
+}
+
+func pathExistsAndDir(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
+}
+
+func fileExistsAndNotDir(filename string) bool {
+	info, err := os.Stat(filename)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }

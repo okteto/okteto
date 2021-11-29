@@ -642,6 +642,89 @@ func checkFileAndNotDirectory(path string) error {
 	return fmt.Errorf("Secret '%s' is not a regular file", path)
 }
 
+func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type devType Dev //Prevent recursion
+	dev := devType(*d)
+	err := unmarshal(&dev)
+	if err != nil {
+		return fmt.Errorf("Unmarshal error: '%s'", err)
+	}
+	*d = Dev(dev)
+
+	return nil
+}
+
+func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	dev := NewDev()
+	err := unmarshal(&dev)
+	if err == nil {
+		*d = *NewManifestFromDev(dev)
+		return nil
+	}
+	if !isManifestFieldNotFound(err) {
+		return err
+	}
+	type manifestType Manifest //Prevent recursion
+	manifest := manifestType(*NewManifest())
+	err = unmarshal(&manifest)
+	if err != nil {
+		return err
+	}
+	*d = Manifest(manifest)
+	return nil
+}
+
+func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var commands []string
+	err := unmarshal(&commands)
+	if err == nil {
+		d.Commands = commands
+		return nil
+	} else {
+		return err
+	}
+}
+
+type devRaw Dev
+
+func (d *devRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	devRawPointer := NewDev()
+	err := unmarshal(devRawPointer)
+	if err != nil {
+		return err
+	}
+
+	*d = devRaw(*devRawPointer)
+	return nil
+}
+
+func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type manifestDevs map[string]devRaw
+	devs := make(manifestDevs)
+	err := unmarshal(&devs)
+	if err != nil {
+		return err
+	}
+	result := ManifestDevs{}
+	for k, v := range devs {
+		dev := Dev(v)
+		devPointer := &dev
+		result[k] = devPointer
+	}
+	*d = result
+	return nil
+}
+
+func isManifestFieldNotFound(err error) bool {
+	manifestFields := []string{"devs", "name", "icon", "variables", "deploy", "destroy"}
+	for _, field := range manifestFields {
+		if strings.Contains(err.Error(), fmt.Sprintf("field %s not found", field)) {
+			return true
+		}
+	}
+	return false
+}
+
 func (d *Dev) MarshalYAML() (interface{}, error) {
 	type dev Dev // prevent recursion
 	toMarshall := dev(*d)

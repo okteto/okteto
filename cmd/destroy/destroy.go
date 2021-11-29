@@ -56,10 +56,11 @@ type Options struct {
 	Namespace      string
 	DestroyVolumes bool
 	ForceDestroy   bool
+	K8sContext     string
 }
 
 type destroyCommand struct {
-	getManifest func(cwd, name, filename string) (*utils.Manifest, error)
+	getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 
 	executor    utils.ManifestExecutor
 	nsDestroyer destroyer
@@ -108,9 +109,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			options.Namespace = okteto.Context().Namespace
+			if options.Namespace == "" {
+				options.Namespace = okteto.Context().Namespace
+			}
+
 			c := &destroyCommand{
-				getManifest: utils.GetManifest,
+				getManifest: contextCMD.GetManifest,
 
 				executor:    utils.NewExecutor(),
 				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
@@ -124,17 +128,19 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
+	cmd.Flags().StringVar(&options.Namespace, "namespace", "", "application name")
+	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
 
 	return cmd
 }
 
 func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(cwd, opts.Name, opts.ManifestPath)
+	manifest, err := dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext})
 	if err != nil {
 		// Log error message but application can still be deleted
 		log.Infof("could not find manifest file to be executed: %s", err)
-		manifest = &utils.Manifest{
+		manifest = &model.Manifest{
 			Destroy: []string{},
 		}
 	}

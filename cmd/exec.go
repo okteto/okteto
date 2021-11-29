@@ -48,7 +48,12 @@ func Exec() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, devPath, namespace, k8sContext)
+			if err != nil {
+				return err
+			}
+
+			dev, err := utils.GetDevFromManifest(manifest)
 			if err != nil {
 				return err
 			}
@@ -80,7 +85,7 @@ func Exec() *cobra.Command {
 		Args: utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#exec"),
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the exec command is executed")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the exec command is executed")
 

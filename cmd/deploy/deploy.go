@@ -46,7 +46,10 @@ var tempKubeConfigTemplate = "%s/.okteto/kubeconfig-%s"
 type Options struct {
 	ManifestPath string
 	Name         string
+	Namespace    string
+	K8sContext   string
 	Variables    []string
+	Manifest     *model.Manifest
 }
 
 type kubeConfigHandler interface {
@@ -62,7 +65,7 @@ type proxyInterface interface {
 }
 
 type deployCommand struct {
-	getManifest func(cwd, name, filename string) (*utils.Manifest, error)
+	getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 
 	proxy              proxyInterface
 	kubeconfig         kubeConfigHandler
@@ -143,7 +146,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &deployCommand{
-				getManifest: utils.GetManifest,
+				getManifest: contextCMD.GetManifest,
 
 				kubeconfig: kubeconfig,
 				executor:   utils.NewExecutor(),
@@ -159,6 +162,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVar(&options.Namespace, "namespace", "", "application name")
+	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
+
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 
 	return cmd
@@ -171,8 +177,9 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		return err
 	}
 
+	var err error
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(cwd, opts.Name, opts.ManifestPath)
+	opts.Manifest, err = dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
 	if err != nil {
 		log.Infof("could not find manifest file to be executed: %s", err)
 		return err
@@ -192,7 +199,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		"OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT=true",
 	)
 
-	for _, command := range manifest.Deploy {
+	for _, command := range opts.Manifest.Deploy.Commands {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Infof("error executing command '%s': %s", command, err.Error())
 			return err
