@@ -386,10 +386,16 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
 	}
 	s.LocalPath = parts[0]
+	if len(parts) == 3 {
+		s.LocalPath += parts[1]
+	}
 	if err := checkFileAndNotDirectory(s.LocalPath); err != nil {
 		return err
 	}
 	s.RemotePath = parts[1]
+	if len(parts) == 3 {
+		s.RemotePath = parts[2]
+	}
 	if !strings.HasPrefix(s.RemotePath, "/") {
 		return fmt.Errorf("Secret remote path '%s' must be an absolute path", s.RemotePath)
 	}

@@ -1254,7 +1254,7 @@ services:
 }
 
 func Test_validateForExtraFields(t *testing.T) {
-	file, err := os.CreateTemp("", "secret.txt")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
