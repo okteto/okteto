@@ -1055,6 +1055,7 @@ devs:
 						Name: "test-1",
 						Sync: Sync{
 							RescanInterval: 300,
+							Compression:    true,
 							Folders: []SyncFolder{
 								{
 									LocalPath:  "app",
@@ -1119,6 +1120,7 @@ devs:
 						Name: "test-2",
 						Sync: Sync{
 							RescanInterval: 300,
+							Compression:    true,
 							Folders: []SyncFolder{
 								{
 									LocalPath:  "app",
@@ -1195,7 +1197,7 @@ sync:
 						Name: "test",
 						Sync: Sync{
 							RescanInterval: 300,
-
+							Compression:    true,
 							Folders: []SyncFolder{
 								{
 									LocalPath:  "app",
@@ -1273,6 +1275,7 @@ services:
 						Name: "test",
 						Sync: Sync{
 							RescanInterval: 300,
+							Compression:    true,
 							Folders: []SyncFolder{
 								{
 									LocalPath:  "app",
@@ -1408,7 +1411,7 @@ devs:
 						Name: "test",
 						Sync: Sync{
 							RescanInterval: 300,
-
+							Compression:    true,
 							Folders: []SyncFolder{
 								{
 									LocalPath:  "app",
@@ -1491,6 +1494,7 @@ devs:
 						Name: "test-1",
 						Sync: Sync{
 							RescanInterval: 300,
+							Compression:    true,
 							Folders: []SyncFolder{
 								{
 									LocalPath:  "app",
@@ -1555,6 +1559,7 @@ devs:
 						Name: "test-2",
 						Sync: Sync{
 							RescanInterval: 300,
+							Compression:    true,
 							Folders: []SyncFolder{
 								{
 									LocalPath:  "app",
