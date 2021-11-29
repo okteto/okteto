@@ -21,7 +21,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"text/template"
 	"time"
@@ -38,7 +37,17 @@ type ManifestExecutor interface {
 
 type Executor struct {
 	outputMode string
+	displayer  executorDisplayer
 }
+
+type executorDisplayer interface {
+	display(scanner *bufio.Scanner, command string, sb *screenbuf.ScreenBuf)
+	startCommand(cmd *exec.Cmd) (io.Reader, error)
+}
+
+type ttyExecutorDisplayer struct{}
+type plainExecutorDisplayer struct{}
+type jsonExecutorDisplayer struct{}
 
 type jsonMessage struct {
 	Level     string `json:"level"`
@@ -49,19 +58,22 @@ type jsonMessage struct {
 
 // NewExecutor returns a new executor
 func NewExecutor(output string) *Executor {
-	if output == "tty" && !IsSupportForTTY() {
+	if output == "tty" && !isSupportForTTY() {
 		output = "plain"
+	}
+	var displayer executorDisplayer
+	switch output {
+	case "tty":
+		displayer = ttyExecutorDisplayer{}
+	case "plain":
+		displayer = plainExecutorDisplayer{}
+	case "json":
+		displayer = jsonExecutorDisplayer{}
 	}
 	return &Executor{
 		outputMode: output,
+		displayer:  displayer,
 	}
-}
-
-func IsSupportForTTY() bool {
-	if runtime.GOOS != "windows" {
-		return isSupportForTTY()
-	}
-	return false
 }
 
 // Execute executes the specified command adding `env` to the execution environment
@@ -70,56 +82,55 @@ func (e *Executor) Execute(command string, env []string) error {
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Env = append(os.Environ(), env...)
 
-	var scanner *bufio.Scanner
-
-	if e.outputMode == "tty" {
-		var (
-			reader io.Reader
-			err    error
-		)
-		if runtime.GOOS != "windows" {
-			reader, err = startCommandTTY(cmd)
-		}
-		if err != nil {
-			return err
-		}
-		scanner = bufio.NewScanner(reader)
-	} else {
-		r, err := cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-		scanner = bufio.NewScanner(r)
-
-		if err := cmd.Start(); err != nil {
-			return err
-		}
+	reader, err := e.displayer.startCommand(cmd)
+	if err != nil {
+		return err
 	}
+
+	scanner := bufio.NewScanner(reader)
 
 	sb := screenbuf.New(os.Stdout)
-	if e.outputMode == "plain" {
-		go displayPlainOutput(scanner)
-	} else if e.outputMode == "json" {
-		go displayJSONOutput(scanner, command)
-	} else {
-		go displayTTYOutput(scanner, command, sb)
-	}
+	go e.displayer.display(scanner, command, sb)
 
-	err := cmd.Wait()
+	err = cmd.Wait()
 	if e.outputMode == "tty" {
 		collapseTTY(command, err, sb)
 	}
 	return err
 }
 
-func displayPlainOutput(scanner *bufio.Scanner) {
+func (plainExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+	reader, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return reader, nil
+}
+
+func (plainExecutorDisplayer) display(scanner *bufio.Scanner, _ string, _ *screenbuf.ScreenBuf) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		fmt.Println(line)
 	}
 }
-func displayJSONOutput(scanner *bufio.Scanner, command string) {
 
+func (jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+	reader, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return reader, nil
+}
+
+func (jsonExecutorDisplayer) display(scanner *bufio.Scanner, command string, _ *screenbuf.ScreenBuf) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		level := "info"
@@ -137,7 +148,7 @@ func displayJSONOutput(scanner *bufio.Scanner, command string) {
 	}
 }
 
-func displayTTYOutput(scanner *bufio.Scanner, command string, sb *screenbuf.ScreenBuf) {
+func (ttyExecutorDisplayer) display(scanner *bufio.Scanner, command string, sb *screenbuf.ScreenBuf) {
 	queue := []string{}
 	for scanner.Scan() {
 		commandLine := renderCommand(command)

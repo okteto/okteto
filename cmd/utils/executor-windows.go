@@ -14,6 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This file is needed because we can't check if a windows terminal supports tty
+// This w
+
 package utils
 
 import (
@@ -22,10 +25,10 @@ import (
 )
 
 func isSupportForTTY() bool {
-	return false
+	return true
 }
 
-func startCommandTTY(cmd *exec.Cmd) (io.Reader, error) {
+func (ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
 	r, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err

@@ -30,7 +30,7 @@ func isSupportForTTY() bool {
 	return err == nil
 }
 
-func startCommandTTY(cmd *exec.Cmd) (io.Reader, error) {
+func (ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
 	f, err := pty.Start(cmd)
 	if err != nil {
 		return nil, err
