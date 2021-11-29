@@ -1254,19 +1254,10 @@ services:
 }
 
 func Test_validateForExtraFields(t *testing.T) {
-	file, err := os.CreateTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
 	tests := []struct {
 		name  string
 		value string
 	}{
-		{
-			name: "secrets",
-			value: fmt.Sprintf(`secrets:
-    - %s:/app`, file.Name()),
-		},
 		{
 			name: "services",
 			value: `services:
