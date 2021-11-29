@@ -119,6 +119,9 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 		manifest.Dev[name].Name = name
 		manifest.Dev[name].Namespace = okteto.Context().Namespace
 		manifest.Dev[name].Context = okteto.Context().Name
+		if err := manifest.Dev[name].SetDefaults(); err != nil {
+			return nil, err
+		}
 		return manifest, nil
 	}
 

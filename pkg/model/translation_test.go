@@ -511,6 +511,23 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 		translated SecurityContext
 	}{
 		{
+			name: "root-user-with-overrides",
+			manifest: []byte(`name: root-user-with-overrides
+image: worker:latest
+namespace: n
+securityContext:
+   runAsUser: 100
+   runAsGroup: 101
+   fsGroup: 102
+   runAsNonRoot: false`),
+			translated: SecurityContext{
+				RunAsUser:    &runAsUser,
+				RunAsGroup:   &runAsGroup,
+				FSGroup:      &fsGroup,
+				RunAsNonRoot: &falseBoolean,
+			},
+		},
+		{
 			name: "non-root-user-without-overrides",
 			manifest: []byte(`name: non-root-user-without-overrides
 image: worker:latest
@@ -550,23 +567,6 @@ securityContext:
 				RunAsGroup:   &runAsGroup,
 				FSGroup:      &fsGroup,
 				RunAsNonRoot: &trueBoolean,
-			},
-		},
-		{
-			name: "root-user-with-overrides",
-			manifest: []byte(`name: root-user-with-overrides
-image: worker:latest
-namespace: n
-securityContext:
-   runAsUser: 100
-   runAsGroup: 101
-   fsGroup: 102
-   runAsNonRoot: false`),
-			translated: SecurityContext{
-				RunAsUser:    &runAsUser,
-				RunAsGroup:   &runAsGroup,
-				FSGroup:      &fsGroup,
-				RunAsNonRoot: &falseBoolean,
 			},
 		},
 		{
