@@ -199,8 +199,8 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 		dev.Selector[key] = value
 	}
 
-	if devRc.Sync.Compression {
-		dev.Sync.Compression = devRc.Sync.Compression
+	if !devRc.Sync.Compression {
+		dev.Sync.Compression = false
 	}
 	if devRc.Sync.Verbose {
 		dev.Sync.Verbose = devRc.Sync.Verbose

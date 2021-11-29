@@ -252,6 +252,7 @@ func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawFolders []SyncFolder
 	err := unmarshal(&rawFolders)
 	if err == nil {
+		sync.Compression = true
 		sync.Verbose = log.IsDebug()
 		sync.RescanInterval = DefaultSyncthingRescanInterval
 		sync.Folders = rawFolders

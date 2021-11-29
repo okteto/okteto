@@ -922,6 +922,61 @@ resources: 30s
 	}
 }
 
+func TestSyncUnmashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected Sync
+	}{
+		{
+			name: "only-folders",
+			data: []byte(`- .:/usr/src/app`),
+			expected: Sync{
+				Folders: []SyncFolder{
+					{
+						LocalPath:  ".",
+						RemotePath: "/usr/src/app"},
+				},
+				Compression:    true,
+				Verbose:        false,
+				RescanInterval: DefaultSyncthingRescanInterval,
+			},
+		},
+		{
+			name: "all",
+			data: []byte(`folders:
+  - .:/usr/src/app
+compression: false
+verbose: true
+rescanInterval: 10`),
+			expected: Sync{
+				Folders: []SyncFolder{
+					{
+						LocalPath:  ".",
+						RemotePath: "/usr/src/app"},
+				},
+				Compression:    false,
+				Verbose:        true,
+				RescanInterval: 10,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Sync{}
+
+			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestSyncFoldersUnmashalling(t *testing.T) {
 	tests := []struct {
 		name     string
