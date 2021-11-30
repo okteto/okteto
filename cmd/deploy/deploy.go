@@ -33,17 +33,14 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/endpoints"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
-	"github.com/okteto/okteto/pkg/k8s/pods"
-	"github.com/okteto/okteto/pkg/k8s/replicasets"
+	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 )
 
@@ -220,13 +217,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	}
 
 	if opts.Wait {
-		spinner := utils.NewSpinner("Waiting to be fully deployed...")
-		spinner.Start()
-		defer spinner.Stop()
 		if err := dc.waitUntilDeployed(ctx, opts); err != nil {
 			return err
 		}
-		if err := dc.showEndpoints(ctx, opts, spinner); err != nil {
+		if err := dc.showEndpoints(ctx, opts); err != nil {
 			log.Errorf("could not retrieve endpoints: %s", err)
 		}
 	}
@@ -383,6 +377,9 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 }
 
 func (*deployCommand) waitUntilDeployed(ctx context.Context, opts *Options) error {
+	spinner := utils.NewMultilineSpinner(ctx, "Waiting to be fully deployed...")
+	spinner.Start()
+	defer spinner.Stop()
 	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
@@ -402,23 +399,54 @@ func (*deployCommand) waitUntilDeployed(ctx context.Context, opts *Options) erro
 				return err
 			}
 			for _, dep := range dList {
-				if dep.Status.ReadyReplicas != dep.Status.Replicas {
+				key := fmt.Sprintf("dep-%s", dep.Name)
+				var statusLine string
+				if dep.Status.ObservedGeneration >= dep.Generation &&
+					dep.Status.UpdatedReplicas >= *dep.Spec.Replicas &&
+					dep.Status.AvailableReplicas >= dep.Status.UpdatedReplicas &&
+					dep.Status.Replicas <= dep.Status.UpdatedReplicas {
+					statusLine = fmt.Sprintf("deployment '%s' is running", dep.Name)
+					spinner.FinishLine(key)
+				} else {
 					isReady = false
-					break
+					statusLine = fmt.Sprintf("deployment '%s' is progressing", dep.Name)
 				}
-			}
-			if !isReady {
-				continue
+				spinner.UpdateLine(key, statusLine)
+
 			}
 			sfsList, err := statefulsets.List(ctx, okteto.Context().Namespace, labelSelector, c)
 			if err != nil {
 				return err
 			}
-			for _, sfs := range sfsList {
-				if sfs.Status.ReadyReplicas != sfs.Status.Replicas {
+			for _, sts := range sfsList {
+				key := fmt.Sprintf("sts-%s", sts.Name)
+				var statusLine string
+				if sts.Generation <= sts.Status.ObservedGeneration &&
+					sts.Status.ReadyReplicas >= *sts.Spec.Replicas &&
+					sts.Status.UpdatedReplicas >= (*sts.Spec.Replicas-*sts.Spec.UpdateStrategy.RollingUpdate.Partition) {
+					statusLine = fmt.Sprintf("statefulset '%s' is running", sts.Name)
+					spinner.FinishLine(key)
+				} else {
 					isReady = false
-					break
+					statusLine = fmt.Sprintf("statefulset '%s' is progressing", sts.Name)
 				}
+				spinner.UpdateLine(key, statusLine)
+			}
+			jobsList, err := jobs.List(ctx, okteto.Context().Namespace, labelSelector, c)
+			if err != nil {
+				return err
+			}
+			for _, job := range jobsList {
+				key := fmt.Sprintf("job-%s", job.Name)
+				var statusLine string
+				if job.Status.Active > 0 || job.Status.Succeeded > 0 {
+					statusLine = fmt.Sprintf("job '%s' is running", job.Name)
+					spinner.FinishLine(key)
+				} else {
+					isReady = false
+					statusLine = fmt.Sprintf("job '%s' is progressing", job.Name)
+				}
+				spinner.UpdateLine(key, statusLine)
 			}
 
 			if !isReady {
@@ -429,32 +457,20 @@ func (*deployCommand) waitUntilDeployed(ctx context.Context, opts *Options) erro
 	}
 }
 
-func (*deployCommand) showEndpoints(ctx context.Context, opts *Options, spinner *utils.Spinner) error {
-	spinner.Update("retrieving endpoints")
-	pods, err := getDeployPodNames(ctx, opts)
-	if err != nil {
-		return err
-	}
-
+func (*deployCommand) showEndpoints(ctx context.Context, opts *Options) error {
+	spinner := utils.NewSpinner("Retrieving endpoints...")
+	spinner.Start()
+	defer spinner.Stop()
+	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
-	endpoints, err := endpoints.GetEndpointsByPodName(ctx, pods, okteto.Context().Namespace, c)
-	if err != nil {
-		return err
-	}
-
-	svcsName := map[string]bool{}
-	for _, endpoint := range endpoints {
-		svcsName[endpoint.Name] = true
-	}
-
 	iClient, err := ingresses.GetClient(ctx, c)
 	if err != nil {
 		return err
 	}
-	eps, err := iClient.GetEndpointsByEndpointsServices(ctx, okteto.Context().Namespace, svcsName)
+	eps, err := iClient.GetEndpointsBySelector(ctx, okteto.Context().Namespace, labelSelector)
 	if err != nil {
 		return err
 	}
@@ -466,59 +482,4 @@ func (*deployCommand) showEndpoints(ctx context.Context, opts *Options, spinner 
 		log.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
 	}
 	return nil
-}
-
-func getDeployPodNames(ctx context.Context, opts *Options) (map[string]bool, error) {
-	uuids := map[types.UID]bool{}
-	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
-	c, _, err := okteto.GetK8sClient()
-	if err != nil {
-		log.Infof("error retrieving k8s client: %s", err)
-		return map[string]bool{}, err
-	}
-	dList, err := deployments.List(ctx, okteto.Context().Namespace, labelSelector, c)
-	if err != nil {
-		log.Infof("error retrieving deployments: %s", err)
-		return map[string]bool{}, err
-	}
-	for _, dep := range dList {
-		rs, err := replicasets.GetReplicaSetByDeployment(ctx, &dep, c)
-		if err != nil {
-			log.Infof("error retrieving replicasets: %s", err)
-			return map[string]bool{}, err
-		}
-		uuids[rs.UID] = true
-	}
-	sfsList, err := statefulsets.List(ctx, okteto.Context().Namespace, labelSelector, c)
-	if err != nil {
-		log.Infof("error retrieving sfs: %s", err)
-		return map[string]bool{}, err
-	}
-	for _, sfs := range sfsList {
-		uuids[sfs.UID] = true
-	}
-	pList, err := pods.List(ctx, okteto.Context().Namespace, "", c)
-	if err != nil {
-		log.Infof("error retrieving pods: %s", err)
-		return map[string]bool{}, err
-	}
-
-	podList := map[string]bool{}
-	for _, p := range pList {
-		if isPodFromDeploy(uuids, p.OwnerReferences) {
-			podList[p.Name] = true
-		}
-	}
-
-	return podList, nil
-}
-
-func isPodFromDeploy(uuids map[types.UID]bool, ownerReferences []metav1.OwnerReference) bool {
-	for _, ownerReference := range ownerReferences {
-		if _, ok := uuids[ownerReference.UID]; ok {
-			return true
-		}
-	}
-
-	return false
 }
