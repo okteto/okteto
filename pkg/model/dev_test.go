@@ -515,7 +515,7 @@ func TestDev_validateName(t *testing.T) {
 			}
 			// Since dev isn't being unmarshalled through Read, apply defaults
 			// before validating.
-			if err := dev.setDefaults(); err != nil {
+			if err := dev.SetDefaults(); err != nil {
 				t.Fatalf("error applying defaults: %v", err)
 			}
 			if err := dev.validate(); (err != nil) != tt.wantErr {
@@ -564,7 +564,7 @@ image:
 
 			// Since dev isn't being unmarshalled through Read, apply defaults
 			// before validating.
-			if err := dev.setDefaults(); err != nil {
+			if err := dev.SetDefaults(); err != nil {
 				t.Fatalf("error applying defaults: %v", err)
 			}
 			if !reflect.DeepEqual(dev.Image, tt.expected) {
@@ -1254,19 +1254,10 @@ services:
 }
 
 func Test_validateForExtraFields(t *testing.T) {
-	file, err := os.CreateTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
 	tests := []struct {
 		name  string
 		value string
 	}{
-		{
-			name: "secrets",
-			value: fmt.Sprintf(`secrets:
-    - %s:/app`, file.Name()),
-		},
 		{
 			name: "services",
 			value: `services:

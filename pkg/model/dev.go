@@ -355,7 +355,7 @@ func Read(bytes []byte) (*Manifest, error) {
 			}
 		}
 
-		if err := d.setDefaults(); err != nil {
+		if err := d.SetDefaults(); err != nil {
 			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 		}
 		if err := d.translateDeprecatedMetadataFields(); err != nil {
@@ -493,7 +493,7 @@ func (dev *Dev) loadImage() error {
 	return nil
 }
 
-func (dev *Dev) setDefaults() error {
+func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
 	}
