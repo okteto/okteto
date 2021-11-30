@@ -104,7 +104,6 @@ type Folder struct {
 	Name        string `yaml:"name"`
 	LocalPath   string `yaml:"localPath"`
 	RemotePath  string `yaml:"remotePath"`
-	Retries     int    `yaml:"-"`
 	Overwritten bool   `yaml:"-"`
 }
 
