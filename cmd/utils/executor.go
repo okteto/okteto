@@ -99,7 +99,7 @@ func (e *Executor) Execute(command string, env []string) error {
 	return err
 }
 
-func (plainExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+func startCommand(cmd *exec.Cmd) (io.Reader, error) {
 	reader, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -109,6 +109,10 @@ func (plainExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
 		return nil, err
 	}
 	return reader, nil
+}
+
+func (plainExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+	return startCommand(cmd)
 }
 
 func (plainExecutorDisplayer) display(scanner *bufio.Scanner, _ string, _ *screenbuf.ScreenBuf) {
@@ -119,15 +123,7 @@ func (plainExecutorDisplayer) display(scanner *bufio.Scanner, _ string, _ *scree
 }
 
 func (jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
-	reader, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return reader, nil
+	return startCommand(cmd)
 }
 
 func (jsonExecutorDisplayer) display(scanner *bufio.Scanner, command string, _ *screenbuf.ScreenBuf) {

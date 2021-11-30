@@ -29,13 +29,5 @@ func isSupportForTTY() bool {
 }
 
 func (ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
-	r, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return r, nil
+	return startCommand(cmd)
 }
