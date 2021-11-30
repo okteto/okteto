@@ -27,11 +27,13 @@ type Manifest struct {
 	Filename string `yaml:"-"`
 }
 
+//ManifestDevs refers to all the devs that can be
 type ManifestDevs map[string]*Dev
 
 func NewManifest() *Manifest {
 	return &Manifest{
-		Dev: make(map[string]*Dev),
+		Dev:    map[string]*Dev{},
+		Deploy: &DeployInfo{},
 	}
 }
 
@@ -46,7 +48,7 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 	return manifest
 }
 
-//DeployInfo represents a deploy section
+//DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
 	Commands []string `json:"commands,omitempty" yaml:"commands,omitempty"`
 }

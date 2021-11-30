@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -64,8 +65,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err == nil {
 				log.Success("Stack '%s' successfully deployed", s.Name)
 			}
-			if err := stack.ListEndpoints(ctx, s, ""); err != nil {
-				return err
+			if os.Getenv(model.OktetoWithinDeployCommandContextEnvVar) != "" {
+				if err := stack.ListEndpoints(ctx, s, ""); err != nil {
+					return err
+				}
 			}
 
 			return err

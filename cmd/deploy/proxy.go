@@ -15,12 +15,17 @@ package deploy
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 type proxyConfig struct {
@@ -33,11 +38,58 @@ type proxy struct {
 	proxyConfig proxyConfig
 }
 
-func newProxy(proxyConfig proxyConfig, s *http.Server) *proxy {
-	return &proxy{
-		proxyConfig: proxyConfig,
-		s:           s,
+func NewProxy(name string, kubeconfig *kubeConfig) (*proxy, error) {
+	// Look for a free local port to start the proxy
+	port, err := model.GetAvailablePort("localhost")
+	if err != nil {
+		log.Errorf("could not find a free port to start proxy server: %s", err)
+		return nil, err
 	}
+	log.Debugf("found available port %d", port)
+
+	// Generate a token for the requests done to the proxy
+	sessionToken := uuid.NewString()
+
+	clusterConfig, err := kubeconfig.Read()
+	if err != nil {
+		log.Errorf("could not read kubeconfig file: %s", err)
+		return nil, err
+	}
+
+	handler, err := getProxyHandler(name, sessionToken, clusterConfig)
+	if err != nil {
+		log.Errorf("could not configure local proxy: %s", err)
+		return nil, err
+	}
+
+	// TODO for now, using self-signed certificates
+	cert, err := tls.X509KeyPair(cert, key)
+	if err != nil {
+		log.Errorf("could not read certificate: %s", err)
+		return nil, err
+	}
+
+	s := &http.Server{
+		Addr:         fmt.Sprintf(":%d", port),
+		Handler:      handler,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+
+			// Recommended security configuration by DeepSource
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS13,
+		},
+	}
+	return &proxy{
+		proxyConfig: proxyConfig{
+			port:  port,
+			token: sessionToken,
+		},
+		s: s,
+	}, nil
 }
 
 // Start starts the proxy server

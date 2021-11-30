@@ -91,22 +91,21 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
-	c := &deployCommand{
-		proxy:    p,
-		executor: e,
-		kubeconfig: &fakeKubeConfig{
+	c := &DeployCommand{
+		Proxy:    p,
+		Executor: e,
+		Kubeconfig: &fakeKubeConfig{
 			errOnModify: assert.AnError,
 		},
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, "/tmp", opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -118,21 +117,20 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
-	c := &deployCommand{
-		getManifest: getManifestWithError,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+	c := &DeployCommand{
+		GetManifest: getManifestWithError,
+		Proxy:       p,
+		Executor:    e,
+		Kubeconfig:  &fakeKubeConfig{},
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, "/tmp", opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -146,21 +144,20 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	e := &fakeExecutor{
 		err: assert.AnError,
 	}
-	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+	c := &DeployCommand{
+		GetManifest: getFakeManifest,
+		Proxy:       p,
+		Executor:    e,
+		Kubeconfig:  &fakeKubeConfig{},
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, "/tmp", opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -178,21 +175,21 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		errOnShutdown: assert.AnError,
 	}
 	e := &fakeExecutor{}
-	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+	c := &DeployCommand{
+		GetManifest: getFakeManifest,
+		Proxy:       p,
+		Executor:    e,
+		Kubeconfig:  &fakeKubeConfig{},
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
+
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, "/tmp", opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -208,21 +205,20 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 func TestDeployWithoutErrors(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
-	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+	c := &DeployCommand{
+		GetManifest: getFakeManifest,
+		Proxy:       p,
+		Executor:    e,
+		Kubeconfig:  &fakeKubeConfig{},
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, "/tmp", opts)
 
 	assert.NoError(t, err)
 	// No command was executed

@@ -191,11 +191,10 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
 	if pipelinePath != "" {
 		log.Debugf("Found okteto manifest %s", pipelinePath)
-		manifest, err := LoadManifestWithContext(ctx, opts.Filename, opts.Namespace, opts.K8sContext)
+		manifest, err := LoadManifestWithContext(ctx, pipelinePath, opts.Namespace, opts.K8sContext)
 		if err != nil {
 			log.Infof("could not load manifest: %s", err.Error())
 		}
-
 		manifest.Type = "pipeline"
 		manifest.Filename = pipelinePath
 		return manifest, nil
