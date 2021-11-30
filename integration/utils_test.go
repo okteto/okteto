@@ -27,6 +27,7 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -42,14 +43,14 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	if u, ok := os.LookupEnv("OKTETO_USER"); !ok {
+	if u, ok := os.LookupEnv(model.OktetoUserEnvVar); !ok {
 		log.Println("OKTETO_USER is not defined")
 		os.Exit(1)
 	} else {
 		user = u
 	}
 
-	if v := os.Getenv("OKTETO_APPS_SUBDOMAIN"); v != "" {
+	if v := os.Getenv(model.OktetoAppsSubdomainEnvVar); v != "" {
 		appsSubdomain = v
 	}
 
@@ -83,7 +84,7 @@ func deleteGitRepo(ctx context.Context, path string) error {
 }
 
 func getOktetoPath(ctx context.Context) (string, error) {
-	oktetoPath, ok := os.LookupEnv("OKTETO_PATH")
+	oktetoPath, ok := os.LookupEnv(model.OktetoPathEnvVar)
 	if !ok {
 		oktetoPath = "/usr/local/bin/okteto"
 	}

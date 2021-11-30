@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -28,7 +29,7 @@ import (
 )
 
 func TestDevToTranslationRule(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 container: dev
 image: web:latest
@@ -63,10 +64,12 @@ services:
     sync:
       - worker:/src`)
 
-	dev, err := Read(manifest)
+	manifest, err := Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev := manifest.Dev["web"]
 
 	rule1 := dev.ToTranslationRule(dev, false)
 	rule1OK := &TranslationRule{
@@ -169,7 +172,6 @@ services:
 		Healthchecks:    false,
 		Probes:          &Probes{},
 		Lifecycle:       &Lifecycle{},
-		Environment:     make(Environment, 0),
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64Ptr(0),
 			RunAsGroup: pointer.Int64Ptr(0),
@@ -184,17 +186,19 @@ services:
 				SubPath:   path.Join(SourceCodeSubPath, "worker"),
 			},
 		},
+		Secrets: make([]Secret, 0),
 	}
 
 	marshalled2, _ := yaml.Marshal(rule2)
 	marshalled2OK, _ := yaml.Marshal(rule2OK)
-	if string(marshalled2) != string(marshalled2OK) {
+
+	if !assert.Equal(t, rule2, rule2OK) {
 		t.Fatalf("Wrong rule2 generation.\nActual %s, \nExpected %s", string(marshalled2), string(marshalled2OK))
 	}
 }
 
 func TestDevToTranslationRuleInitContainer(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 sync:
   - .:/app
@@ -208,10 +212,12 @@ initContainer:
       cpu: 2
       memory: 2Gi`)
 
-	dev, err := Read(manifest)
+	manifest, err := Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev := manifest.Dev["web"]
 
 	rule := dev.ToTranslationRule(dev, false)
 	ruleOK := &TranslationRule{
@@ -279,7 +285,7 @@ initContainer:
 }
 
 func TestDevToTranslationRuleDockerEnabled(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 image: dev-image
 namespace: n
 sync:
@@ -287,10 +293,12 @@ sync:
 docker:
   enabled: true`)
 
-	dev, err := Read(manifest)
+	manifest, err := Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev := manifest.Dev["web"]
 
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
@@ -385,16 +393,18 @@ docker:
 func TestDevToTranslationDebugEnabled(t *testing.T) {
 	log.SetLevel("debug")
 	defer log.SetLevel("info")
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 image: dev-image
 namespace: n
 sync:
   - .:/app`)
 
-	dev, err := Read(manifest)
+	manifest, err := Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev := manifest.Dev["web"]
 
 	rule := dev.ToTranslationRule(dev, false)
 	ruleOK := &TranslationRule{
@@ -496,49 +506,12 @@ func TestDevToTranslationRuleRunAsNonRoot(t *testing.T) {
 	var fsGroup int64 = 102
 
 	tests := []struct {
+		name       string
 		manifest   []byte
 		translated SecurityContext
 	}{
 		{
-			manifest: []byte(`name: non-root-user-without-overrides
-image: worker:latest
-namespace: n
-securityContext:
-   runAsNonRoot: true`),
-			translated: SecurityContext{
-				RunAsNonRoot: &trueBoolean,
-			},
-		},
-		{
-			manifest: []byte(`name: root-user-with-defaults
-image: worker:latest
-namespace: n
-securityContext:
-   runAsNonRoot: false`),
-			translated: SecurityContext{
-				RunAsUser:    pointer.Int64Ptr(0),
-				RunAsGroup:   pointer.Int64Ptr(0),
-				FSGroup:      pointer.Int64Ptr(0),
-				RunAsNonRoot: &falseBoolean,
-			},
-		},
-		{
-			manifest: []byte(`name: non-root-user-with-overrides
-image: worker:latest
-namespace: n
-securityContext:
-   runAsUser: 100
-   runAsGroup: 101
-   fsGroup: 102
-   runAsNonRoot: true`),
-			translated: SecurityContext{
-				RunAsUser:    &runAsUser,
-				RunAsGroup:   &runAsGroup,
-				FSGroup:      &fsGroup,
-				RunAsNonRoot: &trueBoolean,
-			},
-		},
-		{
+			name: "root-user-with-overrides",
 			manifest: []byte(`name: root-user-with-overrides
 image: worker:latest
 namespace: n
@@ -555,6 +528,49 @@ securityContext:
 			},
 		},
 		{
+			name: "non-root-user-without-overrides",
+			manifest: []byte(`name: non-root-user-without-overrides
+image: worker:latest
+namespace: n
+securityContext:
+   runAsNonRoot: true`),
+			translated: SecurityContext{
+				RunAsNonRoot: &trueBoolean,
+			},
+		},
+		{
+			name: "root-user-with-defaults",
+			manifest: []byte(`name: root-user-with-defaults
+image: worker:latest
+namespace: n
+securityContext:
+   runAsNonRoot: false`),
+			translated: SecurityContext{
+				RunAsUser:    pointer.Int64Ptr(0),
+				RunAsGroup:   pointer.Int64Ptr(0),
+				FSGroup:      pointer.Int64Ptr(0),
+				RunAsNonRoot: &falseBoolean,
+			},
+		},
+		{
+			name: "non-root-user-with-overrides",
+			manifest: []byte(`name: non-root-user-with-overrides
+image: worker:latest
+namespace: n
+securityContext:
+   runAsUser: 100
+   runAsGroup: 101
+   fsGroup: 102
+   runAsNonRoot: true`),
+			translated: SecurityContext{
+				RunAsUser:    &runAsUser,
+				RunAsGroup:   &runAsGroup,
+				FSGroup:      &fsGroup,
+				RunAsNonRoot: &trueBoolean,
+			},
+		},
+		{
+			name: "no-security-context",
 			manifest: []byte(`name: no-security-context
 image: worker:latest
 namespace: n`),
@@ -565,6 +581,7 @@ namespace: n`),
 			},
 		},
 		{
+			name: "no-run-as-non-root",
 			manifest: []byte(`name: no-run-as-non-root
 image: worker:latest
 namespace: n
@@ -581,10 +598,13 @@ securityContext:
 	}
 
 	for _, test := range tests {
-		dev, err := Read(test.manifest)
+		manifest, err := Read(test.manifest)
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		dev := manifest.Dev[test.name]
+
 		rule := dev.ToTranslationRule(dev, false)
 		marshalled, _ := yaml.Marshal(rule.SecurityContext)
 		marshalledOK, _ := yaml.Marshal(test.translated)

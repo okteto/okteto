@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -194,7 +195,7 @@ func (c *ContextUse) initOktetoContext(ctx context.Context, ctxOptions *ContextO
 
 	setSecrets(userContext.Secrets)
 
-	os.Setenv("OKTETO_USERNAME", okteto.Context().Username)
+	os.Setenv(model.OktetoUserNameEnvVar, okteto.Context().Username)
 
 	return nil
 }

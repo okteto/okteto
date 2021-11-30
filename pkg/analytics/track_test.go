@@ -17,6 +17,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -71,7 +72,7 @@ func Test_getTrackID(t *testing.T) {
 			}
 			defer os.RemoveAll(dir)
 
-			os.Setenv("OKTETO_HOME", dir)
+			os.Setenv(model.OktetoHomeEnvVar, dir)
 
 			a := get()
 			a.MachineID = tt.machineID

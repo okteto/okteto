@@ -50,7 +50,12 @@ func Down() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, devPath, namespace, k8sContext)
+			if err != nil {
+				return err
+			}
+
+			dev, err := utils.GetDevFromManifest(manifest)
 			if err != nil {
 				return err
 			}
@@ -65,7 +70,7 @@ func Down() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volume")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the down command is executed")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the down command is executed")
@@ -96,12 +101,16 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		}
 
 		spinner.Stop()
-		app, _, err := utils.GetApp(ctx, dev, c)
+
+		app, _, err := utils.GetApp(ctx, dev, c, false)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				exit <- err
 				return
 			}
+			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
+		}
+		if dev.Autocreate {
 			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 		}
 		spinner.Start()
@@ -139,7 +148,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		spinner.Stop()
 		log.Success("Persistent volume removed")
 
-		if os.Getenv("OKTETO_SKIP_CLEANUP") == "" {
+		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
 			if err := syncthing.RemoveFolder(dev); err != nil {
 				log.Infof("failed to delete existing syncthing folder")
 			}

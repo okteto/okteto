@@ -40,7 +40,9 @@ func Sandbox(dev *model.Dev) *appsv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
-			Labels:    model.Labels{},
+			Labels: model.Labels{
+				model.DevLabel: "true",
+			},
 			Annotations: model.Annotations{
 				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
 			},
