@@ -75,7 +75,7 @@ Follow [@OktetoHQ](https://twitter.com/oktetohq) on Twitter for important announ
 
 We use GitHub [issues](https://github.com/okteto/okteto/issues) to track our roadmap. A [milestone](https://github.com/okteto/okteto/milestones) is created every month to track the work scheduled for that time period. Feedback and help are always appreciated!
 
-## ✨  Contributions
+## ✨ Contributions
 
 We ❤️ contributions big or small. [See our guide](contributing.md) on how to get started.
 
