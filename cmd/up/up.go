@@ -181,6 +181,8 @@ func Up() *cobra.Command {
 				log.Infof("error deleting deprecated volume: %v", err)
 			}
 
+			err = fmt.Errorf("%w; Additional logs can be found at: $HOME/.okteto/okteto.log", err)
+
 			return err
 		},
 	}
