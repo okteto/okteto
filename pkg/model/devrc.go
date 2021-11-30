@@ -191,9 +191,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 		return dev.Reverse[i].Local < dev.Reverse[j].Local
 	})
 
-	for _, secret := range devRc.Secrets {
-		dev.Secrets = append(dev.Secrets, secret)
-	}
+	dev.Secrets = append(dev.Secrets, devRc.Secrets...)
 
 	for key, value := range devRc.Selector {
 		dev.Selector[key] = value
@@ -208,9 +206,8 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	if devRc.Sync.RescanInterval != 0 {
 		dev.Sync.RescanInterval = devRc.Sync.RescanInterval
 	}
-	for _, folder := range devRc.Sync.Folders {
-		dev.Sync.Folders = append(dev.Sync.Folders, folder)
-	}
+
+	dev.Sync.Folders = append(dev.Sync.Folders, devRc.Sync.Folders...)
 
 	if devRc.Timeout.Default != 0 {
 		dev.Timeout.Default = devRc.Timeout.Default
