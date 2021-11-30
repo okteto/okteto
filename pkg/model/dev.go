@@ -721,12 +721,16 @@ func (dev *Dev) validateSync() error {
 					Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 				}
 			}
-		} else if errors.Is(err, os.ErrNotExist) {
+
+			continue
+		}
+
+		if errors.Is(err, os.ErrNotExist) {
 			return oktetoError.UserError{
 				E:    fmt.Errorf("path '%s' does not exist", folder.LocalPath),
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 			}
-		} else if err != nil {
+		} else {
 			return oktetoError.UserError{
 				E:    fmt.Errorf("File paths are not supported on sync fields"),
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
