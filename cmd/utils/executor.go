@@ -15,20 +15,15 @@ package utils
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
-	"text/template"
 	"time"
 
-	"github.com/manifoldco/promptui"
 	"github.com/manifoldco/promptui/screenbuf"
-	"github.com/okteto/okteto/pkg/log"
-	"golang.org/x/term"
 )
 
 type ManifestExecutor interface {
@@ -45,7 +40,6 @@ type executorDisplayer interface {
 	startCommand(cmd *exec.Cmd) (io.Reader, error)
 }
 
-type ttyExecutorDisplayer struct{}
 type plainExecutorDisplayer struct{}
 type jsonExecutorDisplayer struct{}
 
@@ -58,17 +52,14 @@ type jsonMessage struct {
 
 // NewExecutor returns a new executor
 func NewExecutor(output string) *Executor {
-	if output == "tty" && !isSupportForTTY() {
-		output = "plain"
-	}
 	var displayer executorDisplayer
 	switch output {
-	case "tty":
-		displayer = ttyExecutorDisplayer{}
 	case "plain":
 		displayer = plainExecutorDisplayer{}
 	case "json":
 		displayer = jsonExecutorDisplayer{}
+	default:
+		displayer = plainExecutorDisplayer{}
 	}
 	return &Executor{
 		outputMode: output,
@@ -93,9 +84,6 @@ func (e *Executor) Execute(command string, env []string) error {
 	go e.displayer.display(scanner, command, sb)
 
 	err = cmd.Wait()
-	if e.outputMode == "tty" {
-		collapseTTY(command, err, sb)
-	}
 	return err
 }
 
@@ -144,100 +132,6 @@ func (jsonExecutorDisplayer) display(scanner *bufio.Scanner, command string, _ *
 	}
 }
 
-func (ttyExecutorDisplayer) display(scanner *bufio.Scanner, command string, sb *screenbuf.ScreenBuf) {
-	queue := []string{}
-	for scanner.Scan() {
-		commandLine := renderCommand(command)
-		sb.Write(commandLine)
-		line := scanner.Text()
-		if len(queue) == 10 {
-			queue = queue[1:]
-		}
-		queue = append(queue, line)
-		lines := renderLines(queue)
-		for _, line := range lines {
-			sb.Write([]byte(line))
-		}
-		sb.Flush()
-	}
-	if scanner.Err() != nil {
-		log.Infof("Error reading command output: %s", scanner.Err().Error())
-	}
-}
-
-func collapseTTY(command string, err error, sb *screenbuf.ScreenBuf) {
-	if sb == nil {
-		return
-	}
-	var message []byte
-	if err == nil {
-		message = renderSuccessCommand(command)
-	} else {
-		message = renderFailCommand(command)
-	}
-	sb.Reset()
-	sb.Write(message)
-	sb.Flush()
-}
 func isErrorLine(text string) bool {
 	return strings.HasPrefix(text, " x ")
-}
-
-func renderCommand(command string) []byte {
-	commandTemplate := "{{ . | blue }}: "
-	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(commandTemplate)
-	if err != nil {
-		return []byte{}
-	}
-	command = fmt.Sprintf("Running %s", command)
-	return render(tpl, command)
-}
-
-func renderSuccessCommand(command string) []byte {
-	commandTemplate := `{{ " ✓ " | bgGreen | black }} {{ . | green }}`
-	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(commandTemplate)
-	if err != nil {
-		return []byte{}
-	}
-
-	return render(tpl, command)
-}
-
-func renderFailCommand(command string) []byte {
-	commandTemplate := `{{ " x " | bgRed | black }} {{ . | red }}`
-	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(commandTemplate)
-	if err != nil {
-		return []byte{}
-	}
-
-	return render(tpl, command)
-}
-
-func renderLines(queue []string) [][]byte {
-	lineTemplate := "{{ . | white }} "
-	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(lineTemplate)
-	if err != nil {
-		return [][]byte{}
-	}
-
-	result := [][]byte{}
-	for _, line := range queue {
-		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
-		if width > 4 && len(line)+2 > width {
-			result = append(result, render(tpl, fmt.Sprintf("%s...", line[:width-5])))
-		} else {
-			result = append(result, render(tpl, line))
-		}
-
-	}
-	return result
-}
-
-func render(tpl *template.Template, data interface{}) []byte {
-	var buf bytes.Buffer
-	err := tpl.Execute(&buf, data)
-	if err != nil {
-		return []byte(fmt.Sprintf("%v", data))
-	}
-	return buf.Bytes()
 }
