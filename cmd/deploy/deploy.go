@@ -174,8 +174,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
 
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait for the application to be fully deployed")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 
 	return cmd
 }
@@ -203,10 +201,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	opts.Variables = append(
 		opts.Variables,
 		// Set KUBECONFIG environment variable as environment for the commands to be executed
-		fmt.Sprintf("KUBECONFIG=%s", dc.tempKubeconfigFile),
+		fmt.Sprintf("%s=%s", model.KubeConfigEnvVar, dc.tempKubeconfigFile),
 		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all the Okteto commands executed within this command execution
 		// should not overwrite the server and the credentials in the kubeconfig
-		"OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT=true",
+		fmt.Sprintf("%s=true", model.OktetoWithinDeployCommandContextEnvVar),
 	)
 
 	for _, command := range opts.Manifest.Deploy.Commands {
@@ -216,12 +214,9 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		}
 	}
 
-	if opts.Wait {
-		if err := dc.waitUntilDeployed(ctx, opts); err != nil {
-			return err
-		}
+	if os.Getenv(model.OktetoWithinDeployCommandContextEnvVar) != "" {
 		if err := dc.showEndpoints(ctx, opts); err != nil {
-			log.Errorf("could not retrieve endpoints: %s", err)
+			log.Infof("could not retrieve endpoints: %s", err)
 		}
 	}
 
