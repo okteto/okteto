@@ -32,10 +32,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
-	"github.com/okteto/okteto/pkg/k8s/jobs"
-	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -369,87 +366,6 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 	return handler, nil
 
-}
-
-func (*deployCommand) waitUntilDeployed(ctx context.Context, opts *Options) error {
-	spinner := utils.NewMultilineSpinner(ctx, "Waiting to be fully deployed...")
-	spinner.Start()
-	defer spinner.Stop()
-	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
-	c, _, err := okteto.GetK8sClient()
-	if err != nil {
-		return err
-	}
-
-	ticker := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(opts.Timeout)
-	for {
-		select {
-		case <-to.C:
-			return fmt.Errorf("application '%s' didn't finish after %s", opts.Name, opts.Timeout.String())
-		case <-ticker.C:
-			isReady := true
-			dList, err := deployments.List(ctx, okteto.Context().Namespace, labelSelector, c)
-			if err != nil {
-				return err
-			}
-			for _, dep := range dList {
-				key := fmt.Sprintf("dep-%s", dep.Name)
-				var statusLine string
-				if dep.Status.ObservedGeneration >= dep.Generation &&
-					dep.Status.UpdatedReplicas >= *dep.Spec.Replicas &&
-					dep.Status.AvailableReplicas >= dep.Status.UpdatedReplicas &&
-					dep.Status.Replicas <= dep.Status.UpdatedReplicas {
-					statusLine = fmt.Sprintf("deployment '%s' is running", dep.Name)
-					spinner.FinishLine(key)
-				} else {
-					isReady = false
-					statusLine = fmt.Sprintf("deployment '%s' is progressing", dep.Name)
-				}
-				spinner.UpdateLine(key, statusLine)
-
-			}
-			sfsList, err := statefulsets.List(ctx, okteto.Context().Namespace, labelSelector, c)
-			if err != nil {
-				return err
-			}
-			for _, sts := range sfsList {
-				key := fmt.Sprintf("sts-%s", sts.Name)
-				var statusLine string
-				if sts.Generation <= sts.Status.ObservedGeneration &&
-					sts.Status.ReadyReplicas >= *sts.Spec.Replicas &&
-					sts.Status.UpdatedReplicas >= (*sts.Spec.Replicas-*sts.Spec.UpdateStrategy.RollingUpdate.Partition) {
-					statusLine = fmt.Sprintf("statefulset '%s' is running", sts.Name)
-					spinner.FinishLine(key)
-				} else {
-					isReady = false
-					statusLine = fmt.Sprintf("statefulset '%s' is progressing", sts.Name)
-				}
-				spinner.UpdateLine(key, statusLine)
-			}
-			jobsList, err := jobs.List(ctx, okteto.Context().Namespace, labelSelector, c)
-			if err != nil {
-				return err
-			}
-			for _, job := range jobsList {
-				key := fmt.Sprintf("job-%s", job.Name)
-				var statusLine string
-				if job.Status.Active > 0 || job.Status.Succeeded > 0 {
-					statusLine = fmt.Sprintf("job '%s' is running", job.Name)
-					spinner.FinishLine(key)
-				} else {
-					isReady = false
-					statusLine = fmt.Sprintf("job '%s' is progressing", job.Name)
-				}
-				spinner.UpdateLine(key, statusLine)
-			}
-
-			if !isReady {
-				continue
-			}
-			return nil
-		}
-	}
 }
 
 func (*deployCommand) showEndpoints(ctx context.Context, opts *Options) error {
