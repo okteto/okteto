@@ -42,8 +42,7 @@ import (
 )
 
 var (
-	configTemplate   = template.Must(template.New("syncthingConfig").Parse(configXML))
-	isHealthyRetries = 0
+	configTemplate = template.Must(template.New("syncthingConfig").Parse(configXML))
 )
 
 const (
@@ -104,6 +103,7 @@ type Folder struct {
 	Name        string `yaml:"name"`
 	LocalPath   string `yaml:"localPath"`
 	RemotePath  string `yaml:"remotePath"`
+	Retries     int    `yaml:"-"`
 	Overwritten bool   `yaml:"-"`
 }
 
@@ -113,33 +113,13 @@ type Status struct {
 	PullErrors int64  `json:"pullErrors"`
 }
 
-// StateChangedEvent represents state changed in syncthing.
-type StateChangedEvent struct {
-	Data DataStateChangedEvent `json:"data"`
+// FolderErrors represents folder errors in syncthing.
+type FolderErrors struct {
+	Data DataFolderErrors `json:"data"`
 }
 
-// DataStateChangedEvent represents data state changed in syncthing.
-type DataStateChangedEvent struct {
-	State string `json:"to"`
-}
-
-// FolderSummaryEvent represents folder summary in syncthing.
-type FolderSummaryEvent struct {
-	Data DataFolderSummaryEvent `json:"data"`
-}
-
-// DataFolderSummaryEvent represents data folder summary in syncthing.
-type DataFolderSummaryEvent struct {
-	Summary Status `json:"summary"`
-}
-
-// FolderErrorEvent represents folder errors in syncthing.
-type FolderErrorEvent struct {
-	Data DataFolderErrorEvent `json:"data"`
-}
-
-// DataFolderErrorEvent represents data folder errors in syncthing.
-type DataFolderErrorEvent struct {
+// DataFolderErrors represents data folder errors in syncthing.
+type DataFolderErrors struct {
 	Errors []FolderError `json:"errors"`
 }
 
@@ -454,18 +434,18 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 	to := time.Now().Add(s.timeout * 10) // 5 minutes
 
 	for retries := 0; ; retries++ {
-		status, err := s.GetSyncthingStatus(ctx, folder, local)
+		status, err := s.GetStatus(ctx, folder, local)
 		if err != nil && err != errors.ErrBusySyncthing {
 			return err
 		}
 
-		if status != "" {
+		if status != nil {
 			if retries%100 == 0 {
 				// one log every 10 seconds
-				log.Infof("syncthing folder local=%t is '%s'", local, status)
+				log.Infof("syncthing folder local=%t is '%s'", local, status.State)
 			}
-			if status != "scanning" && status != "scan-waiting" {
-				log.Infof("syncthing folder local=%t finished scanning: '%s'", local, status)
+			if status.State != "scanning" && status.State != "scan-waiting" {
+				log.Infof("syncthing folder local=%t finished scanning: '%s'", local, status.State)
 				return nil
 			}
 		}
@@ -506,108 +486,68 @@ func (s *Syncthing) GetCompletion(ctx context.Context, local bool, device string
 
 // IsHealthy returns the syncthing error or nil
 func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
-	pullErrors, err := s.GetPullErrors(ctx, local)
-	if err != nil {
-		if err == errors.ErrBusySyncthing {
-			return nil
+	for _, folder := range s.Folders {
+		status, err := s.GetStatus(ctx, folder, false)
+		if err != nil {
+			if err == errors.ErrBusySyncthing {
+				continue
+			}
+			return err
+		}
+		if status.PullErrors == 0 {
+			folder.Retries = 0
+			continue
+		}
+
+		folder.Retries++
+		err = s.GetFolderErrors(ctx, folder, false)
+		if err != nil {
+			log.Infof("syncthing error in folder '%s' local=%t retry %d: %s", folder.RemotePath, local, folder.Retries, err.Error())
+		}
+		if err == errors.ErrInsufficientSpace {
+			return err
+		}
+
+		if folder.Retries <= max {
+			continue
+		}
+		if err == nil || err == errors.ErrBusySyncthing {
+			return errors.ErrUnknownSyncError
 		}
 		return err
 	}
-	if pullErrors == 0 {
-		isHealthyRetries = 0
-		return nil
-	}
-
-	isHealthyRetries++
-	err = s.GetFolderErrors(ctx, false)
-	if err != nil {
-		log.Infof("syncthing error local=%t retry %d: %s", local, isHealthyRetries, err.Error())
-	}
-	if err == errors.ErrInsufficientSpace {
-		return err
-	}
-
-	if isHealthyRetries <= max {
-		return nil
-	}
-	if err == nil || err == errors.ErrBusySyncthing {
-		return errors.ErrUnknownSyncError
-	}
-	return err
+	return nil
 }
 
-// GetSyncthingStatus returns the syncthing status
-func (s *Syncthing) GetSyncthingStatus(ctx context.Context, folder *Folder, local bool) (string, error) {
-	params := map[string]string{
-		"folder":  GetFolderName(folder),
-		"since":   "0",
-		"limit":   "1",
-		"timeout": "0",
-		"events":  "StateChanged",
-	}
-	scList := []StateChangedEvent{}
-	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+// GetStatus returns the syncthing status
+func (s *Syncthing) GetStatus(ctx context.Context, folder *Folder, local bool) (*Status, error) {
+	params := getFolderParameter(folder)
+	status := &Status{}
+	body, err := s.APICall(ctx, "rest/db/status", "GET", 200, params, local, nil, true, 3)
 	if err != nil {
-		log.Infof("error getting events: %s", err.Error())
+		log.Infof("error getting status: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			return "", errors.ErrBusySyncthing
+			return nil, errors.ErrBusySyncthing
 		}
-		return "", errors.ErrLostSyncthing
+		return nil, errors.ErrLostSyncthing
 	}
-
-	err = json.Unmarshal(body, &scList)
+	err = json.Unmarshal(body, status)
 	if err != nil {
-		log.Infof("error unmarshalling events: %s", err.Error())
-		return "", errors.ErrLostSyncthing
+		log.Infof("error unmarshalling status: %s", err.Error())
+		return nil, errors.ErrLostSyncthing
 	}
 
-	if len(scList) == 0 {
-		return "scanning", nil
-	}
-
-	return scList[0].Data.State, nil
-}
-
-// GetPullErrors returns the syncthing current pull errors
-func (s *Syncthing) GetPullErrors(ctx context.Context, local bool) (int64, error) {
-	params := map[string]string{
-		"since":   "0",
-		"limit":   "1",
-		"timeout": "0",
-		"events":  "FolderSummary",
-	}
-	fsList := []FolderSummaryEvent{}
-	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
-	if err != nil {
-		log.Infof("error getting events: %s", err.Error())
-		if strings.Contains(err.Error(), "Client.Timeout") {
-			return 0, errors.ErrBusySyncthing
-		}
-		return 0, errors.ErrLostSyncthing
-	}
-
-	err = json.Unmarshal(body, &fsList)
-	if err != nil {
-		log.Infof("error unmarshalling events: %s", err.Error())
-		return 0, errors.ErrLostSyncthing
-	}
-
-	if len(fsList) == 0 {
-		return 0, nil
-	}
-
-	return fsList[0].Data.Summary.PullErrors, nil
+	return status, nil
 }
 
 // GetFolderErrors returns the last folder errors
-func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
-	params := map[string]string{
-		"since":   "0",
-		"limit":   "1",
-		"timeout": "0",
-		"events":  "FolderErrors",
-	}
-	folderErrorsList := []FolderErrorEvent{}
+func (s *Syncthing) GetFolderErrors(ctx context.Context, folder *Folder, local bool) error {
+	params := getFolderParameter(folder)
+	params["since"] = "0"
+	params["limit"] = "1"
+	params["timeout"] = "0"
+	params["events"] = "FolderErrors"
+	folderErrorsList := []FolderErrors{}
 	body, err := s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
 	if err != nil {
 		log.Infof("error getting events: %s", err.Error())
@@ -626,7 +566,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 	if len(folderErrorsList) == 0 {
 		return nil
 	}
-	folderErrors := folderErrorsList[0]
+	folderErrors := folderErrorsList[len(folderErrorsList)-1]
 	if len(folderErrors.Data.Errors) == 0 {
 		return nil
 	}
