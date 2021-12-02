@@ -15,6 +15,9 @@ package stack
 
 import (
 	"context"
+	"os"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -25,6 +28,13 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
+
+func splitComposeFileEnv(value string) []string {
+	if runtime.GOOS == "windows" {
+		return strings.Split(value, ";")
+	}
+	return strings.Split(value, ":")
+}
 
 // Deploy deploys a stack
 func Deploy(ctx context.Context) *cobra.Command {
@@ -40,6 +50,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 				if err != nil {
 					log.Errorf("error loading .env file: %s", err.Error())
 				}
+			}
+
+			composeEnv, present := os.LookupEnv(model.ComposeFile)
+
+			if len(options.StackPath) == 0 && present {
+				options.StackPath = splitComposeFileEnv(composeEnv)
 			}
 
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPath)
