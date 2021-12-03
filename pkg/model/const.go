@@ -28,9 +28,6 @@ const (
 	// AppReplicasAnnotation indicates the number of replicas before dev mode was activated
 	AppReplicasAnnotation = "dev.okteto.com/replicas"
 
-	// AppAnnotationsAnnotation indicates the annotations before dev mode was activated
-	AppAnnotationsAnnotation = "dev.okteto.com/annotations"
-
 	// InteractiveDevLabel indicates the interactive dev pod
 	InteractiveDevLabel = "interactive.dev.okteto.com"
 
